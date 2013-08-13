@@ -344,6 +344,7 @@ GET     /internal/shoebox/database/changedComment     @com.keepit.controllers.sh
 GET     /internal/shoebox/database/commentRecipientIds  @com.keepit.controllers.shoebox.ShoeboxController.getCommentRecipientIds(commentId: Id[Comment])
 POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
+POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.shoebox.ShoeboxController.sendMailToUser
 GET     /internal/shoebox/database/getPhrasesByPage   @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesByPage(page: Int, size: Int)
 GET     /internal/shoebox/database/getCollectionsChanged @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsChangedDeprecated(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/changedCollections @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsChanged(seqNum: Long, fetchSize: Int)

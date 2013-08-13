@@ -24,6 +24,8 @@ trait NotificationRouter { //TODO Stephen: This needs a better name
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray) : Unit
 
+  def sendToAllUsers(data: JsArray) : Unit
+
   def connectedSockets : Int
 }
 
@@ -65,6 +67,15 @@ class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient) 
       socket.channel.push(data)
     }
   }
+
+  def sendToAllUsers(data: JsArray) : Unit = {
+    userSockets.values.foreach{ socketMap =>
+      socketMap.values.foreach{ socket =>
+        socket.channel.push(data)
+      }
+    }
+  }
+
 
   def connectedSockets : Int = userSockets.values.map{_.keys.toSeq.length}.sum
 
