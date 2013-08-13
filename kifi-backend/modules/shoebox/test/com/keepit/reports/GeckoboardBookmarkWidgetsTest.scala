@@ -64,7 +64,7 @@ class GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicatio
         inject[TotalKeepsPerHour].data === NumberAndSecondaryStat(2, 0)
         inject[TotalKeepsPerDay].data === NumberAndSecondaryStat(2, 0)
         inject[TotalKeepsPerWeek].data === NumberAndSecondaryStat(2, 0)
-        inject[HoverKeepsPerWeek].data === NumberAndSecondaryStat(1, 0)
+        inject[UIKeepsPerWeek].data === NumberAndSecondaryStat(1, 0)
       }
     }
   }
