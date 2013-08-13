@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.joda.time.DateTime
 import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.logging.Logging
@@ -124,7 +124,7 @@ trait ReportBuilderPlugin extends Plugin {
 }
 
 class ReportBuilderPluginImpl @Inject() (
-  actorProvider: ActorProvider[ReportBuilderActor],
+  actor: ActorInstance[ReportBuilderActor],
   db: Database,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
   reportStore: ReportStore,
@@ -133,23 +133,22 @@ class ReportBuilderPluginImpl @Inject() (
   val schedulingProperties: SchedulingProperties) //only on leader
     extends Logging with ReportBuilderPlugin with SchedulingPlugin {
 
+  def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actor.ref ! BuildReport(startDate, endDate, report)
+  def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor.ref ! BuildReports(startDate, endDate, reportGroup)
+
   implicit val dbMasterSlave = Database.Slave
 
-  def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actorProvider.actor ! BuildReport(startDate, endDate, report)
-  def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actorProvider.actor ! BuildReports(startDate, endDate, reportGroup)
-
-  private lazy val actor = actorProvider.actor
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 10 seconds, 1 hour, actorProvider.actor, ReportCron(this))
+    scheduleTask(actor.system, 10 seconds, 1 hour, actor.ref, ReportCron(this))
   }
 
   override def reportCron(): Unit = {
     if (currentDateTime.hourOfDay().get() == 3) {// 3am PST
-      actorProvider.actor ! BuildReports(defaultStartTime, defaultEndTime,
+      actor.ref ! BuildReports(defaultStartTime, defaultEndTime,
          searchExperimentReports(db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }))
-      actorProvider.actor ! BuildReports(defaultStartTime, defaultEndTime, dailyReports)
+      actor.ref ! BuildReports(defaultStartTime, defaultEndTime, dailyReports)
     }
   }
 

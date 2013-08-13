@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import us.theatr.akka.quartz.QuartzActor
 import com.keepit.search._
 import com.keepit.reports._
 import com.keepit.common.zookeeper._
@@ -29,6 +30,7 @@ import com.keepit.classify.FakeDomainTagImporterModule
 import com.keepit.learning.topicmodel.FakeWordTopicModule
 import com.keepit.learning.topicmodel.DevTopicModelModule
 import com.keepit.learning.topicmodel.DevTopicStoreModule
+import com.keepit.eliza.TestElizaServiceClientModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -63,7 +65,8 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeWordTopicModule(),
         DevTopicModelModule(),
         DevTopicStoreModule(),
-        GeckoboardModule()
+        GeckoboardModule(),
+        TestElizaServiceClientModule()
       )) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
@@ -71,7 +74,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         }.distinct.filter(isShoeboxController)
         for (c <- classes) inject(classType[Controller](c), injector)
         val bindings = injector.getAllBindings
-        val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor],
+        val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor], classOf[QuartzActor],
           classOf[MailToKeepServerSettings], classOf[MemcachedClient])
         bindings.keySet() filter { key =>
           val klazz = key.getTypeLiteral.getRawType
@@ -80,7 +83,12 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
           }
           !fail
         } foreach { key =>
-          injector.getInstance(key)
+          try {
+            injector.getInstance(key)
+          } catch {
+            case e: Throwable =>
+              throw new Exception(s"can't instantiate $key", e)
+          }
         }
         injector.getInstance(classOf[SearchServiceClient])
         injector.getInstance(classOf[ServiceDiscovery])

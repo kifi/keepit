@@ -169,15 +169,15 @@ GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreensho
 GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
 
-GET     /admin/data/integrity       @com.keepit.controllers.admin.ScraperController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
-GET     /admin/data/dupe            @com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
-GET     /admin/data/orphan          @com.keepit.controllers.admin.ScraperController.orphanCleanup
+GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
+GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
+GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup
 GET     /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.getUnscrapable()
 POST    /admin/data/previewUnscrapable     @com.keepit.controllers.admin.ScraperController.previewUnscrapable()
 POST    /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.createUnscrapable()
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
-POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.ScraperController.handleDuplicate
-POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.ScraperController.handleDuplicates
+POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
+POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/fixSeqNum       @com.keepit.controllers.admin.UrlController.fixSeqNum
 
 
@@ -375,7 +375,9 @@ POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.sh
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 
-POST    /internal/geckoboard/refresh                 @com.keepit.reports.GeckoboardReporterController.refreshAll()
+POST    /internal/geckoboard/refresh                  @com.keepit.reports.GeckoboardReporterController.refreshAll()
+
+GET     /internal/migrateToEliza                      @com.keepit.controllers.shoebox.ShoeboxChatMigrationController.migrateToEliza()
 
 
 

@@ -58,7 +58,7 @@ object ApplicationBuild extends Build {
       "org.apache.lucene" % "lucene-core" % "4.2.1",
       "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
       "org.apache.lucene" % "lucene-suggest" % "4.2.1",
-      "us.theatr" %% "akka-quartz" % "0.2.0"
+      "us.theatr" %% "akka-quartz" % "0.2.0_42.1"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
@@ -68,7 +68,8 @@ object ApplicationBuild extends Build {
     ))
 
     val searchDependencies = Seq(
-      "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5" from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
+      "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5"
+        from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
       "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5"
     )
 
@@ -96,16 +97,17 @@ object ApplicationBuild extends Build {
 
     val commonResolvers = Seq(
       Resolver.url("sbt-plugin-snapshots",
-        new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
-      "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-      "kevoree Repository" at "http://maven2.kevoree.org/release/",
+        new URL("http://repo.42go.com:4242/fortytwo/content/groups/public/"))(Resolver.ivyStylePatterns),
+        // new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
+      // "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+      // "kevoree Repository" at "http://maven2.kevoree.org/release/",
       "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
-      "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel",
+      "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel"
       //for org.mongodb#casb
-      "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-      "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
-      "terracotta" at "http://www.terracotta.org/download/reflector/releases/",
-      "The Buzz Media Maven Repository" at "http://maven.thebuzzmedia.com"
+      // "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
+      // "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
+      // "terracotta" at "http://www.terracotta.org/download/reflector/releases/",
+      // "The Buzz Media Maven Repository" at "http://maven.thebuzzmedia.com"
     )
 
     val _templatesImport = Seq(

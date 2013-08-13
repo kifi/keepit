@@ -11,17 +11,19 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.time._
 import com.keepit.inject._
 import play.api.Plugin
 import play.api.Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import us.theatr.akka.quartz.QuartzActor
 
 private[reports] class GeckoboardReporterActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
   geckoboardPublisher: GeckoboardPublisher)
+
 extends FortyTwoActor(healthcheckPlugin) with Logging {
   def receive() = {
     case widget: GeckoboardWidget[_] => geckoboardPublisher.publish(widget)
@@ -34,15 +36,14 @@ trait GeckoboardReporterPlugin extends SchedulingPlugin {
 }
 
 class GeckoboardReporterPluginImpl @Inject() (
-    actorProvider: ActorProvider[GeckoboardReporterActor],
-    // quartz: ActorProvider[QuartzActor],
+    actor: ActorInstance[GeckoboardReporterActor],
+    quartz: ActorInstance[QuartzActor],
     val schedulingProperties: SchedulingProperties,
     totalKeepsPerHour: TotalKeepsPerHour,
     totalKeepsPerDay: TotalKeepsPerDay,
     totalKeepsPerWeek: TotalKeepsPerWeek,
     hoverKeepsPerWeek: HoverKeepsPerWeek)
 extends GeckoboardReporterPlugin with Logging {
- // val schedulingProperties = SchedulingProperties.AlwaysEnabled
 
   implicit val actorTimeout = Timeout(60 seconds)
 
@@ -50,17 +51,16 @@ extends GeckoboardReporterPlugin with Logging {
   override def enabled: Boolean = true
 
   def refreshAll(): Unit = {
-    actorProvider.actor ! totalKeepsPerHour
-    actorProvider.actor ! totalKeepsPerDay
-    actorProvider.actor ! totalKeepsPerWeek
-    actorProvider.actor ! hoverKeepsPerWeek
+    actor.ref ! totalKeepsPerHour
+    actor.ref ! totalKeepsPerDay
+    actor.ref ! totalKeepsPerWeek
+    actor.ref ! hoverKeepsPerWeek
   }
 
   override def onStart() {
-    // quartz.actor ! AddCronSchedule(destinationActorRef, "* 0/1 * * * ?", totalKeepsPerHour)
-    scheduleTask(actorProvider.system, 0 seconds, 10 minutes, actorProvider.actor, totalKeepsPerHour)
-    scheduleTask(actorProvider.system, 0 seconds, 1 hours, actorProvider.actor, totalKeepsPerDay)
-    scheduleTask(actorProvider.system, 0 seconds, 6 hours, actorProvider.actor, totalKeepsPerWeek)
-    scheduleTask(actorProvider.system, 0 seconds, 6 hours, actorProvider.actor, hoverKeepsPerWeek)
+    cronTask(quartz, actor.ref, "0 0/10 * * * ?", totalKeepsPerHour)
+    cronTask(quartz, actor.ref, "0 0 * * * ?", totalKeepsPerDay)
+    cronTask(quartz, actor.ref, "0 0 0/6 * * ?", totalKeepsPerWeek)
+    cronTask(quartz, actor.ref, "0 0 0/6 * * ?", hoverKeepsPerWeek)
   }
 }

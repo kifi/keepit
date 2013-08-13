@@ -85,7 +85,7 @@ class SecureSocialUserPluginImpl @Inject() (
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
     val userOpt = userId orElse {
       // TODO: better way of dealing with emails that already exist; for now just link accounts
-      socialUser.email flatMap emailRepo.getByAddressOpt map (_.userId)
+      socialUser.email flatMap (emailRepo.getByAddressOpt(_)) map (_.userId)
     } flatMap userRepo.getOpt
 
     suiOpt.map(_.withCredentials(socialUser)) match {

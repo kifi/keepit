@@ -3,7 +3,7 @@ package com.keepit.common.mail
 import scala.concurrent.duration._
 
 import com.google.inject.Inject
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -17,18 +17,18 @@ trait MailSenderPlugin extends Plugin {
 }
 
 class MailSenderPluginImpl @Inject() (
-    actorProvider: ActorProvider[MailSenderActor],
+    actor: ActorInstance[MailSenderActor],
     val schedulingProperties: SchedulingProperties) //only on leader
   extends Logging with MailSenderPlugin with SchedulingPlugin {
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 5 seconds, 5 seconds, actorProvider.actor, ProcessOutbox)
+    scheduleTask(actor.system, 5 seconds, 5 seconds, actor.ref, ProcessOutbox)
   }
 
-  override def processOutbox() { actorProvider.actor ! ProcessOutbox }
-  override def processMail(mail: ElectronicMail) { actorProvider.actor ! ProcessMail(mail) }
+  override def processOutbox() { actor.ref ! ProcessOutbox }
+  override def processMail(mail: ElectronicMail) { actor.ref ! ProcessMail(mail) }
 }
 
 private[mail] case class ProcessOutbox()

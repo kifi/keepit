@@ -13,7 +13,8 @@ CREATE TABLE message_thread (
     replyable bool NOT NULL,
 
     PRIMARY KEY (id),
-    KEY message_thread_i_ext_id (external_id(8)),
+    KEY message_thread_i_ext_id (external_id),
+    -- KEY message_thread_i_ext_id (external_id(8)), --Prod
     KEY message_thread_i_participants_uri (uri_id, participants_hash)
 );
 

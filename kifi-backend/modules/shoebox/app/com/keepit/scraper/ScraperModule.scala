@@ -10,7 +10,6 @@ case class ScraperImplModule() extends ScraperModule {
 
   def configure {
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
-    bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
   }
 
   @Singleton
