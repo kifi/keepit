@@ -542,11 +542,8 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
               }, page);
           });
         });
-        worker.port.on("api:load", function(path, callbackId) {
-          worker.port.emit("api:respond", callbackId, data.load(path));
-        });
-        worker.port.on("api:require", function(path, callbackId) {
-          var o = deps(path, injected);
+        worker.port.on("api:require", function(paths, callbackId) {
+          var o = deps(paths, injected);
           exports.log("[api:require] tab:", tab.id, o);
           markInjected(injected, o);
           worker.port.emit("api:inject", o.styles.map(load), o.scripts.map(load), callbackId);

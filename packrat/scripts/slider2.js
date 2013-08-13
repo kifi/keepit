@@ -60,7 +60,7 @@ slider2 = function() {
     var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"m":0}');
     api.log("[createSlider] kept: %s counts: %o", kept || "no", counts);
 
-    render("html/metro/slider2.html", {
+    render("html/metro/slider2", {
       "bgDir": api.url("images/keeper"),
       "isKept": kept,
       "isPrivate": kept == "private",
@@ -124,7 +124,7 @@ slider2 = function() {
         var btn = this;
         api.port.emit("get_keepers", function(o) {
           if (o.keepers.length) {
-            render("html/metro/keepers.html", {
+            render("html/metro/keepers", {
               link: true,
               keepers: pick(o.keepers, 8),
               captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps)
@@ -137,7 +137,7 @@ slider2 = function() {
                 position: positionIt});
             });
           } else {
-            render("html/keeper/titled_tip.html", {
+            render("html/keeper/titled_tip", {
               title: (o.kept ? "Unkeep" : "Keep") + " (" + CO_KEY + "+Shift+K)",
               html: o.kept ? "Un-keeping this page will<br>remove it from your keeps." :
                 "Keeping this page helps you<br>easily find it later."
@@ -159,7 +159,7 @@ slider2 = function() {
         var $a = $(this);
         var friend = $a.closest(".kifi-slider2-tip").data("keepers").filter(hasId($a.data("id")))[0];
         if (!friend) return;
-        render("html/friend_card.html", {
+        render("html/friend_card", {
           name: friend.firstName + " " + friend.lastName,
           id: friend.id,
           iconsUrl: api.url("images/social_icons.png")
@@ -188,7 +188,7 @@ slider2 = function() {
           "Keeping this privately allows you<br>to find this page easily without<br>letting anyone know you kept it." : publicly ?
           "This keep is public. Making it private<br>allows you to find it easily without<br>letting anyone know you kept it." :
           "This keep is private. Making it<br>public allows your friends to<br>discover that you kept it.";
-        render("html/keeper/titled_tip.html", {title: title, html: html}, function(html) {
+        render("html/keeper/titled_tip", {title: title, html: html}, function(html) {
           configureHover(html, {
             mustHoverFor: 700,
             hideAfter: 4000,
@@ -213,7 +213,7 @@ slider2 = function() {
           n: ["Notifications", "View all of your notifications.<br>Any new ones are highlighted."],
           m: ["Private Messages (" + CO_KEY + "+Shift+M)", "Send this page to friends<br>and start a discussion."]
         }[this.dataset.loc.substr(1,1)];
-        render("html/keeper/titled_tip.html", {title: tip[0], html: tip[1]}, function(html) {
+        render("html/keeper/titled_tip", {title: tip[0], html: tip[1]}, function(html) {
           configureHover(html, {
             mustHoverFor: 700,
             hideAfter: 4000,
@@ -420,7 +420,7 @@ slider2 = function() {
       var left = back || toPaneIdx(pane) < toPaneIdx(toPaneName(paneHistory[0]));
       $slider.find(".kifi-at").removeClass("kifi-at").end()
         .find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
-      render("html/metro/pane_" + pane + ".html", params, function(html) {
+      render("html/metro/pane_" + pane, params, function(html) {
         var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden");
         var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
         var $old = $cart.find(".kifi-pane-box");
@@ -457,12 +457,12 @@ slider2 = function() {
         $slider.find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
       }
       api.require("styles/metro/pane.css", function() {
-        render("html/metro/pane.html", $.extend(params, {
+        render("html/metro/pane", $.extend(params, {
           site: location.hostname,
           kifiLogoUrl: api.url("images/kifi_logo.png"),
           gearUrl: api.url("images/metro/gear.png")
         }), {
-          pane: "pane_" + pane + ".html"
+          pane: "pane_" + pane
         },
         function(html) {
           $("html").addClass("kifi-pane-parent");
@@ -486,7 +486,7 @@ slider2 = function() {
           })
           .bindHover(".kifi-pane-head-logo", {mustHoverFor: 700, hideAfter: 2500, click: "hide"})
           .bindHover(".kifi-pane-head-feedback", function(configureHover) {
-            render("html/keeper/titled_tip.html", {
+            render("html/keeper/titled_tip", {
               dir: "below",
               title: "Give Us Feedback",
               html: "Tell us your ideas for Kifi<br>or report an issue."
@@ -506,7 +506,7 @@ slider2 = function() {
               "width="+width+",height="+height+",resizable,top="+top+",left="+left);
           })
           .bindHover(".kifi-pane-head-settings:not(.kifi-active)", function(configureHover) {
-            render("html/keeper/titled_tip.html", {
+            render("html/keeper/titled_tip", {
               dir: "below",
               title: "Settings",
               html: "Customize your Kifi<br>experience."
@@ -753,7 +753,7 @@ slider2 = function() {
       if (lastShownAt) return;
       var $tile = $(tile).bindHover(function(configureHover) {
         // TODO: preload friend pictures
-        render("html/metro/keepers.html", {
+        render("html/metro/keepers", {
           keepers: pick(keepers, 8),
           captionHtml: formatCountHtml(0, keepers.length, otherKeeps)
         }, function(html) {

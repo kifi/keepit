@@ -65,7 +65,7 @@ var KifiNotification = {
   add: function(params) {
     params = $.extend(KifiNotification.defaultParams, params);
 
-    render("html/notify_box.html", {
+    render("html/notify_box", {
       formatSnippet: getSnippetFormatter,
       title: params.title,
       subtitle: params.subtitle,

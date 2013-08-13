@@ -1,5 +1,8 @@
 // @require styles/metro/threads.css
 // @require styles/metro/compose.css
+// @require scripts/html/metro/threads.js
+// @require scripts/html/metro/thread.js
+// @require scripts/html/metro/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/api.js
@@ -21,7 +24,7 @@ threadsPane = function() {
         t.messagesUnread = n < 0;
         t.participantsPictured = t.participants.slice(0, 4);
       });
-      render("html/metro/threads.html", {
+      $(render("html/metro/threads", {
         formatSnippet: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
         emptyUri: api.url("images/metro/bg_messages.png"),
@@ -33,19 +36,19 @@ threadsPane = function() {
         submitTip: (prefs.enterToSend ? "" : CO_KEY + "-") + "Enter to send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
-        thread: "thread.html",
-        compose: "compose.html"
-      }, function(html) {
-        $(html).prependTo($container)
+        thread: "thread",
+        compose: "compose"
+      })).prependTo($container)
+      // TODO: unindent below
         .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
         .on("click", "a[href^='x-kifi-sel:']", function(e) {
           e.preventDefault();
         })
         .on("click", ".kifi-thread", function() {
           var $th = $(this), id = $th.data("id");
-          var participants = $th.data("participants") ||
-            o.threads.filter(function(t) {return t.id == id})[0].participants;
-          $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["/messages/" + id, participants])
+          var recipients = $th.data("recipients") ||
+            o.threads.filter(function(t) {return t.id == id})[0].recipients;
+          $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["/messages/" + id, recipients])
         })
         .on("kifi:compose-submit", sendMessage.bind(null, $container))
         .find("time").timeago();
@@ -60,7 +63,6 @@ threadsPane = function() {
           $list.length = 0;
           $(window).off("resize.threads");
         });
-      });
     },
     update: function(thread, readTime) {
       if ($list.length) {
@@ -125,8 +127,8 @@ threadsPane = function() {
     th.participantsPictured = th.participants.slice(0, 4);
     th.formatSnippet = getSnippetFormatter;
     th.formatLocalDate = getLocalDateFormatter;
-    render("html/metro/thread.html", th, function(html) {
-      callback($(html).data("participants", th.participants).find("time").timeago().end());
+    render("html/metro/thread", th, function(html) {
+      callback($(html).data("participants", th. participants).find("time").timeago().end());
     });
   }
 
