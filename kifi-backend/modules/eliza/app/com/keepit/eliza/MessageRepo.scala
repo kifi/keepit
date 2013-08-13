@@ -9,6 +9,7 @@ import com.keepit.common.time.{currentDateTime, zones, Clock}
 import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import MessagingTypeMappers._
+import com.keepit.common.logging.Logging
 
 case class Message(
     id: Option[Id[Message]] = None,
@@ -42,7 +43,7 @@ class MessageRepoImpl @Inject() (
     val clock: Clock,
     val db: DataBaseComponent
   )
-  extends DbRepo[Message] with MessageRepo with ExternalIdColumnDbFunction[Message] {
+  extends DbRepo[Message] with MessageRepo with ExternalIdColumnDbFunction[Message] with Logging {
 
   import db.Driver.Implicit._
 
@@ -63,12 +64,16 @@ class MessageRepoImpl @Inject() (
   }
 
 
-  def get(thread: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession) : Seq[Message] = {
-    val query = (for (row <- table if row.thread === thread) yield row).drop(from)
-    to match {
+  def get(threadId: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession) : Seq[Message] = {
+    log.info(s"[get_thread] getting thread messages for thread_id ${threadId}. $from - $to")
+    val query = (for (row <- table if row.thread === threadId) yield row).drop(from)
+    log.info(s"[get_thread] getting thread messages for thread_id ${threadId}:\n${query.selectStatement}")
+    val got = to match {
       case Some(upper) => query.take(upper-from).sortBy(row => row.createdAt desc).list
       case None => query.sortBy(row => row.createdAt desc).list
     }
+    log.info(s"[get_thread] got thread messages for thread_id ${threadId}:\n${got}")
+    got
   }
 
 
