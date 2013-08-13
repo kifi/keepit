@@ -465,6 +465,7 @@ api.port.on({
   send_message: function(data, respond) {
     api.log("[send_message]", data);
     ajax("eliza", "POST", "/eliza/messages", data, function(o) {
+      socket.send(["get_threads_by_url", data.url]);
       api.log("[send_message] resp:", o);
       respond(o);
     });
