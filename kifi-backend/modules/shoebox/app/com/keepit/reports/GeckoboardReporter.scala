@@ -44,7 +44,9 @@ class GeckoboardReporterPluginImpl @Inject() (
     totalKeepsPerDay: TotalKeepsPerDay,
     uiKeepsPerDay: UIKeepsPerDay,
     totalKeepsPerWeek: TotalKeepsPerWeek,
-    uiKeepsPerWeek: UIKeepsPerWeek)
+    uiKeepsPerWeek: UIKeepsPerWeek,
+    totalKeepsPerMonth: TotalKeepsPerMonth,
+    uiKeepsPerMonth: UIKeepsPerMonth)
 extends GeckoboardReporterPlugin with Logging {
 
   implicit val actorTimeout = Timeout(60 seconds)
@@ -59,6 +61,8 @@ extends GeckoboardReporterPlugin with Logging {
     actor.ref ! uiKeepsPerDay
     actor.ref ! totalKeepsPerWeek
     actor.ref ! uiKeepsPerWeek
+    actor.ref ! totalKeepsPerMonth
+    actor.ref ! uiKeepsPerMonth
   }
 
   override def onStart() {
@@ -68,5 +72,7 @@ extends GeckoboardReporterPlugin with Logging {
     cronTask(quartz, actor.ref, "0 0 * * * ?", uiKeepsPerDay)
     cronTask(quartz, actor.ref, "0 0 0/6 * * ?", totalKeepsPerWeek)
     cronTask(quartz, actor.ref, "0 0 0/6 * * ?", uiKeepsPerWeek)
+    cronTask(quartz, actor.ref, "0 0 0/6 * * ?", totalKeepsPerMonth)
+    cronTask(quartz, actor.ref, "0 0 0/6 * * ?", uiKeepsPerMonth)
   }
 }
