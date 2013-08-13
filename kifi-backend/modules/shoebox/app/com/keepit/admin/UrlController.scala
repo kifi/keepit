@@ -20,6 +20,7 @@ import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.integrity.ChangedUri
 import com.keepit.integrity.MergedUri
+import com.keepit.integrity.SplittedUri
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -92,7 +93,13 @@ class UrlController @Inject() (
           // in readOnly mode, id maybe empty
           if (normalizedUri.id.isEmpty || url.normalizedUriId.id != normalizedUri.id.get.id) {
             changes("url") += 1
-            if (!readOnly) uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = url.normalizedUriId, newUri = normalizedUri.id.get))
+            if (!readOnly) {
+              reason match {
+                case URLHistoryCause.MERGE => uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = url.normalizedUriId, newUri = normalizedUri.id.get))
+                case URLHistoryCause.SPLIT => uriIntegrityPlugin.handleChangedUri(SplittedUri(url = url, newUri = normalizedUri.id.get))
+              }
+
+            }
           }
         }
       }
