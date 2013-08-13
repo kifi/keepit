@@ -36,6 +36,8 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def get(thread: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession)  : Seq[Message]
 
+  def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[Message]
+
 }
 
 @Singleton
@@ -74,6 +76,10 @@ class MessageRepoImpl @Inject() (
     }
     log.info(s"[get_thread] got thread messages for thread_id ${threadId}:\n${got}")
     got
+  }
+
+  def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[Message] = {
+    (for (row <- table if row.thread===threadId && row.createdAt>after) yield row).sortBy(row => row.createdAt desc).list
   }
 
 

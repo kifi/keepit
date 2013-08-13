@@ -11,9 +11,9 @@ import com.keepit.common.net.UserAgent
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.serializer.SocialUserSerializer
-import java.sql.{Timestamp, Clob, Blob}
+import java.sql.{Timestamp, Clob, Blob, Date}
 import javax.sql.rowset.serial.{SerialBlob, SerialClob}
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, LocalDate}
 import play.api.libs.json._
 import scala.Some
 import scala.slick.driver._
@@ -58,6 +58,14 @@ object FortyTwoTypeMappers {
   }
 
   implicit val listDateTimeSP: SetParameter[List[DateTime]] = seqParam[DateTime]
+
+  implicit object SetLocalDate extends SetParameter[LocalDate] {
+    def apply(v: LocalDate, pp: PositionedParameters) {
+      pp.setDate(new Date(v.toDate().getTime()))
+    }
+  }
+
+  implicit val listLocalDateSP: SetParameter[List[LocalDate]] = seqParam[LocalDate]
 
   implicit object GenericIdTypeMapper extends BaseTypeMapper[Id[Model[_]]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Model[_]](profile)

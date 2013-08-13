@@ -36,4 +36,12 @@ class ElizaController @Inject() (notificationRouter: NotificationRouter) extends
     })
   }
 
+  def sendToAllUsers() = Action { request =>
+    Async(future{
+      val req = request.body.asJson.get.asInstanceOf[JsArray]
+      notificationRouter.sendToAllUsers(req)
+      Ok("")
+    })
+  }
+
 }
