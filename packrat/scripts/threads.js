@@ -22,7 +22,7 @@ threadsPane = function() {
         var n = messageCount(t, new Date(o.read[t.id] || 0));
         t.messageCount = n < -9 ? "9+" : Math.abs(n);
         t.messagesUnread = n < 0;
-        t.recipientsPictured = t.recipients.slice(0, 4);
+        t.participantsPictured = t.participants.slice(0, 4);
       });
       $(render("html/metro/threads", {
         formatSnippet: getSnippetFormatter,
@@ -114,9 +114,9 @@ threadsPane = function() {
           o[f.id] = f;
           return o;
         }, {});
-        var recipients = recipientIds.map(function(id) {return friends[id]});
+        var participants = recipientIds.map(function(id) {return friends[id]});
         var locator = "/messages/" + (resp.parentId || resp.id);
-        $container.closest(".kifi-pane").triggerHandler("kifi:show-pane", [locator, recipients]);
+        $container.closest(".kifi-pane").triggerHandler("kifi:show-pane", [locator, participants]);
       });
   }
 
@@ -124,11 +124,11 @@ threadsPane = function() {
     var n = messageCount(th, new Date(readTime || 0));
     th.messageCount = n < -9 ? "9+" : Math.abs(n);
     th.messagesUnread = n < 0;
-    th.recipientsPictured = th.recipients.slice(0, 4);
+    th.participantsPictured = th.participants.slice(0, 4);
     th.formatSnippet = getSnippetFormatter;
     th.formatLocalDate = getLocalDateFormatter;
     render("html/metro/thread", th, function(html) {
-      callback($(html).data("recipients", th.recipients).find("time").timeago().end());
+      callback($(html).data("participants", th. participants).find("time").timeago().end());
     });
   }
 
