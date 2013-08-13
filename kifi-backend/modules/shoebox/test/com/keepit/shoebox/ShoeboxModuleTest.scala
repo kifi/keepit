@@ -29,6 +29,7 @@ import com.keepit.learning.topicmodel.FakeWordTopicModule
 import com.keepit.learning.topicmodel.DevTopicModelModule
 import com.keepit.learning.topicmodel.DevTopicStoreModule
 import com.keepit.eliza.TestElizaServiceClientModule
+import com.keepit.scraper.FakeScraperModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -56,6 +57,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         DevTopicStoreModule(),
         GeckoboardModule(),
         FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
+        FakeScraperModule(), // This one should not be required once the Scraper is off Shoebox
         TestElizaServiceClientModule()
       )) {
         val ClassRoute = "@(.+)@.+".r

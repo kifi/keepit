@@ -3,14 +3,17 @@ package com.keepit.normalizer
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.model.{Normalization, NormalizedURIRepo, UriNormalizationRuleRepo, NormalizedURI}
+import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.keepit.scraper.ScraperPlugin
-import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.duration._
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
-import scala.util.{Try, Success, Failure}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
+import scala.util.{Try, Failure}
+import com.keepit.common.healthcheck.HealthcheckError
+import scala.util.Success
+import com.keepit.integrity.{ChangedUri, UriIntegrityPlugin}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
@@ -19,12 +22,18 @@ trait NormalizationService {
 }
 
 @Singleton
-class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizationRuleRepo, scraperPlugin: ScraperPlugin, monitoredAwait: MonitoredAwait, healthcheckPlugin: HealthcheckPlugin) extends NormalizationService with Logging {
+class NormalizationServiceImpl @Inject() (
+  normalizationRuleRepo: UriNormalizationRuleRepo,
+  failedContentCheckRepo: FailedUriNormalizationRepo,
+  uriIntegrityPlugin: UriIntegrityPlugin,
+  scraperPlugin: ScraperPlugin,
+  monitoredAwait: MonitoredAwait,
+  healthcheckPlugin: HealthcheckPlugin) extends NormalizationService with Logging {
 
   def normalize(uriString: String)(implicit session: RSession): String = {
     val prepUrlTry = for {
       uri <- URI.parse(uriString)
-      prepUrl <- Try { PreNormalizer(uri).toString() }
+      prepUrl <- Try { Prenormalizer(uri).toString() }
     } yield prepUrl
 
     prepUrlTry match {
@@ -63,8 +72,8 @@ class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizatio
       }
     }
 
-    def findStrongerMatch(orderedCandidates: List[NormalizationCandidate]): (Option[NormalizedURI], Seq[String]) = orderedCandidates match {
-      case Nil => (None, Nil)
+    def findStrongerMatch(orderedCandidates: List[NormalizationCandidate], failedContentChecks: List[String]): (Option[NormalizedURI], Seq[String], Seq[String]) = orderedCandidates match {
+      case Nil => (None, Nil, failedContentChecks)
       case strongerCandidate::weakerCandidates => {
         assert(current.normalization.isEmpty || current.normalization.get <= strongerCandidate.normalization)
         assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization)
@@ -72,15 +81,15 @@ class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizatio
         val strongerCandidateUrl = normalize(strongerCandidate.url)
 
         if (current.url == strongerCandidateUrl) {
-          if (current.normalization == strongerCandidate.normalization) (None, Nil)
+          if (current.normalization == strongerCandidate.normalization) (None, Nil, failedContentChecks)
           else {
             val currentWithUpgradedNormalization = current.withNormalization(strongerCandidate.normalization)
             val toBeMigrated = weakerCandidates.takeWhile(current.normalization.isEmpty || _.normalization >= current.normalization.get).map(_.url)
-            (Some(currentWithUpgradedNormalization), toBeMigrated)
+            (Some(currentWithUpgradedNormalization), toBeMigrated, failedContentChecks)
           }
         }
 
-        else {
+        else if (checkSignature(strongerCandidateUrl)) {
           val candidateNormalizedURI = normalizedURIRepo.getByUri(strongerCandidateUrl) match {
             case None => NormalizedURI.withHash(normalizedUrl = strongerCandidateUrl, normalization = Some(strongerCandidate.normalization))
             case Some(uri) =>
@@ -88,17 +97,17 @@ class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizatio
                 uri.withNormalization(strongerCandidate.normalization)
               else uri
           }
-          if (checkSignature(candidateNormalizedURI.url)) {
-            val toBeMigrated = current.url :: weakerCandidates.takeWhile(current.normalization.isEmpty || _.normalization >= current.normalization.get).map(_.url)
-            (Some(candidateNormalizedURI), toBeMigrated)
-          }
-          else findStrongerMatch(weakerCandidates)
+          val toBeMigrated = current.url :: weakerCandidates.takeWhile(current.normalization.isEmpty || _.normalization >= current.normalization.get).map(_.url)
+
+          (Some(candidateNormalizedURI), toBeMigrated, failedContentChecks)
         }
+
+        else findStrongerMatch(weakerCandidates, strongerCandidateUrl::failedContentChecks)
       }
     }
 
     lazy val currentContentSignatureFuture = scraperPlugin.asyncSignature(current.url)
-    def checkSignature(normalizedCandidateUrl: String): Boolean = {
+    def checkSignature(normalizedCandidateUrl: String): Boolean = !failedContentCheckRepo.contains(current.url, normalizedCandidateUrl) && {
       val signaturesFuture = for {
         currentContentSignatureOption <- currentContentSignatureFuture
         candidateContentSignatureOption <- scraperPlugin.asyncSignature(normalizedCandidateUrl) if currentContentSignatureOption.isDefined
@@ -114,7 +123,13 @@ class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizatio
 
     def migrate(authoritativeURI: NormalizedURI, urlsToBeMigrated: Seq[String]): NormalizedURI = {
       normalizedURIRepo.save(authoritativeURI)
-      // For each existing url, add rule, grandfather references
+      val changedUris = for {
+        url <- urlsToBeMigrated
+        normalizedURI <- normalizedURIRepo.getByUri(url)
+      } yield ChangedUri(oldUri = normalizedURI.id.get, newUri = authoritativeURI.id.get, URLHistoryCause.MERGE)
+
+      changedUris.foreach(uriIntegrityPlugin.handleChangedUri(_))
+      authoritativeURI
     }
 
     //Main routine
@@ -124,8 +139,8 @@ class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizatio
       case None => candidates ++ buildInternalCandidates()
     }
 
-    val (authoritativeURI, urlsToBeMigrated) = findStrongerMatch(allCandidates.toList.sortBy(_.normalization).reverse)
+    val (authoritativeURI, urlsToBeMigrated, failedContentChecks) = findStrongerMatch(allCandidates.toList.sortBy(_.normalization).reverse, Nil)
+    failedContentChecks.foreach(failedContentCheckRepo.createOrIncrease(_, current.url))
     authoritativeURI.map(migrate(_, urlsToBeMigrated))
-
   }
 }

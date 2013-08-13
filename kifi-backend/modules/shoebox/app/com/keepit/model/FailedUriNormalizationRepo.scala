@@ -9,7 +9,8 @@ import com.keepit.common.db.slick.DBSession._
 @ImplementedBy(classOf[FailedUriNormalizationRepoImpl])
 trait FailedUriNormalizationRepo extends Repo[FailedUriNormalization]{
   def getByUrlHashes(urlHash: UrlHash, mappedUrlHash: UrlHash)(implicit session: RSession): Option[FailedUriNormalization]
-  def createOrIncrease(url: String, mappedUrl: String)(implicit session: RWSession): Unit
+  def createOrIncrease(prepUrl: String, mappedUrl: String)(implicit session: RWSession): Unit
+  def contains(prepUrl: String, mappedUrl: String)(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -36,10 +37,16 @@ class FailedUriNormalizationRepoImpl @Inject()(
 
   def createOrIncrease(prepUrl: String, mappedUrl: String)(implicit session: RWSession): Unit = {
     val (prepUrlHash, mappedUrlHash) = (NormalizedURI.hashUrl(prepUrl), NormalizedURI.hashUrl(mappedUrl))
-    val r = (for( r <- table if (r.prepUrlHash === prepUrlHash && r.mappedUrlHash === mappedUrlHash)) yield r).firstOption
+    val r = getByUrlHashes(prepUrlHash: UrlHash, mappedUrlHash: UrlHash)
     r match {
       case Some(record) => save(record.withCounts(record.counts + 1))
       case None => save( FailedUriNormalization(prepUrlHash = prepUrlHash, mappedUrlHash = mappedUrlHash, prepUrl = prepUrl, mappedUrl = mappedUrl, counts = 1, lastContentCheck = currentDateTime) )
     }
   }
+
+  def contains(prepUrl: String, mappedUrl: String)(implicit session: RSession): Boolean = {
+    val (prepUrlHash, mappedUrlHash) = (NormalizedURI.hashUrl(prepUrl), NormalizedURI.hashUrl(mappedUrl))
+    getByUrlHashes(prepUrlHash: UrlHash, mappedUrlHash: UrlHash).nonEmpty
+  }
+
 }

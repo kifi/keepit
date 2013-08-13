@@ -5,7 +5,7 @@ import com.keepit.common.net.URI
 trait URINormalizer extends PartialFunction[URI, URI]
 trait StaticNormalizer extends URINormalizer
 
-object PreNormalizer extends StaticNormalizer {
+object Prenormalizer extends StaticNormalizer {
   val normalizers: Seq[StaticNormalizer] =
     Seq(AmazonNormalizer, GoogleNormalizer, YoutubeNormalizer, RemoveWWWNormalizer, LinkedInNormalizer, DefaultNormalizer)
 
