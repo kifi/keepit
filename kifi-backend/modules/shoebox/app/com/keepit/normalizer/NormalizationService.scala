@@ -50,7 +50,7 @@ class NormalizationServiceImpl @Inject() (
 
   def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo, session: RWSession): Option[NormalizedURI] = {
 
-    // Inner methods
+    // Inner method that builds internal candidates from alternate schemes/hosts [NO DB]
     def buildInternalCandidates(): Seq[NormalizationCandidate] = {
       val internalCandidatesTry =
         for {
@@ -72,6 +72,23 @@ class NormalizationServiceImpl @Inject() (
       }
     }
 
+    // Inner method that content-checks a candidate url versus the current one, for which the signature is cached in closure [DB READONLY]
+    lazy val currentContentSignatureFuture = scraperPlugin.asyncSignature(current.url)
+    def checkSignature(normalizedCandidateUrl: String): Boolean = !failedContentCheckRepo.contains(current.url, normalizedCandidateUrl) && {
+      val signaturesFuture = for {
+        currentContentSignatureOption <- currentContentSignatureFuture
+        candidateContentSignatureOption <- scraperPlugin.asyncSignature(normalizedCandidateUrl) if currentContentSignatureOption.isDefined
+      } yield (currentContentSignatureOption, candidateContentSignatureOption)
+
+      val signatures = monitoredAwait.result(signaturesFuture, 2 minutes , s"Content signatures of URLs ${current.url} and ${normalizedCandidateUrl} could not be compared.", (None, None))
+
+      signatures match {
+        case (Some(currentContentSignature), Some(candidateContentSignature)) => currentContentSignature.similarTo(candidateContentSignature) > 0.9
+        case _ => false
+      }
+    }
+
+    // Recursive inner method that tries to find a matching normalization and splits candidates into migration candidate urls and failed candidate urls [DB READONLY]
     def findStrongerMatch(orderedCandidates: List[NormalizationCandidate], failedContentChecks: List[String]): (Option[NormalizedURI], Seq[String], Seq[String]) = orderedCandidates match {
       case Nil => (None, Nil, failedContentChecks)
       case strongerCandidate::weakerCandidates => {
@@ -106,21 +123,7 @@ class NormalizationServiceImpl @Inject() (
       }
     }
 
-    lazy val currentContentSignatureFuture = scraperPlugin.asyncSignature(current.url)
-    def checkSignature(normalizedCandidateUrl: String): Boolean = !failedContentCheckRepo.contains(current.url, normalizedCandidateUrl) && {
-      val signaturesFuture = for {
-        currentContentSignatureOption <- currentContentSignatureFuture
-        candidateContentSignatureOption <- scraperPlugin.asyncSignature(normalizedCandidateUrl) if currentContentSignatureOption.isDefined
-      } yield (currentContentSignatureOption, candidateContentSignatureOption)
-
-      val signatures = monitoredAwait.result(signaturesFuture, 2 minutes , s"Content signatures of URLs ${current.url} and ${normalizedCandidateUrl} could not be compared.", (None, None))
-
-      signatures match {
-        case (Some(currentContentSignature), Some(candidateContentSignature)) => currentContentSignature.similarTo(candidateContentSignature) > 0.9
-        case _ => false
-      }
-    }
-
+    // Inner method that triggers the necessary migrations [DB READWRITE]
     def migrate(authoritativeURI: NormalizedURI, urlsToBeMigrated: Seq[String]): NormalizedURI = {
       normalizedURIRepo.save(authoritativeURI)
       val mergedUris = for {
@@ -132,7 +135,7 @@ class NormalizationServiceImpl @Inject() (
       authoritativeURI
     }
 
-    //Main routine
+    // Main routine [DB READWRITE]
 
     val allCandidates = current.normalization match {
       case Some(currentNormalization) => candidates.filter(_.normalization >= currentNormalization)
