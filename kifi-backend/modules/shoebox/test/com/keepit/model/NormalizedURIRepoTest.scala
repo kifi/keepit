@@ -1,11 +1,13 @@
 package com.keepit.model
 
 import org.specs2.mutable._
-
 import com.google.inject.Injector
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
+import org.joda.time.DateTime
+import com.keepit.common.time.zones.PT
+
 
 class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
 
@@ -178,6 +180,20 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
           val blowup = uriRepo.getByUriOrElseCreate("http://www.arte.tv/fr/3482046.html")
           uriRepo.count === 1
           blowup.url === "http://www.arte.tv/fr/3482046.html"
+        }
+      }
+    }
+
+    "redirect works" in {
+      withDb() { implicit injector =>
+        db.readWrite { implicit s =>
+          val uri1 = createUri(title = "old", url = "http://www.keepit.com/old")
+          val uri2 = createUri(title = "redirect", url = "http://www.keepit.com/redirect")
+          val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
+          uriRepo.save(uri1.withRedirect(uri2.id.get, t))
+          val updated = uriRepo.get(uri1.id.get)
+          updated.redirect === uri2.id
+          updated.redirectTime === Some(t)
         }
       }
     }
