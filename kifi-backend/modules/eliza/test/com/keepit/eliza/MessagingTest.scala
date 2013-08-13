@@ -83,10 +83,12 @@ class MessagingTest extends Specification with DbTestInjector {
         notified.isDefinedAt(user1)===false
         notified(user2)===2
 
+        messagingController.getLatestSendableNotifications(user3, 10)
 
         messagingController.getPendingNotifications(user3).length===1 //there was only one thread created due to merging
         messagingController.setAllNotificationsRead(user3)
         messagingController.getPendingNotifications(user3).length===0
+
       }
     }
 
