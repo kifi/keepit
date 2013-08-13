@@ -19,10 +19,10 @@ trait UserExperimentRepo extends Repo[UserExperiment] {
 
 @Singleton
 class UserExperimentRepoImpl @Inject()(
-                                        val db: DataBaseComponent,
-                                        val clock: Clock,
-                                        userExperimentCache: UserExperimentCache
-                                        ) extends DbRepo[UserExperiment] with UserExperimentRepo {
+    val db: DataBaseComponent,
+    val clock: Clock,
+    userExperimentCache: UserExperimentCache)
+  extends DbRepo[UserExperiment] with UserExperimentRepo {
 
   import DBSession._
   import FortyTwoTypeMappers._
