@@ -20,7 +20,7 @@ class FailedContentCheckRepoImpl @Inject()(
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override val table = new RepoTable[FailedContentCheck](db, "failed_uri_normalization"){
+  override val table = new RepoTable[FailedContentCheck](db, "failed_content_check"){
     def url1Hash = column[UrlHash]("url1_hash", O.NotNull)
     def url2Hash = column[UrlHash]("url2_hash", O.NotNull)
     def url1 = column[String]("url1", O.NotNull)
