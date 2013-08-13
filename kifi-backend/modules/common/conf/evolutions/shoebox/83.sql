@@ -4,16 +4,16 @@
 --	rename to failed_content_check;
 
 --alter TABLE failed_content_check
---	change prep_url_hash to url1_hash varchar(26) NOT NULL;
+--	change prep_url_hash url1_hash varchar(26) NOT NULL;
 
 --alter TABLE failed_content_check
---	change mapped_url_hash to url2_hash varchar(26) NOT NULL;
+--	change mapped_url_hash url2_hash varchar(26) NOT NULL;
 
 --alter TABLE failed_content_check
---	change prep_url to url1 varchar(3072) NOT NULL;
+--	change prep_url url1 varchar(3072) NOT NULL;
 
 --alter TABLE failed_content_check
---	change mapped_url to url2 varchar(3072) NOT NULL;
+--	change mapped_url url2 varchar(3072) NOT NULL;
 
 --	insert into evolutions (name, description) values('83.sql', 'modify table and column names in failed_uri_normalization');
 
