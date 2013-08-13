@@ -331,11 +331,14 @@ class MessagingController @Inject() (
 
   def getThreadMessages(thread: MessageThread, pageOpt: Option[Int]) : Seq[Message] = 
     db.readOnly { implicit session =>
+      log.info(s"[get_thread] trying to get thread messages for thread extId ${thread.externalId}. pageOpt is $pageOpt")
       pageOpt.map { page =>
         val lower = MessagingController.THREAD_PAGE_SIZE*page
         val upper = MessagingController.THREAD_PAGE_SIZE*(page+1)-1
+        log.info(s"[get_thread] getting thread messages for thread extId ${thread.externalId}. lu: $lower, $upper")
         messageRepo.get(thread.id.get,lower,Some(upper)) 
       } getOrElse {
+        log.info(s"[get_thread] getting thread messages for thread extId ${thread.externalId}. no l/u")
         messageRepo.get(thread.id.get, 0, None)
       }
     }
