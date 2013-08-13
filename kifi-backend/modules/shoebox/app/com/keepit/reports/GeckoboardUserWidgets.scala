@@ -19,10 +19,20 @@ import play.api.Plugin
 import play.api.Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import org.joda.time._
+import org.joda.time.LocalDate
 import com.keepit.common.db.slick.FortyTwoTypeMappers._
 import scala.slick.lifted.Query
 import scala.slick.jdbc._
+import com.keepit.common.cache._
+
+case class UserRetentionKey(day: LocalDate) extends Key[Int] {
+  override val version = 0
+  val namespace = "user_retention"
+  def toKey(): String = day.toString
+}
+
+class UserRetentionCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[UserRetentionKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object UserQueries {
   val activeUsers = StaticQuery.query[(LocalDate, LocalDate, LocalDate, LocalDate), (Int, Option[Int])](
@@ -39,28 +49,29 @@ object UserQueries {
 trait RetentionPerDay {
   val db: Database
   val clock: Clock
+  val userRetentionCache: UserRetentionCache
 }
 
 trait RetentionWindow extends RetentionPerDay {
   implicit val dbMasterSlave = Database.Slave
 
   def countsPerDay(day: LocalDate) = db.readOnly { implicit s =>
-    val userKeeps = UserQueries.activeUsers.list((day.minusMonths(3), day.minusMonths(2), day.minusMonths(1), day))
+    val args = (day.minusMonths(3), day.minusMonths(2), day.minusMonths(1), day)
+    val userKeeps = UserQueries.activeUsers.list(args)
     (userKeeps.size, userKeeps.filter(_._2.isDefined).size)
   }
 
-  def ratioPerDay(day: LocalDate): Int =
+  def ratioPerDay(day: LocalDate): Int = userRetentionCache.getOrElse(UserRetentionKey(day)) {
     (countsPerDay(day) match {case (users, keepers) => 100d * (keepers.doubleValue / users)}).intValue
+  }
 
   def data(): SparkLine = {
     val today = clock.today
     val ratioOfMonth = (0 until 30) map today.minusDays map ratioPerDay
-    SparkLine("Retention Per Month", ratioOfMonth.head, ratioOfMonth)
+    SparkLine("Retention Per Month", ratioOfMonth.head, ratioOfMonth.reverse)
   }
 }
 
-class RetentionOverMonth @Inject() (val db: Database, val clock: Clock)
+class RetentionOverMonth @Inject() (val db: Database, val clock: Clock, val userRetentionCache: UserRetentionCache)
   extends GeckoboardWidget[SparkLine](GeckoboardWidgetId("37507-ed12ca14-740b-449b-8998-d9f7fc909c80"))
   with RetentionWindow
-
-
