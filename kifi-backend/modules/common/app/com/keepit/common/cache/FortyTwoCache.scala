@@ -154,7 +154,7 @@ trait ObjectCache[K <: Key[T], T] {
       case Some(valueOpt) => valueOpt
       case None => outerCache match {
         case Some(cache) => cache.get(key)
-        case None => None 
+        case None => None
       }
     }
   }
@@ -188,7 +188,7 @@ trait ObjectCache[K <: Key[T], T] {
           case None => orElse
         }
         setInnerCache(key, valueOption)
-        valueOption 
+        valueOption
     }
   }
 
@@ -229,7 +229,6 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   val repo: FortyTwoCachePlugin
   val serializer: Serializer[T]
   val stats = CacheStatistics
-
 
   protected[cache] def getFromInnerCache(key: K): Option[Option[T]] = {
     val getStart = currentDateTime.getMillis()
@@ -274,7 +273,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
             case (isDefined: Boolean, x: java.lang.Double) => (isDefined, x.doubleValue())
             case (isDefined: Boolean, x: java.lang.Character) => (isDefined, x.charValue())
             case (isDefined: Boolean, x: java.lang.Boolean) => (isDefined, x.booleanValue())
-            case (false, _) => (false, null) 
+            case (false, _) => (false, null)
             case x: scala.Array[_] => x
             case x: JsValue => Json.stringify(x)
             case x: String => x

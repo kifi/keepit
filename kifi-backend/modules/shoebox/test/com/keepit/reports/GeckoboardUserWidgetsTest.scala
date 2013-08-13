@@ -82,7 +82,7 @@ class GeckoboardUserWidgetsTest extends Specification with ShoeboxApplicationInj
         clock += Days.ONE
         val data = inject[RetentionOverMonth].data
         println(data.json)
-        data === SparkLine("Retention Per Month", 40 ,Vector(40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 25, 25, 33, 33, 100, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        data === SparkLine("Retention Per Month", 40 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 100, 33, 33, 25, 25, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40))
       }
     }
   }
