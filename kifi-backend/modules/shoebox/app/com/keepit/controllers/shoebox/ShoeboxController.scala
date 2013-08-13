@@ -125,7 +125,7 @@ class ShoeboxController @Inject() (
 
   def normalizeURL() = Action(parse.json) { request =>
     val url : String = Json.fromJson[String](request.body).get
-    val uriId = db.readWrite { implicit s =>
+    val uriId = db.readWrite(attempts=2) { implicit s =>
       normUriRepo.getByUriOrElseCreate(url)
     }
     Ok(Json.toJson(uriId))
