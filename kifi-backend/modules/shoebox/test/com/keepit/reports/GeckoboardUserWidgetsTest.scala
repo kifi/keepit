@@ -120,12 +120,12 @@ class GeckoboardUserWidgetsTest extends Specification with ShoeboxApplicationInj
         setup(clock)
         clock += Days.ONE
         inject[RetentionOverMonth].data === SparkLine("30D Retention %", 40 ,Vector(0, 0, 0, 0, 0, 100, 100, 33, 33, 25, 25, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40))
-        inject[RetentionOverWeek].data === SparkLine("30D Retention %", 50 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 50, 50, 50, 50))
-        inject[RetentionOverDay].data === SparkLine("30D Retention %", 0 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        inject[RetentionOverWeek].data === SparkLine("7D Retention %", 50 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 50, 50, 50, 50))
+        inject[RetentionOverDay].data === SparkLine("1D Retention %", 0 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
         clock += Days.days(10)
         inject[RetentionOverMonth].data === SparkLine("30D Retention %", 0 ,Vector(25, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 25, 25, 0, 0))
-        inject[RetentionOverWeek].data === SparkLine("30D Retention %", 0 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 50, 50, 50, 50, 50, 50, 0, 0, 0, 0, 0, 0, 0, 0))
-        inject[RetentionOverDay].data === SparkLine("30D Retention %", 0 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        inject[RetentionOverWeek].data === SparkLine("7D Retention %", 0 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 50, 50, 50, 50, 50, 50, 0, 0, 0, 0, 0, 0, 0, 0))
+        inject[RetentionOverDay].data === SparkLine("1D Retention %", 0 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
       }
     }
   }
