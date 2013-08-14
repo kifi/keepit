@@ -38,7 +38,7 @@ object UserQueries {
   val activeUsers = StaticQuery.query[(LocalDate, LocalDate, LocalDate, LocalDate), (Int, Option[Int])](
     s"""select u.id, b.bcount
       from (
-        select id from user where updated_at between ? and ? and id not in (${UserIdSql.DontShowInAnalytics})
+        select id from user where updated_at between ? and ? and id not in (${UserIdSql.DontShowInAnalytics}) and state = 'active'
       ) u
       left join (
         select user_id, count(*) as bcount from bookmark where updated_at between ? and ? and state = 'active' and source != 'INIT_LOAD' group by user_id
@@ -55,6 +55,7 @@ trait RetentionPerDay {
 trait RetentionWindow extends RetentionPerDay {
   implicit val dbMasterSlave = Database.Slave
   val period: Period
+  val title: String
 
   def countsPerDay(day: LocalDate) = db.readOnly { implicit s =>
     val args = (day.minus(period.multipliedBy(3)), day.minus(period.multipliedBy(2)), day.minus(period.multipliedBy(1)), day)
@@ -69,20 +70,20 @@ trait RetentionWindow extends RetentionPerDay {
   def data(): SparkLine = {
     val today = clock.today
     val ratioOfPeriod = (0 until 30) map today.minusDays map ratioPerDay
-    SparkLine("30D Retention %", ratioOfPeriod.head, ratioOfPeriod.reverse)
+    SparkLine(title, ratioOfPeriod.head, ratioOfPeriod.reverse)
   }
 }
 
 class RetentionOverMonth @Inject() (val db: Database, val clock: Clock, val userRetentionCache: UserRetentionCache)
   extends GeckoboardWidget[SparkLine](GeckoboardWidgetId("37507-ed12ca14-740b-449b-8998-d9f7fc909c80"))
-  with RetentionWindow { val period = Months.months(1).toPeriod() }
+  with RetentionWindow { val period = Months.months(1).toPeriod(); val title = "30D Retention %" }
 
 class RetentionOverWeek @Inject() (val db: Database, val clock: Clock, val userRetentionCache: UserRetentionCache)
   extends GeckoboardWidget[SparkLine](GeckoboardWidgetId("37507-4bcc8716-c0ec-440e-9114-342d0a833d1f"))
-  with RetentionWindow { val period = Days.days(7).toPeriod() }
+  with RetentionWindow { val period = Days.days(7).toPeriod(); val title = "7D Retention %" }
 
 class RetentionOverDay @Inject() (val db: Database, val clock: Clock, val userRetentionCache: UserRetentionCache)
   extends GeckoboardWidget[SparkLine](GeckoboardWidgetId("37507-893e9267-6539-48ce-9e16-5b599367c226"))
-  with RetentionWindow { val period = Days.days(1).toPeriod() }
+  with RetentionWindow { val period = Days.days(1).toPeriod(); val title = "1D Retention %" }
 
 
