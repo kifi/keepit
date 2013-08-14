@@ -444,9 +444,12 @@ api = function() {
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (this.readyState == 4) {
-          var arg = /^application\/json/.test(this.getResponseHeader("Content-Type")) ? JSON.parse(this.responseText) : this;
-          ((this.status == 200 ? done : fail) || api.noop)(arg);
-          done = fail = api.noop;  // ensure we don't call a callback again
+          if (this.status < 300) {
+            done && done(/^application\/json/.test(this.getResponseHeader("Content-Type")) ? JSON.parse(this.responseText) : this);
+          } else if (fail) {
+            fail(this);
+          }
+          done = fail = null;
         }
       }
       xhr.open(method, uri, true);
