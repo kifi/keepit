@@ -231,7 +231,7 @@ const socketHandlers = {
         for (var i = 0; i < d.threadCallbacks.length; i++) {
           var cb = d.threadCallbacks[i];
           if (th.id == cb.id || th.messages.some(hasId(cb.id))) {
-            cb.respond({id: th.id, messages: th.messages});
+            cb.respond({id: th.id, messages: th.messages, participants: th.messages[0].participants});
             d.threadCallbacks.splice(i--, 1);
           }
         }
@@ -515,7 +515,7 @@ api.port.on({
         var id = (th || data).id;
         socket.send(["get_thread", id]);
         if (data.respond) {
-          (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond, participants: th.participants || th.recipients});
+          (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond});
         }
       }
     });
