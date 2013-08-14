@@ -408,14 +408,15 @@ a.page-url[href]:hover {text-decoration: underline}
 .page-how-pri>*>*>.page-how-3::before {width: 12px; background-position: -34px 0}
 a.page-keep[href],
 a.page-priv[href] {display: inline-block; margin-top: 5px; color: #fff; background-color: #b8c5d2; font-size: 13px; line-height: 30px; width: 50%; -moz-box-sizing: border-box; box-sizing: border-box; text-align: center; -webkit-font-smoothing: antialiased}
-a.page-priv[href] {border-left: 2px solid #eff2f7}
+a.page-keep[href] {border-right: 1px solid #eff2f7}
+a.page-priv[href] {border-left: 1px solid #eff2f7}
 a.page-keep[href]:hover,
 a.page-priv[href]:hover {background-color: #a0b1c2}
 a.page-keep[href]:active,
 a.page-priv[href]:active {background-color: #8699ab}
 [data-kept^=p]>*>.page-keep[href]::before,
 .page-priv[href]::before {content: " "; display: inline-block; height: 13px; width: 11px; background: url(../img/keep-icons.png) 0 0/auto 16px content-box; vertical-align: -1px; margin-right: 8px}
-:not([data-kept=pri])>*>.page-priv[href]::before {width: 10px; background-position: -11px 0; border-left: 2px solid transparent}
+:not([data-kept=pri])>*>.page-priv[href]::before {width: 10px; background-position: -11px 0}
 [data-kept=pri]>*>.page-priv[href]::before {width: 13px; background-position: -21px 0}
 .page-keep::after {content: "Keep"}
 [data-kept^=p]>*>.page-keep::after {content: "Unkeep"}
@@ -539,9 +540,9 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
   .keep-colls {background-image: url(../img/folder-icon-small.2x.png)}
   .splash ul>li>a::before {background-image: url(../img/splash.2x.png)}
-  .page-how>.page-how-text::before,
+  .page-how-3.page-how-3::before,
   [data-kept^=p]>*>.page-keep[href]::before,
-  .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
+  .page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
   .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
   .invite-filters>a[data-nw] {background-image: url(../img/networks.2x.png)}
   .profile-nw {background-image: url(../img/networks.2x.png)}
