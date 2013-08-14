@@ -9,6 +9,10 @@ import play.api.libs.json.{JsArray, Json}
 import play.modules.statsd.api.Statsd
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+
+import akka.actor.ActorSystem
 
 import org.joda.time.DateTime
 
@@ -35,7 +39,9 @@ trait NotificationRouter { //TODO Stephen: This needs a better name
 }
 
 @Singleton
-class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient) extends NotificationRouter with Logging { 
+class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient, system: ActorSystem) extends NotificationRouter with Logging {
+
+  system.scheduler.schedule(30 seconds, 1 minutes)(updateStatsD _)
 
   private var notificationCallbacks = Vector[(Option[Id[User]], Notification) => Unit]()
   private val userSockets = TrieMap[Id[User], TrieMap[Long, SocketInfo]]() 
@@ -102,6 +108,13 @@ class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient) 
       socketMap.values.foreach{ socket =>
         socket.channel.push(data)
       }
+    }
+  }
+
+  private def updateStatsD(): Unit = {
+    elizaServiceClient.connectedClientCount.map{ countSeq =>
+      val count : Int = countSeq.sum + connectedSockets
+      Statsd.gauge("websocket.channel.user.client", count)
     }
   }
 

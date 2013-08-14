@@ -10,6 +10,9 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Future, Promise}
+
 import play.api.libs.json.{JsArray, Json, JsObject}
 
 import com.google.inject.Inject
@@ -19,6 +22,8 @@ trait ElizaServiceClient extends ServiceClient {
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit
   def sendToUser(userId: Id[User], data: JsArray): Unit
   def sendToAllUsers(data: JsArray): Unit
+
+  def connectedClientCount: Future[Seq[Int]]
 
   //migration
   def importThread(data: JsObject): Unit
@@ -48,6 +53,12 @@ class ElizaServiceClientImpl @Inject() (
     broadcast(Eliza.internal.sendToAllUsers, data)
   }
 
+  def connectedClientCount: Future[Seq[Int]] = {
+    Future.sequence(broadcast(Eliza.internal.connectedClientCount)).map{ respSeq =>
+      respSeq.map{ resp => resp.body.toInt }
+    }
+  }
+
   //migration
   def importThread(data: JsObject): Unit = {
     call(Eliza.internal.importThread, data)
@@ -64,6 +75,11 @@ class FakeElizaServiceClientImpl(val healthcheck: HealthcheckPlugin) extends Eli
   def sendToUser(userId: Id[User], data: JsArray): Unit = {}
 
   def sendToAllUsers(data: JsArray): Unit = {}
+
+  def connectedClientCount: Future[Seq[Int]] = {
+    val p = Promise.successful(Seq[Int](1))
+    p.future
+  }
 
   //migration
   def importThread(data: JsObject): Unit = {}
