@@ -339,7 +339,9 @@ class BookmarksController @Inject() (
 
   def keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false) =AuthenticatedJsonAction { request =>
     implicit val externalIdFormat = ExternalId.format[Bookmark]
-    db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
+    db.readOnly { implicit s =>
+      collectionRepo.getByUserAndExternalId(request.userId, id)
+    } map { collection =>
       request.body.asJson.flatMap(Json.fromJson[Set[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
         val (added, removed) = addToCollection(keepExtIds, collection, removeOthers)
         Ok(Json.obj("added" -> added.size, "removed" -> removed.size))
