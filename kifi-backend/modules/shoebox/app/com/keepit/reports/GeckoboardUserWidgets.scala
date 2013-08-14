@@ -26,7 +26,7 @@ import scala.slick.jdbc._
 import com.keepit.common.cache._
 
 case class UserRetentionKey(day: LocalDate, period: Period) extends Key[Int] {
-  override val version = 0
+  override val version = 1
   val namespace = "user_retention"
   def toKey(): String = day.toString + "_" + period.toString
 }
