@@ -13,8 +13,10 @@ import com.keepit.common.actor.ActorInstance
 import play.api.Plugin
 import scala.concurrent.duration._
 
+trait ChangedUri
 
-case class ChangedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI], cause: URLHistoryCause)
+case class MergedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends ChangedUri
+case class SplittedUri(url: URL, newUri: Id[NormalizedURI]) extends ChangedUri
 
 class UriIntegrityActor @Inject()(
   db: Database,
@@ -30,20 +32,32 @@ class UriIntegrityActor @Inject()(
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
+  uriNormRuleRepo: UriNormalizationRuleRepo,
   healthcheckPlugin: HealthcheckPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
+
+  private def preNormalize(uri: String): String = {uri}   // DUMMY
 
   /**
    * any reference to the old uri should be redirected to the new one
    */
-  def handleChanged(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI], cause: URLHistoryCause): Unit = {
+  def handleMerge(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]): Unit = {
     if (oldUri == newUri) return
     db.readWrite{ implicit s =>
       urlRepo.getByNormUri(oldUri).map{ url =>
-        urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, cause)))
+        urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.MERGE)))
       }
 
-      uriRepo.save(uriRepo.get(oldUri).withState(NormalizedURIStates.INACTIVE))
+      val (u, v) = (uriRepo.get(oldUri), uriRepo.get(newUri))
+      if ( u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE && (v.state == NormalizedURIStates.ACTIVE || v.state == NormalizedURIStates.INACTIVE)){
+        uriRepo.save(v.withState(NormalizedURIStates.SCRAPE_WANTED))
+      }
+      uriRepo.save(u.withState(NormalizedURIStates.INACTIVE))
+
+      urlRepo.getByNormUri(oldUri).map{ url =>
+        val prepUrl = preNormalize(url.url)
+        uriNormRuleRepo.save( UriNormalizationRule(prepUrl = prepUrl, mappedUrl = v.url, prepUrlHash = NormalizedURI.hashUrl(prepUrl)))
+      }
 
       scrapeInfoRepo.getByUri(oldUri).map{ info =>
         scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
@@ -68,16 +82,37 @@ class UriIntegrityActor @Inject()(
       followRepo.getByUri(oldUri, excludeState = None).map{ follow =>
         followRepo.save(follow.withNormUriId(newUri))
       }
+    }
+  }
 
-      scrapeInfoRepo.getByUri(oldUri).map{ info =>
-        scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
+  def handleSplit(url: URL, newUri: Id[NormalizedURI]): Unit = {
+    db.readWrite { implicit s =>
+      urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.SPLIT)))
+      val (u, v) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUri))
+      if (u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE && (v.state == NormalizedURIStates.ACTIVE || v.state == NormalizedURIStates.INACTIVE))
+        uriRepo.save(uriRepo.get(newUri).withState(NormalizedURIStates.SCRAPE_WANTED))
+
+      bookmarkRepo.getByUrlId(url.id.get).map{ bm =>
+        bookmarkRepo.save(bm.withNormUriId(newUri))
       }
 
+      commentRepo.getByUrlId(url.id.get).map{ cm =>
+        commentRepo.save(cm.withNormUriId(newUri))
+      }
+
+      deepLinkRepo.getByUrl(url.id.get).map{ link =>
+        deepLinkRepo.save(link.withNormUriId(newUri))
+      }
+
+      followRepo.getByUrl(url.id.get, excludeState = None).map{ follow =>
+        followRepo.save(follow.withNormUriId(newUri))
+      }
     }
   }
 
   def receive = {
-    case ChangedUri(oldUri, newUri, cause) => handleChanged(oldUri, newUri, cause)
+    case MergedUri(oldUri, newUri) => handleMerge(oldUri, newUri)
+    case SplittedUri(url, newUri) => handleSplit(url, newUri)
   }
 
 }

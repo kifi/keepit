@@ -18,6 +18,7 @@ trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit
   def sendToUser(userId: Id[User], data: JsArray): Unit
+  def sendToAllUsers(data: JsArray): Unit
 
   //migration
   def importThread(data: JsObject): Unit
@@ -43,6 +44,10 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.sendToUser, payload)
   }
 
+  def sendToAllUsers(data: JsArray): Unit = {
+    broadcast(Eliza.internal.sendToAllUsers, data)
+  }
+
   //migration
   def importThread(data: JsObject): Unit = {
     call(Eliza.internal.importThread, data)
@@ -57,6 +62,8 @@ class FakeElizaServiceClientImpl(val healthcheck: HealthcheckPlugin) extends Eli
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}
 
   def sendToUser(userId: Id[User], data: JsArray): Unit = {}
+
+  def sendToAllUsers(data: JsArray): Unit = {}
 
   //migration
   def importThread(data: JsObject): Unit = {}

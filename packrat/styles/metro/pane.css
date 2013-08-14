@@ -296,6 +296,8 @@ a.kifi-pane-back::after {
   right: 0;
   bottom: 0;
   background: #fafafa;
+}
+.kifi-pane-notices>.kifi-pane-tall {
   overflow: hidden;
 }
 .kifi-pane-tall .kifi-scroll-inner {

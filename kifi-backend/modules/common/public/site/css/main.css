@@ -107,7 +107,7 @@ input.query::-ms-clear {display: none}
 :not(.empty)>*>.query-mag {left: 100%; -webkit-transition-delay: 0; transition-delay: 0}
 .main-head,
 .main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
-.main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
+.main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent; position: relative}
 .main-head.scrolled,
 .above-friends-list.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
 .main[data-view=search] .main-head {padding-top: 10px; height: 37px}
@@ -118,6 +118,10 @@ input.query::-ms-clear {display: none}
 .main:not([data-view=friends]) .friends,
 .main:not([data-view=blog]) .blog  {display: none}
 h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
+.undo {position: absolute; top: -8px; left: 0; right: 0; text-align: center; display: none}
+.undo-box {display: inline-block; background-color: #ffc; border: 1px solid #f8f4e8; border-radius: 2px; padding: 0 12px; font-size: 13px; font-weight: 300; line-height: 17px; height: 18px; white-space: nowrap}
+a.undo-link[href] {margin-left: 4px; font-weight: 500}
+a.undo-link[href]:hover {text-decoration: underline}
 
 .profile {position: absolute; top: 70px; left: 0; width: 100%; font-size: 14px; box-sizing: border-box; padding: 20px 50px; color: #818692;}
 .profile, .profile input, .profile h2 {font-weight: 300; letter-spacing: 1px;}
@@ -263,12 +267,16 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .main[data-view=search] .main-keeps {top: 107px}
 .main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
 
-.keep-group-title {margin-top: 7px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
-.keep-group-title+.keep {border-top: 0}
-.keep {background-color: #fff; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9; position: relative}
+.keep-group-title {margin-top: 7px; height: 33px; line-height: 33px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 0 30px; overflow: hidden; transition: height .3s ease-in-out}
+.keep-group-title+.keep {border-top: none}
+.keep {background-color: #fff; padding-left: 30px; border-top: 1px solid #f9f9f9; position: relative; -moz-box-sizing: border-box; box-sizing: border-box}
 .keep.detailed {background-color: #eff2f7}
 .keep.selected {background-color: #fffcf1; border-color: #f0f0f0}
 .keep.ui-draggable-dragging {border-top: none}
+.keep.toggling {overflow: hidden; transition: height .3s ease-in-out}
+.keep.unkept {height: 0 !important}
+.keep::before {content: " "; display: block; height: 10px}
+.keep::after {content: " "; display: block; height: 13px}
 .keep-arrow {position: absolute; right: 16px; width: 6px; height: 16px; bottom: 13px; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; cursor: pointer; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
 .keep-arrow:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
 .keep:hover .keep-arrow,
