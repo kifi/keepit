@@ -44,4 +44,8 @@ class ElizaController @Inject() (notificationRouter: NotificationRouter) extends
     })
   }
 
+  def connectedClientCount() = Action { request =>
+    Ok(notificationRouter.connectedSockets.toString)
+  }
+
 }
