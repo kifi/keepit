@@ -65,7 +65,7 @@ threadsPane = function() {
         });
     },
     update: function(thread, readTime) {
-      if ($list.length) {
+      if ($list.length && thread) {
         renderThread(thread, readTime, function($th) {
           var $old = $list.children("[data-id=" + thread.id + "],[data-id=]").first();
           if ($old.length) {
