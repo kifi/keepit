@@ -1000,10 +1000,6 @@ $(function() {
 	}).on("click", ".keep-coll-a", function(e) {
 		e.stopPropagation(), e.preventDefault();
 		navigate(this.href);
-	}).on("click", ".keep-coll-x", function(e) {
-		e.stopPropagation(), e.preventDefault();
-		var $coll = $(this.parentNode);
-		removeKeepsFromCollection($coll.data("id"), [$coll.closest(".keep").data("id")]);
 	}).on("click", ".keep-title>a", function(e) {
 		e.stopPropagation();
 	}).on("click", ".keep", function(e) {
