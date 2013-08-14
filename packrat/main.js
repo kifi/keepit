@@ -328,7 +328,7 @@ const socketHandlers = {
           thread = d.threads[i];
 
           var messages;
-          if (thread.messageCount > 1) {
+          if (thread.messageCount >= 1) {
             messages = messageData[threadId];
             if (messages) {
               var t = new Date(message.createdAt);
