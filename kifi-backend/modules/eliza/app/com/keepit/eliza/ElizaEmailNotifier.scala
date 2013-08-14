@@ -93,7 +93,7 @@ trait ElizaEmailNotifierPlugin extends SchedulingPlugin {
   def sendEmails(): Unit
 }
 
-//@AppScoped
+@AppScoped
 class ElizaEmailNotifierPluginImpl @Inject() (
     actor: ActorInstance[ElizaEmailNotifierActor],
     val schedulingProperties: SchedulingProperties) //only on leader
