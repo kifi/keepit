@@ -7,8 +7,6 @@ import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
 import com.keepit.normalizer.{NormalizationService, NormalizationCandidate}
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
@@ -129,6 +127,7 @@ class NormalizedURIRepoImpl @Inject() (
       case None => save(NormalizedURI.withHash(normalizedUrl = normalizedUrl))
       case Some(normalizedURI)=> normalizedURI
     }
+    normalizedURIFactory.normalizationService.update(uri, candidates:_*)(this)
     uri
   }
 }

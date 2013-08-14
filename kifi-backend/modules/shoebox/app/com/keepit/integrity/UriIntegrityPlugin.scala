@@ -15,6 +15,7 @@ import scala.concurrent.duration._
 import com.keepit.common.net.URI
 import scala.util.{Success, Failure, Try}
 import com.keepit.normalizer.Prenormalizer
+import com.keepit.scraper.ScraperPlugin
 
 trait ChangedUri
 
@@ -37,7 +38,8 @@ class UriIntegrityActor @Inject()(
   scrapeInfoRepo: ScrapeInfoRepo,
   uriNormRuleRepo: UriNormalizationRuleRepo,
   changedUriRepo: ChangedURIRepo,
-  healthcheckPlugin: HealthcheckPlugin
+  healthcheckPlugin: HealthcheckPlugin,
+  scraper: ScraperPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   private def prenormalize(url: String): String = {
@@ -58,48 +60,47 @@ class UriIntegrityActor @Inject()(
   /**
    * any reference to the old uri should be redirected to the new one
    */
-  def handleMerge(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]): Unit = {
-    if (oldUri == newUri) return
+  def handleMerge(oldUriId: Id[NormalizedURI], newUriId: Id[NormalizedURI]): Unit = {
+    if (oldUriId == newUriId) return
     db.readWrite{ implicit s =>
-      changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri))
+      changedUriRepo.save(ChangedURI(oldUriId = oldUriId, newUriId = newUriId))
 
-      urlRepo.getByNormUri(oldUri).map{ url =>
-        urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.MERGE)))
-      }
+      val (oldUri, newUri) = (uriRepo.get(oldUriId), uriRepo.get(newUriId))
 
-      val (u, v) = (uriRepo.get(oldUri), uriRepo.get(newUri))
-      if ( u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE && (v.state == NormalizedURIStates.ACTIVE || v.state == NormalizedURIStates.INACTIVE)){
-        uriRepo.save(v.withState(NormalizedURIStates.SCRAPE_WANTED))
-      }
-      uriRepo.save(u.withState(NormalizedURIStates.INACTIVE))
-
-      urlRepo.getByNormUri(oldUri).map{ url =>
+      urlRepo.getByNormUri(oldUriId).map{ url =>
         val prepUrl = prenormalize(url.url)
-        uriNormRuleRepo.save( UriNormalizationRule(prepUrl = prepUrl, mappedUrl = v.url, prepUrlHash = NormalizedURI.hashUrl(prepUrl)))
+        uriNormRuleRepo.save( UriNormalizationRule(prepUrl = prepUrl, mappedUrl = newUri.url, prepUrlHash = NormalizedURI.hashUrl(prepUrl)))
+        urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MERGE)))
       }
 
-      scrapeInfoRepo.getByUri(oldUri).map{ info =>
+      if ( oldUri.state != NormalizedURIStates.ACTIVE && oldUri.state != NormalizedURIStates.INACTIVE && (newUri.state == NormalizedURIStates.ACTIVE || newUri.state == NormalizedURIStates.INACTIVE)){
+        uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
+        scraper.asyncScrape(newUri)
+      }
+      uriRepo.save(oldUri.withState(NormalizedURIStates.INACTIVE).withRedirect(newUriId, currentDateTime))
+
+      scrapeInfoRepo.getByUri(oldUriId).map{ info =>
         scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
       }
 
-      bookmarkRepo.getByUri(oldUri).map{ bm =>
-        bookmarkRepo.save(bm.withNormUriId(newUri))
+      bookmarkRepo.getByUri(oldUriId).map{ bm =>
+        bookmarkRepo.save(bm.withNormUriId(newUriId))
       }
 
-      commentRepo.getByUri(oldUri).map{ cm =>
-        commentRepo.save(cm.withNormUriId(newUri))
+      commentRepo.getByUri(oldUriId).map{ cm =>
+        commentRepo.save(cm.withNormUriId(newUriId))
       }
 
-      commentReadRepo.getByUri(oldUri).map{ cm =>
-        commentReadRepo.save(cm.withNormUriId(newUri))
+      commentReadRepo.getByUri(oldUriId).map{ cm =>
+        commentReadRepo.save(cm.withNormUriId(newUriId))
       }
 
-      deepLinkRepo.getByUri(oldUri).map{ link =>
-        deepLinkRepo.save(link.withNormUriId(newUri))
+      deepLinkRepo.getByUri(oldUriId).map{ link =>
+        deepLinkRepo.save(link.withNormUriId(newUriId))
       }
 
-      followRepo.getByUri(oldUri, excludeState = None).map{ follow =>
-        followRepo.save(follow.withNormUriId(newUri))
+      followRepo.getByUri(oldUriId, excludeState = None).map{ follow =>
+        followRepo.save(follow.withNormUriId(newUriId))
       }
     }
   }
@@ -108,27 +109,29 @@ class UriIntegrityActor @Inject()(
    * url now pointing to a new uri, any entity related to that url should update its uri reference.
    * This is NOT equivalent as a uri to uri migration. (Note the difference from the Merged case)
    */
-  def handleSplit(url: URL, newUri: Id[NormalizedURI]): Unit = {
+  def handleSplit(url: URL, newUriId: Id[NormalizedURI]): Unit = {
     db.readWrite { implicit s =>
-      urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.SPLIT)))
-      val (u, v) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUri))
-      if (u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE && (v.state == NormalizedURIStates.ACTIVE || v.state == NormalizedURIStates.INACTIVE))
-        uriRepo.save(uriRepo.get(newUri).withState(NormalizedURIStates.SCRAPE_WANTED))
+      urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.SPLIT)))
+      val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
+      if (oldUri.state != NormalizedURIStates.ACTIVE && oldUri.state != NormalizedURIStates.INACTIVE && (newUri.state == NormalizedURIStates.ACTIVE || newUri.state == NormalizedURIStates.INACTIVE)) {
+        uriRepo.save(uriRepo.get(newUriId).withState(NormalizedURIStates.SCRAPE_WANTED))
+        scraper.asyncScrape(newUri)
+      }
 
       bookmarkRepo.getByUrlId(url.id.get).map{ bm =>
-        bookmarkRepo.save(bm.withNormUriId(newUri))
+        bookmarkRepo.save(bm.withNormUriId(newUriId))
       }
 
       commentRepo.getByUrlId(url.id.get).map{ cm =>
-        commentRepo.save(cm.withNormUriId(newUri))
+        commentRepo.save(cm.withNormUriId(newUriId))
       }
 
       deepLinkRepo.getByUrl(url.id.get).map{ link =>
-        deepLinkRepo.save(link.withNormUriId(newUri))
+        deepLinkRepo.save(link.withNormUriId(newUriId))
       }
 
       followRepo.getByUrl(url.id.get, excludeState = None).map{ follow =>
-        followRepo.save(follow.withNormUriId(newUri))
+        followRepo.save(follow.withNormUriId(newUriId))
       }
     }
   }
