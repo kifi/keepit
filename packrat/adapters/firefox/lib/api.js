@@ -180,8 +180,12 @@ exports.request = function(method, url, data, done, fail) {
       for (var key in resp) {
         keys.push(key);
       }
-      ((resp.status == 200 ? done : fail) || exports.noop)(resp.json || resp);
-      done = fail = exports.noop;  // ensure we don't call a callback again
+      if (resp.status < 300) {
+        done && done(resp.json || resp);
+      } else if (fail) {
+        fail(resp);
+      }
+      done = fail = null;
     }
   };
   if (data) {
