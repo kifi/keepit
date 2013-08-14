@@ -127,6 +127,10 @@ class ExtMessagingController @Inject() (
       val notices = messagingController.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       socket.channel.push(Json.arr(requestId.toLong, notices))
     },
+    "get_unread_notifications_count" -> { _ =>
+      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
+      socket.channel.push(Json.arr("unread_notifications_count", unvisited))
+    }, 
     "set_message_read" -> { case JsString(messageId) +: _ =>
       val msgExtId = ExternalId[Message](messageId)
       messagingController.setNotificationReadForMessage(socket.userId, msgExtId)
