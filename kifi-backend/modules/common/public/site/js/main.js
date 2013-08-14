@@ -1277,7 +1277,7 @@ $(function() {
 					}).css('height', 0);
 				hideKeepDetails();
 				$('.undo-message').text($keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.');
-				$undoBox.show().data({
+				$undo.show().data({
 					$keeps: $keeps,
 					$titles: $titlesToHide,
 					timeout: setTimeout(hideUndo.bind(this, 'slow'), 30000)});
@@ -1416,8 +1416,8 @@ $(function() {
 		}
 	});
 
-	var $undoBox = $(".undo-box").on('click', '.undo-link', function() {
-		var boxData = $undoBox.data(), $keeps = boxData.$keeps;
+	var $undo = $(".undo").on('click', '.undo-link', function() {
+		var boxData = $undo.data(), $keeps = boxData.$keeps;
 		clearTimeout(boxData.timeout);
 		$.postJson(xhrBase + '/keeps/add', {
 				keeps: $keeps.map(function() {
@@ -1446,7 +1446,7 @@ $(function() {
 						$k.find('.keep-colls').append(data.$coll);
 					}
 				}).removeData('sel prev priv $coll');
-				$undoBox.removeData().hide();
+				$undo.removeData().hide();
 				updateKeepDetails();
 				var collCounts = $keeps.find('.keep-coll').map(getDataId).get()
 					.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
@@ -1456,17 +1456,17 @@ $(function() {
 			});
 	});
 	function hideUndo(duration) {
-		var $keeps = $undoBox.data("$keeps");
+		var $keeps = $undo.data("$keeps");
 		if ($keeps) {
-			clearTimeout($undoBox.data("timeout"));
+			clearTimeout($undo.data("timeout"));
 			var finalize = function() {
 				$keeps.remove();
-				$undoBox.removeData();
+				$undo.removeData();
 			};
 			if (duration) {
-				$undoBox.fadeOut(duration, finalize);
+				$undo.fadeOut(duration, finalize);
 			} else {
-				$undoBox.hide(), finalize();
+				$undo.hide(), finalize();
 			}
 		}
 	}
