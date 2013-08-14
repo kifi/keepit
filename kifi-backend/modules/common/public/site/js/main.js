@@ -983,8 +983,10 @@ $(function() {
 				break;
 			case 'friends':
 				title = {friends: 'Friends', 'friends/invite': 'Invite Friends', 'friends/requests': 'Friend Requests'}[uri];
+				break;
 			case 'blog':
 			  title = 'Updates and Features'
+			  break;
 		}
 		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
 	}
