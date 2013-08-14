@@ -33,6 +33,7 @@ class UriIntegrityActor @Inject()(
   followRepo: FollowRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
   uriNormRuleRepo: UriNormalizationRuleRepo,
+  changedUriRepo: ChangedURIRepo,
   healthcheckPlugin: HealthcheckPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
@@ -44,6 +45,8 @@ class UriIntegrityActor @Inject()(
   def handleMerge(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]): Unit = {
     if (oldUri == newUri) return
     db.readWrite{ implicit s =>
+      changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri))
+
       urlRepo.getByNormUri(oldUri).map{ url =>
         urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.MERGE)))
       }
@@ -85,6 +88,10 @@ class UriIntegrityActor @Inject()(
     }
   }
 
+  /**
+   * url now pointing to a new uri, any entity related to that url should update its uri reference.
+   * This is NOT equivalent as a uri to uri migration. (Note the difference from the Merged case)
+   */
   def handleSplit(url: URL, newUri: Id[NormalizedURI]): Unit = {
     db.readWrite { implicit s =>
       urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.SPLIT)))
