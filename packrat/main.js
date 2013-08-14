@@ -515,7 +515,7 @@ api.port.on({
         var id = (th || data).id;
         socket.send(["get_thread", id]);
         if (data.respond) {
-          (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond});
+          (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond, participants: th.participants || th.recipients});
         }
       }
     });
