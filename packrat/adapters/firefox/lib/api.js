@@ -182,7 +182,7 @@ exports.request = function(method, url, data, done, fail) {
       for (var key in resp) {
         keys.push(key);
       }
-      if (resp.status < 300) {
+      if (resp.status % 100 === 2) {
         done && done(resp.json || resp);
       } else if (fail) {
         fail(resp);
