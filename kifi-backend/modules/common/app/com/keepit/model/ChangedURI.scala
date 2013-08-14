@@ -18,4 +18,3 @@ case class ChangedURI(
 }
 
 object ChangedURIStates extends States[ChangedURI]
-

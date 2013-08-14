@@ -189,7 +189,7 @@ class SliderShownListener @Inject() (
       val (user, normUri) = db.readWrite(attempts = 3) { implicit s =>
         val user = userRepo.get(externalUser)
         val normUri = (metaData \ "url").asOpt[String].map { url =>
-          normalizedURIRepo.getByUriOrElseCreate(url, NormalizationCandidate(metaData): _*)
+          normalizedURIRepo.internByUri(url, NormalizationCandidate(metaData): _*)
         }
         (user, normUri)
       }

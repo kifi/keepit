@@ -145,7 +145,7 @@ class ExtCommentController @Inject() (
 
   private def getOrCreateUriAndUrl(urlStr: String): (NormalizedURI, URL) = {
     db.readWrite(attempts = 2) { implicit s =>
-      val uri = normalizedURIRepo.getByUriOrElseCreate(urlStr)
+      val uri = normalizedURIRepo.internByUri(urlStr)
       val url: URL = urlRepo.get(urlStr).getOrElse(urlRepo.save(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
       (uri, url)
     }
