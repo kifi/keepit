@@ -29,7 +29,7 @@ class UriNormalizationRuleRepoImpl @Inject()(
   override def save(model: UriNormalizationRule)(implicit session: RWSession): UriNormalizationRule = {
     getRuleObjectByUrl(model.prepUrl) match {
       case None => super.save(model)
-      case Some(rule) => super.save(rule.copy(mappedUrl = model.mappedUrl))           // modify an existing rule. Make sure rule is unique.
+      case Some(rule) => super.save(rule.copy(updatedAt = model.updatedAt, mappedUrl = model.mappedUrl))           // modify an existing rule. Make sure rule is unique.
     }
   }
 
