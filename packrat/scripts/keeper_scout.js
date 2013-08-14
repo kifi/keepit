@@ -178,6 +178,12 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   }, 60000);
 
+  !function(link, meta) {
+    if (link || meta) {
+      api.port.emit("canonical", {url: document.URL, canonical: link.href, og: meta.content});
+    }
+  }(document.head.querySelector('link[rel=canonical]'), document.head.querySelector('meta[property="og:url"]'));
+
   api.onEnd.push(function() {
     document.removeEventListener("keydown", onKeyDown, true);
     if (onScroll) {
