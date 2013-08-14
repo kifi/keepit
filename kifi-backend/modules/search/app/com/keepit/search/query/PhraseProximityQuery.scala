@@ -147,7 +147,7 @@ class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
           i += 1
         }
         maxScore = max(maxScore, localSum)
-        if (maxScore > maxRawScore) earlyStop = true
+        if (maxScore >= maxRawScore) earlyStop = true
       }
     }
     maxScore
