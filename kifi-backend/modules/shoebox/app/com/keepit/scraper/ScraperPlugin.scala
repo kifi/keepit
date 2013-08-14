@@ -44,13 +44,7 @@ private[scraper] class ScrapeSignatureActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
   def receive() = {
-    case GetSignature(url) => try {
-      sender ! scraper.getSignature(url)
-    } catch {
-      case e: Exception =>
-         healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
-         errorMessage = Some(s"Error in getting signature for url = ${url}")))
-    }
+    case GetSignature(url) => sender ! scraper.getSignature(url)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }

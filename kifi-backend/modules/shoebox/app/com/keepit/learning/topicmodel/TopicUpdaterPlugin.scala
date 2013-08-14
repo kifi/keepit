@@ -29,43 +29,19 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
-    case UpdateTopic => try {
-      topicUpdater.update()
-    } catch {
-      case e: Exception =>
-        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some("Error updating topics")))
-    }
+    case UpdateTopic => topicUpdater.update()
 
-    case SwitchModel => try {
+    case SwitchModel => {
       if (topicUpdater.checkFlagConsistency){
         log.info("SwitchModel msg received but ignored. Internal flag already matches central config")
       } else {
         log.info("SwitchModel msg received. Will refresh and switch model.")
         topicUpdater.refreshAndSwitchModel()
       }
-    } catch {
-      case e: Exception =>
-        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some("Error handling SwitchModel message")))
     }
 
-    case Remodel => try {
-      topicRemodeler.remodel(continueFromLastInteruption = false)
-    } catch {
-      case e: Exception =>
-        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some("Error reconstructing topic model")))
-    }
-
-    case ContinueRemodel => try {
-      topicRemodeler.remodel(continueFromLastInteruption = true)
-    } catch {
-      case e: Exception =>
-        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some("Error reconstructing topic model")))
-    }
-
+    case Remodel => topicRemodeler.remodel(continueFromLastInteruption = false)
+    case ContinueRemodel => topicRemodeler.remodel(continueFromLastInteruption = true)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
