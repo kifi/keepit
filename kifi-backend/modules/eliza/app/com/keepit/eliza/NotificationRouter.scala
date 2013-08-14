@@ -3,6 +3,7 @@ package com.keepit.eliza
 import com.keepit.model.{User}
 import com.keepit.common.db.{Id}
 import com.keepit.common.time._
+import com.keepit.common.logging.Logging
 
 import play.api.libs.json.{JsArray, Json}
 import play.modules.statsd.api.Statsd
@@ -34,7 +35,7 @@ trait NotificationRouter { //TODO Stephen: This needs a better name
 }
 
 @Singleton
-class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient) extends NotificationRouter { 
+class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient) extends NotificationRouter with Logging { 
 
   private var notificationCallbacks = Vector[(Option[Id[User]], Notification) => Unit]()
   private val userSockets = TrieMap[Id[User], TrieMap[Long, SocketInfo]]() 
@@ -43,7 +44,7 @@ class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient) 
   private def logTiming(tag: String, msg: JsArray) = {
     try {
       if(msg(0).as[String] == "message") {
-        val createdAt = Json.fromJson[DateTime](msg(2) \ "createdAt").get
+        val createdAt = Json.fromJson[DateTime](msg(2) \ "createdAt")(DateTimeJsonFormat).get
         val now = currentDateTime
         val diff = now.getMillis - createdAt.getMillis
         Statsd.timing(s"websocket.delivery.$tag.message", now.getMillis - createdAt.getMillis)
@@ -54,7 +55,7 @@ class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient) 
         Statsd.timing(s"websocket.delivery.$tag.notice", now.getMillis - createdAt.getMillis)
       }
     } catch {
-      case ex: Throwable => // Do nothing, we couldn't parse this msg has a message or notification
+      case ex: Throwable => log.warn(s"Error with statsd tacking: $ex")
     }
   }
 
