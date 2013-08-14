@@ -451,7 +451,7 @@ api = function() {
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (this.readyState == 4) {
-          if (this.status % 100 === 2) {
+          if (this.status >= 200 && this.status < 300) {
             done && done(/^application\/json/.test(this.getResponseHeader("Content-Type")) ? JSON.parse(this.responseText) : this);
           } else if (fail) {
             fail(this);
