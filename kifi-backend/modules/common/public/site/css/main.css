@@ -174,7 +174,7 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .profile-nw.not-connected { transition: background .25s ease-in 50ms; }
 
 .blog {height:100%; width:100%;}
-.blog iframe {height:100%; width:100%; border:0;}
+iframe.blog {height:100%; width:100%; border:0;}
 
 .friends {padding: 13px 20px 0}
 .friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee; white-space: nowrap}

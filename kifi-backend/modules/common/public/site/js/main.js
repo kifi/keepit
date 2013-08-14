@@ -631,15 +631,17 @@ $(function() {
 		});
 	}
 
-	function showBlog(path) {
+	function showBlog() {
 		$main.attr('data-view', 'blog');
 		$('.left-col .active').removeClass('active');
-		$('.blog iframe').attr('src','http://kifiupdates.tumblr.com/');
+		$blog = $('iframe.blog');
+		if(!$blog.attr('src')) {
+			$blog.attr('src','http://kifiupdates.tumblr.com/');
+		}
 	}
 	$('.updates-features').click(function(e) {
 		e.preventDefault();
-		console.log("forwarding user to", this.href)
-		navigate('blog', {replace: true});
+		navigate('blog');
 	});
 
 
