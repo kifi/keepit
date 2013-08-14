@@ -634,7 +634,7 @@ $(function() {
 	function showBlog() {
 		$main.attr('data-view', 'blog');
 		$('.left-col .active').removeClass('active');
-		$blog = $('iframe.blog');
+		var $blog = $('iframe.blog');
 		if(!$blog.attr('src')) {
 			$blog.attr('src','http://kifiupdates.tumblr.com/');
 		}
