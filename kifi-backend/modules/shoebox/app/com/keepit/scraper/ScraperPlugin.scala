@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
@@ -44,7 +44,13 @@ private[scraper] class ScrapeSignatureActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
   def receive() = {
-    case GetSignature(url) => sender ! scraper.getSignature(url)
+    case GetSignature(url) => try {
+      sender ! scraper.getSignature(url)
+    } catch {
+      case e: Exception =>
+         healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
+         errorMessage = Some(s"Error in getting signature for url = ${url}")))
+    }
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
