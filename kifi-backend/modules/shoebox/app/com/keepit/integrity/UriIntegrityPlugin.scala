@@ -118,8 +118,20 @@ class UriIntegrityActor @Inject()(
   }
 
   def receive = {
-    case MergedUri(oldUri, newUri) => handleMerge(oldUri, newUri)
-    case SplittedUri(url, newUri) => handleSplit(url, newUri)
+    case MergedUri(oldUri, newUri) => try {
+      handleMerge(oldUri, newUri)
+    } catch {
+      case e: Exception =>
+         healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
+         errorMessage = Some(s"Error in grandfathering process for merged uris: old uri id = ${oldUri.id}, new uri id = ${newUri.id}")))
+    }
+    case SplittedUri(url, newUri) => try {
+      handleSplit(url, newUri)
+    } catch {
+      case e: Exception =>
+         healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
+         errorMessage = Some(s"Error in grandfathering process for splitted uris: url = ${url.url}, new uri id = ${newUri.id}")))
+    }
   }
 
 }
