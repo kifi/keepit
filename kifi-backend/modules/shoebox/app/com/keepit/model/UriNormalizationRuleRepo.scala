@@ -32,7 +32,7 @@ class UriNormalizationRuleRepoImpl @Inject()(
   def getByUrl(prepUrl: String)(implicit session: RSession): Option[String] = {
     val prepUrlHash = NormalizedURI.hashUrl(prepUrl)
     prepUrlHashCache.getOrElseOpt(PrepUrlHashKey(prepUrlHash)) {
-    (for(r <- table if r.prepUrlHash === prepUrlHash) yield r.mappedUrl).firstOption
+      (for(r <- table if r.prepUrlHash === prepUrlHash) yield r.mappedUrl).firstOption
     }
   }
 
