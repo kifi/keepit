@@ -1217,24 +1217,42 @@ $(function() {
 			});
 	}
 
-	function removeKeepsFromCollection(collId, keepIds) {
-		$.postJson(xhrBase + '/collections/' + collId + '/removeKeeps', keepIds, function(data) {
+	function removeFromCollection(collId, $keeps) {
+		$.postJson(xhrBase + '/collections/' + collId + '/removeKeeps', $keeps.map(getDataId).get(), function(data) {
+			if ($collList.find('.collection.active').data('id') === collId) {
+				var $titles = obliviate($keeps);
+				hideKeepDetails();
+				showUndo(
+					($keeps.length > 1 ? $keeps.length + ' Keeps' : 'Keep') + ' removed from this collection.',
+					undoRemoveFromCollection.bind(null, collId, $keeps, $titles),
+					$.fn.remove.bind($keeps));
+			} else {
+				var $keepColl = $keeps.find(".keep-coll[data-id=" + collId + "]");
+				$keepColl.css("width", $keepColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
+				var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
+				$pageColl.css("width", $pageColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
+			}
 			$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps -= data.removed);
-		}).error(showMessage.bind(null, 'Could not remove keep' + (keepIds.length > 1 ? 's' : '') + ' from collection, please try again later'));
-		var $allKeeps = $main.find(".keep");
-		var $keeps = $allKeeps.filter(function() {return keepIds.indexOf($(this).data("id")) >= 0});
-		var $keepColl = $keeps.find(".keep-coll[data-id=" + collId + "]");
-		$keepColl.css("width", $keepColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
-		if ($keeps.is(".detailed") && !$allKeeps.filter(".detailed").not($keeps).has(".keep-coll[data-id=" + collId + "]").length) {
-			// there are no other selected keeps in the collection, so must remove collection from detail pane
-			var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
-			$pageColl.css("width", $pageColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
-		}
+		}).error(showMessage.bind(null, 'Could not remove keep' + ($keeps.length > 1 ? 's' : '') + ' from collection, please try again later'));
+	}
+
+	function undoRemoveFromCollection(collId, $keeps, $titles) {
+		$.postJson(xhrBase + '/collections/' + collId + '/addKeeps', $keeps.map(getDataId).get(), function(data) {
+			rennervate($keeps, $titles);
+			updateKeepDetails();
+			$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps += data.added);
+		});
 	}
 
 	function removeIfThis(e) {
 		if (e.target === this) {
 			$(this).remove();
+		}
+	}
+
+	function detachAndOff(e) {
+		if (e.target === this) {
+			$(this).off(e.type, detachAndOff).detach();
 		}
 	}
 
@@ -1265,37 +1283,21 @@ $(function() {
 				for (var collId in collCounts) {
 					$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps -= collCounts[collId]);
 				}
-				var $keepsToHide = !searchResponse ? $keeps :
-					$keeps.not($keeps.has('.keep-friends,.keep-others')
-						.each(function() {
-							var $keep = $(this), $priv = $keep.find('.keep-private');
-							$keep.data({
-								sel: $keep.hasClass('selected'),
-								priv: $priv.hasClass('on'),
-								$coll: $keep.find('.keep-coll')})
-							.removeClass('mine selected detailed');
-							$priv.removeClass('on');
-						}));
-				$keepsToHide.each(function() {
-					$(this).data('prev', this.previousElementSibling).css('height', this.offsetHeight);
-				}).layout().addClass('toggling').one('transitionend', function() {
-					$(this).detach();
-				}).addClass('unkept');
-				var $titlesToHide = searchResponse ? $() :
-					$myKeeps.find('.keep-group-title').filter(function() {
-						for (var $li = $(this); ($li = $li.next()).hasClass('keep');) {
-							if (!$li.hasClass('detailed')) return;
-						}
-						return true;
-					}).each(function() {
-						$(this).data('prev', this.previousElementSibling);
-					}).one('transitionend', function() {
-						$(this).detach();
-					}).css('height', 0);
+				var $keepsStaying = searchResponse ? $keeps.has('.keep-friends,.keep-others') : $();
+				$keepsStaying.each(function() {
+					var $keep = $(this), $priv = $keep.find('.keep-private');
+					$keep.data({
+						sel: $keep.hasClass('selected'),
+						priv: $priv.hasClass('on'),
+						$coll: $keep.find('.keep-coll')})
+					.removeClass('mine selected detailed');
+					$priv.removeClass('on');
+				});
+				var $titles = obliviate($keeps.not($keepsStaying));
 				hideKeepDetails();
 				showUndo(
 					$keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.',
-					undoUnkeep.bind(null, $keeps, $titlesToHide),
+					undoUnkeep.bind(null, $keeps, $titles),
 					$.fn.remove.bind($keeps));
 			}).error(showMessage.bind(null, 'Could not delete keeps, please try again later'));
 		} else {  // toggle public/private
@@ -1317,9 +1319,7 @@ $(function() {
 		navigate(this.href);
 	}).on("click", ".page-coll-x", function(e) {
 		e.preventDefault();
-		removeKeepsFromCollection(
-			$(this.parentNode).data("id"),
-			$main.find(".keep.detailed").map(getDataId).get());
+		removeFromCollection($(this.parentNode).data("id"), $main.find(".keep.detailed"));
 	}).on("click", ".page-coll-add", function() {
 		var $btn = $(this), $in = $(".page-coll-input").css("width", $btn.outerWidth());
 		$btn.hide();
@@ -1432,35 +1432,58 @@ $(function() {
 		}
 	});
 
+	// Removes keeps from current view using animation, detaches them from DOM, and remembers their positions.
+	// Also removes (and returns) any keep group titles that no longer have any keeps beneath them.
+	function obliviate($keeps) {
+		$keeps.each(function() {
+			$(this).each(notePosition).css('height', this.offsetHeight);
+		}).layout().addClass('toggling').on('transitionend', detachAndOff).addClass('unkept');
+		return searchResponse ? $() :
+			$myKeeps.find('.keep-group-title').filter(function() {
+				for (var $li = $(this); ($li = $li.next()).hasClass('keep');) {
+					if (!$li.hasClass('detailed')) return;
+				}
+				return true;
+			}).each(notePosition).on('transitionend', detachAndOff).css('height', 0);
+
+		function notePosition() {
+			$(this).data({par: this.parentNode, prev: this.previousElementSibling});
+		}
+	}
+
+	// Uses animation to bring back keeps and titles removed using obliviate.
+	function rennervate($keeps, $titles) {
+		$titles.each(reattach).layout().css('height', '');
+		$keeps.each(reattach).layout().one('transitionend', function() {
+			$(this).removeClass('toggling').css('height', '');
+		}).removeClass('unkept');
+
+		function reattach() {
+			var $t = $(this), data = $t.data();
+			if (data.prev) {
+				$t.insertAfter(data.prev);
+			} else {
+				$t.prependTo(data.par);
+			}
+			$t.removeData('par prev');
+		}
+	}
+
 	function undoUnkeep($keeps, $titles) {
 		$.postJson(xhrBase + '/keeps/add', {
 				keeps: $keeps.map(function() {
 					var a = this.querySelector('.keep-title>a'), data = $(this).data();
-					return {title: a.title, url: a.href, isPrivate: data.prev ? !!this.querySelector('.keep-private.on') : data.priv};
+					return {title: a.title, url: a.href, isPrivate: 'priv' in data ? data.priv : !!this.querySelector('.keep-private.on')};
 				}).get()
 			}, function(data) {
-				$titles.each(function() {
-					var $t = $(this), data = $t.data();
-					if (data.prev) {
-						$t.insertAfter(data.prev);
-					} else {
-						$t.prependTo($myKeeps);
-					}
-					$t.layout().css('height', '').removeData('prev');
-				});
-				$keeps.each(function() {
+				var $keepsRemoved = $keeps.filter(function() {return 'prev' in $(this).data()});
+				rennervate($keepsRemoved, $titles);
+				$keeps.not($keepsRemoved).each(function() {
 					var $k = $(this), data = $k.data();
-					if (data.prev) {
-						$k.insertAfter(data.prev).layout().one('transitionend', function() {
-							$k.removeClass('toggling').css('height', '');
-						}).removeClass('unkept');
-					} else {
-						$k.addClass('mine detailed').toggleClass('selected', data.sel);
-						$k.find('.keep-private').toggleClass('on', data.priv);
-						$k.find('.keep-colls').append(data.$coll);
-					}
-				}).removeData('sel prev priv $coll');
-				$undo.removeData().hide();
+					$k.addClass('mine detailed').toggleClass('selected', data.sel);
+					$k.find('.keep-private').toggleClass('on', data.priv);
+					$k.find('.keep-colls').append(data.$coll);
+				}).removeData('sel priv $coll');
 				updateKeepDetails();
 				var collCounts = $keeps.find('.keep-coll').map(getDataId).get()
 					.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
