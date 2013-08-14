@@ -6,14 +6,15 @@ import com.keepit.common.db.LargeString._
 import com.keepit.common.db.slick._
 import com.keepit.inject._
 import com.keepit.test.{DbTestInjector}
-import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule}
 import com.keepit.common.cache.{ElizaCacheModule}
 import com.keepit.common.time._
-
+import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.db.{Model, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
+
+import play.api.test.Helpers._
 
 
 class MessagingTest extends Specification with DbTestInjector {
@@ -39,7 +40,7 @@ class MessagingTest extends Specification with DbTestInjector {
   "Messaging Contoller" should {
 
     "send correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule()) { implicit injector =>
+      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
@@ -60,7 +61,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
 
     "merge and notify correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule()) { implicit injector =>
+      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
 
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
