@@ -178,11 +178,15 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   }, 60000);
 
-  !function(link, meta) {
-    if (link || meta) {
-      api.port.emit("canonical", {url: document.URL, canonical: link.href, og: meta.content});
+  !function(url, link, meta) {
+    var o = {
+      url: url,
+      canonical: link && link.href !== url ? link.href : undefined,
+      og: meta && meta.content !== url ? meta.content : undefined};
+    if (o.canonical || o.og) {
+      api.port.emit("canonical", o);
     }
-  }(document.head.querySelector('link[rel=canonical]'), document.head.querySelector('meta[property="og:url"]'));
+  }(document.URL, document.head.querySelector('link[rel=canonical]'), document.head.querySelector('meta[property="og:url"]'));
 
   api.onEnd.push(function() {
     document.removeEventListener("keydown", onKeyDown, true);

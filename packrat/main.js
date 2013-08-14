@@ -392,6 +392,7 @@ const socketHandlers = {
 
 api.port.on({
   canonical: function(urls) {
+    api.log("[canonical]", Object.keys(urls));
     ajax("POST", "/ext/canonical", urls);
   },
   get_keeps: searchOnServer,
