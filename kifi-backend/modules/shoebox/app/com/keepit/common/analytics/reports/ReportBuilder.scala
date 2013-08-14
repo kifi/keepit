@@ -18,6 +18,7 @@ import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.analytics.MongoEventStore
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.common.db.slick.Database
+import us.theatr.akka.quartz.QuartzActor
 
 class ReportGroup(val name: String, val reports: Seq[ReportRepo])
 
@@ -125,6 +126,7 @@ trait ReportBuilderPlugin extends Plugin {
 
 class ReportBuilderPluginImpl @Inject() (
   actor: ActorInstance[ReportBuilderActor],
+  quartz: ActorInstance[QuartzActor],
   db: Database,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
   reportStore: ReportStore,
@@ -141,15 +143,17 @@ class ReportBuilderPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 10 seconds, 1 hour, actor.ref, ReportCron(this))
+    cronTask(quartz, actor.ref, "0 0 3 * * ?", searchExperimentReportsEvent)
+    cronTask(quartz, actor.ref, "0 0 3 * * ?", dailyReportsEvent)
   }
 
-  override def reportCron(): Unit = {
-    if (currentDateTime.hourOfDay().get() == 3) {// 3am PST
-      actor.ref ! BuildReports(defaultStartTime, defaultEndTime,
+  private val dailyReportsEvent = BuildReports(defaultStartTime, defaultEndTime, dailyReports)
+  private val searchExperimentReportsEvent = BuildReports(defaultStartTime, defaultEndTime,
          searchExperimentReports(db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }))
-      actor.ref ! BuildReports(defaultStartTime, defaultEndTime, dailyReports)
-    }
+
+  def reportCron() {
+    actor.ref ! dailyReportsEvent
+    actor.ref ! searchExperimentReportsEvent
   }
 
   def searchExperimentReports(experiments: Seq[SearchConfigExperiment]): ReportGroup = {
@@ -165,7 +169,6 @@ class ReportBuilderPluginImpl @Inject() (
   }
 }
 
-private[reports] case class ReportCron(sender: ReportBuilderPlugin)
 private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo)
 private[reports] case class BuildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup)
 
@@ -175,8 +178,6 @@ private[reports] class ReportBuilderActor @Inject() (
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
-    case ReportCron(sender) =>
-      sender.reportCron()
     case BuildReport(startDate, endDate, report) =>
       val toPersist = report.get(startDate, endDate)
       reportStore += (toPersist.persistenceKey -> toPersist)
