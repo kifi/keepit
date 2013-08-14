@@ -73,6 +73,11 @@ class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
 
   val phraseLenMap = phraseMap.foldLeft(Map.empty[Int, Int]) { case (m, (phrase, (id, len))) => m + (id -> len) }
 
+  val maxRawScore = {
+    val n = phraseLenMap.map { case (id, len) => len }.foldLeft(0) { (s, l) => s + l }
+    ((n * (n + 1.0f) / 2.0f) - (PhraseProximityQuery.gapPenalty * n * (n - 1.0f) / 2.0f))
+  }
+
   val numPhrases = phraseMap.size
 
   val phraseTrie = phraseMap.keys.foldLeft(new PhraseTrie) { (trie, phrase) => { trie.addPhrase(trie.root, phrase.split(" ").toList); trie } }
@@ -122,8 +127,9 @@ class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
     var runLen = 0
     var localSum = 0.0f
     var lastId = -1
+    var earlyStop = false
     matches.foreach {
-      case (id, phraseLen, lastPos) =>
+      case (id, phraseLen, lastPos) => if (!earlyStop){
         if (lastPos == prevPos + phraseLen && id != lastId) runLen += phraseLen else runLen = phraseLen
         lastId = id
         lp(id) = lastPos
@@ -141,6 +147,8 @@ class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
           i += 1
         }
         maxScore = max(maxScore, localSum)
+        if (maxScore > maxRawScore) earlyStop = true
+      }
     }
     maxScore
   }
@@ -170,10 +178,7 @@ class PhraseProximityQuery(val terms: Seq[Term], val phrases: Set[(Int, Int)]) e
 class PhraseProximityWeight(query: PhraseProximityQuery) extends Weight {
   private[this] var value = 0.0f
   val phraseHelper = new PhraseHelper(query.terms.map(t => t.text), query.phrases)
-  private[this] val maxRawScore = {
-    val n = phraseHelper.phraseLenMap.map { case (id, len) => len }.foldLeft(0) { (s, l) => s + l }
-    ((n * (n + 1.0f) / 2.0f) - (PhraseProximityQuery.gapPenalty * n * (n - 1.0f) / 2.0f))
-  }
+  val maxRawScore = phraseHelper.maxRawScore
 
   def getWeightValue = value / maxRawScore
 
