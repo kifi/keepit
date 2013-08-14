@@ -18,5 +18,21 @@ class UriNormalizationRuleTest extends Specification with ShoeboxTestInjector{
         }
       }
     }
+
+    "rule should be unique" in {
+      val raw = "www.test.com/index"
+      val mapped = "www.test.com"
+      val mapped2 = "test.com"
+      withDb() { implicit injector =>
+        db.readWrite{ implicit s =>
+          uriNormalizationRuleRepo.save(UriNormalizationRule(prepUrlHash = NormalizedURI.hashUrl(raw), prepUrl = raw, mappedUrl = mapped))
+          uriNormalizationRuleRepo.save(UriNormalizationRule(prepUrlHash = NormalizedURI.hashUrl(raw), prepUrl = raw, mappedUrl = mapped2))
+        }
+        db.readOnly{ implicit s =>
+          val r = uriNormalizationRuleRepo.getByUrl(raw)
+          r.get === mapped2
+        }
+      }
+    }
   }
 }

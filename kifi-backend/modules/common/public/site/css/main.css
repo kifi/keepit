@@ -107,7 +107,7 @@ input.query::-ms-clear {display: none}
 :not(.empty)>*>.query-mag {left: 100%; -webkit-transition-delay: 0; transition-delay: 0}
 .main-head,
 .main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
-.main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
+.main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent; position: relative}
 .main-head.scrolled,
 .above-friends-list.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
 .main[data-view=search] .main-head {padding-top: 10px; height: 37px}
@@ -115,8 +115,13 @@ input.query::-ms-clear {display: none}
 .main:not([data-view=mine]):not([data-view=search]) .main-head,
 .main:not([data-view=mine]):not([data-view=search]) .main-keeps,
 .main:not([data-view=profile]) .profile,
-.main:not([data-view=friends]) .friends {display: none}
+.main:not([data-view=friends]) .friends,
+.main:not([data-view=blog]) .blog  {display: none}
 h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
+.undo {position: absolute; top: -8px; left: 0; right: 0; text-align: center; display: none}
+.undo-box {display: inline-block; background-color: #ffc; border: 1px solid #f8f4e8; border-radius: 2px; padding: 0 12px; font-size: 13px; font-weight: 300; line-height: 17px; height: 18px; white-space: nowrap}
+a.undo-link[href] {margin-left: 4px; font-weight: 500}
+a.undo-link[href]:hover {text-decoration: underline}
 
 .profile {position: absolute; top: 70px; left: 0; width: 100%; font-size: 14px; box-sizing: border-box; padding: 20px 50px; color: #818692;}
 .profile, .profile input, .profile h2 {font-weight: 300; letter-spacing: 1px;}
@@ -167,6 +172,8 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .profile-nw::after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
 .profile-nw.not-connected::after { background: #dbdee3; }
 .profile-nw.not-connected { transition: background .25s ease-in 50ms; }
+
+iframe.blog {height:100%; width:100%; border:0;}
 
 .friends {padding: 13px 20px 0}
 .friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee; white-space: nowrap}
@@ -348,9 +355,7 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .detail {position: absolute; top: 70px; left: 0; right: 0; bottom: 0}
 .right-col>*>*>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; right: 0; overflow-x: hidden; overflow-y: scroll}
 
-.splash {background-color: #fff; border-left: 1px solid #dbdee3; z-index: 0}
-.splash>.undo-box {position: absolute; top: 0; left: 0; right: 0; background-color: #ffc; border-bottom: 1px solid #ff8; font-size: 13px; font-weight: 300; line-height: 24px; text-align: center; z-index: 1; display: none}
-a.undo-link[href] {margin-left: 4px; font-weight: 500}
+.splash {background-color: #fff; border-left: 1px solid #dbdee3}
 .splash>.antiscroll-inner {padding: 6px 0 0 36px; -moz-box-sizing: border-box; box-sizing: border-box}
 .splash h2 {margin: 30px 0 6px; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .splash ul {margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 46px; -webkit-font-smoothing: antialiased}
@@ -403,14 +408,15 @@ a.page-url[href]:hover {text-decoration: underline}
 .page-how-pri>*>*>.page-how-3::before {width: 12px; background-position: -34px 0}
 a.page-keep[href],
 a.page-priv[href] {display: inline-block; margin-top: 5px; color: #fff; background-color: #b8c5d2; font-size: 13px; line-height: 30px; width: 50%; -moz-box-sizing: border-box; box-sizing: border-box; text-align: center; -webkit-font-smoothing: antialiased}
-a.page-priv[href] {border-left: 2px solid #eff2f7}
+a.page-keep[href] {border-right: 1px solid #eff2f7}
+a.page-priv[href] {border-left: 1px solid #eff2f7}
 a.page-keep[href]:hover,
 a.page-priv[href]:hover {background-color: #a0b1c2}
 a.page-keep[href]:active,
 a.page-priv[href]:active {background-color: #8699ab}
 [data-kept^=p]>*>.page-keep[href]::before,
 .page-priv[href]::before {content: " "; display: inline-block; height: 13px; width: 11px; background: url(../img/keep-icons.png) 0 0/auto 16px content-box; vertical-align: -1px; margin-right: 8px}
-:not([data-kept=pri])>*>.page-priv[href]::before {width: 10px; background-position: -11px 0; border-left: 2px solid transparent}
+:not([data-kept=pri])>*>.page-priv[href]::before {width: 10px; background-position: -11px 0}
 [data-kept=pri]>*>.page-priv[href]::before {width: 13px; background-position: -21px 0}
 .page-keep::after {content: "Keep"}
 [data-kept^=p]>*>.page-keep::after {content: "Unkeep"}
@@ -534,9 +540,9 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
   .keep-colls {background-image: url(../img/folder-icon-small.2x.png)}
   .splash ul>li>a::before {background-image: url(../img/splash.2x.png)}
-  .page-how>.page-how-text::before,
+  .page-how-3.page-how-3::before,
   [data-kept^=p]>*>.page-keep[href]::before,
-  .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
+  .page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
   .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
   .invite-filters>a[data-nw] {background-image: url(../img/networks.2x.png)}
   .profile-nw {background-image: url(../img/networks.2x.png)}

@@ -7,6 +7,8 @@ import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
 import com.keepit.normalizer.{NormalizationService, NormalizationCandidate}
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
@@ -15,7 +17,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getScraped(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def getByUriOrElseCreate(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
+  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
 }
 
 @Singleton
@@ -109,20 +111,24 @@ class NormalizedURIRepoImpl @Inject() (
     limited.list
   }
 
-  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    val normalizedUri = normalizedURIFactory.normalize(url)
-    val hash = NormalizedURI.hashUrl(normalizedUri)
+  private def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
+    val hash = NormalizedURI.hashUrl(normalizedUrl)
     urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
       (for (t <- table if t.urlHash === hash) yield t).firstOption
     }
   }
 
-  def getByUriOrElseCreate(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
-    val uri = getByUri(url) match {
+  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
+    val normalizedUrl = normalizedURIFactory.normalize(url)
+    getByNormalizedUrl(normalizedUrl)
+  }
+
+  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
+    val normalizedUrl = normalizedURIFactory.normalize(url)
+    val uri = getByNormalizedUrl(normalizedUrl) match {
+      case None => save(NormalizedURI.withHash(normalizedUrl = normalizedUrl))
       case Some(normalizedURI)=> normalizedURI
-      case None => save(normalizedURIFactory(url))
     }
-    normalizedURIFactory.normalizationService.update(uri, candidates:_*)(this, session)
     uri
   }
 }

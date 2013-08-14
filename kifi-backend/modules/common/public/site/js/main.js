@@ -631,6 +631,20 @@ $(function() {
 		});
 	}
 
+	function showBlog() {
+		$main.attr('data-view', 'blog');
+		$('.left-col .active').removeClass('active');
+		var $blog = $('iframe.blog');
+		if(!$blog.attr('src')) {
+			$blog.attr('src','http://kifiupdates.tumblr.com/');
+		}
+	}
+	$('.updates-features').click(function(e) {
+		e.preventDefault();
+		navigate('blog');
+	});
+
+
 	function doSearch(q) {
 		if (q) {
 			searchResponse = null;
@@ -938,6 +952,9 @@ $(function() {
 			case 'friends':
 				showFriends(hash);
 				break;
+			case 'blog':
+				showBlog();
+				break;
 			default:
 				return;
 		}
@@ -949,8 +966,8 @@ $(function() {
 		if (uri.substr(0, baseUri.length) == baseUri) {
 			uri = uri.substr(baseUri.length);
 		}
-		console.log('[navigate]', uri, opts || '');
 		var title, kind = uri.match(/[\w-]*/)[0];
+		console.log('[navigate]', uri, opts || '', kind);
 		switch (kind) {
 			case '':
 				title = 'Your Keeps';
@@ -966,6 +983,10 @@ $(function() {
 				break;
 			case 'friends':
 				title = {friends: 'Friends', 'friends/invite': 'Invite Friends', 'friends/requests': 'Friend Requests'}[uri];
+				break;
+			case 'blog':
+			  title = 'Updates and Features'
+			  break;
 		}
 		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
 	}
@@ -1277,7 +1298,7 @@ $(function() {
 					}).css('height', 0);
 				hideKeepDetails();
 				$('.undo-message').text($keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.');
-				$undoBox.show().data({
+				$undo.show().data({
 					$keeps: $keeps,
 					$titles: $titlesToHide,
 					timeout: setTimeout(hideUndo.bind(this, 'slow'), 30000)});
@@ -1416,8 +1437,8 @@ $(function() {
 		}
 	});
 
-	var $undoBox = $(".undo-box").on('click', '.undo-link', function() {
-		var boxData = $undoBox.data(), $keeps = boxData.$keeps;
+	var $undo = $(".undo").on('click', '.undo-link', function() {
+		var boxData = $undo.data(), $keeps = boxData.$keeps;
 		clearTimeout(boxData.timeout);
 		$.postJson(xhrBase + '/keeps/add', {
 				keeps: $keeps.map(function() {
@@ -1446,7 +1467,7 @@ $(function() {
 						$k.find('.keep-colls').append(data.$coll);
 					}
 				}).removeData('sel prev priv $coll');
-				$undoBox.removeData().hide();
+				$undo.removeData().hide();
 				updateKeepDetails();
 				var collCounts = $keeps.find('.keep-coll').map(getDataId).get()
 					.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
@@ -1456,17 +1477,17 @@ $(function() {
 			});
 	});
 	function hideUndo(duration) {
-		var $keeps = $undoBox.data("$keeps");
+		var $keeps = $undo.data("$keeps");
 		if ($keeps) {
-			clearTimeout($undoBox.data("timeout"));
+			clearTimeout($undo.data("timeout"));
 			var finalize = function() {
 				$keeps.remove();
-				$undoBox.removeData();
+				$undo.removeData();
 			};
 			if (duration) {
-				$undoBox.fadeOut(duration, finalize);
+				$undo.fadeOut(duration, finalize);
 			} else {
-				$undoBox.hide(), finalize();
+				$undo.hide(), finalize();
 			}
 		}
 	}

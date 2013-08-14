@@ -137,7 +137,7 @@ class MessagingController @Inject() (
 
           }
 
-          log.info("MIGRATION: Starting notification recovery for $extId.")
+          log.info(s"MIGRATION: Starting notification recovery for $extId.")
           val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
           val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds)
           participants.toSet.foreach{ userId : Id[User] => 
@@ -187,7 +187,7 @@ class MessagingController @Inject() (
         messageCount=messagesByThread(thread.id.get).length,
         messageTimes=messageTimes,
         createdAt=thread.createdAt,
-        lastCommentedAt= lastMessage.createdAt,
+        lastCommentedAt=lastMessage.createdAt,
         lastMessageRead=userThreads(thread.id.get).lastSeen,
         nUrl = thread.nUrl.getOrElse(""),
         url = requestUrl

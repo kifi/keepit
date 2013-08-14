@@ -231,7 +231,7 @@ const socketHandlers = {
         for (var i = 0; i < d.threadCallbacks.length; i++) {
           var cb = d.threadCallbacks[i];
           if (th.id == cb.id || th.messages.some(hasId(cb.id))) {
-            cb.respond({id: th.id, messages: th.messages});
+            cb.respond({id: th.id, messages: th.messages, participants: th.messages[0].participants});
             d.threadCallbacks.splice(i--, 1);
           }
         }
@@ -267,7 +267,7 @@ const socketHandlers = {
       d.lastMessageRead = d.lastMessageRead || {};
       d.lastMessageRead[t.id] = t.lastMessageRead;
       d.counts = {
-        n: numNotificationsNotVisited,
+        n: 0,
         m: messageCount(d)};
       d.threadDataReceived = true;
       if (d.pageDetailsReceived) {
@@ -278,6 +278,7 @@ const socketHandlers = {
         d.dispatchOn2();
       }
     });
+    tellTabsNoticeCountIfChanged();
 
     for (var u in urisToUpdate) {
       var d = pageData[u];
@@ -327,7 +328,7 @@ const socketHandlers = {
           thread = d.threads[i];
 
           var messages;
-          if (thread.messageCount > 1) {
+          if (thread.messageCount >= 1) {
             messages = messageData[threadId];
             if (messages) {
               var t = new Date(message.createdAt);
@@ -830,6 +831,8 @@ function tellTabsIfCountChanged(d, key, count) {
 function searchOnServer(request, respond) {
   logEvent("search", "newSearch", {query: request.query, filter: request.filter});
 
+  if (getPrefetched(request, respond)) return;
+
   if (!session) {
     api.log("[searchOnServer] no session");
     respond({});
@@ -922,8 +925,7 @@ function subscribe(tab) {
       d.keeps = uri_2.keeps || 0;
       d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
       d.threads = d.threads || [];
-      d.counts = d.counts || {};
-      d.counts.n = numNotificationsNotVisited;
+      d.counts = d.counts || {m:0, n:0};
       d.lastMessageRead = d.lastMessageRead || {};
       d.pageDetailsReceived = true;
       if (d.threadDataReceived) {
@@ -933,6 +935,8 @@ function subscribe(tab) {
         });
         d.dispatchOn2();
       }
+
+      tellTabsNoticeCountIfChanged();
     });
   }
   function finish(uri) {
@@ -1000,6 +1004,33 @@ api.tabs.on.loading.add(function(tab) {
   api.log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab);
   subscribe(tab);
 });
+
+const prefetchCache = {}, prefetchCacheTimeout = 10000;
+api.on.search.add(function prefetchResults(query) {
+  api.log('[prefetchResults] prefetching for query:', query);
+  searchOnServer({query: query}, function(response) {
+    var cached = prefetchCache[query];
+    cached.response = response;
+    while (cached.callbacks.length) cached.callbacks.shift()(response);
+    api.timers.setTimeout(function () { delete prefetchCache[query] }, prefetchCacheTimeout);
+  });
+  prefetchCache[query] = { callbacks: [], response: null };
+});
+
+function getPrefetched(request, cb) {
+  function callback(result) {
+    api.log('[getPrefetched] returning prefetched results:', result);
+    cb(result);
+  }
+  var cached = prefetchCache[request.query];
+  if (!cached || request.filter || request.lastUUID) return false;
+  if (cached.response) {
+    callback(cached.response);
+  } else {
+    cached.callbacks.push(callback);
+  }
+  return true;
+}
 
 api.tabs.on.ready.add(function(tab) {
   api.log("#b8a", "[tabs.on.ready] %i %o", tab.id, tab);
@@ -1190,7 +1221,7 @@ function startSession(callback, retryMs) {
         setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
       }
     } else if (getStored("kifi_installation_id")) {
-      openLogin();
+      openLogin(callback, retryMs);
     } else {
       var tab = api.tabs.anyAt(webBaseUri() + "/");
       if (tab) {

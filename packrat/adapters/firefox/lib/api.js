@@ -25,6 +25,7 @@ const icon = require("./icon");
 const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
 const privateMode = require("sdk/private-browsing");
+const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(\.[a-z]{2})?\/(|search|webhp)\?(|.*&)q=([^&]*)/;
 
 const pages = {}, workers = {}, tabsById = {};  // all by tab.id
 function createPage(tab) {
@@ -83,6 +84,7 @@ exports.log.error = function(exception, context) {
 exports.noop = function() {};
 
 exports.on = {
+  search: new Listeners,
   install: new Listeners,
   update: new Listeners,
   startup: new Listeners};
@@ -180,8 +182,12 @@ exports.request = function(method, url, data, done, fail) {
       for (var key in resp) {
         keys.push(key);
       }
-      ((resp.status == 200 ? done : fail) || exports.noop)(resp.json || resp);
-      done = fail = exports.noop;  // ensure we don't call a callback again
+      if (resp.status < 300) {
+        done && done(resp.json || resp);
+      } else if (fail) {
+        fail(resp);
+      }
+      done = fail = null;
     }
   };
   if (data) {
@@ -479,7 +485,10 @@ PageMod({
       if (oldPage && /^https?:/.test(oldPage.url)) {
         dispatch.call(exports.tabs.on.unload, oldPage);
       }
-      dispatch.call(exports.tabs.on.loading, createPage(tab));
+      var page = createPage(tab);
+      var searchQuery = decodeURIComponent(((page.url.match(googleSearchPattern) || [])[4] || '').replace(/\+/g, ' '));
+      if (searchQuery) dispatch.call(exports.on.search, searchQuery);
+      dispatch.call(exports.tabs.on.loading, page);
     });
     worker.port.on("api:nav", function() {
       exports.log("[api:nav]", tab.id, tab.url);

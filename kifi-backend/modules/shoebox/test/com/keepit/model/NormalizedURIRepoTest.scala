@@ -158,7 +158,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-  "getByUriOrElseCreate" should {
+  "internByUri" should {
     "Find an existing uri without creating a new one" in {
       withDb() { implicit injector =>
         db.readWrite { implicit s =>
@@ -166,7 +166,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
           val xkcd = uriRepo.save(normalizedURIFactory.apply("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/"))
           uriRepo.count === 1
           uriRepo.getByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/").get === xkcd
-          uriRepo.getByUriOrElseCreate("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/") === xkcd
+          uriRepo.internByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/") === xkcd
           uriRepo.count === 1
         }
       }
@@ -177,7 +177,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           uriRepo.count === 0
           uriRepo.getByUri("http://www.arte.tv/fr/3482046.html").isEmpty === true
-          val blowup = uriRepo.getByUriOrElseCreate("http://www.arte.tv/fr/3482046.html")
+          val blowup = uriRepo.internByUri("http://www.arte.tv/fr/3482046.html")
           uriRepo.count === 1
           blowup.url === "http://www.arte.tv/fr/3482046.html"
         }
