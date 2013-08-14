@@ -12,6 +12,9 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.actor.ActorInstance
 import play.api.Plugin
 import scala.concurrent.duration._
+import com.keepit.common.net.URI
+import scala.util.{Success, Failure, Try}
+import com.keepit.normalizer.Prenormalizer
 
 trait ChangedUri
 
@@ -36,7 +39,20 @@ class UriIntegrityActor @Inject()(
   healthcheckPlugin: HealthcheckPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
-  private def preNormalize(uri: String): String = {uri}   // DUMMY
+  private def prenormalize(url: String): String = {
+    val prepUrlTry = for {
+      uri <- URI.parse(url)
+      prepUrl <- Try { Prenormalizer(uri).toString() }
+    } yield prepUrl
+
+    prepUrlTry match {
+      case Success(prepUrl) => prepUrl
+      case Failure(e) => {
+        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Static Normalization failed: ${e.getMessage}")))
+        url
+      }
+    }
+  }
 
   /**
    * any reference to the old uri should be redirected to the new one
@@ -55,7 +71,7 @@ class UriIntegrityActor @Inject()(
       uriRepo.save(u.withState(NormalizedURIStates.INACTIVE))
 
       urlRepo.getByNormUri(oldUri).map{ url =>
-        val prepUrl = preNormalize(url.url)
+        val prepUrl = prenormalize(url.url)
         uriNormRuleRepo.save( UriNormalizationRule(prepUrl = prepUrl, mappedUrl = v.url, prepUrlHash = NormalizedURI.hashUrl(prepUrl)))
       }
 

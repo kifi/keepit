@@ -24,7 +24,7 @@ trait NormalizationService {
 @Singleton
 class NormalizationServiceImpl @Inject() (
   normalizationRuleRepo: UriNormalizationRuleRepo,
-  failedContentCheckRepo: FailedUriNormalizationRepo,
+  failedContentCheckRepo: FailedContentCheckRepo,
   uriIntegrityPlugin: UriIntegrityPlugin,
   scraperPlugin: ScraperPlugin,
   monitoredAwait: MonitoredAwait,
