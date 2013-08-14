@@ -1190,7 +1190,7 @@ function startSession(callback, retryMs) {
         setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
       }
     } else if (getStored("kifi_installation_id")) {
-      openLogin();
+      openLogin(callback, retryMs);
     } else {
       var tab = api.tabs.anyAt(webBaseUri() + "/");
       if (tab) {
