@@ -187,7 +187,7 @@ class MessagingController @Inject() (
         messageCount=messagesByThread(thread.id.get).length,
         messageTimes=messageTimes,
         createdAt=thread.createdAt,
-        lastCommentedAt= lastMessage.createdAt,
+        lastCommentedAt=lastMessage.createdAt,
         lastMessageRead=userThreads(thread.id.get).lastSeen,
         nUrl = thread.nUrl.getOrElse(""),
         url = requestUrl
