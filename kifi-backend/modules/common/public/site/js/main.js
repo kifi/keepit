@@ -1293,11 +1293,10 @@ $(function() {
 						$(this).detach();
 					}).css('height', 0);
 				hideKeepDetails();
-				$('.undo-message').text($keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.');
-				$undo.show().data({
-					$keeps: $keeps,
-					$titles: $titlesToHide,
-					timeout: setTimeout(hideUndo.bind(this, 'slow'), 30000)});
+				showUndo(
+					$keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.',
+					undoUnkeep.bind(null, $keeps, $titlesToHide),
+					$.fn.remove.bind($keeps));
 			}).error(showMessage.bind(null, 'Could not delete keeps, please try again later'));
 		} else {  // toggle public/private
 			howKept = howKept == "pub" ? "pri" : "pub";
@@ -1433,16 +1432,14 @@ $(function() {
 		}
 	});
 
-	var $undo = $(".undo").on('click', '.undo-link', function() {
-		var boxData = $undo.data(), $keeps = boxData.$keeps;
-		clearTimeout(boxData.timeout);
+	function undoUnkeep($keeps, $titles) {
 		$.postJson(xhrBase + '/keeps/add', {
 				keeps: $keeps.map(function() {
 					var a = this.querySelector('.keep-title>a'), data = $(this).data();
 					return {title: a.title, url: a.href, isPrivate: data.prev ? !!this.querySelector('.keep-private.on') : data.priv};
 				}).get()
 			}, function(data) {
-				boxData.$titles.each(function() {
+				$titles.each(function() {
 					var $t = $(this), data = $t.data();
 					if (data.prev) {
 						$t.insertAfter(data.prev);
@@ -1471,21 +1468,34 @@ $(function() {
 					$collList.find('.collection[data-id=' + collId + ']').find('.nav-count').text(collections[collId].keeps += collCounts[collId]);
 				}
 			});
+	}
+
+	var $undo = $(".undo").on('click', '.undo-link', function() {
+		var d = $undo.data();
+		d.undo && d.undo();
+		delete d.commit;
+		hideUndo();
 	});
+	function showUndo(msg, undo, commit) {
+		hideUndo();
+		$undo.find('.undo-message').text(msg);
+		$undo.show().data({undo: undo, commit: commit, timeout: setTimeout(hideUndo.bind(this, 'slow'), 30000)});
+	}
 	function hideUndo(duration) {
-		var $keeps = $undo.data("$keeps");
-		if ($keeps) {
-			clearTimeout($undo.data("timeout"));
-			var finalize = function() {
-				$keeps.remove();
-				$undo.removeData();
-			};
+		var d = $undo.data();
+		if (d.timeout) {
+			clearTimeout(d.timeout), delete d.timeout;
 			if (duration) {
-				$undo.fadeOut(duration, finalize);
+				$undo.fadeOut(duration, expireUndo);
 			} else {
-				$undo.hide(), finalize();
+				$undo.hide(), expireUndo();
 			}
 		}
+	}
+	function expireUndo() {
+		var d = $undo.data();
+		d.commit && d.commit();
+		delete d.undo, delete d.commit;
 	}
 
 	$(".send-feedback").click(function() {
