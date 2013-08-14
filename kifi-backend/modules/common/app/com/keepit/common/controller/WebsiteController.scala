@@ -21,14 +21,14 @@ class WebsiteController(actionAuthenticator: ActionAuthenticator) extends Contro
     AuthenticatedJsonAction(false, parse.tolerantJson)(action)
 
   def AuthenticatedJsonAction[T](allowPending: Boolean, bodyParser: BodyParser[T])(action: AuthenticatedRequest[T] => Result): Action[T] = Action(bodyParser) { request =>
-    actionAuthenticator.authenticatedAction(false, allowPending, bodyParser, action)(request) match {
+    actionAuthenticator.authenticatedAction(true, allowPending, bodyParser, action)(request) match {
       case r: PlainResult => r.as(ContentTypes.JSON)
       case any => any
     }
   }
 
   def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
-    actionAuthenticator.authenticatedAction(false, false, parse.anyContent, action)
+    actionAuthenticator.authenticatedAction(true, false, parse.anyContent, action)
 
   def HtmlAction(authenticatedAction: AuthenticatedRequest[AnyContent] => Result, unauthenticatedAction: Request[AnyContent] => Result): Action[AnyContent] =
     HtmlAction(false)(authenticatedAction, unauthenticatedAction)
