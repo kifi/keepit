@@ -13,7 +13,7 @@ import com.keepit.common.db.{Id}
 import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.mail.{ElectronicMail,EmailAddresses,PostOffice}
 
-import com.google.inject.Inject
+import com.google.inject.{Inject, ImplementedBy}
 
 import scala.concurrent.duration._
 import scala.concurrent.Await
@@ -85,7 +85,7 @@ class ElizaEmailNotifierActor @Inject() (
     }
   }
 }
-
+@ImplementedBy(classOf[ElizaEmailNotifierPluginImpl])
 trait ElizaEmailNotifierPlugin extends SchedulingPlugin {
   def sendEmails(): Unit
 }

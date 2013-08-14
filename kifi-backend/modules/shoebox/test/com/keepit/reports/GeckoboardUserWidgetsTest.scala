@@ -55,20 +55,59 @@ class GeckoboardUserWidgetsTest extends Specification with ShoeboxApplicationInj
       clock += Months.ONE
       bookmarkRepo.save(Bookmark(title = Some("Z1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
         uriId = uri1.id.get, source = hover))
+      val user5 = userRepo.save(User(firstName = "Joe1", lastName = "Brown"))
+      val user6 = userRepo.save(User(firstName = "Joe2", lastName = "Brown"))
       clock += Months.ONE
       bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
         uriId = uri1.id.get, source = hover))
       bookmarkRepo.save(Bookmark(title = Some("B1"), userId = user3.id.get, url = url1.url, urlId = url1.id,
         uriId = uri1.id.get, source = hover))
-      clock += Days.days(10)
-      bookmarkRepo.save(Bookmark(title = Some("C1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+      bookmarkRepo.save(Bookmark(title = Some("B1"), userId = user5.id.get, url = url1.url, urlId = url1.id,
         uriId = uri1.id.get, source = hover))
-      bookmarkRepo.save(Bookmark(title = Some("D1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
-        uriId = uri2.id.get, source = initLoad))
-      bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
-        uriId = uri1.id.get, source = hover))
-      userRepo.save(User(firstName = "Joe1", lastName = "Brown"))
-      userRepo.save(User(firstName = "Joe2", lastName = "Brown"))
+      val user7 = userRepo.save(User(firstName = "Joe2", lastName = "Brown"))
+      val user8 = userRepo.save(User(firstName = "Joe2", lastName = "Brown"))
+      clock += Days.days(5)
+      def persistBlock() {
+        bookmarkRepo.save(Bookmark(title = Some("B1"), userId = user5.id.get, url = url1.url, urlId = url1.id,
+          uriId = uri1.id.get, source = hover))
+        bookmarkRepo.save(Bookmark(title = Some("B1"), userId = user6.id.get, url = url1.url, urlId = url1.id,
+          uriId = uri1.id.get, source = hover))
+        bookmarkRepo.save(Bookmark(title = Some("B1"), userId = user7.id.get, url = url1.url, urlId = url1.id,
+          uriId = uri1.id.get, source = hover))
+        bookmarkRepo.save(Bookmark(title = Some("C1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+          uriId = uri1.id.get, source = hover))
+        bookmarkRepo.save(Bookmark(title = Some("D1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+          uriId = uri2.id.get, source = initLoad))
+        bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
+          uriId = uri1.id.get, source = hover))
+      }
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
+      clock += Days.days(1)
+      persistBlock()
 
       (user1, user2, uri1, uri2)
     }
@@ -80,9 +119,13 @@ class GeckoboardUserWidgetsTest extends Specification with ShoeboxApplicationInj
         val clock = inject[FakeClock]
         setup(clock)
         clock += Days.ONE
-        val data = inject[RetentionOverMonth].data
-        println(data.json)
-        data === SparkLine("Retention Per Month", 40 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 100, 33, 33, 25, 25, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40))
+        inject[RetentionOverMonth].data === SparkLine("30D Retention %", 40 ,Vector(0, 0, 0, 0, 0, 100, 100, 33, 33, 25, 25, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40))
+        inject[RetentionOverWeek].data === SparkLine("30D Retention %", 50 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 50, 50, 50, 50))
+        inject[RetentionOverDay].data === SparkLine("30D Retention %", 0 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        clock += Days.days(10)
+        inject[RetentionOverMonth].data === SparkLine("30D Retention %", 0 ,Vector(25, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 25, 25, 0, 0))
+        inject[RetentionOverWeek].data === SparkLine("30D Retention %", 0 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 50, 50, 50, 50, 50, 50, 0, 0, 0, 0, 0, 0, 0, 0))
+        inject[RetentionOverDay].data === SparkLine("30D Retention %", 0 ,Vector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
       }
     }
   }

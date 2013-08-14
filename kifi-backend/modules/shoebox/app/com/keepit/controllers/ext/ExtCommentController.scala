@@ -70,19 +70,20 @@ class ExtCommentController @Inject() (
         (message, Some(parent))
       case None =>
         val message = db.readWrite { implicit s =>
-          val message = commentRepo.save(Comment(
+          val message = Comment(
+            id = Some(Id[Comment](-1)),
             uriId = uri.id.get,
             urlId = url.id,
             userId = userId,
             pageTitle = title,
             text = LargeString(text),
             permissions = CommentPermissions.MESSAGE,
-            parent = None))
-          recipientUserIds foreach { userId =>
-            commentRecipientRepo.save(CommentRecipient(commentId = message.id.get, userId = Some(userId)))
-          }
-          commentReadRepo.save(
-            CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(message.id.get), lastReadId = message.id.get))
+            parent = None)
+          // recipientUserIds foreach { userId =>
+          //   commentRecipientRepo.save(CommentRecipient(commentId = message.id.get, userId = Some(userId)))
+          // }
+          // commentReadRepo.save(
+          //   CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(message.id.get), lastReadId = message.id.get))
           message
         }
         future {  // important that this is spawned only *after* above read/write transaction committed
@@ -100,36 +101,38 @@ class ExtCommentController @Inject() (
 
     val (message, parent) = sendMessageReply(request.user.id.get, text, Right(parentExtId))
 
-    Ok(Json.obj("id" -> message.externalId.id, "parentId" -> parent.externalId.id, "createdAt" -> message.createdAt))
+    Ok(Json.obj("id" -> message.externalId.id, "parentId" -> parentExtId, "createdAt" -> message.createdAt))
   }
 
   private[ext] def sendMessageReply(userId: Id[User], text: String, parentId: Either[Id[Comment], ExternalId[Comment]]): (Comment, Comment) = {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
-    val (message, parent) = db.readWrite { implicit s =>
-      val reqParent = parentId match {
-        case Left(id) => commentRepo.get(id)
-        case Right(extId) => commentRepo.get(extId)
+    val message = db.readWrite { implicit s =>
+      val extId = parentId match {
+        case Right(extId) => extId
+        case _ => ExternalId[Comment]()
       }
-      val parent = reqParent.parent.map(commentRepo.get).getOrElse(reqParent)
-      val message = commentRepo.save(Comment(
-        uriId = parent.uriId,
-        urlId = parent.urlId,
+      // val parent = reqParent.parent.map(commentRepo.get).getOrElse(reqParent)
+      val message = Comment(
+        id = Some(Id[Comment](-1)),
+        externalId = extId,
+        uriId = Id[NormalizedURI](1),
+        urlId = None,
         userId = userId,
-        pageTitle = parent.pageTitle,
+        pageTitle = "",
         text = LargeString(text),
         permissions = CommentPermissions.MESSAGE,
-        parent = parent.id))
-      (message, parent)
+        parent = None)
+      message
     }
 
-    db.readWrite(attempts = 2) { implicit s =>
-      commentReadRepo.save(commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
-        case Some(commentRead) =>
-          commentRead.withLastReadId(message.id.get)
-        case None =>
-          CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)
-      })
-    }
+    // db.readWrite(attempts = 2) { implicit s =>
+    //   commentReadRepo.save(commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
+    //     case Some(commentRead) =>
+    //       commentRead.withLastReadId(message.id.get)
+    //     case None =>
+    //       CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)
+    //   })
+    // }
 
     future {  // important that this is spawned only *after* above read/write transaction committed
       notifyRecipients(message)
@@ -137,7 +140,7 @@ class ExtCommentController @Inject() (
       log.error("Could not notify for message reply %s".format(message.id.get), e)
     }
 
-    (message, parent)
+    (message, message)
   }
 
   private def getOrCreateUriAndUrl(urlStr: String): (NormalizedURI, URL) = {
