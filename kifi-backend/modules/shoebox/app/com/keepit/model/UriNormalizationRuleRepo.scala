@@ -26,6 +26,18 @@ class UriNormalizationRuleRepoImpl @Inject()(
     def * = id.? ~  createdAt ~ updatedAt ~ prepUrlHash ~ prepUrl ~ mappedUrl ~ state <> (UriNormalizationRule.apply _, UriNormalizationRule.unapply _)
   }
 
+  override def save(model: UriNormalizationRule)(implicit session: RWSession): UriNormalizationRule = {
+    getRuleObjectByUrl(model.prepUrl) match {
+      case None => super.save(model)
+      case Some(rule) => super.save(rule.copy(mappedUrl = model.mappedUrl))           // modify an existing rule. Make sure rule is unique.
+    }
+  }
+
+  private def getRuleObjectByUrl(prepUrl: String)(implicit session: RSession): Option[UriNormalizationRule] = {
+    (for(r <- table if r.prepUrlHash === NormalizedURI.hashUrl(prepUrl)) yield r).firstOption
+  }
+
+
   def getByUrl(prepUrl: String)(implicit session: RSession): Option[String] = {
     (for(r <- table if r.prepUrlHash === NormalizedURI.hashUrl(prepUrl)) yield r.mappedUrl).firstOption
   }
