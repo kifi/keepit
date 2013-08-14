@@ -391,6 +391,10 @@ const socketHandlers = {
 // ===== Handling messages from content scripts or other extension pages
 
 api.port.on({
+  canonical: function(urls) {
+    api.log("[canonical]", Object.keys(urls));
+    ajax("POST", "/ext/canonical", urls);
+  },
   get_keeps: searchOnServer,
   get_chatter: function(urls, respond) {
     api.log("[get_chatter]", urls);
