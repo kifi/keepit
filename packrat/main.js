@@ -267,7 +267,7 @@ const socketHandlers = {
       d.lastMessageRead = d.lastMessageRead || {};
       d.lastMessageRead[t.id] = t.lastMessageRead;
       d.counts = {
-        n: numNotificationsNotVisited,
+        n: 0,
         m: messageCount(d)};
       d.threadDataReceived = true;
       if (d.pageDetailsReceived) {
@@ -278,6 +278,7 @@ const socketHandlers = {
         d.dispatchOn2();
       }
     });
+    tellTabsNoticeCountIfChanged();
 
     for (var u in urisToUpdate) {
       var d = pageData[u];
@@ -922,8 +923,7 @@ function subscribe(tab) {
       d.keeps = uri_2.keeps || 0;
       d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
       d.threads = d.threads || [];
-      d.counts = d.counts || {};
-      d.counts.n = numNotificationsNotVisited;
+      d.counts = d.counts || {m:0, n:0};
       d.lastMessageRead = d.lastMessageRead || {};
       d.pageDetailsReceived = true;
       if (d.threadDataReceived) {
@@ -933,6 +933,8 @@ function subscribe(tab) {
         });
         d.dispatchOn2();
       }
+
+      tellTabsNoticeCountIfChanged();
     });
   }
   function finish(uri) {
