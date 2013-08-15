@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.keepit.common.logging.Logging
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
@@ -28,7 +29,7 @@ class NormalizedURIRepoImpl @Inject() (
   urlHashCache: NormalizedURIUrlHashCache,
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizedURIFactory: NormalizedURIFactory)
-  extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
+  extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with Logging {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -76,7 +77,11 @@ class NormalizedURIRepoImpl @Inject() (
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     val num = sequence.incrementAndGet()
-    val saved = super.save(uri.copy(seq = num))
+    val uriWithSeq = uri.copy(seq = num)
+    val message = s"----> about to persist uri: $uriWithSeq"
+    log.error(message, new Exception(message))
+    val saved = super.save(uriWithSeq)
+    log.error(s"<---- persisted uri: $saved")
 
     lazy val scrapeRepo = scrapeRepoProvider.get
     if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {
