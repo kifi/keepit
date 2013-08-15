@@ -27,7 +27,8 @@ class MessagingTest extends Specification with DbTestInjector {
     val db = inject[Database]
     val notificationRouter = inject[NotificationRouter]
     val clock = inject[Clock]
-    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, clock)
+    val uriNormalizationUpdater: UriNormalizationUpdater = null
+    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, clock, uriNormalizationUpdater)
 
     val user1 = Id[User](42)
     val user2 = Id[User](43)

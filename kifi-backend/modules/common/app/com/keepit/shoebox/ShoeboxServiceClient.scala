@@ -89,6 +89,10 @@ trait ShoeboxServiceClient extends ServiceClient {
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
   def sendPushNotification(user: Id[User], extId: String, unvisited: Int, msg: String) : Unit
+
+
+  //API for Leo to fill in
+  def getNormalizedUriUpdates(oldSequenceNumber: Long, newSequenceNumber: Long) : Map[Id[NormalizedURI], NormalizedURI] = Map[Id[NormalizedURI], NormalizedURI]()
 }
 
 case class ShoeboxCacheProvider @Inject() (

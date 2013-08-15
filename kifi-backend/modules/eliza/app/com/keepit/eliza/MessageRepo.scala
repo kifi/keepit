@@ -38,6 +38,8 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[Message]
 
+  def updateUriIds(updates: Map[Id[NormalizedURI], Id[NormalizedURI]])(implicit session: RWSession) : Unit
+
 }
 
 @Singleton
@@ -80,6 +82,12 @@ class MessageRepoImpl @Inject() (
 
   def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[Message] = {
     (for (row <- table if row.thread===threadId && row.createdAt>after) yield row).sortBy(row => row.createdAt desc).list
+  }
+
+  def updateUriIds(updates: Map[Id[NormalizedURI], Id[NormalizedURI]])(implicit session: RWSession) : Unit = { //Note: There is potentially a race condition here with updateUriId. Need to investigate.
+    updates.foreach{ case (oldId, newId) =>
+      (for (row <- table if row.sentOnUriId===oldId) yield row.sentOnUriId).update(newId)
+    } 
   }
 
 

@@ -50,7 +50,8 @@ class MessagingController @Inject() (
     shoebox: ShoeboxServiceClient, 
     db: Database,
     notificationRouter: NotificationRouter,
-    clock: Clock
+    clock: Clock,
+    uriNormalizationUpdater: UriNormalizationUpdater
     )
   extends ElizaServiceController with Logging {
 
