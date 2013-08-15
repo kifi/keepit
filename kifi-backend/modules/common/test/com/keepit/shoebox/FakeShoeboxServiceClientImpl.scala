@@ -15,11 +15,25 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.search.ArticleSearchResult
-import play.api.libs.json.JsObject
+import play.api.libs.json._
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{Map => MutableMap}
 import com.keepit.social.{SocialNetworkType, SocialId, BasicUser}
 import com.keepit.common.mail.{ElectronicMail}
+import com.keepit.common.routes.Shoebox
+import com.keepit.model.ExperimentType
+import com.keepit.model.URL
+import com.keepit.model.BrowsingHistory
+import play.api.libs.json.JsString
+import scala.Some
+import com.keepit.model.CommentRecipient
+import com.keepit.model.UserExperiment
+import com.keepit.search.ArticleSearchResult
+import com.keepit.social.SocialId
+import com.keepit.model.UrlHash
+import com.keepit.model.NormalizedURIUrlHashKey
+import com.keepit.model.ClickHistory
+import play.api.libs.json.JsObject
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(
@@ -208,20 +222,24 @@ class FakeShoeboxServiceClientImpl(
     Future.successful(uri)
   }
 
-  def normalizeURL(url: String): Future[NormalizedURI] = {
-    val fakeNUrl = NormalizedURI(
-      id = Some(Id[NormalizedURI](url.hashCode)),
-      url=url,
-      urlHash=UrlHash(url.hashCode.toString),
-      screenshotUpdatedAt=None
-    )
-
-    Future.successful(fakeNUrl) 
-  }
-
   def getNormalizedURIs(ids: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
     val uris = ids.map(allNormalizedURIs(_))
     Future.successful(uris)
+  }
+
+  def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]] = Future.successful(allNormalizedURIs.values.find(_.url == url))
+
+  def internNormalizedURI(url: String): Future[NormalizedURI] = {
+    val uri = allNormalizedURIs.values.find(_.url == url).getOrElse {
+      NormalizedURI(
+        id = Some(Id[NormalizedURI](url.hashCode)),
+        url=url,
+        urlHash=UrlHash(url.hashCode.toString),
+        screenshotUpdatedAt=None
+      )
+    }
+
+    Future.successful(uri)
   }
 
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {

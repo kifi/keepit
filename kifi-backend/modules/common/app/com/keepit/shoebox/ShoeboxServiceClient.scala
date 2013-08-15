@@ -53,8 +53,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def reportArticleSearchResult(res: ArticleSearchResult): Unit
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
-  def normalizeURL(url: String): Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
+  def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
+  def internNormalizedURI(url: String): Future[NormalizedURI]
   def sendMail(email: ElectronicMail): Future[Boolean]
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
@@ -150,7 +151,6 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }
   }
-
 
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
     call(Shoebox.internal.getBookmarks(userId)).map{ r =>
@@ -268,15 +268,21 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def normalizeURL(url: String): Future[NormalizedURI] = {
-    call(Shoebox.internal.normalizeURL, JsString(url)).map(r => Json.fromJson[NormalizedURI](r.json).get)
-  }
-
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
     val query = uriIds.mkString(",")
     call(Shoebox.internal.getNormalizedURIs(query)).map { r =>
       Json.fromJson[Seq[NormalizedURI]](r.json).get
     }
+  }
+
+  def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]] =
+    call(Shoebox.internal.getNormalizedURIByURL(), JsString(url)).map { r => r.json match {
+      case JsNull => None
+      case js: JsValue => Some(Json.fromJson[NormalizedURI](js).get)
+    }}
+
+  def internNormalizedURI(url: String): Future[NormalizedURI] = {
+    call(Shoebox.internal.internNormalizedURI, JsString(url)).map(r => Json.fromJson[NormalizedURI](r.json).get)
   }
 
   def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]] = consolidateClickHistoryReq(ClickHistoryUserIdKey(userId)) { key =>

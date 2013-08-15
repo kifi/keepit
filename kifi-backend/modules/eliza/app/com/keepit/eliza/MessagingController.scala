@@ -245,7 +245,7 @@ class MessagingController @Inject() (
 
   def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urlOpt: Option[String], messageText: String) : Message = {
     val participants = recipients + from
-    val nUriOpt = urlOpt.map{url: String => Await.result(shoebox.normalizeURL(url), 10 seconds)}
+    val nUriOpt = urlOpt.map{url: String => Await.result(shoebox.internNormalizedURI(url), 10 seconds)}
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val thread = db.readWrite{ implicit session => 
       val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), nUriOpt.flatMap(_.title)) 
@@ -320,7 +320,7 @@ class MessagingController @Inject() (
     }
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach{ url =>
-      shoebox.normalizeURL(url).foreach{ nUri =>
+      shoebox.internNormalizedURI(url).foreach{ nUri =>
         db.readWrite { implicit session => 
           messageRepo.updateUriId(message, nUri.id.get)
         }
@@ -469,7 +469,7 @@ class MessagingController @Inject() (
   }
 
   def getThreadInfos(userId: Id[User], url: String): Seq[ElizaThreadInfo] = {
-    val uriId = Await.result(shoebox.normalizeURL(url), 2 seconds).id.get
+    val uriId = Await.result(shoebox.internNormalizedURI(url), 2 seconds).id.get
     val threads = db.readOnly { implicit session =>
       val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
       threadIds.map(threadRepo.get(_))
