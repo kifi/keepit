@@ -10,20 +10,26 @@ import com.keepit.common.kestrelCombinator
 import play.api.Play.current
 
 class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit executor: ExecutionContext) extends Future[T] with Awaitable[T] {
-  private val safeFuture = future tap (_.onFailure {
-    case cause: Throwable =>
-      cause.printStackTrace() // should always work, to stdout
-      try {
-        // Needs a running Play application. May fail.
-        Logger(getClass).error(s"[SafeFuture] Failure of future${name.map(": " + _).getOrElse("")}", cause)
-        val fortyTwoInjector = current.global.asInstanceOf[FortyTwoGlobal].injector
-        fortyTwoInjector.getInstance(classOf[HealthcheckPlugin]).addError(
-          HealthcheckError(Some(cause), None, None, Healthcheck.INTERNAL, Some(s"[MonitoredExecutionContext]: ${cause.getMessage}"))
-        )
-      } catch {
-        case _: Throwable => 
-      }
-  })
+  private val safeFuture = future tap { f =>
+    f match {
+      case _: SafeFuture =>
+      case dangerousFuture =>
+        dangerousFuture.onFailure {
+          case cause: Throwable =>
+            cause.printStackTrace() // should always work, to stdout
+            try {
+              // Needs a running Play application. May fail.
+              Logger(getClass).error(s"[SafeFuture] Failure of future${name.map(": " + _).getOrElse("")}", cause)
+              val fortyTwoInjector = current.global.asInstanceOf[FortyTwoGlobal].injector
+              fortyTwoInjector.getInstance(classOf[HealthcheckPlugin]).addError(
+                HealthcheckError(Some(cause), None, None, Healthcheck.INTERNAL, Some(s"[MonitoredExecutionContext]: ${cause.getMessage}"))
+              )
+            } catch {
+              case _: Throwable =>
+            }
+        }
+    }
+  }
 
   // Just a wrapper around Future with Awaitable. Wakka Wakka.
   override def result(atMost: Duration)(implicit permit: CanAwait): T = future.result(atMost)(permit)
