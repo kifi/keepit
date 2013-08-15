@@ -32,7 +32,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def prepUrlHashToMappedUrlCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new PrepUrlHashToMappedUrlCache((innerRepo, 1 second), (outerRepo, 7 days))
+    new PrepUrlHashToMappedUrlCache((outerRepo, 7 days))
 
   @Singleton
   @Provides
