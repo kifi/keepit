@@ -135,18 +135,29 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uri))
   }
 
-  def normalizeURL() = Action(parse.json) { request =>
+  def getNormalizedURIs(ids: String) = Action { request =>
+    val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
+    val uris = db.readOnly { implicit s => uriIds map normUriRepo.get }
+    Ok(Json.toJson(uris))
+  }
+
+  def getNormalizedURIByURL() = Action(parse.json) { request =>
     val url : String = Json.fromJson[String](request.body).get
-    val uriId = db.readWrite(attempts=3) { implicit s =>
+    val uriOpt = db.readWrite(attempts=2) { implicit s =>
+      normUriRepo.getByUri(url)
+    }
+    uriOpt match {
+      case Some(uri) => Ok(Json.toJson(uri))
+      case None => Ok(JsNull)
+    }
+  }
+
+  def internNormalizedURI() = Action(parse.json) { request =>
+    val url : String = Json.fromJson[String](request.body).get
+    val uriId = db.readWrite(attempts=2) { implicit s =>
       normUriRepo.internByUri(url)
     }
     Ok(Json.toJson(uriId))
-  }
-
-  def getNormalizedURIs(ids: String) = Action { request =>
-     val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
-     val uris = db.readOnly { implicit s => uriIds map normUriRepo.get }
-     Ok(Json.toJson(uris))
   }
 
   def getBrowsingHistoryFilter(userId: Id[User]) = Action {
@@ -166,7 +177,6 @@ class ShoeboxController @Inject() (
     clickHistoryTracker.add(userId, uriId)
     Ok
   }
-
 
   def getBookmarks(userId: Id[User]) = Action { request =>
     val bookmarks = db.readOnly { implicit session =>
