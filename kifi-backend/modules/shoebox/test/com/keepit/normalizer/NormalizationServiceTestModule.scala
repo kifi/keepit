@@ -13,6 +13,6 @@ case class NormalizationServiceTestModule() extends ScalaModule {
 }
 
 object PrenormalizationService extends NormalizationService {
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo, session: RWSession) = Future.successful(None)
+  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo) = Future.successful(None)
   def normalize(uriString: String)(implicit session: RSession) = URI.safelyParse(uriString).map(Prenormalizer).flatMap(_.safelyToString()).getOrElse(uriString)
 }
