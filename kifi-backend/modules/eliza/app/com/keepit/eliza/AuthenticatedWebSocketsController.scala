@@ -28,6 +28,7 @@ import akka.actor.{Cancellable, ActorSystem}
 import securesocial.core.{Authenticator, UserService, SecureSocial}
 
 import org.joda.time.DateTime
+import com.keepit.common.akka.SafeFuture
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -53,7 +54,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case Input.EOF => Done(Unit, Input.EOF)
       case Input.Empty => Cont[JsArray, Unit](i => step(i))
       case Input.El(e) =>
-        Akka.future { f(e) }
+        SafeFuture("Eliza Websocket (frame: ${e.toString})") { f(e) }
         Cont[JsArray, Unit](i => step(i))
     }
     (Cont[JsArray, Unit](i => step(i)))
