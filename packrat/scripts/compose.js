@@ -146,7 +146,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       $f.removeClass("kifi-empty");
 
       // insert link
-      var r = $d.data("sel"), $a = $("<a>", {href: "x-kifi-sel:" + selector, text: "look here"}), pad = true;
+      var r = $d.data("sel"), $a = $("<a>", {href: "x-kifi-sel:" + selector, text: "look\u00A0here"}), pad = true;
       if (r && r.startContainer === r.endContainer && !$(r.endContainer).closest("a").length) {
         var par = r.endContainer, i = r.startOffset, j = r.endOffset;
         if (par.nodeType == 3) {  // text
