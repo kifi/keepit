@@ -294,6 +294,7 @@ class MessagingController @Inject() (
       sentOnUriId = thread.uriId
       )) 
     }
+    future { setLastSeen(from, thread.id.get, Some(message.createdAt)) }
 
     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
