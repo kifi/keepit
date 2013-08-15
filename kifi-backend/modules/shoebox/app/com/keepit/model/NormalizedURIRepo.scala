@@ -129,7 +129,7 @@ class NormalizedURIRepoImpl @Inject() (
       case Some(uri)=> uri
       case None => {
         val newUri = NormalizedURI.withHash(normalizedUrl = normalizedUrl)
-        newUri.urlHash.hash.intern.synchronized {
+        newUri.urlHash.hash.take(2).intern.synchronized {
           getByNormalizedUrl(normalizedUrl) match {
             case Some(uri) => uri
             case None => save(newUri)
@@ -137,7 +137,6 @@ class NormalizedURIRepoImpl @Inject() (
         }
       }
     }
-    normalizedURIFactory.normalizationService.update(normalizedUri, candidates:_*)(this)
     normalizedUri
   }
 }
