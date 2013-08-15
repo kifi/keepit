@@ -472,12 +472,17 @@ class MessagingController @Inject() (
   }
 
   def getThreadInfos(userId: Id[User], url: String): Seq[ElizaThreadInfo] = {
-    val uriId = Await.result(shoebox.internNormalizedURI(url), 2 seconds).id.get // todo: Remove await
-    val threads = db.readOnly { implicit session =>
-      val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
-      threadIds.map(threadRepo.get(_))
+    val uriIdOpt = Await.result(shoebox.getNormalizedURIByURL(url), 2 seconds).map(_.id.get) // todo: Remove await
+    uriIdOpt.map{ uriId =>
+      val threads = db.readOnly { implicit session =>
+        val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
+        threadIds.map(threadRepo.get(_))
+      }
+      buildThreadInfos(userId, threads, url)
+    } getOrElse {
+      Seq[ElizaThreadInfo]()
     }
-    buildThreadInfos(userId, threads, url)
+    
   }
 
   def connectedSockets: Int  = notificationRouter.connectedSockets
