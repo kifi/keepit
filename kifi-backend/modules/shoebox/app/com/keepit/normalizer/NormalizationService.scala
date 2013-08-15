@@ -111,9 +111,9 @@ class NormalizationServiceImpl @Inject() (
     val contentCheck = ContentCheck(currentReference.url)
 
     def apply(candidates: Set[NormalizationCandidate]): Future[(Option[NormalizedURI], Set[String], Set[String])] =
-      apply(candidates.toList.sortBy(_.normalization).reverse, Set.empty)
+      processRecursively(candidates.toList.sortBy(_.normalization).reverse, Set.empty)
 
-    def apply(orderedCandidates: List[NormalizationCandidate], failedContentChecks: Set[String]): Future[(Option[NormalizedURI], Set[String], Set[String])] =
+    def processRecursively(orderedCandidates: List[NormalizationCandidate], failedContentChecks: Set[String]): Future[(Option[NormalizedURI], Set[String], Set[String])] =
       db.readOnly() { implicit session =>
         orderedCandidates match {
           case Nil => Future.successful((None, Set.empty, failedContentChecks))
