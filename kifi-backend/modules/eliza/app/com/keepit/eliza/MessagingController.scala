@@ -9,7 +9,7 @@ import com.keepit.common.time._
 import com.keepit.social.BasicUser
 import com.keepit.common.controller.ElizaServiceController
 
-import scala.concurrent.{future, Await, Future}
+import scala.concurrent.{Promise, future, Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -97,7 +97,7 @@ class MessagingController @Inject() (
       db.readWrite{ implicit session =>
         if (threadRepo.getOpt(extId).isEmpty) {
           log.info(s"MIGRATION: Importing thread $extId with participants $participants on uriid $uriId")
-          val nUri = Await.result(shoebox.getNormalizedURI(uriId), 10 seconds)
+          val nUri = Await.result(shoebox.getNormalizedURI(uriId), 10 seconds) // todo: Remove await
           //create thread
           val mtps = MessageThreadParticipants(participants.toSet)
           val thread = threadRepo.save(MessageThread(
@@ -139,7 +139,7 @@ class MessagingController @Inject() (
 
           log.info(s"MIGRATION: Starting notification recovery for $extId.")
           val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-          val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds)
+          val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds) // todo: Remove await
           participants.toSet.foreach{ userId : Id[User] => 
             recoverNotification(userId, thread, dbMessages, id2BasicUser)
           }
@@ -245,7 +245,7 @@ class MessagingController @Inject() (
 
   def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urlOpt: Option[String], messageText: String) : Message = {
     val participants = recipients + from
-    val nUriOpt = urlOpt.map{url: String => Await.result(shoebox.internNormalizedURI(url), 10 seconds)}
+    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url), 10 seconds)} // todo: Remove Await
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val thread = db.readWrite{ implicit session => 
       val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), nUriOpt.flatMap(_.title)) 
@@ -260,7 +260,7 @@ class MessagingController @Inject() (
       }
       thread 
     }
-    sendMessage(from, thread, messageText, urlOpt)
+    sendMessage(from, thread, messageText, urlOpt, nUriOpt)
     
   }
 
@@ -280,7 +280,7 @@ class MessagingController @Inject() (
   }
 
 
-  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String]) : Message = {
+  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None) : Message = {
     if (! thread.containsUser(from)) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
     log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session => 
@@ -296,7 +296,7 @@ class MessagingController @Inject() (
     }
 
     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-    val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds)
+    val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
     
     val messageWithBasicUser = MessageWithBasicUser(
       message.externalId,
@@ -319,8 +319,11 @@ class MessagingController @Inject() (
       sendNotificationForMessage(userId, message, thread, messageWithBasicUser)
     }
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
-    urlOpt.foreach{ url =>
-      shoebox.internNormalizedURI(url).foreach{ nUri =>
+    urlOpt.foreach { url =>
+      (nUriOpt match {
+        case Some(n) => Promise.successful(n).future
+        case None => shoebox.internNormalizedURI(url)
+      }) foreach { nUri =>
         db.readWrite { implicit session => 
           messageRepo.updateUriId(message, nUri.id.get)
         }
@@ -469,7 +472,7 @@ class MessagingController @Inject() (
   }
 
   def getThreadInfos(userId: Id[User], url: String): Seq[ElizaThreadInfo] = {
-    val uriId = Await.result(shoebox.internNormalizedURI(url), 2 seconds).id.get
+    val uriId = Await.result(shoebox.internNormalizedURI(url), 2 seconds).id.get // todo: Remove await
     val threads = db.readOnly { implicit session =>
       val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
       threadIds.map(threadRepo.get(_))

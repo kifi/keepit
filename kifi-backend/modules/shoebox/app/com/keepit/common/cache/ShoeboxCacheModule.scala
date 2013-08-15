@@ -28,7 +28,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def normalizedURIUrlHashCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIUrlHashCache((innerRepo, 1 second), (outerRepo, 7 days))
+    new NormalizedURIUrlHashCache((outerRepo, 7 days))
 
   @Provides @Singleton
   def prepUrlHashToMappedUrlCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

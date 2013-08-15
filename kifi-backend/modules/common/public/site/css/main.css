@@ -308,9 +308,6 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .keep-coll-a {padding: 0 5px}
 .keep-coll-a:not(:hover) {color: #99a3b3}
 .keep-coll-a:hover {text-decoration: underline; -webkit-font-smoothing: antialiased}
-.keep-coll-x {display: none; position: absolute; top: 0; bottom: 0; right: 0; width: 0; text-align: center}
-.keep-coll:hover>.keep-coll-x {width: 10px}
-.keep-coll-x::before {content: "\d7"; position: relative; bottom: 1px}
 .keep-who {font-size: 0}
 .keep-who>.pic {display: inline-block; vertical-align: middle; width: 23px; height: 23px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
 .keep-who>.me {border-radius: 50% 0 0 50%}
