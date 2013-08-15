@@ -56,6 +56,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     clearTimeout(keyTimer);
     search();  // immediate search
   }
+  var $qp = $(document.getElementById("gs_taif0"));  // stable identifier: "Google Search Type-Ahead Input Field"
 
   function onIdle() {
     logEvent("search", "dustSettled", {
@@ -68,7 +69,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   }
 
   checkSearchType();
-  search(parseQuery(location.hash));  // Google can be slow to initialize the input field from the hash.
+  search(parseQuery(location.hash || location.search));  // Google can be slow to initialize the input field, or it may be missing
 
   var isVertical;
   function checkSearchType() {
@@ -83,7 +84,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   function search(fallbackQuery, newFilter) {
     if (isVertical) return;
 
-    var q = (getPrediction() || $q.val() || fallbackQuery || "").trim().replace(/\s+/, " ");  // TODO: also detect "Showing results for" and prefer that
+    var q = ($qp.val() || $q.val() || fallbackQuery || "").trim().replace(/\s+/, " ");  // TODO: also detect "Showing results for" and prefer that
     var f = arguments.length > 1 ? newFilter : filter;
     if (q == query && areSameFilter(f, filter)) {
       api.log("[search] nothing new, query:", q, "filter:", f);
@@ -155,11 +156,6 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     });
 
     var $resList = $res.find("#kifi-res-list,.kifi-res-end").css("opacity", .2);
-  }
-
-  var elPredict;
-  function getPrediction() {
-    return (elPredict || (elPredict = document.getElementById("gs_taif0")) || 0).value;  // stable identifier: "Google Search Type-Ahead Input Field 0"
   }
 
   function parseQuery(hash) {
