@@ -125,11 +125,20 @@ class NormalizedURIRepoImpl @Inject() (
 
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
     val normalizedUrl = normalizedURIFactory.normalize(url)
-    val uri = getByNormalizedUrl(normalizedUrl) match {
-      case None => save(NormalizedURI.withHash(normalizedUrl = normalizedUrl))
-      case Some(normalizedURI)=> normalizedURI
+    val normalizedUri = getByNormalizedUrl(normalizedUrl) match {
+      case Some(uri)=> uri
+      case None => {
+        val newUri = NormalizedURI.withHash(normalizedUrl = normalizedUrl)
+        newUri.urlHash.hash.intern.synchronized {
+          getByNormalizedUrl(normalizedUrl) match {
+            case Some(uri) => uri
+            case None => save(newUri)
+          }
+        }
+      }
     }
-    uri
+    normalizedURIFactory.normalizationService.update(normalizedUri, candidates:_*)(this)
+    normalizedUri
   }
 }
 
