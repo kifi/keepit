@@ -16,7 +16,7 @@ object TimeoutFuture {
           promise.failure(new TimeoutException(s"Future timed out after ${after.toMillis}ms"))
         }
       }, after.toNanos, TimeUnit.NANOSECONDS)
-    // does not cancel future, only resolves result in approx. duration! use onCancel to kill it.
+    // does not cancel future, only resolves result in approx. duration!
     Future.firstCompletedOf(Seq(future, promise.future)).tap(_.onComplete { case result => timeout.cancel(); onTimeout })
   }
 }

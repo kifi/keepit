@@ -22,7 +22,7 @@ object CancelableFuture {
     promise tryCompleteWith SafeFuture {
       val t = Thread.currentThread
       threadRef.synchronized { threadRef.set(t) }
-      fun
+      try fun finally { threadRef.set(null) }
     }
 
     (future, () => {
