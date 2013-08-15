@@ -24,11 +24,11 @@ class FakeClock extends Clock with Logging {
   private val stack = mutable.Stack[Long]()
   private var timeFunction: () => Long = () => {
     if (stack.isEmpty) {
-      val nowTime = new DateTime(System.currentTimeMillis())
+      val nowTime = new DateTime(System.currentTimeMillis(), DEFAULT_DATE_TIME_ZONE)
       log.debug(s"FakeClock is retuning real now value: $nowTime")
       nowTime.getMillis
     } else {
-      val fakeNowTime = new DateTime(stack.pop())
+      val fakeNowTime = new DateTime(stack.pop(), DEFAULT_DATE_TIME_ZONE)
       log.debug(s"FakeClock is retuning fake now value: $fakeNowTime")
       fakeNowTime.getMillis
     }
@@ -36,12 +36,12 @@ class FakeClock extends Clock with Logging {
 
   def +=(p: ReadablePeriod) {
     val oldTimeFunction = timeFunction
-    timeFunction = { () => new DateTime(oldTimeFunction()).plus(p).getMillis }
+    timeFunction = { () => new DateTime(oldTimeFunction(), DEFAULT_DATE_TIME_ZONE).plus(p).getMillis }
   }
 
   def -=(p: ReadablePeriod) {
     val oldTimeFunction = timeFunction
-    timeFunction = { () => new DateTime(oldTimeFunction()).minus(p).getMillis }
+    timeFunction = { () => new DateTime(oldTimeFunction(), DEFAULT_DATE_TIME_ZONE).minus(p).getMillis }
   }
 
   def push(t : DateTime): FakeClock = { stack push t.getMillis; this }
