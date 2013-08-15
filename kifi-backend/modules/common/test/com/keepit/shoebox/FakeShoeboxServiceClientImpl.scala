@@ -6,32 +6,23 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.common.db._
-import com.keepit.model.ClickHistory
 import scala.concurrent.Future
 import com.keepit.search._
-import com.keepit.model.ExperimentType
 import com.keepit.model.Phrase
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
-import com.keepit.model.UserExperiment
-import com.keepit.search.ArticleSearchResult
-import play.api.libs.json._
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{Map => MutableMap}
-import com.keepit.social.{SocialNetworkType, SocialId, BasicUser}
+import com.keepit.social.{SocialNetworkType, BasicUser}
 import com.keepit.common.mail.{ElectronicMail}
-import com.keepit.common.routes.Shoebox
 import com.keepit.model.ExperimentType
 import com.keepit.model.URL
 import com.keepit.model.BrowsingHistory
-import play.api.libs.json.JsString
-import scala.Some
 import com.keepit.model.CommentRecipient
 import com.keepit.model.UserExperiment
 import com.keepit.search.ArticleSearchResult
 import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
-import com.keepit.model.NormalizedURIUrlHashKey
 import com.keepit.model.ClickHistory
 import play.api.libs.json.JsObject
 
