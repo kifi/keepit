@@ -1,9 +1,12 @@
 package com.keepit.model
 
+import scala.concurrent.duration.Duration
+
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick._
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[SocialConnectionRepoImpl])
@@ -15,15 +18,23 @@ trait SocialConnectionRepo extends Repo[SocialConnection] {
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int
 }
 
+case class SocialUserConnectionsKey(id: Id[SocialUserInfo]) extends Key[Seq[SocialUserInfo]] {
+  val namespace = "social_user_connections"
+  def toKey(): String = id.id.toString
+}
+
+class SocialUserConnectionsCache(inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[SocialUserConnectionsKey, Seq[SocialUserInfo]](inner, outer: _*)
+
 @Singleton
 class SocialConnectionRepoImpl @Inject() (
-                                           val db: DataBaseComponent,
-                                           val clock: Clock,
-                                           socialRepo: SocialUserInfoRepoImpl)
+  val db: DataBaseComponent,
+  val clock: Clock,
+  socialUserConnectionsCache: SocialUserConnectionsCache,
+  socialRepo: SocialUserInfoRepoImpl)
   extends DbRepo[SocialConnection] with SocialConnectionRepo {
 
   import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
   import scala.slick.jdbc.StaticQuery
   import db.Driver.Implicit._
   import DBSession._
@@ -32,6 +43,12 @@ class SocialConnectionRepoImpl @Inject() (
     def socialUser1 = column[Id[SocialUserInfo]]("social_user_1", O.NotNull)
     def socialUser2 = column[Id[SocialUserInfo]]("social_user_2", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ socialUser1 ~ socialUser2 ~ state <> (SocialConnection, SocialConnection.unapply _)
+  }
+
+  override def invalidateCache(conn: SocialConnection)(implicit session: RSession): SocialConnection = {
+    socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser1))
+    socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser2))
+    super.invalidateCache(conn)
   }
 
   def getFortyTwoUserConnections(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
@@ -93,13 +110,15 @@ class SocialConnectionRepoImpl @Inject() (
   }
 
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo] = {
-    val connections = (for {
-      t <- table if ((t.socialUser1 === id || t.socialUser2 === id) && t.state === SocialConnectionStates.ACTIVE)
-    } yield t ).list
-    connections map (s => if(id == s.socialUser1) s.socialUser2 else s.socialUser1 ) match {
-      case users if !users.isEmpty =>
-        (for (t <- socialRepo.table if t.id inSet users) yield t).list
-      case _ => Nil
+    socialUserConnectionsCache.getOrElse(SocialUserConnectionsKey(id)) {
+      val connections = (for {
+        t <- table if ((t.socialUser1 === id || t.socialUser2 === id) && t.state === SocialConnectionStates.ACTIVE)
+      } yield t ).list
+      connections map (s => if(id == s.socialUser1) s.socialUser2 else s.socialUser1 ) match {
+        case users if !users.isEmpty =>
+          (for (t <- socialRepo.table if t.id inSet users) yield t).list
+        case _ => Nil
+      }
     }
   }
 

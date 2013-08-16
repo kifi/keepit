@@ -19,6 +19,9 @@ import org.joda.time.DateTime
 
 import play.api.libs.json.{JsValue, JsNull, Json, JsObject, JsArray}
 
+import java.nio.{ByteBuffer, CharBuffer}
+import java.nio.charset.Charset
+
 
  //For migration only
 import play.api.mvc.Action
@@ -50,7 +53,8 @@ class MessagingController @Inject() (
     shoebox: ShoeboxServiceClient, 
     db: Database,
     notificationRouter: NotificationRouter,
-    clock: Clock
+    clock: Clock,
+    uriNormalizationUpdater: UriNormalizationUpdater
     )
   extends ElizaServiceController with Logging {
 
@@ -76,7 +80,7 @@ class MessagingController @Inject() (
 
       val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator) 
 
-      userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther.id.get, notifJson)
+      userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson)
       userThreadRepo.clearNotification(userId)
       userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime(zones.PT))
       userThreadRepo.setNotificationLastSeen(userId, currentDateTime(zones.PT))
@@ -157,6 +161,90 @@ class MessagingController @Inject() (
     
   }
 
+  def sendGlobalNotification() = Action(parse.json) { request =>
+    Async(future{
+      val data : JsObject = request.body.asInstanceOf[JsObject]
+      
+      val userIds  : Set[Id[User]] =  (data \ "userIds").as[JsArray].value.map(v => Id[User](v.as[Long])).toSet
+      val title    : String        =  (data \ "title").as[String]
+      val body     : String        =  (data \ "body").as[String]
+      val linkText : String        =  (data \ "linkText").as[String]
+      val linkUrl  : String        =  (data \ "linkUrl").as[String]
+      val imageUrl : String        =  (data \ "imageUrl").as[String]
+      val sticky   : Boolean       =  (data \ "sticky").as[Boolean]
+
+      createGlobalNotificaiton(userIds, title, body, linkText, linkUrl, imageUrl, sticky) 
+
+      Ok("")
+    })
+  }
+
+
+  def createGlobalNotificaiton(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
+    db.readWrite { implicit session =>
+      val mtps = MessageThreadParticipants(userIds)
+      val thread = threadRepo.save(MessageThread(
+        uriId = None,
+        url = None,
+        nUrl = None,
+        pageTitle = None,
+        participants = Some(mtps),
+        participantsHash = Some(mtps.hash),
+        replyable = false
+      ))
+
+      val message = messageRepo.save(Message(
+        from = None,
+        thread = thread.id.get,
+        threadExtId = thread.externalId,
+        messageText = s"$title (on $linkText): $body",
+        sentOnUrl = Some(linkUrl),
+        sentOnUriId = None
+      ))
+
+
+      userIds.foreach{ userId => 
+        val notifJson = Json.obj(
+          "id"       -> message.externalId.id,
+          "time"     -> message.createdAt,
+          "thread"   -> message.threadExtId.id,
+          "unread"   -> true,
+          "category" -> "GLOBAL",
+          "title"    -> title,
+          "bodyHtml" -> body,
+          "linkText" -> linkText,
+          "url"      -> linkUrl,
+          "isSticky" -> sticky,
+          "image"    -> imageUrl
+        )
+
+
+        val userThread = UserThread(
+          id = None,
+          user = userId,
+          thread = thread.id.get,
+          uriId = None,
+          lastSeen = None,
+          notificationPending = true,
+          lastMsgFromOther = Some(message.id.get),
+          lastNotification = notifJson,
+          replyable = false
+        )  
+
+        notificationRouter.sendToUser(
+          userId,
+          Json.arr("notification", notifJson)
+        )
+      
+      }
+    
+
+    }
+  
+
+
+  }
+
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String) : Seq[ElizaThreadInfo]  = {
     //get all involved users
@@ -208,8 +296,16 @@ class MessagingController @Inject() (
       "author"       -> messageWithBasicUser.user,
       "participants" -> messageWithBasicUser.participants,
       "locator"      -> locator,
-      "unread"       -> true
+      "unread"       -> true,
+      "type"         -> "MESSAGE"
     ) 
+  }
+
+  def trimAtBytes(str: String, len: Int, charset: Charset) = { //Conner's Algorithm
+    val outBuf = ByteBuffer.wrap(new Array[Byte](len))
+    val inBuf = CharBuffer.wrap(str.toCharArray())
+    charset.newEncoder().encode(inBuf, outBuf, true)
+    new String(outBuf.array, 0, outBuf.position(), charset)
   }
 
   private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = { //TODO Stephen: And store notification json
@@ -218,7 +314,7 @@ class MessagingController @Inject() (
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
 
       db.readWrite{ implicit session => 
-        userThreadRepo.setNotification(user, thread.id.get, message.id.get, notifJson)
+        userThreadRepo.setNotification(user, thread.id.get, message, notifJson)
       }
       
       notificationRouter.sendToUser(
@@ -231,7 +327,8 @@ class MessagingController @Inject() (
     }
 
     future{
-      shoebox.sendPushNotification(user, message.externalId.id, getPendingNotificationCount(user), messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
+      val notifText = messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText
+      shoebox.sendPushNotification(user, message.externalId.id, getPendingNotificationCount(user), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
     }
 
     //This is mostly for testing and monitoring
@@ -243,12 +340,12 @@ class MessagingController @Inject() (
   }
 
 
-  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urlOpt: Option[String], messageText: String) : Message = {
+  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urlOpt: Option[String], titleOpt: Option[String], messageText: String) : Message = {
     val participants = recipients + from
-    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.normalizeURL(url), 10 seconds)} // todo: Remove Await
+    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url), 10 seconds)} // todo: Remove Await
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val thread = db.readWrite{ implicit session => 
-      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), nUriOpt.flatMap(_.title)) 
+      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title))) 
       if (isNew){
         log.info(s"This is a new thread. Creating User Threads.")
         participants.par.foreach{ userId => 
@@ -281,7 +378,7 @@ class MessagingController @Inject() (
 
 
   def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None) : Message = {
-    if (! thread.containsUser(from)) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
+    if (! thread.containsUser(from) || !thread.replyable) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
     log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session => 
       messageRepo.save(Message(
@@ -294,6 +391,7 @@ class MessagingController @Inject() (
       sentOnUriId = thread.uriId
       )) 
     }
+    future { setLastSeen(from, thread.id.get, Some(message.createdAt)) }
 
     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
@@ -322,7 +420,7 @@ class MessagingController @Inject() (
     urlOpt.foreach { url =>
       (nUriOpt match {
         case Some(n) => Promise.successful(n).future
-        case None => shoebox.normalizeURL(url)
+        case None => shoebox.internNormalizedURI(url)
       }) foreach { nUri =>
         db.readWrite { implicit session => 
           messageRepo.updateUriId(message, nUri.id.get)
@@ -472,12 +570,17 @@ class MessagingController @Inject() (
   }
 
   def getThreadInfos(userId: Id[User], url: String): Seq[ElizaThreadInfo] = {
-    val uriId = Await.result(shoebox.normalizeURL(url), 2 seconds).id.get // todo: Remove await
-    val threads = db.readOnly { implicit session =>
-      val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
-      threadIds.map(threadRepo.get(_))
+    val uriIdOpt = Await.result(shoebox.getNormalizedURIByURL(url), 2 seconds).map(_.id.get) // todo: Remove await
+    uriIdOpt.map{ uriId =>
+      val threads = db.readOnly { implicit session =>
+        val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
+        threadIds.map(threadRepo.get(_))
+      }.filter(_.replyable)
+      buildThreadInfos(userId, threads, url)
+    } getOrElse {
+      Seq[ElizaThreadInfo]()
     }
-    buildThreadInfos(userId, threads, url)
+    
   }
 
   def connectedSockets: Int  = notificationRouter.connectedSockets

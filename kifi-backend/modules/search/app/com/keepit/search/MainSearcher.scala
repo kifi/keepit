@@ -380,12 +380,9 @@ class MainSearcher(
     val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
 
     // simple classifier
-    val show = if (svVar > 0.18f) false else {
-      val isGood = (parsedQuery, personalizedSearcher) match {
-      case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get)
+    val show = (parsedQuery, personalizedSearcher) match {
+      case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get, svVar)
       case _ => true
-      }
-      isGood
     }
 
     // insert a new content if any (after show/no-show classification)
@@ -415,13 +412,13 @@ class MainSearcher(
         lang = lang)
   }
 
-  private def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher) = {
+  private def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher, svVar: Float) = {
     val semanticScoreThreshold = (1.0f - semanticBoost) + semanticBoost * 0.2f
     def classify(hit: MutableArticleHit) = {
       (hit.clickBoost) > 1.1f ||
       hit.scoring.recencyScore > 0.25f ||
       hit.scoring.textScore > 0.7f ||
-      (hit.scoring.textScore >= 0.04f && hit.semanticScore >= semanticScoreThreshold)
+      (hit.scoring.textScore >= 0.04f && hit.semanticScore >= semanticScoreThreshold && svVar < 0.18f)
     }
     hitList.take(3).exists(classify(_))
   }
