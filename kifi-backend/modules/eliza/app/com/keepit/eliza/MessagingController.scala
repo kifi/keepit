@@ -161,6 +161,24 @@ class MessagingController @Inject() (
     
   }
 
+  def sendGlobalNotification() = Action(parse.json) { request =>
+    Async(future{
+      val data : JsObject = request.body.asInstanceOf[JsObject]
+      
+      val userIds  : Set[Id[User]] =  (data \ "userIds").as[JsArray].value.map(v => Id[User](v.as[Long])).toSet
+      val title    : String        =  (data \ "title").as[String]
+      val body     : String        =  (data \ "body").as[String]
+      val linkText : String        =  (data \ "linkText").as[String]
+      val linkUrl  : String        =  (data \ "linkUrl").as[String]
+      val imageUrl : String        =  (data \ "imageUrl").as[String]
+      val sticky   : Boolean       =  (data \ "sticky").as[Boolean]
+
+      createGlobalNotificaiton(userIds, title, body, linkText, linkUrl, imageUrl, sticky) 
+
+      Ok("")
+    })
+  }
+
 
   def createGlobalNotificaiton(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
     db.readWrite { implicit session =>
