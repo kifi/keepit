@@ -3,13 +3,18 @@ package com.keepit.normalizer
 import com.keepit.model.Normalization
 import play.api.libs.json.JsObject
 
-case class NormalizationCandidate(url: String, normalization: Normalization)
+case class NormalizationCandidate(url: String, normalization: Normalization) {
+  require(url == url.toLowerCase, "Normalized urls must be all lowercase.")
+}
 
 object NormalizationCandidate {
-  def apply(json: JsObject, normalization: Normalization) : Option[NormalizationCandidate] =
-    for (url <- (json \ normalization.scheme).asOpt[String]) yield NormalizationCandidate(url, normalization)
+
+  val acceptedSubmissions = Seq(Normalization.CANONICAL, Normalization.OPENGRAPH)
 
   def apply(json: JsObject): Seq[NormalizationCandidate] = {
-    Normalization.priority.keys.map(normalization => apply(json, normalization)).flatten.toSeq
+    for {
+      normalization <- acceptedSubmissions
+      url <- (json \ normalization.scheme).asOpt[String]
+    } yield NormalizationCandidate(url.toLowerCase, normalization)
   }
 }

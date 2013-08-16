@@ -16,6 +16,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getScraped(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
+  def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
 }
 
 @Singleton
@@ -109,7 +110,7 @@ class NormalizedURIRepoImpl @Inject() (
     limited.list
   }
 
-  private def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
+  def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
     val hash = NormalizedURI.hashUrl(normalizedUrl)
     urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
       (for (t <- table if t.urlHash === hash) yield t).firstOption
@@ -127,15 +128,15 @@ class NormalizedURIRepoImpl @Inject() (
       case None => save(NormalizedURI.withHash(normalizedUrl = normalizedUrl))
       case Some(normalizedURI)=> normalizedURI
     }
-    normalizedURIFactory.normalizationService.update(uri, candidates:_*)(this)
+    normalizedURIFactory.normalizationServiceProvider.get.update(uri, candidates:_*)
     uri
   }
 }
 
 @Singleton
-case class NormalizedURIFactory @Inject() (normalizationService: NormalizationService) {
+case class NormalizedURIFactory @Inject() (normalizationServiceProvider: Provider[NormalizationService]) {
 
-  def normalize(url: String)(implicit session: RSession) = normalizationService.normalize(url)
+  def normalize(url: String)(implicit session: RSession) = normalizationServiceProvider.get.normalize(url)
 
   def apply(url: String)(implicit session: RSession): NormalizedURI =
     apply(title = None, url = url, state = NormalizedURIStates.ACTIVE, normalization = None)

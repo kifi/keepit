@@ -18,7 +18,7 @@ import com.keepit.common._
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo): Future[Option[NormalizedURI]]
+  def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]]
   def normalize(uriString: String)(implicit session: RSession): String
 }
 
@@ -27,6 +27,7 @@ class NormalizationServiceImpl @Inject() (
   db: Database,
   normalizationRuleRepo: UriNormalizationRuleRepo,
   failedContentCheckRepo: FailedContentCheckRepo,
+  normalizedURIRepo: NormalizedURIRepo,
   uriIntegrityPlugin: UriIntegrityPlugin,
   scraperPlugin: ScraperPlugin,
   healthcheckPlugin: HealthcheckPlugin) extends NormalizationService with Logging {
@@ -49,21 +50,22 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo): Future[Option[NormalizedURI]] = {
+  def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]] = {
+    require(candidates.isEmpty, "We currently do not accept external submissions.")
 
-    val validCandidates = current.normalization match {
+    val relevantCandidates = current.normalization match {
       case Some(currentNormalization) => candidates.filter(_.normalization >= currentNormalization)
       case None => candidates ++ buildInternalCandidates(current.url)
     }
 
-    val relevantCandidates = validCandidates.groupBy(_.url).map { case (url, candidates) => candidates.maxBy(_.normalization) }.toSet
-
-    val findStrongerReference = FindStrongerReference(current)
-
-    findStrongerReference(relevantCandidates).map { case (newReference, urlsToBeMigrated, urlsThatFailedContentCheck) => {
+    val findStrongerCandidate = FindStrongerCandidate(current)
+    findStrongerCandidate(relevantCandidates).map { case (successfulCandidateOption, weakerCandidates) => {
       db.readWrite { implicit session =>
-        urlsThatFailedContentCheck.foreach(failedContentCheckRepo.createOrIncrease(_, current.url))
-        newReference.map(migrate(_, urlsToBeMigrated))
+        findStrongerCandidate.contentCheck.failedContentChecks.foreach(failedContentCheckRepo.createOrIncrease(_, current.url))
+        for {
+          successfulCandidate <- successfulCandidateOption
+          (newReference, urlsToBeMigrated) <- Some(getNewReference(current, successfulCandidate, weakerCandidates)) if normalizationHasNotChanged(current)
+        } yield migrate(newReference, urlsToBeMigrated)
       }
     }} tap(_.onFailure { case e => healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Normalization update failed: ${e.getMessage}"))) })
   }
@@ -73,10 +75,10 @@ class NormalizationServiceImpl @Inject() (
       for {
         currentURI <- URI.parse(referenceUrl)
         internalCandidates <- Try {
-          for (normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS) yield {
-            val candidateUrl = SchemeNormalizer(normalization)(currentURI).toString()
-            NormalizationCandidate(candidateUrl, normalization)
-          }
+          for {
+            normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS
+            candidateUrl <- SchemeNormalizer(normalization)(currentURI).safelyToString()
+          } yield NormalizationCandidate(candidateUrl.toLowerCase, normalization)
         }
       } yield internalCandidates
 
@@ -89,73 +91,96 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
+  private case class FindStrongerCandidate(currentReference: NormalizedURI) {
+    val contentCheck = ContentCheck(currentReference.url)
+    val priorKnowledge = PriorKnowledge(currentReference)
+
+    def apply(candidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] =
+      findCandidate(candidates.sortBy(_.normalization).reverse)
+
+    def findCandidate(orderedCandidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] = {
+      orderedCandidates match {
+        case Seq() => Future.successful((None, Seq()))
+        case Seq(strongerCandidate, weakerCandidates @ _*) => {
+          assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization)
+          assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization)
+
+          db.readOnly { implicit session =>
+            priorKnowledge(strongerCandidate) match {
+              case Some(true) => Future.successful((Some(strongerCandidate), weakerCandidates))
+              case Some(false) => findCandidate(weakerCandidates)
+              case None => {
+                if (currentReference.url == strongerCandidate.url) Future.successful {
+                  if (currentReference.normalization != strongerCandidate.normalization) (Some(strongerCandidate), weakerCandidates)
+                  else (None, weakerCandidates)
+                }
+                else for {
+                  contentCheck <- contentCheck(strongerCandidate.url)
+                  (successful, weaker) <- {
+                    if (contentCheck) Future.successful((Some(strongerCandidate), weakerCandidates))
+                    else findCandidate(weakerCandidates)
+                  }
+                } yield (successful, weaker)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private case class PriorKnowledge(currentReference: NormalizedURI) {
+    def apply(candidate: NormalizationCandidate)(implicit session: RSession): Option[Boolean] = candidate.normalization match {
+      case Normalization.CANONICAL | Normalization.OPENGRAPH => Some(false)
+      case _ => if (normalizedURIRepo.getByNormalizedUrl(candidate.url).isEmpty) Some(false) else None
+    }
+  }
+
   private case class ContentCheck(referenceUrl: String) {
     lazy val referenceContentSignatureFuture = scraperPlugin.asyncSignature(referenceUrl)
+    var failedContentChecks = Set.empty[String]
+    var referenceUrlIsBroken = false
+
     def apply(alternateUrl: String)(implicit session: RSession): Future[Boolean] = {
-      if (failedContentCheckRepo.contains(referenceUrl, alternateUrl))
-        Future.successful(false)
+      if (referenceUrlIsBroken || failedContentChecks.contains(alternateUrl) || failedContentCheckRepo.contains(referenceUrl, alternateUrl)) Future.successful(false)
       else for {
         currentContentSignatureOption <- referenceContentSignatureFuture
-        candidateContentSignatureOption <- scraperPlugin.asyncSignature(alternateUrl) if currentContentSignatureOption.isDefined
+        candidateContentSignatureOption <- if (currentContentSignatureOption.isDefined) scraperPlugin.asyncSignature(alternateUrl) else Future.successful(None)
       } yield (currentContentSignatureOption, candidateContentSignatureOption) match {
           case (Some(currentContentSignature), Some(candidateContentSignature)) => currentContentSignature.similarTo(candidateContentSignature) > 0.9
-          case _ => {
-            healthcheckPlugin.addError(HealthcheckError(None, None, None, Healthcheck.INTERNAL, Some(s"Content signatures of URLs ${referenceUrl} and ${alternateUrl} could not be compared.")))
-            false
+          case (Some(_), None) => {
+            healthcheckPlugin.addError(HealthcheckError(None, None, None, Healthcheck.INTERNAL, Some(s"Content signature of URL ${alternateUrl} could not be computed.")))
+            failedContentChecks += alternateUrl ; false
+          }
+          case (None, _) => {
+            healthcheckPlugin.addError(HealthcheckError(None, None, None, Healthcheck.INTERNAL, Some(s"Content signature of reference URL ${referenceUrl} could not be computed.")))
+            referenceUrlIsBroken = true ; false
           }
         }
     }
   }
 
-  private case class FindStrongerReference(currentReference: NormalizedURI)(implicit normalizedURIRepo: NormalizedURIRepo) {
-    val contentCheck = ContentCheck(currentReference.url)
-
-    def apply(candidates: Set[NormalizationCandidate]): Future[(Option[NormalizedURI], Set[String], Set[String])] =
-      processRecursively(candidates.toList.sortBy(_.normalization).reverse, Set.empty)
-
-    def processRecursively(orderedCandidates: List[NormalizationCandidate], failedContentChecks: Set[String]): Future[(Option[NormalizedURI], Set[String], Set[String])] =
-      db.readOnly() { implicit session =>
-        orderedCandidates match {
-          case Nil => Future.successful((None, Set.empty, failedContentChecks))
-          case strongerCandidate::weakerCandidates => {
-            assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization)
-            assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization)
-
-            val strongerCandidateUrl = normalize(strongerCandidate.url)
-
-            if (currentReference.url == strongerCandidateUrl) {
-              if (currentReference.normalization == strongerCandidate.normalization) Future.successful((None, Set.empty, failedContentChecks))
-              else {
-                val currentReferenceWithUpgradedNormalization = currentReference.withNormalization(strongerCandidate.normalization)
-                val toBeMigrated = weakerCandidates.takeWhile(currentReference.normalization.isEmpty || _.normalization >= currentReference.normalization.get).map(_.url).toSet
-                Future.successful((Some(currentReferenceWithUpgradedNormalization), toBeMigrated, failedContentChecks))
-              }
-            }
-
-            else for {
-              contentCheck <- contentCheck(strongerCandidateUrl)
-              (newReference, urlsToBeMigrated, urlsThatFailedContentCheck) <- {
-                if (contentCheck) db.readOnly() { implicit session =>
-                  val candidateNormalizedURI = normalizedURIRepo.getByUri(strongerCandidateUrl) match {
-                    case None => NormalizedURI.withHash(normalizedUrl = strongerCandidateUrl, normalization = Some(strongerCandidate.normalization))
-                    case Some(uri) =>
-                      if (uri.normalization.isEmpty || uri.normalization.get < strongerCandidate.normalization)
-                        uri.withNormalization(strongerCandidate.normalization)
-                      else uri
-                  }
-                  val toBeMigrated = Set(currentReference.url) ++ weakerCandidates.takeWhile(currentReference.normalization.isEmpty || _.normalization >= currentReference.normalization.get).map(_.url)
-
-                  Future.successful((Some(candidateNormalizedURI), toBeMigrated, failedContentChecks))
-                }
-                else apply(weakerCandidates, failedContentChecks + strongerCandidateUrl)
-              }
-            } yield (newReference, urlsToBeMigrated, urlsThatFailedContentCheck)
-          }
-        }
+  private def getNewReference(currentReference: NormalizedURI, successfulCandidate: NormalizationCandidate, weakerCandidates: Seq[NormalizationCandidate])(implicit session: RSession): (NormalizedURI, Set[String]) = {
+    val newReference = successfulCandidate match {
+      case NormalizationCandidate(currentReference.url, strongerNormalization) => currentReference.withNormalization(strongerNormalization)
+      case NormalizationCandidate(url, normalization) => normalizedURIRepo.getByNormalizedUrl(url) match {
+        case None => NormalizedURI.withHash(normalizedUrl = url, normalization = Some(normalization))
+        case Some(uri) =>
+          if (uri.normalization.isEmpty || uri.normalization.get < normalization)
+            uri.withNormalization(normalization)
+          else uri
       }
+    }
+    val toBeMigrated = Set(currentReference.url) - newReference.url ++ weakerCandidates.takeWhile(currentReference.normalization.isEmpty || _.normalization >= currentReference.normalization.get).map(_.url)
+    (newReference, toBeMigrated)
   }
 
-  private def migrate(referenceURI: NormalizedURI, urlsToBeMigrated: Set[String])(implicit normalizedURIRepo: NormalizedURIRepo, session: RWSession): NormalizedURI = {
+  private def normalizationHasNotChanged(currentReference: NormalizedURI)(implicit session: RSession) = {
+    val mostRecent = normalizedURIRepo.get(currentReference.id.get)
+    (mostRecent.state != NormalizedURIStates.INACTIVE) && (mostRecent.normalization == currentReference.normalization)
+  }
+
+  private def migrate(referenceURI: NormalizedURI, urlsToBeMigrated: Set[String])(implicit session: RWSession): NormalizedURI = {
     val savedReference = normalizedURIRepo.save(referenceURI)
     val mergedUris = for {
       url <- urlsToBeMigrated

@@ -1,10 +1,9 @@
 package com.keepit.normalizer
 
 import org.specs2.mutable.Specification
-import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.net.URI
 
-class PrenormalizerTest extends Specification with ShoeboxTestInjector {
+class PrenormalizerTest extends Specification {
 
   def prenormalize(url: String): String = URI.safelyParse(url).map(Prenormalizer).flatMap(_.safelyToString()).getOrElse(url)
   // prenormalize mimics the use of Prenormalizer in NormalizationService except the "safely" methods use Logging instead of Healthcheck
