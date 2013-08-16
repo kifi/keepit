@@ -566,29 +566,30 @@ $(function() {
 		nwFriendsScroller.refresh();
 	});
 	var $nwFriendsLoading = $('.invite-friends-loading');
-	function prepInviteTab() {
-		$.getJSON(xhrBase + '/user/socialConnections', function(friends) {
+	var friendsToShow = 20;
+	var friendsTimeout;
+	function filterFriends() {
+		clearTimeout(friendsTimeout);
+		var nw = $('.invite-filters').attr('data-nw-selected');
+		var filter = $('.invite-filter').val();
+		friendsTimeout = setTimeout(function () { prepInviteTab(filter, nw) }, 200);
+	}
+
+	function prepInviteTab(search, network) {
+		search = search || undefined;
+		network = network || undefined;
+		$nwFriendsLoading.show();
+		$.getJSON(xhrBase + '/user/socialConnections', { limit: friendsToShow, search: search, network: network }, function(friends) {
 			console.log('[prepInviteTab] friends:', friends.length);
+			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
+			var filter = $('.invite-filter').val() || undefined;
+			if (filter != search || nw != network) return;
 			nwFriendsTmpl.render(friends);
-			function filterFriends() {
-				var nw = $('.invite-filters').attr('data-nw-selected');
-				var words = $('.invite-filter').val().toLowerCase().split(/\s+/);
-				var matches = {};
-				friends.forEach(function (fr) {
-					matches[fr.value] = (!nw || nw == fr.value.split('/')[0]) && words.reduce(function (v, word) {
-						return v && (' ' + fr.label).toLowerCase().indexOf(' ' + word) >= 0
-					}, true);
-				});
-				$('.invite-friends .invite-friend').each(function () {
-					var $this = $(this);
-					$this.toggleClass('no-match', !matches[$this.data('value')])
-				});
-			}
 			$('.invite-filters>a').click(function () {
 				$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 				filterFriends();
 			});
-			$('.invite-filter').keyup(filterFriends).keyup();
+			$('.invite-filter').keyup(filterFriends);
 			$('.invite-friends').on('click', '.invite-button', function () {
 				var fullSocialId = $(this).closest('.invite-friend').data('value');
 				// TODO: linkedin
