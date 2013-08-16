@@ -309,7 +309,10 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .keep-coll-a:not(:hover) {color: #99a3b3}
 .keep-coll-a:hover {text-decoration: underline; -webkit-font-smoothing: antialiased}
 .keep-who {font-size: 0}
-.keep-who>.pic {display: inline-block; vertical-align: middle; width: 23px; height: 23px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
+.keep-who>.pic,
+.keep-who>.others {display: inline-block; vertical-align: middle; width: 23px; height: 23px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
+.keep-who>.others {background-image: url(../img/globe.png)}
+.keep.mine .keep-who>.others {display: none}
 .keep-who>.me {border-radius: 50% 0 0 50%}
 .keep-who>.me:last-of-type {border-radius: 50%}
 .keep-who>.pic>.fr-card {bottom: 36px; left: -22px; z-index: 2}
@@ -536,6 +539,7 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}
   .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
+  .keep-who>.others {background-image: url(../img/globe.2x.png)}
   .keep-colls {background-image: url(../img/folder-icon-small.2x.png)}
   .splash ul>li>a::before {background-image: url(../img/splash.2x.png)}
   .page-how-3.page-how-3::before,
