@@ -255,13 +255,14 @@ class UserController @Inject() (
     }
   }
 
-  def getAllConnections(search: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+  def getAllConnections(search: Option[String], network: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
     @inline def socialIdString(sui: SocialUserInfo) = s"${sui.networkType}/${sui.socialId.id}"
     @inline def normalize(str: String) =
       Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
     val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
     @inline def searchScore(sui: SocialUserInfo): Int = {
-      if (searchTerms.isEmpty) 1
+      if (network.exists(sui.networkType.name !=)) 0
+      else if (searchTerms.isEmpty) 1
       else {
         val name = normalize(sui.fullName)
         if (searchTerms.exists(!name.contains(_))) 0
