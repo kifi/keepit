@@ -21,6 +21,9 @@ import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.integrity.ChangedUri
 import com.keepit.integrity.MergedUri
 import com.keepit.integrity.SplittedUri
+import org.joda.time.DateTime
+import com.keepit.common.time.zones.PT
+
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -191,6 +194,13 @@ class UrlController @Inject() (
   def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
     dupeDetect.asyncProcessDocuments()
     Redirect(com.keepit.controllers.admin.routes.UrlController.documentIntegrity())
+  }
+  
+  def mergedUriView(page: Int = 0) = AdminHtmlAction{ request =>
+    val u1 = NormalizedURI(id = Some(Id[NormalizedURI](1)), url = "http://www.google.com", urlHash = NormalizedURI.hashUrl("www.google.com"))
+    val u2 = NormalizedURI(id = Some(Id[NormalizedURI](2)), url = "http://google.com", urlHash = NormalizedURI.hashUrl("google.com"))
+    val time = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
+    Ok(html.admin.mergedUri(List((u1,u2, time.date.toString)), page, 1, 1, 50))
   }
 
 }
