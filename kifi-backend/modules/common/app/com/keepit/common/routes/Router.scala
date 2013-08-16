@@ -95,6 +95,7 @@ object Shoebox extends Service {
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
     def sendPushNotification() = ServiceRoute(POST, "/internal/shoebox/device/sendPushNotification")
+    def getNormalizedUriUpdates(seqNum: Long, limit: Int) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("seqNum", seqNum), Param("limit", limit))
   }
 }
 

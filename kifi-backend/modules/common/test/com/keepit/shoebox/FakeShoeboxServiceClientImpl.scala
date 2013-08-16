@@ -310,6 +310,7 @@ class FakeShoeboxServiceClientImpl(
   def userChannelCountFanout(): Seq[scala.concurrent.Future[Int]] = Seq()
 
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]] = ???
+  def getNormalizedUriUpdates(seqNum: Long, limit: Int = -1): Future[Map[Id[NormalizedURI], NormalizedURI]] = ???
 
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]] = {
     val collections = allCollections.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)

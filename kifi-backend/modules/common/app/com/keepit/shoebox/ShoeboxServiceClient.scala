@@ -90,6 +90,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
   def sendPushNotification(user: Id[User], extId: String, unvisited: Int, msg: String) : Unit
+  def getNormalizedUriUpdates(seqNum: Long, limit: Int = -1): Future[Map[Id[NormalizedURI], NormalizedURI]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -433,14 +434,8 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.obj("uri" -> JsNumber(uri.id), "users" -> JsArray(users.map{_.id}.map{JsNumber(_)}) )
     })
     call(Shoebox.internal.suggestExperts(), payload).map{ r =>
-      log.info("\n\n experts received \n\n")
       r.json match {
-        case jso: JsValue => {
-          log.info("\n\n got JsValue \n")
-          val rv = jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
-          rv.foreach(println(_))
-          rv
-        }
+        case jso: JsValue => jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
         case _ => List.empty[Id[User]]
       }
     }
@@ -472,6 +467,23 @@ class ShoeboxServiceClientImpl @Inject() (
       "msg" -> msg
     )
     call(Shoebox.internal.sendPushNotification, payload)
+  }
+  
+  def getNormalizedUriUpdates(seqNum: Long, limit: Int = -1): Future[Map[Id[NormalizedURI], NormalizedURI]] = {
+    call(Shoebox.internal.getNormalizedUriUpdates(seqNum, limit)).map{ r =>
+      var m = Map.empty[Id[NormalizedURI], NormalizedURI]
+      r.json match {
+        case jso: JsValue => {
+          val rv = jso.as[JsArray].value.foreach{  js => 
+            val id = Id[NormalizedURI]((js \ "id").as[Long])
+            val uri = Json.fromJson[NormalizedURI](js \ "uri").get
+            m += id -> uri
+          }
+          m
+        }
+        case _ =>  m
+      }
+    }
   }
 
 
