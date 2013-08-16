@@ -396,13 +396,13 @@ a.page-url[href]:hover {text-decoration: underline}
 [data-kept^=p] .page-how {width: 48px; max-width: 48px}
 .page-how-0 {position: absolute; top: 0; right: 0; bottom: 0; width: 48px; overflow: hidden}
 .page-how-pub,
-.page-how-pri {position: absolute; top: 0; right: 0; width: 100%; height: 100%; -webkit-transform: scale(.001,1); transform: scale(.001,1); -webkit-transition: -webkit-transform .18s, top .18s; transition: -webkit-transform .18s, transform .18s, top .18s}
+.page-how-pri {position: absolute; top: 0; right: 0; width: 100%; height: 100%; z-index: 1; -webkit-transform: scale(.001,1); transform: scale(.001,1); -webkit-transform-origin: right; transform-origin: right; -webkit-transition: -webkit-transform .18s, top .18s; transition: -webkit-transform .18s, transform .18s, top .18s}
 .page-how-pub {background-color: #accc98}
 .page-how-pri {background-color: #e78881}
 [data-kept^=p] .page-how-pub,
 [data-kept^=p] .page-how-pri {-webkit-transform: none; transform: none}
-.pri>*>.page-how-pub {top: 100%}
-.pub>*>.page-how-pri {top: -100%}
+.pri>*>.page-how-pub {top: 100%; z-index: 0}
+.pub>*>.page-how-pri {top: -100%; z-index: 0}
 .page-how-1 {display: table; height: 100%; width: 100%}
 .page-how-2 {display: table-cell; vertical-align: middle; text-align: center}
 .page-how-3 {margin: 0 -50px; color: #fff; font-size: 18px; line-height: 22px; height: 22px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg); transform: rotate(90deg)}
