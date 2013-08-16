@@ -25,6 +25,8 @@ trait ElizaServiceClient extends ServiceClient {
 
   def connectedClientCount: Future[Seq[Int]]
 
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) : Unit
+
   //migration
   def importThread(data: JsObject): Unit
 }
@@ -59,6 +61,20 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) : Unit = {
+    implicit val userFormatter = Id.format[User]
+    val payload = Json.obj(
+      "userIds"   -> userIds.toSeq,
+      "title"     -> title,
+      "body"      -> body,
+      "linkText"  -> linkText,
+      "linkUrl"   -> linkUrl,
+      "imageUrl"  -> imageUrl,
+      "sticky"    -> sticky
+    )
+    call(Eliza.internal.sendGlobalNotification, payload)
+  }
+
   //migration
   def importThread(data: JsObject): Unit = {
     call(Eliza.internal.importThread, data)
@@ -80,6 +96,8 @@ class FakeElizaServiceClientImpl(val healthcheck: HealthcheckPlugin) extends Eli
     val p = Promise.successful(Seq[Int](1))
     p.future
   }
+
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) : Unit = {}
 
   //migration
   def importThread(data: JsObject): Unit = {}
