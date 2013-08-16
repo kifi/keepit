@@ -19,6 +19,9 @@ import org.joda.time.DateTime
 
 import play.api.libs.json.{JsValue, JsNull, Json, JsObject, JsArray}
 
+import java.nio.{ByteBuffer, CharBuffer}
+import java.nio.charset.Charset
+
 
  //For migration only
 import play.api.mvc.Action
@@ -213,6 +216,13 @@ class MessagingController @Inject() (
     ) 
   }
 
+  def trimAtBytes(str: String, len: Int, charset: Charset) = { //Conner's Algorithm
+    val outBuf = ByteBuffer.wrap(new Array[Byte](len))
+    val inBuf = CharBuffer.wrap(str.toCharArray())
+    charset.newEncoder().encode(inBuf, outBuf, true)
+    new String(outBuf.array, 0, outBuf.position(), charset)
+  }
+
   private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = { //TODO Stephen: And store notification json
     future {
       val locator = "/messages/" + thread.externalId
@@ -232,7 +242,8 @@ class MessagingController @Inject() (
     }
 
     future{
-      shoebox.sendPushNotification(user, message.externalId.id, getPendingNotificationCount(user), messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
+      val notifText = messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText
+      shoebox.sendPushNotification(user, message.externalId.id, getPendingNotificationCount(user), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
     }
 
     //This is mostly for testing and monitoring
