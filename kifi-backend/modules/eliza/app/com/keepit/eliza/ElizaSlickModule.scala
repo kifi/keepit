@@ -14,11 +14,11 @@ import play.api.Play
 import akka.actor.ActorSystem
 
 case class ElizaDbInfo() extends DbInfo {
-  def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("eliza")(Play.current))
+  def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
   // can't probe for existing (or not) db, must try and possibly fail.
   override def slaveDatabase = None
 
-  def driverName = Play.current.configuration.getString("db.eliza.driver").get
+  def driverName = Play.current.configuration.getString("db.shoebox.driver").get
 }
 
 case class ElizaSlickModule() extends SlickModule(ElizaDbInfo()) {
