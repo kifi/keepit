@@ -348,7 +348,8 @@ class AdminUserController @Inject() (
       usersOpt.map{ users => 
         eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky)  
       } getOrElse {
-        Ok("Sending to all users implicitely disabled right now.") //Safeguard while testing.
+        val users = db.readOnly{ implicit session => userRepo.getAllIds() } //Note: Need to revisit when we have >50k users.
+        eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky)  
       } 
     } else {
       log.info("Sending global notification via Shoebox!")
