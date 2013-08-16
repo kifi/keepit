@@ -297,7 +297,7 @@ class MessagingController @Inject() (
       "participants" -> messageWithBasicUser.participants,
       "locator"      -> locator,
       "unread"       -> true,
-      "type"         -> "message"
+      "category"     -> "message"
     ) 
   }
 
