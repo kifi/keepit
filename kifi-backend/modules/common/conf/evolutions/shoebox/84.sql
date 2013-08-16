@@ -1,3 +1,5 @@
+# ELIZA
+
 # --- !Ups
 
 CREATE TABLE message_thread (
@@ -64,7 +66,7 @@ CREATE TABLE user_thread (
       ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
-CREATE TABLE evolutions (
+CREATE TABLE IF NOT EXISTS evolutions (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     created_at timestamp NOT NULL,
     name varchar(64) NOT NULL,
@@ -75,7 +77,7 @@ CREATE TABLE evolutions (
 );
 
 
-insert into evolutions (name, description) values('1.sql', 'adding new tables for chat');
+insert into evolutions (name, description) values('84.sql', 'adding new tables for chat');
 
 
 

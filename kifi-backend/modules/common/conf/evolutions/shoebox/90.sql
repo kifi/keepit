@@ -1,3 +1,5 @@
+# ELIZA
+
 # --- !Ups
 
 
@@ -15,7 +17,7 @@ CREATE TABLE uri_renormalization_event (
 );
 
 
-insert into evolutions (name, description) values('7.sql', 'adding new table for tracking normalized uri changes');
+insert into evolutions (name, description) values('90.sql', 'adding new table for tracking normalized uri changes');
 
 
 
