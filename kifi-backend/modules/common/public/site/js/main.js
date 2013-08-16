@@ -159,18 +159,11 @@ $(function() {
 		},
 		start: function() {
 			var r = $collList[0].getBoundingClientRect();
-			var $shade = $('<div class=keep-drag-shade>');
-			var $shades = $shade.clone().css({top: 0, left: 0, right: 0, height: r.top})
-				.add($shade.css({top: r.top, left: r.right, right: 0, bottom: 0}))
-				.appendTo('body').layout().css('opacity', .2);
 			document.addEventListener('mousemove', move);
 			document.addEventListener('mouseup', up, true);
 			function up() {
 				document.removeEventListener('mousemove', move);
 				document.removeEventListener('mouseup', up, true);
-				$shades.css('opacity', 0).on('transitionend', function() {
-					$(this).remove();
-				});
 			}
 			function move(e) {
 				var inCol = e.pageX < r.right && e.pageX >= r.left, dy;

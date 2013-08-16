@@ -337,7 +337,6 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .keep.ui-draggable-dragging,
 .keeps-dragging {opacity: .7; z-index: 90; cursor: move}
 .keeps-dragging>.keep {position: absolute; width: 100%}
-.keep-drag-shade {position: absolute; z-index: 89; background: #000; opacity: 0; -webkit-transition: opacity .2s; transition: opacity .2s}
 
 /* right col */
 
