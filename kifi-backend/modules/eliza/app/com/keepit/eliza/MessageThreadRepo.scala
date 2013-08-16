@@ -71,7 +71,7 @@ object MessageThreadParticipants{
 
 
 case class MessageThread(
-    id: Option[Id[MessageThread]],
+    id: Option[Id[MessageThread]] = None,
     createdAt: DateTime = currentDateTime(zones.PT), 
     updateAt: DateTime = currentDateTime(zones.PT), 
     externalId: ExternalId[MessageThread] = ExternalId(),
