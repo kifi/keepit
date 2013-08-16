@@ -73,7 +73,8 @@ class ShoeboxController @Inject() (
   uriChannel: UriChannel,
   searchFriendRepo: SearchFriendRepo,
   urbanAirship: UrbanAirship,
-  emailAddressRepo: EmailAddressRepo )
+  emailAddressRepo: EmailAddressRepo,
+  changedUriRepo: ChangedURIRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -384,4 +385,16 @@ class ShoeboxController @Inject() (
     })
 
   }
+  
+  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) = Action { request =>
+    val changes = db.readOnly { implicit s =>
+      changedUriRepo.getChangesBetween(SequenceNumber(lowSeq), SequenceNumber(highSeq)).map{ change =>
+        (change.oldUriId, normUriRepo.get(change.newUriId))
+      }
+    }
+    val jsChanges = changes.map{ case (id, uri) =>
+      JsObject(List("id" -> JsNumber(id.id), "uri" -> Json.toJson(uri)))
+    }
+    Ok(JsArray(jsChanges))
+  } 
 }
