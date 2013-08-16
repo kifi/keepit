@@ -291,7 +291,7 @@ $(function() {
 				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function(data) {
 					$pic.css('background-image', 'url(' + data.url + ')');
 				}).error(function() {
-					$pic.find('.page-pic-soon').show();
+					$pic.find('.page-pic-soon').addClass('showing');
 				});
 				$.postJson(xhrBase + '/chatter', {url: o.url}, function(data) {
 					$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
