@@ -76,7 +76,7 @@ class MessagingController @Inject() (
 
       val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator) 
 
-      userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther.id.get, notifJson)
+      userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson)
       userThreadRepo.clearNotification(userId)
       userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime(zones.PT))
       userThreadRepo.setNotificationLastSeen(userId, currentDateTime(zones.PT))
@@ -218,7 +218,7 @@ class MessagingController @Inject() (
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
 
       db.readWrite{ implicit session => 
-        userThreadRepo.setNotification(user, thread.id.get, message.id.get, notifJson)
+        userThreadRepo.setNotification(user, thread.id.get, message, notifJson)
       }
       
       notificationRouter.sendToUser(
