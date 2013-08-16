@@ -158,9 +158,9 @@ const socketHandlers = {
     if (!notifications) {
       notifications = arr;
       for (var i = 0; i < arr.length; i++) {
-        arr[i].category = "message";
+        arr[i].category = (arr[i].category || "message").toLowerCase();
         // remove current user from participants
-        arr[i].participants = arr[i].participants || arr[i].recipients;
+        arr[i].participants = arr[i].participants || [];
         for (var j = 0, len = arr[i].participants.length; j < len; j++) {
           if (arr[i].participants[j].id == session.userId) {
             arr[i].participants.splice(j, 1);
@@ -178,8 +178,8 @@ const socketHandlers = {
   },
   notification: function(n) {  // a new notification (real-time)
     api.log("[socket:notification]", n);
-    n.category = "message";
-    n.participants = n.participants || n.recipients;
+    n.category = (n.category || "message").toLowerCase();
+    n.participants = n.participants || [];
     for (var j = 0, len = n.participants.length; j < len; j++) {
       if (n.participants[j].id == session.userId) {
         n.participants.splice(j, 1);
@@ -202,11 +202,17 @@ const socketHandlers = {
   missed_notifications: function(arr) {
     api.log("[socket:missed_notifications]", arr);
     for (var i = arr.length - 1; ~i; i--) {
-      arr[i].category = "message";
+      arr[i].category = (arr[i].category || "message").toLowerCase();
       if (pageData[arr[i].url]) {
         socket.send(["get_threads_by_url", arr[i].url]);
       }
-
+      arr[i].participants = arr[i].participants || [];
+      for (var j = 0, len = arr[i].participants.length; j < len; j++) {
+        if (arr[i].participants[j].id == session.userId) {
+          arr[i].participants.splice(j, 1);
+          len--;
+        }
+      }
       if (!insertNewNotification(arr[i])) {
         arr.splice(i, 1);
       }
@@ -264,7 +270,7 @@ const socketHandlers = {
     infos.forEach(function(t) {
       var d = pageData[t.nUrl];
       d.threads.push(t); // since threads was cleared above, can just push
-      t.participants = t.participants || t.recipients;
+      t.participants = t.participants || [];
       for (var j = 0, len = t.participants.length; j < len; j++) {
         if (t.participants[j].id == session.userId) {
           t.participants.splice(j, 1);
@@ -520,7 +526,7 @@ api.port.on({
       var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
       if (th && messageData[th.id]) {
         if (data.respond) {
-          respond({id: th.id, messages: messageData[th.id], participants: th.participants || th.recipients});
+          respond({id: th.id, messages: messageData[th.id], participants: th.participants || []});
         }
       } else {
         var id = (th || data).id;
@@ -555,9 +561,9 @@ api.port.on({
     } else {
       socket.send(["get_old_notifications", timeStr, NOTIFICATION_BATCH_SIZE], function(arr) {
         for (var i = 0; i < arr.length; i++) {
-          arr[i].category = "message";
+          arr[i].category = (arr[i].category || "message").toLowerCase();
           // remove current user from participants
-          arr[i].participants = arr[i].participants || arr[i].recipients;
+          arr[i].participants = arr[i].participants || [];
           for (var j = 0, len = arr[i].participants.length; j < len; j++) {
             if (arr[i].participants[j].id == session.userId) {
               arr[i].participants.splice(j, 1);
