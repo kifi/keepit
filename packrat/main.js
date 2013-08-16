@@ -206,7 +206,13 @@ const socketHandlers = {
       if (pageData[arr[i].url]) {
         socket.send(["get_threads_by_url", arr[i].url]);
       }
-
+      arr[i].participants = arr[i].participants || arr[i].recipients;
+      for (var j = 0, len = arr[i].participants.length; j < len; j++) {
+        if (arr[i].participants[j].id == session.userId) {
+          arr[i].participants.splice(j, 1);
+          len--;
+        }
+      }
       if (!insertNewNotification(arr[i])) {
         arr.splice(i, 1);
       }
