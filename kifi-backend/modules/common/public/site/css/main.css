@@ -274,11 +274,13 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .keep.unkept {height: 0 !important}
 .keep::before {content: " "; display: block; height: 10px}
 .keep::after {content: " "; display: block; height: 13px}
-.keep-arrow {position: absolute; right: 16px; width: 6px; height: 16px; bottom: 13px; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; cursor: pointer; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
-.keep-arrow:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
-.keep:hover .keep-arrow,
-.keep.detailed .keep-arrow {background-position: right}
-.keep.detailed .keep-arrow {-webkit-transform: scale(-1,1); transform: scale(-1,1)}
+.keep-arrow-1 {position: absolute; right: 16px; width: 22px; top: 26px; bottom: 0}
+.keep-arrow-2 {display: table; table-layout: fixed; height: 100%; width: 100%}
+.keep-arrow-3 {display: table-cell; vertical-align: middle}
+.keep-arrow-4 {display: inline-block; width: 6px; height: 16px; cursor: pointer; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; -webkit-transition: -webkit-transform .2s; transition: transform .2s}
+.keep-arrow-4:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
+.keep:hover .keep-arrow-4 {background-position: right}
+.keep.detailed .keep-arrow-4 {background-position: right; -webkit-transform: scale(-1,1); transform: scale(-1,1)}
 .keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
 .keep>.handle:hover,
 .keep.detailed>.handle,
