@@ -567,7 +567,7 @@ $(function() {
 	});
 	var $nwFriendsLoading = $('.invite-friends-loading');
 	function prepInviteTab() {
-		$.getJSON(xhrBase + '/user/all-connections', function(friends) {
+		$.getJSON(xhrBase + '/user/socialConnections', function(friends) {
 			console.log('[prepInviteTab] friends:', friends.length);
 			nwFriendsTmpl.render(friends);
 			function filterFriends() {
