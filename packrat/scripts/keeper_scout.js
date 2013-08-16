@@ -178,6 +178,14 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   }, 60000);
 
+  !function(url, link, meta, can, og) {
+    if (link && link.href !== url) can = link.href;
+    if (meta && meta.content !== url && meta.content !== can) og = meta.content;
+    if (can || og) {
+      api.port.emit("canonical", {url: url, canonical: can, og: og});
+    }
+  }(document.URL, document.head.querySelector('link[rel=canonical]'), document.head.querySelector('meta[property="og:url"]'));
+
   api.onEnd.push(function() {
     document.removeEventListener("keydown", onKeyDown, true);
     if (onScroll) {

@@ -53,7 +53,8 @@ object Shoebox extends Service {
   object internal {
     def getNormalizedURI(id: Long) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURI", Param("id", id))
     def getNormalizedURIs(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURIs", Param("ids", ids))
-    def normalizeURL() = ServiceRoute(POST, "/internal/shoebox/database/normalizeURL")
+    def getNormalizedURIByURL() = ServiceRoute(POST, "/internal/shoebox/database/getNormalizedURIByURL")
+    def internNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/internNormalizedURI")
     def getUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getUsers", Param("ids", ids))
     def getUserIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/userIdsByExternalIds", Param("ids", ids))
     def getBasicUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getBasicUsers", Param("ids", ids))
@@ -94,6 +95,7 @@ object Shoebox extends Service {
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
     def sendPushNotification() = ServiceRoute(POST, "/internal/shoebox/device/sendPushNotification")
+    def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq), Param("highSeq", highSeq))
   }
 }
 
@@ -138,6 +140,7 @@ object Eliza extends Service {
     def sendToUserNoBroadcast() = ServiceRoute(POST, "/internal/eliza/sendToUserNoBroadcast")
     def sendToUser() = ServiceRoute(POST, "/internal/eliza/sendToUser")
     def sendToAllUsers() = ServiceRoute(POST, "/internal/eliza/sendToAllUsers")
+    def connectedClientCount() = ServiceRoute(GET, "/internal/eliza/connectedClientCount")
     def importThread() = ServiceRoute(POST, "/internal/eliza/importThread")
   }
 }

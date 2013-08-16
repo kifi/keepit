@@ -179,6 +179,13 @@ const socketHandlers = {
   notification: function(n) {  // a new notification (real-time)
     api.log("[socket:notification]", n);
     n.category = "message";
+    n.participants = n.participants || n.recipients;
+    for (var j = 0, len = n.participants.length; j < len; j++) {
+      if (n.participants[j].id == session.userId) {
+        n.participants.splice(j, 1);
+        len--;
+      }
+    }
     if (insertNewNotification(n)) {
       var told = {};
       api.tabs.eachSelected(tellTab);
@@ -391,6 +398,10 @@ const socketHandlers = {
 // ===== Handling messages from content scripts or other extension pages
 
 api.port.on({
+  canonical: function(urls) {
+    api.log("[canonical]", Object.keys(urls));
+    ajax("POST", "/ext/canonical", urls);
+  },
   get_keeps: searchOnServer,
   get_chatter: function(urls, respond) {
     api.log("[get_chatter]", urls);

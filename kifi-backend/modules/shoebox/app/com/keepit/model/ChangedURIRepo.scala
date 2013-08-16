@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 @ImplementedBy(classOf[ChangedURIRepoImpl])
 trait ChangedURIRepo extends Repo[ChangedURI] {
   def getChangesSince(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[ChangedURI]
+  def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber)(implicit session: RSession): Seq[ChangedURI]   // (low, high]
   def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber]
 }
 
@@ -39,6 +40,12 @@ class ChangedURIRepoImpl @Inject() (
     val q = (for (r <- table if r.seq > num) yield r).sortBy(_.seq).list
     if (limit == -1) q else q.take(limit)
   }
+  
+  def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber)(implicit session: RSession): Seq[ChangedURI] = {
+    if (highSeq <= lowSeq) Nil
+    else (for (r <- table if r.seq > lowSeq && r.seq <= highSeq) yield r).sortBy(_.seq).list
+  }
+
 
   def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber] = {
     (for (r <- table) yield r.seq).sortBy(x => x).list.lastOption

@@ -39,13 +39,13 @@ class ExtMessagingController @Inject() (
     val o = request.body
     val (urlStr, title, text, recipients) = (
       (o \ "url").as[String],
-      (o \ "title").as[String],
+      (o \ "title").asOpt[String],
       (o \ "text").as[String].trim,
       (o \ "recipients").as[Seq[String]])
 
 
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).map{ recipientSet =>
-      val message : Message = messagingController.sendNewMessage(request.user.id.get, recipientSet, Some(urlStr), text)
+      val message : Message = messagingController.sendNewMessage(request.user.id.get, recipientSet, Some(urlStr), title, text)
       Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))  
     }
     Async(responseFuture)

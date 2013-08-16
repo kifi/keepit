@@ -4,8 +4,8 @@ import scala.slick.lifted.{BaseTypeMapper}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.{IdMapperDelegate, ExternalIdMapperDelegate, StringMapperDelegate}
 import scala.slick.driver.{BasicProfile}
-import play.api.libs.json.{Json, JsValue, JsObject, JsSuccess}
-import com.keepit.model.{User}
+import play.api.libs.json.{Json, JsValue, JsObject, JsSuccess, JsArray, JsNumber}
+import com.keepit.model.{User, NormalizedURI}
 import org.joda.time.DateTime
 
 
@@ -43,4 +43,25 @@ object MessagingTypeMappers {
     }
   }
 
+  implicit object NormalizedUriIdSeqMapper extends BaseTypeMapper[Seq[Id[NormalizedURI]]] {
+    def apply(profile: BasicProfile) = new StringMapperDelegate[Seq[Id[NormalizedURI]]](profile) {
+      
+      implicit val nUriIdFormat = Id.format[NormalizedURI]
+
+      def safeDestToSource(source: String): Seq[Id[NormalizedURI]] = {
+        Json.parse(source) match {
+          case x: JsArray => {
+            x.value.map(_.as[Id[NormalizedURI]])
+          }
+          case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for Seq of Normalized URI ids: $source")
+        }
+      }
+      
+      def sourceToDest(dest: Seq[Id[NormalizedURI]]): String = {
+        Json.stringify(JsArray(dest.map( x => JsNumber(x.id) )))
+      }
+      
+      def zero: Seq[Id[NormalizedURI]] = Seq[Id[NormalizedURI]]()
+    }
+  }
 }

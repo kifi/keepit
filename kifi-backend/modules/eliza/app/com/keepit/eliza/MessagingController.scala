@@ -9,7 +9,7 @@ import com.keepit.common.time._
 import com.keepit.social.BasicUser
 import com.keepit.common.controller.ElizaServiceController
 
-import scala.concurrent.{future, Await, Future}
+import scala.concurrent.{Promise, future, Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -18,6 +18,9 @@ import com.google.inject.Inject
 import org.joda.time.DateTime
 
 import play.api.libs.json.{JsValue, JsNull, Json, JsObject, JsArray}
+
+import java.nio.{ByteBuffer, CharBuffer}
+import java.nio.charset.Charset
 
 
  //For migration only
@@ -50,7 +53,8 @@ class MessagingController @Inject() (
     shoebox: ShoeboxServiceClient, 
     db: Database,
     notificationRouter: NotificationRouter,
-    clock: Clock
+    clock: Clock,
+    uriNormalizationUpdater: UriNormalizationUpdater
     )
   extends ElizaServiceController with Logging {
 
@@ -76,7 +80,7 @@ class MessagingController @Inject() (
 
       val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator) 
 
-      userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther.id.get, notifJson)
+      userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson)
       userThreadRepo.clearNotification(userId)
       userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime(zones.PT))
       userThreadRepo.setNotificationLastSeen(userId, currentDateTime(zones.PT))
@@ -97,7 +101,7 @@ class MessagingController @Inject() (
       db.readWrite{ implicit session =>
         if (threadRepo.getOpt(extId).isEmpty) {
           log.info(s"MIGRATION: Importing thread $extId with participants $participants on uriid $uriId")
-          val nUri = Await.result(shoebox.getNormalizedURI(uriId), 10 seconds)
+          val nUri = Await.result(shoebox.getNormalizedURI(uriId), 10 seconds) // todo: Remove await
           //create thread
           val mtps = MessageThreadParticipants(participants.toSet)
           val thread = threadRepo.save(MessageThread(
@@ -139,7 +143,7 @@ class MessagingController @Inject() (
 
           log.info(s"MIGRATION: Starting notification recovery for $extId.")
           val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-          val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds)
+          val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds) // todo: Remove await
           participants.toSet.foreach{ userId : Id[User] => 
             recoverNotification(userId, thread, dbMessages, id2BasicUser)
           }
@@ -212,13 +216,20 @@ class MessagingController @Inject() (
     ) 
   }
 
+  def trimAtBytes(str: String, len: Int, charset: Charset) = { //Conner's Algorithm
+    val outBuf = ByteBuffer.wrap(new Array[Byte](len))
+    val inBuf = CharBuffer.wrap(str.toCharArray())
+    charset.newEncoder().encode(inBuf, outBuf, true)
+    new String(outBuf.array, 0, outBuf.position(), charset)
+  }
+
   private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = { //TODO Stephen: And store notification json
     future {
       val locator = "/messages/" + thread.externalId
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
 
       db.readWrite{ implicit session => 
-        userThreadRepo.setNotification(user, thread.id.get, message.id.get, notifJson)
+        userThreadRepo.setNotification(user, thread.id.get, message, notifJson)
       }
       
       notificationRouter.sendToUser(
@@ -231,7 +242,8 @@ class MessagingController @Inject() (
     }
 
     future{
-      shoebox.sendPushNotification(user, message.externalId.id, getPendingNotificationCount(user), messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
+      val notifText = messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText
+      shoebox.sendPushNotification(user, message.externalId.id, getPendingNotificationCount(user), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
     }
 
     //This is mostly for testing and monitoring
@@ -243,12 +255,12 @@ class MessagingController @Inject() (
   }
 
 
-  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urlOpt: Option[String], messageText: String) : Message = {
+  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urlOpt: Option[String], titleOpt: Option[String], messageText: String) : Message = {
     val participants = recipients + from
-    val nUriOpt = urlOpt.map{url: String => Await.result(shoebox.normalizeURL(url), 10 seconds)}
+    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url), 10 seconds)} // todo: Remove Await
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val thread = db.readWrite{ implicit session => 
-      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), nUriOpt.flatMap(_.title)) 
+      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title))) 
       if (isNew){
         log.info(s"This is a new thread. Creating User Threads.")
         participants.par.foreach{ userId => 
@@ -260,7 +272,7 @@ class MessagingController @Inject() (
       }
       thread 
     }
-    sendMessage(from, thread, messageText, urlOpt)
+    sendMessage(from, thread, messageText, urlOpt, nUriOpt)
     
   }
 
@@ -280,7 +292,7 @@ class MessagingController @Inject() (
   }
 
 
-  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String]) : Message = {
+  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None) : Message = {
     if (! thread.containsUser(from)) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
     log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session => 
@@ -294,9 +306,10 @@ class MessagingController @Inject() (
       sentOnUriId = thread.uriId
       )) 
     }
+    future { setLastSeen(from, thread.id.get, Some(message.createdAt)) }
 
     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-    val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds)
+    val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
     
     val messageWithBasicUser = MessageWithBasicUser(
       message.externalId,
@@ -319,8 +332,11 @@ class MessagingController @Inject() (
       sendNotificationForMessage(userId, message, thread, messageWithBasicUser)
     }
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
-    urlOpt.foreach{ url =>
-      shoebox.normalizeURL(url).foreach{ nUri =>
+    urlOpt.foreach { url =>
+      (nUriOpt match {
+        case Some(n) => Promise.successful(n).future
+        case None => shoebox.internNormalizedURI(url)
+      }) foreach { nUri =>
         db.readWrite { implicit session => 
           messageRepo.updateUriId(message, nUri.id.get)
         }
@@ -469,12 +485,17 @@ class MessagingController @Inject() (
   }
 
   def getThreadInfos(userId: Id[User], url: String): Seq[ElizaThreadInfo] = {
-    val uriId = Await.result(shoebox.normalizeURL(url), 2 seconds).id.get
-    val threads = db.readOnly { implicit session =>
-      val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
-      threadIds.map(threadRepo.get(_))
+    val uriIdOpt = Await.result(shoebox.getNormalizedURIByURL(url), 2 seconds).map(_.id.get) // todo: Remove await
+    uriIdOpt.map{ uriId =>
+      val threads = db.readOnly { implicit session =>
+        val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
+        threadIds.map(threadRepo.get(_))
+      }
+      buildThreadInfos(userId, threads, url)
+    } getOrElse {
+      Seq[ElizaThreadInfo]()
     }
-    buildThreadInfos(userId, threads, url)
+    
   }
 
   def connectedSockets: Int  = notificationRouter.connectedSockets

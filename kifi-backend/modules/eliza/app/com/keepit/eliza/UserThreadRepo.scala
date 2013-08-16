@@ -50,7 +50,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def clearNotificationsBefore(user: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit
 
-  def setNotification(user: Id[User], thread: Id[MessageThread], message: Id[Message], notifJson: JsValue)(implicit session: RWSession) : Unit
+  def setNotification(user: Id[User], thread: Id[MessageThread], message: Message, notifJson: JsValue)(implicit session: RWSession) : Unit
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit
 
@@ -76,6 +76,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[Message]])(implicit session: RWSession) : Unit
 
+  def updateUriIds(updates: Map[Id[NormalizedURI], Id[NormalizedURI]])(implicit session: RWSession) : Unit
 
 }
 
@@ -154,10 +155,10 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.user===userId && row.notificationUpdatedAt<=timeCutoff) yield row.notificationPending).update(false)
   }
 
-  def setNotification(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message], notifJson: JsValue)(implicit session: RWSession) : Unit = {
+  def setNotification(userId: Id[User], threadId: Id[MessageThread], message: Message, notifJson: JsValue)(implicit session: RWSession) : Unit = {
     Query(table).filter(row => row.user===userId && row.thread===threadId)
       .map(row => row.lastNotification ~ row.lastMsgFromOther ~ row.notificationPending ~ row.notificationUpdatedAt ~ row.notificationEmailed)
-      .update((notifJson, messageId, true, currentDateTime(zones.PT), false))
+      .update((notifJson, message.id.get, true, message.createdAt, false))
   }
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit = {
@@ -235,5 +236,12 @@ class UserThreadRepoImpl @Inject() (
       (for (row <- table if row.id===id) yield row.notificationEmailed).update(true)
     }
   }
+
+  def updateUriIds(updates: Map[Id[NormalizedURI], Id[NormalizedURI]])(implicit session: RWSession) : Unit = {
+    updates.foreach{ case (oldId, newId) =>
+      (for (row <- table if row.uriId===oldId) yield row.uriId).update(newId)
+    } 
+  }
+
 
 }
