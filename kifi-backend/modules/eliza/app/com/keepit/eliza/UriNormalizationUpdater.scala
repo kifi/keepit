@@ -8,6 +8,9 @@ import com.keepit.model.NormalizedURI
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.logging.Logging 
 import com.keepit.integrity.ChangedUriSeqNumKey
+import com.keepit.common.zookeeper.ServiceDiscovery
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import com.google.inject.{Inject, Singleton}
 
@@ -21,20 +24,23 @@ class UriNormalizationUpdater @Inject() (
     shoebox: ShoeboxServiceClient, 
     db: Database,
     centralConfig: CentralConfig,
-    renormRepo: UriRenormalizationTrackingRepo
+    renormRepo: UriRenormalizationTrackingRepo,
+    serviceDiscovery: ServiceDiscovery
   ) extends Logging {
 
   centralConfig.onChange(ChangedUriSeqNumKey())(checkAndUpdate _)
 
   def localSequenceNumber: Long = db.readOnly{ implicit session => renormRepo.getCurrentSequenceNumber() }
 
-  def checkAndUpdate(remoteSequenceNumberOpt: Option[Long]) = {
+  def checkAndUpdate(remoteSequenceNumberOpt: Option[Long]) = synchronized {
     log.info("Renormalization: Checking if I need to update")
     remoteSequenceNumberOpt match {
-      case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSequenceNumber) => {
-        val updates = shoebox.getNormalizedUriUpdates(localSequenceNumber, remoteSequenceNumber)
-        updateTables(updates)
-        db.readWrite{ implicit session => renormRepo.addNew(remoteSequenceNumber, updates.keys.toSeq.length, updates.keys.toSeq) }
+      case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSequenceNumber && serviceDiscovery.isLeader) => {
+        val updatesFuture = shoebox.getNormalizedUriUpdates(localSequenceNumber, remoteSequenceNumber)
+        updatesFuture.map{ updates =>
+          updateTables(updates)
+          db.readWrite{ implicit session => renormRepo.addNew(remoteSequenceNumber, updates.keys.toSeq.length, updates.keys.toSeq) }
+        }
       }
       case _ => 
     }

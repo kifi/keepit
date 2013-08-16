@@ -90,28 +90,28 @@
 				</span>
 				<span class="subtitle-text" data-template data-has="collId" data-n="{{numShown}}" style="display:none">
 					{% if numShown == 0 %}
-						No keeps in this collection
+						No Keeps in this collection
 					{% endif %}{% if numShown == 1 %}
-						Showing the only keep in this collection
+						Showing the only Keep in this collection
 					{% endif %}{% if numShown == 2 %}
-						Showing both keeps in this collection
+						Showing both Keeps in this collection
 					{% endif %}{% if numShown > 2 && numShown < numTotal %}
-						Showing the {{numShown}} latest keeps in this collection
+						Showing the {{numShown}} latest Keeps in this collection
 					{% endif %}{% if numShown > 2 && numShown == numTotal %}
-						Showing all {{numShown}} keeps in this collection
+						Showing all {{numShown}} Keeps in this collection
 					{% endif %}
 				</span>
 				<span class="subtitle-text" data-template data-has="numShown" data-n="{{numShown}}" style="display:none">
 					{% if numShown == 0 %}
-						You have no keeps
+						You have no Keeps
 					{% endif %}{% if numShown == 1 %}
-						Showing your only keep
+						Showing your only Keep
 					{% endif %}{% if numShown == 2 %}
-						Showing both of your keeps
+						Showing both of your Keeps
 					{% endif %}{% if numShown > 2 && numShown < numTotal %}
-						Showing your {{numShown}} latest keeps
+						Showing your {{numShown}} latest Keeps
 					{% endif %}{% if numShown > 2 && numShown == numTotal %}
-						Showing all {{numShown}} of your keeps
+						Showing all {{numShown}} of your Keeps
 					{% endif %}
 				</span>
 				<span class="subtitle-text" data-template data-has="searching" style="display:none">Searching...</span>
@@ -337,7 +337,7 @@
 	<div class="detail"><div data-template data-kept="{{howKept}}">
 		<a class="page-x" href="javascript:"></a>
 		<div class="page-meta" data-n="{{numKeeps}}">
-			<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} keeps selected{% endif %}</h2>
+			<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} Keeps selected{% endif %}</h2>
 			{% if numKeeps == 1 %}
 			<a class="page-url long-text" href="{{url}}" target="_blank">{{url}}</a>
 			<div class="page-pic-wrap">
@@ -381,7 +381,7 @@
 			<div class="page-who-text"></div>
 		</div>
 		<div class="page-chatter">
-			<h2>Talking about this keep:</h2>
+			<h2>Talking about this Keep:</h2>
 			<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
 			<a class="page-chatter-comments" href="{{url}}" target="_blank" data-n="0" data-locator="/comments">Public Comment</a>
 		</div>
