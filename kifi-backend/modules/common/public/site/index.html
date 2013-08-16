@@ -266,6 +266,7 @@
 					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
 				</div>
 				<div class="invite-friends">
+					<img class="invite-friends-loading" src="img/wait.gif">
 					<ul class="antiscroll-inner">
 						<li class="invite-friend" data-template data-value="{{value}}">
 							<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{image}}">
@@ -285,7 +286,6 @@
 							{% endif %}
 						</li>
 					</ul>
-					<img class="invite-friends-loading" src="img/wait.gif">
 				</div>
 			</div>
 			<div class="friends-page" data-href="friends/requests">
