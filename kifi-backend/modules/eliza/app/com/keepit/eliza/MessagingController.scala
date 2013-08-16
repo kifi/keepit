@@ -219,7 +219,7 @@ class MessagingController @Inject() (
         )
 
 
-        val userThread = UserThread(
+        val userThread = userThreadRepo.save(UserThread(
           id = None,
           user = userId,
           thread = thread.id.get,
@@ -229,7 +229,7 @@ class MessagingController @Inject() (
           lastMsgFromOther = Some(message.id.get),
           lastNotification = notifJson,
           replyable = false
-        )  
+        ))  
 
         notificationRouter.sendToUser(
           userId,
