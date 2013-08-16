@@ -209,7 +209,7 @@ class MessagingController @Inject() (
           "time"     -> message.createdAt,
           "thread"   -> message.threadExtId.id,
           "unread"   -> true,
-          "category" -> "GLOBAL",
+          "category" -> "global",
           "title"    -> title,
           "bodyHtml" -> body,
           "linkText" -> linkText,
@@ -297,7 +297,7 @@ class MessagingController @Inject() (
       "participants" -> messageWithBasicUser.participants,
       "locator"      -> locator,
       "unread"       -> true,
-      "type"         -> "MESSAGE"
+      "category"     -> "message"
     ) 
   }
 
