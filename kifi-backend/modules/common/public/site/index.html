@@ -144,6 +144,9 @@
 								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"></a>
 							<a class="pic" data-template-for="keepers" href="javascript:" data-name="{{firstName}} {{lastName}}" data-id="{{id}}"
 								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"></a>
+							{% if !keepers.length && others %}
+								<span class="others"></span>
+							{% endif %}
 							<span class="keep-who-text" data-after-template>
 								<span class="keep-you">
 									You
