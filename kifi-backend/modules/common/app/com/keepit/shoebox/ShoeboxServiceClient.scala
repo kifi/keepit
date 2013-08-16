@@ -90,7 +90,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
   def sendPushNotification(user: Id[User], extId: String, unvisited: Int, msg: String) : Unit
-  def getNormalizedUriUpdates(seqNum: Long, limit: Int = -1): Future[Map[Id[NormalizedURI], NormalizedURI]]
+  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Map[Id[NormalizedURI], NormalizedURI]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -469,8 +469,8 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.sendPushNotification, payload)
   }
   
-  def getNormalizedUriUpdates(seqNum: Long, limit: Int = -1): Future[Map[Id[NormalizedURI], NormalizedURI]] = {
-    call(Shoebox.internal.getNormalizedUriUpdates(seqNum, limit)).map{ r =>
+  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Map[Id[NormalizedURI], NormalizedURI]] = {
+    call(Shoebox.internal.getNormalizedUriUpdates(lowSeq, highSeq)).map{ r =>
       var m = Map.empty[Id[NormalizedURI], NormalizedURI]
       r.json match {
         case jso: JsValue => {

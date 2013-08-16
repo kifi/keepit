@@ -386,9 +386,9 @@ class ShoeboxController @Inject() (
 
   }
   
-  def getNormalizedUriUpdates(seqNum: Long, limit: Int = -1) = Action { request =>
+  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) = Action { request =>
     val changes = db.readOnly { implicit s =>
-      changedUriRepo.getChangesSince(SequenceNumber(seqNum), limit).map{ change =>
+      changedUriRepo.getChangesBetween(SequenceNumber(lowSeq), SequenceNumber(highSeq)).map{ change =>
         (change.oldUriId, normUriRepo.get(change.newUriId))
       }
     }
