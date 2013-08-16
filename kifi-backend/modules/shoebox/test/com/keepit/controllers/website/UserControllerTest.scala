@@ -89,20 +89,25 @@ class UserControllerTest extends Specification with ApplicationInjector {
   "UserController" should {
     "fetch my social connections, in the proper order" in new WithUserController {
 
-      val res1 = controller.getAllConnections(Some("leo"), 10)(FakeRequest("GET", "/").withCookies(cookie))
+      val res1 = controller.getAllConnections(Some("leo"), None, 10)(FakeRequest("GET", "/").withCookies(cookie))
       status(res1) must_== OK
       val n1 = Json.fromJson[Seq[JsObject]](Json.parse(contentAsString(res1))).get.map(j => (j \ "label").as[String])
       n1 must_== Seq("Léo Grimaldi")
 
-      val res2 = controller.getAllConnections(Some("莹"), 10)(FakeRequest("GET", "/").withCookies(cookie))
+      val res2 = controller.getAllConnections(Some("莹"), None, 10)(FakeRequest("GET", "/").withCookies(cookie))
       status(res2) must_== OK
       val n2 = Json.fromJson[Seq[JsObject]](Json.parse(contentAsString(res2))).get.map(j => (j \ "label").as[String])
       n2 must_== Seq("杨莹")
 
-      val res3 = controller.getAllConnections(None, 2)(FakeRequest("GET", "/").withCookies(cookie))
+      val res3 = controller.getAllConnections(None, None, 2)(FakeRequest("GET", "/").withCookies(cookie))
       status(res3) must_== OK
       val n3 = Json.fromJson[Seq[JsObject]](Json.parse(contentAsString(res3))).get.map(j => (j \ "label").as[String])
       n3 must_== Seq("Léo Grimaldi", "Andrew Conner")
+
+      val res4 = controller.getAllConnections(Some("leo"), Some("facebook"), 2)(FakeRequest("GET", "/").withCookies(cookie))
+      status(res4) must_== OK
+      val n4 = Json.fromJson[Seq[JsObject]](Json.parse(contentAsString(res4))).get.map(j => (j \ "label").as[String])
+      n4 must_== Seq("Léo Grimaldi")
     }
   }
 }
