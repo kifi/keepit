@@ -257,8 +257,6 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .check-all.live {cursor: pointer}
 .check-all.live:hover {border-color: #b8c5d2}
 .check-all.checked {background-position: 2px 4px}
-.check-all.live:hover+.subtitle-text::before {content: "Select "}
-.check-all.live.checked:hover+.subtitle-text::before {content: "Deselect "}
 .main-head>.subtitle {font-size: 13px; line-height: 20px; font-weight: 300; color: #5b6670; padding-left: 30px; position: relative}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
