@@ -243,12 +243,12 @@ class MessagingController @Inject() (
   }
 
 
-  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urlOpt: Option[String], messageText: String) : Message = {
+  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urlOpt: Option[String], titleOpt: Option[String], messageText: String) : Message = {
     val participants = recipients + from
     val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url), 10 seconds)} // todo: Remove Await
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val thread = db.readWrite{ implicit session => 
-      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), nUriOpt.flatMap(_.title)) 
+      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title))) 
       if (isNew){
         log.info(s"This is a new thread. Creating User Threads.")
         participants.par.foreach{ userId => 
