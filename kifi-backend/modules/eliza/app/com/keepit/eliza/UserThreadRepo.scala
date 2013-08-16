@@ -30,7 +30,8 @@ case class UserThread(
     lastNotification: JsValue,
     notificationUpdatedAt: DateTime = currentDateTime(zones.PT),
     notificationLastSeen: Option[DateTime] = None,
-    notoficationEmailed: Boolean = false
+    notoficationEmailed: Boolean = false,
+    replyable: Boolean = true
   ) 
   extends Model[UserThread] {
 
@@ -102,7 +103,8 @@ class UserThreadRepoImpl @Inject() (
     def notificationUpdatedAt = column[DateTime]("notification_updated_at", O.NotNull)
     def notificationLastSeen = column[DateTime]("notification_last_seen", O.Nullable)
     def notificationEmailed = column[Boolean]("notification_emailed", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ user ~ thread ~ uriId.? ~ lastSeen.? ~ notificationPending ~ muted ~ lastMsgFromOther.? ~ lastNotification ~ notificationUpdatedAt ~ notificationLastSeen.? ~ notificationEmailed <> (UserThread.apply _, UserThread.unapply _)
+    def replyable = column[Boolean]("replyable", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ user ~ thread ~ uriId.? ~ lastSeen.? ~ notificationPending ~ muted ~ lastMsgFromOther.? ~ lastNotification ~ notificationUpdatedAt ~ notificationLastSeen.? ~ notificationEmailed ~ replyable <> (UserThread.apply _, UserThread.unapply _)
 
     def userThreadIndex = index("user_thread", (user,thread), unique=true)
   }
