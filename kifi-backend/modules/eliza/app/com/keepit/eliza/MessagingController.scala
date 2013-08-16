@@ -293,7 +293,7 @@ class MessagingController @Inject() (
 
 
   def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None) : Message = {
-    if (! thread.containsUser(from)) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
+    if (! thread.containsUser(from) || !thread.replyable) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
     log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session => 
       messageRepo.save(Message(
@@ -490,7 +490,7 @@ class MessagingController @Inject() (
       val threads = db.readOnly { implicit session =>
         val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
         threadIds.map(threadRepo.get(_))
-      }
+      }.filter(_.replyable)
       buildThreadInfos(userId, threads, url)
     } getOrElse {
       Seq[ElizaThreadInfo]()
