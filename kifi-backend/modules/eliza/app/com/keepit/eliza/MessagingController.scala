@@ -162,6 +162,72 @@ class MessagingController @Inject() (
   }
 
 
+  def createGlobalNotificaiton(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
+    db.readWrite { implicit session =>
+      val mtps = MessageThreadParticipants(userIds)
+      val thread = threadRepo.save(MessageThread(
+        uriId = None,
+        url = None,
+        nUrl = None,
+        pageTitle = None,
+        participants = Some(mtps),
+        participantsHash = Some(mtps.hash),
+        replyable = false
+      ))
+
+      val message = messageRepo.save(Message(
+        from = None,
+        thread = thread.id.get,
+        threadExtId = thread.externalId,
+        messageText = s"$title (on $linkText): $body",
+        sentOnUrl = Some(linkUrl),
+        sentOnUriId = None
+      ))
+
+
+      userIds.foreach{ userId => 
+        val notifJson = Json.obj(
+          "id"       -> message.externalId.id,
+          "time"     -> message.createdAt,
+          "thread"   -> message.threadExtId.id,
+          "unread"   -> true,
+          "category" -> "GLOBAL",
+          "title"    -> title,
+          "bodyHtml" -> body,
+          "linkText" -> linkText,
+          "url"      -> linkUrl,
+          "isSticky" -> sticky,
+          "image"    -> imageUrl
+        )
+
+
+        val userThread = UserThread(
+          id = None,
+          user = userId,
+          thread = thread.id.get,
+          uriId = None,
+          lastSeen = None,
+          notificationPending = true,
+          lastMsgFromOther = Some(message.id.get),
+          lastNotification = notifJson,
+          replyable = false
+        )  
+
+        notificationRouter.sendToUser(
+          userId,
+          Json.arr("notification", notifJson)
+        )
+      
+      }
+    
+
+    }
+  
+
+
+  }
+
+
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String) : Seq[ElizaThreadInfo]  = {
     //get all involved users
     val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.all).getOrElse(Set())}
@@ -212,7 +278,8 @@ class MessagingController @Inject() (
       "author"       -> messageWithBasicUser.user,
       "participants" -> messageWithBasicUser.participants,
       "locator"      -> locator,
-      "unread"       -> true
+      "unread"       -> true,
+      "type"         -> "MESSAGE"
     ) 
   }
 

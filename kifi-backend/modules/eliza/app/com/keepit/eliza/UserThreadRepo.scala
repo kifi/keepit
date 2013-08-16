@@ -17,7 +17,7 @@ case class Notification(thread: Id[MessageThread], message: Id[Message])
 
 
 case class UserThread(
-    id: Option[Id[UserThread]],
+    id: Option[Id[UserThread]] = None,
     createdAt: DateTime = currentDateTime(zones.PT), 
     updateAt: DateTime = currentDateTime(zones.PT), 
     user: Id[User],
