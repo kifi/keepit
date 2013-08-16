@@ -1299,12 +1299,13 @@ $(function() {
 					.removeClass('mine selected detailed');
 					$priv.removeClass('on');
 				});
-				var $titles = obliviate($keeps.not($keepsStaying));
+				var $keepsGoing = $keeps.not($keepsStaying);
+				var $titles = obliviate($keepsGoing);
 				hideKeepDetails();
 				showUndo(
 					$keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.',
 					undoUnkeep.bind(null, $keeps, $titles),
-					$.fn.remove.bind($keeps));
+					$.fn.remove.bind($keepsGoing));
 			}).error(showMessage.bind(null, 'Could not delete keeps, please try again later'));
 		} else {  // toggle public/private
 			howKept = howKept == "pub" ? "pri" : "pub";
