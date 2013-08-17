@@ -131,8 +131,8 @@ class NormalizationServiceImpl @Inject() (
 
   private case class PriorKnowledge(currentReference: NormalizedURI) {
     def apply(candidate: NormalizationCandidate)(implicit session: RSession): Option[Boolean] = candidate.normalization match {
-      case Normalization.CANONICAL | Normalization.OPENGRAPH => Some(false)
-      case _ => None// if (normalizedURIRepo.getByNormalizedUrl(candidate.url).isEmpty) Some(false) else None
+      case Normalization.CANONICAL | Normalization.OPENGRAPH => Some(false) // Refuse all external candidates
+      case _ => if (normalizedURIRepo.getByNormalizedUrl(candidate.url).isEmpty) Some(false) else None // Lazy renormalization
     }
   }
 
