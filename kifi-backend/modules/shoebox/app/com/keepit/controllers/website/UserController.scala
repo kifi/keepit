@@ -300,7 +300,6 @@ class UserController @Inject() (
         "value" -> socialIdString(conn._1),
         "status" -> conn._2
       )
-    }))
-
+    })).withHeaders("Cache-Control" -> "private, max-age=120")
   }
 }
