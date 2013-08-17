@@ -35,7 +35,7 @@ class ExtPageController @Inject() (
 
   def recordCanonicalUrl() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
-    normalizedUriRepo.getByUri(url) match {
+    db.readOnly { implicit session => normalizedUriRepo.getByUri(url) } match {
       case None => Ok(JsBoolean(false))
       case Some(normalizedUri) => {
         normalizationService.update(normalizedUri, NormalizationCandidate(request.body.as[JsObject]): _*)
