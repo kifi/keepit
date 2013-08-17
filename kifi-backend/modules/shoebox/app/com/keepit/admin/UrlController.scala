@@ -199,13 +199,16 @@ class UrlController @Inject() (
   }
   
   def mergedUriView(page: Int = 0) = AdminHtmlAction{ request =>
-    
-    val u1 = NormalizedURI(id = Some(Id[NormalizedURI](1)), url = "http://www.google.com", urlHash = NormalizedURI.hashUrl("www.google.com"))
-    val u2 = NormalizedURI(id = Some(Id[NormalizedURI](2)), url = "http://google.com", urlHash = NormalizedURI.hashUrl("google.com"))
-    val time = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
-    Ok(html.admin.mergedUri(List((u1,u2, time.date.toString)), page, 1, 1, 50))
+    val PAGE_SIZE = 5
+    val (totalCount, changes) = db.readOnly{ implicit s =>
+      val totalCount = changedUriRepo.all().size  
+      val changes = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
+        (uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId), change.updatedAt.date.toString())
+      }
+      (totalCount, changes)
+    }
+    Ok(html.admin.mergedUri(changes, page, totalCount, page, PAGE_SIZE))
   }
-
 }
 
 
