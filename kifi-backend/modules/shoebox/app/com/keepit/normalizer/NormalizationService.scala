@@ -78,7 +78,7 @@ class NormalizationServiceImpl @Inject() (
           for {
             normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS
             candidateUrl <- SchemeNormalizer(normalization)(currentURI).safelyToString()
-          } yield NormalizationCandidate(candidateUrl.toLowerCase, normalization)
+          } yield NormalizationCandidate(candidateUrl, normalization)
         }
       } yield internalCandidates
 
@@ -132,7 +132,7 @@ class NormalizationServiceImpl @Inject() (
   private case class PriorKnowledge(currentReference: NormalizedURI) {
     def apply(candidate: NormalizationCandidate)(implicit session: RSession): Option[Boolean] = candidate.normalization match {
       case Normalization.CANONICAL | Normalization.OPENGRAPH => Some(false)
-      case _ => if (normalizedURIRepo.getByNormalizedUrl(candidate.url).isEmpty) Some(false) else None
+      case _ => None// if (normalizedURIRepo.getByNormalizedUrl(candidate.url).isEmpty) Some(false) else None
     }
   }
 
@@ -162,13 +162,14 @@ class NormalizationServiceImpl @Inject() (
 
   private def getNewReference(currentReference: NormalizedURI, successfulCandidate: NormalizationCandidate, weakerCandidates: Seq[NormalizationCandidate])(implicit session: RSession): (NormalizedURI, Set[String]) = {
     val newReference = successfulCandidate match {
-      case NormalizationCandidate(currentReference.url, strongerNormalization) => currentReference.withNormalization(strongerNormalization)
       case NormalizationCandidate(url, normalization) => normalizedURIRepo.getByNormalizedUrl(url) match {
         case None => NormalizedURI.withHash(normalizedUrl = url, normalization = Some(normalization))
-        case Some(uri) =>
-          if (uri.normalization.isEmpty || uri.normalization.get < normalization)
-            uri.withNormalization(normalization)
-          else uri
+        case Some(uri) => {
+          val activeUri = if (uri.state == NormalizedURIStates.INACTIVE) uri.withState(NormalizedURIStates.ACTIVE) else uri
+          if (activeUri.normalization.isEmpty || activeUri.normalization.get < normalization)
+            activeUri.withNormalization(normalization)
+          else activeUri
+        }
       }
     }
     val toBeMigrated = Set(currentReference.url) - newReference.url ++ weakerCandidates.takeWhile(currentReference.normalization.isEmpty || _.normalization >= currentReference.normalization.get).map(_.url)
