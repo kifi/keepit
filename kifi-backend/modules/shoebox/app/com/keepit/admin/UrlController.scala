@@ -199,7 +199,7 @@ class UrlController @Inject() (
   }
   
   def mergedUriView(page: Int = 0) = AdminHtmlAction{ request =>
-    val PAGE_SIZE = 5
+    val PAGE_SIZE = 50
     val (totalCount, changes) = db.readOnly{ implicit s =>
       val totalCount = changedUriRepo.all().size  
       val changes = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
