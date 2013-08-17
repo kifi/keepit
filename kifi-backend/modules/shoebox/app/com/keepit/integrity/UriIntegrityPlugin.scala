@@ -62,7 +62,7 @@ class UriIntegrityActor @Inject()(
    */
   def handleMerge(oldUriId: Id[NormalizedURI], newUriId: Id[NormalizedURI]): Unit = {
     if (oldUriId == newUriId) return
-    db.readWrite{ implicit s =>
+    val toBeScraped = db.readWrite{ implicit s =>
       changedUriRepo.save(ChangedURI(oldUriId = oldUriId, newUriId = newUriId))
 
       val (oldUri, newUri) = (uriRepo.get(oldUriId), uriRepo.get(newUriId))
@@ -73,10 +73,10 @@ class UriIntegrityActor @Inject()(
         urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MERGE)))
       }
 
-      if ( oldUri.state != NormalizedURIStates.ACTIVE && oldUri.state != NormalizedURIStates.INACTIVE && (newUri.state == NormalizedURIStates.ACTIVE || newUri.state == NormalizedURIStates.INACTIVE)){
-        uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
-        scraper.asyncScrape(newUri)
-      }
+      val toBeScraped = if ( oldUri.state != NormalizedURIStates.ACTIVE && oldUri.state != NormalizedURIStates.INACTIVE && (newUri.state == NormalizedURIStates.ACTIVE || newUri.state == NormalizedURIStates.INACTIVE)){
+          Some(uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED)))
+        } else None
+
       uriRepo.save(oldUri.withState(NormalizedURIStates.INACTIVE).withRedirect(newUriId, currentDateTime))
 
       scrapeInfoRepo.getByUri(oldUriId).map{ info =>
@@ -102,7 +102,9 @@ class UriIntegrityActor @Inject()(
       followRepo.getByUri(oldUriId, excludeState = None).map{ follow =>
         followRepo.save(follow.withNormUriId(newUriId))
       }
+      toBeScraped
     }
+    toBeScraped.map(scraper.asyncScrape(_))
   }
 
   /**
@@ -110,13 +112,12 @@ class UriIntegrityActor @Inject()(
    * This is NOT equivalent as a uri to uri migration. (Note the difference from the Merged case)
    */
   def handleSplit(url: URL, newUriId: Id[NormalizedURI]): Unit = {
-    db.readWrite { implicit s =>
+    val toBeScraped = db.readWrite { implicit s =>
       urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.SPLIT)))
       val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
-      if (oldUri.state != NormalizedURIStates.ACTIVE && oldUri.state != NormalizedURIStates.INACTIVE && (newUri.state == NormalizedURIStates.ACTIVE || newUri.state == NormalizedURIStates.INACTIVE)) {
-        uriRepo.save(uriRepo.get(newUriId).withState(NormalizedURIStates.SCRAPE_WANTED))
-        scraper.asyncScrape(newUri)
-      }
+      val toBeScraped = if (oldUri.state != NormalizedURIStates.ACTIVE && oldUri.state != NormalizedURIStates.INACTIVE && (newUri.state == NormalizedURIStates.ACTIVE || newUri.state == NormalizedURIStates.INACTIVE)) {
+        Some(uriRepo.save(uriRepo.get(newUriId).withState(NormalizedURIStates.SCRAPE_WANTED)))
+      } else None
 
       bookmarkRepo.getByUrlId(url.id.get).map{ bm =>
         bookmarkRepo.save(bm.withNormUriId(newUriId))
@@ -133,7 +134,9 @@ class UriIntegrityActor @Inject()(
       followRepo.getByUrl(url.id.get, excludeState = None).map{ follow =>
         followRepo.save(follow.withNormUriId(newUriId))
       }
+      toBeScraped
     }
+    toBeScraped.map(scraper.asyncScrape(_))
   }
 
   def receive = {
