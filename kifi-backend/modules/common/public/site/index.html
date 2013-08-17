@@ -144,6 +144,9 @@
 								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"></a>
 							<a class="pic" data-template-for="keepers" href="javascript:" data-name="{{firstName}} {{lastName}}" data-id="{{id}}"
 								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"></a>
+							{% if !keepers.length && others %}
+								<span class="others"></span>
+							{% endif %}
 							<span class="keep-who-text" data-after-template>
 								<span class="keep-you">
 									You
@@ -171,7 +174,7 @@
 								{% endif %}
 							</span>
 						</div>
-						<div class="keep-arrow"></div>
+						<div class="keep-arrow-1"><div class="keep-arrow-2"><div class="keep-arrow-3"><div class="keep-arrow-4"></div></div></div></div>
 					</li>
 				</ol>
 				<img class="keeps-loading" src="img/wait.gif">
@@ -263,6 +266,7 @@
 					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
 				</div>
 				<div class="invite-friends">
+					<img class="invite-friends-loading" src="img/wait.gif">
 					<ul class="antiscroll-inner">
 						<li class="invite-friend" data-template data-value="{{value}}">
 							<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{image}}">
@@ -282,7 +286,6 @@
 							{% endif %}
 						</li>
 					</ul>
-					<img class="invite-friends-loading" src="img/wait.gif">
 				</div>
 			</div>
 			<div class="friends-page" data-href="friends/requests">
@@ -345,7 +348,7 @@
 					<div class="page-pic-1">
 						<div class="page-pic-2">
 							<div class="page-pic-3">
-								<div class="page-pic-soon">Page preview coming soon</div>
+								<div class="page-pic-soon">Preview of this page<br>not yet available</div>
 								<span class="page-pic-tip">Visit page</span>
 							</div>
 						</div>

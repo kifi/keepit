@@ -171,18 +171,11 @@ $(function() {
 		},
 		start: function() {
 			var r = $collList[0].getBoundingClientRect();
-			var $shade = $('<div class=keep-drag-shade>');
-			var $shades = $shade.clone().css({top: 0, left: 0, right: 0, height: r.top})
-				.add($shade.css({top: r.top, left: r.right, right: 0, bottom: 0}))
-				.appendTo('body').layout().css('opacity', .2);
 			document.addEventListener('mousemove', move);
 			document.addEventListener('mouseup', up, true);
 			function up() {
 				document.removeEventListener('mousemove', move);
 				document.removeEventListener('mouseup', up, true);
-				$shades.css('opacity', 0).on('transitionend', function() {
-					$(this).remove();
-				});
 			}
 			function move(e) {
 				var inCol = e.pageX < r.right && e.pageX >= r.left, dy;
@@ -310,7 +303,7 @@ $(function() {
 				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function(data) {
 					$pic.css('background-image', 'url(' + data.url + ')');
 				}).error(function() {
-					$pic.find('.page-pic-soon').show();
+					$pic.find('.page-pic-soon').addClass('showing');
 				});
 				$.postJson(xhrBase + '/chatter', {url: o.url}, function(data) {
 					$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
@@ -573,29 +566,30 @@ $(function() {
 		nwFriendsScroller.refresh();
 	});
 	var $nwFriendsLoading = $('.invite-friends-loading');
-	function prepInviteTab() {
-		$.getJSON(xhrBase + '/user/all-connections', function(friends) {
+	var friendsToShow = 20;
+	var friendsTimeout;
+	function filterFriends() {
+		clearTimeout(friendsTimeout);
+		var nw = $('.invite-filters').attr('data-nw-selected');
+		var filter = $('.invite-filter').val();
+		friendsTimeout = setTimeout(function () { prepInviteTab(filter, nw) }, 200);
+	}
+
+	function prepInviteTab(search, network) {
+		search = search || undefined;
+		network = network || undefined;
+		$nwFriendsLoading.show();
+		$.getJSON(xhrBase + '/user/socialConnections', { limit: friendsToShow, search: search, network: network }, function(friends) {
 			console.log('[prepInviteTab] friends:', friends.length);
+			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
+			var filter = $('.invite-filter').val() || undefined;
+			if (filter != search || nw != network) return;
 			nwFriendsTmpl.render(friends);
-			function filterFriends() {
-				var nw = $('.invite-filters').attr('data-nw-selected');
-				var words = $('.invite-filter').val().toLowerCase().split(/\s+/);
-				var matches = {};
-				friends.forEach(function (fr) {
-					matches[fr.value] = (!nw || nw == fr.value.split('/')[0]) && words.reduce(function (v, word) {
-						return v && (' ' + fr.label).toLowerCase().indexOf(' ' + word) >= 0
-					}, true);
-				});
-				$('.invite-friends .invite-friend').each(function () {
-					var $this = $(this);
-					$this.toggleClass('no-match', !matches[$this.data('value')])
-				});
-			}
 			$('.invite-filters>a').click(function () {
 				$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 				filterFriends();
 			});
-			$('.invite-filter').keyup(filterFriends).keyup();
+			$('.invite-filter').keyup(filterFriends);
 			$('.invite-friends').on('click', '.invite-button', function () {
 				var fullSocialId = $(this).closest('.invite-friend').data('value');
 				// TODO: linkedin
@@ -1306,12 +1300,13 @@ $(function() {
 					.removeClass('mine selected detailed');
 					$priv.removeClass('on');
 				});
-				var $titles = obliviate($keeps.not($keepsStaying));
+				var $keepsGoing = $keeps.not($keepsStaying);
+				var $titles = obliviate($keepsGoing);
 				hideKeepDetails();
 				showUndo(
 					$keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.',
 					undoUnkeep.bind(null, $keeps, $titles),
-					$.fn.remove.bind($keeps));
+					$.fn.remove.bind($keepsGoing));
 			}).error(showMessage.bind(null, 'Could not delete keeps, please try again later'));
 		} else {  // toggle public/private
 			howKept = howKept == "pub" ? "pri" : "pub";

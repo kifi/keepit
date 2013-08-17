@@ -1,3 +1,5 @@
+# SHOEBOX
+
 # --- !Ups
 
 CREATE INDEX manual_sensitive_index ON domain (state, manual_sensitive);

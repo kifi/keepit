@@ -12,6 +12,7 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.actor.ActorInstance
 import play.api.Plugin
 import scala.concurrent.duration._
+import com.keepit.scraper.ScraperPlugin
 
 trait ChangedUri
 
@@ -34,6 +35,7 @@ class UriIntegrityActor @Inject()(
   scrapeInfoRepo: ScrapeInfoRepo,
   uriNormRuleRepo: UriNormalizationRuleRepo,
   changedUriRepo: ChangedURIRepo,
+  scraperPlugin: ScraperPlugin,
   healthcheckPlugin: HealthcheckPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
@@ -54,6 +56,7 @@ class UriIntegrityActor @Inject()(
       val (u, v) = (uriRepo.get(oldUri), uriRepo.get(newUri))
       if ( u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE && (v.state == NormalizedURIStates.ACTIVE || v.state == NormalizedURIStates.INACTIVE)){
         uriRepo.save(v.withState(NormalizedURIStates.SCRAPE_WANTED))
+        scraperPlugin.asyncScrape(v)
       }
       uriRepo.save(u.withState(NormalizedURIStates.INACTIVE))
 
@@ -96,9 +99,10 @@ class UriIntegrityActor @Inject()(
     db.readWrite { implicit s =>
       urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.SPLIT)))
       val (u, v) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUri))
-      if (u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE && (v.state == NormalizedURIStates.ACTIVE || v.state == NormalizedURIStates.INACTIVE))
+      if (u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE && (v.state == NormalizedURIStates.ACTIVE || v.state == NormalizedURIStates.INACTIVE)){
         uriRepo.save(uriRepo.get(newUri).withState(NormalizedURIStates.SCRAPE_WANTED))
-
+        scraperPlugin.asyncScrape(v)
+      }  
       bookmarkRepo.getByUrlId(url.id.get).map{ bm =>
         bookmarkRepo.save(bm.withNormUriId(newUri))
       }
