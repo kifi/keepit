@@ -27,8 +27,9 @@ class NormalizedURIRepoImpl @Inject() (
   idCache: NormalizedURICache,
   urlHashCache: NormalizedURIUrlHashCache,
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
-  normalizedURIFactory: NormalizedURIFactory)
-  extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with Logging {
+  normalizedURIFactory: NormalizedURIFactory,
+  urlRepoProvider: Provider[URLRepo])
+  extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -77,10 +78,7 @@ class NormalizedURIRepoImpl @Inject() (
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     val num = sequence.incrementAndGet()
     val uriWithSeq = uri.copy(seq = num)
-    val message = s"----> about to persist uri: $uriWithSeq"
-    log.error(message, new Exception(message))
     val saved = super.save(uriWithSeq)
-    log.error(s"<---- persisted uri: $saved")
 
     lazy val scrapeRepo = scrapeRepoProvider.get
     if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {
@@ -130,18 +128,14 @@ class NormalizedURIRepoImpl @Inject() (
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
     val normalizedUrl = normalizedURIFactory.normalize(url)
     val normalizedUri = getByNormalizedUrl(normalizedUrl) match {
-      case Some(uri)=> uri
+      case Some(uri) => uri
       case None => {
-        val newUri = NormalizedURI.withHash(normalizedUrl = normalizedUrl)
-        newUri.urlHash.hash.take(2).intern.synchronized {
-          getByNormalizedUrl(normalizedUrl) match {
-            case Some(uri) => uri
-            case None => save(newUri)
-          }
-        }
+        val newUri = save(NormalizedURI.withHash(normalizedUrl = normalizedUrl))
+        urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
+        newUri
       }
     }
-    normalizedURIFactory.normalizationServiceProvider.get.update(normalizedUri, candidates:_*)
+    normalizedURIFactory.normalizationServiceProvider.get.update(normalizedUri)
     normalizedUri
   }
 }
