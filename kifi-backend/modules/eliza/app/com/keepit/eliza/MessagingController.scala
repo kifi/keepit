@@ -161,6 +161,90 @@ class MessagingController @Inject() (
     
   }
 
+  def sendGlobalNotification() = Action(parse.json) { request =>
+    Async(future{
+      val data : JsObject = request.body.asInstanceOf[JsObject]
+      
+      val userIds  : Set[Id[User]] =  (data \ "userIds").as[JsArray].value.map(v => Id[User](v.as[Long])).toSet
+      val title    : String        =  (data \ "title").as[String]
+      val body     : String        =  (data \ "body").as[String]
+      val linkText : String        =  (data \ "linkText").as[String]
+      val linkUrl  : String        =  (data \ "linkUrl").as[String]
+      val imageUrl : String        =  (data \ "imageUrl").as[String]
+      val sticky   : Boolean       =  (data \ "sticky").as[Boolean]
+
+      createGlobalNotificaiton(userIds, title, body, linkText, linkUrl, imageUrl, sticky) 
+
+      Ok("")
+    })
+  }
+
+
+  def createGlobalNotificaiton(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
+    db.readWrite { implicit session =>
+      val mtps = MessageThreadParticipants(userIds)
+      val thread = threadRepo.save(MessageThread(
+        uriId = None,
+        url = None,
+        nUrl = None,
+        pageTitle = None,
+        participants = Some(mtps),
+        participantsHash = Some(mtps.hash),
+        replyable = false
+      ))
+
+      val message = messageRepo.save(Message(
+        from = None,
+        thread = thread.id.get,
+        threadExtId = thread.externalId,
+        messageText = s"$title (on $linkText): $body",
+        sentOnUrl = Some(linkUrl),
+        sentOnUriId = None
+      ))
+
+
+      userIds.foreach{ userId => 
+        val notifJson = Json.obj(
+          "id"       -> message.externalId.id,
+          "time"     -> message.createdAt,
+          "thread"   -> message.threadExtId.id,
+          "unread"   -> true,
+          "category" -> "global",
+          "title"    -> title,
+          "bodyHtml" -> body,
+          "linkText" -> linkText,
+          "url"      -> linkUrl,
+          "isSticky" -> sticky,
+          "image"    -> imageUrl
+        )
+
+
+        val userThread = userThreadRepo.save(UserThread(
+          id = None,
+          user = userId,
+          thread = thread.id.get,
+          uriId = None,
+          lastSeen = None,
+          notificationPending = true,
+          lastMsgFromOther = Some(message.id.get),
+          lastNotification = notifJson,
+          replyable = false
+        ))  
+
+        notificationRouter.sendToUser(
+          userId,
+          Json.arr("notification", notifJson)
+        )
+      
+      }
+    
+
+    }
+  
+
+
+  }
+
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String) : Seq[ElizaThreadInfo]  = {
     //get all involved users
@@ -212,7 +296,8 @@ class MessagingController @Inject() (
       "author"       -> messageWithBasicUser.user,
       "participants" -> messageWithBasicUser.participants,
       "locator"      -> locator,
-      "unread"       -> true
+      "unread"       -> true,
+      "category"     -> "message"
     ) 
   }
 
@@ -293,7 +378,7 @@ class MessagingController @Inject() (
 
 
   def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None) : Message = {
-    if (! thread.containsUser(from)) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
+    if (! thread.containsUser(from) || !thread.replyable) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
     log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session => 
       messageRepo.save(Message(
@@ -490,7 +575,7 @@ class MessagingController @Inject() (
       val threads = db.readOnly { implicit session =>
         val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
         threadIds.map(threadRepo.get(_))
-      }
+      }.filter(_.replyable)
       buildThreadInfos(userId, threads, url)
     } getOrElse {
       Seq[ElizaThreadInfo]()

@@ -12,6 +12,7 @@ trait ChangedURIRepo extends Repo[ChangedURI] {
   def getChangesSince(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[ChangedURI]
   def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber)(implicit session: RSession): Seq[ChangedURI]   // (low, high]
   def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber]
+  def page(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[ChangedURI]
 }
 
 @Singleton
@@ -46,8 +47,12 @@ class ChangedURIRepoImpl @Inject() (
     else (for (r <- table if r.seq > lowSeq && r.seq <= highSeq) yield r).sortBy(_.seq).list
   }
 
-
   def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber] = {
     (for (r <- table) yield r.seq).sortBy(x => x).list.lastOption
+  }
+  
+  override def page(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[ChangedURI] = {
+    val q = for( r <- table ) yield r
+    q.sortBy(_.updatedAt desc).drop(pageSize * pageNum).take(pageSize).list
   }
 }

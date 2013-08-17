@@ -21,6 +21,10 @@ import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.integrity.ChangedUri
 import com.keepit.integrity.MergedUri
 import com.keepit.integrity.SplittedUri
+import org.joda.time.DateTime
+import com.keepit.common.time.zones.PT
+
+
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -35,6 +39,7 @@ class UrlController @Inject() (
   commentRepo: CommentRepo,
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
+  changedUriRepo: ChangedURIRepo,
   normalizedUriFactory: NormalizedURIFactory,
   duplicateDocumentRepo: DuplicateDocumentRepo,
   orphanCleaner: OrphanCleaner,
@@ -192,7 +197,18 @@ class UrlController @Inject() (
     dupeDetect.asyncProcessDocuments()
     Redirect(com.keepit.controllers.admin.routes.UrlController.documentIntegrity())
   }
-
+  
+  def mergedUriView(page: Int = 0) = AdminHtmlAction{ request =>
+    val PAGE_SIZE = 50
+    val (totalCount, changes) = db.readOnly{ implicit s =>
+      val totalCount = changedUriRepo.all().size  
+      val changes = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
+        (uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId), change.updatedAt.date.toString())
+      }
+      (totalCount, changes)
+    }
+    Ok(html.admin.mergedUri(changes, page, totalCount, page, PAGE_SIZE))
+  }
 }
 
 

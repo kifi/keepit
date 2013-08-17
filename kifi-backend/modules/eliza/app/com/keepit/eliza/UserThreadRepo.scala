@@ -17,7 +17,7 @@ case class Notification(thread: Id[MessageThread], message: Id[Message])
 
 
 case class UserThread(
-    id: Option[Id[UserThread]],
+    id: Option[Id[UserThread]] = None,
     createdAt: DateTime = currentDateTime(zones.PT), 
     updateAt: DateTime = currentDateTime(zones.PT), 
     user: Id[User],
@@ -30,7 +30,8 @@ case class UserThread(
     lastNotification: JsValue,
     notificationUpdatedAt: DateTime = currentDateTime(zones.PT),
     notificationLastSeen: Option[DateTime] = None,
-    notoficationEmailed: Boolean = false
+    notoficationEmailed: Boolean = false,
+    replyable: Boolean = true
   ) 
   extends Model[UserThread] {
 
@@ -102,7 +103,8 @@ class UserThreadRepoImpl @Inject() (
     def notificationUpdatedAt = column[DateTime]("notification_updated_at", O.NotNull)
     def notificationLastSeen = column[DateTime]("notification_last_seen", O.Nullable)
     def notificationEmailed = column[Boolean]("notification_emailed", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ user ~ thread ~ uriId.? ~ lastSeen.? ~ notificationPending ~ muted ~ lastMsgFromOther.? ~ lastNotification ~ notificationUpdatedAt ~ notificationLastSeen.? ~ notificationEmailed <> (UserThread.apply _, UserThread.unapply _)
+    def replyable = column[Boolean]("replyable", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ user ~ thread ~ uriId.? ~ lastSeen.? ~ notificationPending ~ muted ~ lastMsgFromOther.? ~ lastNotification ~ notificationUpdatedAt ~ notificationLastSeen.? ~ notificationEmailed ~ replyable <> (UserThread.apply _, UserThread.unapply _)
 
     def userThreadIndex = index("user_thread", (user,thread), unique=true)
   }
@@ -226,7 +228,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread] = {
-    (for (row <- table if row.notificationPending===true && row.notificationEmailed===false && (row.notificationLastSeen.isNull || row.notificationLastSeen < row.notificationUpdatedAt) && row.notificationUpdatedAt < before) yield row).list
+    (for (row <- table if row.replyable===true && row.notificationPending===true && row.notificationEmailed===false && (row.notificationLastSeen.isNull || row.notificationLastSeen < row.notificationUpdatedAt) && row.notificationUpdatedAt < before) yield row).list
   }
 
   def setNotificationEmailed(id: Id[UserThread], relevantMessageOpt: Option[Id[Message]])(implicit session: RWSession) : Unit = {

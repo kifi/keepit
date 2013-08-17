@@ -117,7 +117,7 @@ GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
 GET     /site/user/connections/count @com.keepit.controllers.website.UserController.connectionCount()
-GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], limit: Int ?= Integer.MAX_VALUE)
+GET     /site/user/socialConnections  @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], limit: Int ?= Integer.MAX_VALUE)
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
@@ -178,6 +178,7 @@ GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/fixSeqNum       @com.keepit.controllers.admin.UrlController.fixSeqNum
+GET     /admin/data/mergedUri/:page       @com.keepit.controllers.admin.UrlController.mergedUriView(page: Int)
 
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index

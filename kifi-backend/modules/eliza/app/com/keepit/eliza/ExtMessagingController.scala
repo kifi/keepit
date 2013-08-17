@@ -137,6 +137,7 @@ class ExtMessagingController @Inject() (
       messagingController.setLastSeen(socket.userId, msgExtId)
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
+      messagingController.setNotificationReadForMessage(socket.userId, ExternalId[Message](messageId))
       messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
     },
     "get_threads_by_url" -> { case JsString(url) +: _ =>
