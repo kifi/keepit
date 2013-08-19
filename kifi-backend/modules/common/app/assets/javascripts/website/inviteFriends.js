@@ -30,7 +30,7 @@ $(function() {
     });
   }
 
-  $.getJSON("/site/user/all-connections", function(connections) {
+  $.getJSON("/site/user/socialConnections", function(connections) {
 
     $("#invites").on("click", ".invite_btn", function() {
       var $this = $(this);

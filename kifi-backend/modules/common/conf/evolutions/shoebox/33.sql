@@ -1,3 +1,5 @@
+# SHOEBOX
+
 # --- !Ups
 CREATE TABLE url_pattern (
     id bigint(20) NOT NULL AUTO_INCREMENT,

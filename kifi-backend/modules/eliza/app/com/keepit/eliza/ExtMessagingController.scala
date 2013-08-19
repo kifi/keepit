@@ -39,13 +39,13 @@ class ExtMessagingController @Inject() (
     val o = request.body
     val (urlStr, title, text, recipients) = (
       (o \ "url").as[String],
-      (o \ "title").as[String],
+      (o \ "title").asOpt[String],
       (o \ "text").as[String].trim,
       (o \ "recipients").as[Seq[String]])
 
 
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).map{ recipientSet =>
-      val message : Message = messagingController.sendNewMessage(request.user.id.get, recipientSet, Some(urlStr), text)
+      val message : Message = messagingController.sendNewMessage(request.user.id.get, recipientSet, Some(urlStr), title, text)
       Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))  
     }
     Async(responseFuture)
@@ -127,12 +127,17 @@ class ExtMessagingController @Inject() (
       val notices = messagingController.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       socket.channel.push(Json.arr(requestId.toLong, notices))
     },
+    "get_unread_notifications_count" -> { _ =>
+      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
+      socket.channel.push(Json.arr("unread_notifications_count", unvisited))
+    }, 
     "set_message_read" -> { case JsString(messageId) +: _ =>
       val msgExtId = ExternalId[Message](messageId)
       messagingController.setNotificationReadForMessage(socket.userId, msgExtId)
       messagingController.setLastSeen(socket.userId, msgExtId)
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
+      messagingController.setNotificationReadForMessage(socket.userId, ExternalId[Message](messageId))
       messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
     },
     "get_threads_by_url" -> { case JsString(url) +: _ =>

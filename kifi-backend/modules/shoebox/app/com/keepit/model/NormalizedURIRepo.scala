@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.keepit.common.logging.Logging
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
@@ -17,7 +18,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getScraped(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def getByUriOrElseCreate(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
+  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
 }
 
 @Singleton
@@ -28,7 +29,7 @@ class NormalizedURIRepoImpl @Inject() (
   urlHashCache: NormalizedURIUrlHashCache,
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizedURIFactory: NormalizedURIFactory)
-  extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
+  extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with Logging {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -76,7 +77,11 @@ class NormalizedURIRepoImpl @Inject() (
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     val num = sequence.incrementAndGet()
-    val saved = super.save(uri.copy(seq = num))
+    val uriWithSeq = uri.copy(seq = num)
+    val message = s"----> about to persist uri: $uriWithSeq"
+    log.error(message, new Exception(message))
+    val saved = super.save(uriWithSeq)
+    log.error(s"<---- persisted uri: $saved")
 
     lazy val scrapeRepo = scrapeRepoProvider.get
     if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {
@@ -111,21 +116,33 @@ class NormalizedURIRepoImpl @Inject() (
     limited.list
   }
 
-  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    val normalizedUri = normalizedURIFactory.normalize(url)
-    val hash = NormalizedURI.hashUrl(normalizedUri)
+  private def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
+    val hash = NormalizedURI.hashUrl(normalizedUrl)
     urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
       (for (t <- table if t.urlHash === hash) yield t).firstOption
     }
   }
 
-  def getByUriOrElseCreate(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
-    val uri = getByUri(url) match {
-      case Some(normalizedURI)=> normalizedURI
-      case None => save(normalizedURIFactory(url))
+  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
+    val normalizedUrl = normalizedURIFactory.normalize(url)
+    getByNormalizedUrl(normalizedUrl)
+  }
+
+  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
+    val normalizedUrl = normalizedURIFactory.normalize(url)
+    val normalizedUri = getByNormalizedUrl(normalizedUrl) match {
+      case Some(uri)=> uri
+      case None => {
+        val newUri = NormalizedURI.withHash(normalizedUrl = normalizedUrl)
+        newUri.urlHash.hash.take(2).intern.synchronized {
+          getByNormalizedUrl(normalizedUrl) match {
+            case Some(uri) => uri
+            case None => save(newUri)
+          }
+        }
+      }
     }
-    Future(normalizedURIFactory.normalizationService.update(uri, candidates:_*))
-    uri
+    normalizedUri
   }
 }
 

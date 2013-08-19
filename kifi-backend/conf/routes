@@ -3,4 +3,6 @@
 
 ->  / shoebox.Routes
 
+->  / eliza.Routes
+
 -> /  search.Routes

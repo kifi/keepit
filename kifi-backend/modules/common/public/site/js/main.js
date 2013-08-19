@@ -71,31 +71,43 @@ $(function() {
 	var $checkAll = $subtitle.find('.check-all').click(function() {
 		if ($checkAll.hasClass('live')) {
 			var $keeps = $main.find('.keep');
-			$checkAll.toggleClass('checked');
-			if ($checkAll.hasClass('checked')) {
+			var checked = $checkAll.toggleClass('checked').hasClass('checked');
+			if (checked) {
 				$keeps.addClass('selected detailed');
 			} else {
 				$keeps.filter('.selected').removeClass('selected detailed');
 			}
+			updateSubtitleTextForSelection(checked ? $keeps.length : 0);
 			updateKeepDetails();
 		}
 	}).hover(function() {
-		var $text = $checkAll.next('.subtitle-text');
-		var n = $text.data("n");
-		if (n) {
-			$checkAll.addClass("live");
-			$text.data("text", $text.text()).text(
-				n == 1 ? "the keep below" :
-				 n == 2 ? "both keeps below" :
-				 "all " + n + " keeps below");
+		var $text = $checkAll.next('.subtitle-text'), d = $text.data(), noun = searchResponse ? 'result' : 'Keep';
+		if (d.n) {
+			$checkAll.addClass('live');
+			d.leaveText = $text.text();
+			$text.text(($checkAll.hasClass('checked') ? 'Deselect ' : 'Select ') + (
+				d.n == 1 ? 'the ' + noun + ' below' :
+				 d.n == 2 ? 'both ' + noun + 's below' :
+				 'all ' + d.n + ' ' + noun + 's below'));
 		}
 	}, function() {
-		var $text = $(this).removeClass("live").next('.subtitle-text');
-		var text = $text.data("text");
-		if (text) {
-			$text.text(text).removeData("text");
+		var $text = $(this).removeClass("live").next('.subtitle-text'), d = $text.data();
+		if (d.leaveText) {
+			$text.text(d.leaveText), delete d.leaveText;
 		}
 	});
+	function updateSubtitleTextForSelection(numSel) {
+		var $text = $checkAll.next('.subtitle-text'), d = $text.data();
+		if (numSel) {
+			if (!d.defText) {
+				d.defText = d.leaveText || $text.text();
+			}
+			$text.text(numSel + ' ' + (searchResponse ? 'result' : 'Keep') + (numSel == 1 ? '' : 's') + ' selected');
+		} else {
+			$text.text(d.defText), delete d.defText;
+		}
+		delete d.leaveText;
+	}
 
 	$('.keep-colls,.keep-coll').removeText();
 	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps)
@@ -554,29 +566,30 @@ $(function() {
 		nwFriendsScroller.refresh();
 	});
 	var $nwFriendsLoading = $('.invite-friends-loading');
-	function prepInviteTab() {
-		$.getJSON(xhrBase + '/user/all-connections', function(friends) {
+	var friendsToShow = 20;
+	var friendsTimeout;
+	function filterFriends() {
+		clearTimeout(friendsTimeout);
+		var nw = $('.invite-filters').attr('data-nw-selected');
+		var filter = $('.invite-filter').val();
+		friendsTimeout = setTimeout(function () { prepInviteTab(filter, nw) }, 200);
+	}
+
+	function prepInviteTab(search, network) {
+		search = search || undefined;
+		network = network || undefined;
+		$nwFriendsLoading.show();
+		$.getJSON(xhrBase + '/user/socialConnections', { limit: friendsToShow, search: search, network: network }, function(friends) {
 			console.log('[prepInviteTab] friends:', friends.length);
+			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
+			var filter = $('.invite-filter').val() || undefined;
+			if (filter != search || nw != network) return;
 			nwFriendsTmpl.render(friends);
-			function filterFriends() {
-				var nw = $('.invite-filters').attr('data-nw-selected');
-				var words = $('.invite-filter').val().toLowerCase().split(/\s+/);
-				var matches = {};
-				friends.forEach(function (fr) {
-					matches[fr.value] = (!nw || nw == fr.value.split('/')[0]) && words.reduce(function (v, word) {
-						return v && (' ' + fr.label).toLowerCase().indexOf(' ' + word) >= 0
-					}, true);
-				});
-				$('.invite-friends .invite-friend').each(function () {
-					var $this = $(this);
-					$this.toggleClass('no-match', !matches[$this.data('value')])
-				});
-			}
 			$('.invite-filters>a').click(function () {
 				$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 				filterFriends();
 			});
-			$('.invite-filter').keyup(filterFriends).keyup();
+			$('.invite-filter').keyup(filterFriends);
 			$('.invite-friends').on('click', '.invite-button', function () {
 				var fullSocialId = $(this).closest('.invite-friend').data('value');
 				// TODO: linkedin
@@ -728,7 +741,7 @@ $(function() {
 
 		var fromSearch = $main.attr("data-view") == "search";
 		$main.attr("data-view", "mine");
-		$mainHead.find("h1").text(collId ? collections[collId].name : "Browse your keeps");
+		$mainHead.find("h1").text(collId ? collections[collId].name : "Browse your Keeps");
 
 		$results.empty();
 		$query.val("").removeAttr("data-q");
@@ -1001,6 +1014,7 @@ $(function() {
 			$keep.toggleClass("selected");
 			var $selected = $keeps.filter(".selected");
 			$checkAll.toggleClass("checked", $selected.length == $keeps.length);
+			updateSubtitleTextForSelection($selected.length);
 			if ($selected.length == 0 ||
 			    $selected.not(".detailed").addClass("detailed").length +
 			    $keeps.filter(".detailed:not(.selected)").removeClass("detailed").length == 0) {
@@ -1267,7 +1281,7 @@ $(function() {
 				}, function(data) {
 					$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
 					$keeps.addClass("mine").find(".keep-private").toggleClass("on", howKept == "pri");
-				}).error(showMessage.bind(null, 'Could not add keeps, please try again later'));
+				}).error(showMessage.bind(null, 'Could not add Keeps, please try again later'));
 		} else if ($a.hasClass('page-keep')) {  // unkeep
 			$.postJson(xhrBase + '/keeps/remove', $keeps.map(function() {return {url: this.querySelector('.keep-title>a').href}}).get(), function(data) {
 				// TODO: update number in "Showing top 30 results" tagline? load more instantly if number gets too small?
