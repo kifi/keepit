@@ -64,10 +64,13 @@ class UserController @Inject() (
     ))
   }
 
-  def connectionCount() = AuthenticatedJsonAction { request =>
-    Ok(Json.obj(
-      "count" -> db.readOnly { implicit s => userConnectionRepo.getConnectionCount(request.userId) }
-    ))
+  def friendCount() = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s =>
+      Ok(Json.obj(
+        "friends" -> userConnectionRepo.getConnectionCount(request.userId),
+        "requests" -> friendRequestRepo.getCountByRecipient(request.userId)
+      ))
+    }
   }
 
   private case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -255,7 +258,8 @@ class UserController @Inject() (
     }
   }
 
-  def getAllConnections(search: Option[String], network: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+  def getAllConnections(search: Option[String], network: Option[String],
+      after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
     @inline def socialIdString(sui: SocialUserInfo) = s"${sui.networkType}/${sui.socialId.id}"
     @inline def normalize(str: String) =
       Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
@@ -285,13 +289,21 @@ class UserController @Inject() (
     def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialUserInfo] =
       socialConnectionRepo.getSocialUserConnections(sui.id.get) filter (searchScore(_) > 0)
 
-    val connections = db.readOnly { implicit s =>
+    val unfilteredConnections = db.readOnly { implicit s =>
       socialUserRepo.getByUser(request.userId)
         .flatMap(getFilteredConnections)
         .map(getWithInviteStatus)
         .sortBy { case (sui, status) => (status, -searchScore(sui), normalize(sui.fullName)) }
-        .take(limit)
     }
+
+    println(unfilteredConnections)
+    val connections = (after match {
+      case Some(id) => unfilteredConnections.dropWhile { case (sui, _) => socialIdString(sui) != id } match {
+        case hd +: tl => tl
+        case tl => tl
+      }
+      case None => unfilteredConnections
+    }).take(limit)
 
     Ok(JsArray(connections.map { conn =>
       Json.obj(
@@ -300,6 +312,6 @@ class UserController @Inject() (
         "value" -> socialIdString(conn._1),
         "status" -> conn._2
       )
-    })).withHeaders("Cache-Control" -> "private, max-age=120")
+    })).withHeaders("Cache-Control" -> "private, max-age=300")
   }
 }

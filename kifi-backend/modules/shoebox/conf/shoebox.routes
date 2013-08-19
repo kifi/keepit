@@ -116,8 +116,8 @@ POST    /site/user/:id/include      @com.keepit.controllers.website.UserControll
 GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserController.outgoingFriendRequests
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
-GET     /site/user/connections/count @com.keepit.controllers.website.UserController.connectionCount()
-GET     /site/user/socialConnections  @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], limit: Int ?= Integer.MAX_VALUE)
+GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
+GET     /site/user/socialConnections  @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
