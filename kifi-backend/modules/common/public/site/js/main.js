@@ -1,4 +1,4 @@
-var xhrDomain = 'http://dev.ezkeep.com:9000';
+var xhrDomain = 'https://api.kifi.com';
 var xhrBase = xhrDomain + '/site';
 
 var compareSearch = {usage: "search", sensitivity: "base"};
