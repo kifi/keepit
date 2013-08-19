@@ -95,32 +95,38 @@ a.kifi-pane-head-feedback .kifi-slider2-tip-below {
   right: -44px;
   margin-top: 10px;
 }
-a.kifi-pane-head-settings {
+div.kifi-pane-head-settings {
   float: right;
   width: 40px;
   height: 100%;
   margin-right: 6px;
-  background-size: 16px;
-  background-position: 12px 12px;
-  background-repeat: no-repeat;
   position: relative;
   z-index: 1;
 }
+div.kifi-pane-head-settings a {
+  width: 30px;
+  height: 30px;
+  background-size: 30px;
+  background-repeat: no-repeat;
+  display: block;
+  border-radius: 15px;
+  margin: 5px;
+}
 a.kifi-pane-head-logo:hover,
-a.kifi-pane-head-settings:hover {
+div.kifi-pane-head-settings:hover {
   background-color: #374d63;
 }
 a.kifi-pane-head-logo:active,
-a.kifi-pane-head-settings:active,
-a.kifi-pane-head-settings.kifi-active {
+div.kifi-pane-head-settings:active,
+div.kifi-pane-head-settings.kifi-active {
   background-color: #324559;
 }
-a.kifi-pane-head-settings .kifi-slider2-tip-below {
+div.kifi-pane-head-settings .kifi-slider2-tip-below {
   left: auto;
   right: 0;
   margin-top: 10px;
 }
-a.kifi-pane-head-settings .kifi-slider2-tip-below::before {
+div.kifi-pane-head-settings .kifi-slider2-tip-below::before {
   left: auto;
   right: 13px;
 }
@@ -139,12 +145,15 @@ div.kifi-pane-head-settings-menu {
   -webkit-user-select: none;
   -moz-user-select: none;
 }
-.kifi-pane-settings-hide {
+.kifi-pane-head-settings-menu div {
   padding: 6px 10px 6px 6px;
   border: 1px solid transparent;
 }
-.kifi-pane-settings-hide:hover,
-.kifi-pane-settings-hide.kifi-hover {
+.kifi-pane-settings-menu-no-select {
+  margin-left: 12px;
+}
+.kifi-pane-settings-menu-item:hover,
+.kifi-pane-settings-menu-item.kifi-hover {
   background: -moz-linear-gradient(top, #6389f8, #1f60f6);
   background: -webkit-linear-gradient(#6389f8, #1f60f6);
   background: linear-gradient(#6389f8, #1f60f6);
@@ -153,12 +162,12 @@ div.kifi-pane-head-settings-menu {
   color: #fff;
   cursor: pointer;
 }
-.kifi-pane-settings-hide::before {
+.kifi-pane-settings-menu-item::before {
   content: "\2713";
   margin-right: 3px;
   visibility: hidden;
 }
-.kifi-pane-settings-hide.kifi-checked::before {
+.kifi-pane-settings-menu-item.kifi-checked::before {
   visibility: visible;
 }
 
