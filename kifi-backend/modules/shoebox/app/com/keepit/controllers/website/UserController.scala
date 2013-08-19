@@ -61,10 +61,12 @@ class UserController @Inject() (
     ))
   }
 
-  def connectionCount() = AuthenticatedJsonAction { request =>
-    Ok(Json.obj(
-      "count" -> db.readOnly { implicit s => userConnectionRepo.getConnectionCount(request.userId) }
-    ))
+  def friendCount() = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s =>
+      Ok(Json.obj(
+        "friends" -> userConnectionRepo.getConnectionCount(request.userId),
+        "requests" -> friendRequestRepo.getByRecipient(request.userId).size))  // TODO: optimize friend request count
+    }
   }
 
   private case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])

@@ -1550,8 +1550,8 @@ $(function() {
 		}).promise()};
 	updateCollections();
 	updateNumKeeps();
-	$.getJSON(xhrBase + '/user/connections/count', function(data) {
-		$('.left-col .my-friends .nav-count').text(data.count);
+	$.getJSON(xhrBase + '/user/friends/count', function(data) {
+		$('.left-col .my-friends .nav-count').text(data.friends);
 	});
 
 	$.when(promise.me).done(function() {
