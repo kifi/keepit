@@ -614,7 +614,7 @@ api.port.on({
   },
   open_deep_link: function(data, _, tab) {
     var uriData = pageData[data.nUri];
-    if (uriData) {
+    if (uriData && uriData.tabs[0]) {
       var tab = tab.nUri == data.nUri ? tab : uriData.tabs[0];
       if (tab.ready) {
         api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: data.locator});
