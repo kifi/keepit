@@ -562,10 +562,13 @@ slider2 = function() {
             }, 150);
           })
           .on("keydown", ".kifi-pane-search", function(e) {
-            var q;
-            if (e.which == 13 && (q = this.value.trim())) {
-              window.open("https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+"));
-              this.value = "";
+            var q, el = this;
+            if (e.which == 13 && (q = el.value.trim())) {
+              api.port.emit("session", function(session) {
+                var uri = session && ~session.experiments.indexOf("website") ? "https://www.kifi.com/site/search?q=" : "https://www.google.com/search?q=";
+                window.open(uri + encodeURIComponent(q).replace(/%20/g, "+"));
+                el.value = "";
+              });
             }
           })
           .on("click", ".kifi-pane-back", function() {
