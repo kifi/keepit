@@ -562,7 +562,7 @@ $(function() {
 	$nwFriends.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var filter = $('.invite-filter').val();
 		var sT = this.scrollTop;
-		if (!$nwFriendsLoading.is(':visible') && !filter && this.clientHeight + sT > this.scrollHeight - 150) {
+		if (!$nwFriendsLoading.is(':visible') && !filter && this.clientHeight + sT > this.scrollHeight - 250) {
 			console.log('loading more friends');
 			prepInviteTab(20);
 		}
