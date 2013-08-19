@@ -45,7 +45,7 @@ class UserController @Inject() (
     }
   }
 
-  def connections() = AuthenticatedJsonAction { request =>
+  def friends() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
       "connections" -> db.readOnly { implicit s =>
         val searchFriends = searchFriendRepo.getSearchFriends(request.userId)

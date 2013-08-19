@@ -535,7 +535,7 @@ $(function() {
 		friendsTmpl.clear();
 		$friendsLoading.show();
 		$.when(
-			$.getJSON(xhrBase + '/user/connections'),
+			$.getJSON(xhrBase + '/user/friends'),
 			$.getJSON(xhrBase + '/user/outgoingFriendRequests'))
 		.done(function(a0, a1) {
 			var friends = a0[0].connections, requests = a1[0];
