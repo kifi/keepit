@@ -62,14 +62,12 @@ class DuplicateDocumentsProcessor @Inject()(
 
     // according to asyncProcessDocuments, if we have N dups, their uri1Id are the same
     //  this is used as the new uri for all dups
-    if (dupAction.action == DuplicateDocumentStates.MERGED) {
-      dups.foreach( dup => mergeUris(old = dup.uri2Id, intoNew = dup.uri1Id))
+    if (typedAction(dupAction) == DuplicateDocumentStates.MERGED) {
+      dups.foreach(dup => mergeUris(old = dup.uri2Id, intoNew = dup.uri1Id))
+      db.readWrite { implicit s =>
+        dups.foreach { dup => duplicateDocumentRepo.save(dup.withState(typedAction(dupAction))) }
+      }
     }
-
-    db.readWrite{ implicit s =>
-      dups.foreach{ dup => duplicateDocumentRepo.save(dup.withState(typedAction(dupAction))) }
-    }
-
   }
 
 }
