@@ -149,6 +149,9 @@ div.kifi-pane-head-settings-menu {
   padding: 6px 10px 6px 6px;
   border: 1px solid transparent;
 }
+.kifi-pane-settings-menu-no-select {
+  margin-left: 12px;
+}
 .kifi-pane-settings-menu-item:hover,
 .kifi-pane-settings-menu-item.kifi-hover {
   background: -moz-linear-gradient(top, #6389f8, #1f60f6);
