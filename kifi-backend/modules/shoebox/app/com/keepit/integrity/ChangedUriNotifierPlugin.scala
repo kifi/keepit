@@ -13,15 +13,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.zookeeper.CentralConfig
-import com.keepit.common.zookeeper.LongCentralConfigKey
 import com.keepit.model.ChangedURIRepo
 import com.keepit.model.ChangedURIRepoImpl
-
-
-case class ChangedUriSeqNumKey(val name: String = "changed_uri_seq") extends LongCentralConfigKey {
-  val namespace = "changed_uri"
-  def key: String = name
-}
 
 case object ReportSeq
 

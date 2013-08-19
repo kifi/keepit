@@ -1,3 +1,4 @@
+// @require styles/metro/tile.css
 // @require styles/metro/slider2.css
 // @require styles/friend_card.css
 // @require scripts/lib/jquery.js

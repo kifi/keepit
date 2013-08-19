@@ -16,7 +16,6 @@ import play.api.test.Helpers._
 import com.google.inject._
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.actor.Scheduler
-import org.joda.time.DateTime
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.duration.FiniteDuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -25,6 +24,8 @@ import org.specs2.mutable._
 import play.api.libs.json._
 
 class GeckoboardUserWidgetsTest extends Specification with ShoeboxApplicationInjector {
+
+  args(skipAll = true)
 
   val hover = BookmarkSource("HOVER_KEEP")
   val initLoad = BookmarkSource("INIT_LOAD")

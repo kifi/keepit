@@ -333,24 +333,38 @@ class AdminUserController @Inject() (
       "url" -> optional(text),
       "image" -> text,
       "sticky" -> optional(text),
-      "users" -> optional(text)
+      "users" -> optional(text),
+      "eliza" -> optional(text)
     ))
 
-    val (title, bodyHtml, linkText, url, image, sticky, whichUsers) = notifyForm.bindFromRequest.get
+    val (title, bodyHtml, linkText, url, image, sticky, whichUsers, elizaFlag) = notifyForm.bindFromRequest.get
 
-    val users = whichUsers.flatMap(s => if(s == "") None else Some(s) ).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
+    val usersOpt : Option[Seq[Id[User]]] = whichUsers.flatMap(s => if(s == "") None else Some(s) ).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
+    val isSticky : Boolean = sticky.map(_ => true).getOrElse(false)
+    val useEliza : Boolean = elizaFlag.map(_ => true).getOrElse(false) 
 
-    val globalNotification = GlobalNotification(
-      sendToSpecificUsers = users,
-      title = title,
-      bodyHtml = bodyHtml,
-      linkText = linkText,
-      url = url,
-      image = image,
-      isSticky = sticky.map(_ => true).getOrElse(false),
-      markReadOnAction = true)
+    if (useEliza){
+      log.info("Sending global notification via Eliza!")
+      usersOpt.map{ users => 
+        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky)  
+      } getOrElse {
+        val users = db.readOnly{ implicit session => userRepo.getAllIds() } //Note: Need to revisit when we have >50k users.
+        eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky)  
+      } 
+    } else {
+      log.info("Sending global notification via Shoebox!")
+      val globalNotification = GlobalNotification(
+        sendToSpecificUsers = usersOpt,
+        title = title,
+        bodyHtml = bodyHtml,
+        linkText = linkText,
+        url = url,
+        image = image,
+        isSticky = isSticky,
+        markReadOnAction = true)
 
-    userNotifier.globalNotification(globalNotification)
+      userNotifier.globalNotification(globalNotification)
+    }
 
     Redirect(routes.AdminUserController.notification())
   }

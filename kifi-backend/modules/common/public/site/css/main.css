@@ -257,8 +257,6 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .check-all.live {cursor: pointer}
 .check-all.live:hover {border-color: #b8c5d2}
 .check-all.checked {background-position: 2px 4px}
-.check-all.live:hover+.subtitle-text::before {content: "Select "}
-.check-all.live.checked:hover+.subtitle-text::before {content: "Deselect "}
 .main-head>.subtitle {font-size: 13px; line-height: 20px; font-weight: 300; color: #5b6670; padding-left: 30px; position: relative}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
@@ -276,11 +274,13 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .keep.unkept {height: 0 !important}
 .keep::before {content: " "; display: block; height: 10px}
 .keep::after {content: " "; display: block; height: 13px}
-.keep-arrow {position: absolute; right: 16px; width: 6px; height: 16px; bottom: 13px; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; cursor: pointer; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
-.keep-arrow:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
-.keep:hover .keep-arrow,
-.keep.detailed .keep-arrow {background-position: right}
-.keep.detailed .keep-arrow {-webkit-transform: scale(-1,1); transform: scale(-1,1)}
+.keep-arrow-1 {position: absolute; right: 16px; width: 22px; top: 26px; bottom: 0}
+.keep-arrow-2 {display: table; table-layout: fixed; height: 100%; width: 100%}
+.keep-arrow-3 {display: table-cell; vertical-align: middle}
+.keep-arrow-4 {display: inline-block; width: 6px; height: 16px; cursor: pointer; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; -webkit-transition: -webkit-transform .2s; transition: transform .2s}
+.keep-arrow-4:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
+.keep:hover .keep-arrow-4 {background-position: right}
+.keep.detailed .keep-arrow-4 {background-position: right; -webkit-transform: scale(-1,1); transform: scale(-1,1)}
 .keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
 .keep>.handle:hover,
 .keep.detailed>.handle,
@@ -308,11 +308,11 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .keep-coll-a {padding: 0 5px}
 .keep-coll-a:not(:hover) {color: #99a3b3}
 .keep-coll-a:hover {text-decoration: underline; -webkit-font-smoothing: antialiased}
-.keep-coll-x {display: none; position: absolute; top: 0; bottom: 0; right: 0; width: 0; text-align: center}
-.keep-coll:hover>.keep-coll-x {width: 10px}
-.keep-coll-x::before {content: "\d7"; position: relative; bottom: 1px}
 .keep-who {font-size: 0}
-.keep-who>.pic {display: inline-block; vertical-align: middle; width: 23px; height: 23px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
+.keep-who>.pic,
+.keep-who>.others {display: inline-block; vertical-align: middle; width: 23px; height: 23px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
+.keep-who>.others {background-image: url(../img/globe.png)}
+.keep.mine .keep-who>.others {display: none}
 .keep-who>.me {border-radius: 50% 0 0 50%}
 .keep-who>.me:last-of-type {border-radius: 50%}
 .keep-who>.pic>.fr-card {bottom: 36px; left: -22px; z-index: 2}
@@ -340,7 +340,6 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .keep.ui-draggable-dragging,
 .keeps-dragging {opacity: .7; z-index: 90; cursor: move}
 .keeps-dragging>.keep {position: absolute; width: 100%}
-.keep-drag-shade {position: absolute; z-index: 89; background: #000; opacity: 0; -webkit-transition: opacity .2s; transition: opacity .2s}
 
 /* right col */
 
@@ -387,19 +386,21 @@ a.page-url[href]:hover {text-decoration: underline}
 .page-pic-1 {position: absolute; top: 0; bottom: 0; left: 0; right: 48px}
 .page-pic-2 {display: table; width: 100%; height: 100%}
 .page-pic-3 {display: table-cell; vertical-align: middle; text-align: center}
-.page-pic-soon {display: none; font-size: 16px; font-weight: 300; -webkit-font-smoothing: antialiased}
+.page-pic-soon {font-size: 16px; font-weight: 300; -webkit-font-smoothing: antialiased}
+.page-pic-soon:not(.showing),
+.page-pic:hover .page-pic-soon {display: none}
 .page-pic-tip {display: inline-block; padding: 0 16px; border-radius: 4px; text-transform: uppercase; background-color: #b8c5d2; color: #fff; font-size: 11px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .page-pic:not(:hover) .page-pic-tip {display: none}
 [data-kept^=p] .page-how {width: 48px; max-width: 48px}
 .page-how-0 {position: absolute; top: 0; right: 0; bottom: 0; width: 48px; overflow: hidden}
 .page-how-pub,
-.page-how-pri {position: absolute; top: 0; right: 0; width: 100%; height: 100%; -webkit-transform: scale(.001,1); transform: scale(.001,1); -webkit-transition: -webkit-transform .18s, top .18s; transition: -webkit-transform .18s, transform .18s, top .18s}
+.page-how-pri {position: absolute; top: 0; right: 0; width: 100%; height: 100%; z-index: 1; -webkit-transform: scale(.001,1); transform: scale(.001,1); -webkit-transform-origin: right; transform-origin: right; -webkit-transition: -webkit-transform .18s, top .18s; transition: -webkit-transform .18s, transform .18s, top .18s}
 .page-how-pub {background-color: #accc98}
 .page-how-pri {background-color: #e78881}
 [data-kept^=p] .page-how-pub,
 [data-kept^=p] .page-how-pri {-webkit-transform: none; transform: none}
-.pri>*>.page-how-pub {top: 100%}
-.pub>*>.page-how-pri {top: -100%}
+.pri>*>.page-how-pub {top: 100%; z-index: 0}
+.pub>*>.page-how-pri {top: -100%; z-index: 0}
 .page-how-1 {display: table; height: 100%; width: 100%}
 .page-how-2 {display: table-cell; vertical-align: middle; text-align: center}
 .page-how-3 {margin: 0 -50px; color: #fff; font-size: 18px; line-height: 22px; height: 22px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg); transform: rotate(90deg)}
@@ -538,6 +539,7 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}
   .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
+  .keep-who>.others {background-image: url(../img/globe.2x.png)}
   .keep-colls {background-image: url(../img/folder-icon-small.2x.png)}
   .splash ul>li>a::before {background-image: url(../img/splash.2x.png)}
   .page-how-3.page-how-3::before,
