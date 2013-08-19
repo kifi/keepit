@@ -1,29 +1,26 @@
 package com.keepit.common.db.slick
 
-import com.google.inject.{Inject, Provider}
-import com.keepit.common.db.{ DbSequence, DatabaseDialect }
 import java.sql.{ PreparedStatement, Connection }
 import scala.collection.mutable
-import scala.slick.driver._
-import scala.slick.session.{ Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
-import scala.annotation.tailrec
-import com.keepit.common.logging.Logging
-import scala.util.Failure
-import scala.util.Success
-import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
-import akka.actor.ActorSystem
+import scala.slick.session.{Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
 import scala.concurrent._
+import scala.util.Try
 
 object DBSession {
   abstract class SessionWrapper(_session: => Session) extends Session {
     private var open = false
     private var doRollback = false
-    private var inTransaction = false
+    private var transaction: Option[Promise[Unit]] = None
     lazy val session = {
       val s = _session
       if (inTransaction) s.conn.setAutoCommit(false)
       open = true
       s
+    }
+
+    private def transactionFuture: Future[Unit] = {
+      require(inTransaction, "Not in a transaction.")
+      transaction.get.future
     }
 
     def conn: Connection = session.conn
@@ -34,10 +31,15 @@ object DBSession {
     override def resultSetHoldability = session.resultSetHoldability
     def close() { if (open) session.close() }
     def rollback() { doRollback = true }
+    def inTransaction = transaction.nonEmpty
+
+    def onTransactionSuccess[U](f: => U)(implicit executor: ExecutionContext): Unit = transactionFuture.onSuccess { case _: Unit => f }
+    def onTransactionFailure [U](f: PartialFunction[Throwable, U])(implicit executor: ExecutionContext): Unit = transactionFuture.onFailure(f)
+    def onTransactionComplete[U](f: Function[Try[Unit], U])(implicit executor: ExecutionContext): Unit = transactionFuture.onComplete(f)
 
     def withTransaction[T](f: => T): T = if (inTransaction) f else {
       if (open) conn.setAutoCommit(false)
-      inTransaction = true
+      transaction = Some(Promise())
       try {
         var done = false
         try {
@@ -45,11 +47,14 @@ object DBSession {
           done = true
           res
         } finally {
-          if (open && !done || doRollback) conn.rollback()
+          if (open && !done || doRollback) {
+            conn.rollback()
+            transaction.get.failure(new Exception("Transaction was rolled back."))
+          } else transaction.get.success()
         }
       } finally {
         if (open) conn.setAutoCommit(true)
-        inTransaction = false
+        transaction = None
       }
     }
 
