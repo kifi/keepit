@@ -68,7 +68,8 @@ class UserController @Inject() (
     db.readOnly { implicit s =>
       Ok(Json.obj(
         "friends" -> userConnectionRepo.getConnectionCount(request.userId),
-        "requests" -> friendRequestRepo.getByRecipient(request.userId).size))  // TODO: optimize friend request count
+        "requests" -> friendRequestRepo.getCountByRecipient(request.userId)
+      ))
     }
   }
 
