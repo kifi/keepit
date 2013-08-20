@@ -7,6 +7,7 @@ import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
+import com.keepit.common.healthcheck.{HealthcheckPlugin}
 
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -29,7 +30,8 @@ class ExtMessagingController @Inject() (
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
-    protected val clock: Clock
+    protected val clock: Clock,
+    protected val healthcheckPlugin: HealthcheckPlugin
   ) 
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
