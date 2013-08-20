@@ -535,7 +535,7 @@ $(function() {
 		friendsTmpl.clear();
 		$friendsLoading.show();
 		$.when(
-			$.getJSON(xhrBase + '/user/connections'),
+			$.getJSON(xhrBase + '/user/friends'),
 			$.getJSON(xhrBase + '/user/outgoingFriendRequests'))
 		.done(function(a0, a1) {
 			var friends = a0[0].connections, requests = a1[0];
@@ -558,7 +558,15 @@ $(function() {
 
 	// Friend Invites
 
-	var $nwFriends = $('.invite-friends').antiscroll({x: false, width: '100%'})
+	var $nwFriends = $('.invite-friends').antiscroll({x: false, width: '100%'});
+	$nwFriends.find(".antiscroll-inner").scroll(function() { // infinite scroll
+		var filter = $('.invite-filter').val();
+		var sT = this.scrollTop;
+		if (!$nwFriendsLoading.is(':visible') && !filter && this.clientHeight + sT > this.scrollHeight - 250) {
+			console.log('loading more friends');
+			prepInviteTab(20);
+		}
+	});
 	var nwFriendsScroller = $nwFriends.data("antiscroll");
 	$(window).resize(nwFriendsScroller.refresh.bind(nwFriendsScroller));  // TODO: throttle, and only bind while visible
 	var nwFriendsTmpl = Tempo.prepare($nwFriends).when(TempoEvent.Types.RENDER_COMPLETE, function() {
@@ -566,25 +574,34 @@ $(function() {
 		nwFriendsScroller.refresh();
 	});
 	var $nwFriendsLoading = $('.invite-friends-loading');
-	var friendsToShow = 20;
 	var friendsTimeout;
 	function filterFriends() {
 		clearTimeout(friendsTimeout);
-		var nw = $('.invite-filters').attr('data-nw-selected');
-		var filter = $('.invite-filter').val();
-		friendsTimeout = setTimeout(function () { prepInviteTab(filter, nw) }, 200);
+		$nwFriends.find('ul').empty();
+		friendsTimeout = setTimeout(prepInviteTab, 200);
 	}
 
-	function prepInviteTab(search, network) {
-		search = search || undefined;
-		network = network || undefined;
+	const friendsToShow = 20;
+	const friendsToShowInSearch = 50;
+	const friendsShowing = [];
+	function prepInviteTab(moreToShow) {
+		var network = $('.invite-filters').attr('data-nw-selected') || undefined;
+		var search = $('.invite-filter').val() || undefined;
 		$nwFriendsLoading.show();
-		$.getJSON(xhrBase + '/user/socialConnections', { limit: friendsToShow, search: search, network: network }, function(friends) {
+		var opts = {
+			limit: search ? friendsToShowInSearch : (moreToShow || friendsToShow),
+			after: moreToShow && !search ? friendsShowing[friendsShowing.length - 1].value : undefined,
+			search: search,
+			network: network
+		};
+		$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
 			console.log('[prepInviteTab] friends:', friends.length);
 			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
 			var filter = $('.invite-filter').val() || undefined;
 			if (filter != search || nw != network) return;
-			nwFriendsTmpl.render(friends);
+			if (!moreToShow) friendsShowing.length = 0;
+			friendsShowing.push.apply(friendsShowing, friends);
+			nwFriendsTmpl.render(friendsShowing);
 			$('.invite-filters>a').click(function () {
 				$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 				filterFriends();

@@ -457,133 +457,138 @@ slider2 = function() {
       } else {
         $slider.find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
       }
-      api.require("styles/metro/pane.css", function() {
-        render("html/metro/pane", $.extend(params, {
-          site: location.hostname,
-          kifiLogoUrl: api.url("images/kifi_logo.png"),
-          gearUrl: api.url("images/metro/gear.png")
-        }), {
-          pane: "pane_" + pane
-        },
-        function(html) {
-          $("html").addClass("kifi-pane-parent");
-          $pane = $(html);
-          $pane[0].dataset.locator = locator;
-          if (bringSlider) {
-            $pane.append($slider).appendTo(tile.parentNode);
-          } else {
-            $pane.insertBefore(tile);
-            $(tile).css("transform", "translate(0," + (window.innerHeight - tile.getBoundingClientRect().bottom) + "px)");
-          }
-          $pane.layout()
-          .on("transitionend", function onPaneShown(e) {
-            if (e.target !== this) return;
-            $pane.off("transitionend", onPaneShown);
-            if (!bringSlider) {
-              $pane.before(tile);
-              $slider.appendTo($pane);
+      api.port.emit("session", function(session) {
+        api.require("styles/metro/pane.css", function() {
+          render("html/metro/pane", $.extend(params, {
+            site: location.hostname,
+            kifiLogoUrl: api.url("images/kifi_logo.png"),
+            session: session
+          }), {
+            pane: "pane_" + pane
+          },
+          function(html) {
+            $("html").addClass("kifi-pane-parent");
+            $pane = $(html);
+            $pane[0].dataset.locator = locator;
+            if (bringSlider) {
+              $pane.append($slider).appendTo(tile.parentNode);
+            } else {
+              $pane.insertBefore(tile);
+              $(tile).css("transform", "translate(0," + (window.innerHeight - tile.getBoundingClientRect().bottom) + "px)");
             }
-            $box.data("shown", true).triggerHandler("kifi:shown");
-          })
-          .bindHover(".kifi-pane-head-logo", {mustHoverFor: 700, hideAfter: 2500, click: "hide"})
-          .bindHover(".kifi-pane-head-feedback", function(configureHover) {
-            render("html/keeper/titled_tip", {
-              dir: "below",
-              title: "Give Us Feedback",
-              html: "Tell us your ideas for Kifi<br>or report an issue."
-            }, function(html) {
-              configureHover(html, {mustHoverFor: 700, hideAfter: 4000, click: "hide"});
-            });
-          })
-          .on("click", ".kifi-pane-head-feedback", function(e) {
-            e.preventDefault();
-            var width = 700;
-            var height = 400;
-            var left = (screen.width - width) / 2;
-            var top = (screen.height - height) / 2;
-            window.open(
-              "https://www.kifi.com/feedback/form",
-              "kifi-feedback",
-              "width="+width+",height="+height+",resizable,top="+top+",left="+left);
-          })
-          .bindHover(".kifi-pane-head-settings:not(.kifi-active)", function(configureHover) {
-            render("html/keeper/titled_tip", {
-              dir: "below",
-              title: "Settings",
-              html: "Customize your Kifi<br>experience."
-            }, function(html) {
-              configureHover(html, {mustHoverFor: 700, hideAfter: 3000, click: "hide"});
-            });
-          })
-          .on("mousedown", ".kifi-pane-head-settings", function(e) {
-            e.preventDefault();
-            var $sett = $(this).addClass("kifi-active");
-            var $menu = $sett.next(".kifi-pane-head-settings-menu").fadeIn(50);
-            var $hide = $menu.find(".kifi-pane-settings-hide")
-              .on("mouseenter", enterItem)
-              .on("mouseleave", leaveItem);
-            document.addEventListener("mousedown", docMouseDown, true);
-            $menu.on("kifi:hide", hide);
-            // .kifi-hover class needed because :hover does not work during drag
-            function enterItem() { $(this).addClass("kifi-hover"); }
-            function leaveItem() { $(this).removeClass("kifi-hover"); }
-            function docMouseDown(e) {
-              if (!$menu[0].contains(e.target)) {
-                $menu.triggerHandler("kifi:hide");
-                if ($sett[0] === e.target) {
-                  e.stopPropagation();
+            $pane.layout()
+            .on("transitionend", function onPaneShown(e) {
+              if (e.target !== this) return;
+              $pane.off("transitionend", onPaneShown);
+              if (!bringSlider) {
+                $pane.before(tile);
+                $slider.appendTo($pane);
+              }
+              $box.data("shown", true).triggerHandler("kifi:shown");
+            })
+            .bindHover(".kifi-pane-head-logo", {mustHoverFor: 700, hideAfter: 2500, click: "hide"})
+            .bindHover(".kifi-pane-head-feedback", function(configureHover) {
+              render("html/keeper/titled_tip", {
+                dir: "below",
+                title: "Give Us Feedback",
+                html: "Tell us your ideas for Kifi<br>or report an issue."
+              }, function(html) {
+                configureHover(html, {mustHoverFor: 700, hideAfter: 4000, click: "hide"});
+              });
+            })
+            .on("click", ".kifi-pane-head-feedback", function(e) {
+              e.preventDefault();
+              var width = 700;
+              var height = 400;
+              var left = (screen.width - width) / 2;
+              var top = (screen.height - height) / 2;
+              window.open(
+                "https://www.kifi.com/feedback/form",
+                "kifi-feedback",
+                "width="+width+",height="+height+",resizable,top="+top+",left="+left);
+            })
+            .bindHover(".kifi-pane-head-settings:not(.kifi-active)", function(configureHover) {
+              render("html/keeper/titled_tip", {
+                dir: "below",
+                title: "Settings",
+                html: "Customize your Kifi<br>experience."
+              }, function(html) {
+                configureHover(html, {mustHoverFor: 700, hideAfter: 3000, click: "hide"});
+              });
+            })
+            .on("mousedown", ".kifi-pane-head-settings", function(e) {
+              e.preventDefault();
+              var $sett = $(this).addClass("kifi-active");
+              var $menu = $sett.next(".kifi-pane-head-settings-menu").fadeIn(50);
+              var $hide = $menu.find(".kifi-pane-settings-hide")
+                .on("mouseenter", enterItem)
+                .on("mouseleave", leaveItem);
+              document.addEventListener("mousedown", docMouseDown, true);
+              $menu.on("kifi:hide", hide);
+              // .kifi-hover class needed because :hover does not work during drag
+              function enterItem() { $(this).addClass("kifi-hover"); }
+              function leaveItem() { $(this).removeClass("kifi-hover"); }
+              function docMouseDown(e) {
+                if (!$menu[0].contains(e.target)) {
+                  $menu.triggerHandler("kifi:hide");
+                  if ($sett[0] === e.target) {
+                    e.stopPropagation();
+                  }
                 }
               }
-            }
-            function hide() {
-              document.removeEventListener("mousedown", docMouseDown, true);
-              $sett.removeClass("kifi-active");
-              $hide.off("mouseenter", enterItem)
-                  .off("mouseleave", leaveItem);
-              $menu.off("kifi:hide", hide).fadeOut(50, function() {
-                $menu.find(".kifi-hover").removeClass("kifi-hover");
-              });
-            }
-            api.port.emit("get_suppressed", function(suppressed) {
-              $hide.toggleClass("kifi-checked", !!suppressed);
-            });
-          })
-          .on("mouseup", ".kifi-pane-settings-hide", function(e) {
-            e.preventDefault();
-            var $hide = $(this).toggleClass("kifi-checked");
-            var checked = $hide.hasClass("kifi-checked");
-            $(tile).toggle(!checked);
-            api.port.emit("suppress_on_site", checked);
-            setTimeout(function() {
-              if (checked) {
-                hidePane();
-              } else {
-                $hide.closest(".kifi-pane-head-settings-menu").triggerHandler("kifi:hide");
+              function hide() {
+                document.removeEventListener("mousedown", docMouseDown, true);
+                $sett.removeClass("kifi-active");
+                $hide.off("mouseenter", enterItem)
+                    .off("mouseleave", leaveItem);
+                $menu.off("kifi:hide", hide).fadeOut(50, function() {
+                  $menu.find(".kifi-hover").removeClass("kifi-hover");
+                });
               }
-            }, 150);
-          })
-          .on("keydown", ".kifi-pane-search", function(e) {
-            var q;
-            if (e.which == 13 && (q = this.value.trim())) {
-              window.open("https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+"));
-              this.value = "";
-            }
-          })
-          .on("click", ".kifi-pane-back", function() {
-            var loc = paneHistory[1] || this.dataset.loc;
-            if (loc) {
-              showPane(loc, true);
-            }
-          })
-          .on("kifi:show-pane", function(e, loc, paramsArg) {
-            showPane(loc, false, paramsArg);
-          })
-          .on("mousedown click keydown keypress keyup", function(e) {
-            e.stopPropagation();
+              api.port.emit("get_suppressed", function(suppressed) {
+                $hide.toggleClass("kifi-checked", !!suppressed);
+              });
+            })
+            .on("mouseup", ".kifi-pane-settings-hide", function(e) {
+              e.preventDefault();
+              var $hide = $(this).toggleClass("kifi-checked");
+              var checked = $hide.hasClass("kifi-checked");
+              $(tile).toggle(!checked);
+              api.port.emit("suppress_on_site", checked);
+              setTimeout(function() {
+                if (checked) {
+                  hidePane();
+                } else {
+                  $hide.closest(".kifi-pane-head-settings-menu").triggerHandler("kifi:hide");
+                }
+              }, 150);
+            })
+            .on("keydown", ".kifi-pane-search", function(e) {
+              var q, el = this;
+              if (e.which == 13 && (q = el.value.trim())) {
+                api.port.emit("session", function(session) {
+                  var uri = session && ~session.experiments.indexOf("website") ? "https://www.kifi.com/site/search?q=" : "https://www.google.com/search?q=";
+                  window.open(uri + encodeURIComponent(q).replace(/%20/g, "+"));
+                  el.value = "";
+                });
+              }
+            })
+            .on("click", ".kifi-pane-back", function() {
+              var loc = paneHistory[1] || this.dataset.loc;
+              if (loc) {
+                showPane(loc, true);
+              }
+            })
+            .on("kifi:show-pane", function(e, loc, paramsArg) {
+              showPane(loc, false, paramsArg);
+            })
+            .on("mousedown click keydown keypress keyup", function(e) {
+              e.stopPropagation();
+            });
+            $("html").addClass("kifi-with-pane");
+            var $box = $pane.find(".kifi-pane-box");
+            populatePane[pane]($box, locator);
           });
-          $("html").addClass("kifi-with-pane");
-          var $box = $pane.find(".kifi-pane-box");
-          populatePane[pane]($box, locator);
         });
       });
     }
