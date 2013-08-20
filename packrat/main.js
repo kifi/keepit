@@ -321,7 +321,7 @@ const socketHandlers = {
           });
         }
       }
-    }
+    });
 
   },
   message: function(threadId, message) {
