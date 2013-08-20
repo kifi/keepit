@@ -27,6 +27,7 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
         db.readOnly { implicit s =>
           friendRequestRepo.getBySender(users(0)).map(_.recipientId) must haveTheSameElementsAs(Seq(users(2)))
           friendRequestRepo.getByRecipient(users(1)) must beEmpty
+          friendRequestRepo.getCountByRecipient(users(2)) must_== 1
           friendRequestRepo.getByRecipient(users(2)).map(_.senderId) must haveTheSameElementsAs(Seq(users(0)))
           friendRequestRepo.getBySenderAndRecipient(users(0), users(1)) must beNone
         }
@@ -38,6 +39,7 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
           friendRequestRepo.getBySender(users(0), states = Set(FriendRequestStates.ACCEPTED,
             FriendRequestStates.IGNORED)).map(_.recipientId) must haveTheSameElementsAs(Seq(users(1), users(2)))
           friendRequestRepo.getByRecipient(users(1)) must beEmpty
+          friendRequestRepo.getCountByRecipient(users(2)) must_== 0
           friendRequestRepo.getByRecipient(users(2)) must beEmpty
           friendRequestRepo.getBySenderAndRecipient(users(0), users(1)) must beNone
           friendRequestRepo.getBySenderAndRecipient(users(0), users(2)) must beNone

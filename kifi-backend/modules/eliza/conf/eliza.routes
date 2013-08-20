@@ -15,7 +15,9 @@ GET     /eliza/ext/ws                     @com.keepit.eliza.ExtMessagingControll
 
 POST  /internal/eliza/sendToUserNoBroadcast     @com.keepit.eliza.ElizaController.sendToUserNoBroadcast
 POST  /internal/eliza/sendToUser                @com.keepit.eliza.ElizaController.sendToUser
-POST  /internal/eliza/sendToAllUsers              @com.keepit.eliza.ElizaController.sendToAllUsers
+POST  /internal/eliza/sendToAllUsers            @com.keepit.eliza.ElizaController.sendToAllUsers
+GET   /internal/eliza/connectedClientCount      @com.keepit.eliza.ElizaController.connectedClientCount
+POST  /internal/eliza/sendGlobalNotification    @com.keepit.eliza.MessagingController.sendGlobalNotification
 
 POST /internal/eliza/importThread               @com.keepit.eliza.MessagingController.importThread()
 

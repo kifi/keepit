@@ -73,7 +73,8 @@ class ShoeboxController @Inject() (
   uriChannel: UriChannel,
   searchFriendRepo: SearchFriendRepo,
   urbanAirship: UrbanAirship,
-  emailAddressRepo: EmailAddressRepo )
+  emailAddressRepo: EmailAddressRepo,
+  changedUriRepo: ChangedURIRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -135,18 +136,29 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uri))
   }
 
-  def normalizeURL() = Action(parse.json) { request =>
-    val url : String = Json.fromJson[String](request.body).get
-    val uriId = db.readWrite(attempts=3) { implicit s =>
-      normUriRepo.getByUriOrElseCreate(url)
-    }
-    Ok(Json.toJson(uriId))
+  def getNormalizedURIs(ids: String) = Action { request =>
+    val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
+    val uris = db.readOnly { implicit s => uriIds map normUriRepo.get }
+    Ok(Json.toJson(uris))
   }
 
-  def getNormalizedURIs(ids: String) = Action { request =>
-     val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
-     val uris = db.readOnly { implicit s => uriIds map normUriRepo.get }
-     Ok(Json.toJson(uris))
+  def getNormalizedURIByURL() = Action(parse.json) { request =>
+    val url : String = Json.fromJson[String](request.body).get
+    val uriOpt = db.readWrite(attempts=2) { implicit s =>
+      normUriRepo.getByUri(url)
+    }
+    uriOpt match {
+      case Some(uri) => Ok(Json.toJson(uri))
+      case None => Ok(JsNull)
+    }
+  }
+
+  def internNormalizedURI() = Action(parse.json) { request =>
+    val url : String = Json.fromJson[String](request.body).get
+    val uriId = db.readWrite(attempts=2) { implicit s =>
+      normUriRepo.internByUri(url)
+    }
+    Ok(Json.toJson(uriId))
   }
 
   def getBrowsingHistoryFilter(userId: Id[User]) = Action {
@@ -166,7 +178,6 @@ class ShoeboxController @Inject() (
     clickHistoryTracker.add(userId, uriId)
     Ok
   }
-
 
   def getBookmarks(userId: Id[User]) = Action { request =>
     val bookmarks = db.readOnly { implicit session =>
@@ -374,4 +385,16 @@ class ShoeboxController @Inject() (
     })
 
   }
+  
+  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) = Action { request =>
+    val changes = db.readOnly { implicit s =>
+      changedUriRepo.getChangesBetween(SequenceNumber(lowSeq), SequenceNumber(highSeq)).map{ change =>
+        (change.oldUriId, normUriRepo.get(change.newUriId))
+      }
+    }
+    val jsChanges = changes.map{ case (id, uri) =>
+      JsObject(List("id" -> JsNumber(id.id), "uri" -> Json.toJson(uri)))
+    }
+    Ok(JsArray(jsChanges))
+  } 
 }

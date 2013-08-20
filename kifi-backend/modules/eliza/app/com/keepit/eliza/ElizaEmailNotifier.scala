@@ -12,6 +12,7 @@ import com.keepit.model.{User}
 import com.keepit.common.db.{Id}
 import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.mail.{ElectronicMail,EmailAddresses,PostOffice}
+import com.keepit.inject.AppScoped
 
 import com.google.inject.{Inject, ImplementedBy}
 
@@ -85,11 +86,14 @@ class ElizaEmailNotifierActor @Inject() (
     }
   }
 }
+
+
 @ImplementedBy(classOf[ElizaEmailNotifierPluginImpl])
 trait ElizaEmailNotifierPlugin extends SchedulingPlugin {
   def sendEmails(): Unit
 }
 
+@AppScoped
 class ElizaEmailNotifierPluginImpl @Inject() (
     actor: ActorInstance[ElizaEmailNotifierActor],
     val schedulingProperties: SchedulingProperties) //only on leader

@@ -28,7 +28,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def normalizedURIUrlHashCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIUrlHashCache((innerRepo, 1 second), (outerRepo, 7 days))
+    new NormalizedURIUrlHashCache((outerRepo, 7 days))
+
+  @Provides @Singleton
+  def prepUrlHashToMappedUrlCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new PrepUrlHashToMappedUrlCache((innerRepo, 1 second), (outerRepo, 7 days))
 
   @Singleton
   @Provides
@@ -164,5 +168,15 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def userTopicCache(outerRepo: FortyTwoCachePlugin) =
     new UserTopicCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def socialUserConnectionsCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SocialUserConnectionsCache((innerRepo, 1 minute), (outerRepo, 6 hours))
+
+  @Singleton
+  @Provides
+  def friendRequestCountCache(outerRepo: FortyTwoCachePlugin) =
+    new FriendRequestCountCache((outerRepo, 7 days))
 
 }

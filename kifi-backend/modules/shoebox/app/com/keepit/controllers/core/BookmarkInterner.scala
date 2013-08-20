@@ -63,7 +63,7 @@ class BookmarkInterner @Inject() (
       log.debug("interning bookmark %s with title [%s]".format(json, title))
 
       val uri = db.readWrite(attempts = 2) { implicit s =>
-        val initialURI = uriRepo.getByUriOrElseCreate(url, NormalizationCandidate(json):_*)
+        val initialURI = uriRepo.internByUri(url, NormalizationCandidate(json):_*)
         if (initialURI.state == NormalizedURIStates.ACTIVE | initialURI.state == NormalizedURIStates.INACTIVE)
           uriRepo.save(initialURI.withState(NormalizedURIStates.SCRAPE_WANTED))
         else initialURI

@@ -7,6 +7,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{SocialNetworkType, SocialId}
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
+import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError, Healthcheck}
 
 import scala.concurrent.stm.{Ref, atomic}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -28,7 +29,6 @@ import akka.actor.{Cancellable, ActorSystem}
 import securesocial.core.{Authenticator, UserService, SecureSocial}
 
 import org.joda.time.DateTime
-import com.keepit.common.akka.SafeFuture
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -41,6 +41,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val impersonateCookie: ImpersonateCookie
   protected val actorSystem: ActorSystem
   protected val clock: Clock
+  protected val healthcheckPlugin: HealthcheckPlugin
 
   protected def onConnect(socket: SocketInfo) : Unit
   protected def onDisconnect(socket: SocketInfo) : Unit
@@ -54,7 +55,21 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case Input.EOF => Done(Unit, Input.EOF)
       case Input.Empty => Cont[JsArray, Unit](i => step(i))
       case Input.El(e) =>
-        SafeFuture("Eliza Websocket (frame: ${e.toString})") { f(e) }
+        Akka.future { 
+          try {
+            f(e)
+          } catch {
+            case ex: Throwable => healthcheckPlugin.addError(
+              HealthcheckError(
+                error = Some(ex), 
+                method = Some("ws"), 
+                path = e.value.headOption.map(_.toString), 
+                callType = Healthcheck.INTERNAL,
+                errorMessage = Some(s"Error on ws call ${e.toString}")
+              )
+            )
+          } 
+        }
         Cont[JsArray, Unit](i => step(i))
     }
     (Cont[JsArray, Unit](i => step(i)))

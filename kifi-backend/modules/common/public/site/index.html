@@ -90,28 +90,28 @@
 				</span>
 				<span class="subtitle-text" data-template data-has="collId" data-n="{{numShown}}" style="display:none">
 					{% if numShown == 0 %}
-						No keeps in this collection
+						No Keeps in this collection
 					{% endif %}{% if numShown == 1 %}
-						Showing the only keep in this collection
+						Showing the only Keep in this collection
 					{% endif %}{% if numShown == 2 %}
-						Showing both keeps in this collection
+						Showing both Keeps in this collection
 					{% endif %}{% if numShown > 2 && numShown < numTotal %}
-						Showing the {{numShown}} latest keeps in this collection
+						Showing the {{numShown}} latest Keeps in this collection
 					{% endif %}{% if numShown > 2 && numShown == numTotal %}
-						Showing all {{numShown}} keeps in this collection
+						Showing all {{numShown}} Keeps in this collection
 					{% endif %}
 				</span>
 				<span class="subtitle-text" data-template data-has="numShown" data-n="{{numShown}}" style="display:none">
 					{% if numShown == 0 %}
-						You have no keeps
+						You have no Keeps
 					{% endif %}{% if numShown == 1 %}
-						Showing your only keep
+						Showing your only Keep
 					{% endif %}{% if numShown == 2 %}
-						Showing both of your keeps
+						Showing both of your Keeps
 					{% endif %}{% if numShown > 2 && numShown < numTotal %}
-						Showing your {{numShown}} latest keeps
+						Showing your {{numShown}} latest Keeps
 					{% endif %}{% if numShown > 2 && numShown == numTotal %}
-						Showing all {{numShown}} of your keeps
+						Showing all {{numShown}} of your Keeps
 					{% endif %}
 				</span>
 				<span class="subtitle-text" data-template data-has="searching" style="display:none">Searching...</span>
@@ -136,7 +136,7 @@
 						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '' | replace '^([^/]*)/$', '$1'}}</div>
 						<div class="keep-colls">
 							<span class="keep-coll" data-template-for="collections" data-id="{{id}}">
-								<a class="keep-coll-a" href="collection/{{id}}">{{name}}</a><a class="keep-coll-x" href="javascript:"></a>
+								<a class="keep-coll-a" href="collection/{{id}}">{{name}}</a>
 							</span>
 						</div>
 						<div class="keep-who">
@@ -144,6 +144,9 @@
 								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"></a>
 							<a class="pic" data-template-for="keepers" href="javascript:" data-name="{{firstName}} {{lastName}}" data-id="{{id}}"
 								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"></a>
+							{% if !keepers.length && others %}
+								<span class="others"></span>
+							{% endif %}
 							<span class="keep-who-text" data-after-template>
 								<span class="keep-you">
 									You
@@ -171,7 +174,7 @@
 								{% endif %}
 							</span>
 						</div>
-						<div class="keep-arrow"></div>
+						<div class="keep-arrow-1"><div class="keep-arrow-2"><div class="keep-arrow-3"><div class="keep-arrow-4"></div></div></div></div>
 					</li>
 				</ol>
 				<img class="keeps-loading" src="img/wait.gif">
@@ -263,26 +266,28 @@
 					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
 				</div>
 				<div class="invite-friends">
-					<ul class="antiscroll-inner">
-						<li class="invite-friend" data-template data-value="{{value}}">
-							<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{image}}">
-							<div class="invite-name">{{label}}</div>
-							<div class="invite-status">
-								{% if status %}
-									{{status}}
-								{% else %}
-									Invite through {{value | replace '/.*', ''}}
+					<div class="antiscroll-inner">
+						<ul>
+							<li class="invite-friend" data-template data-value="{{value}}">
+								<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{image}}">
+								<div class="invite-name">{{label}}</div>
+								<div class="invite-status">
+									{% if status %}
+										{{status}}
+									{% else %}
+										Invite through {{value | replace '/.*', ''}}
+									{% endif %}
+								</div>
+								{% if !status %}
+								<form method="POST">
+									<input type="hidden" name="fullSocialId" value="{{value}}">
+									<a class="invite-button" href="javascript:"></a>
+								</form>
 								{% endif %}
-							</div>
-							{% if !status %}
-							<form method="POST">
-								<input type="hidden" name="fullSocialId" value="{{value}}">
-								<a class="invite-button" href="javascript:"></a>
-							</form>
-							{% endif %}
-						</li>
-					</ul>
-					<img class="invite-friends-loading" src="img/wait.gif">
+							</li>
+						</ul>
+						<img class="invite-friends-loading" src="img/wait.gif">
+					</div>
 				</div>
 			</div>
 			<div class="friends-page" data-href="friends/requests">
@@ -337,7 +342,7 @@
 	<div class="detail"><div data-template data-kept="{{howKept}}">
 		<a class="page-x" href="javascript:"></a>
 		<div class="page-meta" data-n="{{numKeeps}}">
-			<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} keeps selected{% endif %}</h2>
+			<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} Keeps selected{% endif %}</h2>
 			{% if numKeeps == 1 %}
 			<a class="page-url long-text" href="{{url}}" target="_blank">{{url}}</a>
 			<div class="page-pic-wrap">
@@ -345,7 +350,7 @@
 					<div class="page-pic-1">
 						<div class="page-pic-2">
 							<div class="page-pic-3">
-								<div class="page-pic-soon">Page preview coming soon</div>
+								<div class="page-pic-soon">Preview of this page<br>not yet available</div>
 								<span class="page-pic-tip">Visit page</span>
 							</div>
 						</div>
@@ -381,7 +386,7 @@
 			<div class="page-who-text"></div>
 		</div>
 		<div class="page-chatter">
-			<h2>Talking about this keep:</h2>
+			<h2>Talking about this Keep:</h2>
 			<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
 			<a class="page-chatter-comments" href="{{url}}" target="_blank" data-n="0" data-locator="/comments">Public Comment</a>
 		</div>
