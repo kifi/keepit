@@ -256,21 +256,17 @@ const socketHandlers = {
     }
   },
   thread_infos: function(infos) {
-    // infos may be for multiple URLs
-    var urisToUpdate = {};
-    infos.forEach(function(t) {
-      urisToUpdate[t.nUrl] = 1;
-    });
-
-    for (var u in urisToUpdate) {
-      pageData[u] = pageData[u] || new PageData;
-      urisToUpdate[u] = clone(pageData[u]);
-      // for now, we can clear a url's threads. when we move to threads being on multiple pages, will need to be changed.
-      pageData[u].threads = [];
-    }
+    var allThreadsPrev = {};
 
     infos.forEach(function(t) {
       var d = pageData[t.nUrl];
+      if (!d) return;
+      allThreadsPrev[t.nUrl] = d.threads, d.threads = [];
+    });
+
+    infos.forEach(function(t) {
+      var d = pageData[t.nUrl];
+      if (!d) return;
       d.threads.push(t); // since threads was cleared above, can just push
       t.participants = t.participants || [];
       for (var j = 0, len = t.participants.length; j < len; j++) {
@@ -295,14 +291,13 @@ const socketHandlers = {
     });
     tellTabsNoticeCountIfChanged();
 
-    for (var u in urisToUpdate) {
-      var d = pageData[u];
-      var dPrev = urisToUpdate[u];
-
-      if (dPrev.threads) {
+    infos.forEach(function(t) {
+      var d = pageData[t.nUrl];
+      var threadsPrev = allThreadsPrev[t.nUrl];
+      if (d && threadsPrev) {
         var threadsWithNewMessages = [];
         d.threads.forEach(function(th) {
-          var thPrev = dPrev.threads.filter(hasId(th.id))[0];
+          var thPrev = threadsPrev.filter(hasId(th.id))[0];
           var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
           if (numNew) {
             socket.send(["get_thread", th.id]);
@@ -924,9 +919,9 @@ function subscribe(tab) {
       var uri = resp.normalized;
       var uri_1 = resp.uri_1;
       var uri_2 = resp.uri_2;
-      d = pageData[uri] = pageData[uri] || new PageData;
 
       if (api.tabs.get(tab.id) && api.tabs.get(tab.id).url != tab.url) return;
+      d = pageData[uri] = pageData[uri] || new PageData;
       finish(uri);
 
       // uri_1
