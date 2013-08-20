@@ -911,7 +911,7 @@ function subscribe(tab) {
       var uri_1 = resp.uri_1;
       var uri_2 = resp.uri_2;
 
-      if (api.tabs.get(tab.id) && api.tabs.get(tab.id).url != tab.url) return;
+      if ((api.tabs.get(tab.id) || {}).url != tab.url) return;
       d = pageData[uri] = pageData[uri] || new PageData;
       finish(uri);
 
