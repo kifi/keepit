@@ -6,12 +6,6 @@ api = function() {
     this.forEach(function(f) {f.apply(null, args)});
   }
 
-  const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(\.[a-z]{2})?\/(|search|webhp)\?(|.*&)q=([^&]*)/;
-  chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
-    var searchQuery = decodeURIComponent(((details.url.match(googleSearchPattern) || [])[4] || '').replace(/\+/g, ' '));
-    if (searchQuery) dispatch.call(api.on.search, searchQuery);
-  });
-
   function createPage(tab, skipOnLoading) {
     var page = pages[tab.id] = {
       id: tab.id,
@@ -86,6 +80,15 @@ api = function() {
       if (page && /^https?:/.test(page.url)) {
         dispatch.call(api.tabs.on.focus, page);
       }
+    }
+  });
+
+  const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:|.*&)q=([^&]*)/;
+  const plusPattern = /\+/g;
+  chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
+    var match = details.url.match(googleSearchPattern);
+    if (match && details.frameId === 0) {
+      dispatch.call(api.on.search, decodeURIComponent(match[1].replace(plusPattern, ' ')));
     }
   });
 
