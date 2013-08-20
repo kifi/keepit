@@ -293,7 +293,7 @@ class UserController @Inject() (
       socialUserRepo.getByUser(request.userId)
         .flatMap(getFilteredConnections)
         .map(getWithInviteStatus)
-        .sortBy { case (sui, status) => (status, -searchScore(sui), normalize(sui.fullName)) }
+        .sortBy { case (sui, status) => (-searchScore(sui), normalize(sui.fullName)) }
     }
 
     println(unfilteredConnections)
