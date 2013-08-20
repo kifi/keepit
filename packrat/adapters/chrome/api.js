@@ -115,7 +115,7 @@ api = function() {
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("#666", "[tabs.onUpdated] %i change: %o", tabId, change);
     if (selectedTabIds[tab.windowId]) {  // window is "normal"
-      if (change.status === "loading") {
+      if (change.status === "loading" && (change.url || !ports[tabId])) {  // app.asana.com/0/7052550309820/7364261745177
         onRemoved(tabId);
         createPage(tab);
       }
