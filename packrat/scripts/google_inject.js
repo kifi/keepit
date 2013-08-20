@@ -115,7 +115,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
 
       $resList.remove(); // remove any old results
       response = resp;
-      // response.filter = f;
+      response.filter = f;
       response.hits.forEach(processHit);
       if (!newFilter) {
         clicks.kifi.length = clicks.google.length = 0;

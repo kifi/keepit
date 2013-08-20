@@ -844,12 +844,6 @@ function tellTabsIfCountChanged(d, key, count) {
   }
 }
 
-var searchFilterCache = {
-  "page query": {
-    timestamp: '',
-    filter: {}
-  }};
-
 function searchOnServer(request, respond) {
   logEvent("search", "newSearch", {query: request.query, filter: request.filter});
 
@@ -859,15 +853,6 @@ function searchOnServer(request, respond) {
     api.log("[searchOnServer] no session");
     respond({});
     return;
-  }
-
-  if (request.filter) {
-    searchFilterCache[request.query] = {
-      timestamp: new Date(),
-      filter: request.filter
-    };
-  } else {
-    delete searchFilterCache[request.query];
   }
 
   var when, params = {
@@ -891,7 +876,6 @@ function searchOnServer(request, respond) {
       resp.session = session;
       resp.admBaseUri = admBaseUri();
       resp.showScores = api.prefs.get("showScores");
-      resp.filter = request.filter;
       respond(resp);
     });
   return true;
@@ -1040,12 +1024,7 @@ api.tabs.on.loading.add(function(tab) {
 const prefetchCache = {}, prefetchCacheTimeout = 10000;
 api.on.search.add(function prefetchResults(query) {
   api.log('[prefetchResults] prefetching for query:', query);
-  var queryCachedFilter = searchFilterCache[query];
-  var filter;
-  if (queryCachedFilter && queryCachedFilter.filter) {
-    filter = queryCachedFilter.filter;
-  }
-  searchOnServer({query: query, filter: filter}, function(response) {
+  searchOnServer({query: query}, function(response) {
     var cached = prefetchCache[query];
     cached.response = response;
     while (cached.callbacks.length) cached.callbacks.shift()(response);
@@ -1060,7 +1039,7 @@ function getPrefetched(request, cb) {
     cb(result);
   }
   var cached = prefetchCache[request.query];
-  if (!cached || request.filter || request.lastUUID) return false; // Note that there could still be a filter on the results
+  if (!cached || request.filter || request.lastUUID) return false;
   if (cached.response) {
     callback(cached.response);
   } else {
