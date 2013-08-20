@@ -63,9 +63,9 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               HealthcheckError(
                 error = Some(ex), 
                 method = Some("ws"), 
-                path = Some(e.toString), 
+                path = e.value.headOption.map(_.toString), 
                 callType = Healthcheck.INTERNAL,
-                errorMessage = Some(ex.getMessage)
+                errorMessage = Some(s"Error on ws call ${e.toString}")
               )
             )
           } 
