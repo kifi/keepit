@@ -901,9 +901,11 @@ function subscribe(tab) {
       } // else wait for page data
     }
   } else {
-    socket.send(["get_threads_by_url", tab.nUri || tab.url]);
 
     ajax("POST", "/ext/pageDetails", {url: tab.url}, function(resp) {
+
+      socket.send(["get_threads_by_url", tab.nUri || tab.url]);
+
       api.log("[subscribe]", resp);
       var uri = resp.normalized;
       var uri_1 = resp.uri_1;
