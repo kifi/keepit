@@ -6,12 +6,6 @@ api = function() {
     this.forEach(function(f) {f.apply(null, args)});
   }
 
-  const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(\.[a-z]{2})?\/(|search|webhp)\?(|.*&)q=([^&]*)/;
-  chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
-    var searchQuery = decodeURIComponent(((details.url.match(googleSearchPattern) || [])[4] || '').replace(/\+/g, ' '));
-    if (searchQuery) dispatch.call(api.on.search, searchQuery);
-  });
-
   function createPage(tab, skipOnLoading) {
     var page = pages[tab.id] = {
       id: tab.id,
@@ -89,6 +83,15 @@ api = function() {
     }
   });
 
+  const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:|.*&)q=([^&]*)/;
+  const plusPattern = /\+/g;
+  chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
+    var match = details.url.match(googleSearchPattern);
+    if (match && details.frameId === 0) {
+      dispatch.call(api.on.search, decodeURIComponent(match[1].replace(plusPattern, ' ')));
+    }
+  });
+
   chrome.webNavigation.onDOMContentLoaded.addListener(function(details) {
     if (!details.frameId && /^https?:/.test(details.url)) {
       var page = pages[details.tabId];
@@ -112,7 +115,7 @@ api = function() {
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("#666", "[tabs.onUpdated] %i change: %o", tabId, change);
     if (selectedTabIds[tab.windowId]) {  // window is "normal"
-      if (change.status === "loading") {
+      if (change.status === "loading" && (change.url || !ports[tabId])) {  // app.asana.com/0/7052550309820/7364261745177
         onRemoved(tabId);
         createPage(tab);
       }
