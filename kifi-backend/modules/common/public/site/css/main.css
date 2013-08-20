@@ -231,8 +231,8 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padd
 
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
 .invite-friends { position: absolute; top: 310px; bottom: 0; overflow: hidden; }
-.invite-friends .antiscroll-inner { max-height: 100%; width: 960px; }
-.invite-friend {margin-top: 12px; display: inline-block; vertical-align: top; margin-right: 2%; width: 48%; min-width: 270px; background-color: #eff2f7; padding: 10px 16px 10px 10px; position: relative; -moz-box-sizing: border-box; box-sizing: border-box;}
+.invite-friends .antiscroll-inner { max-height: 100%; width: 100%; }
+.invite-friend {margin-top: 12px; display: inline-block; vertical-align: top; margin-right: 2%; width: 48%; min-width: 300px; background-color: #eff2f7; padding: 10px 16px 10px 10px; position: relative; -moz-box-sizing: border-box; box-sizing: border-box;}
 .invite-friend.no-match {display: none}
 .invite-pic {float: left; width: 64px; height: 64px; border-radius: 2px; margin-right: 12px}
 .invite-status {font-size: 13px; font-weight: 300; color: #67829c}
