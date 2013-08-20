@@ -296,7 +296,6 @@ class UserController @Inject() (
         .sortBy { case (sui, status) => (-searchScore(sui), normalize(sui.fullName)) }
     }
 
-    println(unfilteredConnections)
     val connections = (after match {
       case Some(id) => unfilteredConnections.dropWhile { case (sui, _) => socialIdString(sui) != id } match {
         case hd +: tl => tl
