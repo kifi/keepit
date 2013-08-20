@@ -100,7 +100,7 @@ class Scraper @Inject() (
         val errorURI = db.readWrite { implicit s =>
           // first update the uri state to SCRAPE_FAILED
           val latestUri = normalizedURIRepo.get(uri.id.get)
-          val savedUri = normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          val savedUri = if (latestUri.state == NormalizedURIStates.INACTIVE) latestUri else normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
           // then update the scrape schedule
           scrapeInfoRepo.save(info.withFailure())
           savedUri
@@ -123,69 +123,71 @@ class Scraper @Inject() (
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
     log.debug(s"scraping $uri")
 
-    fetchArticle(uri, info) match {
-      case Scraped(article, signature) =>
-        // store a scraped article in a store map
-        articleStore += (uri.id.get -> article)
+    val fetchedArticle = fetchArticle(uri, info)
+    db.readWrite { implicit s =>
+      val latestUri = normalizedURIRepo.get(uri.id.get)
+      if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
+      else fetchedArticle match {
+        case Scraped(article, signature) =>
+          // store a scraped article in a store map
+          articleStore += (latestUri.id.get -> article)
 
-        val scrapedURI = db.readWrite { implicit s =>
-          // first update the uri state to SCRAPED
-          val latestUri = normalizedURIRepo.get(uri.id.get)
-          val savedUri = normalizedURIRepo.save(latestUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
-          // then update the scrape schedule
-          scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-          bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
-            bookmarkRepo.save(bookmark.copy(title = savedUri.title))
+          val scrapedURI = {
+            // first update the uri state to SCRAPED
+            val savedUri = normalizedURIRepo.save(latestUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+            // then update the scrape schedule
+            scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
+            bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
+              bookmarkRepo.save(bookmark.copy(title = savedUri.title))
+            }
+            savedUri
           }
-          savedUri
-        }
-        log.debug("fetched uri %s => %s".format(scrapedURI, article))
+          log.debug("fetched uri %s => %s".format(scrapedURI, article))
 
-        def shouldUpdateScreenshot(uri: NormalizedURI) = {
-          uri.screenshotUpdatedAt map { update =>
-            Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
-          } getOrElse true
-        }
-        if(shouldUpdateScreenshot(scrapedURI))
-          s3ScreenshotStore.updatePicture(scrapedURI)
+          def shouldUpdateScreenshot(uri: NormalizedURI) = {
+            uri.screenshotUpdatedAt map { update =>
+              Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
+            } getOrElse true
+          }
+          if(shouldUpdateScreenshot(scrapedURI))
+            s3ScreenshotStore.updatePicture(scrapedURI)
 
-        (scrapedURI, Some(article))
-      case NotScrapable(destinationUrl) =>
-        val unscrapableURI = db.readWrite { implicit s =>
-          scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-          val latestUri = normalizedURIRepo.get(uri.id.get)
-          normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.UNSCRAPABLE))
-        }
-        (unscrapableURI, None)
-      case NotModified =>
-        // update the scrape schedule, uri is not changed
-        db.readWrite { implicit s => scrapeInfoRepo.save(info.withDocumentUnchanged()) }
-        (uri, None)
-      case Error(httpStatus, msg) =>
-        // store a fallback article in a store map
-        val article = Article(
-            id = uri.id.get,
-            title = uri.title.getOrElse(""),
-            description = None,
-            media = None,
-            content = "",
-            scrapedAt = currentDateTime,
-            httpContentType = None,
-            httpOriginalContentCharset = None,
-            state = NormalizedURIStates.SCRAPE_FAILED,
-            message = Option(msg),
-            titleLang = None,
-            contentLang = None,
-            destinationUrl = None)
-        articleStore += (uri.id.get -> article)
-        // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
-        val errorURI = db.readWrite { implicit s =>
-          scrapeInfoRepo.save(info.withFailure())
-          val latestUri = normalizedURIRepo.get(uri.id.get)
-          normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
-        }
-        (errorURI, None)
-    }
+          (scrapedURI, Some(article))
+        case NotScrapable(destinationUrl) =>
+          val unscrapableURI = {
+            scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
+            normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.UNSCRAPABLE))
+          }
+          (unscrapableURI, None)
+        case NotModified =>
+          // update the scrape schedule, uri is not changed
+          scrapeInfoRepo.save(info.withDocumentUnchanged())
+          (latestUri, None)
+        case Error(httpStatus, msg) =>
+          // store a fallback article in a store map
+          val article = Article(
+              id = latestUri.id.get,
+              title = latestUri.title.getOrElse(""),
+              description = None,
+              media = None,
+              content = "",
+              scrapedAt = currentDateTime,
+              httpContentType = None,
+              httpOriginalContentCharset = None,
+              state = NormalizedURIStates.SCRAPE_FAILED,
+              message = Option(msg),
+              titleLang = None,
+              contentLang = None,
+              destinationUrl = None)
+          articleStore += (latestUri.id.get -> article)
+          // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
+          val errorURI = {
+            scrapeInfoRepo.save(info.withFailure())
+            normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          }
+          (errorURI, None)
+      }
+      }
   }
 
   protected def getExtractor(url: String): Extractor = {
