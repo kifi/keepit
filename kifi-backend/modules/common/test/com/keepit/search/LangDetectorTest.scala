@@ -38,6 +38,8 @@ class LangDetectorTest extends Specification {
       LangDetector.detectShortText("book", Lang("en")) === Lang("en")
       LangDetector.detectShortText("Amazon", Map(Lang("en") -> 0.9d)) === Lang("en")
       LangDetector.detectShortText("pandora", Map(Lang("en") -> 0.9d)) === Lang("en")
+      LangDetector.detectShortText("make me happier", Map(Lang("en") -> 0.98d)) === Lang("en")
+      LangDetector.detectShortText("make you happy", Map(Lang("en") -> 0.99999d)) === Lang("en")
     }
 
     "detect short Chinese" in {
