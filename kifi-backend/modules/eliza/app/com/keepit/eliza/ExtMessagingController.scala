@@ -13,6 +13,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.json.{Json, JsValue, JsArray, JsString, JsNumber, JsNull, JsObject}
+import play.modules.statsd.api.Statsd
 
 import akka.actor.ActorSystem
 
@@ -36,6 +37,7 @@ class ExtMessagingController @Inject() (
   /*********** REST *********************/
 
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
+    val tStart = currentDateTime
     val o = request.body
     val (urlStr, title, text, recipients) = (
       (o \ "url").as[String],
@@ -46,17 +48,21 @@ class ExtMessagingController @Inject() (
 
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).map{ recipientSet =>
       val message : Message = messagingController.sendNewMessage(request.user.id.get, recipientSet, Some(urlStr), title, text)
+      val tDiff = currentDateTime.getMillis - tStart.getMillis
+      Statsd.timing(s"messaging.newMessage", tDiff)
       Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))  
     }
     Async(responseFuture)
   }
 
   def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = AuthenticatedJsonToJsonAction { request =>
+    val tStart = currentDateTime
     val o = request.body
     val text = (o \ "text").as[String].trim
 
     val message = messagingController.sendMessage(request.user.id.get, threadExtId, text, None)
-
+    val tDiff = currentDateTime.getMillis - tStart.getMillis
+    Statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }
 
