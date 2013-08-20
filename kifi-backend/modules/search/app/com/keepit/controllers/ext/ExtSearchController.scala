@@ -147,11 +147,12 @@ class ExtSearchController @Inject() (
       if (lang == "zh") Set("zh-cn", "zh-tw") else Set(lang)
     } + "en" // always include English
 
+    val majorLangs = 0.99999d
     val size = langs.size
     if (size == 0) {
-      Map(Lang("en") -> 0.9d)
+      Map(Lang("en") -> majorLangs)
     } else {
-      val prob = (1.0d - 0.1d / size) / size
+      val prob = (majorLangs / size) / size
       langs.map{ (Lang(_) -> prob) }.toMap
     }
   }
