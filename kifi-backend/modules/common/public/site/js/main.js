@@ -630,6 +630,7 @@ $(function() {
 			$a.closest('.friend-req-act').addClass('done');
 			$a.closest('.friend-req').find('.friend-req-q').text(
 				accepting ? 'Accepted as your kifi friend' : 'Friend request ignored');
+			updateFriendRequests(-1);
 		}).error(function() {
 			$a.siblings('a').addBack().attr('href', 'javascript:');
 		});
@@ -1567,6 +1568,15 @@ $(function() {
 		$(".my-description").text(data.description || '\u00A0'); // nbsp
 	}
 
+	function updateFriendRequests(n) {
+		var $a = $('h3.my-friends>a'), $count = $a.find('.nav-count');
+		if (n < 0) {
+			n += +$count.text();
+		}
+		$count.add('.friend-req-count').text(n || '');
+		$a[0].href = n ? 'friends/requests' : 'friends';
+	}
+
 	// load data for persistent (view-independent) page UI
 	var promise = {
 		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
@@ -1582,7 +1592,7 @@ $(function() {
 	updateCollections();
 	updateNumKeeps();
 	$.getJSON(xhrBase + '/user/friends/count', function(data) {
-		$('.left-col .my-friends .nav-count').text(data.friends);
+		updateFriendRequests(data.requests);
 	});
 
 	$.when(promise.me).done(function() {
