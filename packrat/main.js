@@ -260,8 +260,9 @@ const socketHandlers = {
 
     infos.forEach(function(t) {
       var d = pageData[t.nUrl];
-      if (!d) return;
-      allThreadsPrev[t.nUrl] = d.threads, d.threads = [];
+      if (d && !allThreadsPrev[t.nUrl]) {
+        allThreadsPrev[t.nUrl] = d.threads, d.threads = [];
+      }
     });
 
     infos.forEach(function(t) {
