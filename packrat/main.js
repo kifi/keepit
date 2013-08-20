@@ -296,6 +296,7 @@ const socketHandlers = {
       var d = pageData[t.nUrl];
       var threadsPrev = allThreadsPrev[t.nUrl];
       if (d && threadsPrev) {
+        delete allThreadsPrev[t.nUrl];
         var threadsWithNewMessages = [];
         d.threads.forEach(function(th) {
           var thPrev = threadsPrev.filter(hasId(th.id))[0];
