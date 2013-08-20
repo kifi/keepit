@@ -174,4 +174,9 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def socialUserConnectionsCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SocialUserConnectionsCache((innerRepo, 1 minute), (outerRepo, 6 hours))
 
+  @Singleton
+  @Provides
+  def friendRequestCountCache(outerRepo: FortyTwoCachePlugin) =
+    new FriendRequestCountCache((outerRepo, 7 days))
+
 }
