@@ -5,7 +5,7 @@ import java.util.concurrent.{TimeoutException, TimeUnit}
 import scala.concurrent.{Future, ExecutionContext, Promise}
 import scala.concurrent.duration.Duration
 import org.jboss.netty.util.Timeout
-import com.keepit.common.kestrelCombinator
+import com.keepit.common.KestrelCombinator
 
 object TimeoutFuture {
   def apply[T](future: Future[T], onTimeout: => Unit = Unit)(implicit ec: ExecutionContext, after: Duration): Future[T] = {
