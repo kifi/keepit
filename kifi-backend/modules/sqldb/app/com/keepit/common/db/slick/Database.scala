@@ -73,7 +73,7 @@ class Database @Inject() (
       //log.warn("Already in a DB session!", new InSessionException(message)) // todo(Andrew): re-enable
       //healthcheckPlugin.get.addError(HealthcheckError(Some(new InSessionException(message)), None, None, Healthcheck.INTERNAL, Some(message)))
 
-      if (playMode == Test) throw new InSessionException("already in a DB session!")
+      //throw new InSessionException("already in a DB session!")
     }
     DatabaseSessionLock.inSession.withValue(true) { f }
   }
