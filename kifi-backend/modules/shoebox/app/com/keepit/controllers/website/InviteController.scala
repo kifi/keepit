@@ -93,6 +93,24 @@ class InviteController @Inject() (db: Database,
       case None => (Array(), None, None)
     }
     db.readWrite { implicit session =>
+
+      def sendInvitation(socialUserInfo: SocialUserInfo, invite: Invitation) = {
+        socialUserInfo.networkType match {
+          case SocialNetworks.FACEBOOK =>
+            Async { fbInviteUrl(invitationRepo.save(invite)) map (Redirect(_)) }
+          case SocialNetworks.LINKEDIN =>
+            val me = socialUserInfoRepo.getByUser(request.userId)
+                .find(_.networkType == SocialNetworks.LINKEDIN).get
+            val path = routes.InviteController.acceptInvite(invite.externalId).url
+            val messageWithUrl = s"${message getOrElse ""}\n$url$path"
+            linkedIn.sendMessage(me, socialUserInfo, subject.getOrElse(""), messageWithUrl)
+            invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
+            Redirect(routes.InviteController.invite)
+          case _ =>
+            BadRequest("Unsupported social network")
+        }
+      }
+
       if(fullSocialId.size != 2) {
         Redirect(routes.InviteController.invite)
       } else {
@@ -100,7 +118,7 @@ class InviteController @Inject() (db: Database,
         invitationRepo.getByRecipient(socialUserInfo.id.get) match {
           case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE =>
             if(alreadyInvited.senderUserId == request.user.id) {
-              Async { fbInviteUrl(alreadyInvited) map (Redirect(_)) }
+              sendInvitation(socialUserInfo, alreadyInvited)
             } else {
               Redirect(routes.InviteController.invite)
             }
@@ -110,8 +128,7 @@ class InviteController @Inject() (db: Database,
               case s if s.state != InvitationStates.INACTIVE =>
                 Some(createBasicUserInvitation(socialUserRepo.get(s.recipientSocialUserId), s.state))
             }
-            val left = totalAllowedInvites - currentInvitations.length
-            if(left > 0) {
+            if (currentInvitations.length < totalAllowedInvites) {
               val invite = inactiveOpt map {
                 _.copy(senderUserId = Some(request.user.id.get))
               } getOrElse Invitation(
@@ -119,20 +136,7 @@ class InviteController @Inject() (db: Database,
                 recipientSocialUserId = socialUserInfo.id.get,
                 state = InvitationStates.INACTIVE
               )
-              socialUserInfo.networkType match {
-                case SocialNetworks.FACEBOOK =>
-                  Async { fbInviteUrl(invitationRepo.save(invite)) map (Redirect(_)) }
-                case SocialNetworks.LINKEDIN =>
-                  val me = socialUserInfoRepo.getByUser(request.userId)
-                    .find(_.networkType == SocialNetworks.LINKEDIN).get
-                  val path = routes.InviteController.acceptInvite(invite.externalId).url
-                  val messageWithUrl = s"${message getOrElse ""}\n$url$path"
-                  linkedIn.sendMessage(me, socialUserInfo, subject.getOrElse(""), messageWithUrl)
-                  invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
-                  Redirect(routes.InviteController.invite)
-                case _ =>
-                  BadRequest("Unsupported social network")
-              }
+              sendInvitation(socialUserInfo, invite)
             } else {
               Redirect(routes.InviteController.invite)
             }
