@@ -602,29 +602,29 @@ $(function() {
 			if (!moreToShow) friendsShowing.length = 0;
 			friendsShowing.push.apply(friendsShowing, friends);
 			nwFriendsTmpl.render(friendsShowing);
-			$('.invite-filters>a').click(function () {
-				$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
-				filterFriends();
-			});
-			$('.invite-filter').keyup(filterFriends);
-			$('.invite-friends').on('click', '.invite-button', function () {
-				var fullSocialId = $(this).closest('.invite-friend').data('value');
-				var $form = $(this).closest('form').attr('action', xhrDomain + '/invite');
-				if (fullSocialId.indexOf("facebook/") === 0) {
-					$form.submit();
-				} else if (fullSocialId.indexOf("linkedin/") === 0) {
-					var $popup = $(this).closest('form').find('.invite-message-dialog').show();
-					$popup.off().on('click', '.invite-cancel', function () {
-						$popup.hide();
-						return false;
-					}).on('click', '.invite-send', function () {
-						$form.submit();
-						return false;
-					});
-				}
-			});
 		});
 	}
+	$('.invite-filters>a').click(function () {
+		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
+		filterFriends();
+	});
+	$('.invite-filter').keyup(filterFriends);
+	$('.invite-friends').on('click', '.invite-button', function () {
+		var fullSocialId = $(this).closest('.invite-friend').data('value');
+		var $form = $(this).closest('form').attr('action', xhrDomain + '/invite');
+		if (fullSocialId.indexOf("facebook/") === 0) {
+			$form.submit();
+		} else if (fullSocialId.indexOf("linkedin/") === 0) {
+			var $popup = $(this).closest('form').find('.invite-message-dialog').show();
+			$popup.off().on('click', '.invite-cancel', function () {
+				$popup.hide();
+				return false;
+			}).on('click', '.invite-send', function () {
+				$form.submit();
+				return false;
+			});
+		}
+	});
 
 	// Friend Requests
 
