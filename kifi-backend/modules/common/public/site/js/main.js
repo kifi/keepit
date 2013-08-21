@@ -539,7 +539,7 @@ $(function() {
 			$.getJSON(xhrBase + '/user/friends'),
 			$.getJSON(xhrBase + '/user/outgoingFriendRequests'))
 		.done(function(a0, a1) {
-			var friends = a0[0].connections, requests = a1[0];
+			var friends = a0[0].friends, requests = a1[0];
 			var requested = requests.reduce(function(o, u) {o[u.id] = true; return o}, {});
 			console.log('[prepFriendsTab] friends:', friends.length, 'req:', requests.length);
 			for (var f, i = 0; i < friends.length; i++) {
