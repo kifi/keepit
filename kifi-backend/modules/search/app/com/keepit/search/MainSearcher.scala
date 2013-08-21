@@ -295,10 +295,11 @@ class MainSearcher(
         }
 
         val score = h.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
+        val recencyScoreVal = if (recencyBoost > 0.0f) recencyScore(myUriEdgeAccessor.getCreatedAt(h.id)) else 0.0f
 
-        if (score > threshold) {
+        if (score > (threshold * (1.0f - recencyScoreVal))) {
           h.users = sharingUsers.destIdSet
-          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScore(myUriEdgeAccessor.getCreatedAt(h.id)))
+          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal)
           h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
           hits.insert(h)
           true
