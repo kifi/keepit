@@ -69,7 +69,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   }
 
   checkSearchType();
-  search(parseQuery(location.hash || location.search));  // Google can be slow to initialize the input field, or it may be missing
+  search(parseQuery(location.hash || location.search), null, true);  // Google can be slow to initialize the input field, or it may be missing
 
   var isVertical;
   function checkSearchType() {
@@ -81,7 +81,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     }
   }
 
-  function search(fallbackQuery, newFilter) {
+  function search(fallbackQuery, newFilter, isFirst) {
     if (isVertical) return;
 
     var q = ($qp.val() || $q.val() || fallbackQuery || "").trim().replace(/\s+/, " ");  // TODO: also detect "Showing results for" and prefer that
@@ -101,7 +101,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     clearTimeout(idleTimer);
     idleTimer = setTimeout(onIdle, 1200);
     var t1 = +new Date;
-    api.port.emit("get_keeps", {query: q, filter: f}, function results(resp) {
+    api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
       if (q != query || !areSameFilter(f, filter)) {
         api.log("[results] ignoring for query:", q, "filter:", f);
         return;
@@ -110,16 +110,29 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
         return;
       }
 
-      tKifiResultsReceived = +new Date;
+      tKifiResultsReceived = Date.now();
       api.log("[results] response after", tKifiResultsReceived - t1, "ms:", resp);
-
-      $resList.remove(); // remove any old results
-      response = resp;
-      response.filter = f;
-      response.hits.forEach(processHit);
       if (!newFilter) {
         clicks.kifi.length = clicks.google.length = 0;
       }
+
+      $resList.remove(); // remove any old results
+      response = resp;
+      if (isFirst && resp.filter) {  // restoring previous filter (user navigated back)
+        filter = f = newFilter = resp.filter;
+        $(".kifi-filter-btn").addClass("kifi-expanded");
+        $res.find(".kifi-filters").show().each(function() {
+          if (f.who) {
+            $(this).find(".kifi-filter[data-name=who]").find(".kifi-filter-val")
+            .filter("[data-val=" + (f.who.length > 1 ? "f" : f.who) + "]").trigger("mouseup", [true]);
+          }
+          if (f.when) {
+            $(this).find(".kifi-filter[data-name=when]").find(".kifi-filter-val")
+            .filter("[data-val=" + f.when + "]").trigger("mouseup", [true]);
+          }
+        });
+      }
+      response.hits.forEach(processHit);
 
       var ires = document.getElementById("ires");
       if (ires) {
@@ -543,9 +556,20 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   }
 
   function showFilterDetail() {
-    $(this).off("transitionend").on("transitionend", function end(e) {
-      if (e.target !== this || e.originalEvent.propertyName != "opacity") return;
-      $(this).off("transitionend", end);
+    var $fd = $(this);
+    if ($res.is(':visible')) {
+      $fd.off("transitionend").on("transitionend", function end(e) {
+        if (e.target === this && e.originalEvent.propertyName === "opacity") {
+          $fd.off("transitionend", end);
+          prepFriendsTokenInput();
+        }
+      });
+    } else {
+      prepFriendsTokenInput();
+    }
+    $fd.prev(".kifi-filter-detail-notch").addBack().addClass("kifi-visible");
+
+    function prepFriendsTokenInput() {
       var $in = $res.find("#kifi-filter-det");
       api.port.emit("get_friends", function(friends) {
         api.log("friends:", friends);
@@ -555,7 +579,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
         }
         api.require("scripts/lib/jquery-tokeninput.js", function() {
           if ($in.prev("ul").length) return;
-          var addTime;
+          var addTime, ids = filter && filter.who && filter.who.length > 1 ? filter.who.split(".") : null;
           $in.tokenInput(friends, {
             searchDelay: 0,
             minChars: 1,
@@ -568,6 +592,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
             allowTabOut: true,
             tokenValue: "id",
             theme: "googly",
+            prePopulate: ids && friends.filter(function(f) {return ids.indexOf(f.id) >= 0}),
             resultsFormatter: function(f) {
               return "<li style='background-image:url(//" + cdnBase + "/users/" + f.id + "/pics/100/0.jpg)'>" +
                 Mustache.escape(f.name) + "</li>";
@@ -598,9 +623,12 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
                 $in.nextAll(".kifi-filter-detail-clear").removeClass("kifi-visible");
               }
             }});
+          if (ids) {
+            $in.nextAll(".kifi-filter-detail-clear").addClass("kifi-visible");
+          }
         });
       });
-    }).prev(".kifi-filter-detail-notch").addBack().addClass("kifi-visible");
+    }
   }
 
   function hideFilterDetail() {

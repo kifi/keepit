@@ -282,6 +282,7 @@ input#token-input-kifi-filter-det {
 }
 li:not(:first-child)>input#token-input-kifi-filter-det {
   margin-left: 6px !important; /* FF */
+  width: 0;
 }
 input#kifi-filter-det::-moz-placeholder,
 input#token-input-kifi-filter-det::-moz-placeholder {
@@ -395,6 +396,9 @@ div.token-input-dropdown-googly>ul>li.token-input-selected-dropdown-item-googly 
   text-align: center;
   font-size: 12px;
   color: #666;
+}
+#kifi-res-list a:visited {
+  color: #2518b5;
 }
 
 .kifi_resurl {

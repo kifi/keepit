@@ -396,7 +396,7 @@ api.port.on({
   },
   get_keeps: searchOnServer,
   get_chatter: function(urls, respond) {
-    api.log("[get_chatter]", urls);
+    api.log("[get_chatter]");
     ajax("POST", "/search/chatter", urls, respond);
   },
   get_keepers: function(_, respond, tab) {
@@ -842,12 +842,18 @@ function tellTabsIfCountChanged(d, key, count) {
 function searchOnServer(request, respond) {
   logEvent("search", "newSearch", {query: request.query, filter: request.filter});
 
-  if (getPrefetched(request, respond)) return;
+  if (request.first && getPrefetched(request, respond)) return;
 
   if (!session) {
     api.log("[searchOnServer] no session");
     respond({});
     return;
+  }
+
+  if (request.filter) {
+    searchFilterCache[request.query] = {filter: request.filter, time: Date.now()};  // TODO: purge cache
+  } else {
+    delete searchFilterCache[request.query];
   }
 
   var when, params = {
@@ -868,6 +874,7 @@ function searchOnServer(request, respond) {
   ajax("search", "GET", "/search", params,
     function(resp) {
       api.log("[searchOnServer] response:", resp);
+      resp.filter = request.filter;
       resp.session = session;
       resp.admBaseUri = admBaseUri();
       resp.showScores = api.prefs.get("showScores");
@@ -1038,31 +1045,33 @@ api.tabs.on.loading.add(function(tab) {
   subscribe(tab);
 });
 
-const prefetchCache = {}, prefetchCacheTimeout = 10000;
+const searchPrefetchCache = {};  // for searching before the results page is ready
+const searchFilterCache = {};    // for restoring filter if user navigates back to results
 api.on.search.add(function prefetchResults(query) {
   api.log('[prefetchResults] prefetching for query:', query);
-  searchOnServer({query: query}, function(response) {
-    var cached = prefetchCache[query];
+  searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter}, function(response) {
+    var cached = searchPrefetchCache[query];
     cached.response = response;
     while (cached.callbacks.length) cached.callbacks.shift()(response);
-    api.timers.setTimeout(function () { delete prefetchCache[query] }, prefetchCacheTimeout);
+    api.timers.setTimeout(function () { delete searchPrefetchCache[query] }, 10000);
   });
-  prefetchCache[query] = { callbacks: [], response: null };
+  searchPrefetchCache[query] = { callbacks: [], response: null };
 });
 
 function getPrefetched(request, cb) {
-  function callback(result) {
-    api.log('[getPrefetched] returning prefetched results:', result);
-    cb(result);
+  var cached = searchPrefetchCache[request.query];
+  if (cached) {
+    var logAndCb = function(r) {
+      api.log('[getPrefetched] results:', r);
+      cb(r);
+    };
+    if (cached.response) {
+      logAndCb(cached.response);
+    } else {
+      cached.callbacks.push(logAndCb);
+    }
+    return true;
   }
-  var cached = prefetchCache[request.query];
-  if (!cached || request.filter || request.lastUUID) return false;
-  if (cached.response) {
-    callback(cached.response);
-  } else {
-    cached.callbacks.push(callback);
-  }
-  return true;
 }
 
 api.tabs.on.ready.add(function(tab) {
