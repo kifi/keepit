@@ -79,9 +79,9 @@ class NormalizedURIRepoImpl @Inject() (
     val num = sequence.incrementAndGet()
     val uriWithSeq = uri.copy(seq = num)
     val message = s"----> about to persist uri: $uriWithSeq"
-    log.error(message, new Exception(message))
+//    log.error(message, new Exception(message))
     val saved = super.save(uriWithSeq)
-    log.error(s"<---- persisted uri: $saved")
+ //   log.error(s"<---- persisted uri: $saved")
 
     lazy val scrapeRepo = scrapeRepoProvider.get
     if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {
