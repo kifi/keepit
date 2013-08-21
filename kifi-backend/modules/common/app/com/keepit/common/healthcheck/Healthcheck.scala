@@ -38,7 +38,30 @@ object Healthcheck {
   case object INTERNAL extends CallType
   case object EXTENSION extends CallType
 
-  val OPS_OF_THE_WEEK = EmailAddresses.STEPHEN
+  def OPS_OF_THE_WEEK = {
+    import EmailAddresses._
+    val offset = if (currentDateTime.getDayOfWeek == 1 && currentDateTime.getHourOfDay < 9) -1 else 0
+    val weekNumber = currentDateTime.getWeekOfWeekyear + offset
+    val selflessEngineers = Map(
+      33 -> STEPHEN,
+      34 -> ANDREW, // 2013/08/19
+      35 -> GREG,
+      36 -> LÉO,
+      37 -> EISHAY,
+      38 -> STEPHEN,
+      39 -> ANDREW,
+      40 -> GREG,
+      41 -> LÉO,
+      42 -> EISHAY,
+      43 -> STEPHEN,
+      44 -> ANDREW,
+      45 -> GREG,
+      46 -> LÉO,
+      47 -> EISHAY,
+      48 -> STEPHEN
+    )
+    selflessEngineers.getOrElse(weekNumber, ANDREW) // punishment if I don't keep this updated
+  }
 }
 
 case object ReportErrorsAction

@@ -103,7 +103,7 @@ div.kifi-pane-head-settings {
   position: relative;
   z-index: 1;
 }
-div.kifi-pane-head-settings a {
+div.kifi-pane-head-settings .kifi-pane-head-settings-picture {
   width: 30px;
   height: 30px;
   background-size: 30px;
@@ -145,11 +145,16 @@ div.kifi-pane-head-settings-menu {
   -webkit-user-select: none;
   -moz-user-select: none;
 }
-.kifi-pane-head-settings-menu div {
+.kifi-pane-settings-menu-no-select {
+  color: #b8b9b9;
+}
+.kifi-pane-settings-menu-item, .kifi-pane-settings-menu-no-select {
   padding: 6px 10px 6px 6px;
   border: 1px solid transparent;
 }
 .kifi-pane-settings-menu-no-select {
+  user-select: none;
+  cursor: default;
   margin-left: 12px;
 }
 .kifi-pane-settings-menu-item:hover,

@@ -282,6 +282,7 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getNormalizedURIByURL(), JsString(url)).map { r => r.json match {
         case JsNull => None
         case js: JsValue => Some(Json.fromJson[NormalizedURI](js).get)
+        case null => None
       }}
     }
 
