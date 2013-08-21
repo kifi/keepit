@@ -163,8 +163,8 @@ class UserThreadRepoImpl @Inject() (
       .update((notifJson, message.id.get, true, message.createdAt, false))
   }
 
-  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastSeen).update(timestamp)
+  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit = {  //Note: minor race condition
+    (for (row <- table if row.user===userId && row.thread===threadId && row.lastSeen < timestamp) yield row.lastSeen).update(timestamp)
   }
 
   def getPendingNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification] = {
