@@ -1604,13 +1604,6 @@ $(function() {
 		updateFriendRequests(data.requests);
 	});
 
-	$.when(promise.me).done(function() {
-		if (location.port || ~me.experiments.indexOf('website friends')) {
-			$('.my-friends').show();
-			$collList.removeClass('positioned').each(function() {this.style.top = this.offsetTop + 'px'}).addClass('positioned');
-		}
-	});
-
 	// render initial view
 	$(window).trigger('statechange');
 
