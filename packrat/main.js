@@ -485,7 +485,14 @@ api.port.on({
   },
   set_message_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
-    if (!d || !d.lastMessageRead || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
+    var unreadNotification = false;
+    for (var i = 0; i < notifications.length; i++) {
+      if (notifications[i].messageId == o.id && notifications[i].unread) {
+        unreadNotification = true;
+      }
+    }
+    
+    if (unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0))) {
       markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
       if (d && d.lastMessageRead) {
         d.lastMessageRead[o.threadId] = o.time;
