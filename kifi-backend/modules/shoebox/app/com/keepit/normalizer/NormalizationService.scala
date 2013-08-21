@@ -1,7 +1,7 @@
 package com.keepit.normalizer
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import com.keepit.common.net.URI
+import com.keepit.common.net.{Host, URI}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.model._
 import com.keepit.common.logging.Logging
@@ -129,12 +129,23 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
+  private object PriorKnowledge {
+    val trustedDomains = Set.empty[String]
+    def canBeTrusted(domain: String): Option[String] = trustedDomains.find(trustedDomain => domain.endsWith(trustedDomain))
+  }
+
   private case class PriorKnowledge(currentReference: NormalizedURI) {
+    lazy val trustedDomain = for { uri <- URI.safelyParse(currentReference.url); host <- uri.host; domain <- PriorKnowledge.canBeTrusted(host.name) } yield domain
+
     def apply(candidate: NormalizationCandidate)(implicit session: RSession): Option[Boolean] = candidate match {
-      case _: UntrustedCandidate => Some(false) // Refuse all external candidates
       case TrustedCandidate(url, _) if normalizedURIRepo.getByNormalizedUrl(candidate.url).isEmpty => Some(false) // lazy renormalization
       case TrustedCandidate(_, normalization) if Set(Normalization.HTTPS, Normalization.HTTPSWWW, Normalization.HTTPSM).contains(normalization) => Some(true)
-      case _ => None
+      case TrustedCandidate(_, _) => None
+
+      case _: UntrustedCandidate => {
+        val candidateMatchTrustedDomain = ( for { domain <- trustedDomain; uri <- URI.safelyParse(currentReference.url); host <- uri.host } yield host.name.endsWith(domain) ).getOrElse(false)
+        if (candidateMatchTrustedDomain) None else Some(false)
+      }
     }
   }
 
