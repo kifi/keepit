@@ -54,7 +54,7 @@ class ExtUserController @Inject() (
   }
 
   def getLoggedIn() = AuthenticatedJsonAction { request =>
-    Ok
+    Ok(0)
   }
 
   def getNetworks(friendExtId: ExternalId[User]) = AuthenticatedJsonAction { request =>
