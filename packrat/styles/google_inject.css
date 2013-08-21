@@ -397,6 +397,9 @@ div.token-input-dropdown-googly>ul>li.token-input-selected-dropdown-item-googly 
   font-size: 12px;
   color: #666;
 }
+#kifi-res-list a:visited {
+  color: #2518b5;
+}
 
 .kifi_resurl {
   white-space: nowrap;
