@@ -93,4 +93,9 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides
   def searchFriendsCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SearchFriendsCache((innerRepo, 10 seconds), (outerRepo, 7 days))
+  
+  @Singleton
+  @Provides
+  def normalizedURIUrlHashCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new NormalizedURIUrlHashCache((outerRepo, 7 days))
 }
