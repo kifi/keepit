@@ -83,7 +83,7 @@ api = function() {
     }
   });
 
-  const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:|.*&)q=([^&]*)/;
+  const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
   const plusPattern = /\+/g;
   chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
     var match = details.url.match(googleSearchPattern);
