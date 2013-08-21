@@ -891,6 +891,19 @@ function subscribe(tab) {
     api.icon.set(tab, "icons/keep.faint.png");
   }
 
+  if (session == null) {
+    api.log("[subscribe] user not logged in")
+    if (!getStored("user_logout")) { // user did not explicitly log out using our logout process
+      ajax("GET", "/ext/authed", function userIsLoggedIn() {
+        // user is now logged in
+        authenticate(function() {
+          subscribe(tab);
+        });
+      });
+    }   
+    return;
+  }
+
   var d = pageData[tab.nUri || tab.url];
 
   if (d) {  // no need to ask server again
@@ -909,8 +922,7 @@ function subscribe(tab) {
     }
   } else {
 
-    ajax("POST", "/ext/pageDetails", {url: tab.url}, function(resp) {
-
+    ajax("POST", "/ext/pageDetails", {url: tab.url}, function success(resp) {
       socket.send(["get_threads_by_url", tab.nUri || tab.url]);
 
       api.log("[subscribe]", resp);
@@ -949,6 +961,15 @@ function subscribe(tab) {
       }
 
       tellTabsNoticeCountIfChanged();
+    }, function fail(e) {
+      if (e.status == 403) {
+        session = null;
+        if (socket) {
+          socket.close();
+          socket = null;
+        }
+        clearDataCache();
+      }
     });
   }
   function finish(uri) {
