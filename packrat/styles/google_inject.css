@@ -282,6 +282,7 @@ input#token-input-kifi-filter-det {
 }
 li:not(:first-child)>input#token-input-kifi-filter-det {
   margin-left: 6px !important; /* FF */
+  width: 0;
 }
 input#kifi-filter-det::-moz-placeholder,
 input#token-input-kifi-filter-det::-moz-placeholder {

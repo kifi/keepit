@@ -18,9 +18,9 @@ class LangDetectorTest extends Specification {
       LangDetector.detect("Dies ist ein Beispiel deutsche Text.") === Lang("de")
     }
 
-    // "detect Japanese" in {
-    //   LangDetector.detect("これは日本語です。") === Lang("ja")
-    // }
+    "detect Japanese" in {
+      LangDetector.detect("この文は、どこから見てもまちがいなく日本語だといえます。") === Lang("ja")
+    }
 
     "detect Chinese Simplified" in {
       LangDetector.detect("简体中文测试") === Lang("zh-cn")
@@ -38,6 +38,8 @@ class LangDetectorTest extends Specification {
       LangDetector.detectShortText("book", Lang("en")) === Lang("en")
       LangDetector.detectShortText("Amazon", Map(Lang("en") -> 0.9d)) === Lang("en")
       LangDetector.detectShortText("pandora", Map(Lang("en") -> 0.9d)) === Lang("en")
+      LangDetector.detectShortText("make me happier", Map(Lang("en") -> 0.98d)) === Lang("en")
+      LangDetector.detectShortText("make you happy", Map(Lang("en") -> 0.99999d)) === Lang("en")
     }
 
     "detect short Chinese" in {

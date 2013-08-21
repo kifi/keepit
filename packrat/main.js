@@ -256,78 +256,62 @@ const socketHandlers = {
     }
   },
   thread_infos: function(infos) {
-    // infos may be for multiple URLs
-    var urisToUpdate = {};
-    infos.forEach(function(t) {
-      urisToUpdate[t.nUrl] = 1;
-    });
-
-    for (var u in urisToUpdate) {
-      pageData[u] = pageData[u] || new PageData;
-      urisToUpdate[u] = clone(pageData[u]);
-      // for now, we can clear a url's threads. when we move to threads being on multiple pages, will need to be changed.
-      pageData[u].threads = [];
-    }
-
+    var threadsPrevByUri = {};
     infos.forEach(function(t) {
       var d = pageData[t.nUrl];
-      d.threads.push(t); // since threads was cleared above, can just push
-      t.participants = t.participants || [];
-      for (var j = 0, len = t.participants.length; j < len; j++) {
-        if (t.participants[j].id == session.userId) {
-          t.participants.splice(j, 1);
-          len--;
+      if (d) {
+        t.participants = t.participants || [];
+        for (var j = t.participants.length; --j >= 0;) {
+          if (t.participants[j].id == session.userId) {
+            t.participants.splice(j, 1);
+          }
         }
+
+        if (!threadsPrevByUri[t.nUrl]) {
+          threadsPrevByUri[t.nUrl] = d.threads, d.threads = [t];
+          d.lastMessageRead = d.lastMessageRead || {};
+        } else {
+          d.threads.push(t);
+        }
+        d.lastMessageRead[t.id] = t.lastMessageRead;
       }
-      d.lastMessageRead = d.lastMessageRead || {};
-      d.lastMessageRead[t.id] = t.lastMessageRead;
-      d.counts = {
-        n: 0,
-        m: messageCount(d)};
+    });
+    for (var u in threadsPrevByUri) {
+      var d = pageData[u];
+      d.counts = {n: 0, m: messageCount(d)};
       d.threadDataReceived = true;
       if (d.pageDetailsReceived) {
-        d.pageDetailsReceived = threadDataReceived = false;
         d.tabs.forEach(function(tab) {
           initTab(tab, d);
         });
         d.dispatchOn2();
       }
-    });
-    tellTabsNoticeCountIfChanged();
-
-    for (var u in urisToUpdate) {
-      var d = pageData[u];
-      var dPrev = urisToUpdate[u];
-
-      if (dPrev.threads) {
-        var threadsWithNewMessages = [];
-        d.threads.forEach(function(th) {
-          var thPrev = dPrev.threads.filter(hasId(th.id))[0];
-          var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
-          if (numNew) {
-            socket.send(["get_thread", th.id]);
-            (d.threadCallbacks = d.threadCallbacks || []).push({id: th.id, respond: function(th) {
-              d.tabs.forEach(function(tab) {
-                // TODO: may want to special case (numNew == 1) for an animation
-                api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
-              });
-            }});
-            threadsWithNewMessages.push(th);
-          }
-        });
-        if (threadsWithNewMessages.length == 1) {
-          var th = threadsWithNewMessages[0];
-          d.tabs.forEach(function(tab) {
-            api.tabs.emit(tab, "thread_info", {thread: th, read: d.lastMessageRead[th.id]});
-          });
-        } else if (threadsWithNewMessages.length > 1) {
-          d.tabs.forEach(function(tab) {
-            api.tabs.emit(tab, "threads", {threads: d.threads, readTimes: d.lastMessageRead, userId: session.userId});
-          });
+      var threadsPrev = threadsPrevByUri[u], threadsWithNewMessages = [];
+      d.threads.forEach(function(th) {
+        var thPrev = threadsPrev.filter(hasId(th.id))[0];
+        var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
+        if (numNew) {
+          socket.send(["get_thread", th.id]);
+          (d.threadCallbacks = d.threadCallbacks || []).push({id: th.id, respond: function(th) {
+            d.tabs.forEach(function(tab) {
+              // TODO: may want to special case (numNew == 1) for an animation
+              api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
+            });
+          }});
+          threadsWithNewMessages.push(th);
         }
+      });
+      if (threadsWithNewMessages.length == 1) {
+        var th = threadsWithNewMessages[0];
+        d.tabs.forEach(function(tab) {
+          api.tabs.emit(tab, "thread_info", {thread: th, read: d.lastMessageRead[th.id]});
+        });
+      } else if (threadsWithNewMessages.length > 1) {
+        d.tabs.forEach(function(tab) {
+          api.tabs.emit(tab, "threads", {threads: d.threads, readTimes: d.lastMessageRead, userId: session.userId});
+        });
       }
     }
-
   },
   message: function(threadId, message) {
     api.log("[socket:message]", threadId, message, message.nUrl);
@@ -412,7 +396,7 @@ api.port.on({
   },
   get_keeps: searchOnServer,
   get_chatter: function(urls, respond) {
-    api.log("[get_chatter]", urls);
+    api.log("[get_chatter]");
     ajax("POST", "/search/chatter", urls, respond);
   },
   get_keepers: function(_, respond, tab) {
@@ -614,7 +598,7 @@ api.port.on({
   },
   open_deep_link: function(data, _, tab) {
     var uriData = pageData[data.nUri];
-    if (uriData && uriData.tabs[0]) {
+    if (uriData) {
       var tab = tab.nUri == data.nUri ? tab : uriData.tabs[0];
       if (tab.ready) {
         api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: data.locator});
@@ -851,12 +835,18 @@ function tellTabsIfCountChanged(d, key, count) {
 function searchOnServer(request, respond) {
   logEvent("search", "newSearch", {query: request.query, filter: request.filter});
 
-  if (getPrefetched(request, respond)) return;
+  if (request.first && getPrefetched(request, respond)) return;
 
   if (!session) {
     api.log("[searchOnServer] no session");
     respond({});
     return;
+  }
+
+  if (request.filter) {
+    searchFilterCache[request.query] = {filter: request.filter, time: Date.now()};  // TODO: purge cache
+  } else {
+    delete searchFilterCache[request.query];
   }
 
   var when, params = {
@@ -877,6 +867,7 @@ function searchOnServer(request, respond) {
   ajax("search", "GET", "/search", params,
     function(resp) {
       api.log("[searchOnServer] response:", resp);
+      resp.filter = request.filter;
       resp.session = session;
       resp.admBaseUri = admBaseUri();
       resp.showScores = api.prefs.get("showScores");
@@ -917,16 +908,18 @@ function subscribe(tab) {
       } // else wait for page data
     }
   } else {
-    socket.send(["get_threads_by_url", tab.nUri || tab.url]);
 
     ajax("POST", "/ext/pageDetails", {url: tab.url}, function(resp) {
+
+      socket.send(["get_threads_by_url", tab.nUri || tab.url]);
+
       api.log("[subscribe]", resp);
       var uri = resp.normalized;
       var uri_1 = resp.uri_1;
       var uri_2 = resp.uri_2;
-      d = pageData[uri] = pageData[uri] || new PageData;
 
-      if (api.tabs.get(tab.id) && api.tabs.get(tab.id).url != tab.url) return;
+      if ((api.tabs.get(tab.id) || {}).url != tab.url) return;
+      d = pageData[uri] = pageData[uri] || new PageData;
       finish(uri);
 
       // uri_1
@@ -949,7 +942,6 @@ function subscribe(tab) {
       d.lastMessageRead = d.lastMessageRead || {};
       d.pageDetailsReceived = true;
       if (d.threadDataReceived) {
-        d.pageDetailsReceived = threadDataReceived = false;
         d.tabs.forEach(function(tab) {
           initTab(tab, d);
         });
@@ -1025,31 +1017,33 @@ api.tabs.on.loading.add(function(tab) {
   subscribe(tab);
 });
 
-const prefetchCache = {}, prefetchCacheTimeout = 10000;
+const searchPrefetchCache = {};  // for searching before the results page is ready
+const searchFilterCache = {};    // for restoring filter if user navigates back to results
 api.on.search.add(function prefetchResults(query) {
   api.log('[prefetchResults] prefetching for query:', query);
-  searchOnServer({query: query}, function(response) {
-    var cached = prefetchCache[query];
+  searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter}, function(response) {
+    var cached = searchPrefetchCache[query];
     cached.response = response;
     while (cached.callbacks.length) cached.callbacks.shift()(response);
-    api.timers.setTimeout(function () { delete prefetchCache[query] }, prefetchCacheTimeout);
+    api.timers.setTimeout(function () { delete searchPrefetchCache[query] }, 10000);
   });
-  prefetchCache[query] = { callbacks: [], response: null };
+  searchPrefetchCache[query] = { callbacks: [], response: null };
 });
 
 function getPrefetched(request, cb) {
-  function callback(result) {
-    api.log('[getPrefetched] returning prefetched results:', result);
-    cb(result);
+  var cached = searchPrefetchCache[request.query];
+  if (cached) {
+    var logAndCb = function(r) {
+      api.log('[getPrefetched] results:', r);
+      cb(r);
+    };
+    if (cached.response) {
+      logAndCb(cached.response);
+    } else {
+      cached.callbacks.push(logAndCb);
+    }
+    return true;
   }
-  var cached = prefetchCache[request.query];
-  if (!cached || request.filter || request.lastUUID) return false;
-  if (cached.response) {
-    callback(cached.response);
-  } else {
-    cached.callbacks.push(callback);
-  }
-  return true;
 }
 
 api.tabs.on.ready.add(function(tab) {
