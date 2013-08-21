@@ -37,7 +37,6 @@ class ChangedUriNotifierActor @Inject() (
   }
 }
 
-@ImplementedBy(classOf[ChangedUriNotifierPluginImpl])
 trait ChangedUriNotifierPlugin extends SchedulingPlugin
 
 @Singleton

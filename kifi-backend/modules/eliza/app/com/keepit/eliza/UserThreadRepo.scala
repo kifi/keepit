@@ -163,8 +163,8 @@ class UserThreadRepoImpl @Inject() (
       .update((notifJson, message.id.get, true, message.createdAt, false))
   }
 
-  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastSeen).update(timestamp)
+  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit = {  //Note: minor race condition
+    (for (row <- table if row.user===userId && row.thread===threadId && (row.lastSeen < timestamp || row.lastSeen.isNull)) yield row.lastSeen).update(timestamp)
   }
 
   def getPendingNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification] = {
@@ -184,9 +184,9 @@ class UserThreadRepoImpl @Inject() (
 
   def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime] = {
     threadIdOpt.map{ threadId =>
-      (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationLastSeen).firstOption
+      (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationLastSeen.?).firstOption flatten
     } getOrElse {
-      (for (row <- table if row.user===userId) yield row.notificationLastSeen).firstOption
+      (for (row <- table if row.user===userId) yield row.notificationLastSeen.?).firstOption flatten
     }
   }
 

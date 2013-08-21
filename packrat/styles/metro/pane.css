@@ -95,38 +95,42 @@ a.kifi-pane-head-feedback .kifi-slider2-tip-below {
   right: -44px;
   margin-top: 10px;
 }
-div.kifi-pane-head-settings {
+a.kifi-pane-head-settings {
   float: right;
   width: 40px;
   height: 100%;
   margin-right: 6px;
+  background-position: 200%;
+  background-repeat: no-repeat;
   position: relative;
   z-index: 1;
 }
-div.kifi-pane-head-settings a {
+a.kifi-pane-head-settings::before {
+  content: " ";
+  display: block;
+  margin: 5px;
   width: 30px;
   height: 30px;
+  background-image: inherit;
   background-size: 30px;
   background-repeat: no-repeat;
-  display: block;
-  border-radius: 15px;
-  margin: 5px;
+  border-radius: 50%;
 }
 a.kifi-pane-head-logo:hover,
-div.kifi-pane-head-settings:hover {
+a.kifi-pane-head-settings:hover {
   background-color: #374d63;
 }
 a.kifi-pane-head-logo:active,
-div.kifi-pane-head-settings:active,
-div.kifi-pane-head-settings.kifi-active {
+a.kifi-pane-head-settings:active,
+a.kifi-pane-head-settings.kifi-active {
   background-color: #324559;
 }
-div.kifi-pane-head-settings .kifi-slider2-tip-below {
+a.kifi-pane-head-settings .kifi-slider2-tip-below {
   left: auto;
   right: 0;
   margin-top: 10px;
 }
-div.kifi-pane-head-settings .kifi-slider2-tip-below::before {
+a.kifi-pane-head-settings .kifi-slider2-tip-below::before {
   left: auto;
   right: 13px;
 }
@@ -145,11 +149,16 @@ div.kifi-pane-head-settings-menu {
   -webkit-user-select: none;
   -moz-user-select: none;
 }
-.kifi-pane-head-settings-menu div {
+.kifi-pane-settings-menu-no-select {
+  color: #b8b9b9;
+}
+.kifi-pane-settings-menu-item, .kifi-pane-settings-menu-no-select {
   padding: 6px 10px 6px 6px;
   border: 1px solid transparent;
 }
 .kifi-pane-settings-menu-no-select {
+  user-select: none;
+  cursor: default;
   margin-left: 12px;
 }
 .kifi-pane-settings-menu-item:hover,

@@ -602,20 +602,29 @@ $(function() {
 			if (!moreToShow) friendsShowing.length = 0;
 			friendsShowing.push.apply(friendsShowing, friends);
 			nwFriendsTmpl.render(friendsShowing);
-			$('.invite-filters>a').click(function () {
-				$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
-				filterFriends();
-			});
-			$('.invite-filter').keyup(filterFriends);
-			$('.invite-friends').on('click', '.invite-button', function () {
-				var fullSocialId = $(this).closest('.invite-friend').data('value');
-				// TODO: linkedin
-				if (fullSocialId.indexOf("facebook/") === 0) {
-					$(this).closest('form').attr('action', xhrDomain + '/invite').submit();
-				}
-			});
 		});
 	}
+	$('.invite-filters>a').click(function () {
+		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
+		filterFriends();
+	});
+	$('.invite-filter').keyup(filterFriends);
+	$('.invite-friends').on('click', '.invite-button', function () {
+		var fullSocialId = $(this).closest('.invite-friend').data('value');
+		var $form = $(this).closest('form').attr('action', xhrDomain + '/invite');
+		if (fullSocialId.indexOf("facebook/") === 0) {
+			$form.submit();
+		} else if (fullSocialId.indexOf("linkedin/") === 0) {
+			var $popup = $(this).closest('form').find('.invite-message-dialog').show();
+			$popup.off().on('click', '.invite-cancel', function () {
+				$popup.hide();
+				return false;
+			}).on('click', '.invite-send', function () {
+				$form.submit();
+				return false;
+			});
+		}
+	});
 
 	// Friend Requests
 
@@ -630,6 +639,7 @@ $(function() {
 			$a.closest('.friend-req-act').addClass('done');
 			$a.closest('.friend-req').find('.friend-req-q').text(
 				accepting ? 'Accepted as your kifi friend' : 'Friend request ignored');
+			updateFriendRequests(-1);
 		}).error(function() {
 			$a.siblings('a').addBack().attr('href', 'javascript:');
 		});
@@ -1567,6 +1577,15 @@ $(function() {
 		$(".my-description").text(data.description || '\u00A0'); // nbsp
 	}
 
+	function updateFriendRequests(n) {
+		var $a = $('h3.my-friends>a'), $count = $a.find('.nav-count');
+		if (n < 0) {
+			n += +$count.text();
+		}
+		$count.add('.friend-req-count').text(n || '');
+		$a[0].href = n ? 'friends/requests' : 'friends';
+	}
+
 	// load data for persistent (view-independent) page UI
 	var promise = {
 		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
@@ -1582,7 +1601,7 @@ $(function() {
 	updateCollections();
 	updateNumKeeps();
 	$.getJSON(xhrBase + '/user/friends/count', function(data) {
-		$('.left-col .my-friends .nav-count').text(data.friends);
+		updateFriendRequests(data.requests);
 	});
 
 	$.when(promise.me).done(function() {

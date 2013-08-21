@@ -94,5 +94,10 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def activeExperimentsCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ActiveExperimentsCache((innerRepo, 5 minutes), (outerRepo, 7 days))
+  
+  @Singleton
+  @Provides
+  def normalizedURIUrlHashCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new NormalizedURIUrlHashCache((outerRepo, 7 days))
 
 }

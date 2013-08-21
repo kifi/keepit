@@ -102,7 +102,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
 
       val res3 = controller.getAllConnections(None, None, None, 2)(FakeRequest("GET", "/").withCookies(cookie))
       status(res3) must_== OK
-      getNames(res3) must_== Seq("Léo Grimaldi", "Andrew Conner")
+      getNames(res3) must_== Seq("Andrew Conner", "Léo Grimaldi")
 
       val res4 = controller.getAllConnections(Some("leo"), Some("facebook"), None, 2)(FakeRequest("GET", "/").withCookies(cookie))
       status(res4) must_== OK
@@ -110,7 +110,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
 
       val res5 = controller.getAllConnections(None, None, Some("facebook/arst"), 2)(FakeRequest("GET", "/").withCookies(cookie))
       status(res5) must_== OK
-      getNames(res5) must_== Seq("Andrew Conner", "杨莹")
+      getNames(res5) must_== Seq("杨莹")
     }
   }
 }
