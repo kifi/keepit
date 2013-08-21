@@ -307,7 +307,6 @@ $(function() {
 				});
 				$.postJson(xhrBase + '/chatter', {url: o.url}, function(data) {
 					$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
-					$chatter.find('.page-chatter-comments').attr('data-n', data.comments || 0);
 				});
 			} else { // multiple keeps
 				var collCounts = collIds.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
