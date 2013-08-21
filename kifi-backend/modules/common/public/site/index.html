@@ -279,6 +279,17 @@
 								{% if !status %}
 								<form method="POST">
 									<input type="hidden" name="fullSocialId" value="{{value}}">
+									<div class="invite-message-dialog">
+										<div class="invite-message-header">Send Invite</div>
+										<a href="javascript:" class="invite-cancel">×</a>
+										<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
+										<textarea class="invite-message" name="message">Hi {{label}},
+
+I would like to invite you to the private beta of kifi.com. Click this link to accept the invitation:
+
+</textarea>
+										<input class="invite-send" type="submit" value="Send!">
+									</div>
 									<a class="invite-button" href="javascript:"></a>
 								</form>
 								{% endif %}
