@@ -164,7 +164,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit = {  //Note: minor race condition
-    (for (row <- table if row.user===userId && row.thread===threadId && row.lastSeen < timestamp) yield row.lastSeen).update(timestamp)
+    (for (row <- table if row.user===userId && row.thread===threadId && (row.lastSeen < timestamp || row.lastSeen.isNull)) yield row.lastSeen).update(timestamp)
   }
 
   def getPendingNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification] = {
