@@ -16,6 +16,8 @@
   font-weight: inherit;
   font-style: inherit;
   text-transform: none;
+  text-shadow: none;
+  text-indent: 0;
   background: transparent;
   color: inherit;
   border: none;
@@ -75,6 +77,16 @@
 .kifi-slider2 ::-webkit-input-placeholder,
 .kifi-pane ::-webkit-input-placeholder {
   font-style: inherit;
+}
+.kifi-slider2 ::selection,
+.kifi-pane ::selection {
+  background-color: initial;
+  color: initial;
+}
+.kifi-slider2 ::-moz-selection,
+.kifi-pane ::-moz-selection {
+  background-color: -moz-html-CellHighlight;
+  color: -moz-html-CellHighlightText;
 }
 
 .kifi-tile>.kifi-slider2-tip {
