@@ -619,7 +619,8 @@ $(function() {
 	$('.invite-filter').keyup(filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
 		var fullSocialId = $(this).closest('.invite-friend').data('value');
-		var $form = $(this).closest('form').attr('action', xhrDomain + '/invite').off('submit');
+		// TODO(greg): figure out why this doesn't work cross-domain
+		var $form = $(this).closest('form').attr('action', '/invite').off('submit');
 		if (fullSocialId.indexOf("facebook/") === 0) {
 			$form.submit();
 		} else if (fullSocialId.indexOf("linkedin/") === 0) {
