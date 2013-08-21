@@ -7,5 +7,6 @@ import com.google.inject.{Provides, Singleton}
 case class DataIntegrityModule() extends ScalaModule {
   def configure {
     bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
+    bind[ChangedUriNotifierPlugin].to[ChangedUriNotifierPluginImpl].in[AppScoped]
   }
 }
