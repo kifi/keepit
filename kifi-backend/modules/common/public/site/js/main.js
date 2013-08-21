@@ -1626,9 +1626,12 @@ $(function() {
 	// render initial view
 	$(window).trigger('statechange');
 
-	// auto-update my keeps every minute
-	setInterval(addNewKeeps, 60000);
-	setInterval(updateNumKeeps, 60000);
+	// auto-update my keeps
+	setTimeout(function refresh() {
+		updateNumKeeps();
+		addNewKeeps();
+		setTimeout(refresh, 25000 + 5000 * Math.random());
+	}, 30000);
 
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
