@@ -1,4 +1,5 @@
 var xhrDomain = 'https://api.kifi.com';
+//xhrDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
 
 var compareSearch = {usage: "search", sensitivity: "base"};
@@ -581,6 +582,12 @@ $(function() {
 		friendsTimeout = setTimeout(prepInviteTab, 200);
 	}
 
+	var invitesUpdatedAt;
+	function updateInviteCache() {
+		invitesUpdatedAt = Date.now();
+	}
+	updateInviteCache();
+
 	const friendsToShow = 20;
 	const friendsToShowInSearch = 50;
 	const friendsShowing = [];
@@ -592,7 +599,8 @@ $(function() {
 			limit: search ? friendsToShowInSearch : (moreToShow || friendsToShow),
 			after: moreToShow && !search ? friendsShowing[friendsShowing.length - 1].value : undefined,
 			search: search,
-			network: network
+			network: network,
+			updatedAt: invitesUpdatedAt
 		};
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
 			console.log('[prepInviteTab] friends:', friends.length);
@@ -611,17 +619,27 @@ $(function() {
 	$('.invite-filter').keyup(filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
 		var fullSocialId = $(this).closest('.invite-friend').data('value');
-		var $form = $(this).closest('form').attr('action', xhrDomain + '/invite');
+		var $form = $(this).closest('form').attr('action', xhrDomain + '/invite').off('submit');
 		if (fullSocialId.indexOf("facebook/") === 0) {
 			$form.submit();
 		} else if (fullSocialId.indexOf("linkedin/") === 0) {
-			var $popup = $(this).closest('form').find('.invite-message-dialog').show();
-			$popup.off().on('click', '.invite-cancel', function () {
+			var $popup = $form.find('.invite-message-dialog').show().off('click');
+			$popup.on('click', '.invite-cancel', function (e) {
+				e.preventDefault();
 				$popup.hide();
-				return false;
-			}).on('click', '.invite-send', function () {
-				$form.submit();
-				return false;
+			});
+			$form.on('submit', function (e) {
+				e.preventDefault();
+				$.post($form.attr('action'), $form.serialize()).complete(function(xhr) {
+					if (xhr.status >= 400) {
+						console.log('error sending invite: ', xhr);
+						prepInviteTab();
+					} else {
+						console.log('sent invite');
+						$popup.fadeOut({ duration: 500, complete: prepInviteTab.bind(null) });
+					}
+					updateInviteCache();
+				});
 			});
 		}
 	});
