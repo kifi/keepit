@@ -67,7 +67,7 @@ span.kifi-thread-msg-count {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.kifi-thread-arrow {
+.kifi-thread-arr {
   position: absolute;
   top: 21px;
   right: 11px;
@@ -75,7 +75,7 @@ span.kifi-thread-msg-count {
   height: 9px;
   overflow: hidden;
 }
-.kifi-thread-arrow::before {
+.kifi-thread-arr::before {
   content: "\21e7";
   position: absolute;
   top: -10px;
