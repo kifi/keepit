@@ -184,9 +184,9 @@ class UserThreadRepoImpl @Inject() (
 
   def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime] = {
     threadIdOpt.map{ threadId =>
-      (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationLastSeen).firstOption
+      (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationLastSeen.?).firstOption flatten
     } getOrElse {
-      (for (row <- table if row.user===userId) yield row.notificationLastSeen).firstOption
+      (for (row <- table if row.user===userId) yield row.notificationLastSeen.?).firstOption flatten
     }
   }
 
