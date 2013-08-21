@@ -41,11 +41,12 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .left-col .my-friends .nav-count {background: #b7d07c; border-color: transparent; color: #fff}
 .left-col .active .nav-count {color: #fff; background: #b8c5d2}
 .left-col .active .view-name {color: #556179}
-.left-col .view-name::before {content: " "; display: inline-block; height: 21px; padding: 10px 0; background: url(../img/nav-icons.png) 0 no-repeat; background-size: auto 21px; vertical-align: top}
-.left-col .my-keeps .view-name::before {width: 21px; margin-right: 7px; background-position: -21px}
-.left-col .my-keeps.active .view-name::before {background-position: 0}
-.left-col .my-friends .view-name::before {width: 20px; margin-right: 8px; background-position: -62px 8px}
-.left-col .my-friends.active .view-name::before {background-position: -42px 8px}
+.my-keeps>a>.view-name::before,
+.my-friends>a>.view-name::before {content: " "; display: inline-block; height: 21px; padding: 10px 0; background: url(../img/nav-icons.png) 0 no-repeat; background-size: auto 21px; vertical-align: top}
+.my-keeps>a>.view-name::before {width: 21px; margin-right: 7px; background-position: -21px}
+.my-keeps.active>a>.view-name::before {background-position: 0}
+.my-friends>a>.view-name::before {width: 20px; margin-right: 8px; background-position: -62px 8px}
+.my-friends.active>a>.view-name::before {background-position: -42px 8px}
 #collections>h2 {margin-top: 15px; padding-bottom: 2px; border-bottom: 1px solid #dbdee3; position: relative}
 #collections>h2::before {content: " "; display: inline-block; height: 15px; width: 18px; margin: 0 8px 0 1px; background: url(../img/nav-icons.png) right bottom; background-size: auto 21px}
 #collections h3 {line-height: 39px}
@@ -551,7 +552,8 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .header-logo {background-image: url(../img/kifi-logo.2x.png)}
   .query-mag::before,
   .query-x::before {background-image: url(../img/search.2x.png)}
-  .left-col .my-keeps .view-name::before,
+  .my-keeps>a>.view-name::before,
+  .my-friends>a>.view-name::before,
   #collections>h2::before {background-image: url(../img/nav-icons.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}
