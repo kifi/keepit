@@ -970,9 +970,9 @@ $(function() {
 	function hideCollMenu() {
 		console.log("[hideCollMenu]");
 		document.removeEventListener("mousedown", $collMenu.data("docMouseDown"), true);
-		$collMenu.removeData("docMouseDown").slideUp(80, function() {
+		$collMenu.removeData("docMouseDown").one('transitionend', function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
-		}).closest(".collection").removeClass("with-menu");
+		}).removeClass('showing').closest(".collection").removeClass("with-menu");
 	}
 
 	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
@@ -1164,16 +1164,18 @@ $(function() {
 	}).on("mousedown", ".coll-tri", function(e) {
 		if (e.button > 0) return;
 		e.preventDefault();  // do not start selection
-		if ($collMenu.is(":animated")) return;
 		var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
-		$collMenu.hide().appendTo($coll)
-			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 51)
-			.slideDown(80)
+		$collMenu.hide().removeClass('showing').appendTo($coll)
+			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 70)
+			.show().layout().addClass('showing')
 			.data("docMouseDown", docMouseDown);
 		document.addEventListener("mousedown", docMouseDown, true);
 		function docMouseDown(e) {
 			if (!e.button && !$.contains($collMenu[0], e.target)) {
 				hideCollMenu();
+				if ($(e.target).hasClass("coll-tri")) {
+					e.stopPropagation();
+				}
 			}
 		}
 	});
