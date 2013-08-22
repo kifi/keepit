@@ -620,6 +620,7 @@ $(function() {
 			if (!moreToShow) friendsShowing.length = 0;
 			friendsShowing.push.apply(friendsShowing, friends);
 			nwFriendsTmpl.append(friends);
+			$('.invite-pic').lazyload({ container: $nwFriends.find('.antiscroll-inner') });
 		});
 	}
 	$('.invite-filters>a').click(function () {
