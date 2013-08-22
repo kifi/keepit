@@ -530,13 +530,15 @@ $(function() {
 		friendsScroller.refresh();
 	});
 	var $friendsLoading = $('.friends-loading');
+	var lazyScript = $.getScript('/site/js/jquery.lazyload.min.js');
 	function prepFriendsTab() {
 		$('.friends-filter').val('');
 		friendsTmpl.clear();
 		$friendsLoading.show();
 		$.when(
 			$.getJSON(xhrBase + '/user/friends'),
-			$.getJSON(xhrBase + '/user/outgoingFriendRequests'))
+			$.getJSON(xhrBase + '/user/outgoingFriendRequests'),
+			lazyScript)
 		.done(function(a0, a1) {
 			var friends = a0[0].friends, requests = a1[0];
 			var requested = requests.reduce(function(o, u) {o[u.id] = true; return o}, {});
@@ -553,6 +555,7 @@ $(function() {
 				       f1.id.localeCompare(f2.id, undefined, compareSort);
 			});
 			friendsTmpl.render(friends);
+			$('.friend-pic .lazyload').lazyload({ container: $friendsList.find('.antiscroll-inner') });
 		});
 	}
 
