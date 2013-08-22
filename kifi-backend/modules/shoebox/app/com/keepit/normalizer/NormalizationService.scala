@@ -77,20 +77,21 @@ class NormalizationServiceImpl @Inject() (
   } tap(_.onFailure { case e => healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Normalization update failed: ${e.getMessage}"))) })
 
 
-  private def buildInternalCandidates(referenceUrl: String): Seq[TrustedCandidate] = {
-    val internalCandidatesTry =
+  private def buildInternalCandidates(referenceUrl: String): Seq[NormalizationCandidate] = {
+
+    val schemeCandidatesTry =
       for {
         currentURI <- URI.parse(referenceUrl)
-        internalCandidates <- Try {
+        schemeCandidates <- Try {
           for {
             normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS
             candidateUrl <- SchemeNormalizer(normalization)(currentURI).safelyToString()
           } yield TrustedCandidate(candidateUrl, normalization)
         }
-      } yield internalCandidates
+      } yield schemeCandidates
 
-    internalCandidatesTry match {
-      case Success(internalCandidates) => internalCandidates.toSeq
+    schemeCandidatesTry match {
+      case Success(schemeCandidates) => schemeCandidates.toSeq
       case Failure(e) => {
         healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Normalization candidates could not be generated internally: ${e.getMessage}")))
         Seq.empty[TrustedCandidate]
@@ -145,10 +146,7 @@ class NormalizationServiceImpl @Inject() (
     lazy val trustedDomain = for { uri <- URI.safelyParse(currentReference.url); host <- uri.host; domain <- PriorKnowledge.canBeTrusted(host.name) } yield domain
 
     def apply(candidate: NormalizationCandidate)(implicit session: RSession): Option[Boolean] = candidate match {
-      case TrustedCandidate(url, _) if normalizedURIRepo.getByNormalizedUrl(candidate.url).isEmpty => Some(false) // lazy renormalization
-      case TrustedCandidate(_, normalization) if Set(Normalization.HTTPS, Normalization.HTTPSWWW, Normalization.HTTPSM).contains(normalization) => Some(true)
-      case TrustedCandidate(_, _) => None
-
+      case TrustedCandidate(url, _) => if (normalizedURIRepo.getByNormalizedUrl(candidate.url).nonEmpty) Some(true) else Some(false) // restrict renormalization to existing (hence valid) uris
       case _: UntrustedCandidate => {
         val candidateMatchTrustedDomain = ( for { domain <- trustedDomain; uri <- URI.safelyParse(currentReference.url); host <- uri.host } yield host.name.endsWith(domain) ).getOrElse(false)
         if (candidateMatchTrustedDomain) None else Some(false)
