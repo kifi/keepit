@@ -1,10 +1,11 @@
 var xhrDomain = 'https://api.kifi.com';
+//xhrDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
 
 var compareSearch = {usage: "search", sensitivity: "base"};
 var compareSort = {numeric: true};
 
-$.ajaxSetup({cache: true, crossDomain: true, xhrFields: {withCredentials: true}});
+$.ajaxSetup({crossDomain: true, xhrFields: {withCredentials: true}});
 
 $.timeago.settings.localeTitle = true;
 $.extend($.timeago.settings.strings, {
@@ -307,7 +308,6 @@ $(function() {
 				});
 				$.postJson(xhrBase + '/chatter', {url: o.url}, function(data) {
 					$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
-					$chatter.find('.page-chatter-comments').attr('data-n', data.comments || 0);
 				});
 			} else { // multiple keeps
 				var collCounts = collIds.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
@@ -530,15 +530,17 @@ $(function() {
 		friendsScroller.refresh();
 	});
 	var $friendsLoading = $('.friends-loading');
+	var lazyScript = $.getScript('/site/js/jquery.lazyload.min.js');
 	function prepFriendsTab() {
 		$('.friends-filter').val('');
 		friendsTmpl.clear();
 		$friendsLoading.show();
 		$.when(
 			$.getJSON(xhrBase + '/user/friends'),
-			$.getJSON(xhrBase + '/user/outgoingFriendRequests'))
+			$.getJSON(xhrBase + '/user/outgoingFriendRequests'),
+			lazyScript)
 		.done(function(a0, a1) {
-			var friends = a0[0].connections, requests = a1[0];
+			var friends = a0[0].friends, requests = a1[0];
 			var requested = requests.reduce(function(o, u) {o[u.id] = true; return o}, {});
 			console.log('[prepFriendsTab] friends:', friends.length, 'req:', requests.length);
 			for (var f, i = 0; i < friends.length; i++) {
@@ -553,6 +555,7 @@ $(function() {
 				       f1.id.localeCompare(f2.id, undefined, compareSort);
 			});
 			friendsTmpl.render(friends);
+			$('.friend-pic .lazyload').lazyload({ container: $friendsList.find('.antiscroll-inner') });
 		});
 	}
 
@@ -560,11 +563,12 @@ $(function() {
 
 	var $nwFriends = $('.invite-friends').antiscroll({x: false, width: '100%'});
 	$nwFriends.find(".antiscroll-inner").scroll(function() { // infinite scroll
-		var filter = $('.invite-filter').val();
-		var sT = this.scrollTop;
-		if (!$nwFriendsLoading.is(':visible') && !filter && this.clientHeight + sT > this.scrollHeight - 250) {
+		var sT = this.scrollTop, sH = this.scrollHeight;
+		// tweak these values as desired
+		const offset = sH / 4, toFetch = 40;
+		if (!$nwFriendsLoading.is(':visible') && this.clientHeight + sT > sH - offset) {
 			console.log('loading more friends');
-			prepInviteTab(20);
+			prepInviteTab(toFetch);
 		}
 	});
 	var nwFriendsScroller = $nwFriends.data("antiscroll");
@@ -581,24 +585,38 @@ $(function() {
 		friendsTimeout = setTimeout(prepInviteTab, 200);
 	}
 
+	var invitesUpdatedAt;
+	function updateInviteCache() {
+		invitesUpdatedAt = Date.now();
+	}
+	updateInviteCache();
+
 	const friendsToShow = 20;
-	const friendsToShowInSearch = 50;
 	const friendsShowing = [];
+	var moreFriends = true;
 	function prepInviteTab(moreToShow) {
+		if (moreToShow && !moreFriends) return;
+		moreFriends = true;
 		var network = $('.invite-filters').attr('data-nw-selected') || undefined;
 		var search = $('.invite-filter').val() || undefined;
 		$nwFriendsLoading.show();
 		var opts = {
-			limit: search ? friendsToShowInSearch : (moreToShow || friendsToShow),
-			after: moreToShow && !search ? friendsShowing[friendsShowing.length - 1].value : undefined,
+			limit: moreToShow || friendsToShow,
+			after: moreToShow ? friendsShowing[friendsShowing.length - 1].value : undefined,
 			search: search,
-			network: network
+			network: network,
+			updatedAt: invitesUpdatedAt
 		};
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
 			console.log('[prepInviteTab] friends:', friends.length);
 			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
 			var filter = $('.invite-filter').val() || undefined;
 			if (filter != search || nw != network) return;
+			if (moreToShow && friends.length == 0) {
+				moreFriends = false;
+				$nwFriendsLoading.hide();
+				return;
+			}
 			if (!moreToShow) friendsShowing.length = 0;
 			friendsShowing.push.apply(friendsShowing, friends);
 			nwFriendsTmpl.render(friendsShowing);
@@ -611,17 +629,28 @@ $(function() {
 	$('.invite-filter').keyup(filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
 		var fullSocialId = $(this).closest('.invite-friend').data('value');
-		var $form = $(this).closest('form').attr('action', xhrDomain + '/invite');
+		// TODO(greg): figure out why this doesn't work cross-domain
+		var $form = $(this).closest('form').attr('action', '/invite').off('submit');
 		if (fullSocialId.indexOf("facebook/") === 0) {
 			$form.submit();
 		} else if (fullSocialId.indexOf("linkedin/") === 0) {
-			var $popup = $(this).closest('form').find('.invite-message-dialog').show();
-			$popup.off().on('click', '.invite-cancel', function () {
+			var $popup = $form.find('.invite-message-dialog').show().off('click');
+			$popup.on('click', '.invite-cancel', function (e) {
+				e.preventDefault();
 				$popup.hide();
-				return false;
-			}).on('click', '.invite-send', function () {
-				$form.submit();
-				return false;
+			});
+			$form.on('submit', function (e) {
+				e.preventDefault();
+				$.post($form.attr('action'), $form.serialize()).complete(function(xhr) {
+					if (xhr.status >= 400) {
+						console.log('error sending invite: ', xhr);
+						prepInviteTab();
+					} else {
+						console.log('sent invite');
+						$popup.fadeOut({ duration: 500, complete: prepInviteTab.bind(null) });
+					}
+					updateInviteCache();
+				});
 			});
 		}
 	});
@@ -941,9 +970,9 @@ $(function() {
 	function hideCollMenu() {
 		console.log("[hideCollMenu]");
 		document.removeEventListener("mousedown", $collMenu.data("docMouseDown"), true);
-		$collMenu.removeData("docMouseDown").slideUp(80, function() {
+		$collMenu.removeData("docMouseDown").one('transitionend', function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
-		}).closest(".collection").removeClass("with-menu");
+		}).removeClass('showing').closest(".collection").removeClass("with-menu");
 	}
 
 	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
@@ -1135,16 +1164,18 @@ $(function() {
 	}).on("mousedown", ".coll-tri", function(e) {
 		if (e.button > 0) return;
 		e.preventDefault();  // do not start selection
-		if ($collMenu.is(":animated")) return;
 		var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
-		$collMenu.hide().appendTo($coll)
-			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 51)
-			.slideDown(80)
+		$collMenu.hide().removeClass('showing').appendTo($coll)
+			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 70)
+			.show().layout().addClass('showing')
 			.data("docMouseDown", docMouseDown);
 		document.addEventListener("mousedown", docMouseDown, true);
 		function docMouseDown(e) {
 			if (!e.button && !$.contains($collMenu[0], e.target)) {
 				hideCollMenu();
+				if ($(e.target).hasClass("coll-tri")) {
+					e.stopPropagation();
+				}
 			}
 		}
 	});
@@ -1604,19 +1635,15 @@ $(function() {
 		updateFriendRequests(data.requests);
 	});
 
-	$.when(promise.me).done(function() {
-		if (location.port || ~me.experiments.indexOf('website friends')) {
-			$('.my-friends').show();
-			$collList.removeClass('positioned').each(function() {this.style.top = this.offsetTop + 'px'}).addClass('positioned');
-		}
-	});
-
 	// render initial view
 	$(window).trigger('statechange');
 
-	// auto-update my keeps every minute
-	setInterval(addNewKeeps, 60000);
-	setInterval(updateNumKeeps, 60000);
+	// auto-update my keeps
+	setTimeout(function refresh() {
+		updateNumKeeps();
+		addNewKeeps();
+		setTimeout(refresh, 25000 + 5000 * Math.random());
+	}, 30000);
 
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();

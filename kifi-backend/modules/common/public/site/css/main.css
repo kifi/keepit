@@ -41,11 +41,12 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .left-col .my-friends .nav-count {background: #b7d07c; border-color: transparent; color: #fff}
 .left-col .active .nav-count {color: #fff; background: #b8c5d2}
 .left-col .active .view-name {color: #556179}
-.left-col .view-name::before {content: " "; display: inline-block; height: 21px; padding: 10px 0; background: url(../img/nav-icons.png) 0 no-repeat; background-size: auto 21px; vertical-align: top}
-.left-col .my-keeps .view-name::before {width: 21px; margin-right: 7px; background-position: -21px}
-.left-col .my-keeps.active .view-name::before {background-position: 0}
-.left-col .my-friends .view-name::before {width: 20px; margin-right: 8px; background-position: -62px 8px}
-.left-col .my-friends.active .view-name::before {background-position: -42px 8px}
+.my-keeps>a>.view-name::before,
+.my-friends>a>.view-name::before {content: " "; display: inline-block; height: 21px; padding: 10px 0; background: url(../img/nav-icons.png) 0 no-repeat; background-size: auto 21px; vertical-align: top}
+.my-keeps>a>.view-name::before {width: 21px; margin-right: 7px; background-position: -21px}
+.my-keeps.active>a>.view-name::before {background-position: 0}
+.my-friends>a>.view-name::before {width: 20px; margin-right: 8px; background-position: -62px 8px}
+.my-friends.active>a>.view-name::before {background-position: -42px 8px}
 #collections>h2 {margin-top: 15px; padding-bottom: 2px; border-bottom: 1px solid #dbdee3; position: relative}
 #collections>h2::before {content: " "; display: inline-block; height: 15px; width: 18px; margin: 0 8px 0 1px; background: url(../img/nav-icons.png) right bottom; background-size: auto 21px}
 #collections h3 {line-height: 39px}
@@ -76,12 +77,12 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .active>.coll-tri::before {border-top-color: #fff}
 .collection:not(.renaming):hover>.coll-tri,
 .collection.with-menu>.coll-tri {left: 0}
-#coll-menu {display: none; position: absolute; top: 100%; left: 0; z-index: 1; background: #e3e6ee}
-#coll-menu.page-bottom {top: auto; bottom: 100%}
-#coll-menu>li>a {display: block; padding: 0 16px; font-size: 12px; line-height: 24px; white-space: nowrap; color: #556179; border: solid #dbdee3; border-width: 0 1px 1px 0}
-#coll-menu>li:first-child>a {border-top-width: 1px}
+#coll-menu {position: absolute; top: 100%; left: 0; z-index: 1; border: 1px solid #dbdee3; background: #fff; padding: 4px 0; border-radius: 4px; display: none; opacity: 0; -webkit-transform: scale(1,.6); transform: scale(1,.6); -webkit-transform-origin: top; transform-origin: top; -webkit-transition: opacity .12s linear, -webkit-transform .12s ease-in; transition: opacity .12s linear, transform .12s ease-in}
+#coll-menu.page-bottom {top: auto; bottom: 100%; -webkit-transform-origin: bottom}
+#coll-menu.showing {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-timing-function: linear, ease-out; transition-timing-function: linear, ease-out}
+#coll-menu>li>a {display: block; padding: 0 32px 0 16px; font-size: 13px; line-height: 30px; white-space: nowrap; color: #556179}
 #coll-menu>li>a:hover,
-#coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
+#coll-menu>li>a.hover {background: #f1f2f6}
 
 /* center col */
 .main>.page-col-inner::before {content: " "; position: absolute; top: 70px; bottom: 0; border-left: 1px solid #dbdee3}
@@ -188,7 +189,7 @@ iframe.blog {height:100%; width:100%; border:0;}
 input.friends-filter,
 input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
 #friends-list {position: absolute; top: 260px; left: 20px; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden}
-#friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-y: auto; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
+#friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
 .friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
 .friend.no-match {display: none}
 .friend:last-child {border-bottom: 1px solid #e3e6ee}
@@ -232,8 +233,8 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padd
 .invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px;}
 
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
-.invite-friends { position: absolute; top: 310px; bottom: 0; right: 0; left: 20px; overflow: hidden; }
-.invite-friends .antiscroll-inner { max-height: 100%; width: 100%; }
+.invite-friends { position: absolute; top: 310px; bottom: 0; right: 0; left: 20px; overflow: hidden}
+.invite-friends .antiscroll-inner { max-height: 100%; width: 100%; overflow-x: hidden}
 .invite-friend {margin-top: 12px; display: inline-block; vertical-align: top; margin-right: 2%; width: 48%; min-width: 300px; background-color: #eff2f7; padding: 10px 16px 10px 10px; position: relative; -moz-box-sizing: border-box; box-sizing: border-box;}
 .invite-friend[data-status=invited] { background: #629eed; }
 .invite-friend[data-status=joined] { background: #27ae60; }
@@ -249,7 +250,7 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padd
 .invite-button::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background: url(../img/friend-actions.png) -70px; background-size: auto 16px; width: 20px; position: relative; left: 1px}
 .invite-friends-loading {margin: 12px 0;}
 
-.invite-message-dialog { background: #fafafa; border: 1px solid #aab8c8; border-radius: 5px; font-size: 14px; display: none; position: fixed; left: 50%; top: 50%; z-index: 100; height: 240px; margin-top: -120px; width: 440px; margin-left: -220px; box-shadow: 8px 10px 0 #bfc9d4; }
+.invite-message-dialog { background: #fafafa; border: 1px solid #aab8c8; border-radius: 5px; font-size: 14px; display: none; position: fixed; left: 50%; top: 50%; z-index: 100; height: 240px; margin-top: -120px; width: 440px; margin-left: -220px; box-shadow: 8px 10px 2px rgba(0, 0, 0, 0.3); }
 .invite-message-header { font-size: 16px; padding: 14px 16px 10px; border-bottom: 1px solid #e7eced; color: #3a495b; }
 a.invite-cancel { position: absolute; color: #b1b8c1; font-weight: bold; padding: 8px 12px; right: 0; top: 0; font-size: 20px; text-decoration: none; }
 input.invite-subject { display: block; font-size: 14px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; }
@@ -464,12 +465,9 @@ a.page-priv[href]:active {background-color: #8699ab}
 :not([data-kept^=p])>*>.page-who-text>.keep-you+.keep-kept-this::before {content: "Nobody has "}
 .page-chatter {margin-bottom: -6px}
 .page-chatter>h2 {margin-bottom: 8px}
-.page-chatter-messages,
-.page-chatter-comments {display: inline; font-size: 13px; margin-right: 16px; color: inherit !important; white-space: nowrap}
-.page-chatter-messages::before,
-.page-chatter-comments::before {content: attr(data-n); font-size: 25px; color: #b8c5d2; font-weight: bold; -webkit-font-smoothing: antialiased; vertical-align: -3px; margin-right: 5px}
-.page-chatter-messages:not([data-n="1"])::after,
-.page-chatter-comments:not([data-n="1"])::after {content: "s"}
+.page-chatter-messages {display: inline; font-size: 13px; margin-right: 16px; color: inherit !important; white-space: nowrap}
+.page-chatter-messages::before {content: attr(data-n); font-size: 25px; color: #b8c5d2; font-weight: bold; -webkit-font-smoothing: antialiased; vertical-align: -3px; margin-right: 5px}
+.page-chatter-messages:not([data-n="1"])::after {content: "s"}
 .page-colls.some>h2::before {content: "In "}
 .page-coll-list {margin-top: 10px}
 .page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
@@ -551,7 +549,8 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .header-logo {background-image: url(../img/kifi-logo.2x.png)}
   .query-mag::before,
   .query-x::before {background-image: url(../img/search.2x.png)}
-  .left-col .my-keeps .view-name::before,
+  .my-keeps>a>.view-name::before,
+  .my-friends>a>.view-name::before,
   #collections>h2::before {background-image: url(../img/nav-icons.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}

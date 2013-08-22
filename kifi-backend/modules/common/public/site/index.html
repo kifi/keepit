@@ -38,7 +38,7 @@
 				<div class="view-name">Your Keeps</div>
 			</a>
 		</h3>
-		<h3 class="my-friends" style="display:none">
+		<h3 class="my-friends">
 			<a href="friends">
 				<div class="nav-count"></div>
 				<div class="view-name">Your Friends</div>
@@ -231,7 +231,7 @@
 					<ul class="antiscroll-inner">
 						<li class="friend" data-template>
 							<div class="friend-pic">
-								<img src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+								<img class="lazyload" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-original="{{picUri}}">
 							</div>
 							<div class="friend-info">
 								<div class="friend-name">{{firstName}} {{lastName}}</div>
@@ -286,7 +286,6 @@
 										<textarea class="invite-message" name="message">Hi {{label}},
 
 I would like to invite you to the private beta of kifi.com. Click this link to accept the invitation:
-
 </textarea>
 										<input class="invite-send" type="submit" value="Send!">
 									</div>
@@ -397,7 +396,6 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 		<div class="page-chatter">
 			<h2>Talking about this Keep:</h2>
 			<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
-			<a class="page-chatter-comments" href="{{url}}" target="_blank" data-n="0" data-locator="/comments">Public Comment</a>
 		</div>
 		{% endif %}
 		<div class="page-colls{% if collections.length %} some{% endif %}">
