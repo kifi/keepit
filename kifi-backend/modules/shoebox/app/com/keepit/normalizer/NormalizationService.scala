@@ -58,17 +58,24 @@ class NormalizationServiceImpl @Inject() (
     }
 
     val findStrongerCandidate = FindStrongerCandidate(current)
-    findStrongerCandidate(relevantCandidates).map { case (successfulCandidateOption, weakerCandidates) =>
-      findStrongerCandidate.contentCheck.persistFailedContentChecks()
-      for {
-        successfulCandidate <- successfulCandidateOption
-        newReference <- migrate(current, successfulCandidate)
-      } yield {
-        getURIsToBeFurtherUpdated(current,  newReference, weakerCandidates).foreach(update(_, successfulCandidate))
-        newReference
+    for {
+      (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(relevantCandidates)
+      newReferenceOption <- {
+        findStrongerCandidate.contentCheck.persistFailedContentChecks()
+
+        val newReferenceWithRecursiveUpdatesOption = for {
+          successfulCandidate <- successfulCandidateOption
+          newReference <- migrate(current, successfulCandidate)
+        } yield (newReference, getURIsToBeFurtherUpdated(current,  newReference, weakerCandidates).map(update(_, successfulCandidate)))
+
+        newReferenceWithRecursiveUpdatesOption match {
+          case None => Future.successful(None)
+          case Some((newReference, recursiveUpdates)) => Future.sequence(recursiveUpdates).map(_ => Some(newReference))
+        }
       }
-    } tap(_.onFailure { case e => healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Normalization update failed: ${e.getMessage}"))) })
-  }
+    } yield newReferenceOption
+  } tap(_.onFailure { case e => healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Normalization update failed: ${e.getMessage}"))) })
+
 
   private def buildInternalCandidates(referenceUrl: String): Seq[TrustedCandidate] = {
     val internalCandidatesTry =
