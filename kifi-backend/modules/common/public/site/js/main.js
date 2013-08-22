@@ -180,10 +180,10 @@ $(function() {
 			}
 			function move(e) {
 				var inCol = e.pageX < r.right && e.pageX >= r.left, dy;
-				if (inCol && Math.abs(dy = (e.pageY - r.bottom)) < 10) {
+				if (inCol && (dy = e.pageY - r.bottom) > -10) {
 					scrollTimeout = scrollTimeout || setTimeout(scroll, scrollTimeoutMs);
-					scrollPx = 10 + dy * 2;
-				} else if (inCol && (dy = e.pageY - r.top) < 10 && dy > -50) {
+					scrollPx = 15 + Math.min(5, Math.round(dy * 1.5));
+				} else if (inCol && (dy = e.pageY - r.top) < 10) {
 					scrollTimeout = scrollTimeout || setTimeout(scroll, scrollTimeoutMs)
 					scrollPx = -10 + Math.max(-10, dy);
 				} else if (scrollTimeout) {
@@ -1145,7 +1145,7 @@ $(function() {
 	var $collList = $("#collections-list")
 	.each(function() {this.style.top = this.offsetTop + "px"})
 	.addClass("positioned")
-	.antiscroll({x: false, width: "100%"})
+	.antiscroll({x: false, width: "100%", autoHide: false})
 	.sortable({
 		axis: "y",
 		items: ".collection",
