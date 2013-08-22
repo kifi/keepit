@@ -619,7 +619,7 @@ $(function() {
 			}
 			if (!moreToShow) friendsShowing.length = 0;
 			friendsShowing.push.apply(friendsShowing, friends);
-			nwFriendsTmpl.render(friendsShowing);
+			nwFriendsTmpl.append(friends);
 		});
 	}
 	$('.invite-filters>a').click(function () {
