@@ -47,7 +47,6 @@ class ExtMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "recipients").as[Seq[String]])
 
-    // TODO: factor out NormalizedURI interning so that it's only done once instead of once per recipient
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).map{ recipientSet =>
       // TODO: propagate "canonical" & "og" to shoebox along with "url" to intern the NormalizedURI
       val message : Message = messagingController.sendNewMessage(request.user.id.get, recipientSet, Some(urlStr), title, text)
