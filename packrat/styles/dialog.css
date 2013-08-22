@@ -1,0 +1,130 @@
+
+
+.kifi-message-dialog-wrapper {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 99999999999998;
+  visibility: hidden;
+  -webkit-transform: translateX(-50%) translateY(-50%);
+  -moz-transform: translateX(-50%) translateY(-50%);
+  transform: translateX(-50%) translateY(-50%);
+    height: 240px; width: 440px;
+}
+
+.kifi-dialog-show {
+  visibility: visible;
+}
+
+.kifi-dialog-overlay {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+  top: 0;
+  left: 0;
+  z-index: 999;
+  opacity: 0;
+  background: rgba(0, 0, 0, 0.2);
+  -webkit-transition: all 0.5s;
+  -moz-transition: all 0.5s;
+  transition: all 0.5s;
+}
+
+.kifi-dialog-show ~ .kifi-dialog-overlay {
+  opacity: 1;
+  visibility: visible;
+}
+
+.kifi-message-dialog-wrapper {
+  -webkit-perspective: 1300px;
+  -moz-perspective: 1300px;
+  perspective: 1300px;
+}
+
+.kifi-message-dialog {
+  -webkit-transform-style: preserve-3d;
+  -moz-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+  -webkit-transform: rotateX(-40deg);
+  -moz-transform: rotateX(-40deg);
+  transform: rotateX(-40deg);
+  -webkit-transition: all 0.1s;
+  -moz-transition: all 0.1s;
+  transition: all 0.1s;
+  opacity: 0;
+  background: #fafafa; border: 1px solid #aab8c8; border-radius: 5px; font-size: 14px;
+  z-index: 99999999999999;
+  color: #000;
+  position: relative;
+  margin: 0 auto;
+  height: 240px;
+  box-shadow: rgba(0, 0, 0, 0.2) 8px 10px 0px; font: 18px/1.5 Lato, Helvetica, Arial, sans-serif;
+  letter-spacing: 0px;
+}
+
+.kifi-dialog-show .kifi-message-dialog {
+  -webkit-transform: rotateX(0deg);
+  -moz-transform: rotateX(0deg);
+  transform: rotateX(0deg);
+  opacity: 1;
+}
+
+a.kifi-dialog-cancel {
+  position: absolute;
+  color: #b1b8c1;
+  font-weight: bold;
+  padding: 8px 12px;
+  right: 0;
+  top: 0;
+  font-size: 20px;
+  text-decoration: none;
+}
+a.kifi-dialog-cancel:hover { text-decoration: none; }
+.kifi-dialog-networks {
+  height: 65px;
+  -webkit-transform: translateZ(1px);
+  transform: translateZ(1px);
+  -moz-transform: translateZ(1px);
+}
+.kifi-dialog-networks > a.kifi-social-button {
+  text-decoration: none;
+  border: none;
+  outline: none;
+  border-radius: 5px;
+  padding: 8px 12px;
+  background: #3ea9f5;
+  color: white;
+  cursor: pointer;
+  transition: all 0.1s ease-out;
+}
+.kifi-dialog-networks > a.kifi-social-button:hover { background: #69c1ff; }
+.kifi-logo {
+  width: 103px;
+  height: 58px;
+  margin: 0 auto;
+  margin-top: 35px;
+  margin-bottom: 25px;
+}
+.kifi-dialog-networks > .kifi-facebook {
+  float: left;
+  margin-left: 25px;
+}
+.kifi-dialog-networks > .kifi-linkedin {
+  float: right;
+  margin-right: 25px;
+}
+.no-account-signup {
+  border-top:1px solid #000;
+  text-align: center;
+  width:390px;
+  margin: 0 auto;
+  padding-top:12px;
+}
+.no-account-signup a.kifi-signup-link {
+  text-decoration: none;
+  color: #3ea9f5;
+}
+.no-account-signup a.kifi-signup-link:hover {
+  color: #69c1ff;
+}

@@ -390,6 +390,9 @@ const socketHandlers = {
 // ===== Handling messages from content scripts or other extension pages
 
 api.port.on({
+  deauthenticate: function() {
+    deauthenticate();
+  },
   canonical: function(urls) {
     api.log("[canonical]", Object.keys(urls));
     ajax("POST", "/ext/canonical", urls);
@@ -1254,6 +1257,9 @@ function startSession(callback, retryMs) {
 
     api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
     api.tabs.eachSelected(subscribe);
+    api.tabs.each(function(page) {
+      api.tabs.emit(page, "new_session", session);
+    });
     callback();
   },
   function fail(xhr) {
@@ -1307,7 +1313,6 @@ function deauthenticate() {
     socket = null;
   }
   clearDataCache();
-  // TODO: make all page icons faint?
   api.popup.open({
     name: "kifi-deauthenticate",
     url: webBaseUri() + "/logout#_=_",
@@ -1318,6 +1323,10 @@ function deauthenticate() {
         api.log("[deauthenticate] closing popup");
         this.close();
       }
+      api.tabs.each(function(tab) {
+        api.icon.set(tab, "icons/keep.faint.png");
+        api.tabs.emit(tab, "new_session", undefined);
+      });
     }
   })
 }
