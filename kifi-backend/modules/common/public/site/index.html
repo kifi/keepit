@@ -277,7 +277,7 @@
 									{% if !status %} Invite through {{value | replace '/.*', ''}} {% endif %}
 								</div>
 								{% if !status %}
-								<form method="POST">
+								<form method="POST" target="_blank">
 									<input type="hidden" name="fullSocialId" value="{{value}}">
 									<div class="invite-message-dialog">
 										<div class="invite-message-header">Send Invite</div>

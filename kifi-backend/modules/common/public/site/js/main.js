@@ -465,6 +465,8 @@ $(function() {
 		} else {
 			$friendsList.find('.no-match').removeClass('no-match');
 		}
+		// trigger image lazy loading
+		$friendsList.find('.antiscroll-inner').scroll();
 	});
 	var $friendsList = $('#friends-list').antiscroll({x: false, width: '100%'})
 	.on('mouseover', '.friend-status', function() {
@@ -624,7 +626,7 @@ $(function() {
 		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 		filterFriends();
 	});
-	$('.invite-filter').keyup(filterFriends);
+	$('.invite-filter').on('input change', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
 		var fullSocialId = $(this).closest('.invite-friend').data('value');
 		// TODO(greg): figure out why this doesn't work cross-domain
