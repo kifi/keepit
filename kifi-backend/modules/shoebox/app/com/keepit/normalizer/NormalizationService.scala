@@ -118,11 +118,8 @@ class NormalizationServiceImpl @Inject() (
             priorKnowledge(strongerCandidate) match {
               case Some(true) => Future.successful((Some(strongerCandidate), weakerCandidates))
               case Some(false) => findCandidate(weakerCandidates)
-              case None => {
-                if (currentReference.url == strongerCandidate.url) Future.successful {
-                  if (currentReference.normalization != strongerCandidate.normalization) (Some(strongerCandidate), weakerCandidates)
-                  else (None, weakerCandidates)
-                }
+              case None =>
+                if (currentReference.url == strongerCandidate.url) Future.successful(Some(strongerCandidate), weakerCandidates)
                 else for {
                   contentCheck <- contentCheck(strongerCandidate.url)
                   (successful, weaker) <- {
@@ -130,7 +127,6 @@ class NormalizationServiceImpl @Inject() (
                     else findCandidate(weakerCandidates)
                   }
                 } yield (successful, weaker)
-              }
             }
           }
         }
@@ -147,7 +143,6 @@ class NormalizationServiceImpl @Inject() (
     lazy val trustedDomain = for { uri <- URI.safelyParse(currentReference.url); host <- uri.host; domain <- PriorKnowledge.canBeTrusted(host.name) } yield domain
 
     def apply(candidate: NormalizationCandidate)(implicit session: RSession): Option[Boolean] = candidate match {
-      case TrustedCandidate(url, _) => if (normalizedURIRepo.getByNormalizedUrl(candidate.url).nonEmpty) Some(true) else Some(false) // restrict renormalization to existing (hence valid) uris
       case TrustedCandidate(url, _) => if (normalizedURIRepo.getByNormalizedUrl(url).nonEmpty) Some(true) else Some(false) // restrict renormalization to existing (hence valid) uris
       case _: UntrustedCandidate => {
         val candidateMatchTrustedDomain = ( for { domain <- trustedDomain; uri <- URI.safelyParse(currentReference.url); host <- uri.host } yield host.name.endsWith(domain) ).getOrElse(false)
