@@ -563,11 +563,12 @@ $(function() {
 
 	var $nwFriends = $('.invite-friends').antiscroll({x: false, width: '100%'});
 	$nwFriends.find(".antiscroll-inner").scroll(function() { // infinite scroll
-		var filter = $('.invite-filter').val();
-		var sT = this.scrollTop;
-		if (!$nwFriendsLoading.is(':visible') && !filter && this.clientHeight + sT > this.scrollHeight - 250) {
+		var sT = this.scrollTop, sH = this.scrollHeight;
+		// tweak these values as desired
+		const offset = sH / 4, toFetch = 40;
+		if (!$nwFriendsLoading.is(':visible') && this.clientHeight + sT > sH - offset) {
 			console.log('loading more friends');
-			prepInviteTab(20);
+			prepInviteTab(toFetch);
 		}
 	});
 	var nwFriendsScroller = $nwFriends.data("antiscroll");
@@ -591,15 +592,17 @@ $(function() {
 	updateInviteCache();
 
 	const friendsToShow = 20;
-	const friendsToShowInSearch = 50;
 	const friendsShowing = [];
+	var moreFriends = true;
 	function prepInviteTab(moreToShow) {
+		if (moreToShow && !moreFriends) return;
+		moreFriends = true;
 		var network = $('.invite-filters').attr('data-nw-selected') || undefined;
 		var search = $('.invite-filter').val() || undefined;
 		$nwFriendsLoading.show();
 		var opts = {
-			limit: search ? friendsToShowInSearch : (moreToShow || friendsToShow),
-			after: moreToShow && !search ? friendsShowing[friendsShowing.length - 1].value : undefined,
+			limit: moreToShow || friendsToShow,
+			after: moreToShow ? friendsShowing[friendsShowing.length - 1].value : undefined,
 			search: search,
 			network: network,
 			updatedAt: invitesUpdatedAt
@@ -609,6 +612,11 @@ $(function() {
 			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
 			var filter = $('.invite-filter').val() || undefined;
 			if (filter != search || nw != network) return;
+			if (moreToShow && friends.length == 0) {
+				moreFriends = false;
+				$nwFriendsLoading.hide();
+				return;
+			}
 			if (!moreToShow) friendsShowing.length = 0;
 			friendsShowing.push.apply(friendsShowing, friends);
 			nwFriendsTmpl.render(friendsShowing);
