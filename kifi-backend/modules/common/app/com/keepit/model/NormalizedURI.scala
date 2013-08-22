@@ -34,11 +34,10 @@ case class NormalizedURI (
 ) extends ModelWithExternalId[NormalizedURI] with Logging {
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
-
   def withState(state: State[NormalizedURI]) = copy(state = state)
   def withTitle(title: String) = if (title.isEmpty()) this else copy(title = Some(title))
+  def withNormalization(normalization: Normalization) = copy(normalization = Some(normalization))
   def withRedirect(id: Id[NormalizedURI], now: DateTime): NormalizedURI = copy(redirect = Some(id), redirectTime = Some(now))
-
 }
 
 object NormalizedURI {
@@ -72,7 +71,6 @@ object NormalizedURI {
     if (normalizedUrl.size > URLFactory.MAX_URL_SIZE) throw new Exception(s"url size is ${normalizedUrl.size} which exceeds ${URLFactory.MAX_URL_SIZE}: $normalizedUrl")
     NormalizedURI(title = title, url = normalizedUrl, urlHash = hashUrl(normalizedUrl), state = state, screenshotUpdatedAt = None, normalization = normalization)
   }
-
 }
 
 case class UrlHash(hash: String) extends AnyVal

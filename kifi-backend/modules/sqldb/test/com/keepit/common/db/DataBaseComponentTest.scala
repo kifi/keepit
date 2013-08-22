@@ -26,7 +26,7 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
         }
       }
     }
-
+/*
     "execute all read-write sessions inside a transaction" in {
       withDb() { implicit injector: Injector =>
         db.readWrite { implicit s =>
@@ -77,7 +77,7 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
         }
         //fakeHealthcheck.errorCount() === 1
       }
-    }
+    }*/
 
     "attempt retry" in {
       withDb() { implicit injector: Injector =>

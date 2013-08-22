@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession._
 trait FailedContentCheckRepo extends Repo[FailedContentCheck]{
   def getByUrls(url1: String, url2: String)(implicit session: RSession): Option[FailedContentCheck]
   def createOrIncrease(url1: String, url2: String)(implicit session: RWSession): Unit
+  def contains(url1: String, url2: String)(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -39,12 +40,15 @@ class FailedContentCheckRepoImpl @Inject()(
   }
 
   def createOrIncrease(url1: String, url2: String)(implicit session: RWSession): Unit = {
-    val (sorted1, sorted2) = sortUrls(url1, url2)
-    val (hash1, hash2) = (NormalizedURI.hashUrl(sorted1), NormalizedURI.hashUrl(sorted2))
-    val r = (for( r <- table if (r.url1Hash === hash1 && r.url2Hash === hash2) ) yield r).firstOption
-    r match {
+    getByUrls(url1, url2) match {
       case Some(record) => save(record.withCounts(record.counts + 1))
-      case None => save( FailedContentCheck(url1Hash = hash1, url2Hash = hash2, url1 = sorted1, url2 = sorted2, counts = 1, lastContentCheck = currentDateTime) )
+      case None => {
+        val (sorted1, sorted2) = sortUrls(url1, url2)
+        val (hash1, hash2) = (NormalizedURI.hashUrl(sorted1), NormalizedURI.hashUrl(sorted2))
+        save( FailedContentCheck(url1Hash = hash1, url2Hash = hash2, url1 = sorted1, url2 = sorted2, counts = 1, lastContentCheck = currentDateTime) )
+      }
     }
   }
+
+  def contains(url1: String, url2: String)(implicit session: RSession): Boolean = getByUrls(url1, url2).isDefined
 }

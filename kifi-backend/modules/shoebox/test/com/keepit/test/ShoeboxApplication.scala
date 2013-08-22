@@ -16,6 +16,8 @@ import com.google.inject.util.Modules
 import com.google.inject.Module
 import com.keepit.common.cache.{HashMapMemoryCacheModule, ShoeboxCacheModule}
 import com.keepit.common.zookeeper.FakeDiscoveryModule
+import com.keepit.scraper.FakeScraperModule
+import com.keepit.normalizer.TestNormalizationServiceModule
 
 class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Module])
   extends TestGlobal(defaultModules, overridingModules) {
@@ -36,7 +38,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
       TestFortyTwoModule(),
       FakeDiscoveryModule(),
       TestSlickModule(TestDbInfo.dbInfo),
-      ShoeboxCacheModule(HashMapMemoryCacheModule())
+      ShoeboxCacheModule(HashMapMemoryCacheModule()),
+      TestNormalizationServiceModule()
     ), overridingModules
   ))
 
@@ -48,6 +51,7 @@ trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with Shoe
     FakeClockModule(),
     FakeHealthcheckModule(),
     TestSlickModule(TestDbInfo.dbInfo),
-    ShoeboxCacheModule(HashMapMemoryCacheModule())
+    ShoeboxCacheModule(HashMapMemoryCacheModule()),
+    TestNormalizationServiceModule()
   )
 }

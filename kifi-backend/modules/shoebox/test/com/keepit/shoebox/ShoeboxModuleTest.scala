@@ -24,23 +24,14 @@ import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialM
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.model.TestSliderHistoryTrackerModule
-import com.keepit.scraper.FakeScraperModule
-import net.codingwell.scalaguice.ScalaModule
 import com.keepit.classify.FakeDomainTagImporterModule
 import com.keepit.learning.topicmodel.FakeWordTopicModule
 import com.keepit.learning.topicmodel.DevTopicModelModule
 import com.keepit.learning.topicmodel.DevTopicStoreModule
 import com.keepit.eliza.TestElizaServiceClientModule
+import com.keepit.scraper.FakeScraperModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
-
-  // This should not be required once the Scraper is off Shoebox
-  case class FakeScraperInShoeboxModule() extends ScalaModule {
-    def configure() {
-      install(FakeScraperModule())
-      install(FakeShoeboxServiceModule())
-    }
-  }
 
   private def isShoeboxController(clazz: Class[_]): Boolean = {
     classOf[ShoeboxServiceController] isAssignableFrom clazz
@@ -60,12 +51,13 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         TestAnalyticsModule(),
         TestSliderHistoryTrackerModule(),
         TestSearchServiceClientModule(),
-        FakeScraperInShoeboxModule(),
         FakeDomainTagImporterModule(),
         FakeWordTopicModule(),
         DevTopicModelModule(),
         DevTopicStoreModule(),
         GeckoboardModule(),
+        FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
+        FakeScraperModule(), // This one should not be required once the Scraper is off Shoebox
         TestElizaServiceClientModule()
       )) {
         val ClassRoute = "@(.+)@.+".r
