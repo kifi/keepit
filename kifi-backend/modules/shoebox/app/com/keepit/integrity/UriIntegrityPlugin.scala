@@ -75,8 +75,12 @@ class UriIntegrityActor @Inject()(
 
       val toBeScraped = if ( oldUri.state != NormalizedURIStates.ACTIVE && oldUri.state != NormalizedURIStates.INACTIVE && (newUri.state == NormalizedURIStates.ACTIVE || newUri.state == NormalizedURIStates.INACTIVE)){
           Some(uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED)))
-        } else None
-
+      } else None
+      
+      uriRepo.getByRedirection(oldUri.id.get).foreach{ uri =>
+        uriRepo.save(uri.withRedirect(newUriId, currentDateTime))  
+      }  
+        
       uriRepo.save(oldUri.withState(NormalizedURIStates.INACTIVE).withRedirect(newUriId, currentDateTime))
 
       scrapeInfoRepo.getByUri(oldUriId).map{ info =>
