@@ -53,7 +53,7 @@ class NormalizationServiceImpl @Inject() (
   def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]] = {
 
     val relevantCandidates = current.normalization match {
-      case Some(currentNormalization) => candidates.filter(_.normalization >= currentNormalization)
+      case Some(currentNormalization) => candidates.filter(candidate => candidate.normalization > currentNormalization || (candidate.normalization == currentNormalization && candidate.url != current.url))
       case None => candidates ++ buildInternalCandidates(current.url)
     }
 
@@ -110,8 +110,9 @@ class NormalizationServiceImpl @Inject() (
       orderedCandidates match {
         case Seq() => Future.successful((None, Seq()))
         case Seq(strongerCandidate, weakerCandidates @ _*) => {
-          assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization)
           assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization)
+          assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization)
+          if (currentReference.normalization == Some(strongerCandidate.normalization)) assert(currentReference.url != strongerCandidate.url)
 
           db.readOnly { implicit session =>
             priorKnowledge(strongerCandidate) match {
