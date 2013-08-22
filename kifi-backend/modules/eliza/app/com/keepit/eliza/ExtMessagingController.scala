@@ -32,7 +32,7 @@ class ExtMessagingController @Inject() (
     protected val actorSystem: ActorSystem,
     protected val clock: Clock,
     protected val healthcheckPlugin: HealthcheckPlugin
-  ) 
+  )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
 
@@ -47,12 +47,13 @@ class ExtMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "recipients").as[Seq[String]])
 
-
+    // TODO: factor out NormalizedURI interning so that it's only done once instead of once per recipient
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).map{ recipientSet =>
+      // TODO: propagate "canonical" & "og" to shoebox along with "url" to intern the NormalizedURI
       val message : Message = messagingController.sendNewMessage(request.user.id.get, recipientSet, Some(urlStr), title, text)
       val tDiff = currentDateTime.getMillis - tStart.getMillis
       Statsd.timing(s"messaging.newMessage", tDiff)
-      Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))  
+      Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
     }
     Async(responseFuture)
   }
@@ -138,7 +139,7 @@ class ExtMessagingController @Inject() (
     "get_unread_notifications_count" -> { _ =>
       val unvisited = messagingController.getPendingNotificationCount(socket.userId)
       socket.channel.push(Json.arr("unread_notifications_count", unvisited))
-    }, 
+    },
     "set_message_read" -> { case JsString(messageId) +: _ =>
       val msgExtId = ExternalId[Message](messageId)
       messagingController.setNotificationReadForMessage(socket.userId, msgExtId)

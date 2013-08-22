@@ -251,7 +251,7 @@ slider2 = function() {
     createSlider(function() {
       $slider.prependTo(tile);
 
-      logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0), url: document.URL});
+      logEvent("slider", "sliderShown", withUrls({trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0)}));
       api.port.emit("keeper_shown");
 
       callback && callback();
@@ -356,21 +356,21 @@ slider2 = function() {
   function keepPage(how) {
     api.log("[keepPage]", how);
     updateKeptDom(how);
-    api.port.emit("keep", {url: document.URL, title: document.title, how: how});
+    api.port.emit("keep", withUrls({title: document.title, how: how}));
     logEvent("slider", "keep", {isPrivate: how == "private"});
   }
 
   function unkeepPage() {
     api.log("[unkeepPage]", document.URL);
     updateKeptDom("");
-    api.port.emit("unkeep");
+    api.port.emit("unkeep", withUrls({}));
     logEvent("slider", "unkeep");
   }
 
   function toggleKeep(how) {
     api.log("[toggleKeep]", how);
     updateKeptDom(how);
-    api.port.emit("set_private", how == "private");
+    api.port.emit("set_private", withUrls({private: how == "private"}));
   }
 
   function updateKeptDom(how) {

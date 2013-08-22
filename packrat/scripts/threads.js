@@ -103,11 +103,10 @@ threadsPane = function() {
 
   function sendMessage($container, e, text, recipientIds) {
     // logEvent("slider", "message");
-    api.port.emit("send_message", {
-        url: document.URL,
+    api.port.emit("send_message", withUrls({
         title: document.title,
         text: text,
-        recipients: recipientIds},
+        recipients: recipientIds}),
       function(resp) {
         api.log("[sendMessage] resp:", resp);
         var friends = $container.find(".kifi-compose-to").data("friends").reduce(function(o, f) {

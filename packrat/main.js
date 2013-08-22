@@ -410,6 +410,8 @@ api.port.on({
     var bm = {
       title: data.title,
       url: data.url,
+      canonical: data.canonical,
+      og: data.og,
       isPrivate: data.how == "private"};
     postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
     pageData[tab.nUri].tabs.forEach(function(tab) {
@@ -417,10 +419,10 @@ api.port.on({
       api.tabs.emit(tab, "kept", {kept: data.how});
     });
   },
-  unkeep: function(_, _, tab) {
-    api.log("[unkeep]", tab.url);
+  unkeep: function(data, _, tab) {
+    api.log("[unkeep]", data);
     delete (pageData[tab.nUri] || {}).kept;
-    ajax("POST", "/bookmarks/remove", {url: tab.url}, function(o) {
+    ajax("POST", "/bookmarks/remove", data, function(o) {
       api.log("[unkeep] response:", o);
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
@@ -428,13 +430,13 @@ api.port.on({
       api.tabs.emit(tab, "kept", {kept: null});
     });
   },
-  set_private: function(priv, _, tab) {
-    api.log("[setPrivate]", tab.url, priv);
-    ajax("POST", "/bookmarks/private", {url: tab.url, private: priv}, function(o) {
+  set_private: function(data, _, tab) {
+    api.log("[setPrivate]", data);
+    ajax("POST", "/bookmarks/private", data, function(o) {
       api.log("[setPrivate] response:", o);
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
-      api.tabs.emit(tab, "kept", {kept: priv ? "private" : "public"});
+      api.tabs.emit(tab, "kept", {kept: data.private ? "private" : "public"});
     });
   },
   keeper_shown: function(_, _, tab) {
@@ -491,7 +493,7 @@ api.port.on({
         unreadNotification = true;
       }
     }
-    
+
     if (unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0))) {
       markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
       if (d && d.lastMessageRead) {
