@@ -593,7 +593,7 @@ $(function() {
 	}
 	updateInviteCache();
 
-	const friendsToShow = 20;
+	const friendsToShow = 40;
 	const friendsShowing = [];
 	var moreFriends = true;
 	function prepInviteTab(moreToShow) {
