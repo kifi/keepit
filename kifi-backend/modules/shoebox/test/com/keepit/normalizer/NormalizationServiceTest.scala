@@ -1,4 +1,4 @@
-/*
+
 package com.keepit.normalizer
 
 import org.specs2.mutable.Specification
@@ -88,4 +88,4 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
     }
   }
 }
-*/
+
