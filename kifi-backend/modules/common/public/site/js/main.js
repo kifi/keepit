@@ -612,10 +612,8 @@ $(function() {
 			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
 			var filter = $('.invite-filter').val() || undefined;
 			if (filter != search || nw != network) return;
-			if (moreToShow && friends.length == 0) {
+			if (friends.length < moreToShow) {
 				moreFriends = false;
-				$nwFriendsLoading.hide();
-				return;
 			}
 			if (!moreToShow) friendsShowing.length = 0;
 			friendsShowing.push.apply(friendsShowing, friends);

@@ -19,6 +19,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getScraped(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
+  def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI]
 }
 
 @Singleton
@@ -139,6 +140,11 @@ class NormalizedURIRepoImpl @Inject() (
     session.onTransactionSuccess(normalizedURIFactory.normalizationServiceProvider.get.update(normalizedUri))
     normalizedUri
   }
+  
+  def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI] = {
+    (for(t <- table if t.redirect === redirect) yield t).list
+  }
+
 }
 
 @Singleton
