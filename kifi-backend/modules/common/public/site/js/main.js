@@ -1145,7 +1145,7 @@ $(function() {
 	var $collList = $("#collections-list")
 	.each(function() {this.style.top = this.offsetTop + "px"})
 	.addClass("positioned")
-	.antiscroll({x: false, width: "100%"})
+	.antiscroll({x: false, width: "100%", autoHide: false})
 	.sortable({
 		axis: "y",
 		items: ".collection",
