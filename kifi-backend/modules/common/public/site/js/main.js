@@ -901,7 +901,7 @@ $(function() {
 	}).on("mouseout", "a", function() {
 		$(this).removeClass("hover");
 	}).on("mouseup mousedown", ".coll-remove", function(e) {
-		if (e.which > 1) return;
+		if (e.which > 1 || !$collMenu.hasClass('showing')) return;
 		hideCollMenu();
 		var $coll = $collMenu.closest(".collection");
 		var collId = $coll.data("id");
@@ -920,7 +920,7 @@ $(function() {
 			$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
 		}).error(showMessage.bind(null, 'Could not delete collection, please try again later'));
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
-		if (e.which > 1) return;
+		if (e.which > 1 || !$collMenu.hasClass('showing')) return;
 		hideCollMenu();
 		var $coll = $collMenu.closest(".collection").addClass("renaming").each(function() {
 			var scrEl = $collList.find(".antiscroll-inner")[0], oT = this.offsetTop;
