@@ -38,7 +38,7 @@ class ElizaEmailNotifierActor @Inject() (
   def receive = {
     case SendEmails => {
       val unseenUserThreads = db.readOnly { implicit session => 
-        userThreadRepo.getUserThreadsForEmailing(clock.now.minusMinutes(5))
+        userThreadRepo.getUserThreadsForEmailing(clock.now.minusMinutes(15))
       }
       unseenUserThreads.foreach { userThread =>
         val thread = db.readOnly { implicit session =>  threadRepo.get(userThread.thread) }
@@ -54,7 +54,7 @@ class ElizaEmailNotifierActor @Inject() (
         }}.map{ message =>
           val user = id2BasicUser(message.from.get)
           (user.firstName + " " + user.lastName, user.externalId.id, message.messageText)
-        }
+        } reverse
 
         if (unseenMessages.nonEmpty) {
 
