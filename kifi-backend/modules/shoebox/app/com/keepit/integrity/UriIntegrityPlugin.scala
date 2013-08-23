@@ -191,7 +191,6 @@ class ScheduledUriIntegrityPluginImpl @Inject() (
   }
 }
 
-@ImplementedBy(classOf[UriIntegrityPluginImpl])
 trait UriIntegrityPlugin extends Plugin {
   def handleChangedUri(change: ChangedUri): Unit
   def batchUpdateMerge(): Unit

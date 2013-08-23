@@ -53,7 +53,7 @@ class ChangedURIRepoImpl @Inject() (
   }
   
   override def page(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[ChangedURI] = {
-    val q = for( r <- table ) yield r
+    val q = for( r <- table if r.state === ChangedURIStates.APPLIED) yield r
     q.sortBy(_.updatedAt desc).drop(pageSize * pageNum).take(pageSize).list
   }
 }
