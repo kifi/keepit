@@ -258,7 +258,7 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padd
 a.invite-cancel { position: absolute; color: #b1b8c1; font-weight: bold; padding: 8px 12px; right: 0; top: 0; font-size: 20px; text-decoration: none; }
 input.invite-subject { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; }
 textarea.invite-message { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; min-height: 80px;}
-button.invite-send { position: absolute; right: 12px; bottom: 12px; font-size: 14px; border: none; outline: none; border-radius: 5px; -webkit-backface-visibility: hidden; padding: 8px 12px; background: #6fa6ef; color: white; cursor: pointer; }
+button.invite-send { position: absolute; right: 12px; bottom: 12px; font-size: 14px; border: none; outline: none; border-radius: 5px; padding: 8px 12px; background: #6fa6ef; color: white; cursor: pointer; }
 
 .friend-reqs-status {margin-bottom: 4px}
 .friend-reqs-status,
