@@ -68,8 +68,10 @@ class UriIntegrityActor @Inject()(
    */
   private def processMerge(change: ChangedURI)(implicit session: RWSession): Option[NormalizedURI] = {
     val (oldUriId, newUriId) = (change.oldUriId, change.newUriId)
-    if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) None
-    else {
+    if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) { 
+      if (oldUriId == newUriId) changedUriRepo.save(change.withState(ChangedURIStates.INACTIVE))
+      None 
+    } else {
       val (oldUri, newUri) = (uriRepo.get(oldUriId), uriRepo.get(newUriId))
 
       urlRepo.getByNormUri(oldUriId).map{ url =>
@@ -174,36 +176,22 @@ class UriIntegrityActor @Inject()(
 
 }
 
-trait ScheduledUriIntegrityPlugin extends SchedulingPlugin 
-
-class ScheduledUriIntegrityPluginImpl @Inject() (
-  actor: ActorInstance[UriIntegrityActor],
-  val schedulingProperties: SchedulingProperties  // leader only
-) extends ScheduledUriIntegrityPlugin with Logging {
-  override def enabled = true
-
-  override def onStart() {
-    log.info("starting ScheduledUriIntegrityPluginImpl")
-    scheduleTask(actor.system, 1 minutes, 30 seconds, actor.ref, BatchUpdateMerge)
-  }
-  override def onStop() {
-    log.info("stopping ScheduledUriIntegrityPluginImpl")
-  }
-}
 
 @ImplementedBy(classOf[UriIntegrityPluginImpl])
-trait UriIntegrityPlugin extends Plugin {
+trait UriIntegrityPlugin extends SchedulingPlugin  {
   def handleChangedUri(change: ChangedUri): Unit
   def batchUpdateMerge(): Unit
 }
 
 @Singleton
 class UriIntegrityPluginImpl @Inject() (
-  actor: ActorInstance[UriIntegrityActor]
+  actor: ActorInstance[UriIntegrityActor],
+  val schedulingProperties: SchedulingProperties
 ) extends UriIntegrityPlugin with Logging {
-
+  override def enabled = true
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
+     scheduleTask(actor.system, 1 minutes, 30 seconds, actor.ref, BatchUpdateMerge)
   }
   override def onStop() {
      log.info("stopping UriIntegrityPluginImpl")
