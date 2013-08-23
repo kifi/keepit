@@ -263,6 +263,10 @@
 					<a href="javascript:" data-nw="linkedin"></a>
 				</nav>
 				<div class="above-invite-friends">
+					<div class="invite-num-results" data-template>
+						{% if filter && results > 0 %} Showing <b>{{results}}</b> results for <b>{{filter}}</b> {% endif %}
+						{% if filter && results == 0 %} No results for <b>{{filter}}</b> {% endif %}
+					</div>
 					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
 				</div>
 				<div class="invite-friends">
