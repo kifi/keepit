@@ -20,6 +20,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.normalizer.NormalizationCandidate
 import com.keepit.search.ArticleSearchResultRef
 import com.keepit.search.ArticleSearchResultRefRepo
 import com.keepit.search.SearchConfigExperiment
@@ -121,7 +122,7 @@ class ShoeboxController @Inject() (
   def sendMailToUser = Action(parse.json) { request =>
     val userId = Id[User]((request.body \ "user").as[Long])
     val email = (request.body \ "email").as[ElectronicMail]
-    
+
     val addrs = db.readOnly{ implicit session => emailAddressRepo.getByUser(userId) }
     for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
       db.readWrite{ implicit session => postOffice.sendMail(email.copy(to=List(addr))) }
@@ -154,9 +155,13 @@ class ShoeboxController @Inject() (
   }
 
   def internNormalizedURI() = Action(parse.json) { request =>
-    val url : String = Json.fromJson[String](request.body).get
+    val o: JsObject = request.body match {
+      case o: JsObject => o
+      case url: JsString => Json.obj("url" -> url)
+    }
+    val url = (o \ "url").as[String]
     val uriId = db.readWrite(attempts=2) { implicit s =>
-      normUriRepo.internByUri(url)
+      normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
     }
     Ok(Json.toJson(uriId))
   }
@@ -372,7 +377,7 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def sendPushNotification() = Action { request => 
+  def sendPushNotification() = Action { request =>
     Async(future{
       val req = request.body.asJson.get.asInstanceOf[JsObject]
       val userId = Id[User]((req \ "userId").as[Long])
@@ -385,7 +390,7 @@ class ShoeboxController @Inject() (
     })
 
   }
-  
+
   def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) = Action { request =>
     val changes = db.readOnly { implicit s =>
       changedUriRepo.getChangesBetween(SequenceNumber(lowSeq), SequenceNumber(highSeq)).map{ change =>
@@ -396,5 +401,5 @@ class ShoeboxController @Inject() (
       JsObject(List("id" -> JsNumber(id.id), "uri" -> Json.toJson(uri)))
     }
     Ok(JsArray(jsChanges))
-  } 
+  }
 }
