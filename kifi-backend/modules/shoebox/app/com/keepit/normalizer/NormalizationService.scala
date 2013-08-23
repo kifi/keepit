@@ -143,7 +143,7 @@ class NormalizationServiceImpl @Inject() (
     lazy val trustedDomain = for { uri <- URI.safelyParse(currentReference.url); host <- uri.host; domain <- PriorKnowledge.canBeTrusted(host.name) } yield domain
 
     def apply(candidate: NormalizationCandidate)(implicit session: RSession): Option[Boolean] = candidate match {
-      case _ if !(candidate.url.endsWith("vimeo.com/23030893") || candidate.url.endsWith("vimeo.com/34505587") || candidate.url.endsWith("vimeo.com/45985040")) => Some(false) // First deployment guard
+     // case _ if !(candidate.url.endsWith("vimeo.com/23030893") || candidate.url.endsWith("vimeo.com/34505587") || candidate.url.endsWith("vimeo.com/45985040")) => Some(false) // First deployment guard
       case TrustedCandidate(url, _) => if (normalizedURIRepo.getByNormalizedUrl(url).nonEmpty) Some(true) else Some(false) // restrict renormalization to existing (hence valid) uris
       case _: UntrustedCandidate => {
         val candidateMatchTrustedDomain = ( for { domain <- trustedDomain; uri <- URI.safelyParse(currentReference.url); host <- uri.host } yield host.name.endsWith(domain) ).getOrElse(false)
@@ -216,7 +216,7 @@ class NormalizationServiceImpl @Inject() (
       val saved = normalizedURIRepo.save(newReference)
 
       val (oldUriId, newUriId) = (currentReference.id.get, saved.id.get)
-      if (oldUriId != newUriId) uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = oldUriId, newUri = newUriId))
+      if (oldUriId != newUriId) {println("=================== sending mering uris"); uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = oldUriId, newUri = newUriId))}
 
       Some(saved)
     }

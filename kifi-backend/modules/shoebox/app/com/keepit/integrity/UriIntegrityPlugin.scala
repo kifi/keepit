@@ -4,7 +4,7 @@ import akka.util.Timeout
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
@@ -197,6 +197,7 @@ trait UriIntegrityPlugin extends Plugin {
   def batchUpdateMerge(): Unit
 }
 
+@Singleton
 class UriIntegrityPluginImpl @Inject() (
   actor: ActorInstance[UriIntegrityActor]
 ) extends UriIntegrityPlugin with Logging {
