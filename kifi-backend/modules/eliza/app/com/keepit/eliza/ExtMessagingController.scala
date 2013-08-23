@@ -41,15 +41,14 @@ class ExtMessagingController @Inject() (
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val tStart = currentDateTime
     val o = request.body
-    val (urlStr, title, text, recipients) = (
-      (o \ "url").as[String],
+    val (title, text, recipients) = (
       (o \ "title").asOpt[String],
       (o \ "text").as[String].trim,
       (o \ "recipients").as[Seq[String]])
+    val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).map{ recipientSet =>
-      // TODO: propagate "canonical" & "og" to shoebox along with "url" to intern the NormalizedURI
-      val message : Message = messagingController.sendNewMessage(request.user.id.get, recipientSet, Some(urlStr), title, text)
+      val message : Message = messagingController.sendNewMessage(request.user.id.get, recipientSet, urls, title, text)
       val tDiff = currentDateTime.getMillis - tStart.getMillis
       Statsd.timing(s"messaging.newMessage", tDiff)
       Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
