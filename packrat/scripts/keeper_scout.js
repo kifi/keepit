@@ -91,10 +91,10 @@ var tile = tile || function() {  // idempotent for Chrome
       switch (e.keyCode) {
       case 75: // k
         if (tile && tile.dataset.kept) {
-          api.port.emit("unkeep");
+          api.port.emit("unkeep", withUrls({}));
           tile.removeAttribute("data-kept");  // delete .dataset.kept fails in FF 21
         } else {
-          api.port.emit("keep", {url: document.URL, title: document.title, how: "public"});
+          api.port.emit("keep", withUrls({title: document.title, how: "public"}));
           if (tile) tile.dataset.kept = "public";
         }
         e.preventDefault();
@@ -178,14 +178,6 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   }, 60000);
 
-  !function(url, link, meta, can, og) {
-    if (link && link.href !== url) can = link.href;
-    if (meta && meta.content !== url && meta.content !== can) og = meta.content;
-    if (can || og) {
-      api.port.emit("canonical", {url: url, canonical: can, og: og});
-    }
-  }(document.URL, document.head.querySelector('link[rel=canonical]'), document.head.querySelector('meta[property="og:url"]'));
-
   api.onEnd.push(function() {
     document.removeEventListener("keydown", onKeyDown, true);
     if (onScroll) {
@@ -200,3 +192,12 @@ var tile = tile || function() {  // idempotent for Chrome
 
   return tile;
 }();
+
+function withUrls(o) {
+  var el, cUrl = (el = document.head.querySelector('link[rel=canonical]')) && el.href;
+  var gUrl = (el = document.head.querySelector('meta[property="og:url"]')) && el.content;
+  o.url = document.URL;
+  if (cUrl && cUrl !== o.url) o.canonical = cUrl;
+  if (gUrl && gUrl !== o.url && gUrl !== cUrl) o.og = gUrl;
+  return o;
+}

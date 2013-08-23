@@ -269,7 +269,7 @@
 					<div class="antiscroll-inner">
 						<ul>
 							<li class="invite-friend" data-template data-value="{{value}}" data-status="{{status}}">
-								<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{image}}">
+								<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-original="{{image}}">
 								<div class="invite-name">{{label}}</div>
 								<div class="invite-status">
 									{% if status == "joined" %} Joined Kifi {% endif %}
@@ -280,14 +280,17 @@
 								<form method="POST" target="_blank">
 									<input type="hidden" name="fullSocialId" value="{{value}}">
 									<div class="invite-message-dialog">
-										<div class="invite-message-header">Send Invite</div>
-										<a href="javascript:" class="invite-cancel">×</a>
-										<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
-										<textarea class="invite-message" name="message">Hi {{label}},
+										<div class="dialog-content">
+											<div class="invite-message-header">Your Kifi invite to {{label}}</div>
+											<a href="javascript:" class="invite-cancel">×</a>
+											<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
+											<textarea class="invite-message" name="message">Hi {{label | replace ' .*', '' }},
 
 I would like to invite you to the private beta of kifi.com. Click this link to accept the invitation:
 </textarea>
-										<input class="invite-send" type="submit" value="Send!">
+											<p>A link for the invite will be attached to your message.</p>
+											<button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
+										</div>
 									</div>
 									<a class="invite-button" href="javascript:"></a>
 								</form>
@@ -334,7 +337,7 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 			<li><a href="blog" class="updates-features">Updates and features</a>
 			<li><a href="/install">Install Kifi on this computer</a>
 			<li><a href="/invite">Invite your friends</a>
-			<li><a href="javascript:">How to use Kifi</a>
+			<li><a href="https://fast.wistia.net/embed/iframe/b7qisfubnv?popover=true" class="wistia-popover[height=394,playerColor=7b796a,width=700]">How to use Kifi</a><script charset="ISO-8859-1" src="https://fast.wistia.com/static/popover-v1.js"></script>
 			<li><a href="javascript:" class="send-feedback">Send feedback</a>
 		</ul>
 		<h2>Get to Know Us</h2>
