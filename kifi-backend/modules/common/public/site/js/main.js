@@ -636,22 +636,22 @@ $(function() {
 			window.open("about:blank", fullSocialId, "height=600,width=800,left=200,top=200", false);
 			$form.attr('target', fullSocialId).submit();
 		} else if (fullSocialId.indexOf("linkedin/") === 0) {
-			var $popup = $form.find('.invite-message-dialog').show().off('click');
+			var $popup = $form.find('.invite-message-dialog').addClass('showing').off('click');
 			$popup.on('click', '.invite-cancel', function (e) {
 				e.preventDefault();
-				$popup.hide();
+				$popup.removeClass('showing');
 			});
 			$form.on('submit', function (e) {
 				e.preventDefault();
 				$.post($form.attr('action'), $form.serialize()).complete(function(xhr) {
 					if (xhr.status >= 400) {
 						console.log('error sending invite: ', xhr);
-						prepInviteTab();
 					} else {
 						console.log('sent invite');
-						$popup.fadeOut({ duration: 500, complete: prepInviteTab.bind(null) });
+						$popup.removeClass('showing');
 					}
 					updateInviteCache();
+					prepInviteTab();
 				});
 			});
 		}
