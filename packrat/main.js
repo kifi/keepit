@@ -373,6 +373,9 @@ const socketHandlers = {
   message_read: function(nUri, threadId, time, messageId) {
     api.log("[socket:message_read]", nUri, threadId, time);
     var d = pageData[nUri];
+
+    syncNumNotificationsNotVisited(); // see comment in function :(
+
     if (!d || !d.lastMessageRead || new Date(d.lastMessageRead[threadId] || 0) < new Date(time)) {
       markNoticesVisited("message", nUri, messageId, time, "/messages/" + threadId);
       if (d && d.lastMessageRead) {
@@ -1216,6 +1219,7 @@ function connectSync() {
   getRules();
   getFriends();
   getPrefs();
+  syncNumNotificationsNotVisited();
 }
 
 function authenticate(callback, retryMs) {
