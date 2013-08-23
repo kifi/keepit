@@ -216,7 +216,7 @@ class NormalizationServiceImpl @Inject() (
       val saved = normalizedURIRepo.save(newReference)
 
       val (oldUriId, newUriId) = (currentReference.id.get, saved.id.get)
-      if (oldUriId != newUriId) {println("=================== sending mering uris"); uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = oldUriId, newUri = newUriId))}
+      if (oldUriId != newUriId) uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = oldUriId, newUri = newUriId))
 
       Some(saved)
     }
