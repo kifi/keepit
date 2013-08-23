@@ -308,7 +308,7 @@ class MessagingController @Inject() (
     new String(outBuf.array, 0, outBuf.position(), charset)
   }
 
-  private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = { //TODO Stephen: And store notification json
+  private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = {
     future {
       val locator = "/messages/" + thread.externalId
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
@@ -317,6 +317,8 @@ class MessagingController @Inject() (
         userThreadRepo.setNotification(user, thread.id.get, message, notifJson)
       }
       
+      future { notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getPendingNotificationCount(user))) }
+
       notificationRouter.sendToUser(
         user,
         Json.arr("notification", notifJson)
@@ -592,6 +594,7 @@ class MessagingController @Inject() (
     val nUrl : String = thread.nUrl.getOrElse("")
     db.readWrite{ implicit session => userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message.id.get) }
     notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
+    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getPendingNotificationCount(userId)))
   }
 
 
