@@ -4,7 +4,7 @@ import akka.util.Timeout
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
@@ -16,11 +16,16 @@ import com.keepit.common.net.URI
 import scala.util.{Success, Failure, Try}
 import com.keepit.normalizer.Prenormalizer
 import com.keepit.scraper.ScraperPlugin
+import com.keepit.common.zookeeper.CentralConfig
+import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.SchedulingProperties
+import com.keepit.common.db.slick.DBSession.RWSession
 
 trait ChangedUri
 
 case class MergedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends ChangedUri
 case class SplittedUri(url: URL, newUri: Id[NormalizedURI]) extends ChangedUri
+case object BatchUpdateMerge
 
 class UriIntegrityActor @Inject()(
   db: Database,
@@ -38,6 +43,7 @@ class UriIntegrityActor @Inject()(
   scrapeInfoRepo: ScrapeInfoRepo,
   uriNormRuleRepo: UriNormalizationRuleRepo,
   changedUriRepo: ChangedURIRepo,
+  centralConfig: CentralConfig,
   healthcheckPlugin: HealthcheckPlugin,
   scraper: ScraperPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
@@ -60,11 +66,12 @@ class UriIntegrityActor @Inject()(
   /**
    * any reference to the old uri should be redirected to the new one
    */
-  def handleMerge(oldUriId: Id[NormalizedURI], newUriId: Id[NormalizedURI]): Unit = {
-    if (oldUriId == newUriId) return
-    val toBeScraped = db.readWrite{ implicit s =>
-      changedUriRepo.save(ChangedURI(oldUriId = oldUriId, newUriId = newUriId))
-
+  private def processMerge(change: ChangedURI)(implicit session: RWSession): Option[NormalizedURI] = {
+    val (oldUriId, newUriId) = (change.oldUriId, change.newUriId)
+    if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) { 
+      if (oldUriId == newUriId) changedUriRepo.save(change.withState(ChangedURIStates.INACTIVE))
+      None 
+    } else {
       val (oldUri, newUri) = (uriRepo.get(oldUriId), uriRepo.get(newUriId))
 
       urlRepo.getByNormUri(oldUriId).map{ url =>
@@ -106,16 +113,18 @@ class UriIntegrityActor @Inject()(
       followRepo.getByUri(oldUriId, excludeState = None).map{ follow =>
         followRepo.save(follow.withNormUriId(newUriId))
       }
+      
+      changedUriRepo.save(change.withState(ChangedURIStates.APPLIED))
+      
       toBeScraped
     }
-    toBeScraped.map(scraper.asyncScrape(_))
   }
 
   /**
    * url now pointing to a new uri, any entity related to that url should update its uri reference.
    * This is NOT equivalent as a uri to uri migration. (Note the difference from the Merged case)
    */
-  def handleSplit(url: URL, newUriId: Id[NormalizedURI]): Unit = {
+  private def handleSplit(url: URL, newUriId: Id[NormalizedURI]): Unit = {
     val toBeScraped = db.readWrite { implicit s =>
       urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.SPLIT)))
       val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
@@ -142,28 +151,47 @@ class UriIntegrityActor @Inject()(
     }
     toBeScraped.map(scraper.asyncScrape(_))
   }
+  
+  private def batchUpdateMerge() = {
+    val toMerge = getOverDueList(fetchSize = 50)
+    val toScrape = db.readWrite{ implicit s =>
+      toMerge.map{ change => processMerge(change) }
+    }
+    toMerge.sortBy(_.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.seq.value) }
+    toScrape.filter(_.isDefined).map{ x => scraper.asyncScrape(x.get)}
+  }
+  
+  private def getOverDueList(fetchSize: Int = -1) = {
+    centralConfig(new ChangedUriSeqNumKey()) match {
+      case None => db.readOnly{ implicit s => changedUriRepo.getChangesSince(SequenceNumber(0), fetchSize, state = ChangedURIStates.ACTIVE)}
+      case Some(seqNum) => db.readOnly{ implicit s => changedUriRepo.getChangesSince(SequenceNumber(seqNum), fetchSize, state = ChangedURIStates.ACTIVE)}
+    }
+  }
 
   def receive = {
-    case MergedUri(oldUri, newUri) => handleMerge(oldUri, newUri)
+    case BatchUpdateMerge => batchUpdateMerge()
+    case MergedUri(oldUri, newUri) => db.readWrite{ implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) }   // process later
     case SplittedUri(url, newUri) => handleSplit(url, newUri)
   }
 
 }
 
+
 @ImplementedBy(classOf[UriIntegrityPluginImpl])
-trait UriIntegrityPlugin extends Plugin {
+trait UriIntegrityPlugin extends SchedulingPlugin  {
   def handleChangedUri(change: ChangedUri): Unit
+  def batchUpdateMerge(): Unit
 }
 
+@Singleton
 class UriIntegrityPluginImpl @Inject() (
-  actor: ActorInstance[UriIntegrityActor]
+  actor: ActorInstance[UriIntegrityActor],
+  val schedulingProperties: SchedulingProperties
 ) extends UriIntegrityPlugin with Logging {
-  implicit val actorTimeout = Timeout(5 seconds)
-
-  override def enabled: Boolean = true
-
+  override def enabled = true
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
+     scheduleTask(actor.system, 1 minutes, 30 seconds, actor.ref, BatchUpdateMerge)
   }
   override def onStop() {
      log.info("stopping UriIntegrityPluginImpl")
@@ -172,4 +200,6 @@ class UriIntegrityPluginImpl @Inject() (
   override def handleChangedUri(change: ChangedUri) = {
     actor.ref ! change
   }
+  
+  override def batchUpdateMerge() = actor.ref ! BatchUpdateMerge
 }
