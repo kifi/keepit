@@ -385,6 +385,14 @@ const socketHandlers = {
       tellTabsNoticeCountIfChanged();
     }
   },
+  unread_notifications_count: function(count) {
+    // see comment in syncNumNotificationsNotVisited() :(
+    if (numNotificationsNotVisited != count) {
+      numNotificationsNotVisited = count;
+      reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
+      tellTabsNoticeCountIfChanged();
+    }
+  }
 };
 
 // ===== Handling messages from content scripts or other extension pages
@@ -664,7 +672,19 @@ function insertNewNotification(n) {
       }
     }
   }
+
+  syncNumNotificationsNotVisited(); // see comment below :(
   return true;
+}
+
+function syncNumNotificationsNotVisited() {
+  // We have an open issue where numNotificationsNotVisited gets off - it goes below 0
+  // So either an incriment is not happening, or a decrement is happening too often.
+  // The issue goes back several months (with the -1 notification issue), but has gotten
+  // much worse lately. I've had dificulty consistantly reproducing, so am adding this
+  // sync in until we can identify the real issue counts get off. Could be related to
+  // spotty internet, or some logic error above. -Andrew
+  socket.send(["get_unread_notifications_count"]);
 }
 
 // id is of last read message, timeStr is its createdAt time (not notification's).
@@ -689,6 +709,8 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
       id: id,
       numNotVisited: numNotificationsNotVisited});
   });
+
+  syncNumNotificationsNotVisited(); // see comment in function :(
 }
 
 function markAllNoticesVisited(id, timeStr) {  // id and time of most recent notification to mark
@@ -717,6 +739,8 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
       time: timeStr,
       numNotVisited: numNotificationsNotVisited});
   });
+
+  syncNumNotificationsNotVisited(); // see comment in function :(
   tellTabsNoticeCountIfChanged();  // visible tabs
 }
 
