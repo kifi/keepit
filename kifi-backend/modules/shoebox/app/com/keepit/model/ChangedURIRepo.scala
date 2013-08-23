@@ -6,11 +6,12 @@ import com.keepit.common.db.Id
 import com.keepit.common.time.Clock
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.State
 
 @ImplementedBy(classOf[ChangedURIRepoImpl])
 trait ChangedURIRepo extends Repo[ChangedURI] {
-  def getChangesSince(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[ChangedURI]
-  def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber)(implicit session: RSession): Seq[ChangedURI]   // (low, high]
+  def getChangesSince(num: SequenceNumber, limit: Int, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI]
+  def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI]   // (low, high]
   def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber]
   def page(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[ChangedURI]
 }
@@ -37,14 +38,14 @@ class ChangedURIRepoImpl @Inject() (
     super.save(newModel)
   }
 
-  def getChangesSince(num: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[ChangedURI] = {
-    val q = (for (r <- table if r.seq > num) yield r).sortBy(_.seq).list
+  def getChangesSince(num: SequenceNumber, limit: Int = -1, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI] = {
+    val q = (for (r <- table if r.seq > num && r.state === state) yield r).sortBy(_.seq).list
     if (limit == -1) q else q.take(limit)
   }
   
-  def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber)(implicit session: RSession): Seq[ChangedURI] = {
+  def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI] = {
     if (highSeq <= lowSeq) Nil
-    else (for (r <- table if r.seq > lowSeq && r.seq <= highSeq) yield r).sortBy(_.seq).list
+    else (for (r <- table if r.seq > lowSeq && r.seq <= highSeq && r.state === state) yield r).sortBy(_.seq).list
   }
 
   def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber] = {
@@ -52,7 +53,7 @@ class ChangedURIRepoImpl @Inject() (
   }
   
   override def page(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[ChangedURI] = {
-    val q = for( r <- table ) yield r
+    val q = for( r <- table if r.state === ChangedURIStates.APPLIED) yield r
     q.sortBy(_.updatedAt desc).drop(pageSize * pageNum).take(pageSize).list
   }
 }

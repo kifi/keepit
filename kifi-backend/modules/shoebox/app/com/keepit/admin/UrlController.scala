@@ -209,6 +209,11 @@ class UrlController @Inject() (
     }
     Ok(html.admin.mergedUri(changes, page, totalCount, page, PAGE_SIZE))
   }
+  
+  def batchMerge = AdminHtmlAction{ request =>
+    uriIntegrityPlugin.batchUpdateMerge()
+    Ok("Will do batch merging uris")
+  }
 }
 
 
