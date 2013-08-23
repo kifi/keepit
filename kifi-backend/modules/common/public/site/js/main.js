@@ -579,6 +579,7 @@ $(function() {
 		$nwFriendsLoading.hide();
 		nwFriendsScroller.refresh();
 	});
+	var inviteFilterTmpl = Tempo.prepare($('.above-invite-friends'))
 	var $nwFriendsLoading = $('.invite-friends-loading');
 	var friendsTimeout;
 	function filterFriends() {
@@ -624,6 +625,7 @@ $(function() {
 			friendsShowing.push.apply(friendsShowing, friends);
 			nwFriendsTmpl.append(friends);
 			$('.invite-pic').lazyload({ container: $nwFriends.find('.antiscroll-inner') });
+			inviteFilterTmpl.render({ results: friendsShowing.length, filter: filter });
 		});
 	}
 	$('.invite-filters>a').click(function () {
