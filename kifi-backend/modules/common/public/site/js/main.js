@@ -5,7 +5,7 @@ var xhrBase = xhrDomain + '/site';
 var compareSearch = {usage: "search", sensitivity: "base"};
 var compareSort = {numeric: true};
 
-$.ajaxSetup({crossDomain: true, xhrFields: {withCredentials: true}});
+$.ajaxSetup({cache: true, crossDomain: true, xhrFields: {withCredentials: true}});
 
 $.timeago.settings.localeTitle = true;
 $.extend($.timeago.settings.strings, {
@@ -180,10 +180,10 @@ $(function() {
 			}
 			function move(e) {
 				var inCol = e.pageX < r.right && e.pageX >= r.left, dy;
-				if (inCol && Math.abs(dy = (e.pageY - r.bottom)) < 10) {
+				if (inCol && (dy = e.pageY - r.bottom) > -10) {
 					scrollTimeout = scrollTimeout || setTimeout(scroll, scrollTimeoutMs);
-					scrollPx = 10 + dy * 2;
-				} else if (inCol && (dy = e.pageY - r.top) < 10 && dy > -50) {
+					scrollPx = 15 + Math.min(5, Math.round(dy * 1.5));
+				} else if (inCol && (dy = e.pageY - r.top) < 10) {
 					scrollTimeout = scrollTimeout || setTimeout(scroll, scrollTimeoutMs)
 					scrollPx = -10 + Math.max(-10, dy);
 				} else if (scrollTimeout) {
@@ -465,6 +465,8 @@ $(function() {
 		} else {
 			$friendsList.find('.no-match').removeClass('no-match');
 		}
+		// trigger image lazy loading
+		$friendsList.find('.antiscroll-inner').scroll();
 	});
 	var $friendsList = $('#friends-list').antiscroll({x: false, width: '100%'})
 	.on('mouseover', '.friend-status', function() {
@@ -591,7 +593,7 @@ $(function() {
 	}
 	updateInviteCache();
 
-	const friendsToShow = 20;
+	const friendsToShow = 40;
 	const friendsShowing = [];
 	var moreFriends = true;
 	function prepInviteTab(moreToShow) {
@@ -615,39 +617,44 @@ $(function() {
 			if (friends.length < moreToShow) {
 				moreFriends = false;
 			}
-			if (!moreToShow) friendsShowing.length = 0;
+			if (!moreToShow) {
+				nwFriendsTmpl.clear();
+				friendsShowing.length = 0;
+			}
 			friendsShowing.push.apply(friendsShowing, friends);
-			nwFriendsTmpl.render(friendsShowing);
+			nwFriendsTmpl.append(friends);
+			$('.invite-pic').lazyload({ container: $nwFriends.find('.antiscroll-inner') });
 		});
 	}
 	$('.invite-filters>a').click(function () {
 		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 		filterFriends();
 	});
-	$('.invite-filter').keyup(filterFriends);
+	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
 		var fullSocialId = $(this).closest('.invite-friend').data('value');
 		// TODO(greg): figure out why this doesn't work cross-domain
 		var $form = $(this).closest('form').attr('action', '/invite').off('submit');
 		if (fullSocialId.indexOf("facebook/") === 0) {
-			$form.submit();
+			window.open("about:blank", fullSocialId, "height=600,width=800,left=200,top=200", false);
+			$form.attr('target', fullSocialId).submit();
 		} else if (fullSocialId.indexOf("linkedin/") === 0) {
-			var $popup = $form.find('.invite-message-dialog').show().off('click');
+			var $popup = $form.find('.invite-message-dialog').addClass('showing').off('click');
 			$popup.on('click', '.invite-cancel', function (e) {
 				e.preventDefault();
-				$popup.hide();
+				$popup.removeClass('showing');
 			});
 			$form.on('submit', function (e) {
 				e.preventDefault();
 				$.post($form.attr('action'), $form.serialize()).complete(function(xhr) {
 					if (xhr.status >= 400) {
 						console.log('error sending invite: ', xhr);
-						prepInviteTab();
 					} else {
 						console.log('sent invite');
-						$popup.fadeOut({ duration: 500, complete: prepInviteTab.bind(null) });
+						$popup.removeClass('showing');
 					}
 					updateInviteCache();
+					prepInviteTab();
 				});
 			});
 		}
@@ -899,7 +906,7 @@ $(function() {
 	}).on("mouseout", "a", function() {
 		$(this).removeClass("hover");
 	}).on("mouseup mousedown", ".coll-remove", function(e) {
-		if (e.which > 1) return;
+		if (e.which > 1 || !$collMenu.hasClass('showing')) return;
 		hideCollMenu();
 		var $coll = $collMenu.closest(".collection");
 		var collId = $coll.data("id");
@@ -918,7 +925,7 @@ $(function() {
 			$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
 		}).error(showMessage.bind(null, 'Could not delete collection, please try again later'));
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
-		if (e.which > 1) return;
+		if (e.which > 1 || !$collMenu.hasClass('showing')) return;
 		hideCollMenu();
 		var $coll = $collMenu.closest(".collection").addClass("renaming").each(function() {
 			var scrEl = $collList.find(".antiscroll-inner")[0], oT = this.offsetTop;
@@ -1143,7 +1150,7 @@ $(function() {
 	var $collList = $("#collections-list")
 	.each(function() {this.style.top = this.offsetTop + "px"})
 	.addClass("positioned")
-	.antiscroll({x: false, width: "100%"})
+	.antiscroll({x: false, width: "100%", autoHide: false})
 	.sortable({
 		axis: "y",
 		items: ".collection",
