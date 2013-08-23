@@ -18,8 +18,18 @@ import com.google.inject.{Inject, ImplementedBy}
 
 import scala.concurrent.duration._
 import scala.concurrent.Await
+import scala.util.matching.Regex.Match
 
 import akka.util.Timeout
+
+
+object MessageLookHereRemover {
+  private[this] val lookHereRegex = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
+
+  def apply(text: String): String = {
+    lookHereRegex.replaceAllIn(text, (m: Match) => m.group(1))
+  }
+}
 
 
 case object SendEmails
@@ -53,7 +63,7 @@ class ElizaEmailNotifierActor @Inject() (
           messageRepo.get(thread.id.get, 0, None)
         }}.map{ message =>
           val user = id2BasicUser(message.from.get)
-          (user.firstName + " " + user.lastName, user.externalId.id, message.messageText)
+          (user.firstName + " " + user.lastName, user.externalId.id, MessageLookHereRemover(message.messageText))
         } reverse
 
         if (unseenMessages.nonEmpty) {
