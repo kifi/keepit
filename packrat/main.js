@@ -1217,7 +1217,6 @@ function connectSync() {
   getRules();
   getFriends();
   getPrefs();
-  syncNumNotificationsNotVisited();
 }
 
 function authenticate(callback, retryMs) {
@@ -1251,6 +1250,7 @@ function startSession(callback, retryMs) {
       reportError("socket disconnect (" + why + ")");
     });
     logEvent.catchUp();
+    syncNumNotificationsNotVisited();
 
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
