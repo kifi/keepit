@@ -27,7 +27,7 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
          }
 
          var changes = db.readOnly{ implicit s =>
-           changedURIRepo.getChangesSince(SequenceNumber.ZERO, -1)
+           changedURIRepo.getChangesSince(SequenceNumber.ZERO, -1, ChangedURIStates.ACTIVE)
          }
          changes.size === 5
          val lastSeq = changes.last.seq
@@ -40,15 +40,15 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
          }
 
          changes = db.readOnly{ implicit s =>
-           changedURIRepo.getChangesSince(lastSeq, -1)
+           changedURIRepo.getChangesSince(lastSeq, -1, ChangedURIStates.ACTIVE)
          }
 
          changes.size === 3
 
          db.readOnly { implicit s =>
            changedURIRepo.getHighestSeqNum() === Some(SequenceNumber(8))
-           changedURIRepo.getChangesSince(SequenceNumber(0), -1).map{_.seq.value}.toArray === (1 to 8).toArray
-           changedURIRepo.getChangesBetween(SequenceNumber(2), SequenceNumber(6)).map(_.seq.value).toArray === (3 to 6).toArray
+           changedURIRepo.getChangesSince(SequenceNumber(0), -1, ChangedURIStates.ACTIVE).map{_.seq.value}.toArray === (1 to 8).toArray
+           changedURIRepo.getChangesBetween(SequenceNumber(2), SequenceNumber(6), ChangedURIStates.ACTIVE).map(_.seq.value).toArray === (3 to 6).toArray
      
            changedURIRepo.page(0, 3).map(_.seq.value).toArray === Array(8, 7, 6)
            changedURIRepo.page(1, 3).map(_.seq.value).toArray === Array(5, 4, 3)
