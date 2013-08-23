@@ -5,7 +5,7 @@ var xhrBase = xhrDomain + '/site';
 var compareSearch = {usage: "search", sensitivity: "base"};
 var compareSort = {numeric: true};
 
-$.ajaxSetup({crossDomain: true, xhrFields: {withCredentials: true}});
+$.ajaxSetup({cache: true, crossDomain: true, xhrFields: {withCredentials: true}});
 
 $.timeago.settings.localeTitle = true;
 $.extend($.timeago.settings.strings, {
