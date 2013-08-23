@@ -636,7 +636,7 @@ $(function() {
 		// TODO(greg): figure out why this doesn't work cross-domain
 		var $form = $(this).closest('form').attr('action', '/invite').off('submit');
 		if (fullSocialId.indexOf("facebook/") === 0) {
-			window.open("about:blank", fullSocialId, "height=600,width=800,left=200,top=200", false);
+			window.open("about:blank", fullSocialId, "height=640,width=1060,left=200,top=200", false);
 			$form.attr('target', fullSocialId).submit();
 		} else if (fullSocialId.indexOf("linkedin/") === 0) {
 			var $popup = $form.find('.invite-message-dialog').addClass('showing').off('click');
