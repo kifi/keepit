@@ -154,10 +154,12 @@ class UriIntegrityActor @Inject()(
   
   private def batchUpdateMerge() = {
     val toMerge = getOverDueList(fetchSize = 50)
+    log.info(s"batch merge uris: ${toMerge.size} pair of uris to be merged")
     val toScrape = db.readWrite{ implicit s =>
       toMerge.map{ change => processMerge(change) }
     }
     toMerge.sortBy(_.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.seq.value) }
+    log.info(s"batch merge uris completed in database: ${toMerge.size} pair of uris merged. zookeeper seqNum updated. start scraping ${toScrape.size} pages")
     toScrape.filter(_.isDefined).map{ x => scraper.asyncScrape(x.get)}
   }
   
