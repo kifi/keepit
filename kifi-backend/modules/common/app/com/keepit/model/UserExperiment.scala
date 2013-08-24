@@ -30,6 +30,7 @@ object ExperimentTypes {
   val BLOCK = State[ExperimentType]("block")
   val INACTIVE = State[ExperimentType]("inactive")
   val NO_SEARCH_EXPERIMENTS = State[ExperimentType]("no search experiments")
+  val NOT_SENSITIVE = State[ExperimentType]("not sensitive")
   val CAN_INVITE = State[ExperimentType]("can invite")
   val CAN_MESSAGE_ALL_USERS = State[ExperimentType]("can message all users")
 
@@ -41,6 +42,7 @@ object ExperimentTypes {
     case WEBSITE.value => WEBSITE
     case FAKE.value => FAKE
     case BLOCK.value => BLOCK
+    case NOT_SENSITIVE.value => NOT_SENSITIVE
     case INACTIVE.value => INACTIVE
     case NO_SEARCH_EXPERIMENTS.value => NO_SEARCH_EXPERIMENTS
     case CAN_INVITE.value => CAN_INVITE
