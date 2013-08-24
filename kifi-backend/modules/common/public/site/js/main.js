@@ -632,6 +632,8 @@ $(function() {
 		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 		filterFriends();
 	});
+	var $inviteMessageDialog = $('.invite-message-dialog').remove();
+	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
 	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
 		var fullSocialId = $(this).closest('.invite-friend').data('value');
@@ -641,10 +643,11 @@ $(function() {
 			window.open("about:blank", fullSocialId, "height=640,width=1060,left=200,top=200", false);
 			$form.attr('target', fullSocialId).submit();
 		} else if (fullSocialId.indexOf("linkedin/") === 0) {
-			var $popup = $form.find('.invite-message-dialog').addClass('showing').off('click');
+			inviteMessageDialogTmpl.render({ label: $(this).closest('.invite-friend').find('.invite-name').text() });
+			var $popup = $inviteMessageDialog.appendTo($form).off('click');
 			$popup.on('click', '.invite-cancel', function (e) {
 				e.preventDefault();
-				$popup.removeClass('showing');
+				$popup.remove();
 			});
 			$form.on('submit', function (e) {
 				e.preventDefault();
@@ -653,7 +656,7 @@ $(function() {
 						console.log('error sending invite: ', xhr);
 					} else {
 						console.log('sent invite');
-						$popup.removeClass('showing');
+						$popup.remove();
 					}
 					updateInviteCache();
 					prepInviteTab();
