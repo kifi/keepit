@@ -15,6 +15,7 @@ import scala.math._
 object Signature {
   def apply(arr: Array[Byte]) = new Signature(arr)
   def apply(base64: String) = new Signature(parseBase64Binary(base64))
+  def apply(fields: Seq[String]): Signature = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
 }
 
 class Signature(val bytes: Array[Byte]) {

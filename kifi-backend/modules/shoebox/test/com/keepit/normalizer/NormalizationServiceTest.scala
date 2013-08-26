@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import com.keepit.test.ShoeboxTestInjector
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.scraper.{Signature, FakeScraperModule}
+import com.keepit.scraper.{BasicArticle, Signature, FakeScraperModule}
 import com.keepit.model.{NormalizedURIStates, NormalizedURI, Normalization}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
@@ -19,10 +19,10 @@ import com.google.inject.Injector
 
 class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
 
-  val fakeSignatures: PartialFunction[String, Signature] = {
-    case "https://vimeo.com/48578814" => Signature("woods")
-    case "http://vimeo.com/48578814" => Signature("woods")
-    case "http://www.vimeo.com/48578814" => Signature("woods")
+  val fakeArticles: PartialFunction[String, BasicArticle] = {
+    case "https://vimeo.com/48578814" => BasicArticle("woods", "")
+    case "http://vimeo.com/48578814" => BasicArticle("woods", "")
+    case "http://www.vimeo.com/48578814" => BasicArticle("woods", "")
   }
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
@@ -32,7 +32,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
     result
   }
 
-  val modules = Seq(TestFortyTwoModule(), FakeDiscoveryModule(), FakeScraperModule(Some(fakeSignatures)), StandaloneTestActorSystemModule(), new ScalaModule { def configure() { bind[NormalizationService].to[NormalizationServiceImpl] }})
+  val modules = Seq(TestFortyTwoModule(), FakeDiscoveryModule(), FakeScraperModule(Some(fakeArticles)), StandaloneTestActorSystemModule(), new ScalaModule { def configure() { bind[NormalizationService].to[NormalizationServiceImpl] }})
 
 
   "NormalizationService" should {

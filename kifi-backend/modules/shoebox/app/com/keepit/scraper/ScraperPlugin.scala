@@ -23,7 +23,7 @@ import com.keepit.inject.AppScoped
 
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
-case class GetSignature(url: String)
+case class ScrapeBasicArticle(url: String)
 
 private[scraper] class ScraperActor @Inject() (
     scraper: Scraper,
@@ -39,12 +39,12 @@ private[scraper] class ScraperActor @Inject() (
   }
 }
 
-private[scraper] class ScrapeSignatureActor @Inject() (
+private[scraper] class ReadOnlyScraperActor @Inject() (
   scraper: Scraper,
   healthcheckPlugin: HealthcheckPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
   def receive() = {
-    case GetSignature(url) => sender ! scraper.getSignature(url)
+    case ScrapeBasicArticle(url) => sender ! scraper.getBasicArticle(url)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
@@ -52,12 +52,12 @@ private[scraper] class ScrapeSignatureActor @Inject() (
 trait ScraperPlugin extends Plugin {
   def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]]
   def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])]
-  def asyncSignature(url: String): Future[Option[Signature]]
+  def scrapeBasicArticle(url: String): Future[Option[BasicArticle]]
 }
 
 class ScraperPluginImpl @Inject() (
     actor: ActorInstance[ScraperActor],
-    signatureActor: ActorInstance[ScrapeSignatureActor],
+    readOnlyActor: ActorInstance[ReadOnlyScraperActor],
     scraper: Scraper,
     val schedulingProperties: SchedulingProperties) //only on leader
   extends ScraperPlugin with SchedulingPlugin with Logging {
@@ -81,6 +81,6 @@ class ScraperPluginImpl @Inject() (
   override def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] =
     actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
 
-  override def asyncSignature(url: String): Future[Option[Signature]] =
-    signatureActor.ref.ask(GetSignature(url))(1 minutes).mapTo[Option[Signature]]
+  override def scrapeBasicArticle(url: String): Future[Option[BasicArticle]] =
+    readOnlyActor.ref.ask(ScrapeBasicArticle(url))(1 minutes).mapTo[Option[BasicArticle]]
 }

@@ -5,7 +5,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.model._
 import com.keepit.common.logging.Logging
-import com.keepit.scraper.ScraperPlugin
+import com.keepit.scraper.{Signature, ScraperPlugin}
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import scala.util.{Try, Failure}
 import com.keepit.common.healthcheck.HealthcheckError
@@ -174,7 +174,11 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private case class SignatureCheck(referenceUrl: String, trustedDomain: String) extends ContentCheck {
-    lazy val referenceContentSignatureFuture = scraperPlugin.asyncSignature(referenceUrl)
+    private def signature(url: String): Future[Option[Signature]] = scraperPlugin.scrapeBasicArticle(url).map { articleOption =>
+      articleOption.map { article => Signature(Seq(article.title, article.description.getOrElse(""), article.content)) }
+    }
+
+    private lazy val referenceContentSignatureFuture = signature(referenceUrl)
     var failedContentChecks = Set.empty[String]
     var referenceUrlIsBroken = false
 
@@ -184,7 +188,7 @@ class NormalizationServiceImpl @Inject() (
       if (referenceUrlIsBroken || failedContentChecks.contains(alternateUrl) || failedContentCheckRepo.contains(referenceUrl, alternateUrl)) Future.successful(false)
       else for {
         currentContentSignatureOption <- referenceContentSignatureFuture
-        candidateContentSignatureOption <- if (currentContentSignatureOption.isDefined) scraperPlugin.asyncSignature(alternateUrl) else Future.successful(None)
+        candidateContentSignatureOption <- if (currentContentSignatureOption.isDefined) signature(alternateUrl) else Future.successful(None)
       } yield (currentContentSignatureOption, candidateContentSignatureOption) match {
           case (Some(currentContentSignature), Some(candidateContentSignature)) => currentContentSignature.similarTo(candidateContentSignature) > 0.9
           case (Some(_), None) => {
@@ -209,7 +213,7 @@ class NormalizationServiceImpl @Inject() (
     val linkedInPublicProfile = new Regex("""^http://www\.linkedin\.com/in/(\w+)$""", "name")
 
     def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && linkedInPublicProfile.findFirstIn(candidate.url).isDefined
-    protected def check(publicProfileCandidate: NormalizationCandidate)(implicit session: RSession) = Future.successful(false) // TO BE IMPLEMENTED
+    protected def check(publicProfileCandidate: NormalizationCandidate)(implicit session: RSession) = Future.successful(false)
     def persistFailedContentChecks() = {}
   }
 
