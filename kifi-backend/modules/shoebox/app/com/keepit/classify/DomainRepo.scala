@@ -49,5 +49,5 @@ class DomainRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) exte
     (for (d <- table if d.state =!= excludeState.orNull && d.manualSensitive.isNotNull) yield d).list
 
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RSession): Int =
-    (for (d <- table if d.id.inSet(domainIds)) yield d.autoSensitive).update(value)
+    (for (d <- table if d.id.inSet(domainIds)) yield d.autoSensitive ~ d.updatedAt).update(value -> clock.now())
 }
