@@ -85,12 +85,13 @@ home-grown at FortyTwo, not intended for distribution (yet)
     if (data.opts.hideAfter) {
       data.hide = setTimeout(hide.bind(this), data.opts.hideAfter);
     }
+    $(document).on('mousewheel.hoverfu', hide.bind(this));
   }
   function hide() {
     var data = getData(this);
     clearTimeout(data.show || data.hide);
     delete data.show, delete data.hide;
-    $(document).off("mousemove.hoverfu");
+    $(document).off('mousewheel.hoverfu mousemove.hoverfu');
     if (data.showing) {
       data.showing = false;
       data.fadeOutStartTime = Date.now();
