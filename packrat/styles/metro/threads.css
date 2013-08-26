@@ -61,11 +61,13 @@ span.kifi-thread-msg-count {
   background-color: #e74c3c;
   color: #fff;
 }
-.kifi-thread-snippet {
+.kifi-thread>p.kifi-thread-snippet {
   margin: 22px 24px 10px 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: inherit;
+  line-height: 1;
 }
 .kifi-thread-arr {
   position: absolute;
