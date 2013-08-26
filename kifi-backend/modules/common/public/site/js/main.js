@@ -644,7 +644,7 @@ $(function() {
 			$form.attr('target', fullSocialId).submit();
 		} else if (fullSocialId.indexOf("linkedin/") === 0) {
 			inviteMessageDialogTmpl.render({ label: $(this).closest('.invite-friend').find('.invite-name').text() });
-			var $popup = $inviteMessageDialog.appendTo($form).off('click');
+			var $popup = $inviteMessageDialog.appendTo($form);
 			$popup.on('click', '.invite-cancel', function (e) {
 				e.preventDefault();
 				$popup.remove();
