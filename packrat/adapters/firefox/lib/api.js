@@ -24,7 +24,6 @@ const {Listeners} = require("./listeners");
 const icon = require("./icon");
 const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
-const privateMode = require("sdk/private-browsing");
 const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(\.[a-z]{2})?\/(|search|webhp)\?(|.*&)q=([^&]*)/;
 
 const pages = {}, workers = {}, tabsById = {};  // all by tab.id
@@ -397,7 +396,7 @@ tabs
 })
 .on("activate", function(tab) {
   var page = pages[tab.id];
-  if ((!page || !page.active) && !privateMode.isPrivate(tab)) {
+  if (!page || !page.active) {
     exports.log("[tabs.activate]", tab.id, tab.url);
     if (!/^about:/.test(tab.url)) {
       if (page) {
@@ -425,19 +424,16 @@ tabs
   }
 })
 .on("ready", function(tab) {
-  if (privateMode.isPrivate(tab)) return;
   exports.log("[tabs.ready]", tab.id, tab.url);
   pages[tab.id] || createPage(tab);
 });
 
 windows
 .on("open", function(win) {
-  if (privateMode.isPrivate(win)) return;
   exports.log("[windows.open]", win.title);
   win.removeIcon = icon.addToWindow(win, onIconClick);
 })
 .on("close", function(win) {
-  if (privateMode.isPrivate(win)) return;
   exports.log("[windows.close]", win.title);
   removeFromWindow(win);
 })
@@ -455,7 +451,6 @@ windows
 });
 
 for each (let win in windows) {
-  if (privateMode.isPrivate(win)) continue;
   if (!win.removeIcon) {
     exports.log("[windows] adding icon to window:", win.title);
     win.removeIcon = icon.addToWindow(win, onIconClick);
@@ -476,7 +471,6 @@ PageMod({
   contentScriptWhen: "start",
   attachTo: ["existing", "top"],
   onAttach: function(worker) {
-    if (privateMode.isPrivate(worker.tab)) return;
     var tab = worker.tab;
     exports.log("[onAttach]", tab.id, "start.js", tab.url);
     worker.port.on("api:start", function() {
@@ -513,7 +507,6 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentScriptOptions: {dataUriPrefix: url(""), dev: prefs.env == "development"},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
-        if (privateMode.isPrivate(worker.tab)) return;
         let tab = worker.tab, page = pages[tab.id];
         exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
         let injected = markInjected({}, o);
