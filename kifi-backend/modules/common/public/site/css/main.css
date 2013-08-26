@@ -337,9 +337,6 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .keep.mine .keep-who>.others {display: none}
 .keep-who>.me {border-radius: 50% 0 0 50%}
 .keep-who>.me:last-of-type {border-radius: 50%}
-.keep-who>.pic>.fr-card {bottom: 36px; left: -22px; z-index: 2}
-.keep-who>.pic>.fr-card::before,
-.keep-who>.pic>.fr-card::after {left: 33px}
 .keep-who-text {vertical-align: middle; margin-left: 4px; font-size: 12px; color: #99a3b3}
 .keep.mine .me+.keep-who-text {margin-left: 7px}
 .keep:not(.mine) .me+.keep-who-text {margin-left: 0}
@@ -456,9 +453,6 @@ a.page-priv[href]:active {background-color: #8699ab}
 .page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding: 11px 0 0}
 .page-who-pics {margin: 5px 0 13px; white-space: nowrap}
 .page-who-pics>.pic {display: inline-block; width: 38px; height: 38px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
-.page-who-pics>.pic>.fr-card {bottom: 51px; left: -22px}
-.page-who-pics>.pic>.fr-card::before,
-.page-who-pics>.pic>.fr-card::after {left: 33px}
 .page-who-text {font-size: 12px; line-height: 12px}
 :not([data-kept^=p])>*>.page-who-pics>.me,
 :not([data-kept^=p])>*>.page-who-text>.keep-you,
@@ -518,16 +512,22 @@ span.long-text, a.long-text {display: inline-block}
 .fr-card {
   position: absolute; min-width: 300px; background-color: #fff; color: #faf9f9; box-shadow: 2px 5px 12px rgba(0,0,0,.3); border: 1px solid #929496;
   text-align: left; line-height: normal; cursor: default; opacity: 0;
-  -webkit-transform: translate(0, 3px); transform: translate(0, 3px);
   -webkit-transition: opacity linear, -webkit-transform ease-in-out;
   transition: opacity linear, -webkit-transform ease-in-out, transform ease-in-out;
   -webkit-transition-duration: 100ms; transition-duration: 100ms;
 }
-.kifi-hover-showing>.fr-card {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-duration: 60ms; transition-duration: 60ms}
-.fr-card::before,
-.fr-card::after {content: " "; position: absolute; top: 100%; height: 0; width: 0; left: 50%; border: solid transparent}
-.fr-card::before {margin-left: -9px; border-width: 9px; border-top-color: inherit}
-.fr-card::after {margin-left: -8px; border-width: 8px; border-top-color: #fff}
+.fr-card.bottom {-webkit-transform: translate(0,5px); transform: translate(0,5px)}
+.fr-card.top {-webkit-transform: translate(0,-5px); transform: translate(0,-5px)}
+.fr-card.showing {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-duration: 60ms; transition-duration: 60ms}
+.fr-card-tri {position: absolute; height: 0; width: 0}
+.bottom>.fr-card-tri {top: 100%; border-top-color: inherit}
+.top>.fr-card-tri {bottom: 100%; border-bottom-color: inherit}
+.fr-card-tri::before {content: " "; position: absolute; left: -9px; border: solid transparent}
+.fr-card-tri::after {content: " "; position: absolute; left: -8px; border: solid transparent}
+.bottom>.fr-card-tri::before {border-width: 9px 9px 0; border-top-color: inherit}
+.bottom>.fr-card-tri::after {border-width: 8px 8px 0; border-top-color: #fff}
+.top>.fr-card-tri::before {border-width: 0 9px 9px; border-bottom-color: inherit; bottom: 0}
+.top>.fr-card-tri::after {border-width: 0 8px 8px; border-bottom-color: #fff; bottom: 0}
 .fr-card .fr-card-top {display: table; padding: 20px 14px}
 .fr-card .fr-card-pic {display: table-cell; -moz-box-sizing: content-box; box-sizing: content-box; height: 100px; width: 100px; padding: 1px; background-color: #fff; border: 2px solid #dbdbdb; border-radius: 5px; float: left}
 .fr-card .fr-card-info {display: table-cell; vertical-align: top; padding-left: 14px; font-size: 12px; line-height: 13px; color: #808080}
