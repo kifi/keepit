@@ -687,7 +687,9 @@ function syncNumNotificationsNotVisited() {
   // much worse lately. I've had dificulty consistantly reproducing, so am adding this
   // sync in until we can identify the real issue counts get off. Could be related to
   // spotty internet, or some logic error above. -Andrew
-  socket.send(["get_unread_notifications_count"]);
+  if(socket && socket.send) {
+    socket.send(["get_unread_notifications_count"]);
+  }
 }
 
 // id is of last read message, timeStr is its createdAt time (not notification's).
