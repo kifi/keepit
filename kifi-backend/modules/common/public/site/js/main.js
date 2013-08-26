@@ -365,16 +365,16 @@ $(function() {
 			$('.profile .save').click(function () {
 				var props = {};
 				var $editContainer = $(this).closest('.edit-container');
-				if (props['email']) {
-					props['emails'] = [props['email']];
-					delete props['email'];
-				}
 				$editContainer.find('.editable').each(function () {
 					var $this = $(this);
 					var value = $this.find('input').val();
 					$this.text(value);
 					props[$this.data('prop')] = value;
 				});
+				if (props['email']) {
+					props['emails'] = [props['email']];
+					delete props['email'];
+				}
 				var $save = $editContainer.find('.save')
 				var saveText = $save.text();
 				$save.text('Saving...');
@@ -643,8 +643,10 @@ $(function() {
 			window.open("about:blank", fullSocialId, "height=640,width=1060,left=200,top=200", false);
 			$form.attr('target', fullSocialId).submit();
 		} else if (fullSocialId.indexOf("linkedin/") === 0) {
-			inviteMessageDialogTmpl.render({ label: $(this).closest('.invite-friend').find('.invite-name').text() });
-			var $popup = $inviteMessageDialog.appendTo($form);
+			inviteMessageDialogTmpl.render({
+				label: $(this).closest('.invite-friend').find('.invite-name').text()
+			});
+			var $popup =$inviteMessageDialog.appendTo($form).off('click');
 			$popup.on('click', '.invite-cancel', function (e) {
 				e.preventDefault();
 				$popup.remove();
