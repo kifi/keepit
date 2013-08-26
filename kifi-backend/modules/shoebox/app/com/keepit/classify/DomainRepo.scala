@@ -2,7 +2,7 @@ package com.keepit.classify
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.common.db.{Id, State}
 import com.keepit.common.db.slick.DBSession.RSession
 
