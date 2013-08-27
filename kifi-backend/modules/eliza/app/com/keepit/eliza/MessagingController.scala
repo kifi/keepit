@@ -316,13 +316,13 @@ class MessagingController @Inject() (
       db.readWrite{ implicit session => 
         userThreadRepo.setNotification(user, thread.id.get, message, notifJson)
       }
-      
-      future { notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getPendingNotificationCount(user))) }
 
       notificationRouter.sendToUser(
         user,
         Json.arr("notification", notifJson)
       )
+      
+      future { notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getPendingNotificationCount(user))) }
 
       shoebox.createDeepLink(message.from.get, user, thread.uriId.get, DeepLocator(locator))
 
@@ -409,7 +409,7 @@ class MessagingController @Inject() (
       participantSet.toSeq.map(id2BasicUser(_))
     )
 
-    thread.participants.map(_.all.foreach { user =>
+    thread.participants.map(_.all.par.foreach { user =>
       notificationRouter.sendToUser(
         user,
         Json.arr("message", message.threadExtId.id, messageWithBasicUser)
