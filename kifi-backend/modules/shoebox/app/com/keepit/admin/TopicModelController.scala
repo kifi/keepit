@@ -105,7 +105,7 @@ class TopicModelController  @Inject() (
 
   def getUserTopic = AdminHtmlAction { implicit request =>
 
-    def buildString(score: Array[Int], topK: Int = 5) = {
+    def buildString(score: Array[Int], topK: Int = 10) = {
       val newScore = currentAccessor.topicNameMapper.scoreMapper(score)
       val tops = newScore.zipWithIndex.filter(_._1 > 0).sortWith((a, b) => a._1 > b._1).take(topK).map{x => (x._2, x._1)}
       tops.map{x => currentAccessor.topicNameMapper.getMappedNameByNewId(x._1) + ": " + x._2}.mkString("\n")      // NOTE: use new id after score transformation

@@ -92,14 +92,10 @@ if [ "$1" == "package" ]; then
 
   if [ "$2" == "deploy" ]; then
     echo -e "\nDeploying Firefox extension to kifi.com"
-    scp out/kifi-beta.xpi fortytwo@marvin.keep42.com:
-    scp out/kifi-beta.update.rdf fortytwo@marvin.keep42.com:
-
-    echo
     for server in b01 b02; do
       echo "Uploading to $server..."
-      ssh fortytwo@marvin.keep42.com scp kifi-beta.* $server:www-install/
-    done
+      scp out/kifi-beta.xpi out/kifi-beta.update.rdf fortytwo@$server:www-install/
+      done
     echo "Done."
 
     echo -e "\n!! Please upload kifi-beta.zip to the Chrome Web Store at https://chrome.google.com/webstore/developer/dashboard"

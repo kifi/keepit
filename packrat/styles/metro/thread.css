@@ -54,11 +54,11 @@ img.kifi-message-pic.kifi-self {
   margin-bottom: 2px;
   font-weight: bold;
 }
-.kifi-message-body p {
+.kifi-message-body.kifi-message-body>p {
   line-height: 16px;
   color: #444;
 }
-.kifi-message-body p a[href] {
+.kifi-message-body>p>a[href] {
   text-decoration: underline;
 }
 .kifi-message-sent::after {

@@ -142,7 +142,7 @@ $(function() {
 					}
 					break;
 				default:
-					if (!$myKeeps.find('.keep-group-title.older').length) {
+					if ((li[0] || li[1] || li[2]) && !$myKeeps.find('.keep-group-title.older').length) {
 						$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
 					}
 					return false;
@@ -325,7 +325,7 @@ $(function() {
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
-			$main.attr("data-view", "profile");
+			$('body').attr("data-view", "profile");
 			$('.left-col .active').removeClass("active");
 			$('.profile').on('keydown keypress keyup', function (e) {
 				e.stopPropagation();
@@ -346,7 +346,7 @@ $(function() {
 								var $this = $(this);
 								var prop = $this.data("prop");
 								if (prop == 'email') {
-									$this.text(me['emails'][0]);
+									$this.text(me.emails[0]);
 								} else {
 									$this.text(me[prop]);
 								}
@@ -365,16 +365,16 @@ $(function() {
 			$('.profile .save').click(function () {
 				var props = {};
 				var $editContainer = $(this).closest('.edit-container');
-				if (props['email']) {
-					props['emails'] = [props['email']];
-					delete props['email'];
-				}
 				$editContainer.find('.editable').each(function () {
 					var $this = $(this);
 					var value = $this.find('input').val();
 					$this.text(value);
 					props[$this.data('prop')] = value;
 				});
+				if (props.email) {
+					props.emails = [props.email];
+					delete props.email;
+				}
 				var $save = $editContainer.find('.save')
 				var saveText = $save.text();
 				$save.text('Saving...');
@@ -387,10 +387,11 @@ $(function() {
 					$save.text(saveText);
 				});
 			});
-			$('.profile .networks a').each(function () {
+			$('.profile .networks li').each(function () {
 				var $this = $(this);
 				var name = $this.data('network');
 				if (!name) return;
+				var $a = $this.find('a.profile-nw');
 				var networkInfo = myNetworks.filter(function (nw) {
 					return nw.network === name;
 				})[0];
@@ -404,16 +405,16 @@ $(function() {
 						.remove();
 				};
 				if (networkInfo) {
-					$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
+					$a.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
 					if (myNetworks.length > 1) {
 						$('<a>').addClass('disconnect').text('Unlink')
 							.attr('href', 'javascript:')
 							.data('action', '/disconnect/' + name)
 							.click(postLink)
-							.appendTo($this.parent());
+							.appendTo($this);
 					}
 				} else {
-					$this.addClass('not-connected').attr('title', 'Click to connect')
+					$a.addClass('not-connected').attr('title', 'Click to connect')
 						.attr('href', 'javascript:')
 						.data('action', '/link/' + name)
 						.click(postLink);
@@ -421,7 +422,7 @@ $(function() {
 						.attr('href', 'javascript:')
 						.data('action', '/link/' + name)
 						.click(postLink)
-						.appendTo($this.parent());
+						.appendTo($this);
 				}
 			});
 		});
@@ -437,7 +438,7 @@ $(function() {
 	var $friendsTabPages = $friends.find('.friends-page');
 
 	function showFriends(path) {
-		$main.attr('data-view', 'friends');
+		$('body').attr('data-view', 'friends');
 		$('.left-col .active').removeClass('active');
 		$('.my-friends').addClass('active');
 		var $tab = $friendsTabs.filter('[data-href="' + path + '"]').removeAttr('href');
@@ -579,6 +580,7 @@ $(function() {
 		$nwFriendsLoading.hide();
 		nwFriendsScroller.refresh();
 	});
+	var inviteFilterTmpl = Tempo.prepare($('.above-invite-friends'))
 	var $nwFriendsLoading = $('.invite-friends-loading');
 	var friendsTimeout;
 	function filterFriends() {
@@ -624,25 +626,31 @@ $(function() {
 			friendsShowing.push.apply(friendsShowing, friends);
 			nwFriendsTmpl.append(friends);
 			$('.invite-pic').lazyload({ container: $nwFriends.find('.antiscroll-inner') });
+			inviteFilterTmpl.render({ results: friendsShowing.length, filter: filter });
 		});
 	}
 	$('.invite-filters>a').click(function () {
 		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 		filterFriends();
 	});
+	var $inviteMessageDialog = $('.invite-message-dialog').remove();
+	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
 	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
 		var fullSocialId = $(this).closest('.invite-friend').data('value');
 		// TODO(greg): figure out why this doesn't work cross-domain
 		var $form = $(this).closest('form').attr('action', '/invite').off('submit');
 		if (fullSocialId.indexOf("facebook/") === 0) {
-			window.open("about:blank", fullSocialId, "height=600,width=800,left=200,top=200", false);
+			window.open("about:blank", fullSocialId, "height=640,width=1060,left=200,top=200", false);
 			$form.attr('target', fullSocialId).submit();
 		} else if (fullSocialId.indexOf("linkedin/") === 0) {
-			var $popup = $form.find('.invite-message-dialog').addClass('showing').off('click');
+			inviteMessageDialogTmpl.render({
+				label: $(this).closest('.invite-friend').find('.invite-name').text()
+			});
+			var $popup =$inviteMessageDialog.appendTo($form).off('click');
 			$popup.on('click', '.invite-cancel', function (e) {
 				e.preventDefault();
-				$popup.removeClass('showing');
+				$popup.remove();
 			});
 			$form.on('submit', function (e) {
 				e.preventDefault();
@@ -651,7 +659,7 @@ $(function() {
 						console.log('error sending invite: ', xhr);
 					} else {
 						console.log('sent invite');
-						$popup.removeClass('showing');
+						$popup.remove();
 					}
 					updateInviteCache();
 					prepInviteTab();
@@ -699,7 +707,7 @@ $(function() {
 	}
 
 	function showBlog() {
-		$main.attr('data-view', 'blog');
+		$('body').attr('data-view', 'blog');
 		$('.left-col .active').removeClass('active');
 		var $blog = $('iframe.blog');
 		if(!$blog.attr('src')) {
@@ -720,7 +728,7 @@ $(function() {
 		}
 		console.log("[doSearch] " + (searchResponse ? "more " : "") + "q:", q);
 		$('.left-col .active').removeClass('active');
-		$main.attr("data-view", "search");
+		$('body').attr("data-view", "search");
 		if (!searchResponse) {
 			subtitleTmpl.render({searching: true});
 			$checkAll.removeClass('live checked');
@@ -800,8 +808,8 @@ $(function() {
 		$h3.filter(".active").removeClass("active");
 		$h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps").addClass("active");
 
-		var fromSearch = $main.attr("data-view") == "search";
-		$main.attr("data-view", "mine");
+		var fromSearch = $('body').attr("data-view") == "search";
+		$('body').attr("data-view", "mine");
 		$mainHead.find("h1").text(collId ? collections[collId].name : "Browse your Keeps");
 
 		$results.empty();
@@ -1070,8 +1078,8 @@ $(function() {
 	}).on("click", ".keep-title>a", function(e) {
 		e.stopPropagation();
 	}).on("click", ".keep", function(e) {
-		var $keep = $(this), $keeps = $main.find(".keep");
-		if ($(e.target).hasClass("keep-checkbox") || $(e.target).hasClass("handle")) {
+		var $keep = $(this), $keeps = $main.find(".keep"), $el = $(e.target);
+		if ($el.hasClass("keep-checkbox") || $el.hasClass("handle")) {
 			$keep.toggleClass("selected");
 			var $selected = $keeps.filter(".selected");
 			$checkAll.toggleClass("checked", $selected.length == $keeps.length);
@@ -1081,6 +1089,8 @@ $(function() {
 			    $keeps.filter(".detailed:not(.selected)").removeClass("detailed").length == 0) {
 				return;  // avoid redrawing same details
 			}
+		} else if ($el.hasClass("pic")) {
+			return;
 		} else if ($keep.hasClass("selected")) {
 			$keeps.filter(".selected").toggleClass("detailed");
 			$keeps.not(".selected").removeClass("detailed");
@@ -1652,14 +1662,18 @@ $(function() {
 
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
-	$.getScript('js/jquery-bindhover.js').done(function() {
-		$(document).bindHover(".pic:not(.me)", function(configureHover) {
-			var $a = $(this), id = $a.data('id');
-			friendCardTmpl.into(this).render({
+	$.getScript('js/jquery-hoverfu.min.js').done(function() {
+		$(document).hoverfu(".pic:not(.me)", function(configureHover) {
+			var $a = $(this), id = $a.data('id'), $temp = $('<div>');
+			friendCardTmpl.into($temp).append({
 				name: $a.data('name'),
 				picUri: formatPicUrl(id, $a.css('background-image').match(/\/([^\/]*)['"]?\)$/)[1], 200)});
-			var $el = $a.children();
-			configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+			var $el = $temp.children().detach();
+			configureHover($el, {
+				position: {my: "left-33 bottom-13", at: "center top", of: $a, collision: "flipfit flip", using: show},
+				canLeaveFor: 600,
+				hideAfter: 4000,
+				click: "toggle"});
 			$.getJSON(xhrBase + '/user/' + id + '/networks', function(networks) {
 				for (nw in networks) {
 					console.log("[networks]", nw, networks[nw]);
@@ -1668,5 +1682,9 @@ $(function() {
 				}
 			});
 		});
+		function show(pos, o) {
+			o.element.element.css(pos).addClass(o.horizontal + ' ' + o.vertical)
+				.find(".fr-card-tri").css('left', Math.round(o.target.left - o.element.left + .5 * o.target.width));
+		}
 	});
 });

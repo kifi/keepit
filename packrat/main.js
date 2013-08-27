@@ -689,7 +689,9 @@ function syncNumNotificationsNotVisited() {
   // much worse lately. I've had dificulty consistantly reproducing, so am adding this
   // sync in until we can identify the real issue counts get off. Could be related to
   // spotty internet, or some logic error above. -Andrew
-  socket.send(["get_unread_notifications_count"]);
+  if(socket && socket.send) {
+    socket.send(["get_unread_notifications_count"]);
+  }
 }
 
 // id is of last read message, timeStr is its createdAt time (not notification's).
@@ -764,9 +766,9 @@ function getTimeLastRead(n, d) {
 }
 
 function createDeepLinkListener(locator, tabId) {
-  var createdTime = new Date;
+  var createdTime = Date.now();
   api.tabs.on.ready.add(function deepLinkListener(tab) {
-    if (new Date - createdTime > 15000) {
+    if (Date.now() - createdTime > 15000) {
       api.tabs.on.ready.remove(deepLinkListener);
       api.log("[createDeepLinkListener] Listener timed out.");
       return;
@@ -1219,7 +1221,6 @@ function connectSync() {
   getRules();
   getFriends();
   getPrefs();
-  syncNumNotificationsNotVisited();
 }
 
 function authenticate(callback, retryMs) {
@@ -1253,6 +1254,7 @@ function startSession(callback, retryMs) {
       reportError("socket disconnect (" + why + ")");
     });
     logEvent.catchUp();
+    syncNumNotificationsNotVisited();
 
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);

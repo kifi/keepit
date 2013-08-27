@@ -2,7 +2,7 @@ package com.keepit.classify
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.common.db.{Id, State}
 import com.keepit.common.db.slick.DBSession.RSession
 
@@ -49,5 +49,5 @@ class DomainRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) exte
     (for (d <- table if d.state =!= excludeState.orNull && d.manualSensitive.isNotNull) yield d).list
 
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RSession): Int =
-    (for (d <- table if d.id.inSet(domainIds)) yield d.autoSensitive).update(value)
+    (for (d <- table if d.id.inSet(domainIds)) yield d.autoSensitive ~ d.updatedAt).update(value -> clock.now())
 }
