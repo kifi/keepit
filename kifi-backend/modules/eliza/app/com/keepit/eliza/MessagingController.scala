@@ -345,7 +345,7 @@ class MessagingController @Inject() (
   def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urls: JsObject, titleOpt: Option[String], messageText: String) : Message = {
     val participants = recipients + from
     val urlOpt = (urls \ "url").asOpt[String]
-    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(urls), 10 seconds)} // todo: Remove Await
+    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(urls), 2 seconds)} // todo: Remove Await
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val thread = db.readWrite{ implicit session =>
       val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
