@@ -43,6 +43,7 @@ class UriIntegrityActor @Inject()(
   scrapeInfoRepo: ScrapeInfoRepo,
   uriNormRuleRepo: UriNormalizationRuleRepo,
   changedUriRepo: ChangedURIRepo,
+  keepToCollectionRepo: KeepToCollectionRepo,
   centralConfig: CentralConfig,
   healthcheckPlugin: HealthcheckPlugin,
   scraper: ScraperPlugin
@@ -94,9 +95,35 @@ class UriIntegrityActor @Inject()(
         scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
       }
 
-      bookmarkRepo.getByUri(oldUriId).groupBy(_.userId).foreach{ case (userId, bms) =>
-        bms.foreach{ bm => bookmarkRepo.save(bm.withActive(false)) }
-        if (bookmarkRepo.getByUriAndUser(newUriId, userId).size == 0) bms.take(1).map{ bm => bookmarkRepo.save(bm.withNormUriId(newUriId).withActive(true)) }        
+      /**
+       * ensure uniqueness of bookmarks during merge.
+       */
+      val changedBms = bookmarkRepo.getByUri(oldUriId, excludeState = None).groupBy(_.userId).map{ case (userId, bms) =>
+        assume(bms.size == 1, s"user ${userId.id} has multiple bookmarks referencing uri ${oldUriId}")
+        val oldBm = bms.head
+        bookmarkRepo.getByUriAndUser(newUriId, userId, excludeState = None) match {
+          case None => bookmarkRepo.save(oldBm.withNormUriId(newUriId)); (None, None) 
+          case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
+            bookmarkRepo.save(oldBm.withActive(false)); (Some(oldBm), Some(bm))
+          } else (None, None)
+        }
+      }
+
+      changedBms.map { pair =>
+        pair match {
+          case (Some(oldBm), Some(newBm)) => {
+            val co1 = keepToCollectionRepo.getCollectionsForBookmark(oldBm.id.get).toSet
+            val co2 = keepToCollectionRepo.getCollectionsForBookmark(newBm.id.get).toSet
+            val inter = (co1 & co2)
+            val diff = co1 -- co2
+            keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).foreach { ktc =>
+              if (inter.contains(ktc.collectionId)) keepToCollectionRepo.save(ktc.withState(KeepToCollectionStates.INACTIVE))
+              if (diff.contains(ktc.collectionId)) keepToCollectionRepo.save(ktc.copy(bookmarkId = newBm.id.get))
+            }
+          }
+          case _ =>
+        }
+
       }
 
       commentRepo.getByUri(oldUriId).map{ cm =>
