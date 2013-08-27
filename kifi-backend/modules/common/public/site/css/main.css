@@ -27,18 +27,18 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .header-logo {display: inline-block; width: 51px; height: 29px; background: url(../img/kifi-logo.png) 0/100%}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
 .my-pic {display: block; width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
-.my-pic::before { display: block; background: rgba(192, 192, 192, .95) url(../img/pencil.png) center center no-repeat padding-box; border: 33px solid transparent; box-sizing: border-box; -moz-box-sizing: border-box; width: 66px; height: 66px; border-radius: 50%; content: " "; background-size: 14px; }
-.my-pic:hover::before, body[data-view=profile] .my-pic::before { border-width: 7px; border-color: rgba(192, 192, 192, .5); transition: border-width .4s ease-in-out; }
-body[data-view=profile] .my-pic::before { transition: none; animation-name: edit-profile; -webkit-animation-name: edit-profile; animation-duration: 0.5s; -webkit-animation-duration: 0.5s; }
+.my-pic::before { display: block; border: 34px solid transparent; background: #abb8c8 url(../img/pencil.png) center center no-repeat padding-box; transition: border-width .25s ease-in-out, border-color .25s ease-in-out; box-sizing: border-box; -moz-box-sizing: border-box; width: 66px; height: 66px; border-radius: 50%; content: " "; background-size: 14px; }
+.my-pic:hover::before, body[data-view=profile] .my-pic::before { border-width: 8px; border-color: rgba(81, 100, 123, .5); }
+body[data-view=profile] .my-pic::before { transition: none; animation-name: edit-profile; -webkit-animation-name: edit-profile; animation-duration: 0.25s; -webkit-animation-duration: 0.25s; }
 @-webkit-keyframes edit-profile {
-  0% { border-width: 7px; }
+  0% { border-width: 8px; }
   50% { border-width: 5px; }
-  100% { border-width: 7px; }
+  100% { border-width: 8px; }
 }
 @keyframes edit-profile {
-  0% { border-width: 7px; }
+  0% { border-width: 8px; }
   50% { border-width: 5px; }
-  100% { border-width: 7px; }
+  100% { border-width: 8px; }
 }
 .my-name {height: 28px; line-height: 28px; font-size: 16px}
 .my-name:first-child {padding-top: 80px}
