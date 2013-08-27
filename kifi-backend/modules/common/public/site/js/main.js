@@ -142,7 +142,7 @@ $(function() {
 					}
 					break;
 				default:
-					if (!$myKeeps.find('.keep-group-title.older').length) {
+					if ((li[0] || li[1] || li[2]) && !$myKeeps.find('.keep-group-title.older').length) {
 						$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
 					}
 					return false;
