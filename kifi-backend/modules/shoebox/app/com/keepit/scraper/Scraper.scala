@@ -68,8 +68,8 @@ class Scraper @Inject() (
     safeProcessURI(uri, info)
   }
 
-  def getBasicArticle(url: String): Option[BasicArticle] = {
-    val extractor = getExtractor(url)
+  def getBasicArticle(url: String, customExtractor: Option[Extractor] = None): Option[BasicArticle] = {
+    val extractor = customExtractor.getOrElse(getExtractor(url))
     try {
       val fetchStatus = httpFetcher.fetch(url) { input => extractor.process(input) }
 

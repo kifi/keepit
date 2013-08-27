@@ -16,13 +16,15 @@ import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.inject.TestFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
 import com.google.inject.Injector
+import com.keepit.scraper.extractor.Extractor
 
 class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
 
-  val fakeArticles: PartialFunction[String, BasicArticle] = {
-    case "https://vimeo.com/48578814" => BasicArticle("woods", "")
-    case "http://vimeo.com/48578814" => BasicArticle("woods", "")
-    case "http://www.vimeo.com/48578814" => BasicArticle("woods", "")
+  val fakeArticles: PartialFunction[(String, Option[Extractor]), BasicArticle] = {
+    case ("http://www.linkedin.com/pub/leonard\\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "")
+    case ("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "some script element")
+    case ("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content")
+    case ("http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content")
   }
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
@@ -88,11 +90,50 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         latestHttpsUri.normalization === Some(Normalization.CANONICAL)
       }
 
+      "redirect an existing canonical normalization to a most recent one" in new TestKitScope() {
+        val canonicalUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://vimeo.com/48578814") }.get
+        canonicalUri.normalization === Some(Normalization.CANONICAL)
+
+        val moreRecentCanonicalUri = updateNormalizationNow(canonicalUri, TrustedCandidate("http://vimeo.com/48578814", Normalization.CANONICAL)).get
+        moreRecentCanonicalUri.state != NormalizedURIStates.INACTIVE
+        moreRecentCanonicalUri.redirect == None
+        moreRecentCanonicalUri.redirectTime == None
+
+        val redirectedCanonicalUri = db.readOnly { implicit session => uriRepo.get(canonicalUri.id.get) }
+        redirectedCanonicalUri.redirect === Some(moreRecentCanonicalUri.id.get)
+        redirectedCanonicalUri.state === NormalizedURIStates.INACTIVE
+      }
+
       "ignore a random untrusted candidate" in new TestKitScope() {
         val httpsUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://vimeo.com/48578814") }.get
         val newReference = updateNormalizationNow(httpsUri, UntrustedCandidate("http://www.iamrandom.com", Normalization.CANONICAL), UntrustedCandidate("http://www.iamsociallyrandom.com", Normalization.OPENGRAPH))
         newReference === None
       }
+
+      "not normalize a LinkedIn private profile to its public url if ids do not match" in new TestKitScope() {
+        val privateUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/profile/view?id=17558679", normalization = Some(Normalization.HTTPSWWW))) }
+        updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leonard\\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)) == None
+      }
+
+      "normalize a LinkedIn private profile to its public url if ids match" in new TestKitScope() {
+        val privateUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }
+        val publicUri = updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)).get
+        val latestPrivateUri = db.readOnly { implicit session => uriRepo.get(privateUri.id.get) }
+        latestPrivateUri.redirect == Some(publicUri.id.get)
+        latestPrivateUri.state == NormalizedURIStates.INACTIVE
+      }
+
+      "normalize a LinkedIn private profile to a vanity public url" in new TestKitScope() {
+        val publicUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3").get }
+        val vanityUri = updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo", Normalization.CANONICAL)).get
+        val latestPublicUri = db.readOnly { implicit session => uriRepo.get(publicUri.id.get) }
+        val latestPrivateUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }
+        latestPrivateUri.redirect == Some(vanityUri.id.get)
+        latestPrivateUri.state == NormalizedURIStates.INACTIVE
+        latestPublicUri.redirect == Some(vanityUri.id.get)
+        latestPublicUri.state == NormalizedURIStates.INACTIVE
+      }
+
 
       "shutdown shared actor system" in {
         system.shutdown()

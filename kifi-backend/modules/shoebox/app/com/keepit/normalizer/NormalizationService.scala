@@ -5,7 +5,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.model._
 import com.keepit.common.logging.Logging
-import com.keepit.scraper.{Signature, ScraperPlugin}
+import com.keepit.scraper.{Scraper, Signature, ScraperPlugin}
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import scala.util.{Try, Failure}
 import com.keepit.common.healthcheck.HealthcheckError
@@ -16,6 +16,8 @@ import scala.concurrent.Future
 import com.keepit.common.db.slick.Database
 import com.keepit.common._
 import scala.util.matching.Regex
+import com.keepit.scraper.extractor.JsoupBasedExtractor
+import org.jsoup.nodes.Document
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
@@ -141,11 +143,14 @@ class NormalizationServiceImpl @Inject() (
     case class Check(contentCheck: ContentCheck) extends Action
 
     val trustedDomains = Set.empty[String]
+    val linkedInPrivateProfile = new Regex("""^http[/\w:\.]+\.linkedin\.com/profile/view\?id=(\d+)""", "id")
+    val linkedInPublicProfile = new Regex("""^http://\w+\.linkedin\.com/(in/\w+|pub/[\P{M}\p{M}\w]+(/\w+){3})$""")
 
     def getContentChecks(referenceUrl: String): Seq[ContentCheck] = {
-      val linkedInPrivateProfile = new Regex("""linkedin\.com/profile/view\?id=(\d+)""", "id")
+
       referenceUrl match {
         case linkedInPrivateProfile(id) => Seq(LinkedInProfileCheck(id.toLong))
+        case linkedInPublicProfile => Seq(SignatureCheck(referenceUrl, "linkedin.com"))
         case _ => {
           val trustedDomain = getTrustedDomain(referenceUrl)
           if (trustedDomain.isDefined) Seq(SignatureCheck(referenceUrl, trustedDomain.get)) else Seq.empty
@@ -210,10 +215,18 @@ class NormalizationServiceImpl @Inject() (
 
   private case class LinkedInProfileCheck(privateProfileId: Long) extends ContentCheck {
 
-    val linkedInPublicProfile = new Regex("""^http://www\.linkedin\.com/in/(\w+)$""", "name")
+    def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && PriorKnowledge.linkedInPublicProfile.findFirstIn(candidate.url).isDefined
+    protected def check(publicProfileCandidate: NormalizationCandidate)(implicit session: RSession) = {
+      val idExtractor = new JsoupBasedExtractor(publicProfileCandidate.url, Scraper.maxContentChars) {
+        def parse(doc: Document): String = doc.getElementsContainingText(s"newTrkInfo = '${privateProfileId},' + document.referrer.substr(0,128)").text()
+      }
 
-    def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && linkedInPublicProfile.findFirstIn(candidate.url).isDefined
-    protected def check(publicProfileCandidate: NormalizationCandidate)(implicit session: RSession) = Future.successful(false)
+      for { publicProfileOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(idExtractor)) } yield publicProfileOption match {
+        case Some(article) => article.content.nonEmpty
+        case None => false
+
+      }
+    }
     def persistFailedContentChecks() = {}
   }
 
