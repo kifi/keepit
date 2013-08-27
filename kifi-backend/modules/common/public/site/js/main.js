@@ -346,7 +346,7 @@ $(function() {
 								var $this = $(this);
 								var prop = $this.data("prop");
 								if (prop == 'email') {
-									$this.text(me['emails'][0]);
+									$this.text(me.emails[0]);
 								} else {
 									$this.text(me[prop]);
 								}
@@ -371,14 +371,15 @@ $(function() {
 					$this.text(value);
 					props[$this.data('prop')] = value;
 				});
-				if (props['email']) {
-					props['emails'] = [props['email']];
-					delete props['email'];
+				if (props.email) {
+					props.emails = [props.email];
+					delete props.email;
 				}
 				var $save = $editContainer.find('.save')
 				var saveText = $save.text();
 				$save.text('Saving...');
 				$.postJson(xhrBase + '/user/me', props, function(data) {
+					$editContainer.removeClass('editing');
 					$save.text(saveText);
 					updateMe(data);
 				}).error(function() {
