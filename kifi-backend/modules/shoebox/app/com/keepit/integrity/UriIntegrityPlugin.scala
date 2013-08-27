@@ -94,8 +94,9 @@ class UriIntegrityActor @Inject()(
         scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
       }
 
-      bookmarkRepo.getByUri(oldUriId).map{ bm =>
-        bookmarkRepo.save(bm.withNormUriId(newUriId))
+      bookmarkRepo.getByUri(oldUriId).groupBy(_.userId).foreach{ case (userId, bms) =>
+        bms.foreach{ bm => bookmarkRepo.save(bm.withActive(false)) }
+        if (bookmarkRepo.getByUriAndUser(newUriId, userId).size == 0) bms.take(1).map{ bm => bookmarkRepo.save(bm.withNormUriId(newUriId).withActive(true)) }        
       }
 
       commentRepo.getByUri(oldUriId).map{ cm =>
