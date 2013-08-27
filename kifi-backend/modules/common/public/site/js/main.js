@@ -387,10 +387,11 @@ $(function() {
 					$save.text(saveText);
 				});
 			});
-			$('.profile .networks a').each(function () {
+			$('.profile .networks li').each(function () {
 				var $this = $(this);
 				var name = $this.data('network');
 				if (!name) return;
+				var $a = $this.find('a.profile-nw');
 				var networkInfo = myNetworks.filter(function (nw) {
 					return nw.network === name;
 				})[0];
@@ -404,16 +405,16 @@ $(function() {
 						.remove();
 				};
 				if (networkInfo) {
-					$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
+					$a.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
 					if (myNetworks.length > 1) {
 						$('<a>').addClass('disconnect').text('Unlink')
 							.attr('href', 'javascript:')
 							.data('action', '/disconnect/' + name)
 							.click(postLink)
-							.appendTo($this.parent());
+							.appendTo($this);
 					}
 				} else {
-					$this.addClass('not-connected').attr('title', 'Click to connect')
+					$a.addClass('not-connected').attr('title', 'Click to connect')
 						.attr('href', 'javascript:')
 						.data('action', '/link/' + name)
 						.click(postLink);
@@ -421,7 +422,7 @@ $(function() {
 						.attr('href', 'javascript:')
 						.data('action', '/link/' + name)
 						.click(postLink)
-						.appendTo($this.parent());
+						.appendTo($this);
 				}
 			});
 		});

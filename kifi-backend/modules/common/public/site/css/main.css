@@ -186,6 +186,7 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .profile-nw::after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
 .profile-nw.not-connected::after { background: #dbdee3; }
 .profile-nw.not-connected { transition: background .25s ease-in 50ms; }
+.networks>ul>li:hover:not([data-network])::after { content: "Coming soon"; display: block; font-size: 11px; padding: 5px 0; }
 
 iframe.blog {height:100%; width:100%; border:0;}
 
