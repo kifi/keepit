@@ -18,6 +18,7 @@ import com.google.inject.Inject
 import org.joda.time.DateTime
 
 import play.api.libs.json.{JsValue, JsNull, Json, JsObject, JsArray}
+import play.modules.statsd.api.Statsd
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
@@ -345,7 +346,9 @@ class MessagingController @Inject() (
   def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urls: JsObject, titleOpt: Option[String], messageText: String) : Message = {
     val participants = recipients + from
     val urlOpt = (urls \ "url").asOpt[String]
-    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(urls), 2 seconds)} // todo: Remove Await
+    val tStart = currentDateTime
+    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(urls), 10 seconds)} // todo: Remove Await
+    Statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis)
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val thread = db.readWrite{ implicit session =>
       val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
