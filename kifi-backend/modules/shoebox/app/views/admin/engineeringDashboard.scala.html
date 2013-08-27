@@ -100,9 +100,9 @@
   // Message Chart
 
 
-  var newMessageTarget = 'alias(summarize(stats.timers.eliza.messaging.newMessage.mean,"30min"),"New Message")';
-  var messageReplyTarget = 'alias(summarize(stats.timers.eliza.messaging.replyMessage.mean,"30min"),"Reply")';
-  var noticeRemoteTarget = 'alias(summarize(stats.timers.eliza.websocket.delivery.remote.notice.mean,"30min"),"Notification (remote)")';
+  var newMessageTarget = 'alias(stats.timers.eliza.messaging.newMessage.mean,"New Message")';
+  var messageReplyTarget = 'alias(stats.timers.eliza.messaging.replyMessage.mean,"Reply")';
+  var noticeRemoteTarget = 'alias(stats.timers.eliza.websocket.delivery.remote.notice.mean,"Notification (remote)")';
 
   var messageAndNotificationTargets = baseTargets.concat(newMessageTarget).concat(messageReplyTarget).concat(noticeRemoteTarget)
   options.target = messageAndNotificationTargets;
