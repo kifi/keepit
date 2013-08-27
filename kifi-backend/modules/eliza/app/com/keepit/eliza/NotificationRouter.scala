@@ -87,7 +87,7 @@ class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient, 
 
   private def sendToUserNoBroadcastNoLog(userId: Id[User], data: JsArray) : Unit = {
     val sockets = userSockets.get(userId).map(_.values.toSeq).getOrElse(Seq())
-    sockets.foreach{ socket =>
+    sockets.par.foreach{ socket =>
       socket.channel.push(data)
     }
   }

@@ -325,7 +325,7 @@ $(function() {
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
-			$main.attr("data-view", "profile");
+			$('body').attr("data-view", "profile");
 			$('.left-col .active').removeClass("active");
 			$('.profile').on('keydown keypress keyup', function (e) {
 				e.stopPropagation();
@@ -346,7 +346,7 @@ $(function() {
 								var $this = $(this);
 								var prop = $this.data("prop");
 								if (prop == 'email') {
-									$this.text(me['emails'][0]);
+									$this.text(me.emails[0]);
 								} else {
 									$this.text(me[prop]);
 								}
@@ -365,16 +365,16 @@ $(function() {
 			$('.profile .save').click(function () {
 				var props = {};
 				var $editContainer = $(this).closest('.edit-container');
-				if (props['email']) {
-					props['emails'] = [props['email']];
-					delete props['email'];
-				}
 				$editContainer.find('.editable').each(function () {
 					var $this = $(this);
 					var value = $this.find('input').val();
 					$this.text(value);
 					props[$this.data('prop')] = value;
 				});
+				if (props.email) {
+					props.emails = [props.email];
+					delete props.email;
+				}
 				var $save = $editContainer.find('.save')
 				var saveText = $save.text();
 				$save.text('Saving...');
@@ -437,7 +437,7 @@ $(function() {
 	var $friendsTabPages = $friends.find('.friends-page');
 
 	function showFriends(path) {
-		$main.attr('data-view', 'friends');
+		$('body').attr('data-view', 'friends');
 		$('.left-col .active').removeClass('active');
 		$('.my-friends').addClass('active');
 		var $tab = $friendsTabs.filter('[data-href="' + path + '"]').removeAttr('href');
@@ -643,8 +643,10 @@ $(function() {
 			window.open("about:blank", fullSocialId, "height=640,width=1060,left=200,top=200", false);
 			$form.attr('target', fullSocialId).submit();
 		} else if (fullSocialId.indexOf("linkedin/") === 0) {
-			inviteMessageDialogTmpl.render({ label: $(this).closest('.invite-friend').find('.invite-name').text() });
-			var $popup = $inviteMessageDialog.appendTo($form).off('click');
+			inviteMessageDialogTmpl.render({
+				label: $(this).closest('.invite-friend').find('.invite-name').text()
+			});
+			var $popup =$inviteMessageDialog.appendTo($form).off('click');
 			$popup.on('click', '.invite-cancel', function (e) {
 				e.preventDefault();
 				$popup.remove();
@@ -704,7 +706,7 @@ $(function() {
 	}
 
 	function showBlog() {
-		$main.attr('data-view', 'blog');
+		$('body').attr('data-view', 'blog');
 		$('.left-col .active').removeClass('active');
 		var $blog = $('iframe.blog');
 		if(!$blog.attr('src')) {
@@ -725,7 +727,7 @@ $(function() {
 		}
 		console.log("[doSearch] " + (searchResponse ? "more " : "") + "q:", q);
 		$('.left-col .active').removeClass('active');
-		$main.attr("data-view", "search");
+		$('body').attr("data-view", "search");
 		if (!searchResponse) {
 			subtitleTmpl.render({searching: true});
 			$checkAll.removeClass('live checked');
@@ -805,8 +807,8 @@ $(function() {
 		$h3.filter(".active").removeClass("active");
 		$h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps").addClass("active");
 
-		var fromSearch = $main.attr("data-view") == "search";
-		$main.attr("data-view", "mine");
+		var fromSearch = $('body').attr("data-view") == "search";
+		$('body').attr("data-view", "mine");
 		$mainHead.find("h1").text(collId ? collections[collId].name : "Browse your Keeps");
 
 		$results.empty();
@@ -1075,8 +1077,8 @@ $(function() {
 	}).on("click", ".keep-title>a", function(e) {
 		e.stopPropagation();
 	}).on("click", ".keep", function(e) {
-		var $keep = $(this), $keeps = $main.find(".keep");
-		if ($(e.target).hasClass("keep-checkbox") || $(e.target).hasClass("handle")) {
+		var $keep = $(this), $keeps = $main.find(".keep"), $el = $(e.target);
+		if ($el.hasClass("keep-checkbox") || $el.hasClass("handle")) {
 			$keep.toggleClass("selected");
 			var $selected = $keeps.filter(".selected");
 			$checkAll.toggleClass("checked", $selected.length == $keeps.length);
@@ -1086,6 +1088,8 @@ $(function() {
 			    $keeps.filter(".detailed:not(.selected)").removeClass("detailed").length == 0) {
 				return;  // avoid redrawing same details
 			}
+		} else if ($el.hasClass("pic")) {
+			return;
 		} else if ($keep.hasClass("selected")) {
 			$keeps.filter(".selected").toggleClass("detailed");
 			$keeps.not(".selected").removeClass("detailed");
@@ -1657,14 +1661,18 @@ $(function() {
 
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
-	$.getScript('js/jquery-bindhover.js').done(function() {
-		$(document).bindHover(".pic:not(.me)", function(configureHover) {
-			var $a = $(this), id = $a.data('id');
-			friendCardTmpl.into(this).render({
+	$.getScript('js/jquery-hoverfu.min.js').done(function() {
+		$(document).hoverfu(".pic:not(.me)", function(configureHover) {
+			var $a = $(this), id = $a.data('id'), $temp = $('<div>');
+			friendCardTmpl.into($temp).append({
 				name: $a.data('name'),
 				picUri: formatPicUrl(id, $a.css('background-image').match(/\/([^\/]*)['"]?\)$/)[1], 200)});
-			var $el = $a.children();
-			configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+			var $el = $temp.children().detach();
+			configureHover($el, {
+				position: {my: "left-33 bottom-13", at: "center top", of: $a, collision: "flipfit flip", using: show},
+				canLeaveFor: 600,
+				hideAfter: 4000,
+				click: "toggle"});
 			$.getJSON(xhrBase + '/user/' + id + '/networks', function(networks) {
 				for (nw in networks) {
 					console.log("[networks]", nw, networks[nw]);
@@ -1673,5 +1681,9 @@ $(function() {
 				}
 			});
 		});
+		function show(pos, o) {
+			o.element.element.css(pos).addClass(o.horizontal + ' ' + o.vertical)
+				.find(".fr-card-tri").css('left', Math.round(o.target.left - o.element.left + .5 * o.target.width));
+		}
 	});
 });
