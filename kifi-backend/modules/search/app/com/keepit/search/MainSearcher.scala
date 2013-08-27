@@ -125,7 +125,6 @@ class MainSearcher(
 
   private[this] lazy val fullFriendEdgeSet = uriGraphSearcher.friendEdgeSet
   private[this] val friendEdgeSet = uriGraphSearcher.searchFriendEdgeSet
-  private[this] val friendIds = friendEdgeSet.destIdSet
   private[this] val friendsUriEdgeSets = uriGraphSearcher.friendsUriEdgeSets
   private[this] val friendsUriEdgeAccessors = friendsUriEdgeSets.mapValues{ _.accessor }
   private[this] val filteredFriendEdgeSet = {
@@ -160,7 +159,7 @@ class MainSearcher(
   Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
 
   private def findSharingUsers(id: Long): UserToUserEdgeSet = {
-    uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
+    uriGraphSearcher.intersect(fullFriendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
   }
 
   private def sharingScore(sharingUsers: UserToUserEdgeSet): Float = {
