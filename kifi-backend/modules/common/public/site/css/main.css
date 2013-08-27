@@ -27,6 +27,19 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .header-logo {display: inline-block; width: 51px; height: 29px; background: url(../img/kifi-logo.png) 0/100%}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
 .my-pic {display: block; width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
+.my-pic::before { display: block; background: rgba(192, 192, 192, .95) url(../img/pencil.png) center center no-repeat padding-box; border: 33px solid transparent; box-sizing: border-box; -moz-box-sizing: border-box; width: 66px; height: 66px; border-radius: 50%; content: " "; background-size: 14px; }
+.my-pic:hover::before, body[data-view=profile] .my-pic::before { border-width: 7px; border-color: rgba(192, 192, 192, .5); transition: border-width .4s ease-in-out; }
+body[data-view=profile] .my-pic::before { transition: none; animation-name: edit-profile; -webkit-animation-name: edit-profile; animation-duration: 0.5s; -webkit-animation-duration: 0.5s; }
+@-webkit-keyframes edit-profile {
+  0% { border-width: 7px; }
+  50% { border-width: 5px; }
+  100% { border-width: 7px; }
+}
+@keyframes edit-profile {
+  0% { border-width: 7px; }
+  50% { border-width: 5px; }
+  100% { border-width: 7px; }
+}
 .my-name {height: 28px; line-height: 28px; font-size: 16px}
 .my-name:first-child {padding-top: 80px}
 .my-description {font-size: 12px; color: #818692;}
@@ -111,13 +124,13 @@ input.query::-ms-clear {display: none}
 .main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent; position: relative}
 .main-head.scrolled,
 .above-friends-list.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
-.main[data-view=search] .main-head {padding-top: 10px; height: 37px}
-.main[data-view=search] .main-head>h1,
-.main:not([data-view=mine]):not([data-view=search]) .main-head,
-.main:not([data-view=mine]):not([data-view=search]) .main-keeps,
-.main:not([data-view=profile]) .profile,
-.main:not([data-view=friends]) .friends,
-.main:not([data-view=blog]) .blog  {display: none}
+body[data-view=search] .main-head {padding-top: 10px; height: 37px}
+body[data-view=search] .main-head>h1,
+body:not([data-view=mine]):not([data-view=search]) .main-head,
+body:not([data-view=mine]):not([data-view=search]) .main-keeps,
+body:not([data-view=profile]) .profile,
+body:not([data-view=friends]) .friends,
+body:not([data-view=blog]) .blog  {display: none}
 h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .undo {position: absolute; top: -8px; left: 0; right: 0; text-align: center; display: none}
 .undo-box {display: inline-block; background-color: #ffc; border: 1px solid #f8f4e8; border-radius: 2px; padding: 0 12px; font-size: 13px; font-weight: 300; line-height: 17px; height: 18px; white-space: nowrap}
@@ -283,7 +296,7 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
 .main-keeps {position: absolute; top: 142px; bottom: 0; left: 0; right: 0; overflow: hidden}
-.main[data-view=search] .main-keeps {top: 107px}
+body[data-view=search] .main-keeps {top: 107px}
 .main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
 
 .keep-group-title {margin-top: 7px; height: 33px; line-height: 33px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 0 30px; overflow: hidden; transition: height .3s ease-in-out}
@@ -570,6 +583,7 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .profile-nw {background-image: url(../img/networks.2x.png)}
   .friend-actions>*>a::before {background-image: url(../img/friend-actions.2x.png)}
   a.friend-nw {background-image: url(../img/networks-18.2x.png)}
+  .my-pic::before {background-image: url(../img/pencil.2x.png)}
 }
 
 .fancybox-inner {font-size: 16px}

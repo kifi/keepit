@@ -325,7 +325,7 @@ $(function() {
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
-			$main.attr("data-view", "profile");
+			$('body').attr("data-view", "profile");
 			$('.left-col .active').removeClass("active");
 			$('.profile').on('keydown keypress keyup', function (e) {
 				e.stopPropagation();
@@ -379,7 +379,6 @@ $(function() {
 				var saveText = $save.text();
 				$save.text('Saving...');
 				$.postJson(xhrBase + '/user/me', props, function(data) {
-					$editContainer.removeClass('editing');
 					$save.text(saveText);
 					updateMe(data);
 				}).error(function() {
@@ -437,7 +436,7 @@ $(function() {
 	var $friendsTabPages = $friends.find('.friends-page');
 
 	function showFriends(path) {
-		$main.attr('data-view', 'friends');
+		$('body').attr('data-view', 'friends');
 		$('.left-col .active').removeClass('active');
 		$('.my-friends').addClass('active');
 		var $tab = $friendsTabs.filter('[data-href="' + path + '"]').removeAttr('href');
@@ -706,7 +705,7 @@ $(function() {
 	}
 
 	function showBlog() {
-		$main.attr('data-view', 'blog');
+		$('body').attr('data-view', 'blog');
 		$('.left-col .active').removeClass('active');
 		var $blog = $('iframe.blog');
 		if(!$blog.attr('src')) {
@@ -727,7 +726,7 @@ $(function() {
 		}
 		console.log("[doSearch] " + (searchResponse ? "more " : "") + "q:", q);
 		$('.left-col .active').removeClass('active');
-		$main.attr("data-view", "search");
+		$('body').attr("data-view", "search");
 		if (!searchResponse) {
 			subtitleTmpl.render({searching: true});
 			$checkAll.removeClass('live checked');
@@ -807,8 +806,8 @@ $(function() {
 		$h3.filter(".active").removeClass("active");
 		$h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps").addClass("active");
 
-		var fromSearch = $main.attr("data-view") == "search";
-		$main.attr("data-view", "mine");
+		var fromSearch = $('body').attr("data-view") == "search";
+		$('body').attr("data-view", "mine");
 		$mainHead.find("h1").text(collId ? collections[collId].name : "Browse your Keeps");
 
 		$results.empty();
