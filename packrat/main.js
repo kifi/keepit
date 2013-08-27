@@ -766,9 +766,9 @@ function getTimeLastRead(n, d) {
 }
 
 function createDeepLinkListener(locator, tabId) {
-  var createdTime = new Date;
+  var createdTime = Date.now();
   api.tabs.on.ready.add(function deepLinkListener(tab) {
-    if (new Date - createdTime > 15000) {
+    if (Date.now() - createdTime > 15000) {
       api.tabs.on.ready.remove(deepLinkListener);
       api.log("[createDeepLinkListener] Listener timed out.");
       return;
