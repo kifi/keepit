@@ -390,9 +390,7 @@ const socketHandlers = {
 // ===== Handling messages from content scripts or other extension pages
 
 api.port.on({
-  deauthenticate: function() {
-    deauthenticate();
-  },
+  deauthenticate: deauthenticate,
   canonical: function(urls) {
     api.log("[canonical]", Object.keys(urls));
     ajax("POST", "/ext/canonical", urls);
@@ -971,8 +969,8 @@ function subscribe(tab) {
       }
 
       tellTabsNoticeCountIfChanged();
-    }, function fail(e) {
-      if (e.status == 403) {
+    }, function fail(xhr) {
+      if (xhr.status == 403) {
         session = null;
         if (socket) {
           socket.close();
@@ -1258,7 +1256,7 @@ function startSession(callback, retryMs) {
     api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
     api.tabs.eachSelected(subscribe);
     api.tabs.each(function(page) {
-      api.tabs.emit(page, "new_session", session);
+      api.tabs.emit(page, "session_change", session);
     });
     callback();
   },
@@ -1325,7 +1323,7 @@ function deauthenticate() {
       }
       api.tabs.each(function(tab) {
         api.icon.set(tab, "icons/keep.faint.png");
-        api.tabs.emit(tab, "new_session", undefined);
+        api.tabs.emit(tab, "session_change", undefined);
       });
     }
   })

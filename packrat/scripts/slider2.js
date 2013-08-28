@@ -566,7 +566,7 @@ slider2 = function() {
             .on("mouseup", ".kifi-pane-settings-sign-out", function(e) {
               e.preventDefault();
               api.port.emit("deauthenticate");
-              $(tile).toggle(false);
+              $(tile).hide();
               setTimeout(function() {
                 hidePane();
                 $('<div class="kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/keep.faint.png') + '"> button above.</div>')

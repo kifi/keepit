@@ -4,7 +4,7 @@
 // @require scripts/render.js
 
 kifiDialog = function() {
-  function showLoginDialog() {
+  function toggleLoginDialog() {
     render("html/login_dialog", {
       logo: api.url("images/kifi_logo_medium.png")
     }, function(html) {
@@ -12,15 +12,13 @@ kifiDialog = function() {
         removeDialog();
         return;
       }
-      $wrapper = $('<div/>').addClass('kifi-message-dialog-wrapper').html(html).appendTo('body');
+      var $wrapper = $('<div>').addClass('kifi-message-dialog-wrapper').html(html).appendTo('body');
 
-      var $overlay = $('<div class="kifi-dialog-overlay"></div>');
+      var $overlay = $('<div class="kifi-dialog-overlay">');
       $overlay.appendTo('body');
 
       var $dialog = $('.kifi-message-dialog');
-      setTimeout(function() {
-        $wrapper.addClass('kifi-dialog-show');
-      }, 1);
+      $wrapper.layout().addClass('kifi-dialog-show')
 
       function removeDialog() {
         $wrapper = $('.kifi-message-dialog-wrapper');
@@ -36,12 +34,12 @@ kifiDialog = function() {
         ev.stopPropagation();
         removeDialog();
       });
-      $dialog.find('.kifi-facebook').on('click', function() {
+      $dialog.on('click', '.kifi-facebook', function() {
         document.location = "https://www.kifi.com/login/facebook";
         removeDialog();
         return false;
       });
-      $dialog.find('.kifi-linkedin').on('click', function() {
+      $dialog.on('click', '.kifi-linkedin', function() {
         document.location = "https://www.kifi.com/login/linkedin";
         removeDialog();
         return false;
@@ -52,13 +50,14 @@ kifiDialog = function() {
       function onKeyDown(e) {
         if (e.keyCode == 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) { 
           removeDialog();
+          return false;
         }
       }
     });
   }
   return {
-    showLoginDialog: function() {
-      showLoginDialog();
+    toggleLoginDialog: function() {
+      toggleLoginDialog();
     }
   };
 }();

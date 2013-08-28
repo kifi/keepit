@@ -9,7 +9,8 @@
   -webkit-transform: translateX(-50%) translateY(-50%);
   -moz-transform: translateX(-50%) translateY(-50%);
   transform: translateX(-50%) translateY(-50%);
-    height: 240px; width: 440px;
+  height: 240px;
+  width: 440px;
 }
 
 .kifi-dialog-show {
@@ -26,8 +27,6 @@
   z-index: 999;
   opacity: 0;
   background: rgba(0, 0, 0, 0.2);
-  -webkit-transition: all 0.5s;
-  -moz-transition: all 0.5s;
   transition: all 0.5s;
 }
 
@@ -44,22 +43,22 @@
 
 .kifi-message-dialog {
   -webkit-transform-style: preserve-3d;
-  -moz-transform-style: preserve-3d;
   transform-style: preserve-3d;
   -webkit-transform: rotateX(-40deg);
   -moz-transform: rotateX(-40deg);
   transform: rotateX(-40deg);
-  -webkit-transition: all 0.1s;
-  -moz-transition: all 0.1s;
   transition: all 0.1s;
   opacity: 0;
-  background: #fafafa; border: 1px solid #aab8c8; border-radius: 5px; font-size: 14px;
+  background: #fafafa;
+  border: 1px solid #aab8c8;
+  border-radius: 5px;
   z-index: 99999999999999;
   color: #000;
   position: relative;
   margin: 0 auto;
   height: 240px;
-  box-shadow: rgba(0, 0, 0, 0.2) 8px 10px 0px; font: 18px/1.5 Lato, Helvetica, Arial, sans-serif;
+  box-shadow: rgba(0, 0, 0, 0.2) 8px 10px 0px;
+  font: 18px/1.5 Lato, Helvetica, Arial, sans-serif;
   letter-spacing: 0px;
 }
 
