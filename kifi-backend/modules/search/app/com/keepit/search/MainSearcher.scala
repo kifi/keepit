@@ -168,7 +168,7 @@ class MainSearcher(
 
   private def sharingScore(sharingUsers: UserToUserEdgeSet, normalizedFriendStats: FriendStats): Float = {
     val users = if (filter.isCustom) filter.filterFriends(sharingUsers.destIdSet) else sharingUsers.destIdSet
-    users.foldLeft(0.0f){ (score, id) => score + normalizedFriendStats.score(id) }
+    users.foldLeft(sharingUsers.size.toFloat){ (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
 
   def getPersonalizedSearcher(query: Query) = {
