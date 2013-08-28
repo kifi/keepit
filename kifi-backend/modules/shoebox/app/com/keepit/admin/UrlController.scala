@@ -228,7 +228,7 @@ class UrlController @Inject() (
         }
       }
       val msg = s"readOnly Mode = ${readOnly}. ${info.size} bookmarks affected. (bookmarkId, userId, uriId, bookmarkTitle) are: \n" + info.mkString("\n")
-      postOffice.sendMail(ElectronicMail(from = EmailAddresses.YINGJIE, to = List(EmailAddresses.YINGJIE),
+      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
        subject = "Duplicate Bookmarks Report", htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
     }
     Ok(s"OK. Detecting duplicated bookmarks. ReadOnly Mode = ${readOnly}. Will send report emails")
