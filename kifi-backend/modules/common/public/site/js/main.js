@@ -111,6 +111,7 @@ $(function() {
 	}
 
 	$('.keep-colls,.keep-coll').removeText();
+	var $fixedTitle = $('.keep-group-title-fixed');
 	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps)
 	.when(TempoEvent.Types.ITEM_RENDER_COMPLETE, function(ev) {
 		var $keep = $(ev.element).draggable(draggableKeepOpts);
@@ -120,34 +121,20 @@ $(function() {
 		});
 		$keep.find("time").timeago();
 	}).when(TempoEvent.Types.RENDER_COMPLETE, function(ev) {
+		console.log('[$myKeeps:RENDER_COMPLETE]', ev);
 		$keepSpinner.hide();
 
-		if (ev.element === $myKeeps[0]) {
-			var today = new Date().setHours(0, 0, 0, 0), li = [];
-			$myKeeps.find("time").each(function() {
-				switch (Math.round((today - new Date($(this).attr("datetime")).setHours(0, 0, 0, 0)) / 86400000)) {
-				case 0:
-					if (!li[0] && !(li[0] = $myKeeps.find('.keep-group-title.today').length)) {
-						$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
-					}
+		var $titles = ev.element === $myKeeps[0] ? addGroupHeadings() : $();
+		$mainKeeps.toggleClass("grouped", $titles.length > 0);
+		if ($titles.length) {
+			for (var sT = $mainKeeps.find(".antiscroll-inner")[0].scrollTop, i = $titles.length; i;) {
+				if ($titles[--i].offsetTop <= sT) {
+					$fixedTitle.text($titles.eq(i).text()).data({$titles: $titles, i: i});
 					break;
-				case 1:
-					if (!li[1] && !(li[1] = $myKeeps.find('.keep-group-title.yesterday').length)) {
-						$(this).closest(".keep").before('<li class="keep-group-title yesterday">Yesterday</li>');
-					}
-					break;
-				case 2: case 3: case 4: case 5: case 6:
-					if (!li[2] && !(li[2] = $myKeeps.find('.keep-group-title.week').length)) {
-						$(this).closest(".keep").before('<li class="keep-group-title week">Past Week</li>');
-					}
-					break;
-				default:
-					if ((li[0] || li[1] || li[2]) && !$myKeeps.find('.keep-group-title.older').length) {
-						$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
-					}
-					return false;
 				}
-			});
+			}
+		} else {
+			$fixedTitle.empty().removeData();
 		}
 
 		mainScroller.refresh();
@@ -210,6 +197,37 @@ $(function() {
 				}
 			}
 		}};
+
+	function addGroupHeadings() {
+		var today = new Date().setHours(0, 0, 0, 0), h = [];
+		$myKeeps.find("time").each(function() {
+			var $time = $(this);
+			switch (Math.round((today - new Date($time.attr("datetime")).setHours(0, 0, 0, 0)) / 86400000)) {
+			case 0:
+				if (!h[0] && !(h[0] = $myKeeps.find('.keep-group-title.today')[0])) {
+					h[0] = $('<li class="keep-group-title today">Today</li>').insertBefore($time.closest(".keep"))[0];
+				}
+				break;
+			case 1:
+				if (!h[1] && !(h[1] = $myKeeps.find('.keep-group-title.yesterday')[0])) {
+					h[1] = $('<li class="keep-group-title yesterday">Yesterday</li>').insertBefore($time.closest(".keep"))[0];
+				}
+				break;
+			case 2: case 3: case 4: case 5: case 6:
+				if (!h[2] && !(h[2] = $myKeeps.find('.keep-group-title.week')[0])) {
+					h[2] = $('<li class="keep-group-title week">Past Week</li>').insertBefore($time.closest(".keep"))[0];
+				}
+				break;
+			default:
+				if ((h[0] || h[1] || h[2]) && !(h[3] = $myKeeps.find('.keep-group-title.older')[0])) {
+					h[3] = $('<li class="keep-group-title older">Older</li>').insertBefore($time.closest(".keep"))[0];
+				}
+				return false;
+			}
+		});
+		console.log('[addGroupHeadings] h:', h);
+		return $(h.filter(identity));
+	}
 
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		collScroller.refresh();
@@ -733,6 +751,7 @@ $(function() {
 			subtitleTmpl.render({searching: true});
 			$checkAll.removeClass('live checked');
 			$myKeeps.detach().find('.keep').removeClass('selected detailed');
+			$fixedTitle.empty().removeData();
 		}
 		$keepSpinner.show();
 		$loadMore.addClass('hidden');
@@ -813,7 +832,9 @@ $(function() {
 		$mainHead.find("h1").text(collId ? collections[collId].name : "Browse your Keeps");
 
 		$results.empty();
-		$query.val("").removeAttr("data-q");
+		$query.val('').removeAttr("data-q");
+		$queryWrap.addClass('empty');
+		$fixedTitle.empty().removeData();
 		if (fromSearch) {
 			searchResponse = null;
 			$checkAll.removeClass('checked');
@@ -1111,13 +1132,29 @@ $(function() {
 	var $mainKeeps = $(".main-keeps").antiscroll({x: false, width: "100%"});
 	$mainKeeps.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var sT = this.scrollTop;
-		$mainHead.toggleClass("scrolled", sT > 0);
 		if ($keepSpinner.css('display') == 'none' && this.clientHeight + sT > this.scrollHeight - 300) {
 			if ($main[0].querySelector('.keep.selected')) {
 				$loadMore.removeClass('hidden');
 			} else {
 				$loadMore.triggerHandler('click');
 			}
+		}
+		if ($fixedTitle[0].hasChildNodes()) {
+			var o = $fixedTitle.data(), curr = o.$titles[o.i], next = o.$titles[o.i + 1], h = $fixedTitle[0].offsetHeight, d;
+			if (next && (d = sT + h - next.offsetTop) > 0) {
+				if (d >= h) {
+					$fixedTitle.text(o.$titles.eq(++o.i).text()).css('top', 0);
+				} else {
+					$fixedTitle.css('top', -d);
+				}
+			} else if (o.i && (d = curr.offsetTop - sT) > 0) {
+				$fixedTitle.text(o.$titles.eq(--o.i).text()).css('top', d - h);
+			} else if (parseInt($fixedTitle.css('top'), 10)) {
+				$fixedTitle.css('top', 0);
+			}
+			$mainKeeps.removeClass("scrolled");
+		} else {
+			$mainKeeps.toggleClass("scrolled", sT > 0);
 		}
 	});
 	var mainScroller = $mainKeeps.data("antiscroll");
