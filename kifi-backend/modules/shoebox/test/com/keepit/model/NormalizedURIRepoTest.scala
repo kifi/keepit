@@ -187,13 +187,17 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     "redirect works" in {
       withDb() { implicit injector =>
         db.readWrite { implicit s =>
-          val uri1 = createUri(title = "old", url = "http://www.keepit.com/old")
+          val uri0 = createUri(title = "too_old", url = "http://www.keepit.com/too_old")
+          val uri1 = createUri(title = "old", url = "http://www.keepit.com/old")          
           val uri2 = createUri(title = "redirect", url = "http://www.keepit.com/redirect")
           val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
+          uriRepo.save(uri0.withRedirect(uri2.id.get, t))
           uriRepo.save(uri1.withRedirect(uri2.id.get, t))
           val updated = uriRepo.get(uri1.id.get)
           updated.redirect === uri2.id
           updated.redirectTime === Some(t)
+          uriRepo.getByRedirection(uri2.id.get).map{_.title}.toSet === Set(Some("too_old"), Some("old"))
+          uriRepo.getByRedirection(uri0.id.get).size === 0
         }
       }
     }

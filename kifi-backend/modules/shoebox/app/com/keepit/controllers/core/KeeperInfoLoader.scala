@@ -75,6 +75,7 @@ class KeeperInfoLoader @Inject() (
     threadInfoRepo: ThreadInfoRepo,
     domainClassifier: DomainClassifier,
     basicUserRepo: BasicUserRepo,
+    userExperimentRepo: UserExperimentRepo,
     historyTracker: SliderHistoryTracker,
     searchClient: SearchServiceClient) {
 
@@ -92,8 +93,12 @@ class KeeperInfoLoader @Inject() (
       (domain, bookmark, position, neverOnSite, host)
     }
 
-    val sensitive = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
-    KeeperInfo1(bookmark.map { b => if (b.isPrivate) "private" else "public" }, position, neverOnSite, sensitive.getOrElse(false))
+    val userIsSensitive = db.readOnly { implicit s =>
+      !userExperimentRepo.hasExperiment(userId, ExperimentTypes.NOT_SENSITIVE)
+    }
+    val sensitive = userIsSensitive &&
+      (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
+    KeeperInfo1(bookmark.map { b => if (b.isPrivate) "private" else "public" }, position, neverOnSite, sensitive)
   }
 
   def load2(userId: Id[User], normalizedUri: String): KeeperInfo2 = {

@@ -11,6 +11,7 @@ import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
 import com.keepit.scraper.FakeScraperModule
+import com.keepit.common.zookeeper.CentralConfig
 
 
 
@@ -74,7 +75,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         
         // merge
         plugin.handleChangedUri(MergedUri(uris(0).id.get, uris(1).id.get))
-        
+        plugin.batchUpdateMerge()
         
         // check redirection
         db.readOnly{ implicit s =>
@@ -90,6 +91,9 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
           bmRepo.getByUrlId(urls(2).id.get).head.uriId === uris(2).id.get
           
         }
+        
+        val centralConfig = inject[CentralConfig]
+        centralConfig(new ChangedUriSeqNumKey()) === Some(2)
         
         // split
         plugin.handleChangedUri(SplittedUri(urls(2), uris(3).id.get))

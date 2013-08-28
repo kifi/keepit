@@ -18,6 +18,7 @@ import com.google.inject.Inject
 import org.joda.time.DateTime
 
 import play.api.libs.json.{JsValue, JsNull, Json, JsObject, JsArray}
+import play.modules.statsd.api.Statsd
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
@@ -308,7 +309,7 @@ class MessagingController @Inject() (
     new String(outBuf.array, 0, outBuf.position(), charset)
   }
 
-  private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = { //TODO Stephen: And store notification json
+  private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = {
     future {
       val locator = "/messages/" + thread.externalId
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
@@ -316,11 +317,13 @@ class MessagingController @Inject() (
       db.readWrite{ implicit session => 
         userThreadRepo.setNotification(user, thread.id.get, message, notifJson)
       }
-      
+
       notificationRouter.sendToUser(
         user,
         Json.arr("notification", notifJson)
       )
+      
+      future { notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getPendingNotificationCount(user))) }
 
       shoebox.createDeepLink(message.from.get, user, thread.uriId.get, DeepLocator(locator))
 
@@ -340,12 +343,15 @@ class MessagingController @Inject() (
   }
 
 
-  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urlOpt: Option[String], titleOpt: Option[String], messageText: String) : Message = {
+  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urls: JsObject, titleOpt: Option[String], messageText: String) : Message = {
     val participants = recipients + from
-    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url), 10 seconds)} // todo: Remove Await
+    val urlOpt = (urls \ "url").asOpt[String]
+    val tStart = currentDateTime
+    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(urls), 10 seconds)} // todo: Remove Await
+    Statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis)
     val uriIdOpt = nUriOpt.flatMap(_.id)
-    val thread = db.readWrite{ implicit session => 
-      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title))) 
+    val thread = db.readWrite{ implicit session =>
+      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
       if (isNew){
         log.info(s"This is a new thread. Creating User Threads.")
         participants.par.foreach{ userId => 
@@ -406,7 +412,7 @@ class MessagingController @Inject() (
       participantSet.toSeq.map(id2BasicUser(_))
     )
 
-    thread.participants.map(_.all.foreach { user =>
+    thread.participants.map(_.all.par.foreach { user =>
       notificationRouter.sendToUser(
         user,
         Json.arr("message", message.threadExtId.id, messageWithBasicUser)
@@ -420,7 +426,7 @@ class MessagingController @Inject() (
     urlOpt.foreach { url =>
       (nUriOpt match {
         case Some(n) => Promise.successful(n).future
-        case None => shoebox.internNormalizedURI(url)
+        case None => shoebox.internNormalizedURI(Json.obj("url" -> url)) //Note, this also needs to include canonical/og when we have detached threads
       }) foreach { nUri =>
         db.readWrite { implicit session => 
           messageRepo.updateUriId(message, nUri.id.get)
@@ -591,6 +597,7 @@ class MessagingController @Inject() (
     val nUrl : String = thread.nUrl.getOrElse("")
     db.readWrite{ implicit session => userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message.id.get) }
     notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
+    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getPendingNotificationCount(userId)))
   }
 
 

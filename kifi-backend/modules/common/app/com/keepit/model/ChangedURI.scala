@@ -17,4 +17,6 @@ case class ChangedURI(
   def withState(state: State[ChangedURI]) = copy(state = state)
 }
 
-object ChangedURIStates extends States[ChangedURI]
+object ChangedURIStates extends States[ChangedURI]{
+  val APPLIED = State[ChangedURI]("applied")      // Indicates we actually merged these uris
+}

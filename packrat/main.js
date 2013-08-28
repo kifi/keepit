@@ -373,6 +373,9 @@ const socketHandlers = {
   message_read: function(nUri, threadId, time, messageId) {
     api.log("[socket:message_read]", nUri, threadId, time);
     var d = pageData[nUri];
+
+    syncNumNotificationsNotVisited(); // see comment in function :(
+
     if (!d || !d.lastMessageRead || new Date(d.lastMessageRead[threadId] || 0) < new Date(time)) {
       markNoticesVisited("message", nUri, messageId, time, "/messages/" + threadId);
       if (d && d.lastMessageRead) {
@@ -385,6 +388,14 @@ const socketHandlers = {
       tellTabsNoticeCountIfChanged();
     }
   },
+  unread_notifications_count: function(count) {
+    // see comment in syncNumNotificationsNotVisited() :(
+    if (numNotificationsNotVisited != count) {
+      numNotificationsNotVisited = count;
+      reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
+      tellTabsNoticeCountIfChanged();
+    }
+  }
 };
 
 // ===== Handling messages from content scripts or other extension pages
@@ -411,6 +422,8 @@ api.port.on({
     var bm = {
       title: data.title,
       url: data.url,
+      canonical: data.canonical,
+      og: data.og,
       isPrivate: data.how == "private"};
     postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
     pageData[tab.nUri].tabs.forEach(function(tab) {
@@ -418,10 +431,10 @@ api.port.on({
       api.tabs.emit(tab, "kept", {kept: data.how});
     });
   },
-  unkeep: function(_, _, tab) {
-    api.log("[unkeep]", tab.url);
+  unkeep: function(data, _, tab) {
+    api.log("[unkeep]", data);
     delete (pageData[tab.nUri] || {}).kept;
-    ajax("POST", "/bookmarks/remove", {url: tab.url}, function(o) {
+    ajax("POST", "/bookmarks/remove", data, function(o) {
       api.log("[unkeep] response:", o);
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
@@ -429,13 +442,13 @@ api.port.on({
       api.tabs.emit(tab, "kept", {kept: null});
     });
   },
-  set_private: function(priv, _, tab) {
-    api.log("[setPrivate]", tab.url, priv);
-    ajax("POST", "/bookmarks/private", {url: tab.url, private: priv}, function(o) {
+  set_private: function(data, _, tab) {
+    api.log("[setPrivate]", data);
+    ajax("POST", "/bookmarks/private", data, function(o) {
       api.log("[setPrivate] response:", o);
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
-      api.tabs.emit(tab, "kept", {kept: priv ? "private" : "public"});
+      api.tabs.emit(tab, "kept", {kept: data.private ? "private" : "public"});
     });
   },
   keeper_shown: function(_, _, tab) {
@@ -492,7 +505,7 @@ api.port.on({
         unreadNotification = true;
       }
     }
-    
+
     if (unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0))) {
       markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
       if (d && d.lastMessageRead) {
@@ -665,7 +678,21 @@ function insertNewNotification(n) {
       }
     }
   }
+
+  syncNumNotificationsNotVisited(); // see comment below :(
   return true;
+}
+
+function syncNumNotificationsNotVisited() {
+  // We have an open issue where numNotificationsNotVisited gets off - it goes below 0
+  // So either an incriment is not happening, or a decrement is happening too often.
+  // The issue goes back several months (with the -1 notification issue), but has gotten
+  // much worse lately. I've had dificulty consistantly reproducing, so am adding this
+  // sync in until we can identify the real issue counts get off. Could be related to
+  // spotty internet, or some logic error above. -Andrew
+  if(socket && socket.send) {
+    socket.send(["get_unread_notifications_count"]);
+  }
 }
 
 // id is of last read message, timeStr is its createdAt time (not notification's).
@@ -690,6 +717,8 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
       id: id,
       numNotVisited: numNotificationsNotVisited});
   });
+
+  syncNumNotificationsNotVisited(); // see comment in function :(
 }
 
 function markAllNoticesVisited(id, timeStr) {  // id and time of most recent notification to mark
@@ -718,6 +747,8 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
       time: timeStr,
       numNotVisited: numNotificationsNotVisited});
   });
+
+  syncNumNotificationsNotVisited(); // see comment in function :(
   tellTabsNoticeCountIfChanged();  // visible tabs
 }
 
@@ -736,9 +767,9 @@ function getTimeLastRead(n, d) {
 }
 
 function createDeepLinkListener(locator, tabId) {
-  var createdTime = new Date;
+  var createdTime = Date.now();
   api.tabs.on.ready.add(function deepLinkListener(tab) {
-    if (new Date - createdTime > 15000) {
+    if (Date.now() - createdTime > 15000) {
       api.tabs.on.ready.remove(deepLinkListener);
       api.log("[createDeepLinkListener] Listener timed out.");
       return;
@@ -1245,6 +1276,7 @@ function startSession(callback, retryMs) {
       reportError("socket disconnect (" + why + ")");
     });
     logEvent.catchUp();
+    syncNumNotificationsNotVisited();
 
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);

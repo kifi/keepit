@@ -10,7 +10,10 @@ import com.keepit.common.logging.Logging
 import com.keepit.integrity.ChangedUriSeqNumKey
 import com.keepit.common.zookeeper.ServiceDiscovery
 
+import akka.actor.ActorSystem
+
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 
 import com.google.inject.{Inject, Singleton}
 
@@ -25,7 +28,8 @@ class UriNormalizationUpdater @Inject() (
     db: Database,
     centralConfig: CentralConfig,
     renormRepo: UriRenormalizationTrackingRepo,
-    serviceDiscovery: ServiceDiscovery
+    serviceDiscovery: ServiceDiscovery,
+    system: ActorSystem
   ) extends Logging {
 
   centralConfig.onChange(ChangedUriSeqNumKey())(checkAndUpdate _)
@@ -39,6 +43,9 @@ class UriNormalizationUpdater @Inject() (
         val updatesFuture = shoebox.getNormalizedUriUpdates(localSequenceNumber, remoteSequenceNumber)
         updatesFuture.map{ updates =>
           updateTables(updates)
+          system.scheduler.scheduleOnce(1 minutes){
+            updateTables(updates)
+          } 
           db.readWrite{ implicit session => renormRepo.addNew(remoteSequenceNumber, updates.keys.toSeq.length, updates.keys.toSeq) }
         }
       }

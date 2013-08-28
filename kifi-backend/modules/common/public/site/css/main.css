@@ -27,6 +27,19 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .header-logo {display: inline-block; width: 51px; height: 29px; background: url(../img/kifi-logo.png) 0/100%}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
 .my-pic {display: block; width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
+.my-pic::before { display: block; border: 34px solid transparent; background: #abb8c8 url(../img/pencil.png) center center no-repeat padding-box; transition: border-width .15s ease-in-out, border-color .15s ease-in-out; box-sizing: border-box; -moz-box-sizing: border-box; width: 66px; height: 66px; border-radius: 50%; content: " "; background-size: 14px; }
+.my-pic:hover::before, body[data-view=profile] .my-pic::before { border-width: 8px; border-color: rgba(103, 130, 156, .6); }
+body[data-view=profile] .my-pic::before { transition: none; animation-name: edit-profile; -webkit-animation-name: edit-profile; animation-duration: 0.2s; -webkit-animation-duration: 0.2s; }
+@-webkit-keyframes edit-profile {
+  0% { border-width: 8px; }
+  50% { border-width: 5px; }
+  100% { border-width: 8px; }
+}
+@keyframes edit-profile {
+  0% { border-width: 8px; }
+  50% { border-width: 5px; }
+  100% { border-width: 8px; }
+}
 .my-name {height: 28px; line-height: 28px; font-size: 16px}
 .my-name:first-child {padding-top: 80px}
 .my-description {font-size: 12px; color: #818692;}
@@ -77,12 +90,12 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .active>.coll-tri::before {border-top-color: #fff}
 .collection:not(.renaming):hover>.coll-tri,
 .collection.with-menu>.coll-tri {left: 0}
-#coll-menu {display: none; position: absolute; top: 100%; left: 0; z-index: 1; background: #e3e6ee}
-#coll-menu.page-bottom {top: auto; bottom: 100%}
-#coll-menu>li>a {display: block; padding: 0 16px; font-size: 12px; line-height: 24px; white-space: nowrap; color: #556179; border: solid #dbdee3; border-width: 0 1px 1px 0}
-#coll-menu>li:first-child>a {border-top-width: 1px}
+#coll-menu {position: absolute; top: 100%; left: 0; z-index: 1; border: 1px solid #dbdee3; background: #fff; padding: 4px 0; border-radius: 4px; display: none; opacity: 0; -webkit-transform: scale(1,.6); transform: scale(1,.6); -webkit-transform-origin: top; transform-origin: top; -webkit-transition: opacity .12s linear, -webkit-transform .12s ease-in; transition: opacity .12s linear, transform .12s ease-in}
+#coll-menu.page-bottom {top: auto; bottom: 100%; -webkit-transform-origin: bottom}
+#coll-menu.showing {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-timing-function: linear, ease-out; transition-timing-function: linear, ease-out}
+#coll-menu>li>a {display: block; padding: 0 32px 0 16px; font-size: 13px; line-height: 30px; white-space: nowrap; color: #556179}
 #coll-menu>li>a:hover,
-#coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
+#coll-menu>li>a.hover {background: #f1f2f6}
 
 /* center col */
 .main>.page-col-inner::before {content: " "; position: absolute; top: 70px; bottom: 0; border-left: 1px solid #dbdee3}
@@ -111,13 +124,13 @@ input.query::-ms-clear {display: none}
 .main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent; position: relative}
 .main-head.scrolled,
 .above-friends-list.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
-.main[data-view=search] .main-head {padding-top: 10px; height: 37px}
-.main[data-view=search] .main-head>h1,
-.main:not([data-view=mine]):not([data-view=search]) .main-head,
-.main:not([data-view=mine]):not([data-view=search]) .main-keeps,
-.main:not([data-view=profile]) .profile,
-.main:not([data-view=friends]) .friends,
-.main:not([data-view=blog]) .blog  {display: none}
+body[data-view=search] .main-head {padding-top: 10px; height: 37px}
+body[data-view=search] .main-head>h1,
+body:not([data-view=mine]):not([data-view=search]) .main-head,
+body:not([data-view=mine]):not([data-view=search]) .main-keeps,
+body:not([data-view=profile]) .profile,
+body:not([data-view=friends]) .friends,
+body:not([data-view=blog]) .blog  {display: none}
 h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .undo {position: absolute; top: -8px; left: 0; right: 0; text-align: center; display: none}
 .undo-box {display: inline-block; background-color: #ffc; border: 1px solid #f8f4e8; border-radius: 2px; padding: 0 12px; font-size: 13px; font-weight: 300; line-height: 17px; height: 18px; white-space: nowrap}
@@ -173,6 +186,7 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .profile-nw::after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
 .profile-nw.not-connected::after { background: #dbdee3; }
 .profile-nw.not-connected { transition: background .25s ease-in 50ms; }
+.networks>ul>li:hover:not([data-network])::after { content: "Coming soon"; display: block; font-size: 11px; padding: 5px 0; }
 
 iframe.blog {height:100%; width:100%; border:0;}
 
@@ -185,11 +199,11 @@ iframe.blog {height:100%; width:100%; border:0;}
 .friend-req-count {background: #b6d177; border-radius: 50%; color: #fff; font-size: 12px; font-weight: normal; line-height: 16px; width: 16px; text-align: center; position: absolute; top: 12px; right: 8px}
 .friend-req-count:empty {display: none}
 
-.above-friends-list {padding-bottom: 20px; border-bottom: 1px solid transparent}
+.above-friends-list {padding-bottom: 20px; border-bottom: 1px solid transparent; position: relative; z-index: 1}
 input.friends-filter,
-input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
+input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; max-width: 45%; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
 #friends-list {position: absolute; top: 260px; left: 20px; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden}
-#friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-y: auto; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
+#friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
 .friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
 .friend.no-match {display: none}
 .friend:last-child {border-bottom: 1px solid #e3e6ee}
@@ -232,9 +246,10 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padd
 .invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
 .invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px;}
 
+.invite-num-results { float: right; color: #556179; font-size: 14px; margin: 10px 4px; max-width: 45%; }
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
-.invite-friends { position: absolute; top: 310px; bottom: 0; right: 0; left: 20px; overflow: hidden; }
-.invite-friends .antiscroll-inner { max-height: 100%; width: 100%; }
+.invite-friends { position: absolute; top: 310px; bottom: 0; right: 0; left: 20px; overflow: hidden}
+.invite-friends .antiscroll-inner { max-height: 100%; width: 100%; overflow-x: hidden}
 .invite-friend {margin-top: 12px; display: inline-block; vertical-align: top; margin-right: 2%; width: 48%; min-width: 300px; background-color: #eff2f7; padding: 10px 16px 10px 10px; position: relative; -moz-box-sizing: border-box; box-sizing: border-box;}
 .invite-friend[data-status=invited] { background: #629eed; }
 .invite-friend[data-status=joined] { background: #27ae60; }
@@ -250,12 +265,15 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padd
 .invite-button::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background: url(../img/friend-actions.png) -70px; background-size: auto 16px; width: 20px; position: relative; left: 1px}
 .invite-friends-loading {margin: 12px 0;}
 
-.invite-message-dialog { background: #fafafa; border: 1px solid #aab8c8; border-radius: 5px; font-size: 14px; display: none; position: fixed; left: 50%; top: 50%; z-index: 100; height: 240px; margin-top: -120px; width: 440px; margin-left: -220px; box-shadow: 8px 10px 0 #bfc9d4; }
+.invite-message-dialog { z-index: -1; opacity: 0; position: fixed; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0, 0, 0, 0.2); transition: all 0.2s ease-in-out; }
+.invite-friend .invite-message-dialog { z-index: 100; opacity: 1; }
+.invite-message-dialog .dialog-content { background: #fafafa; border: 1px solid #aab8c8; border-radius: 5px; font-size: 14px; position: fixed; left: 50%; top: 50%; height: 280px; margin-top: -140px; width: 440px; margin-left: -220px; box-shadow: 8px 10px 2px rgba(0, 0, 0, 0.3); }
+.invite-message-dialog p { margin: 12px 15px; }
 .invite-message-header { font-size: 16px; padding: 14px 16px 10px; border-bottom: 1px solid #e7eced; color: #3a495b; }
 a.invite-cancel { position: absolute; color: #b1b8c1; font-weight: bold; padding: 8px 12px; right: 0; top: 0; font-size: 20px; text-decoration: none; }
-input.invite-subject { display: block; font-size: 14px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; }
-textarea.invite-message { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; min-height: 60px;}
-input.invite-send { position: absolute; right: 12px; bottom: 12px; font-size: 14px; border: none; outline: none; border-radius: 5px; -webkit-backface-visibility: hidden; padding: 8px 12px; background: #48c9b0; color: white; cursor: pointer; }
+input.invite-subject { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; }
+textarea.invite-message { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; min-height: 80px;}
+button.invite-send { position: absolute; right: 12px; bottom: 12px; font-size: 14px; border: none; outline: none; border-radius: 5px; padding: 8px 12px; background: #6fa6ef; color: white; cursor: pointer; }
 
 .friend-reqs-status {margin-bottom: 4px}
 .friend-reqs-status,
@@ -279,7 +297,7 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
 .main-keeps {position: absolute; top: 142px; bottom: 0; left: 0; right: 0; overflow: hidden}
-.main[data-view=search] .main-keeps {top: 107px}
+body[data-view=search] .main-keeps {top: 107px}
 .main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
 
 .keep-group-title {margin-top: 7px; height: 33px; line-height: 33px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 0 30px; overflow: hidden; transition: height .3s ease-in-out}
@@ -333,9 +351,6 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .keep.mine .keep-who>.others {display: none}
 .keep-who>.me {border-radius: 50% 0 0 50%}
 .keep-who>.me:last-of-type {border-radius: 50%}
-.keep-who>.pic>.fr-card {bottom: 36px; left: -22px; z-index: 2}
-.keep-who>.pic>.fr-card::before,
-.keep-who>.pic>.fr-card::after {left: 33px}
 .keep-who-text {vertical-align: middle; margin-left: 4px; font-size: 12px; color: #99a3b3}
 .keep.mine .me+.keep-who-text {margin-left: 7px}
 .keep:not(.mine) .me+.keep-who-text {margin-left: 0}
@@ -452,9 +467,6 @@ a.page-priv[href]:active {background-color: #8699ab}
 .page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding: 11px 0 0}
 .page-who-pics {margin: 5px 0 13px; white-space: nowrap}
 .page-who-pics>.pic {display: inline-block; width: 38px; height: 38px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
-.page-who-pics>.pic>.fr-card {bottom: 51px; left: -22px}
-.page-who-pics>.pic>.fr-card::before,
-.page-who-pics>.pic>.fr-card::after {left: 33px}
 .page-who-text {font-size: 12px; line-height: 12px}
 :not([data-kept^=p])>*>.page-who-pics>.me,
 :not([data-kept^=p])>*>.page-who-text>.keep-you,
@@ -465,12 +477,9 @@ a.page-priv[href]:active {background-color: #8699ab}
 :not([data-kept^=p])>*>.page-who-text>.keep-you+.keep-kept-this::before {content: "Nobody has "}
 .page-chatter {margin-bottom: -6px}
 .page-chatter>h2 {margin-bottom: 8px}
-.page-chatter-messages,
-.page-chatter-comments {display: inline; font-size: 13px; margin-right: 16px; color: inherit !important; white-space: nowrap}
-.page-chatter-messages::before,
-.page-chatter-comments::before {content: attr(data-n); font-size: 25px; color: #b8c5d2; font-weight: bold; -webkit-font-smoothing: antialiased; vertical-align: -3px; margin-right: 5px}
-.page-chatter-messages:not([data-n="1"])::after,
-.page-chatter-comments:not([data-n="1"])::after {content: "s"}
+.page-chatter-messages {display: inline; font-size: 13px; margin-right: 16px; color: inherit !important; white-space: nowrap}
+.page-chatter-messages::before {content: attr(data-n); font-size: 25px; color: #b8c5d2; font-weight: bold; -webkit-font-smoothing: antialiased; vertical-align: -3px; margin-right: 5px}
+.page-chatter-messages:not([data-n="1"])::after {content: "s"}
 .page-colls.some>h2::before {content: "In "}
 .page-coll-list {margin-top: 10px}
 .page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
@@ -515,18 +524,24 @@ span.long-text, a.long-text {display: inline-block}
 
 /* friend card */
 .fr-card {
-  position: absolute; min-width: 300px; background-color: #fff; color: #faf9f9; box-shadow: 2px 5px 12px rgba(0,0,0,.3); border: 1px solid #929496;
+  position: absolute; z-index: 9; min-width: 300px; background-color: #fff; color: #faf9f9; box-shadow: 2px 5px 12px rgba(0,0,0,.3); border: 1px solid #929496;
   text-align: left; line-height: normal; cursor: default; opacity: 0;
-  -webkit-transform: translate(0, 3px); transform: translate(0, 3px);
   -webkit-transition: opacity linear, -webkit-transform ease-in-out;
   transition: opacity linear, -webkit-transform ease-in-out, transform ease-in-out;
   -webkit-transition-duration: 100ms; transition-duration: 100ms;
 }
-.kifi-hover-showing>.fr-card {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-duration: 60ms; transition-duration: 60ms}
-.fr-card::before,
-.fr-card::after {content: " "; position: absolute; top: 100%; height: 0; width: 0; left: 50%; border: solid transparent}
-.fr-card::before {margin-left: -9px; border-width: 9px; border-top-color: inherit}
-.fr-card::after {margin-left: -8px; border-width: 8px; border-top-color: #fff}
+.fr-card.bottom {-webkit-transform: translate(0,5px); transform: translate(0,5px)}
+.fr-card.top {-webkit-transform: translate(0,-5px); transform: translate(0,-5px)}
+.fr-card.showing {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-duration: 60ms; transition-duration: 60ms}
+.fr-card-tri {position: absolute; height: 0; width: 0}
+.bottom>.fr-card-tri {top: 100%; border-top-color: inherit}
+.top>.fr-card-tri {bottom: 100%; border-bottom-color: inherit}
+.fr-card-tri::before {content: " "; position: absolute; left: -9px; border: solid transparent}
+.fr-card-tri::after {content: " "; position: absolute; left: -8px; border: solid transparent}
+.bottom>.fr-card-tri::before {border-width: 9px 9px 0; border-top-color: inherit}
+.bottom>.fr-card-tri::after {border-width: 8px 8px 0; border-top-color: #fff}
+.top>.fr-card-tri::before {border-width: 0 9px 9px; border-bottom-color: inherit; bottom: 0}
+.top>.fr-card-tri::after {border-width: 0 8px 8px; border-bottom-color: #fff; bottom: 0}
 .fr-card .fr-card-top {display: table; padding: 20px 14px}
 .fr-card .fr-card-pic {display: table-cell; -moz-box-sizing: content-box; box-sizing: content-box; height: 100px; width: 100px; padding: 1px; background-color: #fff; border: 2px solid #dbdbdb; border-radius: 5px; float: left}
 .fr-card .fr-card-info {display: table-cell; vertical-align: top; padding-left: 14px; font-size: 12px; line-height: 13px; color: #808080}
@@ -569,6 +584,7 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .profile-nw {background-image: url(../img/networks.2x.png)}
   .friend-actions>*>a::before {background-image: url(../img/friend-actions.2x.png)}
   a.friend-nw {background-image: url(../img/networks-18.2x.png)}
+  .my-pic::before {background-image: url(../img/pencil.2x.png)}
 }
 
 .fancybox-inner {font-size: 16px}

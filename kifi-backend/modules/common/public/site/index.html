@@ -207,10 +207,10 @@
 				<div class="networks">
 					<div class="kifi-k"></div>
 					<ul>
-						<li><a class="profile-nw nw-facebook" data-network="facebook">Facebook</a></li>
-						<li><a class="profile-nw nw-linkedin" data-network="linkedin">LinkedIn</a></li>
-						<li><a class="profile-nw nw-twitter not-connected" title="Coming soon!">Twitter</a></li>
-						<li><a class="profile-nw nw-google not-connected" title="Coming soon!">Google</a></li>
+						<li data-network="facebook"><a class="profile-nw nw-facebook">Facebook</a></li>
+						<li data-network="linkedin"><a class="profile-nw nw-linkedin">LinkedIn</a></li>
+						<li><a class="profile-nw nw-twitter not-connected">Twitter</a></li>
+						<li><a class="profile-nw nw-google not-connected">Google</a></li>
 					</ul>
 				</div>
 			</div>
@@ -231,7 +231,7 @@
 					<ul class="antiscroll-inner">
 						<li class="friend" data-template>
 							<div class="friend-pic">
-								<img src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+								<img class="lazyload" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-original="{{picUri}}">
 							</div>
 							<div class="friend-info">
 								<div class="friend-name">{{firstName}} {{lastName}}</div>
@@ -263,13 +263,30 @@
 					<a href="javascript:" data-nw="linkedin"></a>
 				</nav>
 				<div class="above-invite-friends">
+					<div class="invite-num-results" data-template>
+						{% if filter && results > 0 %} Showing <b>{{results}}</b> results for <b>{{filter}}</b> {% endif %}
+						{% if filter && results == 0 %} No results for <b>{{filter}}</b> {% endif %}
+					</div>
 					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
+				</div>
+				<div class="invite-message-dialog">
+					<div class="dialog-content" data-template>
+						<div class="invite-message-header">Your Kifi invite to {{label}}</div>
+						<a href="javascript:" class="invite-cancel">×</a>
+						<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
+						<textarea class="invite-message" name="message">Hi {{label | replace ' .*', '' }},
+
+I would like to invite you to the private beta of kifi.com. Click this link to accept the invitation:
+</textarea>
+						<p>A link for the invite will be attached to your message.</p>
+						<button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
+					</div>
 				</div>
 				<div class="invite-friends">
 					<div class="antiscroll-inner">
 						<ul>
 							<li class="invite-friend" data-template data-value="{{value}}" data-status="{{status}}">
-								<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{image}}">
+								<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-original="{{image}}">
 								<div class="invite-name">{{label}}</div>
 								<div class="invite-status">
 									{% if status == "joined" %} Joined Kifi {% endif %}
@@ -277,19 +294,8 @@
 									{% if !status %} Invite through {{value | replace '/.*', ''}} {% endif %}
 								</div>
 								{% if !status %}
-								<form method="POST">
+								<form method="POST" target="_blank">
 									<input type="hidden" name="fullSocialId" value="{{value}}">
-									<div class="invite-message-dialog">
-										<div class="invite-message-header">Send Invite</div>
-										<a href="javascript:" class="invite-cancel">×</a>
-										<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
-										<textarea class="invite-message" name="message">Hi {{label}},
-
-I would like to invite you to the private beta of kifi.com. Click this link to accept the invitation:
-
-</textarea>
-										<input class="invite-send" type="submit" value="Send!">
-									</div>
 									<a class="invite-button" href="javascript:"></a>
 								</form>
 								{% endif %}
@@ -397,7 +403,6 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 		<div class="page-chatter">
 			<h2>Talking about this Keep:</h2>
 			<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
-			<a class="page-chatter-comments" href="{{url}}" target="_blank" data-n="0" data-locator="/comments">Public Comment</a>
 		</div>
 		{% endif %}
 		<div class="page-colls{% if collections.length %} some{% endif %}">
@@ -440,6 +445,7 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 					</div>
 				</div>
 			</div>
+			<div class="fr-card-tri"></div>
 		</div>
 	</div>
 

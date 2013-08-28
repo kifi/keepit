@@ -55,7 +55,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
-  def internNormalizedURI(url: String): Future[NormalizedURI]
+  def internNormalizedURI(urls: JsObject): Future[NormalizedURI]
   def sendMail(email: ElectronicMail): Future[Boolean]
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
@@ -278,16 +278,14 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]] =
-    cacheProvider.uriByUrlhashCache.getOrElseFutureOpt(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(url))){
       call(Shoebox.internal.getNormalizedURIByURL(), JsString(url)).map { r => r.json match {
         case JsNull => None
         case js: JsValue => Some(Json.fromJson[NormalizedURI](js).get)
         case null => None
       }}
-    }
 
-  def internNormalizedURI(url: String): Future[NormalizedURI] = {
-    call(Shoebox.internal.internNormalizedURI, JsString(url)).map(r => Json.fromJson[NormalizedURI](r.json).get)
+  def internNormalizedURI(urls: JsObject): Future[NormalizedURI] = {
+    call(Shoebox.internal.internNormalizedURI, urls).map(r => Json.fromJson[NormalizedURI](r.json).get)
   }
 
   def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]] = consolidateClickHistoryReq(ClickHistoryUserIdKey(userId)) { key =>
