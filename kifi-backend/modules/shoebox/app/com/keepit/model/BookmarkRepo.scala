@@ -26,6 +26,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit
   def save(model: Bookmark)(implicit session: RWSession): Bookmark
+  def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
 }
 
 @Singleton
@@ -141,4 +142,13 @@ class BookmarkRepoImpl @Inject() (
   }
 
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit = (for(b <- table if b.id === id) yield b).delete
+  
+  def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])] = {
+    val q = for {
+      r <- table
+      s <- table if (r.userId === s.userId && r.uriId === s.uriId && r.id < s.id)
+    } yield (r.userId, r.uriId)
+    q.list.distinct
+  }
+
 }

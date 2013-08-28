@@ -25,7 +25,6 @@ import org.joda.time.DateTime
 import com.keepit.common.time.zones.PT
 
 
-
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
@@ -213,6 +212,26 @@ class UrlController @Inject() (
   def batchMerge = AdminHtmlAction{ request =>
     uriIntegrityPlugin.batchUpdateMerge()
     Ok("Will do batch merging uris")
+  }
+  
+  def handleDupBookmarks(readOnly: Boolean = true) = AdminHtmlAction{ request =>
+    val dups = db.readOnly{ implicit s =>
+      bookmarkRepo.detectDuplicates()
+    }
+    var info = Vector.empty[(Long, Long, Long, String)]
+    db.readWrite{ implicit s =>
+      dups.foreach{ case (userId, uriId) =>
+        val dup = bookmarkRepo.getByUser(userId).filter(_.uriId == uriId)     // active ones, sorted by updatedAt
+        dup.dropRight(1).foreach{ bm =>
+          if (!readOnly) bookmarkRepo.save(bm.withActive(false))
+          info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""))
+        }
+      }
+      val msg = s"readOnly Mode = ${readOnly}. ${info.size} bookmarks affected. (bookmarkId, userId, uriId, bookmarkTitle) are: \n" + info.mkString("\n")
+      postOffice.sendMail(ElectronicMail(from = EmailAddresses.YINGJIE, to = List(EmailAddresses.YINGJIE),
+       subject = "Duplicate Bookmarks Report", htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
+    }
+    Ok(s"OK. Detecting duplicated bookmarks. ReadOnly Mode = ${readOnly}. Will send report emails")
   }
 }
 
