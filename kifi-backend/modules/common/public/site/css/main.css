@@ -484,9 +484,11 @@ a.page-priv[href]:active {background-color: #8699ab}
 :not([data-kept^=p])>*>.page-who-text>.keep-you+.keep-kept-this::before {content: "Nobody has "}
 .page-chatter {margin-bottom: -6px}
 .page-chatter>h2 {margin-bottom: 8px}
-.page-chatter-messages {display: inline; font-size: 13px; margin-right: 16px; color: inherit !important; white-space: nowrap}
+a.page-chatter-messages {display: inline; font-size: 13px; margin-right: 16px; color: inherit; white-space: nowrap}
 .page-chatter-messages::before {content: attr(data-n); font-size: 25px; color: #b8c5d2; font-weight: bold; -webkit-font-smoothing: antialiased; vertical-align: -3px; margin-right: 5px}
 .page-chatter-messages:not([data-n="1"])::after {content: "s"}
+.page-chatter-messages:hover {color: #0089d5}
+.page-chatter-messages:hover::before {color: rgba(0,137,213,.35)}
 .page-colls.some>h2::before {content: "In "}
 .page-coll-list {margin-top: 10px}
 .page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
