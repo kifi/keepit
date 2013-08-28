@@ -14,8 +14,9 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.Healthcheck
+import scala.xml._
 
-case class NonOKResponseException(url: String, response: ClientResponse, requestBody: Option[JsValue] = None)
+case class NonOKResponseException(url: String, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"Requesting $url ${requestBody.map{b => b.toString}}, got a ${response.status}. Body: ${response.body}")
 
 trait HttpClient {
@@ -33,6 +34,9 @@ trait HttpClient {
 
   def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
   def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
+
+  def postXml(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
+  def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
 
   def put(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
   def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
@@ -88,6 +92,21 @@ case class HttpClientImpl(
   def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(postFuture(url, body, onFailure))
 
   def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
+    val request = req(url)
+    val result = request.post(body).map { response =>
+      val cr = res(request, response)
+      if (response.status / 100 != validResponseClass) {
+        throw new NonOKResponseException(url, cr, Some(body))
+      }
+      cr
+    }
+    result.onFailure(onFailure(url) orElse defaultOnFailure(url))
+    result
+  }
+
+  def postXml(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(postXmlFuture(url, body, onFailure))
+
+  def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
     val result = request.post(body).map { response =>
       val cr = res(request, response)
@@ -158,6 +177,15 @@ private[net] class Request(wsRequest: WSRequestHolder) extends Logging {
   }
 
   def post(body: JsValue) = {
+    val start = System.currentTimeMillis
+    val res = wsRequest.post(body)
+    res.onComplete { resTry =>
+      logResponse(start, "POST", resTry.isSuccess)
+    }
+    res
+  }
+
+  def post(body: NodeSeq) = {
     val start = System.currentTimeMillis
     val res = wsRequest.post(body)
     res.onComplete { resTry =>

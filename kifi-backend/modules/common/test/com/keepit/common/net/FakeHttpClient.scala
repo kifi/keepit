@@ -1,6 +1,7 @@
 package com.keepit.common.net
 
 import scala.concurrent._
+import scala.xml._
 
 import play.api.libs.json._
 
@@ -14,6 +15,7 @@ class FakeHttpClient(
   override def put(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a GET client")
   override def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a GET client")
   override def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a GET client")
+  override def postXml(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a POST client")
   def posting(payload: String): FakeHttpPostClient = new FakeHttpPostClient(requestToResponse, {body =>
     if(payload != body.toString()) throw new Exception("expected %s doesn't match payload %s".format(payload, body))
   })
@@ -31,6 +33,7 @@ class FakeHttpClient(
   override def longTimeout(): HttpClient = this
 
   override def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { post(url, body) }
+  override def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { postXml(url, body) }
   override def getFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { get(url) }
   override def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { put(url, body) }
   override def deleteFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { delete(url) }
