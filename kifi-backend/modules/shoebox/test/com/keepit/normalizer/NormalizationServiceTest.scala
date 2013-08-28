@@ -24,7 +24,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
     case ("http://www.linkedin.com/pub/leonard\\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "")
     case ("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "some script element")
     case ("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content")
-    case ("http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content")
+    case ("http://www.linkedin.com/in/leo/", None) => BasicArticle("leo", "some content")
     case ("http://fr.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "some script element")
   }
 
@@ -126,7 +126,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
 
       "normalize a LinkedIn public profile to a vanity public url" in new TestKitScope() {
         val publicUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3").get }
-        val vanityUri = updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo", Normalization.CANONICAL)).get
+        val vanityUri = updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo/", Normalization.CANONICAL)).get
         val latestPublicUri = db.readOnly { implicit session => uriRepo.get(publicUri.id.get) }
         val latestPrivateUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }
         latestPrivateUri.redirect == Some(vanityUri.id.get)

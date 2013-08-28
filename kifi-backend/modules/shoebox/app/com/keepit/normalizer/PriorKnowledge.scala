@@ -24,7 +24,7 @@ object PriorKnowledge {
 
   val trustedDomains = Set.empty[String]
   val linkedInPrivateProfile = new Regex("""^https?://[a-z]{2,3}\.linkedin\.com/profile/view\?id=(\d+)""", "id")
-  val linkedInPublicProfile = new Regex("""^http://[a-z]{2,3}\.linkedin\.com/(in/\w+|pub/[\P{M}\p{M}\w]+(/\w+){3})$""")
+  val linkedInPublicProfile = new Regex("""^http://[a-z]{2,3}\.linkedin\.com/(in/\w+/?|pub/[\P{M}\p{M}\w]+(/\w+){3})$""")
 
   def getContentChecks(referenceUrl: String)(implicit scraperPlugin: ScraperPlugin): Seq[ContentCheck] = {
 
