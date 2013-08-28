@@ -25,6 +25,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
     case ("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "some script element")
     case ("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content")
     case ("http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content")
+    case ("http://fr.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "some script element")
   }
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
@@ -134,6 +135,13 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         latestPublicUri.state == NormalizedURIStates.INACTIVE
       }
 
+      "normalize a French LinkedIn private profile to a vanity public url" in new TestKitScope() {
+        val privateUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("http://fr.linkedin.com/profile/view?id=136123062")) }
+        val vanityUri = updateNormalizationNow(privateUri, UntrustedCandidate("http://fr.linkedin.com/in/viviensaulue", Normalization.CANONICAL)).get
+        val latestPrivateUri = db.readOnly { implicit session => uriRepo.get(privateUri.id.get) }
+        latestPrivateUri.redirect == Some(vanityUri.id.get)
+        latestPrivateUri.state == NormalizedURIStates.INACTIVE
+      }
 
       "shutdown shared actor system" in {
         system.shutdown()
