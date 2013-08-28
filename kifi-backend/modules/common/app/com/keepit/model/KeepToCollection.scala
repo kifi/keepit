@@ -18,7 +18,6 @@ case class KeepToCollection(
   def isActive: Boolean = state == KeepToCollectionStates.ACTIVE
   def withId(id: Id[KeepToCollection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def withState(state: State[KeepToCollection]) = this.copy(state = state)
 }
 
 case class CollectionsForBookmarkKey(bookmarkId: Id[Bookmark]) extends Key[Seq[Id[Collection]]] {
