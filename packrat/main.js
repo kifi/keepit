@@ -501,12 +501,12 @@ api.port.on({
     var d = pageData[tab.nUri];
     var unreadNotification = false;
     for (var i = 0; i < notifications.length; i++) {
-      if (notifications[i].messageId == o.id && notifications[i].unread) {
+      if (notifications[i].unread && (notifications[i].threadId == o.threadId || notifications[i].id == o.messageId)) {
         unreadNotification = true;
       }
     }
 
-    if (unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0))) {
+    if (o.forceSend || unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) >= new Date(d.lastMessageRead[o.threadId] || 0))) {
       markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
       if (d && d.lastMessageRead) {
         d.lastMessageRead[o.threadId] = o.time;
@@ -679,7 +679,6 @@ function insertNewNotification(n) {
     }
   }
 
-  syncNumNotificationsNotVisited(); // see comment below :(
   return true;
 }
 
@@ -789,6 +788,7 @@ function createDeepLinkListener(locator, tabId) {
 function initTab(tab, d) {  // d is pageData[tab.nUri]
   api.log("[initTab]", tab.id, "inited:", tab.inited);
 
+  d.counts.n = numNotificationsNotVisited;
   api.tabs.emit(tab, "counts", d.counts);
   if (tab.inited) return;
   tab.inited = true;
