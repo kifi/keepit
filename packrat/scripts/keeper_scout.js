@@ -193,7 +193,7 @@ var tile = tile || function() {  // idempotent for Chrome
   return tile;
 }();
 
-const linkedInProfileRe = /^(https?:\/\/)www.linkedin.com\/profile\/view\?/
+const linkedInProfileRe = /^(https?:\/\/)[a-z]{2,3}.linkedin.com\/profile\/view\?/
 function withUrls(o) {
   o.url = document.URL;
   var el, match = linkedInProfileRe.exec(o.url), cUrl = match ?
