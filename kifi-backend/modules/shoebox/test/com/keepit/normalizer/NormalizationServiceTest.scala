@@ -123,7 +123,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         latestPrivateUri.state == NormalizedURIStates.INACTIVE
       }
 
-      "normalize a LinkedIn private profile to a vanity public url" in new TestKitScope() {
+      "normalize a LinkedIn public profile to a vanity public url" in new TestKitScope() {
         val publicUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3").get }
         val vanityUri = updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo", Normalization.CANONICAL)).get
         val latestPublicUri = db.readOnly { implicit session => uriRepo.get(publicUri.id.get) }

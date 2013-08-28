@@ -5,7 +5,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.model._
 import com.keepit.common.logging.Logging
-import com.keepit.scraper.{Scraper, Signature, ScraperPlugin}
+import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import scala.util.{Try, Failure}
 import com.keepit.common.healthcheck.HealthcheckError
@@ -15,9 +15,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import com.keepit.common.db.slick.Database
 import com.keepit.common._
-import scala.util.matching.Regex
-import com.keepit.scraper.extractor.JsoupBasedExtractor
-import org.jsoup.nodes.Document
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
@@ -55,6 +52,9 @@ class NormalizationServiceImpl @Inject() (
 
   def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]] = {
 
+    implicit val uriRepo: NormalizedURIRepo = normalizedURIRepo
+    implicit val scraper: ScraperPlugin = scraperPlugin
+
     val relevantCandidates = current.normalization match {
       case Some(currentNormalization) => candidates.filter(candidate => candidate.normalization > currentNormalization || (candidate.normalization == currentNormalization && candidate.url != current.url))
       case None => candidates ++ buildInternalCandidates(current.url)
@@ -65,7 +65,8 @@ class NormalizationServiceImpl @Inject() (
     for {
       (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(relevantCandidates)
       newReferenceOption <- {
-        priorKnowledge.contentChecks.foreach(_.persistFailedContentChecks())
+
+        priorKnowledge.contentChecks.foreach(persistFailedAttempts(_))
 
         val newReferenceWithRecursiveUpdatesOption = for {
           successfulCandidate <- successfulCandidateOption
@@ -136,100 +137,6 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private object PriorKnowledge {
-    sealed trait Action
-    case object ACCEPT extends Action
-    case object REJECT extends Action
-    case class Check(contentCheck: ContentCheck) extends Action
-
-    val trustedDomains = Set.empty[String]
-    val linkedInPrivateProfile = new Regex("""^http[/\w:\.]+\.linkedin\.com/profile/view\?id=(\d+)""", "id")
-    val linkedInPublicProfile = new Regex("""^http://\w+\.linkedin\.com/(in/\w+|pub/[\P{M}\p{M}\w]+(/\w+){3})$""")
-
-    def getContentChecks(referenceUrl: String): Seq[ContentCheck] = {
-
-      referenceUrl match {
-        case linkedInPrivateProfile(id) => Seq(LinkedInProfileCheck(id.toLong))
-        case linkedInPublicProfile => Seq(SignatureCheck(referenceUrl, "linkedin.com"))
-        case _ => {
-          val trustedDomain = getTrustedDomain(referenceUrl)
-          if (trustedDomain.isDefined) Seq(SignatureCheck(referenceUrl, trustedDomain.get)) else Seq.empty
-        }
-      }
-    }
-
-    private def canBeTrusted(domain: String): Option[String] = trustedDomains.find(trustedDomain => domain.endsWith(trustedDomain))
-    private def getDomain(referenceUrl: String): Option[String] = for { uri <- URI.safelyParse(referenceUrl); host <- uri.host } yield host.name
-    private def getTrustedDomain(referenceUrl: String): Option[String] = for { domain <- getDomain(referenceUrl); trustedDomain <- canBeTrusted(domain) } yield trustedDomain
-  }
-
-  private case class PriorKnowledge(currentReference: NormalizedURI) {
-    lazy val contentChecks = PriorKnowledge.getContentChecks(currentReference.url)
-
-    def apply(candidate: NormalizationCandidate)(implicit session: RSession): PriorKnowledge.Action = candidate match {
-      case _: TrustedCandidate => if (normalizedURIRepo.getByNormalizedUrl(candidate.url).isDefined) PriorKnowledge.ACCEPT else PriorKnowledge.REJECT // restrict renormalization to existing (hence valid) uris
-      case _: UntrustedCandidate => contentChecks.find(_.isDefinedAt(candidate)).map(PriorKnowledge.Check).getOrElse(PriorKnowledge.REJECT)
-    }
-  }
-
-  private trait ContentCheck extends PartialFunction[NormalizationCandidate, RSession => Future[Boolean]] {
-    def persistFailedContentChecks(): Unit
-    def apply(candidate: NormalizationCandidate) = { implicit session: RSession => check(candidate) }
-    protected def check(candidate: NormalizationCandidate)(implicit session: RSession): Future[Boolean]
-  }
-
-  private case class SignatureCheck(referenceUrl: String, trustedDomain: String) extends ContentCheck {
-    private def signature(url: String): Future[Option[Signature]] = scraperPlugin.scrapeBasicArticle(url).map { articleOption =>
-      articleOption.map { article => Signature(Seq(article.title, article.description.getOrElse(""), article.content)) }
-    }
-
-    private lazy val referenceContentSignatureFuture = signature(referenceUrl)
-    var failedContentChecks = Set.empty[String]
-    var referenceUrlIsBroken = false
-
-    def isDefinedAt(candidate: NormalizationCandidate) = ( for { uri <- URI.safelyParse(candidate.url); host <- uri.host } yield host.name.endsWith(trustedDomain) ).getOrElse(false)
-    protected def check(candidate: NormalizationCandidate)(implicit session: RSession): Future[Boolean] = {
-      val alternateUrl = candidate.url
-      if (referenceUrlIsBroken || failedContentChecks.contains(alternateUrl) || failedContentCheckRepo.contains(referenceUrl, alternateUrl)) Future.successful(false)
-      else for {
-        currentContentSignatureOption <- referenceContentSignatureFuture
-        candidateContentSignatureOption <- if (currentContentSignatureOption.isDefined) signature(alternateUrl) else Future.successful(None)
-      } yield (currentContentSignatureOption, candidateContentSignatureOption) match {
-          case (Some(currentContentSignature), Some(candidateContentSignature)) => currentContentSignature.similarTo(candidateContentSignature) > 0.9
-          case (Some(_), None) => {
-            healthcheckPlugin.addError(HealthcheckError(None, None, None, Healthcheck.INTERNAL, Some(s"Content signature of URL ${alternateUrl} could not be computed.")))
-            failedContentChecks += alternateUrl ; false
-          }
-          case (None, _) => {
-            healthcheckPlugin.addError(HealthcheckError(None, None, None, Healthcheck.INTERNAL, Some(s"Content signature of reference URL ${referenceUrl} could not be computed.")))
-            referenceUrlIsBroken = true ; false
-          }
-        }
-    }
-
-    def persistFailedContentChecks(): Unit = db.readWrite { implicit session =>
-      failedContentChecks.foreach(failedContentCheckRepo.createOrIncrease(_, referenceUrl))
-      failedContentChecks = Set.empty[String]
-    }
-  }
-
-  private case class LinkedInProfileCheck(privateProfileId: Long) extends ContentCheck {
-
-    def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && PriorKnowledge.linkedInPublicProfile.findFirstIn(candidate.url).isDefined
-    protected def check(publicProfileCandidate: NormalizationCandidate)(implicit session: RSession) = {
-      val idExtractor = new JsoupBasedExtractor(publicProfileCandidate.url, Scraper.maxContentChars) {
-        def parse(doc: Document): String = doc.getElementsContainingText(s"newTrkInfo = '${privateProfileId},' + document.referrer.substr(0,128)").text()
-      }
-
-      for { publicProfileOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(idExtractor)) } yield publicProfileOption match {
-        case Some(article) => article.content.nonEmpty
-        case None => false
-
-      }
-    }
-    def persistFailedContentChecks() = {}
-  }
-
   private def getNewReference(successfulCandidate: NormalizationCandidate)(implicit session: RSession): NormalizedURI = {
     val (url, normalization) = (successfulCandidate.url, successfulCandidate.normalization)
     normalizedURIRepo.getByNormalizedUrl(url) match {
@@ -270,5 +177,9 @@ class NormalizationServiceImpl @Inject() (
       Some(saved)
     }
     else None
+  }
+
+  private def persistFailedAttempts(contentCheck: ContentCheck): Unit = {
+    contentCheck.getFailedAttempts().foreach { case (url1, url2) => db.readWrite { implicit session => failedContentCheckRepo.createOrIncrease(url1, url2) }}
   }
 }
