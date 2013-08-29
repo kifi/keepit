@@ -77,7 +77,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[Message]])(implicit session: RWSession) : Unit
 
-  def updateUriIds(updates: Map[Id[NormalizedURI], Id[NormalizedURI]])(implicit session: RWSession) : Unit
+  def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit
 
 }
 
@@ -245,7 +245,7 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def updateUriIds(updates: Map[Id[NormalizedURI], Id[NormalizedURI]])(implicit session: RWSession) : Unit = {
+  def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit = {
     updates.foreach{ case (oldId, newId) =>
       (for (row <- table if row.uriId===oldId) yield row.uriId).update(newId)
     } 
