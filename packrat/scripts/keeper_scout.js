@@ -93,6 +93,8 @@ var tile = tile || function() {  // idempotent for Chrome
       setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
+      if (!tile || !tile.parentNode) return;
+      
       var n = Math.max(counts.m, counts.n);
       if (n) {
         tileCount.textContent = n;
@@ -262,7 +264,7 @@ var tile = tile || function() {  // idempotent for Chrome
     document.removeEventListener("keydown", onKeyDown, true);
     cleanUpDom();
     if (tile) {
-      tile.parentNode.removeChild(tile);
+      tile.remove();
       tile = tileCount = null;
     }
   });
