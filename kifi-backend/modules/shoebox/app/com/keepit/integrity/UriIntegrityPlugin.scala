@@ -43,6 +43,7 @@ class UriIntegrityActor @Inject()(
   scrapeInfoRepo: ScrapeInfoRepo,
   uriNormRuleRepo: UriNormalizationRuleRepo,
   changedUriRepo: ChangedURIRepo,
+  keepToCollectionRepo: KeepToCollectionRepo,
   centralConfig: CentralConfig,
   healthcheckPlugin: HealthcheckPlugin,
   scraper: ScraperPlugin
@@ -59,6 +60,32 @@ class UriIntegrityActor @Inject()(
       case Failure(e) => {
         healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Static Normalization failed: ${e.getMessage}")))
         url
+      }
+    }
+  }
+  
+  private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
+    val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
+      val oldBm = bms.head
+      assume(bms.size == 1, s"user ${userId.id} has multiple bookmarks referencing uri ${oldBm.uriId}")
+      bookmarkRepo.getByUriAndUser(newUriId, userId, excludeState = None) match {
+        case None => bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None 
+        case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
+          bookmarkRepo.save(oldBm.withActive(false)); Some(oldBm, bm)
+        } else None
+      }
+    }
+
+    deactivatedBms.flatten.map {
+      case (oldBm, newBm) => {
+        val co1 = keepToCollectionRepo.getCollectionsForBookmark(oldBm.id.get).toSet
+        val co2 = keepToCollectionRepo.getCollectionsForBookmark(newBm.id.get).toSet
+        val inter = co1 & co2
+        val diff = co1 -- co2
+        keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).foreach { ktc =>
+          if (inter.contains(ktc.collectionId)) keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+          if (diff.contains(ktc.collectionId)) keepToCollectionRepo.save(ktc.copy(bookmarkId = newBm.id.get))
+        }
       }
     }
   }
@@ -81,11 +108,11 @@ class UriIntegrityActor @Inject()(
       }
 
       val toBeScraped = if ( oldUri.state != NormalizedURIStates.ACTIVE && oldUri.state != NormalizedURIStates.INACTIVE && (newUri.state == NormalizedURIStates.ACTIVE || newUri.state == NormalizedURIStates.INACTIVE)){
-          Some(uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED)))
+        Some(uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED)))
       } else None
       
       uriRepo.getByRedirection(oldUri.id.get).foreach{ uri =>
-        uriRepo.save(uri.withRedirect(newUriId, currentDateTime))  
+        uriRepo.save(uri.withRedirect(newUriId, currentDateTime))
       }  
         
       uriRepo.save(oldUri.withState(NormalizedURIStates.INACTIVE).withRedirect(newUriId, currentDateTime))
@@ -94,9 +121,11 @@ class UriIntegrityActor @Inject()(
         scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
       }
 
-      bookmarkRepo.getByUri(oldUriId).map{ bm =>
-        bookmarkRepo.save(bm.withNormUriId(newUriId))
-      }
+      /**
+       * ensure uniqueness of bookmarks during merge.
+       */
+      val oldUserBms = bookmarkRepo.getByUri(oldUriId, excludeState = None).groupBy(_.userId)
+      handleBookmarks(oldUserBms, newUriId)
 
       commentRepo.getByUri(oldUriId).map{ cm =>
         commentRepo.save(cm.withNormUriId(newUriId))
@@ -132,9 +161,8 @@ class UriIntegrityActor @Inject()(
         Some(uriRepo.save(uriRepo.get(newUriId).withState(NormalizedURIStates.SCRAPE_WANTED)))
       } else None
 
-      bookmarkRepo.getByUrlId(url.id.get).map{ bm =>
-        bookmarkRepo.save(bm.withNormUriId(newUriId))
-      }
+      val oldUserBms = bookmarkRepo.getByUrlId(url.id.get).groupBy(_.userId)
+      handleBookmarks(oldUserBms, newUriId)
 
       commentRepo.getByUrlId(url.id.get).map{ cm =>
         commentRepo.save(cm.withNormUriId(newUriId))

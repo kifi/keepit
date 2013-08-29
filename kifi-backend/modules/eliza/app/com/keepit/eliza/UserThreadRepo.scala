@@ -71,13 +71,13 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
 
-  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], msgTime: DateTime)(implicit session: RWSession): Unit
+  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], msg: Message)(implicit session: RWSession): Unit
 
   def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread]
 
   def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[Message]])(implicit session: RWSession) : Unit
 
-  def updateUriIds(updates: Map[Id[NormalizedURI], Id[NormalizedURI]])(implicit session: RWSession) : Unit
+  def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit
 
 }
 
@@ -158,9 +158,13 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def setNotification(userId: Id[User], threadId: Id[MessageThread], message: Message, notifJson: JsValue)(implicit session: RWSession) : Unit = {
-    Query(table).filter(row => row.user===userId && row.thread===threadId)
+    Query(table).filter(row => (row.user===userId && row.thread===threadId) && (row.lastMsgFromOther.isNull || row.lastMsgFromOther < message.id.get))
       .map(row => row.lastNotification ~ row.lastMsgFromOther ~ row.notificationPending ~ row.notificationUpdatedAt ~ row.notificationEmailed)
       .update((notifJson, message.id.get, true, message.createdAt, false))
+
+    Query(table).filter(row => (row.user===userId && row.thread===threadId) && row.lastMsgFromOther === message.id.get)
+      .map(row => row.lastNotification ~ row.notificationEmailed)
+      .update((notifJson, false))
   }
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit = {  //Note: minor race condition
@@ -223,8 +227,10 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.user===userId && row.thread===threadId) yield row).first
   }
 
-  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], msgTime: DateTime)(implicit session: RWSession): Unit = {
-    (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationPending).update(false)
+  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], message: Message)(implicit session: RWSession): Unit = {
+    Query(table).filter(row => (row.user===userId && row.thread===threadId) && (row.lastMsgFromOther.isNull || row.lastMsgFromOther <= message.id.get))
+      .map(row => row.lastMsgFromOther ~ row.notificationPending ~ row.notificationUpdatedAt)
+      .update((message.id.get, false, message.createdAt))
   }
 
   def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread] = {
@@ -239,7 +245,7 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def updateUriIds(updates: Map[Id[NormalizedURI], Id[NormalizedURI]])(implicit session: RWSession) : Unit = {
+  def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit = {
     updates.foreach{ case (oldId, newId) =>
       (for (row <- table if row.uriId===oldId) yield row.uriId).update(newId)
     } 
