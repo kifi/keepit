@@ -71,7 +71,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
 
-  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], msgId: Id[Message])(implicit session: RWSession): Unit
+  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], msgTime: DateTime)(implicit session: RWSession): Unit
 
   def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread]
 
@@ -223,8 +223,8 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.user===userId && row.thread===threadId) yield row).first
   }
 
-  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], msgId: Id[Message])(implicit session: RWSession): Unit = {
-    (for (row <- table if row.user===userId && row.thread===threadId && row.lastMsgFromOther===msgId) yield row.notificationPending).update(false)
+  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], msgTime: DateTime)(implicit session: RWSession): Unit = {
+    (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationPending).update(false)
   }
 
   def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread] = {
