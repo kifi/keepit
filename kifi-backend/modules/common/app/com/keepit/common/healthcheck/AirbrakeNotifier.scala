@@ -26,11 +26,17 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
   }
 }
 
-class AirbrakeSender @Inject() (httpClient: HttpClient) {
+class AirbrakeSender @Inject() (httpClient: HttpClient) extends Logging {
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   def send(xml: NodeSeq) = httpClient.
     withHeaders("Content-type" -> "text/xml").
-    postXmlFuture("http://airbrakeapp.com/notifier_api/v2/notices", xml)
+    postXmlFuture("http://airbrakeapp.com/notifier_api/v2/notices", xml) map { res =>
+      val xml = res.xml
+      val id = (xml \ "id").head.text
+      val url = (xml \ "url").head.text
+      log.info(s"sent to airbreak error $id more info at $url")
+    }
 }
 
 // apiKey is per service type (showbox, search etc)
@@ -56,6 +62,7 @@ class AirbrakeNotifier @Inject() (
                 //   <component/>
                 //   <action/>
                 // </request>
+  //http://airbrake.io/airbrake_2_3.xsd
   private[healthcheck] def format(error: AirbrakeError) = <notice version="2.3">
       <api-key>{apiKey}</api-key>
       <notifier>
