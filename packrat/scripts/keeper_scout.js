@@ -15,11 +15,21 @@ var tile = tile || function() {  // idempotent for Chrome
   api.port.emit("session", function(s) {
     session = s;
     sessionChange = true;
+    showOrCleanUpKeeper();
     while (sessionChangeCallbacks.length) sessionChangeCallbacks.shift()();
   });
 
+  function showOrCleanUpKeeper() {
+    if (session && tile) {
+      showTile();
+    } else if (!session) { 
+      cleanUpDom();
+    }
+  }
+
   function onSessionChange(f) {
     if (sessionChange) {
+      showOrCleanUpKeeper();
       f();
     } else {
       sessionChangeCallbacks.push(f);
@@ -37,8 +47,8 @@ var tile = tile || function() {  // idempotent for Chrome
     session_change: function(s) {
       session = s;
       sessionChange = true;
-      sessionChangeCallbacks.forEach(function (elem) { elem(); });
-      sessionChangeCallbacks = [];
+      showOrCleanUpKeeper();
+      while (sessionChangeCallbacks.length) sessionChangeCallbacks.shift()();
     },
     open_to: function(o) {
       keeper("showPane", o.trigger, o.locator);
@@ -83,6 +93,7 @@ var tile = tile || function() {  // idempotent for Chrome
       setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
+      if (!tile || !tile.parentNode) return;
       var n = Math.max(counts.m, counts.n);
       if (n) {
         tileCount.textContent = n;
@@ -112,8 +123,6 @@ var tile = tile || function() {  // idempotent for Chrome
       }
     }
   });
-
-  document.addEventListener("keydown", onKeyDown, true);
   function onKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey) {  // ⌘-shift-[key], ctrl-shift-[key]
       switch (e.keyCode) {
@@ -149,6 +158,12 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   }
 
+  function onMouseOver(e) {
+    if (e.target === tileCount || tileCard.contains(e.target)) {
+      keeper("show", "tile");
+    }
+  }
+
   function toggleLoginDialog() {
     api.require("scripts/dialog.js", function() {
       kifiDialog.toggleLoginDialog();
@@ -172,6 +187,14 @@ var tile = tile || function() {  // idempotent for Chrome
     });
   }
 
+  function showTile() {
+    if (tile.parentNode) return;
+    (document.querySelector("body") || document.documentElement).appendChild(tile);
+    tile.addEventListener("mouseover", onMouseOver);
+    tile["kifi:position"] = positionTile;
+    document.addEventListener("keydown", onKeyDown, true);
+  }
+
   while (tile = document.getElementById("kifi-tile")) {
     tile.parentNode.removeChild(tile);
   }
@@ -186,13 +209,8 @@ var tile = tile || function() {  // idempotent for Chrome
   tileCard = tile.firstChild;
   tileCount = document.createElement("span");
   tileCount.className = "kifi-count";
-  (document.querySelector("body") || document.documentElement).appendChild(tile);
-  tile.addEventListener("mouseover", function(e) {
-    if (e.target === tileCount || tileCard.contains(e.target)) {
-      keeper("show", "tile");
-    }
-  });
-  tile["kifi:position"] = positionTile;
+
+  showTile();
 
   function onResize() {
     if (document.documentElement.classList.contains("kifi-with-pane")) return;
@@ -216,6 +234,24 @@ var tile = tile || function() {  // idempotent for Chrome
     tile.style["transform" in tile.style ? "transform" : "webkitTransform"] = "translate(0," + px + "px)";
   }
 
+  function cleanUpDom() {
+    if (onScroll) {
+      document.removeEventListener("scroll", onScroll);
+      onScroll = null;
+    }
+    if (tile) {
+      tile.removeEventListener("mouseover", onMouseOver);
+      if (tile.parentNode) {
+        tile.parentNode.removeChild(tile);
+      }
+    }
+
+    var sliderElem = document.getElementsByClassName("kifi-pane")[0];
+    if (window.slider2) {
+      slider2.hidePane(false);
+    }
+  }
+
   setTimeout(function checkIfUseful() {
     if (document.hasFocus() && document.body.scrollTop > 300) {
       logEvent("slider", "usefulPage", {url: document.URL});
@@ -226,14 +262,7 @@ var tile = tile || function() {  // idempotent for Chrome
 
   api.onEnd.push(function() {
     document.removeEventListener("keydown", onKeyDown, true);
-    if (onScroll) {
-      document.removeEventListener("scroll", onScroll);
-      onScroll = null;
-    }
-    if (tile) {
-      tile.parentNode.removeChild(tile);
-      tile = tileCount = null;
-    }
+    cleanUpDom();
   });
 
   return tile;
