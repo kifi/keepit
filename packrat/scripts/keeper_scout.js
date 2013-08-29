@@ -15,21 +15,21 @@ var tile = tile || function() {  // idempotent for Chrome
   api.port.emit("session", function(s) {
     session = s;
     sessionChange = true;
+    showOrCleanUpSlider();
+    while (sessionChangeCallbacks.length) sessionChangeCallbacks.shift()();
+  });
+
+  function showOrCleanUpSlider() {
     if (session && !tile) {
       showTile();
     } else if (!session) { 
       cleanUpDom();
     }
-    while (sessionChangeCallbacks.length) sessionChangeCallbacks.shift()();
-  });
+  }
 
   function onSessionChange(f) {
     if (sessionChange) {
-      if (session && !tile) {
-        showTile();
-      } else if (!session) { 
-        cleanUpDom();
-      }
+      showOrCleanUpSlider();
       f();
     } else {
       sessionChangeCallbacks.push(f);
@@ -47,11 +47,7 @@ var tile = tile || function() {  // idempotent for Chrome
     session_change: function(s) {
       session = s;
       sessionChange = true;
-      if (session && !tile) {
-        showTile();
-      } else if (!session) { 
-        cleanUpDom();
-      }
+      showOrCleanUpSlider();
       while (sessionChangeCallbacks.length) sessionChangeCallbacks.shift()();
       sessionChangeCallbacks = [];
     },
