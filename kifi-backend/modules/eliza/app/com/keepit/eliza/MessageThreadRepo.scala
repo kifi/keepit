@@ -120,7 +120,7 @@ trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunctio
 
   override def get(id: Id[MessageThread])(implicit session: RSession) : MessageThread
 
-  def updateNormalizedUris(updates: Map[Id[NormalizedURI], NormalizedURI])(implicit session: RWSession) : Unit
+  def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession) : Unit
 }
 
 
@@ -183,7 +183,7 @@ class MessageThreadRepoImpl @Inject() (
     super.get(id)
   }
 
-  def updateNormalizedUris(updates: Map[Id[NormalizedURI], NormalizedURI])(implicit session: RWSession) : Unit = {
+  def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession) : Unit = {
     updates.foreach{ case (oldId, newNUri) =>
       val updateIds = (for (row <- table if row.uriId===oldId) yield row.externalId).list //Note: race condition if there is an insert after this?
       (for (row <- table if row.uriId===oldId) yield (row.uriId ~ row.nUrl)).update((newNUri.id.get, newNUri.url))
