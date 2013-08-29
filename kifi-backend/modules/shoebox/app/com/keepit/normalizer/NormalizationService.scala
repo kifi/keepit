@@ -1,7 +1,7 @@
 package com.keepit.normalizer
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import com.keepit.common.net.{Host, URI}
+import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.model._
 import com.keepit.common.logging.Logging
@@ -52,16 +52,21 @@ class NormalizationServiceImpl @Inject() (
 
   def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]] = {
 
+    implicit val uriRepo: NormalizedURIRepo = normalizedURIRepo
+    implicit val scraper: ScraperPlugin = scraperPlugin
+
     val relevantCandidates = current.normalization match {
       case Some(currentNormalization) => candidates.filter(candidate => candidate.normalization > currentNormalization || (candidate.normalization == currentNormalization && candidate.url != current.url))
       case None => candidates ++ buildInternalCandidates(current.url)
     }
 
-    val findStrongerCandidate = FindStrongerCandidate(current)
+    val priorKnowledge = PriorKnowledge(current)
+    val findStrongerCandidate = FindStrongerCandidate(current, priorKnowledge)
     for {
       (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(relevantCandidates)
       newReferenceOption <- {
-        findStrongerCandidate.contentCheck.persistFailedContentChecks()
+
+        priorKnowledge.contentChecks.foreach(persistFailedAttempts(_))
 
         val newReferenceWithRecursiveUpdatesOption = for {
           successfulCandidate <- successfulCandidateOption
@@ -86,7 +91,8 @@ class NormalizationServiceImpl @Inject() (
           for {
             normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS
             candidateUrl <- SchemeNormalizer(normalization)(currentURI).safelyToString()
-          } yield TrustedCandidate(candidateUrl, normalization)
+            existingUri <- db.readOnly { implicit session => normalizedURIRepo.getByNormalizedUrl(candidateUrl) }
+          } yield TrustedCandidate(candidateUrl, existingUri.normalization.getOrElse(normalization))
         }
       } yield schemeCandidates
 
@@ -99,9 +105,7 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private case class FindStrongerCandidate(currentReference: NormalizedURI) {
-    val contentCheck = ContentCheck(currentReference.url)
-    val priorKnowledge = PriorKnowledge(currentReference)
+  private case class FindStrongerCandidate(currentReference: NormalizedURI, priorKnowledge: PriorKnowledge) {
 
     def apply(candidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] =
       findCandidate(candidates.sortBy(_.normalization).reverse)
@@ -116,12 +120,12 @@ class NormalizationServiceImpl @Inject() (
 
           db.readOnly { implicit session =>
             priorKnowledge(strongerCandidate) match {
-              case Some(true) => Future.successful((Some(strongerCandidate), weakerCandidates))
-              case Some(false) => findCandidate(weakerCandidates)
-              case None =>
+              case PriorKnowledge.ACCEPT => Future.successful((Some(strongerCandidate), weakerCandidates))
+              case PriorKnowledge.REJECT => findCandidate(weakerCandidates)
+              case PriorKnowledge.Check(contentCheck) =>
                 if (currentReference.url == strongerCandidate.url) Future.successful(Some(strongerCandidate), weakerCandidates)
                 else for {
-                  contentCheck <- contentCheck(strongerCandidate.url)
+                  contentCheck <- contentCheck(strongerCandidate)(session)
                   (successful, weaker) <- {
                     if (contentCheck) Future.successful((Some(strongerCandidate), weakerCandidates))
                     else findCandidate(weakerCandidates)
@@ -131,53 +135,6 @@ class NormalizationServiceImpl @Inject() (
           }
         }
       }
-    }
-  }
-
-  private object PriorKnowledge {
-    val trustedDomains = Set.empty[String]
-    def canBeTrusted(domain: String): Option[String] = trustedDomains.find(trustedDomain => domain.endsWith(trustedDomain))
-  }
-
-  private case class PriorKnowledge(currentReference: NormalizedURI) {
-    lazy val trustedDomain = for { uri <- URI.safelyParse(currentReference.url); host <- uri.host; domain <- PriorKnowledge.canBeTrusted(host.name) } yield domain
-
-    def apply(candidate: NormalizationCandidate)(implicit session: RSession): Option[Boolean] = candidate match {
-      case _ if !(candidate.url.endsWith("vimeo.com/23030893") || candidate.url.endsWith("vimeo.com/34505587") || candidate.url.endsWith("vimeo.com/45985040")) => Some(false) // First deployment guard
-      case TrustedCandidate(url, _) => if (normalizedURIRepo.getByNormalizedUrl(url).nonEmpty) Some(true) else Some(false) // restrict renormalization to existing (hence valid) uris
-      case _: UntrustedCandidate => {
-        val candidateMatchTrustedDomain = ( for { domain <- trustedDomain; uri <- URI.safelyParse(currentReference.url); host <- uri.host } yield host.name.endsWith(domain) ).getOrElse(false)
-        if (candidateMatchTrustedDomain) None else Some(false)
-      }
-    }
-  }
-
-  private case class ContentCheck(referenceUrl: String) {
-    lazy val referenceContentSignatureFuture = scraperPlugin.asyncSignature(referenceUrl)
-    var failedContentChecks = Set.empty[String]
-    var referenceUrlIsBroken = false
-
-    def apply(alternateUrl: String)(implicit session: RSession): Future[Boolean] = {
-      if (referenceUrlIsBroken || failedContentChecks.contains(alternateUrl) || failedContentCheckRepo.contains(referenceUrl, alternateUrl)) Future.successful(false)
-      else for {
-        currentContentSignatureOption <- referenceContentSignatureFuture
-        candidateContentSignatureOption <- if (currentContentSignatureOption.isDefined) scraperPlugin.asyncSignature(alternateUrl) else Future.successful(None)
-      } yield (currentContentSignatureOption, candidateContentSignatureOption) match {
-          case (Some(currentContentSignature), Some(candidateContentSignature)) => currentContentSignature.similarTo(candidateContentSignature) > 0.9
-          case (Some(_), None) => {
-            healthcheckPlugin.addError(HealthcheckError(None, None, None, Healthcheck.INTERNAL, Some(s"Content signature of URL ${alternateUrl} could not be computed.")))
-            failedContentChecks += alternateUrl ; false
-          }
-          case (None, _) => {
-            healthcheckPlugin.addError(HealthcheckError(None, None, None, Healthcheck.INTERNAL, Some(s"Content signature of reference URL ${referenceUrl} could not be computed.")))
-            referenceUrlIsBroken = true ; false
-          }
-        }
-    }
-
-    def persistFailedContentChecks(): Unit = db.readWrite { implicit session =>
-      failedContentChecks.foreach(failedContentCheckRepo.createOrIncrease(_, referenceUrl))
-      failedContentChecks = Set.empty[String]
     }
   }
 
@@ -221,5 +178,9 @@ class NormalizationServiceImpl @Inject() (
       Some(saved)
     }
     else None
+  }
+
+  private def persistFailedAttempts(contentCheck: ContentCheck): Unit = {
+    contentCheck.getFailedAttempts().foreach { case (url1, url2) => db.readWrite { implicit session => failedContentCheckRepo.createOrIncrease(url1, url2) }}
   }
 }
