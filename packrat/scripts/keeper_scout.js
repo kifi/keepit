@@ -15,12 +15,12 @@ var tile = tile || function() {  // idempotent for Chrome
   api.port.emit("session", function(s) {
     session = s;
     sessionChange = true;
-    showOrCleanUpSlider();
+    showOrCleanUpKeeper();
     while (sessionChangeCallbacks.length) sessionChangeCallbacks.shift()();
   });
 
-  function showOrCleanUpSlider() {
-    if (session && !tile) {
+  function showOrCleanUpKeeper() {
+    if (session && tile) {
       showTile();
     } else if (!session) { 
       cleanUpDom();
@@ -29,7 +29,7 @@ var tile = tile || function() {  // idempotent for Chrome
 
   function onSessionChange(f) {
     if (sessionChange) {
-      showOrCleanUpSlider();
+      showOrCleanUpKeeper();
       f();
     } else {
       sessionChangeCallbacks.push(f);
@@ -47,9 +47,8 @@ var tile = tile || function() {  // idempotent for Chrome
     session_change: function(s) {
       session = s;
       sessionChange = true;
-      showOrCleanUpSlider();
+      showOrCleanUpKeeper();
       while (sessionChangeCallbacks.length) sessionChangeCallbacks.shift()();
-      sessionChangeCallbacks = [];
     },
     open_to: function(o) {
       keeper("showPane", o.trigger, o.locator);
@@ -94,7 +93,7 @@ var tile = tile || function() {  // idempotent for Chrome
       setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
-      if (!tile) return;
+      if (!tile || !tile.parentNode) return;
       var n = Math.max(counts.m, counts.n);
       if (n) {
         tileCount.textContent = n;
@@ -159,6 +158,12 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   }
 
+  function onMouseOver(e) {
+    if (e.target === tileCount || tileCard.contains(e.target)) {
+      keeper("show", "tile");
+    }
+  }
+
   function toggleLoginDialog() {
     api.require("scripts/dialog.js", function() {
       kifiDialog.toggleLoginDialog();
@@ -183,30 +188,27 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function showTile() {
-    while (tile = document.getElementById("kifi-tile")) {
-      tile.parentNode.removeChild(tile);
-    }
-    tile = document.createElement("div");
-    tile.dataset.t0 = +new Date;
-    tile.id = tile.className = "kifi-tile";
-    tile.style.display = "none";
-    tile.innerHTML =
-      "<div class=kifi-tile-card>" +
-      "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
-      "<div class=kifi-tile-kept></div></div>";
-    tileCard = tile.firstChild;
-    tileCount = document.createElement("span");
-    tileCount.className = "kifi-count";
+    if (tile.parentNode) return;
     (document.querySelector("body") || document.documentElement).appendChild(tile);
-    tile.addEventListener("mouseover", function(e) {
-      if (e.target === tileCount || tileCard.contains(e.target)) {
-        keeper("show", "tile");
-      }
-    });
+    tile.addEventListener("mouseover", onMouseOver);
     tile["kifi:position"] = positionTile;
-    document.removeEventListener("keydown", onKeyDown, true);
     document.addEventListener("keydown", onKeyDown, true);
   }
+
+  while (tile = document.getElementById("kifi-tile")) {
+    tile.parentNode.removeChild(tile);
+  }
+  tile = document.createElement("div");
+  tile.dataset.t0 = +new Date;
+  tile.id = tile.className = "kifi-tile";
+  tile.style.display = "none";
+  tile.innerHTML =
+    "<div class=kifi-tile-card>" +
+    "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
+    "<div class=kifi-tile-kept></div></div>";
+  tileCard = tile.firstChild;
+  tileCount = document.createElement("span");
+  tileCount.className = "kifi-count";
 
   showTile();
 
@@ -238,15 +240,15 @@ var tile = tile || function() {  // idempotent for Chrome
       onScroll = null;
     }
     if (tile) {
-      tile.parentNode.removeChild(tile);
-      tile = tileCount = null;
+      tile.removeEventListener("mouseover", onMouseOver);
+      if (tile.parentNode) {
+        tile.parentNode.removeChild(tile);
+      }
     }
 
     var sliderElem = document.getElementsByClassName("kifi-pane")[0];
-    if (sliderElem) {
-      api.require("scripts/slider2.js", function() {
-        slider2["hidePane"](false);
-      });
+    if (window.slider2) {
+      slider2.hidePane(false);
     }
   }
 

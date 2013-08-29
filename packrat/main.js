@@ -235,6 +235,7 @@ const socketHandlers = {
   },
   all_notifications_visited: function(id, time) {
     api.log("[socket:all_notifications_visited]", id, time);
+    syncNumNotificationsNotVisited();
     markAllNoticesVisited(id, time);
   },
   thread: function(th) {
@@ -347,6 +348,11 @@ const socketHandlers = {
           thread.messageCount = messages.length;
           messages.forEach(function(m) { thread.messageTimes[m.id] = m.createdAt; });
           thread.participants = messageData[threadId][messages.length-1].participants;
+          for (var j = thread.participants.length; --j >= 0;) {
+            if (thread.participants[j].id == session.userId) {
+              thread.participants.splice(j, 1);
+            }
+          }
 
           // insert thread in chronological order
           //var t = new Date(thread.lastCommmentedAt);
@@ -497,8 +503,9 @@ api.port.on({
     var d = pageData[tab.nUri];
     var unreadNotification = false;
     for (var i = 0; i < notifications.length; i++) {
-      if (notifications[i].unread && (notifications[i].threadId == o.threadId || notifications[i].id == o.messageId)) {
+      if (notifications[i].unread && (notifications[i].thread == o.threadId || notifications[i].id == o.messageId)) {
         unreadNotification = true;
+        o.messageId = notifications[i].id;
       }
     }
 
@@ -743,7 +750,6 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
       numNotVisited: numNotificationsNotVisited});
   });
 
-  syncNumNotificationsNotVisited(); // see comment in function :(
   tellTabsNoticeCountIfChanged();  // visible tabs
 }
 

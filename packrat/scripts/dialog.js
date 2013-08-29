@@ -3,10 +3,11 @@
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
 
+$.fn.layout = $.fn.layout || function() {
+  return this.each(function() {this.clientHeight});  // forces layout
+};
+
 kifiDialog = function() {
-  $.fn.layout = function() {
-    return this.each(function() {this.clientHeight});  // forces layout
-  };
   
   function toggleLoginDialog() {
     render("html/login_dialog", {
