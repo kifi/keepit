@@ -55,11 +55,11 @@ case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: 
   def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && PriorKnowledge.linkedInPublicProfile.findFirstIn(candidate.url).isDefined
   protected def check(publicProfileCandidate: NormalizationCandidate)(implicit session: RSession) = {
     val idExtractor = new JsoupBasedExtractor(publicProfileCandidate.url, Scraper.maxContentChars) {
-      def parse(doc: Document): String = doc.getElementsContainingText(s"newTrkInfo = '${privateProfileId},' + document.referrer.substr(0,128)").text()
+      def parse(doc: Document): String = doc.getElementsByTag("script").toString
     }
 
     for { publicProfileOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(idExtractor)) } yield publicProfileOption match {
-      case Some(article) => article.content.nonEmpty
+      case Some(article) => article.content.contains(s"newTrkInfo = '${privateProfileId},' + document.referrer.substr(0,128)")
       case None => false
 
     }
