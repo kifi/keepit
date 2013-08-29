@@ -218,16 +218,16 @@ class UrlController @Inject() (
     val dups = db.readOnly{ implicit s =>
       bookmarkRepo.detectDuplicates()
     }
-    var info = Vector.empty[(Long, Long, Long, String)]
+    var info = Vector.empty[(Long, Long, Long, String, String)]
     db.readWrite{ implicit s =>
       dups.foreach{ case (userId, uriId) =>
-        val dup = bookmarkRepo.getByUser(userId).filter(_.uriId == uriId)     // active ones, sorted by updatedAt
+        val dup = bookmarkRepo.getByUser(userId, excludeState = None).filter(_.uriId == uriId).sortBy(_.seq)
         dup.dropRight(1).foreach{ bm =>
           if (!readOnly) bookmarkRepo.save(bm.withActive(false))
-          info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""))
+          if (bm.state == BookmarkStates.ACTIVE) info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value)
         }
       }
-      val msg = s"readOnly Mode = ${readOnly}. ${info.size} bookmarks affected. (bookmarkId, userId, uriId, bookmarkTitle) are: \n" + info.mkString("\n")
+      val msg = s"readOnly Mode = ${readOnly}. ${info.size} bookmarks affected. (bookmarkId, userId, uriId, bookmarkTitle, state) are: \n" + info.mkString("\n")
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
        subject = "Duplicate Bookmarks Report", htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
     }
