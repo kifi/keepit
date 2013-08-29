@@ -52,8 +52,10 @@ class FakeHttpPostClient(requestToResponse: Option[PartialFunction[String, FakeC
 }
 
 case class FakeClientResponse(expectedResponse: String, override val status: Int = 200) extends ClientResponse {
-  override def body: String = expectedResponse
-  override def json: JsValue = Json.parse(expectedResponse)
+  def body: String = expectedResponse
+  def json: JsValue = Json.parse(expectedResponse)
+  def xml: NodeSeq = XML.loadString(expectedResponse)
+
 }
 
 object FakeClientResponse {
