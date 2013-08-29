@@ -123,15 +123,17 @@ class MainSearcher(
         }
     }
 
-  private[this] lazy val fullFriendEdgeSet = uriGraphSearcher.friendEdgeSet
   private[this] val friendEdgeSet = uriGraphSearcher.searchFriendEdgeSet
   private[this] val friendsUriEdgeSets = uriGraphSearcher.friendsUriEdgeSets
   private[this] val friendsUriEdgeAccessors = friendsUriEdgeSets.mapValues{ _.accessor }
-  private[this] val filteredFriendEdgeSet = {
+  private[this] val (filteredFriendEdgeSet, relevantFriendEdgeSet) = {
     if (filter.isCustom) {
-      uriGraphSearcher.getUserToUserEdgeSet(userId, filter.filterFriends(fullFriendEdgeSet.destIdSet)) // a custom filter can have non-search friends
+      val fullFriendEdgeSet = uriGraphSearcher.friendEdgeSet
+      val filtered = uriGraphSearcher.getUserToUserEdgeSet(userId, filter.filterFriends(fullFriendEdgeSet.destIdSet)) // a custom filter can have non-search friends
+      val unioned = uriGraphSearcher.getUserToUserEdgeSet(userId, filtered.destIdSet ++ friendEdgeSet.destIdSet)
+      (filtered, unioned)
     } else {
-      friendEdgeSet
+      (friendEdgeSet, friendEdgeSet)
     }
   }
   private[this] val friendUris = if (filter.includeFriends) {
@@ -159,7 +161,7 @@ class MainSearcher(
   Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
 
   private def findSharingUsers(id: Long): UserToUserEdgeSet = {
-    uriGraphSearcher.intersect(fullFriendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
+    uriGraphSearcher.intersect(relevantFriendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
   }
 
   private def sharingScore(sharingUsers: UserToUserEdgeSet): Float = {
@@ -273,7 +275,7 @@ class MainSearcher(
     }
 
     val threshold = highScore * tailCutting
-    val friendStats = FriendStats(fullFriendEdgeSet.destIdSet)
+    val friendStats = FriendStats(relevantFriendEdgeSet.destIdSet)
     var numCollectStats = 20
 
     if (myHits.size > 0) {
