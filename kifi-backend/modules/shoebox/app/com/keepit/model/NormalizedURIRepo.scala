@@ -137,7 +137,7 @@ class NormalizedURIRepoImpl @Inject() (
         newUri
       }
     }
-    session.onTransactionSuccess(normalizedURIFactory.normalizationServiceProvider.get.update(normalizedUri))
+    session.onTransactionSuccess(normalizedURIFactory.normalizationServiceProvider.get.update(normalizedUri, candidates: _*))
     normalizedUri
   }
   
