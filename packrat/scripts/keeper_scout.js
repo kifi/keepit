@@ -242,9 +242,12 @@ var tile = tile || function() {  // idempotent for Chrome
       tile = tileCount = null;
     }
 
-    api.require("scripts/slider2.js", function() {
-      slider2["hidePane"](false);
-    });
+    var sliderElem = document.getElementsByClassName("kifi-pane")[0];
+    if (sliderElem) {
+      api.require("scripts/slider2.js", function() {
+        slider2["hidePane"](false);
+      });
+    }
   }
 
   setTimeout(function checkIfUseful() {
