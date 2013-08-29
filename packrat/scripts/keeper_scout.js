@@ -239,10 +239,13 @@ var tile = tile || function() {  // idempotent for Chrome
   return tile;
 }();
 
+const linkedInProfileRe = /^https?:\/\/[a-z]{2,3}.linkedin.com\/profile\/view\?/;
 function withUrls(o) {
-  var el, cUrl = (el = document.head.querySelector('link[rel=canonical]')) && el.href;
-  var gUrl = (el = document.head.querySelector('meta[property="og:url"]')) && el.content;
   o.url = document.URL;
+  var el, cUrl = ~o.url.search(linkedInProfileRe) ?
+    (el = document.querySelector('.public-profile>dd>:first-child')) && 'http://' + el.textContent :
+    (el = document.head.querySelector('link[rel=canonical]')) && el.href;
+  var gUrl = (el = document.head.querySelector('meta[property="og:url"]')) && el.content;
   if (cUrl && cUrl !== o.url) o.canonical = cUrl;
   if (gUrl && gUrl !== o.url && gUrl !== cUrl) o.og = gUrl;
   return o;

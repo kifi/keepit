@@ -1,8 +1,5 @@
 package com.keepit.controllers.website
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
 import java.net.URLEncoder
 
 import com.google.inject.Inject
@@ -73,16 +70,12 @@ class InviteController @Inject() (db: Database,
 
   private val url = current.configuration.getString("application.baseUrl").get
   private val appId = current.configuration.getString("securesocial.facebook.clientId").get
-  private def fbInviteUrl(invite: Invitation)(implicit session: RSession): Future[String] = {
+  private def fbInviteUrl(invite: Invitation)(implicit session: RSession): String = {
     val identity = socialUserInfoRepo.get(invite.recipientSocialUserId)
     val link = URLEncoder.encode(s"$url${routes.InviteController.acceptInvite(invite.externalId)}", "UTF-8")
     val confirmUri = URLEncoder.encode(
       s"$url${routes.InviteController.confirmInvite(invite.externalId, None, None)}", "UTF-8")
-    // Workaround for https://developers.facebook.com/bugs/314349658708936
-    // See https://developers.facebook.com/bugs/576522152386211
-    httpClient.getFuture(s"https://developers.facebook.com/tools/debug/og/object?q=$link") map { _ =>
-      s"https://www.facebook.com/dialog/send?app_id=$appId&link=$link&redirect_uri=$confirmUri&to=${identity.socialId.id}"
-    }
+    s"https://www.facebook.com/dialog/send?app_id=$appId&link=$link&redirect_uri=$confirmUri&to=${identity.socialId}"
   }
 
   def inviteConnection = AuthenticatedHtmlAction { implicit request =>
@@ -97,7 +90,7 @@ class InviteController @Inject() (db: Database,
       def sendInvitation(socialUserInfo: SocialUserInfo, invite: Invitation) = {
         socialUserInfo.networkType match {
           case SocialNetworks.FACEBOOK =>
-            Async { fbInviteUrl(invitationRepo.save(invite)) map (Redirect(_)) }
+            Redirect(fbInviteUrl(invitationRepo.save(invite)))
           case SocialNetworks.LINKEDIN =>
             val me = socialUserInfoRepo.getByUser(request.userId)
                 .find(_.networkType == SocialNetworks.LINKEDIN).get
