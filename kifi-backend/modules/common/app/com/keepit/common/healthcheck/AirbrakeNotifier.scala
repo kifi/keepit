@@ -69,6 +69,7 @@ class AirbrakeNotifier @Inject() (
       <notifier>
         <name>S42</name>
         <version>0.0.1</version>
+        <url>http://admin.kifi.com/admin</url>
       </notifier>
       <error>
         <class>{error.exception.getClass.getName}</class>
