@@ -94,6 +94,7 @@ var tile = tile || function() {  // idempotent for Chrome
     },
     counts: function(counts) {
       if (!tile || !tile.parentNode) return;
+      
       var n = Math.max(counts.m, counts.n);
       if (n) {
         tileCount.textContent = n;
@@ -192,7 +193,6 @@ var tile = tile || function() {  // idempotent for Chrome
     (document.querySelector("body") || document.documentElement).appendChild(tile);
     tile.addEventListener("mouseover", onMouseOver);
     tile["kifi:position"] = positionTile;
-    document.addEventListener("keydown", onKeyDown, true);
   }
 
   while (tile = document.getElementById("kifi-tile")) {
@@ -209,6 +209,7 @@ var tile = tile || function() {  // idempotent for Chrome
   tileCard = tile.firstChild;
   tileCount = document.createElement("span");
   tileCount.className = "kifi-count";
+  document.addEventListener("keydown", onKeyDown, true);
 
   showTile();
 
@@ -246,7 +247,6 @@ var tile = tile || function() {  // idempotent for Chrome
       }
     }
 
-    var sliderElem = document.getElementsByClassName("kifi-pane")[0];
     if (window.slider2) {
       slider2.hidePane(false);
     }
@@ -263,6 +263,10 @@ var tile = tile || function() {  // idempotent for Chrome
   api.onEnd.push(function() {
     document.removeEventListener("keydown", onKeyDown, true);
     cleanUpDom();
+    if (tile) {
+      tile.remove();
+      tile = tileCount = null;
+    }
   });
 
   return tile;
