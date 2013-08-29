@@ -91,7 +91,8 @@ class NormalizationServiceImpl @Inject() (
           for {
             normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS
             candidateUrl <- SchemeNormalizer(normalization)(currentURI).safelyToString()
-          } yield TrustedCandidate(candidateUrl, normalization)
+            existingUri <- db.readOnly { implicit session => normalizedURIRepo.getByNormalizedUrl(candidateUrl) }
+          } yield TrustedCandidate(candidateUrl, existingUri.normalization.getOrElse(normalization))
         }
       } yield schemeCandidates
 
