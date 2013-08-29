@@ -591,7 +591,8 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
   .invite-filters>a[data-nw] {background-image: url(../img/networks.2x.png)}
   .profile-nw {background-image: url(../img/networks.2x.png)}
-  .friend-actions>*>a::before {background-image: url(../img/friend-actions.2x.png)}
+  .friend-actions>*>a::before,
+  .invite-button::before {background-image: url(../img/friend-actions.2x.png)}
   a.friend-nw {background-image: url(../img/networks-18.2x.png)}
   .my-pic::before {background-image: url(../img/pencil.2x.png)}
 }
