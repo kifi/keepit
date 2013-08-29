@@ -448,10 +448,7 @@ $(function() {
 
 	// Friends Tabs/Pages
 
-	var $friends = $('.friends').on('click', '.friends-tabs>a[href]', function(e) {
-		e.preventDefault();
-		navigate(this.href);
-	});
+	var $friends = $('.friends');
 	var $friendsTabs = $friends.find('.friends-tabs>a');
 	var $friendsTabPages = $friends.find('.friends-page');
 
@@ -728,15 +725,10 @@ $(function() {
 		$('body').attr('data-view', 'blog');
 		$('.left-col .active').removeClass('active');
 		var $blog = $('iframe.blog');
-		if(!$blog.attr('src')) {
-			$blog.attr('src','http://kifiupdates.tumblr.com/');
+		if (!$blog.attr('src')) {
+			$blog.attr('src', 'http://kifiupdates.tumblr.com');
 		}
 	}
-	$('.updates-features').click(function(e) {
-		e.preventDefault();
-		navigate('blog');
-	});
-
 
 	function doSearch(q) {
 		if (q) {
@@ -1013,7 +1005,14 @@ $(function() {
 		if (!$(e.target).is('input,textarea') && e.which >= 48 && e.which <= 90 && !e.ctrlKey && !e.metaKey && !e.altKey) {
 			$query.focus();
 		}
+	}).on('click', 'a[href]', function(e) {
+		var href;
+		if (!e.isDefaultPrevented() && ~(href = this.getAttribute('href')).search(inPageNavRe)) {
+			e.preventDefault();
+			navigate(href);
+		}
 	});
+	var inPageNavRe = /^(?:$|[a-z0-9]+(?:$|\/))/i;
 
 	var baseUriRe = new RegExp('^' + ($('base').attr('href') || ''));
 	$(window).on('statechange anchorchange', function(e) {
@@ -1093,9 +1092,6 @@ $(function() {
 
 	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
 		e.preventDefault();  // avoid starting selection
-	}).on("click", ".keep-coll-a", function(e) {
-		e.stopPropagation(), e.preventDefault();
-		navigate(this.href);
 	}).on("click", ".keep-title>a", function(e) {
 		e.stopPropagation();
 	}).on("click", ".keep", function(e) {
@@ -1110,7 +1106,7 @@ $(function() {
 			    $keeps.filter(".detailed:not(.selected)").removeClass("detailed").length == 0) {
 				return;  // avoid redrawing same details
 			}
-		} else if ($el.hasClass("pic")) {
+		} else if ($el.hasClass("pic") || $el.hasClass('keep-coll-a')) {
 			return;
 		} else if ($keep.hasClass("selected")) {
 			$keeps.filter(".selected").toggleClass("detailed");
@@ -1123,10 +1119,6 @@ $(function() {
 			$keep.addClass("detailed");
 		}
 		updateKeepDetails();
-	});
-	$(".my-identity a").click(function (e) {
-		e.preventDefault();
-		navigate(this.href);
 	});
 	var $mainHead = $(".main-head");
 	var $mainKeeps = $(".main-keeps").antiscroll({x: false, width: "100%"});
@@ -1234,20 +1226,10 @@ $(function() {
 	var collScroller = $collList.data("antiscroll");
 	$(window).resize(collScroller.refresh.bind(collScroller));
 
-	$leftCol.on('click', 'h3:not(.collection)>a[href]', function(e) {
-		e.preventDefault();
-		navigate(this.href);
-	});
-
 	$colls.on("click", "h3.collection>a", function(e) {
-		e.preventDefault();
-		var $a = $(this), $coll = $a.parent();
-		if ($coll.hasClass("renaming")) {
-			if (e.target === this) {
-				$a.find("input").focus();
-			}
-		} else {
-			navigate(this.href);
+		if (e.target === this && $(this.parentNode).hasClass("renaming")) {
+			e.preventDefault();
+			$(this).find("input").focus();
 		}
 	})
 	.on("click", ".collection-create", function() {
@@ -1432,9 +1414,6 @@ $(function() {
 					}).error(showMessage.bind(null, 'Could not update keep, please try again later'));
 			});
 		}
-	}).on("click", ".page-coll-a", function(e) {
-		e.preventDefault();
-		navigate(this.href);
 	}).on("click", ".page-coll-x", function(e) {
 		e.preventDefault();
 		removeFromCollection($(this.parentNode).data("id"), $main.find(".keep.detailed"));

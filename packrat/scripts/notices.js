@@ -126,7 +126,8 @@ noticesPane = function() {
 
   function showNew(notices) {
     notices.forEach(function(n) {
-      $notices.find(".kifi-notice[data-id='" + n.thread + "']").remove();
+      $notices.find(".kifi-notice[data-id='" + n.id + "']").remove();
+      $notices.find(".kifi-notice[data-thread='" + n.thread + "']").remove();
     });
     var $n = $(notices.map(function(n) {return renderNotice(n, true)}).join(""))
       .find("time").timeago().end()

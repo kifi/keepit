@@ -563,6 +563,17 @@ slider2 = function() {
                 }
               }, 150);
             })
+            .on("mouseup", ".kifi-pane-settings-sign-out", function(e) {
+              e.preventDefault();
+              api.port.emit("deauthenticate");
+              $(tile).hide();
+              setTimeout(function() {
+                hidePane();
+                $('<div class="kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/keep.faint.png') + '"> button above.</div>')
+                  .appendTo('body').delay(6000).fadeOut(1000, function() { $(this).remove(); });
+              }, 150);
+              return;
+            })
             .on("keydown", ".kifi-pane-search", function(e) {
               var q, el = this;
               if (e.which == 13 && (q = el.value.trim())) {
