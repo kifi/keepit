@@ -766,6 +766,11 @@ slider2 = function() {
         showPane(locator || "/notices");
       }
     },
+    hidePane: function(leaveSlider) {
+      if ($pane) {
+        hidePane(leaveSlider);
+      }
+    },
     showKeepers: function(keepers, otherKeeps) {
       if (lastShownAt) return;
       var $tile = $(tile).bindHover(function(configureHover) {

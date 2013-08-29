@@ -15,11 +15,21 @@ var tile = tile || function() {  // idempotent for Chrome
   api.port.emit("session", function(s) {
     session = s;
     sessionChange = true;
+    if (session && !tile) {
+      showTile();
+    } else if (!session) { 
+      cleanUpDom();
+    }
     while (sessionChangeCallbacks.length) sessionChangeCallbacks.shift()();
   });
 
   function onSessionChange(f) {
     if (sessionChange) {
+      if (session && !tile) {
+        showTile();
+      } else if (!session) { 
+        cleanUpDom();
+      }
       f();
     } else {
       sessionChangeCallbacks.push(f);
@@ -37,7 +47,12 @@ var tile = tile || function() {  // idempotent for Chrome
     session_change: function(s) {
       session = s;
       sessionChange = true;
-      sessionChangeCallbacks.forEach(function (elem) { elem(); });
+      if (session && !tile) {
+        showTile();
+      } else if (!session) { 
+        cleanUpDom();
+      }
+      while (sessionChangeCallbacks.length) sessionChangeCallbacks.shift()();
       sessionChangeCallbacks = [];
     },
     open_to: function(o) {
@@ -83,6 +98,7 @@ var tile = tile || function() {  // idempotent for Chrome
       setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
+      if (!tile) return;
       var n = Math.max(counts.m, counts.n);
       if (n) {
         tileCount.textContent = n;
@@ -112,8 +128,6 @@ var tile = tile || function() {  // idempotent for Chrome
       }
     }
   });
-
-  document.addEventListener("keydown", onKeyDown, true);
   function onKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey) {  // ⌘-shift-[key], ctrl-shift-[key]
       switch (e.keyCode) {
@@ -172,27 +186,33 @@ var tile = tile || function() {  // idempotent for Chrome
     });
   }
 
-  while (tile = document.getElementById("kifi-tile")) {
-    tile.parentNode.removeChild(tile);
-  }
-  tile = document.createElement("div");
-  tile.dataset.t0 = +new Date;
-  tile.id = tile.className = "kifi-tile";
-  tile.style.display = "none";
-  tile.innerHTML =
-    "<div class=kifi-tile-card>" +
-    "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
-    "<div class=kifi-tile-kept></div></div>";
-  tileCard = tile.firstChild;
-  tileCount = document.createElement("span");
-  tileCount.className = "kifi-count";
-  (document.querySelector("body") || document.documentElement).appendChild(tile);
-  tile.addEventListener("mouseover", function(e) {
-    if (e.target === tileCount || tileCard.contains(e.target)) {
-      keeper("show", "tile");
+  function showTile() {
+    while (tile = document.getElementById("kifi-tile")) {
+      tile.parentNode.removeChild(tile);
     }
-  });
-  tile["kifi:position"] = positionTile;
+    tile = document.createElement("div");
+    tile.dataset.t0 = +new Date;
+    tile.id = tile.className = "kifi-tile";
+    tile.style.display = "none";
+    tile.innerHTML =
+      "<div class=kifi-tile-card>" +
+      "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
+      "<div class=kifi-tile-kept></div></div>";
+    tileCard = tile.firstChild;
+    tileCount = document.createElement("span");
+    tileCount.className = "kifi-count";
+    (document.querySelector("body") || document.documentElement).appendChild(tile);
+    tile.addEventListener("mouseover", function(e) {
+      if (e.target === tileCount || tileCard.contains(e.target)) {
+        keeper("show", "tile");
+      }
+    });
+    tile["kifi:position"] = positionTile;
+    document.removeEventListener("keydown", onKeyDown, true);
+    document.addEventListener("keydown", onKeyDown, true);
+  }
+
+  showTile();
 
   function onResize() {
     if (document.documentElement.classList.contains("kifi-with-pane")) return;
@@ -216,6 +236,21 @@ var tile = tile || function() {  // idempotent for Chrome
     tile.style["transform" in tile.style ? "transform" : "webkitTransform"] = "translate(0," + px + "px)";
   }
 
+  function cleanUpDom() {
+    if (onScroll) {
+      document.removeEventListener("scroll", onScroll);
+      onScroll = null;
+    }
+    if (tile) {
+      tile.parentNode.removeChild(tile);
+      tile = tileCount = null;
+    }
+
+    api.require("scripts/slider2.js", function() {
+      slider2["hidePane"](false);
+    });
+  }
+
   setTimeout(function checkIfUseful() {
     if (document.hasFocus() && document.body.scrollTop > 300) {
       logEvent("slider", "usefulPage", {url: document.URL});
@@ -226,14 +261,7 @@ var tile = tile || function() {  // idempotent for Chrome
 
   api.onEnd.push(function() {
     document.removeEventListener("keydown", onKeyDown, true);
-    if (onScroll) {
-      document.removeEventListener("scroll", onScroll);
-      onScroll = null;
-    }
-    if (tile) {
-      tile.parentNode.removeChild(tile);
-      tile = tileCount = null;
-    }
+    cleanUpDom();
   });
 
   return tile;

@@ -4,6 +4,10 @@
 // @require scripts/render.js
 
 kifiDialog = function() {
+  $.fn.layout = function() {
+    return this.each(function() {this.clientHeight});  // forces layout
+  };
+  
   function toggleLoginDialog() {
     render("html/login_dialog", {
       logo: api.url("images/kifi_logo_medium.png")
