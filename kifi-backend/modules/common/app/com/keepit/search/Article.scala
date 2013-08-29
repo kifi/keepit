@@ -18,4 +18,3 @@ case class Article(
     titleLang: Option[Lang],
     contentLang: Option[Lang],
     destinationUrl: Option[String] = None)
-

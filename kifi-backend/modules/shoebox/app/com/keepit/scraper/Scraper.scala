@@ -68,22 +68,13 @@ class Scraper @Inject() (
     safeProcessURI(uri, info)
   }
 
-  def getSignature(url: String): Option[Signature] = {
-    val extractor = getExtractor(url)
+  def getBasicArticle(url: String, customExtractor: Option[Extractor] = None): Option[BasicArticle] = {
+    val extractor = customExtractor.getOrElse(getExtractor(url))
     try {
       val fetchStatus = httpFetcher.fetch(url) { input => extractor.process(input) }
 
       fetchStatus.statusCode match {
-        case HttpStatus.SC_OK =>
-          if (isUnscrapable(url, fetchStatus.destinationUrl)) {
-            None
-          } else {
-            val content = extractor.getContent
-            val title = getTitle(extractor)
-            val description = getDescription(extractor)
-            val signature = computeSignature(title, description.getOrElse(""), content)
-            Some(signature)
-          }
+        case HttpStatus.SC_OK if !(isUnscrapable(url, fetchStatus.destinationUrl)) => Some(basicArticle(url, extractor))
         case _ => None
       }
     } catch {
@@ -246,7 +237,7 @@ class Scraper @Inject() (
             val title = getTitle(extractor)
             val description = getDescription(extractor)
             val media = getMediaTypeString(extractor)
-            val signature = computeSignature(title, description.getOrElse(""), content)
+            val signature = Signature(Seq(title, description.getOrElse(""), content))
 
             // now detect the document change
             val docChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
@@ -298,9 +289,18 @@ class Scraper @Inject() (
   }
   private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
-  private[this] def computeSignature(fields: String*) = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
 
   def close() {
     httpFetcher.close()
   }
+  
+  private[this] def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
+    title = getTitle(extractor),
+    content = extractor.getContent,
+    description = getDescription(extractor),
+    media = getMediaTypeString(extractor),
+    httpContentType = extractor.getMetadata("Content-Type"),
+    httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
+    destinationUrl = Some(destinationUrl)
+  )
 }
