@@ -57,7 +57,7 @@ class NormalizationServiceImpl @Inject() (
 
     val relevantCandidates = current.normalization match {
       case Some(currentNormalization) => candidates.filter(candidate => candidate.normalization > currentNormalization || (candidate.normalization == currentNormalization && candidate.url != current.url))
-      case None => candidates ++ buildInternalCandidates(current.url)
+      case None => candidates ++ findVariations(current.url).map { case (normalization, uri) => TrustedCandidate(uri.url, normalization) }
     }
 
     val priorKnowledge = PriorKnowledge(current)
@@ -71,7 +71,7 @@ class NormalizationServiceImpl @Inject() (
         val newReferenceWithRecursiveUpdatesOption = for {
           successfulCandidate <- successfulCandidateOption
           newReference <- migrate(current, successfulCandidate)
-        } yield (newReference, getURIsToBeFurtherUpdated(current,  newReference, weakerCandidates).map(update(_, successfulCandidate)))
+        } yield (newReference, getURIsToBeFurtherUpdated(current,  newReference).map(update(_, successfulCandidate)))
 
         newReferenceWithRecursiveUpdatesOption match {
           case None => Future.successful(None)
@@ -82,25 +82,25 @@ class NormalizationServiceImpl @Inject() (
   } tap(_.onFailure { case e => healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Normalization update failed: ${e.getMessage}"))) })
 
 
-  private def buildInternalCandidates(referenceUrl: String): Seq[NormalizationCandidate] = {
+  private def findVariations(referenceUrl: String): Seq[(Normalization, NormalizedURI)] = {
 
-    val schemeCandidatesTry =
+    val variationsTry =
       for {
-        currentURI <- URI.parse(referenceUrl)
-        schemeCandidates <- Try {
+        referenceURI <- URI.parse(referenceUrl)
+        variations <- Try {
           for {
             normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS
-            candidateUrl <- SchemeNormalizer(normalization)(currentURI).safelyToString()
-            existingUri <- db.readOnly { implicit session => normalizedURIRepo.getByNormalizedUrl(candidateUrl) }
-          } yield TrustedCandidate(candidateUrl, existingUri.normalization.getOrElse(normalization))
+            urlVariation <- SchemeNormalizer(normalization)(referenceURI).safelyToString()
+            uri <- db.readOnly { implicit session => normalizedURIRepo.getByNormalizedUrl(urlVariation) }
+          } yield (normalization, uri)
         }
-      } yield schemeCandidates
+      } yield variations
 
-    schemeCandidatesTry match {
-      case Success(schemeCandidates) => schemeCandidates.toSeq
+    variationsTry match {
+      case Success(variations) => variations.toSeq
       case Failure(e) => {
-        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Normalization candidates could not be generated internally: ${e.getMessage}")))
-        Seq.empty[TrustedCandidate]
+        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Url variations could not be generated: ${e.getMessage}")))
+        Seq.empty
       }
     }
   }
@@ -148,10 +148,11 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private def getURIsToBeFurtherUpdated(currentReference: NormalizedURI, newReference: NormalizedURI, weakerCandidates: Seq[NormalizationCandidate]): Set[NormalizedURI] = db.readOnly { implicit session =>
+  private def getURIsToBeFurtherUpdated(currentReference: NormalizedURI, newReference: NormalizedURI): Set[NormalizedURI] = db.readOnly { implicit session =>
+
     val toBeUpdated = for {
-      candidate <- weakerCandidates.takeWhile(currentReference.normalization.isEmpty || _.normalization >= currentReference.normalization.get).toSet[NormalizationCandidate]
-      normalizedURI <- normalizedURIRepo.getByUri(candidate.url)
+      url <- Set(currentReference.url, newReference.url)
+      (_, normalizedURI) <- findVariations(url) if normalizedURI.normalization.isEmpty || normalizedURI.normalization.get <= newReference.normalization.get
       toBeUpdated <- (normalizedURI.state, normalizedURI.redirect) match {
         case (NormalizedURIStates.INACTIVE, None) => None
         case (NormalizedURIStates.INACTIVE, Some(id)) => {
@@ -168,7 +169,7 @@ class NormalizationServiceImpl @Inject() (
 
   private def migrate(currentReference: NormalizedURI, successfulCandidate: NormalizationCandidate): Option[NormalizedURI] = db.readWrite { implicit session =>
     val latestCurrent = normalizedURIRepo.get(currentReference.id.get)
-    if (latestCurrent.state != NormalizedURIStates.INACTIVE && latestCurrent.normalization == currentReference.normalization) {
+    if (latestCurrent.state != NormalizedURIStates.INACTIVE  && latestCurrent.normalization == currentReference.normalization) {
       val newReference = getNewReference(successfulCandidate)
       val saved = normalizedURIRepo.save(newReference)
 
