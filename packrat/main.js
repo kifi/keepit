@@ -235,6 +235,7 @@ const socketHandlers = {
   },
   all_notifications_visited: function(id, time) {
     api.log("[socket:all_notifications_visited]", id, time);
+    syncNumNotificationsNotVisited();
     markAllNoticesVisited(id, time);
   },
   thread: function(th) {
@@ -347,6 +348,11 @@ const socketHandlers = {
           thread.messageCount = messages.length;
           messages.forEach(function(m) { thread.messageTimes[m.id] = m.createdAt; });
           thread.participants = messageData[threadId][messages.length-1].participants;
+          for (var j = thread.participants.length; --j >= 0;) {
+            if (thread.participants[j].id == session.userId) {
+              thread.participants.splice(j, 1);
+            }
+          }
 
           // insert thread in chronological order
           //var t = new Date(thread.lastCommmentedAt);
@@ -401,6 +407,7 @@ const socketHandlers = {
 // ===== Handling messages from content scripts or other extension pages
 
 api.port.on({
+  deauthenticate: deauthenticate,
   get_keeps: searchOnServer,
   get_chatter: function(urls, respond) {
     api.log("[get_chatter]");
@@ -496,12 +503,13 @@ api.port.on({
     var d = pageData[tab.nUri];
     var unreadNotification = false;
     for (var i = 0; i < notifications.length; i++) {
-      if (notifications[i].messageId == o.id && notifications[i].unread) {
+      if (notifications[i].unread && (notifications[i].thread == o.threadId || notifications[i].id == o.messageId)) {
         unreadNotification = true;
+        o.messageId = notifications[i].id;
       }
     }
 
-    if (unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0))) {
+    if (o.forceSend || unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) >= new Date(d.lastMessageRead[o.threadId] || 0))) {
       markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
       if (d && d.lastMessageRead) {
         d.lastMessageRead[o.threadId] = o.time;
@@ -674,7 +682,6 @@ function insertNewNotification(n) {
     }
   }
 
-  syncNumNotificationsNotVisited(); // see comment below :(
   return true;
 }
 
@@ -743,7 +750,6 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
       numNotVisited: numNotificationsNotVisited});
   });
 
-  syncNumNotificationsNotVisited(); // see comment in function :(
   tellTabsNoticeCountIfChanged();  // visible tabs
 }
 
@@ -784,6 +790,7 @@ function createDeepLinkListener(locator, tabId) {
 function initTab(tab, d) {  // d is pageData[tab.nUri]
   api.log("[initTab]", tab.id, "inited:", tab.inited);
 
+  d.counts.n = numNotificationsNotVisited;
   api.tabs.emit(tab, "counts", d.counts);
   if (tab.inited) return;
   tab.inited = true;
@@ -925,6 +932,19 @@ function subscribe(tab) {
     api.icon.set(tab, "icons/keep.faint.png");
   }
 
+  if (session == null) {
+    api.log("[subscribe] user not logged in")
+    if (!getStored("user_logout")) { // user did not explicitly log out using our logout process
+      ajax("GET", "/ext/authed", function userIsLoggedIn() {
+        // user is now logged in
+        authenticate(function() {
+          subscribe(tab);
+        });
+      });
+    }   
+    return;
+  }
+
   var d = pageData[tab.nUri || tab.url];
 
   if (d) {  // no need to ask server again
@@ -943,8 +963,7 @@ function subscribe(tab) {
     }
   } else {
 
-    ajax("POST", "/ext/pageDetails", {url: tab.url}, function(resp) {
-
+    ajax("POST", "/ext/pageDetails", {url: tab.url}, function success(resp) {
       socket.send(["get_threads_by_url", tab.nUri || tab.url]);
 
       api.log("[subscribe]", resp);
@@ -983,6 +1002,15 @@ function subscribe(tab) {
       }
 
       tellTabsNoticeCountIfChanged();
+    }, function fail(xhr) {
+      if (xhr.status == 403) {
+        session = null;
+        if (socket) {
+          socket.close();
+          socket = null;
+        }
+        clearDataCache();
+      }
     });
   }
   function finish(uri) {
@@ -1261,6 +1289,9 @@ function startSession(callback, retryMs) {
 
     api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
     api.tabs.eachSelected(subscribe);
+    api.tabs.each(function(page) {
+      api.tabs.emit(page, "session_change", session);
+    });
     callback();
   },
   function fail(xhr) {
@@ -1314,7 +1345,6 @@ function deauthenticate() {
     socket = null;
   }
   clearDataCache();
-  // TODO: make all page icons faint?
   api.popup.open({
     name: "kifi-deauthenticate",
     url: webBaseUri() + "/logout#_=_",
@@ -1325,6 +1355,10 @@ function deauthenticate() {
         api.log("[deauthenticate] closing popup");
         this.close();
       }
+      api.tabs.each(function(tab) {
+        api.icon.set(tab, "icons/keep.faint.png");
+        api.tabs.emit(tab, "session_change", undefined);
+      });
     }
   })
 }

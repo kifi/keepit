@@ -323,7 +323,7 @@ class MessagingController @Inject() (
         Json.arr("notification", notifJson)
       )
       
-      future { notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getPendingNotificationCount(user))) }
+      notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getPendingNotificationCount(user)))
 
       shoebox.createDeepLink(message.from.get, user, thread.uriId.get, DeepLocator(locator))
 
@@ -595,7 +595,7 @@ class MessagingController @Inject() (
     val message = db.readOnly{ implicit session => messageRepo.get(msgExtId) }
     val thread  = db.readOnly{ implicit session => threadRepo.get(message.thread) } //TODO: This needs to change when we have detached threads
     val nUrl : String = thread.nUrl.getOrElse("")
-    db.readWrite{ implicit session => userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message.id.get) }
+    if (message.from != userId) db.readWrite{ implicit session => userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message) }
     notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
     notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getPendingNotificationCount(userId)))
   }

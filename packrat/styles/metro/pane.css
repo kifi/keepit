@@ -180,6 +180,25 @@ div.kifi-pane-head-settings-menu {
   visibility: visible;
 }
 
+.kifi-signed-out-tooltip {
+  position: fixed;
+  top: 2px;
+  right: 50px;
+  text-align: left;
+  line-height: 20px;
+  font: 16px/1.5 "Helvetica Neue",arial,sans-serif !important;
+  color: #515051;
+  background-color: #474e54;
+  color: #fff !important;
+  padding: 10px;
+  border-radius: 10px;
+  z-index: 999999999999;
+}
+.kifi-signed-out-tooltip > .kifi-signed-out-icon {
+  height: 18px;
+  width: 18px;
+}
+
 .kifi-pane input[type=text].kifi-pane-search {
   margin: 0;
   width: 100%;
