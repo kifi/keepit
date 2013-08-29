@@ -29,12 +29,12 @@ class ChatterController @Inject() (
   extends WebsiteController(actionAuthenticator) {
 
   def getChatter() = AuthenticatedJsonToJsonAction { request =>
-    val urls = request.body.as[Seq[String]]
+    val url = (request.body \ "url").as[String]
     Async {
-      messagingController.getChatter(request.user.id.get, urls).map { res =>
-        Ok(res.map { case (url, msgCount) =>
+      messagingController.getChatter(request.user.id.get, Seq(url)).map { res =>
+        Ok(res.headOption.map { case (url, msgCount) =>
           Json.obj("comments" -> 0, "conversations" -> msgCount)
-        })
+        }.getOrElse(Json.obj()))
       }
     }
   }

@@ -71,9 +71,10 @@ class ExtMessagingController @Inject() (
     val urls = request.body.as[Seq[String]]
     Async {
       messagingController.getChatter(request.user.id.get, urls).map { res =>
-        Ok(res.map { case (url, msgCount) =>
+        val built = res.map { case (url, msgCount) =>
           url -> Json.arr(0, msgCount) // Legacy 0 for comments. Extension needs to be updated to not need that count.
-        })
+        }.toSeq
+        Ok(JsObject(built))
       }
     }
   }
