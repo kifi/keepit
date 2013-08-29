@@ -646,29 +646,27 @@ $(function() {
 	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
 	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
-		var fullSocialId = $(this).closest('.invite-friend').data('value');
+		var $friend = $(this).closest('.invite-friend'), fullSocialId = $friend.data('value');
 		// TODO(greg): figure out why this doesn't work cross-domain
-		var $form = $(this).closest('form').attr('action', '/invite').off('submit');
-		if (fullSocialId.indexOf("facebook/") === 0) {
+		var $form = $('<form method=POST action=/invite style="position:absolute;height:0;width:0;left:-99px">')
+			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">').appendTo('body');
+		if (/^facebook/.test(fullSocialId)) {
 			window.open("about:blank", fullSocialId, "height=640,width=1060,left=200,top=200", false);
-			$form.attr('target', fullSocialId).submit();
-		} else if (fullSocialId.indexOf("linkedin/") === 0) {
-			inviteMessageDialogTmpl.render({
-				label: $(this).closest('.invite-friend').find('.invite-name').text()
-			});
-			var $popup =$inviteMessageDialog.appendTo($form).off('click');
-			$popup.on('click', '.invite-cancel', function (e) {
+			$form.attr('target', fullSocialId).submit().remove();
+		} else if (/^linkedin/.test(fullSocialId)) {
+			inviteMessageDialogTmpl.render({label: $friend.find('.invite-name').text()});
+			$inviteMessageDialog.appendTo($form).on('click', '.invite-cancel', function (e) {
 				e.preventDefault();
-				$popup.remove();
+				$inviteMessageDialog.remove(), $form.remove();
 			});
 			$form.on('submit', function (e) {
 				e.preventDefault();
 				$.post($form.attr('action'), $form.serialize()).complete(function(xhr) {
 					if (xhr.status >= 400) {
-						console.log('error sending invite: ', xhr);
+						console.log('error sending invite:', xhr);
 					} else {
 						console.log('sent invite');
-						$popup.remove();
+						$inviteMessageDialog.remove(), $form.remove();
 					}
 					updateInviteCache();
 					prepInviteTab();
