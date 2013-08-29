@@ -15,7 +15,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
                      (implicit session: RSession): Option[Bookmark]
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark]
+  def getByUser(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Bookmark]
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
                 collectionId: Option[Id[Collection]], count: Int)(implicit session: RSession): Seq[Bookmark]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
@@ -87,8 +87,8 @@ class BookmarkRepoImpl @Inject() (
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.uriId === uriId && b.state === BookmarkStates.ACTIVE && b.title.isNull) yield b).list
 
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark] =
-    (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).sortBy(_.createdAt).list
+  def getByUser(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Bookmark] =
+    (for(b <- table if b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
 
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
                 collectionId: Option[Id[Collection]], count: Int)(implicit session: RSession): Seq[Bookmark] = {
