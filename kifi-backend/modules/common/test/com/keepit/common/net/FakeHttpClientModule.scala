@@ -7,7 +7,9 @@ import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInst
 case class FakeHttpClientModule(requestToResponse: PartialFunction[String, FakeClientResponse] = FakeClientResponse.emptyFakeHttpClient) extends ScalaModule {
 
   def configure(): Unit = {
-    bind[HttpClient].toInstance(new FakeHttpClient(Some(requestToResponse)))
+    val fakeClient = new FakeHttpClient(Some(requestToResponse))
+    bind[HttpClient].toInstance(fakeClient)
+    bind[FakeHttpClient].toInstance(fakeClient)
   }
 
   @Singleton

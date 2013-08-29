@@ -210,18 +210,29 @@ private[net] class Request(wsRequest: WSRequestHolder) extends Logging {
 trait ClientResponse {
   def body: String
   def json: JsValue
+  def xml: NodeSeq
   def status: Int
 }
 
 class ClientResponseImpl(val request: Request, val response: Response) extends ClientResponse {
 
-  override def status: Int = response.status
+  def status: Int = response.status
 
-  override def body: String = response.body
+  def body: String = response.body
 
-  override def json: JsValue = {
+  def json: JsValue = {
     try {
       response.json
+    } catch {
+      case e: Throwable =>
+        println("bad response: %s".format(response.body.toString()))
+        throw e
+    }
+  }
+
+  def xml: NodeSeq = {
+    try {
+      response.xml
     } catch {
       case e: Throwable =>
         println("bad response: %s".format(response.body.toString()))
