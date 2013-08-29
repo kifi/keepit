@@ -941,7 +941,7 @@ function subscribe(tab) {
           subscribe(tab);
         });
       });
-    }   
+    }
     return;
   }
 
@@ -962,7 +962,6 @@ function subscribe(tab) {
       } // else wait for page data
     }
   } else {
-
     ajax("POST", "/ext/pageDetails", {url: tab.url}, function success(resp) {
       socket.send(["get_threads_by_url", tab.nUri || tab.url]);
 
