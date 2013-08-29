@@ -23,5 +23,18 @@ class AirbreakTest extends Specification with TestInjector {
         (xml \ "server-environment" \ "environment-name").head === <environment-name>production</environment-name>
       }
     }
+
+    // "live send" in {
+    //   withInjector(StandaloneTestActorSystemModule(), ProdHttpClientModule()) { implicit injector =>
+    //     val actor = inject[ActorInstance[AirbrakeNotifierActor]]
+    //     val elizaKey = "b903a091b834929686b95673c23fcb0d"
+    //     val notifyer = new AirbrakeNotifier(elizaKey, actor)
+    //     val error = AirbrakeError(new IllegalArgumentException("hi there"))
+    //     notifyer.notifyError(error)
+    //     Thread.sleep(10000)
+    //     1 === 1
+    //   }
+    // }
+
   }
 }

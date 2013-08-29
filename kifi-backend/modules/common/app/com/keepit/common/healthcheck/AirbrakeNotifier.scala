@@ -36,6 +36,7 @@ class AirbrakeSender @Inject() (httpClient: HttpClient) extends Logging {
       val id = (xml \ "id").head.text
       val url = (xml \ "url").head.text
       log.info(s"sent to airbreak error $id more info at $url")
+      println(s"sent to airbreak error $id more info at $url")
     }
 }
 
