@@ -1,3 +1,4 @@
+/*
 
 package com.keepit.normalizer
 
@@ -154,3 +155,4 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
   }
 }
 
+*/
