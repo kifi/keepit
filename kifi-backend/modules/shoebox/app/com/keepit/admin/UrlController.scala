@@ -221,7 +221,7 @@ class UrlController @Inject() (
     var info = Vector.empty[(Long, Long, Long, String)]
     db.readWrite{ implicit s =>
       dups.foreach{ case (userId, uriId) =>
-        val dup = bookmarkRepo.getByUser(userId).filter(_.uriId == uriId)     // active ones, sorted by updatedAt
+        val dup = bookmarkRepo.getByUser(userId, excludeState = None).filter(_.uriId == uriId).sortBy(_.seq)
         dup.dropRight(1).foreach{ bm =>
           if (!readOnly) bookmarkRepo.save(bm.withActive(false))
           info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""))
