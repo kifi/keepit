@@ -8,6 +8,24 @@ function logEvent() {  // parameters defined in main.js
 
 var tile = tile || function() {  // idempotent for Chrome
   api.log("[scout]", location.hostname);
+  var session;
+  var sessionChange = false;
+  var sessionChangeCallbacks = [];
+
+  api.port.emit("session", function(s) {
+    session = s;
+    sessionChange = true;
+    while (sessionChangeCallbacks.length) sessionChangeCallbacks.shift()();
+  });
+
+  function onSessionChange(f) {
+    if (sessionChange) {
+      f();
+    } else {
+      sessionChangeCallbacks.push(f);
+    }
+  }
+
   window.onerror = function(message, url, lineNo) {
     if (!/https?\:/.test(url)) {  // this is probably from extension code, not from the website we're running this on
       api.port.emit("report_error", { message: message, url: url, lineNo: lineNo });
@@ -16,32 +34,42 @@ var tile = tile || function() {  // idempotent for Chrome
 
   var tileCard, tileCount, onScroll;
   api.port.on({
+    session_change: function(s) {
+      session = s;
+      sessionChange = true;
+      sessionChangeCallbacks.forEach(function (elem) { elem(); });
+      sessionChangeCallbacks = [];
+    },
     open_to: function(o) {
       keeper("showPane", o.trigger, o.locator);
     },
     button_click: keeper.bind(null, "togglePane", "button"),
     auto_show: keeper.bind(null, "show", "auto"),
     init: function(o) {
-      var pos = o.position;
-      if (pos) {
-        tile.style.top = pos.top >= 0 ? pos.top + "px" : "auto";
-        tile.style.bottom = pos.bottom >= 0 ? pos.bottom + "px" : "auto";
-        tile.dataset.pos = JSON.stringify(pos);
-        positionTile(pos);
-      }
-      tileCard.classList.add("kifi-0s");
-      if (o.kept) {
-        tile.dataset.kept = o.kept;
-      } else {
-        tile.removeAttribute("data-kept");
-      }
-      window.addEventListener("resize", onResize);
-      api.require("styles/metro/tile.css", function() {
-        if (!o.hide) {
-          tile.style.display = "";
+      onSessionChange(function() {
+        if (!session) return;
+
+        var pos = o.position;
+        if (pos) {
+          tile.style.top = pos.top >= 0 ? pos.top + "px" : "auto";
+          tile.style.bottom = pos.bottom >= 0 ? pos.bottom + "px" : "auto";
+          tile.dataset.pos = JSON.stringify(pos);
+          positionTile(pos);
         }
-        tile.offsetHeight;
-        tileCard.classList.remove("kifi-0s");
+        tileCard.classList.add("kifi-0s");
+        if (o.kept) {
+          tile.dataset.kept = o.kept;
+        } else {
+          tile.removeAttribute("data-kept");
+        }
+        window.addEventListener("resize", onResize);
+        api.require("styles/metro/tile.css", function() {
+          if (!o.hide) {
+            tile.style.display = "";
+          }
+          tile.offsetHeight;
+          tileCard.classList.remove("kifi-0s");
+        });
       });
     },
     kept: function(o) {
@@ -90,13 +118,19 @@ var tile = tile || function() {  // idempotent for Chrome
     if ((e.metaKey || e.ctrlKey) && e.shiftKey) {  // ⌘-shift-[key], ctrl-shift-[key]
       switch (e.keyCode) {
       case 75: // k
-        if (tile && tile.dataset.kept) {
-          api.port.emit("unkeep", withUrls({}));
-          tile.removeAttribute("data-kept");  // delete .dataset.kept fails in FF 21
-        } else {
-          api.port.emit("keep", withUrls({title: document.title, how: "public"}));
-          if (tile) tile.dataset.kept = "public";
-        }
+        onSessionChange(function () {
+          if (!session) {
+            toggleLoginDialog();
+            return;
+          }
+          if (tile && tile.dataset.kept) {
+            api.port.emit("unkeep", withUrls({}));
+            tile.removeAttribute("data-kept");  // delete .dataset.kept fails in FF 21
+          } else {
+            api.port.emit("keep", withUrls({title: document.title, how: "public"}));
+            if (tile) tile.dataset.kept = "public";
+          }
+        });
         e.preventDefault();
         break;
       case 76: // l
@@ -115,14 +149,26 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   }
 
+  function toggleLoginDialog() {
+    api.require("scripts/dialog.js", function() {
+      kifiDialog.toggleLoginDialog();
+    });
+  }
+
   function keeper() {  // gateway to slider2.js
     var args = Array.prototype.slice.apply(arguments), name = args.shift();
-    if (onScroll && name != "showKeepers") {
-      document.removeEventListener("scroll", onScroll);
-      onScroll = null;
-    }
-    api.require("scripts/slider2.js", function() {
-      slider2[name].apply(slider2, args);
+    onSessionChange(function () {
+      if (!session) {
+        toggleLoginDialog();
+        return;
+      }
+      if (onScroll && name != "showKeepers") {
+        document.removeEventListener("scroll", onScroll);
+        onScroll = null;
+      }
+      api.require("scripts/slider2.js", function() {
+        slider2[name].apply(slider2, args);
+      });
     });
   }
 

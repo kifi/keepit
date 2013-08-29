@@ -1007,12 +1007,12 @@ $(function() {
 		}
 	}).on('click', 'a[href]', function(e) {
 		var href;
-		if (!e.isDefaultPrevented() && ~(href = this.href).search(inPageNaveRe)) {
+		if (!e.isDefaultPrevented() && ~(href = this.getAttribute('href')).search(inPageNavRe)) {
 			e.preventDefault();
 			navigate(href);
 		}
 	});
-	var inPageNaveRe = /^(?:$|[a-z0-9]+(?:$|\/))/i;
+	var inPageNavRe = /^(?:$|[a-z0-9]+(?:$|\/))/i;
 
 	var baseUriRe = new RegExp('^' + ($('base').attr('href') || ''));
 	$(window).on('statechange anchorchange', function(e) {
