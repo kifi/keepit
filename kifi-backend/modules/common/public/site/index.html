@@ -295,10 +295,7 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 									{% if !status %} Invite through {{value | replace '/.*', ''}} {% endif %}
 								</div>
 								{% if !status %}
-								<form method="POST" target="_blank">
-									<input type="hidden" name="fullSocialId" value="{{value}}">
 									<a class="invite-button" href="javascript:"></a>
-								</form>
 								{% endif %}
 							</li>
 						</ul>
