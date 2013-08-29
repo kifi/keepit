@@ -7,7 +7,7 @@ var notifierScout = notifierScout || function() {  // idempotent for Chrome
       if (!s) {
         var notifications = document.getElementsByClassName("kifi-notify-item-wrapper");
         while(notifications.length > 0){
-            notifications[0].parentNode.removeChild(notifications[0]);
+          notifications[0].parentNode.removeChild(notifications[0]);
         }
       }
     },
