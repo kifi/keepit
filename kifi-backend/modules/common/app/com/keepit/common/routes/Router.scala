@@ -16,10 +16,10 @@ import play.api.libs.json.JsArray
 
 
 trait Service
-case class ServiceRoute(method: Method, path: String, params: Param*) {
-  def url = path + (if(params.nonEmpty) "?" + params.map({ p =>
-    URLEncoder.encode(p.key, UTF8) + (if(p.value.value != "") "=" + URLEncoder.encode(p.value.value, UTF8) else "")
-  }).mkString("&") else "")
+  case class ServiceRoute(method: Method, path: String, params: Param*) {
+    def url = path + (if(params.nonEmpty) "?" + params.map({ p =>
+      URLEncoder.encode(p.key, UTF8) + (if(p.value.value != "") "=" + URLEncoder.encode(p.value.value, UTF8) else "")
+    }).mkString("&") else "")
 }
 
 case class Param(key: String, value: ParamValue = ParamValue(""))
