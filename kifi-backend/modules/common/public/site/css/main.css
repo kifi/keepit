@@ -71,7 +71,7 @@ a.collection-create:active {background-color: #8699ab}
 .collection-new.submitted {background-color: rgba(255,255,255,0)}
 #collections input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
 #collections-list {overflow: hidden}
-#collections-list.positioned {position: absolute; bottom: 0; left: 0; right: 0}
+#collections-list.positioned {position: absolute; bottom: 0; left: 0; right: -1px; z-index: 1}
 #collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; position: relative}
 #collections-list>.antiscroll-inner>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
 h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
@@ -82,7 +82,7 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.drop-hover {background-color: #6fa6ef}
 .collection.drop-hover .view-name {color: #fff}
 .collection.drop-hover .nav-count {background-color: #fff; border-color: #fff; color: #628196}
-.collection .nav-count {margin-top: 9px}
+.collection .nav-count {margin-top: 9px; position: relative; left: -1px}
 .collection:hover .nav-count,
 .collection.renaming .nav-count {display: none}
 .coll-tri {position: absolute; top: 0; bottom: 0; right: 0; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer}
@@ -302,9 +302,9 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .main-head>.subtitle {font-size: 13px; line-height: 20px; font-weight: 300; color: #5b6670; padding-left: 30px; position: relative}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
-.main-keeps {position: absolute; top: 143px; bottom: 0; left: 0; right: 0; overflow: hidden}
+.main-keeps {position: absolute; top: 143px; bottom: 0; left: 0; right: -1px; overflow: hidden}
 body[data-view=search] .main-keeps {top: 108px}
-.main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 0 18px; box-sizing: border-box; -moz-box-sizing: border-box}
+.main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 0 19px 0 18px; box-sizing: border-box; -moz-box-sizing: border-box}
 .main-keeps>.antiscroll-scrollbar {z-index: 1}
 
 .keep-group-title,
@@ -604,24 +604,19 @@ a.friend-nw-google[href] {background-color: #e9644b}
 
 /* scrollbars */
 .antiscroll-scrollbar {
-  background: gray;
-  background: rgba(0,0,0,.5);
-  -webkit-border-radius: 7px;
-  -moz-border-radius: 7px;
+  background: rgba(0,0,0,.5) content-box;
   border-radius: 7px;
-  -webkit-box-shadow: 0 0 1px #fff;
-  -moz-box-shadow: 0 0 1px #fff;
   box-shadow: 0 0 1px #fff;
   position: absolute;
   opacity: 0;
   filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=0);
   -webkit-transition: linear 300ms opacity;
-  -moz-transition: linear 300ms opacity;
-  -o-transition: linear 300ms opacity;
+  transition: linear 300ms opacity;
 }
 .antiscroll-scrollbar-shown {opacity: 1; filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100)}
 .antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0}
-.antiscroll-scrollbar-vertical {width: 1px; margin-top: 2px; right: 0; top: 0}
+.antiscroll-scrollbar-vertical {width: 1px; border-left: 6px solid transparent; right: 0; top: 0; -webkit-transition: width .12s ease-in-out .08s, border-left-width .12s ease-in-out .08s; transition: width .12s ease-in-out .08s, border-left-width .12s ease-in-out .08s}
+.antiscroll-scrollbar-vertical:hover {width: 12px; border-left-width: 0}
 .antiscroll-inner {overflow: scroll}
 .antiscroll-inner::-webkit-scrollbar {width: 0; height: 0}
 .antiscroll-inner::scrollbar {width: 0; height: 0}
