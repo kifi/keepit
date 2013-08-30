@@ -244,10 +244,12 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; max-
 .invite-filters>a[data-nw=linkedin] {background-color: #4f83c3; background-position: -36px top;}
 .invite-filters[data-nw-selected=facebook] {border-color: #637ab8;}
 .invite-filters[data-nw-selected=linkedin] {border-color: #4f83c3;}
-
+.invite-filters:not([data-nw-selected])>[data-nw]:hover,
+.invite-filters:not([data-nw-selected=facebook])>[data-nw=facebook]:hover,
+.invite-filters:not([data-nw-selected=linkedin])>[data-nw=linkedin]:hover {height: 40px}
 .invite-filters:not([data-nw-selected])>:not([data-nw]),
 .invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
-.invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px;}
+.invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px}
 
 .invite-num-results { float: right; color: #556179; font-size: 14px; margin: 10px 4px; max-width: 45%; }
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
