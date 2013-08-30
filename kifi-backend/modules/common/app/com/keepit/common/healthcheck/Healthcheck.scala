@@ -45,7 +45,7 @@ object Healthcheck {
     val selflessEngineers = Map(
       33 -> STEPHEN,
       34 -> ANDREW, // 2013/08/19
-      35 -> GREG,
+      35 -> LÉO, // was Greg
       36 -> LÉO,
       37 -> EISHAY,
       38 -> STEPHEN,
