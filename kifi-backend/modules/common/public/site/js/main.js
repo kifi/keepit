@@ -1,6 +1,7 @@
 var xhrDomain = 'https://api.kifi.com';
 //xhrDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
+var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 
 var compareSearch = {usage: "search", sensitivity: "base"};
 var compareSort = {numeric: true};
@@ -318,14 +319,17 @@ $(function() {
 				detailTmpl.render(o);
 				$('.page-who-pics').append($detailed.find(".keep-who>.pic").clone());
 				$('.page-who-text').html($detailed.find(".keep-who-text").html());
-				var $pic = $('.page-pic'), $chatter = $('.page-chatter');
+				var $pic = $('.page-pic'), $chatter = $('.page-chatter-messages');
 				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function(data) {
 					$pic.css('background-image', 'url(' + data.url + ')');
 				}).error(function() {
 					$pic.find('.page-pic-soon').addClass('showing');
 				});
-				$.postJson(xhrBase + '/chatter', {url: o.url}, function(data) {
-					$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
+				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
+				$.postJson(xhrBaseEliza + '/chatter', {url: o.url}, function(data) {
+					$chatter.attr({
+						'data-n': data.threads || 0,
+						'data-locator': '/messages' + (data.threadId ? '/' + data.threadId : '')});
 				});
 			} else { // multiple keeps
 				var collCounts = collIds.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
