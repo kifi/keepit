@@ -83,14 +83,15 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.drop-hover .view-name {color: #fff}
 .collection.drop-hover .nav-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection .nav-count {margin-top: 9px}
+.collection:hover .nav-count,
 .collection.renaming .nav-count {display: none}
-.coll-tri {position: absolute; top: 0; bottom: 0; left: -33px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; -webkit-transition: left .16s; transition: left .16s}
+.coll-tri {position: absolute; top: 0; bottom: 0; right: 0; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer}
 .active>.coll-tri {background-color: #b8c5d2}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
 .active>.coll-tri::before {border-top-color: #fff}
-.collection:not(.renaming):hover>.coll-tri,
-.collection.with-menu>.coll-tri {left: 0}
-#coll-menu {position: absolute; top: 100%; left: 0; z-index: 1; border: 1px solid #dbdee3; background: #fff; padding: 4px 0; border-radius: 4px; display: none; opacity: 0; -webkit-transform: scale(1,.6); transform: scale(1,.6); -webkit-transform-origin: top; transform-origin: top; -webkit-transition: opacity .12s linear, -webkit-transform .12s ease-in; transition: opacity .12s linear, transform .12s ease-in}
+.collection:not(.with-menu):not(:hover)>.coll-tri,
+.collection.renaming>.coll-tri {display: none}
+#coll-menu {position: absolute; top: 100%; right: 0; z-index: 1; border: 1px solid #dbdee3; background: #fff; padding: 4px 0; border-radius: 4px; display: none; opacity: 0; -webkit-transform: scale(1,.6); transform: scale(1,.6); -webkit-transform-origin: top; transform-origin: top; -webkit-transition: opacity .12s linear, -webkit-transform .12s ease-in; transition: opacity .12s linear, transform .12s ease-in}
 #coll-menu.page-bottom {top: auto; bottom: 100%; -webkit-transform-origin: bottom}
 #coll-menu.showing {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-timing-function: linear, ease-out; transition-timing-function: linear, ease-out}
 #coll-menu>li>a {display: block; padding: 0 32px 0 16px; font-size: 13px; line-height: 30px; white-space: nowrap; color: #556179}
@@ -620,7 +621,7 @@ a.friend-nw-google[href] {background-color: #e9644b}
 }
 .antiscroll-scrollbar-shown {opacity: 1; filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100)}
 .antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0}
-.antiscroll-scrollbar-vertical {width: 7px; margin-top: 2px; right: 2px; top: 0}
+.antiscroll-scrollbar-vertical {width: 1px; margin-top: 2px; right: 0; top: 0}
 .antiscroll-inner {overflow: scroll}
 .antiscroll-inner::-webkit-scrollbar {width: 0; height: 0}
 .antiscroll-inner::scrollbar {width: 0; height: 0}
