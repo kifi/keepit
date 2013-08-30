@@ -4,6 +4,8 @@ import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstance, ServiceCluster}
 import com.keepit.common.service.{ServiceType, ServiceStatus, ServiceVersion}
 import com.keepit.common.amazon.{AmazonInstanceInfo}
+import com.keepit.common.routes.Common
+import com.keepit.common.net.HttpClient
 import com.google.inject.Inject
 import views.html
 
@@ -11,6 +13,7 @@ case class ClusterMemberInfo(serviceType: ServiceType, zkid: Long, isLeader: Boo
 
 class AdminClusterController @Inject() (
     actionAuthenticator: ActionAuthenticator,
+    httpClient: HttpClient,
     serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
     val serviceTypes : List[ServiceType] =  ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: Nil
