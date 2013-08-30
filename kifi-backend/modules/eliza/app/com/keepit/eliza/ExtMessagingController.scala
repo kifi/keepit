@@ -79,8 +79,9 @@ class ExtMessagingController @Inject() (
               Some(threadRepo.get(msgs.head).externalId)
             }
           } else None
-          // change to "threads" -> msgs.size after most users are past 2.5.23
-          url -> JsObject(Seq("1" -> JsNumber(msgs.size)) ++ (if(threadId.isDefined) { Seq("threadId" -> JsString(threadId.get.id)) } else Nil ))
+          url -> JsObject(
+            Seq("threads" -> JsNumber(msgs.size)) ++
+            (if (threadId.isDefined) Seq("threadId" -> JsString(threadId.get.id)) else Nil))
         }.toSeq
         Ok(JsObject(built))
       }
