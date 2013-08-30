@@ -24,8 +24,9 @@ class AdminClusterController @Inject() (
             val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
             serviceCluster.allMembers.map { serviceInstance =>
                 var isLeader = serviceCluster.leader.map(_==serviceInstance).getOrElse(false)
-                var testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email") //this is just for UI testing and will be removed again soon.
-                ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, serviceInstance.remoteService.status, testCapabilities, serviceDiscovery.myVersion)
+                var testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email")
+                val versionResp = httpClient.get("http://" + serviceInstance.instanceInfo.publicHostname + ":9000" + Common.internal.version().url)
+                ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, serviceInstance.remoteService.status, testCapabilities, ServiceVersion(versionResp.body))
             }
         }
 
