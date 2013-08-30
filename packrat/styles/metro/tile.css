@@ -68,6 +68,9 @@
   -webkit-transform: rotateX(180deg);
   transform: rotateX(180deg);
 }
+.kifi-tile[data-kept=private] .kifi-tile-kept {
+  background-color: #c85047;
+}
 .kifi-tile[data-kept] .kifi-tile-keep,
 .kifi-tile:not([data-kept]) .kifi-tile-kept {
   visibility: hidden;
