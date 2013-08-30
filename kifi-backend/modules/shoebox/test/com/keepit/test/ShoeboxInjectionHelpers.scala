@@ -20,7 +20,6 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def searchFriendRepo(implicit injector: Injector) = inject[SearchFriendRepo]
   def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
   def normalizationService(implicit injector: Injector) = inject[NormalizationService]
-  def normalizedURIFactory(implicit injector: Injector) = inject[NormalizedURIFactory]
   def urlRepo(implicit injector: Injector) = inject[URLRepo]
   def bookmarkRepo(implicit injector: Injector) = inject[BookmarkRepo]
   def commentRepo(implicit injector: Injector) = inject[CommentRepo]

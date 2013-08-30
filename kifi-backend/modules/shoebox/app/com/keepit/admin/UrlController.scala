@@ -23,6 +23,7 @@ import com.keepit.integrity.MergedUri
 import com.keepit.integrity.SplittedUri
 import org.joda.time.DateTime
 import com.keepit.common.time.zones.PT
+import com.keepit.normalizer.Prenormalizer
 
 
 class UrlController @Inject() (
@@ -39,7 +40,6 @@ class UrlController @Inject() (
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   changedUriRepo: ChangedURIRepo,
-  normalizedUriFactory: NormalizedURIFactory,
   duplicateDocumentRepo: DuplicateDocumentRepo,
   orphanCleaner: OrphanCleaner,
   dupeDetect: DuplicateDocumentDetection,
@@ -88,7 +88,7 @@ class UrlController @Inject() (
             case Some(nuri) => (nuri, URLHistoryCause.MERGE)
             // No normalized URI exists for this url, create one
             case None => {
-              val tmp = normalizedUriFactory(url.url)
+              val tmp = NormalizedURI.withHash(Prenormalizer(url.url))
               val nuri = if (!readOnly) uriRepo.save(tmp) else tmp
               (nuri, URLHistoryCause.SPLIT)
             }

@@ -33,10 +33,10 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
         def setup() = {
           db.readWrite { implicit session =>
-            val nuri0 = uriRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/").withState(NormalizedURIStates.SCRAPED))
-            val nuri1 = uriRepo.save(normalizedURIFactory.apply("Google", "http://google.com/"))
-            val nuri2 = uriRepo.save(normalizedURIFactory.apply("Bing", "http://www.bing.com/").withState(NormalizedURIStates.SCRAPED))
-            val nuri3 = uriRepo.save(normalizedURIFactory.apply("Bing", "http://www.fakebing.com/"))
+            val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withState(NormalizedURIStates.SCRAPED))
+            val nuri1 = uriRepo.save(NormalizedURI.withHash("http://google.com/", Some("Google")))
+            val nuri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com/", Some("Bing")).withState(NormalizedURIStates.SCRAPED))
+            val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.fakebing.com/", Some("Bing")))
             
             val url0 = urlRepo.save(URLFactory("http://www.google.com/#1", nuri0.id.get))             // to be redirected to nuri1
             val url1 = urlRepo.save(URLFactory("http://www.bing.com/index", nuri2.id.get))
