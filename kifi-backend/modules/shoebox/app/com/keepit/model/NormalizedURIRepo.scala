@@ -83,7 +83,7 @@ class NormalizedURIRepoImpl @Inject() (
     val saved = super.save(uriWithSeq)
 
     lazy val scrapeRepo = scrapeRepoProvider.get
-    if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {
+    if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE || uri.state == NormalizedURIStates.REDIRECTED) {
       // If uri.state is ACTIVE or INACTIVE, we do not want an ACTIVE ScrapeInfo record for it
       scrapeRepo.getByUri(saved.id.get) match {
         case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
@@ -142,7 +142,7 @@ class NormalizedURIRepoImpl @Inject() (
   }
   
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI] = {
-    (for(t <- table if t.redirect === redirect) yield t).list
+    (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
 
 }

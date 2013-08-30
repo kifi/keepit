@@ -29,9 +29,9 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
     val uriIntegrityPlugin = inject[UriIntegrityPlugin]
-    val result = Await.result(normalizationService.update(uri, candidates: _*), Duration(1, SECONDS))
+    val id = Await.result(normalizationService.update(uri, candidates: _*), Duration(1, SECONDS))
     uriIntegrityPlugin.batchUpdateMerge()
-    result
+    id.map { db.readOnly { implicit session => uriRepo.get(_) }}
   }
 
   val modules = Seq(TestFortyTwoModule(), FakeDiscoveryModule(), FakeScraperModule(Some(fakeArticles)), StandaloneTestActorSystemModule(), new ScalaModule { def configure() { bind[NormalizationService].to[NormalizationServiceImpl] }})
@@ -67,7 +67,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
 
         val latestHttpUri = db.readOnly { implicit session => uriRepo.get(httpUri.id.get) }
         latestHttpUri.redirect === Some(latestHttpsUri.id.get)
-        latestHttpUri.state === NormalizedURIStates.INACTIVE
+        latestHttpUri.state === NormalizedURIStates.REDIRECTED
         db.readOnly { implicit session => uriRepo.getByUri("http://vimeo.com/48578814") } == Some(latestHttpsUri)
       }
 
@@ -78,7 +78,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         updateNormalizationNow(httpWWWUri)
         val latestHttpWWWUri = db.readOnly { implicit session => uriRepo.get(httpWWWUri.id.get) }
         latestHttpWWWUri.redirect === Some(httpsUri.id.get)
-        latestHttpWWWUri.state === NormalizedURIStates.INACTIVE
+        latestHttpWWWUri.state === NormalizedURIStates.REDIRECTED
         db.readOnly { implicit session => uriRepo.getByUri("http://www.vimeo.com/48578814") } == Some(httpsUri)
       }
 
@@ -95,13 +95,13 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         canonicalUri.normalization === Some(Normalization.CANONICAL)
 
         val moreRecentCanonicalUri = updateNormalizationNow(canonicalUri, TrustedCandidate("http://vimeo.com/48578814", Normalization.CANONICAL)).get
-        moreRecentCanonicalUri.state !== NormalizedURIStates.INACTIVE
+        moreRecentCanonicalUri.state !== NormalizedURIStates.REDIRECTED
         moreRecentCanonicalUri.redirect === None
         moreRecentCanonicalUri.redirectTime === None
 
         val redirectedCanonicalUri = db.readOnly { implicit session => uriRepo.get(canonicalUri.id.get) }
         redirectedCanonicalUri.redirect === Some(moreRecentCanonicalUri.id.get)
-        redirectedCanonicalUri.state === NormalizedURIStates.INACTIVE
+        redirectedCanonicalUri.state === NormalizedURIStates.REDIRECTED
       }
 
       "ignore a random untrusted candidate" in new TestKitScope() {
@@ -123,9 +123,9 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         val latestHttpsPublicUri = db.readOnly { implicit session => uriRepo.get(httpsPublicUri.id.get) }
         publicUri.normalization === Some(Normalization.CANONICAL)
         latestPrivateUri.redirect === Some(publicUri.id.get)
-        latestPrivateUri.state === NormalizedURIStates.INACTIVE
+        latestPrivateUri.state === NormalizedURIStates.REDIRECTED
         latestHttpsPublicUri.redirect === Some(publicUri.id.get)
-        latestHttpsPublicUri.state === NormalizedURIStates.INACTIVE
+        latestHttpsPublicUri.state === NormalizedURIStates.REDIRECTED
       }
 
       "normalize a LinkedIn public profile to a vanity public url" in new TestKitScope() {
@@ -137,9 +137,9 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         vanityUri.normalization === Some(Normalization.CANONICAL)
         vanityUri.url === "http://www.linkedin.com/in/leo"
         latestPrivateUri.redirect === Some(vanityUri.id.get)
-        latestPrivateUri.state === NormalizedURIStates.INACTIVE
+        latestPrivateUri.state === NormalizedURIStates.REDIRECTED
         latestPublicUri.redirect === Some(vanityUri.id.get)
-        latestPublicUri.state === NormalizedURIStates.INACTIVE
+        latestPublicUri.state === NormalizedURIStates.REDIRECTED
       }
 
       "normalize a French LinkedIn private profile to a vanity public url" in new TestKitScope() {
@@ -149,7 +149,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         vanityUri.normalization === Some(Normalization.CANONICAL)
         vanityUri.url === "http://www.linkedin.com/in/viviensaulue"
         latestPrivateUri.redirect === Some(vanityUri.id.get)
-        latestPrivateUri.state === NormalizedURIStates.INACTIVE
+        latestPrivateUri.state === NormalizedURIStates.REDIRECTED
       }
 
       "shutdown shared actor system" in {

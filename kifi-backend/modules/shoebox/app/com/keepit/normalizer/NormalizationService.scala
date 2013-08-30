@@ -15,10 +15,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import com.keepit.common.db.slick.Database
 import com.keepit.common._
+import com.keepit.common.db.Id
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]]
+  def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]]
   def normalize(uriString: String)(implicit session: RSession): String
 }
 
@@ -65,7 +66,7 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]] = {
+  def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
 
     implicit val uriRepo: NormalizedURIRepo = normalizedURIRepo
     implicit val scraper: ScraperPlugin = scraperPlugin
@@ -89,7 +90,7 @@ class NormalizationServiceImpl @Inject() (
 
         newReferenceWithRecursiveUpdatesOption match {
           case None => Future.successful(None)
-          case Some((newReference, recursiveUpdates)) => Future.sequence(recursiveUpdates).map(_ => Some(newReference))
+          case Some((newReference, recursiveUpdates)) => Future.sequence(recursiveUpdates).map(_ => Some(newReference.id.get))
         }
       }
     } yield newReferenceOption
@@ -168,7 +169,6 @@ class NormalizationServiceImpl @Inject() (
     val (url, normalization) = (successfulCandidate.url, successfulCandidate.normalization)
     normalizedURIRepo.getByNormalizedUrl(url) match {
       case None => NormalizedURI.withHash(normalizedUrl = url, normalization = Some(normalization))
-      case Some(uri) if uri.state == NormalizedURIStates.INACTIVE => uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None, normalization = Some(normalization))
       case Some(uri) if uri.normalization.isEmpty || uri.normalization.get < normalization => uri.withNormalization(normalization)
       case Some(uri) => uri
     }
@@ -180,8 +180,8 @@ class NormalizationServiceImpl @Inject() (
       url <- Set(currentReference.url, newReference.url)
       (_, normalizedURI) <- findVariations(url) if normalizedURI.normalization.isEmpty || normalizedURI.normalization.get <= newReference.normalization.get
       toBeUpdated <- (normalizedURI.state, normalizedURI.redirect) match {
-        case (NormalizedURIStates.INACTIVE, None) => None
-        case (NormalizedURIStates.INACTIVE, Some(id)) => {
+        case (NormalizedURIStates.INACTIVE, _) => None
+        case (NormalizedURIStates.REDIRECTED, Some(id)) => {
           val redirectionURI = normalizedURIRepo.get(id)
           if (redirectionURI.state != NormalizedURIStates.INACTIVE) Some(redirectionURI) else None
         }
@@ -195,7 +195,7 @@ class NormalizationServiceImpl @Inject() (
 
   private def migrate(currentReference: NormalizedURI, successfulCandidate: NormalizationCandidate): Option[NormalizedURI] = db.readWrite { implicit session =>
     val latestCurrent = normalizedURIRepo.get(currentReference.id.get)
-    if (latestCurrent.state != NormalizedURIStates.INACTIVE  && latestCurrent.normalization == currentReference.normalization) {
+    if (latestCurrent.state != NormalizedURIStates.INACTIVE && latestCurrent.state != NormalizedURIStates.REDIRECTED && latestCurrent.normalization == currentReference.normalization) {
       val newReference = getNewReference(successfulCandidate)
       val saved = normalizedURIRepo.save(newReference)
 

@@ -99,7 +99,11 @@ class UriIntegrityActor @Inject()(
       if (oldUriId == newUriId) changedUriRepo.save(change.withState(ChangedURIStates.INACTIVE))
       (None, None) 
     } else {
-      val (oldUri, newUri) = (uriRepo.get(oldUriId), uriRepo.get(newUriId))
+      val oldUri = uriRepo.get(oldUriId)
+      val newUri = uriRepo.get(newUriId) match {
+        case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED => uriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
+        case uri => uri
+      }
 
       urlRepo.getByNormUri(oldUriId).map{ url =>
         val prepUrl = prenormalize(url.url)
@@ -115,11 +119,7 @@ class UriIntegrityActor @Inject()(
         uriRepo.save(uri.withRedirect(newUriId, currentDateTime))
       }  
         
-      uriRepo.save(oldUri.withState(NormalizedURIStates.INACTIVE).withRedirect(newUriId, currentDateTime))
-
-      scrapeInfoRepo.getByUri(oldUriId).map{ info =>
-        scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
-      }
+      uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
 
       /**
        * ensure uniqueness of bookmarks during merge.

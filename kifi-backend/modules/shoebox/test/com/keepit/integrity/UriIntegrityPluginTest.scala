@@ -79,7 +79,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         
         // check redirection
         db.readOnly{ implicit s =>
-          uriRepo.getByState(NormalizedURIStates.INACTIVE, -1).size === 1
+          uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
           uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).size === 1      
           uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).head.id === uris(1).id
           urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
@@ -99,7 +99,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         plugin.handleChangedUri(SplittedUri(urls(2), uris(3).id.get))
         
         db.readOnly{ implicit s =>
-          uriRepo.getByState(NormalizedURIStates.INACTIVE, -1).size === 1
+          uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
           uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).size === 2
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url
