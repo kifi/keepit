@@ -635,7 +635,7 @@ $(function() {
 			}
 			friendsShowing.push.apply(friendsShowing, friends);
 			nwFriendsTmpl.append(friends);
-			inviteFilterTmpl.render({ results: friendsShowing.length, filter: filter });
+			inviteFilterTmpl.render({results: friendsShowing.length, filter: filter});
 		});
 	}
 	$('.invite-filters>a').click(function () {
