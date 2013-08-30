@@ -26,7 +26,6 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeInfoRepo = inject[ScrapeInfoRepo]
-        val ruleRepo = inject[UriNormalizationRuleRepo]
         val bmRepo = inject[BookmarkRepo]
         val plugin = inject[UriIntegrityPlugin]
         plugin.onStart()

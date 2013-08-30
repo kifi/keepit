@@ -41,7 +41,6 @@ class UriIntegrityActor @Inject()(
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
-  uriNormRuleRepo: UriNormalizationRuleRepo,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   centralConfig: CentralConfig,
@@ -49,21 +48,6 @@ class UriIntegrityActor @Inject()(
   scraper: ScraperPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
-  private def prenormalize(url: String): String = {
-    val prepUrlTry = for {
-      uri <- URI.parse(url)
-      prepUrl <- Try { Prenormalizer(uri).toString() }
-    } yield prepUrl
-
-    prepUrlTry match {
-      case Success(prepUrl) => prepUrl
-      case Failure(e) => {
-        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Static Normalization failed: ${e.getMessage}")))
-        url
-      }
-    }
-  }
-  
   private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
@@ -106,8 +90,6 @@ class UriIntegrityActor @Inject()(
       }
 
       urlRepo.getByNormUri(oldUriId).map{ url =>
-        val prepUrl = prenormalize(url.url)
-        uriNormRuleRepo.save( UriNormalizationRule(prepUrl = prepUrl, mappedUrl = newUri.url, prepUrlHash = NormalizedURI.hashUrl(prepUrl)))
         urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MERGE)))
       }
 
