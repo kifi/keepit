@@ -32,8 +32,8 @@ class ChatterController @Inject() (
     val url = (request.body \ "url").as[String]
     Async {
       messagingController.getChatter(request.user.id.get, Seq(url)).map { res =>
-        Ok(res.headOption.map { case (url, msgCount) =>
-          Json.obj("comments" -> 0, "conversations" -> msgCount)
+        Ok(res.headOption.map { case (url, msgs) =>
+          Json.obj("comments" -> 0, "conversations" -> msgs.size)
         }.getOrElse(Json.obj()))
       }
     }
