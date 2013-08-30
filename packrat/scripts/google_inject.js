@@ -412,10 +412,8 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
           }});
       });
     }).bindHover(".kifi-chatter", function(configureHover) {
-      var n = $(this).data("n");
       render("html/search/chatter", {
-        //numComments: n[0],
-        numMessages: n[1],
+        numMessages: $(this).data("n"),
         pluralize: function() {return pluralLambda}
       }, function(html) {
         configureHover(html, {canLeaveFor: 600, click: "toggle"});
@@ -448,7 +446,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
       var bgImg = "url(" + api.url("images/chatter.png") + ")";
       for (var url in counts) {
         var n = counts[url];
-        if (n[0] || n[1]) {
+        if ((n = n[1] || n.threads)) {
           $res.find(".kifi-who[data-url='" + url + "']").append(
             $("<span class=kifi-chatter>").css("background-image", bgImg).data("n", n));
         }
