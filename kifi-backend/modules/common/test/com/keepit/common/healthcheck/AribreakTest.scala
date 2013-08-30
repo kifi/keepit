@@ -6,7 +6,24 @@ import com.keepit.common.actor._
 import org.specs2.mutable.Specification
 import akka.testkit.TestKit
 
+import javax.xml.transform.stream.StreamSource
+import javax.xml.validation.Schema
+import javax.xml.validation.SchemaFactory
+import javax.xml.validation.{Validator => JValidator}
+import org.xml.sax.SAXException
+import java.io.StringReader
+
+import scala.xml._
+
 class AirbreakTest extends Specification with TestInjector {
+
+  def validate(xml: NodeSeq) = {
+    val schemaLang = "http://www.w3.org/2001/XMLSchema"
+    val factory = SchemaFactory.newInstance(schemaLang)
+    val schema = factory.newSchema(new StreamSource("modules/common/test/com/keepit/common/healthcheck/airbrake_2_3.xsd"))
+    val validator = schema.newValidator()
+    validator.validate(new StreamSource(new StringReader(xml.toString)))
+  }
 
   "AirbreakTest" should {
     "format" in {
@@ -15,10 +32,12 @@ class AirbreakTest extends Specification with TestInjector {
         val notifyer = new AirbrakeNotifier("123", actor)
         val error = AirbrakeError(new IllegalArgumentException("hi there"))
         val xml = notifyer.format(error)
+        println(xml)
+        validate(xml)
         (xml \ "api-key").head === <api-key>123</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
         (xml \ "error" \ "message").head === <message>hi there</message>
-        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AribreakTest.scala" number="16"/>
+        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AribreakTest.scala" number="33"/>
         (xml \ "error" \ "backtrace" \ "line").last === <line method="main" file="ForkMain.java" number="84"/>
         (xml \ "server-environment" \ "environment-name").head === <environment-name>production</environment-name>
       }
@@ -31,10 +50,9 @@ class AirbreakTest extends Specification with TestInjector {
     //     val notifyer = new AirbrakeNotifier(elizaKey, actor)
     //     val error = AirbrakeError(new IllegalArgumentException("hi there"))
     //     notifyer.notifyError(error)
-    //     Thread.sleep(10000)
+    //     Thread.sleep(5000)
     //     1 === 1
     //   }
     // }
-
   }
 }
