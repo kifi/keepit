@@ -71,7 +71,9 @@ class NormalizationServiceImpl @Inject() (
         val newReferenceWithRecursiveUpdatesOption = for {
           successfulCandidate <- successfulCandidateOption
           newReference <- migrate(current, successfulCandidate)
-        } yield (newReference, getURIsToBeFurtherUpdated(current,  newReference).map(update(_, successfulCandidate)))
+        } yield (newReference, getURIsToBeFurtherUpdated(current, newReference).map { uri =>
+            update(uri, TrustedCandidate(newReference.url, newReference.normalization.get))
+          })
 
         newReferenceWithRecursiveUpdatesOption match {
           case None => Future.successful(None)
