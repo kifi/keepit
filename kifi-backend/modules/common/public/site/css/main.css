@@ -244,7 +244,7 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; max-
 .invite-filters>a[data-nw=linkedin] {background-color: #4f83c3; background-position: -36px top;}
 .invite-filters[data-nw-selected=facebook] {border-color: #637ab8;}
 .invite-filters[data-nw-selected=linkedin] {border-color: #4f83c3;}
-.invite-filters:not([data-nw-selected])>[data-nw]:hover,
+.invite-filters[data-nw-selected]>:not([data-nw]):hover,
 .invite-filters:not([data-nw-selected=facebook])>[data-nw=facebook]:hover,
 .invite-filters:not([data-nw-selected=linkedin])>[data-nw=linkedin]:hover {height: 40px}
 .invite-filters:not([data-nw-selected])>:not([data-nw]),
