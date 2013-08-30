@@ -1,12 +1,10 @@
-/*
-
 package com.keepit.normalizer
 
 import org.specs2.mutable.Specification
 import com.keepit.test.ShoeboxTestInjector
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.scraper.{BasicArticle, Signature, FakeScraperModule}
+import com.keepit.scraper.{BasicArticle, FakeScraperModule}
 import com.keepit.model.{NormalizedURIStates, NormalizedURI, Normalization}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
@@ -22,11 +20,11 @@ import com.keepit.scraper.extractor.Extractor
 class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
 
   val fakeArticles: PartialFunction[(String, Option[Extractor]), BasicArticle] = {
-    case ("http://www.linkedin.com/pub/leonard\\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever")
-    case ("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "newTrkInfo = '17558679,' + document.referrer.substr(0,128)")
-    case ("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content")
-    case ("http://www.linkedin.com/in/leo/", None) => BasicArticle("leo", "some content")
-    case ("http://fr.linkedin.com/in/viviensaulue", Some(_)) => { println("VIVIEN") ; BasicArticle("vivien", "newTrkInfo = '136123062,' + document.referrer.substr(0,128)") }
+    case ("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever")
+    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "newTrkInfo = '17558679,' + document.referrer.substr(0,128)")
+    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content")
+    case ("http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content")
+    case ("http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "newTrkInfo = '136123062,' + document.referrer.substr(0,128)")
   }
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
@@ -114,25 +112,30 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
 
       "not normalize a LinkedIn private profile to its public url if ids do not match" in new TestKitScope() {
         val privateUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/profile/view?id=17558679", normalization = Some(Normalization.HTTPSWWW))) }
-        updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leonard\\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)) === None
+        updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)) === None
       }
 
       "normalize a LinkedIn private profile to its public url if ids match" in new TestKitScope() {
+        val httpsPublicUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", normalization = Some(Normalization.HTTPSWWW))) }
         val privateUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }
-        val publicUri = updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)).get
+        val publicUri = updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)).get
         val latestPrivateUri = db.readOnly { implicit session => uriRepo.get(privateUri.id.get) }
+        val latestHttpsPublicUri = db.readOnly { implicit session => uriRepo.get(httpsPublicUri.id.get) }
         publicUri.normalization === Some(Normalization.CANONICAL)
         latestPrivateUri.redirect === Some(publicUri.id.get)
         latestPrivateUri.state === NormalizedURIStates.INACTIVE
+        latestHttpsPublicUri.redirect === Some(publicUri.id.get)
+        latestHttpsPublicUri.state === NormalizedURIStates.INACTIVE
       }
 
       "normalize a LinkedIn public profile to a vanity public url" in new TestKitScope() {
-        val publicUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/pub/leo\\u002dgrimaldi/12/42/2b3").get }
+        val publicUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3").get }
         val vanityUri = updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo/", Normalization.CANONICAL)).get
         val latestPublicUri = db.readOnly { implicit session => uriRepo.get(publicUri.id.get) }
         val latestPrivateUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }
 
         vanityUri.normalization === Some(Normalization.CANONICAL)
+        vanityUri.url === "http://www.linkedin.com/in/leo"
         latestPrivateUri.redirect === Some(vanityUri.id.get)
         latestPrivateUri.state === NormalizedURIStates.INACTIVE
         latestPublicUri.redirect === Some(vanityUri.id.get)
@@ -144,6 +147,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         val vanityUri = updateNormalizationNow(privateUri, UntrustedCandidate("http://fr.linkedin.com/in/viviensaulue", Normalization.CANONICAL)).get
         val latestPrivateUri = db.readOnly { implicit session => uriRepo.get(privateUri.id.get) }
         vanityUri.normalization === Some(Normalization.CANONICAL)
+        vanityUri.url === "http://www.linkedin.com/in/viviensaulue"
         latestPrivateUri.redirect === Some(vanityUri.id.get)
         latestPrivateUri.state === NormalizedURIStates.INACTIVE
       }
@@ -154,5 +158,3 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
     }
   }
 }
-
-*/

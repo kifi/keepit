@@ -32,6 +32,21 @@ class NormalizationServiceImpl @Inject() (
   scraperPlugin: ScraperPlugin,
   healthcheckPlugin: HealthcheckPlugin) extends NormalizationService with Logging {
 
+  private def prenormalize(uriString: String): String = {
+    val prepUrlTry = for {
+      uri <- URI.parse(uriString)
+      prepUrl <- Try { Prenormalizer(uri).toString() }
+    } yield prepUrl
+
+    prepUrlTry match {
+      case Failure(e) => {
+        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Static Normalization failed: ${e.getMessage}")))
+        uriString
+      }
+      case Success(prepUrl) => prepUrl
+    }
+  }
+
   def normalize(uriString: String)(implicit session: RSession): String = {
     val prepUrlTry = for {
       uri <- URI.parse(uriString)
@@ -55,13 +70,10 @@ class NormalizationServiceImpl @Inject() (
     implicit val uriRepo: NormalizedURIRepo = normalizedURIRepo
     implicit val scraper: ScraperPlugin = scraperPlugin
 
-    val relevantCandidates = current.normalization match {
-      case Some(currentNormalization) => candidates.filter(candidate => candidate.normalization > currentNormalization || (candidate.normalization == currentNormalization && candidate.url != current.url))
-      case None => candidates ++ findVariations(current.url).map { case (normalization, uri) => TrustedCandidate(uri.url, normalization) }
-    }
-
+    val relevantCandidates = getRelevantCandidates(current, candidates)
     val priorKnowledge = PriorKnowledge(current)
     val findStrongerCandidate = FindStrongerCandidate(current, priorKnowledge)
+
     for {
       (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(relevantCandidates)
       newReferenceOption <- {
@@ -83,6 +95,18 @@ class NormalizationServiceImpl @Inject() (
     } yield newReferenceOption
   } tap(_.onFailure { case e => healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Normalization update failed: ${e.getMessage}"))) })
 
+  private def getRelevantCandidates(current: NormalizedURI, candidates: Seq[NormalizationCandidate]) = {
+
+    val prenormalizedCandidates = candidates.map {
+      case UntrustedCandidate(url, normalization) => UntrustedCandidate(prenormalize(url), normalization)
+      case candidate: TrustedCandidate => candidate
+    }
+
+    current.normalization match {
+      case Some(currentNormalization) => prenormalizedCandidates.filter(candidate => candidate.normalization > currentNormalization || (candidate.normalization == currentNormalization && candidate.url != current.url))
+      case None => prenormalizedCandidates ++ findVariations(current.url).map { case (normalization, uri) => TrustedCandidate(uri.url, normalization) }
+    }
+  }
 
   private def findVariations(referenceUrl: String): Seq[(Normalization, NormalizedURI)] = {
 

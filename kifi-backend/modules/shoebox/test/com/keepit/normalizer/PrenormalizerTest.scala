@@ -194,6 +194,18 @@ class PrenormalizerTest extends Specification {
 
       path = "http://www.linkedin.com/profile/view?id=12345678&authType=name&authToken=IsVM&trk=prof-connections-name"
       prenormalize(path) === "http://www.linkedin.com/profile/view?id=12345678"
+
+      path = "https://www.linkedin.com/in/leogrimaldi/"
+      prenormalize(path) === "https://www.linkedin.com/in/leogrimaldi"
+
+      path = "http://fr.linkedin.com/in/leogrimaldi/en"
+      prenormalize(path) === "http://www.linkedin.com/in/leogrimaldi/en"
+
+      path = "http://fr.linkedin.com/pub/vivien-saulue/39/706/b06"
+      prenormalize(path) === "http://www.linkedin.com/pub/vivien-saulue/39/706/b06"
+
+      path = "http://fr.linkedin.com/pub/marc-milowski/13/640/1a8/en"
+      prenormalize(path) === "http://www.linkedin.com/pub/marc-milowski/13/640/1a8/en"
     }
   }
 }
