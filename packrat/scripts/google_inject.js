@@ -414,6 +414,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     }).bindHover(".kifi-chatter", function(configureHover) {
       render("html/search/chatter", {
         numMessages: $(this).data("n"),
+        locator: $(this).data("locator"),
         pluralize: function() {return pluralLambda}
       }, function(html) {
         configureHover(html, {canLeaveFor: 600, click: "toggle"});
@@ -441,14 +442,16 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
 
   function loadChatter(hits) {
     if (!hits.length) return;
-    api.port.emit("get_chatter", hits.map(function(h) {return h.bookmark.url}), function gotChatter(counts) {
-      api.log("[gotChatter]", counts);
+    api.port.emit("get_chatter", hits.map(function(h) {return h.bookmark.url}), function gotChatter(chatter) {
+      api.log("[gotChatter]", chatter);
       var bgImg = "url(" + api.url("images/chatter.png") + ")";
-      for (var url in counts) {
-        var n = counts[url];
-        if ((n = n[1] || n.threads)) {
+      for (var url in chatter) {
+        var o = chatter[url];
+        if (o && o.threads) {
           $res.find(".kifi-who[data-url='" + url + "']").append(
-            $("<span class=kifi-chatter>").css("background-image", bgImg).data("n", n));
+            $("<span class=kifi-chatter>")
+            .css("background-image", bgImg)
+            .data({n: o.threads, locator: "/messages" + (o.threadId ? "/" + o.threadId : "")}));
         }
       }
     });
