@@ -7,7 +7,7 @@ import com.keepit.common.time.Clock
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
-import com.keepit.normalizer.{NormalizationService, NormalizationCandidate}
+import com.keepit.normalizer.{Prenormalizer, NormalizationService, NormalizationCandidate}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
@@ -123,16 +123,17 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    val normalizedUrl = normalizedURIFactory.normalize(url)
-    getByNormalizedUrl(normalizedUrl)
+    getByNormalizedUrl(Prenormalizer(url)) map {
+      case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
+      case uri => uri
+    }
   }
 
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
-    val normalizedUrl = normalizedURIFactory.normalize(url)
-    val normalizedUri = getByNormalizedUrl(normalizedUrl) match {
+    val normalizedUri = getByUri(url) match {
       case Some(uri) => uri
       case None => {
-        val newUri = save(NormalizedURI.withHash(normalizedUrl = normalizedUrl))
+        val newUri = save(NormalizedURI.withHash(normalizedUrl = Prenormalizer(url)))
         urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
         newUri
       }

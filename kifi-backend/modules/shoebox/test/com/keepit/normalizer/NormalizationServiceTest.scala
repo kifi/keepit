@@ -152,6 +152,15 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         latestPrivateUri.state === NormalizedURIStates.REDIRECTED
       }
 
+      "find a variation with an upgraded normalization" in new TestKitScope() {
+        val canonicalVariation = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/in/viviensaulue").get }
+        val httpsUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/in/viviensaulue")) }
+        updateNormalizationNow(httpsUri, UntrustedCandidate("http://fr.linkedin.com/in/viviensaulue", Normalization.CANONICAL)) == Some(canonicalVariation)
+        val latestHttpsUri = db.readOnly { implicit session => uriRepo.get(httpsUri.id.get) }
+        latestHttpsUri.redirect === Some(canonicalVariation.id.get)
+        latestHttpsUri.state === NormalizedURIStates.REDIRECTED
+      }
+
       "shutdown shared actor system" in {
         system.shutdown()
       }
