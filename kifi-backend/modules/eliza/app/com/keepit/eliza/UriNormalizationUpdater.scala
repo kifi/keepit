@@ -46,18 +46,18 @@ class UriNormalizationUpdater @Inject() (
           system.scheduler.scheduleOnce(1 minutes){
             updateTables(updates)
           } 
-          db.readWrite{ implicit session => renormRepo.addNew(remoteSequenceNumber, updates.keys.toSeq.length, updates.keys.toSeq) }
+          db.readWrite{ implicit session => renormRepo.addNew(remoteSequenceNumber, updates.size, updates.map{_._1}) }
         }
       }
       case _ => 
     }
   }
 
-  private def updateTables(updates: Map[Id[NormalizedURI], NormalizedURI]) : Unit = {
+  private def updateTables(updates: Seq[(Id[NormalizedURI], NormalizedURI)]) : Unit = {
     db.readWrite{ implicit session =>
       threadRepo.updateNormalizedUris(updates)
-      userThreadRepo.updateUriIds(updates.mapValues(_.id.get))
-      messageRepo.updateUriIds(updates.mapValues(_.id.get))
+      userThreadRepo.updateUriIds(updates.map{ case (id, uri) => (id, uri.id.get)})
+      messageRepo.updateUriIds(updates.map{case (id, uri) => (id, uri.id.get)})
     }
   }
 

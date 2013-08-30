@@ -22,9 +22,11 @@ import play.modules.statsd.api.Statsd
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
+import com.keepit.common.akka.TimeoutFuture
+import java.util.concurrent.TimeoutException
 
 
- //For migration only
+//For migration only
 import play.api.mvc.Action
 import com.keepit.common.db.slick.DBSession.RWSession
 
@@ -238,12 +240,7 @@ class MessagingController @Inject() (
         )
       
       }
-    
-
     }
-  
-
-
   }
 
 
@@ -586,7 +583,20 @@ class MessagingController @Inject() (
     } getOrElse {
       Seq[ElizaThreadInfo]()
     }
-    
+  }
+
+  def getChatter(userId: Id[User], urls: Seq[String]) = {
+    implicit val timeout = Duration(3, "seconds")
+    TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(u -> _)))).recover {
+      case ex: TimeoutException => Seq[(String, Option[NormalizedURI])]()
+    }.map { res =>
+      val urlMsgCount = db.readOnly { implicit session =>
+        res.filter(_._2.isDefined).map { case (url, nuri) =>
+          url -> userThreadRepo.getThreads(userId, Some(nuri.get.id.get))
+        }
+      }
+      Map(urlMsgCount: _*)
+    }
   }
 
   def connectedSockets: Int  = notificationRouter.connectedSockets

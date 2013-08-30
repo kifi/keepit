@@ -1,6 +1,7 @@
 var xhrDomain = 'https://api.kifi.com';
 //xhrDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
+var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 
 var compareSearch = {usage: "search", sensitivity: "base"};
 var compareSort = {numeric: true};
@@ -318,14 +319,17 @@ $(function() {
 				detailTmpl.render(o);
 				$('.page-who-pics').append($detailed.find(".keep-who>.pic").clone());
 				$('.page-who-text').html($detailed.find(".keep-who-text").html());
-				var $pic = $('.page-pic'), $chatter = $('.page-chatter');
+				var $pic = $('.page-pic'), $chatter = $('.page-chatter-messages');
 				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function(data) {
 					$pic.css('background-image', 'url(' + data.url + ')');
 				}).error(function() {
 					$pic.find('.page-pic-soon').addClass('showing');
 				});
-				$.postJson(xhrBase + '/chatter', {url: o.url}, function(data) {
-					$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
+				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
+				$.postJson(xhrBaseEliza + '/chatter', {url: o.url}, function(data) {
+					$chatter.attr({
+						'data-n': data.threads || 0,
+						'data-locator': '/messages' + (data.threadId ? '/' + data.threadId : '')});
 				});
 			} else { // multiple keeps
 				var collCounts = collIds.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
@@ -481,8 +485,6 @@ $(function() {
 		} else {
 			$friendsList.find('.no-match').removeClass('no-match');
 		}
-		// trigger image lazy loading
-		$friendsList.find('.antiscroll-inner').scroll();
 	});
 	var $friendsList = $('#friends-list').antiscroll({x: false, width: '100%'})
 	.on('mouseover', '.friend-status', function() {
@@ -548,15 +550,13 @@ $(function() {
 		friendsScroller.refresh();
 	});
 	var $friendsLoading = $('.friends-loading');
-	var lazyScript = $.getScript('/site/js/jquery.lazyload.min.js');
 	function prepFriendsTab() {
 		$('.friends-filter').val('');
 		friendsTmpl.clear();
 		$friendsLoading.show();
 		$.when(
 			$.getJSON(xhrBase + '/user/friends'),
-			$.getJSON(xhrBase + '/user/outgoingFriendRequests'),
-			lazyScript)
+			$.getJSON(xhrBase + '/user/outgoingFriendRequests'))
 		.done(function(a0, a1) {
 			var friends = a0[0].friends, requests = a1[0];
 			var requested = requests.reduce(function(o, u) {o[u.id] = true; return o}, {});
@@ -573,7 +573,6 @@ $(function() {
 				       f1.id.localeCompare(f2.id, undefined, compareSort);
 			});
 			friendsTmpl.render(friends);
-			$('.friend-pic .lazyload').lazyload({ container: $friendsList.find('.antiscroll-inner') });
 		});
 	}
 
@@ -640,8 +639,7 @@ $(function() {
 			}
 			friendsShowing.push.apply(friendsShowing, friends);
 			nwFriendsTmpl.append(friends);
-			$('.invite-pic').lazyload({ container: $nwFriends.find('.antiscroll-inner') });
-			inviteFilterTmpl.render({ results: friendsShowing.length, filter: filter });
+			inviteFilterTmpl.render({results: friendsShowing.length, filter: filter});
 		});
 	}
 	$('.invite-filters>a').click(function () {
@@ -652,29 +650,27 @@ $(function() {
 	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
 	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
-		var fullSocialId = $(this).closest('.invite-friend').data('value');
+		var $friend = $(this).closest('.invite-friend'), fullSocialId = $friend.data('value');
 		// TODO(greg): figure out why this doesn't work cross-domain
-		var $form = $(this).closest('form').attr('action', '/invite').off('submit');
-		if (fullSocialId.indexOf("facebook/") === 0) {
+		var $form = $('<form method=POST action=/invite style="position:absolute;height:0;width:0;left:-99px">')
+			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">').appendTo('body');
+		if (/^facebook/.test(fullSocialId)) {
 			window.open("about:blank", fullSocialId, "height=640,width=1060,left=200,top=200", false);
-			$form.attr('target', fullSocialId).submit();
-		} else if (fullSocialId.indexOf("linkedin/") === 0) {
-			inviteMessageDialogTmpl.render({
-				label: $(this).closest('.invite-friend').find('.invite-name').text()
-			});
-			var $popup =$inviteMessageDialog.appendTo($form).off('click');
-			$popup.on('click', '.invite-cancel', function (e) {
+			$form.attr('target', fullSocialId).submit().remove();
+		} else if (/^linkedin/.test(fullSocialId)) {
+			inviteMessageDialogTmpl.render({label: $friend.find('.invite-name').text()});
+			$inviteMessageDialog.appendTo($form).on('click', '.invite-cancel', function (e) {
 				e.preventDefault();
-				$popup.remove();
+				$inviteMessageDialog.remove(), $form.remove();
 			});
 			$form.on('submit', function (e) {
 				e.preventDefault();
 				$.post($form.attr('action'), $form.serialize()).complete(function(xhr) {
 					if (xhr.status >= 400) {
-						console.log('error sending invite: ', xhr);
+						console.log('error sending invite:', xhr);
 					} else {
 						console.log('sent invite');
-						$popup.remove();
+						$inviteMessageDialog.remove(), $form.remove();
 					}
 					updateInviteCache();
 					prepInviteTab();

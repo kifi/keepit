@@ -19,7 +19,7 @@ import play.modules.statsd.api.Statsd
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
-
+import com.keepit.common.db.slick.Database
 
 
 class ExtMessagingController @Inject() (
@@ -27,6 +27,8 @@ class ExtMessagingController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     notificationRouter: NotificationRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
+    threadRepo: MessageThreadRepo,
+    db: Database,
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
@@ -65,6 +67,25 @@ class ExtMessagingController @Inject() (
     val tDiff = currentDateTime.getMillis - tStart.getMillis
     Statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
+  }
+
+  def getChatter() = AuthenticatedJsonToJsonAction { request =>
+    val urls = request.body.as[Seq[String]]
+    Async {
+      messagingController.getChatter(request.user.id.get, urls).map { res =>
+        val built = res.map { case (url, msgs) =>
+          val threadId = if (msgs.size == 1) {
+            db.readOnly { implicit session =>
+              Some(threadRepo.get(msgs.head).externalId)
+            }
+          } else None
+          url -> JsObject(
+            Seq("threads" -> JsNumber(msgs.size)) ++
+            (if (threadId.isDefined) Seq("threadId" -> JsString(threadId.get.id)) else Nil))
+        }.toSeq
+        Ok(JsObject(built))
+      }
+    }
   }
 
 
