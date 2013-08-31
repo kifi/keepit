@@ -1685,6 +1685,7 @@ $(function() {
 			var $el = $temp.children().detach();
 			configureHover($el, {
 				position: {my: "left-33 bottom-13", at: "center top", of: $a, collision: "flipfit flip", using: show},
+				mustHoverFor: 400,
 				canLeaveFor: 600,
 				hideAfter: 4000,
 				click: "toggle"});

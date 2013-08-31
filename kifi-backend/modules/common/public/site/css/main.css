@@ -539,12 +539,12 @@ span.long-text, a.long-text {display: inline-block}
   position: absolute; z-index: 9; min-width: 300px; background-color: #fff; color: #faf9f9; box-shadow: 2px 5px 12px rgba(0,0,0,.3); border: 1px solid #929496;
   text-align: left; line-height: normal; cursor: default; opacity: 0;
   -webkit-transition: opacity linear, -webkit-transform ease-in-out;
-  transition: opacity linear, -webkit-transform ease-in-out, transform ease-in-out;
-  -webkit-transition-duration: 100ms; transition-duration: 100ms;
+  transition: opacity linear, transform ease-in-out;
+  -webkit-transition-duration: 200ms; transition-duration: 200ms;
 }
 .fr-card.bottom {-webkit-transform: translate(0,5px); transform: translate(0,5px)}
 .fr-card.top {-webkit-transform: translate(0,-5px); transform: translate(0,-5px)}
-.fr-card.showing {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-duration: 60ms; transition-duration: 60ms}
+.fr-card.showing {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-duration: 120ms; transition-duration: 120ms}
 .fr-card-tri {position: absolute; height: 0; width: 0}
 .bottom>.fr-card-tri {top: 100%; border-top-color: inherit}
 .top>.fr-card-tri {bottom: 100%; border-bottom-color: inherit}
