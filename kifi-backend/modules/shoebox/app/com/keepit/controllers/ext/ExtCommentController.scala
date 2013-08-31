@@ -42,19 +42,6 @@ class ExtCommentController @Inject() (
     Ok(JsObject(counts.map { case (url, n) => url -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
   }
 
-  def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
-    val o = request.body
-    val (urlStr, title, text, recipients) = (
-      (o \ "url").as[String],
-      (o \ "title").as[String],
-      (o \ "text").as[String].trim,
-      (o \ "recipients").as[Seq[String]])
-
-    val (message, parentOpt) = sendMessage(request.user.id.get, urlStr, title, text, recipients)
-
-    Ok(Json.obj("id" -> message.externalId.id, "parentId" -> parentOpt.map(_.externalId.id), "createdAt" -> message.createdAt))
-  }
-
   private[ext] def sendMessage(userId: Id[User], urlStr: String, title: String, text: String, recipients: Seq[String]): (Comment, Option[Comment]) = {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val (uri, url) = getOrCreateUriAndUrl(urlStr)
@@ -93,15 +80,6 @@ class ExtCommentController @Inject() (
         }
         (message, None)
     }
-  }
-
-  def sendMessageReplyAction(parentExtId: ExternalId[Comment]) = AuthenticatedJsonToJsonAction { request =>
-    val o = request.body
-    val text = (o \ "text").as[String].trim
-
-    val (message, parent) = sendMessageReply(request.user.id.get, text, Right(parentExtId))
-
-    Ok(Json.obj("id" -> message.externalId.id, "parentId" -> parentExtId, "createdAt" -> message.createdAt))
   }
 
   private[ext] def sendMessageReply(userId: Id[User], text: String, parentId: Either[Id[Comment], ExternalId[Comment]]): (Comment, Comment) = {
