@@ -27,7 +27,7 @@ class AdminClusterController @Inject() (
                 var isLeader = serviceCluster.leader.map(_==serviceInstance).getOrElse(false)
                 var testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email")
                 val versionResp = httpClient.get("http://" + serviceInstance.instanceInfo.publicHostname + ":9000" + Common.internal.version().url)
-                val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.publicIp.ip).getHostName()
+                val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.localIp.ip).getHostName()
                 ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, ServiceVersion(versionResp.body))
             }
         }
