@@ -182,6 +182,8 @@ GET     /admin/data/fixSeqNum       @com.keepit.controllers.admin.UrlController.
 GET     /admin/data/mergedUri/:page       @com.keepit.controllers.admin.UrlController.mergedUriView(page: Int)
 GET     /admin/data/batchMergedUri        @com.keepit.controllers.admin.UrlController.batchMerge
 GET     /admin/data/dupBookmarks          @com.keepit.controllers.admin.UrlController.handleDupBookmarks(readOnly: Boolean ?= true)
+GET     /admin/data/delDupBookmarks          @com.keepit.controllers.admin.UrlController.deleteDupBookmarks(readOnly: Boolean ?= true)
+
 
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
