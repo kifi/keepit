@@ -163,7 +163,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         db.readWrite { implicit s =>
           uriRepo.count === 0
-          val xkcd = uriRepo.save(normalizedURIFactory.apply("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/"))
+          val xkcd = uriRepo.save(NormalizedURI.withHash("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/"))
           uriRepo.count === 1
           uriRepo.getByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/").get === xkcd
           uriRepo.internByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/") === xkcd
@@ -205,7 +205,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
 
   def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit
       session: RWSession, injector: Injector) = {
-    val uri = normalizedURIFactory.apply(title = title, url = url, state = state)
+    val uri = NormalizedURI.withHash(title = Some(title), normalizedUrl = url, state = state)
     try {
       uriRepo.save(uri)
     } catch {

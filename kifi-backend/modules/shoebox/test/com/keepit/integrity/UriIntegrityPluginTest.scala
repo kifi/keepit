@@ -26,17 +26,16 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeInfoRepo = inject[ScrapeInfoRepo]
-        val ruleRepo = inject[UriNormalizationRuleRepo]
         val bmRepo = inject[BookmarkRepo]
         val plugin = inject[UriIntegrityPlugin]
         plugin.onStart()
 
         def setup() = {
           db.readWrite { implicit session =>
-            val nuri0 = uriRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/").withState(NormalizedURIStates.SCRAPED))
-            val nuri1 = uriRepo.save(normalizedURIFactory.apply("Google", "http://google.com/"))
-            val nuri2 = uriRepo.save(normalizedURIFactory.apply("Bing", "http://www.bing.com/").withState(NormalizedURIStates.SCRAPED))
-            val nuri3 = uriRepo.save(normalizedURIFactory.apply("Bing", "http://www.fakebing.com/"))
+            val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withState(NormalizedURIStates.SCRAPED))
+            val nuri1 = uriRepo.save(NormalizedURI.withHash("http://google.com/", Some("Google")))
+            val nuri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com/", Some("Bing")).withState(NormalizedURIStates.SCRAPED))
+            val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.fakebing.com/", Some("Bing")))
             
             val url0 = urlRepo.save(URLFactory("http://www.google.com/#1", nuri0.id.get))             // to be redirected to nuri1
             val url1 = urlRepo.save(URLFactory("http://www.bing.com/index", nuri2.id.get))
@@ -79,7 +78,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         
         // check redirection
         db.readOnly{ implicit s =>
-          uriRepo.getByState(NormalizedURIStates.INACTIVE, -1).size === 1
+          uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
           uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).size === 1      
           uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).head.id === uris(1).id
           urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
@@ -99,7 +98,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         plugin.handleChangedUri(SplittedUri(urls(2), uris(3).id.get))
         
         db.readOnly{ implicit s =>
-          uriRepo.getByState(NormalizedURIStates.INACTIVE, -1).size === 1
+          uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
           uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).size === 2
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url

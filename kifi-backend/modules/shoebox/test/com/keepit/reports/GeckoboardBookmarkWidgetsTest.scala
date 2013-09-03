@@ -23,7 +23,8 @@ import scala.concurrent.duration._
 import org.specs2.mutable._
 import play.api.libs.json._
 
-class GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicationInjector {
+class
+GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicationInjector {
 
   val hover = BookmarkSource("HOVER_KEEP")
   val initLoad = BookmarkSource("INIT_LOAD")
@@ -40,8 +41,8 @@ class GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicatio
       userExperimentRepo.count === 1
 
       uriRepo.count === 0
-      val uri1 = uriRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/"))
-      val uri2 = uriRepo.save(normalizedURIFactory.apply("Amazon", "http://www.amazon.com/"))
+      val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
+      val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
 
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))

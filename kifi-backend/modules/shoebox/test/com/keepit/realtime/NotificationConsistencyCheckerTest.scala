@@ -24,7 +24,7 @@ class NotificationConsistencyCheckerTest extends TestKit(ActorSystem()) with Spe
         val healthcheck = inject[FakeHealthcheck]
         val (user, nUri, comment, notif) = db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Andrew", lastName = "Smith"))
-          val nUri = uriRepo.save(normalizedURIFactory.apply("http://www.42go.com/"))
+          val nUri = uriRepo.save(NormalizedURI.withHash("http://www.42go.com/"))
           val comment = commentRepo.save(
             Comment(userId = user.id.get, uriId = nUri.id.get, text = "hey", pageTitle = "test"))
           val notif = notificationRepo.save(
