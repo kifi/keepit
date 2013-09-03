@@ -1137,7 +1137,7 @@ $(function() {
 					$fixedTitle.css('top', -d);
 				}
 			} else if (o.i && (d = curr.offsetTop - sT) > 0) {
-				$fixedTitle.text(o.$titles.eq(--o.i).text()).css('top', d - h);
+				$fixedTitle.text(o.$titles.eq(--o.i).text()).css('top', Math.min(0, d - h));
 			} else if (parseInt($fixedTitle.css('top'), 10)) {
 				$fixedTitle.css('top', 0);
 			}
