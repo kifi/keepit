@@ -245,13 +245,36 @@ class UrlController @Inject() (
     db.readWrite{ implicit s =>
       dups.foreach{ case (userId, uriId) =>
         val dup = bookmarkRepo.getByUser(userId, excludeState = None).filter(_.uriId == uriId).sortBy(_.seq)
-        dup.foreach{ bm =>
-          val toBeDel = (bm.state == BookmarkStates.INACTIVE) && ktcRepo.getByBookmark(bm.id.get).size == 0
-          if (toBeDel){
-            info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_deleted")
-            if (!readOnly)  bookmarkRepo.delete(bm.id.get)
+        val (inactive, active) = dup.partition( _.state == BookmarkStates.INACTIVE)
+        
+        active.foreach{ bm => 
+          info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_Kept")
+        }
+
+        inactive.foreach { bm =>
+          val ktcs = ktcRepo.getByBookmark(bm.id.get)
+          if (ktcs.size > 0) {
+            active.find(_.uriId == bm.uriId) match {
+              case Some(bm2) => {
+                info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "in collection, can_be_deleted" + s" and be replaced by ${bm2.id}")
+                if (!readOnly) {
+                  ktcs.map { ktc =>
+                    if (!ktcRepo.getBookmarksInCollection(ktc.collectionId).contains(bm2.id.get)) {
+                      ktcRepo.save(ktc.copy(bookmarkId = bm2.id.get))
+                      collectionRepo.collectionChanged(ktc.collectionId, false)
+                    } else {
+                      ktcRepo.delete(ktc.id.get)   // if same collection has a dup bookmark, remove this ktc.
+                      collectionRepo.collectionChanged(ktc.collectionId, false)
+                    }
+                  }
+                  bookmarkRepo.delete(bm.id.get)   // it's now not referenced by any ktc. can be deleted.
+                }
+              }
+              case None => info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "in collection, cannot_be_deleted")
+            }
           } else {
-            info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_Kept")
+            if (!readOnly) bookmarkRepo.delete(bm.id.get)
+            info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "not in collection, to_be_deleted")
           }
         }
       }
