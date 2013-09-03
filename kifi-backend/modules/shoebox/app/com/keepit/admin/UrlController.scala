@@ -41,6 +41,7 @@ class UrlController @Inject() (
   changedUriRepo: ChangedURIRepo,
   normalizedUriFactory: NormalizedURIFactory,
   duplicateDocumentRepo: DuplicateDocumentRepo,
+  ktcRepo: KeepToCollectionRepo,
   orphanCleaner: OrphanCleaner,
   dupeDetect: DuplicateDocumentDetection,
   duplicatesProcessor: DuplicateDocumentsProcessor,
@@ -244,12 +245,15 @@ class UrlController @Inject() (
     db.readWrite{ implicit s =>
       dups.foreach{ case (userId, uriId) =>
         val dup = bookmarkRepo.getByUser(userId, excludeState = None).filter(_.uriId == uriId).sortBy(_.seq)
-        dup.tail.foreach{ bm =>
-          if (!readOnly) bookmarkRepo.delete(bm.id.get)
-          info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_deleted")
+        dup.foreach{ bm =>
+          val toBeDel = (bm.state == BookmarkStates.INACTIVE) && ktcRepo.getByBookmark(bm.id.get).size == 0
+          if (toBeDel){
+            info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_deleted")
+            if (!readOnly)  bookmarkRepo.delete(bm.id.get)
+          } else {
+            info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_Kept")
+          }
         }
-        val toBeKept = dup.head
-        info = info :+ (toBeKept.id.get.id, toBeKept.userId.id, toBeKept.uriId.id, toBeKept.title.getOrElse(""), toBeKept.state.value, toBeKept.seq.value, "to_be_Kept")
       }
       val msg = s"readOnly Mode = ${readOnly}. ${info.size} bookmarks affected. (bookmarkId, userId, uriId, bookmarkTitle, state, seqNum, action) are: \n" + info.mkString("\n")
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
