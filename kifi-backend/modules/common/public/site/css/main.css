@@ -23,10 +23,10 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .page-col-inner {position: relative; height: 100%; width: 100%} /* bugzil.la/35168 */
 
 /* left col */
-.header-left {height: 70px; background-color: #67829c; text-align: center; padding-top: 18px; -moz-box-sizing: border-box; box-sizing: border-box}
+.header-left {height: 70px; background-color: #67829c; text-align: center; padding-top: 18px; -moz-box-sizing: border-box; box-sizing: border-box; position: relative; z-index: 2}
 .header-logo {display: inline-block; width: 51px; height: 29px; background: url(../img/kifi-logo.png) 0/100%}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
-.my-pic {display: block; width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
+.my-pic {display: block; width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 2}
 .my-pic::before { display: block; border: 34px solid transparent; background: #abb8c8 url(../img/pencil.png) center center no-repeat padding-box; transition: border-width .15s ease-in-out, border-color .15s ease-in-out; box-sizing: border-box; -moz-box-sizing: border-box; width: 66px; height: 66px; border-radius: 50%; content: " "; background-size: 14px; }
 .my-pic:hover::before, body[data-view=profile] .my-pic::before { border-width: 8px; border-color: rgba(103, 130, 156, .6); }
 body[data-view=profile] .my-pic::before { transition: none; animation-name: edit-profile; -webkit-animation-name: edit-profile; animation-duration: 0.2s; -webkit-animation-duration: 0.2s; }
@@ -71,9 +71,10 @@ a.collection-create:active {background-color: #8699ab}
 .collection-new.submitted {background-color: rgba(255,255,255,0)}
 #collections input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
 #collections-list {overflow: hidden}
-#collections-list.positioned {position: absolute; bottom: 0; left: 0; right: -1px; z-index: 1}
+#collections-list.positioned {position: absolute; bottom: 0; left: 0; right: -1px}
 #collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; position: relative}
 #collections-list>.antiscroll-inner>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
+#collections-list>.antiscroll-scrollbar {z-index: 2}
 h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.renaming {background-color: #fff}
 .collection.renaming>a {cursor: text}
@@ -100,7 +101,7 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 
 /* center col */
 .main>.page-col-inner::before {content: " "; position: absolute; top: 70px; bottom: 0; border-left: 1px solid #dbdee3}
-.query-wrap {background-color: #67829c; padding: 10px 120px 12px 0; transition: padding-right .3s; -webkit-transition: padding-right .3s; white-space: nowrap}
+.query-wrap {background-color: #67829c; padding: 10px 120px 12px 0; transition: padding-right .3s; -webkit-transition: padding-right .3s; white-space: nowrap; position: relative; z-index: 1}
 .query-wrap.focus,
 .query-wrap:not(.empty) {padding-right: 0}
 input.query {border: none; padding: 9px 48px 9px 20px; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 48px; -moz-box-sizing: border-box; box-sizing: border-box; -webkit-font-smoothing: antialiased}
@@ -205,7 +206,7 @@ iframe.blog {height:100%; width:100%; border:0;}
 .above-friends-list {padding-bottom: 20px; border-bottom: 1px solid #e3e6ee; position: relative; z-index: 1; -webkit-transition: border-bottom-color .3s ease-out; transition: border-bottom-color .3s ease-out}
 .above-friends-list.scrolled {border-bottom-color: #dbdee3; -webkit-transition-timing-function: ease-in; transition-timing-function: ease-in}
 input.friends-filter,
-input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; max-width: 45%; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
+input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; max-width: 50%; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
 #friends-list {position: absolute; top: 260px; left: 20px; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden}
 #friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
 .friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
@@ -604,19 +605,17 @@ a.friend-nw-google[href] {background-color: #e9644b}
 
 /* scrollbars */
 .antiscroll-scrollbar {
-  background: rgba(0,0,0,.5) content-box;
-  border-radius: 7px;
-  box-shadow: 0 0 1px #fff;
   position: absolute;
-  opacity: 0;
-  filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=0);
-  -webkit-transition: linear 300ms opacity;
-  transition: linear 300ms opacity;
+  background: rgba(0,0,0,0) content-box;
 }
-.antiscroll-scrollbar-shown {opacity: 1; filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100)}
-.antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0}
-.antiscroll-scrollbar-vertical {width: 1px; border-left: 6px solid transparent; right: 0; top: 0; -webkit-transition: width .12s ease-in-out .08s, border-left-width .12s ease-in-out .08s; transition: width .12s ease-in-out .08s, border-left-width .12s ease-in-out .08s}
-.antiscroll-scrollbar-vertical:hover {width: 12px; border-left-width: 0}
+.antiscroll-scrollbar-vertical {
+  top: 0; right: 0; width: 1px; border-radius: .5px;
+-webkit-transition: background-color .3s linear, width .12s ease-in-out .02s, border-radius .12s ease-in-out .02s;
+        transition: background-color .3s linear, width .12s ease-in-out .02s, border-radius .12s ease-in-out .02s}
+.antiscroll-scrollbar-vertical:hover,
+.antiscroll-scrollbar-vertical.antiscroll-dragging {width: 12px; border-radius: 6px; box-shadow: 0 0 1px #fff}
+.antiscroll-scrollbar-shown {background-color: rgba(0,0,0,.5)}
+.antiscroll-scrollbar::before {content: " "; position: absolute; top: 0; bottom: 0; left: -8px; width: 8px}
 .antiscroll-inner {overflow: scroll}
 .antiscroll-inner::-webkit-scrollbar {width: 0; height: 0}
 .antiscroll-inner::scrollbar {width: 0; height: 0}

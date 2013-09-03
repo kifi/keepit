@@ -1,8 +1,4 @@
-/**
- * learnboost.github.io/antiscroll/
- * commit 073c8a211a7326c99451c3b136b06b71781667c3 plus pull requests 65, 66, 67, 68 and one other minor edit
- * see github.com/2is10/antiscroll/
- */
+// github.com/2is10/antiscroll/
 (function ($) {
 
   /**
@@ -44,9 +40,8 @@
 
     var ss = scrollbarSize();
     this.inner = this.el.find('.antiscroll-inner').css({
-        'width':  this.y && ss ? (this.options.width  ? 'calc(' + ss + 'px + ' + this.options.width  + ')' : '+=' + ss) : null
-      , 'height': this.x && ss ? (this.options.height ? 'calc(' + ss + 'px + ' + this.options.height + ')' : '+=' + ss) : null
-    });
+      'width':  this.y && ss ? (this.options.width  ? 'calc(' + ss + 'px + ' + this.options.width  + ')' : '+=' + ss) : null,
+      'height': this.x && ss ? (this.options.height ? 'calc(' + ss + 'px + ' + this.options.height + ')' : '+=' + ss) : null});
 
     this.refresh();
   };
@@ -59,7 +54,7 @@
 
   Antiscroll.prototype.refresh = function() {
     var needHScroll = this.inner.get(0).scrollWidth > this.el.width() + (this.y ? scrollbarSize() : 0),
-	    needVScroll = this.inner.get(0).scrollHeight > this.el.height() + (this.x ? scrollbarSize() : 0);
+      needVScroll = this.inner.get(0).scrollHeight > this.el.height() + (this.x ? scrollbarSize() : 0);
 
     if (this.x) {
       if (!this.horizontal && needHScroll) {
@@ -229,24 +224,20 @@
     ev.preventDefault();
 
     this.dragging = true;
-
     this.startPageY = ev.pageY - parseInt(this.el.css('top'), 10);
     this.startPageX = ev.pageX - parseInt(this.el.css('left'), 10);
 
-    // prevent crazy selections on IE
-    this.el[0].ownerDocument.onselectstart = function () { return false; };
+    var self = this;
 
-    var pane = this.pane,
-	    move = $.proxy(this, 'mousemove'),
-		self = this
-
+    this.el.addClass('antiscroll-dragging');
     $(this.el[0].ownerDocument)
-      .mousemove(move)
-      .mouseup(function () {
+      .on('selectstart.antiscroll-drag', function() {return false})  // prevent crazy selections on IE
+      .on('mousemove.antiscroll-drag', $.proxy(this, 'mousemove'))
+      .on('mouseup.antiscroll-drag', function() {
         self.dragging = false;
-        this.onselectstart = null;
+        self.el.removeClass('antiscroll-dragging');
 
-        $(this).unbind('mousemove', move);
+        $(this).off('.antiscroll-drag');
 
         if (!self.enter) {
           self.hide();
@@ -310,8 +301,8 @@
 
   Scrollbar.Horizontal.prototype.update = function () {
     var paneWidth = this.pane.el.width(),
-	    trackWidth = paneWidth - this.pane.padding * 2,
-		innerEl = this.pane.inner.get(0)
+      trackWidth = paneWidth - this.pane.padding * 2,
+    innerEl = this.pane.inner.get(0)
 
     this.el
       .css('width', trackWidth * paneWidth / innerEl.scrollWidth)
@@ -328,9 +319,9 @@
 
   Scrollbar.Horizontal.prototype.mousemove = function (ev) {
     var trackWidth = this.pane.el.width() - this.pane.padding * 2,
-	    pos = ev.pageX - this.startPageX,
-		barWidth = this.el.width(),
-		innerEl = this.pane.inner.get(0)
+      pos = ev.pageX - this.startPageX,
+    barWidth = this.el.width(),
+    innerEl = this.pane.inner.get(0)
 
     // minimum top is 0, maximum is the track height
     var y = Math.min(Math.max(pos, 0), trackWidth - barWidth);
@@ -379,8 +370,8 @@
 
   Scrollbar.Vertical.prototype.update = function () {
     var paneHeight = this.pane.el.height(),
-	    trackHeight = paneHeight - this.pane.padding * 2,
-		innerEl = this.innerEl;
+      trackHeight = paneHeight - this.pane.padding * 2,
+    innerEl = this.innerEl;
 
     var scrollbarHeight = trackHeight * paneHeight / innerEl.scrollHeight;
     scrollbarHeight = scrollbarHeight < 20 ? 20 : scrollbarHeight;
@@ -396,7 +387,7 @@
       .css('height', scrollbarHeight)
       .css('top', topPos);
 
-	  return paneHeight < innerEl.scrollHeight;
+    return paneHeight < innerEl.scrollHeight;
   };
 
   /**
@@ -407,10 +398,10 @@
 
   Scrollbar.Vertical.prototype.mousemove = function (ev) {
     var paneHeight = this.pane.el.height(),
-	    trackHeight = paneHeight - this.pane.padding * 2,
-		pos = ev.pageY - this.startPageY,
-		barHeight = this.el.height(),
-		innerEl = this.innerEl
+      trackHeight = paneHeight - this.pane.padding * 2,
+    pos = ev.pageY - this.startPageY,
+    barHeight = this.el.height(),
+    innerEl = this.innerEl
 
     // minimum top is 0, maximum is the track height
     var y = Math.min(Math.max(pos, 0), trackHeight - barHeight);
