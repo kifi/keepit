@@ -181,12 +181,13 @@ class UriIntegrityActor @Inject()(
   }
   
   private def batchUpdateMerge() = {
-    val toMerge = getOverDueList(fetchSize = 50)
+    val toMerge = getOverDueList(fetchSize = 500)
     log.info(s"batch merge uris: ${toMerge.size} pair of uris to be merged")
     val toScrapeAndSavedChange = db.readWrite{ implicit s =>
-      toMerge.map{ change => processMerge(change) }
+      val results = toMerge.map{ change => processMerge(change) }
+      results.map(_._2).filter(_.isDefined).sortBy(_.get.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.get.seq.value) }
+      results
     }
-    toScrapeAndSavedChange.map(_._2).filter(_.isDefined).sortBy(_.get.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.get.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pair of uris merged. zookeeper seqNum updated. start scraping ${toScrapeAndSavedChange.size} pages")
     toScrapeAndSavedChange.map(_._1).filter(_.isDefined).map{ x => scraper.asyncScrape(x.get)}
   }
