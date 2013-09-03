@@ -166,9 +166,10 @@ class UriIntegrityActor @Inject()(
     val toMerge = getOverDueList(fetchSize = 50)
     log.info(s"batch merge uris: ${toMerge.size} pair of uris to be merged")
     val toScrapeAndSavedChange = db.readWrite{ implicit s =>
-      toMerge.map{ change => processMerge(change) }
+      val results = toMerge.map{ change => processMerge(change) }
+      results.map(_._2).filter(_.isDefined).sortBy(_.get.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.get.seq.value) }
+      results
     }
-    toScrapeAndSavedChange.map(_._2).filter(_.isDefined).sortBy(_.get.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.get.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pair of uris merged. zookeeper seqNum updated. start scraping ${toScrapeAndSavedChange.size} pages")
     toScrapeAndSavedChange.map(_._1).filter(_.isDefined).map{ x => scraper.asyncScrape(x.get)}
   }
@@ -203,7 +204,7 @@ class UriIntegrityPluginImpl @Inject() (
   override def enabled = true
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
-     scheduleTask(actor.system, 1 minutes, 15 seconds, actor.ref, BatchUpdateMerge)
+     scheduleTask(actor.system, 1 minutes, 20 seconds, actor.ref, BatchUpdateMerge)
   }
   override def onStop() {
      log.info("stopping UriIntegrityPluginImpl")

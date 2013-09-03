@@ -27,8 +27,8 @@ POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
-POST    /messages                   @com.keepit.controllers.ext.ExtCommentController.sendMessageAction()
-POST    /messages/:parentId         @com.keepit.controllers.ext.ExtCommentController.sendMessageReplyAction(parentId: ExternalId[Comment])
+#POST    /messages                   @com.keepit.controllers.ext.ExtCommentController.sendMessageAction()
+#POST    /messages/:parentId         @com.keepit.controllers.ext.ExtCommentController.sendMessageReplyAction(parentId: ExternalId[Comment])
 
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
@@ -43,7 +43,7 @@ POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthControlle
 GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 
-GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamController.ws()
+#GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamController.ws()
 GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
 GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceController.normalize(url: String)
 GET     /ext/pref/rules                  @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
@@ -182,6 +182,8 @@ GET     /admin/data/fixSeqNum       @com.keepit.controllers.admin.UrlController.
 GET     /admin/data/mergedUri/:page       @com.keepit.controllers.admin.UrlController.mergedUriView(page: Int)
 GET     /admin/data/batchMergedUri        @com.keepit.controllers.admin.UrlController.batchMerge
 GET     /admin/data/dupBookmarks          @com.keepit.controllers.admin.UrlController.handleDupBookmarks(readOnly: Boolean ?= true)
+GET     /admin/data/delDupBookmarks          @com.keepit.controllers.admin.UrlController.deleteDupBookmarks(readOnly: Boolean ?= true)
+
 
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index

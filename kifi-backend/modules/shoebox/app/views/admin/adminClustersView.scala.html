@@ -37,13 +37,13 @@
 
     @admin("Clusters Overview") {
         <table class="table table-bordered">
-            <th>Service Type</th> <th>Zookeeper Id</th> <th>Leader?</th>  <th>IPs</th> <th>State</th> <th>Version <small>(this machine thinks!)</small></th> <th>Capabilities</th> <th>AWS Instance Details</th>
+            <th>Service Type</th> <th>Zookeeper Id</th> <th>Leader?</th>  <th>IPs</th> <th>State</th> <th>Version</th> <th>Capabilities</th> <th>AWS Instance Details</th>
             @for(cmi <- data) {
                 <tr>
                     <td>@cmi.serviceType.name</td>
                     <td>@cmi.zkid</td>
                     <td>@cmi.isLeader</td>
-                    <td> @cmi.instanceInfo.localIp / @cmi.instanceInfo.publicIp  </td>
+                    <td>@cmi.instanceInfo.localIp (@cmi.instanceInfo.localHostname) / @cmi.instanceInfo.publicIp </td>
                     <td>@cmi.state.name</td>
                     <td>@cmi.version</td>
                     <td>
@@ -69,5 +69,8 @@
                 </tr>
             }
         </table>
+        <script>
+            setInterval(function(){location.reload();}, 5000);
+        </script>
     }
 
