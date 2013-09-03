@@ -181,7 +181,7 @@ class UriIntegrityActor @Inject()(
   }
   
   private def batchUpdateMerge() = {
-    val toMerge = getOverDueList(fetchSize = 500)
+    val toMerge = getOverDueList(fetchSize = 50)
     log.info(s"batch merge uris: ${toMerge.size} pair of uris to be merged")
     val toScrapeAndSavedChange = db.readWrite{ implicit s =>
       val results = toMerge.map{ change => processMerge(change) }
