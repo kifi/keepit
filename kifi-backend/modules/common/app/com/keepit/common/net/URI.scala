@@ -6,6 +6,9 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.strings.UTF8
 
 object URI extends Logging {
+
+  def needRenormalization(uriString: String) = false // this is for migration to new URI parser
+
   def parse(uriString: String): Try[URI] = {
     unapplyTry(uriString).map { case (scheme, userInfo, host, port, path, query, fragment) =>
       URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment)
