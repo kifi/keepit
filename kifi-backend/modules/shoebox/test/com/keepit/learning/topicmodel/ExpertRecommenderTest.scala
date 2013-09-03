@@ -178,7 +178,7 @@ trait DbSetupHelper extends ShoeboxTestInjector {
           userRepo.save(User(firstName = "user%d".format(i), lastName = ""))
         }
         val uris = (1 to numUris).map{ i =>
-          uriRepo.save(normalizedURIFactory.apply(title = "title%d".format(i), url = "http://www.keepit.com/article%d".format(i), state = SCRAPED))
+          uriRepo.save(NormalizedURI.withHash(title = Some("title%d".format(i)), normalizedUrl = "http://www.keepit.com/article%d".format(i), state = SCRAPED))
         }
         (users, uris)
       }

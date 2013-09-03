@@ -47,8 +47,8 @@ class GeckoboardUserWidgetsTest extends Specification with ShoeboxApplicationInj
       userExperimentRepo.count === 1
 
       uriRepo.count === 0
-      val uri1 = uriRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/"))
-      val uri2 = uriRepo.save(normalizedURIFactory.apply("Amazon", "http://www.amazon.com/"))
+      val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
+      val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
 
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))

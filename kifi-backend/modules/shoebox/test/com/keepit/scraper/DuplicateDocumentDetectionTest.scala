@@ -23,14 +23,13 @@ class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjec
         val sig4 = builder3.add("Completely unrelated to the others. In no way similar. These documents aren't even close.").build
 
         val uriRepo = inject[NormalizedURIRepo]
-        val normalizedURIFactory = inject[NormalizedURIFactory]
         val scrapeRepo = inject[ScrapeInfoRepo]
         val documentSignatures2 = inject[Database].readWrite { implicit s =>
-          val nuri1 = uriRepo.save(normalizedURIFactory("http://google.com/1", NormalizedURIStates.SCRAPE_WANTED))
-          val nuri2 = uriRepo.save(normalizedURIFactory("http://google.com/2", NormalizedURIStates.SCRAPE_WANTED))
-          val nuri3 = uriRepo.save(normalizedURIFactory("http://google.com/3", NormalizedURIStates.SCRAPE_WANTED))
-          val nuri4 = uriRepo.save(normalizedURIFactory("http://google.com/4", NormalizedURIStates.SCRAPE_WANTED))
-          val nuri5 = uriRepo.save(normalizedURIFactory("http://google.com/5", NormalizedURIStates.SCRAPE_WANTED))
+          val nuri1 = uriRepo.save(NormalizedURI.withHash("http://google.com/1", state = NormalizedURIStates.SCRAPE_WANTED))
+          val nuri2 = uriRepo.save(NormalizedURI.withHash("http://google.com/2", state = NormalizedURIStates.SCRAPE_WANTED))
+          val nuri3 = uriRepo.save(NormalizedURI.withHash("http://google.com/3", state = NormalizedURIStates.SCRAPE_WANTED))
+          val nuri4 = uriRepo.save(NormalizedURI.withHash("http://google.com/4", state = NormalizedURIStates.SCRAPE_WANTED))
+          val nuri5 = uriRepo.save(NormalizedURI.withHash("http://google.com/5", state = NormalizedURIStates.SCRAPE_WANTED))
 
           implicit val conf = com.keepit.scraper.ScraperConfig()
 
