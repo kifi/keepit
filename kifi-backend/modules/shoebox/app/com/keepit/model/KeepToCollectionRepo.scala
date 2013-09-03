@@ -3,7 +3,7 @@ package com.keepit.model
 import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, Id}
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.time.Clock
 import scala.Some
 import scala.slick.lifted.Query
@@ -19,6 +19,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
                       excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
                      (implicit session: RSession): Seq[KeepToCollection]
   def count(collId: Id[Collection])(implicit session: RSession): Int
+  def delete(id: Id[KeepToCollection])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -82,4 +83,9 @@ class KeepToCollectionRepoImpl @Inject() (
          b.state === BookmarkStates.ACTIVE && c.state === KeepToCollectionStates.ACTIVE
     } yield c).length).firstOption.getOrElse(0)
   }
+  
+  def delete(id: Id[KeepToCollection])(implicit session: RWSession): Unit = {
+    (for(r <- table if r.id === id) yield r).delete
+  }
+
 }
