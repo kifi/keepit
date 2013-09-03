@@ -605,19 +605,16 @@ a.friend-nw-google[href] {background-color: #e9644b}
 
 /* scrollbars */
 .antiscroll-scrollbar {
-  background: rgba(0,0,0,.5) content-box;
-  border-radius: 7px;
-  box-shadow: 0 0 1px #fff;
   position: absolute;
-  opacity: 0;
-  filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=0);
-  -webkit-transition: linear 300ms opacity;
-  transition: linear 300ms opacity;
+  background: rgba(0,0,0,0) content-box;
 }
-.antiscroll-scrollbar-shown {opacity: 1; filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100)}
-.antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0}
-.antiscroll-scrollbar-vertical {width: 1px; border-left: 6px solid transparent; right: 0; top: 0; -webkit-transition: width .12s ease-in-out .08s, border-left-width .12s ease-in-out .08s; transition: width .12s ease-in-out .08s, border-left-width .12s ease-in-out .08s}
-.antiscroll-scrollbar-vertical:hover {width: 12px; border-left-width: 0}
+.antiscroll-scrollbar-vertical {
+  top: 0; right: 0; width: 1px; border-radius: .5px;
+-webkit-transition: background-color .3s linear, width .12s ease-in-out .02s, border-radius .12s ease-in-out .02s;
+        transition: background-color .3s linear, width .12s ease-in-out .02s, border-radius .12s ease-in-out .02s}
+.antiscroll-scrollbar-vertical:hover {width: 12px; border-radius: 6px; box-shadow: 0 0 1px #fff}
+.antiscroll-scrollbar-shown {background-color: rgba(0,0,0,.5)}
+.antiscroll-scrollbar::before {content: " "; position: absolute; top: 0; bottom: 0; left: -8px; width: 8px}
 .antiscroll-inner {overflow: scroll}
 .antiscroll-inner::-webkit-scrollbar {width: 0; height: 0}
 .antiscroll-inner::scrollbar {width: 0; height: 0}
