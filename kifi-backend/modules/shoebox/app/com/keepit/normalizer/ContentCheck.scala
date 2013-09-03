@@ -52,7 +52,7 @@ case class SignatureCheck(referenceUrl: String, trustedDomain: String)(implicit 
 
 case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: ScraperPlugin) extends ContentCheck {
 
-  def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && PriorKnowledge.linkedInPublicProfile.findFirstIn(candidate.url).isDefined
+  def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInPublicProfile.findFirstIn(candidate.url).isDefined
   protected def check(publicProfileCandidate: NormalizationCandidate)(implicit session: RSession) = {
     val idExtractor = new JsoupBasedExtractor(publicProfileCandidate.url, Scraper.maxContentChars) {
       def parse(doc: Document): String = doc.getElementsByTag("script").toString
