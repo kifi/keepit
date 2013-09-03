@@ -1042,7 +1042,13 @@ $(function() {
 				showProfile();
 				break;
 			case 'friends':
-				showFriends(hash);
+				$.when(promise.me).done(function() {
+					if (parts[1] === 'invites' && !canInvite()) {
+						navigate('friends', {replace: true});
+					} else {
+						showFriends(hash);
+					}
+				});
 				break;
 			case 'blog':
 				showBlog();
@@ -1635,6 +1641,12 @@ $(function() {
 		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
 		$(".my-name").text(data.firstName + ' ' + data.lastName);
 		$(".my-description").text(data.description || '\u00A0'); // nbsp
+		$friendsTabs.filter('[data-href="friends/invite"]').toggle(canInvite());
+	}
+
+	function canInvite() {
+		return me.experiments.indexOf('admin') >= 0 ||
+			me.experiments.indexOf('can invite') >= 0;
 	}
 
 	function updateFriendRequests(n) {
