@@ -65,8 +65,8 @@ $(function() {
 			$.postJson(xhrBase + '/user/prefs', {site_left_col_width: String($leftCol.outerWidth())}, function(data) {
 				console.log("[prefs]", data);
 			});
-		}
-	});
+		},
+		zIndex: 1});
 	$leftCol.find(".ui-resizable-handle").appendTo($leftCol.find(".page-col-inner"));
 
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
