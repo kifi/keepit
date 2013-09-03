@@ -122,7 +122,7 @@ input.query::-ms-clear {display: none}
 .empty>*>.query-x,
 :not(.empty)>*>.query-mag {left: 100%; -webkit-transition-delay: 0; transition-delay: 0}
 .main-head,
-.main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
+.main-keeps {box-shadow: inset -1px 0 #dbdee3}
 .main-head {padding: 13px 20px 0; height: 73px; box-sizing: border-box; -moz-box-sizing: border-box; position: relative}
 .main-keeps::before {content: " "; position: absolute; z-index: 1; top: 0; left: 18px; right: 18px; border-top: 1px none #f9f9f9}
 .main-keeps.grouped::before {height: 16px; z-index: 2; background: -ms-linear-gradient(#fff 25%,rgba(255,255,255,0)); background: linear-gradient(#fff 25%,rgba(255,255,255,0)); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff',endColorstr='#00ffffff',GradientType=0)}
@@ -194,7 +194,7 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 
 iframe.blog {height:100%; width:100%; border:0;}
 
-.friends {padding: 13px 20px 0}
+.friends {position: absolute; top: 70px; bottom: 0; left: 0; right: 0; padding: 13px 20px 0; border-right: 1px solid #dbdee3}
 .friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee; white-space: nowrap}
 .friends-tabs>a {display: inline-block; border: solid transparent; border-radius: 6px 6px 0 0; border-width: 2px 2px 0; padding: 0 25px; font-size: 18px; font-weight: 300; vertical-align: top; position: relative; bottom: -2px; -webkit-font-smoothing: antialiased}
 .friends-tabs>a:not([href]) {border-color: #e3e6ee; background-color: #fff; color: #34495e}
@@ -206,9 +206,10 @@ iframe.blog {height:100%; width:100%; border:0;}
 .above-friends-list {padding-bottom: 20px; border-bottom: 1px solid #e3e6ee; position: relative; z-index: 1; -webkit-transition: border-bottom-color .3s ease-out; transition: border-bottom-color .3s ease-out}
 .above-friends-list.scrolled {border-bottom-color: #dbdee3; -webkit-transition-timing-function: ease-in; transition-timing-function: ease-in}
 input.friends-filter,
-input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; max-width: 50%; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
-#friends-list {position: absolute; top: 260px; left: 20px; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden}
-#friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
+input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 1px solid #e3e6ee; height: 36px; width: 48%; width: -webkit-calc(50% - 6px); width: calc(50% - 6px); min-width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
+#friends-list {position: absolute; top: 190px; left: 20px; right: -1px; bottom: 0; overflow-y: auto; overflow-x: hidden}
+#friends-list>.antiscroll-inner,
+.invite-friends>.antiscroll-inner {position: absolute; left: 0; right: 1px; top: 0; bottom: 0; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
 .friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
 .friend.no-match {display: none}
 .friend:last-child {border-bottom: 1px solid #e3e6ee}
@@ -255,9 +256,9 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; max-
 
 .invite-num-results { float: right; color: #556179; font-size: 14px; margin: 10px 4px; max-width: 45%; }
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
-.invite-friends { position: absolute; top: 310px; bottom: 0; right: 0; left: 20px; overflow: hidden}
-.invite-friends .antiscroll-inner { max-height: 100%; width: 100%; overflow-x: hidden}
-.invite-friend {margin-top: 12px; display: inline-block; vertical-align: top; margin-right: 2%; width: 48%; min-width: 300px; background-color: #eff2f7; padding: 10px 16px 10px 10px; position: relative; -moz-box-sizing: border-box; box-sizing: border-box;}
+.invite-friends { position: absolute; top: 248px; bottom: 0; right: -1px; left: 20px; overflow: hidden}
+.invite-friend {display: block; background-color: #eff2f7; padding: 10px; margin-bottom: 12px; -moz-box-sizing: border-box; box-sizing: border-box; position: relative}
+.invite-friend::after {content: " "; display: block; clear: both}
 .invite-friend[data-status=invited] { background: #629eed; }
 .invite-friend[data-status=joined] { background: #27ae60; }
 .invite-friend[data-status]:not([data-status=""]) div { color: white; }
@@ -267,10 +268,15 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; max-
 .invite-friend[data-status=joined]::before { border-color: #27ae60; }
 .invite-friend[data-value^=facebook]::before { background-color: #637ab8; background-position: 0 top;  }
 .invite-friend[data-value^=linkedin]::before { background-color: #4f83c3; background-position: -20px top; }
-.invite-status {font-size: 13px; font-weight: 300; color: #67829c; letter-spacing: 1px; }
-.invite-button {position: absolute; top: 25px; right: 20px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
+.invite-status {font-size: 13px; font-weight: 300; color: #67829c; letter-spacing: 1px; margin-right: 42px}
+.invite-button {position: absolute; top: 30px; right: 24px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
 .invite-button::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background: url(../img/friend-actions.png) -70px; background-size: auto 16px; width: 20px; position: relative; left: 1px}
 .invite-friends-loading {margin: 12px 0;}
+@media screen and (min-width: 1140px) {
+  .invite-friend {display: inline-block; vertical-align: top; width: 48%; width: -webkit-calc(50% - 6px); width: calc(50% - 6px)}
+  .invite-friend:nth-child(even) {margin-left: 12px}
+  .invite-button {right: 16px}
+}
 
 .invite-message-dialog { z-index: -1; opacity: 0; position: fixed; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0, 0, 0, 0.2); transition: all 0.2s ease-in-out; }
 form>.invite-message-dialog { z-index: 100; opacity: 1; }
@@ -303,7 +309,7 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .main-head>.subtitle {font-size: 13px; line-height: 20px; font-weight: 300; color: #5b6670; padding-left: 30px; position: relative}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
-.main-keeps {position: absolute; top: 143px; bottom: 0; left: 0; right: -1px; overflow: hidden}
+.main-keeps {position: absolute; top: 143px; bottom: 0; left: 0; right: 0; overflow: hidden}
 body[data-view=search] .main-keeps {top: 108px}
 .main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 0 19px 0 18px; box-sizing: border-box; -moz-box-sizing: border-box}
 .main-keeps>.antiscroll-scrollbar {z-index: 1}
@@ -398,7 +404,7 @@ body[data-view=search] .main-keeps {top: 108px}
 .detail {position: absolute; top: 70px; left: 0; right: 0; bottom: 0}
 .right-col>*>*>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; right: 0; overflow-x: hidden; overflow-y: scroll}
 
-.splash {background-color: #fff; border-left: 1px solid #dbdee3}
+.splash {background-color: #fff}
 .splash>.antiscroll-inner {padding: 6px 0 0 36px; -moz-box-sizing: border-box; box-sizing: border-box}
 .splash h2 {margin: 30px 0 6px; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .splash ul {margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 46px; -webkit-font-smoothing: antialiased}
