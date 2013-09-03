@@ -282,6 +282,7 @@ input#token-input-kifi-filter-det {
 }
 li:not(:first-child)>input#token-input-kifi-filter-det {
   margin-left: 6px !important; /* FF */
+  width: 0;
 }
 input#kifi-filter-det::-moz-placeholder,
 input#token-input-kifi-filter-det::-moz-placeholder {
@@ -395,6 +396,9 @@ div.token-input-dropdown-googly>ul>li.token-input-selected-dropdown-item-googly 
   text-align: center;
   font-size: 12px;
   color: #666;
+}
+#kifi-res-list a:visited {
+  color: #2518b5;
 }
 
 .kifi_resurl {
@@ -536,9 +540,9 @@ a.kifi-res-friends {
 .kifi-chatter-hover {
   position: absolute;
   bottom: 21px;
-  left: -40px;
-  width: 78px;
-  height: 42px;
+  left: -35px;
+  width: 70px;
+  height: 29px;
   padding: 6px 10px;
   background-color: #6ca4f2;
   color: #fff;
@@ -555,7 +559,7 @@ a.kifi-res-friends {
 .kifi-chatter-hover::after {
   content: " ";
   position: absolute;
-  left: 45px;
+  left: 40px;
   bottom: -5px;
   width: 0;
   height: 0;

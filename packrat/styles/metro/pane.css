@@ -100,11 +100,21 @@ a.kifi-pane-head-settings {
   width: 40px;
   height: 100%;
   margin-right: 6px;
-  background-size: 16px;
-  background-position: 12px 12px;
+  background-position: 99px;
   background-repeat: no-repeat;
   position: relative;
   z-index: 1;
+}
+a.kifi-pane-head-settings::before {
+  content: " ";
+  display: block;
+  margin: 5px;
+  width: 30px;
+  height: 30px;
+  background-image: inherit;
+  background-size: 30px;
+  background-repeat: no-repeat;
+  border-radius: 50%;
 }
 a.kifi-pane-head-logo:hover,
 a.kifi-pane-head-settings:hover {
@@ -139,12 +149,20 @@ div.kifi-pane-head-settings-menu {
   -webkit-user-select: none;
   -moz-user-select: none;
 }
-.kifi-pane-settings-hide {
+.kifi-pane-settings-menu-no-select {
+  color: #b8b9b9;
+}
+.kifi-pane-settings-menu-item, .kifi-pane-settings-menu-no-select {
   padding: 6px 10px 6px 6px;
   border: 1px solid transparent;
 }
-.kifi-pane-settings-hide:hover,
-.kifi-pane-settings-hide.kifi-hover {
+.kifi-pane-settings-menu-no-select {
+  user-select: none;
+  cursor: default;
+  margin-left: 12px;
+}
+.kifi-pane-settings-menu-item:hover,
+.kifi-pane-settings-menu-item.kifi-hover {
   background: -moz-linear-gradient(top, #6389f8, #1f60f6);
   background: -webkit-linear-gradient(#6389f8, #1f60f6);
   background: linear-gradient(#6389f8, #1f60f6);
@@ -153,13 +171,32 @@ div.kifi-pane-head-settings-menu {
   color: #fff;
   cursor: pointer;
 }
-.kifi-pane-settings-hide::before {
+.kifi-pane-settings-menu-item::before {
   content: "\2713";
   margin-right: 3px;
   visibility: hidden;
 }
-.kifi-pane-settings-hide.kifi-checked::before {
+.kifi-pane-settings-menu-item.kifi-checked::before {
   visibility: visible;
+}
+
+.kifi-signed-out-tooltip {
+  position: fixed;
+  top: 2px;
+  right: 50px;
+  text-align: left;
+  line-height: 20px;
+  font: 16px/1.5 "Helvetica Neue",arial,sans-serif !important;
+  color: #515051;
+  background-color: #474e54;
+  color: #fff !important;
+  padding: 10px;
+  border-radius: 10px;
+  z-index: 999999999999;
+}
+.kifi-signed-out-tooltip > .kifi-signed-out-icon {
+  height: 18px;
+  width: 18px;
 }
 
 .kifi-pane input[type=text].kifi-pane-search {
@@ -297,6 +334,12 @@ a.kifi-pane-back::after {
   bottom: 0;
   background: #fafafa;
 }
+.kifi-pane-notices>.kifi-pane-tall {
+  overflow: hidden;
+}
+.kifi-pane-tall .kifi-scroll-inner {
+  overflow-x: hidden;
+}
 div.kifi-pane-tall-middle {
   display: table;
   height: 100%;
@@ -316,7 +359,7 @@ div.kifi-pane-empty {
 div.kifi-pane-empty.kifi-hidden {
   opacity: 0;
 }
-div.kifi-pane-empty img {
+div.kifi-pane-empty>img {
   margin-bottom: 18px;
   image-rendering: -moz-crisp-edges;
   image-rendering: -webkit-optimize-contrast;
@@ -328,6 +371,11 @@ div.kifi-pane-empty img {
   right: 0;
   bottom: 0;
   height: auto;
+}
+.kifi-scroll-wrap {
+  position: relative;
+  overflow: hidden;
+  max-height: 0;
 }
 .kifi-scrollable-above,
 .kifi-scrollable-below {

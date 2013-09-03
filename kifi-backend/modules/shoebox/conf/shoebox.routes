@@ -27,12 +27,6 @@ POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
-POST    /comments/add               @com.keepit.controllers.ext.ExtCommentController.createComment()
-POST    /comments/:id/remove        @com.keepit.controllers.ext.ExtCommentController.removeComment(id: ExternalId[Comment])
-POST    /comments/follow            @com.keepit.controllers.ext.ExtCommentController.startFollowing()
-POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentController.stopFollowing()
-
-POST    /comments                   @com.keepit.controllers.ext.ExtCommentController.postCommentAction()
 POST    /messages                   @com.keepit.controllers.ext.ExtCommentController.sendMessageAction()
 POST    /messages/:parentId         @com.keepit.controllers.ext.ExtCommentController.sendMessageReplyAction(parentId: ExternalId[Comment])
 
@@ -50,6 +44,17 @@ GET     /whois                      @com.keepit.controllers.ext.ExtAuthControlle
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 
 GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamController.ws()
+GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
+GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceController.normalize(url: String)
+GET     /ext/pref/rules                  @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
+GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs()
+POST    /ext/pref/keeperPosition         @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
+POST    /ext/pref/enterToSend            @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
+GET     /ext/user/friends                @com.keepit.controllers.ext.ExtUserController.getFriends()
+GET     /ext/user/networks               @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
+POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
+POST    /ext/canonical              @com.keepit.controllers.ext.ExtPageController.recordCanonicalUrl()
+
 POST    /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
@@ -111,9 +116,9 @@ POST    /site/user/:id/exclude      @com.keepit.controllers.website.UserControll
 POST    /site/user/:id/include      @com.keepit.controllers.website.UserController.includeFriend(id: ExternalId[User])
 GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserController.outgoingFriendRequests
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
-GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
-GET     /site/user/connections/count @com.keepit.controllers.website.UserController.connectionCount()
-GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
+GET     /site/user/friends      @com.keepit.controllers.website.UserController.friends()
+GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
+GET     /site/user/socialConnections  @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
@@ -141,7 +146,6 @@ POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMail
 
 GET     /admin                      @com.keepit.controllers.admin.AdminDashboardController.index
 GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
-GET     /admin/graphs/bookmarks.json    @com.keepit.controllers.admin.AdminDashboardController.bookmarksByDate
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
 
 GET     /admin/events               @com.keepit.controllers.admin.AdminEventController.reportList
@@ -165,16 +169,22 @@ GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreensho
 GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
 
-GET     /admin/data/integrity       @com.keepit.controllers.admin.ScraperController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
-GET     /admin/data/dupe            @com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
-GET     /admin/data/orphan          @com.keepit.controllers.admin.ScraperController.orphanCleanup
+GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
+GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
+GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup
 GET     /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.getUnscrapable()
 POST    /admin/data/previewUnscrapable     @com.keepit.controllers.admin.ScraperController.previewUnscrapable()
 POST    /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.createUnscrapable()
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
-POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.ScraperController.handleDuplicate
-POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.ScraperController.handleDuplicates
+POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
+POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/fixSeqNum       @com.keepit.controllers.admin.UrlController.fixSeqNum
+GET     /admin/data/mergedUri/:page       @com.keepit.controllers.admin.UrlController.mergedUriView(page: Int)
+GET     /admin/data/batchMergedUri        @com.keepit.controllers.admin.UrlController.batchMerge
+GET     /admin/data/dupBookmarks          @com.keepit.controllers.admin.UrlController.handleDupBookmarks(readOnly: Boolean ?= true)
+GET     /admin/data/delDupBookmarks          @com.keepit.controllers.admin.UrlController.deleteDupBookmarks(readOnly: Boolean ?= true)
+
+
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
@@ -322,12 +332,16 @@ GET     /internal/version                             @com.keepit.controllers.we
 
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
+POST    /internal/shoebox/database/getNormalizedURIByURL       @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIByURL()
+POST    /internal/shoebox/database/normalizeURL       @com.keepit.controllers.shoebox.ShoeboxController.internNormalizedURI()
+POST    /internal/shoebox/database/internNormalizedURI       @com.keepit.controllers.shoebox.ShoeboxController.internNormalizedURI()
 GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getBasicUsers      @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers(ids: String)
 GET     /internal/shoebox/database/collectionIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt         @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments           @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])
+GET     /internal/shoebox/database/getNormalizedUriUpdates    @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedUriUpdates(lowSeq: Long, highSeq: Long)
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])
 GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getBrowsingHistoryFilter(userId: Id[User])
@@ -339,12 +353,14 @@ GET     /internal/shoebox/database/changedComment     @com.keepit.controllers.sh
 GET     /internal/shoebox/database/commentRecipientIds  @com.keepit.controllers.shoebox.ShoeboxController.getCommentRecipientIds(commentId: Id[Comment])
 POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
+POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.shoebox.ShoeboxController.sendMailToUser
 GET     /internal/shoebox/database/getPhrasesByPage   @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesByPage(page: Int, size: Int)
 GET     /internal/shoebox/database/getCollectionsChanged @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsChangedDeprecated(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/changedCollections @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getBookmarksInCollection @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksInCollection(collectionId: Id[Collection])
 GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsByUser(userId: Id[User])
 GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.shoebox.ShoeboxController.getIndexable(seqNum: Long, fetchSize: Int)
+POST    /internal/shoebox/database/createDeepLink      @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.shoebox.ShoeboxController.getActiveExperiments
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.shoebox.ShoeboxController.getExperiments
@@ -362,7 +378,17 @@ POST    /internal/shoebox/channel/userCount           @com.keepit.controllers.sh
 POST    /internal/shoebox/channel/uri                 @com.keepit.controllers.shoebox.ShoeboxController.uriChannelFanout()
 POST    /internal/shoebox/channel/uriCount            @com.keepit.controllers.shoebox.ShoeboxController.uriChannelCountFanout()
 
+POST    /internal/shoebox/device/sendPushNotification @com.keepit.controllers.shoebox.ShoeboxController.sendPushNotification()
+
 POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.shoebox.ExpertRecommenderController.suggestExperts()
+
+POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
+
+POST    /internal/geckoboard/refresh                  @com.keepit.reports.GeckoboardReporterController.refreshAll()
+
+GET     /internal/migrateToEliza                      @com.keepit.controllers.shoebox.ShoeboxChatMigrationController.migrateToEliza()
+
+
 
 
 ->  / common.Routes

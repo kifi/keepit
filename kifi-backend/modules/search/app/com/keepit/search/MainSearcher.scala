@@ -123,16 +123,17 @@ class MainSearcher(
         }
     }
 
-  private[this] lazy val fullFriendEdgeSet = uriGraphSearcher.friendEdgeSet
   private[this] val friendEdgeSet = uriGraphSearcher.searchFriendEdgeSet
-  private[this] val friendIds = friendEdgeSet.destIdSet
   private[this] val friendsUriEdgeSets = uriGraphSearcher.friendsUriEdgeSets
   private[this] val friendsUriEdgeAccessors = friendsUriEdgeSets.mapValues{ _.accessor }
-  private[this] val filteredFriendEdgeSet = {
+  private[this] val (filteredFriendEdgeSet, relevantFriendEdgeSet) = {
     if (filter.isCustom) {
-      uriGraphSearcher.getUserToUserEdgeSet(userId, filter.filterFriends(fullFriendEdgeSet.destIdSet)) // a custom filter can have non-search friends
+      val fullFriendEdgeSet = uriGraphSearcher.friendEdgeSet
+      val filtered = uriGraphSearcher.getUserToUserEdgeSet(userId, filter.filterFriends(fullFriendEdgeSet.destIdSet)) // a custom filter can have non-search friends
+      val unioned = uriGraphSearcher.getUserToUserEdgeSet(userId, filtered.destIdSet ++ friendEdgeSet.destIdSet)
+      (filtered, unioned)
     } else {
-      friendEdgeSet
+      (friendEdgeSet, friendEdgeSet)
     }
   }
   private[this] val friendUris = if (filter.includeFriends) {
@@ -160,7 +161,7 @@ class MainSearcher(
   Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
 
   private def findSharingUsers(id: Long): UserToUserEdgeSet = {
-    uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
+    uriGraphSearcher.intersect(relevantFriendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
   }
 
   private def sharingScore(sharingUsers: UserToUserEdgeSet): Float = {
@@ -169,7 +170,7 @@ class MainSearcher(
 
   private def sharingScore(sharingUsers: UserToUserEdgeSet, normalizedFriendStats: FriendStats): Float = {
     val users = if (filter.isCustom) filter.filterFriends(sharingUsers.destIdSet) else sharingUsers.destIdSet
-    users.foldLeft(0.0f){ (score, id) => score + normalizedFriendStats.score(id) }
+    users.foldLeft(sharingUsers.size.toFloat){ (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
 
   def getPersonalizedSearcher(query: Query) = {
@@ -274,7 +275,7 @@ class MainSearcher(
     }
 
     val threshold = highScore * tailCutting
-    val friendStats = FriendStats(fullFriendEdgeSet.destIdSet)
+    val friendStats = FriendStats(relevantFriendEdgeSet.destIdSet)
     var numCollectStats = 20
 
     if (myHits.size > 0) {
@@ -295,10 +296,11 @@ class MainSearcher(
         }
 
         val score = h.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
+        val recencyScoreVal = if (recencyBoost > 0.0f) recencyScore(myUriEdgeAccessor.getCreatedAt(h.id)) else 0.0f
 
-        if (score > threshold) {
+        if (score > (threshold * (1.0f - recencyScoreVal))) {
           h.users = sharingUsers.destIdSet
-          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScore(myUriEdgeAccessor.getCreatedAt(h.id)))
+          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal)
           h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
           hits.insert(h)
           true
@@ -369,6 +371,8 @@ class MainSearcher(
           false
         }
       }
+      // if others have really high score, clear hits from mine and friends (this decision must be made after filtering out orphan URIs)
+      if (queue.size > 0 && highScore < queue.highScore * tailCutting * tailCutting) hits.clear()
       queue.foreach{ h => hits.insert(h) }
     }
 
@@ -378,12 +382,9 @@ class MainSearcher(
     val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
 
     // simple classifier
-    val show = if (svVar > 0.18f) false else {
-      val isGood = (parsedQuery, personalizedSearcher) match {
-      case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get)
+    val show = (parsedQuery, personalizedSearcher) match {
+      case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get, svVar)
       case _ => true
-      }
-      isGood
     }
 
     // insert a new content if any (after show/no-show classification)
@@ -413,13 +414,13 @@ class MainSearcher(
         lang = lang)
   }
 
-  private def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher) = {
+  private def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher, svVar: Float) = {
     val semanticScoreThreshold = (1.0f - semanticBoost) + semanticBoost * 0.2f
     def classify(hit: MutableArticleHit) = {
-      (hit.clickBoost) > 1.25f ||
+      (hit.clickBoost) > 1.1f ||
       hit.scoring.recencyScore > 0.25f ||
       hit.scoring.textScore > 0.7f ||
-      (hit.scoring.textScore >= 0.04f && hit.semanticScore >= semanticScoreThreshold)
+      (hit.scoring.textScore >= 0.04f && hit.semanticScore >= semanticScoreThreshold && svVar < 0.18f)
     }
     hitList.take(3).exists(classify(_))
   }

@@ -1,15 +1,16 @@
 package com.keepit.test
 
 import com.keepit.inject._
-import com.keepit.common.db.slick.{SlickSessionProvider, Database}
+import com.keepit.common.db.slick.SlickSessionProvider
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.TestSlickSessionProvider
 import com.keepit.common.mail.ElectronicMailRepo
 import com.google.inject.Injector
+import com.keepit.normalizer.NormalizationService
 
 trait ShoeboxInjectionHelpers { self: InjectorProvider =>
-  
+
   def userSessionRepo(implicit injector: Injector) = inject[UserSessionRepo]
   def userRepo(implicit injector: Injector) = inject[UserRepo]
   def basicUserRepo(implicit injector: Injector) = inject[BasicUserRepo]
@@ -18,6 +19,8 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def friendRequestRepo(implicit injector: Injector) = inject[FriendRequestRepo]
   def searchFriendRepo(implicit injector: Injector) = inject[SearchFriendRepo]
   def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
+  def normalizationService(implicit injector: Injector) = inject[NormalizationService]
+  def normalizedURIFactory(implicit injector: Injector) = inject[NormalizedURIFactory]
   def urlRepo(implicit injector: Injector) = inject[URLRepo]
   def bookmarkRepo(implicit injector: Injector) = inject[BookmarkRepo]
   def commentRepo(implicit injector: Injector) = inject[CommentRepo]
@@ -38,5 +41,8 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def uriTopicRepoA(implicit injector: Injector) = inject[UriTopicRepoA]
   def uriTopicRepoB(implicit injector: Injector) = inject[UriTopicRepoB]
   def userBookmarkClicksRepo(implicit injector: Injector) = inject[UserBookmarkClicksRepo]
+  def uriNormalizationRuleRepo(implicit injector: Injector) = inject[UriNormalizationRuleRepo]
+  def failedContentCheckRepo(implicit injector: Injector) = inject[FailedContentCheckRepo]
+  def changedURIRepo(implicit injector: Injector) = inject[ChangedURIRepo]
   def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[TestSlickSessionProvider]
 }

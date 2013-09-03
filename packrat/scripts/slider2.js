@@ -1,3 +1,4 @@
+// @require styles/metro/tile.css
 // @require styles/metro/slider2.css
 // @require styles/friend_card.css
 // @require scripts/lib/jquery.js
@@ -19,20 +20,6 @@ $.fn.scrollToBottom = function() {
     }
   });
 };
-!function() {
-  $.fn.scrollable = function(o) {
-    return this.each(function() {
-      o.$above.addClass("kifi-scrollable-above");
-      o.$below.addClass("kifi-scrollable-below");
-      $(this).data(o);
-    }).scroll(onScroll);
-  };
-  function onScroll() {
-    var sT = this.scrollTop, sH = this.scrollHeight, oH = this.offsetHeight, o = $(this).data();
-    o.$above.toggleClass("kifi-can-scroll", sT > 0);
-    o.$below.toggleClass("kifi-can-scroll", sT < sH - oH);
-  }
-}();
 
 const CO_KEY = /^Mac/.test(navigator.platform) ? "⌘" : "Ctrl";
 var noticesPane, threadsPane, threadPane;  // stubs
@@ -74,11 +61,11 @@ slider2 = function() {
     var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"m":0}');
     api.log("[createSlider] kept: %s counts: %o", kept || "no", counts);
 
-    render("html/metro/slider2.html", {
+    render("html/metro/slider2", {
       "bgDir": api.url("images/keeper"),
       "isKept": kept,
       "isPrivate": kept == "private",
-      "noticesCount": counts.n,
+      "noticesCount": Math.max(0, counts.n - counts.m),
       "messageCount": counts.m,
       "atNotices": "/notices" == locator,
       "atMessages": /^\/messages/.test(locator)
@@ -138,7 +125,7 @@ slider2 = function() {
         var btn = this;
         api.port.emit("get_keepers", function(o) {
           if (o.keepers.length) {
-            render("html/metro/keepers.html", {
+            render("html/metro/keepers", {
               link: true,
               keepers: pick(o.keepers, 8),
               captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps)
@@ -151,7 +138,7 @@ slider2 = function() {
                 position: positionIt});
             });
           } else {
-            render("html/keeper/titled_tip.html", {
+            render("html/keeper/titled_tip", {
               title: (o.kept ? "Unkeep" : "Keep") + " (" + CO_KEY + "+Shift+K)",
               html: o.kept ? "Un-keeping this page will<br>remove it from your keeps." :
                 "Keeping this page helps you<br>easily find it later."
@@ -173,7 +160,7 @@ slider2 = function() {
         var $a = $(this);
         var friend = $a.closest(".kifi-slider2-tip").data("keepers").filter(hasId($a.data("id")))[0];
         if (!friend) return;
-        render("html/friend_card.html", {
+        render("html/friend_card", {
           name: friend.firstName + " " + friend.lastName,
           id: friend.id,
           iconsUrl: api.url("images/social_icons.png")
@@ -202,7 +189,7 @@ slider2 = function() {
           "Keeping this privately allows you<br>to find this page easily without<br>letting anyone know you kept it." : publicly ?
           "This keep is public. Making it private<br>allows you to find it easily without<br>letting anyone know you kept it." :
           "This keep is private. Making it<br>public allows your friends to<br>discover that you kept it.";
-        render("html/keeper/titled_tip.html", {title: title, html: html}, function(html) {
+        render("html/keeper/titled_tip", {title: title, html: html}, function(html) {
           configureHover(html, {
             mustHoverFor: 700,
             hideAfter: 4000,
@@ -227,7 +214,7 @@ slider2 = function() {
           n: ["Notifications", "View all of your notifications.<br>Any new ones are highlighted."],
           m: ["Private Messages (" + CO_KEY + "+Shift+M)", "Send this page to friends<br>and start a discussion."]
         }[this.dataset.loc.substr(1,1)];
-        render("html/keeper/titled_tip.html", {title: tip[0], html: tip[1]}, function(html) {
+        render("html/keeper/titled_tip", {title: tip[0], html: tip[1]}, function(html) {
           configureHover(html, {
             mustHoverFor: 700,
             hideAfter: 4000,
@@ -264,7 +251,7 @@ slider2 = function() {
     createSlider(function() {
       $slider.prependTo(tile);
 
-      logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0), url: document.URL});
+      logEvent("slider", "sliderShown", withUrls({trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0)}));
       api.port.emit("keeper_shown");
 
       callback && callback();
@@ -369,21 +356,21 @@ slider2 = function() {
   function keepPage(how) {
     api.log("[keepPage]", how);
     updateKeptDom(how);
-    api.port.emit("keep", {url: document.URL, title: document.title, how: how});
+    api.port.emit("keep", withUrls({title: document.title, how: how}));
     logEvent("slider", "keep", {isPrivate: how == "private"});
   }
 
   function unkeepPage() {
     api.log("[unkeepPage]", document.URL);
     updateKeptDom("");
-    api.port.emit("unkeep");
+    api.port.emit("unkeep", withUrls({}));
     logEvent("slider", "unkeep");
   }
 
   function toggleKeep(how) {
     api.log("[toggleKeep]", how);
     updateKeptDom(how);
-    api.port.emit("set_private", how == "private");
+    api.port.emit("set_private", withUrls({private: how == "private"}));
   }
 
   function updateKeptDom(how) {
@@ -402,18 +389,18 @@ slider2 = function() {
   }
 
   const createTemplateParams = {
-    thread: function(cb, locator, recipients) {
-      var id = locator.split("/")[2];  // can be id of any message (assumed to be parent if recipients provided)
-      if (recipients) {
-        respond(recipients, locator);
+    thread: function(cb, locator, participants) {
+      var id = locator.split("/")[2];
+      if (participants) {
+        respond(participants, locator);
       } else {
-        api.log("[createTemplateParams] getting thread for recipients");
+        api.log("[createTemplateParams] getting thread for participants");
         api.port.emit("thread", {id: id, respond: true}, function(th) {
-          respond(th.messages[0].recipients, "/messages/" + th.id);
+          respond(th.participants, "/messages/" + th.id);
         });
       }
-      function respond(r, canonicalLocator) {
-        cb({recipients: r, numRecipients: r.length > 1 ? r.length : null}, canonicalLocator);
+      function respond(p, canonicalLocator) {
+        cb({participants: p, numParticipants: p.length > 1 ? p.length : null}, canonicalLocator);
       }
     }};
 
@@ -434,7 +421,7 @@ slider2 = function() {
       var left = back || toPaneIdx(pane) < toPaneIdx(toPaneName(paneHistory[0]));
       $slider.find(".kifi-at").removeClass("kifi-at").end()
         .find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
-      render("html/metro/pane_" + pane + ".html", params, function(html) {
+      render("html/metro/pane_" + pane, params, function(html) {
         var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden");
         var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
         var $old = $cart.find(".kifi-pane-box");
@@ -470,133 +457,149 @@ slider2 = function() {
       } else {
         $slider.find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
       }
-      api.require("styles/metro/pane.css", function() {
-        render("html/metro/pane.html", $.extend(params, {
-          site: location.hostname,
-          kifiLogoUrl: api.url("images/kifi_logo.png"),
-          gearUrl: api.url("images/metro/gear.png")
-        }), {
-          pane: "pane_" + pane + ".html"
-        },
-        function(html) {
-          $("html").addClass("kifi-pane-parent");
-          $pane = $(html);
-          $pane[0].dataset.locator = locator;
-          if (bringSlider) {
-            $pane.append($slider).appendTo(tile.parentNode);
-          } else {
-            $pane.insertBefore(tile);
-            $(tile).css("transform", "translate(0," + (window.innerHeight - tile.getBoundingClientRect().bottom) + "px)");
-          }
-          $pane.layout()
-          .on("transitionend", function onPaneShown(e) {
-            if (e.target !== this) return;
-            $pane.off("transitionend", onPaneShown);
-            if (!bringSlider) {
-              $pane.before(tile);
-              $slider.appendTo($pane);
+      api.port.emit("session", function(session) {
+        api.require("styles/metro/pane.css", function() {
+          render("html/metro/pane", $.extend(params, {
+            site: location.hostname,
+            kifiLogoUrl: api.url("images/kifi_logo.png"),
+            session: session
+          }), {
+            pane: "pane_" + pane
+          },
+          function(html) {
+            $("html").addClass("kifi-pane-parent");
+            $pane = $(html);
+            $pane[0].dataset.locator = locator;
+            if (bringSlider) {
+              $pane.append($slider).appendTo(tile.parentNode);
+            } else {
+              $pane.insertBefore(tile);
+              $(tile).css("transform", "translate(0," + (window.innerHeight - tile.getBoundingClientRect().bottom) + "px)");
             }
-            $box.data("shown", true).triggerHandler("kifi:shown");
-          })
-          .bindHover(".kifi-pane-head-logo", {mustHoverFor: 700, hideAfter: 2500, click: "hide"})
-          .bindHover(".kifi-pane-head-feedback", function(configureHover) {
-            render("html/keeper/titled_tip.html", {
-              dir: "below",
-              title: "Give Us Feedback",
-              html: "Tell us your ideas for KiFi<br>or report an issue."
-            }, function(html) {
-              configureHover(html, {mustHoverFor: 700, hideAfter: 4000, click: "hide"});
-            });
-          })
-          .on("click", ".kifi-pane-head-feedback", function(e) {
-            e.preventDefault();
-            var width = 700;
-            var height = 400;
-            var left = (screen.width - width) / 2;
-            var top = (screen.height - height) / 2;
-            window.open(
-              "https://www.kifi.com/feedback/form",
-              "kifi-feedback",
-              "width="+width+",height="+height+",resizable,top="+top+",left="+left);
-          })
-          .bindHover(".kifi-pane-head-settings:not(.kifi-active)", function(configureHover) {
-            render("html/keeper/titled_tip.html", {
-              dir: "below",
-              title: "Settings",
-              html: "Customize your KiFi<br>experience."
-            }, function(html) {
-              configureHover(html, {mustHoverFor: 700, hideAfter: 3000, click: "hide"});
-            });
-          })
-          .on("mousedown", ".kifi-pane-head-settings", function(e) {
-            e.preventDefault();
-            var $sett = $(this).addClass("kifi-active");
-            var $menu = $sett.next(".kifi-pane-head-settings-menu").fadeIn(50);
-            var $hide = $menu.find(".kifi-pane-settings-hide")
-              .on("mouseenter", enterItem)
-              .on("mouseleave", leaveItem);
-            document.addEventListener("mousedown", docMouseDown, true);
-            $menu.on("kifi:hide", hide);
-            // .kifi-hover class needed because :hover does not work during drag
-            function enterItem() { $(this).addClass("kifi-hover"); }
-            function leaveItem() { $(this).removeClass("kifi-hover"); }
-            function docMouseDown(e) {
-              if (!$menu[0].contains(e.target)) {
-                $menu.triggerHandler("kifi:hide");
-                if ($sett[0] === e.target) {
-                  e.stopPropagation();
+            $pane.layout()
+            .on("transitionend", function onPaneShown(e) {
+              if (e.target !== this) return;
+              $pane.off("transitionend", onPaneShown);
+              if (!bringSlider) {
+                $pane.before(tile);
+                $slider.appendTo($pane);
+              }
+              $box.data("shown", true).triggerHandler("kifi:shown");
+            })
+            .bindHover(".kifi-pane-head-logo", {mustHoverFor: 700, hideAfter: 2500, click: "hide"})
+            .bindHover(".kifi-pane-head-feedback", function(configureHover) {
+              render("html/keeper/titled_tip", {
+                dir: "below",
+                title: "Give Us Feedback",
+                html: "Tell us your ideas for Kifi<br>or report an issue."
+              }, function(html) {
+                configureHover(html, {mustHoverFor: 700, hideAfter: 4000, click: "hide"});
+              });
+            })
+            .on("click", ".kifi-pane-head-feedback", function(e) {
+              e.preventDefault();
+              var width = 700;
+              var height = 400;
+              var left = (screen.width - width) / 2;
+              var top = (screen.height - height) / 2;
+              window.open(
+                "https://www.kifi.com/feedback/form",
+                "kifi-feedback",
+                "width="+width+",height="+height+",resizable,top="+top+",left="+left);
+            })
+            .bindHover(".kifi-pane-head-settings:not(.kifi-active)", function(configureHover) {
+              render("html/keeper/titled_tip", {
+                dir: "below",
+                title: "Settings",
+                html: "Customize your Kifi<br>experience."
+              }, function(html) {
+                configureHover(html, {mustHoverFor: 700, hideAfter: 3000, click: "hide"});
+              });
+            })
+            .on("mousedown", ".kifi-pane-head-settings", function(e) {
+              e.preventDefault();
+              var $sett = $(this).addClass("kifi-active");
+              var $menu = $sett.next(".kifi-pane-head-settings-menu").fadeIn(50);
+              var $hide = $menu.find(".kifi-pane-settings-hide")
+                .on("mouseenter", enterItem)
+                .on("mouseleave", leaveItem);
+              document.addEventListener("mousedown", docMouseDown, true);
+              $menu.on("kifi:hide", hide);
+              // .kifi-hover class needed because :hover does not work during drag
+              function enterItem() { $(this).addClass("kifi-hover"); }
+              function leaveItem() { $(this).removeClass("kifi-hover"); }
+              function docMouseDown(e) {
+                if (!$menu[0].contains(e.target)) {
+                  $menu.triggerHandler("kifi:hide");
+                  if ($sett[0] === e.target) {
+                    e.stopPropagation();
+                  }
                 }
               }
-            }
-            function hide() {
-              document.removeEventListener("mousedown", docMouseDown, true);
-              $sett.removeClass("kifi-active");
-              $hide.off("mouseenter", enterItem)
-                  .off("mouseleave", leaveItem);
-              $menu.off("kifi:hide", hide).fadeOut(50, function() {
-                $menu.find(".kifi-hover").removeClass("kifi-hover");
-              });
-            }
-            api.port.emit("get_suppressed", function(suppressed) {
-              $hide.toggleClass("kifi-checked", !!suppressed);
-            });
-          })
-          .on("mouseup", ".kifi-pane-settings-hide", function(e) {
-            e.preventDefault();
-            var $hide = $(this).toggleClass("kifi-checked");
-            var checked = $hide.hasClass("kifi-checked");
-            $(tile).toggle(!checked);
-            api.port.emit("suppress_on_site", checked);
-            setTimeout(function() {
-              if (checked) {
-                hidePane();
-              } else {
-                $hide.closest(".kifi-pane-head-settings-menu").triggerHandler("kifi:hide");
+              function hide() {
+                document.removeEventListener("mousedown", docMouseDown, true);
+                $sett.removeClass("kifi-active");
+                $hide.off("mouseenter", enterItem)
+                    .off("mouseleave", leaveItem);
+                $menu.off("kifi:hide", hide).fadeOut(50, function() {
+                  $menu.find(".kifi-hover").removeClass("kifi-hover");
+                });
               }
-            }, 150);
-          })
-          .on("keydown", ".kifi-pane-search", function(e) {
-            var q;
-            if (e.which == 13 && (q = this.value.trim())) {
-              window.open("https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+"));
-              this.value = "";
-            }
-          })
-          .on("click", ".kifi-pane-back", function() {
-            var loc = paneHistory[1] || this.dataset.loc;
-            if (loc) {
-              showPane(loc, true);
-            }
-          })
-          .on("kifi:show-pane", function(e, loc, paramsArg) {
-            showPane(loc, false, paramsArg);
-          })
-          .on("mousedown click keydown keypress keyup", function(e) {
-            e.stopPropagation();
+              api.port.emit("get_suppressed", function(suppressed) {
+                $hide.toggleClass("kifi-checked", !!suppressed);
+              });
+            })
+            .on("mouseup", ".kifi-pane-settings-hide", function(e) {
+              e.preventDefault();
+              var $hide = $(this).toggleClass("kifi-checked");
+              var checked = $hide.hasClass("kifi-checked");
+              $(tile).toggle(!checked);
+              api.port.emit("suppress_on_site", checked);
+              setTimeout(function() {
+                if (checked) {
+                  hidePane();
+                } else {
+                  $hide.closest(".kifi-pane-head-settings-menu").triggerHandler("kifi:hide");
+                }
+              }, 150);
+            })
+            .on("mouseup", ".kifi-pane-settings-sign-out", function(e) {
+              e.preventDefault();
+              api.port.emit("deauthenticate");
+              $(tile).hide();
+              setTimeout(function() {
+                hidePane();
+                $('<div class="kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/keep.faint.png') + '"> button above.</div>')
+                  .appendTo('body').delay(6000).fadeOut(1000, function() { $(this).remove(); });
+              }, 150);
+              return;
+            })
+            .on("keydown", ".kifi-pane-search", function(e) {
+              var q, el = this;
+              if (e.which == 13 && (q = el.value.trim())) {
+                api.port.emit("session", function(session) {
+                  var uri = session && ~session.experiments.indexOf("website") ? "https://www.kifi.com/site/search?q=" : "https://www.google.com/search?q=";
+                  window.open(uri + encodeURIComponent(q).replace(/%20/g, "+"));
+                  el.value = "";
+                });
+              }
+            })
+            .on("click", ".kifi-pane-back", function() {
+              var loc = paneHistory[1] || this.dataset.loc;
+              if (loc) {
+                showPane(loc, true);
+              }
+            })
+            .on("kifi:show-pane", function(e, loc, paramsArg) {
+              showPane(loc, false, paramsArg);
+            })
+            .on("mousedown click keydown keypress keyup", function(e) {
+              e.stopPropagation();
+            });
+            $("html").addClass("kifi-with-pane");
+            var $box = $pane.find(".kifi-pane-box");
+            populatePane[pane]($box, locator);
           });
-          $("html").addClass("kifi-with-pane");
-          var $box = $pane.find(".kifi-pane-box");
-          populatePane[pane]($box, locator);
         });
       });
     }
@@ -717,7 +720,7 @@ slider2 = function() {
     },
     message: function(o) {
       threadsPane.update(o.thread, o.read);
-      threadPane.update(o.thread.id, o.message, o.userId);
+      threadPane.update(o.threadId, o.message, o.userId);
     },
     thread: function(o) {
       threadPane.updateAll(o.id, o.messages, o.userId);
@@ -725,7 +728,7 @@ slider2 = function() {
     counts: function(o) {
       if (!$slider) return;
       var $btns = $slider.find(".kifi-slider2-dock-btn");
-      [[".kifi-slider2-notices", o.n],
+      [[".kifi-slider2-notices", Math.max(0, o.n - o.m)],
        [".kifi-slider2-messages", o.m]].forEach(function(a) {
         $btns.filter(a[0]).find(".kifi-count")
           .text(a[1] || "")
@@ -763,11 +766,16 @@ slider2 = function() {
         showPane(locator || "/notices");
       }
     },
+    hidePane: function(leaveSlider) {
+      if ($pane) {
+        hidePane(leaveSlider);
+      }
+    },
     showKeepers: function(keepers, otherKeeps) {
       if (lastShownAt) return;
       var $tile = $(tile).bindHover(function(configureHover) {
         // TODO: preload friend pictures
-        render("html/metro/keepers.html", {
+        render("html/metro/keepers", {
           keepers: pick(keepers, 8),
           captionHtml: formatCountHtml(0, keepers.length, otherKeeps)
         }, function(html) {

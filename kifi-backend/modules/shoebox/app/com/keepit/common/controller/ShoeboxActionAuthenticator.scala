@@ -12,13 +12,13 @@ import com.keepit.common.db.{ExternalId, State, Id}
 import com.keepit.common.social.{ConnectionUpdater}
 import com.keepit.common.db.slick.DBSession.RSession
 import play.api.mvc._
-import com.keepit.common.net.URI
 import com.keepit.model.ExperimentType
 import com.keepit.model.KifiInstallation
 import scala.Some
 import com.keepit.model.User
 import securesocial.core.SecuredRequest
 import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.common.net.URI
 
 @Singleton
 class ShoeboxActionAuthenticator @Inject() (
@@ -38,12 +38,12 @@ class ShoeboxActionAuthenticator @Inject() (
     userIdOpt match {
       case None =>
         val socialUser = socialUserInfoRepo.get(socialId, socialNetworkType)
-        val userId = socialUser.userId.get
-        userId
+        socialUser.userId.getOrElse(
+          throw new IllegalStateException(s"User ID for social user not defined: $socialUser"))
       case Some(userId) =>
         val socialUser = socialUserInfoRepo.get(socialId, socialNetworkType)
         if (socialUser.userId.get != userId) {
-          log.error("Social user id %s does not match session user id %s".format(socialUser, userId))
+          log.error(s"Social user id $socialUser does not match session user id $userId")
         }
         userId
     }
@@ -55,9 +55,6 @@ class ShoeboxActionAuthenticator @Inject() (
       val userId = loadUserId(userIdOpt, socialId, socialNetworkType)
       (userId, getExperiments(userId))
     }
-    // for migration to new UserConnection
-    connectionUpdater.updateConnectionsIfNecessary(userId)
-    //
     (userId, experiments)
   }
 
@@ -69,7 +66,7 @@ class ShoeboxActionAuthenticator @Inject() (
     val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
     val socialUser = request.user
     val (userId, experiments) =
-      loadUserContext(userIdOpt, SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId))
+      loadUserContext(userIdOpt, SocialId(socialUser.identityId.userId), SocialNetworkType(socialUser.identityId.providerId))
     val newSession = session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)
     impersonatedUserIdOpt match {
       case Some(impExternalUserId) =>

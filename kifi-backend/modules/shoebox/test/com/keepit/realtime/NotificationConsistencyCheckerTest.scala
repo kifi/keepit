@@ -10,7 +10,6 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers._
 import play.api.libs.json.Json
-import com.keepit.inject.ApplicationInjector
 import com.keepit.model.UserNotification
 import com.keepit.model.UserNotificationDetails
 import com.keepit.model.CommentRead
@@ -25,7 +24,7 @@ class NotificationConsistencyCheckerTest extends TestKit(ActorSystem()) with Spe
         val healthcheck = inject[FakeHealthcheck]
         val (user, nUri, comment, notif) = db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Andrew", lastName = "Smith"))
-          val nUri = uriRepo.save(NormalizedURIFactory("http://www.42go.com/"))
+          val nUri = uriRepo.save(normalizedURIFactory.apply("http://www.42go.com/"))
           val comment = commentRepo.save(
             Comment(userId = user.id.get, uriId = nUri.id.get, text = "hey", pageTitle = "test"))
           val notif = notificationRepo.save(

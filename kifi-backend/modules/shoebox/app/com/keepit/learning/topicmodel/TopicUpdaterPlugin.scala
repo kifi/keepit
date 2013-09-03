@@ -9,7 +9,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.inject._
 import play.api.Play.current
 import scala.concurrent.Future
@@ -29,43 +29,19 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
-    case UpdateTopic => try {
-      topicUpdater.update()
-    } catch {
-      case e: Exception =>
-        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some("Error updating topics")))
-    }
+    case UpdateTopic => topicUpdater.update()
 
-    case SwitchModel => try {
+    case SwitchModel => {
       if (topicUpdater.checkFlagConsistency){
         log.info("SwitchModel msg received but ignored. Internal flag already matches central config")
       } else {
         log.info("SwitchModel msg received. Will refresh and switch model.")
         topicUpdater.refreshAndSwitchModel()
       }
-    } catch {
-      case e: Exception =>
-        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some("Error handling SwitchModel message")))
     }
 
-    case Remodel => try {
-      topicRemodeler.remodel(continueFromLastInteruption = false)
-    } catch {
-      case e: Exception =>
-        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some("Error reconstructing topic model")))
-    }
-
-    case ContinueRemodel => try {
-      topicRemodeler.remodel(continueFromLastInteruption = true)
-    } catch {
-      case e: Exception =>
-        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some("Error reconstructing topic model")))
-    }
-
+    case Remodel => topicRemodeler.remodel(continueFromLastInteruption = false)
+    case ContinueRemodel => topicRemodeler.remodel(continueFromLastInteruption = true)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
@@ -76,7 +52,7 @@ trait TopicUpdaterPlugin extends SchedulingPlugin {
 
 @Singleton
 class TopicUpdaterPluginImpl @Inject() (
-    actorProvider: ActorProvider[TopicUpdaterActor],
+    actor: ActorInstance[TopicUpdaterActor],
     centralConfig: CentralConfig,
     val schedulingProperties: SchedulingProperties //only on leader
 ) extends TopicUpdaterPlugin with Logging{
@@ -86,8 +62,8 @@ class TopicUpdaterPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
      log.info("starting TopicUpdaterPluginImpl")
-     scheduleTask(actorProvider.system, 10 minutes, 2 minutes, actorProvider.actor, UpdateTopic)
-     scheduleTask(actorProvider.system, 30 seconds, 3650 days, "check remodel status")(watchRemodelStatus)
+     scheduleTask(actor.system, 10 minutes, 2 minutes, actor.ref, UpdateTopic)
+     scheduleTask(actor.system, 30 seconds, 3650 days, "check remodel status")(watchRemodelStatus)
   }
   override def onStop() {
      log.info("stopping TopicUpdaterPluginImpl")
@@ -112,12 +88,12 @@ class TopicUpdaterPluginImpl @Inject() (
     }
 
     if (remodelStat == RemodelState.STARTED){
-      actorProvider.actor ! ContinueRemodel
+      actor.ref ! ContinueRemodel
     }
 
     centralConfig.onChange(remodelKey){ flagOpt =>
       if (flagOpt.isDefined && (flagOpt.get == RemodelState.NEEDED)){
-        actorProvider.actor ! Remodel
+        actor.ref ! Remodel
       }
     }
   }
@@ -134,7 +110,7 @@ trait TopicModelSwitcherPlugin extends Plugin
 
 @Singleton
 class TopicModelSwitcherPluginImpl @Inject() (
-  actorProvider: ActorProvider[TopicUpdaterActor],
+  actor: ActorInstance[TopicUpdaterActor],
   centralConfig: CentralConfig
 ) extends TopicModelSwitcherPlugin with Logging {
   implicit val actorTimeout = Timeout(5 seconds)
@@ -154,7 +130,7 @@ class TopicModelSwitcherPluginImpl @Inject() (
     val flagKey = new TopicModelFlagKey()
     centralConfig.onChange(flagKey){ flagOpt =>
       log.info("topic model flag may have changed. Send a msg to TopicUpdater actor. ")
-      actorProvider.actor ! SwitchModel
+      actor.ref ! SwitchModel
     }
   }
 }

@@ -1,11 +1,14 @@
 package com.keepit.model
 
+import com.keepit.common.logging.Logging
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.common.db.{State, Id, SequenceNumber}
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
+import com.keepit.normalizer.{NormalizationService, NormalizationCandidate}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
@@ -14,6 +17,9 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getScraped(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
+  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
+  def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
+  def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI]
 }
 
 @Singleton
@@ -22,7 +28,9 @@ class NormalizedURIRepoImpl @Inject() (
   val clock: Clock,
   idCache: NormalizedURICache,
   urlHashCache: NormalizedURIUrlHashCache,
-  scrapeRepoProvider: Provider[ScrapeInfoRepo])
+  scrapeRepoProvider: Provider[ScrapeInfoRepo],
+  normalizedURIFactory: NormalizedURIFactory,
+  urlRepoProvider: Provider[URLRepo])
   extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
@@ -37,8 +45,11 @@ class NormalizedURIRepoImpl @Inject() (
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
+    def normalization = column[Normalization]("normalization")
+    def redirect = column[Id[NormalizedURI]]("redirect")
+    def redirectTime = column[DateTime]("redirect_time")
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~
-        screenshotUpdatedAt.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
+        screenshotUpdatedAt.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
   }
 
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
@@ -51,10 +62,9 @@ class NormalizedURIRepoImpl @Inject() (
     (if (limit >= 0) q.take(limit) else q).list
   }
 
-
   override def invalidateCache(uri: NormalizedURI)(implicit session: RSession) = {
     uri.id map {id => idCache.set(NormalizedURIKey(id), uri)}
-    urlHashCache.set(NormalizedURIUrlHashKey(NormalizedURIFactory.hashUrl(uri.url)), uri)
+    urlHashCache.set(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(uri.url)), uri)
     uri
   }
 
@@ -69,7 +79,8 @@ class NormalizedURIRepoImpl @Inject() (
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     val num = sequence.incrementAndGet()
-    val saved = super.save(uri.copy(seq = num))
+    val uriWithSeq = uri.copy(seq = num)
+    val saved = super.save(uriWithSeq)
 
     lazy val scrapeRepo = scrapeRepoProvider.get
     if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {
@@ -104,11 +115,58 @@ class NormalizedURIRepoImpl @Inject() (
     limited.list
   }
 
-  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    val normalizedUri = NormalizedURIFactory.normalize(url)
-    val hash = NormalizedURIFactory.hashUrl(normalizedUri)
+  def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
+    val hash = NormalizedURI.hashUrl(normalizedUrl)
     urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
       (for (t <- table if t.urlHash === hash) yield t).firstOption
     }
   }
+
+  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
+    val normalizedUrl = normalizedURIFactory.normalize(url)
+    getByNormalizedUrl(normalizedUrl)
+  }
+
+  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
+    val normalizedUrl = normalizedURIFactory.normalize(url)
+    val normalizedUri = getByNormalizedUrl(normalizedUrl) match {
+      case Some(uri) => uri
+      case None => {
+        val newUri = save(NormalizedURI.withHash(normalizedUrl = normalizedUrl))
+        urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
+        newUri
+      }
+    }
+    session.onTransactionSuccess(normalizedURIFactory.normalizationServiceProvider.get.update(normalizedUri, candidates: _*))
+    normalizedUri
+  }
+  
+  def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI] = {
+    (for(t <- table if t.redirect === redirect) yield t).list
+  }
+
+}
+
+@Singleton
+case class NormalizedURIFactory @Inject() (normalizationServiceProvider: Provider[NormalizationService]) {
+
+  def normalize(url: String)(implicit session: RSession) = normalizationServiceProvider.get.normalize(url)
+
+  def apply(url: String)(implicit session: RSession): NormalizedURI =
+    apply(title = None, url = url, state = NormalizedURIStates.ACTIVE, normalization = None)
+
+  def apply(url: String, state: State[NormalizedURI])(implicit session: RSession): NormalizedURI =
+    apply(title = None, url = url, state = state, normalization = None)
+
+  def apply(title: String, url: String)(implicit session: RSession): NormalizedURI =
+    apply(title = Some(title), url = url, state = NormalizedURIStates.ACTIVE, normalization = None)
+
+  def apply(title: String, url: String, state: State[NormalizedURI])(implicit session: RSession): NormalizedURI =
+    apply(title = Some(title), url = url, state = state, normalization = None)
+
+  def apply(url: String, normalization: Normalization)(implicit session: RSession): NormalizedURI =
+    apply(title = None, url = url, state = NormalizedURIStates.ACTIVE, normalization = Some(normalization))
+
+  def apply(url: String, title: Option[String] = None, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE, normalization: Option[Normalization] = None)(implicit session: RSession): NormalizedURI =
+    NormalizedURI.withHash(normalizedUrl = normalize(url), title = title, state = state, normalization = normalization)
 }

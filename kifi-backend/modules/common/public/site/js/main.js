@@ -1,5 +1,7 @@
 var xhrDomain = 'https://api.kifi.com';
+//xhrDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
+var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 
 var compareSearch = {usage: "search", sensitivity: "base"};
 var compareSort = {numeric: true};
@@ -71,33 +73,46 @@ $(function() {
 	var $checkAll = $subtitle.find('.check-all').click(function() {
 		if ($checkAll.hasClass('live')) {
 			var $keeps = $main.find('.keep');
-			$checkAll.toggleClass('checked');
-			if ($checkAll.hasClass('checked')) {
+			var checked = $checkAll.toggleClass('checked').hasClass('checked');
+			if (checked) {
 				$keeps.addClass('selected detailed');
 			} else {
 				$keeps.filter('.selected').removeClass('selected detailed');
 			}
+			updateSubtitleTextForSelection(checked ? $keeps.length : 0);
 			updateKeepDetails();
 		}
 	}).hover(function() {
-		var $text = $checkAll.next('.subtitle-text');
-		var n = $text.data("n");
-		if (n) {
-			$checkAll.addClass("live");
-			$text.data("text", $text.text()).text(
-				n == 1 ? "the keep below" :
-				 n == 2 ? "both keeps below" :
-				 "all " + n + " keeps below");
+		var $text = $checkAll.next('.subtitle-text'), d = $text.data(), noun = searchResponse ? 'result' : 'Keep';
+		if (d.n) {
+			$checkAll.addClass('live');
+			d.leaveText = $text.text();
+			$text.text(($checkAll.hasClass('checked') ? 'Deselect ' : 'Select ') + (
+				d.n == 1 ? 'the ' + noun + ' below' :
+				 d.n == 2 ? 'both ' + noun + 's below' :
+				 'all ' + d.n + ' ' + noun + 's below'));
 		}
 	}, function() {
-		var $text = $(this).removeClass("live").next('.subtitle-text');
-		var text = $text.data("text");
-		if (text) {
-			$text.text(text).removeData("text");
+		var $text = $(this).removeClass("live").next('.subtitle-text'), d = $text.data();
+		if (d.leaveText) {
+			$text.text(d.leaveText), delete d.leaveText;
 		}
 	});
+	function updateSubtitleTextForSelection(numSel) {
+		var $text = $checkAll.next('.subtitle-text'), d = $text.data();
+		if (numSel) {
+			if (!d.defText) {
+				d.defText = d.leaveText || $text.text();
+			}
+			$text.text(numSel + ' ' + (searchResponse ? 'result' : 'Keep') + (numSel == 1 ? '' : 's') + ' selected');
+		} else {
+			$text.text(d.defText), delete d.defText;
+		}
+		delete d.leaveText;
+	}
 
 	$('.keep-colls,.keep-coll').removeText();
+	var $fixedTitle = $('.keep-group-title-fixed');
 	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps)
 	.when(TempoEvent.Types.ITEM_RENDER_COMPLETE, function(ev) {
 		var $keep = $(ev.element).draggable(draggableKeepOpts);
@@ -107,23 +122,20 @@ $(function() {
 		});
 		$keep.find("time").timeago();
 	}).when(TempoEvent.Types.RENDER_COMPLETE, function(ev) {
+		console.log('[$myKeeps:RENDER_COMPLETE]', ev);
 		$keepSpinner.hide();
 
-		if (ev.element === $myKeeps[0]) {
-			var now = new Date;
-			$myKeeps.find("time").each(function() {
-				var age = daysBetween(new Date($(this).attr("datetime")), now);
-				if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
-					$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
-				} else if ($myKeeps.find('li.keep-group-title.yesterday').length == 0 && age > 1 && age < 2) {
-					$(this).closest(".keep").before('<li class="keep-group-title yesterday">Yesderday</li>');
-				} else if ($myKeeps.find('li.keep-group-title.week').length == 0 && age >= 2 && age <= 7) {
-					$(this).closest(".keep").before('<li class="keep-group-title week">Past Week</li>');
-				} else if ($myKeeps.find('li.keep-group-title.older').length == 0 && age > 7) {
-					$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
-					return false;
+		var $titles = ev.element === $myKeeps[0] ? addGroupHeadings() : $();
+		$mainKeeps.toggleClass("grouped", $titles.length > 0);
+		if ($titles.length) {
+			for (var sT = $mainKeeps.find(".antiscroll-inner")[0].scrollTop, i = $titles.length; i;) {
+				if ($titles[--i].offsetTop <= sT) {
+					$fixedTitle.text($titles.eq(i).text()).data({$titles: $titles, i: i});
+					break;
 				}
-			});
+			}
+		} else {
+			$fixedTitle.empty().removeData();
 		}
 
 		mainScroller.refresh();
@@ -148,25 +160,18 @@ $(function() {
 		},
 		start: function() {
 			var r = $collList[0].getBoundingClientRect();
-			var $shade = $('<div class=keep-drag-shade>');
-			var $shades = $shade.clone().css({top: 0, left: 0, right: 0, height: r.top})
-				.add($shade.css({top: r.top, left: r.right, right: 0, bottom: 0}))
-				.appendTo('body').layout().css('opacity', .2);
 			document.addEventListener('mousemove', move);
 			document.addEventListener('mouseup', up, true);
 			function up() {
 				document.removeEventListener('mousemove', move);
 				document.removeEventListener('mouseup', up, true);
-				$shades.css('opacity', 0).on('transitionend', function() {
-					$(this).remove();
-				});
 			}
 			function move(e) {
 				var inCol = e.pageX < r.right && e.pageX >= r.left, dy;
-				if (inCol && Math.abs(dy = (e.pageY - r.bottom)) < 10) {
+				if (inCol && (dy = e.pageY - r.bottom) > -10) {
 					scrollTimeout = scrollTimeout || setTimeout(scroll, scrollTimeoutMs);
-					scrollPx = 10 + dy * 2;
-				} else if (inCol && (dy = e.pageY - r.top) < 10 && dy > -50) {
+					scrollPx = 15 + Math.min(5, Math.round(dy * 1.5));
+				} else if (inCol && (dy = e.pageY - r.top) < 10) {
 					scrollTimeout = scrollTimeout || setTimeout(scroll, scrollTimeoutMs)
 					scrollPx = -10 + Math.max(-10, dy);
 				} else if (scrollTimeout) {
@@ -193,6 +198,37 @@ $(function() {
 				}
 			}
 		}};
+
+	function addGroupHeadings() {
+		var today = new Date().setHours(0, 0, 0, 0), h = [];
+		$myKeeps.find("time").each(function() {
+			var $time = $(this);
+			switch (Math.round((today - new Date($time.attr("datetime")).setHours(0, 0, 0, 0)) / 86400000)) {
+			case 0:
+				if (!h[0] && !(h[0] = $myKeeps.find('.keep-group-title.today')[0])) {
+					h[0] = $('<li class="keep-group-title today">Today</li>').insertBefore($time.closest(".keep"))[0];
+				}
+				break;
+			case 1:
+				if (!h[1] && !(h[1] = $myKeeps.find('.keep-group-title.yesterday')[0])) {
+					h[1] = $('<li class="keep-group-title yesterday">Yesterday</li>').insertBefore($time.closest(".keep"))[0];
+				}
+				break;
+			case 2: case 3: case 4: case 5: case 6:
+				if (!h[2] && !(h[2] = $myKeeps.find('.keep-group-title.week')[0])) {
+					h[2] = $('<li class="keep-group-title week">Past Week</li>').insertBefore($time.closest(".keep"))[0];
+				}
+				break;
+			default:
+				if ((h[0] || h[1] || h[2]) && !(h[3] = $myKeeps.find('.keep-group-title.older')[0])) {
+					h[3] = $('<li class="keep-group-title older">Older</li>').insertBefore($time.closest(".keep"))[0];
+				}
+				return false;
+			}
+		});
+		console.log('[addGroupHeadings] h:', h);
+		return $(h.filter(identity));
+	}
 
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		collScroller.refresh();
@@ -233,10 +269,6 @@ $(function() {
 		return a;
 	}
 
-	function daysBetween(date1, date2) {
-		return Math.round((date2 - date1) / 86400000);  // ms in one day
-	}
-
 	function formatPicUrl(userId, pictureName, size) {
 		return '//djty7jcqog9qu.cloudfront.net/users/' + userId + '/pics/' + size + '/' + pictureName;
 	}
@@ -271,6 +303,7 @@ $(function() {
 		}).css({transform: "translate(" + d + "px,0)", "transition-timing-function": "ease-in"});
 	}
 	function updateKeepDetails() {
+		hideUndo();
 		var $detailed = $main.find('.keep.detailed');
 		if ($detailed.length) {
 			var o = {
@@ -286,15 +319,17 @@ $(function() {
 				detailTmpl.render(o);
 				$('.page-who-pics').append($detailed.find(".keep-who>.pic").clone());
 				$('.page-who-text').html($detailed.find(".keep-who-text").html());
-				var $pic = $('.page-pic'), $chatter = $('.page-chatter');
+				var $pic = $('.page-pic'), $chatter = $('.page-chatter-messages');
 				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function(data) {
 					$pic.css('background-image', 'url(' + data.url + ')');
 				}).error(function() {
-					$pic.find('.page-pic-soon').show();
+					$pic.find('.page-pic-soon').addClass('showing');
 				});
-				$.postJson(xhrBase + '/chatter', {url: o.url}, function(data) {
-					$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
-					$chatter.find('.page-chatter-comments').attr('data-n', data.comments || 0);
+				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
+				$.postJson(xhrBaseEliza + '/chatter', {url: o.url}, function(data) {
+					$chatter.attr({
+						'data-n': data.threads || 0,
+						'data-locator': '/messages' + (data.threadId ? '/' + data.threadId : '')});
 				});
 			} else { // multiple keeps
 				var collCounts = collIds.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
@@ -312,7 +347,7 @@ $(function() {
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
-			$main.attr("data-view", "profile");
+			$('body').attr("data-view", "profile");
 			$('.left-col .active').removeClass("active");
 			$('.profile').on('keydown keypress keyup', function (e) {
 				e.stopPropagation();
@@ -333,7 +368,7 @@ $(function() {
 								var $this = $(this);
 								var prop = $this.data("prop");
 								if (prop == 'email') {
-									$this.text(me['emails'][0]);
+									$this.text(me.emails[0]);
 								} else {
 									$this.text(me[prop]);
 								}
@@ -352,16 +387,16 @@ $(function() {
 			$('.profile .save').click(function () {
 				var props = {};
 				var $editContainer = $(this).closest('.edit-container');
-				if (props['email']) {
-					props['emails'] = [props['email']];
-					delete props['email'];
-				}
 				$editContainer.find('.editable').each(function () {
 					var $this = $(this);
 					var value = $this.find('input').val();
 					$this.text(value);
 					props[$this.data('prop')] = value;
 				});
+				if (props.email) {
+					props.emails = [props.email];
+					delete props.email;
+				}
 				var $save = $editContainer.find('.save')
 				var saveText = $save.text();
 				$save.text('Saving...');
@@ -374,10 +409,11 @@ $(function() {
 					$save.text(saveText);
 				});
 			});
-			$('.profile .networks a').each(function () {
+			$('.profile .networks li').each(function () {
 				var $this = $(this);
 				var name = $this.data('network');
 				if (!name) return;
+				var $a = $this.find('a.profile-nw');
 				var networkInfo = myNetworks.filter(function (nw) {
 					return nw.network === name;
 				})[0];
@@ -391,16 +427,16 @@ $(function() {
 						.remove();
 				};
 				if (networkInfo) {
-					$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
+					$a.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
 					if (myNetworks.length > 1) {
 						$('<a>').addClass('disconnect').text('Unlink')
 							.attr('href', 'javascript:')
 							.data('action', '/disconnect/' + name)
 							.click(postLink)
-							.appendTo($this.parent());
+							.appendTo($this);
 					}
 				} else {
-					$this.addClass('not-connected').attr('title', 'Click to connect')
+					$a.addClass('not-connected').attr('title', 'Click to connect')
 						.attr('href', 'javascript:')
 						.data('action', '/link/' + name)
 						.click(postLink);
@@ -408,7 +444,7 @@ $(function() {
 						.attr('href', 'javascript:')
 						.data('action', '/link/' + name)
 						.click(postLink)
-						.appendTo($this.parent());
+						.appendTo($this);
 				}
 			});
 		});
@@ -416,15 +452,12 @@ $(function() {
 
 	// Friends Tabs/Pages
 
-	var $friends = $('.friends').on('click', '.friends-tabs>a[href]', function(e) {
-		e.preventDefault();
-		navigate(this.href);
-	});
+	var $friends = $('.friends');
 	var $friendsTabs = $friends.find('.friends-tabs>a');
 	var $friendsTabPages = $friends.find('.friends-page');
 
 	function showFriends(path) {
-		$main.attr('data-view', 'friends');
+		$('body').attr('data-view', 'friends');
 		$('.left-col .active').removeClass('active');
 		$('.my-friends').addClass('active');
 		var $tab = $friendsTabs.filter('[data-href="' + path + '"]').removeAttr('href');
@@ -522,10 +555,10 @@ $(function() {
 		friendsTmpl.clear();
 		$friendsLoading.show();
 		$.when(
-			$.getJSON(xhrBase + '/user/connections'),
+			$.getJSON(xhrBase + '/user/friends'),
 			$.getJSON(xhrBase + '/user/outgoingFriendRequests'))
 		.done(function(a0, a1) {
-			var friends = a0[0].connections, requests = a1[0];
+			var friends = a0[0].friends, requests = a1[0];
 			var requested = requests.reduce(function(o, u) {o[u.id] = true; return o}, {});
 			console.log('[prepFriendsTab] friends:', friends.length, 'req:', requests.length);
 			for (var f, i = 0; i < friends.length; i++) {
@@ -545,46 +578,106 @@ $(function() {
 
 	// Friend Invites
 
-	var $nwFriends = $('.invite-friends').antiscroll({x: false, width: '100%'})
+	var $nwFriends = $('.invite-friends').antiscroll({x: false, width: '100%'});
+	$nwFriends.find(".antiscroll-inner").scroll(function() { // infinite scroll
+		var sT = this.scrollTop, sH = this.scrollHeight;
+		// tweak these values as desired
+		const offset = sH / 4, toFetch = 40;
+		if (!$nwFriendsLoading.is(':visible') && this.clientHeight + sT > sH - offset) {
+			console.log('loading more friends');
+			prepInviteTab(toFetch);
+		}
+	});
 	var nwFriendsScroller = $nwFriends.data("antiscroll");
 	$(window).resize(nwFriendsScroller.refresh.bind(nwFriendsScroller));  // TODO: throttle, and only bind while visible
 	var nwFriendsTmpl = Tempo.prepare($nwFriends).when(TempoEvent.Types.RENDER_COMPLETE, function() {
 		$nwFriendsLoading.hide();
 		nwFriendsScroller.refresh();
 	});
+	var inviteFilterTmpl = Tempo.prepare($('.above-invite-friends'))
 	var $nwFriendsLoading = $('.invite-friends-loading');
-	function prepInviteTab() {
-		$.getJSON(xhrBase + '/user/all-connections', function(friends) {
+	var friendsTimeout;
+	function filterFriends() {
+		clearTimeout(friendsTimeout);
+		$nwFriends.find('ul').empty();
+		friendsTimeout = setTimeout(prepInviteTab, 200);
+	}
+
+	var invitesUpdatedAt;
+	function updateInviteCache() {
+		invitesUpdatedAt = Date.now();
+	}
+	updateInviteCache();
+
+	const friendsToShow = 40;
+	const friendsShowing = [];
+	var moreFriends = true;
+	function prepInviteTab(moreToShow) {
+		if (moreToShow && !moreFriends) return;
+		moreFriends = true;
+		var network = $('.invite-filters').attr('data-nw-selected') || undefined;
+		var search = $('.invite-filter').val() || undefined;
+		$nwFriendsLoading.show();
+		var opts = {
+			limit: moreToShow || friendsToShow,
+			after: moreToShow ? friendsShowing[friendsShowing.length - 1].value : undefined,
+			search: search,
+			network: network,
+			updatedAt: invitesUpdatedAt
+		};
+		$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
 			console.log('[prepInviteTab] friends:', friends.length);
-			nwFriendsTmpl.render(friends);
-			function filterFriends() {
-				var nw = $('.invite-filters>.selected').data('nw');
-				var words = $('.invite-filter').val().toLowerCase().split(/\s+/);
-				var matches = {};
-				friends.forEach(function (fr) {
-					matches[fr.value] = (!nw || nw == fr.value.split('/')[0]) && words.reduce(function (v, word) {
-						return v && (' ' + fr.label).toLowerCase().indexOf(' ' + word) >= 0
-					}, true);
-				});
-				$('.invite-friends .invite-friend').each(function () {
-					var $this = $(this);
-					$this.toggleClass('no-match', !matches[$this.data('value')])
-				});
+			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
+			var filter = $('.invite-filter').val() || undefined;
+			if (filter != search || nw != network) return;
+			if (friends.length < moreToShow) {
+				moreFriends = false;
 			}
-			$('.invite-filters>a').click(function () {
-				$(this).addClass('selected').siblings().removeClass('selected');
-				filterFriends();
-			});
-			$('.invite-filter').keyup(filterFriends).keyup();
-			$('.invite-friends').on('click', '.invite-button', function () {
-				var fullSocialId = $(this).closest('.invite-friend').data('value');
-				// TODO: linkedin
-				if (fullSocialId.indexOf("facebook/") === 0) {
-					$(this).closest('form').attr('action', xhrDomain + '/invite').submit();
-				}
-			});
+			if (!moreToShow) {
+				nwFriendsTmpl.clear();
+				friendsShowing.length = 0;
+			}
+			friendsShowing.push.apply(friendsShowing, friends);
+			nwFriendsTmpl.append(friends);
+			inviteFilterTmpl.render({results: friendsShowing.length, filter: filter});
 		});
 	}
+	$('.invite-filters>a').click(function () {
+		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
+		filterFriends();
+	});
+	var $inviteMessageDialog = $('.invite-message-dialog').remove();
+	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
+	$('.invite-filter').on('input', filterFriends);
+	$('.invite-friends').on('click', '.invite-button', function () {
+		var $friend = $(this).closest('.invite-friend'), fullSocialId = $friend.data('value');
+		// TODO(greg): figure out why this doesn't work cross-domain
+		var $form = $('<form method=POST action=/invite style="position:absolute;height:0;width:0;left:-99px">')
+			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">').appendTo('body');
+		if (/^facebook/.test(fullSocialId)) {
+			window.open("about:blank", fullSocialId, "height=640,width=1060,left=200,top=200", false);
+			$form.attr('target', fullSocialId).submit().remove();
+		} else if (/^linkedin/.test(fullSocialId)) {
+			inviteMessageDialogTmpl.render({label: $friend.find('.invite-name').text()});
+			$inviteMessageDialog.appendTo($form).on('click', '.invite-cancel', function (e) {
+				e.preventDefault();
+				$inviteMessageDialog.remove(), $form.remove();
+			});
+			$form.on('submit', function (e) {
+				e.preventDefault();
+				$.post($form.attr('action'), $form.serialize()).complete(function(xhr) {
+					if (xhr.status >= 400) {
+						console.log('error sending invite:', xhr);
+					} else {
+						console.log('sent invite');
+						$inviteMessageDialog.remove(), $form.remove();
+					}
+					updateInviteCache();
+					prepInviteTab();
+				});
+			});
+		}
+	});
 
 	// Friend Requests
 
@@ -599,6 +692,7 @@ $(function() {
 			$a.closest('.friend-req-act').addClass('done');
 			$a.closest('.friend-req').find('.friend-req-q').text(
 				accepting ? 'Accepted as your kifi friend' : 'Friend request ignored');
+			updateFriendRequests(-1);
 		}).error(function() {
 			$a.siblings('a').addBack().attr('href', 'javascript:');
 		});
@@ -623,6 +717,15 @@ $(function() {
 		});
 	}
 
+	function showBlog() {
+		$('body').attr('data-view', 'blog');
+		$('.left-col .active').removeClass('active');
+		var $blog = $('iframe.blog');
+		if (!$blog.attr('src')) {
+			$blog.attr('src', 'http://kifiupdates.tumblr.com');
+		}
+	}
+
 	function doSearch(q) {
 		if (q) {
 			searchResponse = null;
@@ -631,11 +734,12 @@ $(function() {
 		}
 		console.log("[doSearch] " + (searchResponse ? "more " : "") + "q:", q);
 		$('.left-col .active').removeClass('active');
-		$main.attr("data-view", "search");
+		$('body').attr("data-view", "search");
 		if (!searchResponse) {
 			subtitleTmpl.render({searching: true});
 			$checkAll.removeClass('live checked');
 			$myKeeps.detach().find('.keep').removeClass('selected detailed');
+			$fixedTitle.empty().removeData();
 		}
 		$keepSpinner.show();
 		$loadMore.addClass('hidden');
@@ -711,12 +815,14 @@ $(function() {
 		$h3.filter(".active").removeClass("active");
 		$h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps").addClass("active");
 
-		var fromSearch = $main.attr("data-view") == "search";
-		$main.attr("data-view", "mine");
-		$mainHead.find("h1").text(collId ? collections[collId].name : "Browse your keeps");
+		var fromSearch = $('body').attr("data-view") == "search";
+		$('body').attr("data-view", "mine");
+		$mainHead.find("h1").text(collId ? collections[collId].name : "Browse your Keeps");
 
 		$results.empty();
-		$query.val("").removeAttr("data-q");
+		$query.val('').removeAttr("data-q");
+		$queryWrap.addClass('empty');
+		$fixedTitle.empty().removeData();
 		if (fromSearch) {
 			searchResponse = null;
 			$checkAll.removeClass('checked');
@@ -817,7 +923,7 @@ $(function() {
 	}).on("mouseout", "a", function() {
 		$(this).removeClass("hover");
 	}).on("mouseup mousedown", ".coll-remove", function(e) {
-		if (e.which > 1) return;
+		if (e.which > 1 || !$collMenu.hasClass('showing')) return;
 		hideCollMenu();
 		var $coll = $collMenu.closest(".collection");
 		var collId = $coll.data("id");
@@ -836,7 +942,7 @@ $(function() {
 			$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
 		}).error(showMessage.bind(null, 'Could not delete collection, please try again later'));
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
-		if (e.which > 1) return;
+		if (e.which > 1 || !$collMenu.hasClass('showing')) return;
 		hideCollMenu();
 		var $coll = $collMenu.closest(".collection").addClass("renaming").each(function() {
 			var scrEl = $collList.find(".antiscroll-inner")[0], oT = this.offsetTop;
@@ -886,19 +992,28 @@ $(function() {
 	function hideCollMenu() {
 		console.log("[hideCollMenu]");
 		document.removeEventListener("mousedown", $collMenu.data("docMouseDown"), true);
-		$collMenu.removeData("docMouseDown").slideUp(80, function() {
+		$collMenu.removeData("docMouseDown").one('transitionend', function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
-		}).closest(".collection").removeClass("with-menu");
+		}).removeClass('showing')
+		.closest(".collection").removeClass("with-menu").off("mouseleave", hideCollMenu);
 	}
 
 	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
 		if (!$(e.target).is('input,textarea') && e.which >= 48 && e.which <= 90 && !e.ctrlKey && !e.metaKey && !e.altKey) {
 			$query.focus();
 		}
+	}).on('click', 'a[href]', function(e) {
+		var href;
+		if (!e.isDefaultPrevented() && ~(href = this.getAttribute('href')).search(inPageNavRe)) {
+			e.preventDefault();
+			navigate(href);
+		}
 	});
+	var inPageNavRe = /^(?:$|[a-z0-9]+(?:$|\/))/i;
 
 	var baseUriRe = new RegExp('^' + ($('base').attr('href') || ''));
 	$(window).on('statechange anchorchange', function(e) {
+		hideUndo();
 		var state = History.getState();
 		var hash = state.hash.replace(baseUriRe, '').replace(/^\.\//, '').replace(/[?#].*/, '');
 		var parts = hash.split('/');
@@ -929,6 +1044,9 @@ $(function() {
 			case 'friends':
 				showFriends(hash);
 				break;
+			case 'blog':
+				showBlog();
+				break;
 			default:
 				return;
 		}
@@ -940,8 +1058,8 @@ $(function() {
 		if (uri.substr(0, baseUri.length) == baseUri) {
 			uri = uri.substr(baseUri.length);
 		}
-		console.log('[navigate]', uri, opts || '');
 		var title, kind = uri.match(/[\w-]*/)[0];
+		console.log('[navigate]', uri, opts || '', kind);
 		switch (kind) {
 			case '':
 				title = 'Your Keeps';
@@ -957,6 +1075,10 @@ $(function() {
 				break;
 			case 'friends':
 				title = {friends: 'Friends', 'friends/invite': 'Invite Friends', 'friends/requests': 'Friend Requests'}[uri];
+				break;
+			case 'blog':
+			  title = 'Updates and Features'
+			  break;
 		}
 		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
 	}
@@ -967,26 +1089,22 @@ $(function() {
 
 	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
 		e.preventDefault();  // avoid starting selection
-	}).on("click", ".keep-coll-a", function(e) {
-		e.stopPropagation(), e.preventDefault();
-		navigate(this.href);
-	}).on("click", ".keep-coll-x", function(e) {
-		e.stopPropagation(), e.preventDefault();
-		var $coll = $(this.parentNode);
-		removeKeepsFromCollection($coll.data("id"), [$coll.closest(".keep").data("id")]);
 	}).on("click", ".keep-title>a", function(e) {
 		e.stopPropagation();
 	}).on("click", ".keep", function(e) {
-		var $keep = $(this), $keeps = $main.find(".keep");
-		if ($(e.target).hasClass("keep-checkbox") || $(e.target).hasClass("handle")) {
+		var $keep = $(this), $keeps = $main.find(".keep"), $el = $(e.target);
+		if ($el.hasClass("keep-checkbox") || $el.hasClass("handle")) {
 			$keep.toggleClass("selected");
 			var $selected = $keeps.filter(".selected");
 			$checkAll.toggleClass("checked", $selected.length == $keeps.length);
+			updateSubtitleTextForSelection($selected.length);
 			if ($selected.length == 0 ||
 			    $selected.not(".detailed").addClass("detailed").length +
 			    $keeps.filter(".detailed:not(.selected)").removeClass("detailed").length == 0) {
 				return;  // avoid redrawing same details
 			}
+		} else if ($el.hasClass("pic") || $el.hasClass('keep-coll-a')) {
+			return;
 		} else if ($keep.hasClass("selected")) {
 			$keeps.filter(".selected").toggleClass("detailed");
 			$keeps.not(".selected").removeClass("detailed");
@@ -999,21 +1117,33 @@ $(function() {
 		}
 		updateKeepDetails();
 	});
-	$(".my-identity a").click(function (e) {
-		e.preventDefault();
-		navigate(this.href);
-	});
 	var $mainHead = $(".main-head");
 	var $mainKeeps = $(".main-keeps").antiscroll({x: false, width: "100%"});
 	$mainKeeps.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var sT = this.scrollTop;
-		$mainHead.toggleClass("scrolled", sT > 0);
 		if ($keepSpinner.css('display') == 'none' && this.clientHeight + sT > this.scrollHeight - 300) {
 			if ($main[0].querySelector('.keep.selected')) {
 				$loadMore.removeClass('hidden');
 			} else {
 				$loadMore.triggerHandler('click');
 			}
+		}
+		if ($fixedTitle[0].hasChildNodes()) {
+			var o = $fixedTitle.data(), curr = o.$titles[o.i], next = o.$titles[o.i + 1], h = $fixedTitle[0].offsetHeight, d;
+			if (next && (d = sT + h - next.offsetTop) > 0) {
+				if (d >= h) {
+					$fixedTitle.text(o.$titles.eq(++o.i).text()).css('top', 0);
+				} else {
+					$fixedTitle.css('top', -d);
+				}
+			} else if (o.i && (d = curr.offsetTop - sT) > 0) {
+				$fixedTitle.text(o.$titles.eq(--o.i).text()).css('top', d - h);
+			} else if (parseInt($fixedTitle.css('top'), 10)) {
+				$fixedTitle.css('top', 0);
+			}
+			$mainKeeps.removeClass("scrolled");
+		} else {
+			$mainKeeps.toggleClass("scrolled", sT > 0);
 		}
 	});
 	var mainScroller = $mainKeeps.data("antiscroll");
@@ -1056,7 +1186,7 @@ $(function() {
 	var $collList = $("#collections-list")
 	.each(function() {this.style.top = this.offsetTop + "px"})
 	.addClass("positioned")
-	.antiscroll({x: false, width: "100%"})
+	.antiscroll({x: false, width: "100%", autoHide: false})
 	.sortable({
 		axis: "y",
 		items: ".collection",
@@ -1075,36 +1205,29 @@ $(function() {
 	}).on("mousedown", ".coll-tri", function(e) {
 		if (e.button > 0) return;
 		e.preventDefault();  // do not start selection
-		if ($collMenu.is(":animated")) return;
-		var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
-		$collMenu.hide().appendTo($coll)
-			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 51)
-			.slideDown(80)
+		var $tri = $(this), $coll = $tri.closest(".collection");
+		$coll.addClass("with-menu").on("mouseleave", hideCollMenu);
+		$collMenu.hide().removeClass('showing').appendTo($coll)
+			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 70)
+			.show().layout().addClass('showing')
 			.data("docMouseDown", docMouseDown);
 		document.addEventListener("mousedown", docMouseDown, true);
 		function docMouseDown(e) {
 			if (!e.button && !$.contains($collMenu[0], e.target)) {
 				hideCollMenu();
+				if ($(e.target).hasClass("coll-tri")) {
+					e.stopPropagation();
+				}
 			}
 		}
 	});
 	var collScroller = $collList.data("antiscroll");
 	$(window).resize(collScroller.refresh.bind(collScroller));
 
-	$leftCol.on('click', 'h3:not(.collection)>a[href]', function(e) {
-		e.preventDefault();
-		navigate(this.href);
-	});
-
 	$colls.on("click", "h3.collection>a", function(e) {
-		e.preventDefault();
-		var $a = $(this), $coll = $a.parent();
-		if ($coll.hasClass("renaming")) {
-			if (e.target === this) {
-				$a.find("input").focus();
-			}
-		} else {
-			navigate(this.href);
+		if (e.target === this && $(this.parentNode).hasClass("renaming")) {
+			e.preventDefault();
+			$(this).find("input").focus();
 		}
 	})
 	.on("click", ".collection-create", function() {
@@ -1191,24 +1314,42 @@ $(function() {
 			});
 	}
 
-	function removeKeepsFromCollection(collId, keepIds) {
-		$.postJson(xhrBase + '/collections/' + collId + '/removeKeeps', keepIds, function(data) {
+	function removeFromCollection(collId, $keeps) {
+		$.postJson(xhrBase + '/collections/' + collId + '/removeKeeps', $keeps.map(getDataId).get(), function(data) {
+			if ($collList.find('.collection.active').data('id') === collId) {
+				var $titles = obliviate($keeps);
+				hideKeepDetails();
+				showUndo(
+					($keeps.length > 1 ? $keeps.length + ' Keeps' : 'Keep') + ' removed from this collection.',
+					undoRemoveFromCollection.bind(null, collId, $keeps, $titles),
+					$.fn.remove.bind($keeps));
+			} else {
+				var $keepColl = $keeps.find(".keep-coll[data-id=" + collId + "]");
+				$keepColl.css("width", $keepColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
+				var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
+				$pageColl.css("width", $pageColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
+			}
 			$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps -= data.removed);
-		}).error(showMessage.bind(null, 'Could not remove keep' + (keepIds.length > 1 ? 's' : '') + ' from collection, please try again later'));
-		var $allKeeps = $main.find(".keep");
-		var $keeps = $allKeeps.filter(function() {return keepIds.indexOf($(this).data("id")) >= 0});
-		var $keepColl = $keeps.find(".keep-coll[data-id=" + collId + "]");
-		$keepColl.css("width", $keepColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
-		if ($keeps.is(".detailed") && !$allKeeps.filter(".detailed").not($keeps).has(".keep-coll[data-id=" + collId + "]").length) {
-			// there are no other selected keeps in the collection, so must remove collection from detail pane
-			var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
-			$pageColl.css("width", $pageColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
-		}
+		}).error(showMessage.bind(null, 'Could not remove keep' + ($keeps.length > 1 ? 's' : '') + ' from collection, please try again later'));
+	}
+
+	function undoRemoveFromCollection(collId, $keeps, $titles) {
+		$.postJson(xhrBase + '/collections/' + collId + '/addKeeps', $keeps.map(getDataId).get(), function(data) {
+			rennervate($keeps, $titles);
+			updateKeepDetails();
+			$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps += data.added);
+		});
 	}
 
 	function removeIfThis(e) {
 		if (e.target === this) {
 			$(this).remove();
+		}
+	}
+
+	function detachAndOff(e) {
+		if (e.target === this) {
+			$(this).off(e.type, detachAndOff).detach();
 		}
 	}
 
@@ -1230,18 +1371,33 @@ $(function() {
 				}, function(data) {
 					$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
 					$keeps.addClass("mine").find(".keep-private").toggleClass("on", howKept == "pri");
-				}).error(showMessage.bind(null, 'Could not add keeps, please try again later'));
+				}).error(showMessage.bind(null, 'Could not add Keeps, please try again later'));
 		} else if ($a.hasClass('page-keep')) {  // unkeep
 			$.postJson(xhrBase + '/keeps/remove', $keeps.map(function() {return {url: this.querySelector('.keep-title>a').href}}).get(), function(data) {
-				$detail.children().removeAttr('data-kept');
-				$detail.find('.page-coll').remove();
-				$keeps.removeClass("mine").find(".keep-private").removeClass("on");
-				var collCounts = $keeps.find(".keep-coll").remove().map(getDataId).get()
+				// TODO: update number in "Showing top 30 results" tagline? load more instantly if number gets too small?
+				var collCounts = $keeps.find(".keep-coll").map(getDataId).get()
 					.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
 				for (var collId in collCounts) {
 					$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps -= collCounts[collId]);
 				}
-			}).error(showMessage.bind(null, 'Could not remove keeps, please try again later'));
+				var $keepsStaying = searchResponse ? $keeps.has('.keep-friends,.keep-others') : $();
+				$keepsStaying.each(function() {
+					var $keep = $(this), $priv = $keep.find('.keep-private');
+					$keep.data({
+						sel: $keep.hasClass('selected'),
+						priv: $priv.hasClass('on'),
+						$coll: $keep.find('.keep-coll')})
+					.removeClass('mine selected detailed');
+					$priv.removeClass('on');
+				});
+				var $keepsGoing = $keeps.not($keepsStaying);
+				var $titles = obliviate($keepsGoing);
+				hideKeepDetails();
+				showUndo(
+					$keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.',
+					undoUnkeep.bind(null, $keeps, $titles),
+					$.fn.remove.bind($keepsGoing));
+			}).error(showMessage.bind(null, 'Could not delete keeps, please try again later'));
 		} else {  // toggle public/private
 			howKept = howKept == "pub" ? "pri" : "pub";
 			$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
@@ -1256,14 +1412,9 @@ $(function() {
 					}).error(showMessage.bind(null, 'Could not update keep, please try again later'));
 			});
 		}
-	}).on("click", ".page-coll-a", function(e) {
-		e.preventDefault();
-		navigate(this.href);
 	}).on("click", ".page-coll-x", function(e) {
 		e.preventDefault();
-		removeKeepsFromCollection(
-			$(this.parentNode).data("id"),
-			$main.find(".keep.detailed").map(getDataId).get());
+		removeFromCollection($(this.parentNode).data("id"), $main.find(".keep.detailed"));
 	}).on("click", ".page-coll-add", function() {
 		var $btn = $(this), $in = $(".page-coll-input").css("width", $btn.outerWidth());
 		$btn.hide();
@@ -1376,6 +1527,95 @@ $(function() {
 		}
 	});
 
+	// Removes keeps from current view using animation, detaches them from DOM, and remembers their positions.
+	// Also removes (and returns) any keep group titles that no longer have any keeps beneath them.
+	function obliviate($keeps) {
+		$keeps.each(function() {
+			$(this).each(notePosition).css('height', this.offsetHeight);
+		}).layout().addClass('toggling').on('transitionend', detachAndOff).addClass('unkept');
+		return searchResponse ? $() :
+			$myKeeps.find('.keep-group-title').filter(function() {
+				for (var $li = $(this); ($li = $li.next()).hasClass('keep');) {
+					if (!$li.hasClass('detailed')) return;
+				}
+				return true;
+			}).each(notePosition).on('transitionend', detachAndOff).css('height', 0);
+
+		function notePosition() {
+			$(this).data({par: this.parentNode, prev: this.previousElementSibling});
+		}
+	}
+
+	// Uses animation to bring back keeps and titles removed using obliviate.
+	function rennervate($keeps, $titles) {
+		$titles.each(reattach).layout().css('height', '');
+		$keeps.each(reattach).layout().one('transitionend', function() {
+			$(this).removeClass('toggling').css('height', '');
+		}).removeClass('unkept');
+
+		function reattach() {
+			var $t = $(this), data = $t.data();
+			if (data.prev) {
+				$t.insertAfter(data.prev);
+			} else {
+				$t.prependTo(data.par);
+			}
+			$t.removeData('par prev');
+		}
+	}
+
+	function undoUnkeep($keeps, $titles) {
+		$.postJson(xhrBase + '/keeps/add', {
+				keeps: $keeps.map(function() {
+					var a = this.querySelector('.keep-title>a'), data = $(this).data();
+					return {title: a.title, url: a.href, isPrivate: 'priv' in data ? data.priv : !!this.querySelector('.keep-private.on')};
+				}).get()
+			}, function(data) {
+				var $keepsRemoved = $keeps.filter(function() {return 'prev' in $(this).data()});
+				rennervate($keepsRemoved, $titles);
+				$keeps.not($keepsRemoved).each(function() {
+					var $k = $(this), data = $k.data();
+					$k.addClass('mine detailed').toggleClass('selected', data.sel);
+					$k.find('.keep-private').toggleClass('on', data.priv);
+					$k.find('.keep-colls').append(data.$coll);
+				}).removeData('sel priv $coll');
+				updateKeepDetails();
+				var collCounts = $keeps.find('.keep-coll').map(getDataId).get()
+					.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
+				for (var collId in collCounts) {
+					$collList.find('.collection[data-id=' + collId + ']').find('.nav-count').text(collections[collId].keeps += collCounts[collId]);
+				}
+			});
+	}
+
+	var $undo = $(".undo").on('click', '.undo-link', function() {
+		var d = $undo.data();
+		d.undo && d.undo();
+		delete d.commit;
+		hideUndo();
+	});
+	function showUndo(msg, undo, commit) {
+		hideUndo();
+		$undo.find('.undo-message').text(msg);
+		$undo.show().data({undo: undo, commit: commit, timeout: setTimeout(hideUndo.bind(this, 'slow'), 30000)});
+	}
+	function hideUndo(duration) {
+		var d = $undo.data();
+		if (d.timeout) {
+			clearTimeout(d.timeout), delete d.timeout;
+			if (duration) {
+				$undo.fadeOut(duration, expireUndo);
+			} else {
+				$undo.hide(), expireUndo();
+			}
+		}
+	}
+	function expireUndo() {
+		var d = $undo.data();
+		d.commit && d.commit();
+		delete d.undo, delete d.commit;
+	}
+
 	$(".send-feedback").click(function() {
 		if (!window.UserVoice) {
 			window.UserVoice = [];
@@ -1397,6 +1637,15 @@ $(function() {
 		$(".my-description").text(data.description || '\u00A0'); // nbsp
 	}
 
+	function updateFriendRequests(n) {
+		var $a = $('h3.my-friends>a'), $count = $a.find('.nav-count');
+		if (n < 0) {
+			n += +$count.text();
+		}
+		$count.add('.friend-req-count').text(n || '');
+		$a[0].href = n ? 'friends/requests' : 'friends';
+	}
+
 	// load data for persistent (view-independent) page UI
 	var promise = {
 		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
@@ -1411,34 +1660,35 @@ $(function() {
 		}).promise()};
 	updateCollections();
 	updateNumKeeps();
-	$.getJSON(xhrBase + '/user/connections/count', function(data) {
-		$('.left-col .my-friends .nav-count').text(data.count);
-	});
-
-	$.when(promise.me).done(function() {
-		if (location.port || ~me.experiments.indexOf('website friends')) {
-			$('.my-friends').show();
-			$collList.removeClass('positioned').each(function() {this.style.top = this.offsetTop + 'px'}).addClass('positioned');
-		}
+	$.getJSON(xhrBase + '/user/friends/count', function(data) {
+		updateFriendRequests(data.requests);
 	});
 
 	// render initial view
 	$(window).trigger('statechange');
 
-	// auto-update my keeps every minute
-	setInterval(addNewKeeps, 60000);
-	setInterval(updateNumKeeps, 60000);
+	// auto-update my keeps
+	setTimeout(function refresh() {
+		updateNumKeeps();
+		addNewKeeps();
+		setTimeout(refresh, 25000 + 5000 * Math.random());
+	}, 30000);
 
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
-	$.getScript('js/jquery-bindhover.js').done(function() {
-		$(document).bindHover(".pic:not(.me)", function(configureHover) {
-			var $a = $(this), id = $a.data('id');
-			friendCardTmpl.into(this).render({
+	$.getScript('js/jquery-hoverfu.min.js').done(function() {
+		$(document).hoverfu(".pic:not(.me)", function(configureHover) {
+			var $a = $(this), id = $a.data('id'), $temp = $('<div>');
+			friendCardTmpl.into($temp).append({
 				name: $a.data('name'),
 				picUri: formatPicUrl(id, $a.css('background-image').match(/\/([^\/]*)['"]?\)$/)[1], 200)});
-			var $el = $a.children();
-			configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+			var $el = $temp.children().detach();
+			configureHover($el, {
+				position: {my: "left-33 bottom-13", at: "center top", of: $a, collision: "flipfit flip", using: show},
+				mustHoverFor: 400,
+				canLeaveFor: 600,
+				hideAfter: 4000,
+				click: "toggle"});
 			$.getJSON(xhrBase + '/user/' + id + '/networks', function(networks) {
 				for (nw in networks) {
 					console.log("[networks]", nw, networks[nw]);
@@ -1447,5 +1697,9 @@ $(function() {
 				}
 			});
 		});
+		function show(pos, o) {
+			o.element.element.css(pos).addClass(o.horizontal + ' ' + o.vertical)
+				.find(".fr-card-tri").css('left', Math.round(o.target.left - o.element.left + .5 * o.target.width));
+		}
 	});
 });

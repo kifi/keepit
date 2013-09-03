@@ -3,7 +3,6 @@ package com.keepit.learning.topicmodel
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.BookmarkSource
 import com.keepit.model.BookmarkFactory
-import com.keepit.model.NormalizedURIFactory
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.UriTopicHelper
 import com.keepit.model.UriTopic
@@ -15,7 +14,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import scala.math.log
 
-class ExpertRecommenderTest extends Specification with DbSetupHelper{
+class ExpertRecommenderTest extends Specification with DbSetupHelper {
 
   "Expert Recommender" should {
     "compute topic posterior" in {
@@ -179,7 +178,7 @@ trait DbSetupHelper extends ShoeboxTestInjector {
           userRepo.save(User(firstName = "user%d".format(i), lastName = ""))
         }
         val uris = (1 to numUris).map{ i =>
-          uriRepo.save(NormalizedURIFactory(title = "title%d".format(i), url = "http://www.keepit.com/article%d".format(i), state = SCRAPED))
+          uriRepo.save(normalizedURIFactory.apply(title = "title%d".format(i), url = "http://www.keepit.com/article%d".format(i), state = SCRAPED))
         }
         (users, uris)
       }

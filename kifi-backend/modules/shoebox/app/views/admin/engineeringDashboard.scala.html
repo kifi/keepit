@@ -60,7 +60,7 @@
   lineWidth: 2
   };
 
-  var baseTargets = ['alias(drawAsInfinite(stats.counters.search.deploys.count),"Search Deploys")','alias(drawAsInfinite(stats.counters.shoebox.deploys.count),"Shoebox Deploys")'];
+  var baseTargets = ['alias(drawAsInfinite(stats.counters.search.deploys.count),"Search Deploys")','alias(drawAsInfinite(stats.counters.shoebox.deploys.count),"Shoebox Deploys")', 'alias(drawAsInfinite(stats.counters.eliza.deploys.count),"Eliza Deploys")'];
 
   // Search Chart
 
@@ -88,8 +88,8 @@
 
   // Websocket Chart
 
-  var pingTarget = 'alias(summarize(stats.counters.shoebox.websocket.handler.ping.count,"1min"),"Pings per Minute")'
-  var connectedClientTarget = ['alias(secondYAxis(stats.gauges.shoebox.websocket.channel.user.client),"Connected Clients")'];
+  var pingTarget = 'alias(summarize(stats.counters.eliza.websocket.handler.ping.count,"1min"),"Pings per Minute")'
+  var connectedClientTarget = ['alias(secondYAxis(stats.gauges.eliza.websocket.channel.user.client),"Connected Clients")'];
   var websocketTargets = baseTargets.concat(pingTarget).concat(connectedClientTarget)
   options.target = websocketTargets;
   options.title = "WebSocket Pings per Minute vs Connected Clients";
@@ -99,16 +99,16 @@
 
   // Message Chart
 
-  var messageLocalTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.local.message.mean,"30min"),"Message (local)")';
-  var messageRemoteTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.remote.message.mean,"30min"),"Message (remote)")';
-  var noticeLocalTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.local.notice.mean,"30min"),"Notification (local)")';
-  var noticeRemoteTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.remote.notice.mean,"30min"),"Notification (remote)")';
 
-  var messageAndNotificationTargets = baseTargets.concat(messageLocalTarget).concat(messageRemoteTarget).concat(noticeLocalTarget).concat(noticeRemoteTarget)
+  var newMessageTarget = 'alias(stats.timers.eliza.messaging.newMessage.mean,"New Message")';
+  var messageReplyTarget = 'alias(stats.timers.eliza.messaging.replyMessage.mean,"Reply")';
+  var noticeRemoteTarget = 'alias(stats.timers.eliza.websocket.delivery.remote.notice.mean,"Notification (remote)")';
+
+  var messageAndNotificationTargets = baseTargets.concat(newMessageTarget).concat(messageReplyTarget).concat(noticeRemoteTarget)
   options.target = messageAndNotificationTargets;
-  options.title = "Message and Notification Latiency, local and remote";
+  options.title = "Messaging Latency";
   options.yMin = null;
-  options.yMax = 500;
+  options.yMax = 300;
   $("#message").graphite(options);
 }
 

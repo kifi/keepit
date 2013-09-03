@@ -1,13 +1,13 @@
 <div class="kifi-thread" data-id="{{id}}">
   <div class="kifi-thread-pics">
-    {{#recipientsPictured}}
+    {{#participantsPictured}}
     <img class="kifi-thread-pic" src="{{cdnBase}}/users/{{id}}/pics/100/0.jpg" alt="{{firstName}} {{lastName}}">
-    {{/recipientsPictured}}
+    {{/participantsPictured}}
     <span class="kifi-thread-msg-count{{#messagesUnread}} kifi-unread{{/messagesUnread}}">{{messageCount}}</span>
   </div>
   <time datetime="{{lastCommentedAt}}">{{#formatLocalDate}}{{lastCommentedAt}}{{/formatLocalDate}}</time>
   <p class="kifi-thread-snippet">
     {{#formatSnippet}}{{{digest}}}{{/formatSnippet}}
   </p>
-  <span class="kifi-thread-arrow"></span>
+  <span class="kifi-thread-arr"></span>
 </div>

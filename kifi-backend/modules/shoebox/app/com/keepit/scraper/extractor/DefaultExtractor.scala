@@ -1,7 +1,6 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.URI
 import com.keepit.scraper.Scraper
 import org.apache.tika.metadata.Metadata
 import org.apache.tika.parser.html.BoilerpipeContentHandler
@@ -11,6 +10,7 @@ import org.apache.tika.sax.ContentHandlerDecorator
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 import play.api.http.MimeTypes
+import com.keepit.common.net.URI
 
 
 object DefaultExtractorProvider extends ExtractorProvider {

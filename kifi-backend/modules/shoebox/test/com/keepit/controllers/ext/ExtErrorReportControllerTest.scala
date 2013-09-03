@@ -22,7 +22,7 @@ class ExtErrorReportControllerTest extends Specification with ShoeboxApplication
 
   def fakeRequest(json: JsValue) = {
     val oAuth2Info = OAuth2Info(accessToken = "A", tokenType = None, expiresIn = None, refreshToken = None)
-    val su = SocialUser(UserId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
+    val su = SocialUser(IdentityId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
       Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
     val user = db.readWrite {implicit s =>
       val user = userRepo.save(User(firstName = "A", lastName = "1"))

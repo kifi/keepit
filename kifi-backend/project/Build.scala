@@ -36,7 +36,7 @@ object ApplicationBuild extends Build {
     val commonDependencies = Seq(
       jdbc,
       "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
-      "securesocial" %% "securesocial" % "master-SNAPSHOT",
+      "securesocial" %% "securesocial" % "master-20130808",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
@@ -57,7 +57,8 @@ object ApplicationBuild extends Build {
       "net.codingwell" %% "scala-guice" % "3.0.2",
       "org.apache.lucene" % "lucene-core" % "4.2.1",
       "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
-      "org.apache.lucene" % "lucene-suggest" % "4.2.1"
+      "org.apache.lucene" % "lucene-suggest" % "4.2.1",
+      "us.theatr" %% "akka-quartz" % "0.2.0_42.1"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
@@ -67,7 +68,8 @@ object ApplicationBuild extends Build {
     ))
 
     val searchDependencies = Seq(
-      "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5" from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
+      "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5"
+        from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
       "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5"
     )
 
@@ -80,11 +82,6 @@ object ApplicationBuild extends Build {
       "com.typesafe.slick" %% "slick-testkit" % "1.0.1",
       "org.imgscalr" % "imgscalr-lib" % "4.2",
       "org.jsoup" % "jsoup" % "1.7.1"
-    )
-
-    val graphDependencies = Seq(
-      ("org.neo4j" % "neo4j" % "1.9.M01").exclude("org.neo4j", "neo4j-lucene-index"),
-      "org.neo4j" % "neo4j-kernel-tests" % "1.9.M01" % "test" from "https://oss.sonatype.org/content/groups/scala-tools/org/neo4j/neo4j-kernel/1.9.M01/neo4j-kernel-1.9.M01.jar"
     )
 
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
@@ -100,14 +97,17 @@ object ApplicationBuild extends Build {
 
     val commonResolvers = Seq(
       Resolver.url("sbt-plugin-snapshots",
-        new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
-      "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-      "kevoree Repository" at "http://maven2.kevoree.org/release/",
+        new URL("http://repo.42go.com:4242/fortytwo/content/groups/public/"))(Resolver.ivyStylePatterns),
+        // new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
+      // "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+      // "kevoree Repository" at "http://maven2.kevoree.org/release/",
+      "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
+      "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel"
       //for org.mongodb#casb
-      "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-      "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
-      "terracotta" at "http://www.terracotta.org/download/reflector/releases/",
-      "The Buzz Media Maven Repository" at "http://maven.thebuzzmedia.com"
+      // "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
+      // "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
+      // "terracotta" at "http://www.terracotta.org/download/reflector/releases/",
+      // "The Buzz Media Maven Repository" at "http://maven.thebuzzmedia.com"
     )
 
     val _templatesImport = Seq(
@@ -157,44 +157,11 @@ object ApplicationBuild extends Build {
       commonSettings: _*
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
-<<<<<<< HEAD
-    val graph = play.Project("graph", appVersion, commonDependencies ++ graphDependencies, path = file("modules/graph")).settings(
-      scalacOptions ++= _scalacOptions,
-      routesImport ++= _routesImport,
-      resolvers ++= commonResolvers,
-      templatesImport ++= _templatesImport,
-      javaOptions in test ++= javaTestOptions,
-
-      javaOptions in test ++= javaTestOptions,
-      parallelExecution in Test := true,
-      testOptions in Test ++= _testOptions,
-      EclipseKeys.skipParents in ThisBuild := false,
-
-      //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
-      sources in doc in Compile := List()
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
-
-
-    val main = play.Project(appName, appVersion).settings(
-      scalacOptions ++= _scalacOptions,
-      // Due to the way resolvers work in sbt, we need to specify the resolvers for *all* subprojects here.
-      resolvers ++= commonResolvers,
-
-      javaOptions in test ++= javaTestOptions,
-      parallelExecution in Test := true,
-      testOptions in Test ++= _testOptions,
-      EclipseKeys.skipParents in ThisBuild := false,
-
-      //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
-      sources in doc in Compile := List()
-    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", graph % "test->test;compile->compile").aggregate(common, search, shoebox, graph)
-=======
-    val bender = play.Project("bender", appVersion, Nil, path = file("modules/bender")).settings(
-      commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    val eliza = play.Project("eliza", appVersion, Nil, path = file("modules/eliza")).settings(
+      (commonSettings ++ (routesImport += "com.keepit.eliza._")) : _*
+    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val aaaMain = play.Project(appName, appVersion).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", bender % "compile->compile").aggregate(common, search, shoebox, bender)
->>>>>>> b9e829ea8efc1724397cf3dd7880e65f3c7013e6
+    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "compile->compile").aggregate(common, search, shoebox, eliza)
 }

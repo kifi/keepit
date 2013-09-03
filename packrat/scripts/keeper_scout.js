@@ -8,14 +8,17 @@ function logEvent() {  // parameters defined in main.js
 
 var tile = tile || function() {  // idempotent for Chrome
   api.log("[scout]", location.hostname);
+
   window.onerror = function(message, url, lineNo) {
     if (!/https?\:/.test(url)) {  // this is probably from extension code, not from the website we're running this on
       api.port.emit("report_error", { message: message, url: url, lineNo: lineNo });
     }
   };
 
-  var tileCard, tileCount, onScroll;
+  var session, whenSessionKnown = [], tileCard, tileCount, onScroll;
+  api.port.emit("session", onSessionChange);
   api.port.on({
+    session_change: onSessionChange,
     open_to: function(o) {
       keeper("showPane", o.trigger, o.locator);
     },
@@ -55,15 +58,14 @@ var tile = tile || function() {  // idempotent for Chrome
       setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
-      var n = 0;
-      for (var i in counts) {
-        n += counts[i];
-      }
+      if (!tile || !tile.parentNode) return;
+
+      var n = Math.max(counts.m, counts.n);
       if (n) {
         tileCount.textContent = n;
         tile.insertBefore(tileCount, tileCard.nextSibling);
       } else if (tileCount.parentNode) {
-        tile.removeChild(tileCount);
+        tileCount.remove();
       }
       tile.dataset.counts = JSON.stringify(counts);
     },
@@ -87,17 +89,19 @@ var tile = tile || function() {  // idempotent for Chrome
       }
     }
   });
-
-  document.addEventListener("keydown", onKeyDown, true);
   function onKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey) {  // ⌘-shift-[key], ctrl-shift-[key]
       switch (e.keyCode) {
       case 75: // k
-        if (tile && tile.dataset.kept) {
-          api.port.emit("unkeep");
+        if (session === undefined) {  // not yet initialized
+          whenSessionKnown.push(onKeyDown.bind(this, e));
+        } else if (!session) {
+          toggleLoginDialog();
+        } else if (tile && tile.dataset.kept) {
+          api.port.emit("unkeep", withUrls({}));
           tile.removeAttribute("data-kept");  // delete .dataset.kept fails in FF 21
         } else {
-          api.port.emit("keep", {url: document.URL, title: document.title, how: "public"});
+          api.port.emit("keep", withUrls({title: document.title, how: "public"}));
           if (tile) tile.dataset.kept = "public";
         }
         e.preventDefault();
@@ -118,19 +122,47 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   }
 
-  function keeper() {  // gateway to slider2.js
-    var args = Array.prototype.slice.apply(arguments), name = args.shift();
-    if (onScroll && name != "showKeepers") {
-      document.removeEventListener("scroll", onScroll);
-      onScroll = null;
-    }
-    api.require("scripts/slider2.js", function() {
-      slider2[name].apply(slider2, args);
+  function toggleLoginDialog() {
+    api.require("scripts/dialog.js", function() {
+      kifiDialog.toggleLoginDialog();
     });
   }
 
+  function keeper() {  // gateway to slider2.js
+    var args = Array.prototype.slice.apply(arguments);
+    if (session === undefined) {  // not yet initialized
+      args.unshift(null);
+      whenSessionKnown.push(Function.bind.apply(keeper, args));
+    } else if (!session) {
+      toggleLoginDialog();
+    } else {
+      if (onScroll && name != "showKeepers") {
+        document.removeEventListener("scroll", onScroll);
+        onScroll = null;
+      }
+      api.require("scripts/slider2.js", function() {
+        slider2[args.shift()].apply(slider2, args);
+      });
+    }
+  }
+
+  function onSessionChange(s) {
+    if ((session = s)) {
+      attachTile();
+    } else {
+      cleanUpDom();
+    }
+    while (whenSessionKnown.length) whenSessionKnown.shift()();
+  }
+
+  function attachTile() {
+    if (tile && !tile.parentNode) {
+      (document.querySelector("body") || document.documentElement).appendChild(tile);
+    }
+  }
+
   while (tile = document.getElementById("kifi-tile")) {
-    tile.parentNode.removeChild(tile);
+    tile.remove();
   }
   tile = document.createElement("div");
   tile.dataset.t0 = +new Date;
@@ -140,16 +172,17 @@ var tile = tile || function() {  // idempotent for Chrome
     "<div class=kifi-tile-card>" +
     "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
     "<div class=kifi-tile-kept></div></div>";
-  tileCard = tile.firstChild;
-  tileCount = document.createElement("span");
-  tileCount.className = "kifi-count";
-  (document.querySelector("body") || document.documentElement).appendChild(tile);
+  tile["kifi:position"] = positionTile;
   tile.addEventListener("mouseover", function(e) {
     if (e.target === tileCount || tileCard.contains(e.target)) {
       keeper("show", "tile");
     }
   });
-  tile["kifi:position"] = positionTile;
+
+  tileCard = tile.firstChild;
+  tileCount = document.createElement("span");
+  tileCount.className = "kifi-count";
+  document.addEventListener("keydown", onKeyDown, true);
 
   function onResize() {
     if (document.documentElement.classList.contains("kifi-with-pane")) return;
@@ -173,6 +206,20 @@ var tile = tile || function() {  // idempotent for Chrome
     tile.style["transform" in tile.style ? "transform" : "webkitTransform"] = "translate(0," + px + "px)";
   }
 
+  function cleanUpDom() {
+    window.removeEventListener("resize", onResize);
+    if (onScroll) {
+      document.removeEventListener("scroll", onScroll);
+      onScroll = null;
+    }
+    if (tile) {
+      tile.remove();
+    }
+    if (window.slider2) {
+      slider2.hidePane(false);
+    }
+  }
+
   setTimeout(function checkIfUseful() {
     if (document.hasFocus() && document.body.scrollTop > 300) {
       logEvent("slider", "usefulPage", {url: document.URL});
@@ -183,15 +230,21 @@ var tile = tile || function() {  // idempotent for Chrome
 
   api.onEnd.push(function() {
     document.removeEventListener("keydown", onKeyDown, true);
-    if (onScroll) {
-      document.removeEventListener("scroll", onScroll);
-      onScroll = null;
-    }
-    if (tile) {
-      tile.parentNode.removeChild(tile);
-      tile = tileCount = null;
-    }
+    cleanUpDom();
+    session = tile = tileCard = tileCount = null;
   });
 
   return tile;
 }();
+
+const linkedInProfileRe = /^https?:\/\/[a-z]{2,3}.linkedin.com\/profile\/view\?/;
+function withUrls(o) {
+  o.url = document.URL;
+  var el, cUrl = ~o.url.search(linkedInProfileRe) ?
+    (el = document.querySelector('.public-profile>dd>:first-child')) && 'http://' + el.textContent :
+    (el = document.head.querySelector('link[rel=canonical]')) && el.href;
+  var gUrl = (el = document.head.querySelector('meta[property="og:url"]')) && el.content;
+  if (cUrl && cUrl !== o.url) o.canonical = cUrl;
+  if (gUrl && gUrl !== o.url && gUrl !== cUrl) o.og = gUrl;
+  return o;
+}

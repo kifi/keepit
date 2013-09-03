@@ -18,7 +18,7 @@ import org.joda.time.format.DateTimeFormat
 import com.google.inject.{Provides, ImplementedBy, Inject, Singleton}
 
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.Id
@@ -309,18 +309,18 @@ trait DomainTagImporter {
 }
 
 class DomainTagImporterImpl @Inject() (
-  actorProvider: ActorProvider[DomainTagImportActor])
+  actor: ActorInstance[DomainTagImportActor])
     extends DomainTagImporter {
 
   def refetchClassifications() {
-    actorProvider.actor ! RefetchAll
+    actor.ref ! RefetchAll
   }
 
   def removeTag(tagName: DomainTagName): Future[Option[DomainTag]] = {
-    actorProvider.actor.ask(RemoveTag(tagName))(1 minute).mapTo[Option[DomainTag]]
+    actor.ref.ask(RemoveTag(tagName))(1 minute).mapTo[Option[DomainTag]]
   }
 
   def applyTagToDomains(tagName: DomainTagName, domainNames: Seq[String]): Future[DomainTag] = {
-    actorProvider.actor.ask(ApplyTag(tagName, domainNames))(1 minute).mapTo[DomainTag]
+    actor.ref.ask(ApplyTag(tagName, domainNames))(1 minute).mapTo[DomainTag]
   }
 }

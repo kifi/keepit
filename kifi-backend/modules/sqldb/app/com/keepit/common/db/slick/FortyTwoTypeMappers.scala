@@ -11,9 +11,9 @@ import com.keepit.common.net.UserAgent
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.serializer.SocialUserSerializer
-import java.sql.{Timestamp, Clob, Blob}
+import java.sql.{Timestamp, Clob, Blob, Date}
 import javax.sql.rowset.serial.{SerialBlob, SerialClob}
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, LocalDate}
 import play.api.libs.json._
 import scala.Some
 import scala.slick.driver._
@@ -21,8 +21,9 @@ import scala.slick.lifted.{BaseTypeMapper, TypeMapperDelegate}
 import scala.slick.session.{PositionedParameters, PositionedResult}
 import securesocial.core.AuthenticationMethod
 import securesocial.core.SocialUser
-import securesocial.core.UserId
+import securesocial.core.IdentityId
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
+import scala.slick.jdbc.SetParameter
 
 object FortyTwoGenericTypeMappers {
   def idMapper[M <: Model[M]] = new BaseTypeMapper[Id[M]] {
@@ -36,10 +37,35 @@ object FortyTwoGenericTypeMappers {
 
 object FortyTwoTypeMappers {
 
+  def seqParam[A](implicit pconv: SetParameter[A]): SetParameter[Seq[A]] = SetParameter {
+    case (seq, pp) =>
+      for (a <- seq) {
+        pconv.apply(a, pp)
+      }
+  }
+
+  implicit val listStringSP: SetParameter[List[String]] = seqParam[String]
+
   // Time
   implicit object DateTimeTypeMapper extends BaseTypeMapper[DateTime] {
     def apply(profile: BasicProfile) = new DateTimeMapperDelegate(profile)
   }
+
+  implicit object SetDateTime extends SetParameter[DateTime] {
+    def apply(v: DateTime, pp: PositionedParameters) {
+      pp.setTimestamp(new Timestamp(v.toDate().getTime()))
+    }
+  }
+
+  implicit val listDateTimeSP: SetParameter[List[DateTime]] = seqParam[DateTime]
+
+  implicit object SetLocalDate extends SetParameter[LocalDate] {
+    def apply(v: LocalDate, pp: PositionedParameters) {
+      pp.setDate(new Date(v.toDate().getTime()))
+    }
+  }
+
+  implicit val listLocalDateSP: SetParameter[List[LocalDate]] = seqParam[LocalDate]
 
   implicit object GenericIdTypeMapper extends BaseTypeMapper[Id[Model[_]]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Model[_]](profile)
@@ -219,6 +245,10 @@ object FortyTwoTypeMappers {
 
   implicit object DeepLocatorTypeMapper extends BaseTypeMapper[DeepLocator] {
     def apply(profile: BasicProfile) = new DeepLocatorMapperDelegate(profile)
+  }
+
+  implicit object NormalizationTypeMapper extends BaseTypeMapper[Normalization] {
+    def apply(profile: BasicProfile) = new NormalizationMapperDelegate(profile)
   }
 
   implicit object JsArrayTypeMapper extends BaseTypeMapper[JsArray] {
@@ -428,7 +458,7 @@ class SocialNetworkTypeMapperDelegate(profile: BasicProfile) extends StringMappe
 //       SocialNetworkType -> String
 //************************************
 class SocialUserMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[SocialUser](profile) {
-  def zero = new SocialUser(id = UserId("", ""), firstName = "", lastName = "",
+  def zero = SocialUser(identityId = IdentityId("", ""), firstName = "", lastName = "",
     fullName = "", authMethod = AuthenticationMethod.OAuth2, email = None, avatarUrl = None)
   def sourceToDest(socialUser: SocialUser) = SocialUserSerializer.userSerializer.writes(socialUser).toString
   def safeDestToSource(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str)).get
@@ -582,5 +612,14 @@ class UserNotificationDetailsMapperDelegate(profile: BasicProfile) extends Strin
   def zero = UserNotificationDetails(Json.obj())
   def sourceToDest(value: UserNotificationDetails) = Json.stringify(value.payload)
   def safeDestToSource(str: String) = UserNotificationDetails(Json.parse(str).asInstanceOf[JsObject])
+}
+
+//************************************
+//       Normalization -> String
+//************************************
+class NormalizationMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[Normalization](profile) {
+  def zero = Normalization("")
+  def sourceToDest(value: Normalization): String = value.scheme
+  def safeDestToSource(str: String): Normalization = Normalization(str)
 }
 

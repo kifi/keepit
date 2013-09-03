@@ -1,8 +1,11 @@
 package com.keepit.controllers.website
 
+import java.text.Normalizer
+
 import com.google.inject.Inject
 import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.ExternalId
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
@@ -42,9 +45,9 @@ class UserController @Inject() (
     }
   }
 
-  def connections() = AuthenticatedJsonAction { request =>
+  def friends() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
-      "connections" -> db.readOnly { implicit s =>
+      "friends" -> db.readOnly { implicit s =>
         val searchFriends = searchFriendRepo.getSearchFriends(request.userId)
         val socialUsers = socialUserRepo.getByUser(request.userId)
         val connectionIds = userConnectionRepo.getConnectedUsers(request.userId)
@@ -61,10 +64,13 @@ class UserController @Inject() (
     ))
   }
 
-  def connectionCount() = AuthenticatedJsonAction { request =>
-    Ok(Json.obj(
-      "count" -> db.readOnly { implicit s => userConnectionRepo.getConnectionCount(request.userId) }
-    ))
+  def friendCount() = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s =>
+      Ok(Json.obj(
+        "friends" -> userConnectionRepo.getConnectionCount(request.userId),
+        "requests" -> friendRequestRepo.getCountByRecipient(request.userId)
+      ))
+    }
   }
 
   private case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -252,29 +258,59 @@ class UserController @Inject() (
     }
   }
 
-  def getAllConnections = AuthenticatedJsonAction { request =>
-    val connections = db.readOnly { implicit conn =>
-      (socialUserRepo.getByUser(request.user.id.get) flatMap { su =>
-        socialConnectionRepo.getSocialUserConnections(su.id.get) map { suc =>
-
-          val status = suc.userId map (_ => "joined") getOrElse {
-            invitationRepo.getByRecipient(suc.id.get) collect {
-              case inv if inv.state != InvitationStates.INACTIVE => "invited"
-            } getOrElse ""
-          }
-          (suc, status)
+  def getAllConnections(search: Option[String], network: Option[String],
+      after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+    @inline def socialIdString(sui: SocialUserInfo) = s"${sui.networkType}/${sui.socialId.id}"
+    @inline def normalize(str: String) =
+      Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
+    val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
+    @inline def searchScore(sui: SocialUserInfo): Int = {
+      if (network.exists(sui.networkType.name !=)) 0
+      else if (searchTerms.isEmpty) 1
+      else {
+        val name = normalize(sui.fullName)
+        if (searchTerms.exists(!name.contains(_))) 0
+        else {
+          val names = name.split("\\s+").filterNot(_.isEmpty)
+          names.count(n => searchTerms.exists(n.startsWith))*2 +
+              names.count(n => searchTerms.exists(n.contains)) +
+              (if (searchTerms.exists(name.startsWith)) 1 else 0)
         }
-      }) sortBy { case (sui, status) => s"$status ${sui.fullName}" }
+      }
     }
+
+    def getWithInviteStatus(sui: SocialUserInfo)(implicit s: RSession): (SocialUserInfo, String) =
+      sui -> sui.userId.map(_ => "joined").getOrElse {
+        invitationRepo.getByRecipient(sui.id.get) collect {
+          case inv if inv.state != InvitationStates.INACTIVE => "invited"
+        } getOrElse ""
+      }
+
+    def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialUserInfo] =
+      socialConnectionRepo.getSocialUserConnections(sui.id.get) filter (searchScore(_) > 0)
+
+    val unfilteredConnections = db.readOnly { implicit s =>
+      socialUserRepo.getByUser(request.userId)
+        .flatMap(getFilteredConnections)
+        .map(getWithInviteStatus)
+        .sortBy { case (sui, status) => (-searchScore(sui), normalize(sui.fullName)) }
+    }
+
+    val connections = (after match {
+      case Some(id) => unfilteredConnections.dropWhile { case (sui, _) => socialIdString(sui) != id } match {
+        case hd +: tl => tl
+        case tl => tl
+      }
+      case None => unfilteredConnections
+    }).take(limit)
 
     Ok(JsArray(connections.map { conn =>
       Json.obj(
         "label" -> conn._1.fullName,
         "image" -> toJson(conn._1.getPictureUrl(75, 75)),
-        "value" -> (conn._1.networkType + "/" + conn._1.socialId.id),
+        "value" -> socialIdString(conn._1),
         "status" -> conn._2
       )
-    }))
-
+    })).withHeaders("Cache-Control" -> "private, max-age=300")
   }
 }

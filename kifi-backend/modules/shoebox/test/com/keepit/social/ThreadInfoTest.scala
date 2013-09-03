@@ -20,8 +20,8 @@ class ThreadInfoTest extends Specification with ShoeboxTestInjector {
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
       val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
 
-      val uri1 = normalizedURIRepo.save(NormalizedURIFactory("Google", "http://www.google.com/"))
-      val uri2 = normalizedURIRepo.save(NormalizedURIFactory("Bing", "http://www.bing.com/"))
+      val uri1 = normalizedURIRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/"))
+      val uri2 = normalizedURIRepo.save(normalizedURIFactory.apply("Bing", "http://www.bing.com/"))
 
       socialuserInfoRepo.save(SocialUserInfo(fullName = "Andrew Conner", socialId = SocialId("asdf"), networkType = SocialNetworks.FACEBOOK, userId = user1.id))
       socialuserInfoRepo.save(SocialUserInfo(fullName = "Eishay Smith", socialId = SocialId("fdaa"), networkType = SocialNetworks.FACEBOOK, userId = user2.id))
@@ -57,4 +57,3 @@ class ThreadInfoTest extends Specification with ShoeboxTestInjector {
     }
   }
 }
-

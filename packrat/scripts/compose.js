@@ -1,3 +1,5 @@
+// @require scripts/scrollable.js
+
 function attachComposeBindings($c, composeTypeName, enterToSend) {
   var $f = $c.find(".kifi-compose");
   var $t = $f.find(".kifi-compose-to");
@@ -71,7 +73,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       preventDuplicates: true,
       allowTabOut: true,
       tokenValue: "id",
-      theme: "KiFi",
+      theme: "Kifi",
       zindex: 999999999992,
       resultsFormatter: function(f) {
         return "<li style='background-image:url(//" + cdnBase + "/users/" + f.id + "/pics/100/0.jpg)'>" +
@@ -124,7 +126,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
     setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   })
   .bindHover(".kifi-compose-snapshot", function(configureHover) {
-    render("html/keeper/titled_tip.html", {
+    render("html/keeper/titled_tip", {
       title: "Microfind",
       html: "Click to mark something on<br>the page and reference it in<br>your " + composeTypeName + "."
     }, function(html) {
@@ -144,7 +146,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       $f.removeClass("kifi-empty");
 
       // insert link
-      var r = $d.data("sel"), $a = $("<a>", {href: "x-kifi-sel:" + selector, text: "look here"}), pad = true;
+      var r = $d.data("sel"), $a = $("<a>", {href: "x-kifi-sel:" + selector, text: "look\u00A0here"}), pad = true;
       if (r && r.startContainer === r.endContainer && !$(r.endContainer).closest("a").length) {
         var par = r.endContainer, i = r.startOffset, j = r.endOffset;
         if (par.nodeType == 3) {  // text
@@ -232,10 +234,11 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
   });
 
   var hOld, elAbove = $f[0].previousElementSibling;
-  $(elAbove).scrollable({
+  var elScroll = $(elAbove).find(".kifi-scroll-inner").scrollable({
     $above: $c.closest(".kifi-pane-box").find(".kifi-pane-title,.kifi-thread-who").last(),
     $below: $f
-  }).layout();
+  })[0];
+  $(elAbove).layout();
   updateMaxHeight();
 
   $(window).on("resize", updateMaxHeight);
@@ -266,12 +269,12 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
     var hNew = Math.max(0, $c[0].offsetHeight - $f[0].offsetHeight);
     if (hNew != hOld) {
       api.log("[updateMaxHeight]", hOld, "->", hNew);
-      var scrollTop = elAbove.scrollTop;
+      var scrollTop = elScroll.scrollTop;
       elAbove.style.maxHeight = hNew + "px";
       if (hOld) {
-        elAbove.scrollTop = Math.max(0, scrollTop + hOld - hNew);
+        elScroll.scrollTop = Math.max(0, scrollTop + hOld - hNew);
       } else {
-        elAbove.scrollTop = 99999;
+        elScroll.scrollTop = 99999;
       }
       hOld = hNew;
     }

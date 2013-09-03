@@ -16,8 +16,8 @@ class CommentTest extends Specification with ShoeboxTestInjector {
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
       val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
 
-      val uri1 = uriRepo.save(NormalizedURIFactory("Google", "http://www.google.com/"))
-      val uri2 = uriRepo.save(NormalizedURIFactory("Bing", "http://www.bing.com/"))
+      val uri1 = uriRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/"))
+      val uri2 = uriRepo.save(normalizedURIFactory.apply("Bing", "http://www.bing.com/"))
 
       // Public
       commentRepo.save(Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Public Comment on Google1", permissions = CommentPermissions.PUBLIC))

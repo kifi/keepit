@@ -40,12 +40,12 @@ var api = api || function() {
   }
 
   var requireQueue = [], injected = {};
-  function requireNow(path, callback) {
-    if (injected[path]) {
+  function requireNow(paths, callback) {
+    if (typeof paths == 'string' ? injected[paths] : !(paths = paths.filter(notInjected)).length) {
       done();
     } else {
       requireQueue = requireQueue || [];
-      api.port.emit("api:require", {path: path, injected: injected}, function(paths) {
+      api.port.emit("api:require", {paths: paths, injected: injected}, function(paths) {
         for (var i = 0; i < paths.length; i++) {
           injected[paths[i]] = true;
         }
@@ -67,18 +67,11 @@ var api = api || function() {
       requireQueue = null;
     }
   }
+  function notInjected(path) {
+    return !injected[path];
+  }
 
   return {
-    load: function(path, callback) {
-      var req = new XMLHttpRequest();
-      req.open("GET", api.url(path), true);
-      req.onreadystatechange = function() {
-        if (req.readyState == 4 && req.status == 200) {
-          callback(req.responseText);
-        }
-      };
-      req.send(null);
-    },
     log: window.suppressLog ? function() {} : function() {
       var d = new Date, ds = d.toString();
       arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
@@ -102,11 +95,11 @@ var api = api || function() {
         msgHandlers.push(handlers);
         port || createPort();
       }},
-    require: function(path, callback) {
+    require: function(paths, callback) {
       if (requireQueue) {
-        requireQueue.push([path, callback]);
+        requireQueue.push([paths, callback]);
       } else {
-        requireNow(path, callback);
+        requireNow(paths, callback);
       }
     },
     url: chrome.runtime.getURL};

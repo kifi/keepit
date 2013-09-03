@@ -4,7 +4,6 @@ import com.keepit.common.logging.Logging
 import com.google.inject._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.common.net.URI
 import com.keepit.search.ArticleStore
 import com.keepit.model._
 import com.keepit.scraper.extractor.DefaultExtractorProvider
@@ -25,6 +24,7 @@ import com.keepit.common.healthcheck.HealthcheckError
 import scala.util.Success
 import com.keepit.model.ScrapeInfo
 import com.keepit.search.Article
+import com.keepit.common.net.URI
 
 object Scraper {
   val BATCH_SIZE = 100
@@ -68,6 +68,20 @@ class Scraper @Inject() (
     safeProcessURI(uri, info)
   }
 
+  def getBasicArticle(url: String, customExtractor: Option[Extractor] = None): Option[BasicArticle] = {
+    val extractor = customExtractor.getOrElse(getExtractor(url))
+    try {
+      val fetchStatus = httpFetcher.fetch(url) { input => extractor.process(input) }
+
+      fetchStatus.statusCode match {
+        case HttpStatus.SC_OK if !(isUnscrapable(url, fetchStatus.destinationUrl)) => Some(basicArticle(url, extractor))
+        case _ => None
+      }
+    } catch {
+      case e: Throwable => None
+    }
+  }
+
   private def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
       processURI(uri, info)
     } catch {
@@ -76,7 +90,8 @@ class Scraper @Inject() (
         healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL))
         val errorURI = db.readWrite { implicit s =>
           // first update the uri state to SCRAPE_FAILED
-          val savedUri = normalizedURIRepo.save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          val latestUri = normalizedURIRepo.get(uri.id.get)
+          val savedUri = if (latestUri.state == NormalizedURIStates.INACTIVE) latestUri else normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
           // then update the scrape schedule
           scrapeInfoRepo.save(info.withFailure())
           savedUri
@@ -99,66 +114,71 @@ class Scraper @Inject() (
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
     log.debug(s"scraping $uri")
 
-    fetchArticle(uri, info) match {
-      case Scraped(article, signature) =>
-        // store a scraped article in a store map
-        articleStore += (uri.id.get -> article)
+    val fetchedArticle = fetchArticle(uri, info)
+    db.readWrite { implicit s =>
+      val latestUri = normalizedURIRepo.get(uri.id.get)
+      if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
+      else fetchedArticle match {
+        case Scraped(article, signature) =>
+          // store a scraped article in a store map
+          articleStore += (latestUri.id.get -> article)
 
-        val scrapedURI = db.readWrite { implicit s =>
-          // first update the uri state to SCRAPED
-          val savedUri = normalizedURIRepo.save(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
-          // then update the scrape schedule
-          scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-          bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
-            bookmarkRepo.save(bookmark.copy(title = savedUri.title))
+          val scrapedURI = {
+            // first update the uri state to SCRAPED
+            val savedUri = normalizedURIRepo.save(latestUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+            // then update the scrape schedule
+            scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
+            bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
+              bookmarkRepo.save(bookmark.copy(title = savedUri.title))
+            }
+            savedUri
           }
-          savedUri
-        }
-        log.debug("fetched uri %s => %s".format(scrapedURI, article))
+          log.debug("fetched uri %s => %s".format(scrapedURI, article))
 
-        def shouldUpdateScreenshot(uri: NormalizedURI) = {
-          uri.screenshotUpdatedAt map { update =>
-            Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
-          } getOrElse true
-        }
-        if(shouldUpdateScreenshot(scrapedURI))
-          s3ScreenshotStore.updatePicture(scrapedURI)
+          def shouldUpdateScreenshot(uri: NormalizedURI) = {
+            uri.screenshotUpdatedAt map { update =>
+              Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
+            } getOrElse true
+          }
+          if(shouldUpdateScreenshot(scrapedURI))
+            s3ScreenshotStore.updatePicture(scrapedURI)
 
-        (scrapedURI, Some(article))
-      case NotScrapable(destinationUrl) =>
-        val unscrapableURI = db.readWrite { implicit s =>
-          scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-          normalizedURIRepo.save(uri.withState(NormalizedURIStates.UNSCRAPABLE))
-        }
-        (unscrapableURI, None)
-      case NotModified =>
-        // update the scrape schedule, uri is not changed
-        db.readWrite { implicit s => scrapeInfoRepo.save(info.withDocumentUnchanged()) }
-        (uri, None)
-      case Error(httpStatus, msg) =>
-        // store a fallback article in a store map
-        val article = Article(
-            id = uri.id.get,
-            title = uri.title.getOrElse(""),
-            description = None,
-            media = None,
-            content = "",
-            scrapedAt = currentDateTime,
-            httpContentType = None,
-            httpOriginalContentCharset = None,
-            state = NormalizedURIStates.SCRAPE_FAILED,
-            message = Option(msg),
-            titleLang = None,
-            contentLang = None,
-            destinationUrl = None)
-        articleStore += (uri.id.get -> article)
-        // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
-        val errorURI = db.readWrite { implicit s =>
-          scrapeInfoRepo.save(info.withFailure())
-          normalizedURIRepo.save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
-        }
-        (errorURI, None)
-    }
+          (scrapedURI, Some(article))
+        case NotScrapable(destinationUrl) =>
+          val unscrapableURI = {
+            scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
+            normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.UNSCRAPABLE))
+          }
+          (unscrapableURI, None)
+        case NotModified =>
+          // update the scrape schedule, uri is not changed
+          scrapeInfoRepo.save(info.withDocumentUnchanged())
+          (latestUri, None)
+        case Error(httpStatus, msg) =>
+          // store a fallback article in a store map
+          val article = Article(
+              id = latestUri.id.get,
+              title = latestUri.title.getOrElse(""),
+              description = None,
+              media = None,
+              content = "",
+              scrapedAt = currentDateTime,
+              httpContentType = None,
+              httpOriginalContentCharset = None,
+              state = NormalizedURIStates.SCRAPE_FAILED,
+              message = Option(msg),
+              titleLang = None,
+              contentLang = None,
+              destinationUrl = None)
+          articleStore += (latestUri.id.get -> article)
+          // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
+          val errorURI = {
+            scrapeInfoRepo.save(info.withFailure())
+            normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          }
+          (errorURI, None)
+      }
+      }
   }
 
   protected def getExtractor(url: String): Extractor = {
@@ -217,7 +237,7 @@ class Scraper @Inject() (
             val title = getTitle(extractor)
             val description = getDescription(extractor)
             val media = getMediaTypeString(extractor)
-            val signature = computeSignature(title, description.getOrElse(""), content)
+            val signature = Signature(Seq(title, description.getOrElse(""), content))
 
             // now detect the document change
             val docChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
@@ -269,9 +289,18 @@ class Scraper @Inject() (
   }
   private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
-  private[this] def computeSignature(fields: String*) = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
 
   def close() {
     httpFetcher.close()
   }
+  
+  private[this] def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
+    title = getTitle(extractor),
+    content = extractor.getContent,
+    description = getDescription(extractor),
+    media = getMediaTypeString(extractor),
+    httpContentType = extractor.getMetadata("Content-Type"),
+    httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
+    destinationUrl = Some(destinationUrl)
+  )
 }

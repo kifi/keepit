@@ -21,8 +21,8 @@ import com.keepit.model.SocialUserInfoRepo
 import com.keepit.model.User
 import com.keepit.model.UserValueRepo
 import play.api.libs.ws.WS
-import com.keepit.common.net.URI
 import com.keepit.social.SocialNetworks
+import com.keepit.common.net.URI
 
 object S3UserPictureConfig {
   val ImageSizes = Seq(100, 200)

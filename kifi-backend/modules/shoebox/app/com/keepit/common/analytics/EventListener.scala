@@ -2,15 +2,13 @@ package com.keepit.common.analytics
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.{ Inject, Singleton, Provider }
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.Host
-import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
@@ -21,6 +19,8 @@ import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.ClickHistoryTracker
 import play.api.libs.json.JsObject
 import scala.util.Success
+import com.keepit.normalizer.{NormalizationCandidate}
+import com.keepit.common.net.{Host, URI}
 
 abstract class EventListener(
     userRepo: UserRepo,
@@ -84,9 +84,9 @@ object SearchEventName {
 
 @Singleton
 class EventHelper @Inject() (
-  actorProvider: ActorProvider[EventHelperActor],
+  actor: ActorInstance[EventHelperActor],
   listeners: Set[EventListener]) {
-  def newEvent(event: Event): Unit = actorProvider.actor ! event
+  def newEvent(event: Event): Unit = actor.ref ! event
 
   def matchEvent(event: Event): Seq[String] =
     listeners.filter(_.onEvent.isDefinedAt(event)).map(_.getClass.getSimpleName.replaceAll("\\$", "")).toSeq
@@ -189,8 +189,7 @@ class SliderShownListener @Inject() (
       val (user, normUri) = db.readWrite(attempts = 3) { implicit s =>
         val user = userRepo.get(externalUser)
         val normUri = (metaData \ "url").asOpt[String].map { url =>
-          normalizedURIRepo.getByUri(url).getOrElse(
-            normalizedURIRepo.save(NormalizedURIFactory(url, NormalizedURIStates.ACTIVE)))
+          normalizedURIRepo.internByUri(url, NormalizationCandidate(metaData): _*)
         }
         (user, normUri)
       }

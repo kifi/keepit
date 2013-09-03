@@ -2,7 +2,7 @@ package com.keepit.common.store
 
 import scala.concurrent.duration._
 import com.google.inject.Inject
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -77,7 +77,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
   private def get(url: String): ClientResponse = try {
     httpClient.get(url, httpClient.ignoreFailure)
   } catch {
-    case NonOKResponseException(_, response) => response
+    case NonOKResponseException(_, response, _) => response
   }
 }
 
@@ -87,15 +87,15 @@ trait ImageDataIntegrityPlugin extends Plugin {
 
 class ImageDataIntegrityPluginImpl @Inject()(
     system: ActorSystem,
-    actorProvider: ActorProvider[ImageDataIntegrityActor],
+    actor: ActorInstance[ImageDataIntegrityActor],
     val schedulingProperties: SchedulingProperties //only on leader
   ) extends SchedulingPlugin with ImageDataIntegrityPlugin {
   def verifyAll() {
-    actorProvider.actor ! VerifyAllPictures
+    actor.ref ! VerifyAllPictures
   }
 
   override def onStart() {
-    scheduleTask(system, 2 minutes, 1 hour, actorProvider.actor, VerifyAllPictures)
+    scheduleTask(system, 2 minutes, 1 hour, actor.ref, VerifyAllPictures)
     super.onStart()
   }
 }

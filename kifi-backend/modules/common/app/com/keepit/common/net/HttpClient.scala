@@ -14,9 +14,10 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.Healthcheck
+import scala.xml._
 
-case class NonOKResponseException(url: String, response: ClientResponse)
-    extends Exception(s"Requesting $url, got a ${response.status}. Body: ${response.body}")
+case class NonOKResponseException(url: String, response: ClientResponse, requestBody: Option[Any] = None)
+    extends Exception(s"Requesting $url ${requestBody.map{b => b.toString}}, got a ${response.status}. Body: ${response.body}")
 
 trait HttpClient {
 
@@ -33,6 +34,9 @@ trait HttpClient {
 
   def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
   def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
+
+  def postXml(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
+  def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
 
   def put(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
   def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
@@ -92,7 +96,22 @@ case class HttpClientImpl(
     val result = request.post(body).map { response =>
       val cr = res(request, response)
       if (response.status / 100 != validResponseClass) {
-        throw new NonOKResponseException(url, cr)
+        throw new NonOKResponseException(url, cr, Some(body))
+      }
+      cr
+    }
+    result.onFailure(onFailure(url) orElse defaultOnFailure(url))
+    result
+  }
+
+  def postXml(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(postXmlFuture(url, body, onFailure))
+
+  def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
+    val request = req(url)
+    val result = request.post(body).map { response =>
+      val cr = res(request, response)
+      if (response.status / 100 != validResponseClass) {
+        throw new NonOKResponseException(url, cr, Some(body))
       }
       cr
     }
@@ -108,7 +127,7 @@ case class HttpClientImpl(
     val result = request.put(body).map { response =>
       val cr = res(request, response)
       if (response.status / 100 != validResponseClass) {
-        throw new NonOKResponseException(url, cr)
+        throw new NonOKResponseException(url, cr, Some(body))
       }
       cr
     }
@@ -166,6 +185,15 @@ private[net] class Request(wsRequest: WSRequestHolder) extends Logging {
     res
   }
 
+  def post(body: NodeSeq) = {
+    val start = System.currentTimeMillis
+    val res = wsRequest.post(body)
+    res.onComplete { resTry =>
+      logResponse(start, "POST", resTry.isSuccess)
+    }
+    res
+  }
+
   def delete() = {
     val start = System.currentTimeMillis
     val res = wsRequest.delete()
@@ -182,18 +210,29 @@ private[net] class Request(wsRequest: WSRequestHolder) extends Logging {
 trait ClientResponse {
   def body: String
   def json: JsValue
+  def xml: NodeSeq
   def status: Int
 }
 
 class ClientResponseImpl(val request: Request, val response: Response) extends ClientResponse {
 
-  override def status: Int = response.status
+  def status: Int = response.status
 
-  override def body: String = response.body
+  def body: String = response.body
 
-  override def json: JsValue = {
+  def json: JsValue = {
     try {
       response.json
+    } catch {
+      case e: Throwable =>
+        println("bad response: %s".format(response.body.toString()))
+        throw e
+    }
+  }
+
+  def xml: NodeSeq = {
+    try {
+      response.xml
     } catch {
       case e: Throwable =>
         println("bad response: %s".format(response.body.toString()))

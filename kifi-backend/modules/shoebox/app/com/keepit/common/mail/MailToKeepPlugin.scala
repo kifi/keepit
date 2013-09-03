@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import org.jsoup.Jsoup
 
 import com.google.inject.{ImplementedBy, Inject}
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.slick.Database
@@ -207,17 +207,17 @@ trait MailToKeepPlugin extends Plugin {
 }
 
 class MailToKeepPluginImpl @Inject()(
-  actorProvider: ActorProvider[MailToKeepActor],
+  actor: ActorInstance[MailToKeepActor],
   val schedulingProperties: SchedulingProperties //only on leader
 ) extends MailToKeepPlugin with SchedulingPlugin {
 
   override def enabled: Boolean = true
 
   def fetchNewKeeps() {
-    actorProvider.actor ! FetchNewKeeps
+    actor.ref ! FetchNewKeeps
   }
   override def onStart() {
-    scheduleTask(actorProvider.system, 10 seconds, 1 minute, actorProvider.actor, FetchNewKeeps)
+    scheduleTask(actor.system, 10 seconds, 1 minute, actor.ref, FetchNewKeeps)
   }
 }
 

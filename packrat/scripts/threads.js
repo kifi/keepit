@@ -1,5 +1,8 @@
 // @require styles/metro/threads.css
 // @require styles/metro/compose.css
+// @require scripts/html/metro/threads.js
+// @require scripts/html/metro/thread.js
+// @require scripts/html/metro/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/api.js
@@ -8,6 +11,8 @@
 // @require scripts/render.js
 // @require scripts/compose.js
 // @require scripts/snapshot.js
+// @require scripts/lib/antiscroll.min.js
+// @require scripts/prevent_ancestor_scroll.js
 
 threadsPane = function() {
   var $list = $();
@@ -15,11 +20,11 @@ threadsPane = function() {
     render: function($container, o, prefs) {
       o.threads.forEach(function(t) {
         var n = messageCount(t, new Date(o.read[t.id] || 0));
-        t.messageCount = Math.abs(n);
+        t.messageCount = n < -9 ? "9+" : Math.abs(n);
         t.messagesUnread = n < 0;
-        t.recipientsPictured = t.recipients.slice(0, 4);
+        t.participantsPictured = t.participants.slice(0, 4);
       });
-      render("html/metro/threads.html", {
+      $(render("html/metro/threads", {
         formatSnippet: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
         emptyUri: api.url("images/metro/bg_messages.png"),
@@ -31,10 +36,10 @@ threadsPane = function() {
         submitTip: (prefs.enterToSend ? "" : CO_KEY + "-") + "Enter to send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
-        thread: "thread.html",
-        compose: "compose.html"
-      }, function(html) {
-        $(html).prependTo($container)
+        thread: "thread",
+        compose: "compose"
+      })).prependTo($container)
+      // TODO: unindent below
         .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
         .on("click", "a[href^='x-kifi-sel:']", function(e) {
           e.preventDefault();
@@ -50,14 +55,17 @@ threadsPane = function() {
 
         attachComposeBindings($container, "message", prefs.enterToSend);
 
-        $list = $container.find(".kifi-threads-list");
+        $list = $container.find(".kifi-threads-list").preventAncestorScroll();
+        var scroller = $list.parent().antiscroll({x: false}).data("antiscroll");
+        $(window).on("resize.threads", scroller.refresh.bind(scroller));
+
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           $list.length = 0;
+          $(window).off("resize.threads");
         });
-      });
     },
     update: function(thread, readTime) {
-      if ($list.length) {
+      if ($list.length && thread) {
         renderThread(thread, readTime, function($th) {
           var $old = $list.children("[data-id=" + thread.id + "],[data-id=]").first();
           if ($old.length) {
@@ -95,44 +103,42 @@ threadsPane = function() {
 
   function sendMessage($container, e, text, recipientIds) {
     // logEvent("slider", "message");
-    api.port.emit("send_message", {
-        url: document.URL,
+    api.port.emit("send_message", withUrls({
         title: document.title,
         text: text,
-        recipients: recipientIds},
+        recipients: recipientIds}),
       function(resp) {
         api.log("[sendMessage] resp:", resp);
         var friends = $container.find(".kifi-compose-to").data("friends").reduce(function(o, f) {
           o[f.id] = f;
           return o;
         }, {});
-        var recipients = recipientIds.map(function(id) {return friends[id]});
+        var participants = recipientIds.map(function(id) {return friends[id]});
         var locator = "/messages/" + (resp.parentId || resp.id);
-        $container.closest(".kifi-pane").triggerHandler("kifi:show-pane", [locator, recipients]);
+        $container.closest(".kifi-pane").triggerHandler("kifi:show-pane", [locator, participants]);
       });
   }
 
   function renderThread(th, readTime, callback) {
     var n = messageCount(th, new Date(readTime || 0));
-    th.messageCount = Math.abs(n);
+    th.messageCount = n < -9 ? "9+" : Math.abs(n);
     th.messagesUnread = n < 0;
-    th.recipientsPictured = th.recipients.slice(0, 4);
+    th.participantsPictured = th.participants.slice(0, 4);
     th.formatSnippet = getSnippetFormatter;
     th.formatLocalDate = getLocalDateFormatter;
-    render("html/metro/thread.html", th, function(html) {
-      callback($(html).data("recipients", th.recipients).find("time").timeago().end());
+    render("html/metro/thread", th, function(html) {
+      callback($(html).data("participants", th. participants).find("time").timeago().end());
     });
   }
 
   function messageCount(th, readTime) {
-    var n = 0, nUnr = 0;
+    var nUnr = 0;
     for (var id in th.messageTimes) {
       if (new Date(th.messageTimes[id]) > readTime) {
         nUnr++;
       }
-      n++;
     }
-    return -nUnr || n;
+    return -nUnr || th.messageCount;
   }
 
   function remove() {

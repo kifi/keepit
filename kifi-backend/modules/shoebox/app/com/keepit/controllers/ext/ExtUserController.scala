@@ -5,20 +5,78 @@ import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionC
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.net.URI
 import com.keepit.model._
+import com.keepit.common.time._
 
 import play.api.Play.current
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 
 import com.google.inject.Inject
+import com.keepit.common.net.URI
+import com.keepit.controllers.core.NetworkInfoLoader
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.social.BasicUser
+import com.keepit.common.analytics.{EventPersister, Event, EventFamilies, Events}
+import play.api.libs.concurrent.Akka
+import com.keepit.common.service.FortyTwoServices
 
 class ExtUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   domainRepo: DomainRepo,
-  userToDomainRepo: UserToDomainRepo)
+  userToDomainRepo: UserToDomainRepo,
+  networkInfoLoader: NetworkInfoLoader,
+  userRepo: UserRepo,
+  userConnectionRepo: UserConnectionRepo,
+  experimentRepo: UserExperimentRepo,
+  basicUserRepo: BasicUserRepo,
+  EventPersister: EventPersister,
+  implicit val clock: Clock,
+  implicit val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+
+
+  def logEvent() = AuthenticatedJsonToJsonAction { request =>
+    Akka.future {
+      val o = request.body
+      val eventTime = clock.now.minusMillis((o \ "msAgo").asOpt[Int].getOrElse(0))
+      val eventFamily = EventFamilies((o \ "eventFamily").as[String])
+      val eventName = (o \ "eventName").as[String]
+      val installId = (o \ "installId").as[String]
+      val metaData = (o \ "metaData").asOpt[JsObject].getOrElse(Json.obj())
+      val prevEvents = (o \ "prevEvents").asOpt[Seq[String]].getOrElse(Seq.empty).map(ExternalId[Event])
+      val user = db.readOnly { implicit s => userRepo.get(request.user.id.get) }
+      val event = Events.userEvent(eventFamily, eventName, user, request.experiments, installId, metaData, prevEvents, eventTime)
+      log.debug("Created new event: %s".format(event))
+      EventPersister.persist(event)
+    }
+    Ok
+  }
+
+  def getLoggedIn() = AuthenticatedJsonAction { request =>
+    Ok("0")
+  }
+
+  def getNetworks(friendExtId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    Ok(Json.toJson(networkInfoLoader.load(request.user.id.get, friendExtId)))
+  }
+
+  def getFriends() = AuthenticatedJsonAction { request =>
+    val basicUsers = db.readOnly { implicit s =>
+      if (canMessageAllUsers(request.user.id.get)) {
+        userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
+          .collect { case u if u.id.get != request.user.id.get => BasicUser.fromUser(u) }.toSet
+      } else {
+        userConnectionRepo.getConnectedUsers(request.user.id.get).map(basicUserRepo.load)
+      }
+    }
+    Ok(Json.toJson(basicUsers))
+  }
+
+
+  private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
+    experimentRepo.hasExperiment(userId, ExperimentTypes.CAN_MESSAGE_ALL_USERS)
+  }
 
   def suppressSliderForSite() = AuthenticatedJsonToJsonAction { request =>
     val json = request.body

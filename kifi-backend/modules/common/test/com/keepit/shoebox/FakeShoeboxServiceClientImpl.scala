@@ -6,19 +6,25 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.common.db._
-import com.keepit.model.ClickHistory
 import scala.concurrent.Future
 import com.keepit.search._
-import com.keepit.model.ExperimentType
 import com.keepit.model.Phrase
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
-import com.keepit.model.UserExperiment
-import com.keepit.search.ArticleSearchResult
-import play.api.libs.json.JsObject
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{Map => MutableMap}
-import com.keepit.social.{SocialNetworkType, SocialId, BasicUser}
+import com.keepit.social.{SocialNetworkType, BasicUser}
+import com.keepit.common.mail.{ElectronicMail}
+import com.keepit.model.ExperimentType
+import com.keepit.model.URL
+import com.keepit.model.BrowsingHistory
+import com.keepit.model.CommentRecipient
+import com.keepit.model.UserExperiment
+import com.keepit.search.ArticleSearchResult
+import com.keepit.social.SocialId
+import com.keepit.model.UrlHash
+import com.keepit.model.ClickHistory
+import play.api.libs.json.JsObject
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(
@@ -212,6 +218,22 @@ class FakeShoeboxServiceClientImpl(
     Future.successful(uris)
   }
 
+  def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]] = Future.successful(allNormalizedURIs.values.find(_.url == url))
+
+  def internNormalizedURI(urls: JsObject): Future[NormalizedURI] = {
+    val url = (urls \ "url").as[String]
+    val uri = allNormalizedURIs.values.find(_.url == url).getOrElse {
+      NormalizedURI(
+        id = Some(Id[NormalizedURI](url.hashCode)),
+        url=url,
+        urlHash=UrlHash(url.hashCode.toString),
+        screenshotUpdatedAt=None
+      )
+    }
+
+    Future.successful(uri)
+  }
+
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
     val bookmarks = allUserBookmarks.getOrElse(userId, Set.empty).map(allBookmarks(_)).toSeq
     Future.successful(bookmarks)
@@ -259,7 +281,12 @@ class FakeShoeboxServiceClientImpl(
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
     val basicUsers = userIds.map { id =>
-      val user = allUsers(id)
+      val dummyUser = User(
+        id = Some(id),
+        firstName = "Douglas",
+        lastName = "Adams-clone-" + id.toString
+      )
+      val user = allUsers.getOrElse(id,dummyUser)
       id -> BasicUser(
         externalId = user.externalId,
         firstName = user.firstName,
@@ -271,6 +298,7 @@ class FakeShoeboxServiceClientImpl(
   }
 
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
+  def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Future.successful(Seq())
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
   def getSessionByExternalId(sessionId: com.keepit.common.db.ExternalId[com.keepit.model.UserSession]): scala.concurrent.Future[Option[com.keepit.model.UserSession]] = ???
@@ -283,6 +311,7 @@ class FakeShoeboxServiceClientImpl(
   def userChannelCountFanout(): Seq[scala.concurrent.Future[Int]] = Seq()
 
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]] = ???
+  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = ???
 
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]] = {
     val collections = allCollections.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
@@ -346,6 +375,12 @@ class FakeShoeboxServiceClientImpl(
   def getFriends(userId: Id[User]): Future[Set[Id[User]]] = {
     Future.successful(allUserConnections.getOrElse(userId, Set.empty))
   }
+
+  def logEvent(userId: Id[User], event: JsObject) = {}
+
+  def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}
+
+  def sendPushNotification(user: Id[User], extId: String, unvisited: Int, msg: String) : Unit = {}
 }
 
 class FakeClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends ClickHistoryTracker with Logging {

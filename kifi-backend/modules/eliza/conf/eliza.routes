@@ -1,0 +1,34 @@
+
+##########################################
+# Extension API
+##########################################
+
+POST    /eliza/messages                   @com.keepit.eliza.ExtMessagingController.sendMessageAction()
+POST    /eliza/messages/:parentId         @com.keepit.eliza.ExtMessagingController.sendMessageReplyAction(parentId: ExternalId[MessageThread])
+
+POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterController.getChatter
+
+GET     /eliza/ext/ws                     @com.keepit.eliza.ExtMessagingController.websocket()
+POST    /eliza/ext/chatter                @com.keepit.eliza.ExtMessagingController.getChatter()
+
+##########################################
+#INTERNAL ROUTES/Eliza
+##########################################
+
+POST  /internal/eliza/sendToUserNoBroadcast     @com.keepit.eliza.ElizaController.sendToUserNoBroadcast
+POST  /internal/eliza/sendToUser                @com.keepit.eliza.ElizaController.sendToUser
+POST  /internal/eliza/sendToAllUsers            @com.keepit.eliza.ElizaController.sendToAllUsers
+GET   /internal/eliza/connectedClientCount      @com.keepit.eliza.ElizaController.connectedClientCount
+POST  /internal/eliza/sendGlobalNotification    @com.keepit.eliza.MessagingController.sendGlobalNotification
+
+POST /internal/eliza/importThread               @com.keepit.eliza.MessagingController.importThread()
+
+
+
+
+
+->  / common.Routes
+
+
+
+

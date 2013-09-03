@@ -24,7 +24,7 @@ const {Listeners} = require("./listeners");
 const icon = require("./icon");
 const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
-const privateMode = require("sdk/private-browsing");
+const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(\.[a-z]{2})?\/(|search|webhp)\?(|.*&)q=([^&]*)/;
 
 const pages = {}, workers = {}, tabsById = {};  // all by tab.id
 function createPage(tab) {
@@ -83,6 +83,7 @@ exports.log.error = function(exception, context) {
 exports.noop = function() {};
 
 exports.on = {
+  search: new Listeners,
   install: new Listeners,
   update: new Listeners,
   startup: new Listeners};
@@ -180,8 +181,12 @@ exports.request = function(method, url, data, done, fail) {
       for (var key in resp) {
         keys.push(key);
       }
-      ((resp.status == 200 ? done : fail) || exports.noop)(resp.json || resp);
-      done = fail = exports.noop;  // ensure we don't call a callback again
+      if (resp.status >= 200 && resp.status < 300) {
+        done && done(resp.json || resp);
+      } else if (fail) {
+        fail(resp);
+      }
+      done = fail = null;
     }
   };
   if (data) {
@@ -353,10 +358,6 @@ exports.tabs = {
     var tab = tabsById[page.id], win = tab.window;
     return win === windows.activeWindow && tab === win.tabs.activeTab;
   },
-  isSelected: function(page) {
-    var tab = tabsById[page.id], win = tab.window;
-    return tab === win.tabs.activeTab;
-  },
   navigate: function(tabId, url) {
     var tab = tabsById[tabId], win;
     if (tab) {
@@ -395,7 +396,7 @@ tabs
 })
 .on("activate", function(tab) {
   var page = pages[tab.id];
-  if ((!page || !page.active) && !privateMode.isPrivate(tab)) {
+  if (!page || !page.active) {
     exports.log("[tabs.activate]", tab.id, tab.url);
     if (!/^about:/.test(tab.url)) {
       if (page) {
@@ -423,19 +424,16 @@ tabs
   }
 })
 .on("ready", function(tab) {
-  if (privateMode.isPrivate(tab)) return;
   exports.log("[tabs.ready]", tab.id, tab.url);
   pages[tab.id] || createPage(tab);
 });
 
 windows
 .on("open", function(win) {
-  if (privateMode.isPrivate(win)) return;
   exports.log("[windows.open]", win.title);
   win.removeIcon = icon.addToWindow(win, onIconClick);
 })
 .on("close", function(win) {
-  if (privateMode.isPrivate(win)) return;
   exports.log("[windows.close]", win.title);
   removeFromWindow(win);
 })
@@ -453,7 +451,6 @@ windows
 });
 
 for each (let win in windows) {
-  if (privateMode.isPrivate(win)) continue;
   if (!win.removeIcon) {
     exports.log("[windows] adding icon to window:", win.title);
     win.removeIcon = icon.addToWindow(win, onIconClick);
@@ -474,7 +471,6 @@ PageMod({
   contentScriptWhen: "start",
   attachTo: ["existing", "top"],
   onAttach: function(worker) {
-    if (privateMode.isPrivate(worker.tab)) return;
     var tab = worker.tab;
     exports.log("[onAttach]", tab.id, "start.js", tab.url);
     worker.port.on("api:start", function() {
@@ -483,7 +479,10 @@ PageMod({
       if (oldPage && /^https?:/.test(oldPage.url)) {
         dispatch.call(exports.tabs.on.unload, oldPage);
       }
-      dispatch.call(exports.tabs.on.loading, createPage(tab));
+      var page = createPage(tab);
+      var searchQuery = decodeURIComponent(((page.url.match(googleSearchPattern) || [])[4] || '').replace(/\+/g, ' '));
+      if (searchQuery) dispatch.call(exports.on.search, searchQuery);
+      dispatch.call(exports.tabs.on.loading, page);
     });
     worker.port.on("api:nav", function() {
       exports.log("[api:nav]", tab.id, tab.url);
@@ -508,7 +507,6 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentScriptOptions: {dataUriPrefix: url(""), dev: prefs.env == "development"},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
-        if (privateMode.isPrivate(worker.tab)) return;
         let tab = worker.tab, page = pages[tab.id];
         exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
         let injected = markInjected({}, o);
@@ -546,11 +544,8 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
               }, page);
           });
         });
-        worker.port.on("api:load", function(path, callbackId) {
-          worker.port.emit("api:respond", callbackId, data.load(path));
-        });
-        worker.port.on("api:require", function(path, callbackId) {
-          var o = deps(path, injected);
+        worker.port.on("api:require", function(paths, callbackId) {
+          var o = deps(paths, injected);
           exports.log("[api:require] tab:", tab.id, o);
           markInjected(injected, o);
           worker.port.emit("api:inject", o.styles.map(load), o.scripts.map(load), callbackId);

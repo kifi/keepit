@@ -6,7 +6,9 @@
 // @require scripts/lib/mustache.js
 // @require scripts/api.js
 // @require scripts/render.js
-
+// @require scripts/html/search/google.js
+// @require scripts/html/search/google_hits.js
+// @require scripts/html/search/google_hit.js
 
 var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(location.host) && function() {  // idempotent for Chrome
   api.log("[google_inject]");
@@ -15,11 +17,8 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     api.port.emit("log_event", Array.prototype.slice.call(arguments));
   }
 
-  var $res = $();         // a reference to our search results (kept so that we can reinsert when removed)
-  render("html/search/google.html", {}, function(html) {
-    $res = $(Mustache.to_html(html)).hide();
-    bindHandlers();
-  });
+  var $res = $(render("html/search/google", {})).hide();   // a reference to our search results (kept so that we can reinsert when removed)
+  bindHandlers();
 
   var filter;             // current search filter (null or {[who: "m"|"f"|dot-delimited user ids]?, [when: "t"|"y"|"w"|"m"]?})
   var query = "";         // latest search query
@@ -57,6 +56,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     clearTimeout(keyTimer);
     search();  // immediate search
   }
+  var $qp = $(document.getElementById("gs_taif0"));  // stable identifier: "Google Search Type-Ahead Input Field"
 
   function onIdle() {
     logEvent("search", "dustSettled", {
@@ -69,7 +69,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   }
 
   checkSearchType();
-  search(parseQuery(location.hash));  // Google can be slow to initialize the input field from the hash.
+  search(parseQuery(location.hash || location.search), null, true);  // Google can be slow to initialize the input field, or it may be missing
 
   var isVertical;
   function checkSearchType() {
@@ -81,10 +81,10 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     }
   }
 
-  function search(fallbackQuery, newFilter) {
+  function search(fallbackQuery, newFilter, isFirst) {
     if (isVertical) return;
 
-    var q = (getPrediction() || $q.val() || fallbackQuery || "").trim().replace(/\s+/, " ");  // TODO: also detect "Showing results for" and prefer that
+    var q = ($qp.val() || $q.val() || fallbackQuery || "").trim().replace(/\s+/, " ");  // TODO: also detect "Showing results for" and prefer that
     var f = arguments.length > 1 ? newFilter : filter;
     if (q == query && areSameFilter(f, filter)) {
       api.log("[search] nothing new, query:", q, "filter:", f);
@@ -101,7 +101,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     clearTimeout(idleTimer);
     idleTimer = setTimeout(onIdle, 1200);
     var t1 = +new Date;
-    api.port.emit("get_keeps", {query: q, filter: f}, function results(resp) {
+    api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
       if (q != query || !areSameFilter(f, filter)) {
         api.log("[results] ignoring for query:", q, "filter:", f);
         return;
@@ -110,16 +110,29 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
         return;
       }
 
-      tKifiResultsReceived = +new Date;
+      tKifiResultsReceived = Date.now();
       api.log("[results] response after", tKifiResultsReceived - t1, "ms:", resp);
-
-      $resList.remove(); // remove any old results
-      response = resp;
-      response.filter = f;
-      response.hits.forEach(processHit);
       if (!newFilter) {
         clicks.kifi.length = clicks.google.length = 0;
       }
+
+      $resList.remove(); // remove any old results
+      response = resp;
+      if (isFirst && resp.filter) {  // restoring previous filter (user navigated back)
+        filter = f = newFilter = resp.filter;
+        $(".kifi-filter-btn").addClass("kifi-expanded");
+        $res.find(".kifi-filters").show().each(function() {
+          if (f.who) {
+            $(this).find(".kifi-filter[data-name=who]").find(".kifi-filter-val")
+            .filter("[data-val=" + (f.who.length > 1 ? "f" : f.who) + "]").trigger("mouseup", [true]);
+          }
+          if (f.when) {
+            $(this).find(".kifi-filter[data-name=when]").find(".kifi-filter-val")
+            .filter("[data-val=" + f.when + "]").trigger("mouseup", [true]);
+          }
+        });
+      }
+      response.hits.forEach(processHit);
 
       var ires = document.getElementById("ires");
       if (ires) {
@@ -156,11 +169,6 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     });
 
     var $resList = $res.find("#kifi-res-list,.kifi-res-end").css("opacity", .2);
-  }
-
-  var elPredict;
-  function getPrediction() {
-    return (elPredict || (elPredict = document.getElementById("gs_taif0")) || 0).value;  // stable identifier: "Google Search Type-Ahead Input Field 0"
   }
 
   function parseQuery(hash) {
@@ -379,7 +387,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
       var i = $a.closest("li.g").prevAll("li.g").length;
       var j = $a.prevAll(".kifi-friend").length;
       var friend = response.hits[i].users[j];
-      render("html/friend_card.html", {
+      render("html/friend_card", {
         name: friend.firstName + " " + friend.lastName,
         id: friend.id,
         iconsUrl: api.url("images/social_icons.png")
@@ -396,7 +404,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
       });
     }).bindHover(".kifi-res-friends", function(configureHover) {
       var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;
-      render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
+      render("html/search/friends", {friends: response.hits[i].users}, function(html) {
         configureHover(html, {
           click: "toggle",
           position: function(w) {
@@ -404,10 +412,9 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
           }});
       });
     }).bindHover(".kifi-chatter", function(configureHover) {
-      var n = $(this).data("n");
-      render("html/search/chatter.html", {
-        //numComments: n[0],
-        numMessages: n[1],
+      render("html/search/chatter", {
+        numMessages: $(this).data("n"),
+        locator: $(this).data("locator"),
         pluralize: function() {return pluralLambda}
       }, function(html) {
         configureHover(html, {canLeaveFor: 600, click: "toggle"});
@@ -421,31 +428,30 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   function appendResults() {
     $res.find(".kifi-res-title").toggleClass("kifi-collapsed", !response.show);
     $res.find(".kifi-filter-btn")[response.show ? "show" : "hide"]();
-    render("html/search/google_hits.html", {
+    $res.append(render(
+      "html/search/google_hits", {
         show: response.show,
         results: response.hits,
         anyResults: response.hits.length > 0,
         session: response.session,
         images: api.url("images"),
-        mayHaveMore: response.mayHaveMore
-      }, {
-        google_hit: "google_hit.html"
-      }, function(html) {
-        $res.append(html);
-        api.log("[appendResults] done");
-      });
+        mayHaveMore: response.mayHaveMore},
+      {google_hit: "google_hit"}));
+    api.log("[appendResults] done");
   }
 
   function loadChatter(hits) {
     if (!hits.length) return;
-    api.port.emit("get_chatter", hits.map(function(h) {return h.bookmark.url}), function gotChatter(counts) {
-      api.log("[gotChatter]", counts);
+    api.port.emit("get_chatter", hits.map(function(h) {return h.bookmark.url}), function gotChatter(chatter) {
+      api.log("[gotChatter]", chatter);
       var bgImg = "url(" + api.url("images/chatter.png") + ")";
-      for (var url in counts) {
-        var n = counts[url];
-        if (n[0] || n[1]) {
+      for (var url in chatter) {
+        var o = chatter[url];
+        if (o && o.threads) {
           $res.find(".kifi-who[data-url='" + url + "']").append(
-            $("<span class=kifi-chatter>").css("background-image", bgImg).data("n", n));
+            $("<span class=kifi-chatter>")
+            .css("background-image", bgImg)
+            .data({n: o.threads, locator: "/messages" + (o.threadId ? "/" + o.threadId : "")}));
         }
       }
     });
@@ -490,22 +496,16 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
 
     var hitHtml = [];
     for (var i = 0; i < hits.length; i++) {
-      render("html/search/google_hit.html",
-        $.extend({session: response.session, images: api.url("images")}, hits[i]),
-        function(html) {
-          hitHtml.push(html);
-          if (hitHtml.length == hits.length) {
-            var $list = $("#kifi-res-list");
-            $(hitHtml.join("")).hide().insertAfter($list.children("li.g").last()).slideDown(200, function() {
-              $(this).css("overflow", "");  // slideDown clean-up
-            });
-            if (!response.mayHaveMore) {
-              $list.find(".kifi-res-more").hide(200);
-            }
-            loadChatter(hits);
-          }
-        });
+      hitHtml.push(render("html/search/google_hit", $.extend({session: response.session, images: api.url("images")}, hits[i])));
     }
+    var $list = $("#kifi-res-list");
+    $(hitHtml.join("")).hide().insertAfter($list.children("li.g").last()).slideDown(200, function() {
+      $(this).css("overflow", "");  // slideDown clean-up
+    });
+    if (!response.mayHaveMore) {
+      $list.find(".kifi-res-more").hide(200);
+    }
+    loadChatter(hits);
   }
 
   function processHit(hit) {
@@ -546,10 +546,9 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   }
 
   function boldSearchTerms(text, matches) {
-    var before = '<b>', after = '</b>';
-    return (matches || []).reduce(function (text, match, i) {
-      var start = match[0] + i*(before.length + after.length), len = match[1];
-      return text.substr(0, start) + before + text.substr(start, len) + after + text.substr(start + len);
+    return (matches || []).reduceRight(function (text, match) {
+      var start = match[0], len = match[1];
+      return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
     }, text || "");
   }
 
@@ -558,9 +557,20 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   }
 
   function showFilterDetail() {
-    $(this).off("transitionend").on("transitionend", function end(e) {
-      if (e.target !== this || e.originalEvent.propertyName != "opacity") return;
-      $(this).off("transitionend", end);
+    var $fd = $(this);
+    if ($res.is(':visible')) {
+      $fd.off("transitionend").on("transitionend", function end(e) {
+        if (e.target === this && e.originalEvent.propertyName === "opacity") {
+          $fd.off("transitionend", end);
+          prepFriendsTokenInput();
+        }
+      });
+    } else {
+      prepFriendsTokenInput();
+    }
+    $fd.prev(".kifi-filter-detail-notch").addBack().addClass("kifi-visible");
+
+    function prepFriendsTokenInput() {
       var $in = $res.find("#kifi-filter-det");
       api.port.emit("get_friends", function(friends) {
         api.log("friends:", friends);
@@ -570,7 +580,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
         }
         api.require("scripts/lib/jquery-tokeninput.js", function() {
           if ($in.prev("ul").length) return;
-          var addTime;
+          var addTime, ids = filter && filter.who && filter.who.length > 1 ? filter.who.split(".") : null;
           $in.tokenInput(friends, {
             searchDelay: 0,
             minChars: 1,
@@ -583,6 +593,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
             allowTabOut: true,
             tokenValue: "id",
             theme: "googly",
+            prePopulate: ids && friends.filter(function(f) {return ids.indexOf(f.id) >= 0}),
             resultsFormatter: function(f) {
               return "<li style='background-image:url(//" + cdnBase + "/users/" + f.id + "/pics/100/0.jpg)'>" +
                 Mustache.escape(f.name) + "</li>";
@@ -613,9 +624,12 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
                 $in.nextAll(".kifi-filter-detail-clear").removeClass("kifi-visible");
               }
             }});
+          if (ids) {
+            $in.nextAll(".kifi-filter-detail-clear").addClass("kifi-visible");
+          }
         });
       });
-    }).prev(".kifi-filter-detail-notch").addBack().addClass("kifi-visible");
+    }
   }
 
   function hideFilterDetail() {

@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import com.keepit.reports._
 import com.keepit.common.cache.CacheModule
 import com.keepit.social.{SocialGraphModule, SecureSocialModule}
 import com.keepit.search.SearchServiceClientModule
@@ -18,6 +19,8 @@ import com.keepit.inject.{ConfigurationModule, FortyTwoModule}
 import com.keepit.common.actor.ActorSystemModule
 import com.keepit.common.zookeeper.DiscoveryModule
 import com.keepit.common.db.slick.SlickModule
+import com.keepit.integrity.DataIntegrityModule
+import com.keepit.eliza.ElizaServiceClientModule
 
 abstract class ShoeboxModule(
   // Common Functional Modules
@@ -35,6 +38,7 @@ abstract class ShoeboxModule(
   val healthCheckModule: HealthCheckModule,
   val httpClientModule: HttpClientModule,
   val shoeboxServiceClientModule: ShoeboxServiceClientModule,
+  val elizaServiceClientModule: ElizaServiceClientModule,
 
   // Shoebox Functional Modules
   val slickModule: SlickModule,
@@ -45,7 +49,9 @@ abstract class ShoeboxModule(
   val topicModelModule: TopicModelModule,
   val domainTagImporterModule: DomainTagImporterModule,
   val sliderHistoryTrackerModule: SliderHistoryTrackerModule,
-  val userIndexModule: UserIndexModule = UserIndexModule()
+  val userIndexModule: UserIndexModule = UserIndexModule(),
+  val geckoboardModule: GeckoboardModule = GeckoboardModule(),
+  val dataIntegrityModule: DataIntegrityModule
 
 ) extends ConfigurationModule(
     fortyTwoModule,
@@ -62,6 +68,7 @@ abstract class ShoeboxModule(
     healthCheckModule,
     httpClientModule,
     shoeboxServiceClientModule,
+    elizaServiceClientModule,
 
     slickModule,
     scraperModule,
@@ -71,5 +78,7 @@ abstract class ShoeboxModule(
     topicModelModule,
     domainTagImporterModule,
     sliderHistoryTrackerModule,
-    userIndexModule
+    userIndexModule,
+    geckoboardModule,
+    dataIntegrityModule
 )

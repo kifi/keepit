@@ -15,6 +15,8 @@ import com.keepit.model._
 import com.keepit.realtime.{UserNotifier, UserChannel}
 import com.keepit.search.SearchServiceClient
 import com.keepit.shoebox.usersearch.UserIndex
+import com.keepit.eliza.ElizaServiceClient
+
 
 import play.api.data.Forms._
 import play.api.data._
@@ -57,7 +59,8 @@ class AdminUserController @Inject() (
     userNotifier: UserNotifier,
     emailAddressRepo: EmailAddressRepo,
     invitationRepo: InvitationRepo,
-    clock: Clock) extends AdminController(actionAuthenticator) {
+    clock: Clock,
+    eliza: ElizaServiceClient) extends AdminController(actionAuthenticator) {
 
   implicit val dbMasterSlave = Database.Slave
 
@@ -277,6 +280,7 @@ class AdminUserController @Inject() (
         case None => Some(userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType)))
       }) foreach { _ =>
         userChannel.pushAndFanout(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
+        eliza.sendToUser(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }
     Ok(Json.obj(experiment -> true))
@@ -299,6 +303,7 @@ class AdminUserController @Inject() (
       userExperimentRepo.get(userId, ExperimentTypes(experiment)).foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
         userChannel.pushAndFanout(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
+        eliza.sendToUser(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }
     Ok(Json.obj(experiment -> false))
@@ -328,24 +333,38 @@ class AdminUserController @Inject() (
       "url" -> optional(text),
       "image" -> text,
       "sticky" -> optional(text),
-      "users" -> optional(text)
+      "users" -> optional(text),
+      "eliza" -> optional(text)
     ))
 
-    val (title, bodyHtml, linkText, url, image, sticky, whichUsers) = notifyForm.bindFromRequest.get
+    val (title, bodyHtml, linkText, url, image, sticky, whichUsers, elizaFlag) = notifyForm.bindFromRequest.get
 
-    val users = whichUsers.flatMap(s => if(s == "") None else Some(s) ).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
+    val usersOpt : Option[Seq[Id[User]]] = whichUsers.flatMap(s => if(s == "") None else Some(s) ).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
+    val isSticky : Boolean = sticky.map(_ => true).getOrElse(false)
+    val useEliza : Boolean = elizaFlag.map(_ => true).getOrElse(false) 
 
-    val globalNotification = GlobalNotification(
-      sendToSpecificUsers = users,
-      title = title,
-      bodyHtml = bodyHtml,
-      linkText = linkText,
-      url = url,
-      image = image,
-      isSticky = sticky.map(_ => true).getOrElse(false),
-      markReadOnAction = true)
+    if (useEliza){
+      log.info("Sending global notification via Eliza!")
+      usersOpt.map{ users => 
+        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky)  
+      } getOrElse {
+        val users = db.readOnly{ implicit session => userRepo.getAllIds() } //Note: Need to revisit when we have >50k users.
+        eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky)  
+      } 
+    } else {
+      log.info("Sending global notification via Shoebox!")
+      val globalNotification = GlobalNotification(
+        sendToSpecificUsers = usersOpt,
+        title = title,
+        bodyHtml = bodyHtml,
+        linkText = linkText,
+        url = url,
+        image = image,
+        isSticky = isSticky,
+        markReadOnAction = true)
 
-    userNotifier.globalNotification(globalNotification)
+      userNotifier.globalNotification(globalNotification)
+    }
 
     Redirect(routes.AdminUserController.notification())
   }

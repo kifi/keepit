@@ -9,7 +9,6 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.net.URI
 import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.model._
@@ -18,6 +17,7 @@ import com.keepit.search.SearchServiceClient
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.social.{ThreadInfo, CommentWithBasicUser, BasicUser}
+import com.keepit.common.net.URI
 
 case class KeeperInfo1(  // information needed immediately when a page is visited
     kept: Option[String],
@@ -75,6 +75,7 @@ class KeeperInfoLoader @Inject() (
     threadInfoRepo: ThreadInfoRepo,
     domainClassifier: DomainClassifier,
     basicUserRepo: BasicUserRepo,
+    userExperimentRepo: UserExperimentRepo,
     historyTracker: SliderHistoryTracker,
     searchClient: SearchServiceClient) {
 
@@ -92,8 +93,12 @@ class KeeperInfoLoader @Inject() (
       (domain, bookmark, position, neverOnSite, host)
     }
 
-    val sensitive = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
-    KeeperInfo1(bookmark.map { b => if (b.isPrivate) "private" else "public" }, position, neverOnSite, sensitive.getOrElse(false))
+    val userIsSensitive = db.readOnly { implicit s =>
+      !userExperimentRepo.hasExperiment(userId, ExperimentTypes.NOT_SENSITIVE)
+    }
+    val sensitive = userIsSensitive &&
+      (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
+    KeeperInfo1(bookmark.map { b => if (b.isPrivate) "private" else "public" }, position, neverOnSite, sensitive)
   }
 
   def load2(userId: Id[User], normalizedUri: String): KeeperInfo2 = {

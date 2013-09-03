@@ -1,5 +1,8 @@
 // @require styles/metro/thread.css
 // @require styles/metro/compose.css
+// @require scripts/html/metro/messages.js
+// @require scripts/html/metro/message.js
+// @require scripts/html/metro/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/api.js
 // @require scripts/formatting.js
@@ -7,15 +10,17 @@
 // @require scripts/render.js
 // @require scripts/compose.js
 // @require scripts/snapshot.js
+// @require scripts/lib/antiscroll.min.js
+// @require scripts/prevent_ancestor_scroll.js
 
 threadPane = function() {
-  var $scroller = $(), $holder = $(), buffer = {};
+  var $holder = $(), buffer = {};
   return {
     render: function($container, threadId, messages, session) {
       messages.forEach(function(m) {
         m.isLoggedInUser = m.user.id == session.userId;
       });
-      render("html/metro/messages.html", {
+      $(render("html/metro/messages", {
         formatMessage: getTextFormatter,
         formatLocalDate: getLocalDateFormatter,
         messages: messages,
@@ -24,10 +29,10 @@ threadPane = function() {
         submitTip: (session.prefs.enterToSend ? "" : CO_KEY + "-") + "Enter to send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
-        message: "message.html",
-        compose: "compose.html"
-      }, function(html) {
-        $(html).prependTo($container)
+        message: "message",
+        compose: "compose"
+      })).prependTo($container)
+      // TODO: unindent below
         .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
         .on("click", "a[href^='x-kifi-sel:']", function(e) {
           e.preventDefault();
@@ -37,11 +42,14 @@ threadPane = function() {
 
         attachComposeBindings($container, "message", session.prefs.enterToSend);
 
-        $scroller = $container.find(".kifi-messages-sent");
-        $holder = $scroller.find(".kifi-messages-sent-inner").data("threadId", threadId);
+        $holder = $container.find(".kifi-messages-sent-inner").preventAncestorScroll().data("threadId", threadId);
+        var scroller = $container.find(".kifi-scroll-wrap").antiscroll({x: false}).data("antiscroll");
+        $(window).on("resize.thread", scroller.refresh.bind(scroller));
+
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           if ($holder.length && this.contains($holder[0])) {
-            $scroller = $holder = $();
+            $holder = $();
+            $(window).off("resize.thread");
           }
         });
 
@@ -51,13 +59,11 @@ threadPane = function() {
           api.log("[render] appending buffered message", buffer.message.id);
           messages.push(buffer.message);
           renderMessage(buffer.message, session.userId, function($m) {
-            $holder.append($m);
-            $scroller.scrollToBottom();
+            $holder.append($m).scrollToBottom();
           });
         }
 
-        if (messages.length) emitRead(threadId, messages[messages.length - 1]);
-      });
+        if (messages.length) emitRead(threadId, messages[messages.length - 1], true);
     },
     update: function(threadId, message, userId) {
       if ($holder.length && $holder.data("threadId") == threadId) {
@@ -68,8 +74,7 @@ threadPane = function() {
                 api.log("[update] comparing message text");
                 return $(el).data("text") === message.text;
               })) {
-            $holder.append($m);  // should we compare timestamps and insert in order?
-            $scroller.scrollToBottom();
+            $holder.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
           }
           emitRead(threadId, message);
         });
@@ -85,8 +90,7 @@ threadPane = function() {
           renderMessage(m, userId, function($m) {
             arr[i] = $m;
             if (++n == arr.length) {
-              $holder.find(".kifi-message-sent").remove().end().append(arr);
-              $scroller.scrollToBottom();
+              $holder.find(".kifi-message-sent").remove().end().append(arr).scrollToBottom();
               emitRead(threadId, messages[messages.length - 1]);
             }
           });
@@ -110,8 +114,7 @@ threadPane = function() {
         lastName: ""}
     }, session.userId, function($m) {
       updateSentReply($reply = $m, resp);
-      $holder.append($m.data("text", text));
-      $scroller.scrollToBottom();
+      $holder.append($m.data("text", text)).scrollToBottom();
     });
   }
 
@@ -119,7 +122,7 @@ threadPane = function() {
     m.formatMessage = getTextFormatter;
     m.formatLocalDate = getLocalDateFormatter;
     m.isLoggedInUser = m.user.id == userId;
-    render("html/metro/message.html", m, function(html) {
+    render("html/metro/message", m, function(html) {
       callback($(html).find("time").timeago().end());
     });
   }
@@ -134,7 +137,15 @@ threadPane = function() {
     }
   }
 
-  function emitRead(threadId, m) {
-    api.port.emit("set_message_read", {threadId: threadId, messageId: m.id, time: m.createdAt});
+  function emitRead(threadId, m, forceSend) {
+    var hidden = 'hidden' in document ? 'hidden' : 'webkitHidden';
+    if (document[hidden]) {
+      api.log("[emitRead] waiting (hidden)", m.id);
+      $(document).off('.thread').one('visibilitychange.thread webkitvisibilitychange.thread', function() { 
+        emitRead(threadId, m, forceSend);
+      });
+    } else {
+      api.port.emit("set_message_read", {threadId: threadId, messageId: m.id, time: m.createdAt, forceSend: forceSend || false});
+    }
   }
 }();

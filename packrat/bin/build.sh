@@ -21,16 +21,25 @@ cp -R adapters/firefox out/
 cp adapters/shared/*.js out/chrome/
 cp adapters/shared/*.js out/firefox/lib/
 
-for d in html icons images media scripts styles; do
+for d in icons images media scripts styles; do
   cp -R $d out/chrome/
   cp -R $d out/firefox/data/
 done
 
-cd out/chrome/scripts
-for f in $(find * -type f); do
-  echo "//@ sourceURL=http://kifi/"$f >> $f
+for f in $(find html -name '*.html'); do
+  f2="out/chrome/scripts/"${f/%.html/.js}
+  mkdir -p `dirname $f2`
+  echo -n "render.cache['${f%.html}']='" > $f2
+  # replace newlines and subsequent whitespace with a single space, then close the JS string and assignment
+  cat $f | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n */ /g' -e "s/'/\\'/g" -e $'$s/$/\';/' >> $f2
+  f3=${f2/chrome/firefox\/data}
+  mkdir -p `dirname $f3`
+  cp $f2 $f3
 done
-cd -
+
+for f in $(find out/chrome/scripts -name '*.js'); do
+  echo "//@ sourceURL=http://kifi/${f:19}" >> $f
+done
 
 cp main.js out/chrome/
 cp main.js out/firefox/lib/
@@ -38,7 +47,7 @@ cp main.js out/firefox/lib/
 matches=()
 cssDeps=()
 jsDeps=()
-for s in $(ls scripts/*.js); do
+for s in $(find scripts -name '*.js'); do
   match=$(head -1 $s | grep '^// @match ' | cut -c11-)
   req=$(head -30 $s | grep '^// @require ' | cut -c13-)
   css=$(echo "$req" | grep css$)
@@ -59,7 +68,7 @@ IFS=,
 echo -e "meta = {\n  contentScripts: [${matches[*]}],\n  styleDeps: {${cssDeps[*]}},\n  scriptDeps: {${jsDeps[*]}}};" > out/chrome/meta.js
 echo -e "exports.contentScripts = [${matches[*]}];\nexports.styleDeps = {${cssDeps[*]}};\nexports.scriptDeps = {${jsDeps[*]}};" > out/firefox/lib/meta.js
 version=$(grep ^version= build.properties | cut -c9-)
-chromeResourcesJson="$(toChromeStringListJson $(find images html -type f -not -name '.*') "  ")"
+chromeResourcesJson="$(toChromeStringListJson $(find images -type f -not -name '.*') "  ")"
 sed -e "s/\"version\":.*/\"version\": \"$version\",/" \
   -e "s/\"web_accessible_resources\": \[\]/\"web_accessible_resources\": $(sedSubEsc "$chromeResourcesJson")/" \
   adapters/chrome/manifest.json > out/chrome/manifest.json
@@ -83,14 +92,10 @@ if [ "$1" == "package" ]; then
 
   if [ "$2" == "deploy" ]; then
     echo -e "\nDeploying Firefox extension to kifi.com"
-    scp out/kifi-beta.xpi fortytwo@marvin.keep42.com:
-    scp out/kifi-beta.update.rdf fortytwo@marvin.keep42.com:
-
-    echo
     for server in b01 b02; do
       echo "Uploading to $server..."
-      ssh fortytwo@marvin.keep42.com scp kifi-beta.* $server:www-install/
-    done
+      scp out/kifi-beta.xpi out/kifi-beta.update.rdf fortytwo@$server:www-install/
+      done
     echo "Done."
 
     echo -e "\n!! Please upload kifi-beta.zip to the Chrome Web Store at https://chrome.google.com/webstore/developer/dashboard"

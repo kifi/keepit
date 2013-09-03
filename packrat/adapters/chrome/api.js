@@ -83,6 +83,15 @@ api = function() {
     }
   });
 
+  const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
+  const plusPattern = /\+/g;
+  chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
+    var match = details.url.match(googleSearchPattern);
+    if (match && details.frameId === 0) {
+      dispatch.call(api.on.search, decodeURIComponent(match[1].replace(plusPattern, ' ')));
+    }
+  });
+
   chrome.webNavigation.onDOMContentLoaded.addListener(function(details) {
     if (!details.frameId && /^https?:/.test(details.url)) {
       var page = pages[details.tabId];
@@ -106,7 +115,7 @@ api = function() {
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("#666", "[tabs.onUpdated] %i change: %o", tabId, change);
     if (selectedTabIds[tab.windowId]) {  // window is "normal"
-      if (change.status === "loading") {
+      if (change.status === "loading" && (change.url || !ports[tabId])) {  // app.asana.com/0/7052550309820/7364261745177
         onRemoved(tabId);
         createPage(tab);
       }
@@ -191,7 +200,7 @@ api = function() {
       }
     },
     "api:require": function(data, respond, tab) {
-      injectWithDeps(tab.id, data.path, data.injected, respond);
+      injectWithDeps(tab.id, data.paths, data.injected, respond);
     }};
   chrome.runtime.onConnect.addListener(function(port) {
     var tab = port.sender.tab;
@@ -278,8 +287,8 @@ api = function() {
     }
   }
 
-  function injectWithDeps(tabId, path, injected, callback) {
-    var o = deps(path, injected), n = 0;
+  function injectWithDeps(tabId, paths, injected, callback) {
+    var o = deps(paths, injected), n = 0;
     injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, done);
     injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, done);
     function done() {
@@ -371,6 +380,7 @@ api = function() {
       console.log.apply(console, arguments);
     },
     on: {
+      search: new Listeners,
       install: new Listeners,
       update: new Listeners,
       startup: new Listeners},
@@ -444,9 +454,12 @@ api = function() {
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (this.readyState == 4) {
-          var arg = /^application\/json/.test(this.getResponseHeader("Content-Type")) ? JSON.parse(this.responseText) : this;
-          ((this.status == 200 ? done : fail) || api.noop)(arg);
-          done = fail = api.noop;  // ensure we don't call a callback again
+          if (this.status >= 200 && this.status < 300) {
+            done && done(/^application\/json/.test(this.getResponseHeader("Content-Type")) ? JSON.parse(this.responseText) : this);
+          } else if (fail) {
+            fail(this);
+          }
+          done = fail = null;
         }
       }
       xhr.open(method, uri, true);
@@ -567,14 +580,6 @@ api = function() {
       },
       get: function(tabId) {
         return pages[tabId];
-      },
-      isSelected: function(tab) {
-        for (var winId in selectedTabIds) {
-          if (selectedTabIds[winId] === tab.id) {
-            return true;
-          }
-        }
-        return false;
       },
       isFocused: function(tab) {
         return selectedTabIds[focusedWinId] === tab.id;

@@ -54,7 +54,10 @@ trait ShoeboxServiceClient extends ServiceClient {
   def reportArticleSearchResult(res: ArticleSearchResult): Unit
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
+  def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
+  def internNormalizedURI(urls: JsObject): Future[NormalizedURI]
   def sendMail(email: ElectronicMail): Future[Boolean]
+  def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]]
   def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]]
@@ -84,6 +87,10 @@ trait ShoeboxServiceClient extends ServiceClient {
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
+  def logEvent(userId: Id[User], event: JsObject) : Unit
+  def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
+  def sendPushNotification(user: Id[User], extId: String, unvisited: Int, msg: String) : Unit
+  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -100,7 +107,8 @@ case class ShoeboxCacheProvider @Inject() (
     socialUserCache: SocialUserInfoUserCache,
     userSessionExternalIdCache: UserSessionExternalIdCache,
     userConnectionsCache: UserConnectionIdCache,
-    searchFriendsCache: SearchFriendsCache)
+    searchFriendsCache: SearchFriendsCache,
+    uriByUrlhashCache: NormalizedURIUrlHashCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -146,7 +154,6 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
     call(Shoebox.internal.getBookmarks(userId)).map{ r =>
       r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
@@ -182,6 +189,14 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def sendMail(email: ElectronicMail): Future[Boolean] = {
     call(Shoebox.internal.sendMail(), Json.toJson(email)).map(r => r.body.toBoolean)
+  }
+
+  def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = {
+    val payload = Json.obj(
+      "user" -> userId.id,
+      "email" -> Json.toJson(email)
+    )
+    call(Shoebox.internal.sendMailToUser(), payload).map(r => r.body.toBoolean)
   }
 
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
@@ -260,6 +275,17 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getNormalizedURIs(query)).map { r =>
       Json.fromJson[Seq[NormalizedURI]](r.json).get
     }
+  }
+
+  def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]] =
+      call(Shoebox.internal.getNormalizedURIByURL(), JsString(url)).map { r => r.json match {
+        case JsNull => None
+        case js: JsValue => Some(Json.fromJson[NormalizedURI](js).get)
+        case null => None
+      }}
+
+  def internNormalizedURI(urls: JsObject): Future[NormalizedURI] = {
+    call(Shoebox.internal.internNormalizedURI, urls).map(r => Json.fromJson[NormalizedURI](r.json).get)
   }
 
   def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]] = consolidateClickHistoryReq(ClickHistoryUserIdKey(userId)) { key =>
@@ -410,17 +436,57 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.obj("uri" -> JsNumber(uri.id), "users" -> JsArray(users.map{_.id}.map{JsNumber(_)}) )
     })
     call(Shoebox.internal.suggestExperts(), payload).map{ r =>
-      log.info("\n\n experts received \n\n")
       r.json match {
-        case jso: JsValue => {
-          log.info("\n\n got JsValue \n")
-          val rv = jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
-          rv.foreach(println(_))
-          rv
-        }
+        case jso: JsValue => jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
         case _ => List.empty[Id[User]]
       }
     }
   }
+
+  def logEvent(userId: Id[User], event: JsObject) : Unit = {
+    implicit val userFormatter = Id.format[User]
+    val payload = Json.obj("userId" -> userId, "event" -> event)
+    call(Shoebox.internal.logEvent, payload)
+  }
+
+  def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {
+    implicit val userFormatter = Id.format[User]
+    implicit val uriFormatter = Id.format[NormalizedURI]
+    val payload = Json.obj(
+      "initiator" -> initiator,
+      "recipient" -> recipient,
+      "uriId" -> uriId,
+      "locator" -> locator.value
+    )
+    call(Shoebox.internal.createDeepLink, payload)
+  }
+
+  def sendPushNotification(user: Id[User], extId: String, unvisited: Int, msg: String) : Unit = {
+    val payload = Json.obj(
+      "userId" -> user.id,
+      "extId" -> extId,
+      "unvisited" -> unvisited,
+      "msg" -> msg
+    )
+    call(Shoebox.internal.sendPushNotification, payload)
+  }
+  
+  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = {
+    call(Shoebox.internal.getNormalizedUriUpdates(lowSeq, highSeq)).map{ r =>
+      var m = Vector.empty[(Id[NormalizedURI], NormalizedURI)]
+      r.json match {
+        case jso: JsValue => {
+          val rv = jso.as[JsArray].value.foreach{  js => 
+            val id = Id[NormalizedURI]((js \ "id").as[Long])
+            val uri = Json.fromJson[NormalizedURI](js \ "uri").get
+            m = m :+ (id, uri)
+          }
+          m
+        }
+        case _ =>  m
+      }
+    }
+  }
+
 
 }

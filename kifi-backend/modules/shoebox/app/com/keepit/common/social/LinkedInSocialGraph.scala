@@ -35,7 +35,7 @@ class LinkedInSocialGraph @Inject() (
     Some(SocialUserRawInfo(
       socialUserInfo.userId,
       socialUserInfo.id,
-      SocialId(credentials.id.id),
+      SocialId(credentials.identityId.userId),
       SocialNetworks.LINKEDIN,
       credentials.fullName,
       jsons))

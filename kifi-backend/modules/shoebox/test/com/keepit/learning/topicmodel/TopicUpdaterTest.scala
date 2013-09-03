@@ -16,7 +16,6 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.google.inject.Injector
 import com.keepit.common.zookeeper.CentralConfig
 
-
 class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
   val numTopics = TopicModelGlobalTest.numTopics
 
@@ -163,7 +162,7 @@ trait TopicUpdaterTestHelper extends ShoeboxApplicationInjector {
     db.readWrite { implicit s =>
       val users = (0 until numUser).map{ i => userRepo.save(User(firstName = "user%d".format(i), lastName = "" ))}
       val uris = (0 until numUri).map{i  =>
-        uriRepo.save(NormalizedURIFactory(title = "title%d".format(i), url = "http://www.keepit.com/article%d".format(i), state = SCRAPED))
+        uriRepo.save(normalizedURIFactory.apply(title = "title%d".format(i), url = "http://www.keepit.com/article%d".format(i), state = SCRAPED))
       }
       (users, uris)
     }

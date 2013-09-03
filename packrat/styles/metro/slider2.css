@@ -5,6 +5,7 @@
 .kifi-pane * {
   overflow: visible;
   float: none;
+  clear: none;
   width: auto;
   line-height: normal;
   letter-spacing: normal;
@@ -15,6 +16,8 @@
   font-weight: inherit;
   font-style: inherit;
   text-transform: none;
+  text-shadow: none;
+  text-indent: 0;
   background: transparent;
   color: inherit;
   border: none;
@@ -74,6 +77,16 @@
 .kifi-slider2 ::-webkit-input-placeholder,
 .kifi-pane ::-webkit-input-placeholder {
   font-style: inherit;
+}
+.kifi-slider2 ::selection,
+.kifi-pane ::selection {
+  background-color: initial;
+  color: initial;
+}
+.kifi-slider2 ::-moz-selection,
+.kifi-pane ::-moz-selection {
+  background-color: -moz-html-CellHighlight;
+  color: -moz-html-CellHighlightText;
 }
 
 .kifi-tile>.kifi-slider2-tip {
@@ -327,13 +340,13 @@
   background-color: #6e8aa6;
 }
 .kifi-private .kifi-slider2-kept-lock {
-  background-color: #00bb00;
+  background-color: #e78881;
 }
 .kifi-private .kifi-slider2-kept-lock:hover {
-  background-color: #00c800;
+  background-color: #e7958f;
 }
 .kifi-private .kifi-slider2-kept-lock:active {
-  background-color: #00b800;
+  background-color: #e77e76;
 }
 .kifi-slider2-keep-lock::before,
 .kifi-slider2-kept-lock::before {
