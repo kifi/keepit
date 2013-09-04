@@ -102,8 +102,10 @@ class NormalizationServiceImpl @Inject() (
 
   private case class FindStrongerCandidate(currentReference: NormalizedURI, priorKnowledge: PriorKnowledge) {
 
-    def apply(candidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] =
+    def apply(candidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] = {
+      log.info(s"NORMALIZATION: CHECKING CANDIDATES FOR url ${currentReference.url}:\n" + candidates.mkString("\n"))
       findCandidate(candidates.sortBy(_.normalization).reverse)
+    }
 
     def findCandidate(orderedCandidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] = {
       orderedCandidates match {
@@ -165,7 +167,7 @@ class NormalizationServiceImpl @Inject() (
     val latestCurrent = normalizedURIRepo.get(currentReference.id.get)
     if (latestCurrent.state != NormalizedURIStates.INACTIVE && latestCurrent.state != NormalizedURIStates.REDIRECTED && latestCurrent.normalization == currentReference.normalization) {
       val newReference = getNewReference(successfulCandidate)
-      val saved = normalizedURIRepo.save(newReference)
+/*      val saved = normalizedURIRepo.save(newReference)
 
       val (oldUriId, newUriId) = (currentReference.id.get, saved.id.get)
       if (oldUriId != newUriId) {
@@ -178,7 +180,15 @@ class NormalizationServiceImpl @Inject() (
         uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = oldUriId, newUri = newUriId))
       }
 
-      Some(saved)
+      Some(saved)*/
+
+      val toBeFurtherUpdated = getURIsToBeFurtherUpdated(currentReference, newReference).map(_.url)
+      log.info("NORMALIZATION EVENT: \n" +
+        s"${(latestCurrent.normalization, latestCurrent.url)} => ${(newReference.normalization, newReference.url)} \n" +
+        s"TO BE FURTHER UPDATED: ${toBeFurtherUpdated.size}} \n" + toBeFurtherUpdated.mkString("\n")
+      )
+
+      None
     }
     else None
   }
