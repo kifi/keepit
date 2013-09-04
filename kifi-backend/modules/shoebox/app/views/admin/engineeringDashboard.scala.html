@@ -88,7 +88,7 @@
 
   // Websocket Chart
 
-  var pingTarget = 'alias(summarize(stats.counters.eliza.websocket.handler.ping.count,"1min"),"Pings per Minute")'
+  var pingTarget = 'alias(summarize(stats.counters.eliza.websocket.handler.ping.count,"1min", "avg"),"Pings per Minute")'
   var connectedClientTarget = ['alias(secondYAxis(stats.gauges.eliza.websocket.channel.user.client),"Connected Clients")'];
   var websocketTargets = baseTargets.concat(pingTarget).concat(connectedClientTarget)
   options.target = websocketTargets;
