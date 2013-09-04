@@ -12,11 +12,18 @@ import play.api.libs.json._
 import play.api.libs.ws.WS
 import com.keepit.common.db.slick.Database
 
+object LinkedInSocialGraph {
+  val ProfileFields = Seq("id","firstName","lastName","pictureUrl","publicProfileUrl")
+  val ProfileFieldSelector = ProfileFields.mkString("(",",",")")
+}
+
 class LinkedInSocialGraph @Inject() (
     client: HttpClient,
     db: Database,
     socialRepo: SocialUserInfoRepo
   ) extends SocialGraph with Logging {
+
+  import LinkedInSocialGraph.ProfileFieldSelector
 
   val networkType = SocialNetworks.LINKEDIN
 
@@ -72,11 +79,22 @@ class LinkedInSocialGraph @Inject() (
   )
 
   private def connectionsUrl(id: SocialId, accessToken: String): String = {
-    s"https://api.linkedin.com/v1/people/$id/connections:(id,firstName,lastName,pictureUrl,publicProfileUrl)?format=json&oauth2_access_token=$accessToken"
+    s"https://api.linkedin.com/v1/people/$id/connections:$ProfileFieldSelector?format=json&oauth2_access_token=$accessToken"
   }
 
   private def profileUrl(id: SocialId, accessToken: String): String = {
-    s"https://api.linkedin.com/v1/people/$id:(id,firstName,lastName,emailAddress,pictureUrl)?format=json&oauth2_access_token=$accessToken"
+    s"https://api.linkedin.com/v1/people/$id:$ProfileFieldSelector?format=json&oauth2_access_token=$accessToken"
+  }
+
+  def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue): SocialUserInfo = {
+    (json \ "id").asOpt[String] map { id =>
+      assert(sui.socialId.id == id, s"Social id in profile $id should be equal to the existing id ${sui.socialId}")
+      sui.copy(
+        fullName = ((json \ "firstName").asOpt[String] ++ (json \ "lastName").asOpt[String]).mkString(" "),
+        pictureUrl = (json \ "pictureUrl").asOpt[String] orElse sui.pictureUrl,
+        profileUrl = (json \ "publicProfileUrl").asOpt[String] orElse sui.profileUrl
+      )
+    } getOrElse sui
   }
 
   private def getJson(socialUserInfo: SocialUserInfo): Seq[JsValue] = {
