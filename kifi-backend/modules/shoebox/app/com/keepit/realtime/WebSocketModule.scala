@@ -12,7 +12,7 @@ case class ShoeboxWebSocketModule() extends WebSocketModule {
   def configure() {
     bind[UserEmailNotifierPlugin].to[UserEmailNotifierPluginImpl].in[AppScoped]
     bind[NotificationConsistencyChecker].to[NotificationConsistencyCheckerImpl].in[AppScoped]
-    bind[ChannelPlugin].to[ChannelPluginImpl].in[AppScoped]
+    // bind[ChannelPlugin].to[ChannelPluginImpl].in[AppScoped]
   }
 
   @Provides @Singleton def urbanAirshipConfig(app: play.api.Application): UrbanAirshipConfig = {
