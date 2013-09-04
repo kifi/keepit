@@ -20,6 +20,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI]
+  def invalidateRedirectedURIs(readOnly: Boolean = true)(implicit session: RWSession): Seq[NormalizedURI]
 }
 
 @Singleton
@@ -144,5 +145,11 @@ class NormalizedURIRepoImpl @Inject() (
   
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI] = {
     (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
+  }
+
+  def invalidateRedirectedURIs(readOnly: Boolean = true)(implicit session: RWSession): Seq[NormalizedURI] = {
+    val uris = (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.normalization.isNull) yield t).list
+    if (!readOnly) uris.map { uri => save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))}
+    else uris
   }
 }
