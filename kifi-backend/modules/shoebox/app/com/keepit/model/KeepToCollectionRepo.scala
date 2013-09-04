@@ -85,7 +85,9 @@ class KeepToCollectionRepoImpl @Inject() (
   }
   
   def delete(id: Id[KeepToCollection])(implicit session: RWSession): Unit = {
-    (for(r <- table if r.id === id) yield r).delete
+    val q = (for(r <- table if r.id === id) yield r)
+    q.firstOption.map{ ktc => collectionRepo.collectionChanged(ktc.collectionId, false) }
+    q.delete
   }
 
 }

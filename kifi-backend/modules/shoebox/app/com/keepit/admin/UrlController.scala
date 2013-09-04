@@ -261,10 +261,8 @@ class UrlController @Inject() (
                   ktcs.map { ktc =>
                     if (!ktcRepo.getBookmarksInCollection(ktc.collectionId).contains(bm2.id.get)) {
                       ktcRepo.save(ktc.copy(bookmarkId = bm2.id.get))
-                      collectionRepo.collectionChanged(ktc.collectionId, false)
                     } else {
                       ktcRepo.delete(ktc.id.get)   // if same collection has a dup bookmark, remove this ktc.
-                      collectionRepo.collectionChanged(ktc.collectionId, false)
                     }
                   }
                   bookmarkRepo.delete(bm.id.get)   // it's now not referenced by any ktc. can be deleted.
