@@ -15,6 +15,7 @@ trait ChangedURIRepo extends Repo[ChangedURI] {
   def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber]
   def page(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[ChangedURI]
   def allAppliedCount()(implicit session: RSession): Int
+  def saveWithoutIncreSeqnum(model: ChangedURI)(implicit session: RWSession): ChangedURI     // useful when we track processed merge requests
 }
 
 @Singleton
@@ -60,6 +61,10 @@ class ChangedURIRepoImpl @Inject() (
   
   def allAppliedCount()(implicit session: RSession): Int = {
     (for( r <- table if r.state === ChangedURIStates.APPLIED) yield r).list.size
+  }
+  
+  def saveWithoutIncreSeqnum(model: ChangedURI)(implicit session: RWSession): ChangedURI = {
+    super.save(model)
   }
 
 }
