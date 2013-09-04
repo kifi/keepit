@@ -203,7 +203,7 @@ class UriIntegrityPluginImpl @Inject() (
   override def enabled = true
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
-     scheduleTask(actor.system, 1 minutes, 600 seconds, actor.ref, BatchUpdateMerge)
+     scheduleTask(actor.system, 1 minutes, 45 seconds, actor.ref, BatchUpdateMerge)
   }
   override def onStop() {
      log.info("stopping UriIntegrityPluginImpl")
