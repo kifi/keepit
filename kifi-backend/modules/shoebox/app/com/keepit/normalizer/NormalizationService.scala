@@ -51,7 +51,7 @@ class NormalizationServiceImpl @Inject() (
 
         val newReferenceWithRecursiveUpdatesOption = for {
           successfulCandidate <- successfulCandidateOption
-          newReference <- migrate(current, successfulCandidate)
+          newReference <- migrate(current, successfulCandidate, weakerCandidates)
         } yield (newReference, getURIsToBeFurtherUpdated(current, newReference).map { uri =>
             update(uri, TrustedCandidate(newReference.url, newReference.normalization.get))
           })
@@ -161,14 +161,22 @@ class NormalizationServiceImpl @Inject() (
     toBeUpdated.filter(uri => !toBeExcluded.contains(uri.url))
   }
 
-  private def migrate(currentReference: NormalizedURI, successfulCandidate: NormalizationCandidate): Option[NormalizedURI] = db.readWrite { implicit session =>
+  private def migrate(currentReference: NormalizedURI, successfulCandidate: NormalizationCandidate, weakerCandidates: Seq[NormalizationCandidate]): Option[NormalizedURI] = db.readWrite { implicit session =>
     val latestCurrent = normalizedURIRepo.get(currentReference.id.get)
     if (latestCurrent.state != NormalizedURIStates.INACTIVE && latestCurrent.state != NormalizedURIStates.REDIRECTED && latestCurrent.normalization == currentReference.normalization) {
       val newReference = getNewReference(successfulCandidate)
       val saved = normalizedURIRepo.save(newReference)
 
       val (oldUriId, newUriId) = (currentReference.id.get, saved.id.get)
-      if (oldUriId != newUriId) uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = oldUriId, newUri = newUriId))
+      if (oldUriId != newUriId) {
+
+        if (currentReference.normalization.isEmpty) {
+          for (weakerVariationCandidate <- weakerCandidates.find { candidate => candidate.isTrusted && candidate.url == currentReference.url }) yield
+            normalizedURIRepo.save(latestCurrent.withNormalization(weakerVariationCandidate.normalization))
+        }
+
+        uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = oldUriId, newUri = newUriId))
+      }
 
       Some(saved)
     }
