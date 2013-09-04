@@ -8,7 +8,7 @@ import com.keepit.scraper.ScraperPlugin
 case class PriorKnowledge(currentReference: NormalizedURI)(implicit normalizedURIRepo: NormalizedURIRepo, scraperPlugin: ScraperPlugin) {
   lazy val contentChecks = PriorKnowledge.getContentChecks(currentReference.url)
 
-  def apply(candidate: NormalizationCandidate)(implicit session: RSession): PriorKnowledge.Action = candidate match {
+  def apply(candidate: NormalizationCandidate): PriorKnowledge.Action = candidate match {
     case _ => PriorKnowledge.REJECT
     case _: TrustedCandidate => PriorKnowledge.ACCEPT
     case _: UntrustedCandidate => contentChecks.find(_.isDefinedAt(candidate)).map(PriorKnowledge.Check).getOrElse(PriorKnowledge.REJECT)
