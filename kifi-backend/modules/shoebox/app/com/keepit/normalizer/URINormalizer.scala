@@ -9,13 +9,10 @@ object Prenormalizer extends StaticNormalizer {
   val normalizers: Seq[StaticNormalizer] =
     Seq(AmazonNormalizer, GoogleNormalizer, YoutubeNormalizer, RemoveWWWNormalizer, LinkedInNormalizer, DefaultNormalizer)
 
-  def isDefinedAt(uri: URI) = normalizers.exists(_.isDefinedAt(uri))
+  def isDefinedAt(uri: URI) = DefaultPageNormalizer.isDefinedAt(uri) || normalizers.exists(_.isDefinedAt(uri))
   def apply(uri: URI) = {
     // do default page normalization before calling normalizers
-    val uri2 = uri match {
-      case URI(scheme, userInfo, host, port, path, query, fragment) =>
-        URI(uri.raw, scheme, userInfo, host, port, normalizePath(path), query, fragment)
-    }
+    val uri2 = DefaultPageNormalizer.applyOrElse(uri, {u: URI =>u})
 
     normalizers.find(_.isDefinedAt(uri2)).map(_.apply(uri2)).get
   }
