@@ -95,6 +95,13 @@ class FacebookSocialGraph @Inject() (
     httpClient.deleteFuture(url).map(_ => ())
   }
 
+  def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue) = {
+    (json \ "id").asOpt[String] map { id =>
+      assert(sui.socialId.id == id, s"Social id in profile $id should be equal to the existing id ${sui.socialId}")
+      sui.copy(fullName = (json \ "name").as[String])
+    } getOrElse sui
+  }
+
   protected def getAccessToken(socialUserInfo: SocialUserInfo): String = {
     val credentials = socialUserInfo.credentials.getOrElse(throw new Exception("Can't find credentials for %s".format(socialUserInfo)))
     val oAuth2Info = credentials.oAuth2Info.getOrElse(throw new Exception("Can't find oAuth2Info for %s".format(socialUserInfo)))
