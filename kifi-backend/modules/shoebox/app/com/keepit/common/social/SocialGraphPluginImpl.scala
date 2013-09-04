@@ -66,8 +66,9 @@ private[social] class SocialGraphActor @Inject() (
         val connections = socialUserCreateConnections.createConnections(
           socialUserInfo, friends.map(_._1.socialId), graph.networkType)
 
+        val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
         db.readWrite { implicit c =>
-          socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
+          socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
         connections
       }

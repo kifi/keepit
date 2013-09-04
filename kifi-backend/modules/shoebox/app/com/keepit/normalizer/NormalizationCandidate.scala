@@ -6,10 +6,16 @@ import play.api.libs.json.JsObject
 sealed trait NormalizationCandidate {
   val url: String
   val normalization: Normalization
+  def isTrusted: Boolean
 }
 
-case class TrustedCandidate(url: String, normalization: Normalization) extends NormalizationCandidate
-case class UntrustedCandidate(url: String, normalization: Normalization) extends NormalizationCandidate
+case class TrustedCandidate(url: String, normalization: Normalization) extends NormalizationCandidate {
+  def isTrusted = true
+}
+
+case class UntrustedCandidate(url: String, normalization: Normalization) extends NormalizationCandidate {
+  def isTrusted = false
+}
 
 object NormalizationCandidate {
 

@@ -592,7 +592,7 @@ class MessagingController @Inject() (
     }.map { res =>
       val urlMsgCount = db.readOnly { implicit session =>
         res.filter(_._2.isDefined).map { case (url, nuri) =>
-          url -> userThreadRepo.getThreads(userId, Some(nuri.get.id.get)).size
+          url -> userThreadRepo.getThreads(userId, Some(nuri.get.id.get))
         }
       }
       Map(urlMsgCount: _*)

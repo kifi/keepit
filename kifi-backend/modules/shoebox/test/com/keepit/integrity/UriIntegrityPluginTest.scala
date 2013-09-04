@@ -26,28 +26,28 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeInfoRepo = inject[ScrapeInfoRepo]
-        val ruleRepo = inject[UriNormalizationRuleRepo]
         val bmRepo = inject[BookmarkRepo]
         val plugin = inject[UriIntegrityPlugin]
         plugin.onStart()
 
         def setup() = {
           db.readWrite { implicit session =>
-            val nuri0 = uriRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/").withState(NormalizedURIStates.SCRAPED))
-            val nuri1 = uriRepo.save(normalizedURIFactory.apply("Google", "http://google.com/"))
-            val nuri2 = uriRepo.save(normalizedURIFactory.apply("Bing", "http://www.bing.com/").withState(NormalizedURIStates.SCRAPED))
-            val nuri3 = uriRepo.save(normalizedURIFactory.apply("Bing", "http://www.fakebing.com/"))
+            val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withState(NormalizedURIStates.SCRAPED))
+            val nuri1 = uriRepo.save(NormalizedURI.withHash("http://google.com/", Some("Google")))
+            val nuri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com/", Some("Bing")).withState(NormalizedURIStates.SCRAPED))
+            val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.fakebing.com/", Some("Bing")))
             
             val url0 = urlRepo.save(URLFactory("http://www.google.com/#1", nuri0.id.get))             // to be redirected to nuri1
             val url1 = urlRepo.save(URLFactory("http://www.bing.com/index", nuri2.id.get))
             val url2 = urlRepo.save(URLFactory("http://www.fakebing.com/index", nuri2.id.get))        // to be splitted, to be pointing to
             
             val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
+            val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz"))
             
             val hover = BookmarkSource("HOVER_KEEP")
             val bm1 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id,  uriId = nuri0.id.get, source = hover))
             val bm2 = bmRepo.save(Bookmark(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id, uriId = nuri2.id.get, source = hover))
-            val bm3 = bmRepo.save(Bookmark(title = Some("bing"), userId = user.id.get, url = url2.url, urlId = url2.id, uriId = nuri2.id.get, source = hover))
+            val bm3 = bmRepo.save(Bookmark(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id, uriId = nuri2.id.get, source = hover))
 
             (Array(nuri0, nuri1, nuri2, nuri3), Array(url0, url1, url2), Array(bm1, bm2, bm3))
           }
@@ -79,7 +79,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         
         // check redirection
         db.readOnly{ implicit s =>
-          uriRepo.getByState(NormalizedURIStates.INACTIVE, -1).size === 1
+          uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
           uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).size === 1      
           uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).head.id === uris(1).id
           urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
@@ -93,13 +93,13 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         }
         
         val centralConfig = inject[CentralConfig]
-        centralConfig(new ChangedUriSeqNumKey()) === Some(2)
+        centralConfig(new ChangedUriSeqNumKey()) === Some(1)
         
         // split
         plugin.handleChangedUri(SplittedUri(urls(2), uris(3).id.get))
         
         db.readOnly{ implicit s =>
-          uriRepo.getByState(NormalizedURIStates.INACTIVE, -1).size === 1
+          uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
           uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).size === 2
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url

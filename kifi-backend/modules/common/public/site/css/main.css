@@ -23,10 +23,10 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .page-col-inner {position: relative; height: 100%; width: 100%} /* bugzil.la/35168 */
 
 /* left col */
-.header-left {height: 70px; background-color: #67829c; text-align: center; padding-top: 18px; -moz-box-sizing: border-box; box-sizing: border-box}
+.header-left {height: 70px; background-color: #67829c; text-align: center; padding-top: 18px; -moz-box-sizing: border-box; box-sizing: border-box; position: relative; z-index: 2}
 .header-logo {display: inline-block; width: 51px; height: 29px; background: url(../img/kifi-logo.png) 0/100%}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
-.my-pic {display: block; width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
+.my-pic {display: block; width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 2}
 .my-pic::before { display: block; border: 34px solid transparent; background: #abb8c8 url(../img/pencil.png) center center no-repeat padding-box; transition: border-width .15s ease-in-out, border-color .15s ease-in-out; box-sizing: border-box; -moz-box-sizing: border-box; width: 66px; height: 66px; border-radius: 50%; content: " "; background-size: 14px; }
 .my-pic:hover::before, body[data-view=profile] .my-pic::before { border-width: 8px; border-color: rgba(103, 130, 156, .6); }
 body[data-view=profile] .my-pic::before { transition: none; animation-name: edit-profile; -webkit-animation-name: edit-profile; animation-duration: 0.2s; -webkit-animation-duration: 0.2s; }
@@ -71,9 +71,10 @@ a.collection-create:active {background-color: #8699ab}
 .collection-new.submitted {background-color: rgba(255,255,255,0)}
 #collections input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
 #collections-list {overflow: hidden}
-#collections-list.positioned {position: absolute; bottom: 0; left: 0; right: 0}
+#collections-list.positioned {position: absolute; bottom: 0; left: 0; right: -1px}
 #collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; position: relative}
 #collections-list>.antiscroll-inner>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
+#collections-list>.antiscroll-scrollbar {z-index: 2}
 h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.renaming {background-color: #fff}
 .collection.renaming>a {cursor: text}
@@ -82,15 +83,16 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.drop-hover {background-color: #6fa6ef}
 .collection.drop-hover .view-name {color: #fff}
 .collection.drop-hover .nav-count {background-color: #fff; border-color: #fff; color: #628196}
-.collection .nav-count {margin-top: 9px}
+.collection .nav-count {margin-top: 9px; position: relative; left: -1px}
+.collection:hover .nav-count,
 .collection.renaming .nav-count {display: none}
-.coll-tri {position: absolute; top: 0; bottom: 0; left: -33px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; -webkit-transition: left .16s; transition: left .16s}
+.coll-tri {position: absolute; top: 0; bottom: 0; right: 0; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer}
 .active>.coll-tri {background-color: #b8c5d2}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
 .active>.coll-tri::before {border-top-color: #fff}
-.collection:not(.renaming):hover>.coll-tri,
-.collection.with-menu>.coll-tri {left: 0}
-#coll-menu {position: absolute; top: 100%; left: 0; z-index: 1; border: 1px solid #dbdee3; background: #fff; padding: 4px 0; border-radius: 4px; display: none; opacity: 0; -webkit-transform: scale(1,.6); transform: scale(1,.6); -webkit-transform-origin: top; transform-origin: top; -webkit-transition: opacity .12s linear, -webkit-transform .12s ease-in; transition: opacity .12s linear, transform .12s ease-in}
+.collection:not(.with-menu):not(:hover)>.coll-tri,
+.collection.renaming>.coll-tri {display: none}
+#coll-menu {position: absolute; top: 100%; right: 0; z-index: 1; border: 1px solid #dbdee3; background: #fff; padding: 4px 0; border-radius: 4px; display: none; opacity: 0; -webkit-transform: scale(1,.6); transform: scale(1,.6); -webkit-transform-origin: top; transform-origin: top; -webkit-transition: opacity .12s linear, -webkit-transform .12s ease-in; transition: opacity .12s linear, transform .12s ease-in}
 #coll-menu.page-bottom {top: auto; bottom: 100%; -webkit-transform-origin: bottom}
 #coll-menu.showing {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-timing-function: linear, ease-out; transition-timing-function: linear, ease-out}
 #coll-menu>li>a {display: block; padding: 0 32px 0 16px; font-size: 13px; line-height: 30px; white-space: nowrap; color: #556179}
@@ -99,7 +101,7 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 
 /* center col */
 .main>.page-col-inner::before {content: " "; position: absolute; top: 70px; bottom: 0; border-left: 1px solid #dbdee3}
-.query-wrap {background-color: #67829c; padding: 10px 120px 12px 0; transition: padding-right .3s; -webkit-transition: padding-right .3s; white-space: nowrap}
+.query-wrap {background-color: #67829c; padding: 10px 120px 12px 0; transition: padding-right .3s; -webkit-transition: padding-right .3s; white-space: nowrap; position: relative; z-index: 1}
 .query-wrap.focus,
 .query-wrap:not(.empty) {padding-right: 0}
 input.query {border: none; padding: 9px 48px 9px 20px; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 48px; -moz-box-sizing: border-box; box-sizing: border-box; -webkit-font-smoothing: antialiased}
@@ -120,7 +122,7 @@ input.query::-ms-clear {display: none}
 .empty>*>.query-x,
 :not(.empty)>*>.query-mag {left: 100%; -webkit-transition-delay: 0; transition-delay: 0}
 .main-head,
-.main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
+.main-keeps {box-shadow: inset -1px 0 #dbdee3}
 .main-head {padding: 13px 20px 0; height: 73px; box-sizing: border-box; -moz-box-sizing: border-box; position: relative}
 .main-keeps::before {content: " "; position: absolute; z-index: 1; top: 0; left: 18px; right: 18px; border-top: 1px none #f9f9f9}
 .main-keeps.grouped::before {height: 16px; z-index: 2; background: -ms-linear-gradient(#fff 25%,rgba(255,255,255,0)); background: linear-gradient(#fff 25%,rgba(255,255,255,0)); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff',endColorstr='#00ffffff',GradientType=0)}
@@ -192,7 +194,7 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 
 iframe.blog {height:100%; width:100%; border:0;}
 
-.friends {padding: 13px 20px 0}
+.friends {position: absolute; top: 70px; bottom: 0; left: 0; right: 0; padding: 13px 20px 0; border-right: 1px solid #dbdee3}
 .friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee; white-space: nowrap}
 .friends-tabs>a {display: inline-block; border: solid transparent; border-radius: 6px 6px 0 0; border-width: 2px 2px 0; padding: 0 25px; font-size: 18px; font-weight: 300; vertical-align: top; position: relative; bottom: -2px; -webkit-font-smoothing: antialiased}
 .friends-tabs>a:not([href]) {border-color: #e3e6ee; background-color: #fff; color: #34495e}
@@ -204,9 +206,10 @@ iframe.blog {height:100%; width:100%; border:0;}
 .above-friends-list {padding-bottom: 20px; border-bottom: 1px solid #e3e6ee; position: relative; z-index: 1; -webkit-transition: border-bottom-color .3s ease-out; transition: border-bottom-color .3s ease-out}
 .above-friends-list.scrolled {border-bottom-color: #dbdee3; -webkit-transition-timing-function: ease-in; transition-timing-function: ease-in}
 input.friends-filter,
-input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; max-width: 45%; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
-#friends-list {position: absolute; top: 260px; left: 20px; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden}
-#friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
+input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 1px solid #e3e6ee; height: 36px; width: 48%; width: -webkit-calc(50% - 6px); width: calc(50% - 6px); min-width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
+#friends-list {position: absolute; top: 190px; left: 20px; right: -1px; bottom: 0; overflow-y: auto; overflow-x: hidden}
+#friends-list>.antiscroll-inner,
+.invite-friends>.antiscroll-inner {position: absolute; left: 0; right: 1px; top: 0; bottom: 0; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
 .friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
 .friend.no-match {display: none}
 .friend:last-child {border-bottom: 1px solid #e3e6ee}
@@ -244,16 +247,18 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; max-
 .invite-filters>a[data-nw=linkedin] {background-color: #4f83c3; background-position: -36px top;}
 .invite-filters[data-nw-selected=facebook] {border-color: #637ab8;}
 .invite-filters[data-nw-selected=linkedin] {border-color: #4f83c3;}
-
+.invite-filters[data-nw-selected]>:not([data-nw]):hover,
+.invite-filters:not([data-nw-selected=facebook])>[data-nw=facebook]:hover,
+.invite-filters:not([data-nw-selected=linkedin])>[data-nw=linkedin]:hover {height: 40px}
 .invite-filters:not([data-nw-selected])>:not([data-nw]),
 .invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
-.invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px;}
+.invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px}
 
 .invite-num-results { float: right; color: #556179; font-size: 14px; margin: 10px 4px; max-width: 45%; }
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
-.invite-friends { position: absolute; top: 310px; bottom: 0; right: 0; left: 20px; overflow: hidden}
-.invite-friends .antiscroll-inner { max-height: 100%; width: 100%; overflow-x: hidden}
-.invite-friend {margin-top: 12px; display: inline-block; vertical-align: top; margin-right: 2%; width: 48%; min-width: 300px; background-color: #eff2f7; padding: 10px 16px 10px 10px; position: relative; -moz-box-sizing: border-box; box-sizing: border-box;}
+.invite-friends { position: absolute; top: 248px; bottom: 0; right: -1px; left: 20px; overflow: hidden}
+.invite-friend {display: block; background-color: #eff2f7; padding: 10px; margin-bottom: 12px; -moz-box-sizing: border-box; box-sizing: border-box; position: relative}
+.invite-friend::after {content: " "; display: block; clear: both}
 .invite-friend[data-status=invited] { background: #629eed; }
 .invite-friend[data-status=joined] { background: #27ae60; }
 .invite-friend[data-status]:not([data-status=""]) div { color: white; }
@@ -263,15 +268,20 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; max-
 .invite-friend[data-status=joined]::before { border-color: #27ae60; }
 .invite-friend[data-value^=facebook]::before { background-color: #637ab8; background-position: 0 top;  }
 .invite-friend[data-value^=linkedin]::before { background-color: #4f83c3; background-position: -20px top; }
-.invite-status {font-size: 13px; font-weight: 300; color: #67829c; letter-spacing: 1px; }
-.invite-button {position: absolute; top: 25px; right: 20px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
+.invite-status {font-size: 13px; font-weight: 300; color: #67829c; letter-spacing: 1px; margin-right: 42px}
+.invite-button {position: absolute; top: 30px; right: 24px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
 .invite-button::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background: url(../img/friend-actions.png) -70px; background-size: auto 16px; width: 20px; position: relative; left: 1px}
 .invite-friends-loading {margin: 12px 0;}
+@media screen and (min-width: 1140px) {
+  .invite-friend {display: inline-block; vertical-align: top; width: 48%; width: -webkit-calc(50% - 6px); width: calc(50% - 6px)}
+  .invite-friend:nth-child(even) {margin-left: 12px}
+  .invite-button {right: 16px}
+}
 
 .invite-message-dialog { z-index: -1; opacity: 0; position: fixed; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0, 0, 0, 0.2); transition: all 0.2s ease-in-out; }
-.invite-friend .invite-message-dialog { z-index: 100; opacity: 1; }
-.invite-message-dialog .dialog-content { background: #fafafa; border: 1px solid #aab8c8; border-radius: 5px; font-size: 14px; position: fixed; left: 50%; top: 50%; height: 280px; margin-top: -140px; width: 440px; margin-left: -220px; box-shadow: 8px 10px 2px rgba(0, 0, 0, 0.3); }
-.invite-message-dialog p { margin: 12px 15px; }
+form>.invite-message-dialog { z-index: 100; opacity: 1; }
+.invite-message-dialog>.dialog-content { background: #fafafa; border: 1px solid #aab8c8; border-radius: 5px; font-size: 14px; position: fixed; left: 50%; top: 50%; height: 280px; margin-top: -140px; width: 440px; margin-left: -220px; box-shadow: 8px 10px 2px rgba(0, 0, 0, 0.3); }
+.invite-message-dialog>.dialog-content>p { margin: 12px 15px; }
 .invite-message-header { font-size: 16px; padding: 14px 16px 10px; border-bottom: 1px solid #e7eced; color: #3a495b; }
 a.invite-cancel { position: absolute; color: #b1b8c1; font-weight: bold; padding: 8px 12px; right: 0; top: 0; font-size: 20px; text-decoration: none; }
 input.invite-subject { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; }
@@ -301,7 +311,7 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .result-query::after {content: "\201d"}
 .main-keeps {position: absolute; top: 143px; bottom: 0; left: 0; right: 0; overflow: hidden}
 body[data-view=search] .main-keeps {top: 108px}
-.main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 0 18px; box-sizing: border-box; -moz-box-sizing: border-box}
+.main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 0 19px 0 18px; box-sizing: border-box; -moz-box-sizing: border-box}
 .main-keeps>.antiscroll-scrollbar {z-index: 1}
 
 .keep-group-title,
@@ -394,7 +404,7 @@ body[data-view=search] .main-keeps {top: 108px}
 .detail {position: absolute; top: 70px; left: 0; right: 0; bottom: 0}
 .right-col>*>*>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; right: 0; overflow-x: hidden; overflow-y: scroll}
 
-.splash {background-color: #fff; border-left: 1px solid #dbdee3}
+.splash {background-color: #fff}
 .splash>.antiscroll-inner {padding: 6px 0 0 36px; -moz-box-sizing: border-box; box-sizing: border-box}
 .splash h2 {margin: 30px 0 6px; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .splash ul {margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 46px; -webkit-font-smoothing: antialiased}
@@ -536,12 +546,12 @@ span.long-text, a.long-text {display: inline-block}
   position: absolute; z-index: 9; min-width: 300px; background-color: #fff; color: #faf9f9; box-shadow: 2px 5px 12px rgba(0,0,0,.3); border: 1px solid #929496;
   text-align: left; line-height: normal; cursor: default; opacity: 0;
   -webkit-transition: opacity linear, -webkit-transform ease-in-out;
-  transition: opacity linear, -webkit-transform ease-in-out, transform ease-in-out;
-  -webkit-transition-duration: 100ms; transition-duration: 100ms;
+  transition: opacity linear, transform ease-in-out;
+  -webkit-transition-duration: 200ms; transition-duration: 200ms;
 }
 .fr-card.bottom {-webkit-transform: translate(0,5px); transform: translate(0,5px)}
 .fr-card.top {-webkit-transform: translate(0,-5px); transform: translate(0,-5px)}
-.fr-card.showing {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-duration: 60ms; transition-duration: 60ms}
+.fr-card.showing {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-duration: 120ms; transition-duration: 120ms}
 .fr-card-tri {position: absolute; height: 0; width: 0}
 .bottom>.fr-card-tri {top: 100%; border-top-color: inherit}
 .top>.fr-card-tri {bottom: 100%; border-bottom-color: inherit}
@@ -591,7 +601,8 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
   .invite-filters>a[data-nw] {background-image: url(../img/networks.2x.png)}
   .profile-nw {background-image: url(../img/networks.2x.png)}
-  .friend-actions>*>a::before {background-image: url(../img/friend-actions.2x.png)}
+  .friend-actions>*>a::before,
+  .invite-button::before {background-image: url(../img/friend-actions.2x.png)}
   a.friend-nw {background-image: url(../img/networks-18.2x.png)}
   .my-pic::before {background-image: url(../img/pencil.2x.png)}
 }
@@ -600,24 +611,17 @@ a.friend-nw-google[href] {background-color: #e9644b}
 
 /* scrollbars */
 .antiscroll-scrollbar {
-  background: gray;
-  background: rgba(0,0,0,.5);
-  -webkit-border-radius: 7px;
-  -moz-border-radius: 7px;
-  border-radius: 7px;
-  -webkit-box-shadow: 0 0 1px #fff;
-  -moz-box-shadow: 0 0 1px #fff;
-  box-shadow: 0 0 1px #fff;
   position: absolute;
-  opacity: 0;
-  filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=0);
-  -webkit-transition: linear 300ms opacity;
-  -moz-transition: linear 300ms opacity;
-  -o-transition: linear 300ms opacity;
+  background: rgba(0,0,0,0) content-box;
 }
-.antiscroll-scrollbar-shown {opacity: 1; filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100)}
-.antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0}
-.antiscroll-scrollbar-vertical {width: 7px; margin-top: 2px; right: 2px; top: 0}
+.antiscroll-scrollbar-vertical {
+  top: 0; right: 0; width: 1px; border-radius: .5px;
+-webkit-transition: background-color .3s linear, width .12s ease-in-out .02s, border-radius .12s ease-in-out .02s;
+        transition: background-color .3s linear, width .12s ease-in-out .02s, border-radius .12s ease-in-out .02s}
+.antiscroll-scrollbar-vertical:hover,
+.antiscroll-scrollbar-vertical.antiscroll-dragging {width: 12px; border-radius: 6px; box-shadow: 0 0 1px #fff}
+.antiscroll-scrollbar-shown {background-color: rgba(0,0,0,.5)}
+.antiscroll-scrollbar::before {content: " "; position: absolute; top: 0; bottom: 0; left: -8px; width: 8px}
 .antiscroll-inner {overflow: scroll}
 .antiscroll-inner::-webkit-scrollbar {width: 0; height: 0}
 .antiscroll-inner::scrollbar {width: 0; height: 0}

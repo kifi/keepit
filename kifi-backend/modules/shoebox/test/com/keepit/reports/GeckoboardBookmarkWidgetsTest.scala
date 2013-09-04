@@ -23,7 +23,8 @@ import scala.concurrent.duration._
 import org.specs2.mutable._
 import play.api.libs.json._
 
-class GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicationInjector {
+class
+GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicationInjector {
 
   val hover = BookmarkSource("HOVER_KEEP")
   val initLoad = BookmarkSource("INIT_LOAD")
@@ -40,17 +41,17 @@ class GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicatio
       userExperimentRepo.count === 1
 
       uriRepo.count === 0
-      val uri1 = uriRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/"))
-      val uri2 = uriRepo.save(normalizedURIFactory.apply("Amazon", "http://www.amazon.com/"))
+      val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
+      val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
 
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
       bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
-      bookmarkRepo.save(Bookmark(title = Some("B1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
-        uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
-      bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+      bookmarkRepo.save(Bookmark(title = Some("B1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+        uriId = uri2.id.get, source = hover, createdAt = t1.plusMinutes(3)))
+      bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user2.id.get, url = url2.url, urlId = url2.id,
         uriId = uri2.id.get, source = initLoad, createdAt = t1.plusHours(50)))
       bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
         uriId = uri1.id.get, source = hover, createdAt = t2.plusDays(1)))
@@ -68,13 +69,13 @@ class GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicatio
         inject[KeepersPerWeek].data === NumberAndSecondaryStat(1, 0)
         inject[KeepersPerMonth].data === NumberAndSecondaryStat(1, 0)
 
-        inject[TotalKeepsPerHour].data === NumberAndSecondaryStat(3, 0)
+        inject[TotalKeepsPerHour].data === NumberAndSecondaryStat(2, 0)
         inject[UIKeepsPerHour].data === NumberAndSecondaryStat(2, 0)
-        inject[TotalKeepsPerDay].data === NumberAndSecondaryStat(3, 0)
+        inject[TotalKeepsPerDay].data === NumberAndSecondaryStat(2, 0)
         inject[UIKeepsPerDay].data === NumberAndSecondaryStat(2, 0)
-        inject[TotalKeepsPerWeek].data === NumberAndSecondaryStat(3, 0)
+        inject[TotalKeepsPerWeek].data === NumberAndSecondaryStat(2, 0)
         inject[UIKeepsPerWeek].data === NumberAndSecondaryStat(2, 0)
-        inject[TotalKeepsPerMonth].data === NumberAndSecondaryStat(3, 0)
+        inject[TotalKeepsPerMonth].data === NumberAndSecondaryStat(2, 0)
         inject[UIKeepsPerMonth].data === NumberAndSecondaryStat(2, 0)
       }
     }

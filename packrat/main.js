@@ -411,7 +411,7 @@ api.port.on({
   get_keeps: searchOnServer,
   get_chatter: function(urls, respond) {
     api.log("[get_chatter]");
-    ajax("POST", "/search/chatter", urls, respond);
+    ajax("eliza", "POST", "/eliza/ext/chatter", urls, respond);
   },
   get_keepers: function(_, respond, tab) {
     api.log("[get_keepers]", tab.id);

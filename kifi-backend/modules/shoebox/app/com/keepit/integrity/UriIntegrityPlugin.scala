@@ -41,7 +41,6 @@ class UriIntegrityActor @Inject()(
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
-  uriNormRuleRepo: UriNormalizationRuleRepo,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   centralConfig: CentralConfig,
@@ -49,21 +48,6 @@ class UriIntegrityActor @Inject()(
   scraper: ScraperPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
-  private def prenormalize(url: String): String = {
-    val prepUrlTry = for {
-      uri <- URI.parse(url)
-      prepUrl <- Try { Prenormalizer(uri).toString() }
-    } yield prepUrl
-
-    prepUrlTry match {
-      case Success(prepUrl) => prepUrl
-      case Failure(e) => {
-        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Static Normalization failed: ${e.getMessage}")))
-        url
-      }
-    }
-  }
-  
   private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
@@ -96,14 +80,16 @@ class UriIntegrityActor @Inject()(
   private def processMerge(change: ChangedURI)(implicit session: RWSession): (Option[NormalizedURI], Option[ChangedURI]) = {
     val (oldUriId, newUriId) = (change.oldUriId, change.newUriId)
     if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) { 
-      if (oldUriId == newUriId) changedUriRepo.save(change.withState(ChangedURIStates.INACTIVE))
+      if (oldUriId == newUriId) changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
       (None, None) 
     } else {
-      val (oldUri, newUri) = (uriRepo.get(oldUriId), uriRepo.get(newUriId))
+      val oldUri = uriRepo.get(oldUriId)
+      val newUri = uriRepo.get(newUriId) match {
+        case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED => uriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
+        case uri => uri
+      }
 
       urlRepo.getByNormUri(oldUriId).map{ url =>
-        val prepUrl = prenormalize(url.url)
-        uriNormRuleRepo.save( UriNormalizationRule(prepUrl = prepUrl, mappedUrl = newUri.url, prepUrlHash = NormalizedURI.hashUrl(prepUrl)))
         urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MERGE)))
       }
 
@@ -115,11 +101,7 @@ class UriIntegrityActor @Inject()(
         uriRepo.save(uri.withRedirect(newUriId, currentDateTime))
       }  
         
-      uriRepo.save(oldUri.withState(NormalizedURIStates.INACTIVE).withRedirect(newUriId, currentDateTime))
-
-      scrapeInfoRepo.getByUri(oldUriId).map{ info =>
-        scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
-      }
+      uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
 
       /**
        * ensure uniqueness of bookmarks during merge.
@@ -143,7 +125,7 @@ class UriIntegrityActor @Inject()(
         followRepo.save(follow.withNormUriId(newUriId))
       }
       
-      val saved = changedUriRepo.save(change.withState(ChangedURIStates.APPLIED))
+      val saved = changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
       
       (toBeScraped, Some(saved))
     }
@@ -188,7 +170,7 @@ class UriIntegrityActor @Inject()(
     }
     toScrapeAndSavedChange.map(_._2).filter(_.isDefined).sortBy(_.get.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.get.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pair of uris merged. zookeeper seqNum updated. start scraping ${toScrapeAndSavedChange.size} pages")
-    toScrapeAndSavedChange.map(_._1).filter(_.isDefined).map{ x => scraper.asyncScrape(x.get)}
+    toScrapeAndSavedChange.map(_._1).filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values.map{ x => scraper.asyncScrape(x.get)}
   }
   
   private def getOverDueList(fetchSize: Int = -1) = {
@@ -221,7 +203,7 @@ class UriIntegrityPluginImpl @Inject() (
   override def enabled = true
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
-     scheduleTask(actor.system, 1 minutes, 15 seconds, actor.ref, BatchUpdateMerge)
+     scheduleTask(actor.system, 1 minutes, 45 seconds, actor.ref, BatchUpdateMerge)
   }
   override def onStop() {
      log.info("stopping UriIntegrityPluginImpl")
