@@ -14,6 +14,7 @@ trait ChangedURIRepo extends Repo[ChangedURI] {
   def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI]   // (low, high]
   def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber]
   def page(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[ChangedURI]
+  def allAppliedCount()(implicit session: RSession): Int
 }
 
 @Singleton
@@ -32,12 +33,12 @@ class ChangedURIRepoImpl @Inject() (
     def seq = column[SequenceNumber]("seq", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ oldUriId ~ newUriId ~ state ~ seq <> (ChangedURI.apply _, ChangedURI.unapply _)
   }
-
+    
   override def save(model: ChangedURI)(implicit session: RWSession) = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
     super.save(newModel)
   }
-
+  
   def getChangesSince(num: SequenceNumber, limit: Int = -1, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI] = {
     val q = (for (r <- table if r.seq > num && r.state === state) yield r).sortBy(_.seq).list
     if (limit == -1) q else q.take(limit)
@@ -56,4 +57,9 @@ class ChangedURIRepoImpl @Inject() (
     val q = for( r <- table if r.state === ChangedURIStates.APPLIED) yield r
     q.sortBy(_.updatedAt desc).drop(pageSize * pageNum).take(pageSize).list
   }
+  
+  def allAppliedCount()(implicit session: RSession): Int = {
+    (for( r <- table if r.state === ChangedURIStates.APPLIED) yield r).list.size
+  }
+
 }
