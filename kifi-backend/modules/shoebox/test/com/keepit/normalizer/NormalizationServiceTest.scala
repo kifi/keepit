@@ -55,7 +55,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
       "does not normalize an http:// url to HTTP twice" in new TestKitScope() {
         val httpUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://vimeo.com/48578814") }.get
         httpUri.normalization === Some(Normalization.HTTP)
-        updateNormalizationNow(httpUri, TrustedCandidate("http://vimeo.com/48578814", Normalization.HTTP)) == None
+        updateNormalizationNow(httpUri, TrustedCandidate("http://vimeo.com/48578814", Normalization.HTTP)) === None
       }
 
       "redirect an existing http url to a new https:// url" in new TestKitScope() {
@@ -69,7 +69,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         val latestHttpUri = db.readOnly { implicit session => uriRepo.get(httpUri.id.get) }
         latestHttpUri.redirect === Some(latestHttpsUri.id.get)
         latestHttpUri.state === NormalizedURIStates.REDIRECTED
-        db.readOnly { implicit session => uriRepo.getByUri("http://vimeo.com/48578814") } == Some(latestHttpsUri)
+        db.readOnly { implicit session => uriRepo.getByUri("http://vimeo.com/48578814") } === Some(latestHttpsUri)
       }
 
       "redirect a new http://www url to an existing https:// url" in new TestKitScope() {
@@ -78,9 +78,10 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         val httpWWWUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("http://www.vimeo.com/48578814")) }
         updateNormalizationNow(httpWWWUri)
         val latestHttpWWWUri = db.readOnly { implicit session => uriRepo.get(httpWWWUri.id.get) }
+        latestHttpWWWUri.normalization === Some(Normalization.HTTPWWW)
         latestHttpWWWUri.redirect === Some(httpsUri.id.get)
         latestHttpWWWUri.state === NormalizedURIStates.REDIRECTED
-        db.readOnly { implicit session => uriRepo.getByUri("http://www.vimeo.com/48578814") } == Some(httpsUri)
+        db.readOnly { implicit session => uriRepo.getByUri("http://www.vimeo.com/48578814") }.map(_.id) === Some(httpsUri.id)
       }
 
       "upgrade an existing https:// url to a better normalization" in new TestKitScope() {
@@ -156,7 +157,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
       "find a variation with an upgraded normalization" in new TestKitScope() {
         val canonicalVariation = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/in/viviensaulue").get }
         val httpsUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/in/viviensaulue")) }
-        updateNormalizationNow(httpsUri, UntrustedCandidate("http://fr.linkedin.com/in/viviensaulue", Normalization.CANONICAL)) == Some(canonicalVariation)
+        updateNormalizationNow(httpsUri, UntrustedCandidate("http://fr.linkedin.com/in/viviensaulue", Normalization.CANONICAL)).map(_.id) === Some(canonicalVariation.id)
         val latestHttpsUri = db.readOnly { implicit session => uriRepo.get(httpsUri.id.get) }
         latestHttpsUri.redirect === Some(canonicalVariation.id.get)
         latestHttpsUri.state === NormalizedURIStates.REDIRECTED
@@ -168,4 +169,5 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
     }
   }
 }
+
 */
