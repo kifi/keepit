@@ -9,6 +9,7 @@ import com.keepit.common.routes._
 import com.keepit.common.zookeeper.ServiceCluster
 
 import play.api.libs.json.{JsNull, JsValue}
+import play.api.libs.concurrent.Execution.Implicits._
 
 class ServiceNotAvailableException(serviceType: ServiceType)
   extends Exception(s"Service of type ${serviceType.name} is not available")
@@ -43,7 +44,15 @@ trait ServiceClient extends Logging {
     fullUrls
   }
 
-  protected def call(call: ServiceRoute, body: JsValue = JsNull): Future[ClientResponse] = callUrl(call, url(call.url), body)
+  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2): Future[ClientResponse] = {
+    var respFuture = callUrl(call, url(call.url), body)
+    (1 until attempts).foreach { _ =>
+        respFuture = respFuture.recoverWith {
+          case _:Throwable => callUrl(call, url(call.url), body)
+        }
+    }
+    respFuture
+  }
 
   protected def callUrl(call: ServiceRoute, url: String, body: JsValue): Future[ClientResponse] = {
     if (url.length > ServiceClient.MaxUrlLength) {
