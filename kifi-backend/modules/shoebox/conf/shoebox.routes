@@ -328,7 +328,6 @@ GET     /internal/version                             @com.keepit.controllers.we
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
 POST    /internal/shoebox/database/getNormalizedURIByURL       @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIByURL()
-POST    /internal/shoebox/database/normalizeURL       @com.keepit.controllers.shoebox.ShoeboxController.internNormalizedURI()
 POST    /internal/shoebox/database/internNormalizedURI       @com.keepit.controllers.shoebox.ShoeboxController.internNormalizedURI()
 GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
