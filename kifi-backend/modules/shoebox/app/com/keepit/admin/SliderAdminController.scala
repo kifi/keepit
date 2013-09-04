@@ -15,7 +15,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.model.{SliderRuleRepo, SliderRuleStates}
 import com.keepit.model.{URLPattern, URLPatternRepo, URLPatternStates}
-import com.keepit.realtime.UserChannel
 import com.mongodb.casbah.Imports._
 import com.keepit.eliza.ElizaServiceClient
 
@@ -35,7 +34,6 @@ class SliderAdminController @Inject() (
   domainRepo: DomainRepo,
   domainTagImporter: DomainTagImporter,
   mongoEventStore: MongoEventStore,
-  userChannel: UserChannel,
   eliza: ElizaServiceClient)
     extends AdminController(actionAuthenticator) {
 
@@ -61,7 +59,6 @@ class SliderAdminController @Inject() (
       }
       sliderRuleRepo.getGroup(groupName)
     }
-    userChannel.broadcast(Json.arr("slider_rules", ruleGroup.compactJson))
     eliza.sendToAllUsers(Json.arr("slider_rules", ruleGroup.compactJson))
     Redirect(routes.SliderAdminController.getRules)
   }
@@ -95,7 +92,6 @@ class SliderAdminController @Inject() (
       }
       urlPatternRepo.getActivePatterns()
     }
-    userChannel.broadcast(Json.arr("url_patterns", patterns))
     eliza.sendToAllUsers(Json.arr("url_patterns", patterns))
     Redirect(routes.SliderAdminController.getPatterns)
   }
@@ -221,7 +217,6 @@ class SliderAdminController @Inject() (
   }
 
   def broadcastLatestVersion(ver: String) = AdminJsonAction { implicit request =>
-    userChannel.broadcast(Json.arr("version", ver))
     eliza.sendToAllUsers(Json.arr("version", ver))
     Ok(Json.obj("version" -> ver))
   }
