@@ -15,13 +15,15 @@ import com.keepit.social.{SocialNetworks, SocialId}
 
 class LinkedInSocialGraphTest extends Specification with ShoeboxApplicationInjector {
 
+  import LinkedInSocialGraph.ProfileFieldSelector
+
   private def urlIsConnections(url: String): Boolean = {
-    url.startsWith("https://api.linkedin.com/v1/people/rFOBMp35vZ/connections:(id,firstName,lastName,pictureUrl,publicProfileUrl)?format=json") &&
+    url.startsWith(s"https://api.linkedin.com/v1/people/rFOBMp35vZ/connections:$ProfileFieldSelector?format=json") &&
       url.contains("oauth2_access_token=this_is_my_token")
   }
 
   private def urlIsProfile(url: String): Boolean = {
-    url.startsWith("https://api.linkedin.com/v1/people/rFOBMp35vZ:(id,firstName,lastName,emailAddress,pictureUrl)?format=json")
+    url.startsWith(s"https://api.linkedin.com/v1/people/rFOBMp35vZ:$ProfileFieldSelector?format=json")
   }
 
   private val fakeLinkedInResponse: PartialFunction[String, FakeClientResponse] = {
@@ -58,6 +60,10 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxApplicationInjec
         rawInfo.userId === socialUserInfo.userId
         rawInfo.socialId.id === "rFOBMp35vZ"
 
+        val updated = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
+        updated.fullName === "Gregory Methvin"
+        updated.pictureUrl must beSome("http://m3.licdn.com/mpr/mprx/0_VqIaHTv7Z7Iiji26sv2AHik8NuM30Qp64z0lHiBYwoSAhGIQn-RGQ_iKsTJOyTjoRcdrFkWGuL1A")
+
         val connections = rawInfo.jsons flatMap graph.extractFriends
         connections.length === 9
         connections exists { conn =>
@@ -72,7 +78,7 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxApplicationInjec
 """
 {
   "emailAddress": "greg.methvin@gmail.com",
-  "firstName": "Greg",
+  "firstName": "Gregory",
   "id": "rFOBMp35vZ",
   "lastName": "Methvin",
   "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_VqIaHTv7Z7Iiji26sv2AHik8NuM30Qp64z0lHiBYwoSAhGIQn-RGQ_iKsTJOyTjoRcdrFkWGuL1A"
