@@ -234,7 +234,7 @@ class UserController @Inject() (
     Ok(toJson(basicUser).as[JsObject] ++ toJson(info).as[JsObject] ++ Json.obj("experiments" -> request.experiments.map(_.value)))
   }
 
-  private val SitePrefNames = Set("site_left_col_width")
+  private val SitePrefNames = Set("site_left_col_width", "site_welcome")
 
   def getPrefs() = AuthenticatedJsonAction { request =>
     Ok(db.readOnly { implicit s =>
