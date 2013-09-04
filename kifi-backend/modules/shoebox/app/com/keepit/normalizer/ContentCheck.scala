@@ -50,9 +50,9 @@ case class SignatureCheck(referenceUrl: String, trustedDomain: String)(implicit 
 
 }
 
-case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: ScraperPlugin) extends ContentCheck {
+case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: ScraperPlugin) extends ContentCheck with Logging {
 
-  def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && PriorKnowledge.linkedInPublicProfile.findFirstIn(candidate.url).isDefined
+  def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInPublicProfile.findFirstIn(candidate.url).isDefined
   protected def check(publicProfileCandidate: NormalizationCandidate)(implicit session: RSession) = {
     val idExtractor = new JsoupBasedExtractor(publicProfileCandidate.url, Scraper.maxContentChars) {
       def parse(doc: Document): String = doc.getElementsByTag("script").toString
@@ -60,8 +60,10 @@ case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: 
 
     for { publicProfileOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(idExtractor)) } yield publicProfileOption match {
       case Some(article) => article.content.contains(s"newTrkInfo = '${privateProfileId},' + document.referrer.substr(0,128)")
-      case None => false
-
+      case None => {
+        log.error(s"Content check of LinkedIn public profile ${publicProfileCandidate.url} for id ${privateProfileId} failed.")
+        false
+      }
     }
   }
   def getFailedAttempts() = Set.empty

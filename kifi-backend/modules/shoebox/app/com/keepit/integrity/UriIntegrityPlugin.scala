@@ -41,7 +41,6 @@ class UriIntegrityActor @Inject()(
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
-  uriNormRuleRepo: UriNormalizationRuleRepo,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   centralConfig: CentralConfig,
@@ -49,21 +48,6 @@ class UriIntegrityActor @Inject()(
   scraper: ScraperPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
-  private def prenormalize(url: String): String = {
-    val prepUrlTry = for {
-      uri <- URI.parse(url)
-      prepUrl <- Try { Prenormalizer(uri).toString() }
-    } yield prepUrl
-
-    prepUrlTry match {
-      case Success(prepUrl) => prepUrl
-      case Failure(e) => {
-        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Static Normalization failed: ${e.getMessage}")))
-        url
-      }
-    }
-  }
-  
   private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
@@ -99,11 +83,13 @@ class UriIntegrityActor @Inject()(
       if (oldUriId == newUriId) changedUriRepo.save(change.withState(ChangedURIStates.INACTIVE))
       (None, None) 
     } else {
-      val (oldUri, newUri) = (uriRepo.get(oldUriId), uriRepo.get(newUriId))
+      val oldUri = uriRepo.get(oldUriId)
+      val newUri = uriRepo.get(newUriId) match {
+        case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED => uriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
+        case uri => uri
+      }
 
       urlRepo.getByNormUri(oldUriId).map{ url =>
-        val prepUrl = prenormalize(url.url)
-        uriNormRuleRepo.save( UriNormalizationRule(prepUrl = prepUrl, mappedUrl = newUri.url, prepUrlHash = NormalizedURI.hashUrl(prepUrl)))
         urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MERGE)))
       }
 
@@ -115,11 +101,7 @@ class UriIntegrityActor @Inject()(
         uriRepo.save(uri.withRedirect(newUriId, currentDateTime))
       }  
         
-      uriRepo.save(oldUri.withState(NormalizedURIStates.INACTIVE).withRedirect(newUriId, currentDateTime))
-
-      scrapeInfoRepo.getByUri(oldUriId).map{ info =>
-        scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
-      }
+      uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
 
       /**
        * ensure uniqueness of bookmarks during merge.
@@ -181,7 +163,7 @@ class UriIntegrityActor @Inject()(
   }
   
   private def batchUpdateMerge() = {
-    val toMerge = getOverDueList(fetchSize = 500)
+    val toMerge = getOverDueList(fetchSize = 50)
     log.info(s"batch merge uris: ${toMerge.size} pair of uris to be merged")
     val toScrapeAndSavedChange = db.readWrite{ implicit s =>
       val results = toMerge.map{ change => processMerge(change) }
@@ -222,7 +204,7 @@ class UriIntegrityPluginImpl @Inject() (
   override def enabled = true
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
-     scheduleTask(actor.system, 1 minutes, 20 seconds, actor.ref, BatchUpdateMerge)
+     scheduleTask(actor.system, 1 minutes, 1800 seconds, actor.ref, BatchUpdateMerge)
   }
   override def onStop() {
      log.info("stopping UriIntegrityPluginImpl")

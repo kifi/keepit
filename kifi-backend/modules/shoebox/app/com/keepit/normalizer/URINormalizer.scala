@@ -11,4 +11,5 @@ object Prenormalizer extends StaticNormalizer {
 
   def isDefinedAt(uri: URI) = normalizers.exists(_.isDefinedAt(uri))
   def apply(uri: URI) =  normalizers.find(_.isDefinedAt(uri)).map(_.apply(uri)).get
+  def apply(url: String): String = URI.safelyParse(url).map(Prenormalizer).flatMap(_.safelyToString()).getOrElse(url)
 }

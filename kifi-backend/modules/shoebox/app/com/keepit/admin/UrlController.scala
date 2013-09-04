@@ -23,6 +23,7 @@ import com.keepit.integrity.MergedUri
 import com.keepit.integrity.SplittedUri
 import org.joda.time.DateTime
 import com.keepit.common.time.zones.PT
+import com.keepit.normalizer.Prenormalizer
 
 
 class UrlController @Inject() (
@@ -39,8 +40,8 @@ class UrlController @Inject() (
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   changedUriRepo: ChangedURIRepo,
-  normalizedUriFactory: NormalizedURIFactory,
   duplicateDocumentRepo: DuplicateDocumentRepo,
+  ktcRepo: KeepToCollectionRepo,
   orphanCleaner: OrphanCleaner,
   dupeDetect: DuplicateDocumentDetection,
   duplicatesProcessor: DuplicateDocumentsProcessor,
@@ -88,7 +89,7 @@ class UrlController @Inject() (
             case Some(nuri) => (nuri, URLHistoryCause.MERGE)
             // No normalized URI exists for this url, create one
             case None => {
-              val tmp = normalizedUriFactory(url.url)
+              val tmp = NormalizedURI.withHash(Prenormalizer(url.url))
               val nuri = if (!readOnly) uriRepo.save(tmp) else tmp
               (nuri, URLHistoryCause.SPLIT)
             }
@@ -221,7 +222,7 @@ class UrlController @Inject() (
     var info = Vector.empty[(Long, Long, Long, String, String, Long, String)]
     db.readWrite{ implicit s =>
       dups.foreach{ case (userId, uriId) =>
-        val dup = bookmarkRepo.getByUser(userId, excludeState = None).filter(_.uriId == uriId).sortBy(_.seq)
+        val dup = bookmarkRepo.getByUser(userId).filter(_.uriId == uriId).sortBy(_.seq)
         dup.dropRight(1).foreach{ bm =>
           if (!readOnly) bookmarkRepo.save(bm.withActive(false))
           if (bm.state == BookmarkStates.ACTIVE) info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_inactiveated")
@@ -244,12 +245,38 @@ class UrlController @Inject() (
     db.readWrite{ implicit s =>
       dups.foreach{ case (userId, uriId) =>
         val dup = bookmarkRepo.getByUser(userId, excludeState = None).filter(_.uriId == uriId).sortBy(_.seq)
-        dup.tail.foreach{ bm =>
-          if (!readOnly) bookmarkRepo.delete(bm.id.get)
-          info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_deleted")
+        val (inactive, active) = dup.partition( _.state == BookmarkStates.INACTIVE)
+        
+        active.foreach{ bm => 
+          info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_Kept")
         }
-        val toBeKept = dup.head
-        info = info :+ (toBeKept.id.get.id, toBeKept.userId.id, toBeKept.uriId.id, toBeKept.title.getOrElse(""), toBeKept.state.value, toBeKept.seq.value, "to_be_Kept")
+
+        inactive.foreach { bm =>
+          val ktcs = ktcRepo.getByBookmark(bm.id.get, excludeState = None)
+          if (ktcs.size > 0) {
+            active.find(_.uriId == bm.uriId) match {
+              case Some(bm2) => {
+                info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "in collection, can_be_deleted" + s" and be replaced by ${bm2.id}")
+                if (!readOnly) {
+                  ktcs.map { ktc =>
+                    if (!ktcRepo.getBookmarksInCollection(ktc.collectionId).contains(bm2.id.get)) {
+                      ktcRepo.save(ktc.copy(bookmarkId = bm2.id.get))
+                      collectionRepo.collectionChanged(ktc.collectionId, false)
+                    } else {
+                      ktcRepo.delete(ktc.id.get)   // if same collection has a dup bookmark, remove this ktc.
+                      collectionRepo.collectionChanged(ktc.collectionId, false)
+                    }
+                  }
+                  bookmarkRepo.delete(bm.id.get)   // it's now not referenced by any ktc. can be deleted.
+                }
+              }
+              case None => info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "in collection, cannot_be_deleted")
+            }
+          } else {
+            if (!readOnly) bookmarkRepo.delete(bm.id.get)
+            info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "not in collection, to_be_deleted")
+          }
+        }
       }
       val msg = s"readOnly Mode = ${readOnly}. ${info.size} bookmarks affected. (bookmarkId, userId, uriId, bookmarkTitle, state, seqNum, action) are: \n" + info.mkString("\n")
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),

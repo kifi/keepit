@@ -11,13 +11,13 @@ class ScrapeInfoTest extends Specification with ShoeboxTestInjector {
   def setup()(implicit injector: Injector) = {
     inject[Database].readWrite {implicit s =>
       
-      val uri1 = uriRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/"))
-      val uri2 = uriRepo.save(normalizedURIFactory.apply("Bing", "http://www.bing.com/"))
-      val uri3 = uriRepo.save(normalizedURIFactory.apply("Convex Optimization", "http://www.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf"))
-      val uri4 = uriRepo.save(normalizedURIFactory.apply("Purely Functional Data Structures", "http://www.cs.cmu.edu/~rwh/theses/okasaki.pdf"))
-      val uri5 = uriRepo.save(normalizedURIFactory.apply("Map Reduce", "http://static.usenix.org/event/osdi04/tech/full_papers/dean/dean.pdf"))
-      val uri6 = uriRepo.save(normalizedURIFactory.apply("BBC Feynman Archive", "http://www.bbc.co.uk/archive/feynman/"))
-      val uri7 = uriRepo.save(normalizedURIFactory.apply("Learn French in One Word", "http://www.youtube.com/watch?v=GSeaDQ6sPs0"))
+      val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
+      val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com/", Some("Bing")))
+      val uri3 = uriRepo.save(NormalizedURI.withHash("http://www.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf", Some("Convex Optimization")))
+      val uri4 = uriRepo.save(NormalizedURI.withHash("http://www.cs.cmu.edu/~rwh/theses/okasaki.pdf", Some("Purely Functional Data Structures")))
+      val uri5 = uriRepo.save(NormalizedURI.withHash("http://static.usenix.org/event/osdi04/tech/full_papers/dean/dean.pdf", Some("Map Reduce")))
+      val uri6 = uriRepo.save(NormalizedURI.withHash("http://www.bbc.co.uk/archive/feynman/", Some("BBC Feynman Archive")))
+      val uri7 = uriRepo.save(NormalizedURI.withHash("http://www.youtube.com/watch?v=GSeaDQ6sPs0", Some("Learn French in One Word")))
 
       val info1 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri1.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE, signature = "nonempty"))
       val info2 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri2.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE, signature = "nonempty"))
