@@ -170,7 +170,7 @@ class UriIntegrityActor @Inject()(
     }
     toScrapeAndSavedChange.map(_._2).filter(_.isDefined).sortBy(_.get.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.get.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pair of uris merged. zookeeper seqNum updated. start scraping ${toScrapeAndSavedChange.size} pages")
-    toScrapeAndSavedChange.map(_._1).filter(_.isDefined).map{ x => scraper.asyncScrape(x.get)}
+    toScrapeAndSavedChange.map(_._1).filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values.map{ x => scraper.asyncScrape(x.get)}
   }
   
   private def getOverDueList(fetchSize: Int = -1) = {
