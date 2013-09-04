@@ -208,7 +208,7 @@ class UrlController @Inject() (
       (totalCount, changes)
     }
     val pageCount = (totalCount*1.0 / PAGE_SIZE).ceil.toInt
-    Ok(html.admin.mergedUri(changes, page, totalCount, page, PAGE_SIZE))
+    Ok(html.admin.mergedUri(changes, page, totalCount, pageCount, PAGE_SIZE))
   }
   
   def batchMerge = AdminHtmlAction{ request =>
