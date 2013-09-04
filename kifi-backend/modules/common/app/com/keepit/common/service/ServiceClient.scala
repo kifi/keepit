@@ -48,7 +48,7 @@ trait ServiceClient extends Logging {
     var respFuture = callUrl(call, url(call.url), body)
     (1 until attempts).foreach { _ =>
         respFuture = respFuture.recoverWith {
-          case _:Throwable => callUrl(call, url(call.url), body)
+          case _ : java.net.ConnectException => callUrl(call, url(call.url), body)
         }
     }
     respFuture
