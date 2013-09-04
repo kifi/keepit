@@ -80,7 +80,7 @@ class UriIntegrityActor @Inject()(
   private def processMerge(change: ChangedURI)(implicit session: RWSession): (Option[NormalizedURI], Option[ChangedURI]) = {
     val (oldUriId, newUriId) = (change.oldUriId, change.newUriId)
     if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) { 
-      if (oldUriId == newUriId) changedUriRepo.save(change.withState(ChangedURIStates.INACTIVE))
+      if (oldUriId == newUriId) changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
       (None, None) 
     } else {
       val oldUri = uriRepo.get(oldUriId)
@@ -125,7 +125,7 @@ class UriIntegrityActor @Inject()(
         followRepo.save(follow.withNormUriId(newUriId))
       }
       
-      val saved = changedUriRepo.save(change.withState(ChangedURIStates.APPLIED))
+      val saved = changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
       
       (toBeScraped, Some(saved))
     }
