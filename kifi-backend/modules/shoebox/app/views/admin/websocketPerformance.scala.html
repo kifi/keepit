@@ -107,7 +107,7 @@
     options.from = $("#timerange").val();
 
   if (chart == "counters") {
-    var countTarget = 'summarize(' + sumSeries(["stats.counters.shoebox.websocket.handler", handler.val(), "count"].join(".")) + ',"1min")';
+    var countTarget = 'summarize(' + sumSeries(["stats.counters.shoebox.websocket.handler", handler.val(), "count:sum"].join(".")) + ',"1min")';
     var connectedClientTargets = ["secondYAxis(stats.gauges.shoebox.websocket.channel.*.client)"];
     options.title = "Handler Activity (Events per Minute) vs Connected Clients (User vs URI Specific Channels)"
     options.target = baseTargets.concat(countTarget).concat(connectedClientTargets)
@@ -119,14 +119,14 @@
     var percentileValue = $("#percentile").val()
     var percentileSuffix = (percentileValue == "0.99") ? "_99" : "" 
     var percentileTitle = (percentileValue == "0.99") ? "99% " : "" 
-    var meanTargets = "divideSeries(" + sumSeries(prefix + ".sum" + percentileSuffix) + ",scale(" + sumSeries(prefix + ".count") + "," + percentileValue + "))"
+    var meanTargets = "divideSeries(" + sumSeries(prefix + ".sum" + percentileSuffix) + ",scale(" + sumSeries(prefix + ".count:sum") + "," + percentileValue + "))"
     options.title = "Handler " + percentileTitle + "Mean Time in Milliseconds"
     options.target = baseTargets.concat(meanTargets)
     options.logBase = null;
   }
 
   if (chart == "anonymous") {
-    var anonymousTarget = 'summarize(stats.counters.shoebox.websocket.anonymous.count,"1min")';
+    var anonymousTarget = 'summarize(stats.counters.shoebox.websocket.anonymous.count:sum,"1min")';
     options.title = "Anonymous Connexion Attempts per Minute" 
     options.target = baseTargets.concat(anonymousTarget)
     options.logBase = null;
