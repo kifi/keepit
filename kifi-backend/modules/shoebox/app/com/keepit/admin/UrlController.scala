@@ -252,7 +252,7 @@ class UrlController @Inject() (
         }
 
         inactive.foreach { bm =>
-          val ktcs = ktcRepo.getByBookmark(bm.id.get)
+          val ktcs = ktcRepo.getByBookmark(bm.id.get, excludeState = None)
           if (ktcs.size > 0) {
             active.find(_.uriId == bm.uriId) match {
               case Some(bm2) => {
