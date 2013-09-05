@@ -18,7 +18,6 @@ import com.keepit.integrity.DuplicateDocumentDetection
 import com.keepit.integrity.DuplicateDocumentsProcessor
 import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.integrity.UriIntegrityPlugin
-import com.keepit.integrity.ChangedUri
 import com.keepit.integrity.MergedUri
 import com.keepit.integrity.SplittedUri
 import org.joda.time.DateTime
@@ -214,74 +213,6 @@ class UrlController @Inject() (
   def batchMerge = AdminHtmlAction{ request =>
     uriIntegrityPlugin.batchUpdateMerge()
     Ok("Will do batch merging uris")
-  }
-  
-  def handleDupBookmarks(readOnly: Boolean = true) = AdminHtmlAction{ request =>
-    val dups = db.readOnly{ implicit s =>
-      bookmarkRepo.detectDuplicates()
-    }
-    var info = Vector.empty[(Long, Long, Long, String, String, Long, String)]
-    db.readWrite{ implicit s =>
-      dups.foreach{ case (userId, uriId) =>
-        val dup = bookmarkRepo.getByUser(userId).filter(_.uriId == uriId).sortBy(_.seq)
-        dup.dropRight(1).foreach{ bm =>
-          if (!readOnly) bookmarkRepo.save(bm.withActive(false))
-          if (bm.state == BookmarkStates.ACTIVE) info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_inactiveated")
-        }
-        val toBeKept = dup.last
-        info = info :+ (toBeKept.id.get.id, toBeKept.userId.id, toBeKept.uriId.id, toBeKept.title.getOrElse(""), toBeKept.state.value, toBeKept.seq.value, "to_be_Kept")
-      }
-      val msg = s"readOnly Mode = ${readOnly}. ${info.size} bookmarks affected. (bookmarkId, userId, uriId, bookmarkTitle, state, seqNum, action) are: \n" + info.mkString("\n")
-      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-       subject = "Duplicate Bookmarks Report", htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
-    }
-    Ok(s"OK. Detecting duplicated bookmarks. ReadOnly Mode = ${readOnly}. Will send report emails")
-  }
-  
-  def deleteDupBookmarks(readOnly: Boolean = true) = AdminHtmlAction{ request =>
-    val dups = db.readOnly{ implicit s =>
-      bookmarkRepo.detectDuplicates()
-    }
-    var info = Vector.empty[(Long, Long, Long, String, String, Long, String)]
-    db.readWrite{ implicit s =>
-      dups.foreach{ case (userId, uriId) =>
-        val dup = bookmarkRepo.getByUser(userId, excludeState = None).filter(_.uriId == uriId).sortBy(_.seq)
-        val (inactive, active) = dup.partition( _.state == BookmarkStates.INACTIVE)
-        
-        active.foreach{ bm => 
-          info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_Kept")
-        }
-
-        inactive.foreach { bm =>
-          val ktcs = ktcRepo.getByBookmark(bm.id.get, excludeState = None)
-          if (ktcs.size > 0) {
-            active.find(_.uriId == bm.uriId) match {
-              case Some(bm2) => {
-                info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "in collection, can_be_deleted" + s" and be replaced by ${bm2.id}")
-                if (!readOnly) {
-                  ktcs.map { ktc =>
-                    if (!ktcRepo.getBookmarksInCollection(ktc.collectionId).contains(bm2.id.get)) {
-                      ktcRepo.save(ktc.copy(bookmarkId = bm2.id.get))
-                    } else {
-                      ktcRepo.delete(ktc.id.get)   // if same collection has a dup bookmark, remove this ktc.
-                    }
-                  }
-                  bookmarkRepo.delete(bm.id.get)   // it's now not referenced by any ktc. can be deleted.
-                }
-              }
-              case None => info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "in collection, cannot_be_deleted")
-            }
-          } else {
-            if (!readOnly) bookmarkRepo.delete(bm.id.get)
-            info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "not in collection, to_be_deleted")
-          }
-        }
-      }
-      val msg = s"readOnly Mode = ${readOnly}. ${info.size} bookmarks affected. (bookmarkId, userId, uriId, bookmarkTitle, state, seqNum, action) are: \n" + info.mkString("\n")
-      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-       subject = "Duplicate Bookmarks Report", htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
-    }
-    Ok(s"OK. Deleting duplicated bookmarks. ReadOnly Mode = ${readOnly}. Will send report emails")
   }
 }
 
