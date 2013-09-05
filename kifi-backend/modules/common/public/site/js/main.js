@@ -1658,7 +1658,7 @@ $(function() {
 		delete d.undo, delete d.commit;
 	}
 
-	$(".send-feedback").click(function() {
+	var $sendFeedback = $(".send-feedback").click(function() {
 		if (!window.UserVoice) {
 			window.UserVoice = [];
 			$.getScript("//widget.uservoice.com/2g5fkHnTzmxUgCEwjVY13g.js");
@@ -1670,7 +1670,7 @@ $(function() {
 			default_mode: 'support',
 			forum_id: 200379,
 			custom_template_id: 3305}]);
-	});
+	}).filter('.top-right-nav>*');
 
 	function updateMe(data) {
 		me = data;
@@ -1728,6 +1728,7 @@ $(function() {
 			$welcomeDialog.dialog('show').on('click', 'button', function() {
 				$welcomeDialog.dialog('hide');
 				$welcomeDialog = null;
+				setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
 			}).find('button').focus();
 			$.postJson(xhrBase + '/user/prefs', {site_welcomed: 'true'}, function(data) {
 				console.log("[prefs]", data);
@@ -1740,6 +1741,13 @@ $(function() {
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
 	$.getScript('js/jquery-hoverfu.min.js').done(function() {
+		$sendFeedback.hoverfu(function(configure) {
+			configure({
+				position: {my: "center-24 bottom-12", at: "center top", of: this},
+				mustHoverFor: 400,
+				hideAfter: 1800,
+				click: 'hide'});
+		});
 		$(document).hoverfu(".pic:not(.me)", function(configureHover) {
 			var $a = $(this), id = $a.data('id'), $temp = $('<div>');
 			friendCardTmpl.into($temp).append({
