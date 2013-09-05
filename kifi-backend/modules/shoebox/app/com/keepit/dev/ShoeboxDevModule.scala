@@ -6,7 +6,6 @@ import com.keepit.shoebox.ShoeboxBrowsingHistoryModule
 import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.model.ProdSliderHistoryTrackerModule
 import com.keepit.learning.topicmodel.DevTopicModelModule
-import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.scraper.ScraperImplModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox.ShoeboxClickHistoryModule
@@ -26,6 +25,7 @@ import com.keepit.common.zookeeper.DevDiscoveryModule
 import com.keepit.shoebox.ShoeboxSlickModule
 import com.keepit.integrity.DataIntegrityModule
 import com.keepit.eliza.ProdElizaServiceClientModule
+import com.keepit.realtime.ShoeboxWebSocketModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
 

@@ -9,7 +9,6 @@ import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.learning.topicmodel.TopicModelModule
 import com.keepit.model.{BrowsingHistoryModule, ClickHistoryModule, SliderHistoryTrackerModule}
 import com.keepit.scraper.ScraperModule
-import com.keepit.realtime.WebSocketModule
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.crypto.CryptoModule
 import com.keepit.common.healthcheck.HealthCheckModule
@@ -21,6 +20,7 @@ import com.keepit.common.zookeeper.DiscoveryModule
 import com.keepit.common.db.slick.SlickModule
 import com.keepit.integrity.DataIntegrityModule
 import com.keepit.eliza.ElizaServiceClientModule
+import com.keepit.realtime.WebSocketModule
 
 abstract class ShoeboxModule(
   // Common Functional Modules
