@@ -6,7 +6,6 @@ import com.keepit.shoebox.ShoeboxBrowsingHistoryModule
 import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.model.ProdSliderHistoryTrackerModule
 import com.keepit.learning.topicmodel.DevTopicModelModule
-import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.scraper.ScraperImplModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox.ShoeboxClickHistoryModule
@@ -52,7 +51,6 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   scraperModule = ScraperImplModule(),
   socialGraphModule = ProdSocialGraphModule(),
   analyticsModule = DevAnalyticsModule(),
-  webSocketModule = ShoeboxWebSocketModule(),
   topicModelModule = DevTopicModelModule(),
   domainTagImporterModule = DevDomainTagImporterModule(),
   sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule(),

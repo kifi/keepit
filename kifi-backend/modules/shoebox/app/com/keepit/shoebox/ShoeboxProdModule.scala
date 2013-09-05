@@ -11,7 +11,6 @@ import com.keepit.model.ProdSliderHistoryTrackerModule
 import com.keepit.common.mail.ProdMailModule
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.store.ShoeboxProdStoreModule
-import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.classify.ProdDomainTagImporterModule
 import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.net.ProdHttpClientModule
@@ -44,7 +43,6 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   scraperModule = ScraperImplModule(),
   socialGraphModule = ProdSocialGraphModule(),
   analyticsModule = ProdAnalyticsModule(),
-  webSocketModule = ShoeboxWebSocketModule(),
   topicModelModule = LdaTopicModelModule(),
   domainTagImporterModule = ProdDomainTagImporterModule(),
   sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule(),

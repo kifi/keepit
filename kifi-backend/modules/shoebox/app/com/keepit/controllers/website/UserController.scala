@@ -10,7 +10,6 @@ import com.keepit.common.db.slick._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.model._
-import com.keepit.realtime.{DeviceType, UrbanAirship}
 
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
@@ -28,22 +27,21 @@ class UserController @Inject() (
   networkInfoLoader: NetworkInfoLoader,
   actionAuthenticator: ActionAuthenticator,
   friendRequestRepo: FriendRequestRepo,
-  searchFriendRepo: SearchFriendRepo,
-  urbanAirship: UrbanAirship)
+  searchFriendRepo: SearchFriendRepo)
     extends WebsiteController(actionAuthenticator) {
 
-  def registerDevice(deviceType: String) = AuthenticatedJsonToJsonAction { implicit request =>
-    (request.body \ "token").asOpt[String] map { token =>
-      val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType))
-      Ok(Json.obj(
-        "token" -> device.token
-      ))
-    } getOrElse {
-      BadRequest(Json.obj(
-        "error" -> "Body must contain a token parameter"
-      ))
-    }
-  }
+//  def registerDevice(deviceType: String) = AuthenticatedJsonToJsonAction { implicit request =>
+//    (request.body \ "token").asOpt[String] map { token =>
+//      val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType))
+//      Ok(Json.obj(
+//        "token" -> device.token
+//      ))
+//    } getOrElse {
+//      BadRequest(Json.obj(
+//        "error" -> "Body must contain a token parameter"
+//      ))
+//    }
+//  }
 
   def friends() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(

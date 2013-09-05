@@ -10,7 +10,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.net.{FakeHttpClient, HttpClient}
 import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
-import com.keepit.realtime.UrbanAirshipConfig
 import com.keepit.social.{SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin, SocialId, SocialNetworks}
 import com.keepit.test.ShoeboxApplication
 
@@ -59,7 +58,6 @@ class UserControllerTest extends Specification with ApplicationInjector {
     def configure() {
       bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
       bind[HttpClient].toInstance(new FakeHttpClient())
-      bind[UrbanAirshipConfig].toInstance(UrbanAirshipConfig("test", "test"))
       bind[ImpersonateCookie].toInstance(new ImpersonateCookie(Some("dev.ezkeep.com")))
       bind[KifiInstallationCookie].toInstance(new KifiInstallationCookie(Some("dev.ezkeep.com")))
       bind[SecureSocialAuthenticatorPlugin].toInstance(new SecureSocialAuthenticatorPlugin {

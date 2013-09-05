@@ -27,7 +27,6 @@ import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.ClickHistoryTracker
-import com.keepit.realtime.{UrbanAirship, PushNotification}
 
 import scala.concurrent.future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -70,7 +69,6 @@ class ShoeboxController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
-  urbanAirship: UrbanAirship,
   emailAddressRepo: EmailAddressRepo,
   changedUriRepo: ChangedURIRepo)
   (implicit private val clock: Clock,
@@ -350,7 +348,7 @@ class ShoeboxController @Inject() (
       val unvisited = (req \ "unvisited").as[Int]
       val msg = (req \ "msg").as[String]
 
-      urbanAirship.notifyUser(userId, PushNotification(extId, unvisited, msg))
+      // urbanAirship.notifyUser(userId, PushNotification(extId, unvisited, msg))
       Ok("")
     })
 

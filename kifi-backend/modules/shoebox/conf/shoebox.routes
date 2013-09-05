@@ -53,8 +53,6 @@ POST    /ext/canonical              @com.keepit.controllers.ext.ExtPageControlle
 
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
-POST    /devices/:deviceType        @com.keepit.controllers.website.UserController.registerDevice(deviceType: String)
-
 ##########################################
 # Website
 ##########################################
@@ -235,19 +233,8 @@ GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstance
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
 GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView
 
-GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
-GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
-GET     /admin/emails/message-reply @com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
-
 GET     /admin/electronicMails       @com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
 GET     /admin/electronicMails/:page @com.keepit.controllers.admin.ElectronicMailController.electronicMailsView(page: Int)
-
-GET     /admin/follows              @com.keepit.controllers.admin.AdminCommentController.followsView
-GET     /admin/comments             @com.keepit.controllers.admin.AdminCommentController.commentsViewFirstPage
-GET     /admin/comments/:page       @com.keepit.controllers.admin.AdminCommentController.commentsView(page: Int)
-GET     /admin/messages             @com.keepit.controllers.admin.AdminCommentController.messagesViewFirstPage
-GET     /admin/messages/:page       @com.keepit.controllers.admin.AdminCommentController.messagesView(page: Int)
-POST    /admin/notify/rebuild       @com.keepit.controllers.admin.AdminCommentController.recreateNotificationDetails(safeMode: Boolean ?= true)
 
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])

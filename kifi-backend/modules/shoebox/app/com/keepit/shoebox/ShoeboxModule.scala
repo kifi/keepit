@@ -9,7 +9,6 @@ import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.learning.topicmodel.TopicModelModule
 import com.keepit.model.{BrowsingHistoryModule, ClickHistoryModule, SliderHistoryTrackerModule}
 import com.keepit.scraper.ScraperModule
-import com.keepit.realtime.WebSocketModule
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.crypto.CryptoModule
 import com.keepit.common.healthcheck.HealthCheckModule
@@ -45,7 +44,6 @@ abstract class ShoeboxModule(
   val scraperModule: ScraperModule,
   val socialGraphModule: SocialGraphModule,
   val analyticsModule: AnalyticsModule,
-  val webSocketModule: WebSocketModule,
   val topicModelModule: TopicModelModule,
   val domainTagImporterModule: DomainTagImporterModule,
   val sliderHistoryTrackerModule: SliderHistoryTrackerModule,
@@ -74,7 +72,6 @@ abstract class ShoeboxModule(
     scraperModule,
     socialGraphModule,
     analyticsModule,
-    webSocketModule,
     topicModelModule,
     domainTagImporterModule,
     sliderHistoryTrackerModule,
