@@ -39,17 +39,25 @@ $.extend($.timeago.settings.strings, {
 	};
 	var dialogMethods = {
 		show: function() {
+			var $d = $(this);
 			if (!this.parentNode) {
-				$(this).appendTo('body').layout();
+				$d.appendTo('body').layout();
 			}
-			$(this).addClass('showing');
+			$d.addClass('showing');
+			$(document).on('keydown.dialog', function(e) {
+				if (e.keyCode === 27 && !e.isDefaultPrevented()) {
+					e.preventDefault();
+					$d.dialog('hide');
+				}
+			});
 		},
 		hide: function() {
+			$(document).off('keydown.dialog');
 			$(this).on('transitionend', function end(e) {
 				if (e.target === this) {
 					$(this).off('transitionend', end).detach();
 				}
-			}).removeClass('showing')
+			}).removeClass('showing');
 		}};
 }();
 
@@ -674,7 +682,7 @@ $(function() {
 		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 		filterFriends();
 	});
-	var $inviteMessageDialog = $('.invite-message-dialog').detach()
+	var $inviteMessageDialog = $('.invite-message-dialog').detach().show()
 	.on('submit', 'form', function(e) {
 		e.preventDefault();
 		$.post(this.action, $(this).serialize()).complete(function(xhr) {
@@ -1713,6 +1721,21 @@ $(function() {
 		addNewKeeps();
 		setTimeout(refresh, 25000 + 5000 * Math.random());
 	}, 30000);
+
+	var $welcomeDialog = $('.welcome-dialog').remove().show();
+	$.when(promise.myPrefs).done(function() {
+		if (!myPrefs.site_welcomed) {
+			$welcomeDialog.dialog('show').on('click', 'button', function() {
+				$welcomeDialog.dialog('hide');
+				$welcomeDialog = null;
+			}).find('button').focus();
+			$.postJson(xhrBase + '/user/prefs', {site_welcomed: 'true'}, function(data) {
+				console.log("[prefs]", data);
+			});
+		} else {
+			$welcomeDialog = null;
+		}
+	});
 
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
