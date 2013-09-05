@@ -21,10 +21,10 @@ import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.db.slick.DBSession.RWSession
 
-trait ChangedUri
+trait UriChangeMessage
 
-case class MergedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends ChangedUri
-case class SplittedUri(url: URL, newUri: Id[NormalizedURI]) extends ChangedUri
+case class MergedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends UriChangeMessage
+case class SplittedUri(url: URL, newUri: Id[NormalizedURI]) extends UriChangeMessage
 case object BatchUpdateMerge
 
 class UriIntegrityActor @Inject()(
@@ -191,7 +191,7 @@ class UriIntegrityActor @Inject()(
 
 @ImplementedBy(classOf[UriIntegrityPluginImpl])
 trait UriIntegrityPlugin extends SchedulingPlugin  {
-  def handleChangedUri(change: ChangedUri): Unit
+  def handleChangedUri(change: UriChangeMessage): Unit
   def batchUpdateMerge(): Unit
 }
 
@@ -209,7 +209,7 @@ class UriIntegrityPluginImpl @Inject() (
      log.info("stopping UriIntegrityPluginImpl")
   }
 
-  override def handleChangedUri(change: ChangedUri) = {
+  override def handleChangedUri(change: UriChangeMessage) = {
     actor.ref ! change
   }
   
