@@ -379,6 +379,18 @@ $(function() {
 		}
 	}
 
+	// profile
+
+	$('.my-pic').click(function(e) {
+		if (e.which === 1 && $('body').attr('data-view') === 'profile') {
+			e.preventDefault();
+			if (History.getCurrentIndex()) {
+				History.back();
+			} else {
+				navigate('');
+			}
+		}
+	});
 	var profileTmpl = Tempo.prepare("profile-template");
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
