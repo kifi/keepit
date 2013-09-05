@@ -141,7 +141,11 @@ class BookmarkRepoImpl @Inject() (
     super.save(newModel)
   }
 
-  def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit = (for(b <- table if b.id === id) yield b).delete
+  def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit = {
+    val q = (for(b <- table if b.id === id) yield b)
+    q.firstOption.map{ bm => invalidateCache(bm) }
+    q.delete
+  }
   
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])] = {
     val q = for {
