@@ -101,7 +101,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
   }
 
   $f.keydown(function(e) {
-    if (e.which == 13 && !e.shiftKey && !enterToSend == (e.metaKey || e.ctrlKey)) {
+    if (e.which == 13 && !e.shiftKey && !e.altKey && !enterToSend == (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       $f.submit();
     }

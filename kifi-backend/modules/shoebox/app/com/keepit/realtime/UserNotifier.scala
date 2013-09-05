@@ -94,7 +94,6 @@ object SendableNotification {
 }
 
 class NotificationBroadcaster @Inject() (
-    userChannel: UserChannel,
     urbanAirship: UrbanAirship,
     userNotificationRepo: UserNotificationRepo,
     messageRepo: CommentRepo,
@@ -108,7 +107,6 @@ class NotificationBroadcaster @Inject() (
     }
     val sendable = SendableNotification.fromUserNotification(notify)
     log.info("User notification serialized: " + sendable)
-    userChannel.pushAndFanout(notify.userId, Json.arr("notification", Json.toJson(sendable)))
   }
 }
 
@@ -129,8 +127,6 @@ class UserNotifier @Inject() (
   notificationBroadcast: NotificationBroadcaster,
   commentWithBasicUserRepo: CommentWithBasicUserRepo,
   normalUriRepo: NormalizedURIRepo,
-  uriChannel: UriChannel,
-  userChannel: UserChannel,
   threadInfoRepo: ThreadInfoRepo,
   normalizationService: NormalizationService,
   clock: Clock,
@@ -183,7 +179,6 @@ class UserNotifier @Inject() (
   def comment(comment: Comment): Unit = {
     db.readWrite { implicit s =>
       val normalizedUri = normalUriRepo.get(comment.uriId).url
-      uriChannel.pushAndFanout(normalizedUri, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
 
       val commentDetails = createCommentDetails(comment)
       commentDetails.map { commentDetail =>
@@ -234,7 +229,6 @@ class UserNotifier @Inject() (
       // val cwbu2 = cwbu.copy(text=SPECIAL_MESSAGE)
       
       val messageJson = Json.arr("message", normUri.url, threadInfo, cwbu)
-      userChannel.pushAndFanout(message.userId, messageJson)
       // val participants = commentRepo.getParticipantsUserIds(message.id.get)
       // participants.map { p =>
       //   userChannel.pushAndFanout(p, messageJson)

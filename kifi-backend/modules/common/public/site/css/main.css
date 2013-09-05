@@ -24,7 +24,8 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 
 /* left col */
 .header-left {height: 70px; background-color: #67829c; text-align: center; padding-top: 18px; -moz-box-sizing: border-box; box-sizing: border-box; position: relative; z-index: 2}
-.header-logo {display: inline-block; width: 51px; height: 29px; background: url(../img/kifi-logo.png) 0/100%}
+.header-logo {display: inline-block; width: 51px; height: 29px; background: url(../img/kifi-logo.png) 0/100%; position: relative}
+.header-logo::after {content: "beta"; position: absolute; bottom: 0; left: 56px; color: #fff; line-height: 10px; font-size: 10px; font-style: italic; font-weight: 300; -webkit-font-smoothing: antialiased}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
 .my-pic {display: block; width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 2}
 .my-pic::before { display: block; border: 34px solid transparent; background: #abb8c8 url(../img/pencil.png) center center no-repeat padding-box; transition: border-width .15s ease-in-out, border-color .15s ease-in-out; box-sizing: border-box; -moz-box-sizing: border-box; width: 66px; height: 66px; border-radius: 50%; content: " "; background-size: 14px; }
@@ -136,7 +137,7 @@ body:not([data-view=profile]) .profile,
 body:not([data-view=friends]) .friends,
 body:not([data-view=blog]) .blog  {display: none}
 h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
-.undo {position: absolute; top: -8px; left: 0; right: 0; text-align: center; display: none}
+.undo {position: absolute; top: -8px; left: 0; right: 0; z-index: 1; text-align: center; display: none}
 .undo-box {display: inline-block; background-color: #ffc; border: 1px solid #f8f4e8; border-radius: 2px; padding: 0 12px; font-size: 13px; font-weight: 300; line-height: 17px; height: 18px; white-space: nowrap}
 a.undo-link[href] {margin-left: 4px; font-weight: 500}
 a.undo-link[href]:hover {text-decoration: underline}
@@ -278,9 +279,11 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
   .invite-button {right: 16px}
 }
 
-.invite-message-dialog { z-index: -1; opacity: 0; position: fixed; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0, 0, 0, 0.2); transition: all 0.2s ease-in-out; }
-form>.invite-message-dialog { z-index: 100; opacity: 1; }
-.invite-message-dialog>.dialog-content { background: #fafafa; border: 1px solid #aab8c8; border-radius: 5px; font-size: 14px; position: fixed; left: 50%; top: 50%; height: 280px; margin-top: -140px; width: 440px; margin-left: -220px; box-shadow: 8px 10px 2px rgba(0, 0, 0, 0.3); }
+.dialog {z-index: -1; opacity: 0; position: fixed; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0,0,0,.2); -webkit-transition: opacity .3s linear, z-index 0s .3s; transition: opacity .3s linear, z-index 0s .3s}
+.dialog.showing { z-index: 100; opacity: 1; -webkit-transition-delay: 0s; transition-delay: 0s}
+.dialog-content {position: fixed; left: 50%; top: 50%; background: #fafafa; border: 1px solid #aab8c8; border-radius: 5px; box-shadow: 8px 10px 2px rgba(0,0,0,.3); font-size: 14px}
+
+.invite-message-dialog>.dialog-content { height: 280px; margin-top: -140px; width: 440px; margin-left: -220px; }
 .invite-message-dialog>.dialog-content>p { margin: 12px 15px; }
 .invite-message-header { font-size: 16px; padding: 14px 16px 10px; border-bottom: 1px solid #e7eced; color: #3a495b; }
 a.invite-cancel { position: absolute; color: #b1b8c1; font-weight: bold; padding: 8px 12px; right: 0; top: 0; font-size: 20px; text-decoration: none; }

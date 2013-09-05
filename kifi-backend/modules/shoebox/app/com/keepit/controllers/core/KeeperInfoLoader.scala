@@ -35,14 +35,10 @@ object KeeperInfo1 {
 }
 
 case class KeeperInfo2(  // supplemental information
-    shown: Boolean,
-    keepers: Seq[BasicUser],
-    keeps: Int,
-    following: Boolean,
-    comments: Seq[CommentWithBasicUser],
-    threads: Seq[ThreadInfo],
-    lastCommentRead: Option[DateTime],
-    lastMessageRead: Map[ExternalId[Comment], DateTime])  // keys are parent IDs (thread IDs)
+  shown: Boolean,
+  keepers: Seq[BasicUser],
+  keeps: Int
+)
 
 object KeeperInfo2 {
   implicit val writesKeeperInfo2 = new Writes[KeeperInfo2] {  // TODO: rewrite fancy :D
@@ -50,12 +46,7 @@ object KeeperInfo2 {
       JsObject(Seq[Option[(String, JsValue)]](
         if (o.shown) Some("shown" -> JsBoolean(true)) else None,
         if (o.keepers.nonEmpty) Some("keepers" -> Json.toJson(o.keepers)) else None,
-        if (o.keeps > 0) Some("keeps" -> JsNumber(o.keeps)) else None,
-        if (o.following) Some("following" -> JsBoolean(true)) else None,
-        if (o.comments.nonEmpty) Some("comments" -> Json.toJson(o.comments)) else None,
-        if (o.threads.nonEmpty) Some("threads" -> Json.toJson(o.threads)) else None,
-        if (o.lastCommentRead.nonEmpty) Some("lastCommentRead" -> Json.toJson(o.lastCommentRead.get)) else None,
-        if (o.lastMessageRead.nonEmpty) Some("lastMessageRead" -> Json.toJson(o.lastMessageRead.map(m => m._1.id -> m._2))) else None)
+        if (o.keeps > 0) Some("keeps" -> JsNumber(o.keeps)) else None)
       .flatten)
   }
 }
@@ -102,31 +93,14 @@ class KeeperInfoLoader @Inject() (
   }
 
   def load2(userId: Id[User], normalizedUri: String): KeeperInfo2 = {
-    val (nUri, shown, following, comments, threads, lastCommentRead, lastMessageRead) = {
+    val (nUri, shown) = {
       val nUri = db.readOnly { implicit s => normalizedURIRepo.getByUri(normalizedUri) }
       nUri match {
         case Some(uri) =>
           val shown = historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id)
-          val (following, comments, threads, lastCommentRead, lastMessageRead) = db.readOnly { implicit s =>
-            val parentMessages = commentRepo.getParentMessages(uri.id.get, userId)
-            (
-              followRepo.get(userId, uri.id.get).isDefined,
-              commentRepo.getPublic(uri.id.get).map(commentWithBasicUserRepo.load),
-              parentMessages.map(threadInfoRepo.load(_, Some(userId))).sortBy(_.lastCommentedAt),
-              commentReadRepo.getByUserAndUri(userId, uri.id.get) map { cr =>
-                commentRepo.get(cr.lastReadId).createdAt
-              },
-              parentMessages.map { th =>
-                commentReadRepo.getByUserAndParent(userId, th.id.get).map { cr =>
-                  val m = if (cr.lastReadId == th.id.get) th else commentRepo.get(cr.lastReadId)
-                  (th.externalId -> m.createdAt)
-                }
-              }.flatten.toMap
-            )
-          }
-          (nUri, shown, following, comments, threads, lastCommentRead, lastMessageRead)
+          (nUri, shown)
         case None =>
-          (None, false, false, Nil, Nil, None, Map.empty[ExternalId[Comment], DateTime])
+          (None, false)
       }
     }
     val (keepers, keeps) = nUri map { uri =>
@@ -137,6 +111,6 @@ class KeeperInfoLoader @Inject() (
       (keepers, sharingUserInfo.keepersEdgeSetSize)
     } getOrElse (Nil, 0)
 
-    KeeperInfo2(shown, keepers, keeps, following, comments, threads, lastCommentRead, lastMessageRead)
+    KeeperInfo2(shown, keepers, keeps)
   }
 }

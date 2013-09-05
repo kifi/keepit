@@ -117,16 +117,9 @@ object URI extends Logging {
 
   val slashDotDot = """^(/\.\.)+""".r
 
-  val defaultPage = """/(index|default)\.(html|htm|asp|aspx|php|php3|php4|phtml|cfm|cgi|jsp|jsf|jspx|jspa)$""".r
-
   def normalizePath(path: Option[String]) = {
     path.flatMap{ path =>
-      var path2 = slashDotDot.replaceFirstIn(path.trim, "")
-      defaultPage.findFirstMatchIn(path2.toLowerCase).foreach{ m =>
-        val delta = path2.length - path2.toLowerCase.length // in case the case conversion changed the length
-        path2 = path2.substring(0, m.start + delta) + "/"
-      }
-      path2 match {
+      slashDotDot.replaceFirstIn(path.trim, "") match {
         case "" => None
         case path => Some(path.replace("%7E", "~"))
       }
