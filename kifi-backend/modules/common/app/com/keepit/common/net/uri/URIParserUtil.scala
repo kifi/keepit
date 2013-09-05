@@ -17,8 +17,6 @@ object URIParserUtil {
   val fragmentReservedChars: Set[Char]   = Set('%') ++ controls ++ space ++ genDelims - '@' - ':' - '/' - '?' - '#'
   val encodingMap: Map[Char, String] = allSymbols.map(c => (c -> encodeChar(c))).toMap
 
-  val defaultPage = """^(index|default)\.(html|htm|asp|aspx|php|php3|php4|phtml|cfm|cgi|jsp|jsf|jspx|jspa)$""".r
-
   private[this] val _percentEncodeRe = """(\%\p{XDigit}\p{XDigit})+""".r
 
   def encodeChar(c: Char): String = {
@@ -64,8 +62,6 @@ object URIParserUtil {
       case "." => addComponent("")
       case component => addComponent(component)
     }
-
-    if (stack.nonEmpty && defaultPage.findFirstIn(stack.head.toLowerCase).isDefined) stack = ""::stack.tail
 
     stack.reverse
   }
