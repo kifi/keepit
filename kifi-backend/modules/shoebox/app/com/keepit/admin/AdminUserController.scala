@@ -9,10 +9,9 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
-import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.realtime.{UserNotifier, UserChannel}
+import com.keepit.realtime.UserNotifier
 import com.keepit.search.SearchServiceClient
 import com.keepit.shoebox.usersearch.UserIndex
 import com.keepit.eliza.ElizaServiceClient
@@ -51,7 +50,6 @@ class AdminUserController @Inject() (
     userExperimentRepo: UserExperimentRepo,
     socialGraphPlugin: SocialGraphPlugin,
     searchClient: SearchServiceClient,
-    userChannel: UserChannel,
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
@@ -279,7 +277,6 @@ class AdminUserController @Inject() (
         case Some(ue) => Some(userExperimentRepo.save(ue.withState(UserExperimentStates.ACTIVE)))
         case None => Some(userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType)))
       }) foreach { _ =>
-        userChannel.pushAndFanout(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
         eliza.sendToUser(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }
@@ -302,7 +299,6 @@ class AdminUserController @Inject() (
     db.readWrite { implicit session =>
       userExperimentRepo.get(userId, ExperimentTypes(experiment)).foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
-        userChannel.pushAndFanout(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
         eliza.sendToUser(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }

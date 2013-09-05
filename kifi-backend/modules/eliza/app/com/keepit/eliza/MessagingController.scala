@@ -328,7 +328,7 @@ class MessagingController @Inject() (
 
     future{
       val notifText = messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText
-      shoebox.sendPushNotification(user, message.externalId.id, getPendingNotificationCount(user), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
+      shoebox.sendPushNotification(user, thread.externalId.id, getPendingNotificationCount(user), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
     }
 
     //This is mostly for testing and monitoring

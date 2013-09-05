@@ -51,7 +51,7 @@ class NormalizationServiceImpl @Inject() (
 
         val newReferenceWithRecursiveUpdatesOption = for {
           successfulCandidate <- successfulCandidateOption
-          newReference <- migrate(current, successfulCandidate)
+          newReference <- migrate(current, successfulCandidate, weakerCandidates)
         } yield (newReference, getURIsToBeFurtherUpdated(current, newReference).map { uri =>
             update(uri, TrustedCandidate(newReference.url, newReference.normalization.get))
           })
@@ -102,8 +102,10 @@ class NormalizationServiceImpl @Inject() (
 
   private case class FindStrongerCandidate(currentReference: NormalizedURI, priorKnowledge: PriorKnowledge) {
 
-    def apply(candidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] =
+    def apply(candidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] = {
+      log.info(s"NORMALIZATION: CHECKING CANDIDATES FOR url ${currentReference.url}:\n" + candidates.mkString("\n"))
       findCandidate(candidates.sortBy(_.normalization).reverse)
+    }
 
     def findCandidate(orderedCandidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] = {
       orderedCandidates match {
@@ -161,14 +163,30 @@ class NormalizationServiceImpl @Inject() (
     toBeUpdated.filter(uri => !toBeExcluded.contains(uri.url))
   }
 
-  private def migrate(currentReference: NormalizedURI, successfulCandidate: NormalizationCandidate): Option[NormalizedURI] = db.readWrite { implicit session =>
+  private def migrate(currentReference: NormalizedURI, successfulCandidate: NormalizationCandidate, weakerCandidates: Seq[NormalizationCandidate]): Option[NormalizedURI] = db.readWrite { implicit session =>
     val latestCurrent = normalizedURIRepo.get(currentReference.id.get)
     if (latestCurrent.state != NormalizedURIStates.INACTIVE && latestCurrent.state != NormalizedURIStates.REDIRECTED && latestCurrent.normalization == currentReference.normalization) {
       val newReference = getNewReference(successfulCandidate)
       val saved = normalizedURIRepo.save(newReference)
 
       val (oldUriId, newUriId) = (currentReference.id.get, saved.id.get)
-      if (oldUriId != newUriId) uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = oldUriId, newUri = newUriId))
+      if (oldUriId != newUriId) {
+
+        if (currentReference.normalization.isEmpty) {
+          for (weakerVariationCandidate <- weakerCandidates.find { candidate => candidate.isTrusted && candidate.url == currentReference.url }) yield
+            normalizedURIRepo.save(latestCurrent.withNormalization(weakerVariationCandidate.normalization))
+        }
+
+        uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = oldUriId, newUri = newUriId))
+      }
+
+      /// LOGGING
+      val toBeFurtherUpdated = getURIsToBeFurtherUpdated(currentReference, newReference).map(_.url)
+      log.info("NORMALIZATION EVENT: \n" +
+        s"${(latestCurrent.normalization, latestCurrent.url)} => ${(newReference.normalization, newReference.url)} \n" +
+        s"TO BE FURTHER UPDATED: ${toBeFurtherUpdated.size}} \n" + toBeFurtherUpdated.mkString("\n")
+      )
+      /// END LOGGING
 
       Some(saved)
     }

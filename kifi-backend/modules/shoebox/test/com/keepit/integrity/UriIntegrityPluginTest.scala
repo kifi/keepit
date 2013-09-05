@@ -42,11 +42,12 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val url2 = urlRepo.save(URLFactory("http://www.fakebing.com/index", nuri2.id.get))        // to be splitted, to be pointing to
             
             val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
+            val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz"))
             
             val hover = BookmarkSource("HOVER_KEEP")
             val bm1 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id,  uriId = nuri0.id.get, source = hover))
             val bm2 = bmRepo.save(Bookmark(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id, uriId = nuri2.id.get, source = hover))
-            val bm3 = bmRepo.save(Bookmark(title = Some("bing"), userId = user.id.get, url = url2.url, urlId = url2.id, uriId = nuri2.id.get, source = hover))
+            val bm3 = bmRepo.save(Bookmark(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id, uriId = nuri2.id.get, source = hover))
 
             (Array(nuri0, nuri1, nuri2, nuri3), Array(url0, url1, url2), Array(bm1, bm2, bm3))
           }
@@ -92,7 +93,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         }
         
         val centralConfig = inject[CentralConfig]
-        centralConfig(new ChangedUriSeqNumKey()) === Some(2)
+        centralConfig(new ChangedUriSeqNumKey()) === Some(1)
         
         // split
         plugin.handleChangedUri(SplittedUri(urls(2), uris(3).id.get))
