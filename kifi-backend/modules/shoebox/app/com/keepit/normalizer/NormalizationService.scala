@@ -159,7 +159,7 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private def saveAndLog(uri: NormalizedURI)(implicit session: RWSession) =
-    normalizedURIRepo.save(uri) tap { saved => log.info(s"${saved.id.get}: ${saved.url} saved with normalization ${saved.normalization.get}") }
+    normalizedURIRepo.save(uri) tap { saved => log.info(s"${saved.id.get}: ${saved.url} saved with ${saved.normalization.get}") }
 
   def processAdditionalUpdates(currentReference: NormalizedURI, newReferenceOption: Option[NormalizedURI]): Future[Option[NormalizedURI]] = {
     val additionalUpdatesOption = newReferenceOption.map { newReference =>
