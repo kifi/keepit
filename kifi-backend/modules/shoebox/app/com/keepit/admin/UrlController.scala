@@ -283,12 +283,6 @@ class UrlController @Inject() (
     }
     Ok(s"OK. Deleting duplicated bookmarks. ReadOnly Mode = ${readOnly}. Will send report emails")
   }
-
-  def invalidateSimpleNormalizations(readOnly: Boolean = true) = AdminHtmlAction{ request =>
-    val toBeInvalidated = db.readWrite { implicit s => uriRepo.invalidateSimpleNormalizations(readOnly) }
-    Ok(s"[READONLY = ${readOnly}] TO BE INVALIDATED: ${toBeInvalidated.length} uris. \n" + toBeInvalidated.map(_.url).mkString("\n"))
-    }
-
 }
 
 
