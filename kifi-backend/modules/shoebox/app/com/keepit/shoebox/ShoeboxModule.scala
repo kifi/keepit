@@ -20,6 +20,7 @@ import com.keepit.common.zookeeper.DiscoveryModule
 import com.keepit.common.db.slick.SlickModule
 import com.keepit.integrity.DataIntegrityModule
 import com.keepit.eliza.ElizaServiceClientModule
+import com.keepit.realtime.WebSocketModule
 
 abstract class ShoeboxModule(
   // Common Functional Modules
@@ -44,6 +45,7 @@ abstract class ShoeboxModule(
   val scraperModule: ScraperModule,
   val socialGraphModule: SocialGraphModule,
   val analyticsModule: AnalyticsModule,
+  val webSocketModule: WebSocketModule,
   val topicModelModule: TopicModelModule,
   val domainTagImporterModule: DomainTagImporterModule,
   val sliderHistoryTrackerModule: SliderHistoryTrackerModule,
@@ -72,6 +74,7 @@ abstract class ShoeboxModule(
     scraperModule,
     socialGraphModule,
     analyticsModule,
+    webSocketModule,
     topicModelModule,
     domainTagImporterModule,
     sliderHistoryTrackerModule,

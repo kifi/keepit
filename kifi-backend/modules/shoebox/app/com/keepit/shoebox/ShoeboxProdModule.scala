@@ -19,6 +19,7 @@ import com.keepit.common.actor.ProdActorSystemModule
 import com.keepit.common.zookeeper.ProdDiscoveryModule
 import com.keepit.integrity.DataIntegrityModule
 import com.keepit.eliza.ProdElizaServiceClientModule
+import com.keepit.realtime.ShoeboxWebSocketModule
 
 case class ShoeboxProdModule() extends ShoeboxModule(
   // Common Functional Modules
@@ -43,6 +44,7 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   scraperModule = ScraperImplModule(),
   socialGraphModule = ProdSocialGraphModule(),
   analyticsModule = ProdAnalyticsModule(),
+  webSocketModule = ShoeboxWebSocketModule(),
   topicModelModule = LdaTopicModelModule(),
   domainTagImporterModule = ProdDomainTagImporterModule(),
   sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule(),

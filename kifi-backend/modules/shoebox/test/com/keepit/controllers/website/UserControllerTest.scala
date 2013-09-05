@@ -19,6 +19,7 @@ import play.api.test._
 import securesocial.core._
 import securesocial.core.providers.Token
 import play.api.mvc.Result
+import com.keepit.realtime.UrbanAirshipConfig
 
 class UserControllerTest extends Specification with ApplicationInjector {
 
@@ -59,6 +60,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
       bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
       bind[HttpClient].toInstance(new FakeHttpClient())
       bind[ImpersonateCookie].toInstance(new ImpersonateCookie(Some("dev.ezkeep.com")))
+      bind[UrbanAirshipConfig].toInstance(UrbanAirshipConfig("test", "test"))
       bind[KifiInstallationCookie].toInstance(new KifiInstallationCookie(Some("dev.ezkeep.com")))
       bind[SecureSocialAuthenticatorPlugin].toInstance(new SecureSocialAuthenticatorPlugin {
         def delete(id: String) = Right(())

@@ -25,6 +25,7 @@ import com.keepit.common.zookeeper.DevDiscoveryModule
 import com.keepit.shoebox.ShoeboxSlickModule
 import com.keepit.integrity.DataIntegrityModule
 import com.keepit.eliza.ProdElizaServiceClientModule
+import com.keepit.realtime.ShoeboxWebSocketModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
 
@@ -51,6 +52,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   scraperModule = ScraperImplModule(),
   socialGraphModule = ProdSocialGraphModule(),
   analyticsModule = DevAnalyticsModule(),
+  webSocketModule = ShoeboxWebSocketModule(),
   topicModelModule = DevTopicModelModule(),
   domainTagImporterModule = DevDomainTagImporterModule(),
   sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule(),

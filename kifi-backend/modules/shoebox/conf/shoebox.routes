@@ -53,6 +53,8 @@ POST    /ext/canonical              @com.keepit.controllers.ext.ExtPageControlle
 
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
+POST    /devices/:deviceType        @com.keepit.controllers.website.UserController.registerDevice(deviceType: String)
+
 ##########################################
 # Website
 ##########################################
