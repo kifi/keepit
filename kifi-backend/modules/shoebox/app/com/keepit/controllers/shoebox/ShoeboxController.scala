@@ -152,10 +152,7 @@ class ShoeboxController @Inject() (
   }
 
   def internNormalizedURI() = Action(parse.json) { request =>
-    val o: JsObject = request.body match {
-      case o: JsObject => o
-      case url: JsString => Json.obj("url" -> url)
-    }
+    val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
     val uriId = db.readWrite(attempts=2) { implicit s =>
       normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
