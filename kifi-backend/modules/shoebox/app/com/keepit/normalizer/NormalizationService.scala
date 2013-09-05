@@ -167,7 +167,7 @@ class NormalizationServiceImpl @Inject() (
     val latestCurrent = normalizedURIRepo.get(currentReference.id.get)
     if (latestCurrent.state != NormalizedURIStates.INACTIVE && latestCurrent.state != NormalizedURIStates.REDIRECTED && latestCurrent.normalization == currentReference.normalization) {
       val newReference = getNewReference(successfulCandidate)
-/*      val saved = normalizedURIRepo.save(newReference)
+      val saved = normalizedURIRepo.save(newReference)
 
       val (oldUriId, newUriId) = (currentReference.id.get, saved.id.get)
       if (oldUriId != newUriId) {
@@ -180,15 +180,15 @@ class NormalizationServiceImpl @Inject() (
         uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = oldUriId, newUri = newUriId))
       }
 
-      Some(saved)*/
-
+      /// LOGGING
       val toBeFurtherUpdated = getURIsToBeFurtherUpdated(currentReference, newReference).map(_.url)
       log.info("NORMALIZATION EVENT: \n" +
         s"${(latestCurrent.normalization, latestCurrent.url)} => ${(newReference.normalization, newReference.url)} \n" +
         s"TO BE FURTHER UPDATED: ${toBeFurtherUpdated.size}} \n" + toBeFurtherUpdated.mkString("\n")
       )
+      /// END LOGGING
 
-      None
+      Some(saved)
     }
     else None
   }
