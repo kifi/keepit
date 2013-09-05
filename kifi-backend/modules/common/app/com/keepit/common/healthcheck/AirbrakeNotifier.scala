@@ -57,27 +57,37 @@ class AirbrakeNotifier @Inject() (
         <var key={e._1}>{e._2.mkString(" ")}</var>
     })}</params>
 
-                // <request>
-                //   <url>{request.uri.toString}</url>
-                //   {formatParams(error.request.params)}
-                //   <component/>
-                //   <action/>
-                // </request>
+
+  private def noticeUrl(url: String, params: Map[String,List[String]] = Map()) =
+    <request>
+      <url>{url}</url>
+      { formatParams(params) }
+      <component/>
+      <action/>
+    </request>
+
+  private def noticeError(error: Throwable) =
+    <error>
+      <class>{error.getClass.getName}</class>
+      <message>{error.getMessage}</message>
+      <backtrace>
+        { formatStacktrace(error.getStackTrace) }
+      </backtrace>
+    </error>
+
+  private def noticeEntities(error: AirbrakeError) =
+    (Some(noticeError(error.exception)) :: error.url.map{u => noticeUrl(u, error.params)} :: Nil).flatten
+
   //http://airbrake.io/airbrake_2_3.xsd
-  private[healthcheck] def format(error: AirbrakeError) = <notice version="2.3">
+  private[healthcheck] def format(error: AirbrakeError) =
+    <notice version="2.3">
       <api-key>{apiKey}</api-key>
       <notifier>
         <name>S42</name>
         <version>0.0.1</version>
         <url>http://admin.kifi.com/admin</url>
       </notifier>
-      <error>
-        <class>{error.exception.getClass.getName}</class>
-        <message>{error.exception.getMessage}</message>
-        <backtrace>
-          {formatStacktrace(error.exception.getStackTrace)}
-        </backtrace>
-      </error>
+      { noticeEntities(error) }
       <server-environment>
         <environment-name>production</environment-name>
       </server-environment>
