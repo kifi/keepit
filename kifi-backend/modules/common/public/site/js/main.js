@@ -17,13 +17,41 @@ $.extend($.timeago.settings.strings, {
 	month: "a month",
 	year: "a year"});
 
-$.fn.layout = function() {
-	return this.each(function() {this.clientHeight});  // forces layout
-};
+!function() {
+	$.fn.layout = function() {
+		return this.each(forceLayout);
+	};
+	function forceLayout() {
+		this.clientHeight;
+	}
 
-$.fn.removeText = function() {
-	return this.contents().filter(function() {return this.nodeType == 3}).remove().end().end();
-};
+	$.fn.removeText = function() {
+		return this.contents().filter(isText).remove().end().end();
+	};
+	function isText() {
+		return this.nodeType === 3;
+	}
+
+	$.fn.dialog = function() {
+		var args = Array.prototype.slice.apply(arguments);
+		args.unshift(dialogMethods[args[0]]), args[1] = null;
+		return this.each($.proxy.apply($, args));
+	};
+	var dialogMethods = {
+		show: function() {
+			if (!this.parentNode) {
+				$(this).appendTo('body').layout();
+			}
+			$(this).addClass('showing');
+		},
+		hide: function() {
+			$(this).on('transitionend', function end(e) {
+				if (e.target === this) {
+					$(this).off('transitionend', end).detach();
+				}
+			}).removeClass('showing')
+		}};
+}();
 
 $.postJson = function(uri, data, done) {
 	return $.ajax({
@@ -646,36 +674,36 @@ $(function() {
 		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 		filterFriends();
 	});
-	var $inviteMessageDialog = $('.invite-message-dialog').remove();
+	var $inviteMessageDialog = $('.invite-message-dialog').detach()
+	.on('submit', 'form', function(e) {
+		e.preventDefault();
+		$.post(this.action, $(this).serialize()).complete(function(xhr) {
+			if (xhr.status >= 400) {
+				console.log('error sending invite:', xhr);
+			} else {
+				console.log('sent invite');
+				$inviteMessageDialog.dialog('hide');
+			}
+			updateInviteCache();
+			prepInviteTab();
+		});
+	}).on('click', '.invite-cancel', function(e) {
+		e.preventDefault();
+		$inviteMessageDialog.dialog('hide');
+	});
 	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
 	$('.invite-filter').on('input', filterFriends);
-	$('.invite-friends').on('click', '.invite-button', function () {
+	$('.invite-friends').on('click', '.invite-button', function() {
 		var $friend = $(this).closest('.invite-friend'), fullSocialId = $friend.data('value');
 		// TODO(greg): figure out why this doesn't work cross-domain
-		var $form = $('<form method=POST action=/invite style="position:absolute;height:0;width:0;left:-99px">')
-			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">').appendTo('body');
 		if (/^facebook/.test(fullSocialId)) {
 			window.open("about:blank", fullSocialId, "height=640,width=1060,left=200,top=200", false);
-			$form.attr('target', fullSocialId).submit().remove();
+			$('<form method=POST action=/invite target="' + fullSocialId + '" style="position:fixed;height:0;width:0;left:-99px">')
+			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">')
+			.appendTo('body').submit().remove();
 		} else if (/^linkedin/.test(fullSocialId)) {
-			inviteMessageDialogTmpl.render({label: $friend.find('.invite-name').text()});
-			$inviteMessageDialog.appendTo($form).on('click', '.invite-cancel', function (e) {
-				e.preventDefault();
-				$inviteMessageDialog.remove(), $form.remove();
-			});
-			$form.on('submit', function (e) {
-				e.preventDefault();
-				$.post($form.attr('action'), $form.serialize()).complete(function(xhr) {
-					if (xhr.status >= 400) {
-						console.log('error sending invite:', xhr);
-					} else {
-						console.log('sent invite');
-						$inviteMessageDialog.remove(), $form.remove();
-					}
-					updateInviteCache();
-					prepInviteTab();
-				});
-			});
+			inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: $friend.find('.invite-name').text()});
+			$inviteMessageDialog.dialog('show');
 		}
 	});
 
