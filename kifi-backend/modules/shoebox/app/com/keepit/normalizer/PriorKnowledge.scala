@@ -8,7 +8,8 @@ case class PriorKnowledge(currentReference: NormalizedURI)(implicit normalizedUR
   lazy val contentChecks = PriorKnowledge.getContentChecks(currentReference.url)
 
   def apply(candidate: NormalizationCandidate): PriorKnowledge.Action = candidate match {
-    case candidate if !PriorKnowledge.getDomain(candidate.url).map(domain => domain.endsWith("linkedin.com") || domain.endsWith("kifi.com")).getOrElse(false) => PriorKnowledge.REJECT
+    case _ => PriorKnowledge.REJECT
+    //case candidate if !PriorKnowledge.getDomain(candidate.url).map(domain => domain.endsWith("linkedin.com") || domain.endsWith("kifi.com")).getOrElse(false) => PriorKnowledge.REJECT
     case _: TrustedCandidate => PriorKnowledge.ACCEPT
     case _: UntrustedCandidate => contentChecks.find(_.isDefinedAt(candidate)).map(PriorKnowledge.Check).getOrElse(PriorKnowledge.REJECT)
   }

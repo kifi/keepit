@@ -183,6 +183,7 @@ GET     /admin/data/mergedUri/:page       @com.keepit.controllers.admin.UrlContr
 GET     /admin/data/batchMergedUri        @com.keepit.controllers.admin.UrlController.batchMerge
 GET     /admin/data/dupBookmarks          @com.keepit.controllers.admin.UrlController.handleDupBookmarks(readOnly: Boolean ?= true)
 GET     /admin/data/delDupBookmarks          @com.keepit.controllers.admin.UrlController.deleteDupBookmarks(readOnly: Boolean ?= true)
+GET     /admin/data/invalidateSimpleNormalizations          @com.keepit.controllers.admin.UrlController.invalidateSimpleNormalizations(readOnly: Boolean ?= true)
 
 
 
