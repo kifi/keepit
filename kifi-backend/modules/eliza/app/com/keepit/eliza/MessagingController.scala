@@ -475,13 +475,13 @@ class MessagingController @Inject() (
       log.info(s"[get_thread] got raw messages for extId $threadExtId: $messages")
       messages.map { message =>
         MessageWithBasicUser(
-          message.externalId,
-          message.createdAt,
-          message.messageText,
-          message.sentOnUrl.getOrElse(""),
-          thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
-          message.from.map(id2BasicUser(_)),
-          participantSet.toSeq.map(id2BasicUser(_))
+          id           = message.externalId,
+          createdAt    = message.createdAt,
+          text         = message.messageText,
+          url          = message.sentOnUrl.getOrElse(""),
+          nUrl         = thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
+          user         = message.from.map(id2BasicUser(_)),
+          participants = participantSet.toSeq.map(id2BasicUser(_))
         )
       }
     }
