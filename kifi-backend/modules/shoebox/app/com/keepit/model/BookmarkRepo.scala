@@ -143,7 +143,7 @@ class BookmarkRepoImpl @Inject() (
 
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit = {
     val q = (for(b <- table if b.id === id) yield b)
-    q.firstOption.map{ bm => invalidateCache(bm) }
+    q.firstOption.map{ bm => bookmarkUriUserCache.remove(BookmarkUriUserKey(bm.uriId, bm.userId)); countCache.remove(BookmarkCountKey(Some(bm.userId))) }
     q.delete
   }
   

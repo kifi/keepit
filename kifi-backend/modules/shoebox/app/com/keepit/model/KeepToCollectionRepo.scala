@@ -86,7 +86,7 @@ class KeepToCollectionRepoImpl @Inject() (
   
   def delete(id: Id[KeepToCollection])(implicit session: RWSession): Unit = {
     val q = (for(r <- table if r.id === id) yield r)
-    q.firstOption.map{ ktc => collectionRepo.collectionChanged(ktc.collectionId, false); invalidateCache(ktc) }
+    q.firstOption.map{ ktc => collectionRepo.collectionChanged(ktc.collectionId, false); collectionsForBookmarkCache.remove(CollectionsForBookmarkKey(ktc.bookmarkId)) }
     q.delete
   }
 
