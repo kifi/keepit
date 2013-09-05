@@ -1,7 +1,5 @@
-/*
-jquery-hoverfu.js
-home-grown at FortyTwo, not intended for distribution (yet)
-*/
+// jquery-hoverfu.js
+// home-grown at FortyTwo, not intended for distribution
 
 // Invoke on a link or other element that should trigger a hover element to display
 // inside it (presumably absolutely positioned relative to the trigger) on mouseover
@@ -10,39 +8,61 @@ home-grown at FortyTwo, not intended for distribution (yet)
 // recovery period during which clicks are ignored.
 
 !function($) {
-  $.fn.hoverfu = function(selector, create) {
-    if (selector == "destroy") {
+  'use strict';
+
+  $.fn.hoverfu = function(m) {
+    if ((m = methods[m])) {
+      return m.apply(this, Array.prototype.slice.call(arguments, 1));
+    } else {
+      return methods.init.apply(this, arguments);
+    }
+  };
+
+  var methods = {
+    init: function(selector, create) {
+      if (!create) create = selector, selector = null;
+      if (typeof create != "function") create = createFromDataAttr(create);
+      return this
+      .on("mouseover.hoverfu", selector, $.proxy(onMouseOver, null, create))
+      .on("mouseout.hoverfu", selector, onMouseOut)
+      .on("mousedown.hoverfu", selector, function(e) {
+        var data = getData(this);
+        if (!data.opts || !data.opts.click || isFadingOut(data)) return;
+        if (data.opts.click == "hide") {
+          hide.call(this);
+        } else if (data.opts.click == "toggle") {
+          // Ignore clicks that occur very soon (160ms) after a show or hide begins
+          // because the user's intent is likely already happening.
+          if (e.isTrigger || Date.now() - Math.max(data.showTime || 0, data.fadeOutStartTime || 0) > 160) {
+            if (data.showing) {
+              hide.call(this);
+            } else if (data.$h) {
+              show.call(this);
+            } else {
+              createHover(data, create, true);
+            }
+          }
+        }
+      })
+      .on("hoverfu:show.hoverfu", selector, function() {
+        var data = getData(this);
+        if (data.$h) {
+          show.call(this);
+        } else {
+          createHover(data, create, true);
+        }
+      });
+    },
+    show: function() {
+      return this.trigger("hoverfu:show");
+    },
+    destroy: function() {
       return this.each(function() {
         var data = getData(this) || {};
         clearTimeout(data.show || data.hide);
         data.$h && data.$h.remove();
       }).off(".hoverfu").removeData("hoverfu");
-    }
-    if (!create) create = selector, selector = null;
-    if (typeof create != "function") create = createFromDataAttr(create);
-    return this
-    .on("mouseover.hoverfu", selector, $.proxy(onMouseOver, null, create))
-    .on("mouseout.hoverfu", selector, onMouseOut)
-    .on("mousedown.hoverfu", selector, function(e) {
-      var data = getData(this);
-      if (!data.opts || !data.opts.click || isFadingOut(data)) return;
-      if (data.opts.click == "hide") {
-        hide.call(this);
-      } else if (data.opts.click == "toggle") {
-        // Ignore clicks that occur very soon (160ms) after a show or hide begins
-        // because the user's intent is likely already happening.
-        if (e.isTrigger || Date.now() - Math.max(data.showTime || 0, data.fadeOutStartTime || 0) > 160) {
-          if (data.showing) {
-            hide.call(this);
-          } else if (data.$h) {
-            show.call(this);
-          } else {
-            createHover(data, create, true);
-          }
-        }
-      }
-    });
-  };
+    }};
 
   function createHover(data, create, showImmediately) {
     var createStartTime = Date.now(), a = data.$a[0];

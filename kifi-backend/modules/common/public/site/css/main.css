@@ -552,6 +552,27 @@ span.long-text, a.long-text {display: inline-block}
 .welcome-dialog>.dialog-content>button:hover {background-color: #7faeef}
 .welcome-dialog>.dialog-content>button:active {background-color: #5f9cef; -webkit-transition: none; transition: none}
 
+/* tips */
+.tip {
+  position: absolute; width: auto; height: auto; border-radius: 6px; padding: 8px 12px; background-color: rgba(53,60,67,.9); color: #fff; font-size: 12px; line-height: 14px; opacity: 0;
+  -webkit-transform: translate(0, 4px);
+  transform: translate(0, 4px);
+  -webkit-transition: opacity .15s ease-in-out, -webkit-transform .15s ease-out;
+  transition: opacity .15s ease-in-out, transform .15s ease-out;
+}
+.tip-below {
+  -webkit-transform: translate(0,-4px);
+  transform: translate(0,-4px);
+}
+.tip.showing {
+  opacity: 1;
+  -webkit-transform: none;
+  transform: none;
+  -webkit-transition-duration: 90ms;
+  transition-duration: 90ms;
+}
+.tip::before {content: " "; position: absolute; top: 100%; left: 50%; margin-left: -8px; font-size: 0; line-height: 0; border-style: solid; border-width: 8px 8px 0; border-color: rgba(53,60,67,.9) transparent}
+.tip-below::before {top: auto; bottom: 100%; border-width: 0 8px 8px}
 
 /* friend card */
 .fr-card {
