@@ -198,7 +198,7 @@ class MessageThreadRepoImpl @Inject() (
 
 
 case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {
-  override val version = 2
+  override val version = 3
   val namespace = "message_thread_by_external_id"
   def toKey(): String = externalId.id
 }
