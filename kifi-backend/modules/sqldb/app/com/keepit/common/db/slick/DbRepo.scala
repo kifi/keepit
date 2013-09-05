@@ -87,7 +87,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
   private def update(model: M)(implicit session: RWSession) = {
     val target = for(t <- table if t.id === model.id.get) yield t
     val count = target.update(model)
-    assert(1 == count)
+    if (count != 1) throw new IllegalStateException(s"Updating $count models of [$m] instead of exsactly one")
     model
   }
 
