@@ -270,7 +270,7 @@
 					</div>
 					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
 				</div>
-				<div class="dialog invite-message-dialog">
+				<div class="dialog invite-message-dialog" style="display:none">
 					<form method="POST" action="/invite" class="dialog-content" data-template>
 						<div class="invite-message-header">Your Kifi invite to {{label}}</div>
 						<a href="javascript:" class="invite-cancel">×</a>
@@ -445,6 +445,20 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 				</div>
 			</div>
 			<div class="fr-card-tri"></div>
+		</div>
+	</div>
+
+	<div class="dialog welcome-dialog" style="display:none">
+		<div class="dialog-content">
+			<h2>Welcome to the new kifi.com</h2>
+			Here you can:
+			<ul>
+				<li>Browse and search your keeps
+				<li>Create personal collections of keeps
+				<li>Invite new friends to Kifi
+				<li>Change settings
+			</ul>
+			<button>Let’s go</button>
 		</div>
 	</div>
 
