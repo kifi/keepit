@@ -648,6 +648,7 @@ $(function() {
 	const friendsToShow = 40;
 	const friendsShowing = [];
 	var moreFriends = true;
+	var invitesLeft;
 	function prepInviteTab(moreToShow) {
 		if (moreToShow && !moreFriends) return;
 		moreFriends = true;
@@ -677,10 +678,22 @@ $(function() {
 			nwFriendsTmpl.append(friends);
 			inviteFilterTmpl.render({results: friendsShowing.length, filter: filter});
 		});
+		$.getJSON(xhrBase + '/user/inviteCounts', { updatedAt: invitesUpdatedAt }, function (invites) {
+			invitesLeft = invites.left;
+			$('.num-invites').text(invitesLeft);
+		});
 	}
 	$('.invite-filters>a').click(function () {
 		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 		filterFriends();
+	});
+	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
+	.on('click', '.more-invites', function(e) {
+		e.preventDefault();
+		$noInvitesDialog.dialog('hide');
+		$.postJson('/site/user/needMoreInvites', {}, function (data) {
+			$noInvitesDialog.dialog('hide');
+		});
 	});
 	var $inviteMessageDialog = $('.invite-message-dialog').detach().show()
 	.on('submit', 'form', function(e) {
@@ -702,6 +715,10 @@ $(function() {
 	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
 	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function() {
+		if (!invitesLeft) {
+			$noInvitesDialog.dialog('show');
+			return;
+		}
 		var $friend = $(this).closest('.invite-friend'), fullSocialId = $friend.data('value');
 		// TODO(greg): figure out why this doesn't work cross-domain
 		if (/^facebook/.test(fullSocialId)) {

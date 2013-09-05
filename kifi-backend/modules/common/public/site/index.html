@@ -258,6 +258,7 @@
 				</div>
 			</div>
 			<div class="friends-page" data-href="friends/invite">
+				<div class="invites-left">Invites Left <span class="num-invites"></span></div>
 				<nav class="invite-filters">
 					<a href="javascript:">All</a>
 					<a href="javascript:" data-nw="facebook"></a>
@@ -269,6 +270,14 @@
 						{% if filter && results == 0 %} No results for <b>{{filter}}</b> {% endif %}
 					</div>
 					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
+				</div>
+				<div class="dialog no-invites-dialog" style="display:none">
+					<div class="dialog-content">
+						<h2>You have no invites left</h2>
+						<p>We are limiting the number of users we accept to Kifi.</p>
+						<p>Need more invites? Tell us.</p>
+						<button class="more-invites">I need more invites</button>
+					</div>
 				</div>
 				<div class="dialog invite-message-dialog" style="display:none">
 					<form method="POST" action="/invite" class="dialog-content" data-template>

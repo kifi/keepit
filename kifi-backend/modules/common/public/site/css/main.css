@@ -255,6 +255,9 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
 .invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px}
 
+.invites-left { float: right; font-size: 14px; padding: 10px 20px; background: #e8ebf1; color: #34495e; }
+.invites-left .num-invites { display: inline-block; text-align: center; padding: 4px; margin: 0 2px; border-radius: 50%; background: #7d7d7d; color: #e8ebf1; height: 15px; min-width: 15px; }
+
 .invite-num-results { float: right; color: #556179; font-size: 14px; margin: 10px 4px; max-width: 45%; }
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
 .invite-friends { position: absolute; top: 248px; bottom: 0; right: -1px; left: 20px; overflow: hidden}
@@ -285,6 +288,10 @@ a.invite-cancel { position: absolute; color: #b1b8c1; font-weight: bold; padding
 input.invite-subject { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; }
 textarea.invite-message { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; min-height: 80px;}
 button.invite-send { position: absolute; right: 12px; bottom: 12px; font-size: 14px; border: none; outline: none; border-radius: 5px; padding: 8px 12px; background: #6fa6ef; color: white; cursor: pointer; }
+
+.no-invites-dialog>.dialog-content { height: 200px; margin-top: -100px; width: 400px; margin-left: -200px; padding: 20px 30px; color: #66829b }
+.no-invites-dialog>.dialog-content>p { margin: 12px 0; }
+button.more-invites { display: block; font-size: 14px; border: none; outline: none; border-radius: 5px; padding: 8px 12px; margin: 24px auto; background: #6fa6ef; color: white; cursor: pointer; }
 
 .friend-reqs-status {margin-bottom: 4px}
 .friend-reqs-status,
@@ -543,10 +550,10 @@ span.long-text, a.long-text {display: inline-block}
 .dialog {z-index: 100; opacity: 0; position: fixed; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0,0,0,.2); -webkit-transition: opacity .3s linear; transition: opacity .3s linear}
 .dialog.showing {opacity: 1}
 .dialog-content {position: fixed; left: 50%; top: 50%; background: #fafafa; border: 1px solid #a8a8aa; border-radius: 5px; box-shadow: 8px 10px 2px rgba(0,0,0,.3); font-size: 14px; -moz-box-sizing: border-box; box-sizing: border-box}
+.dialog>.dialog-content>h2 {margin: 0 0 16px; font-size: 22px; font-weight: 300; -webkit-font-smoothing: antialiased; color: #0089d5}
 
 /* welcome dialog */
 .welcome-dialog>.dialog-content {height: 240px; margin-top: -120px; width: 350px; margin-left: -175px; padding: 20px 0 0 30px; color: #66829b}
-.welcome-dialog>.dialog-content>h2 {margin: 0 0 16px; font-size: 22px; font-weight: 300; -webkit-font-smoothing: antialiased; color: #0089d5}
 .welcome-dialog>.dialog-content>ul {list-style: disc; margin: 12px 0 0 30px}
 .welcome-dialog>.dialog-content>button {width: 160px; height: 36px; line-height: 36px; padding: 0; background-color: #6fa5ef; color: #fff; border: none; border-radius: 6px; margin: 24px 0 0 70px; font-size: inherit; font-weight: 300; -webkit-font-smoothing: antialiased; cursor: pointer; -webkit-transition: background-color .1s; transition: background-color .1s}
 .welcome-dialog>.dialog-content>button:hover {background-color: #7faeef}
