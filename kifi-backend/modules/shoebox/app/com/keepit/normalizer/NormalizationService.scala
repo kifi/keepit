@@ -189,8 +189,6 @@ class NormalizationServiceImpl @Inject() (
       /// END LOGGING
 
       Some(saved)
-
-      None
     }
     else None
   }
