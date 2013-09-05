@@ -32,20 +32,4 @@ abstract class SearchModule(
   val searchConfigModule: SearchConfigModule,
   val resultFeedbackModule: ResultFeedbackModule
 
-) extends ConfigurationModule(
-    fortyTwoModule,
-    cacheModule,
-    secureSocialModule,
-    shoeboxServiceClientModule,
-    clickHistoryModule,
-    browsingHistoryModule,
-    actorSystemModule,
-    discoveryModule,
-    healthCheckModule,
-    storeModule,
-    httpClientModule,
-
-    indexModule,
-    searchConfigModule,
-    resultFeedbackModule
-)
+) extends ConfigurationModule

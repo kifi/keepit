@@ -28,15 +28,4 @@ abstract class ElizaModule(
   // Eliza Functional Modules
   val elizaSlickModule: ElizaSlickModule
 
-) extends ConfigurationModule(
-    fortyTwoModule,
-    cacheModule,
-    secureSocialModule,
-    shoeboxServiceClientModule,
-    actorSystemModule,
-    discoveryModule,
-    healthCheckModule,
-    httpClientModule,
-    elizaServiceClientModule,
-    elizaSlickModule
-)
+) extends ConfigurationModule

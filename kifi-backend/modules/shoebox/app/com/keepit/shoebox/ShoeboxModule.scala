@@ -53,32 +53,4 @@ abstract class ShoeboxModule(
   val geckoboardModule: GeckoboardModule = GeckoboardModule(),
   val dataIntegrityModule: DataIntegrityModule
 
-) extends ConfigurationModule(
-    fortyTwoModule,
-    cacheModule,
-    secureSocialModule,
-    searchServiceClientModule,
-    clickHistoryModule,
-    browsingHistoryModule,
-    mailModule,
-    cryptoModule,
-    storeModule,
-    actorSystemModule,
-    discoveryModule,
-    healthCheckModule,
-    httpClientModule,
-    shoeboxServiceClientModule,
-    elizaServiceClientModule,
-
-    slickModule,
-    scraperModule,
-    socialGraphModule,
-    analyticsModule,
-    webSocketModule,
-    topicModelModule,
-    domainTagImporterModule,
-    sliderHistoryTrackerModule,
-    userIndexModule,
-    geckoboardModule,
-    dataIntegrityModule
-)
+) extends ConfigurationModule
