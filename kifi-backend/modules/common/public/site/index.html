@@ -270,10 +270,11 @@
 					</div>
 					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
 				</div>
-				<div class="invite-message-dialog">
-					<div class="dialog-content" data-template>
+				<div class="dialog invite-message-dialog">
+					<form method="POST" action="/invite" class="dialog-content" data-template>
 						<div class="invite-message-header">Your Kifi invite to {{label}}</div>
 						<a href="javascript:" class="invite-cancel">×</a>
+						<input type="hidden" name="fullSocialId" value="{{fullSocialId}}">
 						<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
 						<textarea class="invite-message" name="message">Hi {{label | replace ' .*', '' }},
 
@@ -281,7 +282,7 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 </textarea>
 						<p>A link for the invite will be attached to your message.</p>
 						<button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
-					</div>
+					</form>
 				</div>
 				<div class="invite-friends">
 					<div class="antiscroll-inner">
