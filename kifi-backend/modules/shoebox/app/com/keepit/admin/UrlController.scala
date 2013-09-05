@@ -18,7 +18,6 @@ import com.keepit.integrity.DuplicateDocumentDetection
 import com.keepit.integrity.DuplicateDocumentsProcessor
 import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.integrity.UriIntegrityPlugin
-import com.keepit.integrity.ChangedUri
 import com.keepit.integrity.MergedUri
 import com.keepit.integrity.SplittedUri
 import org.joda.time.DateTime
