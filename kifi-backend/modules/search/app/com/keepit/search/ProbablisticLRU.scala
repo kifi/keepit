@@ -2,6 +2,8 @@ package com.keepit.search
 
 import com.keepit.common.db.Id
 import com.keepit.common.cache.{ProbablisticLRUChunkCache, ProbablisticLRUChunkKey}
+import com.keepit.common.logging.Logging
+
 
 import scala.math._
 import scala.concurrent.future
@@ -95,7 +97,7 @@ class InMemoryResultClickTrackerBuffer(tableSize: Int) extends SimpleLocalBuffer
 }
 
 
-class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticLRUStore, val filterName: ProbablisticLRUName) extends MultiChunkBuffer {
+class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticLRUStore, val filterName: ProbablisticLRUName) extends MultiChunkBuffer with Logging {
 
 
   private def loadChunk(chunkId: Int) : Array[Int] = {
@@ -110,17 +112,23 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
     }
   }
 
-  private def saveChunk(chunkId: Int, chunk: Array[Int]) : Unit = { 
+  private def saveChunk(chunkId: Int, chunk: Array[Int]) : ProbablisticLRUChunkKey  = { 
     val fullId = FullFilterChunkId(filterName.name, chunkId)
     dataStore += (fullId, chunk)
-    cache.set(ProbablisticLRUChunkKey(fullId), chunk)
+    val cacheKey = ProbablisticLRUChunkKey(fullId)
+    cache.set(cacheKey, chunk)
+    cacheKey
   }
 
   private def numChunks : Int = 4000 
 
   def chunkSize : Int = 4000
 
-  def warmCache() : Unit = (0 to numChunks).foreach(loadChunk(_))
+  def warmCache() : Unit = (0 to numChunks).foreach{ chunkId =>
+    val chunk = loadChunk(chunkId)
+    val cacheKey = saveChunk(chunkId, chunk).toString
+    log.info("Warmed cache for $cacheKey.")
+  }
 
   def getChunk(key: Long) = {
     val chunkId = ((Math.abs(key) % chunkSize*numChunks) / chunkSize).toInt
