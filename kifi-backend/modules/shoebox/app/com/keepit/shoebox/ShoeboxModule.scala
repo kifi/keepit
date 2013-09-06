@@ -3,7 +3,7 @@ package com.keepit.shoebox
 import com.keepit.reports._
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.social.SecureSocialModule
-import com.keepit.common.mail.DevMailModule
+import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.learning.topicmodel.TopicModelModule
 import com.keepit.model.ProdSliderHistoryTrackerModule
@@ -19,7 +19,7 @@ import com.keepit.common.social.ProdSocialGraphModule
 
 abstract class ShoeboxModule(
   val secureSocialModule: SecureSocialModule,
-  val mailModule: DevMailModule,
+  val mailModule: MailModule,
   val storeModule: ShoeboxDevStoreModule,
 
   // Shoebox Functional Modules
