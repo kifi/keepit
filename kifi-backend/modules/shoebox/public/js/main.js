@@ -1477,9 +1477,9 @@ $(function() {
 				var $keep = $(this), keepLink = $keep.find('.keep-title>a')[0];
 				// TODO: support bulk operation with one server request
 				$.postJson(
-					xhrBase + '/keeps/' + $keep.data('id') + '/update',
-					{title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'},
-					function(data) {
+					xhrBase + '/keeps/add',
+					{keeps: [{title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'}]},
+					function() {
 						$keep.find('.keep-private').toggleClass('on', howKept == 'pri');
 					}).error(showMessage.bind(null, 'Could not update keep, please try again later'));
 			});
