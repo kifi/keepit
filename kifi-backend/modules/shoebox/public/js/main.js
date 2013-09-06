@@ -856,7 +856,11 @@ $(function() {
 		var params = {}, keepId = $myKeeps.find('.keep').first().data('id');
 		if (keepId) {
 			params.after = keepId;
+		} else if (!promise.keeps || promise.keeps.state() == "pending") {
+			console.log("[anyNewKeeps] keeps not loaded yet");
+			return;
 		}
+
 		if ($('.left-col h3.active').is('.collection')) {
 			params.collection = $('.left-col h3.active').data('id');
 		}
@@ -928,7 +932,7 @@ $(function() {
 				params.before = lastKeep;
 			}
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
-			$.getJSON(xhrBase + '/keeps/all', params, function withKeeps(data) {
+			promise.keeps = $.getJSON(xhrBase + '/keeps/all', params, function withKeeps(data) {
 				updateCollectionsIfAnyUnknown(data.keeps);
 				$.when(promise.me, promise.collections).done(function() {
 					var numShown = $myKeeps.find(".keep").length + data.keeps.length;
