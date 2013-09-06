@@ -17,20 +17,13 @@ abstract class AbstractModuleAccessor extends ScalaModule {
 
 trait ConfigurationModule extends AbstractModuleAccessor with Logging { 
 
-  private def getAllInterfaces(c: Class[_]): Set[Class[_]] = {
-    if (c == null) Set.empty
-    else (c.getInterfaces.toSet ++ c.getInterfaces.toSet.map(getAllInterfaces).flatten ++ getAllInterfaces(c.getSuperclass)) + c.getSuperclass
-  }
-
   final def configure() {
     log.info(s"Configuring ${this}")
-    for (field <- this.getClass.getMethods) {
-      if (getAllInterfaces(field.getReturnType).contains(classOf[ScalaModule])) {
-        val startTime = System.currentTimeMillis
-        val module = field.invoke(this).asInstanceOf[ScalaModule]
-        install0(module)
-        log.info(s"Installing ${module.getClass.getSimpleName}... took ${System.currentTimeMillis-startTime}ms")
-      }
+    for (field <- getClass.getMethods if classOf[ScalaModule] isAssignableFrom field.getReturnType) {
+      val startTime = System.currentTimeMillis
+      val module = field.invoke(this).asInstanceOf[ScalaModule]
+      install0(module)
+      log.info(s"Installing ${module.getClass.getSimpleName}... took ${System.currentTimeMillis-startTime}ms")
     }
   }
 }
