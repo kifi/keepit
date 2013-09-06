@@ -12,7 +12,7 @@ trait ConfigurationModule extends AbstractModuleAccessor with Logging {
   final def configure() {
     log.info(s"Configuring ${this}")
 
-    for (field <- this.getClass.getMethods) yield {
+    for (field <- this.getClass.getMethods) {
       if (field.getReturnType.getGenericInterfaces.contains(classOf[ScalaModule])) {
         val startTime = System.currentTimeMillis
         val module = field.invoke(this).asInstanceOf[ScalaModule]
