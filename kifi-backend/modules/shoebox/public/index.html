@@ -216,7 +216,7 @@
 				</div>
 			</div>
 		</div>
-		<iframe class="blog"></iframe>
+
 		<div class="friends">
 			<h1>Your Friends</h1>
 			<nav class="friends-tabs">
@@ -329,6 +329,23 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 					</ul>
 				</div>
 				<img class="friend-reqs-loading" src="assets/img/wait.gif">
+			</div>
+		</div>
+
+		<div class="blog-outer">
+			<div class="antiscroll-inner">
+				<div class="blog" data-template>
+					<header>
+						<h1>{{title}}</h1>
+						<h2>{{description | replace '(for|Beta) ', '$1&nbsp;'}}</h2>
+					</header>
+					<article data-template-for="entries">
+						<h3>{{title}}</h3>
+						<time title="{{publishedDate}}">{{shortPublishedDate}}</time>
+						{{content}}
+					</article>
+				</div>
+				<img class="blog-loading" src="assets/img/wait.gif">
 			</div>
 		</div>
 	</div>
