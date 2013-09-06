@@ -856,7 +856,11 @@ $(function() {
 		var params = {}, keepId = $myKeeps.find('.keep').first().data('id');
 		if (keepId) {
 			params.after = keepId;
+		} else if (!promise.keeps || promise.keeps.state() == "pending") {
+			console.log("[anyNewKeeps] keeps not loaded yet");
+			return;
 		}
+
 		if ($('.left-col h3.active').is('.collection')) {
 			params.collection = $('.left-col h3.active').data('id');
 		}
@@ -928,7 +932,7 @@ $(function() {
 				params.before = lastKeep;
 			}
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
-			$.getJSON(xhrBase + '/keeps/all', params, function withKeeps(data) {
+			promise.keeps = $.getJSON(xhrBase + '/keeps/all', params, function withKeeps(data) {
 				updateCollectionsIfAnyUnknown(data.keeps);
 				$.when(promise.me, promise.collections).done(function() {
 					var numShown = $myKeeps.find(".keep").length + data.keeps.length;
@@ -1477,9 +1481,9 @@ $(function() {
 				var $keep = $(this), keepLink = $keep.find('.keep-title>a')[0];
 				// TODO: support bulk operation with one server request
 				$.postJson(
-					xhrBase + '/keeps/' + $keep.data('id') + '/update',
-					{title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'},
-					function(data) {
+					xhrBase + '/keeps/add',
+					{keeps: [{title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'}]},
+					function() {
 						$keep.find('.keep-private').toggleClass('on', howKept == 'pri');
 					}).error(showMessage.bind(null, 'Could not update keep, please try again later'));
 			});
@@ -1770,7 +1774,7 @@ $(function() {
 
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
-	$.getScript('js/jquery-hoverfu.min.js').done(function() {
+	$.getScript('assets/js/jquery-hoverfu.min.js').done(function() {
 		$sendFeedback.hoverfu(function(configure) {
 			configure({
 				position: {my: "center-24 bottom-12", at: "center top", of: this},

@@ -70,7 +70,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
   def getBookmarksChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Bookmark]]
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]]
-  def getCommentsChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Comment]]
   def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiments: Future[Seq[SearchConfigExperiment]]
@@ -171,12 +170,6 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getBookmarkByUriAndUser(uriId, userId)).map { r =>
           Json.fromJson[Option[Bookmark]](r.json).get
       }
-    }
-  }
-
-  def getCommentsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Comment]] = {
-    call(Shoebox.internal.getCommentsChanged(seqNum.value, fetchSize)).map{ r =>
-      r.json.as[JsArray].value.map(js => Json.fromJson[Comment](js).get)
     }
   }
 

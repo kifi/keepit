@@ -95,14 +95,14 @@ class CommentIndexer(
     }
 
     var total = 0
-    var done = false
-    while (!done) {
-      total += update {
-        val comments = Await.result(shoeboxClient.getCommentsChanged(sequenceNumber, fetchSize), 180 seconds)
-        done = comments.isEmpty
-        comments
-      }
-    }
+//    var done = false
+//    while (!done) {
+//      total += update {
+//        val comments = Await.result(shoeboxClient.getCommentsChanged(sequenceNumber, fetchSize), 180 seconds) // TODO: move to eliza
+//        done = comments.isEmpty
+//        comments
+//      }
+//    }
     total
   }
 

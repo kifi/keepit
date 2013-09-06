@@ -5,30 +5,32 @@ import play.api.test._
 import play.api.test.Helpers._
 import scala.util.Random
 
+import LocalAlignment._
+
 class PhraseAwareLocalAlignmentTest extends Specification {
   val toId: Map[String, Int] = Map("a"->10, "b"->20, "c"->30, "d"->40, "e"->50)
 
   val dict0 = Seq(
-    (Seq("b", "c") map toId, 2),
-    (Seq("c", "d") map toId, 2)
+    (Seq("b", "c") map toId, PhraseMatch(0, 2)),
+    (Seq("c", "d") map toId, PhraseMatch(0, 2))
   )
   val dict1 = Seq(
-    (Seq("b", "c") map toId, 2),
-    (Seq("d", "e") map toId, 2)
+    (Seq("b", "c") map toId, PhraseMatch(0, 2)),
+    (Seq("d", "e") map toId, PhraseMatch(0, 2))
   )
   val dict2 = Seq(
-    (Seq("a", "b") map toId, 2),
-    (Seq("d", "e") map toId, 2)
+    (Seq("a", "b") map toId, PhraseMatch(0, 2)),
+    (Seq("d", "e") map toId, PhraseMatch(0, 2))
   )
   val dict3 = Seq(
-    (Seq("b", "c", "d") map toId, 3),
-    (Seq("c", "d", "e") map toId, 3)
+    (Seq("b", "c", "d") map toId, PhraseMatch(0, 3)),
+    (Seq("c", "d", "e") map toId, PhraseMatch(0, 3))
   )
 
-  val ac0 = new AhoCorasick[Int, Int](dict0)
-  val ac1 = new AhoCorasick[Int, Int](dict1)
-  val ac2 = new AhoCorasick[Int, Int](dict2)
-  val ac3 = new AhoCorasick[Int, Int](dict3)
+  val pm0 = new PhraseMatcher(dict0)
+  val pm1 = new PhraseMatcher(dict1)
+  val pm2 = new PhraseMatcher(dict2)
+  val pm3 = new PhraseMatcher(dict3)
 
   class DummyLocalAlignment extends LocalAlignment {
     var positions = Set.empty[(Int, Int)]
@@ -44,30 +46,29 @@ class PhraseAwareLocalAlignmentTest extends Specification {
       val dummy = new DummyLocalAlignment
       val doc = Seq("b", "a", "b", "c", "d", "e")
 
-      var localAlignment = new PhraseAwareLocalAlignment(ac0, dummy)
+      var localAlignment = new PhraseAwareLocalAlignment(pm0, 0.0f, dummy)
       localAlignment.begin()
       doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
       dummy.positions === Set((toId("b"), 2), (toId("c"), 3), (toId("d"), 4))
 
-      localAlignment = new PhraseAwareLocalAlignment(ac1, dummy)
+      localAlignment = new PhraseAwareLocalAlignment(pm1, 0.0f, dummy)
       localAlignment.begin()
       doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
       dummy.positions === Set((toId("b"), 2), (toId("c"), 3), (toId("d"), 4), (toId("e"), 5))
 
-      localAlignment = new PhraseAwareLocalAlignment(ac2, dummy)
+      localAlignment = new PhraseAwareLocalAlignment(pm2, 0.0f, dummy)
       localAlignment.begin()
       doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
       dummy.positions === Set((toId("a"), 1), (toId("b"), 2), (toId("d"), 4), (toId("e"), 5))
 
-      localAlignment = new PhraseAwareLocalAlignment(ac3, dummy)
+      localAlignment = new PhraseAwareLocalAlignment(pm3, 0.0f, dummy)
       localAlignment.begin()
       doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
       dummy.positions === Set((toId("b"), 2), (toId("c"), 3), (toId("d"), 4), (toId("e"), 5))
-
     }
   }
 }

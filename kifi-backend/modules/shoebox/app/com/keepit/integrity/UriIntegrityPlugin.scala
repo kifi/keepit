@@ -36,7 +36,6 @@ class UriIntegrityActor @Inject()(
   userRepo: UserRepo,
   bookmarkRepo: BookmarkRepo,
   collectionRepo: CollectionRepo,
-  commentRepo: CommentRepo,
   commentReadRepo: CommentReadRepo,
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
@@ -53,9 +52,13 @@ class UriIntegrityActor @Inject()(
       val oldBm = bms.head
       assume(bms.size == 1, s"user ${userId.id} has multiple bookmarks referencing uri ${oldBm.uriId}")
       bookmarkRepo.getByUriAndUser(newUriId, userId, excludeState = None) match {
-        case None => bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None 
+        case None => {
+          bookmarkRepo.removeFromCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
+          bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None
+        } 
         case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
-          bookmarkRepo.save(oldBm.withActive(false)); Some(oldBm, bm)
+          bookmarkRepo.save(oldBm.withActive(false));
+          bookmarkRepo.removeFromCache(oldBm); Some(oldBm, bm)
         } else None
       }
     }
@@ -109,10 +112,6 @@ class UriIntegrityActor @Inject()(
       val oldUserBms = bookmarkRepo.getByUri(oldUriId, excludeState = None).groupBy(_.userId)
       handleBookmarks(oldUserBms, newUriId)
 
-      commentRepo.getByUri(oldUriId).map{ cm =>
-        commentRepo.save(cm.withNormUriId(newUriId))
-      }
-
       commentReadRepo.getByUri(oldUriId).map{ cm =>
         commentReadRepo.save(cm.withNormUriId(newUriId))
       }
@@ -145,10 +144,6 @@ class UriIntegrityActor @Inject()(
 
       val oldUserBms = bookmarkRepo.getByUrlId(url.id.get).groupBy(_.userId)
       handleBookmarks(oldUserBms, newUriId)
-
-      commentRepo.getByUrlId(url.id.get).map{ cm =>
-        commentRepo.save(cm.withNormUriId(newUriId))
-      }
 
       deepLinkRepo.getByUrl(url.id.get).map{ link =>
         deepLinkRepo.save(link.withNormUriId(newUriId))

@@ -14,13 +14,22 @@ trait LocalAlignment {
 }
 
 object LocalAlignment {
-  def apply(termIds: Array[Int], ac: Option[AhoCorasick[Int, Int]], gapPenalty: Float): LocalAlignment = {
+  def apply(termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, gapPenalty: Float): LocalAlignment = {
     val localAlignment = new BasicLocalAlignment(termIds, gapPenalty)
-    ac match {
-      case Some(ac) => new PhraseAwareLocalAlignment(ac, localAlignment)
+    phraseMatcher match {
+      case Some(phraseMatcher) => new PhraseAwareLocalAlignment(phraseMatcher, phraseBoost, localAlignment)
       case _ => localAlignment
     }
   }
+
+  trait Match {
+    val pos: Int
+    val len: Int
+  }
+  case class PhraseMatch(pos: Int, len: Int) extends Match
+  case class TermMatch(pos: Int) extends Match { val len = 1 }
+
+  class PhraseMatcher(dict: Seq[(Seq[Int], Match)]) extends AhoCorasick[Int, Match](dict)
 }
 
 class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalAlignment {
@@ -76,13 +85,17 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
   def score: Float = alignmentScore
 }
 
-class PhraseAwareLocalAlignment(ac: AhoCorasick[Int, Int], localAlignment: LocalAlignment) extends LocalAlignment {
-  private[this] val bufSize = ac.maxLength
+import LocalAlignment._
+
+class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float, localAlignment: LocalAlignment) extends LocalAlignment {
+  private[this] val bufSize = phraseMatcher.maxLength
   private[this] var bufferedPos = -1
   private[this] var processedPos = -1
   private[this] val ids = new Array[Int](bufSize)
   private[this] val matching = new Array[Boolean](bufSize)
-  private[this] var state: State[Int] = ac.root
+  private[this] var state: State[Match] = phraseMatcher.initialState
+  private[this] var matchedPhrases = Set.empty[PhraseMatch]
+  private[this] var dictSize = phraseMatcher.size
 
   private def flush(): Unit = {
     while (processedPos < bufferedPos) { processOnePosition() }
@@ -96,7 +109,8 @@ class PhraseAwareLocalAlignment(ac: AhoCorasick[Int, Int], localAlignment: Local
   def begin(): Unit = {
     bufferedPos = -1
     processedPos = -1
-    state = ac.root
+    state = phraseMatcher.initialState
+    matchedPhrases = Set.empty[PhraseMatch]
     localAlignment.begin()
   }
 
@@ -104,7 +118,7 @@ class PhraseAwareLocalAlignment(ac: AhoCorasick[Int, Int], localAlignment: Local
     if (pos - bufferedPos > 1) { // found a gap, flush buffer
       flush()
       processedPos = pos - 1
-      state = ac.root
+      state = phraseMatcher.initialState
     } else if (bufferedPos - processedPos >= bufSize) { // buffer full
       processOnePosition()
     }
@@ -112,12 +126,16 @@ class PhraseAwareLocalAlignment(ac: AhoCorasick[Int, Int], localAlignment: Local
     ids(pos % bufSize) = id
     matching(pos % bufSize) = false
 
-    state = ac.next(id, state)
-    state.check(pos, onMatch = { (curPos, len) =>
-      var i = curPos - min(bufSize, len)
+    state = phraseMatcher.next(id, state)
+    state.check(pos, onMatch = { case (curPos, aMatch) =>
+      var i = curPos - min(bufSize, aMatch.len)
       while (i < curPos) {
         i += 1
         matching(i % bufSize) = true
+      }
+      aMatch match {
+        case phraseMatch: PhraseMatch => matchedPhrases += phraseMatch
+        case _ => None
       }
     })
   }
@@ -127,7 +145,9 @@ class PhraseAwareLocalAlignment(ac: AhoCorasick[Int, Int], localAlignment: Local
     localAlignment.end()
   }
 
-  def score: Float = localAlignment.score
+  def score: Float = {
+    localAlignment.score * ((1.0f - phraseBoost) + (matchedPhrases.size / dictSize) * phraseBoost)
+  }
   def maxScore = localAlignment.maxScore
 }
 
