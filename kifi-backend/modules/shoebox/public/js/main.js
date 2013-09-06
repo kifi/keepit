@@ -379,6 +379,18 @@ $(function() {
 		}
 	}
 
+	// profile
+
+	$('.my-pic').click(function(e) {
+		if (e.which === 1 && $('body').attr('data-view') === 'profile') {
+			e.preventDefault();
+			if (History.getCurrentIndex()) {
+				History.back();
+			} else {
+				navigate('');
+			}
+		}
+	});
 	var profileTmpl = Tempo.prepare("profile-template");
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
@@ -648,6 +660,7 @@ $(function() {
 	const friendsToShow = 40;
 	const friendsShowing = [];
 	var moreFriends = true;
+	var invitesLeft;
 	function prepInviteTab(moreToShow) {
 		if (moreToShow && !moreFriends) return;
 		moreFriends = true;
@@ -677,10 +690,22 @@ $(function() {
 			nwFriendsTmpl.append(friends);
 			inviteFilterTmpl.render({results: friendsShowing.length, filter: filter});
 		});
+		$.getJSON(xhrBase + '/user/inviteCounts', { updatedAt: invitesUpdatedAt }, function (invites) {
+			invitesLeft = invites.left;
+			$('.num-invites').text(invitesLeft);
+		});
 	}
 	$('.invite-filters>a').click(function () {
 		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 		filterFriends();
+	});
+	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
+	.on('click', '.more-invites', function(e) {
+		e.preventDefault();
+		$noInvitesDialog.dialog('hide');
+		$.postJson('/site/user/needMoreInvites', {}, function (data) {
+			$noInvitesDialog.dialog('hide');
+		});
 	});
 	var $inviteMessageDialog = $('.invite-message-dialog').detach().show()
 	.on('submit', 'form', function(e) {
@@ -702,6 +727,10 @@ $(function() {
 	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
 	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function() {
+		if (!invitesLeft) {
+			$noInvitesDialog.dialog('show');
+			return;
+		}
 		var $friend = $(this).closest('.invite-friend'), fullSocialId = $friend.data('value');
 		// TODO(greg): figure out why this doesn't work cross-domain
 		if (/^facebook/.test(fullSocialId)) {
@@ -1031,7 +1060,7 @@ $(function() {
 		$collMenu.removeData("docMouseDown").one('transitionend', function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
 		}).removeClass('showing')
-		.closest(".collection").removeClass("with-menu").off("mouseleave", hideCollMenu);
+		.closest(".collection").removeClass("with-menu");
 	}
 
 	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
@@ -1056,6 +1085,7 @@ $(function() {
 		console.log('[' + e.type + ']', hash, state);
 		switch (parts[0]) {
 			case '':
+				navigate('');
 				showMyKeeps();
 				break;
 			case 'collection':
@@ -1248,7 +1278,7 @@ $(function() {
 		if (e.button > 0) return;
 		e.preventDefault();  // do not start selection
 		var $tri = $(this), $coll = $tri.closest(".collection");
-		$coll.addClass("with-menu").on("mouseleave", hideCollMenu);
+		$coll.addClass("with-menu");
 		$collMenu.hide().removeClass('showing').appendTo($coll)
 			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 70)
 			.show().layout().addClass('showing')
@@ -1658,7 +1688,7 @@ $(function() {
 		delete d.undo, delete d.commit;
 	}
 
-	$(".send-feedback").click(function() {
+	var $sendFeedback = $(".send-feedback").click(function() {
 		if (!window.UserVoice) {
 			window.UserVoice = [];
 			$.getScript("//widget.uservoice.com/2g5fkHnTzmxUgCEwjVY13g.js");
@@ -1670,7 +1700,7 @@ $(function() {
 			default_mode: 'support',
 			forum_id: 200379,
 			custom_template_id: 3305}]);
-	});
+	}).filter('.top-right-nav>*');
 
 	function updateMe(data) {
 		me = data;
@@ -1728,6 +1758,7 @@ $(function() {
 			$welcomeDialog.dialog('show').on('click', 'button', function() {
 				$welcomeDialog.dialog('hide');
 				$welcomeDialog = null;
+				setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
 			}).find('button').focus();
 			$.postJson(xhrBase + '/user/prefs', {site_welcomed: 'true'}, function(data) {
 				console.log("[prefs]", data);
@@ -1740,6 +1771,13 @@ $(function() {
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
 	$.getScript('js/jquery-hoverfu.min.js').done(function() {
+		$sendFeedback.hoverfu(function(configure) {
+			configure({
+				position: {my: "center-24 bottom-12", at: "center top", of: this},
+				mustHoverFor: 400,
+				hideAfter: 1800,
+				click: 'hide'});
+		});
 		$(document).hoverfu(".pic:not(.me)", function(configureHover) {
 			var $a = $(this), id = $a.data('id'), $temp = $('<div>');
 			friendCardTmpl.into($temp).append({

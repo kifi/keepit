@@ -29,6 +29,7 @@ GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksCont
 
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
+
 POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
 POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportController.addErrorReport
 
@@ -60,6 +61,13 @@ POST    /devices/:deviceType        @com.keepit.controllers.website.UserControll
 ##########################################
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
+GET     /collection/:id             @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
+GET     /friends                    @com.keepit.controllers.website.HomeController.home
+GET     /friends/invite             @com.keepit.controllers.website.HomeController.home
+GET     /friends/requests           @com.keepit.controllers.website.HomeController.home
+GET     /profile                    @com.keepit.controllers.website.HomeController.home
+GET     /search                     @com.keepit.controllers.website.HomeController.home
+
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 
@@ -101,6 +109,8 @@ POST    /site/chatter               @com.keepit.controllers.website.CommentContr
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
+GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
+POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
 POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
@@ -117,16 +127,8 @@ GET     /site/user/socialConnections  @com.keepit.controllers.website.UserContro
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
-# Temporary hack for kifi.com site before we fully integrate it with Play!
-GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/collection/:id        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id: String)
-GET     /site/search                @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/profile               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/friends               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/friends/invite        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/friends/requests      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String, id = "")
-# NOTE: /site/*path route above must be last /site/ route because it will break any below it!
+GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
+GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
 
 ##########################################
 # External Services API
@@ -174,12 +176,8 @@ GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/fixSeqNum       @com.keepit.controllers.admin.UrlController.fixSeqNum
-GET     /admin/data/mergedUri/:page       @com.keepit.controllers.admin.UrlController.mergedUriView(page: Int)
-GET     /admin/data/batchMergedUri        @com.keepit.controllers.admin.UrlController.batchMerge
-GET     /admin/data/dupBookmarks          @com.keepit.controllers.admin.UrlController.handleDupBookmarks(readOnly: Boolean ?= true)
-GET     /admin/data/delDupBookmarks          @com.keepit.controllers.admin.UrlController.deleteDupBookmarks(readOnly: Boolean ?= true)
-GET     /admin/data/invalidateSimpleNormalizations          @com.keepit.controllers.admin.UrlController.invalidateSimpleNormalizations(readOnly: Boolean ?= true)
-
+GET     /admin/data/normalization/:page       @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
+GET     /admin/data/batchMerge        @com.keepit.controllers.admin.UrlController.batchMerge
 
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
@@ -236,19 +234,8 @@ GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstance
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
 GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView
 
-GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
-GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
-GET     /admin/emails/message-reply @com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
-
 GET     /admin/electronicMails       @com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
 GET     /admin/electronicMails/:page @com.keepit.controllers.admin.ElectronicMailController.electronicMailsView(page: Int)
-
-GET     /admin/follows              @com.keepit.controllers.admin.AdminCommentController.followsView
-GET     /admin/comments             @com.keepit.controllers.admin.AdminCommentController.commentsViewFirstPage
-GET     /admin/comments/:page       @com.keepit.controllers.admin.AdminCommentController.commentsView(page: Int)
-GET     /admin/messages             @com.keepit.controllers.admin.AdminCommentController.messagesViewFirstPage
-GET     /admin/messages/:page       @com.keepit.controllers.admin.AdminCommentController.messagesView(page: Int)
-POST    /admin/notify/rebuild       @com.keepit.controllers.admin.AdminCommentController.recreateNotificationDetails(safeMode: Boolean ?= true)
 
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])

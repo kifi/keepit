@@ -108,10 +108,6 @@ class DailyAdminReports @Inject() (
   Seq(dailyUniqueDepricatedAddBookmarks, dailySearchQueriesReport)
 )
 
-class DailySearchStatisticsReports @Inject() (
-    dailySearchStatstics: DailySearchStatisticsReportRepo)
-  extends ReportGroup("DailySearchStatistics", Seq(dailySearchStatstics))
-
 
 trait ReportBuilderPlugin extends Plugin {
   def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo) : Unit

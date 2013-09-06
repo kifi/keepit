@@ -43,13 +43,15 @@ trait QueryExpansion extends QueryParser {
       }
     }
 
-    def addSiteQuery(baseQuery: DisjunctionMaxQuery, query: Query) {
-      query match {
-        case query: TermQuery =>
-          val q = copyFieldQuery(query, if (Domain.isValid(query.getTerm.text)) "site" else "site_keywords")
-          q.setBoost(siteBoost)
-          baseQuery.add(q)
-        case _ =>
+    def addSiteQuery(baseQuery: DisjunctionMaxQuery, queryText: String, query: Query) {
+      (if (Domain.isValid(queryText)) Option(SiteQuery(queryText)) else None).orElse{
+        query match {
+          case query: TermQuery => Option(copyFieldQuery(query, "site_keywords"))
+          case _ => None
+        }
+      }.foreach{ q =>
+        q.setBoost(siteBoost)
+        baseQuery.add(q)
       }
     }
 
@@ -59,7 +61,7 @@ trait QueryExpansion extends QueryParser {
       disjunct.add(query)
       disjunct.add(copyFieldQuery(query, "c"))
       disjunct.add(copyFieldQuery(query, "title"))
-      addSiteQuery(disjunct, query)
+      addSiteQuery(disjunct, queryText, query)
     }
 
     getStemmedFieldQuery("ts", queryText).foreach{ query =>

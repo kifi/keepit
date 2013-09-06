@@ -52,9 +52,6 @@
               <li><a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUsersView(0)">Social Users</a>
               <li><a href="@com.keepit.controllers.admin.routes.AdminInvitationController.displayInvitations()">Invitations</a>
             </ul>
-		      <li><a href="@com.keepit.controllers.admin.routes.AdminCommentController.followsView">Follows</a>
-		      <li><a href="@com.keepit.controllers.admin.routes.AdminCommentController.commentsView(0)">Comments</a>
-		      <li><a href="@com.keepit.controllers.admin.routes.AdminCommentController.messagesView(0)">Messages</a>
 		      <li><a href="@com.keepit.controllers.admin.routes.ElectronicMailController.electronicMailsView(0)">Emails</a>
 		      <li class="divider-vertical">
           <li class="dropdown">
@@ -78,7 +75,6 @@
                    <li><a href="@com.keepit.controllers.admin.routes.AdminSearchLabsController.friendMap()">Friend Map</a>
                    <li><a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases()">Phrases</a>
                    <li><a href="@com.keepit.controllers.admin.routes.AdminSpellCorrectorController.spellController()">SpellCorrector</a>
-                   <li><a href="@com.keepit.controllers.admin.routes.ScraperController.searchScraper">Scraper</a>
                    <li><a href="@com.keepit.controllers.admin.routes.TopicModelController.documentTopic()">Document Topic</a>
                    <li><a href="@com.keepit.controllers.admin.routes.TopicModelController.wordTopic()">Word Topic</a>
                    <li><a href="@com.keepit.controllers.admin.routes.TopicModelController.userTopic()">User Topic</a>
@@ -100,7 +96,17 @@
                   <li><a href="@com.keepit.controllers.admin.routes.AdminCacheController.serviceView">Cache Performance</a>
                   <li><a href="@com.keepit.controllers.admin.routes.AdminWebSocketController.serviceView">WebSocket Performance</a>
                   <li><a href="@com.keepit.controllers.admin.routes.AdminClusterController.clustersView">Clusters Overview</a>
-                </ul></li>
+                </ul>
+              </li>
+
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown"  href="@com.keepit.controllers.admin.routes.AdminHealthController.serviceView">Data Integrity</a>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="@com.keepit.controllers.admin.routes.ScraperController.searchScraper">Scraper</a>
+                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(0)">Normalization</a>
+                    </ul>
+                </li>
+
 		    </ul>
 		  </div>
 		</div>
