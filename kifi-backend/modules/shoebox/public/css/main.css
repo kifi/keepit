@@ -86,6 +86,7 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.drop-hover .nav-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection .nav-count {margin-top: 9px; position: relative; left: -1px}
 .collection:hover .nav-count,
+.collection.with-menu .nav-count,
 .collection.renaming .nav-count {display: none}
 .coll-tri {position: absolute; top: 0; bottom: 0; right: 0; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer}
 .active>.coll-tri {background-color: #b8c5d2}
@@ -556,7 +557,7 @@ span.long-text, a.long-text {display: inline-block}
 .dialog>.dialog-content>h2 {margin: 0 0 16px; font-size: 22px; font-weight: 300; -webkit-font-smoothing: antialiased; color: #0089d5}
 
 /* welcome dialog */
-.welcome-dialog>.dialog-content {height: 240px; margin-top: -120px; width: 350px; margin-left: -175px; padding: 20px 0 0 30px; color: #66829b}
+.welcome-dialog>.dialog-content {height: 310px; margin-top: -155px; width: 410px; margin-left: -205px; padding: 40px 55px; color: #66829b; line-height: 1.5; }
 .welcome-dialog>.dialog-content>ul {list-style: disc; margin: 12px 0 0 30px}
 .welcome-dialog>.dialog-content>button {width: 160px; height: 36px; line-height: 36px; padding: 0; background-color: #6fa5ef; color: #fff; border: none; border-radius: 6px; margin: 24px 0 0 70px; font-size: inherit; font-weight: 300; -webkit-font-smoothing: antialiased; cursor: pointer; -webkit-transition: background-color .1s; transition: background-color .1s}
 .welcome-dialog>.dialog-content>button:hover {background-color: #7faeef}

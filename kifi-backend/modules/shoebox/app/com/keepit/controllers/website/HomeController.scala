@@ -46,6 +46,10 @@ class HomeController @Inject() (db: Database,
     Ok(views.html.website.welcome())
   })
 
+  def kifiSiteRedirect(path: String) = Action {
+    MovedPermanently(s"/$path")
+  }
+
   def homeWithParam(id: String) = home
 
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {

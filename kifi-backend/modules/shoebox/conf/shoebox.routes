@@ -125,6 +125,9 @@ GET     /site/user/socialConnections  @com.keepit.controllers.website.UserContro
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
+GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
+GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
+
 ##########################################
 # External Services API
 ##########################################
@@ -170,9 +173,8 @@ POST    /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperControl
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
-GET     /admin/data/mergedUri/:page       @com.keepit.controllers.admin.UrlController.mergedUriView(page: Int)
-GET     /admin/data/batchMergedUri        @com.keepit.controllers.admin.UrlController.batchMerge
-
+GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
+GET     /admin/data/batchMerge          @com.keepit.controllers.admin.UrlController.batchMerge
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex

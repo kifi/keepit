@@ -112,40 +112,6 @@ class UrlController @Inject() (
     "%s urls processed, changes:<br>\n<br>\n%s".format(urlsSize, changes)
   }
 
-//  private def fixCommentSeqNum: Unit = {
-//    import com.keepit.model.CommentStates
-//    log.info("started comment seq num fix")
-//    var count = 0
-//    var done = false
-//    while (!done) {
-//      db.readWrite { implicit session =>
-//        val comments = commentRepo.getCommentsChanged(SequenceNumber.MinValue, 100)
-//        val lastCount = count
-//        done = comments.isEmpty || comments.exists{ comment =>
-//          if (comment.seq.value != 0L) true
-//          else {
-//            commentRepo.save(comment)
-//            count += 1
-//            false
-//          }
-//        }
-//        log.info(s"... fixed seq num of ${count - lastCount} comments")
-//      }
-//    }
-//    log.info(s"finished comment seq num fix: ${count}")
-//  }
-
-//  def fixSeqNum = AdminHtmlAction { request =>
-//    Akka.future {
-//      try {
-//        fixCommentSeqNum
-//      } catch {
-//        case ex: Throwable => log.error(ex.getMessage, ex)
-//      }
-//    }
-//    Ok("sequence number fix started")
-//  }
-
   def orphanCleanup() = AdminHtmlAction { implicit request =>
     Akka.future {
       db.readWrite { implicit session =>
@@ -196,22 +162,23 @@ class UrlController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.UrlController.documentIntegrity())
   }
   
-  def mergedUriView(page: Int = 0) = AdminHtmlAction{ request =>
+  def normalizationView(page: Int = 0) = AdminHtmlAction{ request =>
     val PAGE_SIZE = 50
-    val (totalCount, changes) = db.readOnly{ implicit s =>
-      val totalCount = changedUriRepo.allAppliedCount()
-      val changes = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
+    val (pendingCount, appliedCount, applied) = db.readOnly{ implicit s =>
+      val totalCount = changedUriRepo.count
+      val appliedCount = changedUriRepo.allAppliedCount()
+      val applied = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
         (uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId), change.updatedAt.date.toString())
       }
-      (totalCount, changes)
+      (totalCount - appliedCount, appliedCount, applied)
     }
-    val pageCount = (totalCount*1.0 / PAGE_SIZE).ceil.toInt
-    Ok(html.admin.mergedUri(changes, page, totalCount, pageCount, PAGE_SIZE))
+    val pageCount = (appliedCount*1.0 / PAGE_SIZE).ceil.toInt
+    Ok(html.admin.normalization(applied, page, appliedCount, pendingCount, pageCount, PAGE_SIZE))
   }
   
   def batchMerge = AdminHtmlAction{ request =>
     uriIntegrityPlugin.batchUpdateMerge()
-    Ok("Will do batch merging uris")
+    Ok
   }
 }
 

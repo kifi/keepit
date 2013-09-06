@@ -1060,7 +1060,7 @@ $(function() {
 		$collMenu.removeData("docMouseDown").one('transitionend', function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
 		}).removeClass('showing')
-		.closest(".collection").removeClass("with-menu").off("mouseleave", hideCollMenu);
+		.closest(".collection").removeClass("with-menu");
 	}
 
 	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
@@ -1085,6 +1085,7 @@ $(function() {
 		console.log('[' + e.type + ']', hash, state);
 		switch (parts[0]) {
 			case '':
+				navigate('');
 				showMyKeeps();
 				break;
 			case 'collection':
@@ -1277,7 +1278,7 @@ $(function() {
 		if (e.button > 0) return;
 		e.preventDefault();  // do not start selection
 		var $tri = $(this), $coll = $tri.closest(".collection");
-		$coll.addClass("with-menu").on("mouseleave", hideCollMenu);
+		$coll.addClass("with-menu");
 		$collMenu.hide().removeClass('showing').appendTo($coll)
 			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 70)
 			.show().layout().addClass('showing')
