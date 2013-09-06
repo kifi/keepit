@@ -2,34 +2,22 @@ package com.keepit.search
 
 import com.keepit.common.cache.CacheModule
 import com.keepit.social.SecureSocialModule
-import com.keepit.shoebox.ShoeboxServiceClientModule
 import com.keepit.model.{BrowsingHistoryModule, ClickHistoryModule}
-import com.keepit.common.healthcheck.HealthCheckModule
 import com.keepit.common.store.StoreModule
-import com.keepit.common.net.HttpClientModule
-import com.keepit.inject.{FortyTwoModule, ConfigurationModule}
-import com.keepit.common.actor.ActorSystemModule
-import com.keepit.common.zookeeper.DiscoveryModule
+import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
 
 abstract class SearchModule(
 
   // Common Functional Modules
-  val fortyTwoModule: FortyTwoModule,
   val cacheModule: CacheModule,
   val secureSocialModule: SecureSocialModule,
-  val shoeboxServiceClientModule: ShoeboxServiceClientModule,
-  val clickHistoryModule: ClickHistoryModule,
-  val browsingHistoryModule: BrowsingHistoryModule,
-  val actorSystemModule: ActorSystemModule,
-  val discoveryModule: DiscoveryModule,
-  val healthCheckModule: HealthCheckModule,
   val storeModule: StoreModule,
-  val httpClientModule: HttpClientModule,
-
 
   // Search Functional Modules
+  val clickHistoryModule: ClickHistoryModule,
+  val browsingHistoryModule: BrowsingHistoryModule,
   val indexModule: IndexModule,
   val searchConfigModule: SearchConfigModule,
   val resultFeedbackModule: ResultFeedbackModule
 
-) extends ConfigurationModule
+) extends ConfigurationModule with CommonServiceModule
