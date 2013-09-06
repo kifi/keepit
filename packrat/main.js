@@ -208,10 +208,8 @@ const socketHandlers = {
       }
       if (!insertNewNotification(arr[i])) {
         arr.splice(i, 1);
-      } else {
-        if ((new Date(serverTime).getTime() - new Date(notifications[0].time).getTime()) < 1000*60) {
-          sendNotificationToTabs(arr[i]);
-        }
+      } else if ((new Date(serverTime) - new Date(notifications[0].time)) < 1000*60) {
+        sendNotificationToTabs(arr[i]);
       }
     }
     if (arr.length) {
