@@ -29,7 +29,6 @@ class UserRepoImpl @Inject() (
     val externalIdCache: UserExternalIdCache,
     val idCache: UserIdCache,
     basicUserCache: BasicUserUserIdCache,
-    commentRepo: CommentRepo,
     commentWithBasicUserCache: CommentWithBasicUserCache,
     userIndexProvider: Provider[UserIndex])
   extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
@@ -63,9 +62,6 @@ class UserRepoImpl @Inject() (
     for (id <- user.id) {
       idCache.set(UserIdKey(id), user)
       basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
-      for (commentId <- commentRepo.getCommentIdsByUser(id)) {
-        commentWithBasicUserCache.remove(CommentWithBasicUserKey(commentId))
-      }
     }
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
     future {

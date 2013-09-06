@@ -12,7 +12,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model.BookmarkRepo
 import com.keepit.model.BookmarkRepoImpl
-import com.keepit.model.CommentRepo
 import com.keepit.model.DeepLinkRepo
 import com.keepit.model.DuplicateDocumentRepo
 import com.keepit.model.FollowRepo
@@ -38,7 +37,6 @@ class ScraperController @Inject() (
   duplicateDocumentRepo: DuplicateDocumentRepo,
   followRepo: FollowRepo,
   deeplinkRepo: DeepLinkRepo,
-  commentRepo: CommentRepo,
   bookmarkRepo: BookmarkRepo)
     extends AdminController(actionAuthenticator) {
 

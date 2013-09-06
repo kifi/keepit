@@ -35,7 +35,6 @@ class UrlController @Inject() (
   userRepo: UserRepo,
   bookmarkRepo: BookmarkRepo,
   collectionRepo: CollectionRepo,
-  commentRepo: CommentRepo,
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   changedUriRepo: ChangedURIRepo,
@@ -111,40 +110,6 @@ class UrlController @Inject() (
     }
 
     "%s urls processed, changes:<br>\n<br>\n%s".format(urlsSize, changes)
-  }
-
-  private def fixCommentSeqNum: Unit = {
-    import com.keepit.model.CommentStates
-    log.info("started comment seq num fix")
-    var count = 0
-    var done = false
-    while (!done) {
-      db.readWrite { implicit session =>
-        val comments = commentRepo.getCommentsChanged(SequenceNumber.MinValue, 100)
-        val lastCount = count
-        done = comments.isEmpty || comments.exists{ comment =>
-          if (comment.seq.value != 0L) true
-          else {
-            commentRepo.save(comment)
-            count += 1
-            false
-          }
-        }
-        log.info(s"... fixed seq num of ${count - lastCount} comments")
-      }
-    }
-    log.info(s"finished comment seq num fix: ${count}")
-  }
-
-  def fixSeqNum = AdminHtmlAction { request =>
-    Akka.future {
-      try {
-        fixCommentSeqNum
-      } catch {
-        case ex: Throwable => log.error(ex.getMessage, ex)
-      }
-    }
-    Ok("sequence number fix started")
   }
 
   def orphanCleanup() = AdminHtmlAction { implicit request =>

@@ -36,7 +36,6 @@ class AdminUserController @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     followRepo: FollowRepo,
     normalizedURIRepo: NormalizedURIRepo,
-    commentRepo: CommentRepo,
     mailRepo: ElectronicMailRepo,
     commentRecipientRepo: CommentRecipientRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
@@ -91,25 +90,16 @@ class AdminUserController @Inject() (
   }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails) = db.readOnly { implicit s =>
+    val (user, socialUserInfos, sentElectronicMails) = db.readOnly { implicit s =>
       val user = userRepo.get(userId)
       val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
-      val follows = followRepo.getByUser(userId) map {f => normalizedURIRepo.get(f.uriId)}
-      val comments = commentRepo.all(CommentPermissions.PUBLIC, userId) map {c =>
-        (normalizedURIRepo.get(c.uriId), c)
-      }
-      val messages = commentRepo.all(CommentPermissions.MESSAGE, userId) map {c =>
-        (normalizedURIRepo.get(c.uriId), c, commentRecipientRepo.getByComment(c.id.get) map {
-          r => userRepo.get(r.userId.get)
-        })
-      }
       val sentElectronicMails = mailRepo.forSender(userId)
-      (user, socialUserInfos, follows, comments, messages, sentElectronicMails)
+      (user, socialUserInfos, sentElectronicMails)
     }
     val rawInfos = socialUserInfos map {info =>
       socialUserRawInfoStore.get(info.id.get)
     }
-    Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages, sentElectronicMails))
+    Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails))
   }
 
   def updateCollectionsForBookmark(id: Id[Bookmark]) = AdminHtmlAction { implicit request =>
