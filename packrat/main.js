@@ -378,21 +378,23 @@ const socketHandlers = {
   },
   message_read: function(nUri, threadId, time, messageId) {
     api.log("[socket:message_read]", nUri, threadId, time);
-    var d = pageData[nUri];
 
-    syncNumNotificationsNotVisited(); // see comment in function :(
-
-    if (!d || !d.lastMessageRead || new Date(d.lastMessageRead[threadId] || 0) < new Date(time)) {
-      markNoticesVisited("message", nUri, messageId, time, "/messages/" + threadId);
-      if (d && d.lastMessageRead) {
-        d.lastMessageRead[threadId] = time;
-        d.tabs.forEach(function(tab) {
-          api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
-        });
-        tellTabsIfCountChanged(d, "m", messageCount(d));
+    for(page in pageData) {
+      if (pageData[page].threads.filter(hasId(threadId)).length > 0) {
+        var d = pageData[page];
+        if (d.lastMessageRead) {
+          d.lastMessageRead[threadId] = time;
+          d.tabs.forEach(function(tab) {
+            api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
+          });
+          tellTabsIfCountChanged(d, "m", messageCount(d));
+        }
       }
-      tellTabsNoticeCountIfChanged();
     }
+    syncNumNotificationsNotVisited(); // see comment in function :(
+    markNoticesVisited("message", messageId, time, "/messages/" + threadId);
+
+    tellTabsNoticeCountIfChanged();
   },
   unread_notifications_count: function(count) {
     // see comment in syncNumNotificationsNotVisited() :(
@@ -510,7 +512,7 @@ api.port.on({
     }
 
     if (o.forceSend || unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) >= new Date(d.lastMessageRead[o.threadId] || 0))) {
-      markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
+      markNoticesVisited("message", o.messageId, o.time, "/messages/" + o.threadId);
       if (d && d.lastMessageRead) {
         d.lastMessageRead[o.threadId] = o.time;
         tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
@@ -520,7 +522,7 @@ api.port.on({
     }
   },
   set_global_read: function(o, _, tab) {
-    markNoticesVisited("global", undefined, o.noticeId);
+    markNoticesVisited("global", o.noticeId);
     tellTabsNoticeCountIfChanged();  // visible tabs
     socket.send(["set_global_read", o.noticeId]);
   },
@@ -698,13 +700,12 @@ function syncNumNotificationsNotVisited() {
 }
 
 // id is of last read message, timeStr is its createdAt time (not notification's).
-// If category is global, we do not check the nUri, timeStr, and locator because id identifies
+// If category is global, we do not check the timeStr, and locator because id identifies
 // it sufficiently. `undefined` can be passed in for everything but category and id.
-function markNoticesVisited(category, nUri, id, timeStr, locator) {
+function markNoticesVisited(category, id, timeStr, locator) {
   var time = timeStr ? new Date(timeStr) : null;
   notifications && notifications.forEach(function(n, i) {
-    if ((!nUri || n.url == nUri) &&
-        (!locator || n.locator == locator) &&
+    if ((!locator || n.locator == locator) &&
         (n.id == id || new Date(n.time) <= time)) {
       n.unread = false;
       decrementNumNotificationsNotVisited(n);
@@ -713,7 +714,6 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
   tabsShowingNotificationsPane.forEach(function(tab) {
     api.tabs.emit(tab, "notifications_visited", {
       category: category,
-      nUri: nUri,
       time: timeStr,
       locator: locator,
       id: id,
