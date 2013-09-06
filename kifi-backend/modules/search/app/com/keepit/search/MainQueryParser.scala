@@ -80,7 +80,7 @@ class MainQueryParser(
           Set.empty[(Int, Int)]
         }
 
-        val textQuery = if (phraseBoost > 0.0f && phrases.nonEmpty) {
+        val textQuery = if (phraseBoost > 0.0f && phraseProximityBoost > 0.0f && phrases.nonEmpty) {
           new AdditiveBoostQuery(query, Array[Query](createPhraseQueries(phrases)))
         } else {
           query
@@ -104,9 +104,9 @@ class MainQueryParser(
           auxStrengths += phraseProximityBoost
         } else if (proximityBoost > 0.0f && numStemmedTerms > 1) {
           val proxQ = new DisjunctionMaxQuery(0.0f)
-          proxQ.add(ProximityQuery(getStemmedTerms("cs"), phrases))
-          proxQ.add(ProximityQuery(getStemmedTerms("ts"), phrases))
-          proxQ.add(ProximityQuery(getStemmedTerms("title_stemmed"), phrases))
+          proxQ.add(ProximityQuery(getStemmedTerms("cs"), phrases, phraseBoost))
+          proxQ.add(ProximityQuery(getStemmedTerms("ts"), phrases, phraseBoost))
+          proxQ.add(ProximityQuery(getStemmedTerms("title_stemmed"), phrases, phraseBoost))
           auxQueries += namedQuery("proximity", proxQ)
           auxStrengths += proximityBoost
         }
