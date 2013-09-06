@@ -1085,6 +1085,7 @@ $(function() {
 		console.log('[' + e.type + ']', hash, state);
 		switch (parts[0]) {
 			case '':
+				navigate('');
 				showMyKeeps();
 				break;
 			case 'collection':
