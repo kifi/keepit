@@ -26,7 +26,7 @@ import scala.collection.JavaConversions._
 import scala.math._
 
 object ProximityQuery {
-  def apply(terms: Seq[Term], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 1.0f) = new ProximityQuery(terms, phrases, phraseBoost)
+  def apply(terms: Seq[Term], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f) = new ProximityQuery(terms, phrases, phraseBoost)
 
   def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]) = {
     val notInPhrase = termIds.clone

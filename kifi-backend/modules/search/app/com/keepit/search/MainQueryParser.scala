@@ -73,7 +73,11 @@ class MainQueryParser(
         query.setBoost(baseBoost)
 
         val phrases = if (numStemmedTerms > 1 && (phraseBoost > 0.0f || phraseProximityBoost > 0.0f)) {
-          val p = phraseDetector.detect(getStemmedTermArray)
+          val p = if (phraseProximityBoost > 0.0f) {
+            phraseDetector.detect(getStemmedTermArray)
+          } else {
+            phraseDetector.detectAll(getStemmedTermArray)
+          }
           if (p.size > 0) p
           else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer)
         } else {
