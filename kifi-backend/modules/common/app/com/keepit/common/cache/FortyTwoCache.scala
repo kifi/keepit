@@ -41,7 +41,7 @@ object CacheStatistics extends Logging {
   def recordMiss(cachePlugin: String, namespace: String, fullKey: String) {
     incrCount(s"$cachePlugin.$namespace", missesMap)
     Statsd.increment(s"$cachePlugin.$namespace.misses")
-    log.warn(s"Cahe miss on key $fullKey in $cachePlugin")
+    log.warn(s"Cache miss on key $fullKey in $cachePlugin")
   }
 
   def recordSet(cachePlugin: String, namespace: String, millis: Long) {
