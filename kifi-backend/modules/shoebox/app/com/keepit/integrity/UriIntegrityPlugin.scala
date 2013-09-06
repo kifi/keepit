@@ -53,7 +53,10 @@ class UriIntegrityActor @Inject()(
       val oldBm = bms.head
       assume(bms.size == 1, s"user ${userId.id} has multiple bookmarks referencing uri ${oldBm.uriId}")
       bookmarkRepo.getByUriAndUser(newUriId, userId, excludeState = None) match {
-        case None => bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None 
+        case None => {
+          bookmarkRepo.removeFromCache(oldBm)
+          bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None
+        } 
         case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
           bookmarkRepo.save(oldBm.withActive(false)); Some(oldBm, bm)
         } else None
