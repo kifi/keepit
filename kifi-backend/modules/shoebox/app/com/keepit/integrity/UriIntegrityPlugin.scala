@@ -36,7 +36,6 @@ class UriIntegrityActor @Inject()(
   userRepo: UserRepo,
   bookmarkRepo: BookmarkRepo,
   collectionRepo: CollectionRepo,
-  commentRepo: CommentRepo,
   commentReadRepo: CommentReadRepo,
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
@@ -109,10 +108,6 @@ class UriIntegrityActor @Inject()(
       val oldUserBms = bookmarkRepo.getByUri(oldUriId, excludeState = None).groupBy(_.userId)
       handleBookmarks(oldUserBms, newUriId)
 
-      commentRepo.getByUri(oldUriId).map{ cm =>
-        commentRepo.save(cm.withNormUriId(newUriId))
-      }
-
       commentReadRepo.getByUri(oldUriId).map{ cm =>
         commentReadRepo.save(cm.withNormUriId(newUriId))
       }
@@ -145,10 +140,6 @@ class UriIntegrityActor @Inject()(
 
       val oldUserBms = bookmarkRepo.getByUrlId(url.id.get).groupBy(_.userId)
       handleBookmarks(oldUserBms, newUriId)
-
-      commentRepo.getByUrlId(url.id.get).map{ cm =>
-        commentRepo.save(cm.withNormUriId(newUriId))
-      }
 
       deepLinkRepo.getByUrl(url.id.get).map{ link =>
         deepLinkRepo.save(link.withNormUriId(newUriId))
