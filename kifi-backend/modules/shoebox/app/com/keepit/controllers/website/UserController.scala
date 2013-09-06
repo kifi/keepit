@@ -32,21 +32,6 @@ class UserController @Inject() (
   postOffice: LocalPostOffice)
     extends WebsiteController(actionAuthenticator) {
 
-/*
-  def registerDevice(deviceType: String) = AuthenticatedJsonToJsonAction { implicit request =>
-    (request.body \ "token").asOpt[String] map { token =>
-      val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType))
-      Ok(Json.obj(
-        "token" -> device.token
-      ))
-    } getOrElse {
-      BadRequest(Json.obj(
-        "error" -> "Body must contain a token parameter"
-      ))
-    }
-  }
-*/
-
   def friends() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
       "friends" -> db.readOnly { implicit s =>
