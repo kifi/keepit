@@ -25,7 +25,6 @@ final case class ExperimentType(value: String)
 
 object ExperimentTypes {
   val ADMIN = State[ExperimentType]("admin")
-  val WEBSITE = State[ExperimentType]("website")
   val FAKE = State[ExperimentType]("fake")
   val BLOCK = State[ExperimentType]("block")
   val INACTIVE = State[ExperimentType]("inactive")
@@ -39,7 +38,6 @@ object ExperimentTypes {
 
   def apply(str: String): State[ExperimentType] = str.toLowerCase.trim match {
     case ADMIN.value => ADMIN
-    case WEBSITE.value => WEBSITE
     case FAKE.value => FAKE
     case BLOCK.value => BLOCK
     case NOT_SENSITIVE.value => NOT_SENSITIVE
