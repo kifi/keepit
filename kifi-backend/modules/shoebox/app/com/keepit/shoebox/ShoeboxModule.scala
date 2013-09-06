@@ -1,84 +1,48 @@
 package com.keepit.shoebox
 
 import com.keepit.reports._
-import com.keepit.common.cache.CacheModule
-import com.keepit.social.{SocialGraphModule, SecureSocialModule}
-import com.keepit.search.SearchServiceClientModule
-import com.keepit.common.mail.MailModule
+import com.keepit.common.cache.ShoeboxCacheModule
+import com.keepit.social.SecureSocialModule
+import com.keepit.common.mail.DevMailModule
 import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.learning.topicmodel.TopicModelModule
-import com.keepit.model.{BrowsingHistoryModule, ClickHistoryModule, SliderHistoryTrackerModule}
-import com.keepit.scraper.ScraperModule
-import com.keepit.classify.DomainTagImporterModule
-import com.keepit.common.crypto.CryptoModule
-import com.keepit.common.healthcheck.HealthCheckModule
-import com.keepit.common.store.StoreModule
-import com.keepit.common.net.HttpClientModule
-import com.keepit.inject.{ConfigurationModule, FortyTwoModule}
-import com.keepit.common.actor.ActorSystemModule
-import com.keepit.common.zookeeper.DiscoveryModule
-import com.keepit.common.db.slick.SlickModule
-import com.keepit.integrity.DataIntegrityModule
-import com.keepit.eliza.ElizaServiceClientModule
+import com.keepit.model.ProdSliderHistoryTrackerModule
+import com.keepit.scraper.ScraperImplModule
 import com.keepit.realtime.WebSocketModule
+import com.keepit.classify.DomainTagImporterModule
+import com.keepit.common.store.ShoeboxDevStoreModule
+import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
+import com.keepit.integrity.DataIntegrityModule
+import com.keepit.search.ProdSearchServiceClientModule
+import com.keepit.eliza.ProdElizaServiceClientModule
+import com.keepit.common.social.ProdSocialGraphModule
 
 abstract class ShoeboxModule(
-  // Common Functional Modules
-  val fortyTwoModule: FortyTwoModule,
-  val cacheModule: CacheModule,
   val secureSocialModule: SecureSocialModule,
-  val searchServiceClientModule: SearchServiceClientModule,
-  val clickHistoryModule: ClickHistoryModule,
-  val browsingHistoryModule: BrowsingHistoryModule,
-  val mailModule: MailModule,
-  val cryptoModule: CryptoModule,
-  val storeModule: StoreModule,
-  val actorSystemModule: ActorSystemModule,
-  val discoveryModule: DiscoveryModule,
-  val healthCheckModule: HealthCheckModule,
-  val httpClientModule: HttpClientModule,
-  val shoeboxServiceClientModule: ShoeboxServiceClientModule,
-  val elizaServiceClientModule: ElizaServiceClientModule,
+  val mailModule: DevMailModule,
+  val storeModule: ShoeboxDevStoreModule,
 
   // Shoebox Functional Modules
-  val slickModule: SlickModule,
-  val scraperModule: ScraperModule,
-  val socialGraphModule: SocialGraphModule,
   val analyticsModule: AnalyticsModule,
   val webSocketModule: WebSocketModule,
   val topicModelModule: TopicModelModule,
   val domainTagImporterModule: DomainTagImporterModule,
-  val sliderHistoryTrackerModule: SliderHistoryTrackerModule,
-  val userIndexModule: UserIndexModule = UserIndexModule(),
-  val geckoboardModule: GeckoboardModule = GeckoboardModule(),
-  val dataIntegrityModule: DataIntegrityModule
+  val cacheModule: ShoeboxCacheModule
+) extends ConfigurationModule with CommonServiceModule {
 
-) extends ConfigurationModule(
-    fortyTwoModule,
-    cacheModule,
-    secureSocialModule,
-    searchServiceClientModule,
-    clickHistoryModule,
-    browsingHistoryModule,
-    mailModule,
-    cryptoModule,
-    storeModule,
-    actorSystemModule,
-    discoveryModule,
-    healthCheckModule,
-    httpClientModule,
-    shoeboxServiceClientModule,
-    elizaServiceClientModule,
+  // Service clients
+  val searchServiceClientModule = ProdSearchServiceClientModule()
+  val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
+  val elizaServiceClientModule = ProdElizaServiceClientModule()
 
-    slickModule,
-    scraperModule,
-    socialGraphModule,
-    analyticsModule,
-    webSocketModule,
-    topicModelModule,
-    domainTagImporterModule,
-    sliderHistoryTrackerModule,
-    userIndexModule,
-    geckoboardModule,
-    dataIntegrityModule
-)
+  val slickModule = ShoeboxSlickModule()
+  val scraperModule = ScraperImplModule()
+  val socialGraphModule = ProdSocialGraphModule()
+  val sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule()
+  val userIndexModule = UserIndexModule()
+  val geckoboardModule = GeckoboardModule()
+  val dataIntegrityModule = DataIntegrityModule()
+  val clickHistoryModule = ShoeboxClickHistoryModule()
+  val browsingHistoryModule = ShoeboxBrowsingHistoryModule()
+
+}
