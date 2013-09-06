@@ -399,8 +399,8 @@ const socketHandlers = {
   unread_notifications_count: function(count) {
     // see comment in syncNumNotificationsNotVisited() :(
     if (numNotificationsNotVisited != count) {
-      numNotificationsNotVisited = count;
       reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
+      numNotificationsNotVisited = count;
       tellTabsNoticeCountIfChanged();
     }
   }
@@ -623,7 +623,8 @@ api.port.on({
     socket.send(["get_networks", friendId], respond);
   },
   open_deep_link: function(data, _, tab) {
-    var uriData = pageData[data.nUri];
+    var uriData = pageData[data.nUri] || pageData[(n = api.tabs.anyAt(data.nUri)) && n.nUri];
+
     if (uriData) {
       var tab = tab.nUri == data.nUri ? tab : uriData.tabs[0];
       if (tab.ready) {
@@ -707,8 +708,10 @@ function markNoticesVisited(category, id, timeStr, locator) {
   notifications && notifications.forEach(function(n, i) {
     if ((!locator || n.locator == locator) &&
         (n.id == id || new Date(n.time) <= time)) {
-      n.unread = false;
-      decrementNumNotificationsNotVisited(n);
+      if (n.unread) {
+        n.unread = false;
+        decrementNumNotificationsNotVisited(n);
+      }
     }
   });
   tabsShowingNotificationsPane.forEach(function(tab) {
