@@ -14,14 +14,10 @@ case class SearchDevModule() extends SearchModule(
 
   // Common Functional Modules
   cacheModule = SearchCacheModule(HashMapMemoryCacheModule()),
-  secureSocialModule = RemoteSecureSocialModule(),
   storeModule = SearchDevStoreModule(),
 
   // Search Functional Modules
-  clickHistoryModule = SearchClickHistoryModule(),
-  browsingHistoryModule = SearchBrowsingHistoryModule(),
   indexModule = DevIndexModule(),
-  searchConfigModule = SearchConfigModule(),
   resultFeedbackModule = DevResultFeedbackModule()
 ) with CommonDevModule
 

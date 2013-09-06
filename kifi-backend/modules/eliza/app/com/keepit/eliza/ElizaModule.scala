@@ -1,14 +1,20 @@
 package com.keepit.eliza
 
 import com.keepit.common.cache.CacheModule
-import com.keepit.social.SecureSocialModule
+import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
+import com.keepit.search.ProdSearchServiceClientModule
+import com.keepit.shoebox.ProdShoeboxServiceClientModule
 
 abstract class ElizaModule(
   // Common Functional Modules
-  val cacheModule: CacheModule,
-  val secureSocialModule: SecureSocialModule,
+  val cacheModule: CacheModule
+) extends ConfigurationModule with CommonServiceModule  {
+  // Service clients
+  val searchServiceClientModule = ProdSearchServiceClientModule()
+  val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
+  val elizaServiceClientModule = ProdElizaServiceClientModule()
 
-  // Eliza Functional Modules
-  val elizaSlickModule: ElizaSlickModule
-) extends ConfigurationModule with CommonServiceModule
+  val secureSocialModule = RemoteSecureSocialModule()
+  val elizaSlickModule = ElizaSlickModule()
+}

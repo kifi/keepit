@@ -7,16 +7,11 @@ import com.keepit.common.store.SearchProdStoreModule
 import com.keepit.inject.CommonProdModule
 
 case class SearchProdModule() extends SearchModule(
-
   // Common Functional Modules
   cacheModule = SearchCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
-  secureSocialModule = RemoteSecureSocialModule(),
   storeModule = SearchProdStoreModule(),
 
   // Search Functional Modules
-  clickHistoryModule = SearchClickHistoryModule(),
-  browsingHistoryModule = SearchBrowsingHistoryModule(),
   indexModule = ProdIndexModule(),
-  searchConfigModule = SearchConfigModule(),
   resultFeedbackModule = ProdResultFeedbackModule()
 )with CommonProdModule

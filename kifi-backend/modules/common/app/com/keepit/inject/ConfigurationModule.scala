@@ -2,9 +2,6 @@ package com.keepit.inject
 
 import _root_.net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.logging.Logging
-import com.keepit.search.ProdSearchServiceClientModule
-import com.keepit.shoebox.ProdShoeboxServiceClientModule
-import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.actor.{ActorSystemModule, ProdActorSystemModule, DevActorSystemModule}
 import com.keepit.common.zookeeper.{DiscoveryModule, ProdDiscoveryModule, DevDiscoveryModule}
@@ -32,11 +29,6 @@ trait CommonServiceModule {
   val fortyTwoModule: FortyTwoModule
   val actorSystemModule: ActorSystemModule
   val discoveryModule: DiscoveryModule
-
-  // Service clients
-  val searchServiceClientModule = ProdSearchServiceClientModule()
-  val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
-  val elizaServiceClientModule = ProdElizaServiceClientModule()
 
   val cryptoModule = ShoeboxCryptoModule()
   val healthCheckModule = ProdHealthCheckModule()
