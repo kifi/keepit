@@ -12,8 +12,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.search.TrainingDataLabeler
-import com.keepit.search.UriLabel
 import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef }
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.ClickHistoryTracker
@@ -213,42 +211,8 @@ class SearchUnloadListenerImpl @Inject() (
   extends SearchUnloadListener(userRepo, normalizedURIRepo) with Logging {
 
   def onEvent: PartialFunction[Event, Unit] = {
-
     case Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", extUserId, _, _, metaData, _), _, _) => {
-
-      val kifiClicks = (metaData \ "kifiResultsClicked").asOpt[Int].getOrElse(-1)
-      val googleClicks = (metaData \ "googleResultsClicked").asOpt[Int].getOrElse(-1)
-
-      if (kifiClicks > 0 || googleClicks > 0) {
-
-        val googleUris = (metaData \ "googleClickedURIs").asOpt[Seq[String]].getOrElse(Seq.empty[String])
-        val kifiClickedUris = (metaData \ "kifiClickedURIs").asOpt[Seq[String]].getOrElse(Seq.empty[String])
-        val kifiShownUris = (metaData \ "kifiShownURIs").asOpt[Seq[String]].getOrElse(Seq.empty[String])
-        val uuid = (metaData \ "queryUUID").asOpt[String].get
-        val queryString = (metaData \ "query").asOpt[String].get
-
-        val (userId, kifiClickedIds, googleClickedIds, kifiShownIds) = db.readOnly { implicit s =>
-          val userId = userRepo.get(extUserId).id.get
-          val kifiClickedIds = kifiClickedUris.flatMap{ normalizedURIRepo.getByUri(_) }.flatMap(_.id)
-          val googleClickedIds = googleUris.flatMap{ normalizedURIRepo.getByUri(_) }.flatMap(_.id)
-          val kifiShownIds = kifiShownUris.flatMap{ normalizedURIRepo.getByUri(_) }.flatMap(_.id)
-          (userId, kifiClickedIds, googleClickedIds, kifiShownIds)
-        }
-
-        val data = TrainingDataLabeler.getLabeledData(kifiClickedIds, googleClickedIds, kifiShownIds)
-        if (data.nonEmpty) {
-          val labeledUris = data.foldLeft(Map.empty[Id[NormalizedURI], UriLabel]) {
-            case (m, (id, (isClicked, isCorrectlyRanked))) => m + (id -> UriLabel(isClicked, isCorrectlyRanked))
-          }
-          searchClient.getSearchStatistics(uuid, queryString, userId, labeledUris).map { r =>
-            r.value.map { json =>
-              val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", json.as[JsObject])
-              persistEventProvider.get.persist(event)
-            }
-          }
-          log.info("search statistics persisted")
-        }
-      }
+      // do nothing for now
     }
   }
 }

@@ -126,7 +126,6 @@ object Search extends Service {
     def buildDictionary() = ServiceRoute(POST, "/internal/search/spell/buildDict")
     def getBuildStatus() = ServiceRoute(GET, "/internal/search/spell/buildStatus")
     def correctSpelling(query: String) = ServiceRoute(GET, "/internal/search/spell/make-correction", Param("query", query))
-    def getSearchStatistics() = ServiceRoute(POST, "/internal/search/getSearchStatistics")
     def showUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}")
     def setUserConfig(id: Id[User]) = ServiceRoute(POST, s"/internal/search/searchConfig/${id.id}/set")
     def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")
