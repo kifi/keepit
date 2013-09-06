@@ -22,14 +22,14 @@ import com.keepit.common.logging.Logging
 case class UrbanAirshipConfig(key: String, secret: String, baseUrl: String = "https://go.urbanairship.com")
 
 case class Device(
-  id: Option[Id[Device]] = None,
-  userId: Id[User],
-  token: String,
-  deviceType: DeviceType,
-  state: State[Device] = DeviceStates.ACTIVE,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime
-) extends Model[Device] {
+                   id: Option[Id[Device]] = None,
+                   userId: Id[User],
+                   token: String,
+                   deviceType: DeviceType,
+                   state: State[Device] = DeviceStates.ACTIVE,
+                   createdAt: DateTime = currentDateTime,
+                   updatedAt: DateTime = currentDateTime
+                   ) extends Model[Device] {
   def withId(id: Id[Device]): Device = copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): Device = copy(updatedAt = updateTime)
 }
@@ -39,7 +39,7 @@ object DeviceStates extends States[Device]
 @ImplementedBy(classOf[DeviceRepoImpl])
 trait DeviceRepo extends Repo[Device] {
   def getByUserId(userId: Id[User], excludeState: Option[State[Device]] = Some(DeviceStates.INACTIVE))
-      (implicit s: RSession): Seq[Device]
+                 (implicit s: RSession): Seq[Device]
   def get(userId: Id[User], token: String, deviceType: DeviceType)(implicit s: RSession): Option[Device]
 }
 
@@ -105,12 +105,12 @@ trait UrbanAirship {
 }
 
 class UrbanAirshipImpl @Inject()(
-  client: HttpClient,
-  config: UrbanAirshipConfig,
-  deviceRepo: DeviceRepo,
-  db: Database,
-  clock: Clock
-) extends UrbanAirship with Logging {
+                                  client: HttpClient,
+                                  config: UrbanAirshipConfig,
+                                  deviceRepo: DeviceRepo,
+                                  db: Database,
+                                  clock: Clock
+                                  ) extends UrbanAirship with Logging {
 
   lazy val authenticatedClient: HttpClient = {
     val encodedUserPass = new sun.misc.BASE64Encoder().encode(s"${config.key}:${config.secret}".getBytes)

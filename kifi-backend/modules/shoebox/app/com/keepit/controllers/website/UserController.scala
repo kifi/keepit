@@ -11,7 +11,6 @@ import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail, Local
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.model._
-import com.keepit.realtime.{DeviceType, UrbanAirship}
 
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
@@ -30,10 +29,10 @@ class UserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   friendRequestRepo: FriendRequestRepo,
   searchFriendRepo: SearchFriendRepo,
-  postOffice: LocalPostOffice,
-  urbanAirship: UrbanAirship)
+  postOffice: LocalPostOffice)
     extends WebsiteController(actionAuthenticator) {
 
+/*
   def registerDevice(deviceType: String) = AuthenticatedJsonToJsonAction { implicit request =>
     (request.body \ "token").asOpt[String] map { token =>
       val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType))
@@ -46,6 +45,7 @@ class UserController @Inject() (
       ))
     }
   }
+*/
 
   def friends() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
