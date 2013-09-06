@@ -58,8 +58,8 @@ class UriIntegrityActor @Inject()(
           bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None
         } 
         case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
-          bookmarkRepo.removeFromCache(oldBm)
-          bookmarkRepo.save(oldBm.withActive(false)); Some(oldBm, bm)
+          bookmarkRepo.save(oldBm.withActive(false));
+          bookmarkRepo.removeFromCache(oldBm); Some(oldBm, bm)
         } else None
       }
     }
