@@ -1770,7 +1770,7 @@ $(function() {
 
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
-	$.getScript('js/jquery-hoverfu.min.js').done(function() {
+	$.getScript('assets/js/jquery-hoverfu.min.js').done(function() {
 		$sendFeedback.hoverfu(function(configure) {
 			configure({
 				position: {my: "center-24 bottom-12", at: "center top", of: this},
