@@ -15,9 +15,10 @@ import com.keepit.serializer.{Serializer, BinaryFormat}
 import net.sf.ehcache._
 import net.sf.ehcache.config.CacheConfiguration
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.common.logging.Logging
 
 
-object CacheStatistics {
+object CacheStatistics extends Logging {
   private val hitsMap = ConcurrentMap[String, AtomicInteger]()
   private val missesMap = ConcurrentMap[String, AtomicInteger]()
   private val setsMap = ConcurrentMap[String, AtomicInteger]()
@@ -37,9 +38,10 @@ object CacheStatistics {
     Statsd.increment(s"$cachePlugin.$namespace.hits")
     Statsd.timing(s"$cachePlugin.$namespace.hits", millis)
   }
-  def recordMiss(cachePlugin: String, namespace: String) {
+  def recordMiss(cachePlugin: String, namespace: String, fullKey: String) {
     incrCount(s"$cachePlugin.$namespace", missesMap)
     Statsd.increment(s"$cachePlugin.$namespace.misses")
+    log.warn(s"Cahe miss on key $fullKey in $cachePlugin")
   }
 
   def recordSet(cachePlugin: String, namespace: String, millis: Long) {
@@ -247,8 +249,8 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
           CacheStatistics.recordHit("Cache", key.namespace, getEnd - getStart)
         }
         case None => {
-          CacheStatistics.recordMiss(repo.toString, key.namespace)
-          if (outerCache isEmpty) CacheStatistics.recordMiss("Cache", key.namespace)
+          CacheStatistics.recordMiss(repo.toString, key.namespace, key.toString)
+          if (outerCache isEmpty) CacheStatistics.recordMiss("Cache", key.namespace, key.toString)
         }
       }
       objOpt
