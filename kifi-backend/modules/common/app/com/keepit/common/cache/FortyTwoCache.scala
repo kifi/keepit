@@ -41,7 +41,7 @@ object CacheStatistics extends Logging {
   def recordMiss(cachePlugin: String, namespace: String, fullKey: String) {
     incrCount(s"$cachePlugin.$namespace", missesMap)
     Statsd.increment(s"$cachePlugin.$namespace.misses")
-    log.warn(s"Cahe miss on key $fullKey in $cachePlugin")
+    log.warn(s"Cache miss on key $fullKey in $cachePlugin")
   }
 
   def recordSet(cachePlugin: String, namespace: String, millis: Long) {
@@ -280,7 +280,11 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
             case x: JsValue => Json.stringify(x)
             case x: String => x
           }
-      repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
+      var ttlInSeconds = ttl match {
+        case _ : Duration.Infinite => 0
+        case _ => ttl.toSeconds.toInt
+      }
+      repo.set(key.toString, properlyBoxed, ttlInSeconds)
       val setEnd = currentDateTime.getMillis()
       CacheStatistics.recordSet(repo.toString, key.namespace, setEnd - setStart)
       if (outerCache isEmpty) CacheStatistics.recordSet("Cache", key.namespace, setEnd - setStart)

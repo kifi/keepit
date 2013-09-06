@@ -127,7 +127,7 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
   def warmCache() : Unit = (0 to numChunks).foreach{ chunkId =>
     val chunk = loadChunk(chunkId)
     val cacheKey = saveChunk(chunkId, chunk).toString
-    log.info("Warmed cache for $cacheKey.")
+    log.info(s"Warmed cache for $cacheKey.")
   }
 
   def getChunk(key: Long) = {
