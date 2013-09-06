@@ -127,6 +127,9 @@ GET     /site/user/socialConnections  @com.keepit.controllers.website.UserContro
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
+GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
+GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
+
 ##########################################
 # External Services API
 ##########################################
