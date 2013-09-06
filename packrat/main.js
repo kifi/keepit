@@ -379,19 +379,18 @@ const socketHandlers = {
   message_read: function(nUri, threadId, time, messageId) {
     api.log("[socket:message_read]", nUri, threadId, time);
 
-    for(page in pageData) {
-      if (pageData[page].threads.filter(hasId(threadId)).length > 0) {
-        var d = pageData[page];
-        if (d.lastMessageRead) {
-          d.lastMessageRead[threadId] = time;
-          d.tabs.forEach(function(tab) {
-            api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
-          });
-          tellTabsIfCountChanged(d, "m", messageCount(d));
-        }
+    var hasThreadId = hasId(threadId);
+    for (var page in pageData) {
+      var d = pageData[page];
+      if (d.threads.filter(hasThreadId).length > 0) {
+        d.lastMessageRead[threadId] = time;
+        var thread = d.threads.filter(hasId(threadId))[0];
+        d.tabs.forEach(function(tab) {
+          api.tabs.emit(tab, "thread_info", {thread: thread, read: d.lastMessageRead[threadId]});
+        });
+        tellTabsIfCountChanged(d, "m", messageCount(d));
       }
     }
-    syncNumNotificationsNotVisited(); // see comment in function :(
     markNoticesVisited("message", messageId, time, "/messages/" + threadId);
 
     tellTabsNoticeCountIfChanged();
@@ -623,6 +622,7 @@ api.port.on({
     socket.send(["get_networks", friendId], respond);
   },
   open_deep_link: function(data, _, tab) {
+    var n;
     var uriData = pageData[data.nUri] || pageData[(n = api.tabs.anyAt(data.nUri)) && n.nUri];
 
     if (uriData) {
