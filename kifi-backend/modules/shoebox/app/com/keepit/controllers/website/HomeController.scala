@@ -12,7 +12,7 @@ import com.keepit.common.service.FortyTwoServices
 
 import play.api.Play.current
 import play.api._
-import play.api.libs.MimeTypes
+import play.api.http.MimeTypes
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
@@ -32,48 +32,21 @@ class HomeController @Inject() (db: Database,
   fortyTwoServices: FortyTwoServices)
   extends WebsiteController(actionAuthenticator) {
 
-  private def userCanSeeKifiSite[A](implicit request: AuthenticatedRequest[A]): Boolean =
-    (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.WEBSITE)).nonEmpty || Play.isDev
-
-  private def userCanInvite[A](implicit request: AuthenticatedRequest[A]): Boolean =
-    (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty || Play.isDev
-
-  def kifiSite(path: String, id: String) = AuthenticatedHtmlAction { implicit request =>
-    if (userCanSeeKifiSite) {
-      Play.resourceAsStream(s"public/site/$path") map { stream =>
-        val result = Ok.stream(Enumerator.fromStream(stream))
-        MimeTypes.forFileName(path) map (result as _) getOrElse result
-      } getOrElse NotFound
-    } else NotFound
-  }
-
   def version = Action {
     Ok(fortyTwoServices.currentVersion.toString)
   }
 
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
-
     if (request.user.state == UserStates.PENDING) {
       pendingHome()
     } else {
-      val friendsOnKifi = db.readOnly { implicit session =>
-        userConnectionRepo.getConnectedUsers(request.user.id.get).map { u =>
-          val user = userRepo.get(u)
-          if(user.state == UserStates.ACTIVE) Some(user.externalId)
-          else None
-        }.flatten
-      }
-
-      val networks = db.readOnly { implicit s =>
-        val socialUsers = socialUserRepo.getByUser(request.userId)
-        SocialNetworks.ALL.map(n => n -> socialUsers.exists(_.networkType == n))
-      }
-
-      Ok(views.html.website.userHome(request.user, friendsOnKifi, networks, userCanInvite, userCanSeeKifiSite))
+      Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as MimeTypes.HTML
     }
   }, unauthenticatedAction = { implicit request =>
     Ok(views.html.website.welcome())
   })
+
+  def homeWithParam(id: String) = home
 
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
     val user = request.user
