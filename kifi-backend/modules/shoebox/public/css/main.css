@@ -86,6 +86,7 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.drop-hover .nav-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection .nav-count {margin-top: 9px; position: relative; left: -1px}
 .collection:hover .nav-count,
+.collection.with-menu .nav-count,
 .collection.renaming .nav-count {display: none}
 .coll-tri {position: absolute; top: 0; bottom: 0; right: 0; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer}
 .active>.coll-tri {background-color: #b8c5d2}
