@@ -23,7 +23,7 @@ trait ConfigurationModule extends AbstractModuleAccessor with Logging {
       val startTime = System.currentTimeMillis
       val module = field.invoke(this).asInstanceOf[ScalaModule]
       install0(module)
-      log.info(s"Installing ${module.getClass.getSimpleName}... took ${System.currentTimeMillis-startTime}ms")
+      log.info(s"Installing ${module.getClass.getSimpleName}: took ${System.currentTimeMillis-startTime}ms")
     }
   }
 }
