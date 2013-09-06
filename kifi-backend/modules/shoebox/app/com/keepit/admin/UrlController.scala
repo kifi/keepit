@@ -197,22 +197,23 @@ class UrlController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.UrlController.documentIntegrity())
   }
   
-  def mergedUriView(page: Int = 0) = AdminHtmlAction{ request =>
+  def normalizationView(page: Int = 0) = AdminHtmlAction{ request =>
     val PAGE_SIZE = 50
-    val (totalCount, changes) = db.readOnly{ implicit s =>
-      val totalCount = changedUriRepo.allAppliedCount()
-      val changes = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
+    val (pendingCount, appliedCount, applied) = db.readOnly{ implicit s =>
+      val totalCount = changedUriRepo.count
+      val appliedCount = changedUriRepo.allAppliedCount()
+      val applied = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
         (uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId), change.updatedAt.date.toString())
       }
-      (totalCount, changes)
+      (totalCount - appliedCount, appliedCount, applied)
     }
-    val pageCount = (totalCount*1.0 / PAGE_SIZE).ceil.toInt
-    Ok(html.admin.mergedUri(changes, page, totalCount, pageCount, PAGE_SIZE))
+    val pageCount = (appliedCount*1.0 / PAGE_SIZE).ceil.toInt
+    Ok(html.admin.normalization(applied, page, appliedCount, pendingCount, pageCount, PAGE_SIZE))
   }
   
   def batchMerge = AdminHtmlAction{ request =>
     uriIntegrityPlugin.batchUpdateMerge()
-    Ok("Will do batch merging uris")
+    Ok
   }
 }
 
