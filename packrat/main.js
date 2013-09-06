@@ -188,20 +188,11 @@ const socketHandlers = {
       }
     }
     if (insertNewNotification(n)) {
-      var told = {};
-      api.tabs.eachSelected(tellTab);
-      tabsShowingNotificationsPane.forEach(tellTab);
-      tellTabsNoticeCountIfChanged();
-      api.play("media/notification.mp3");
-    }
-    function tellTab(tab) {
-      if (told[tab.id]) return;
-      told[tab.id] = true;
-      api.tabs.emit(tab, "new_notification", n);
+      sendNotificationToTabs(n);
     }
   },
-  missed_notifications: function(arr) {
-    api.log("[socket:missed_notifications]", arr);
+  missed_notifications: function(arr, serverTime) {
+    api.log("[socket:missed_notifications]", arr, serverTime);
     for (var i = arr.length - 1; ~i; i--) {
       arr[i].category = (arr[i].category || "message").toLowerCase();
       if (pageData[arr[i].url]) {
@@ -217,6 +208,8 @@ const socketHandlers = {
       }
       if (!insertNewNotification(arr[i])) {
         arr.splice(i, 1);
+      } else if ((new Date(serverTime) - new Date(notifications[0].time)) < 1000*60) {
+        sendNotificationToTabs(arr[i]);
       }
     }
     if (arr.length) {
@@ -649,6 +642,20 @@ api.port.on({
     //reportError(data.message, data.url, data.lineNo);
   }
 });
+
+function sendNotificationToTabs(n) {
+  var told = {};
+  api.tabs.eachSelected(tellTab);
+  tabsShowingNotificationsPane.forEach(tellTab);
+  tellTabsNoticeCountIfChanged();
+  api.play("media/notification.mp3");
+
+  function tellTab(tab) {
+    if (told[tab.id]) return;
+    told[tab.id] = true;
+    api.tabs.emit(tab, "new_notification", n);
+  }
+}
 
 function insertNewNotification(n) {
   if (!notifications) return false;
