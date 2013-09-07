@@ -692,7 +692,7 @@ $(function() {
 		});
 		$.getJSON(xhrBase + '/user/inviteCounts', { updatedAt: invitesUpdatedAt }, function (invites) {
 			invitesLeft = invites.left;
-			$('.num-invites').text(invitesLeft);
+			$('.num-invites').text(invitesLeft).parent().show();
 		});
 	}
 	$('.invite-filters>a').click(function () {
