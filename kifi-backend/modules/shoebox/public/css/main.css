@@ -50,7 +50,7 @@ body[data-view=profile] .my-pic::before { transition: none; animation-name: edit
 .left-col>*>h3:not(.active):hover {background-color: #e9ecf2}
 .left-col h3>a {display: block; padding: 0 6px 0 40px; color: #818692}
 .left-col .nav-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; background: #eff2f7; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
-@-moz-document url-prefix() {.left-col .nav-count {line-height: 18px}}
+@-moz-document url-prefix() {.left-col .nav-count {line-height: 19px}}
 .left-col .nav-count:empty {display: none}
 .left-col .my-friends .nav-count {background: #b7d07c; border-color: transparent; color: #fff}
 .left-col .active .nav-count {color: #fff; background: #b8c5d2}
@@ -257,9 +257,9 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
 .invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px}
 
-.invites-left { float: right; font-size: 14px; padding: 10px 20px; background: #e8ebf1; color: #34495e; }
-.invites-left .num-invites { display: inline-block; text-align: center; padding: 4px; margin: 0 2px; border-radius: 50%; background: #7d7d7d; color: #e8ebf1; height: 15px; min-width: 15px; }
-
+.invites-left {float: right; margin-top: 2px; font-size: 13px; color: #818692; display: none}
+.invites-left>.num-invites {display: inline-block; border: 1px solid #b8c5d2; color: #628196; border-radius: 10.5px; padding: 0 12px; vertical-align: baseline; font-size: 12px; line-height: 20px; height: 19px; margin-left: 6px}
+@-moz-document url-prefix() {.invites-left>.num-invites {line-height: 19px}}
 .invite-num-results { float: right; color: #556179; font-size: 14px; margin: 10px 4px; max-width: 45%; }
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
 .invite-friends { position: absolute; top: 248px; bottom: 0; right: -1px; left: 20px; overflow: hidden}
