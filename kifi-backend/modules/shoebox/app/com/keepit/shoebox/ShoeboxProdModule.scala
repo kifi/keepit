@@ -2,51 +2,21 @@ package com.keepit.shoebox
 
 import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule}
 import com.keepit.social.ProdShoeboxSecureSocialModule
-import com.keepit.search.ProdSearchServiceClientModule
-import com.keepit.scraper.ScraperImplModule
-import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.common.analytics.ProdAnalyticsModule
 import com.keepit.learning.topicmodel.LdaTopicModelModule
-import com.keepit.model.ProdSliderHistoryTrackerModule
 import com.keepit.common.mail.ProdMailModule
-import com.keepit.common.crypto.ShoeboxCryptoModule
-import com.keepit.common.store.ShoeboxProdStoreModule
+import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.classify.ProdDomainTagImporterModule
-import com.keepit.common.healthcheck.ProdHealthCheckModule
-import com.keepit.common.net.ProdHttpClientModule
-import com.keepit.inject.ProdFortyTwoModule
-import com.keepit.common.actor.ProdActorSystemModule
-import com.keepit.common.zookeeper.ProdDiscoveryModule
-import com.keepit.integrity.DataIntegrityModule
-import com.keepit.eliza.ProdElizaServiceClientModule
-import com.keepit.realtime.ShoeboxWebSocketModule
+import com.keepit.inject.CommonProdModule
 
-case class ShoeboxProdModule() extends ShoeboxModule(
-  // Common Functional Modules
-  fortyTwoModule = ProdFortyTwoModule(),
-  cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
+case class ShoeboxProdModule() extends ShoeboxModule (
   secureSocialModule = ProdShoeboxSecureSocialModule(),
-  searchServiceClientModule = ProdSearchServiceClientModule(),
-  clickHistoryModule = ShoeboxClickHistoryModule(),
-  browsingHistoryModule = ShoeboxBrowsingHistoryModule(),
   mailModule = ProdMailModule(),
-  cryptoModule = ShoeboxCryptoModule(),
-  storeModule = ShoeboxProdStoreModule(),
-  actorSystemModule = ProdActorSystemModule(),
-  discoveryModule = ProdDiscoveryModule(),
-  healthCheckModule = ProdHealthCheckModule(),
-  httpClientModule = ProdHttpClientModule(),
-  shoeboxServiceClientModule = ProdShoeboxServiceClientModule(),
-  elizaServiceClientModule = ProdElizaServiceClientModule(),
+  storeModule = ShoeboxDevStoreModule(),
 
   // Shoebox Functional Modules
-  slickModule = ShoeboxSlickModule(),
-  scraperModule = ScraperImplModule(),
-  socialGraphModule = ProdSocialGraphModule(),
   analyticsModule = ProdAnalyticsModule(),
-  webSocketModule = ShoeboxWebSocketModule(),
   topicModelModule = LdaTopicModelModule(),
   domainTagImporterModule = ProdDomainTagImporterModule(),
-  sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule(),
-  dataIntegrityModule = DataIntegrityModule()
-)
+  cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
+) with CommonProdModule

@@ -94,7 +94,6 @@ object Shoebox extends Service {
     def getSearchFriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/searchFriends", Param("userId", userId))
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
-    def sendPushNotification() = ServiceRoute(POST, "/internal/shoebox/device/sendPushNotification")
     def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq), Param("highSeq", highSeq))
   }
 }
@@ -126,7 +125,6 @@ object Search extends Service {
     def buildDictionary() = ServiceRoute(POST, "/internal/search/spell/buildDict")
     def getBuildStatus() = ServiceRoute(GET, "/internal/search/spell/buildStatus")
     def correctSpelling(query: String) = ServiceRoute(GET, "/internal/search/spell/make-correction", Param("query", query))
-    def getSearchStatistics() = ServiceRoute(POST, "/internal/search/getSearchStatistics")
     def showUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}")
     def setUserConfig(id: Id[User]) = ServiceRoute(POST, s"/internal/search/searchConfig/${id.id}/set")
     def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")

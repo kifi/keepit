@@ -75,12 +75,12 @@
                    <li><a href="@com.keepit.controllers.admin.routes.AdminSearchLabsController.friendMap()">Friend Map</a>
                    <li><a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases()">Phrases</a>
                    <li><a href="@com.keepit.controllers.admin.routes.AdminSpellCorrectorController.spellController()">SpellCorrector</a>
-                   <li><a href="@com.keepit.controllers.admin.routes.ScraperController.searchScraper">Scraper</a>
                    <li><a href="@com.keepit.controllers.admin.routes.TopicModelController.documentTopic()">Document Topic</a>
                    <li><a href="@com.keepit.controllers.admin.routes.TopicModelController.wordTopic()">Word Topic</a>
                    <li><a href="@com.keepit.controllers.admin.routes.TopicModelController.userTopic()">User Topic</a>
                    <li><a href="@com.keepit.controllers.admin.routes.TopicModelController.topicsViewDefault">View Topics</a>
                    <li><a href="@com.keepit.controllers.admin.routes.TopicModelController.summary">TopicModel Summary</a>
+                    <li><a href="@com.keepit.controllers.admin.routes.ScraperController.searchScraper">Scraper</a>
                 </ul>
                </li>
 
@@ -97,7 +97,16 @@
                   <li><a href="@com.keepit.controllers.admin.routes.AdminCacheController.serviceView">Cache Performance</a>
                   <li><a href="@com.keepit.controllers.admin.routes.AdminWebSocketController.serviceView">WebSocket Performance</a>
                   <li><a href="@com.keepit.controllers.admin.routes.AdminClusterController.clustersView">Clusters Overview</a>
-                </ul></li>
+                </ul>
+              </li>
+
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown"  href="@com.keepit.controllers.admin.routes.AdminHealthController.serviceView">Data Integrity</a>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(0)">Normalization</a>
+                    </ul>
+                </li>
+
 		    </ul>
 		  </div>
 		</div>

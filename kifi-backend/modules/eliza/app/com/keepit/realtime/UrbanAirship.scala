@@ -13,23 +13,24 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.net.{NonOKResponseException, HttpClient}
 import com.keepit.common.time._
-import com.keepit.model.{UserNotificationCategories, UserNotification, User}
+import com.keepit.model.User
 
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import com.keepit.common.logging.Logging
+import com.keepit.eliza.{MessageThread, Message}
 
 case class UrbanAirshipConfig(key: String, secret: String, baseUrl: String = "https://go.urbanairship.com")
 
 case class Device(
-  id: Option[Id[Device]] = None,
-  userId: Id[User],
-  token: String,
-  deviceType: DeviceType,
-  state: State[Device] = DeviceStates.ACTIVE,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime
-) extends Model[Device] {
+                   id: Option[Id[Device]] = None,
+                   userId: Id[User],
+                   token: String,
+                   deviceType: DeviceType,
+                   state: State[Device] = DeviceStates.ACTIVE,
+                   createdAt: DateTime = currentDateTime,
+                   updatedAt: DateTime = currentDateTime
+                   ) extends Model[Device] {
   def withId(id: Id[Device]): Device = copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): Device = copy(updatedAt = updateTime)
 }
@@ -39,7 +40,7 @@ object DeviceStates extends States[Device]
 @ImplementedBy(classOf[DeviceRepoImpl])
 trait DeviceRepo extends Repo[Device] {
   def getByUserId(userId: Id[User], excludeState: Option[State[Device]] = Some(DeviceStates.INACTIVE))
-      (implicit s: RSession): Seq[Device]
+                 (implicit s: RSession): Seq[Device]
   def get(userId: Id[User], token: String, deviceType: DeviceType)(implicit s: RSession): Option[Device]
 }
 
@@ -89,7 +90,7 @@ object DeviceType {
 }
 
 // Add fields to this object and handle them properly for each platform
-case class PushNotification(id: ExternalId[UserNotification], unvisitedCount: Int, message: String)
+case class PushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: String)
 
 object UrbanAirship {
   val NotificationSound = "notification.aiff"
@@ -105,12 +106,12 @@ trait UrbanAirship {
 }
 
 class UrbanAirshipImpl @Inject()(
-  client: HttpClient,
-  config: UrbanAirshipConfig,
-  deviceRepo: DeviceRepo,
-  db: Database,
-  clock: Clock
-) extends UrbanAirship with Logging {
+                                  client: HttpClient,
+                                  config: UrbanAirshipConfig,
+                                  deviceRepo: DeviceRepo,
+                                  db: Database,
+                                  clock: Clock
+                                  ) extends UrbanAirship with Logging {
 
   lazy val authenticatedClient: HttpClient = {
     val encodedUserPass = new sun.misc.BASE64Encoder().encode(s"${config.key}:${config.secret}".getBytes)

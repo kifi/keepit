@@ -4,6 +4,7 @@ import com.keepit.search.index.Searcher
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.util.AhoCorasick
 import com.keepit.search.util.LocalAlignment
+import com.keepit.search.util.LocalAlignment._
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.index.IndexReader
@@ -25,7 +26,7 @@ import scala.collection.JavaConversions._
 import scala.math._
 
 object ProximityQuery {
-  def apply(terms: Seq[Term], phrases: Set[(Int, Int)] = Set()) = new ProximityQuery(terms, phrases)
+  def apply(terms: Seq[Term], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f) = new ProximityQuery(terms, phrases, phraseBoost)
 
   def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]) = {
     val notInPhrase = termIds.clone
@@ -33,13 +34,14 @@ object ProximityQuery {
       (pos until (pos + len)).foreach{ idx => notInPhrase(idx) = -1 }
     }
 
-    notInPhrase.filter{ _ >= 0 }.map{ id => (Seq(id), 1) } ++ phrases.map{ case (pos, len) => (termIds.slice(pos, pos + len).toSeq, len) }
+    (notInPhrase.filter{ _ >= 0 }.map{ id => (Seq(id), TermMatch(1).asInstanceOf[Match]) } ++
+      phrases.map{ case (pos, len) => (termIds.slice(pos, pos + len).toSeq, (if (len == 1) TermMatch(1) else PhraseMatch(pos, len)).asInstanceOf[Match]) })
   }
 
   val gapPenalty = 0.05f
 }
 
-class ProximityQuery(val terms: Seq[Term], val phrases: Set[(Int, Int)] = Set()) extends Query {
+class ProximityQuery(val terms: Seq[Term], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float) extends Query {
 
   override def createWeight(searcher: IndexSearcher): Weight = new ProximityWeight(this)
 
@@ -73,9 +75,11 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
     }
   }
   private[this] val termIds = query.terms.take(64).map(termIdMap).toArray
-  private[this] val ac: Option[AhoCorasick[Int, Int]] = if (query.phrases.isEmpty) None else Some(AhoCorasick(ProximityQuery.buildPhraseDict(termIds, query.phrases)))
+  private[this] val phraseMatcher: Option[PhraseMatcher] = {
+    if (query.phrases.isEmpty) None else Some(new PhraseMatcher(ProximityQuery.buildPhraseDict(termIds, query.phrases)))
+  }
 
-  private[this] val maxRawScore = LocalAlignment(termIds, ac, ProximityQuery.gapPenalty).maxScore
+  private[this] val maxRawScore = LocalAlignment(termIds, phraseMatcher, query.phraseBoost, ProximityQuery.gapPenalty).maxScore
 
   def getWeightValue = value / maxRawScore
 
@@ -99,7 +103,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       val phrasesOpt = if (query.phrases.isEmpty) {
         None
       } else {
-        Some(query.phrases.map{ case (pos, len) => query.terms.slice(pos , pos + len).mkString(" ") }.mkString("[", " ; ", "]"))
+        Some(query.phrases.map{ case (pos, len) => query.terms.slice(pos , pos + len).map(_.text).mkString(" ") }.mkString("[", " ; ", "]"))
       }
 
       result.setDescription("proximity(%s), product of:".format(query.terms.mkString(",") + phrasesOpt.getOrElse("")))
@@ -124,7 +128,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
         val termText = term.text()
         makePositionAndId(context, term, id, acceptDocs)
       }.toArray
-      new ProximityScorer(this, tps, termIds, ac)
+      new ProximityScorer(this, tps, termIds, phraseMatcher, query.phraseBoost)
     } else {
       null
     }
@@ -176,7 +180,7 @@ private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termT
   }
 }
 
-class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], ac: Option[AhoCorasick[Int, Int]]) extends Scorer(weight) {
+class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float) extends Scorer(weight) {
   private[this] var curDoc = -1
   private[this] var proximityScore = 0.0f
   private[this] var scoredDoc = -1
@@ -190,7 +194,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
   }
   tps.foreach{ tp => pq.insertWithOverflow(tp) }
 
-  private[this] val localAlignment = LocalAlignment(termIds, ac, ProximityQuery.gapPenalty)
+  private[this] val localAlignment = LocalAlignment(termIds, phraseMatcher, phraseBoost, ProximityQuery.gapPenalty)
 
   override def score(): Float = {
     // compute edit distance based proximity score

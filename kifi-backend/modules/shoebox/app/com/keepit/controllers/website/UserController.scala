@@ -7,10 +7,10 @@ import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, 
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
+import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail, LocalPostOffice}
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.model._
-import com.keepit.realtime.{DeviceType, UrbanAirship}
 
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
@@ -29,21 +29,8 @@ class UserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   friendRequestRepo: FriendRequestRepo,
   searchFriendRepo: SearchFriendRepo,
-  urbanAirship: UrbanAirship)
+  postOffice: LocalPostOffice)
     extends WebsiteController(actionAuthenticator) {
-
-  def registerDevice(deviceType: String) = AuthenticatedJsonToJsonAction { implicit request =>
-    (request.body \ "token").asOpt[String] map { token =>
-      val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType))
-      Ok(Json.obj(
-        "token" -> device.token
-      ))
-    } getOrElse {
-      BadRequest(Json.obj(
-        "error" -> "Body must contain a token parameter"
-      ))
-    }
-  }
 
   def friends() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
@@ -256,6 +243,29 @@ class UserController @Inject() (
     } else {
       BadRequest(Json.obj("error" -> ((SitePrefNames -- o.keys).mkString(", ") + " not recognized")))
     }
+  }
+
+  def getInviteCounts() = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s =>
+      val availableInvites = userValueRepo.getValue(request.userId, "availableInvites").map(_.toInt).getOrElse(6)
+      val invitesLeft = availableInvites - invitationRepo.getByUser(request.userId).length
+      Ok(Json.obj(
+        "total" -> availableInvites,
+        "left" -> invitesLeft
+      )).withHeaders("Cache-Control" -> "private, max-age=300")
+    }
+  }
+
+  def needMoreInvites() = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      postOffice.sendMail(ElectronicMail(
+        from = EmailAddresses.INVITATION,
+        to = Seq(EmailAddresses.EFFI),
+        subject = s"${request.user.firstName} ${request.user.lastName} wants more invites.",
+        htmlBody = s"Go to https://admin.kifi.com/admin/user/${request.userId} to give more invites.",
+        category = PostOffice.Categories.INVITATION))
+    }
+    Ok
   }
 
   def getAllConnections(search: Option[String], network: Option[String],
