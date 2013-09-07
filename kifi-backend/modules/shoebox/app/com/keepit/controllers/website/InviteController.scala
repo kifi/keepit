@@ -17,6 +17,7 @@ import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 import play.api.Play.current
 import play.api._
 import play.api.mvc._
+import play.api.templates.Html
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -68,6 +69,8 @@ class InviteController @Inject() (db: Database,
     }
   }
 
+  private def CloseWindow() = Ok(Html("<script>window.close()</script>"))
+
   private val url = current.configuration.getString("application.baseUrl").get
   private val appId = current.configuration.getString("securesocial.facebook.clientId").get
   private def fbInviteUrl(invite: Invitation)(implicit session: RSession): String = {
@@ -98,14 +101,14 @@ class InviteController @Inject() (db: Database,
             val messageWithUrl = s"${message getOrElse ""}\n$url$path"
             linkedIn.sendMessage(me, socialUserInfo, subject.getOrElse(""), messageWithUrl)
             invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
-            Redirect(routes.InviteController.invite)
+            CloseWindow()
           case _ =>
             BadRequest("Unsupported social network")
         }
       }
 
       if(fullSocialId.size != 2) {
-        Redirect(routes.InviteController.invite)
+        CloseWindow()
       } else {
         val socialUserInfo = socialUserInfoRepo.get(SocialId(fullSocialId(1)), SocialNetworkType(fullSocialId(0)))
         invitationRepo.getByRecipient(socialUserInfo.id.get) match {
@@ -113,7 +116,7 @@ class InviteController @Inject() (db: Database,
             if(alreadyInvited.senderUserId == request.user.id) {
               sendInvitation(socialUserInfo, alreadyInvited)
             } else {
-              Redirect(routes.InviteController.invite)
+              CloseWindow()
             }
           case inactiveOpt =>
             val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
@@ -131,7 +134,7 @@ class InviteController @Inject() (db: Database,
               )
               sendInvitation(socialUserInfo, invite)
             } else {
-              Redirect(routes.InviteController.invite)
+              CloseWindow()
             }
         }
       }
@@ -159,8 +162,9 @@ class InviteController @Inject() (db: Database,
           if (errorCode.isEmpty) {
             invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE))
           }
-          Redirect(routes.InviteController.invite)
-        case None => Redirect(routes.HomeController.home)
+          CloseWindow()
+        case None =>
+          Redirect(routes.HomeController.home)
       }
     }
   }
