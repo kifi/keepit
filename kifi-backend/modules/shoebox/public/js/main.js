@@ -1767,6 +1767,9 @@ $(function() {
 				$(".left-col").animate({width: +myPrefs.site_left_col_width}, 120);
 			}
 		}).promise()};
+	$.when(promise.me).done(function () {
+		$('#invite-friends-link').toggle(canInvite());
+	});
 	updateCollections();
 	updateNumKeeps();
 	$.getJSON(xhrBase + '/user/friends/count', function(data) {
