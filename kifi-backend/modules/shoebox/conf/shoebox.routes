@@ -50,7 +50,6 @@ POST    /ext/pref/enterToSend            @com.keepit.controllers.ext.ExtPreferen
 GET     /ext/user/friends                @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/user/networks               @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
-POST    /ext/canonical              @com.keepit.controllers.ext.ExtPageController.recordCanonicalUrl()
 
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
@@ -174,6 +173,7 @@ POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
 GET     /admin/data/batchMerge          @com.keepit.controllers.admin.UrlController.batchMerge
+GET     /admin/data/canonical       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
