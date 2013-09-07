@@ -8,7 +8,6 @@ import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.learning.topicmodel.TopicModelModule
 import com.keepit.model.ProdSliderHistoryTrackerModule
 import com.keepit.scraper.ScraperImplModule
-import com.keepit.realtime.WebSocketModule
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
@@ -24,7 +23,6 @@ abstract class ShoeboxModule(
 
   // Shoebox Functional Modules
   val analyticsModule: AnalyticsModule,
-  val webSocketModule: WebSocketModule,
   val topicModelModule: TopicModelModule,
   val domainTagImporterModule: DomainTagImporterModule,
   val cacheModule: ShoeboxCacheModule
