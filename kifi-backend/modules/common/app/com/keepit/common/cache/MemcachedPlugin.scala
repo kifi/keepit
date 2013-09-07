@@ -93,6 +93,10 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
       }
     }
 
+    def touch(key: String, expiration: Int) = {
+      client.touch(key, expiration, tc)
+    }
+
     def set(key: String, value: Any, expiration: Int) {
       client.set(key, expiration, value, tc)
     }
