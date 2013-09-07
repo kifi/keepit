@@ -203,27 +203,6 @@ class UrlController @Inject() (
       }
     }
   }
-
-  def fixSite(readOnly: Boolean = true) = AdminHtmlAction { request =>
-    val toBeRedirected = db.readOnly { implicit session => uriRepo.getOldSite() }
-    val r = """(https://www\.kifi\.com)/site(.*)""".r
-    val filtered = toBeRedirected.filter { u => r.findAllIn(u.url).size == 1 }
-    assert(toBeRedirected.size == filtered.size)
-    val newUrls = toBeRedirected.map(_.url).map { case r(prefix, suffix) => prefix + suffix }
-    if (!readOnly) {
-      val newUris = db.readWrite { implicit session => newUrls.map(uriRepo.internByUri(_)) }
-      toBeRedirected zip newUris foreach { case (oldUri, newUri) =>
-        val id = newUri.id.get
-        var newUriWithNormalization = db.readOnly { implicit session => uriRepo.get(id) }
-        while (newUriWithNormalization.normalization.isEmpty) {
-          Thread.sleep(5000)
-          newUriWithNormalization = db.readOnly { implicit session => uriRepo.get(id) }
-        }
-        normalizationService.update(oldUri, TrustedCandidate(newUri.url, newUriWithNormalization.normalization.get))
-      }
-    }
-    Ok(s"[READONLY = ${readOnly}] [VALID = ${filtered.size == toBeRedirected.size}] TO BE INVALIDATED: ${toBeRedirected.length} uris. \n" + (toBeRedirected.map(_.url) zip newUrls).mkString("\n"))
-  }
 }
 
 
