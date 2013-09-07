@@ -308,8 +308,8 @@ class MessagingController @Inject() (
     new String(outBuf.array, 0, outBuf.position(), charset)
   }
 
-  def sendPushNotification(userId:Id[User], extId:String, pendingNotificationCount:Int, msg:String) = {
-    urbanAirship.notifyUser(userId, PushNotification(ExternalId[Message](extId), pendingNotificationCount, msg))
+  def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:String) = {
+    urbanAirship.notifyUser(userId, PushNotification(extId, pendingNotificationCount, msg))
   }
 
   private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = {
@@ -334,7 +334,7 @@ class MessagingController @Inject() (
 
     future{
       val notifText = messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText
-      sendPushNotification(user, thread.externalId.id, getPendingNotificationCount(user), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
+      sendPushNotification(user, thread.externalId, getPendingNotificationCount(user), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
     }
 
     //This is mostly for testing and monitoring
