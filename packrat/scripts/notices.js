@@ -51,7 +51,7 @@ noticesPane = function() {
           if(this.dataset.locator) {
             api.port.emit("open_deep_link", {nUri: this.dataset.uri, locator: this.dataset.locator});
           } else if(this.dataset.category == "global") {
-            markVisited("global", undefined, undefined, undefined, this.dataset.id);
+            markVisited("global", undefined, undefined, this.dataset.id);
             api.port.emit("set_global_read", {noticeId: this.dataset.id});
             if (this.dataset.uri) {
               window.open(this.dataset.uri, "_blank")
@@ -91,7 +91,7 @@ noticesPane = function() {
           break;
         case "markOneVisited":
           console.log("marking one", a)
-          markVisited(a.category, a.nUri, a.time, a.locator, a.id);
+          markVisited(a.category, a.time, a.locator, a.id);
           $markAll.toggle(a.numNotVisited > 0);
           break;
         case "markAllVisited":
@@ -136,14 +136,13 @@ noticesPane = function() {
     api.port.emit("notifications_read", notices[0].time);
   }
 
-  function markVisited(category, nUri, timeStr, locator, id) {
+  function markVisited(category, timeStr, locator, id) {
     var time = new Date(timeStr);  // event time, not notification time
     $notices.find(".kifi-notice-" + category + ":not(.kifi-notice-visited)").each(function() {
       console.log("trying",id, this.dataset.id )
       if(id && id == this.dataset.id) {
         this.classList.add("kifi-notice-visited");
-      } else if (this.dataset.uri == nUri &&
-          dateWithoutMs(this.dataset.createdAt) <= time &&
+      } else if (dateWithoutMs(this.dataset.createdAt) <= time &&
           (!locator || this.dataset.locator == locator)) {
         this.classList.add("kifi-notice-visited");
       }

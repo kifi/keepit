@@ -660,6 +660,7 @@ $(function() {
 	const friendsToShow = 40;
 	const friendsShowing = [];
 	var moreFriends = true;
+	var invitesLeft;
 	function prepInviteTab(moreToShow) {
 		if (moreToShow && !moreFriends) return;
 		moreFriends = true;
@@ -689,10 +690,22 @@ $(function() {
 			nwFriendsTmpl.append(friends);
 			inviteFilterTmpl.render({results: friendsShowing.length, filter: filter});
 		});
+		$.getJSON(xhrBase + '/user/inviteCounts', { updatedAt: invitesUpdatedAt }, function (invites) {
+			invitesLeft = invites.left;
+			$('.num-invites').text(invitesLeft);
+		});
 	}
 	$('.invite-filters>a').click(function () {
 		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 		filterFriends();
+	});
+	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
+	.on('click', '.more-invites', function(e) {
+		e.preventDefault();
+		$noInvitesDialog.dialog('hide');
+		$.postJson('/site/user/needMoreInvites', {}, function (data) {
+			$noInvitesDialog.dialog('hide');
+		});
 	});
 	var $inviteMessageDialog = $('.invite-message-dialog').detach().show()
 	.on('submit', 'form', function(e) {
@@ -714,6 +727,10 @@ $(function() {
 	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
 	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function() {
+		if (!invitesLeft) {
+			$noInvitesDialog.dialog('show');
+			return;
+		}
 		var $friend = $(this).closest('.invite-friend'), fullSocialId = $friend.data('value');
 		// TODO(greg): figure out why this doesn't work cross-domain
 		if (/^facebook/.test(fullSocialId)) {
@@ -839,7 +856,11 @@ $(function() {
 		var params = {}, keepId = $myKeeps.find('.keep').first().data('id');
 		if (keepId) {
 			params.after = keepId;
+		} else if (!promise.keeps || promise.keeps.state() == "pending") {
+			console.log("[anyNewKeeps] keeps not loaded yet");
+			return;
 		}
+
 		if ($('.left-col h3.active').is('.collection')) {
 			params.collection = $('.left-col h3.active').data('id');
 		}
@@ -911,7 +932,7 @@ $(function() {
 				params.before = lastKeep;
 			}
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
-			$.getJSON(xhrBase + '/keeps/all', params, function withKeeps(data) {
+			promise.keeps = $.getJSON(xhrBase + '/keeps/all', params, function withKeeps(data) {
 				updateCollectionsIfAnyUnknown(data.keeps);
 				$.when(promise.me, promise.collections).done(function() {
 					var numShown = $myKeeps.find(".keep").length + data.keeps.length;
@@ -1043,7 +1064,7 @@ $(function() {
 		$collMenu.removeData("docMouseDown").one('transitionend', function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
 		}).removeClass('showing')
-		.closest(".collection").removeClass("with-menu").off("mouseleave", hideCollMenu);
+		.closest(".collection").removeClass("with-menu");
 	}
 
 	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
@@ -1068,6 +1089,7 @@ $(function() {
 		console.log('[' + e.type + ']', hash, state);
 		switch (parts[0]) {
 			case '':
+				navigate('');
 				showMyKeeps();
 				break;
 			case 'collection':
@@ -1260,7 +1282,7 @@ $(function() {
 		if (e.button > 0) return;
 		e.preventDefault();  // do not start selection
 		var $tri = $(this), $coll = $tri.closest(".collection");
-		$coll.addClass("with-menu").on("mouseleave", hideCollMenu);
+		$coll.addClass("with-menu");
 		$collMenu.hide().removeClass('showing').appendTo($coll)
 			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 70)
 			.show().layout().addClass('showing')
@@ -1459,9 +1481,9 @@ $(function() {
 				var $keep = $(this), keepLink = $keep.find('.keep-title>a')[0];
 				// TODO: support bulk operation with one server request
 				$.postJson(
-					xhrBase + '/keeps/' + $keep.data('id') + '/update',
-					{title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'},
-					function(data) {
+					xhrBase + '/keeps/add',
+					{keeps: [{title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'}]},
+					function() {
 						$keep.find('.keep-private').toggleClass('on', howKept == 'pri');
 					}).error(showMessage.bind(null, 'Could not update keep, please try again later'));
 			});
@@ -1752,7 +1774,7 @@ $(function() {
 
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
-	$.getScript('js/jquery-hoverfu.min.js').done(function() {
+	$.getScript('assets/js/jquery-hoverfu.min.js').done(function() {
 		$sendFeedback.hoverfu(function(configure) {
 			configure({
 				position: {my: "center-24 bottom-12", at: "center top", of: this},

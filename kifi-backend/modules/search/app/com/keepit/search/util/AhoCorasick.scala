@@ -56,8 +56,10 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
     def reset(): State[D] = _root
   }
 
+  val size = dict.size
+
   private val _root: StateImpl = new StateImpl(null)
-  def root: State[D] = _root
+  def initialState: State[D] = _root
 
   val maxLength: Int = makeTrie(dict)
   makeFailureLinks()
@@ -99,7 +101,7 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
   @tailrec private def _next(item: I, s: StateImpl): StateImpl = {
     s.next(item) match {
       case Some(next) => next
-      case _ => if (s eq root) _root else _next(item, s.failState)
+      case _ => if (s eq _root) _root else _next(item, s.failState)
     }
   }
 }

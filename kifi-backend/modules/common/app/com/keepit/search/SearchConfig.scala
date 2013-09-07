@@ -19,7 +19,7 @@ object SearchConfig {
       "svWeightMyBookMarks" -> "1",
       "svWeightBrowsingHistory" -> "2",
       "svWeightClickHistory" -> "3",
-      "maxResultClickBoost" -> "10.0",
+      "maxResultClickBoost" -> "20.0",
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",
       "sharingBoostInNetwork" -> "0.5",

@@ -7,6 +7,7 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.controller.FortyTwoCookies.{KifiInstallationCookie, ImpersonateCookie}
 import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.{FakeHttpClient, HttpClient}
 import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
@@ -14,12 +15,11 @@ import com.keepit.social.{SecureSocialUserPlugin, SecureSocialAuthenticatorPlugi
 import com.keepit.test.ShoeboxApplication
 
 import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
 import securesocial.core.providers.Token
-import play.api.mvc.Result
-import com.keepit.realtime.UrbanAirshipConfig
 
 class UserControllerTest extends Specification with ApplicationInjector {
 
@@ -57,10 +57,10 @@ class UserControllerTest extends Specification with ApplicationInjector {
 
   private class WithUserController extends WithApplication(new ShoeboxApplication(new ScalaModule {
     def configure() {
+      install(FakeMailModule())
       bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
       bind[HttpClient].toInstance(new FakeHttpClient())
       bind[ImpersonateCookie].toInstance(new ImpersonateCookie(Some("dev.ezkeep.com")))
-      bind[UrbanAirshipConfig].toInstance(UrbanAirshipConfig("test", "test"))
       bind[KifiInstallationCookie].toInstance(new KifiInstallationCookie(Some("dev.ezkeep.com")))
       bind[SecureSocialAuthenticatorPlugin].toInstance(new SecureSocialAuthenticatorPlugin {
         def delete(id: String) = Right(())

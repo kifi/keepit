@@ -26,7 +26,6 @@ import play.api.libs.json._
 import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
-import com.keepit.serializer.SearchResultInfoSerializer
 import com.keepit.search.query.LuceneExplanationExtractor
 import com.keepit.search.query.LuceneScoreNames
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -400,10 +399,6 @@ class MainSearcher(
     Statsd.timing("mainSearch.total", millisPassed)
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
-    val searchResultInfo = SearchResultInfo(myTotal, friendsTotal, othersTotal, svVar, svExistVar)
-    val searchResultJson = SearchResultInfoSerializer.serializer.writes(searchResultInfo)
-    val metaData = Json.obj("queryUUID" -> JsString(searchResultUuid.id), "searchResultInfo" -> searchResultJson)
-    shoeboxClient.persistServerSearchEvent(metaData)
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
 
@@ -460,6 +455,7 @@ class MainSearcher(
   }
 
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
+  def getBookmarkId(uriId: Id[NormalizedURI]): Long = myUriEdgeAccessor.getBookmarkId(uriId.id)
 }
 
 class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {

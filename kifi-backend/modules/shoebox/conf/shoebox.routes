@@ -53,13 +53,19 @@ POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageControlle
 
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
-POST    /devices/:deviceType        @com.keepit.controllers.website.UserController.registerDevice(deviceType: String)
-
 ##########################################
 # Website
 ##########################################
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
+GET     /collection/:id             @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
+GET     /friends                    @com.keepit.controllers.website.HomeController.home
+GET     /friends/invite             @com.keepit.controllers.website.HomeController.home
+GET     /friends/requests           @com.keepit.controllers.website.HomeController.home
+GET     /profile                    @com.keepit.controllers.website.HomeController.home
+GET     /search                     @com.keepit.controllers.website.HomeController.home
+GET     /blog                       @com.keepit.controllers.website.HomeController.home
+
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 
@@ -97,10 +103,10 @@ POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.Bookma
 POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false)
 POST    /site/collections/:id/setKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = true)
 
-POST    /site/chatter               @com.keepit.controllers.website.CommentController.getChatter
-
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
+GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
+POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
 POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
@@ -117,16 +123,8 @@ GET     /site/user/socialConnections  @com.keepit.controllers.website.UserContro
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
-# Temporary hack for kifi.com site before we fully integrate it with Play!
-GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/collection/:id        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id: String)
-GET     /site/search                @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/profile               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/friends               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/friends/invite        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/friends/requests      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String, id = "")
-# NOTE: /site/*path route above must be last /site/ route because it will break any below it!
+GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
+GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
 
 ##########################################
 # External Services API
@@ -173,11 +171,9 @@ POST    /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperControl
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
-GET     /admin/data/fixSeqNum       @com.keepit.controllers.admin.UrlController.fixSeqNum
-GET     /admin/data/normalization/:page       @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
-GET     /admin/data/batchMerge        @com.keepit.controllers.admin.UrlController.batchMerge
-GET    /admin/data/canonical       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
-
+GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
+GET     /admin/data/batchMerge          @com.keepit.controllers.admin.UrlController.batchMerge
+GET     /admin/data/canonical       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
@@ -330,7 +326,6 @@ GET     /internal/shoebox/tracker/clickHistory        @com.keepit.controllers.sh
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Id[User])
 GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.shoebox.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
-GET     /internal/shoebox/database/changedComment     @com.keepit.controllers.shoebox.ShoeboxController.getCommentsChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/commentRecipientIds  @com.keepit.controllers.shoebox.ShoeboxController.getCommentRecipientIds(commentId: Id[Comment])
 POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
@@ -353,16 +348,11 @@ GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controlle
 GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.shoebox.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
 GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.shoebox.ShoeboxController.searchFriends(userId: Id[User])
 
-POST    /internal/shoebox/device/sendPushNotification @com.keepit.controllers.shoebox.ShoeboxController.sendPushNotification()
-
 POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.shoebox.ExpertRecommenderController.suggestExperts()
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 
 POST    /internal/geckoboard/refresh                  @com.keepit.reports.GeckoboardReporterController.refreshAll()
-
-GET     /internal/migrateToEliza                      @com.keepit.controllers.shoebox.ShoeboxChatMigrationController.migrateToEliza()
-
 
 
 

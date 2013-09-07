@@ -70,7 +70,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
   def getBookmarksChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Bookmark]]
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]]
-  def getCommentsChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Comment]]
   def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiments: Future[Seq[SearchConfigExperiment]]
@@ -89,7 +88,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
-  def sendPushNotification(user: Id[User], extId: String, unvisited: Int, msg: String) : Unit
   def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
 }
 
@@ -171,12 +169,6 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getBookmarkByUriAndUser(uriId, userId)).map { r =>
           Json.fromJson[Option[Bookmark]](r.json).get
       }
-    }
-  }
-
-  def getCommentsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Comment]] = {
-    call(Shoebox.internal.getCommentsChanged(seqNum.value, fetchSize)).map{ r =>
-      r.json.as[JsArray].value.map(js => Json.fromJson[Comment](js).get)
     }
   }
 
@@ -461,16 +453,6 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.createDeepLink, payload)
   }
 
-  def sendPushNotification(user: Id[User], extId: String, unvisited: Int, msg: String) : Unit = {
-    val payload = Json.obj(
-      "userId" -> user.id,
-      "extId" -> extId,
-      "unvisited" -> unvisited,
-      "msg" -> msg
-    )
-    call(Shoebox.internal.sendPushNotification, payload)
-  }
-  
   def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = {
     call(Shoebox.internal.getNormalizedUriUpdates(lowSeq, highSeq)).map{ r =>
       var m = Vector.empty[(Id[NormalizedURI], NormalizedURI)]

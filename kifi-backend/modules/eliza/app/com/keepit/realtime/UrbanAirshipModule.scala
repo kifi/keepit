@@ -6,11 +6,10 @@ import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.keepit.inject.AppScoped
 
-trait WebSocketModule extends ScalaModule
+trait UrbanAirshipModule extends ScalaModule
 
-case class ShoeboxWebSocketModule() extends WebSocketModule {
+case class ElizaUrbanAirshipModule() extends UrbanAirshipModule {
   def configure() {
-    // bind[ChannelPlugin].to[ChannelPluginImpl].in[AppScoped]
   }
 
   @Provides @Singleton def urbanAirshipConfig(app: play.api.Application): UrbanAirshipConfig = {
