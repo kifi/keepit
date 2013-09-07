@@ -309,7 +309,7 @@ class MessagingController @Inject() (
   }
 
   def sendPushNotification(userId:Id[User], extId:String, pendingNotificationCount:Int, msg:String) = {
-    urbanAirship.notifyUser(userId, PushNotification(ExternalId[UserNotification](extId), pendingNotificationCount, msg))
+    urbanAirship.notifyUser(userId, PushNotification(ExternalId[Message](extId), pendingNotificationCount, msg))
   }
 
   private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = {

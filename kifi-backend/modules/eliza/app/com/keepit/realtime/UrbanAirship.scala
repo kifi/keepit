@@ -13,11 +13,12 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.net.{NonOKResponseException, HttpClient}
 import com.keepit.common.time._
-import com.keepit.model.{UserNotificationCategories, UserNotification, User}
+import com.keepit.model.User
 
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import com.keepit.common.logging.Logging
+import com.keepit.eliza.Message
 
 case class UrbanAirshipConfig(key: String, secret: String, baseUrl: String = "https://go.urbanairship.com")
 
@@ -89,7 +90,7 @@ object DeviceType {
 }
 
 // Add fields to this object and handle them properly for each platform
-case class PushNotification(id: ExternalId[UserNotification], unvisitedCount: Int, message: String)
+case class PushNotification(id: ExternalId[Message], unvisitedCount: Int, message: String)
 
 object UrbanAirship {
   val NotificationSound = "notification.aiff"
