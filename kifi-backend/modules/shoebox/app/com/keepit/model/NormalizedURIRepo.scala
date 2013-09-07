@@ -20,7 +20,6 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI]
-  def getOldSite()(implicit session: RSession): Seq[NormalizedURI]
 }
 
 @Singleton
@@ -146,7 +145,4 @@ class NormalizedURIRepoImpl @Inject() (
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI] = {
     (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
-
-  def getOldSite()(implicit session: RSession): Seq[NormalizedURI] =
-    (for { u <- table if u.url like "https://www.kifi.com/site%" } yield u).list
 }
