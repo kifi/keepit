@@ -22,7 +22,8 @@ import com.keepit.integrity.MergedUri
 import com.keepit.integrity.SplittedUri
 import org.joda.time.DateTime
 import com.keepit.common.time.zones.PT
-import com.keepit.normalizer.Prenormalizer
+import com.keepit.normalizer.{TrustedCandidate, NormalizationService, Prenormalizer}
+import scala.concurrent.Await
 
 
 class UrlController @Inject() (
@@ -44,7 +45,8 @@ class UrlController @Inject() (
   orphanCleaner: OrphanCleaner,
   dupeDetect: DuplicateDocumentDetection,
   duplicatesProcessor: DuplicateDocumentsProcessor,
-  uriIntegrityPlugin: UriIntegrityPlugin)
+  uriIntegrityPlugin: UriIntegrityPlugin,
+  normalizationService: NormalizationService)
     extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
@@ -198,6 +200,7 @@ class UrlController @Inject() (
   }
   
   def normalizationView(page: Int = 0) = AdminHtmlAction{ request =>
+    implicit val playRequest = request.request
     val PAGE_SIZE = 50
     val (pendingCount, appliedCount, applied) = db.readOnly{ implicit s =>
       val totalCount = changedUriRepo.count
@@ -212,8 +215,28 @@ class UrlController @Inject() (
   }
   
   def batchMerge = AdminHtmlAction{ request =>
-    uriIntegrityPlugin.batchUpdateMerge()
-    Ok
+    implicit val playRequest = request.request
+    Await.result(uriIntegrityPlugin.batchUpdateMerge(), 5 seconds)
+    Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0))
+  }
+
+  def redirect(oldUrl: String, newUrl: String, canonical: Boolean = false) = AdminHtmlAction { request =>
+    db.readOnly { implicit session =>
+      (uriRepo.getByUri(oldUrl), uriRepo.getByUri(newUrl)) match {
+        case (None, _) => Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUrl} could not be found.")
+        case (_, None) => Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUrl} could not be found.")
+        case (_, Some(newUri)) if newUri.normalization.isEmpty && !canonical =>
+          Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUri.id.get}: ${newUri.url} isn't normalized.")
+        case (Some(oldUri), Some(newUri)) => {
+          val normalization = if (canonical) Normalization.CANONICAL else newUri.normalization.get
+          val result = Await.result(normalizationService.update(oldUri, TrustedCandidate(newUri.url, normalization)), 5 seconds)
+          if (result.isDefined)
+            Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to ${newUri.id.get}: ${newUri.url}")
+          else
+            Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} cannot be redirected to ${newUri.id.get}: ${newUri.url}")
+        }
+      }
+    }
   }
 }
 

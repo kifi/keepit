@@ -1,31 +1,29 @@
 package com.keepit.integrity
 
-import akka.util.Timeout
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.time._
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.actor.ActorInstance
-import play.api.Plugin
 import scala.concurrent.duration._
-import com.keepit.common.net.URI
-import scala.util.{Success, Failure, Try}
-import com.keepit.normalizer.Prenormalizer
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.db.slick.DBSession.RWSession
+import akka.pattern.{ask, pipe}
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
 
 trait UriChangeMessage
 
 case class MergedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends UriChangeMessage
 case class SplittedUri(url: URL, newUri: Id[NormalizedURI]) extends UriChangeMessage
-case object BatchUpdateMerge
+case class BatchUpdateMerge(batchSize: Int)
 
 class UriIntegrityActor @Inject()(
   db: Database,
@@ -161,9 +159,9 @@ class UriIntegrityActor @Inject()(
     }
     toBeScraped.map(scraper.asyncScrape(_))
   }
-  
-  private def batchUpdateMerge() = {
-    val toMerge = getOverDueList(fetchSize = 50)
+
+  private def batchUpdateMerge(batchSize: Int): Int = {
+    val toMerge = getOverDueList(batchSize)
     log.info(s"batch merge uris: ${toMerge.size} pair of uris to be merged")
     val toScrapeAndSavedChange = db.readWrite{ implicit s =>
       toMerge.map{ change => processMerge(change) }
@@ -171,8 +169,9 @@ class UriIntegrityActor @Inject()(
     toScrapeAndSavedChange.map(_._2).filter(_.isDefined).sortBy(_.get.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.get.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pair of uris merged. zookeeper seqNum updated. start scraping ${toScrapeAndSavedChange.size} pages")
     toScrapeAndSavedChange.map(_._1).filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values.map{ x => scraper.asyncScrape(x.get)}
+    toMerge.size
   }
-  
+
   private def getOverDueList(fetchSize: Int = -1) = {
     centralConfig(new ChangedUriSeqNumKey()) match {
       case None => db.readOnly{ implicit s => changedUriRepo.getChangesSince(SequenceNumber(0), fetchSize, state = ChangedURIStates.ACTIVE)}
@@ -181,7 +180,7 @@ class UriIntegrityActor @Inject()(
   }
 
   def receive = {
-    case BatchUpdateMerge => batchUpdateMerge()
+    case BatchUpdateMerge(batchSize) => Future.successful(batchUpdateMerge(batchSize)) pipeTo sender
     case MergedUri(oldUri, newUri) => db.readWrite{ implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) }   // process later
     case SplittedUri(url, newUri) => handleSplit(url, newUri)
   }
@@ -192,7 +191,7 @@ class UriIntegrityActor @Inject()(
 @ImplementedBy(classOf[UriIntegrityPluginImpl])
 trait UriIntegrityPlugin extends SchedulingPlugin  {
   def handleChangedUri(change: UriChangeMessage): Unit
-  def batchUpdateMerge(): Unit
+  def batchUpdateMerge(batchSize: Int = -1): Future[Int]
 }
 
 @Singleton
@@ -203,15 +202,16 @@ class UriIntegrityPluginImpl @Inject() (
   override def enabled = true
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
-     scheduleTask(actor.system, 1 minutes, 45 seconds, actor.ref, BatchUpdateMerge)
+     scheduleTask(actor.system, 1 minutes, 45 seconds, actor.ref, BatchUpdateMerge(50))
   }
   override def onStop() {
      log.info("stopping UriIntegrityPluginImpl")
   }
 
-  override def handleChangedUri(change: UriChangeMessage) = {
+  def handleChangedUri(change: UriChangeMessage) = {
     actor.ref ! change
   }
   
-  override def batchUpdateMerge() = actor.ref ! BatchUpdateMerge
+  def batchUpdateMerge(batchSize: Int) = actor.ref.ask(BatchUpdateMerge(batchSize))(1 minute).mapTo[Int]
+
 }

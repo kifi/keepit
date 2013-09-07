@@ -1,4 +1,4 @@
-@(applied: Seq[(NormalizedURI, NormalizedURI, String)], page: Int, appliedCount: Int, pendingCount: Int, pageCount: Int, maxPageSize: Int)
+@(applied: Seq[(NormalizedURI, NormalizedURI, String)], page: Int, appliedCount: Int, pendingCount: Int, pageCount: Int, maxPageSize: Int)(implicit flash: Flash)
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -37,10 +37,21 @@
 }
 
 @admin(appliedCount + " Redirection Events"){
-    <div style="float: right" class="form-horizontal">
-        <button class="btn btn-primary" type="button" id="process">Process @pendingCount Pending Events Now</button>
-    </div>
-  <h2> Showing @applied.size (page @{page + 1}) </h2>
+
+    <div class="container"><button class="btn btn-primary pull-right" type="button" id="process" style="margin-bottom: 10px">Process @pendingCount Pending Events Now</button></div>
+
+    <form class="form-horizontal pull-right" action="@com.keepit.controllers.admin.routes.UrlController.redirect()" method = "GET">
+        <input type="text" name="oldUrl" placeholder="Old Url">
+        <div class="input-append">
+          <input type="text" name="newUrl" placeholder="New Url">
+            <label class="add-on btn-danger" style="margin-bottom: 0"><input type="checkbox" name="canonical" value="true" style="margin-top: 0" > canonical</label>
+        </div>
+        <button type="submit" class="btn">Redirect</button>
+        <div class="text-success">@flash.get("result").getOrElse("")</div>
+    </form>
+
+        <h2> Showing @applied.size (page @{page + 1}) </h2>
+
   @pagination(page, pageCount)
   <table class = "table table-bordered">
   <tr>
@@ -68,8 +79,5 @@
 }
 
 <script>
-  $("#process").click(function() {
-    $.get("@com.keepit.controllers.admin.routes.UrlController.batchMerge");
-    location = "@com.keepit.controllers.admin.routes.UrlController.normalizationView(0)";
-  });
+  $("#process").click(function() { location = "@com.keepit.controllers.admin.routes.UrlController.batchMerge"; } );
 </script>
