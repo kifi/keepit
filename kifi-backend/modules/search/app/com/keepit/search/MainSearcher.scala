@@ -455,6 +455,7 @@ class MainSearcher(
   }
 
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
+  def getBookmarkId(uriId: Id[NormalizedURI]): Long = myUriEdgeAccessor.getBookmarkId(uriId.id)
 }
 
 class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
