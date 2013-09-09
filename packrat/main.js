@@ -634,6 +634,9 @@ api.port.on({
       });
     }
   },
+  remove_notification: function(o) {
+    removeNotificationPopup(o.uniqueId);
+  },
   add_deep_link_listener: function(locator, _, tab) {
     createDeepLinkListener(locator, tab.id);
   },
@@ -642,6 +645,12 @@ api.port.on({
     //reportError(data.message, data.url, data.lineNo);
   }
 });
+
+function removeNotificationPopup(uniqueId) {
+  api.tabs.each(function(page) {
+    api.tabs.emit(page, "remove_notification", uniqueId);
+  });
+}
 
 function sendNotificationToTabs(n) {
   var told = {};

@@ -6,6 +6,9 @@
 // @require scripts/render.js
 
 var notifier = {
+  removeByUnqiueId: function(uniqueId) {
+    KifiNotification.removeByUnqiueId(uniqueId);
+  },
   show: function(data) {
     var o = data;
     switch (data.category) {
@@ -21,7 +24,8 @@ var notifier = {
           clickAction: function() {
             api.port.emit("open_deep_link", {nUri: o.url, locator: o.locator});
             return false;
-          }
+          },
+          uniqueId: o.thread
         });
         break;
       case "global":
@@ -40,7 +44,8 @@ var notifier = {
               var win = window.open(o.url, "_blank");
               win.focus();
             }
-          }
+          },
+          uniqueId: o.id
         });
         break;
     }
@@ -59,7 +64,8 @@ var KifiNotification = {
     sticky: false,
     popupClass: "",
     clickAction: $.noop,
-    closeOnClick: true
+    closeOnClick: true,
+    uniqueId: ""
   },
 
   add: function(params) {
@@ -73,7 +79,8 @@ var KifiNotification = {
       image: params.image ? '<img src="' + params.image + '" class=kifi-notify-image>' : "",
       popupClass: params.popupClass,
       innerClass: params.image ? "kifi-notify-with-image" : "kifi-notify-without-image",
-      link: params.link
+      link: params.link,
+      uniqueId: params.uniqueId
     }, function(html) {
       var $item = $(html);
 
@@ -127,7 +134,9 @@ var KifiNotification = {
       fadeOutMs = params.fadeOutMs || 300,
       manualClose = unbindEvents;
 
-    $item.data("beforeClose")($item, manualClose);
+    if ($item.data("beforeClose")) {
+      $item.data("beforeClose")($item, manualClose);
+    }
 
     if (unbindEvents) {
       $item.unbind("mouseenter mouseleave");
@@ -140,14 +149,25 @@ var KifiNotification = {
     }
 
     function removeItem() {
-      $item.data("afterClose")($item, manualClose);
+      if ($item.data("afterClose")) {
+        $item.data("afterClose")($item, manualClose);
+      }
       $item.remove();
       $("#kifi-notify-notice-wrapper").not(":has(.kifi-notify-item-wrapper)").remove();
     }
   },
 
   removeSpecific: function($item, params, unbindEvents) {
+    api.port.emit("remove_notification", {uniqueId: $item.data("uniqueid")});
     KifiNotification.fadeItem($item, params || {}, unbindEvents);
+  },
+
+  removeByUnqiueId: function(uniqueId) {
+    var $wrap = $("#kifi-notify-notice-wrapper");
+    $wrap.find(".kifi-notify-item-wrapper[data-uniqueId='" + uniqueId + "']").each(function(i,e) {
+      api.log("xxxxxxx", this, $(this), e, $(e))
+      KifiNotification.fadeItem($(this), {}, true);
+    });
   },
 
   startFadeTimer: function($item, params) {

@@ -11,7 +11,15 @@ var notifierScout = notifierScout || function() {  // idempotent for Chrome
         }
       }
     },
+    remove_notification: function(uniqueId) {
+      if (document.querySelectorAll(".kifi-notify-item-wrapper[data-uniqueId='" + uniqueId + "']").length > 0) {
+        api.require("scripts/notifier.js", function() {
+          notifier.removeByUnqiueId(uniqueId);
+        });
+      }
+    },
     new_notification: function(n) {
+      api.log("hey",n.unread);
       if (!n.unread) return;
       var p = document.querySelector(".kifi-pane"), loc = p && p.dataset.locator;
       if (loc !== n.locator) {
