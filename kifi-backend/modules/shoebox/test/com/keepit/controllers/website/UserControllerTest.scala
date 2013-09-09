@@ -11,7 +11,6 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.{FakeHttpClient, HttpClient}
 import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
-import com.keepit.realtime.UrbanAirshipConfig
 import com.keepit.social.{SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin, SocialId, SocialNetworks}
 import com.keepit.test.ShoeboxApplication
 
@@ -62,7 +61,6 @@ class UserControllerTest extends Specification with ApplicationInjector {
       bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
       bind[HttpClient].toInstance(new FakeHttpClient())
       bind[ImpersonateCookie].toInstance(new ImpersonateCookie(Some("dev.ezkeep.com")))
-      bind[UrbanAirshipConfig].toInstance(UrbanAirshipConfig("test", "test"))
       bind[KifiInstallationCookie].toInstance(new KifiInstallationCookie(Some("dev.ezkeep.com")))
       bind[SecureSocialAuthenticatorPlugin].toInstance(new SecureSocialAuthenticatorPlugin {
         def delete(id: String) = Right(())

@@ -3,7 +3,6 @@ package com.keepit.dev
 import com.keepit.common.mail._
 import com.keepit.shoebox._
 import com.keepit.learning.topicmodel.DevTopicModelModule
-import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.classify.DevDomainTagImporterModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
@@ -19,7 +18,6 @@ case class ShoeboxDevModule() extends ShoeboxModule(
 
   // Shoebox Functional Modules
   analyticsModule = DevAnalyticsModule(),
-  webSocketModule = ShoeboxWebSocketModule(),
   topicModelModule = DevTopicModelModule(),
   domainTagImporterModule = DevDomainTagImporterModule(),
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule())

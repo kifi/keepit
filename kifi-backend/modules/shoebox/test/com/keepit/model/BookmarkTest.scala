@@ -149,5 +149,17 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+    
+    "get by exclude state should work" in {
+       withDb() { implicit injector =>
+        val (user1, user2, uri1, uri2, url1, _) = setup()
+        db.readWrite{ implicit s =>
+          val bm = bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get)
+          bookmarkRepo.save(bm.get.withActive(false))
+          bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get).size === 0
+          bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get, excludeState = None).size === 1
+        }
+       }
+    }
   }
 }

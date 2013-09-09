@@ -692,7 +692,7 @@ $(function() {
 		});
 		$.getJSON(xhrBase + '/user/inviteCounts', { updatedAt: invitesUpdatedAt }, function (invites) {
 			invitesLeft = invites.left;
-			$('.num-invites').text(invitesLeft);
+			$('.num-invites').text(invitesLeft).parent().show();
 		});
 	}
 	$('.invite-filters>a').click(function () {
@@ -782,12 +782,39 @@ $(function() {
 		});
 	}
 
+	var $blog = $('.blog-outer').antiscroll({x: false, width: '100%'});
+	var blogScroller = $blog.data("antiscroll");
+	$(window).resize(function() {
+		if (document.body.getAttribute('data-view') === 'blog') {
+			blogScroller.refresh();
+		}
+	});
+	var blogTmpl = Tempo.prepare($blog.find('.antiscroll-inner'), {escape: false}).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$blogLoading.hide();
+		blogScroller.refresh();
+	});
+	var $blogLoading = $('.blog-loading');
 	function showBlog() {
 		$('body').attr('data-view', 'blog');
 		$('.left-col .active').removeClass('active');
-		var $blog = $('iframe.blog');
-		if (!$blog.attr('src')) {
-			$blog.attr('src', 'http://kifiupdates.tumblr.com');
+		(window.google ? $.Deferred().resolve() : $.getScript('https://www.google.com/jsapi')).done(function() {
+			google.load("feeds", "1", {callback: loadFeed});
+		});
+		function loadFeed() {
+			var feed = new google.feeds.Feed('http://kifiupdates.tumblr.com/rss');
+			feed.setNumEntries(-1);
+			feed.setResultFormat(google.feeds.Feed.JSON_FORMAT);
+			feed.load(function renderFeed(o) {
+				console.log('[renderFeed]', o);
+				if (o.feed) {
+					var suffixes = [,'st','nd','rd'];
+					o.feed.entries.forEach(function(a) {
+						var s = a.publishedDate, d = +s.substr(5, 2);  // TODO: fix "31th" (or never post on 31st, ha!)
+						a.shortPublishedDate = s.substr(8, 4) + d + (suffixes[d % 20] || 'th') + ', ' + s.substr(12, 4);
+					});
+					blogTmpl.render(o.feed);
+				}
+			});
 		}
 	}
 
@@ -1740,6 +1767,9 @@ $(function() {
 				$(".left-col").animate({width: +myPrefs.site_left_col_width}, 120);
 			}
 		}).promise()};
+	$.when(promise.me).done(function () {
+		$('#invite-friends-link').toggle(canInvite());
+	});
 	updateCollections();
 	updateNumKeeps();
 	$.getJSON(xhrBase + '/user/friends/count', function(data) {

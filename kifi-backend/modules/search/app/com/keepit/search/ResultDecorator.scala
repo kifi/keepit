@@ -129,6 +129,7 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
           r.isPrivate,
           ResultDecorator.highlight(r.title, analyzer, field, terms),
           ResultDecorator.highlightURL(r.url, analyzer, field, terms),
+          r.externalId,
           collections
         )
       } else {
@@ -140,6 +141,7 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
           false,
           ResultDecorator.highlight(r.title, analyzer, field, terms),
           ResultDecorator.highlightURL(r.url, analyzer, field, terms),
+          None,
           None
         )
       }

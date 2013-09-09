@@ -216,7 +216,7 @@
 				</div>
 			</div>
 		</div>
-		<iframe class="blog"></iframe>
+
 		<div class="friends">
 			<h1>Your Friends</h1>
 			<nav class="friends-tabs">
@@ -331,6 +331,23 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 				<img class="friend-reqs-loading" src="assets/img/wait.gif">
 			</div>
 		</div>
+
+		<div class="blog-outer">
+			<div class="antiscroll-inner">
+				<div class="blog" data-template>
+					<header>
+						<h1>{{title}}</h1>
+						<h2>{{description | replace '(for|Beta) ', '$1&nbsp;'}}</h2>
+					</header>
+					<article data-template-for="entries">
+						<h3>{{title}}</h3>
+						<time title="{{publishedDate}}">{{shortPublishedDate}}</time>
+						{{content}}
+					</article>
+				</div>
+				<img class="blog-loading" src="assets/img/wait.gif">
+			</div>
+		</div>
 	</div>
 	</section>
 
@@ -347,7 +364,7 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 		<ul class="about-kifi">
 			<li><a href="blog" class="updates-features">Kifi Updates</a>
 			<li><a href="/install">Install Kifi on this computer</a>
-			<li><a href="/site/friends/invite">Invite your friends</a>
+			<li><a href="friends/invite" id="invite-friends-link" style="display:none">Invite your friends</a>
 			<li><a href="https://fast.wistia.net/embed/iframe/b7qisfubnv?popover=true" class="wistia-popover[height=394,playerColor=7b796a,width=700]">How to use Kifi</a><script charset="ISO-8859-1" src="https://fast.wistia.com/static/popover-v1.js"></script>
 			<li><a href="javascript:" class="send-feedback">Send feedback</a>
 		</ul>

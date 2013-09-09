@@ -50,11 +50,8 @@ POST    /ext/pref/enterToSend            @com.keepit.controllers.ext.ExtPreferen
 GET     /ext/user/friends                @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/user/networks               @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
-POST    /ext/canonical              @com.keepit.controllers.ext.ExtPageController.recordCanonicalUrl()
 
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
-
-POST    /devices/:deviceType        @com.keepit.controllers.website.UserController.registerDevice(deviceType: String)
 
 ##########################################
 # Website
@@ -176,6 +173,8 @@ POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
 GET     /admin/data/batchMerge          @com.keepit.controllers.admin.UrlController.batchMerge
+GET     /admin/data/canonical       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
+GET     /admin/data/redirect       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
@@ -349,8 +348,6 @@ GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepi
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
 GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.shoebox.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
 GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.shoebox.ShoeboxController.searchFriends(userId: Id[User])
-
-POST    /internal/shoebox/device/sendPushNotification @com.keepit.controllers.shoebox.ShoeboxController.sendPushNotification()
 
 POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.shoebox.ExpertRecommenderController.suggestExperts()
 

@@ -29,7 +29,6 @@ import com.keepit.learning.topicmodel.DevTopicModelModule
 import com.keepit.learning.topicmodel.DevTopicStoreModule
 import com.keepit.eliza.TestElizaServiceClientModule
 import com.keepit.scraper.FakeScraperModule
-import com.keepit.realtime.ShoeboxWebSocketModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -43,7 +42,6 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeMailModule(),
         FakeHttpClientModule(FakeClientResponse.fakeAmazonDiscoveryClient),
         FakeDiscoveryModule(),
-        ShoeboxWebSocketModule(),
         TestActorSystemModule(),
         TestShoeboxSecureSocialModule(),
         ShoeboxFakeStoreModule(),

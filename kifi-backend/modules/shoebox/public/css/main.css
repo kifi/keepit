@@ -50,7 +50,7 @@ body[data-view=profile] .my-pic::before { transition: none; animation-name: edit
 .left-col>*>h3:not(.active):hover {background-color: #e9ecf2}
 .left-col h3>a {display: block; padding: 0 6px 0 40px; color: #818692}
 .left-col .nav-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; background: #eff2f7; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
-@-moz-document url-prefix() {.left-col .nav-count {line-height: 18px}}
+@-moz-document url-prefix() {.left-col .nav-count {line-height: 19px}}
 .left-col .nav-count:empty {display: none}
 .left-col .my-friends .nav-count {background: #b7d07c; border-color: transparent; color: #fff}
 .left-col .active .nav-count {color: #fff; background: #b8c5d2}
@@ -136,7 +136,7 @@ body:not([data-view=mine]):not([data-view=search]) .main-head,
 body:not([data-view=mine]):not([data-view=search]) .main-keeps,
 body:not([data-view=profile]) .profile,
 body:not([data-view=friends]) .friends,
-body:not([data-view=blog]) .blog  {display: none}
+body:not([data-view=blog]) .blog-outer {display: none}
 h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .undo {position: absolute; top: -8px; left: 0; right: 0; z-index: 1; text-align: center; display: none}
 .undo-box {display: inline-block; background-color: #ffc; border: 1px solid #f8f4e8; border-radius: 2px; padding: 0 12px; font-size: 13px; font-weight: 300; line-height: 17px; height: 18px; white-space: nowrap}
@@ -172,7 +172,7 @@ a.undo-link[href]:hover {text-decoration: underline}
 .profile>.contact-email { font-size: 16px; line-height: 20px }
 .profile>.contact-email>.editable { display: inline-block; padding: 2px 0}
 .profile>.networks { position: relative; font-size: 0; background-size: 62px; margin: 20px 0; padding: 0; text-align: center; }
-.profile>.networks>ul { margin: 0; padding: 60px 0 0 72px; }
+.profile>.networks>ul { margin: 0; padding: 60px 0 0 72px; -webkit-user-select: none; -moz-user-select: none; user-select: none; }
 .profile>.networks>ul>li>.connect,
 .profile>.networks>ul>li>.disconnect { display: block; font-size: 12px; padding: 5px 0; }
 .profile>.networks>.kifi-k::before { position: absolute; display: block; content: "."; background: url(../img/kifi-k.png) no-repeat; background: size: 100%; top: -6px; left: -6px; border: 6px solid white; width: 62px; height: 62px; border-radius: 50%; z-index: 1;}
@@ -196,8 +196,6 @@ a.undo-link[href]:hover {text-decoration: underline}
 .profile-nw.not-connected::after { background: #dbdee3; }
 .profile-nw.not-connected { -webkit-transition: background-color .2s ease-in 50ms; transition: background-color .2s ease-in 50ms; }
 .networks>ul>li:hover:not([data-network])::after { content: "Coming soon"; display: block; font-size: 11px; padding: 5px 0; }
-
-iframe.blog {height:100%; width:100%; border:0;}
 
 .friends {position: absolute; top: 70px; bottom: 0; left: 0; right: 0; padding: 13px 20px 0; border-right: 1px solid #dbdee3}
 .friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee; white-space: nowrap}
@@ -259,9 +257,9 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
 .invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px}
 
-.invites-left { float: right; font-size: 14px; padding: 10px 20px; background: #e8ebf1; color: #34495e; }
-.invites-left .num-invites { display: inline-block; text-align: center; padding: 4px; margin: 0 2px; border-radius: 50%; background: #7d7d7d; color: #e8ebf1; height: 15px; min-width: 15px; }
-
+.invites-left {float: right; margin-top: 2px; font-size: 13px; color: #818692; display: none}
+.invites-left>.num-invites {display: inline-block; border: 1px solid #b8c5d2; color: #628196; border-radius: 10.5px; padding: 0 12px; vertical-align: baseline; font-size: 12px; line-height: 20px; height: 19px; margin-left: 6px}
+@-moz-document url-prefix() {.invites-left>.num-invites {line-height: 19px}}
 .invite-num-results { float: right; color: #556179; font-size: 14px; margin: 10px 4px; max-width: 45%; }
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
 .invite-friends { position: absolute; top: 248px; bottom: 0; right: -1px; left: 20px; overflow: hidden}
@@ -399,6 +397,16 @@ body[data-view=search] .main-keeps {top: 108px}
 .keep.ui-draggable-dragging,
 .keeps-dragging {opacity: .7; z-index: 90; cursor: move}
 .keeps-dragging>.keep {position: absolute; width: 100%}
+
+.blog-outer {position: absolute; top: 70px; bottom: 0; left: 0; right: 0; border-right: 1px solid #dbdee3; font-size: 20px}
+.blog-outer>.antiscroll-inner {text-align: center; overflow-x: hidden; width: 100%; height: 100%; padding-top: 70px; -moz-box-sizing: border-box; box-sizing: border-box }
+.blog-outer>.antiscroll-scrollbar {right: -1px}
+.blog>header {margin: 0 auto; width: 80%; max-width: 660px; text-align: left; -moz-box-sizing: border-box; box-sizing: border-box; padding: 0 0 20px 128px; background: url(../img/news.png) no-repeat 0 0; background-size: 110px; border-bottom: 1px solid #b8c5d2}
+.blog>header>h1 {color: #333; font-size: 42px; line-height: 1; font-weight: normal; margin: 0 0 10px}
+.blog>header>h2 {color: #67829c; font-size: 24px; line-height: 30px; font-weight: 300; -webkit-font-smoothing: antialiased; max-width: 350px}
+.blog>article {color: #333; margin: 70px auto; width: 80%; max-width: 560px; text-align: left; font-size: 18px; line-height: 1.4; -webkit-font-smoothing: antialiased}
+.blog>article>h3 {color: #b7cf80; font-size: 32px; line-height: 36px; margin: 0}
+.blog>article>time {color: #a0afbf}
 
 /* right col */
 
@@ -649,6 +657,7 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .invite-button::before {background-image: url(../img/friend-actions.2x.png)}
   a.friend-nw {background-image: url(../img/networks-18.2x.png)}
   .my-pic::before {background-image: url(../img/pencil.2x.png)}
+  .blog>header {background-image: url(../img/news.2x.png)}
 }
 
 .fancybox-inner {font-size: 16px}
