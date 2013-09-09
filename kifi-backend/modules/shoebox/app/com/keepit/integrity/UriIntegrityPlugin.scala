@@ -54,10 +54,13 @@ class UriIntegrityActor @Inject()(
       assume(bms.size == 1, s"user ${userId.id} has multiple bookmarks referencing uri ${oldBm.uriId}")
       bookmarkRepo.getByUriAndUser(newUriId, userId, excludeState = None) match {
         case None => {
+          log.info("going to redirect bookmark's uri")
           bookmarkRepo.removeFromCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
           bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None
         } 
         case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
+          log.info("not going to redirect bookmark's uri")
+          if (bm.state == BookmarkStates.INACTIVE) bookmarkRepo.save(bm.withActive(false))
           bookmarkRepo.save(oldBm.withActive(false));
           bookmarkRepo.removeFromCache(oldBm); Some(oldBm, bm)
         } else None
