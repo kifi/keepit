@@ -248,11 +248,8 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
           errorMessage = Some(s"Failed fetching key $key from $repo")))
         None
     }
-    if (valueOpt.isDefined && Random.nextFloat>0.99) {
-      ttl match {
-        case _ : Duration.Infinite => 
-        case _ => repo.touch(key.toString, ttl.toSeconds.toInt)
-      }
+    if (valueOpt.isDefined && ttl.isFinite && Random.nextFloat>0.99) {
+      repo.touch(key.toString, ttl.toSeconds.toInt)
     }
     try {
       val objOpt = valueOpt.map(serializer.reads)
@@ -294,10 +291,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
             case x: JsValue => Json.stringify(x)
             case x: String => x
           }
-      var ttlInSeconds = ttl match {
-        case _ : Duration.Infinite => 0
-        case _ => ttl.toSeconds.toInt
-      }
+      var ttlInSeconds = if (ttl.isFinite) ttl.toSeconds.toInt else 0
       repo.set(key.toString, properlyBoxed, ttlInSeconds)
       val setEnd = currentDateTime.getMillis()
       CacheStatistics.recordSet(repo.toString, key.namespace, setEnd - setStart)
