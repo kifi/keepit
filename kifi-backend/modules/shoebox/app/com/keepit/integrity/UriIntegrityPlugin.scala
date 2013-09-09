@@ -47,8 +47,8 @@ class UriIntegrityActor @Inject()(
 
   private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
+      assume(bms.size == 1, s"user ${userId.id} has ${bms.size} bookmarks referencing uri ${oldBm.uriId}")
       val oldBm = bms.head
-      assume(bms.size == 1, s"user ${userId.id} has multiple bookmarks referencing uri ${oldBm.uriId}")
       bookmarkRepo.getByUriAndUser(newUriId, userId, excludeState = None) match {
         case None => {
           log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
@@ -159,13 +159,15 @@ class UriIntegrityActor @Inject()(
 
   private def batchUpdateMerge(batchSize: Int): Int = {
     val toMerge = getOverDueList(batchSize)
-    log.info(s"batch merge uris: ${toMerge.size} pair of uris to be merged")
+    log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
     val toScrapeAndSavedChange = db.readWrite{ implicit s =>
       toMerge.map{ change => processMerge(change) }
     }
     toScrapeAndSavedChange.map(_._2).filter(_.isDefined).sortBy(_.get.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.get.seq.value) }
-    log.info(s"batch merge uris completed in database: ${toMerge.size} pair of uris merged. zookeeper seqNum updated. start scraping ${toScrapeAndSavedChange.size} pages")
-    toScrapeAndSavedChange.map(_._1).filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values.map{ x => scraper.asyncScrape(x.get)}
+    log.info(s"batch merge uris completed in database: ${toMerge.size} pairs of uris merged. zookeeper seqNum updated.")
+    val uniqueToScrape = toScrapeAndSavedChange.map(_._1).filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values
+    log.info(s"start scraping ${uniqueToScrape.size} pages")
+    uniqueToScrape.map{ x => scraper.asyncScrape(x.get)}
     toMerge.size
   }
 
