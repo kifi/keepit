@@ -53,6 +53,7 @@ class UriIntegrityActor @Inject()(
         case None => {
           log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
           bookmarkRepo.removeFromCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
+          bookmarkRepo.removeFromCache(oldBm.withNormUriId(newUriId))   // tmp hack
           bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None
         } 
         case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
