@@ -172,7 +172,7 @@ a.undo-link[href]:hover {text-decoration: underline}
 .profile>.contact-email { font-size: 16px; line-height: 20px }
 .profile>.contact-email>.editable { display: inline-block; padding: 2px 0}
 .profile>.networks { position: relative; font-size: 0; background-size: 62px; margin: 20px 0; padding: 0; text-align: center; }
-.profile>.networks>ul { margin: 0; padding: 60px 0 0 72px; }
+.profile>.networks>ul { margin: 0; padding: 60px 0 0 72px; -webkit-user-select: none; -moz-user-select: none; user-select: none; }
 .profile>.networks>ul>li>.connect,
 .profile>.networks>ul>li>.disconnect { display: block; font-size: 12px; padding: 5px 0; }
 .profile>.networks>.kifi-k::before { position: absolute; display: block; content: "."; background: url(../img/kifi-k.png) no-repeat; background: size: 100%; top: -6px; left: -6px; border: 6px solid white; width: 62px; height: 62px; border-radius: 50%; z-index: 1;}
