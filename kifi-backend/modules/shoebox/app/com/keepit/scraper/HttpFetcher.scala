@@ -53,7 +53,13 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
     override def process(response: HttpResponse, context: HttpContext) {
       if (response.containsHeader(LOCATION)) {
         val locations = response.getHeaders(LOCATION)
-        if (locations.length > 0) context.setAttribute("scraper_destination_url", locations(0).getValue())
+        if (locations.length > 0) {
+          val oldDestination = context.getAttribute("scraper_destination_url").asInstanceOf[String]
+          val newDestination = locations(0).getValue()
+          val redirects = context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]] :+ HttpRedirect(response.getStatusLine.getStatusCode, oldDestination, newDestination)
+          context.setAttribute("redirects", redirects)
+          context.setAttribute("scraper_destination_url", newDestination)
+        }
       }
     }
   }
@@ -97,6 +103,9 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
     log.info("executing request " + httpGet.getURI())
 
     val httpContext = new BasicHttpContext()
+
+    httpContext.setAttribute("scraper_destination_url", url)
+    httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
 
     val response = httpClient.execute(httpGet, httpContext)
     log.info(response.getStatusLine.toString)
@@ -159,4 +168,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
 
 case class HttpFetchStatus(statusCode: Int, message: Option[String], context: HttpContext) {
   def destinationUrl = Option(context.getAttribute("scraper_destination_url").asInstanceOf[String])
+  def redirects = Option(context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]])
 }
+
+case class HttpRedirect(statusCode: Int, oldDestination: String, newDestination: String)
