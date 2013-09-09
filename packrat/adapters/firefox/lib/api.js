@@ -358,6 +358,10 @@ exports.tabs = {
     var tab = tabsById[page.id], win = tab.window;
     return win === windows.activeWindow && tab === win.tabs.activeTab;
   },
+  isSelected: function(page) {
+    var tab = tabsById[page.id], win = tab.window;
+    return tab === win.tabs.activeTab;
+  },
   navigate: function(tabId, url) {
     var tab = tabsById[tabId], win;
     if (tab) {
