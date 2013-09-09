@@ -60,7 +60,7 @@ class UriIntegrityActor @Inject()(
         } 
         case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
           log.info("not going to redirect bookmark's uri")
-          if (bm.state == BookmarkStates.INACTIVE) bookmarkRepo.save(bm.withActive(false))
+          if (bm.state == BookmarkStates.INACTIVE) bookmarkRepo.save(bm.withActive(true))
           bookmarkRepo.save(oldBm.withActive(false));
           bookmarkRepo.removeFromCache(oldBm); Some(oldBm, bm)
         } else None
