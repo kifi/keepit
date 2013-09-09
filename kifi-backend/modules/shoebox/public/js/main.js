@@ -986,16 +986,13 @@ $(function() {
 		}
 	}
 
-	function updateNumKeeps() {
-		$.getJSON(xhrBase + '/keeps/count', function(data) {
-			$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.numKeeps);
-		});
-	}
-
 	function updateCollections() {
 		promise.collections = $.getJSON(xhrBase + '/collections/all', {sort: "user"}, function(data) {
-			collTmpl.render(data.collections);
 			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
+			if ($collList.find('.renaming, .showing').length === 0) {
+				collTmpl.render(data.collections);
+			}
+			$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.keeps);
 		}).promise();
 	}
 
@@ -1771,7 +1768,6 @@ $(function() {
 		$('#invite-friends-link').toggle(canInvite());
 	});
 	updateCollections();
-	updateNumKeeps();
 	$.getJSON(xhrBase + '/user/friends/count', function(data) {
 		updateFriendRequests(data.requests);
 	});
@@ -1781,7 +1777,7 @@ $(function() {
 
 	// auto-update my keeps
 	setTimeout(function refresh() {
-		updateNumKeeps();
+		updateCollections();
 		addNewKeeps();
 		setTimeout(refresh, 25000 + 5000 * Math.random());
 	}, 30000);
