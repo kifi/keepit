@@ -1,11 +1,28 @@
 // jquery-hoverfu.js
-// home-grown at FortyTwo, not intended for distribution
+// home-grown at FortyTwo, not for distribution
 
 // Invoke on a link or other element that should trigger a hover element to display
-// inside it (presumably absolutely positioned relative to the trigger) on mouseover
-// (after a short delay) and to disappear on mouseout (after a short delay).
-// Clicking the trigger can hide the hover element or toggle its visibility, with a small
-// recovery period during which clicks are ignored.
+// on mouseover (after a short delay) and to disappear on mouseout (after a short delay).
+
+// Features:
+//  - Allows the hover element to be built and configured asynchronously.
+//  - Optionally waits for some period of time before showing the hover element.
+//  - Optionally auto-hides the hover element after some period of time.
+//  - Optionally toggles or hides the hover element when trigger element is clicked
+//    with a brief refractory period during which subsequent clicks are ignored.
+//  - Optionally avoids hiding the hover element if the mouse leaves the
+//    trigger element to go to the hover element (see the between function).
+//  - Optionally avoids hiding the hover element if the mouse leaves it
+//    and then returns within some period of time.
+//  - Optionally allows caller to position the hover relative to another element
+//    using the jQuery UI position API (http://api.jqueryui.com/position/).
+//  - Optional configuration via data- attributes.
+
+// TODO:
+//  - Keep a global stack of hover elements currently showing. When it’s time to
+//    show a new hover element, pop and hide every element on the stack first if
+//    the new one’s trigger element is not a descendant of the hover element at
+//    the top of the stack.
 
 !function($) {
   'use strict';
