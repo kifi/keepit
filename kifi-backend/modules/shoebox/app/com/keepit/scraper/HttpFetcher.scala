@@ -25,6 +25,7 @@ import org.apache.http.protocol.HttpContext
 import org.apache.http.util.EntityUtils
 import java.io.{InputStream, IOException}
 import scala.util.Try
+import com.keepit.common.net.URI
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -54,11 +55,11 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
       if (response.containsHeader(LOCATION)) {
         val locations = response.getHeaders(LOCATION)
         if (locations.length > 0) {
-          val oldDestination = context.getAttribute("scraper_destination_url").asInstanceOf[String]
-          val newDestination = locations(0).getValue()
-          val redirects = context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]] :+ HttpRedirect(response.getStatusLine.getStatusCode, oldDestination, newDestination)
+          val currentLocation = context.getAttribute("scraper_destination_url").asInstanceOf[String]
+          val redirect = HttpRedirect.withStandardizationEffort(response.getStatusLine.getStatusCode, currentLocation, locations(0).getValue())
+          val redirects = context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]] :+ redirect
           context.setAttribute("redirects", redirects)
-          context.setAttribute("scraper_destination_url", newDestination)
+          context.setAttribute("scraper_destination_url", redirect.newDestination)
         }
       }
     }
@@ -168,7 +169,22 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
 
 case class HttpFetchStatus(statusCode: Int, message: Option[String], context: HttpContext) {
   def destinationUrl = Option(context.getAttribute("scraper_destination_url").asInstanceOf[String])
-  def redirects = Option(context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]])
+  def redirects = Option(context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]]).getOrElse(Seq.empty[HttpRedirect])
 }
 
-case class HttpRedirect(statusCode: Int, oldDestination: String, newDestination: String)
+case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination: String) {
+  def isPermanent = (statusCode == HttpStatus.SC_MOVED_PERMANENTLY)
+  def isAbsolute = HttpRedirect.isAbsolute(currentLocation) && HttpRedirect.isAbsolute(newDestination)
+}
+
+object HttpRedirect {
+  def isAbsolute(url: String) = url.toLowerCase.startsWith("http")
+  def withStandardizationEffort(statusCode: Int, currentLocation: String, newDestination: String): HttpRedirect = {
+    val standardizedOption = for {
+      uri <- URI.safelyParse(currentLocation) if isAbsolute(currentLocation) && !isAbsolute(newDestination)
+      scheme <- uri.scheme
+      host <- uri.host
+    } yield HttpRedirect(statusCode, currentLocation, scheme + "://" + host.name + newDestination)
+    standardizedOption.getOrElse(HttpRedirect(statusCode, currentLocation, newDestination))
+  }
+}
