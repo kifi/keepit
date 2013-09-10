@@ -251,6 +251,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new NormalizationMapperDelegate(profile)
   }
 
+  implicit object SensitivityTypeMapper extends BaseTypeMapper[Sensitivity] {
+    def apply(profile: BasicProfile) = new SensitivityMapperDelegate(profile)
+  }
+
   implicit object JsArrayTypeMapper extends BaseTypeMapper[JsArray] {
     def apply(profile: BasicProfile) = new JsArrayMapperDelegate(profile)
   }
@@ -623,3 +627,11 @@ class NormalizationMapperDelegate[T](profile: BasicProfile) extends StringMapper
   def safeDestToSource(str: String): Normalization = Normalization(str)
 }
 
+//************************************
+//       Sensitivity -> String
+//************************************
+class SensitivityMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[Sensitivity](profile) {
+  def zero = Sensitivity("")
+  def sourceToDest(value: Sensitivity): String = value.info
+  def safeDestToSource(str: String): Sensitivity = Sensitivity(str)
+}

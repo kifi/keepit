@@ -45,11 +45,12 @@ class NormalizedURIRepoImpl @Inject() (
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
+    def sensitivity = column[Sensitivity]("sensitivity")
     def normalization = column[Normalization]("normalization")
     def redirect = column[Id[NormalizedURI]]("redirect")
     def redirectTime = column[DateTime]("redirect_time")
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~
-        screenshotUpdatedAt.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
+        screenshotUpdatedAt.? ~ sensitivity.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
   }
 
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
