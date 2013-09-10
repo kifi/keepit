@@ -6,14 +6,14 @@
 // @require scripts/render.js
 
 var notifier = {
-  removeByUniqueId: function(uniqueId) {
-    KifiNotification.removeByUniqueId(uniqueId);
+  removeByAssociatedId: function(associatedId) {
+    KifiNotification.removeByAssociatedId(associatedId);
   },
   show: function(data) {
     var o = data;
     switch (data.category) {
       case "message":
-        KifiNotification.removeByUniqueId(o.thread, {fade: false});
+        KifiNotification.removeByAssociatedId(o.thread, {fade: false});
         KifiNotification.add({
           title: o.author.firstName + " " + o.author.lastName,
           subtitle: "Sent you a new Kifi Message",
@@ -26,11 +26,11 @@ var notifier = {
             api.port.emit("open_deep_link", {nUri: o.url, locator: o.locator});
             return false;
           },
-          uniqueId: o.thread
+          associatedId: o.thread
         });
         break;
       case "global":
-        KifiNotification.removeByUniqueId(o.id, {fade: false});
+        KifiNotification.removeByAssociatedId(o.id, {fade: false});
         KifiNotification.add({
           title: o.title,
           subtitle: o.subtitle,
@@ -46,7 +46,7 @@ var notifier = {
               win.focus();
             }
           },
-          uniqueId: o.id
+          associatedId: o.id
         });
         break;
     }
@@ -66,7 +66,7 @@ var KifiNotification = {
     popupClass: "",
     clickAction: $.noop,
     closeOnClick: true,
-    uniqueId: ""
+    associatedId: ""
   },
 
   add: function(params) {
@@ -81,7 +81,7 @@ var KifiNotification = {
       popupClass: params.popupClass,
       innerClass: params.image ? "kifi-notify-with-image" : "kifi-notify-without-image",
       link: params.link,
-      uniqueId: params.uniqueId
+      associatedId: params.associatedId
     }, function(html) {
       var $item = $(html);
 
@@ -135,9 +135,7 @@ var KifiNotification = {
       fadeOutMs = params.fadeOutMs || 300,
       manualClose = unbindEvents;
 
-    if ($item.data("beforeClose")) {
-      $item.data("beforeClose")($item, manualClose);
-    }
+    ($item.data("beforeClose") || $.noop)($item, manualClose);
 
     if (unbindEvents) {
       $item.unbind("mouseenter mouseleave");
@@ -150,22 +148,20 @@ var KifiNotification = {
     }
 
     function removeItem() {
-      if ($item.data("afterClose")) {
-        $item.data("afterClose")($item, manualClose);
-      }
+      ($item.data("afterClose") || $.noop)($item, manualClose);
       $item.remove();
       $("#kifi-notify-notice-wrapper").not(":has(.kifi-notify-item-wrapper)").remove();
     }
   },
 
   removeSpecific: function($item, params, unbindEvents) {
-    api.port.emit("remove_notification", {uniqueId: $item.data("uniqueid")});
+    api.port.emit("remove_notification", {associatedId: $item.data("associated-id")});
     KifiNotification.fadeItem($item, params || {}, unbindEvents);
   },
 
-  removeByUniqueId: function(uniqueId, params) {
+  removeByAssociatedId: function(associatedId, params) {
     var $wrap = $("#kifi-notify-notice-wrapper");
-    $wrap.find(".kifi-notify-item-wrapper[data-uniqueId='" + uniqueId + "']").each(function(i,e) {
+    $wrap.find(".kifi-notify-item-wrapper[data-associated-id='" + associatedId + "']").each(function() {
       KifiNotification.fadeItem($(this), params || {}, true);
     });
   },

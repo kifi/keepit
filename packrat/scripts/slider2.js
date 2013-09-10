@@ -728,7 +728,7 @@ slider2 = function() {
     counts: function(o) {
       if (!$slider) return;
       var $btns = $slider.find(".kifi-slider2-dock-btn");
-      [[".kifi-slider2-notices", Math.max(0, o.n - (o.m > 0 ? 1 : 0))],
+      [[".kifi-slider2-notices", Math.max(0, o.n - o.m)],
        [".kifi-slider2-messages", o.m]].forEach(function(a) {
         $btns.filter(a[0]).find(".kifi-count")
           .text(a[1] || "")

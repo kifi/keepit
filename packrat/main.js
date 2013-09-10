@@ -372,7 +372,7 @@ const socketHandlers = {
   message_read: function(nUri, threadId, time, messageId) {
     api.log("[socket:message_read]", nUri, threadId, time);
 
-    removeNotificationPopup(threadId);
+    removeNotificationPopups(threadId);
 
     var hasThreadId = hasId(threadId);
     for (var page in pageData) {
@@ -495,7 +495,7 @@ api.port.on({
       respond(o);
     });
   },
-  set_message_rendered: function(o, _, tab) {
+  message_rendered: function(o, _, tab) {
     whenTabFocused(tab, o.threadId, function (tab) {
       var d = pageData[tab.nUri];
       var unreadNotification = false;
@@ -639,7 +639,7 @@ api.port.on({
     }
   },
   remove_notification: function(o) {
-    removeNotificationPopup(o.uniqueId);
+    removeNotificationPopups(o.associatedId);
   },
   add_deep_link_listener: function(locator, _, tab) {
     createDeepLinkListener(locator, tab.id);
@@ -650,9 +650,9 @@ api.port.on({
   }
 });
 
-function removeNotificationPopup(uniqueId) {
+function removeNotificationPopups(associatedId) {
   api.tabs.each(function(page) {
-    api.tabs.emit(page, "remove_notification", uniqueId);
+    api.tabs.emit(page, "remove_notification", associatedId);
   });
 }
 
@@ -1080,11 +1080,11 @@ function clone(o) {
   return c;
 }
 
-function whenTabFocused(tab, idx, callback) {
+function whenTabFocused(tab, key, callback) {
   if (api.tabs.isFocused(tab)) {
     callback(tab);
   } else {
-    (tab.focusCallbacks = tab.focusCallbacks || {})[idx] = callback;
+    (tab.focusCallbacks = tab.focusCallbacks || {})[key] = callback;
   }
 }
 // ===== Browser event listeners
@@ -1092,8 +1092,8 @@ function whenTabFocused(tab, idx, callback) {
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
 
-  for(var idx in tab.focusCallbacks) {
-    tab.focusCallbacks[idx](tab);
+  for(var key in tab.focusCallbacks) {
+    tab.focusCallbacks[key](tab);
   }
 
   delete tab.focusCallbacks;
