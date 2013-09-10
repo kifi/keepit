@@ -145,12 +145,15 @@ class ArticleIndexer @Inject() (
           doc.add(buildDocSemanticVectorField("docSv", builder))
           doc.add(buildSemanticVectorField("sv", builder))
 
-          // index domain name
-          URI.parse(uri.url).toOption.flatMap(_.host) match {
-            case Some(Host(domain @ _*)) =>
-              doc.add(buildIteratorField("site", (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
-              doc.add(buildIteratorField("site_keywords", (0 until domain.size).iterator)(domain))
-            case _ =>
+          URI.parse(uri.url).foreach{ uri =>
+            uri.host.foreach{ case Host(domain @ _*) =>
+              if (domain.nonEmpty) {
+                // index domain name
+                doc.add(buildIteratorField("site", (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
+                // keywords in domain
+                doc.add(buildTokenizedDomainField("site_keywords", domain))
+              }
+            }
           }
 
           // media keyword field

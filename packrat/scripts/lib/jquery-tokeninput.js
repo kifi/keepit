@@ -121,7 +121,7 @@ choose which suits your project best!
           return
         }
       }
-      g.width(0);
+      g.width(1);
       if(null == a(b).data("settings").tokenLimit || m < a(b).data("settings").tokenLimit) {
         R(c), g.attr("placeholder", null), O()
       }

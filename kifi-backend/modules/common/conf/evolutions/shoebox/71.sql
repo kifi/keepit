@@ -1,4 +1,4 @@
-# SHOEBOX
+# ELIZA
 
 # --- !Ups
 
@@ -11,7 +11,6 @@ CREATE TABLE device (
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
     PRIMARY KEY (id),
-    CONSTRAINT device_f_user_id FOREIGN KEY (user_id) REFERENCES user(id),
     UNIQUE INDEX device_u_token(token, device_type),
     UNIQUE INDEX device_u_user_id(user_id)
 );

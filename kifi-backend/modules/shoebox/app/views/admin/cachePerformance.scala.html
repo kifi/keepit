@@ -140,7 +140,7 @@
   if (chart == "counters") {
     var prefix = ["stats", chart, service, plugin, namespace].join(".");
     var metrics = ["hits", "misses", "sets"];
-    var countTargets = metrics.map(function (metric) {return "summarize(" + sumSeries(prefix, metric, "count") + ',"1min")'});
+    var countTargets = metrics.map(function (metric) {return "summarize(" + sumSeries(prefix, metric, "count:sum") + ',"1min")'});
     options.title = "Hits - Misses - Sets (Events per Minute)"
     options.target = baseTargets.concat(countTargets)
     options.logBase = $("#yscale").val();
@@ -153,7 +153,7 @@
     var percentileValue = $("#percentile").val()
     var percentileSuffix = (percentileValue == "0.99") ? "_99" : "" 
     var percentileTitle = (percentileValue == "0.99") ? "99% " : "" 
-    var meanTargets = metrics.map(function (metric) {return "divideSeries(" + sumSeries(prefix, metric, "sum" + percentileSuffix) + ",scale(" + sumSeries(prefix, metric, "count") + "," + percentileValue + "))"});
+    var meanTargets = metrics.map(function (metric) {return "divideSeries(" + sumSeries(prefix, metric, "sum" + percentileSuffix + ":sum") + ",scale(" + sumSeries(prefix, metric, "count:sum") + "," + percentileValue + "))"});
     options.title = "Hits - Sets (" + percentileTitle + "Mean Time in Milliseconds)"
     options.target = baseTargets.concat(meanTargets)
     options.logBase = null;
@@ -163,7 +163,7 @@
   
   if (chart == "ratios") {
     var prefix = ["stats.counters", service, plugin, namespace].join(".");
-    var ratioTarget = ["asPercent(" + sumSeries(prefix, "hits", "count") + "," + "sumSeries(" + sumSeries(prefix,"hits", "count") + "," + sumSeries(prefix, "misses","count") + "))"];
+    var ratioTarget = ["asPercent(" + sumSeries(prefix, "hits", "count:sum") + "," + "sumSeries(" + sumSeries(prefix,"hits", "count:sum") + "," + sumSeries(prefix, "misses","count:sum") + "))"];
     options.title = "Hit Ratio"
     options.target = baseTargets.concat(ratioTarget)
     options.logBase = null;

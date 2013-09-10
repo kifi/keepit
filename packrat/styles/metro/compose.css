@@ -241,6 +241,8 @@ form.kifi-compose input[type=text]#token-input-kifi-compose-to { /* token input 
   padding: 2px 0;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
+  -moz-transition: none;
+  transition: none;
 }
 form.kifi-compose input[type=text]::-moz-placeholder {
   color: #a9a9a9 !important;

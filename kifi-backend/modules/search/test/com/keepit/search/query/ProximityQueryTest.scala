@@ -8,6 +8,7 @@ import play.api.test.Helpers._
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.util.LocalAlignment._
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.TextField
@@ -162,6 +163,39 @@ class ProximityQueryTest extends Specification {
       buf.sortBy(_._2).map(_._1) === Seq(19, 18, 17, 16, 15, 14, 13, 12, 11, 10)
     }
 
+    "score using proximity with repeating terms" in {
+      readerContextLeaves.size === 1
+
+      var q = ProximityQuery(Seq(new Term("B", "abc"), new Term("B", "abc"), new Term("B", "def")))
+      var weight = searcher.createNormalizedWeight(q)
+
+      var scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      val buf = new ArrayBuffer[(Int, Float)]()
+      var doc = scorer.nextDoc()
+      while (doc < DocIdSetIterator.NO_MORE_DOCS) {
+        buf += ((doc, scorer.score()))
+        doc = scorer.nextDoc()
+      }
+      indexReader.numDocs() === 30
+      buf.size === 10
+      buf.sortBy(_._2).map(_._1) === Seq(9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+
+      q = ProximityQuery(Seq(new Term("B", "def"), new Term("B", "def"), new Term("B", "ghi"), new Term("B", "ghi")))
+      weight = searcher.createNormalizedWeight(q)
+
+      (weight != null) === true
+
+      scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      buf.clear
+      doc = scorer.nextDoc()
+      while (doc < DocIdSetIterator.NO_MORE_DOCS) {
+        buf += ((doc, scorer.score()))
+        doc = scorer.nextDoc()
+      }
+      buf.size === 10
+      buf.sortBy(_._2).map(_._1) === Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    }
+
     "not return hits when no term" in {
       val q = ProximityQuery(Seq.empty[Term])
       val weight = searcher.createNormalizedWeight(q)
@@ -169,6 +203,24 @@ class ProximityQueryTest extends Specification {
 
       val scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
       scorer === null
+    }
+    "make a phrase dictionary correctly" in {
+      val termIds = Array(0,1,2,3,4,5,6,1,2)
+      val phrases1 = Set((1, 3), (5, 2))
+      ProximityQuery.buildPhraseDict(termIds, phrases1).toSet ===
+        Set((Seq(0), TermMatch(1)), (Seq(1), TermMatch(1)), (Seq(2), TermMatch(1)), (Seq(4), TermMatch(1)), (Seq(1,2,3), PhraseMatch(1, 3)), (Seq(5,6), PhraseMatch(5,2)))
+
+      val phrases2 = Set((1, 3), (5, 2), (6, 2))
+      ProximityQuery.buildPhraseDict(termIds, phrases2).toSet ===
+        Set((Seq(0), TermMatch(1)), (Seq(2), TermMatch(1)), (Seq(4), TermMatch(1)), (Seq(1,2,3), PhraseMatch(1,3)), (Seq(5,6), PhraseMatch(5,2)), (Seq(6,1), PhraseMatch(6,2)))
+
+      val phrases3 = Set((1, 3), (5, 2), (0, 1), (5, 1))
+      ProximityQuery.buildPhraseDict(termIds, phrases3).toSet ===
+        Set((Seq(0), TermMatch(1)), (Seq(1), TermMatch(1)), (Seq(2), TermMatch(1)), (Seq(4), TermMatch(1)), (Seq(1,2,3), PhraseMatch(1,3)), (Seq(5,6),PhraseMatch(5,2)), (Seq(5), TermMatch(1)))
+
+      val phrases4 = Set((0, 3), (3, 3), (6, 3))
+      ProximityQuery.buildPhraseDict(termIds, phrases4).toSet ===
+        Set((Seq(0,1,2), PhraseMatch(0, 3)), (Seq(3,4,5), PhraseMatch(3, 3)), (Seq(6,1,2), PhraseMatch(6, 3)))
     }
   }
 }

@@ -380,7 +380,6 @@ class FakeShoeboxServiceClientImpl(
 
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}
 
-  def sendPushNotification(user: Id[User], extId: String, unvisited: Int, msg: String) : Unit = {}
 }
 
 class FakeClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends ClickHistoryTracker with Logging {

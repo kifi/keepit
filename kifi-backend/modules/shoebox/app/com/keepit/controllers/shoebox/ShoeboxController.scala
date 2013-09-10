@@ -27,7 +27,6 @@ import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.ClickHistoryTracker
-import com.keepit.realtime.{UrbanAirship, PushNotification}
 
 import scala.concurrent.future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -36,7 +35,6 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.social.{SocialNetworkType, SocialId}
-import com.keepit.realtime.{UriChannel, UserChannel}
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -53,7 +51,6 @@ class ShoeboxController @Inject() (
   bookmarkRepo: BookmarkRepo,
   browsingHistoryRepo: BrowsingHistoryRepo,
   browsingHistoryTracker: BrowsingHistoryTracker,
-  commentRepo: CommentRepo,
   commentRecipientRepo: CommentRecipientRepo,
   clickingHistoryRepo: ClickHistoryRepo,
   clickHistoryTracker: ClickHistoryTracker,
@@ -70,10 +67,7 @@ class ShoeboxController @Inject() (
   articleSearchResultRefRepo: ArticleSearchResultRefRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
-  userChannel: UserChannel,
-  uriChannel: UriChannel,
   searchFriendRepo: SearchFriendRepo,
-  urbanAirship: UrbanAirship,
   emailAddressRepo: EmailAddressRepo,
   changedUriRepo: ChangedURIRepo)
   (implicit private val clock: Clock,
@@ -155,10 +149,7 @@ class ShoeboxController @Inject() (
   }
 
   def internNormalizedURI() = Action(parse.json) { request =>
-    val o: JsObject = request.body match {
-      case o: JsObject => o
-      case url: JsString => Json.obj("url" -> url)
-    }
+    val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
     val uriId = db.readWrite(attempts=2) { implicit s =>
       normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
@@ -203,13 +194,6 @@ class ShoeboxController @Inject() (
       bookmarkRepo.getByUriAndUser(uriId, userId)
     }.map(Json.toJson(_)).getOrElse(JsNull)
     Ok(bookmark)
-  }
-
-  def getCommentsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
-    val comments = db.readOnly { implicit session =>
-      commentRepo.getCommentsChanged(SequenceNumber(seqNum), fetchSize)
-    }
-    Ok(Json.toJson(comments))
   }
 
   def getCommentRecipientIds(commentId: Id[Comment]) = Action { request =>
@@ -339,56 +323,10 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def userChannelFanout() = Action { request =>
-    val req = request.body.asJson.get.asInstanceOf[JsObject]
-    val userId = Id[User]((req \ "userId").as[Long])
-    val msg = (req \ "msg").asInstanceOf[JsArray]
-
-    log.info(s"[userChannelFanout] Recieved to $userId: ${msg.toString.take(120)}")
-
-    Ok(userChannel.pushNoFanout(userId, msg).toString)
-  }
-
-  def userChannelBroadcastFanout() = Action { request =>
-    val req = request.body.asJson.get.asInstanceOf[JsArray]
-
-    Ok(userChannel.broadcastNoFanout(req).toString)
-  }
-
-  def userChannelCountFanout() = Action { request =>
-    Ok(userChannel.localClientCount.toString)
-  }
-
-  def uriChannelFanout() = Action { request =>
-    val req = request.body.asJson.get.asInstanceOf[JsObject]
-    val uri = (req \ "uri").as[String]
-    val msg = (req \ "msg").asInstanceOf[JsArray]
-
-    Ok(uriChannel.pushNoFanout(uri, msg).toString)
-  }
-
-  def uriChannelCountFanout() = Action { request =>
-    Ok(uriChannel.localClientCount.toString)
-  }
-
   def searchFriends(userId: Id[User]) = Action { request =>
     db.readOnly { implicit s =>
       Ok(Json.toJson(searchFriendRepo.getSearchFriends(userId).map(_.id)))
     }
-  }
-
-  def sendPushNotification() = Action { request =>
-    Async(future{
-      val req = request.body.asJson.get.asInstanceOf[JsObject]
-      val userId = Id[User]((req \ "userId").as[Long])
-      val extId = ExternalId[UserNotification]((req \ "extId").as[String])
-      val unvisited = (req \ "unvisited").as[Int]
-      val msg = (req \ "msg").as[String]
-
-      urbanAirship.notifyUser(userId, PushNotification(extId, unvisited, msg))
-      Ok("")
-    })
-
   }
 
   def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) = Action { request =>

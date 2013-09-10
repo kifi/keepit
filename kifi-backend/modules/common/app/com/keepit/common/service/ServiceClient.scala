@@ -9,6 +9,7 @@ import com.keepit.common.routes._
 import com.keepit.common.zookeeper.ServiceCluster
 
 import play.api.libs.json.{JsNull, JsValue}
+import play.api.libs.concurrent.Execution.Implicits._
 
 class ServiceNotAvailableException(serviceType: ServiceType)
   extends Exception(s"Service of type ${serviceType.name} is not available")
@@ -43,17 +44,37 @@ trait ServiceClient extends Logging {
     fullUrls
   }
 
-  protected def call(call: ServiceRoute, body: JsValue = JsNull): Future[ClientResponse] = callUrl(call, url(call.url), body)
+  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2): Future[ClientResponse] = {
+    var respFuture = callUrl(call, url(call.url), body)
+    (1 until attempts).foreach { _ =>
+        respFuture = respFuture.recoverWith {
+          case _ : java.net.ConnectException => callUrl(call, url(call.url), body, ignoreFailure=false)
+        }
+    }
+    respFuture.onFailure{
+      case ex: Throwable =>
+        healthcheck.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+    }
+    respFuture
+  }
 
-  protected def callUrl(call: ServiceRoute, url: String, body: JsValue): Future[ClientResponse] = {
+  protected def callUrl(call: ServiceRoute, url: String, body: JsValue, ignoreFailure: Boolean = false): Future[ClientResponse] = {
     if (url.length > ServiceClient.MaxUrlLength) {
       healthcheck.addError(HealthcheckError(callType = Healthcheck.INTERNAL, errorMessage = Some(ErrorMessage(
         "Request URI too long!", Some(s"Request URI length ${url.length} > ${ServiceClient.MaxUrlLength}: $url"
       )))))
     }
-    call match {
-      case c @ ServiceRoute(GET, _, _*) => httpClient.getFuture(url)
-      case c @ ServiceRoute(POST, _, _*) => httpClient.postFuture(url, body)
+    if (ignoreFailure) {
+      call match {
+        case c @ ServiceRoute(GET, _, _*) => httpClient.getFuture(url, httpClient.ignoreFailure)
+        case c @ ServiceRoute(POST, _, _*) => httpClient.postFuture(url, body, httpClient.ignoreFailure)
+      }
+    }
+    else{
+      call match {
+        case c @ ServiceRoute(GET, _, _*) => httpClient.getFuture(url)
+        case c @ ServiceRoute(POST, _, _*) => httpClient.postFuture(url, body)
+      }
     }
   }
 

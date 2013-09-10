@@ -340,13 +340,13 @@
   background-color: #6e8aa6;
 }
 .kifi-private .kifi-slider2-kept-lock {
-  background-color: #00bb00;
+  background-color: #e78881;
 }
 .kifi-private .kifi-slider2-kept-lock:hover {
-  background-color: #00c800;
+  background-color: #e7958f;
 }
 .kifi-private .kifi-slider2-kept-lock:active {
-  background-color: #00b800;
+  background-color: #e77e76;
 }
 .kifi-slider2-keep-lock::before,
 .kifi-slider2-kept-lock::before {

@@ -37,7 +37,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     var Seq(uri1, uri2, uri3) = fakeShoeboxServiceClient.saveURIs(
       NormalizedURI.withHash(title = Some("title1 titles"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
       NormalizedURI.withHash(title = Some("title2 titles"), normalizedUrl = "http://www.keepit.org/article2", state = SCRAPED),
-      NormalizedURI.withHash(title = Some("title3 titles"), normalizedUrl = "http://www.findit.com/article3", state = SCRAPED)
+      NormalizedURI.withHash(title = Some("title3 titles"), normalizedUrl = "http://www.find-it.com/article3", state = SCRAPED)
     )
     store += (uri1.id.get -> mkArticle(uri1.id.get, uri1.title.get, "content1 alldocs body soul"))
     store += (uri2.id.get -> mkArticle(uri2.id.get, uri2.title.get, "content2 alldocs bodies soul"))
@@ -228,10 +228,16 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       var res = indexer.search("keepit")
       res.size === 2
 
-      res = indexer.search("findit")
+      res = indexer.search("keepit.com")
       res.size === 1
 
-      res = indexer.search("findit.com")
+      res = indexer.search("find-it")
+      res.size === 1
+
+      res = indexer.search("find")
+      res.size === 1
+
+      res = indexer.search("find-it.com")
       res.size === 1
     })
 

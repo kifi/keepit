@@ -1,31 +1,29 @@
 package com.keepit.integrity
 
-import akka.util.Timeout
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.time._
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.actor.ActorInstance
-import play.api.Plugin
 import scala.concurrent.duration._
-import com.keepit.common.net.URI
-import scala.util.{Success, Failure, Try}
-import com.keepit.normalizer.Prenormalizer
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.db.slick.DBSession.RWSession
+import akka.pattern.{ask, pipe}
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
 
-trait ChangedUri
+trait UriChangeMessage
 
-case class MergedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends ChangedUri
-case class SplittedUri(url: URL, newUri: Id[NormalizedURI]) extends ChangedUri
-case object BatchUpdateMerge
+case class MergedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends UriChangeMessage
+case class SplittedUri(url: URL, newUri: Id[NormalizedURI]) extends UriChangeMessage
+case class BatchUpdateMerge(batchSize: Int)
 
 class UriIntegrityActor @Inject()(
   db: Database,
@@ -36,12 +34,10 @@ class UriIntegrityActor @Inject()(
   userRepo: UserRepo,
   bookmarkRepo: BookmarkRepo,
   collectionRepo: CollectionRepo,
-  commentRepo: CommentRepo,
   commentReadRepo: CommentReadRepo,
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
-  uriNormRuleRepo: UriNormalizationRuleRepo,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   centralConfig: CentralConfig,
@@ -49,29 +45,20 @@ class UriIntegrityActor @Inject()(
   scraper: ScraperPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
-  private def prenormalize(url: String): String = {
-    val prepUrlTry = for {
-      uri <- URI.parse(url)
-      prepUrl <- Try { Prenormalizer(uri).toString() }
-    } yield prepUrl
-
-    prepUrlTry match {
-      case Success(prepUrl) => prepUrl
-      case Failure(e) => {
-        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Static Normalization failed: ${e.getMessage}")))
-        url
-      }
-    }
-  }
-  
   private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
-      assume(bms.size == 1, s"user ${userId.id} has multiple bookmarks referencing uri ${oldBm.uriId}")
+      assume(bms.size == 1, s"user ${userId.id} has ${bms.size} bookmarks referencing uri ${oldBm.uriId}")
       bookmarkRepo.getByUriAndUser(newUriId, userId, excludeState = None) match {
-        case None => bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None 
+        case None => {
+          log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
+          bookmarkRepo.removeFromCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
+          bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None
+        } 
         case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
-          bookmarkRepo.save(oldBm.withActive(false)); Some(oldBm, bm)
+          if (bm.state == BookmarkStates.INACTIVE) bookmarkRepo.save(bm.withActive(true))
+          bookmarkRepo.save(oldBm.withActive(false));
+          bookmarkRepo.removeFromCache(oldBm); Some(oldBm, bm)
         } else None
       }
     }
@@ -96,14 +83,16 @@ class UriIntegrityActor @Inject()(
   private def processMerge(change: ChangedURI)(implicit session: RWSession): (Option[NormalizedURI], Option[ChangedURI]) = {
     val (oldUriId, newUriId) = (change.oldUriId, change.newUriId)
     if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) { 
-      if (oldUriId == newUriId) changedUriRepo.save(change.withState(ChangedURIStates.INACTIVE))
+      if (oldUriId == newUriId) changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
       (None, None) 
     } else {
-      val (oldUri, newUri) = (uriRepo.get(oldUriId), uriRepo.get(newUriId))
+      val oldUri = uriRepo.get(oldUriId)
+      val newUri = uriRepo.get(newUriId) match {
+        case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED => uriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
+        case uri => uri
+      }
 
       urlRepo.getByNormUri(oldUriId).map{ url =>
-        val prepUrl = prenormalize(url.url)
-        uriNormRuleRepo.save( UriNormalizationRule(prepUrl = prepUrl, mappedUrl = newUri.url, prepUrlHash = NormalizedURI.hashUrl(prepUrl)))
         urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MERGE)))
       }
 
@@ -115,21 +104,13 @@ class UriIntegrityActor @Inject()(
         uriRepo.save(uri.withRedirect(newUriId, currentDateTime))
       }  
         
-      uriRepo.save(oldUri.withState(NormalizedURIStates.INACTIVE).withRedirect(newUriId, currentDateTime))
-
-      scrapeInfoRepo.getByUri(oldUriId).map{ info =>
-        scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
-      }
+      uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
 
       /**
        * ensure uniqueness of bookmarks during merge.
        */
       val oldUserBms = bookmarkRepo.getByUri(oldUriId, excludeState = None).groupBy(_.userId)
       handleBookmarks(oldUserBms, newUriId)
-
-      commentRepo.getByUri(oldUriId).map{ cm =>
-        commentRepo.save(cm.withNormUriId(newUriId))
-      }
 
       commentReadRepo.getByUri(oldUriId).map{ cm =>
         commentReadRepo.save(cm.withNormUriId(newUriId))
@@ -143,7 +124,7 @@ class UriIntegrityActor @Inject()(
         followRepo.save(follow.withNormUriId(newUriId))
       }
       
-      val saved = changedUriRepo.save(change.withState(ChangedURIStates.APPLIED))
+      val saved = changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
       
       (toBeScraped, Some(saved))
     }
@@ -164,10 +145,6 @@ class UriIntegrityActor @Inject()(
       val oldUserBms = bookmarkRepo.getByUrlId(url.id.get).groupBy(_.userId)
       handleBookmarks(oldUserBms, newUriId)
 
-      commentRepo.getByUrlId(url.id.get).map{ cm =>
-        commentRepo.save(cm.withNormUriId(newUriId))
-      }
-
       deepLinkRepo.getByUrl(url.id.get).map{ link =>
         deepLinkRepo.save(link.withNormUriId(newUriId))
       }
@@ -179,18 +156,21 @@ class UriIntegrityActor @Inject()(
     }
     toBeScraped.map(scraper.asyncScrape(_))
   }
-  
-  private def batchUpdateMerge() = {
-    val toMerge = getOverDueList(fetchSize = 50)
-    log.info(s"batch merge uris: ${toMerge.size} pair of uris to be merged")
+
+  private def batchUpdateMerge(batchSize: Int): Int = {
+    val toMerge = getOverDueList(batchSize)
+    log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
     val toScrapeAndSavedChange = db.readWrite{ implicit s =>
       toMerge.map{ change => processMerge(change) }
     }
     toScrapeAndSavedChange.map(_._2).filter(_.isDefined).sortBy(_.get.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.get.seq.value) }
-    log.info(s"batch merge uris completed in database: ${toMerge.size} pair of uris merged. zookeeper seqNum updated. start scraping ${toScrapeAndSavedChange.size} pages")
-    toScrapeAndSavedChange.map(_._1).filter(_.isDefined).map{ x => scraper.asyncScrape(x.get)}
+    log.info(s"batch merge uris completed in database: ${toMerge.size} pairs of uris merged. zookeeper seqNum updated.")
+    val uniqueToScrape = toScrapeAndSavedChange.map(_._1).filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values
+    log.info(s"start scraping ${uniqueToScrape.size} pages")
+    uniqueToScrape.map{ x => scraper.asyncScrape(x.get)}
+    toMerge.size
   }
-  
+
   private def getOverDueList(fetchSize: Int = -1) = {
     centralConfig(new ChangedUriSeqNumKey()) match {
       case None => db.readOnly{ implicit s => changedUriRepo.getChangesSince(SequenceNumber(0), fetchSize, state = ChangedURIStates.ACTIVE)}
@@ -199,7 +179,7 @@ class UriIntegrityActor @Inject()(
   }
 
   def receive = {
-    case BatchUpdateMerge => batchUpdateMerge()
+    case BatchUpdateMerge(batchSize) => Future.successful(batchUpdateMerge(batchSize)) pipeTo sender
     case MergedUri(oldUri, newUri) => db.readWrite{ implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) }   // process later
     case SplittedUri(url, newUri) => handleSplit(url, newUri)
   }
@@ -209,8 +189,8 @@ class UriIntegrityActor @Inject()(
 
 @ImplementedBy(classOf[UriIntegrityPluginImpl])
 trait UriIntegrityPlugin extends SchedulingPlugin  {
-  def handleChangedUri(change: ChangedUri): Unit
-  def batchUpdateMerge(): Unit
+  def handleChangedUri(change: UriChangeMessage): Unit
+  def batchUpdateMerge(batchSize: Int = -1): Future[Int]
 }
 
 @Singleton
@@ -221,15 +201,16 @@ class UriIntegrityPluginImpl @Inject() (
   override def enabled = true
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
-     scheduleTask(actor.system, 1 minutes, 15 seconds, actor.ref, BatchUpdateMerge)
+     scheduleTask(actor.system, 1 minutes, 45 seconds, actor.ref, BatchUpdateMerge(50))
   }
   override def onStop() {
      log.info("stopping UriIntegrityPluginImpl")
   }
 
-  override def handleChangedUri(change: ChangedUri) = {
+  def handleChangedUri(change: UriChangeMessage) = {
     actor.ref ! change
   }
   
-  override def batchUpdateMerge() = actor.ref ! BatchUpdateMerge
+  def batchUpdateMerge(batchSize: Int) = actor.ref.ask(BatchUpdateMerge(batchSize))(1 minute).mapTo[Int]
+
 }
