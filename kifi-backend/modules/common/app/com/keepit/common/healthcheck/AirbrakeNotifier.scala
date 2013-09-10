@@ -52,16 +52,15 @@ class AirbrakeNotifier @Inject() (
       <line method={e.getMethodName} file={e.getFileName} number={e.getLineNumber.toString}/>
     })
 
-  private def formatParams(params: Map[String,List[String]]) =
-    <params>{params.flatMap(e => {
-        <var key={e._1}>{e._2.mkString(" ")}</var>
-    })}</params>
+  // private def formatParams(params: Map[String,List[String]]) =
+  //   <params>{params.flatMap(e => {
+  //       <var key={e._1}>{e._2.mkString(" ")}</var>
+  //   })}</params>
 
   //todo(eishay): add component and session
   private def noticeRequest(url: String, params: Map[String, List[String]], method: Option[String]) =
     <request>
       <url>{url}</url>
-      { formatParams(params) }
       <component/>
       { method.map(m => <action>m</action>).getOrElse(<action/>) }
     </request>

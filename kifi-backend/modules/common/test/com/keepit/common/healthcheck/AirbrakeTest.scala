@@ -54,10 +54,10 @@ class AirbrakeTest extends Specification with TestInjector {
         (xml \ "api-key").head === <api-key>123</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
         (xml \ "error" \ "message").head === <message>hi there</message>
-        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AirbrakeTest.scala" number="33"/>
+        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AirbrakeTest.scala" number="50"/>
         (xml \ "error" \ "backtrace" \ "line").last === <line method="main" file="ForkMain.java" number="84"/>
         (xml \ "server-environment" \ "environment-name").head === <environment-name>production</environment-name>
-        (xml \ "request" \ "url").head === <request><url>http://www.kifi.com/hi</url></request>
+        (xml \ "request" \ "url").head === <url>http://www.kifi.com/hi</url>
       }
     }
 
