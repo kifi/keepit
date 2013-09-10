@@ -19,7 +19,6 @@ var notifierScout = notifierScout || function() {  // idempotent for Chrome
       }
     },
     new_notification: function(n) {
-      api.log("hey",n.unread);
       if (!n.unread) return;
       var p = document.querySelector(".kifi-pane"), loc = p && p.dataset.locator;
       if (loc !== n.locator) {

@@ -13,10 +13,11 @@ var notifier = {
     var o = data;
     switch (data.category) {
       case "message":
+        KifiNotification.removeByUnqiueId(o.thread, {fade: false});
         KifiNotification.add({
           title: o.author.firstName + " " + o.author.lastName,
           subtitle: "Sent you a new Kifi Message",
-          contentHtml: o.text,
+          contentHtml: o.text.trim().length > 200 ? o.text.substring(0, 200).trim() + "…" : o.text,
           link: o.title,
           image: cdnBase + "/users/" + o.author.id + "/pics/100/0.jpg",
           sticky: false,
@@ -29,7 +30,7 @@ var notifier = {
         });
         break;
       case "global":
-        console.log("got", o)
+        KifiNotification.removeByUnqiueId(o.id, {fade: false});
         KifiNotification.add({
           title: o.title,
           subtitle: o.subtitle,
@@ -162,11 +163,10 @@ var KifiNotification = {
     KifiNotification.fadeItem($item, params || {}, unbindEvents);
   },
 
-  removeByUnqiueId: function(uniqueId) {
+  removeByUnqiueId: function(uniqueId, params) {
     var $wrap = $("#kifi-notify-notice-wrapper");
     $wrap.find(".kifi-notify-item-wrapper[data-uniqueId='" + uniqueId + "']").each(function(i,e) {
-      api.log("xxxxxxx", this, $(this), e, $(e))
-      KifiNotification.fadeItem($(this), {}, true);
+      KifiNotification.fadeItem($(this), params || {}, true);
     });
   },
 

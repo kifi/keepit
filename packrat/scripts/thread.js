@@ -138,6 +138,6 @@ threadPane = function() {
   }
 
   function emitRead(threadId, m, forceSend) {
-    api.port.emit("set_message_read", {threadId: threadId, messageId: m.id, time: m.createdAt, forceSend: forceSend || false});
+    api.port.emit("set_message_rendered", {threadId: threadId, messageId: m.id, time: m.createdAt, forceSend: forceSend || false});
   }
 }();
