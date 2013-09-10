@@ -43,14 +43,14 @@ class BookmarkInterner @Inject() (
     db.readWrite(attempts = 2) { implicit s =>
       bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {
         case Some(bookmark) if bookmark.isActive =>
-          Some(if (bookmark.isPrivate == isPrivate) bookmark else bookmarkRepo.save(bookmark.withPrivate(isPrivate)))
+          Some(if (bookmark.isPrivate == isPrivate) bookmark else bookmarkRepo.save(bookmark.copy(isPrivate = isPrivate, isSensitive = false)))
         case Some(bookmark) =>
-          Some(bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate).withTitle(title orElse uri.title).withUrl(url)))
+          val reactivatedBookmark = bookmark.copy(state = BookmarkStates.ACTIVE, isPrivate = isPrivate, isSensitive = false, title = title orElse(uri.title), url = url)
+          Some(bookmarkRepo.save(if (uri.sensitivity.isDefined) reactivatedBookmark.copy(isPrivate = true, isSensitive = true) else reactivatedBookmark))
         case None =>
           Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
           val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-          Some(bookmarkRepo.save(
-            BookmarkFactory(uri, user.id.get, title orElse uri.title, urlObj, source, isPrivate, installationId)))
+          Some(bookmarkRepo.save(BookmarkFactory(uri, user.id.get, title orElse uri.title, urlObj, source, isPrivate, installationId)))
       }
     }
   }

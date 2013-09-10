@@ -63,7 +63,7 @@ class ExtBookmarksController @Inject() (
       // TODO: use uriRepo.internByUri(url, NormalizationCandidate(json):_*) to utilize "canonical" & "og"
       uriRepo.getByUri(url).flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).filter(_.isPrivate != priv).map {b =>
-          bookmarkRepo.save(b.withPrivate(priv))
+          bookmarkRepo.save(b.copy(isPrivate = priv, isSensitive = false))
         }
       }
     } match {

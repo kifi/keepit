@@ -66,7 +66,7 @@ class AdminBookmarksController @Inject() (
     def setIsPrivate(id: Id[Bookmark], isPrivate: Boolean)(implicit session: RWSession): Id[User] = {
       val bookmark = bookmarkRepo.get(id)
       log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
-      bookmarkRepo.save(bookmark.withPrivate(isPrivate))
+      bookmarkRepo.save(bookmark.copy(isPrivate = isPrivate, isSensitive = false))
       log.info("updated bookmark %s".format(bookmark))
       bookmark.userId
     }

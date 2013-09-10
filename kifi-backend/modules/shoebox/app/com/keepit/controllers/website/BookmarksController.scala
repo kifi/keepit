@@ -190,7 +190,8 @@ class BookmarksController @Inject() (
         Json.fromJson[KeepInfo](oldJson.as[JsObject] deepMerge newJson.as[JsObject]).asOpt
       } map { keepInfo =>
         val newKeepInfo = KeepInfo.fromBookmark(db.readWrite { implicit s =>
-          bookmarkRepo.save(b.copy(isPrivate = keepInfo.isPrivate, title = keepInfo.title))
+          val updatedBookmark = if (b.isPrivate != keepInfo.isPrivate) b.copy(isPrivate = keepInfo.isPrivate, isSensitive = false, title = keepInfo.title) else b.copy(title = keepInfo.title)
+          bookmarkRepo.save(updatedBookmark)
         })
         searchClient.updateURIGraph()
         Ok(Json.obj(
