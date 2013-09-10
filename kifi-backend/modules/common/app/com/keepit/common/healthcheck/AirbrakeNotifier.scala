@@ -40,12 +40,9 @@ class AirbrakeSender @Inject() (httpClient: HttpClient) extends Logging {
     }
 }
 
-// apiKey is per service type (showbox, search etc)
-class AirbrakeNotifier @Inject() (
-  apiKey: String,
-  actor: ActorInstance[AirbrakeNotifierActor]) {
-
-  def notifyError(error: AirbrakeError) = actor.ref ! AirbrakeNotice(format(error))
+trait AirbrakeNotifier {
+  def notifyError(error: AirbrakeError): Unit
+  val apiKey: String
 
   private def formatStacktrace(traceElements: Array[StackTraceElement]) =
     traceElements.flatMap(e => {
@@ -78,6 +75,8 @@ class AirbrakeNotifier @Inject() (
     (Some(noticeError(error.exception)) :: error.url.map{u => noticeRequest(u, error.params, error.method)} :: Nil).flatten
 
   //http://airbrake.io/airbrake_2_3.xsd
+  //todo(eishay): add user as a notice field
+  //todo(eishay): add a full serverEnvironment
   private[healthcheck] def format(error: AirbrakeError) =
     <notice version="2.3">
       <api-key>{apiKey}</api-key>
@@ -91,5 +90,13 @@ class AirbrakeNotifier @Inject() (
         <environment-name>production</environment-name>
       </server-environment>
     </notice>
+}
+
+// apiKey is per service type (showbox, search etc)
+class AirbrakeNotifierImpl (
+  val apiKey: String,
+  actor: ActorInstance[AirbrakeNotifierActor]) extends AirbrakeNotifier {
+
+  def notifyError(error: AirbrakeError): Unit = actor.ref ! AirbrakeNotice(format(error))
 }
 
