@@ -15,7 +15,7 @@ import java.io.StringReader
 
 import scala.xml._
 
-class AirbreakTest extends Specification with TestInjector {
+class AirbrakeTest extends Specification with TestInjector {
 
   def validate(xml: NodeSeq) = {
     val schemaLang = "http://www.w3.org/2001/XMLSchema"
@@ -25,21 +25,37 @@ class AirbreakTest extends Specification with TestInjector {
     validator.validate(new StreamSource(new StringReader(xml.toString)))
   }
 
-  "AirbreakTest" should {
-    "format" in {
-      withInjector(StandaloneTestActorSystemModule(), FakeHttpClientModule()) { implicit injector =>
-        val actor = inject[ActorInstance[AirbrakeNotifierActor]]
-        val notifyer = new AirbrakeNotifier("123", actor)
+  "AirbrakeTest" should {
+    "format only error" in {
+      withInjector(StandaloneTestActorSystemModule(), FakeHttpClientModule(), FakeAirbrakeModule()) { implicit injector =>
+        val notifyer = new FakeAirbrakeNotifier()
         val error = AirbrakeError(new IllegalArgumentException("hi there"))
         val xml = notifyer.format(error)
         println(xml)
         validate(xml)
-        (xml \ "api-key").head === <api-key>123</api-key>
+        (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
         (xml \ "error" \ "message").head === <message>hi there</message>
-        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AribreakTest.scala" number="33"/>
+        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AirbrakeTest.scala" number="32"/>
         (xml \ "error" \ "backtrace" \ "line").last === <line method="main" file="ForkMain.java" number="84"/>
         (xml \ "server-environment" \ "environment-name").head === <environment-name>production</environment-name>
+      }
+    }
+
+    "format with url and no params" in {
+      withInjector(StandaloneTestActorSystemModule(), FakeHttpClientModule(), FakeAirbrakeModule()) { implicit injector =>
+        val notifyer = new FakeAirbrakeNotifier()
+        val error = AirbrakeError(new IllegalArgumentException("hi there"), Some("http://www.kifi.com/hi"))
+        val xml = notifyer.format(error)
+        println(xml)
+        validate(xml)
+        (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
+        (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
+        (xml \ "error" \ "message").head === <message>hi there</message>
+        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AirbrakeTest.scala" number="48"/>
+        (xml \ "error" \ "backtrace" \ "line").last === <line method="main" file="ForkMain.java" number="84"/>
+        (xml \ "server-environment" \ "environment-name").head === <environment-name>production</environment-name>
+        (xml \ "request" \ "url").head === <url>http://www.kifi.com/hi</url>
       }
     }
 

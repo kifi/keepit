@@ -250,12 +250,13 @@ class BookmarksController @Inject() (
 
   def allCollections(sort: String) = AuthenticatedJsonAction { request =>
     implicit val collectionIdFormat = ExternalId.format[Collection]
-    val unsortedCollections = db.readOnly { implicit s =>
+    val (unsortedCollections, numKeeps) = db.readOnly { implicit s => (
       collectionRepo.getByUser(request.userId).map { c =>
         val count = keepToCollectionRepo.count(c.id.get)
         BasicCollection fromCollection(c, Some(count))
-      }
-    }
+      },
+      bookmarkRepo.getCountByUser(request.userId)
+    )}
     val collections = sort match {
       case "user" =>
         val orderedCollectionIds = db.readWrite { implicit s => getCollectionOrdering(request.userId) }
@@ -264,6 +265,7 @@ class BookmarksController @Inject() (
         unsortedCollections
     }
     Ok(Json.obj(
+      "keeps" -> numKeeps,
       "collections" -> collections
     ))
   }
