@@ -21,9 +21,9 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long")
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-      bookmarkRepo.save(BookmarkFactory(userId = user1.id.get, title = "my title is short", url = url1, uriId = uri1.id.get, source = BookmarkSource("NA")))
-      bookmarkRepo.save(BookmarkFactory(userId = user1.id.get, title = "my title is long", url = url2, uriId = uri2.id.get, source = BookmarkSource("NA")))
-      bookmarkRepo.save(BookmarkFactory(userId = user2.id.get, title = "my title is long", url = url2, uriId = uri2.id.get, source = BookmarkSource("NA")))
+      bookmarkRepo.save(BookmarkFactory(uri = uri1, userId = user1.id.get, title = Some("my title is short"), url = url1, source = BookmarkSource("NA")))
+      bookmarkRepo.save(BookmarkFactory(uri = uri2, userId = user1.id.get, title = Some("my title is long"), url = url2, source = BookmarkSource("NA")))
+      bookmarkRepo.save(BookmarkFactory(uri = uri2, userId = user2.id.get, title = Some("my title is long"), url = url2, source = BookmarkSource("NA")))
     }
   }
 

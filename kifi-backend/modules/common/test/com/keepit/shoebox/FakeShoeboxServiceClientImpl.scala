@@ -157,7 +157,7 @@ class FakeShoeboxServiceClientImpl(
   def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])], isPrivate: Boolean = false, source: BookmarkSource = BookmarkSource("fake")): Seq[Bookmark] = {
     val bookmarks = edges.map { case (uri, user, optionalTitle) => {
       val url = uriToUrl(uri.id.get)
-      BookmarkFactory(title = optionalTitle.getOrElse(uri.title.get), url = url, uriId = uri.id.get, userId = user.id.get, source = source).withPrivate(isPrivate)
+      BookmarkFactory(uri = uri, userId = user.id.get, title = optionalTitle orElse uri.title, url = url, source = source, isPrivate = isPrivate)
     }}
     saveBookmarks(bookmarks:_*)
   }

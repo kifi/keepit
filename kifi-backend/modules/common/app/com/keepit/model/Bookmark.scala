@@ -29,8 +29,6 @@ case class Bookmark(
   def withId(id: Id[Bookmark]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
-  def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
-
   def withActive(isActive: Boolean) = copy(state = isActive match {
     case true => BookmarkStates.ACTIVE
     case false => BookmarkStates.INACTIVE
@@ -100,12 +98,9 @@ object BookmarkSource {
 
 object BookmarkFactory {
 
-  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
-    Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
+  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: BookmarkSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Bookmark = {
+    val bookmark = Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
+    if (uri.sensitivity.isDefined) bookmark.copy(isPrivate = true, isSensitive = true) else bookmark
+  }
 
-  def apply(title: String, url: URL, uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource): Bookmark =
-    Bookmark(title = Some(title), urlId = Some(url.id.get), url = url.url, uriId = uriId, userId = userId, source = source)
-
-  def apply(title: String, urlId: Id[URL],  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource, isPrivate: Boolean): Bookmark =
-    BookmarkFactory(title = title, urlId = urlId, uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
 }
