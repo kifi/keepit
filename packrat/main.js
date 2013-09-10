@@ -1084,7 +1084,7 @@ function whenTabFocused(tab, idx, callback) {
   if (api.tabs.isFocused(tab)) {
     callback(tab);
   } else {
-    (tab.focusCallbacks = tab.focusCallbacks || {})[tab.id] = callback;
+    (tab.focusCallbacks = tab.focusCallbacks || {})[idx] = callback;
   }
 }
 // ===== Browser event listeners
