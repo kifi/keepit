@@ -78,6 +78,17 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
                 cache.set(TestJsonCacheKey("missing_value"), None)
                 cache.getOrElseOpt(TestJsonCacheKey("missing_value"))(Some(TestJsonCacheData("Error!", -42))) === None
             }
+            "throw exception & invalidate cache when size exceeded" in {
+                val key = TestJsonCacheKey("foo")
+                val obj = Json.obj("foo" -> "bar")
+                val v   = TestJsonCacheData(Json.stringify(obj), 42)
+                cache.set(key, Some(v))
+                cache.get(key).get mustEqual v
+                val arr = Array.fill[JsObject](1000000) { obj }
+                val big = Json.stringify(JsArray(arr))
+                cache.set(key, Some(TestJsonCacheData(big, 42))) must throwA[CacheSizeLimitExceededException]
+                cache.get(key) mustEqual None
+            }
         } 
     }
 
@@ -93,6 +104,16 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
                 cache.set(TestBinaryCacheKey("missing_value"), None)
                 cache.getOrElseOpt(TestBinaryCacheKey("missing_value"))(Some(Array[Byte](-2,-3,-7))) === None
             }
+          "throw exception & invalidate cache when size exceeded" in {
+            val key = TestBinaryCacheKey("foo")
+            val v   = Array[Byte](2,3,7)
+            cache.set(key, Some(v))
+            cache.get(key).get mustEqual v
+            val big = Array.fill[Byte](1000000) { 4 }
+            cache.set(key, Some(big)) must throwA[CacheSizeLimitExceededException]
+            cache.get(key) mustEqual None
+          }
+
         } 
     }
 
@@ -123,7 +144,17 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
                 cache.set(TestStringCacheKey("missing_value"), None)
                 cache.getOrElseOpt(TestStringCacheKey("missing_value"))(Some("owtytrof")) === None
             }
-        } 
+          "throw exception & invalidate cache when size exceeded" in {
+            val key = TestStringCacheKey("foo")
+            val v   = "foobar"
+            cache.set(key, Some(v))
+            cache.get(key).get mustEqual v
+            val chars = Array.fill[Char](1000000) { 'f' }
+            val big = new String(chars)
+            cache.set(key, Some(big)) must throwA[CacheSizeLimitExceededException]
+            cache.get(key) mustEqual None
+          }
+        }
     }
 
 

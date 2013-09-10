@@ -131,6 +131,8 @@ trait Key[T] {
   override final def toString: String = namespace + "%" + version + "#" + toKey()
 }
 
+case class CacheSizeLimitExceededException(msg:String) extends Exception(msg)
+
 trait ObjectCache[K <: Key[T], T] {
   val outerCache: Option[ObjectCache[K, T]] = None
   val ttl: Duration
@@ -276,15 +278,32 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
             case (isDefined: Boolean, x: java.lang.Character) => (isDefined, x.charValue())
             case (isDefined: Boolean, x: java.lang.Boolean) => (isDefined, x.booleanValue())
             case (false, _) => (false, null)
-            case x: scala.Array[_] => x
+            case x: scala.Array[Byte] => x // we only support byte[]
             case x: JsValue => Json.stringify(x)
             case x: String => x
           }
+      val keyS = key.toString
+      // workaround for memcached-specific 1M size limit
+      properlyBoxed match {
+        case s:String => {
+          if (s.length + keyS.length > 200000) { // imprecise -- convert to (utf-8) byte[]
+            repo.remove(keyS)
+            throw new CacheSizeLimitExceededException("KV(string) not cached: key.len=%d (%s) val.len=%d (%s)".format(keyS.length, keyS, s.length, s.take(100)))
+          }
+        }
+        case a:Array[Byte] => {
+          if (a.length + keyS.length > 900000) {
+            repo.remove(keyS)
+            throw new CacheSizeLimitExceededException("KV(byte[]) not cached: key.len=%d (%s) val.len=%d".format(keyS.length, keyS, a.length))
+          }
+        }
+        case _ => // ignore
+      }
       var ttlInSeconds = ttl match {
         case _ : Duration.Infinite => 0
         case _ => ttl.toSeconds.toInt
       }
-      repo.set(key.toString, properlyBoxed, ttlInSeconds)
+      repo.set(keyS, properlyBoxed, ttlInSeconds)
       val setEnd = currentDateTime.getMillis()
       CacheStatistics.recordSet(repo.toString, key.namespace, setEnd - setStart)
       if (outerCache isEmpty) CacheStatistics.recordSet("Cache", key.namespace, setEnd - setStart)

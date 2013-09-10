@@ -10,6 +10,10 @@ import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import MessagingTypeMappers._
 import com.keepit.common.logging.Logging
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import scala.concurrent.duration.Duration
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 case class Message(
     id: Option[Id[Message]] = None,
@@ -29,6 +33,67 @@ case class Message(
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt=updateTime)
 }
 
+object Message {
+  implicit def format = (
+      (__ \ 'id).formatNullable(Id.format[Message]) and
+      (__ \ 'createdAt).format[DateTime] and
+      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'externalId).format(ExternalId.format[Message]) and
+      (__ \ 'from).formatNullable(Id.format[User]) and
+      (__ \ 'thread).format(Id.format[MessageThread]) and
+      (__ \ 'threadExtId).format(ExternalId.format[MessageThread]) and
+      (__ \ 'messageText).format[String] and
+      (__ \ 'sentOnUrl).formatNullable[String] and
+      (__ \ 'sentOnUriId).formatNullable(Id.format[NormalizedURI])
+    )(Message.apply, unlift(Message.unapply))
+}
+
+class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message]) {
+  override def equals(other:Any):Boolean = other match {
+    case mft: MessagesForThread => (thread.id == mft.thread.id && messages.size == mft.messages.size)
+    case _ => false
+  }
+  override def hashCode = thread.id.hashCode
+  override def toString = "[MessagesForThread(%s): %s]".format(thread, messages)
+}
+
+object MessagesForThread extends Logging {
+  implicit val format = new Format[MessagesForThread] {
+    def reads(json: JsValue): JsResult[MessagesForThread] = {
+      json match {
+        case obj: JsObject => {
+          val iter = obj.fields.iterator
+          val tid = iter.next match {
+            case ("thread_id", id:JsNumber) => Id[MessageThread](id.value.toLong)
+          }
+          import Message.format
+          val messages = iter.next match {
+            case ("messages", jsArray:JsArray) => jsArray.value.map { v:JsValue =>
+              Json.fromJson[Message](v).get
+            }
+          }
+          JsSuccess(new MessagesForThread(tid, messages))
+        }
+        case _ => JsError()
+      }
+    }
+    def writes(mft: MessagesForThread):JsValue = {
+      Json.obj(
+          "thread_id"  -> mft.thread.id,
+          "messages"   -> JsArray(mft.messages.map{Json.toJson(_)})
+        )
+    }
+  }
+}
+
+case class MessagesForThreadIdKey(threadId:Id[MessageThread]) extends Key[MessagesForThread] {
+  val namespace = "messages_for_thread_id"
+  def toKey():String = threadId.id.toString
+}
+
+class MessagesForThreadIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[MessagesForThreadIdKey, MessagesForThread](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 @ImplementedBy(classOf[MessageRepoImpl])
 trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
@@ -45,7 +110,8 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 @Singleton
 class MessageRepoImpl @Inject() (
     val clock: Clock,
-    val db: DataBaseComponent
+    val db: DataBaseComponent,
+    val messagesForThreadIdCache: MessagesForThreadIdCache
   )
   extends DbRepo[Message] with MessageRepo with ExternalIdColumnDbFunction[Message] with Logging {
 
@@ -61,7 +127,11 @@ class MessageRepoImpl @Inject() (
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ from.? ~ thread ~ threadExtId ~ messageText ~ sentOnUrl.? ~ sentOnUriId.? <> (Message.apply _, Message.unapply _)
   }
 
-
+  override def invalidateCache(message:Message)(implicit session:RSession):Message = {
+    val key = MessagesForThreadIdKey(message.thread)
+    messagesForThreadIdCache.remove(key)
+    message
+  }
 
   def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit = {
     (for (row <- table if row.id===message.id) yield row.sentOnUriId).update(uriId)
@@ -69,15 +139,31 @@ class MessageRepoImpl @Inject() (
 
 
   def get(threadId: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession) : Seq[Message] = {
-    log.info(s"[get_thread] getting thread messages for thread_id ${threadId}. $from - $to")
-    val query = (for (row <- table if row.thread === threadId) yield row).drop(from)
-    log.info(s"[get_thread] getting thread messages for thread_id ${threadId}:\n${query.selectStatement}")
-    val got = to match {
-      case Some(upper) => query.take(upper-from).sortBy(row => row.createdAt desc).list
-      case None => query.sortBy(row => row.createdAt desc).list
+    val key = MessagesForThreadIdKey(threadId)
+    messagesForThreadIdCache.get(key) match {
+      case Some(v) => {
+        log.info("[get_thread] cache-hit: id=%s v=%s".format(threadId, v))
+        v.messages
+      }
+      case None => {
+        log.info(s"[get_thread] getting thread messages for thread_id ${threadId}. $from - $to")
+        val query = (for (row <- table if row.thread === threadId) yield row).drop(from)
+        log.info(s"[get_thread] getting thread messages for thread_id ${threadId}:\n${query.selectStatement}")
+        val got = to match {
+          case Some(upper) => query.take(upper-from).sortBy(row => row.createdAt desc).list
+          case None => query.sortBy(row => row.createdAt desc).list
+        }
+        log.info(s"[get_thread] got thread messages for thread_id ${threadId}:\n${got}")
+        val mft = new MessagesForThread(threadId, got)
+        log.info("[get_thread] cache-miss: set key=%s to messages=%s".format(key, mft))
+        try {
+          messagesForThreadIdCache.set(key, mft)
+        } catch {
+          case t:Throwable => // no-op
+        }
+        got
+      }
     }
-    log.info(s"[get_thread] got thread messages for thread_id ${threadId}:\n${got}")
-    got
   }
 
   def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[Message] = {
