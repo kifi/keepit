@@ -6,14 +6,14 @@
 // @require scripts/render.js
 
 var notifier = {
-  removeByUnqiueId: function(uniqueId) {
-    KifiNotification.removeByUnqiueId(uniqueId);
+  removeByUniqueId: function(uniqueId) {
+    KifiNotification.removeByUniqueId(uniqueId);
   },
   show: function(data) {
     var o = data;
     switch (data.category) {
       case "message":
-        KifiNotification.removeByUnqiueId(o.thread, {fade: false});
+        KifiNotification.removeByUniqueId(o.thread, {fade: false});
         KifiNotification.add({
           title: o.author.firstName + " " + o.author.lastName,
           subtitle: "Sent you a new Kifi Message",
@@ -30,7 +30,7 @@ var notifier = {
         });
         break;
       case "global":
-        KifiNotification.removeByUnqiueId(o.id, {fade: false});
+        KifiNotification.removeByUniqueId(o.id, {fade: false});
         KifiNotification.add({
           title: o.title,
           subtitle: o.subtitle,
@@ -163,7 +163,7 @@ var KifiNotification = {
     KifiNotification.fadeItem($item, params || {}, unbindEvents);
   },
 
-  removeByUnqiueId: function(uniqueId, params) {
+  removeByUniqueId: function(uniqueId, params) {
     var $wrap = $("#kifi-notify-notice-wrapper");
     $wrap.find(".kifi-notify-item-wrapper[data-uniqueId='" + uniqueId + "']").each(function(i,e) {
       KifiNotification.fadeItem($(this), params || {}, true);

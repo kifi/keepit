@@ -14,7 +14,7 @@ var notifierScout = notifierScout || function() {  // idempotent for Chrome
     remove_notification: function(uniqueId) {
       if (document.querySelectorAll(".kifi-notify-item-wrapper[data-uniqueId='" + uniqueId + "']").length > 0) {
         api.require("scripts/notifier.js", function() {
-          notifier.removeByUnqiueId(uniqueId);
+          notifier.removeByUniqueId(uniqueId);
         });
       }
     },
