@@ -13,6 +13,8 @@ import java.io._
 import java.net._
 import scala.xml._
 
+import play.api.mvc._
+
 case class AirbrakeNotice(xml: NodeSeq)
 
 private[healthcheck] class AirbrakeNotifierActor @Inject() (
@@ -55,7 +57,7 @@ trait AirbrakeNotifier {
   //   })}</params>
 
   //todo(eishay): add component and session
-  private def noticeRequest(url: String, params: Map[String, List[String]], method: Option[String]) =
+  private def noticeRequest(url: String, params: Map[String, Seq[String]], method: Option[String]) =
     <request>
       <url>{url}</url>
       <component/>

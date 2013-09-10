@@ -20,7 +20,8 @@ import com.google.inject.Inject
 class AdminHealthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   healthcheckPlugin: HealthcheckPlugin,
-  services: FortyTwoServices)
+  services: FortyTwoServices,
+  airbrake: AirbrakeNotifier)
     extends AdminController(actionAuthenticator) {
 
   def serviceView = AdminHtmlAction { implicit request =>
@@ -46,14 +47,28 @@ class AdminHealthController @Inject() (
     Redirect(routes.AdminHealthController.serviceView)
   }
 
-  //randomly creates one of two exceptions, each time with a random exception message
-  def causeError() = AdminHtmlAction { implicit request =>
+  def causeError() = Action { implicit request =>
+    throwException()
+    Ok("You cannot see this :-P ")
+  }
+
+  private def throwException(): Unit = {
     if (Random.nextBoolean) {
       // throwing a X/0 exception. its a fixed stack exception with random message text
       (Random.nextInt) / 0
     }
     // throwing an array out bound exception. its a fixed stack exception with random message text
     (new Array[Int](1))(Random.nextInt + 1) = 1
-    Ok("You cannot see this :-P ")
+  }
+
+  def causeHandbrakeError() = Action { implicit request =>
+    try {
+      throwException()
+      Ok("Should not see that!")
+    } catch {
+      case e: Throwable =>
+        airbrake.notifyError(AirbrakeError(request, e))
+        Ok(s"handbrake error sent for $e")
+    }
   }
 }

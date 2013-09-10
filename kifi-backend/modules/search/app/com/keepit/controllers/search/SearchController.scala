@@ -2,6 +2,7 @@ package com.keepit.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
@@ -24,7 +25,8 @@ import play.api.libs.json._
 class SearchController @Inject()(
     searchConfigManager: SearchConfigManager,
     searcherFactory: MainSearcherFactory,
-    shoeboxClient: ShoeboxServiceClient
+    shoeboxClient: ShoeboxServiceClient,
+    airbrake: AirbrakeNotifier
   ) extends SearchServiceController {
 
   def searchKeeps(userId: Id[User], query: String) = Action { request =>
@@ -114,14 +116,28 @@ class SearchController @Inject()(
 
   //randomly creates one of two exceptions, each time with a random exception message
   def causeError() = Action { implicit request =>
+    throwException()
+    Ok("You cannot see this :-P ")
+  }
+
+  private def throwException(): Unit = {
     if (Random.nextBoolean) {
       // throwing a X/0 exception. its a fixed stack exception with random message text
       (Random.nextInt) / 0
     }
     // throwing an array out bound exception. its a fixed stack exception with random message text
     (new Array[Int](1))(Random.nextInt + 1) = 1
-    Ok("You cannot see this :-P ")
   }
 
+  def causeHandbrakeError() = Action { implicit request =>
+    try {
+      throwException()
+      Ok("Should not see that!")
+    } catch {
+      case e: Throwable =>
+        airbrake.notifyError(AirbrakeError(request, e))
+        Ok(s"handbrake error sent for $e")
+    }
+  }
 
 }

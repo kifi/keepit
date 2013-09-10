@@ -7,12 +7,13 @@ import com.keepit.common.actor.{ActorSystemModule, ProdActorSystemModule, DevAct
 import com.keepit.common.zookeeper.{DiscoveryModule, ProdDiscoveryModule, DevDiscoveryModule}
 import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.net.ProdHttpClientModule
+import com.keepit.common.healthcheck.{ProdAirbrakeModule, DevAirbrakeModule}
 
 abstract class AbstractModuleAccessor extends ScalaModule {
   protected def install0(module: ScalaModule) = install(module)
 }
 
-trait ConfigurationModule extends AbstractModuleAccessor with Logging { 
+trait ConfigurationModule extends AbstractModuleAccessor with Logging {
 
   final def configure() {
     log.info(s"Configuring ${this}")
@@ -40,6 +41,8 @@ trait CommonProdModule extends CommonServiceModule {
 
   val actorSystemModule = ProdActorSystemModule()
   val discoveryModule = ProdDiscoveryModule()
+
+  val airbrakeModule = ProdAirbrakeModule()
 }
 
 trait CommonDevModule extends CommonServiceModule {
@@ -47,4 +50,6 @@ trait CommonDevModule extends CommonServiceModule {
 
   val actorSystemModule = DevActorSystemModule()
   val discoveryModule = DevDiscoveryModule()
+
+  val airbrakeModule = DevAirbrakeModule()
 }
