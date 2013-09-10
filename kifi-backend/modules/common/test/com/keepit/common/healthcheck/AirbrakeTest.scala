@@ -15,7 +15,7 @@ import java.io.StringReader
 
 import scala.xml._
 
-class AirbreakTest extends Specification with TestInjector {
+class AirbrakeTest extends Specification with TestInjector {
 
   def validate(xml: NodeSeq) = {
     val schemaLang = "http://www.w3.org/2001/XMLSchema"
@@ -25,8 +25,8 @@ class AirbreakTest extends Specification with TestInjector {
     validator.validate(new StreamSource(new StringReader(xml.toString)))
   }
 
-  "AirbreakTest" should {
-    "format" in {
+  "AirbrakeTest" should {
+    "format only error" in {
       withInjector(StandaloneTestActorSystemModule(), FakeHttpClientModule()) { implicit injector =>
         val actor = inject[ActorInstance[AirbrakeNotifierActor]]
         val notifyer = new AirbrakeNotifier("123", actor)
@@ -37,9 +37,27 @@ class AirbreakTest extends Specification with TestInjector {
         (xml \ "api-key").head === <api-key>123</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
         (xml \ "error" \ "message").head === <message>hi there</message>
-        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AribreakTest.scala" number="33"/>
+        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AirbrakeTest.scala" number="33"/>
         (xml \ "error" \ "backtrace" \ "line").last === <line method="main" file="ForkMain.java" number="84"/>
         (xml \ "server-environment" \ "environment-name").head === <environment-name>production</environment-name>
+      }
+    }
+
+    "format with url and no params" in {
+      withInjector(StandaloneTestActorSystemModule(), FakeHttpClientModule()) { implicit injector =>
+        val actor = inject[ActorInstance[AirbrakeNotifierActor]]
+        val notifyer = new AirbrakeNotifier("123", actor)
+        val error = AirbrakeError(new IllegalArgumentException("hi there"), Some("http://www.kifi.com/hi"))
+        val xml = notifyer.format(error)
+        println(xml)
+        validate(xml)
+        (xml \ "api-key").head === <api-key>123</api-key>
+        (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
+        (xml \ "error" \ "message").head === <message>hi there</message>
+        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AirbrakeTest.scala" number="50"/>
+        (xml \ "error" \ "backtrace" \ "line").last === <line method="main" file="ForkMain.java" number="84"/>
+        (xml \ "server-environment" \ "environment-name").head === <environment-name>production</environment-name>
+        (xml \ "request" \ "url").head === <url>http://www.kifi.com/hi</url>
       }
     }
 

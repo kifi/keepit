@@ -52,32 +52,41 @@ class AirbrakeNotifier @Inject() (
       <line method={e.getMethodName} file={e.getFileName} number={e.getLineNumber.toString}/>
     })
 
-  private def formatParams(params: Map[String,List[String]]) =
-    <params>{params.flatMap(e => {
-        <var key={e._1}>{e._2.mkString(" ")}</var>
-    })}</params>
+  // private def formatParams(params: Map[String,List[String]]) =
+  //   <params>{params.flatMap(e => {
+  //       <var key={e._1}>{e._2.mkString(" ")}</var>
+  //   })}</params>
 
-                // <request>
-                //   <url>{request.uri.toString}</url>
-                //   {formatParams(error.request.params)}
-                //   <component/>
-                //   <action/>
-                // </request>
+  //todo(eishay): add component and session
+  private def noticeRequest(url: String, params: Map[String, List[String]], method: Option[String]) =
+    <request>
+      <url>{url}</url>
+      <component/>
+      { method.map(m => <action>m</action>).getOrElse(<action/>) }
+    </request>
+
+  private def noticeError(error: Throwable) =
+    <error>
+      <class>{error.getClass.getName}</class>
+      <message>{error.getMessage}</message>
+      <backtrace>
+        { formatStacktrace(error.getStackTrace) }
+      </backtrace>
+    </error>
+
+  private def noticeEntities(error: AirbrakeError) =
+    (Some(noticeError(error.exception)) :: error.url.map{u => noticeRequest(u, error.params, error.method)} :: Nil).flatten
+
   //http://airbrake.io/airbrake_2_3.xsd
-  private[healthcheck] def format(error: AirbrakeError) = <notice version="2.3">
+  private[healthcheck] def format(error: AirbrakeError) =
+    <notice version="2.3">
       <api-key>{apiKey}</api-key>
       <notifier>
         <name>S42</name>
         <version>0.0.1</version>
         <url>http://admin.kifi.com/admin</url>
       </notifier>
-      <error>
-        <class>{error.exception.getClass.getName}</class>
-        <message>{error.exception.getMessage}</message>
-        <backtrace>
-          {formatStacktrace(error.exception.getStackTrace)}
-        </backtrace>
-      </error>
+      { noticeEntities(error) }
       <server-environment>
         <environment-name>production</environment-name>
       </server-environment>
