@@ -372,6 +372,8 @@ const socketHandlers = {
   message_read: function(nUri, threadId, time, messageId) {
     api.log("[socket:message_read]", nUri, threadId, time);
 
+    removeNotificationPopups(threadId);
+
     var hasThreadId = hasId(threadId);
     for (var page in pageData) {
       var d = pageData[page];
@@ -493,25 +495,27 @@ api.port.on({
       respond(o);
     });
   },
-  set_message_read: function(o, _, tab) {
-    var d = pageData[tab.nUri];
-    var unreadNotification = false;
-    for (var i = 0; i < notifications.length; i++) {
-      if (notifications[i].unread && (notifications[i].thread == o.threadId || notifications[i].id == o.messageId)) {
-        unreadNotification = true;
-        o.messageId = notifications[i].id;
+  message_rendered: function(o, _, tab) {
+    whenTabFocused(tab, o.threadId, function (tab) {
+      var d = pageData[tab.nUri];
+      var unreadNotification = false;
+      for (var i = 0; i < notifications.length; i++) {
+        if (notifications[i].unread && (notifications[i].thread == o.threadId || notifications[i].id == o.messageId)) {
+          unreadNotification = true;
+          o.messageId = notifications[i].id;
+        }
       }
-    }
 
-    if (o.forceSend || unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) >= new Date(d.lastMessageRead[o.threadId] || 0))) {
-      markNoticesVisited("message", o.messageId, o.time, "/messages/" + o.threadId);
-      if (d && d.lastMessageRead) {
-        d.lastMessageRead[o.threadId] = o.time;
-        tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
+      if (o.forceSend || unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) >= new Date(d.lastMessageRead[o.threadId] || 0))) {
+        markNoticesVisited("message", o.messageId, o.time, "/messages/" + o.threadId);
+        if (d && d.lastMessageRead) {
+          d.lastMessageRead[o.threadId] = o.time;
+          tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
+        }
+        tellTabsNoticeCountIfChanged();  // visible tabs
+        socket.send(["set_message_read", o.messageId]);
       }
-      tellTabsNoticeCountIfChanged();  // visible tabs
-      socket.send(["set_message_read", o.messageId]);
-    }
+    });
   },
   set_global_read: function(o, _, tab) {
     markNoticesVisited("global", o.noticeId);
@@ -634,6 +638,9 @@ api.port.on({
       });
     }
   },
+  remove_notification: function(o) {
+    removeNotificationPopups(o.associatedId);
+  },
   add_deep_link_listener: function(locator, _, tab) {
     createDeepLinkListener(locator, tab.id);
   },
@@ -642,6 +649,12 @@ api.port.on({
     //reportError(data.message, data.url, data.lineNo);
   }
 });
+
+function removeNotificationPopups(associatedId) {
+  api.tabs.each(function(page) {
+    api.tabs.emit(page, "remove_notification", associatedId);
+  });
+}
 
 function sendNotificationToTabs(n) {
   var told = {};
@@ -1067,10 +1080,23 @@ function clone(o) {
   return c;
 }
 
+function whenTabFocused(tab, key, callback) {
+  if (api.tabs.isFocused(tab)) {
+    callback(tab);
+  } else {
+    (tab.focusCallbacks = tab.focusCallbacks || {})[key] = callback;
+  }
+}
 // ===== Browser event listeners
 
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
+
+  for(var key in tab.focusCallbacks) {
+    tab.focusCallbacks[key](tab);
+  }
+
+  delete tab.focusCallbacks;
   subscribe(tab);
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
