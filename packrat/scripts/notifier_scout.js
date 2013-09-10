@@ -12,7 +12,7 @@ var notifierScout = notifierScout || function() {  // idempotent for Chrome
       }
     },
     remove_notification: function(associatedId) {
-      if (document.querySelectorAll(".kifi-notify-item-wrapper[data-associated-id='" + associatedId + "']")) {
+      if (document.querySelector(".kifi-notify-item-wrapper[data-associated-id='" + associatedId + "']")) {
         api.require("scripts/notifier.js", function() {
           notifier.removeByAssociatedId(associatedId);
         });
