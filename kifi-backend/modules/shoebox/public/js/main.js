@@ -989,7 +989,7 @@ $(function() {
 	function updateCollections() {
 		promise.collections = $.getJSON(xhrBase + '/collections/all', {sort: "user"}, function(data) {
 			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
-			if ($collList.find('.renaming, .showing').length === 0) {
+			if ($collList.find('.renaming, .showing, .sortable-placeholder').length === 0) {
 				collTmpl.render(data.collections);
 			}
 			$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.keeps);
