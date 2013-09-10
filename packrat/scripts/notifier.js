@@ -17,7 +17,7 @@ var notifier = {
         KifiNotification.add({
           title: o.author.firstName + " " + o.author.lastName,
           subtitle: "Sent you a new Kifi Message",
-          contentHtml: o.text.trim().length > 200 ? o.text.substring(0, 200).trim() + "…" : o.text,
+          contentHtml: o.text.length > 200 ? o.text.substring(0, 190).trim() + "…" : o.text,
           link: o.title,
           image: cdnBase + "/users/" + o.author.id + "/pics/100/0.jpg",
           sticky: false,
