@@ -16,6 +16,7 @@ import net.sf.ehcache._
 import net.sf.ehcache.config.CacheConfiguration
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.logging.Logging
+import scala.util.Random
 
 
 object CacheStatistics extends Logging {
@@ -64,6 +65,7 @@ trait FortyTwoCachePlugin extends Plugin {
   def get(key: String): Option[Any]
   def remove(key: String): Unit
   def set(key: String, value: Any, expiration: Int = 0): Unit
+  def touch(key: String, expiration: Int = 0) : Unit = {}
 
   override def enabled = true
 }
@@ -74,8 +76,14 @@ trait InMemoryCachePlugin extends FortyTwoCachePlugin
 class MemcachedCache @Inject() (
   val cache: MemcachedPlugin,
   val healthcheck: HealthcheckPlugin) extends FortyTwoCachePlugin {
-  def get(key: String): Option[Any] =
+  
+  def get(key: String): Option[Any] = {
     cache.api.get(key)
+  }
+
+  override def touch(key: String, expiration: Int = 0): Unit = future {
+    cache.api.touch(key, expiration)
+  }
 
   override def onError(he: HealthcheckError) {
     healthcheck.addError(he)
@@ -116,7 +124,7 @@ class EhCacheCache @Inject() (config: EhCacheConfiguration, val healthcheck: Hea
   def set(key: String, value: Any, expiration: Int = 0): Unit = future {
     val element = new Element(key, value)
     if (expiration == 0) element.setEternal(true)
-    element.setTimeToLive(expiration)
+    else element.setTimeToIdle(expiration)
     cache.put(element)
   }
 
@@ -240,6 +248,9 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
           errorMessage = Some(s"Failed fetching key $key from $repo")))
         None
     }
+    if (valueOpt.isDefined && ttl.isFinite && Random.nextFloat>0.99) {
+      repo.touch(key.toString, ttl.toSeconds.toInt)
+    }
     try {
       val objOpt = valueOpt.map(serializer.reads)
       val getEnd = currentDateTime.getMillis()
@@ -280,10 +291,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
             case x: JsValue => Json.stringify(x)
             case x: String => x
           }
-      var ttlInSeconds = ttl match {
-        case _ : Duration.Infinite => 0
-        case _ => ttl.toSeconds.toInt
-      }
+      var ttlInSeconds = if (ttl.isFinite) ttl.toSeconds.toInt else 0
       repo.set(key.toString, properlyBoxed, ttlInSeconds)
       val setEnd = currentDateTime.getMillis()
       CacheStatistics.recordSet(repo.toString, key.namespace, setEnd - setStart)
