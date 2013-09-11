@@ -4,7 +4,7 @@ import com.keepit.model.Normalization
 import com.keepit.common.net.{Host, URI}
 
 case class SchemeNormalizer(normalization: Normalization) extends StaticNormalizer {
-  require(normalization != Normalization.CANONICAL && normalization != Normalization.OPENGRAPH)
+  require(Normalization.schemes.contains(normalization))
   def isDefinedAt(uri: URI) = true
   def apply(uri: URI) = normalization.scheme.split("://") match {
     case Array(httpScheme) => URI(None, Some(httpScheme), uri.userInfo, uri.host.map(cleanPrefix(_)), uri.port, uri.path, uri.query, uri.fragment)
