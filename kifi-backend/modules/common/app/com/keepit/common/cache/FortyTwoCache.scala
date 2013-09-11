@@ -288,13 +288,13 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
         case s:String => {
           if (s.length + keyS.length > 200000) { // imprecise -- convert to (utf-8) byte[]
             repo.remove(keyS)
-            throw new CacheSizeLimitExceededException("KV(string) not cached: key.len=%d (%s) val.len=%d (%s)".format(keyS.length, keyS, s.length, s.take(100)))
+            throw new CacheSizeLimitExceededException(s"KV(string) not cached: key.len=${keyS.length} ($keyS) val.len=${s.length} (${s.take(100)})")
           }
         }
         case a:Array[Byte] => {
           if (a.length + keyS.length > 900000) {
             repo.remove(keyS)
-            throw new CacheSizeLimitExceededException("KV(byte[]) not cached: key.len=%d (%s) val.len=%d".format(keyS.length, keyS, a.length))
+            throw new CacheSizeLimitExceededException("KV(byte[]) not cached: key.len=${keyS.length} ($keyS) val.len=${a.length}")
           }
         }
         case _ => // ignore

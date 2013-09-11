@@ -142,20 +142,20 @@ class MessageRepoImpl @Inject() (
     val key = MessagesForThreadIdKey(threadId)
     messagesForThreadIdCache.get(key) match {
       case Some(v) => {
-        log.info("[get_thread] cache-hit: id=%s v=%s".format(threadId, v))
+        log.info("[get_thread] cache-hit: id=$threadId v=$v")
         v.messages
       }
       case None => {
-        log.info(s"[get_thread] getting thread messages for thread_id ${threadId}. $from - $to")
+        log.info(s"[get_thread] getting thread messages for thread_id $threadId. $from - $to")
         val query = (for (row <- table if row.thread === threadId) yield row).drop(from)
-        log.info(s"[get_thread] getting thread messages for thread_id ${threadId}:\n${query.selectStatement}")
+        log.info(s"[get_thread] getting thread messages for thread_id $threadId:\n${query.selectStatement}")
         val got = to match {
           case Some(upper) => query.take(upper-from).sortBy(row => row.createdAt desc).list
           case None => query.sortBy(row => row.createdAt desc).list
         }
-        log.info(s"[get_thread] got thread messages for thread_id ${threadId}:\n${got}")
+        log.info(s"[get_thread] got thread messages for thread_id $threadId:\n$got")
         val mft = new MessagesForThread(threadId, got)
-        log.info("[get_thread] cache-miss: set key=%s to messages=%s".format(key, mft))
+        log.info("[get_thread] cache-miss: set key=$key to messages=$mft")
         try {
           messagesForThreadIdCache.set(key, mft)
         } catch {
