@@ -51,5 +51,5 @@ trait CommonDevModule extends CommonServiceModule {
   val actorSystemModule = DevActorSystemModule()
   val discoveryModule = DevDiscoveryModule()
 
-  val airbrakeModule = DevAirbrakeModule()
+  val airbrakeModule = ProdAirbrakeModule()
 }

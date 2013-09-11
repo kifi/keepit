@@ -12,7 +12,8 @@ case class AirbrakeError(
     exception: Throwable = new DefaultAirbrakeException(),
     url: Option[String] = None,
     params: Map[String, Seq[String]] = Map(),
-    method: Option[String] = None)
+    method: Option[String] = None,
+    headers: Map[String, Seq[String]] = Map() )
 
 object AirbrakeError {
   def apply(request: Request[_], exception: Throwable): AirbrakeError =
@@ -20,5 +21,6 @@ object AirbrakeError {
           exception = exception,
           url = Some(request.uri),
           params = request.queryString,
-          method = Some(request.method))
+          method = Some(request.method),
+          headers = request.headers.toMap)
 }
