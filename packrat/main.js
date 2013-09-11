@@ -620,6 +620,7 @@ api.port.on({
   },
   open_deep_link: function(data, _, tab) {
     var n;
+                                      // on a tab that is the old normalized URI, and we know about the new normalization
     var uriData = pageData[data.nUri] || pageData[(n = api.tabs.anyAt(data.nUri)) && n.nUri];
 
     if (uriData) {
@@ -856,11 +857,13 @@ function messageCount(d) {
   var n = 0;
   for (var i = 0; i < d.threads.length; i++) {
     var th = d.threads[i], thReadTime = new Date(d.lastMessageRead[th.id] || 0);
+    var newMsg = 0;
     for (var id in th.messageTimes) {
       if (new Date(th.messageTimes[id]) > thReadTime) {
-        n++;
+        newMsg = 1;
       }
     }
+    n += newMsg;
   }
   return n;
 }
@@ -970,7 +973,7 @@ function subscribe(tab) {
 
   var d = pageData[tab.nUri || tab.url];
 
-  if (d) {  // no need to ask server again
+  if (d && !d.cacheIsDirty) {  // no need to ask server again
     if (tab.nUri) {  // tab is already initialized
       if (d.counts) {
         d.counts.n = numNotificationsNotVisited;
@@ -995,22 +998,23 @@ function subscribe(tab) {
 
       if ((api.tabs.get(tab.id) || {}).url != tab.url) return;
       d = pageData[uri] = pageData[uri] || new PageData;
+      d.cacheIsDirty = false;
       finish(uri);
 
       // uri_1
-      d.kept = uri_1.kept;
-      d.position = uri_1.position;
-      d.neverOnSite = uri_1.neverOnSite;
-      d.sensitive = uri_1.sensitive;
+      d.kept = uri_1.kept || resp.kept;
+      d.position = uri_1.position || resp.position;
+      d.neverOnSite = uri_1.neverOnSite || resp.neverOnSite;
+      d.sensitive = uri_1.sensitive || resp.sensitive;
       d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
         sendInit(tab, d);
       });
 
       // uri_2
-      d.shown = uri_2.shown;
-      d.keepers = uri_2.keepers || [];
-      d.keeps = uri_2.keeps || 0;
+      d.shown = uri_2.shown || resp.shown;
+      d.keepers = uri_2.keepers || resp.keepers || [];
+      d.keeps = uri_2.keeps || resp.keeps || 0;
       d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
       d.threads = d.threads || [];
       d.counts = d.counts || {m:0, n:0};
@@ -1298,22 +1302,25 @@ function startSession(callback, retryMs) {
     api.log("[authenticate:done] reason: %s session: %o", api.loadReason, data);
     logEvent("extension", "authenticated");
 
-    connectSync();
-
     session = data;
     session.prefs = {}; // to come via socket
     socket = api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
+      for (page in pageData) {
+        pageData[page].cacheIsDirty = true;
+      }
       socket.send(["get_last_notify_read_time"]);
+      connectSync();
       if (!notifications) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
       }
+      syncNumNotificationsNotVisited();
+      api.tabs.eachSelected(subscribe);
     }, function onDisconnect(why) {
       reportError("socket disconnect (" + why + ")");
     });
     logEvent.catchUp();
-    syncNumNotificationsNotVisited();
 
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
@@ -1323,7 +1330,6 @@ function startSession(callback, retryMs) {
     delete session.installationId;
 
     api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
-    api.tabs.eachSelected(subscribe);
     api.tabs.each(function(page) {
       api.tabs.emit(page, "session_change", session);
     });
