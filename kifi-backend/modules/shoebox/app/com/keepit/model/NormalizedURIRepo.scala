@@ -20,7 +20,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI]
-  def recordSensitiveUri(uri: NormalizedURI, sensitivity: Sensitivity)(implicit session: RWSession): NormalizedURI
+  def recordSensitiveUri(uri: NormalizedURI, sensitivity: Option[Sensitivity])(implicit session: RWSession): NormalizedURI
 }
 
 @Singleton
@@ -149,11 +149,13 @@ class NormalizedURIRepoImpl @Inject() (
     (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
 
-  def recordSensitiveUri(uri: NormalizedURI, sensitivity: Sensitivity)(implicit session: RWSession): NormalizedURI = {
+  def recordSensitiveUri(uri: NormalizedURI, sensitivity: Option[Sensitivity])(implicit session: RWSession): NormalizedURI = {
     val bookmarkRepo = bookmarkRepoProvider.get
-    if (uri.sensitivity.isEmpty) {
-      bookmarkRepo.getByUri(uri.id.get).foreach { bookmark => if (!bookmark.isPrivate) bookmarkRepo.save(bookmark.copy(isPrivate = true, isSensitive = true)) }
+    (uri.sensitivity, sensitivity) match {
+      case (None, Some(_)) => bookmarkRepo.getByUri(uri.id.get).foreach { bookmark => if (!bookmark.isPrivate) bookmarkRepo.save(bookmark.copy(isPrivate = true, isSensitive = true)) }
+      case (Some(_), None) => bookmarkRepo.getByUri(uri.id.get).foreach { bookmark => if (bookmark.isSensitive) bookmarkRepo.save(bookmark.copy(isPrivate = false, isSensitive = false)) }
+      case _ => Unit
     }
-    save(uri.copy(sensitivity = Some(sensitivity)))
+    save(uri.copy(sensitivity = sensitivity))
   }
 }

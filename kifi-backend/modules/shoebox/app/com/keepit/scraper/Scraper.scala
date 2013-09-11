@@ -234,7 +234,7 @@ class Scraper @Inject() (
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
           if (isUnscrapable(url, fetchStatus.destinationUrl)) {
-            NotScrapable(fetchStatus.destinationUrl)
+            NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects)
           } else {
             val content = extractor.getContent
             val title = getTitle(extractor)
@@ -310,10 +310,8 @@ class Scraper @Inject() (
 
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect])(implicit session: RWSession): NormalizedURI = {
     val (permanentRedirects, otherRedirects) = redirects.partition(_.isPermanent)
-    val sensitive = for {
-      redirect <- otherRedirects.headOption
-      sensitivity <- Some(Sensitivity(redirect.statusCode.toString)) if uri.sensitivity != Some(sensitivity)
-    } yield normalizedURIRepo.recordSensitiveUri(uri, sensitivity)
+    val sensitive = for { redirect <- otherRedirects.headOption if uri.sensitivity.isEmpty || uri.sensitivity.get.info != redirect.statusCode.toString } yield
+      normalizedURIRepo.recordSensitiveUri(uri, Some(Sensitivity(redirect.statusCode.toString)))
     val redirected = permanentRedirects.find(redirect => redirect.isAbsolute && redirect.currentLocation == uri.url).map(recordPermanentRedirect(sensitive.getOrElse(uri), _))
     redirected orElse sensitive getOrElse uri
   }
