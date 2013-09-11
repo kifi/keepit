@@ -1,27 +1,16 @@
 package com.keepit.normalizer
 
 import com.keepit.common.net.URI
-import com.keepit.model.{NormalizedURIRepo, NormalizedURI}
+import com.keepit.model.NormalizedURI
 import com.keepit.scraper.ScraperPlugin
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.db.slick.Database
+import com.keepit.classify.DomainRepo
 
-case class PriorKnowledge(currentReference: NormalizedURI)(implicit normalizedURIRepo: NormalizedURIRepo, scraperPlugin: ScraperPlugin) {
-  lazy val contentChecks = PriorKnowledge.getContentChecks(currentReference.url)
+@Singleton
+class PriorKnowledge @Inject() (db: Database, domainRepo: DomainRepo) {
 
-  def apply(candidate: NormalizationCandidate): PriorKnowledge.Action = candidate match {
-    case _: TrustedCandidate => PriorKnowledge.ACCEPT
-    case _: UntrustedCandidate => contentChecks.find(_.isDefinedAt(candidate)).map(PriorKnowledge.Check).getOrElse(PriorKnowledge.REJECT)
-  }
-}
-
-object PriorKnowledge {
-
-  sealed trait Action
-  case object ACCEPT extends Action
-  case object REJECT extends Action
-  case class Check(contentCheck: ContentCheck) extends Action
-
-  val trustedDomains = Set.empty[String]
-  private def canBeTrusted(domain: String): Option[String] = trustedDomains.find(trustedDomain => domain.endsWith(trustedDomain))
+  private def canBeTrusted(domain: String): Option[String] = None // To be implemented (for a given domain, DomainRepo would have to store a trusted domain (None, domain itself or a superset of domain)
   private def getDomain(referenceUrl: String): Option[String] = for { uri <- URI.safelyParse(referenceUrl); host <- uri.host } yield host.name
   private def getTrustedDomain(referenceUrl: String): Option[String] = for { domain <- getDomain(referenceUrl); trustedDomain <- canBeTrusted(domain) } yield trustedDomain
 
@@ -38,3 +27,5 @@ object PriorKnowledge {
   }
 
 }
+
+
