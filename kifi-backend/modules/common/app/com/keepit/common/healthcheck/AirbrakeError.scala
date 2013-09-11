@@ -10,6 +10,7 @@ class DefaultAirbrakeException extends Exception
 
 case class AirbrakeError(
     exception: Throwable = new DefaultAirbrakeException(),
+    message: Option[String] = None,
     url: Option[String] = None,
     params: Map[String, Seq[String]] = Map(),
     method: Option[String] = None,

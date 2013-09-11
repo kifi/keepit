@@ -61,7 +61,7 @@ class AdminHealthController @Inject() (
     (new Array[Int](1))(Random.nextInt + 1) = 1
   }
 
-  def causeHandbrakeError() = Action { implicit request =>
+  def causeHandbrakeError(param: String) = Action { implicit request =>
     try {
       throwException()
       Ok("Should not see that!")

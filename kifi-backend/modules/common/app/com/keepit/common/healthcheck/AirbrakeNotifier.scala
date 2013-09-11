@@ -26,7 +26,7 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
-    case AirbrakeNotice(xml) => airbrakeSender.send(xml)
+    case AirbrakeNotice(xml) => airbrakeSender.send(xml); println(xml)
     case m => throw new Exception(s"unknown message $m")
   }
 }
@@ -64,6 +64,14 @@ trait AirbrakeNotifier {
     case true => Nil
   }
 
+  private def formatHeaders(params: Map[String,Seq[String]]) = params.isEmpty match {
+    case false =>
+      (<session>{params.flatMap(e => {
+          <var key={e._1}>{e._2.mkString(" ")}</var>
+      })}</session>)::Nil
+    case true => Nil
+  }
+
   //todo(eishay): add component and session
   private def noticeRequest(url: String, params: Map[String, Seq[String]], method: Option[String], headers: Map[String, Seq[String]]) =
     <request>
@@ -71,24 +79,22 @@ trait AirbrakeNotifier {
       <component/>
       { formatParams(params) }
       { method.map(m => <action>{m}</action>).getOrElse(<action/>) }
-      { headers.isEmpty match {case true => Nil; case _ => (headers.map(m => <session>{m}</session>))::Nil } }
+      { formatHeaders(headers.toMap) }
     </request>
 
-  private def noticeError(error: Throwable) =
+  private def noticeError(error: Throwable, message: Option[String]) =
     <error>
       <class>{error.getClass.getName}</class>
-      <message>{error.toString}</message>
+      <message>{ message.getOrElse("") + error.toString() }</message>
       <backtrace>
         { formatStacktrace(error.getStackTrace) }
       </backtrace>
     </error>
 
   private def noticeEntities(error: AirbrakeError) =
-    (Some(noticeError(error.exception)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers)} :: Nil).flatten
+    (Some(noticeError(error.exception, error.message)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers)} :: Nil).flatten
 
   //http://airbrake.io/airbrake_2_3.xsd
-  //todo(eishay): add user as a notice field
-  //todo(eishay): add a full serverEnvironment
   private[healthcheck] def format(error: AirbrakeError) =
     <notice version="2.3">
       <api-key>{apiKey}</api-key>
