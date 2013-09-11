@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
-import com.keepit.eliza.{MessageThreadExternalIdCache}
+import com.keepit.eliza.{MessagesForThreadIdCache, MessageThreadExternalIdCache}
 import com.keepit.search.ActiveExperimentsCache
 
 case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
@@ -14,6 +14,11 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def messageThreadExternalIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new MessageThreadExternalIdCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def messagesForThreadIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new MessagesForThreadIdCache((innerRepo, 10 seconds), (outerRepo, 24 hours))
 
   @Singleton
   @Provides
