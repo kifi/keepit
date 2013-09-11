@@ -45,9 +45,9 @@ class NormalizedURIRepoImpl @Inject() (
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
-    def normalization = column[Normalization]("normalization")
-    def redirect = column[Id[NormalizedURI]]("redirect")
-    def redirectTime = column[DateTime]("redirect_time")
+    def normalization = column[Normalization]("normalization", O.Nullable)
+    def redirect = column[Id[NormalizedURI]]("redirect", O.Nullable)
+    def redirectTime = column[DateTime]("redirect_time", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~
         screenshotUpdatedAt.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
   }
