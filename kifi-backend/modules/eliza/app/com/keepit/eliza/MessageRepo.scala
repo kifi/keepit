@@ -142,7 +142,7 @@ class MessageRepoImpl @Inject() (
     val key = MessagesForThreadIdKey(threadId)
     messagesForThreadIdCache.get(key) match {
       case Some(v) => {
-        log.info("[get_thread] cache-hit: id=$threadId v=$v")
+        log.info(s"[get_thread] cache-hit: id=$threadId v=$v")
         v.messages
       }
       case None => {
@@ -154,7 +154,7 @@ class MessageRepoImpl @Inject() (
         log.info(s"[get_thread] got thread messages for thread_id $threadId:\n$got")
         val mft = new MessagesForThread(threadId, got)
         try {
-          log.info("[get_thread] cache-miss: set key=$key to messages=$mft")
+          log.info(s"[get_thread] cache-miss: set key=$key to messages=$mft")
           messagesForThreadIdCache.set(key, mft)
         } catch {
           case c:CacheSizeLimitExceededException => // already reported in FortyTwoCache
