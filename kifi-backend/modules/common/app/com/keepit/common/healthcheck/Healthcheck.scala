@@ -46,7 +46,7 @@ object Healthcheck {
       33 -> STEPHEN,
       34 -> ANDREW, // 2013/08/19
       35 -> LÉO, // was Greg
-      36 -> LÉO,
+      36 -> GREG, // was Léo
       37 -> EISHAY,
       38 -> STEPHEN,
       39 -> ANDREW,
