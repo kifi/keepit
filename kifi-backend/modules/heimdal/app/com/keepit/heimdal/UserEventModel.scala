@@ -14,28 +14,39 @@ object UserEventType {
 
 case class UserEventContext(data: Map[String, Seq[Either[String, Double]]])
 
-// object UserEventContext {
-//   implicit val format = new Format[UserEventContext] {
+object UserEventContext {
+  implicit val format = new Format[UserEventContext] {
 
-//     def reads(json: JsValue): JsResult[UserEventContext] = {
-//       val map : Map[String, Seq[Either[String, Double]]] = json match {
-//         case obj: JsObject => obj.value.mapValues{ _ match {
-//             case arr: JsArray => arr.value.map{ _ match{
-//                 case JsNumber(x) => Right[String, Double](x.doubleValue)
-//                 case JsString(s) => Left[String, Double](s)
-//                 case _ => return JsError()
-//               } 
-//             }
-//             case _ => return JsError()
-//           }
-//         }
-//         case _ => return JsError()
-//       }
-//       JsSuccess(UserEventContext(map))
-//     }
+    def reads(json: JsValue): JsResult[UserEventContext] = {
+      val map = json match {
+        case obj: JsObject => obj.value.mapValues{ value =>
+          val seq : Seq[Either[String, Double]] = value match {
+            case arr: JsArray => arr.value.map{ _ match{
+                case JsNumber(x) => Right[String, Double](x.doubleValue)
+                case JsString(s) => Left[String, Double](s)
+                case _ => return JsError()
+              } 
+            }
+            case _ => return JsError()
+          }
+          seq
+        }
+        case _ => return JsError()
+      }
+      JsSuccess(UserEventContext(Map[String, Seq[Either[String, Double]]](map.toSeq :_*)))
+    }
 
-//   }
-// }
+    def writes(obj: UserEventContext) : JsValue = {
+      JsObject(obj.data.mapValues{ seq =>
+        JsArray(seq.map{ _ match {
+          case Left(s) => JsString(s)
+          case Right(x) => JsNumber(x) 
+        }})
+      }.toSeq)
+    }
+
+  }
+}
 
 
 case class UserEvent(
@@ -46,6 +57,6 @@ case class UserEvent(
 )
 
 
-// object UserEvent {
-//   implicit val format = Json.format[UserEvent]
-// }
+object UserEvent {
+  implicit val format = Json.format[UserEvent]
+}
