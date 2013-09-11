@@ -10,7 +10,7 @@ import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import MessagingTypeMappers._
 import com.keepit.common.logging.Logging
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{CacheSizeLimitExceededException, JsonCacheImpl, FortyTwoCachePlugin, Key}
 import scala.concurrent.duration.Duration
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -146,20 +146,18 @@ class MessageRepoImpl @Inject() (
         v.messages
       }
       case None => {
-        log.info(s"[get_thread] getting thread messages for thread_id $threadId. $from - $to")
         val query = (for (row <- table if row.thread === threadId) yield row).drop(from)
-        log.info(s"[get_thread] getting thread messages for thread_id $threadId:\n${query.selectStatement}")
         val got = to match {
           case Some(upper) => query.take(upper-from).sortBy(row => row.createdAt desc).list
           case None => query.sortBy(row => row.createdAt desc).list
         }
         log.info(s"[get_thread] got thread messages for thread_id $threadId:\n$got")
         val mft = new MessagesForThread(threadId, got)
-        log.info("[get_thread] cache-miss: set key=$key to messages=$mft")
         try {
+          log.info("[get_thread] cache-miss: set key=$key to messages=$mft")
           messagesForThreadIdCache.set(key, mft)
         } catch {
-          case t:Throwable => // no-op
+          case c:CacheSizeLimitExceededException => // already reported in FortyTwoCache
         }
         got
       }
