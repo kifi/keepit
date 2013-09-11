@@ -1,6 +1,7 @@
 package com.keepit.common.healthcheck
 
 import com.keepit.test._
+import com.keepit.inject.TestFortyTwoModule
 import com.keepit.common.net._
 import com.keepit.common.actor._
 import org.specs2.mutable.Specification
@@ -27,35 +28,36 @@ class AirbrakeTest extends Specification with TestInjector {
 
   "AirbrakeTest" should {
     "format only error" in {
-      withInjector(StandaloneTestActorSystemModule(), FakeHttpClientModule(), FakeAirbrakeModule()) { implicit injector =>
-        val notifyer = new FakeAirbrakeNotifier()
+      withInjector(TestFortyTwoModule(), StandaloneTestActorSystemModule(), FakeHttpClientModule(), FakeAirbrakeModule()) { implicit injector =>
+        val notifyer = inject[FakeAirbrakeNotifier]
         val error = AirbrakeError(new IllegalArgumentException("hi there"))
         val xml = notifyer.format(error)
         println(xml)
         validate(xml)
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
-        (xml \ "error" \ "message").head === <message>hi there</message>
-        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AirbrakeTest.scala" number="32"/>
+        (xml \ "error" \ "message").head === <message>java.lang.IllegalArgumentException: hi there</message>
+        (xml \ "error" \ "backtrace" \ "line").head === <line method="withInjector" file="InjectorProvider.scala" number="39"/>
         (xml \ "error" \ "backtrace" \ "line").last === <line method="main" file="ForkMain.java" number="84"/>
-        (xml \ "server-environment" \ "environment-name").head === <environment-name>production</environment-name>
+        (xml \ "server-environment" \ "environment-name").head === <environment-name>Test</environment-name>
       }
     }
 
     "format with url and no params" in {
-      withInjector(StandaloneTestActorSystemModule(), FakeHttpClientModule(), FakeAirbrakeModule()) { implicit injector =>
-        val notifyer = new FakeAirbrakeNotifier()
-        val error = AirbrakeError(new IllegalArgumentException("hi there"), Some("http://www.kifi.com/hi"))
+      withInjector(TestFortyTwoModule(), StandaloneTestActorSystemModule(), FakeHttpClientModule(), FakeAirbrakeModule()) { implicit injector =>
+        val notifyer = inject[FakeAirbrakeNotifier]
+        val error = AirbrakeError(new IllegalArgumentException("hi there"), Some("http://www.kifi.com/hi"), method = Some("POST"))
         val xml = notifyer.format(error)
         println(xml)
         validate(xml)
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
-        (xml \ "error" \ "message").head === <message>hi there</message>
-        (xml \ "error" \ "backtrace" \ "line").head === <line method="apply" file="AirbrakeTest.scala" number="48"/>
+        (xml \ "error" \ "message").head === <message>java.lang.IllegalArgumentException: hi there</message>
+        (xml \ "error" \ "backtrace" \ "line").head === <line method="withInjector" file="InjectorProvider.scala" number="39"/>
         (xml \ "error" \ "backtrace" \ "line").last === <line method="main" file="ForkMain.java" number="84"/>
-        (xml \ "server-environment" \ "environment-name").head === <environment-name>production</environment-name>
+        (xml \ "server-environment" \ "environment-name").head === <environment-name>Test</environment-name>
         (xml \ "request" \ "url").head === <url>http://www.kifi.com/hi</url>
+        (xml \ "request" \ "action").head === <action>POST</action>
       }
     }
 
