@@ -9,7 +9,6 @@ import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.{HealthcheckPlugin}
 
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.libs.iteratee.Concurrent
@@ -29,6 +28,7 @@ class ExtMessagingController @Inject() (
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
     db: Database,
+    eventStatsdInterceptor: EventStatsdInterceptor,
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
@@ -36,7 +36,6 @@ class ExtMessagingController @Inject() (
     protected val healthcheckPlugin: HealthcheckPlugin
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
-
 
   /*********** REST *********************/
 
@@ -88,9 +87,7 @@ class ExtMessagingController @Inject() (
     }
   }
 
-
   /*********** WEBSOCKETS ******************/
-
 
   protected def onConnect(socket: SocketInfo) : Unit = {
     notificationRouter.registerUserSocket(socket)
@@ -177,14 +174,8 @@ class ExtMessagingController @Inject() (
       val eventJson = JsObject(pairs).deepMerge(
         Json.obj("experiments" -> socket.experiments)
       )
+      eventStatsdInterceptor.intercept(eventJson)
       shoebox.logEvent(socket.userId, eventJson)
     }
   )
-
-
-
-
 }
-
-
-
