@@ -294,7 +294,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
         case a:Array[Byte] => {
           if (a.length + keyS.length > 900000) {
             repo.remove(keyS)
-            throw new CacheSizeLimitExceededException("KV(byte[]) not cached: key.len=${keyS.length} ($keyS) val.len=${a.length}")
+            throw new CacheSizeLimitExceededException(s"KV(byte[]) not cached: key.len=${keyS.length} ($keyS) val.len=${a.length}")
           }
         }
         case _ => // ignore
