@@ -20,6 +20,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI]
+  def recordSensitiveUri(uri: NormalizedURI, sensitivity: Sensitivity)(implicit session: RWSession): NormalizedURI
 }
 
 @Singleton
@@ -30,7 +31,8 @@ class NormalizedURIRepoImpl @Inject() (
   urlHashCache: NormalizedURIUrlHashCache,
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizationServiceProvider: Provider[NormalizationService],
-  urlRepoProvider: Provider[URLRepo])
+  urlRepoProvider: Provider[URLRepo],
+  bookmarkRepoProvider: Provider[BookmarkRepo])
   extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
@@ -145,5 +147,13 @@ class NormalizedURIRepoImpl @Inject() (
   
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI] = {
     (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
+  }
+
+  def recordSensitiveUri(uri: NormalizedURI, sensitivity: Sensitivity)(implicit session: RWSession): NormalizedURI = {
+    val bookmarkRepo = bookmarkRepoProvider.get
+    if (uri.sensitivity.isEmpty) {
+      bookmarkRepo.getByUri(uri.id.get).foreach { bookmark => if (!bookmark.isPrivate) bookmarkRepo.save(bookmark.copy(isPrivate = true, isSensitive = true)) }
+    }
+    save(uri.copy(sensitivity = Some(sensitivity)))
   }
 }

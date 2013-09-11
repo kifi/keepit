@@ -25,6 +25,7 @@ import scala.util.Success
 import com.keepit.model.ScrapeInfo
 import com.keepit.search.Article
 import com.keepit.common.net.URI
+import com.keepit.common.db.slick.DBSession.RWSession
 
 object Scraper {
   val BATCH_SIZE = 100
@@ -119,7 +120,7 @@ class Scraper @Inject() (
       val latestUri = normalizedURIRepo.get(uri.id.get)
       if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
       else fetchedArticle match {
-        case Scraped(article, signature) =>
+        case Scraped(article, signature, redirects) =>
           // store a scraped article in a store map
           articleStore += (latestUri.id.get -> article)
 
@@ -131,9 +132,10 @@ class Scraper @Inject() (
             bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
               bookmarkRepo.save(bookmark.copy(title = savedUri.title))
             }
-            savedUri
+            processRedirects(savedUri, redirects)
           }
           log.debug("fetched uri %s => %s".format(scrapedURI, article))
+
 
           def shouldUpdateScreenshot(uri: NormalizedURI) = {
             uri.screenshotUpdatedAt map { update =>
@@ -144,10 +146,11 @@ class Scraper @Inject() (
             s3ScreenshotStore.updatePicture(scrapedURI)
 
           (scrapedURI, Some(article))
-        case NotScrapable(destinationUrl) =>
+        case NotScrapable(destinationUrl, redirects) =>
           val unscrapableURI = {
             scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-            normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.UNSCRAPABLE))
+            val savedUri = normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.UNSCRAPABLE))
+            processRedirects(savedUri, redirects)
           }
           (unscrapableURI, None)
         case NotModified =>
@@ -268,7 +271,8 @@ class Scraper @Inject() (
                   contentLang = Some(contentLang),
                   destinationUrl = fetchStatus.destinationUrl
                ),
-               signature)
+               signature,
+               fetchStatus.redirects)
             }
           }
         case HttpStatus.SC_NOT_MODIFIED =>
@@ -303,4 +307,16 @@ class Scraper @Inject() (
     httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
     destinationUrl = Some(destinationUrl)
   )
+
+  private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect])(implicit session: RWSession): NormalizedURI = {
+    val (permanentRedirects, otherRedirects) = redirects.partition(_.isPermanent)
+    val sensitive = for {
+      redirect <- otherRedirects.headOption
+      sensitivity <- Some(Sensitivity(redirect.statusCode.toString)) if uri.sensitivity != Some(sensitivity)
+    } yield normalizedURIRepo.recordSensitiveUri(uri, sensitivity)
+    val redirected = permanentRedirects.find(redirect => redirect.isAbsolute && redirect.currentLocation == uri.url).map(recordPermanentRedirect(sensitive.getOrElse(uri), _))
+    redirected orElse sensitive getOrElse uri
+  }
+
+  private def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit session: RWSession): NormalizedURI = uri
 }
