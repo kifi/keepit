@@ -76,7 +76,7 @@ class BookmarkCountCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration
   extends PrimitiveCacheImpl[BookmarkCountKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Bookmark] {
-  override val version = 3
+  override val version = 4
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
