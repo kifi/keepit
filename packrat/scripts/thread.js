@@ -4,7 +4,6 @@
 // @require scripts/html/metro/message.js
 // @require scripts/html/metro/compose.js
 // @require scripts/lib/jquery.timeago.js
-// @require scripts/api.js
 // @require scripts/formatting.js
 // @require scripts/look.js
 // @require scripts/render.js
