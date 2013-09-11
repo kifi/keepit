@@ -6,3 +6,4 @@ import play.api.mvc._
 trait SearchServiceController extends Controller with Logging
 trait ShoeboxServiceController extends Controller with Logging
 trait ElizaServiceController extends Controller with Logging
+trait HeimdalServiceController extends Controller with Logging

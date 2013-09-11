@@ -1,0 +1,21 @@
+
+
+
+#POST   /event/user        @EventTrackingController.
+
+
+
+##########################################
+#INTERNAL ROUTES/Eliza
+##########################################
+
+
+
+
+
+
+->  / common.Routes
+
+
+
+

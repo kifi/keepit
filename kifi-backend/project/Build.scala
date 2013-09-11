@@ -84,6 +84,10 @@ object ApplicationBuild extends Build {
       "org.jsoup" % "jsoup" % "1.7.1"
     )
 
+    val heimdalDependencies = Seq(
+      "org.reactivemongo" %% "reactivemongo" % "0.9"
+    )
+
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
       "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
       "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140")
@@ -161,7 +165,11 @@ object ApplicationBuild extends Build {
       (commonSettings ++ (routesImport += "com.keepit.eliza._")) : _*
     ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
+    val heimdal = play.Project("heimdal", appVersion, heimdalDependencies, path=file("modules/heimdal")).settings(
+      commonSettings: _*
+    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+
     val aaaMain = play.Project(appName, appVersion).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "compile->compile").aggregate(common, search, shoebox, eliza)
+    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile").aggregate(common, search, shoebox, eliza, heimdal)
 }
