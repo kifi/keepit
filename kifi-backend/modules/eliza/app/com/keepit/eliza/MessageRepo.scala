@@ -13,6 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.cache.{CacheSizeLimitExceededException, JsonCacheImpl, FortyTwoCachePlugin, Key}
 import scala.concurrent.duration.Duration
 import play.api.libs.json._
+import play.api.libs.json.util._
 import play.api.libs.functional.syntax._
 
 case class Message(
@@ -34,7 +35,7 @@ case class Message(
 }
 
 object Message {
-  implicit def format = (
+  implicit val format = (
       (__ \ 'id).formatNullable(Id.format[Message]) and
       (__ \ 'createdAt).format[DateTime] and
       (__ \ 'updatedAt).format[DateTime] and
@@ -48,7 +49,8 @@ object Message {
     )(Message.apply, unlift(Message.unapply))
 }
 
-class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message]) {
+case class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message])
+{
   override def equals(other:Any):Boolean = other match {
     case mft: MessagesForThread => (thread.id == mft.thread.id && messages.size == mft.messages.size)
     case _ => false
@@ -57,33 +59,18 @@ class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message])
   override def toString = "[MessagesForThread(%s): %s]".format(thread, messages)
 }
 
-object MessagesForThread extends Logging {
-  implicit val format = new Format[MessagesForThread] {
-    def reads(json: JsValue): JsResult[MessagesForThread] = {
-      json match {
-        case obj: JsObject => {
-          val iter = obj.fields.iterator
-          val tid = iter.next match {
-            case ("thread_id", id:JsNumber) => Id[MessageThread](id.value.toLong)
-          }
-          import Message.format
-          val messages = iter.next match {
-            case ("messages", jsArray:JsArray) => jsArray.value.map { v:JsValue =>
-              Json.fromJson[Message](v).get
-            }
-          }
-          JsSuccess(new MessagesForThread(tid, messages))
-        }
-        case _ => JsError()
-      }
-    }
-    def writes(mft: MessagesForThread):JsValue = {
-      Json.obj(
-          "thread_id"  -> mft.thread.id,
-          "messages"   -> JsArray(mft.messages.map{Json.toJson(_)})
-        )
-    }
-  }
+object MessagesForThread {
+
+  implicit val messagesForThreadReads = (
+    (__ \ 'thread_id).read(Id.format[MessageThread]) and
+    (__ \ 'messages).read[Seq[Message]]
+  )(MessagesForThread.apply _)
+
+  implicit val messagesForThreadWrites = (
+    (__ \ 'thread_id).write(Id.format[MessageThread]) and
+    (__ \ 'messages).write(Writes.traversableWrites[Message])
+  )(unlift(MessagesForThread.unapply))
+
 }
 
 case class MessagesForThreadIdKey(threadId:Id[MessageThread]) extends Key[MessagesForThread] {
