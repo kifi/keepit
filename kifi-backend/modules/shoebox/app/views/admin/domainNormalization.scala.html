@@ -1,0 +1,76 @@
+@(domains: Seq[com.keepit.classify.Domain], page: Int, totalCount: Int, pageCount: Int, maxPageSize: Int, searchTerm: Option[String])
+
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered pagination-mini">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@com.keepit.controllers.admin.routes.SliderAdminController.normSchemePageView(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @for(i <- 0 to (pageCount - 1)) {
+        @if(i == page) {
+          <li class="disabled">
+            <a href="com.keepit.controllers.admin.routes.SliderAdminController.normSchemePageView(i)">@{i + 1}</a>
+          </li>
+        } else {
+          <li class="active">
+            <a href="com.keepit.controllers.admin.routes.SliderAdminController.normSchemePageView(i)">@{i + 1}</a>
+          </li>
+        }
+      }
+      <li>
+        @if(domains.size > 0) {
+          <a href="com.keepit.controllers.admin.routes.SliderAdminController.normSchemePageView(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
+
+@admin(totalCount + " domains with normalization scheme") {
+  <h2>Showing @domains.size (page @{page + 1})</h2>
+  @pagination(page, pageCount)
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.SliderAdminController.searchDomainNormalization()" method="POST">
+    @if(searchTerm.isDefined){
+      <input type="text" name="searchTerm" value="@{searchTerm.get}"/>
+    } else {
+      <input type="text" name="searchTerm" placeholder="type prefix of hostname here"/>
+    }
+    <input type="submit" value="Search"/></br>
+    @if(searchTerm.isDefined){
+      <a href="@com.keepit.controllers.admin.routes.SliderAdminController.normSchemePageView(0)">Clear search</a>
+    }
+  </form>
+
+  <table class = "table table-bordered">
+    <tr>
+      <th>#</th>
+      <th>domain id</th>
+      <th>hostname</th>
+      <th>state</th>
+      <th>scheme</th>
+    </tr>
+  
+  @for((domain, i) <- domains.zipWithIndex) {
+    <tr>
+      <td>@{i + 1 + page*maxPageSize}</td>
+      <td>@domain.id.get</td>
+      <td>@domain.hostname</td>
+      <td>@domain.state</td>
+      <td>@domain.normalizationScheme.getOrElse("None")</td>
+    </tr>
+  }
+
+  </table>
+  @pagination(page, pageCount) 
+
+}
