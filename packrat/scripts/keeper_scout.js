@@ -7,7 +7,7 @@ function logEvent() {  // parameters defined in main.js
 }
 
 var tile = tile || function() {  // idempotent for Chrome
-  api.log("[scout]", location.hostname);
+  api.log("[keeper_scout]", location.hostname);
 
   window.onerror = function(message, url, lineNo) {
     if (!/https?\:/.test(url)) {  // this is probably from extension code, not from the website we're running this on
