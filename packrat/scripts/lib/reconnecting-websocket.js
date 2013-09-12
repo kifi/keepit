@@ -3,9 +3,7 @@ function ReconnectingWebSocket(opts) {
   var ws, self = this, buffer = [], disTimeout, pingTimeout, lastRecOrPingTime, retryConnectDelayMs = minRetryConnectDelayMs;
 
   this.send = function(data) {
-    if (disTimeout) {
-      buffer.push([data, +new Date]);
-    } else if (ws && !disTimeout && ws.readyState == WebSocket.OPEN) {
+    if (ws && ws.readyState == WebSocket.OPEN && !disTimeout) {
       ws.send(data);
       if (new Date - lastRecOrPingTime > idlePingDelayMs) {  // a way to recover from timeout failure/unreliability
         ping();
