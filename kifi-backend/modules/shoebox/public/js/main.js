@@ -1,5 +1,6 @@
 var xhrDomain = 'https://api.kifi.com';
-//xhrDomain = 'http://dev.ezkeep.com:9000';
+var wwwDomain = 'https://www.kifi.com';
+//xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 
@@ -468,7 +469,7 @@ $(function() {
 				var postLink = function (e) {
 					e.preventDefault();
 					$('<form>')
-						.attr('action', xhrDomain + $(this).data('action'))
+						.attr('action', wwwDomain + $(this).data('action'))
 						.attr('method', 'post')
 						.appendTo('body')
 						.submit()
@@ -986,16 +987,13 @@ $(function() {
 		}
 	}
 
-	function updateNumKeeps() {
-		$.getJSON(xhrBase + '/keeps/count', function(data) {
-			$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.numKeeps);
-		});
-	}
-
 	function updateCollections() {
 		promise.collections = $.getJSON(xhrBase + '/collections/all', {sort: "user"}, function(data) {
-			collTmpl.render(data.collections);
 			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
+			if ($collList.find('.renaming, .showing, .sortable-placeholder').length === 0) {
+				collTmpl.render(data.collections);
+			}
+			$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.keeps);
 		}).promise();
 	}
 
@@ -1132,7 +1130,7 @@ $(function() {
 					}
 				});
 				break;
-			case 'search':
+			case 'find':
 				doSearch(decodeURIComponent(queryFromUri(state.hash)));
 				break;
 			case 'profile':
@@ -1170,7 +1168,7 @@ $(function() {
 			case 'collection':
 				title = collections[uri.substr(kind.length + 1)].name;
 				break;
-			case 'search':
+			case 'find':
 				title = queryFromUri(uri);
 				break;
 			case 'profile':
@@ -1268,7 +1266,7 @@ $(function() {
 		} else if (!q) {
 			navigate('');
 		} else if (!e.which || e.which == 13) { // Enter
-			var uri = 'search?q=' + encodeURIComponent(q).replace(/%20/g, '+');
+			var uri = 'find?q=' + encodeURIComponent(q).replace(/%20/g, '+');
 			if (e.which) {
 				navigate(uri);
 			} else {
@@ -1771,7 +1769,6 @@ $(function() {
 		$('#invite-friends-link').toggle(canInvite());
 	});
 	updateCollections();
-	updateNumKeeps();
 	$.getJSON(xhrBase + '/user/friends/count', function(data) {
 		updateFriendRequests(data.requests);
 	});
@@ -1781,7 +1778,7 @@ $(function() {
 
 	// auto-update my keeps
 	setTimeout(function refresh() {
-		updateNumKeeps();
+		updateCollections();
 		addNewKeeps();
 		setTimeout(refresh, 25000 + 5000 * Math.random());
 	}, 30000);

@@ -17,7 +17,7 @@ import play.api.mvc.Action
 
 class ExtEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  EventPersister: EventPersister,
+  eventPersister: EventPersister,
   db: Database,
   userRepo: UserRepo,
   implicit private val clock: Clock,
@@ -40,8 +40,8 @@ class ExtEventController @Inject() (
       val experiments = (o \ "experiments").as[Seq[State[ExperimentType]]].toSet
       val user = db.readOnly { implicit s => userRepo.get(userId) }
       val event = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
-      log.debug("Created new event: %s".format(event))
-      EventPersister.persist(event)
+      log.debug(s"Created new event: $event")
+      eventPersister.persist(event)
     }
     Ok("")
   }
@@ -50,7 +50,7 @@ class ExtEventController @Inject() (
     val json = request.body
     (json \ "version").as[Int] match {
       case 1 => createEventsFromPayload(json, request.user, request.experiments)
-      case i => throw new Exception("Unknown events version: %s".format(i))
+      case i => throw new Exception("Unknown events version: $i")
     }
     Ok(JsObject(Seq("stored" -> JsString("ok"))))
   }
@@ -85,9 +85,9 @@ class ExtEventController @Inject() (
           case _: JsValue => None
         }).getOrElse(Seq())
         val newEvent = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
-        log.debug("Created new event: %s".format(newEvent))
+        log.debug(s"Created new event: $newEvent")
 
-        EventPersister.persist(newEvent)
+        eventPersister.persist(newEvent)
       }
   }
 }

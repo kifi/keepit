@@ -15,6 +15,7 @@ import com.keepit.integrity.DataIntegrityModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.common.social.ProdSocialGraphModule
+import com.keepit.common.healthcheck.AirbrakeModule
 
 abstract class ShoeboxModule(
   val secureSocialModule: SecureSocialModule,

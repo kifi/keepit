@@ -356,6 +356,10 @@ const socketHandlers = {
         }
       }
 
+      if (i == n) {
+        socket.send(["get_threads_by_url", message.url]);
+      }
+
       // ensure marked read if from this user
       if (message.user.id == session.userId) {
         if (new Date(message.createdAt) > new Date(d.lastMessageRead[threadId] || 0)) {
