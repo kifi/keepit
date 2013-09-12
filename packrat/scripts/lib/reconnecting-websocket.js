@@ -17,7 +17,7 @@ function ReconnectingWebSocket(opts) {
   this.close = function() {
     api.log("#0bf", "[RWS.close]");
     disconnect("close");
-    this.send = this.close = buffer = pingBuffer = null;
+    this.send = this.close = buffer = null;
     window.removeEventListener("online", onOnlineConnect);
   };
 
@@ -78,11 +78,9 @@ function ReconnectingWebSocket(opts) {
       ws.onmessage = onMessageN;
       retryConnectDelayMs = minRetryConnectDelayMs;
       opts.onConnect();
-      while (buffer.length) {
-        var a = buffer.shift();
-        api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
-        ws.send(a[0]);
-      }
+      sendBuffer(buffer, "disconnect");
+      pendingPong = false;
+      sendBuffer(pingBuffer, "ping");
     } else if (e.data === '["denied"]') {
       api.log("#a00", "[RWS.onMessage1]", e.data);
       disconnect("onMessage1");
@@ -99,13 +97,17 @@ function ReconnectingWebSocket(opts) {
     if (e.data === '["pong"]') {
       api.log("#0ac", "[RWS.pong]");
       pendingPong = false;
-      while (pingBuffer.length) {
-        var a = pingBuffer.shift();
-        api.log("#0bf", "[RWS] sending, pong buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
-        ws.send(a[0]);
-      }
+      sendBuffer(pingBuffer, "ping");
     } else {
       opts.onMessage.call(self, e);
+    }
+  }
+
+  function sendBuffer(arr, name) {
+    while (arr.length) {
+      var a = arr.shift();
+      api.log("#0bf", "[RWS] sending, %s buffered for %i ms: %s", name, new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
+      ws.send(a[0]);
     }
   }
 
