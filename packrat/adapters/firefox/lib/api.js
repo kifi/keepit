@@ -503,7 +503,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       include: urlRe,
       contentStyleFile: o.styles.map(url),
       contentScriptFile: o.scripts.map(url),
-      contentScriptWhen: "ready",
+      contentScriptWhen: arr[2] ? "start" : "ready",
       contentScriptOptions: {dataUriPrefix: url(""), dev: prefs.env == "development"},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
