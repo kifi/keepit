@@ -277,7 +277,7 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .invite-status {font-size: 13px; font-weight: 300; color: #67829c; letter-spacing: 1px; margin-right: 42px}
 .invite-button {position: absolute; top: 30px; right: 24px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
 .invite-button::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background: url(../img/friend-actions.png) -70px; background-size: auto 16px; width: 20px; position: relative; left: 1px}
-.invite-friends-loading {margin: 12px 0;}
+.invite-friends-loading {margin: 12px auto; display: block;}
 @media screen and (min-width: 1140px) {
   .invite-friend {display: inline-block; vertical-align: top; width: 48%; width: -webkit-calc(50% - 6px); width: calc(50% - 6px)}
   .invite-friend:nth-child(even) {margin-left: 12px}

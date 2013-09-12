@@ -631,7 +631,7 @@ $(function() {
 	$nwFriends.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var sT = this.scrollTop, sH = this.scrollHeight;
 		// tweak these values as desired
-		const offset = sH / 4, toFetch = 40;
+		const offset = sH / 3, toFetch = 40;
 		if (!$nwFriendsLoading.is(':visible') && this.clientHeight + sT > sH - offset) {
 			console.log('loading more friends');
 			prepInviteTab(toFetch);
