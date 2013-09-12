@@ -1129,7 +1129,7 @@ $(function() {
 					}
 				});
 				break;
-			case 'search':
+			case 'find':
 				doSearch(decodeURIComponent(queryFromUri(state.hash)));
 				break;
 			case 'profile':
@@ -1167,7 +1167,7 @@ $(function() {
 			case 'collection':
 				title = collections[uri.substr(kind.length + 1)].name;
 				break;
-			case 'search':
+			case 'find':
 				title = queryFromUri(uri);
 				break;
 			case 'profile':
@@ -1265,7 +1265,7 @@ $(function() {
 		} else if (!q) {
 			navigate('');
 		} else if (!e.which || e.which == 13) { // Enter
-			var uri = 'search?q=' + encodeURIComponent(q).replace(/%20/g, '+');
+			var uri = 'find?q=' + encodeURIComponent(q).replace(/%20/g, '+');
 			if (e.which) {
 				navigate(uri);
 			} else {
