@@ -1,5 +1,6 @@
 var xhrDomain = 'https://api.kifi.com';
-//xhrDomain = 'http://dev.ezkeep.com:9000';
+var wwwDomain = 'https://www.kifi.com';
+//xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 
@@ -468,7 +469,7 @@ $(function() {
 				var postLink = function (e) {
 					e.preventDefault();
 					$('<form>')
-						.attr('action', xhrDomain + $(this).data('action'))
+						.attr('action', wwwDomain + $(this).data('action'))
 						.attr('method', 'post')
 						.appendTo('body')
 						.submit()
