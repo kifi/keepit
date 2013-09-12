@@ -34,7 +34,7 @@ case class Message(
 }
 
 object Message {
-  implicit def format = (
+  implicit val format = (
       (__ \ 'id).formatNullable(Id.format[Message]) and
       (__ \ 'createdAt).format[DateTime] and
       (__ \ 'updatedAt).format[DateTime] and
@@ -48,7 +48,8 @@ object Message {
     )(Message.apply, unlift(Message.unapply))
 }
 
-class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message]) {
+case class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message])
+{
   override def equals(other:Any):Boolean = other match {
     case mft: MessagesForThread => (thread.id == mft.thread.id && messages.size == mft.messages.size)
     case _ => false
@@ -57,31 +58,22 @@ class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message])
   override def toString = "[MessagesForThread(%s): %s]".format(thread, messages)
 }
 
-object MessagesForThread extends Logging {
-  implicit val format = new Format[MessagesForThread] {
+object MessagesForThread {
+
+  implicit val messagesForThreadReads = new Reads[MessagesForThread] {
     def reads(json: JsValue): JsResult[MessagesForThread] = {
-      json match {
-        case obj: JsObject => {
-          val iter = obj.fields.iterator
-          val tid = iter.next match {
-            case ("thread_id", id:JsNumber) => Id[MessageThread](id.value.toLong)
-          }
-          import Message.format
-          val messages = iter.next match {
-            case ("messages", jsArray:JsArray) => jsArray.value.map { v:JsValue =>
-              Json.fromJson[Message](v).get
-            }
-          }
-          JsSuccess(new MessagesForThread(tid, messages))
-        }
-        case _ => JsError()
-      }
+      JsSuccess[MessagesForThread](MessagesForThread(
+        Id[MessageThread]((json \ "thread_id").as[Long]),
+        (json \ "messages").as[Seq[Message]]
+      ))
     }
-    def writes(mft: MessagesForThread):JsValue = {
+  }
+  implicit val messagesForThreadWrites = new Writes[MessagesForThread] {
+    def writes(o: MessagesForThread): JsValue = {
       Json.obj(
-          "thread_id"  -> mft.thread.id,
-          "messages"   -> JsArray(mft.messages.map{Json.toJson(_)})
-        )
+        "thread_id" -> o.thread.id,
+        "messages"  -> o.messages
+      )
     }
   }
 }
