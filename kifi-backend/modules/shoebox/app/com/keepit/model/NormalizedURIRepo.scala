@@ -20,7 +20,6 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI]
-  def recordSensitiveUri(uri: NormalizedURI, sensitivity: Option[Sensitivity])(implicit session: RWSession): NormalizedURI
 }
 
 @Singleton
@@ -47,12 +46,12 @@ class NormalizedURIRepoImpl @Inject() (
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
-    def sensitivity = column[Sensitivity]("sensitivity")
+    def restriction = column[Restriction]("restriction", O.Nullable)
     def normalization = column[Normalization]("normalization")
     def redirect = column[Id[NormalizedURI]]("redirect")
     def redirectTime = column[DateTime]("redirect_time")
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~
-        screenshotUpdatedAt.? ~ sensitivity.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
+        screenshotUpdatedAt.? ~ restriction.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
   }
 
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
@@ -147,15 +146,5 @@ class NormalizedURIRepoImpl @Inject() (
   
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI] = {
     (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
-  }
-
-  def recordSensitiveUri(uri: NormalizedURI, sensitivity: Option[Sensitivity])(implicit session: RWSession): NormalizedURI = {
-    val bookmarkRepo = bookmarkRepoProvider.get
-    (uri.sensitivity, sensitivity) match {
-      case (None, Some(_)) => bookmarkRepo.getByUri(uri.id.get).foreach { bookmark => if (!bookmark.isPrivate) bookmarkRepo.save(bookmark.copy(isPrivate = true, isSensitive = true)) }
-      case (Some(_), None) => bookmarkRepo.getByUri(uri.id.get).foreach { bookmark => if (bookmark.isSensitive) bookmarkRepo.save(bookmark.copy(isPrivate = false, isSensitive = false)) }
-      case _ => Unit
-    }
-    save(uri.copy(sensitivity = sensitivity))
   }
 }

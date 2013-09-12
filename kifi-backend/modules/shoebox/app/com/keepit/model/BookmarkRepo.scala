@@ -55,12 +55,11 @@ class BookmarkRepoImpl @Inject() (
     def bookmarkPath = column[String]("bookmark_path", O.NotNull)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def isPrivate = column[Boolean]("is_private", O.NotNull)
-    def isSensitive = column[Boolean]("is_sensitive", O.NotNull)
     def source = column[BookmarkSource]("source", O.NotNull)
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
     def seq = column[SequenceNumber]("seq", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~
-      isSensitive ~ userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark.apply _, Bookmark.unapply _)
+      userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark.apply _, Bookmark.unapply _)
   }
   
   def removeFromCache(bookmark: Bookmark)(implicit session: RSession): Unit = {

@@ -13,7 +13,6 @@ import play.api.libs.json._
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import com.keepit.common.strings._
-import play.api.libs.json.JsString
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
@@ -28,7 +27,7 @@ case class NormalizedURI (
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
   seq: SequenceNumber = SequenceNumber.ZERO,
   screenshotUpdatedAt: Option[DateTime] = None,
-  sensitivity: Option[Sensitivity] = None,
+  restriction: Option[Restriction] = None,
   normalization: Option[Normalization] = None,
   redirect: Option[Id[NormalizedURI]] = None,
   redirectTime: Option[DateTime] = None
@@ -53,7 +52,7 @@ object NormalizedURI {
     (__ \ 'state).format(State.format[NormalizedURI]) and
     (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat) and
     (__ \ 'screenshotUpdatedAt).formatNullable[DateTime] and
-    (__ \ 'sensitivity).formatNullable[Sensitivity] and
+    (__ \ 'restriction).formatNullable[Restriction] and
     (__ \ 'normalization).formatNullable[Normalization] and
     (__ \ 'redirect).formatNullable(Id.format[NormalizedURI]) and
     (__ \'redirectTime).formatNullable[DateTime]

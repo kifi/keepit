@@ -15,13 +15,8 @@ import org.joda.time.Seconds
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.store.S3ScreenshotStore
 import org.joda.time.Days
-import net.codingwell.scalaguice.ScalaModule
-import com.keepit.inject.AppScoped
-import scala.util.Failure
-import scala.Some
-import com.keepit.model.NormalizedURI
+import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.HealthcheckError
-import scala.util.Success
 import com.keepit.model.ScrapeInfo
 import com.keepit.search.Article
 import com.keepit.common.net.URI
@@ -126,13 +121,14 @@ class Scraper @Inject() (
 
           val scrapedURI = {
             // first update the uri state to SCRAPED
-            val savedUri = normalizedURIRepo.save(latestUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+            val toBeSaved = processRedirects(latestUri, redirects).withTitle(article.title).withState(NormalizedURIStates.SCRAPED)
+            val savedUri = normalizedURIRepo.save(toBeSaved)
             // then update the scrape schedule
             scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
             bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
               bookmarkRepo.save(bookmark.copy(title = savedUri.title))
             }
-            processRedirects(savedUri, redirects)
+            savedUri
           }
           log.debug("fetched uri %s => %s".format(scrapedURI, article))
 
@@ -149,8 +145,8 @@ class Scraper @Inject() (
         case NotScrapable(destinationUrl, redirects) =>
           val unscrapableURI = {
             scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-            val savedUri = normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.UNSCRAPABLE))
-            processRedirects(savedUri, redirects)
+            val toBeSaved = processRedirects(latestUri, redirects).withState(NormalizedURIStates.UNSCRAPABLE)
+            normalizedURIRepo.save(toBeSaved)
           }
           (unscrapableURI, None)
         case NotModified =>
@@ -310,10 +306,9 @@ class Scraper @Inject() (
 
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect])(implicit session: RWSession): NormalizedURI = {
     val (permanentRedirects, otherRedirects) = redirects.partition(_.isPermanent)
-    val sensitive = for { redirect <- otherRedirects.headOption if uri.sensitivity.isEmpty || uri.sensitivity.get.info != redirect.statusCode.toString } yield
-      normalizedURIRepo.recordSensitiveUri(uri, Some(Sensitivity(redirect.statusCode.toString)))
-    val redirected = permanentRedirects.find(redirect => redirect.isAbsolute && redirect.currentLocation == uri.url).map(recordPermanentRedirect(sensitive.getOrElse(uri), _))
-    redirected orElse sensitive getOrElse uri
+    val withRestriction = otherRedirects.headOption.map { redirect => uri.copy(restriction = Some(Restriction(redirect.statusCode))) }
+    val redirected = permanentRedirects.find(redirect => redirect.isAbsolute && redirect.currentLocation == uri.url).map(recordPermanentRedirect(withRestriction.getOrElse(uri), _))
+    redirected orElse withRestriction getOrElse uri
   }
 
   private def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit session: RWSession): NormalizedURI = uri

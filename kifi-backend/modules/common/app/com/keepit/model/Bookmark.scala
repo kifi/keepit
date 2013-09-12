@@ -19,7 +19,6 @@ case class Bookmark(
   url: String, // denormalized for efficiency
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
-  isSensitive: Boolean = false,
   userId: Id[User],
   state: State[Bookmark] = BookmarkStates.ACTIVE,
   source: BookmarkSource,
@@ -57,7 +56,6 @@ object Bookmark {
     (__ \ 'url).format[String] and
     (__ \ 'bookmarkPath).formatNullable[String] and
     (__ \ 'isPrivate).format[Boolean] and
-    (__ \ 'isSensitive).format[Boolean] and
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'state).format(State.format[Bookmark]) and
     (__ \ 'source).format[String].inmap(BookmarkSource.apply, unlift(BookmarkSource.unapply)) and
@@ -98,9 +96,7 @@ object BookmarkSource {
 
 object BookmarkFactory {
 
-  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: BookmarkSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Bookmark = {
-    val bookmark = Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
-    if (uri.sensitivity.isDefined) bookmark.copy(isPrivate = true, isSensitive = true) else bookmark
-  }
+  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: BookmarkSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Bookmark =
+    Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
 
 }
