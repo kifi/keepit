@@ -20,6 +20,8 @@ trait DomainRepo extends Repo[Domain] {
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain]
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RSession): Int
+  def getByPrefix(prefix: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
+  def normSchemePage(page: Int, pageSize: Int)(implicit session: RSession): (Seq[Domain], Int)
 }
 
 @Singleton
@@ -56,4 +58,14 @@ class DomainRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) exte
 
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RSession): Int =
     (for (d <- table if d.id.inSet(domainIds)) yield d.autoSensitive ~ d.updatedAt).update(value -> clock.now())
+    
+  def getByPrefix(prefix: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] = {
+    (for (d <- table if d.hostname.startsWith(prefix) && d.state =!= excludeState.orNull) yield d).sortBy(_.hostname).list
+  }
+  
+  def normSchemePage(page: Int, pageSize: Int)(implicit session: RSession): (Seq[Domain], Int) = {
+    val ds = (for (d <- table if d.state =!= DomainStates.INACTIVE && d.normalizationScheme.isNotNull) yield d).sortBy(_.hostname).list
+    (ds.drop(page*pageSize).take(pageSize), ds.size)
+  }
+  
 }
