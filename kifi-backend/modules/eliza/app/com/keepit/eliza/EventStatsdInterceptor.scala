@@ -1,9 +1,11 @@
 package com.keepit.eliza
 
-import play.modules.statsd.api.Statsd
-import play.api.libs.json.JsValue
+import com.keepit.common.logging.Logging
 
-class EventStatsdInterceptor {
+import play.api.libs.json.JsValue
+import play.modules.statsd.api.Statsd
+
+class EventStatsdInterceptor extends Logging {
   def intercept(json: JsValue): Unit = {
     if ((json \ "eventName").as[String] == "dustSettled") {
       reportDustSettled(json \ "metaData")
@@ -17,18 +19,18 @@ class EventStatsdInterceptor {
 
     log.info(s"DustSettled: kifiReceivedAt: $kifiReceivedAt, kifiShownAt: $kifiShownAt, googleShownAt: $googleShownAt")
 
-    Statsd.timing(s"$search.extension.kifiReceivedAt", kifiReceivedAt)
-    Statsd.timing(s"$search.extension.kifiShownAt", kifiShownAt)
-    Statsd.timing(s"$search.extension.googleShownAt", googleShownAt)
+    Statsd.timing(s"search.extension.kifiReceivedAt", kifiReceivedAt)
+    Statsd.timing(s"search.extension.kifiShownAt", kifiShownAt)
+    Statsd.timing(s"search.extension.googleShownAt", googleShownAt)
 
-    Statsd.timing(s"$search.extension.kifiShownVsReceived", (kifiShownAt - kifiReceivedAt))
+    Statsd.timing(s"search.extension.kifiShownVsReceived", (kifiShownAt - kifiReceivedAt))
 
-    Statsd.timing(s"$search.extension.kifiReceivedVsGoogle", (kifiReceivedAt - googleShownAt))
-    Statsd.timing(s"$search.extension.kifiShownVsGoogle", (kifiShownAt - googleShownAt))
+    Statsd.timing(s"search.extension.kifiReceivedVsGoogle", (kifiReceivedAt - googleShownAt))
+    Statsd.timing(s"search.extension.kifiShownVsGoogle", (kifiShownAt - googleShownAt))
 
     //Adding 1000 to the numbers since they may be negative and mess up with statsd or graphite (negative timing may break things)
     //Testing if it makes any diferance
-    Statsd.timing(s"$search.extension.kifiReceivedVsGoogle1000", (1000 + kifiReceivedAt - googleShownAt))
-    Statsd.timing(s"$search.extension.kifiShownVsGoogle1000", (1000 + kifiShownAt - googleShownAt))
+    Statsd.timing(s"search.extension.kifiReceivedVsGoogle1000", (1000 + kifiReceivedAt - googleShownAt))
+    Statsd.timing(s"search.extension.kifiShownVsGoogle1000", (1000 + kifiShownAt - googleShownAt))
   }
 }
