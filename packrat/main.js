@@ -857,13 +857,11 @@ function messageCount(d) {
   var n = 0;
   for (var i = 0; i < d.threads.length; i++) {
     var th = d.threads[i], thReadTime = new Date(d.lastMessageRead[th.id] || 0);
-    var newMsg = 0;
     for (var id in th.messageTimes) {
       if (new Date(th.messageTimes[id]) > thReadTime) {
-        newMsg = 1;
+        n++; break;
       }
     }
-    n += newMsg;
   }
   return n;
 }
@@ -973,7 +971,11 @@ function subscribe(tab) {
 
   var d = pageData[tab.nUri || tab.url];
 
-  if (d && !d.cacheIsDirty) {  // no need to ask server again
+  if (d) {  // no need to ask server again
+    if (d.cacheIsDirty) {
+      socket.send(["get_threads_by_url", tab.nUri || tab.url]);
+      d.cacheIsDirty = false;
+    }
     if (tab.nUri) {  // tab is already initialized
       if (d.counts) {
         d.counts.n = numNotificationsNotVisited;
@@ -993,28 +995,27 @@ function subscribe(tab) {
 
       api.log("[subscribe]", resp);
       var uri = resp.normalized;
-      var uri_1 = resp.uri_1;
-      var uri_2 = resp.uri_2;
+      var uri_1 = resp.uri_1 || resp;
+      var uri_2 = resp.uri_2 || resp;
 
       if ((api.tabs.get(tab.id) || {}).url != tab.url) return;
       d = pageData[uri] = pageData[uri] || new PageData;
-      d.cacheIsDirty = false;
       finish(uri);
 
       // uri_1
-      d.kept = uri_1.kept || resp.kept;
-      d.position = uri_1.position || resp.position;
-      d.neverOnSite = uri_1.neverOnSite || resp.neverOnSite;
-      d.sensitive = uri_1.sensitive || resp.sensitive;
+      d.kept = uri_1.kept;
+      d.position = uri_1.position;
+      d.neverOnSite = uri_1.neverOnSite;
+      d.sensitive = uri_1.sensitive;
       d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
         sendInit(tab, d);
       });
 
       // uri_2
-      d.shown = uri_2.shown || resp.shown;
-      d.keepers = uri_2.keepers || resp.keepers || [];
-      d.keeps = uri_2.keeps || resp.keeps || 0;
+      d.shown = uri_2.shown;
+      d.keepers = uri_2.keepers || [];
+      d.keeps = uri_2.keeps || 0;
       d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
       d.threads = d.threads || [];
       d.counts = d.counts || {m:0, n:0};
@@ -1305,8 +1306,8 @@ function startSession(callback, retryMs) {
     session = data;
     session.prefs = {}; // to come via socket
     socket = api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
-      for (page in pageData) {
-        pageData[page].cacheIsDirty = true;
+      for (var nUri in pageData) {
+        pageData[nUri].cacheIsDirty = true;
       }
       socket.send(["get_last_notify_read_time"]);
       connectSync();
