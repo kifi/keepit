@@ -7,8 +7,10 @@ import com.keepit.model._
 import com.keepit.reports.UserRetentionCache
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
+import com.keepit.classify.DomainCache
 
-case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
+case class
+ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
 
   @Singleton
   @Provides
@@ -174,5 +176,10 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def friendRequestCountCache(outerRepo: FortyTwoCachePlugin) =
     new FriendRequestCountCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def domainCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new DomainCache((innerRepo, 1 second), (outerRepo, 7 days))
 
 }

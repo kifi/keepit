@@ -6,7 +6,8 @@ import com.keepit.common.time._
 import com.keepit.model.Normalization
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import scala.concurrent.duration.Duration
 
 
 case class Domain(
@@ -48,3 +49,12 @@ object Domain {
 }
 
 object DomainStates extends States[Domain]
+
+case class DomainKey(hostname: String) extends Key[Domain] {
+  override val version = 1
+  val namespace = "domain_by_hostname"
+  def toKey(): String = hostname
+}
+
+class DomainCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[DomainKey, Domain](innermostPluginSettings, innerToOuterPluginSettings:_*)
