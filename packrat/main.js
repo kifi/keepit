@@ -702,7 +702,7 @@ function insertNewNotification(n) {
 
   while(++i < notifications.length) {
     var n2 = notifications[i];
-    if ((n.thread && n2.thread == n.thread) || n.locator == n2.locator) {
+    if ((n.thread && n2.thread == n.thread) || (n.locator && n.locator == n2.locator) || (n.id == n2.id)) {
       notifications.splice(i--, 1);
       if (n2.unread) {
         decrementNumNotificationsNotVisited(n2);
