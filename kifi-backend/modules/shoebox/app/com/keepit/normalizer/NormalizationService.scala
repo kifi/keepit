@@ -95,7 +95,7 @@ class NormalizationServiceImpl @Inject() (
         referenceURI <- URI.parse(referenceUrl)
         variations <- Try {
           for {
-            normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS
+            normalization <- Normalization.schemes
             urlVariation <- SchemeNormalizer(normalization)(referenceURI).safelyToString()
             uri <- db.readOnly { implicit session => normalizedURIRepo.getByNormalizedUrl(urlVariation) }
           } yield (normalization, uri)
