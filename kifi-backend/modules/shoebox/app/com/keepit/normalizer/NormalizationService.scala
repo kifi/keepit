@@ -37,8 +37,16 @@ class NormalizationServiceImpl @Inject() (
   def normalize(uriString: String)(implicit session: RSession): String = normalizedURIRepo.getByUri(uriString).map(_.url).getOrElse(prenormalize(uriString))
   def prenormalize(uriString: String)(implicit session: RSession): String = {
     val withStandardPrenormalizationOption = URI.safelyParse(uriString).map(Prenormalizer)
-    val withPreferredSchemeOption = for { prenormalized <- withStandardPrenormalizationOption; schemeNormalizer <- priorKnowledge.getPreferredSchemeNormalizer(uriString) } yield schemeNormalizer(prenormalized)
-    val prenormalizedStringOption = for { prenormalizedURI <- withPreferredSchemeOption orElse withStandardPrenormalizationOption ; prenormalizedString <- prenormalizedURI.safelyToString() } yield prenormalizedString
+    val withPreferredSchemeOption = for {
+      prenormalized <- withStandardPrenormalizationOption
+      schemeNormalizer <- priorKnowledge.getPreferredSchemeNormalizer(uriString)
+    } yield schemeNormalizer(prenormalized)
+
+    val prenormalizedStringOption = for {
+      prenormalizedURI <- withPreferredSchemeOption orElse withStandardPrenormalizationOption
+      prenormalizedString <- prenormalizedURI.safelyToString()
+    } yield prenormalizedString
+
     prenormalizedStringOption.getOrElse(uriString)
   }
 
