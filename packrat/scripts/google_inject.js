@@ -206,15 +206,16 @@ if (searchUrlRe.test(document.URL)) !function() {
   });
 
   function attachKifiRes(_, ires) {
-    if ($res[0].parentElement) {
-      return true;
-    } else if ((ires = ires || document.getElementById('ires'))) {
+    if ((ires = ires || document.getElementById('ires'))) {
       $res.insertBefore(ires);
       if (!response.shown && response.hits) {
         response.shown = true;
         tKifiResultsShown = Date.now();
       }
-      setTimeout(bindResHandlers);
+      if (bindResHandlers) {
+        setTimeout(bindResHandlers);
+        bindResHandlers = null;
+      }
       return true;
     }
   }
@@ -445,7 +446,6 @@ if (searchUrlRe.test(document.URL)) !function() {
       api.port.emit("add_deep_link_listener", $(this).data("locator"));
       location.href = $(this).closest("li.g").find("h3.r a")[0].href;
     });
-    bindResHandlers = $.noop;
   }
 
   function appendResults() {
