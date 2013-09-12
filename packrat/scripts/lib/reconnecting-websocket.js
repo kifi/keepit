@@ -1,11 +1,11 @@
 function ReconnectingWebSocket(opts) {
   const wordRe = /\w+/, minRetryConnectDelayMs = 300, maxRetryConnectDelayMs = 5000, idlePingDelayMs = 10000;
-  var ws, self = this, buffer = [], pendingPong = false, pingBuffer = [], disTimeout, pingTimeout, lastRecOrPingTime, retryConnectDelayMs = minRetryConnectDelayMs;
+  var ws, self = this, buffer = [], disTimeout, pingTimeout, lastRecOrPingTime, retryConnectDelayMs = minRetryConnectDelayMs;
 
   this.send = function(data) {
-    if (pendingPong) {
-      pingBuffer.push([data, +new Date]);
-    } else if (ws && ws.greeted && ws.readyState == WebSocket.OPEN) {
+    if (disTimeout) {
+      buffer.push([data, +new Date]);
+    } else if (ws && !disTimeout && ws.readyState == WebSocket.OPEN) {
       ws.send(data);
       if (new Date - lastRecOrPingTime > idlePingDelayMs) {  // a way to recover from timeout failure/unreliability
         ping();
@@ -40,7 +40,6 @@ function ReconnectingWebSocket(opts) {
   function disconnect(why, timeoutSec) {
     var permanently = why === "close";
     api.log("#0bf", "[RWS.disconnect] why:", why, "readyState:", ws.readyState, "buffered:", buffer.length, "retry:", permanently ? "no" : retryConnectDelayMs);
-    pendingPong = false;
     clearTimeout(disTimeout), disTimeout = null;
     clearTimeout(pingTimeout), pingTimeout = null;
     ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
@@ -74,13 +73,10 @@ function ReconnectingWebSocket(opts) {
     lastRecOrPingTime = +new Date;
     if (e.data === '["hi"]') {
       api.log("#0bf", "[RWS.onMessage1]", e.data);
-      ws.greeted = true;
       ws.onmessage = onMessageN;
       retryConnectDelayMs = minRetryConnectDelayMs;
       opts.onConnect();
-      sendBuffer(buffer, "disconnect");
-      pendingPong = false;
-      sendBuffer(pingBuffer, "ping");
+      sendBuffer(buffer);
     } else if (e.data === '["denied"]') {
       api.log("#a00", "[RWS.onMessage1]", e.data);
       disconnect("onMessage1");
@@ -96,8 +92,7 @@ function ReconnectingWebSocket(opts) {
     lastRecOrPingTime = +new Date;
     if (e.data === '["pong"]') {
       api.log("#0ac", "[RWS.pong]");
-      pendingPong = false;
-      sendBuffer(pingBuffer, "ping");
+      sendBuffer(buffer);
     } else {
       opts.onMessage.call(self, e);
     }
@@ -122,7 +117,6 @@ function ReconnectingWebSocket(opts) {
     clearTimeout(pingTimeout), pingTimeout = null;
     clearTimeout(disTimeout), disTimeout = setTimeout(disconnect.bind(null, "ping", 2), 2000);  // expecting onMessageN "pong"
     ws.send('["ping"]');
-    pendingPong = true;
     lastRecOrPingTime = +new Date;
   }
 }
