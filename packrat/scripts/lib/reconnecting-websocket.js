@@ -74,7 +74,7 @@ function ReconnectingWebSocket(opts) {
       ws.onmessage = onMessageN;
       retryConnectDelayMs = minRetryConnectDelayMs;
       opts.onConnect();
-      sendBuffer(buffer);
+      sendBuffer();
     } else if (e.data === '["denied"]') {
       api.log("#a00", "[RWS.onMessage1]", e.data);
       disconnect("onMessage1");
@@ -90,15 +90,15 @@ function ReconnectingWebSocket(opts) {
     lastRecOrPingTime = +new Date;
     if (e.data === '["pong"]') {
       api.log("#0ac", "[RWS.pong]");
-      sendBuffer(buffer);
+      sendBuffer();
     } else {
       opts.onMessage.call(self, e);
     }
   }
 
-  function sendBuffer(arr) {
-    while (arr.length) {
-      var a = arr.shift();
+  function sendBuffer() {
+    while (buffer.length) {
+      var a = buffer.shift();
       api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
       ws.send(a[0]);
     }
