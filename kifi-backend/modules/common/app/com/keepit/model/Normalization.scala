@@ -22,6 +22,7 @@ object Normalization {
   val HTTPWWW = Normalization("http://www")
   val HTTPSM = Normalization("https://m")
   val HTTPM = Normalization("http://m")
+  val MOVED = Normalization("301")
 
   lazy val priority = Map[Normalization, Int](
     CANONICAL -> 0,
@@ -31,6 +32,7 @@ object Normalization {
     HTTP -> 4,
     HTTPWWW -> 5,
     HTTPSM -> 6,
-    HTTPM -> 7
+    HTTPM -> 7,
+    MOVED -> 8
   )
 }

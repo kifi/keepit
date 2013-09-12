@@ -42,7 +42,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
 
         result must beAnInstanceOf[Scraped] // Article
         (result: @unchecked) match {
-          case Scraped(article, signature) =>
+          case Scraped(article, signature, redirects) =>
             article.title === "foo"
             article.content === "this is a body text. bar."
         }
