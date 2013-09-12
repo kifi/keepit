@@ -588,6 +588,8 @@ class MessagingController @Inject() (
       buildThreadInfos(userId, threads, url)
     } getOrElse {
       Seq[ElizaThreadInfo]()
+    } sortWith { (a,b) =>
+      a.lastCommentedAt.compareTo(b.lastCommentedAt) > 0
     }
   }
 
