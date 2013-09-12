@@ -624,6 +624,7 @@ api.port.on({
   },
   open_deep_link: function(data, _, tab) {
     var n;
+                                      // on a tab that is the old normalized URI, and we know about the new normalization
     var uriData = pageData[data.nUri] || pageData[(n = api.tabs.anyAt(data.nUri)) && n.nUri];
 
     if (uriData) {
@@ -862,7 +863,7 @@ function messageCount(d) {
     var th = d.threads[i], thReadTime = new Date(d.lastMessageRead[th.id] || 0);
     for (var id in th.messageTimes) {
       if (new Date(th.messageTimes[id]) > thReadTime) {
-        n++;
+        n++; break;
       }
     }
   }
@@ -975,6 +976,10 @@ function subscribe(tab) {
   var d = pageData[tab.nUri || tab.url];
 
   if (d) {  // no need to ask server again
+    if (d.cacheIsDirty) {
+      socket.send(["get_threads_by_url", tab.nUri || tab.url]);
+      d.cacheIsDirty = false;
+    }
     if (tab.nUri) {  // tab is already initialized
       if (d.counts) {
         d.counts.n = numNotificationsNotVisited;
@@ -994,8 +999,8 @@ function subscribe(tab) {
 
       api.log("[subscribe]", resp);
       var uri = resp.normalized;
-      var uri_1 = resp.uri_1;
-      var uri_2 = resp.uri_2;
+      var uri_1 = resp.uri_1 || resp;
+      var uri_2 = resp.uri_2 || resp;
 
       if ((api.tabs.get(tab.id) || {}).url != tab.url) return;
       d = pageData[uri] = pageData[uri] || new PageData;
@@ -1302,22 +1307,25 @@ function startSession(callback, retryMs) {
     api.log("[authenticate:done] reason: %s session: %o", api.loadReason, data);
     logEvent("extension", "authenticated");
 
-    connectSync();
-
     session = data;
     session.prefs = {}; // to come via socket
     socket = api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
+      for (var nUri in pageData) {
+        pageData[nUri].cacheIsDirty = true;
+      }
       socket.send(["get_last_notify_read_time"]);
+      connectSync();
       if (!notifications) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
       }
+      syncNumNotificationsNotVisited();
+      api.tabs.eachSelected(subscribe);
     }, function onDisconnect(why) {
       reportError("socket disconnect (" + why + ")");
     });
     logEvent.catchUp();
-    syncNumNotificationsNotVisited();
 
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
@@ -1327,7 +1335,6 @@ function startSession(callback, retryMs) {
     delete session.installationId;
 
     api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
-    api.tabs.eachSelected(subscribe);
     api.tabs.each(function(page) {
       api.tabs.emit(page, "session_change", session);
     });
