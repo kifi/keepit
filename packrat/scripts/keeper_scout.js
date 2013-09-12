@@ -58,8 +58,7 @@ var tile = tile || function() {  // idempotent for Chrome
       setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
-      if (!tile || !tile.parentNode) {
-        whenSessionKnown.push(updateCounts.bind(this, counts));
+      if (!tile) {
         return;
       }
       updateCounts(counts);
