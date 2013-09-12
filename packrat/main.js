@@ -684,7 +684,7 @@ function insertNewNotification(n) {
         return false;
       }
       break;
-    } else if (n.locator && notifications[i].locator == n.locator) {
+    } else if ((n.thread && notifications[i].thread == n.thread) || (notifications[i].id == n.id)) {
       // there is already a more recent notification for this thread
       return false;
     }
