@@ -103,10 +103,10 @@ function ReconnectingWebSocket(opts) {
     }
   }
 
-  function sendBuffer(arr, name) {
+  function sendBuffer(arr) {
     while (arr.length) {
       var a = arr.shift();
-      api.log("#0bf", "[RWS] sending, %s buffered for %i ms: %s", name, new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
+      api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
       ws.send(a[0]);
     }
   }
