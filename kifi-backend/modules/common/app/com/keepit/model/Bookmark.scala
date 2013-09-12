@@ -27,6 +27,7 @@ case class Bookmark(
 ) extends ModelWithExternalId[Bookmark] {
   def withId(id: Id[Bookmark]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
 
   def withActive(isActive: Boolean) = copy(state = isActive match {
     case true => BookmarkStates.ACTIVE
@@ -74,7 +75,7 @@ class BookmarkCountCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration
   extends PrimitiveCacheImpl[BookmarkCountKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Bookmark] {
-  override val version = 4
+  override val version = 3
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }

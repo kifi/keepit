@@ -42,8 +42,8 @@ class BookmarkInterner @Inject() (
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String) = {
     db.readWrite(attempts = 2) { implicit s =>
       bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {
-        case Some(bookmark) if bookmark.isActive => Some(bookmark.copy(isPrivate = isPrivate))
-        case Some(bookmark) => Some(bookmarkRepo.save(bookmark.copy(state = BookmarkStates.ACTIVE, isPrivate = isPrivate, title = title orElse(uri.title), url = url)))
+        case Some(bookmark) if bookmark.isActive => Some(bookmark.withPrivate(isPrivate = isPrivate))
+        case Some(bookmark) => Some(bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate).withTitle(title orElse(uri.title)).withUrl(url)))
         case None =>
           Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
           val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))

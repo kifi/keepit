@@ -30,8 +30,7 @@ class NormalizedURIRepoImpl @Inject() (
   urlHashCache: NormalizedURIUrlHashCache,
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizationServiceProvider: Provider[NormalizationService],
-  urlRepoProvider: Provider[URLRepo],
-  bookmarkRepoProvider: Provider[BookmarkRepo])
+  urlRepoProvider: Provider[URLRepo])
   extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
