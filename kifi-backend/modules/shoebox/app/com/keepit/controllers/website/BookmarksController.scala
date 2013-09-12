@@ -250,6 +250,7 @@ class BookmarksController @Inject() (
 
   def allCollections(sort: String) = AuthenticatedJsonAction { request =>
     implicit val collectionIdFormat = ExternalId.format[Collection]
+    log.info(s"Getting all collections for ${request.userId} (sort $sort)")
     val (unsortedCollections, numKeeps) = db.readOnly { implicit s => (
       collectionRepo.getByUser(request.userId).map { c =>
         val count = keepToCollectionRepo.count(c.id.get)
@@ -257,6 +258,7 @@ class BookmarksController @Inject() (
       },
       bookmarkRepo.getCountByUser(request.userId)
     )}
+    log.info(s"Sorting collections for ${request.userId}")
     val collections = sort match {
       case "user" =>
         val orderedCollectionIds = db.readWrite { implicit s => getCollectionOrdering(request.userId) }
@@ -264,6 +266,7 @@ class BookmarksController @Inject() (
       case _ => // default is "last_kept"
         unsortedCollections
     }
+    log.info(s"Returning collection and keep counts for ${request.userId}")
     Ok(Json.obj(
       "keeps" -> numKeeps,
       "collections" -> collections
@@ -396,9 +399,11 @@ class BookmarksController @Inject() (
 
   private def getCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
+    log.info(s"Getting collection ordering for user $uid")
     val allCollectionIds = collectionRepo.getByUser(uid).map(_.externalId)
     Json.fromJson[Seq[ExternalId[Collection]]](Json.parse {
       userValueRepo.getValue(uid, CollectionOrderingKey) getOrElse {
+        log.info(s"Updating collection ordering for user $uid: $allCollectionIds")
         userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(allCollectionIds)))
       }
     }).get
