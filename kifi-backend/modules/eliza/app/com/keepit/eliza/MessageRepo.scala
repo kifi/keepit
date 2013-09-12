@@ -10,6 +10,11 @@ import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import MessagingTypeMappers._
 import com.keepit.common.logging.Logging
+import com.keepit.common.cache.{CacheSizeLimitExceededException, JsonCacheImpl, FortyTwoCachePlugin, Key}
+import scala.concurrent.duration.Duration
+import play.api.libs.json._
+import play.api.libs.json.util._
+import play.api.libs.functional.syntax._
 
 case class Message(
     id: Option[Id[Message]] = None,
@@ -29,6 +34,53 @@ case class Message(
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt=updateTime)
 }
 
+object Message {
+  implicit val format = (
+      (__ \ 'id).formatNullable(Id.format[Message]) and
+      (__ \ 'createdAt).format[DateTime] and
+      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'externalId).format(ExternalId.format[Message]) and
+      (__ \ 'from).formatNullable(Id.format[User]) and
+      (__ \ 'thread).format(Id.format[MessageThread]) and
+      (__ \ 'threadExtId).format(ExternalId.format[MessageThread]) and
+      (__ \ 'messageText).format[String] and
+      (__ \ 'sentOnUrl).formatNullable[String] and
+      (__ \ 'sentOnUriId).formatNullable(Id.format[NormalizedURI])
+    )(Message.apply, unlift(Message.unapply))
+}
+
+case class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message])
+{
+  override def equals(other:Any):Boolean = other match {
+    case mft: MessagesForThread => (thread.id == mft.thread.id && messages.size == mft.messages.size)
+    case _ => false
+  }
+  override def hashCode = thread.id.hashCode
+  override def toString = "[MessagesForThread(%s): %s]".format(thread, messages)
+}
+
+object MessagesForThread {
+
+  implicit val messagesForThreadReads = (
+    (__ \ 'thread_id).read(Id.format[MessageThread]) and
+    (__ \ 'messages).read[Seq[Message]]
+  )(MessagesForThread.apply _)
+
+  implicit val messagesForThreadWrites = (
+    (__ \ 'thread_id).write(Id.format[MessageThread]) and
+    (__ \ 'messages).write(Writes.traversableWrites[Message])
+  )(unlift(MessagesForThread.unapply))
+
+}
+
+case class MessagesForThreadIdKey(threadId:Id[MessageThread]) extends Key[MessagesForThread] {
+  val namespace = "messages_for_thread_id"
+  def toKey():String = threadId.id.toString
+}
+
+class MessagesForThreadIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[MessagesForThreadIdKey, MessagesForThread](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 @ImplementedBy(classOf[MessageRepoImpl])
 trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
@@ -45,7 +97,8 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 @Singleton
 class MessageRepoImpl @Inject() (
     val clock: Clock,
-    val db: DataBaseComponent
+    val db: DataBaseComponent,
+    val messagesForThreadIdCache: MessagesForThreadIdCache
   )
   extends DbRepo[Message] with MessageRepo with ExternalIdColumnDbFunction[Message] with Logging {
 
@@ -61,7 +114,11 @@ class MessageRepoImpl @Inject() (
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ from.? ~ thread ~ threadExtId ~ messageText ~ sentOnUrl.? ~ sentOnUriId.? <> (Message.apply _, Message.unapply _)
   }
 
-
+  override def invalidateCache(message:Message)(implicit session:RSession):Message = {
+    val key = MessagesForThreadIdKey(message.thread)
+    messagesForThreadIdCache.remove(key)
+    message
+  }
 
   def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit = {
     (for (row <- table if row.id===message.id) yield row.sentOnUriId).update(uriId)
@@ -69,15 +126,29 @@ class MessageRepoImpl @Inject() (
 
 
   def get(threadId: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession) : Seq[Message] = {
-    log.info(s"[get_thread] getting thread messages for thread_id ${threadId}. $from - $to")
-    val query = (for (row <- table if row.thread === threadId) yield row).drop(from)
-    log.info(s"[get_thread] getting thread messages for thread_id ${threadId}:\n${query.selectStatement}")
-    val got = to match {
-      case Some(upper) => query.take(upper-from).sortBy(row => row.createdAt desc).list
-      case None => query.sortBy(row => row.createdAt desc).list
+    val key = MessagesForThreadIdKey(threadId)
+    messagesForThreadIdCache.get(key) match {
+      case Some(v) => {
+        log.info(s"[get_thread] cache-hit: id=$threadId v=$v")
+        v.messages
+      }
+      case None => {
+        val query = (for (row <- table if row.thread === threadId) yield row).drop(from)
+        val got = to match {
+          case Some(upper) => query.take(upper-from).sortBy(row => row.createdAt desc).list
+          case None => query.sortBy(row => row.createdAt desc).list
+        }
+        log.info(s"[get_thread] got thread messages for thread_id $threadId:\n$got")
+        val mft = new MessagesForThread(threadId, got)
+        try {
+          log.info(s"[get_thread] cache-miss: set key=$key to messages=$mft")
+          messagesForThreadIdCache.set(key, mft)
+        } catch {
+          case c:CacheSizeLimitExceededException => // already reported in FortyTwoCache
+        }
+        got
+      }
     }
-    log.info(s"[get_thread] got thread messages for thread_id ${threadId}:\n${got}")
-    got
   }
 
   def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[Message] = {

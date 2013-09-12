@@ -13,5 +13,6 @@ case class TestFortyTwoModule() extends FortyTwoModule {
   def fortyTwoServices(clock: Clock): FortyTwoServices = new FortyTwoServices(clock, Test, None, None) {
     override lazy val currentVersion: ServiceVersion = ServiceVersion("0.0.0")
     override lazy val compilationTime: DateTime = currentDateTime
+    override lazy val baseUrl: String = "test_kifi.com"
   }
 }

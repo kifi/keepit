@@ -1,16 +1,21 @@
 // @match /^https?:\/\/www\.google\.(com|com\.(a[fgiru]|b[dhnorz]|c[ouy]|do|e[cgt]|fj|g[hit]|hk|jm|k[hw]|l[by]|m[txy]|n[afgip]|om|p[aehkry]|qa|s[abglv]|t[jrw]|u[ay]|v[cn])|co\.(ao|bw|c[kr]|i[dln]|jp|k[er]|ls|m[az]|nz|t[hz]|u[gkz]|v[ei]|z[amw])|a[demstz]|b[aefgijsy]|cat|c[adfghilmnvz]|d[ejkmz]|e[es]|f[imr]|g[aeglmpry]|h[nrtu]|i[emqst]|j[eo]|k[giz]|l[aiktuv]|m[degklnsuvw]|n[eloru]|p[lnstosuw]|s[cehikmnot]|t[dgklmnot]|v[gu]|ws)\/(|search|webhp)([?#].*)?$/
+// @asap
 // @require styles/google_inject.css
 // @require styles/friend_card.css
+// @require scripts/api.js
 // @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-bindhover.js
 // @require scripts/lib/mustache.js
-// @require scripts/api.js
 // @require scripts/render.js
 // @require scripts/html/search/google.js
 // @require scripts/html/search/google_hits.js
 // @require scripts/html/search/google_hit.js
 
-var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(location.host) && function() {  // idempotent for Chrome
+// (same as match pattern above)
+const searchUrlRe = /^https?:\/\/www\.google\.(com|com\.(a[fgiru]|b[dhnorz]|c[ouy]|do|e[cgt]|fj|g[hit]|hk|jm|k[hw]|l[by]|m[txy]|n[afgip]|om|p[aehkry]|qa|s[abglv]|t[jrw]|u[ay]|v[cn])|co\.(ao|bw|c[kr]|i[dln]|jp|k[er]|ls|m[az]|nz|t[hz]|u[gkz]|v[ei]|z[amw])|a[demstz]|b[aefgijsy]|cat|c[adfghilmnvz]|d[ejkmz]|e[es]|f[imr]|g[aeglmpry]|h[nrtu]|i[emqst]|j[eo]|k[giz]|l[aiktuv]|m[degklnsuvw]|n[eloru]|p[lnstosuw]|s[cehikmnot]|t[dgklmnot]|v[gu]|ws)\/(|search|webhp)([?#].*)?$/;
+
+// We check the pattern because Chrome match/glob patterns aren't powerful enough. crbug.com/289057
+if (searchUrlRe.test(document.URL)) !function() {
   api.log("[google_inject]");
 
   function logEvent() {  // parameters defined in main.js
@@ -18,7 +23,6 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   }
 
   var $res = $(render("html/search/google", {})).hide();   // a reference to our search results (kept so that we can reinsert when removed)
-  bindHandlers();
 
   var filter;             // current search filter (null or {[who: "m"|"f"|dot-delimited user ids]?, [when: "t"|"y"|"w"|"m"]?})
   var query = "";         // latest search query
@@ -26,46 +30,24 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   var showMoreOnArrival;
   var clicks = {kifi: [], google: []};  // clicked result link hrefs
 
-  // "main" div seems to always stay in the page, so only need to bind listener once.
-  // TODO: move this code lower, so it runs after we initiate the first search
-  // TODO: also detect result selection via keyboard
-  $("#main").on("mousedown", "#search h3.r a", function logSearchEvent() {
-    var href = this.href, $li = $(this).closest("li.g");
-    var $kifiRes = $("#kifi-res-list"), $kifiLi = $kifiRes.children("li.g");
-    var resIdx = $li.parent().children("li.g").index($li);
-    var isKifi = $li[0].parentNode === $kifiRes[0];
+  // stuff for timing
+  var keyTimer, idleTimer, tQuery = Date.now(), tGoogleResultsShown = tQuery, tKifiResultsReceived, tKifiResultsShown;
 
-    clicks[isKifi ? "kifi" : "google"].push(href);
-
-    if (href && resIdx >= 0) {
-      logEvent("search", isKifi ? "kifiResultClicked" : "googleResultClicked",
-        {"url": href, "whichResult": resIdx, "query": response.query, "experimentId": response.experimentId, "kifiResultsCount": $kifiLi.length});
-    }
+  var $q = $(), $qf = $q, $qp = $q;
+  $(function() {
+    $q = $("#gbqfq,#lst-ib").on("input", onInput);  // stable identifier: "Google Bar Query Form Query"
+    $qf = $("#gbqf,#tsf").submit(onSubmit);  // stable identifier: "Google Bar Query Form"
+    $qp = $("#gs_taif0");  // stable identifier: "Google Search Type-Ahead Input Field"
   });
-
-  var keyTimer, idleTimer, tQuery = +new Date, tGoogleResultsShown = tQuery, tKifiResultsReceived, tKifiResultsShown;
-  var $q = $("#gbqfq,#lst-ib").on("input", onInput);  // stable identifier: "Google Bar Query Form Query"
   function onInput() {
-    tQuery = +new Date;
+    tQuery = Date.now();
     clearTimeout(keyTimer);
     keyTimer = setTimeout(search, 250);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
   }
-  var $qf = $("#gbqf,#tsf").submit(onSubmit);  // stable identifier: "Google Bar Query Form"
   function onSubmit() {
-    tQuery = +new Date;
+    tQuery = Date.now();
     clearTimeout(keyTimer);
     search();  // immediate search
-  }
-  var $qp = $(document.getElementById("gs_taif0"));  // stable identifier: "Google Search Type-Ahead Input Field"
-
-  function onIdle() {
-    logEvent("search", "dustSettled", {
-      "query": query,
-      "experimentId": response.experimentId,
-      "kifiHadResults": response.hits && response.hits.length > 0,
-      "kifiReceivedAt": tKifiResultsReceived - tQuery,
-      "kifiShownAt": tKifiResultsShown - tQuery,
-      "googleShownAt": tGoogleResultsShown - tQuery});
   }
 
   checkSearchType();
@@ -84,7 +66,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   function search(fallbackQuery, newFilter, isFirst) {
     if (isVertical) return;
 
-    var q = ($qp.val() || $q.val() || fallbackQuery || "").trim().replace(/\s+/, " ");  // TODO: also detect "Showing results for" and prefer that
+    var q = ($qp.val() || $q.val() || fallbackQuery || "").trim().replace(/\s+/g, " ");  // TODO: also detect "Showing results for" and prefer that
     var f = arguments.length > 1 ? newFilter : filter;
     if (q == query && areSameFilter(f, filter)) {
       api.log("[search] nothing new, query:", q, "filter:", f);
@@ -100,7 +82,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
 
     clearTimeout(idleTimer);
     idleTimer = setTimeout(onIdle, 1200);
-    var t1 = +new Date;
+    var t1 = Date.now();
     api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
       if (q != query || !areSameFilter(f, filter)) {
         api.log("[results] ignoring for query:", q, "filter:", f);
@@ -120,7 +102,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
       response = resp;
       if (isFirst && resp.filter) {  // restoring previous filter (user navigated back)
         filter = f = newFilter = resp.filter;
-        $(".kifi-filter-btn").addClass("kifi-expanded");
+        $res.find(".kifi-filter-btn").addClass("kifi-expanded");
         $res.find(".kifi-filters").show().each(function() {
           if (f.who) {
             $(this).find(".kifi-filter[data-name=who]").find(".kifi-filter-val")
@@ -132,25 +114,17 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
           }
         });
       }
-      response.hits.forEach(processHit);
-
-      var ires = document.getElementById("ires");
-      if (ires) {
-        resp.shown = true;
-        tKifiResultsShown = +new Date;
-      }
 
       if (resp.hits.length || f) {  // we show a "no results match filter" message if filtering
+        response.hits.forEach(processHit);
         appendResults();
         if ($res[0].style.display == "none") {  // check to avoid disrupting transition
-          $res.show();
-        }
-        if ($res[0].nextElementSibling !== ires) {
-          $res.insertBefore(ires);
+          $res[0].style.display = "block";
         }
       } else {
-        $res.hide();
+        $res[0].style.display = "none";
       }
+      attachKifiRes();
 
       logEvent("search", "kifiLoaded", {"query": q, "filter": f, "queryUUID": resp.uuid});
       if (resp.hits.length) {
@@ -173,7 +147,17 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
 
   function parseQuery(hash) {
     var m = /[?#&]q=[^&]*/.exec(hash);
-    return m && unescape(m[0].substr(3).replace("+", " ")).trim() || "";
+    return m && unescape(m[0].substr(3).replace(/\+/g, " ")).trim() || "";
+  }
+
+  function onIdle() {
+    logEvent("search", "dustSettled", {
+      "query": query,
+      "experimentId": response.experimentId,
+      "kifiHadResults": response.hits && response.hits.length > 0,
+      "kifiReceivedAt": tKifiResultsReceived - tQuery,
+      "kifiShownAt": tKifiResultsShown - tQuery,
+      "googleShownAt": tGoogleResultsShown - tQuery});
   }
 
   $(window).on("hashchange", function() {
@@ -181,7 +165,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     checkSearchType();
     search();  // needed for switch from shopping to web search, for example
   }).on("beforeunload", function(e) {
-    if (response.query === query && new Date - tKifiResultsShown > 2000) {
+    if (response.query === query && Date.now() - tKifiResultsShown > 2000) {
       logEvent("search", "searchUnload", {
         "query": response.query,
         "queryUUID": response.uuid,
@@ -193,30 +177,69 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     }
   });
 
-  var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
-  var observer = new MutationObserver(function onMutation(mutations) {
+  var observer = new MutationObserver(withMutations);
+  function withMutations(mutations) {
     if (isVertical) return;
     for (var i = 0; i < mutations.length; i++) {
       for (var j = 0, nodes = mutations[i].addedNodes; j < nodes.length; j++) {
         if (nodes[j].id === "ires") {
-          tGoogleResultsShown = +new Date;
-          api.log("[onMutation] Google results inserted");
-          $res.insertBefore(nodes[j]);  // reattach
-          if (!response.shown) {
-            response.shown = true;
-            tKifiResultsShown = +new Date;
-          }
-          search();  // prediction may have changed
+          tGoogleResultsShown = Date.now();
+          api.log("[withMutations] Google results inserted");
+          attachKifiRes(0, nodes[j]);
+          $(setTimeout.bind(null, search));  // prediction may have changed
         }
       }
     }
     if (!$q.length || !document.contains($q[0])) {  // for #lst-ib (e.g. google.co.il)
-      $q.remove(); $qf.remove();
+      $q.remove(), $qf.remove();
       $q = $($q.selector).on("input", onInput);
       $qf = $($qf.selector).submit(onSubmit);
     }
+  }
+  var whatToObserve = {childList: true, subtree: true};  // TODO: optimize away subtree
+  observer.observe(document, whatToObserve);
+  $(function() {
+    withMutations(observer.takeRecords());
+    observer.disconnect();
+    observer.observe(document.getElementById('main'), whatToObserve);
+    attachKifiRes();
   });
-  observer.observe(document.getElementById("main"), {childList: true, subtree: true});  // TODO: optimize away subtree
+
+  function attachKifiRes(_, ires) {
+    if ((ires = ires || document.getElementById('ires'))) {
+      $res.insertBefore(ires);
+      if (!response.shown && response.hits) {
+        response.shown = true;
+        tKifiResultsShown = Date.now();
+      }
+      if (bindResHandlers) {
+        setTimeout(bindResHandlers);
+        bindResHandlers = null;
+      }
+      return true;
+    }
+  }
+
+  if (!api.mutationsFirePromptly) {
+    setTimeout(function tryAttach() {
+      attachKifiRes() || setTimeout(tryAttach, 1);
+    }, 1);
+  }
+
+  // TODO: also detect result selection via keyboard
+  $(document).on("mousedown", "#search h3.r a", function logSearchEvent() {
+    var href = this.href, $li = $(this).closest("li.g");
+    var $kifiRes = $("#kifi-res-list"), $kifiLi = $kifiRes.children("li.g");
+    var resIdx = $li.parent().children("li.g").index($li);
+    var isKifi = $li[0].parentNode === $kifiRes[0];
+
+    clicks[isKifi ? "kifi" : "google"].push(href);
+
+    if (href && resIdx >= 0) {
+      logEvent("search", isKifi ? "kifiResultClicked" : "googleResultClicked",
+        {"url": href, "whichResult": resIdx, "query": response.query, "experimentId": response.experimentId, "kifiResultsCount": $kifiLi.length});
+    }
+  });
 
   api.onEnd.push(function() {
     api.log("[google_inject:onEnd]");
@@ -277,7 +300,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     return boldSearchTerms(url, matches);
   }
 
-  function bindHandlers() {
+  var bindResHandlers = function() {
     $res.on("mouseover", ".kifi-res-more-a", function() {
       $(this).closest(".kifi-res-more").addClass("kifi-over");
     }).on("mouseout", ".kifi-res-more-a", function() {
@@ -427,7 +450,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
 
   function appendResults() {
     $res.find(".kifi-res-title").toggleClass("kifi-collapsed", !response.show);
-    $res.find(".kifi-filter-btn")[response.show ? "show" : "hide"]();
+    $res.find(".kifi-filter-btn")[0].style.display = response.show ? "block" : "none";
     $res.append(render(
       "html/search/google_hits", {
         show: response.show,
@@ -614,7 +637,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
               var who = filter.who.length > 1 ? filter.who + "." + friend.id : friend.id;
               search(null, $.extend({}, filter, {who: who}));
               $in.nextAll(".kifi-filter-detail-clear").addClass("kifi-visible");
-              addTime = +new Date;
+              addTime = Date.now();
             },
             onDelete: function(friend) {
               api.log("[onDelete]", friend.id, friend.name);
@@ -642,6 +665,4 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
       }
     }).prev(".kifi-filter-detail-notch").addBack().removeClass("kifi-visible");
   }
-
-  return true;
 }();

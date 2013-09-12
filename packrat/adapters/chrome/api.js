@@ -235,35 +235,39 @@ api = function() {
         api.log("[onDisconnect]");
         delete ports[tab.id];
       });
-
       var page = pages[tab.id];
-      if (page && page.toEmit) {
+      if (page && page.ready && page.toEmit) {
         if (tab.url !== page.url) {
           api.log("#a00", "[onConnect] %i mismatch:\n%s\n%s", tab.id, tab.url, page.url);
         }
-        page.toEmit.forEach(function emit(m) {
-          api.log("#0c0", "[onConnect:emit] %i %s %o", tab.id, m[0], m[1] != null ? m[1] : "");
-          port.postMessage(m);
-        });
-        delete page.toEmit;
+        emitQueuedMessages(page, port);
       }
     }
   });
 
+  function emitQueuedMessages(page, port) {
+    page.toEmit.forEach(function emit(m) {
+      api.log("#0c0", "[emitQueuedMessages] %i %s %o", page.id, m[0], m[1] != null ? m[1] : "");
+      port.postMessage(m);
+    });
+    delete page.toEmit;
+  }
+
   function injectContentScripts(page, skipOnReady) {
-    if (page.injecting || page.ready || ports[page.id]) return;
+    if (page.injecting || page.ready) return;
     if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
       api.log("[injectContentScripts] forbidden", page.url);
       return;
     }
     page.injecting = true;
 
-    if (api.prefs.get("suppressLog")) {
-      chrome.tabs.executeScript(page.id, {code: "var suppressLog=true", runAt: "document_start"}, api.noop);
-    }
-    var scripts = meta.contentScripts.filter(function(cs) { return cs[1].test(page.url) });
-    var injected = {};
-    done(0);
+    var scripts = meta.contentScripts.filter(function(cs) { return !cs[2] && cs[1].test(page.url) });
+
+    var js = api.prefs.get('suppressLog') ? 'var suppressLog=true;' : '', injected;
+    chrome.tabs.executeScript(page.id, {code: js + "this.api&&api.injected", runAt: "document_start"}, function(arr) {
+      injected = arr[0] || {};
+      done(0);
+    });
 
     function done(n) {
       if (n < scripts.length) {
@@ -280,6 +284,10 @@ api = function() {
         api.tabs.emit(page, "api:injected", Object.keys(injected));
         page.ready = true;
         delete page.injecting;
+        var port = ports[page.id];
+        if (port && page.toEmit) {
+          emitQueuedMessages(page, port);
+        }
         if (!skipOnReady) {
           dispatch.call(api.tabs.on.ready, page);
         }
@@ -565,10 +573,9 @@ api = function() {
         }
       },
       emit: function(tab, type, data) {
-        var currTab = pages[tab.id];
+        var currTab = pages[tab.id], port;
         if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
-          var port = ports[tab.id];
-          if (port) {
+          if (currTab.ready && (port = ports[tab.id])) {
             api.log("#0c0", "[api.tabs.emit] %i %s %o", tab.id, type, data);
             port.postMessage([type, data]);
           } else {

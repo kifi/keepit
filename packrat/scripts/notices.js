@@ -1,9 +1,9 @@
 // @require styles/metro/notices.css
+// @require scripts/api.js
 // @require scripts/html/metro/notices.js
 // @require scripts/html/metro/notice_global.js
 // @require scripts/html/metro/notice_message.js
 // @require scripts/formatting.js
-// @require scripts/api.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/scrollable.js

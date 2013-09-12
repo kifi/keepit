@@ -63,7 +63,7 @@ GET     /friends                    @com.keepit.controllers.website.HomeControll
 GET     /friends/invite             @com.keepit.controllers.website.HomeController.home
 GET     /friends/requests           @com.keepit.controllers.website.HomeController.home
 GET     /profile                    @com.keepit.controllers.website.HomeController.home
-GET     /search                     @com.keepit.controllers.website.HomeController.home
+GET     /find                       @com.keepit.controllers.website.HomeController.home
 GET     /blog                       @com.keepit.controllers.website.HomeController.home
 
 GET     /install                    @com.keepit.controllers.website.HomeController.install
@@ -260,6 +260,8 @@ POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
+GET     /admin/slider/domainNormSchemeView @com.keepit.controllers.admin.SliderAdminController.normSchemePageView(page: Int ?= 0)
+POST     /admin/slider/searchDomainNormalization @com.keepit.controllers.admin.SliderAdminController.searchDomainNormalization()
 
 GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
@@ -299,6 +301,7 @@ GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClust
 GET     /admin/server               @com.keepit.controllers.admin.AdminHealthController.serviceView()
 GET     /admin/benchmark            @com.keepit.controllers.admin.AdminBenchmarkController.benchmarks()
 GET     /admin/healthcheck/error    @com.keepit.controllers.admin.AdminHealthController.causeError()
+GET     /admin/healthcheck/causeHandbrakeError    @com.keepit.controllers.admin.AdminHealthController.causeHandbrakeError(param: String)
 GET     /admin/healthcheck/emailErrors    @com.keepit.controllers.admin.AdminHealthController.reportErrors()
 GET     /admin/healthcheck/errors   @com.keepit.controllers.admin.AdminHealthController.getErrors()
 GET     /admin/healthcheck/resetErrorCount    @com.keepit.controllers.admin.AdminHealthController.resetErrorCount()

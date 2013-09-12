@@ -80,6 +80,8 @@ class AdminUserController @Inject() (
       }
       userRepo.save(toUser.withState(UserStates.ACTIVE))
       userRepo.save(fromUser.withState(UserStates.INACTIVE))
+
+      userConnectionRepo.deactivateAllConnections(fromUserId)
     }
 
     for (su <- db.readOnly { implicit s => socialUserInfoRepo.getByUser(toUserId) }) {

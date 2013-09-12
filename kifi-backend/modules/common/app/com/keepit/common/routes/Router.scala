@@ -122,6 +122,7 @@ object Search extends Service {
     def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String) =
       ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("lang", lang))
     def causeError() = ServiceRoute(GET, "/internal/search/search/causeError")
+    def causeHandbrakeError() = ServiceRoute(GET, "/internal/search/search/causeHandbrakeError")
     def buildDictionary() = ServiceRoute(POST, "/internal/search/spell/buildDict")
     def getBuildStatus() = ServiceRoute(GET, "/internal/search/spell/buildStatus")
     def correctSpelling(query: String) = ServiceRoute(GET, "/internal/search/spell/make-correction", Param("query", query))
