@@ -126,8 +126,8 @@ class NormalizationServiceImpl @Inject() (
 
           db.readOnly { implicit session =>
             oracle(strongerCandidate) match {
-              case ACCEPT => Future.successful((Some(strongerCandidate), weakerCandidates))
-              case REJECT => findCandidate(weakerCandidates)
+              case Accept => Future.successful((Some(strongerCandidate), weakerCandidates))
+              case Reject => findCandidate(weakerCandidates)
               case Check(contentCheck) =>
                 if (currentReference.url == strongerCandidate.url) Future.successful(Some(strongerCandidate), weakerCandidates)
                 else for {
