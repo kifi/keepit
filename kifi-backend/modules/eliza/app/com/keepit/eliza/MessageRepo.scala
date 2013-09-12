@@ -13,6 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.cache.{CacheSizeLimitExceededException, JsonCacheImpl, FortyTwoCachePlugin, Key}
 import scala.concurrent.duration.Duration
 import play.api.libs.json._
+import play.api.libs.json.util._
 import play.api.libs.functional.syntax._
 
 case class Message(
@@ -60,22 +61,16 @@ case class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Mess
 
 object MessagesForThread {
 
-  implicit val messagesForThreadReads = new Reads[MessagesForThread] {
-    def reads(json: JsValue): JsResult[MessagesForThread] = {
-      JsSuccess[MessagesForThread](MessagesForThread(
-        Id[MessageThread]((json \ "thread_id").as[Long]),
-        (json \ "messages").as[Seq[Message]]
-      ))
-    }
-  }
-  implicit val messagesForThreadWrites = new Writes[MessagesForThread] {
-    def writes(o: MessagesForThread): JsValue = {
-      Json.obj(
-        "thread_id" -> o.thread.id,
-        "messages"  -> o.messages
-      )
-    }
-  }
+  implicit val messagesForThreadReads = (
+    (__ \ 'thread_id).read(Id.format[MessageThread]) and
+    (__ \ 'messages).read[Seq[Message]]
+  )(MessagesForThread.apply _)
+
+  implicit val messagesForThreadWrites = (
+    (__ \ 'thread_id).write(Id.format[MessageThread]) and
+    (__ \ 'messages).write(Writes.traversableWrites[Message])
+  )(unlift(MessagesForThread.unapply))
+
 }
 
 case class MessagesForThreadIdKey(threadId:Id[MessageThread]) extends Key[MessagesForThread] {
