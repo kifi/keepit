@@ -6,28 +6,16 @@ trait URINormalizer extends PartialFunction[URI, URI]
 trait StaticNormalizer extends URINormalizer
 
 object Prenormalizer extends StaticNormalizer {
-  val normalizers: Seq[StaticNormalizer] =
+
+  val serialNormalizers: Seq[StaticNormalizer] = Seq(DefaultPageNormalizer)
+  val parallelNormalizers: Seq[StaticNormalizer] =
     Seq(AmazonNormalizer, GoogleNormalizer, YoutubeNormalizer, RemoveWWWNormalizer, LinkedInNormalizer, DefaultNormalizer)
 
-  def isDefinedAt(uri: URI) = DefaultPageNormalizer.isDefinedAt(uri) || normalizers.exists(_.isDefinedAt(uri))
-  def apply(uri: URI) = {
-    // do default page normalization before calling normalizers
-    val uri2 = DefaultPageNormalizer.applyOrElse(uri, {u: URI =>u})
-
-    normalizers.find(_.isDefinedAt(uri2)).map(_.apply(uri2)).get
-  }
+  def isDefinedAt(uri: URI) = parallelNormalizers.exists(_.isDefinedAt(uri))
+  def apply(uri: URI) = applyAll(applyFirst(uri, parallelNormalizers), serialNormalizers)
   def apply(url: String): String = URI.safelyParse(url).map(Prenormalizer).flatMap(_.safelyToString()).getOrElse(url)
 
-  // default page normalization (moved from URI class)
-  private[this] val defaultPage = """/(index|default)\.(html|htm|asp|aspx|php|php3|php4|phtml|cfm|cgi|jsp|jsf|jspx|jspa)$""".r
-  private def normalizePath(path: Option[String]): Option[String] = {
-    path.map{ path =>
-      defaultPage.findFirstMatchIn(path.toLowerCase) match {
-        case Some(m) =>
-          val delta = path.length - path.toLowerCase.length // in case the case conversion changed the length
-          path.substring(0, m.start + delta) + "/"
-        case _ => path
-      }
-    }
-  }
+  private def applyAll(uri: URI, normalizers: Seq[StaticNormalizer]) = normalizers.foldLeft(uri)((u, n) => n.applyOrElse(u, identity[URI]))
+  private def applyFirst(uri: URI, normalizers: Seq[StaticNormalizer]) = normalizers.find(_.isDefinedAt(uri)).map(_.apply(uri)).get
+
 }

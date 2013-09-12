@@ -89,7 +89,7 @@ class UrlController @Inject() (
             case Some(nuri) => (nuri, URLHistoryCause.MERGE)
             // No normalized URI exists for this url, create one
             case None => {
-              val tmp = NormalizedURI.withHash(Prenormalizer(url.url))
+              val tmp = NormalizedURI.withHash(normalizationService.prenormalize(url.url))
               val nuri = if (!readOnly) uriRepo.save(tmp) else tmp
               (nuri, URLHistoryCause.SPLIT)
             }

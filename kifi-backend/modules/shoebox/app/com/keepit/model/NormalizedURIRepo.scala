@@ -1,13 +1,12 @@
 package com.keepit.model
 
-import com.keepit.common.logging.Logging
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
-import com.keepit.normalizer.{Prenormalizer, NormalizationService, NormalizationCandidate}
+import com.keepit.normalizer.{NormalizationService, NormalizationCandidate}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
@@ -123,7 +122,7 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    getByNormalizedUrl(Prenormalizer(url)) map {
+    getByNormalizedUrl(prenormalize(url)) map {
       case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
       case uri => uri
     }
@@ -133,7 +132,7 @@ class NormalizedURIRepoImpl @Inject() (
     val normalizedUri = getByUri(url) match {
       case Some(uri) => uri
       case None => {
-        val newUri = save(NormalizedURI.withHash(normalizedUrl = Prenormalizer(url)))
+        val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalize(url)))
         urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
         newUri
       }
@@ -145,4 +144,6 @@ class NormalizedURIRepoImpl @Inject() (
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI] = {
     (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
+
+  private def prenormalize(uriString: String)(implicit session: RSession): String = normalizationServiceProvider.get.prenormalize(uriString)
 }

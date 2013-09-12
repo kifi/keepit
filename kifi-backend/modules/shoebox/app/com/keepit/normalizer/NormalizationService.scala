@@ -21,6 +21,7 @@ import com.keepit.common.db.Id
 trait NormalizationService {
   def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]]
   def normalize(uriString: String)(implicit session: RSession): String
+  def prenormalize(uriString: String)(implicit session: RSession): String
 }
 
 @Singleton
@@ -33,7 +34,13 @@ class NormalizationServiceImpl @Inject() (
   scraperPlugin: ScraperPlugin,
   healthcheckPlugin: HealthcheckPlugin) extends NormalizationService with Logging {
 
-  def normalize(uriString: String)(implicit session: RSession): String = normalizedURIRepo.getByUri(uriString).map(_.url).getOrElse(Prenormalizer(uriString))
+  def normalize(uriString: String)(implicit session: RSession): String = normalizedURIRepo.getByUri(uriString).map(_.url).getOrElse(prenormalize(uriString))
+  def prenormalize(uriString: String)(implicit session: RSession): String = {
+    val withStandardPrenormalizationOption = URI.safelyParse(uriString).map(Prenormalizer)
+    val withPreferredSchemeOption = for { prenormalized <- withStandardPrenormalizationOption; schemeNormalizer <- priorKnowledge.getPreferredSchemeNormalizer(uriString) } yield schemeNormalizer(prenormalized)
+    val prenormalizedStringOption = for { prenormalizedURI <- withPreferredSchemeOption orElse withStandardPrenormalizationOption ; prenormalizedString <- prenormalizedURI.safelyToString() } yield prenormalizedString
+    prenormalizedStringOption.getOrElse(uriString)
+  }
 
   def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
     for {
@@ -63,7 +70,7 @@ class NormalizationServiceImpl @Inject() (
   private def getRelevantCandidates(current: NormalizedURI, candidates: Seq[NormalizationCandidate]) = {
 
     val prenormalizedCandidates = candidates.map {
-      case UntrustedCandidate(url, normalization) => UntrustedCandidate(Prenormalizer(url), normalization)
+      case UntrustedCandidate(url, normalization) => db.readOnly { implicit session => UntrustedCandidate(prenormalize(url), normalization) }
       case candidate: TrustedCandidate => candidate
     }
 
