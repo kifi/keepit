@@ -3,7 +3,7 @@ function ReconnectingWebSocket(opts) {
   var ws, self = this, buffer = [], disTimeout, pingTimeout, lastRecOrPingTime, retryConnectDelayMs = minRetryConnectDelayMs;
 
   this.send = function(data) {
-    if (ws && ws.greeted && ws.readyState == WebSocket.OPEN) {
+    if (ws && ws.readyState == WebSocket.OPEN && !disTimeout) {
       ws.send(data);
       if (new Date - lastRecOrPingTime > idlePingDelayMs) {  // a way to recover from timeout failure/unreliability
         ping();
@@ -71,15 +71,10 @@ function ReconnectingWebSocket(opts) {
     lastRecOrPingTime = +new Date;
     if (e.data === '["hi"]') {
       api.log("#0bf", "[RWS.onMessage1]", e.data);
-      ws.greeted = true;
       ws.onmessage = onMessageN;
       retryConnectDelayMs = minRetryConnectDelayMs;
       opts.onConnect();
-      while (buffer.length) {
-        var a = buffer.shift();
-        api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
-        ws.send(a[0]);
-      }
+      sendBuffer();
     } else if (e.data === '["denied"]') {
       api.log("#a00", "[RWS.onMessage1]", e.data);
       disconnect("onMessage1");
@@ -95,8 +90,17 @@ function ReconnectingWebSocket(opts) {
     lastRecOrPingTime = +new Date;
     if (e.data === '["pong"]') {
       api.log("#0ac", "[RWS.pong]");
+      sendBuffer();
     } else {
       opts.onMessage.call(self, e);
+    }
+  }
+
+  function sendBuffer() {
+    while (buffer.length) {
+      var a = buffer.shift();
+      api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
+      ws.send(a[0]);
     }
   }
 
