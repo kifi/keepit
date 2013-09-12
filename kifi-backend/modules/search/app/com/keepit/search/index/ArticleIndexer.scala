@@ -119,7 +119,9 @@ class ArticleIndexer @Inject() (
       getArticle(id = uri.id.get, maxRetry = 5, minSleepTime = 1000) match {
         case Some(article) =>
           // TODO make URIs with invisible if there is a reason
-          // article.reasonToMakeThisUriInvisible.map{ reason => doc.add(buildKeywordField(ArticleVisibility.redirectTerm.field(), ArticleVisibility.redirectTerm.text())) }
+          //article.restriction.map{ reason =>
+          //  doc.add(buildKeywordField(ArticleVisibility.redirectTerm.field(), ArticleVisibility.redirectTerm.text()))
+          //}
           val titleLang = article.titleLang.getOrElse(Lang("en"))
           val contentLang = article.contentLang.getOrElse(Lang("en"))
           doc.add(buildKeywordField("cl", contentLang.lang))
