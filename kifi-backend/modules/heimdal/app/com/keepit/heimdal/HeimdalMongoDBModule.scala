@@ -10,20 +10,37 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import com.google.inject.{Provides, Singleton}
 
+import play.api.Play.current
+
 
 trait MongoModule extends ScalaModule
 
 
-trait ProdMongoModule extends MongoModule {
+case class ProdMongoModule() extends MongoModule {
+
+  def configure() = {}
 
   @Singleton
   @Provides
   def userEventLoggingRepo(healthcheckPlugin: HealthcheckPlugin): UserEventLoggingRepo = {
+    val config = current.configuration.getString("mongodb.main").get
     val driver = new MongoDriver
-    val connection = driver.connection(List("mongodb://fortytwo:keepmyeventssecure@ds045508-a0.mongolab.com:45508,ds045508-a1.mongolab.com:45508/heimdal"))  //temporary! will be in config file
+    val connection = driver.connection(List(config))
     val db = connection("heimdal")
     val collection = db("user_events")
     new ProdUserEventLoggingRepo(collection, healthcheckPlugin)
+  }
+
+}
+
+case class DevMongoModule() extends MongoModule {
+
+  def configure() = {}
+
+  @Singleton
+  @Provides
+  def userEventLoggingRepo(healthcheckPlugin: HealthcheckPlugin): UserEventLoggingRepo = {
+    new DevUserEventLoggingRepo(null, healthcheckPlugin)
   }
 
 }

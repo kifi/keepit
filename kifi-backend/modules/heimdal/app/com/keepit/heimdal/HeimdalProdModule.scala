@@ -4,5 +4,6 @@ import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, Heimda
 import com.keepit.inject.CommonProdModule
 
 case class HeimdalProdModule() extends HeimdalModule(
-  cacheModule = HeimdalCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
+  cacheModule = HeimdalCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
+  mongoModule = ProdMongoModule()
 ) with CommonProdModule

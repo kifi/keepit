@@ -11,10 +11,12 @@ import com.keepit.heimdal.{HeimdalModule, ProdHeimdalServiceClientModule}
 import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.inject.CommonDevModule
+import com.keepit.heimdal.DevMongoModule
 
 
 case class HeimdalDevModule() extends HeimdalModule(
-  cacheModule = HeimdalCacheModule(HashMapMemoryCacheModule())
+  cacheModule = HeimdalCacheModule(HashMapMemoryCacheModule()),
+  mongoModule = DevMongoModule()
 ) with CommonDevModule {
 
 }

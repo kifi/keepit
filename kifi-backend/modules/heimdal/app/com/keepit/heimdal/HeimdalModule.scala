@@ -7,7 +7,8 @@ import com.keepit.shoebox.ProdShoeboxServiceClientModule
 
 abstract class HeimdalModule(
   // Common Functional Modules
-  val cacheModule: CacheModule
+  val cacheModule: CacheModule,
+  val mongoModule: MongoModule
 ) extends ConfigurationModule with CommonServiceModule  {
   // Service clients
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
