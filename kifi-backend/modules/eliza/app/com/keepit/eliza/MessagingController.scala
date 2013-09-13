@@ -349,7 +349,8 @@ class MessagingController @Inject() (
     "0471b558-75a0-41f3-90c5-febc9e95cef9", // greg
     "6d8e337d-4199-49e1-a95c-e4aab582eeca", // yinjgie
     "b80511f6-8248-4799-a17d-f86c1508c90d", // léo
-    "597e6c13-5093-4cba-8acc-93318987d8ee", // eduardo
+    "597e6c13-5093-4cba-8acc-93318987d8ee", // stephen
+    "147c5562-98b1-4fc1-946b-3873ac4a45b4", // eduardo
     "70927814-6a71-4eb4-85d4-a60164bae96c"  // ray
   )
   val product = Seq (
@@ -623,7 +624,7 @@ class MessagingController @Inject() (
     } getOrElse {
       Seq[ElizaThreadInfo]()
     } sortWith { (a,b) =>
-      a.lastCommentedAt.compareTo(b.lastCommentedAt) > 0
+      a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
     }
   }
 
