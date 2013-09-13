@@ -1,0 +1,21 @@
+@(domain: com.keepit.classify.Domain, normSchemeForm: Form[Normalization], schemeOptions: Seq[(String, String)])
+
+@import helper._
+
+@admin("select domain normalization scheme for:" ){
+  <h2>@domain.hostname </h2>
+  @form(com.keepit.controllers.admin.routes.SliderAdminController.saveDomainNormScheme(domain.id.get)){
+  	<fieldset>
+  	@select(
+  	  normSchemeForm("scheme"),
+  	  schemeOptions,
+  	  '_default -> "None"
+  	)
+  </fieldset>
+  <div class = "actions">
+    <input type="submit" value="modify scheme" class="btn primary"> or 
+            <a href="@com.keepit.controllers.admin.routes.SliderAdminController.normSchemePageView(0)" class="btn">Cancel</a> 
+  </div>	
+
+  }	
+}
