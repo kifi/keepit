@@ -85,7 +85,8 @@ object ApplicationBuild extends Build {
     )
 
     val heimdalDependencies = Seq(
-      "org.reactivemongo" %% "reactivemongo" % "0.9"
+      "org.reactivemongo" %% "reactivemongo" % "0.9",
+      "org.reactivemongo" %% "play2-reactivemongo" % "0.9"
     )
 
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",

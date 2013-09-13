@@ -1,15 +1,11 @@
 
 
 
-#POST   /event/user        @EventTrackingController.
-
-
-
 ##########################################
 #INTERNAL ROUTES/Eliza
 ##########################################
 
-
+#POST  /internal/heimdal/
 
 
 

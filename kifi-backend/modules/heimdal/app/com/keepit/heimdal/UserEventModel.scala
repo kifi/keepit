@@ -1,6 +1,6 @@
 package com.keepit.heimdal
 
-
+import com.keepit.common.time._
 
 import org.joda.time.DateTime
 
@@ -48,12 +48,11 @@ object UserEventContext {
   }
 }
 
-
 case class UserEvent(
   userId: Long,
   context: UserEventContext,
   eventType: UserEventType,
-  time: DateTime
+  time: DateTime = currentDateTime
 )
 
 
