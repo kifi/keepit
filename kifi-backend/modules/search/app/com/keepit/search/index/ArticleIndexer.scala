@@ -128,10 +128,7 @@ class ArticleIndexer @Inject() (
           val contentAnalyzer = DefaultAnalyzer.forIndexing(contentLang)
           val contentAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(contentLang)
 
-          val content = article.description match {
-            case Some(desc) => desc + "\n\n" + article.content
-            case None => article.content
-          }
+          val content = (Seq(article.content) ++ article.description ++ article.keywords).mkString("\n\n")
 
           doc.add(buildTextField("t", article.title, titleAnalyzer))
           doc.add(buildTextField("ts", article.title, titleAnalyzerWithStemmer))
