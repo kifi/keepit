@@ -15,7 +15,7 @@ var api = api || function() {  // idempotent for Chrome
           cb(msg[2]);
         }
       } else if (kind == "api:injected") {
-        api.log("[api:injected]", msg[1], Object.keys(api.injected));
+        markInjected(msg[1]);
         requireNext();
       } else {
         var data = msg[1], handler;
@@ -37,13 +37,23 @@ var api = api || function() {  // idempotent for Chrome
     });
   }
 
+  function markInjected(paths) {
+    for (var o = api.injected, i = 0; i < paths.length; i++) {
+      var path = paths[i];
+      o[path] = (o[path] || 0) + 1;
+    }
+  }
+
   var requireQueue;
   function requireNow(paths, callback) {
     if (typeof paths == 'string' ? api.injected[paths] : !(paths = paths.filter(notInjected)).length) {
       done();
     } else {
       requireQueue = requireQueue || [];
-      api.port.emit("api:require", {paths: paths, injected: api.injected}, done);
+      api.port.emit("api:require", {paths: paths, injected: api.injected}, function(paths) {
+        markInjected(paths);
+        done();
+      });
     }
     function done() {
       try {
