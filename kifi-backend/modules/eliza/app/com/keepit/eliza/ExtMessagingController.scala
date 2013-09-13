@@ -27,8 +27,7 @@ class ExtMessagingController @Inject() (
     notificationRouter: NotificationRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
-    db: Database,
-    eventStatsdInterceptor: EventStatsdInterceptor,
+    db: Database
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
@@ -174,7 +173,6 @@ class ExtMessagingController @Inject() (
       val eventJson = JsObject(pairs).deepMerge(
         Json.obj("experiments" -> socket.experiments)
       )
-      eventStatsdInterceptor.intercept(eventJson)
       shoebox.logEvent(socket.userId, eventJson)
     }
   )
