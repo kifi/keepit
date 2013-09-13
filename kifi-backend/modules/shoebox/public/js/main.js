@@ -1758,17 +1758,17 @@ $(function() {
 		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function(data) {
 			myNetworks = data;
-		}).promise(),
-		myPrefs: $.getJSON(xhrBase + '/user/prefs', function(data) {
-			myPrefs = data;
-			if (myPrefs.site_left_col_width) {
-				$(".left-col").animate({width: +myPrefs.site_left_col_width}, 120);
-			}
 		}).promise()};
 	$.when(promise.me).done(function () {
 		$('#invite-friends-link').toggle(canInvite());
 	});
 	updateCollections();
+	promise.myPrefs = $.getJSON(xhrBase + '/user/prefs', function(data) {
+		myPrefs = data;
+		if (myPrefs.site_left_col_width) {
+			$(".left-col").animate({width: +myPrefs.site_left_col_width}, 120);
+		}
+	}).promise();
 	$.getJSON(xhrBase + '/user/friends/count', function(data) {
 		updateFriendRequests(data.requests);
 	});
