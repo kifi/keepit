@@ -341,8 +341,43 @@ class MessagingController @Inject() (
     notificationRouter.sendNotification(Some(user), Notification(thread.id.get, message.id.get))
   }
 
+  val engineers = Seq(
+    "ae5d159c-5935-4ad5-b979-ea280cb6c7ba", // eishay
+    "dc6cb121-2a69-47c7-898b-bc2b9356054c", // andrew
+    "772a9c0f-d083-44cb-87ce-de564cbbfa22", // yasu
+    "d3cdb758-27df-4683-a589-e3f3d99fa47b", // jared
+    "0471b558-75a0-41f3-90c5-febc9e95cef9", // greg
+    "6d8e337d-4199-49e1-a95c-e4aab582eeca", // yinjgie
+    "b80511f6-8248-4799-a17d-f86c1508c90d", // léo
+    "597e6c13-5093-4cba-8acc-93318987d8ee", // stephen
+    "147c5562-98b1-4fc1-946b-3873ac4a45b4", // eduardo
+    "70927814-6a71-4eb4-85d4-a60164bae96c"  // ray
+  )
+  val product = Seq (
+    "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
+    "1a316f42-13be-4d86-a4a2-8c7efb3010b8", // xander
+    "2d18cd0b-ef30-4759-b6c5-f5f113a30f08", // effi
+    "73b1134d-02d4-443f-b99b-e8bc571455e2", // chandler
+    "c82b0fa0-6438-4892-8738-7fa2d96f1365"  // ketan
+  )
+  val family = engineers ++ product ++ Seq(
+    "e890b13a-e33c-4110-bd11-ddd51ec4eceb", // two-meals
+    "6f21b520-87e7-4053-9676-85762e96970a"  // jenny
+  )
+
   def constructRecipientSet(userExtIds: Seq[ExternalId[User]]) : Future[Set[Id[User]]] = {
-    shoebox.getUserIdsByExternalIds(userExtIds).map(_.toSet)
+    val loadedUser = userExtIds.map { userExtId =>
+      userExtId match {
+        case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
+          engineers.map(ExternalId[User])
+        case ExternalId("42424242-4242-4242-4242-424242424202") => // FortyTwo Family
+          family.map(ExternalId[User])
+        case ExternalId("42424242-4242-4242-4242-424242424203") => // FortyTwo Product
+          product.map(ExternalId[User])
+        case notAGroup => Seq(notAGroup)
+      }
+    }
+    shoebox.getUserIdsByExternalIds(loadedUser.flatten).map(_.toSet)
   }
 
 
@@ -588,6 +623,8 @@ class MessagingController @Inject() (
       buildThreadInfos(userId, threads, url)
     } getOrElse {
       Seq[ElizaThreadInfo]()
+    } sortWith { (a,b) =>
+      a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
     }
   }
 
