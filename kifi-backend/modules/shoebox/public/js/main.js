@@ -988,17 +988,12 @@ $(function() {
 	}
 
 	function updateCollections() {
-		promise.collections = $.ajax({
-			cache: false,  // Fri the 13th Chrome workaround
-			dataType: "json",
-			url: xhrBase + '/collections/all?sort=user',
-			success: function(data) {
-				collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
-				if ($collList.find('.renaming, .showing, .sortable-placeholder').length === 0) {
-					collTmpl.render(data.collections);
-				}
-				$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.keeps);
+		promise.collections = $.getJSON(xhrBase + '/collections/all?sort=user&_=' + Date.now().toString(36), function(data) {
+			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
+			if ($collList.find('.renaming, .showing, .sortable-placeholder').length === 0) {
+				collTmpl.render(data.collections);
 			}
+			$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.keeps);
 		}).promise();
 	}
 
