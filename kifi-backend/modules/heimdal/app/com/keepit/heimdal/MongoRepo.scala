@@ -18,7 +18,7 @@ trait MongoRepo[T] {
 
   val collection: BSONCollection
   def toBSON(obj: T): BSONDocument
-  def fromBSON(bson: BSONDocument)
+  def fromBSON(bson: BSONDocument) : T
 
   protected def safeInsert(doc: BSONDocument) = {
     val insertionFuture = new SafeFuture(collection.insert(doc))
@@ -79,19 +79,7 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
 
 }
 
-trait UserEventLoggingRepo extends BufferedMongoRepo[UserEvent] {
-  val warnBufferSize = 1000
-  val maxBufferSize = 2000
 
-  def toBSON(obj: UserEvent) = ??? //XXX
-  def fromBSON(bson: BSONDocument) = ???
-}
-
-class ProdUserEventLoggingRepo(val collection: BSONCollection, protected val healthcheckPlugin: HealthcheckPlugin) extends UserEventLoggingRepo
-
-class DevUserEventLoggingRepo(val collection: BSONCollection, protected val healthcheckPlugin: HealthcheckPlugin) extends UserEventLoggingRepo {
-  override def insert(obj: UserEvent) : Unit = {}
-}
  
 
 
