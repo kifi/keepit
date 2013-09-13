@@ -64,9 +64,9 @@
     <tr>
       <td>@{i + 1 + page*maxPageSize}</td>
       <td>@domain.id.get</td>
-      <td>@domain.hostname</td>
+      <td><a href="@com.keepit.controllers.admin.routes.SliderAdminController.editDomainNormScheme(domain.id.get)"> @domain.hostname</td>
       <td>@domain.state</td>
-      <td>@domain.normalizationScheme.getOrElse("None")</td>
+      <td>@domain.normalizationScheme.map(_.scheme)</td>
     </tr>
   }
 
