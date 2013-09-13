@@ -27,7 +27,7 @@ class ExtMessagingController @Inject() (
     notificationRouter: NotificationRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
-    db: Database
+    db: Database,
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
