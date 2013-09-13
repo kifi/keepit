@@ -109,8 +109,8 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[URL](profile)
   }
 
-  implicit object UnscrapableIdTypeMapper extends BaseTypeMapper[Id[Unscrapable]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[Unscrapable](profile)
+  implicit object UrlPatternRuleIdTypeMapper extends BaseTypeMapper[Id[UrlPatternRule]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[UrlPatternRule](profile)
   }
 
   implicit object NormalizedURIIdTypeMapper extends BaseTypeMapper[Id[NormalizedURI]] {

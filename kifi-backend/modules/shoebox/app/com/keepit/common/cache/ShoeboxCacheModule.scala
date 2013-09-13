@@ -69,8 +69,8 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
-  def unscrapableAllCache(outerRepo: FortyTwoCachePlugin) =
-    new UnscrapableAllCache((outerRepo, 30 days))
+  def urlPatternRuleAllCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UrlPatternRuleAllCache((innerRepo, 1 second), (outerRepo, 30 days))
 
   @Singleton
   @Provides

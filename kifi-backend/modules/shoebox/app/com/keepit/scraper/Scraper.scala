@@ -41,7 +41,7 @@ class Scraper @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   healthcheckPlugin: HealthcheckPlugin,
   bookmarkRepo: BookmarkRepo,
-  unscrapableRepo: UnscrapableRepo,
+  urlPatternRuleRepo: UrlPatternRuleRepo,
   s3ScreenshotStore: S3ScreenshotStore)
     extends Logging {
 
@@ -216,7 +216,7 @@ class Scraper @Inject() (
 
   protected def isUnscrapable(url: String, destinationUrl: Option[String]) = {
     db.readOnly { implicit s =>
-      (unscrapableRepo.contains(url) || (destinationUrl.isDefined && unscrapableRepo.contains(destinationUrl.get)))
+      (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
     }
   }
 

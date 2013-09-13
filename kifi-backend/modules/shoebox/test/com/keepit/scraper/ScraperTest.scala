@@ -289,7 +289,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
   def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher)(implicit injector: Injector) = {
     new Scraper(inject[Database], mockHttpFetcher, articleStore, config,
       inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin],
-      inject[BookmarkRepo], inject[UnscrapableRepo], new FakeS3ScreenshotStore) {
+      inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore) {
       override protected def getExtractor(url: String): Extractor = {
         new TikaBasedExtractor(url, 10000, None) {
           protected def getContentHandler = new BodyContentHandler(output)
