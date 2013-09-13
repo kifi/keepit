@@ -70,7 +70,19 @@ class ExtUserController @Inject() (
         userConnectionRepo.getConnectedUsers(request.user.id.get).map(basicUserRepo.load)
       }
     }
-    Ok(Json.toJson(basicUsers))
+
+    // Apologies for this code. "Personal favor" for Danny. Doing it right should be speced and requires
+    // two models, service clients, and caches.
+    val iNeededToDoThisIn20Minutes = if (request.experiments.contains(ExperimentTypes.ADMIN)) {
+      Seq(
+        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424201"), "FortyTwo Engineering", "", "0.jpg"),
+        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424202"), "FortyTwo Family", "", "0.jpg"),
+        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424203"), "FortyTwo Product", "", "0.jpg")
+      )
+    } else {
+      Seq()
+    }
+    Ok(Json.toJson(basicUsers ++ iNeededToDoThisIn20Minutes))
   }
 
 
