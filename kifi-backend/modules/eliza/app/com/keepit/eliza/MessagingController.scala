@@ -624,7 +624,7 @@ class MessagingController @Inject() (
     } getOrElse {
       Seq[ElizaThreadInfo]()
     } sortWith { (a,b) =>
-      a.lastCommentedAt.compareTo(b.lastCommentedAt) > 0
+      a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
     }
   }
 
