@@ -29,11 +29,11 @@ case class DevAirbrakeModule() extends AirbrakeModule {
 
   @Provides
   @AppScoped
-  def airbrakeProvider(httpClient: HttpClient, actor: ActorInstance[AirbrakeNotifierActor], playMode: Mode, service: FortyTwoServices): AirbrakeNotifier = {
+  def airbrakeProvider(httpClient: HttpClient, actor: ActorInstance[AirbrakeNotifierActor], mode: Mode, service: FortyTwoServices): AirbrakeNotifier = {
     new AirbrakeNotifier() {
       val apiKey: String = "fakeApiKey"
       def notifyError(error: AirbrakeError): Unit = println(error)
-      val playMode: Mode = playMode
+      val playMode: Mode = mode
       val service: FortyTwoServices = service
     }
   }
