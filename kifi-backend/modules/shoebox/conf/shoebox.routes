@@ -262,8 +262,8 @@ GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminCon
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
 GET     /admin/slider/domainNormSchemeView @com.keepit.controllers.admin.SliderAdminController.normSchemePageView(page: Int ?= 0)
 POST     /admin/slider/searchDomainNormalization @com.keepit.controllers.admin.SliderAdminController.searchDomainNormalization()
-POST     /admin/slider/saveDomainNormScheme @com.keepit.controllers.admin.SliderAdminController.saveDomainNormScheme(id: Id[com.keepit.classify.Domain])
-GET     /admin/slider/editDomainNormScheme  @com.keepit.controllers.admin.SliderAdminController.editDomainNormScheme(id: Id[com.keepit.classify.Domain])
+POST     /admin/slider/DomainNormScheme @com.keepit.controllers.admin.SliderAdminController.saveDomainNormScheme(id: Id[com.keepit.classify.Domain])
+GET     /admin/slider/DomainNormScheme  @com.keepit.controllers.admin.SliderAdminController.editDomainNormScheme(id: Id[com.keepit.classify.Domain])
 
 GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
