@@ -9,6 +9,7 @@ case class Article(
     title: String,
     content: String,
     description: Option[String],
+    keywords: Option[String],
     media: Option[String],
     scrapedAt: DateTime,
     httpContentType: Option[String], // from http header
