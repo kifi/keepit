@@ -1,5 +1,6 @@
 var xhrDomain = 'https://api.kifi.com';
-//xhrDomain = 'http://dev.ezkeep.com:9000';
+var wwwDomain = 'https://www.kifi.com';
+//xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 
@@ -468,7 +469,7 @@ $(function() {
 				var postLink = function (e) {
 					e.preventDefault();
 					$('<form>')
-						.attr('action', xhrDomain + $(this).data('action'))
+						.attr('action', wwwDomain + $(this).data('action'))
 						.attr('method', 'post')
 						.appendTo('body')
 						.submit()
@@ -630,7 +631,7 @@ $(function() {
 	$nwFriends.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var sT = this.scrollTop, sH = this.scrollHeight;
 		// tweak these values as desired
-		const offset = sH / 4, toFetch = 40;
+		const offset = sH / 3, toFetch = 40;
 		if (!$nwFriendsLoading.is(':visible') && this.clientHeight + sT > sH - offset) {
 			console.log('loading more friends');
 			prepInviteTab(toFetch);
@@ -987,7 +988,7 @@ $(function() {
 	}
 
 	function updateCollections() {
-		promise.collections = $.getJSON(xhrBase + '/collections/all', {sort: "user"}, function(data) {
+		promise.collections = $.getJSON(xhrBase + '/collections/all?sort=user&_=' + Date.now().toString(36), function(data) {
 			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
 			if ($collList.find('.renaming, .showing, .sortable-placeholder').length === 0) {
 				collTmpl.render(data.collections);
@@ -1129,7 +1130,7 @@ $(function() {
 					}
 				});
 				break;
-			case 'search':
+			case 'find':
 				doSearch(decodeURIComponent(queryFromUri(state.hash)));
 				break;
 			case 'profile':
@@ -1167,7 +1168,7 @@ $(function() {
 			case 'collection':
 				title = collections[uri.substr(kind.length + 1)].name;
 				break;
-			case 'search':
+			case 'find':
 				title = queryFromUri(uri);
 				break;
 			case 'profile':
@@ -1265,7 +1266,7 @@ $(function() {
 		} else if (!q) {
 			navigate('');
 		} else if (!e.which || e.which == 13) { // Enter
-			var uri = 'search?q=' + encodeURIComponent(q).replace(/%20/g, '+');
+			var uri = 'find?q=' + encodeURIComponent(q).replace(/%20/g, '+');
 			if (e.which) {
 				navigate(uri);
 			} else {

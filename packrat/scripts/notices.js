@@ -1,9 +1,9 @@
 // @require styles/metro/notices.css
+// @require scripts/api.js
 // @require scripts/html/metro/notices.js
 // @require scripts/html/metro/notice_global.js
 // @require scripts/html/metro/notice_message.js
 // @require scripts/formatting.js
-// @require scripts/api.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/scrollable.js
@@ -115,6 +115,7 @@ noticesPane = function() {
         notice.twoParticipants = nParticipants == 2;
         notice.threeParticipants = nParticipants == 3;
         notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
+        notice.text = notice.text.length > 200 ? notice.text.substring(0, 190) + "…" : notice.text;
         return render("html/metro/notice_message", notice);
       case "global":
         return render("html/metro/notice_global", notice);

@@ -7,7 +7,7 @@ function logEvent() {  // parameters defined in main.js
 }
 
 var tile = tile || function() {  // idempotent for Chrome
-  api.log("[scout]", location.hostname);
+  api.log("[keeper_scout]", location.hostname);
 
   window.onerror = function(message, url, lineNo) {
     if (!/https?\:/.test(url)) {  // this is probably from extension code, not from the website we're running this on
@@ -58,16 +58,10 @@ var tile = tile || function() {  // idempotent for Chrome
       setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
-      if (!tile || !tile.parentNode) return;
-
-      var n = Math.max(counts.m, counts.n);
-      if (n) {
-        tileCount.textContent = n;
-        tile.insertBefore(tileCount, tileCard.nextSibling);
-      } else if (tileCount.parentNode) {
-        tileCount.remove();
+      if (!tile) {
+        return;
       }
-      tile.dataset.counts = JSON.stringify(counts);
+      updateCounts(counts);
     },
     scroll_rule: function(r) {
       if (!onScroll) {
@@ -120,6 +114,17 @@ var tile = tile || function() {  // idempotent for Chrome
         break;
       }
     }
+  }
+
+  function updateCounts(counts) {
+    var n = Math.max(counts.m, counts.n);
+    if (n) {
+      tileCount.textContent = n;
+      tile.insertBefore(tileCount, tileCard.nextSibling);
+    } else if (tileCount.parentNode) {
+      tileCount.remove();
+    }
+    tile.dataset.counts = JSON.stringify(counts);
   }
 
   function toggleLoginDialog() {

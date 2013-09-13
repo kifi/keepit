@@ -578,7 +578,7 @@ slider2 = function() {
               var q, el = this;
               if (e.which == 13 && (q = el.value.trim())) {
                 api.port.emit("session", function(session) {
-                  var uri = session ? "https://www.kifi.com/search?q=" : "https://www.google.com/search?q=";
+                  var uri = session ? "https://www.kifi.com/find?q=" : "https://www.google.com/search?q=";
                   window.open(uri + encodeURIComponent(q).replace(/%20/g, "+"));
                   el.value = "";
                 });
