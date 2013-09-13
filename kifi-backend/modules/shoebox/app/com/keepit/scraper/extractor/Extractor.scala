@@ -14,6 +14,7 @@ trait Extractor {
   def process(input: HttpInputStream): Unit
   def getContent(): String
   def getMetadata(name: String): Option[String]
+  def getKeywords: Option[String] = None
 }
 
 abstract class ExtractorProvider extends PartialFunction[URI, Extractor]
