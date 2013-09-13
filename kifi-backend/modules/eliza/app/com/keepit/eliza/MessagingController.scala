@@ -365,7 +365,7 @@ class MessagingController @Inject() (
   )
 
   def constructRecipientSet(userExtIds: Seq[ExternalId[User]]) : Future[Set[Id[User]]] = {
-    userExtIds.map { userExtId =>
+    val loadedUser = userExtIds.map { userExtId =>
       userExtId match {
         case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
           engineers.map(ExternalId[User])
@@ -376,7 +376,7 @@ class MessagingController @Inject() (
         case notAGroup => Seq(notAGroup)
       }
     }
-    shoebox.getUserIdsByExternalIds(userExtIds).map(_.toSet)
+    shoebox.getUserIdsByExternalIds(loadedUser.flatten).map(_.toSet)
   }
 
 
