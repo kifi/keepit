@@ -37,6 +37,7 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
     }
 
     private[AhoCorasick] def set(d: D) = {
+      if (!hasMatch) _size += 1
       hasMatch = true
       data = Some(d)
     }
@@ -56,7 +57,8 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
     def reset(): State[D] = _root
   }
 
-  val size = dict.size
+  private[this] var _size: Int = 0
+  def size: Int = _size
 
   private val _root: StateImpl = new StateImpl(null)
   def initialState: State[D] = _root

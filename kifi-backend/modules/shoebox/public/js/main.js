@@ -988,7 +988,7 @@ $(function() {
 	}
 
 	function updateCollections() {
-		promise.collections = $.getJSON(xhrBase + '/collections/all', {sort: "user"}, function(data) {
+		promise.collections = $.getJSON(xhrBase + '/collections/all?sort=user&_=' + Date.now().toString(36), function(data) {
 			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
 			if ($collList.find('.renaming, .showing, .sortable-placeholder').length === 0) {
 				collTmpl.render(data.collections);

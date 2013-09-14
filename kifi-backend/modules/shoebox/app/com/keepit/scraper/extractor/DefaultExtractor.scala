@@ -15,7 +15,7 @@ import com.keepit.common.net.URI
 
 object DefaultExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
-  def apply(uri: URI) = new DefaultExtractor(uri.toString, Scraper.maxContentChars, htmlMapper)
+  def apply(uri: URI) = apply(uri.toString)
   def apply(url: String) = new DefaultExtractor(url, Scraper.maxContentChars, htmlMapper)
 
   private val htmlMapper = Some(new DefaultHtmlMapper {
@@ -29,16 +29,28 @@ object DefaultExtractorProvider extends ExtractorProvider {
 }
 
 class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
-  protected def getContentHandler = new DefaultContentHandler(output, metadata)
+  private[this] val handler: DefaultContentHandler = new DefaultContentHandler(output, metadata, url)
+
+  protected def getContentHandler: ContentHandler = handler
+
+  override def getKeywords: Option[String] = handler.getKeywords.map{ _.mkString(", ") }
 }
 
-class DefaultContentHandler(handler: ContentHandler, metadata: Metadata) extends ContentHandlerDecorator(handler) {
+class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: String) extends ContentHandlerDecorator(handler) {
+
+  private[this] var keywordValidatorContentHandler: Option[KeywordValidatorContentHandler] = None
+
+  def getKeywords:Option[Set[String]] = keywordValidatorContentHandler.map{ _.keywords }
 
   override def startDocument() {
     // enable boilerpipe only for HTML
     Option(metadata.get("Content-Type")).foreach{ contentType =>
       if (contentType startsWith MimeTypes.HTML) {
-        setContentHandler(new BoilerpipeContentHandler(new TextOutputContentHandler(handler)))
+        val keywordCandidates = URITokenizer.getTokens(uri)
+        keywordValidatorContentHandler = Some(
+          new KeywordValidatorContentHandler(keywordCandidates, new BoilerpipeContentHandler(new TextOutputContentHandler(handler)))
+        )
+        setContentHandler(keywordValidatorContentHandler.get)
       } else {
         setContentHandler(new DehyphenatingTextOutputContentHandler(handler))
       }
