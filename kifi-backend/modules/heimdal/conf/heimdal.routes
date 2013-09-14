@@ -5,7 +5,7 @@
 #INTERNAL ROUTES/Eliza
 ##########################################
 
-#POST  /internal/heimdal/
+POST  /internal/heimdal/trackEvent        @com.keepit.heimdal.EventTrackingController.trackInternalEvent()
 
 
 
