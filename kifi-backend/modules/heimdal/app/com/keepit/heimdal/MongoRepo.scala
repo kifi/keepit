@@ -11,6 +11,8 @@ import scala.concurrent.Promise
 import scala.concurrent.ExecutionContext.Implicits.global //Might want to change this to a custom play one
 import java.util.concurrent.atomic.AtomicLong
 
+import play.modules.statsd.api.Statsd
+
 case class MongoInsertBufferFullException() extends java.lang.Throwable
 
 trait MongoRepo[T] {
@@ -69,7 +71,8 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
       ))
     }
 
-    bufferSize.incrementAndGet()
+    val inflight = bufferSize.incrementAndGet()
+    Statsd.gauge(s"monogInsertBuffer.${collection.name}", inflight)
     safeInsert(toBSON(obj)).map{ lastError =>
       bufferSize.decrementAndGet() 
       if (lastError.ok==false) insert(obj)
