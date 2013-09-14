@@ -473,7 +473,7 @@ api.port.on({
         pageData[nUri].position = o.pos;
       }
     }
-    ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos}, respond);
+    ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
   set_enter_to_send: function(data) {
     session.prefs.enterToSend = data;
