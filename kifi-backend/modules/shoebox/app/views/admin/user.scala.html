@@ -61,7 +61,7 @@
         <td id="experiments" class="form-inline">
           @for(exp <- Seq(ExperimentTypes.ADMIN, ExperimentTypes.BLOCK,
               ExperimentTypes.NO_SEARCH_EXPERIMENTS, ExperimentTypes.FAKE, ExperimentTypes.INACTIVE,
-              ExperimentTypes.CAN_INVITE, ExperimentTypes.CAN_MESSAGE_ALL_USERS, ExperimentTypes.NOT_SENSITIVE)) {
+              ExperimentTypes.CAN_INVITE, ExperimentTypes.CAN_MESSAGE_ALL_USERS, ExperimentTypes.NOT_SENSITIVE, ExperimentTypes.PASSWORD_LOGIN)) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(experiments.contains(exp)) {checked}>@exp.value
             </label>
