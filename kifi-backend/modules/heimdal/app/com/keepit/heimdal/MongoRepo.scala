@@ -61,8 +61,7 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
         errorMessage = Some(s"Mongo Insert Buffer Full! (${bufferSize.get})")
       ))
       throw MongoInsertBufferFullException()
-    }
-    if (bufferSize.get>=warnBufferSize && hasWarned.getAndSet(true)==false) {
+    } else if (bufferSize.get>=warnBufferSize && hasWarned.getAndSet(true)==false) {
       healthcheckPlugin.addError(HealthcheckError(
         error = None, 
         method = Some("mongo"), 
@@ -70,8 +69,7 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
         callType = Healthcheck.INTERNAL,
         errorMessage = Some(s"Mongo Insert almost Buffer Full. (${bufferSize.get})")
       ))
-    }
-    if (bufferSize.get < warnBufferSize) hasWarned.set(false)
+    } else if (bufferSize.get < warnBufferSize) hasWarned.set(false)
 
     val inflight = bufferSize.incrementAndGet()
     Statsd.gauge(s"monogInsertBuffer.${collection.name}", inflight)
