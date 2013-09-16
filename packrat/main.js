@@ -228,7 +228,6 @@ const socketHandlers = {
   },
   all_notifications_visited: function(id, time) {
     api.log("[socket:all_notifications_visited]", id, time);
-    syncNumNotificationsNotVisited();
     markAllNoticesVisited(id, time);
   },
   thread: function(th) {
@@ -397,6 +396,7 @@ const socketHandlers = {
   unread_notifications_count: function(count) {
     // see comment in syncNumNotificationsNotVisited() :(
     if (numNotificationsNotVisited != count) {
+      socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
       reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
       numNotificationsNotVisited = count;
       tellTabsNoticeCountIfChanged();
@@ -556,6 +556,7 @@ api.port.on({
       notificationsCallbacks.push(reply);
     }
     function reply() {
+      syncNumNotificationsNotVisited(); // sanity checking
       respond({
         notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
         timeLastSeen: timeNotificationsLastSeen.toISOString(),
@@ -747,8 +748,6 @@ function markNoticesVisited(category, id, timeStr, locator) {
       id: id,
       numNotVisited: numNotificationsNotVisited});
   });
-
-  syncNumNotificationsNotVisited(); // see comment in function :(
 }
 
 function markAllNoticesVisited(id, timeStr) {  // id and time of most recent notification to mark
