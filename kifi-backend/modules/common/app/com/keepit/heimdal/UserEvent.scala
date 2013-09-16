@@ -17,7 +17,7 @@ sealed trait ContextData
 case class ContextStringData(value: String) extends ContextData
 case class ContextDoubleData(value: Double) extends ContextData
 
-case class UserEventContext(data: Map[String, Seq[ContextData]])
+case class UserEventContext(data: Map[String, Seq[ContextData]]) extends AnyVal
 
 object UserEventContext {
   implicit val format = new Format[UserEventContext] {
