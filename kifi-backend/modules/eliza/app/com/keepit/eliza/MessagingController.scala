@@ -333,7 +333,7 @@ class MessagingController @Inject() (
     }
 
     future{
-      val notifText = messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText
+      val notifText = MessageLookHereRemover(messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
       sendPushNotification(user, thread.externalId, getPendingNotificationCount(user), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
     }
 
