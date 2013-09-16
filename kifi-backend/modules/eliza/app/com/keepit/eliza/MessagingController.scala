@@ -554,11 +554,13 @@ class MessagingController @Inject() (
   }
 
   def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[Message]) : DateTime = {
-    db.readWrite{ implicit session =>
+    val lastTime = db.readWrite{ implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.clearNotificationsBefore(user, message.createdAt)
       message.createdAt
     }
+    notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getPendingNotificationCount(user)))
+    lastTime
   }
  
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestampOpt: Option[DateTime] = None) : Unit = {
