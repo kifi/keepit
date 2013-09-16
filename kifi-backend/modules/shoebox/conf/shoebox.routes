@@ -179,6 +179,8 @@ GET     /admin/data/domainNormSchemeView @com.keepit.controllers.admin.UrlContro
 POST    /admin/data/searchDomainNormalization @com.keepit.controllers.admin.UrlController.searchDomainNormalization()
 POST    /admin/data/DomainNormScheme @com.keepit.controllers.admin.UrlController.saveDomainNormScheme(id: Id[com.keepit.model.UrlPatternRule])
 GET     /admin/data/DomainNormScheme  @com.keepit.controllers.admin.UrlController.editDomainNormScheme(id: Id[com.keepit.model.UrlPatternRule])
+GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.getPatterns
+POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex

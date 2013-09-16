@@ -49,5 +49,23 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "save, load by id and slider property" in {
+      withDb() { implicit injector =>
+        val repo = inject[UrlPatternRuleRepo]
+        inject[UrlPatternRuleRepo] must be(repo) // singleton
+
+        val (p1, p2) = inject[Database].readWrite{ implicit session =>
+          (repo.save(UrlPatternRule(pattern = """^https?://www\.42go\.com""", showSlider = false)),
+            repo.save(UrlPatternRule(pattern = """://(www\.|)hulu\.com/watch/""", showSlider = true)))
+        }
+
+        inject[Database].readOnly{ implicit session =>
+          repo.get(p1.id.get) === p1
+          repo.get(p2.id.get) === p2
+          repo.getSliderNotShown() === Seq(p1)
+        }
+      }
+    }
   }
 }

@@ -24,6 +24,7 @@ case class UrlPatternRule(
   def withId(id: Id[UrlPatternRule]) = this.copy(id = Some(id))
   def withState(newState: State[UrlPatternRule]) = this.copy(state = newState)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def isActive = this.state == UrlPatternRuleStates.ACTIVE
 
 }
 

@@ -28,6 +28,8 @@ import com.keepit.integrity.MergedUri
 import com.keepit.integrity.HandleDuplicatesAction
 import play.api.mvc.Action
 import play.api.data.format.Formats._
+import play.api.libs.json.Json
+import com.keepit.eliza.ElizaServiceClient
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -49,8 +51,8 @@ class UrlController @Inject() (
   duplicatesProcessor: DuplicateDocumentsProcessor,
   uriIntegrityPlugin: UriIntegrityPlugin,
   normalizationService: NormalizationService,
-  urlPatternRuleRepo: UrlPatternRuleRepo)
-    extends AdminController(actionAuthenticator) {
+  urlPatternRuleRepo: UrlPatternRuleRepo,
+  eliza: ElizaServiceClient) extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -251,8 +253,56 @@ class UrlController @Inject() (
       }
     )
   }
-}
 
+  def getPatterns = AdminHtmlAction { implicit request =>
+    val patterns = db.readOnly { implicit session =>
+      urlPatternRuleRepo.all
+    }
+    Ok(html.admin.urlPatternRules(patterns))
+  }
+
+  def savePatterns = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
+    val toBeBroadcasted = db.readWrite { implicit session =>
+      for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
+        val id = Id[UrlPatternRule](key.toLong)
+        val oldPat = urlPatternRuleRepo.get(id)
+        val newPat = oldPat.copy(
+          pattern = body("pattern_" + key),
+          example = Some(body("example_" + key)).filter(!_.isEmpty),
+          state = if (body.contains("active_" + key)) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
+          isUnscrapable = body.contains("unscrapable_"+ key),
+          showSlider = body.contains("show-slider_" + key),
+          normalization = body("normalization_" + key) match {
+            case "None" => None
+            case scheme => Some(Normalization(scheme))
+          }
+        )
+
+        if (newPat != oldPat) {
+          urlPatternRuleRepo.save(newPat)
+        }
+      }
+      val newPat = body("new_pattern")
+      if (newPat.nonEmpty) {
+        urlPatternRuleRepo.save(UrlPatternRule(
+          pattern = newPat,
+          example = Some(body("new_example")).filter(!_.isEmpty),
+          state = if (body.contains("new_active")) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
+          isUnscrapable = body.contains("new_unscrapable"),
+          showSlider = body.contains("new_show-slider"),
+          normalization = body("new_normalization") match {
+            case "None" => None
+            case scheme => Some(Normalization(scheme))
+          }
+        ))
+      }
+      urlPatternRuleRepo.getSliderNotShown()
+    }
+    eliza.sendToAllUsers(Json.arr("url_patterns", toBeBroadcasted))
+    Redirect(routes.UrlController.getPatterns)
+  }
+}
 
 case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
 case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes: Seq[DisplayedDuplicate])

@@ -15,6 +15,7 @@ trait UrlPatternRuleRepo extends Repo[UrlPatternRule] {
   def getTrustedDomain(url: String)(implicit session: RSession): Option[String]
   def getPreferredNormalization(url: String)(implicit session: RSession): Option[Normalization]
   def normSchemePage(page: Int, pageSize: Int)(implicit session: RSession): (Seq[UrlPatternRule], Int)
+  def getSliderNotShown()(implicit session: RSession): Seq[UrlPatternRule]
 }
 
 @Singleton
@@ -31,7 +32,7 @@ class UrlPatternRuleRepoImpl @Inject() (
 
   override val table = new RepoTable[UrlPatternRule](db, "url_pattern_rule") {
     def pattern = column[String]("pattern", O.NotNull)
-    def example = column[String]("pattern", O.Nullable)
+    def example = column[String]("example", O.Nullable)
     def isUnscrapable = column[Boolean]("is_unscrapable", O.NotNull)
     def showSlider = column[Boolean]("show_slider", O.NotNull)
     def normalization = column[Normalization]("normalization", O.Nullable)
@@ -57,7 +58,7 @@ class UrlPatternRuleRepoImpl @Inject() (
     }
 
   def get(url: String)(implicit session: RSession): Seq[UrlPatternRule] = allActive().filter(rule => url.matches(rule.pattern))
-  def getUnique(url: String)(implicit sesseion: RSession): Option[UrlPatternRule] = {
+  def getUnique(url: String)(implicit session: RSession): Option[UrlPatternRule] = {
     val matchingRules = get(url)
     require(matchingRules.length <= 1, s"${matchingRules.length} rules match url ${url}")
     matchingRules.headOption
@@ -65,9 +66,12 @@ class UrlPatternRuleRepoImpl @Inject() (
   def isUnscrapable(url: String)(implicit session: RSession): Boolean = getUnique(url).map(_.isUnscrapable).getOrElse(false)
   def getTrustedDomain(url: String)(implicit session: RSession): Option[String] = for { rule <- getUnique(url); trustedDomain <- rule.trustedDomain } yield trustedDomain
   def getPreferredNormalization(url: String)(implicit session: RSession): Option[Normalization] = for { rule <- getUnique(url); normalization <- rule.normalization } yield normalization
+  def getSliderNotShown()(implicit session: RSession): Seq[UrlPatternRule] = allActive().filter(!_.showSlider)
 
   def normSchemePage(page: Int, pageSize: Int)(implicit session: RSession): (Seq[UrlPatternRule], Int) = {
     val ds = (for (d <- table if d.state =!= UrlPatternRuleStates.INACTIVE && d.normalization.isNotNull) yield d).sortBy(_.pattern).list
     (ds.drop(page*pageSize).take(pageSize), ds.size)
   }
+
+
 }
