@@ -1,4 +1,6 @@
 // @require scripts/scrollable.js
+// @require scripts/lib/jquery-ui-position.min.js
+// @require scripts/lib/jquery.hoverfu.js
 
 function attachComposeBindings($c, composeTypeName, enterToSend) {
   var $f = $c.find(".kifi-compose");
@@ -131,7 +133,8 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
     var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
     setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   })
-  .bindHover(".kifi-compose-snapshot", function(configureHover) {
+  .hoverfu(".kifi-compose-snapshot", function(configureHover) {
+    var $a = $(this);
     render("html/keeper/titled_tip", {
       title: "Microfind",
       html: "Click to mark something on<br>the page and reference it in<br>your " + composeTypeName + "."
@@ -140,9 +143,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
         mustHoverFor: 500,
         hideAfter: 3000,
         click: "hide",
-        position: function(w) {
-          this.style.left = 21 - w / 2 + "px";
-        }});
+        position: {my: "center bottom-13", at: "center top", of: $a, collision: "none"}});
     });
   })
   .on("click", ".kifi-compose-snapshot", function() {

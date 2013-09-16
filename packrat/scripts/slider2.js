@@ -2,7 +2,8 @@
 // @require styles/metro/slider2.css
 // @require styles/friend_card.css
 // @require scripts/lib/jquery.js
-// @require scripts/lib/jquery-bindhover.js
+// @require scripts/lib/jquery-ui-position.min.js
+// @require scripts/lib/jquery.hoverfu.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
 
@@ -121,9 +122,10 @@ slider2 = function() {
         }
       }).on("mouseover", ".kifi-slider2-keep-btn>.kifi-slider2-tip,.kifi-slider2-kept-btn>.kifi-slider2-tip", function() {
         this.parentNode.classList.add("kifi-hoverless");
-      }).bindHover(".kifi-slider2-keep-btn,.kifi-slider2-kept-btn", function(configureHover) {
+      }).hoverfu(".kifi-slider2-keep-btn,.kifi-slider2-kept-btn", function(configureHover) {
         var btn = this;
         api.port.emit("get_keepers", function(o) {
+          var positionIt = {my: "right bottom-13", at: "right top", of: btn, collision: "none"};
           if (o.keepers.length) {
             render("html/metro/keepers", {
               link: true,
@@ -150,34 +152,11 @@ slider2 = function() {
                 position: positionIt});
             });
           }
-          function positionIt(w) {  // centered, or right-aligned if that would go off edge of page
-            if (!$slider) return;
-            var r1 = btn.getBoundingClientRect(), r2 = $slider[0].getBoundingClientRect();
-            this.style.right = Math.max((r1.width - w) / 2, r1.right - r2.right + 6) + "px";
-          }
-        });
-      }).bindHover(".kifi-slider2-keeper", function(configureHover) {
-        var $a = $(this);
-        var friend = $a.closest(".kifi-slider2-tip").data("keepers").filter(hasId($a.data("id")))[0];
-        if (!friend) return;
-        render("html/friend_card", {
-          name: friend.firstName + " " + friend.lastName,
-          id: friend.id,
-          iconsUrl: api.url("images/social_icons.png")
-        }, function(html) {
-          var $el = $(html);
-          configureHover($el, {mustHoverFor: 100, canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
-          api.port.emit("get_networks", friend.id, function(networks) {
-            for (nw in networks) {
-              $el.find('.kifi-kcard-nw-' + nw)
-                .toggleClass('kifi-on', networks[nw].connected)
-                .attr('href', networks[nw].profileUrl || null);
-            }
-          });
         });
       }).on("mouseout", ".kifi-slider2-keep-btn,.kifi-slider2-kept-btn", function() {
         this.classList.remove("kifi-hoverless");
-      }).bindHover(".kifi-slider2-keep-lock,.kifi-slider2-kept-lock", function(configureHover) {
+      }).hoverfu(".kifi-slider2-keep-lock,.kifi-slider2-kept-lock", function(configureHover) {
+        var $a = $(this);
         var $card = $(this).closest(".kifi-slider2-keep-card");
         var kept = !$card.hasClass("kifi-unkept");
         var publicly = kept && $card.hasClass("kifi-public");
@@ -194,22 +173,21 @@ slider2 = function() {
             mustHoverFor: 700,
             hideAfter: 4000,
             click: "hide",
-            position: function(w) {
-              this.style.left = 8 - w / 2 + "px";
-            }});
+            position: {my: "center bottom-13", at: "center top", of: $a, collision: "none"}});
         });
       }).on("click", ".kifi-slider2-keep-lock", function(e) {
         if (e.target === this) keepPage("private");
       }).on("click", ".kifi-slider2-kept-lock", function(e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
-      }).bindHover(".kifi-slider2-x", function(configureHover) {
+      }).hoverfu(".kifi-slider2-x", function(configureHover) {
         this.style.overflow = "visible";
         configureHover({mustHoverFor: 700, hideAfter: 2500, click: "hide"});
       }).on("click", ".kifi-slider2-x", function() {
         if ($pane) {
           hidePane(true);
         }
-      }).bindHover(".kifi-slider2-dock-btn", function(configureHover) {
+      }).hoverfu(".kifi-slider2-dock-btn", function(configureHover) {
+        var $a = $(this);
         var tip = {
           n: ["Notifications", "View all of your notifications.<br>Any new ones are highlighted."],
           m: ["Private Messages (" + CO_KEY + "+Shift+M)", "Send this page to friends<br>and start a discussion."]
@@ -219,9 +197,8 @@ slider2 = function() {
             mustHoverFor: 700,
             hideAfter: 4000,
             click: "hide",
-            position: function(w) {
-              this.style.left = 21 - w / 2 + "px";
-            }});
+            position: {my: "center bottom-13", at: "center top", of: $a, collision: "none"}
+          });
         });
       }).on("mousedown", ".kifi-slider2-dock-btn", function(e) {
         e.preventDefault();
@@ -240,6 +217,37 @@ slider2 = function() {
       });
       callback();
     });
+
+    // Yo dawg, I herd you like tooltips
+
+    // $(document).hoverfu(".kifi-slider2-keeper", function(configureHover) {
+    //   var $a = $(this);
+    //   var friend = $a.closest(".kifi-slider2-tip").data("keepers").filter(hasId($a.data("id")))[0];
+    //   if (!friend) return;
+    //   render("html/friend_card", {
+    //     name: friend.firstName + " " + friend.lastName,
+    //     id: friend.id,
+    //     iconsUrl: api.url("images/social_icons.png")
+    //   }, function(html) {
+    //     var $el = $(html).addClass('kifi-slider2-kcard');
+    //     var $arrow = $('<div>').appendTo($el).addClass('kifi-slider2-kcard-arrow');
+    //     configureHover($el, {
+    //       position: {my: "center bottom-13", at: "center top", of: $a, collision: "fit",
+    //       using: function (pos) {
+    //         $arrow.position({my: "center bottom-13", at: "center top", of: $a, collision: "none"});
+    //         $el.css(pos);
+    //       }},
+    //       mustHoverFor: 100, canLeaveFor: 600, hideAfter: 4000, click: "toggle"
+    //     });
+    //     api.port.emit("get_networks", friend.id, function(networks) {
+    //       for (nw in networks) {
+    //         $el.find('.kifi-kcard-nw-' + nw)
+    //           .toggleClass('kifi-on', networks[nw].connected)
+    //           .attr('href', networks[nw].profileUrl || null);
+    //       }
+    //     });
+    //   });
+    // });
   }
 
   function showSlider(trigger, callback) {
@@ -287,7 +295,7 @@ slider2 = function() {
             $(this).off("transitionend", end).css("transition-duration", "");
           });
         }
-        $slider.remove(), $slider = null;
+        $slider.detach(), $slider = null;
       }
     });
     logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
@@ -486,8 +494,8 @@ slider2 = function() {
               }
               $box.data("shown", true).triggerHandler("kifi:shown");
             })
-            .bindHover(".kifi-pane-head-logo", {mustHoverFor: 700, hideAfter: 2500, click: "hide"})
-            .bindHover(".kifi-pane-head-feedback", function(configureHover) {
+            .hoverfu(".kifi-pane-head-logo", {mustHoverFor: 700, hideAfter: 2500, click: "hide"})
+            .hoverfu(".kifi-pane-head-feedback", function(configureHover) {
               render("html/keeper/titled_tip", {
                 dir: "below",
                 title: "Give Us Feedback",
@@ -507,7 +515,7 @@ slider2 = function() {
                 "kifi-feedback",
                 "width="+width+",height="+height+",resizable,top="+top+",left="+left);
             })
-            .bindHover(".kifi-pane-head-settings:not(.kifi-active)", function(configureHover) {
+            .hoverfu(".kifi-pane-head-settings:not(.kifi-active)", function(configureHover) {
               render("html/keeper/titled_tip", {
                 dir: "below",
                 title: "Settings",
@@ -773,20 +781,23 @@ slider2 = function() {
     },
     showKeepers: function(keepers, otherKeeps) {
       if (lastShownAt) return;
-      var $tile = $(tile).bindHover(function(configureHover) {
+      var $tile = $(tile).hoverfu(function(configureHover) {
         // TODO: preload friend pictures
         render("html/metro/keepers", {
           keepers: pick(keepers, 8),
           captionHtml: formatCountHtml(0, keepers.length, otherKeeps)
         }, function(html) {
-          configureHover(html, {mustHoverFor: 0, canLeaveFor: 1e9, click: "hide"});
+          var n = 13 + 10*!!$tile.find('.kifi-count').length;
+          configureHover(html, {
+            position: {my: "right bottom-" + n, at: "right top", of: $tile.find('.kifi-tile-card'), collision: "none"},
+            mustHoverFor: 0, canLeaveFor: 1e9, click: "hide"});
         });
-      }).on("transitionend", function unbindHover(e) {
-        if (!$tile.hasClass("kifi-hover-showing") && e.target.classList.contains("kifi-slider2-tip") && e.originalEvent.propertyName == "opacity") {
-          $tile.off("transitionend", unbindHover).bindHover("destroy");
+      }).on("transitionend", function unhoverfu(e) {
+        if (!$tile.hasClass("kifi-showing") && e.target.classList.contains("kifi-slider2-tip") && e.originalEvent.propertyName == "opacity") {
+          $tile.off("transitionend", unhoverfu).hoverfu("destroy");
         }
       });
-      $tile.triggerHandler("mouseover.bindHover");
-      setTimeout($tile.triggerHandler.bind($tile, "mousedown.bindHover"), 3000);
+      $tile.triggerHandler("mouseover.hoverfu");
+      setTimeout($tile.triggerHandler.bind($tile, "mousedown.hoverfu"), 3000);
     }};
 }();
