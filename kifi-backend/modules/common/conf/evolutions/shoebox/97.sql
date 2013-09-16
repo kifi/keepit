@@ -9,8 +9,10 @@ CREATE TABLE url_pattern_rule (
     state varchar(20) NOT NULL,
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
-    pattern varchar(256) NOT NULL,
+    pattern varchar(2048) NOT NULL,
+    example varchar(2048) NULL,
     is_unscrapable bool NOT NULL,
+    show_slider bool NOT NULL,
     normalization varchar(32) NULL,
     trusted_domain varchar(256) NULL,
 
