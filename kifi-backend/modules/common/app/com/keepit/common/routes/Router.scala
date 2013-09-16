@@ -145,6 +145,12 @@ object Eliza extends Service {
   }
 }
 
+object Heimdal extends Service {
+  object internal {
+    def trackEvent() = ServiceRoute(POST, "/internal/heimdal/trackEvent")
+  }
+}
+
 object Common {
   object internal {
     def benchmarksResults() = ServiceRoute(GET, "/internal/benchmark")

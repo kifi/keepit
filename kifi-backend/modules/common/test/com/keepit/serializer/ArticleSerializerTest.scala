@@ -21,6 +21,7 @@ class ArticleSerializerTest extends Specification {
           id = Id(22),
           title = "my title",
           description = Some("my description"),
+          keywords = Some("my keyword"),
           media = Some("my media"),
           content = "my content",
           scrapedAt = currentDateTime,
@@ -42,6 +43,7 @@ class ArticleSerializerTest extends Specification {
           id = Id(22),
           title = "my title",
           description = None,
+          keywords = None,
           media = None,
           content = """my content
           has few lines in it
