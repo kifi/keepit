@@ -26,7 +26,7 @@ case class SignatureCheck(referenceUrl: String, trustedDomain: String)(implicit 
   private var failedContentChecks = Set.empty[String]
   private var referenceUrlIsBroken = false
 
-  def isDefinedAt(candidate: NormalizationCandidate) = ( for { uri <- URI.safelyParse(candidate.url); host <- uri.host } yield host.name.endsWith(trustedDomain) ).getOrElse(false)
+  def isDefinedAt(candidate: NormalizationCandidate) = candidate.url.matches(trustedDomain)
   protected def check(candidate: NormalizationCandidate)(implicit session: RSession): Future[Boolean] = {
     val alternateUrl = candidate.url
     if (referenceUrlIsBroken || failedContentChecks.contains(alternateUrl)) Future.successful(false)

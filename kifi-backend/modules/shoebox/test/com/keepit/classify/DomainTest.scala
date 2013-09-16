@@ -6,7 +6,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.Normalization
 
-class DomainTest extends Specification with ShoeboxTestInjector {
+class
+DomainTest extends Specification with ShoeboxTestInjector {
   "The domain repo" should {
     "save and retrieve domains by name and id" in {
       withDb() { implicit injector =>
@@ -47,21 +48,6 @@ class DomainTest extends Specification with ShoeboxTestInjector {
 
           domainRepo.save(sd.withManualSensitive(None).withAutoSensitive(None))
           domainRepo.get(sd.id.get).sensitive === None
-        }
-      }
-    }
-    
-    "persist normalization scheme" in {
-      withDb() { implicit injector =>
-        val domainRepo = inject[DomainRepo]
-        val d = Domain(hostname = "www.google.com", autoSensitive = Some(false), normalizationScheme = Some(Normalization.HTTP))
-        val d2 = Domain(hostname = "www.baidu.com", autoSensitive = Some(false))
-
-        inject[Database].readWrite{ implicit s =>
-          val sd = domainRepo.save(d)
-          val sd2 = domainRepo.save(d2)
-          domainRepo.get(sd.id.get).normalizationScheme === Some(Normalization.HTTP)
-          domainRepo.get(sd2.id.get).normalizationScheme === None
         }
       }
     }

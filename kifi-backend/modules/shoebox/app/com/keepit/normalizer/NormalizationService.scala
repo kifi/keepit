@@ -31,7 +31,6 @@ class NormalizationServiceImpl @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   uriIntegrityPlugin: UriIntegrityPlugin,
   priorKnowledge: PriorKnowledge,
-  scraperPlugin: ScraperPlugin,
   healthcheckPlugin: HealthcheckPlugin) extends NormalizationService with Logging {
 
   def normalize(uriString: String)(implicit session: RSession): String = normalizedURIRepo.getByUri(uriString).map(_.url).getOrElse(prenormalize(uriString))
@@ -59,11 +58,9 @@ class NormalizationServiceImpl @Inject() (
 
 
   private def processUpdate(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]] = {
-    implicit val uriRepo: NormalizedURIRepo = normalizedURIRepo
-    implicit val scraper: ScraperPlugin = scraperPlugin
 
     val relevantCandidates = getRelevantCandidates(current, candidates)
-    val contentChecks = priorKnowledge.getContentChecks(current.url)
+    val contentChecks = db.readOnly { implicit session => priorKnowledge.getContentChecks(current.url) }
     val findStrongerCandidate = FindStrongerCandidate(current, Action(current, contentChecks))
 
     for { (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(relevantCandidates) } yield {

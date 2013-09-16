@@ -13,7 +13,6 @@ import scala.concurrent.duration.Duration
 case class Domain(
   id: Option[Id[Domain]] = None,
   hostname: String,
-  normalizationScheme: Option[Normalization] = None,
   autoSensitive: Option[Boolean] = None,
   manualSensitive: Option[Boolean] = None,
   state: State[Domain] = DomainStates.ACTIVE,
@@ -27,14 +26,12 @@ case class Domain(
   def withState(state: State[Domain]) = this.copy(state = state)
   val sensitive: Option[Boolean] = manualSensitive orElse autoSensitive
   def isActive: Boolean = state == DomainStates.ACTIVE
-  def withNormalizationScheme(scheme: Option[Normalization]) = this.copy(normalizationScheme = scheme)
 }
 
 object Domain {
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[Domain]) and
     (__ \ 'hostname).format[String] and
-    (__ \ 'normalizationScheme).formatNullable[Normalization] and
     (__ \ 'autoSensitive).formatNullable[Boolean] and
     (__ \ 'manualSensitive).formatNullable[Boolean] and
     (__ \'state).format(State.format[Domain]) and

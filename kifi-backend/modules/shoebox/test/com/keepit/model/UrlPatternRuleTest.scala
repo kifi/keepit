@@ -35,5 +35,19 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "persist normalization scheme" in {
+      withDb() { implicit injector =>
+        val d = UrlPatternRule(pattern = """https?://www\.google\.com""", normalization = Some(Normalization.HTTPS))
+        val d2 = UrlPatternRule(pattern = "www.baidu.com")
+
+        inject[Database].readWrite{ implicit s =>
+          val sd = urlPatternRuleRepo.save(d)
+          val sd2 = urlPatternRuleRepo.save(d2)
+          urlPatternRuleRepo.get(sd.id.get).normalization === Some(Normalization.HTTPS)
+          urlPatternRuleRepo.get(sd2.id.get).normalization === None
+        }
+      }
+    }
   }
 }

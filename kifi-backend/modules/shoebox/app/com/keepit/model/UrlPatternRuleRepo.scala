@@ -9,8 +9,12 @@ import scala.Some
 @ImplementedBy(classOf[UrlPatternRuleRepoImpl])
 trait UrlPatternRuleRepo extends Repo[UrlPatternRule] {
   def allActive()(implicit session: RSession): Seq[UrlPatternRule]
-  def get(url: String)(implicit session: RSession): Option[UrlPatternRule]
+  def get(url: String)(implicit session: RSession): Seq[UrlPatternRule]
+  def getUnique(url: String)(implicit sesseion: RSession): Option[UrlPatternRule]
   def isUnscrapable(url: String)(implicit session: RSession): Boolean
+  def getTrustedDomain(url: String)(implicit session: RSession): Option[String]
+  def getPreferredNormalization(url: String)(implicit session: RSession): Option[Normalization]
+  def normSchemePage(page: Int, pageSize: Int)(implicit session: RSession): (Seq[UrlPatternRule], Int)
 }
 
 @Singleton
@@ -50,11 +54,18 @@ class UrlPatternRuleRepoImpl @Inject() (
       result
     }
 
-  def get(url: String)(implicit session: RSession): Option[UrlPatternRule] = {
-    val matchingRules = allActive().filter(rule => url.matches(rule.pattern))
-    require(matchingRules.length <= 1, s"Several rules are matching url ${url}.")
+  def get(url: String)(implicit session: RSession): Seq[UrlPatternRule] = allActive().filter(rule => url.matches(rule.pattern))
+  def getUnique(url: String)(implicit sesseion: RSession): Option[UrlPatternRule] = {
+    val matchingRules = get(url)
+    require(matchingRules.length <= 1, s"${matchingRules.length} rules match url ${url}")
     matchingRules.headOption
   }
+  def isUnscrapable(url: String)(implicit session: RSession): Boolean = getUnique(url).map(_.isUnscrapable).getOrElse(false)
+  def getTrustedDomain(url: String)(implicit session: RSession): Option[String] = for { rule <- getUnique(url); trustedDomain <- rule.trustedDomain } yield trustedDomain
+  def getPreferredNormalization(url: String)(implicit session: RSession): Option[Normalization] = for { rule <- getUnique(url); normalization <- rule.normalization } yield normalization
 
-  def isUnscrapable(url: String)(implicit session: RSession): Boolean = get(url).map(_.isUnscrapable).getOrElse(false)
+  def normSchemePage(page: Int, pageSize: Int)(implicit session: RSession): (Seq[UrlPatternRule], Int) = {
+    val ds = (for (d <- table if d.state =!= UrlPatternRuleStates.INACTIVE && d.normalization.isNotNull) yield d).sortBy(_.pattern).list
+    (ds.drop(page*pageSize).take(pageSize), ds.size)
+  }
 }

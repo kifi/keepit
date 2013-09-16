@@ -2,7 +2,7 @@
 
 # --- !Ups
 alter table domain
-	delete column normalization_scheme
+	drop column normalization_scheme;
 
 CREATE TABLE url_pattern_rule (
     id bigint(20) NOT NULL AUTO_INCREMENT,
@@ -15,11 +15,11 @@ CREATE TABLE url_pattern_rule (
     trusted_domain varchar(256) NULL,
 
     PRIMARY KEY (id),
-    INDEX url_pattern_rule_state (state)
-    INDEX url_pattern (pattern)
+    INDEX url_pattern_rule_state (state),
+    UNIQUE INDEX url_pattern (pattern)
 
 );
 
-insert into evolutions (name, description) values('95.sql', 'delete normalization_scheme from domain and create table url_pattern_rule');
+insert into evolutions (name, description) values('97.sql', 'delete normalization_scheme from domain and create table url_pattern_rule');
 
 # --- !Downs

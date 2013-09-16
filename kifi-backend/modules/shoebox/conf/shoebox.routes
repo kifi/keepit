@@ -175,6 +175,10 @@ GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlControl
 GET     /admin/data/batchMerge          @com.keepit.controllers.admin.UrlController.batchMerge
 GET     /admin/data/canonical       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
 GET     /admin/data/redirect       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
+GET     /admin/data/domainNormSchemeView @com.keepit.controllers.admin.UrlController.normSchemePageView(page: Int ?= 0)
+POST    /admin/data/searchDomainNormalization @com.keepit.controllers.admin.UrlController.searchDomainNormalization()
+POST    /admin/data/DomainNormScheme @com.keepit.controllers.admin.UrlController.saveDomainNormScheme(id: Id[com.keepit.model.UrlPatternRule])
+GET     /admin/data/DomainNormScheme  @com.keepit.controllers.admin.UrlController.editDomainNormScheme(id: Id[com.keepit.model.UrlPatternRule])
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
@@ -260,10 +264,6 @@ POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
-GET     /admin/slider/domainNormSchemeView @com.keepit.controllers.admin.SliderAdminController.normSchemePageView(page: Int ?= 0)
-POST     /admin/slider/searchDomainNormalization @com.keepit.controllers.admin.SliderAdminController.searchDomainNormalization()
-POST     /admin/slider/DomainNormScheme @com.keepit.controllers.admin.SliderAdminController.saveDomainNormScheme(id: Id[com.keepit.classify.Domain])
-GET     /admin/slider/DomainNormScheme  @com.keepit.controllers.admin.SliderAdminController.editDomainNormScheme(id: Id[com.keepit.classify.Domain])
 
 GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
