@@ -23,7 +23,7 @@ import scala.concurrent.duration._
 import ArticleRecordSerializer._
 
 object ArticleIndexer {
-  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE)
+  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE, REDIRECTED)
   def shouldDelete(uri: NormalizedURI): Boolean = toBeDeletedStates.contains(uri.state)
 }
 
