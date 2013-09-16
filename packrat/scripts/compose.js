@@ -58,6 +58,12 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
     $f[0].classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
   }).on("transitionend", function() {
     updateMaxHeight();
+  }).on("paste", function(e) {
+    var cd = e.originalEvent.clipboardData;
+    if (cd) {
+      e.preventDefault();
+      document.execCommand("insertText", false, cd.getData("text/plain"));
+    }
   });
 
   if ($t.length) {
