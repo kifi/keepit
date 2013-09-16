@@ -31,10 +31,12 @@ class UrlPatternRuleRepoImpl @Inject() (
 
   override val table = new RepoTable[UrlPatternRule](db, "url_pattern_rule") {
     def pattern = column[String]("pattern", O.NotNull)
+    def example = column[String]("pattern", O.Nullable)
     def isUnscrapable = column[Boolean]("is_unscrapable", O.NotNull)
+    def showSlider = column[Boolean]("show_slider", O.NotNull)
     def normalization = column[Normalization]("normalization", O.Nullable)
     def trustedDomain = column[String]("trusted_domain", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ state ~ pattern ~ isUnscrapable ~ normalization.? ~ trustedDomain.? <> (UrlPatternRule.apply _, UrlPatternRule.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ state ~ pattern ~ example.? ~ isUnscrapable ~ showSlider ~ normalization.? ~ trustedDomain.? <> (UrlPatternRule.apply _, UrlPatternRule.unapply _)
   }
 
   private var allMemCache: Option[Seq[UrlPatternRule]] = None

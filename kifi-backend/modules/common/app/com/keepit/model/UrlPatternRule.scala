@@ -14,7 +14,9 @@ case class UrlPatternRule(
   updatedAt: DateTime = currentDateTime,
   state: State[UrlPatternRule] = UrlPatternRuleStates.ACTIVE,
   pattern: String,
+  example: Option[String] = None,
   isUnscrapable: Boolean = false,
+  showSlider: Boolean = true,
   normalization: Option[Normalization] = None,
   trustedDomain: Option[String] = None
 ) extends Model[UrlPatternRule] {
@@ -32,7 +34,9 @@ object UrlPatternRule {
       (__ \ 'updatedAt).format(DateTimeJsonFormat) and
       (__ \ 'state).format(State.format[UrlPatternRule]) and
       (__ \ 'pattern).format[String] and
+      (__ \ 'example).formatNullable[String] and
       (__ \ 'isUnscrapable).format[Boolean] and
+      (__ \ 'showSlider).format[Boolean] and
       (__ \ 'normalization).formatNullable[Normalization] and
       (__ \ 'trustedDomain).formatNullable[String]
     )(UrlPatternRule.apply, unlift(UrlPatternRule.unapply))
