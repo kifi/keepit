@@ -8,6 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.BasicUser
 import com.keepit.common.controller.ElizaServiceController
+import com.keepit.common.akka.SafeFuture
 
 import scala.concurrent.{Promise, future, Await, Future}
 import scala.concurrent.duration._
@@ -313,7 +314,7 @@ class MessagingController @Inject() (
   }
 
   private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = {
-    future {
+    SafeFuture {
       val locator = "/messages/" + thread.externalId
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
 
@@ -332,7 +333,7 @@ class MessagingController @Inject() (
 
     }
 
-    future{
+    SafeFuture{
       val notifText = MessageLookHereRemover(messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
       sendPushNotification(user, thread.externalId, getPendingNotificationCount(user), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
     }
@@ -435,7 +436,7 @@ class MessagingController @Inject() (
       sentOnUriId = thread.uriId
       )) 
     }
-    future { setLastSeen(from, thread.id.get, Some(message.createdAt)) }
+    SafeFuture { setLastSeen(from, thread.id.get, Some(message.createdAt)) }
 
     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
