@@ -16,7 +16,7 @@ class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingR
   def trackInternalEvent = Action(parse.json) { request =>
     val event: UserEvent = request.body.as[UserEvent]
     userEventLoggingRepo.insert(event)
-    Ok("")
+    Status(202)
   }
 
 
