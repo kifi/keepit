@@ -9,7 +9,7 @@ import reactivemongo.api.collections.default.BSONCollection
 
 import scala.concurrent.Promise
 import scala.concurrent.ExecutionContext.Implicits.global //Might want to change this to a custom play one
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
 
 import play.modules.statsd.api.Statsd
 
@@ -49,6 +49,7 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
   val maxBufferSize: Int
 
   val bufferSize = new AtomicLong(0)
+  val hasWarned = new AtomicBoolean(false)
 
   override def insert(obj: T) : Unit = {
     if (bufferSize.get>=maxBufferSize) {
@@ -61,7 +62,7 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
       ))
       throw MongoInsertBufferFullException()
     }
-    if (bufferSize.get>=warnBufferSize) {
+    if (bufferSize.get>=warnBufferSize && hasWarned.getAndSet(true)==false) {
       healthcheckPlugin.addError(HealthcheckError(
         error = None, 
         method = Some("mongo"), 
@@ -70,6 +71,7 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
         errorMessage = Some(s"Mongo Insert almost Buffer Full. (${bufferSize.get})")
       ))
     }
+    if (bufferSize.get < warnBufferSize) hasWarned.set(false)
 
     val inflight = bufferSize.incrementAndGet()
     Statsd.gauge(s"monogInsertBuffer.${collection.name}", inflight)
