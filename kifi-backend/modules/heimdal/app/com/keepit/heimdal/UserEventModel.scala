@@ -12,8 +12,8 @@ import reactivemongo.api.collections.default.BSONCollection
 
 
 trait UserEventLoggingRepo extends BufferedMongoRepo[UserEvent] {
-  val warnBufferSize = 1000
-  val maxBufferSize = 2000
+  val warnBufferSize = 500
+  val maxBufferSize = 10000
 
   private def contextToBSON(context: UserEventContext): BSONDocument = {
     BSONDocument(
