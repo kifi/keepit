@@ -40,7 +40,7 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: St
 
   private[this] var keywordValidatorContentHandler: Option[KeywordValidatorContentHandler] = None
 
-  def getKeywords:Option[Set[String]] = keywordValidatorContentHandler.map{ _.keywords }
+  def getKeywords:Option[Seq[String]] = keywordValidatorContentHandler.map{ _.keywords }
 
   override def startDocument() {
     // enable boilerpipe only for HTML
