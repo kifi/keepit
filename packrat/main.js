@@ -100,7 +100,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (socket) {
     socket.send(["log_event", ev]);
   } else {
-    ev.time = +new Date;
+    ev.time = Date.now();
     logEvent.queue.push(ev);
     if (logEvent.queue.length > 50) {
       logEvent.queue.shift();  // discard oldest
@@ -109,7 +109,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
 }
 logEvent.queue = [];
 logEvent.catchUp = function() {
-  var t = +new Date;
+  var t = Date.now();
   while (logEvent.queue.length) {
     var ev = logEvent.queue.shift();
     ev.msAgo = t - ev.time;
