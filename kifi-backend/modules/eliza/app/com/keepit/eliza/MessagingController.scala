@@ -656,6 +656,17 @@ class MessagingController @Inject() (
     notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getPendingNotificationCount(userId)))
   }
 
+  def setNotificationUnread(userId: Id[User], threadExtId: ExternalId[MessageThread]) : Unit = {
+    val thread = db.readOnly{ implicit session =>
+      threadRepo.get(threadExtId)
+    }
+    db.readWrite{ implicit session =>
+      userThreadRepo.markPending(userId, thread.id.get)
+    }
+    notificationRouter.sendToUser(userId, Json.arr("set_notification_unread", threadExtId.id))
+    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getPendingNotificationCount(userId)))
+  }
+
 
 }
 

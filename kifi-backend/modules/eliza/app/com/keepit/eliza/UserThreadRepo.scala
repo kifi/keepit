@@ -79,6 +79,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit
 
+  def markPending(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession) : Unit
+
 }
 
 
@@ -249,6 +251,10 @@ class UserThreadRepoImpl @Inject() (
     updates.foreach{ case (oldId, newId) =>
       (for (row <- table if row.uriId===oldId) yield row.uriId).update(newId)
     } 
+  }
+
+  def markPending(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession) : Unit = {
+    (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationPending).update(true)
   }
 
 
