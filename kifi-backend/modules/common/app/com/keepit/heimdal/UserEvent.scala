@@ -13,7 +13,11 @@ object UserEventType {
   implicit val format = Json.format[UserEventType]
 }
 
-case class UserEventContext(data: Map[String, Seq[Either[String, Double]]])
+sealed trait ContextData
+case class ContextStringData(value: String) extends ContextData
+case class ContextDoubleData(value: Double) extends ContextData
+
+case class UserEventContext(data: Map[String, Seq[ContextData]])
 
 object UserEventContext {
   implicit val format = new Format[UserEventContext] {
@@ -21,10 +25,10 @@ object UserEventContext {
     def reads(json: JsValue): JsResult[UserEventContext] = {
       val map = json match {
         case obj: JsObject => obj.value.mapValues{ value =>
-          val seq : Seq[Either[String, Double]] = value match {
+          val seq : Seq[ContextData] = value match {
             case arr: JsArray => arr.value.map{ _ match{
-                case JsNumber(x) => Right[String, Double](x.doubleValue)
-                case JsString(s) => Left[String, Double](s)
+                case JsNumber(x) => ContextDoubleData(x.doubleValue)
+                case JsString(s) => ContextStringData(s)
                 case _ => return JsError()
               } 
             }
@@ -34,14 +38,14 @@ object UserEventContext {
         }
         case _ => return JsError()
       }
-      JsSuccess(UserEventContext(Map[String, Seq[Either[String, Double]]](map.toSeq :_*)))
+      JsSuccess(UserEventContext(Map[String, Seq[ContextData]](map.toSeq :_*)))
     }
 
     def writes(obj: UserEventContext) : JsValue = {
       JsObject(obj.data.mapValues{ seq =>
         JsArray(seq.map{ _ match {
-          case Left(s)  => JsString(s)
-          case Right(x) => JsNumber(x) 
+          case ContextStringData(s)  => JsString(s)
+          case ContextDoubleData(x) => JsNumber(x) 
         }})
       }.toSeq)
     }

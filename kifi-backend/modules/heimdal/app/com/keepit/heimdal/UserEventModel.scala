@@ -20,8 +20,8 @@ trait UserEventLoggingRepo extends BufferedMongoRepo[UserEvent] {
       context.data.mapValues{ seq =>
         BSONArray(
           seq.map{ _ match {
-            case Left(s)  => BSONString(s)
-            case Right(x) => BSONDouble(x)
+            case ContextStringData(s)  => BSONString(s)
+            case ContextDoubleData(x) => BSONDouble(x)
           }}
         )
       }
