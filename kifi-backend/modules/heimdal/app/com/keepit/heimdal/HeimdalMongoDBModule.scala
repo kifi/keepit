@@ -23,7 +23,7 @@ case class ProdMongoModule() extends MongoModule {
   @Singleton
   @Provides
   def userEventLoggingRepo(healthcheckPlugin: HealthcheckPlugin): UserEventLoggingRepo = {
-    val config = current.configuration.getString("mongodb.main").get
+    val config = current.configuration.getString("db.mongo.main").get
     val driver = new MongoDriver
     val connection = driver.connection(List(config))
     val db = connection("heimdal")
