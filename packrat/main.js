@@ -228,7 +228,6 @@ const socketHandlers = {
   },
   all_notifications_visited: function(id, time) {
     api.log("[socket:all_notifications_visited]", id, time);
-    syncNumNotificationsNotVisited();
     markAllNoticesVisited(id, time);
   },
   thread: function(th) {
@@ -749,8 +748,6 @@ function markNoticesVisited(category, id, timeStr, locator) {
       id: id,
       numNotVisited: numNotificationsNotVisited});
   });
-
-  syncNumNotificationsNotVisited(); // see comment in function :(
 }
 
 function markAllNoticesVisited(id, timeStr) {  // id and time of most recent notification to mark
