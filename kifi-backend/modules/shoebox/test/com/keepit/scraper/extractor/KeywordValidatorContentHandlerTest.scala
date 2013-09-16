@@ -28,7 +28,7 @@ class KeywordValidatorContentHandlerTest extends Specification {
        handler.characters(arr, 0, arr.length)
        handler.endDocument()
 
-       handler.keywords === Set("aaa", "bbb ccc")
+       handler.keywords === Seq("aaa", "bbb ccc")
     }
 
     "collpases multiple spaces in input to a single space" in {
@@ -41,7 +41,7 @@ class KeywordValidatorContentHandlerTest extends Specification {
        handler.characters(arr, 0, arr.length)
        handler.endDocument()
 
-       handler.keywords === Set("aaa bbb", "bbb ccc", "ccc ddd")
+       handler.keywords === Seq("aaa bbb", "bbb ccc", "ccc ddd")
     }
 
     "translate a symbol to a space" in {
@@ -54,7 +54,7 @@ class KeywordValidatorContentHandlerTest extends Specification {
        handler.characters(arr, 0, arr.length)
        handler.endDocument()
 
-       handler.keywords === Set("aaa bbb", "bbb ccc", "ccc ddd", "ddd eee")
+       handler.keywords === Seq("aaa bbb", "bbb ccc", "ccc ddd", "ddd eee")
     }
 
     "be case insensitive" in {
@@ -66,7 +66,7 @@ class KeywordValidatorContentHandlerTest extends Specification {
        handler.characters(arr, 0, arr.length)
        handler.endDocument()
 
-       handler.keywords === Set("aaa bbb", "bbb ccc")
+       handler.keywords === Seq("aaa bbb", "bbb ccc")
     }
 
     "be ok with segmentation" in {
@@ -81,7 +81,7 @@ class KeywordValidatorContentHandlerTest extends Specification {
        }
        handler.endDocument()
 
-       handler.keywords === Set("aaa bbb", "bbb ccc")
+       handler.keywords === Seq("aaa bbb", "bbb ccc")
     }
   }
 }
