@@ -2,7 +2,7 @@
 function throttle(func, wait) {
 	var context, args, result, timeout, previous = 0;
 	function later() {
-		previous = +new Date;
+		previous = Date.now();
 		timeout = null;
 		result = func.apply(context, args);
 	}
