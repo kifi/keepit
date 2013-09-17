@@ -284,15 +284,12 @@ class Scraper @Inject() (
     }
   }
 
-  private[this] def getTitle(x: Extractor): String = {
-    x.getMetadata("title").getOrElse("")
-  }
-  private[this] def getDescription(x: Extractor): Option[String] = {
-    x.getMetadata("description").orElse(x.getMetadata("Description")).orElse(x.getMetadata("DESCRIPTION"))
-  }
-  private[this] def getKeywords(x: Extractor): Option[String] = {
-    x.getKeywords
-  }
+  private[this] def getTitle(x: Extractor): String = x.getMetadata("title").getOrElse("")
+
+  private[this] def getDescription(x: Extractor): Option[String] = x.getMetadata("description")
+
+  private[this] def getKeywords(x: Extractor): Option[String] = x.getKeywords
+
   private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
 
