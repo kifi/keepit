@@ -629,12 +629,10 @@ api.port.on({
     if (tab.nUri == link.nUri) {
       awaitDeepLink(link, tab.id);
     } else {
-      var tabAtNewNormUri, d =
-        pageData[link.nUri] ||
-        pageData[(tabAtNewNormUri = api.tabs.anyAt(link.nUri)) && tabAtNewNormUri.nUri];  // data associated with old URI normalization
-      if (d) {
-        awaitDeepLink(link, d.tabs[0].id);
-        api.tabs.select(d.tabs[0].id);
+      var d = pageData[link.nUri];
+      if ((tab = d ? d.tabs[0] : api.tabs.anyAt(link.nUri))) {  // page’s normalized URI may have changed
+        awaitDeepLink(link, tab.id);
+        api.tabs.select(tab.id);
       } else {
         api.tabs.open(link.nUri, function(tabId) {
           awaitDeepLink(link, tabId);
