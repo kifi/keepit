@@ -245,7 +245,7 @@ slider2 = function() {
   function showSlider(trigger, callback) {
     api.log("[showSlider]", trigger);
 
-    lastShownAt = +new Date;
+    lastShownAt = Date.now();
     $slider = $();  // creation in progress (prevents multiple)
 
     createSlider(function() {

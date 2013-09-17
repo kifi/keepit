@@ -299,20 +299,19 @@ class UserController @Inject() (
     def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialUserInfo] =
       socialConnectionRepo.getSocialUserConnections(sui.id.get) filter (searchScore(_) > 0)
 
-    val unfilteredConnections = db.readOnly { implicit s =>
-      socialUserRepo.getByUser(request.userId)
+    val connections = db.readOnly { implicit s =>
+      val filteredConnections = socialUserRepo.getByUser(request.userId)
         .flatMap(getFilteredConnections)
-        .map(getWithInviteStatus)
-        .sortBy { case (sui, status) => (-searchScore(sui), normalize(sui.fullName)) }
-    }
+        .sortBy { case sui => (-searchScore(sui), normalize(sui.fullName)) }
 
-    val connections = (after match {
-      case Some(id) => unfilteredConnections.dropWhile { case (sui, _) => socialIdString(sui) != id } match {
-        case hd +: tl => tl
-        case tl => tl
-      }
-      case None => unfilteredConnections
-    }).take(limit)
+      (after match {
+        case Some(id) => filteredConnections.dropWhile(socialIdString(_) != id) match {
+          case hd +: tl => tl
+          case tl => tl
+        }
+        case None => filteredConnections
+      }).take(limit).map(getWithInviteStatus)
+    }
 
     Ok(JsArray(connections.map { conn =>
       Json.obj(

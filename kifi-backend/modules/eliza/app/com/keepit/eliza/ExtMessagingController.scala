@@ -168,6 +168,9 @@ class ExtMessagingController @Inject() (
       val threadInfos = messagingController.getThreadInfos(socket.userId, url)
       socket.channel.push(Json.arr("thread_infos", threadInfos))
     },
+    "set_notfication_unread" -> { case JsString(threadId) +: _ =>
+      messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
+    },
     "log_event" -> { case JsObject(pairs) +: _ =>
       implicit val experimentFormat = State.format[ExperimentType]
       val eventJson = JsObject(pairs).deepMerge(

@@ -64,7 +64,8 @@ object ApplicationBuild extends Build {
       ExclusionRule(organization = "javax.jms"),
       ExclusionRule(organization = "com.sun.jdmk"),
       ExclusionRule(organization = "com.sun.jmx"),
-      ExclusionRule(organization = "org.jboss.netty")
+      ExclusionRule(organization = "org.jboss.netty"),
+      ExclusionRule(organization = "org.slf4j")
     ))
 
     val searchDependencies = Seq(
@@ -83,6 +84,13 @@ object ApplicationBuild extends Build {
       "org.imgscalr" % "imgscalr-lib" % "4.2",
       "org.jsoup" % "jsoup" % "1.7.1"
     )
+
+    val heimdalDependencies = Seq(
+      "org.reactivemongo" %% "reactivemongo" % "0.9",
+      "org.reactivemongo" %% "play2-reactivemongo" % "0.9"
+    ) map (_.excludeAll(
+      ExclusionRule(organization = "org.slf4j")
+    ))
 
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
       "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
@@ -161,7 +169,11 @@ object ApplicationBuild extends Build {
       (commonSettings ++ (routesImport += "com.keepit.eliza._")) : _*
     ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
+    val heimdal = play.Project("heimdal", appVersion, heimdalDependencies, path=file("modules/heimdal")).settings(
+      commonSettings: _*
+    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+
     val aaaMain = play.Project(appName, appVersion).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "compile->compile").aggregate(common, search, shoebox, eliza)
+    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile").aggregate(common, search, shoebox, eliza, heimdal)
 }

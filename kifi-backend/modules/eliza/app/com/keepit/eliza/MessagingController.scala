@@ -8,6 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.BasicUser
 import com.keepit.common.controller.ElizaServiceController
+import com.keepit.common.akka.SafeFuture
 
 import scala.concurrent.{Promise, future, Await, Future}
 import scala.concurrent.duration._
@@ -313,7 +314,7 @@ class MessagingController @Inject() (
   }
 
   private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = {
-    future {
+    SafeFuture {
       val locator = "/messages/" + thread.externalId
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
 
@@ -332,8 +333,8 @@ class MessagingController @Inject() (
 
     }
 
-    future{
-      val notifText = messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText
+    SafeFuture{
+      val notifText = MessageLookHereRemover(messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
       sendPushNotification(user, thread.externalId, getPendingNotificationCount(user), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
     }
 
@@ -435,7 +436,7 @@ class MessagingController @Inject() (
       sentOnUriId = thread.uriId
       )) 
     }
-    future { setLastSeen(from, thread.id.get, Some(message.createdAt)) }
+    SafeFuture { setLastSeen(from, thread.id.get, Some(message.createdAt)) }
 
     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
@@ -553,11 +554,13 @@ class MessagingController @Inject() (
   }
 
   def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[Message]) : DateTime = {
-    db.readWrite{ implicit session =>
+    val lastTime = db.readWrite{ implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.clearNotificationsBefore(user, message.createdAt)
       message.createdAt
     }
+    notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getPendingNotificationCount(user)))
+    lastTime
   }
  
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestampOpt: Option[DateTime] = None) : Unit = {
@@ -650,6 +653,17 @@ class MessagingController @Inject() (
     val nUrl : String = thread.nUrl.getOrElse("")
     if (message.from != userId) db.readWrite{ implicit session => userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message) }
     notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
+    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getPendingNotificationCount(userId)))
+  }
+
+  def setNotificationUnread(userId: Id[User], threadExtId: ExternalId[MessageThread]) : Unit = {
+    val thread = db.readOnly{ implicit session =>
+      threadRepo.get(threadExtId)
+    }
+    db.readWrite{ implicit session =>
+      userThreadRepo.markPending(userId, thread.id.get)
+    }
+    notificationRouter.sendToUser(userId, Json.arr("set_notification_unread", threadExtId.id))
     notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getPendingNotificationCount(userId)))
   }
 
