@@ -68,3 +68,6 @@ api = function() {
       return self.options.dataUriPrefix + path;
     }};
 }();
+
+/^Mac/.test(navigator.platform) && api.require(['styles/mac.css'], api.noop);
+

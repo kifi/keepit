@@ -160,6 +160,7 @@ class Scraper @Inject() (
               id = latestUri.id.get,
               title = latestUri.title.getOrElse(""),
               description = None,
+              keywords = None,
               media = None,
               content = "",
               scrapedAt = currentDateTime,
@@ -236,6 +237,7 @@ class Scraper @Inject() (
             val content = extractor.getContent
             val title = getTitle(extractor)
             val description = getDescription(extractor)
+            val keywords = getKeywords(extractor)
             val media = getMediaTypeString(extractor)
             val signature = Signature(Seq(title, description.getOrElse(""), content))
 
@@ -257,6 +259,7 @@ class Scraper @Inject() (
                   id = normalizedUri.id.get,
                   title = title,
                   description = description,
+                  keywords = keywords,
                   media = media,
                   content = content,
                   scrapedAt = currentDateTime,
@@ -287,13 +290,16 @@ class Scraper @Inject() (
   private[this] def getDescription(x: Extractor): Option[String] = {
     x.getMetadata("description").orElse(x.getMetadata("Description")).orElse(x.getMetadata("DESCRIPTION"))
   }
+  private[this] def getKeywords(x: Extractor): Option[String] = {
+    x.getKeywords
+  }
   private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
 
   def close() {
     httpFetcher.close()
   }
-  
+
   private[this] def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
     title = getTitle(extractor),
     content = extractor.getContent,

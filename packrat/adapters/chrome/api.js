@@ -528,7 +528,7 @@ api = function() {
           send: function(arr, callback) {
             if (callback) {
               var id = nextCallbackId++;
-              callbacks[id] = [callback, +new Date];
+              callbacks[id] = [callback, Date.now()];
               arr.splice(1, 0, id);
             }
             api.log("#0ac", "[socket.send]", arr);

@@ -28,7 +28,6 @@ class ExtMessagingController @Inject() (
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
     db: Database,
-    eventStatsdInterceptor: EventStatsdInterceptor,
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
@@ -169,12 +168,14 @@ class ExtMessagingController @Inject() (
       val threadInfos = messagingController.getThreadInfos(socket.userId, url)
       socket.channel.push(Json.arr("thread_infos", threadInfos))
     },
+    "set_notfication_unread" -> { case JsString(threadId) +: _ =>
+      messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
+    },
     "log_event" -> { case JsObject(pairs) +: _ =>
       implicit val experimentFormat = State.format[ExperimentType]
       val eventJson = JsObject(pairs).deepMerge(
         Json.obj("experiments" -> socket.experiments)
       )
-      eventStatsdInterceptor.intercept(eventJson)
       shoebox.logEvent(socket.userId, eventJson)
     }
   )

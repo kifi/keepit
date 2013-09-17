@@ -16,7 +16,7 @@
   -moz-box-sizing: content-box;
   box-sizing: content-box;
   text-align: center;
-  font-family: "Helvetica Neue",arial,sans-serif;
+  font-family: Arial, sans-serif;
   text-transform: none;
   text-shadow: none;
   transition: -webkit-transform 90ms ease-in-out;

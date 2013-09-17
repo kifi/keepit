@@ -100,7 +100,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (socket) {
     socket.send(["log_event", ev]);
   } else {
-    ev.time = +new Date;
+    ev.time = Date.now();
     logEvent.queue.push(ev);
     if (logEvent.queue.length > 50) {
       logEvent.queue.shift();  // discard oldest
@@ -109,7 +109,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
 }
 logEvent.queue = [];
 logEvent.catchUp = function() {
-  var t = +new Date;
+  var t = Date.now();
   while (logEvent.queue.length) {
     var ev = logEvent.queue.shift();
     ev.msAgo = t - ev.time;
@@ -228,7 +228,6 @@ const socketHandlers = {
   },
   all_notifications_visited: function(id, time) {
     api.log("[socket:all_notifications_visited]", id, time);
-    syncNumNotificationsNotVisited();
     markAllNoticesVisited(id, time);
   },
   thread: function(th) {
@@ -397,7 +396,10 @@ const socketHandlers = {
   unread_notifications_count: function(count) {
     // see comment in syncNumNotificationsNotVisited() :(
     if (numNotificationsNotVisited != count) {
-      reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
+      if (notifications) {
+        socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
+        reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
+      }
       numNotificationsNotVisited = count;
       tellTabsNoticeCountIfChanged();
     }
@@ -473,7 +475,7 @@ api.port.on({
         pageData[nUri].position = o.pos;
       }
     }
-    ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos}, respond);
+    ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
   set_enter_to_send: function(data) {
     session.prefs.enterToSend = data;
@@ -556,6 +558,7 @@ api.port.on({
       notificationsCallbacks.push(reply);
     }
     function reply() {
+      syncNumNotificationsNotVisited(); // sanity checking
       respond({
         notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
         timeLastSeen: timeNotificationsLastSeen.toISOString(),
@@ -747,8 +750,6 @@ function markNoticesVisited(category, id, timeStr, locator) {
       id: id,
       numNotVisited: numNotificationsNotVisited});
   });
-
-  syncNumNotificationsNotVisited(); // see comment in function :(
 }
 
 function markAllNoticesVisited(id, timeStr) {  // id and time of most recent notification to mark
