@@ -625,34 +625,28 @@ api.port.on({
   get_networks: function(friendId, respond) {
     socket.send(["get_networks", friendId], respond);
   },
-  open_deep_link: function(data, _, tab) {
-    var tabAtNewNormUri, d =
-      pageData[data.nUri] ||
-      pageData[(tabAtNewNormUri = api.tabs.anyAt(data.nUri)) && tabAtNewNormUri.nUri];  // data associated with old URI normalization
-    if (d) {
-      goToDeepLink(tab.nUri == data.nUri ? tab : d.tabs[0]);
+  open_deep_link: function(link, _, tab) {
+    if (tab.nUri == link.nUri) {
+      awaitDeepLink(link, tab.id);
     } else {
-      api.tabs.open(data.nUri, goToDeepLink);
-    }
-    function goToDeepLink(tab) {
-      if (data.locator) {
-        api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: data.locator}, {queue: 1});
+      var tabAtNewNormUri, d =
+        pageData[link.nUri] ||
+        pageData[(tabAtNewNormUri = api.tabs.anyAt(link.nUri)) && tabAtNewNormUri.nUri];  // data associated with old URI normalization
+      if (d) {
+        awaitDeepLink(link, d.tabs[0].id);
+        api.tabs.select(d.tabs[0].id);
+      } else {
+        api.tabs.open(link.nUri, function(tabId) {
+          awaitDeepLink(link, tabId);
+        });
       }
-      api.tabs.select(tab.id);
     }
   },
   remove_notification: function(o) {
     removeNotificationPopups(o.associatedId);
   },
-  handle_deep_link: function handleDeepLink(o, _, tab, retrySec) {
-    tab = api.tabs.get(tab.id);
-    if (tab && o.uri.match(hostRe)[1] == tab.url.match(hostRe)[1]) {
-      api.log("[handleDeepLink]", tab.id, o);
-      api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: o.locator}, {queue: 1});
-    } else if ((retrySec = retrySec || .5) < 5) {
-      api.log("[handleDeepLink]", tab.id, "retrying in", retrySec, "sec");
-      setTimeout(handleDeepLink.bind(null, o, null, tab, retrySec + .5), retrySec * 1000);
-    }
+  await_deep_link: function(link, _, tab) {
+    awaitDeepLink(link, tab.id);
   },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
@@ -705,7 +699,7 @@ function insertNewNotification(n) {
     }
   }
 
-  while(++i < notifications.length) {
+  while (++i < notifications.length) {
     var n2 = notifications[i];
     if ((n.thread && n2.thread == n.thread) || (n.id == n2.id)) {
       notifications.splice(i--, 1);
@@ -796,6 +790,21 @@ function decrementNumNotificationsNotVisited(n) {
 function getTimeLastRead(n, d) {
   return new Date(
     n.category == "message" && d.lastMessageRead ? (d.lastMessageRead[n.locator.split("/")[2]] || 0) : 0);
+}
+
+function awaitDeepLink(link, tabId, retrySec) {
+  if (link.locator) {
+    var tab = api.tabs.get(tabId);
+    if (tab && (link.url || link.nUri).match(hostRe)[1] == tab.url.match(hostRe)[1]) {
+      api.log("[awaitDeepLink]", tabId, link);
+      api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: link.locator}, {queue: 1});
+    } else if ((retrySec = retrySec || .5) < 5) {
+      api.log("[awaitDeepLink]", tabId, "retrying in", retrySec, "sec");
+      setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
+    }
+  } else {
+    api.log("[awaitDeepLink] no locator", tabId, link);
+  }
 }
 
 function initTab(tab, d) {  // d is pageData[tab.nUri]

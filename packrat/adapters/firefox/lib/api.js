@@ -321,7 +321,7 @@ exports.tabs = {
     tabs.open({
       url: url,
       onOpen: function(tab) {
-        callback && callback(pages[tab.id] || createPage(tab));
+        callback && callback(tab.id);
       }
     });
   },
@@ -441,8 +441,6 @@ tabs
 })
 .on("ready", function(tab) {
   exports.log("[tabs.ready]", tab.id, tab.url);
-  // createPage is already called when first message ("api:start") arrives
-  // pages[tab.id] || createPage(tab);
 });
 
 windows

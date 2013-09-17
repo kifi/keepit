@@ -467,7 +467,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       });
     }).on("click", ".kifi-chatter-deeplink", function() {
       var url = $(this).closest("li.g").find("h3.r a")[0].href;
-      api.port.emit("handle_deep_link", {url: url, locator: $(this).data("locator")});
+      api.port.emit("await_deep_link", {url: url, locator: $(this).data("locator")});
       location.href = url;
     });
   }
