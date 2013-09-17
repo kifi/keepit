@@ -7,10 +7,7 @@ api = function() {
   }
 
   function createPage(tab, skipOnLoading) {
-    var page = pages[tab.id] = {
-      id: tab.id,
-      url: tab.url,
-      ready: undefined};  // ready state not known
+    var page = pages[tab.id] = {id: tab.id, url: tab.url};
     if (tab.active) {
       selectedTabIds[tab.windowId] = tab.id;
     }
@@ -20,16 +17,16 @@ api = function() {
     return page;
   }
 
-  function createPageAndInjectContentScripts(tab, skipHandlers) {
-    var page = createPage(tab, skipHandlers);
+  function createPageAndInjectContentScripts(tab, skipOnLoading) {
+    var page = createPage(tab, skipOnLoading);
     if (/^https?:/.test(tab.url)) {
       if (tab.status === "complete") {
-        injectContentScripts(page, skipHandlers);
+        injectContentScripts(page);
       } else if (tab.status === "loading") {
         // we might want to dispatch on.loading here.
         chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
           if (arr && (arr[0] === "interactive" || arr[0] === "complete")) {
-            injectContentScripts(page, skipHandlers);
+            injectContentScripts(page);
           }
         });
       }
@@ -194,67 +191,72 @@ api = function() {
   });
 
   const ports = {}, portHandlers = {
+    "api:handling": function(data, _, page, port) {
+      for (var i = 0; i < data.length; i++) {
+        port.handling[data[i]] = true;
+      }
+      if (page.toEmit) {
+        for (var i = 0; i < page.toEmit.length;) {
+          var m = page.toEmit[i];
+          if (port.handling[m[0]]) {
+            api.log("#0c0", "[api:handling:emit] %i %s %o", page.id, m[0], m[1] != null ? m[1] : "");
+            port.postMessage(m);
+            page.toEmit.splice(i, 1);
+          } else {
+            i++;
+          }
+        }
+        if (!page.toEmit.length) {
+          delete page.toEmit;
+        }
+      }
+    },
     "api:reload": function() {
       if (!api.isPackaged()) {
         chrome.runtime.reload();
       }
     },
-    "api:require": function(data, respond, tab) {
-      injectWithDeps(tab.id, data.paths, data.injected, respond);
+    "api:require": function(data, respond, page) {
+      injectWithDeps(page.id, data.paths, data.injected, respond);
     }};
   chrome.runtime.onConnect.addListener(function(port) {
     var tab = port.sender.tab;
-    api.log("[onConnect]", port.name, tab && tab.id, tab && tab.url);
+    api.log("#0a0", "[onConnect]", port.name, tab && tab.id, tab && tab.url);
     if (port.sender.id === chrome.runtime.id && tab) {
       if (ports[tab.id]) {
         api.log("#a00", "[onConnect] %i disconnecting prev port", tab.id);
         ports[tab.id].disconnect();
       }
       ports[tab.id] = port;
+      port.handling = {};
       port.onMessage.addListener(function(msg) {
+        var page = pages[tab.id];
         var kind = msg[0], data = msg[1], callbackId = msg[2];
         var handler = portHandlers[kind];
-        if (handler) {
-          var page = pages[tab.id];
-          if (page) {
-            if (tab.url !== page.url) {
-              api.log("#a00", "[onMessage] %i %s mismatch:\n%s\n%s", tab.id, kind, tab.url, page.url);
-            }
-            api.log("#0a0", "[onMessage]", tab.id, kind, data != null ? data : "");
-            handler(data, function(response) {
-              port.postMessage(["api:respond", callbackId, response]);
-            }, page);
-          } else {
-            api.log("#a00", "[onMessage]", tab.id, kind, "ignored, no page", tab.url);
+        if (page && handler) {
+          if (page.url !== tab.url) {
+            api.log("#0a0", "[onMessage] %i %s new url:\n%s →\n%s", tab.id, kind, page.url, tab.url);
+            page.url = tab.url;
           }
+          api.log("#0a0", "[onMessage] %i %s", tab.id, kind, data != null ? data : "");
+          handler(data, respondToTab.bind(port, callbackId), page, port);
         } else {
-          api.log("#a00", "[onMessage]", tab.id, kind, "ignored");
+          api.log("#a00", "[onMessage] %i %s %s %O %s", tab.id, kind, "ignored, page:", page, "handler:", !!handler);
         }
       });
       port.onDisconnect.addListener(function() {
-        api.log("[onDisconnect]");
+        api.log("#0a0", "[onDisconnect]", tab.id);
         delete ports[tab.id];
       });
-      var page = pages[tab.id];
-      if (page && page.ready && page.toEmit) {
-        if (tab.url !== page.url) {
-          api.log("#a00", "[onConnect] %i mismatch:\n%s\n%s", tab.id, tab.url, page.url);
-        }
-        emitQueuedMessages(page, port);
-      }
     }
   });
 
-  function emitQueuedMessages(page, port) {
-    page.toEmit.forEach(function emit(m) {
-      api.log("#0c0", "[emitQueuedMessages] %i %s %o", page.id, m[0], m[1] != null ? m[1] : "");
-      port.postMessage(m);
-    });
-    delete page.toEmit;
+  function respondToTab(callbackId, response) {
+    this.postMessage(["api:respond", callbackId, response]);
   }
 
-  function injectContentScripts(page, skipOnReady) {
-    if (page.injecting || page.ready) return;
+  function injectContentScripts(page) {
+    if (page.injecting || page.injected) return;
     if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
       api.log("[injectContentScripts] forbidden", page.url);
       return;
@@ -282,15 +284,8 @@ api = function() {
           chrome.tabs.executeScript(page.id, {code: "api.dev=1", runAt: "document_start"}, api.noop);
         }
         api.tabs.emit(page, "api:injected", Object.keys(injected));
-        page.ready = true;
+        page.injected = true;
         delete page.injecting;
-        var port = ports[page.id];
-        if (port && page.toEmit) {
-          emitQueuedMessages(page, port);
-        }
-        if (!skipOnReady) {
-          dispatch.call(api.tabs.on.ready, page);
-        }
       }
     }
   }
@@ -513,7 +508,7 @@ api = function() {
               } else {
                 var handler = handlers[id];
                 if (handler) {
-                  api.log("#0ac", "[socket.receive] handling", id);
+                  api.log("#0ac", "[socket.receive]", id);
                   handler.apply(null, msg);
                 } else {
                   api.log("#0ac", "[socket.receive] ignoring", [id].concat(msg));
@@ -572,17 +567,30 @@ api = function() {
           if (page && /^https?:/.test(page.url)) callback(page);
         }
       },
-      emit: function(tab, type, data) {
-        var currTab = pages[tab.id], port;
-        if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
-          if (currTab.ready && (port = ports[tab.id])) {
-            api.log("#0c0", "[api.tabs.emit] %i %s %o", tab.id, type, data);
+      emit: function(tab, type, data, opts) {
+        var page = pages[tab.id];
+        if (page && (page === tab || page.url.match(hostRe)[0] == tab.url.match(hostRe)[0])) {
+          var port = ports[tab.id];
+          if (port && port.handling[type]) {
+            api.log("#0c0", "[api.tabs.emit] %i %s %O", tab.id, type, data);
             port.postMessage([type, data]);
-          } else {
-            (currTab.toEmit || (currTab.toEmit = [])).push([type, data]);
+          } else if (opts && opts.queue) {
+            if (page.toEmit) {
+              if (opts.queue === 1) {
+                for (var i = 0; i < page.toEmit.length; i++) {
+                  if (page.toEmit[i][0] === type) {
+                    page.toEmit[i][1] = data;
+                    return;
+                  }
+                }
+              }
+              page.toEmit.push([type, data]);
+            } else {
+              page.toEmit = [[type, data]];
+            }
           }
         } else {
-          api.log("#a00", "[api.tabs.emit] suppressed %i %s navigated: %s -> %s", tab.id, type, tab.url, currTab && currTab.url);
+          api.log("#a00", "[api.tabs.emit] suppressed %i %s navigated: %s -> %s", tab.id, type, tab.url, page && page.url);
         }
       },
       get: function(tabId) {
@@ -600,7 +608,6 @@ api = function() {
         focus: new Listeners,
         blur: new Listeners,
         loading: new Listeners,
-        ready: new Listeners,
         unload: new Listeners}},
     timers: window,
     version: chrome.app.getDetails().version};
