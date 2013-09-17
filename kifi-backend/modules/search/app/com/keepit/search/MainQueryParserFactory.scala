@@ -11,6 +11,7 @@ class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector) {
       phraseProximityBoost: Float = 0.0f, siteBoost: Float = 0.0f): MainQueryParser = {
     val total = 1.0f + phraseBoost
     new MainQueryParser(
+      lang,
       DefaultAnalyzer.forParsing(lang),
       DefaultAnalyzer.forParsingWithStemmer(lang),
       1.0f/total,
