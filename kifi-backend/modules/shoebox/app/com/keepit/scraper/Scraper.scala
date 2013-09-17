@@ -242,7 +242,10 @@ class Scraper @Inject() (
             val signature = Signature(Seq(title, description.getOrElse(""), content))
 
             // now detect the document change
-            val docChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
+            val docChanged = {
+              normalizedUri.title != Option(title) || // title change should always invoke indexing
+              signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
+            }
 
             // if unchanged, don't trigger indexing. buf if SCRAPE_WANTED or SCRAPE_FAILED, we always change the state and invoke indexing.
             if (!docChanged &&
