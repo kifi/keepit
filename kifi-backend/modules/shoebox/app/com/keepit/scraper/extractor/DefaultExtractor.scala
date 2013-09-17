@@ -28,12 +28,51 @@ object DefaultExtractorProvider extends ExtractorProvider {
   })
 }
 
+object DefaultExtractor {
+  val specialRegex = """[,;:/]\s*""".r
+  val spaceRegex = """\s+""".r
+}
+
 class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
   private[this] val handler: DefaultContentHandler = new DefaultContentHandler(output, metadata, url)
 
   protected def getContentHandler: ContentHandler = handler
 
-  override def getKeywords: Option[String] = handler.getKeywords.map{ _.mkString(", ") }
+  override def getKeywords(): Option[String] = {
+    val str = (handler.getKeywords.map{ _.mkString(", ") } ++ getValidatedMetaTagKeywords).mkString(" | ")
+    if (str.length > 0) Some(str) else None
+  }
+
+  private def getValidatedMetaTagKeywords: Option[String] = {
+    getMetadata("keywords").flatMap{ meta =>
+      import DefaultExtractor._
+      val phrases = specialRegex.split(meta).filter{ _.length > 0 }.toSeq
+      val allPhrases = phrases.foldLeft(phrases){ (phrases, onePhrase) => phrases ++ spaceRegex.split(onePhrase).filter{ _.length > 0 }.toSeq }
+      val validator = new KeywordValidator(allPhrases)
+
+      validator.startDocument()
+
+      getMetadata("title").foreach{ title =>
+        validator.characters(title.toCharArray)
+        validator.break()
+      }
+      getMetadata("description").foreach{ description =>
+        validator.characters(description.toCharArray)
+        validator.break()
+      }
+      handler.getKeywords.foreach{ keywords => // keywords from URI path
+        keywords.foreach{ keyword =>
+          validator.characters(keyword.toCharArray)
+          validator.break()
+        }
+      }
+      validator.characters(getContent().toCharArray) // content
+
+      validator.endDocument()
+
+      if (validator.coverage > 0.3d) Some(meta) else None
+    }
+  }
 }
 
 class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: String) extends ContentHandlerDecorator(handler) {
@@ -46,9 +85,9 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: St
     // enable boilerpipe only for HTML
     Option(metadata.get("Content-Type")).foreach{ contentType =>
       if (contentType startsWith MimeTypes.HTML) {
-        val keywordCandidates = URITokenizer.getTokens(uri)
+        val keywordValidator = new KeywordValidator(URITokenizer.getTokens(uri))
         keywordValidatorContentHandler = Some(
-          new KeywordValidatorContentHandler(keywordCandidates, new BoilerpipeContentHandler(new TextOutputContentHandler(handler)))
+          new KeywordValidatorContentHandler(keywordValidator, new BoilerpipeContentHandler(new TextOutputContentHandler(handler)))
         )
         setContentHandler(keywordValidatorContentHandler.get)
       } else {
