@@ -176,50 +176,6 @@ class SliderAdminController @Inject() (
     }
     Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
   }
-  
-  def normSchemePageView(page: Int = 0) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 50
-    val (domains, totalCount) = db.readOnly{ implicit s =>
-      domainRepo.normSchemePage(page, PAGE_SIZE)
-    }
-    val pageCount = (totalCount * 1.0 / PAGE_SIZE).ceil.toInt
-    Ok(html.admin.domainNormalization(domains, page, totalCount, pageCount, PAGE_SIZE, None))
-  }
-  
-  def searchDomainNormalization() = AdminHtmlAction{ implicit request =>
-    val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
-    val searchTerm = form.flatMap{ _.get("searchTerm") }
-    searchTerm match {
-      case None => Redirect(routes.SliderAdminController.normSchemePageView(0))
-      case Some(term) =>
-        val domains = db.readOnly{implicit s => domainRepo.getByPrefix(term) }
-        Ok(html.admin.domainNormalization(domains, 0, domains.size, 1, domains.size, searchTerm))
-    }
-  }
-  
-  val normSchemeForm = Form(
-      mapping("scheme"-> of[String])(Normalization.apply)(Normalization.unapply)
-  )
-  
-  val normSchemeOptions = List(Normalization.HTTPS, Normalization.HTTPSWWW, Normalization.HTTP, Normalization.HTTPWWW, Normalization.HTTPSM, Normalization.HTTPM).map{x => (x.scheme, x.scheme)}
-  
-  def editDomainNormScheme(id: Id[Domain]) = Action { implicit request =>
-    val domain = db.readOnly{ implicit s => domainRepo.get(id) }
-    Ok(html.admin.editDomainNormScheme(domain, normSchemeForm.fill(domain.normalizationScheme.getOrElse(Normalization(""))), normSchemeOptions))
-  }
-  
-  def saveDomainNormScheme(id: Id[Domain]) = Action { implicit request =>
-    val domain = db.readOnly{ implicit s => domainRepo.get(id) }
-    normSchemeForm.bindFromRequest.fold(
-      formWithErrors => BadRequest,
-      normalization => {
-        val modifiedDomain = if (normalization.scheme == "") domain.copy(normalizationScheme = None)
-                             else domain.copy(normalizationScheme = Some(normalization))
-        db.readWrite{implicit s => domainRepo.save(modifiedDomain)}                     
-        Redirect(routes.SliderAdminController.normSchemePageView(0))
-      }
-    )
-  }
 
   def refetchClassifications = /* TODO: AdminJson */Action { implicit request =>
     domainTagImporter.refetchClassifications()

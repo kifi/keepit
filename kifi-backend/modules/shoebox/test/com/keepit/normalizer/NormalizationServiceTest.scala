@@ -5,7 +5,7 @@ import com.keepit.test.ShoeboxTestInjector
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.scraper.{BasicArticle, FakeScraperModule}
-import com.keepit.model.{NormalizedURIStates, NormalizedURI, Normalization}
+import com.keepit.model.{UrlPatternRule, NormalizedURIStates, NormalizedURI, Normalization}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -129,8 +129,10 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         latestHttpsPublicUri.state === NormalizedURIStates.REDIRECTED
       }
 
-      "normalize a LinkedIn public profile to a vanity public url" in new TestKitScope() {
+      "normalize a LinkedIn public profile to a vanity public url if this url is trusted" in new TestKitScope() {
         val publicUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3").get }
+        updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo/", Normalization.CANONICAL)) === None
+        db.readWrite { implicit session => urlPatternRuleRepo.save(UrlPatternRule(pattern = LinkedInNormalizer.linkedInPublicProfile.toString(), trustedDomain = Some("""^https?://([a-z]{2,3})\.linkedin\.com/.*"""))) }
         val vanityUri = updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo/", Normalization.CANONICAL)).get
         val latestPublicUri = db.readOnly { implicit session => uriRepo.get(publicUri.id.get) }
         val latestPrivateUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }

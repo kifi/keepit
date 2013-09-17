@@ -1,4 +1,4 @@
-@(unscrapables: Seq[Unscrapable])
+@(unscrapables: Seq[com.keepit.model.UrlPatternRule])
 
 @admin("Unscrapable documents") {
     <form action="@com.keepit.controllers.admin.routes.ScraperController.previewUnscrapable()" method="POST" class="form-inline">

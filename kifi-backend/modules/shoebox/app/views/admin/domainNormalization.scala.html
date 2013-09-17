@@ -1,11 +1,11 @@
-@(domains: Seq[com.keepit.classify.Domain], page: Int, totalCount: Int, pageCount: Int, maxPageSize: Int, searchTerm: Option[String])
+@(rules: Seq[com.keepit.model.UrlPatternRule], page: Int, totalCount: Int, pageCount: Int, maxPageSize: Int, searchTerm: Option[String])
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
     <ul>
       <li>
         @if(page > 0) {
-          <a href="@com.keepit.controllers.admin.routes.SliderAdminController.normSchemePageView(page - 1)">
+          <a href="@com.keepit.controllers.admin.routes.UrlController.normSchemePageView(page - 1)">
         } else {
          <a href="#">
         }
@@ -24,7 +24,7 @@
         }
       }
       <li>
-        @if(domains.size > 0) {
+        @if(rules.size > 0) {
           <a href="com.keepit.controllers.admin.routes.SliderAdminController.normSchemePageView(page + 1)">
         } else {
          <a href="#">
@@ -37,9 +37,9 @@
 }
 
 @admin(totalCount + " domains with normalization scheme") {
-  <h2>Showing @domains.size (page @{page + 1})</h2>
+  <h2>Showing @rules.size (page @{page + 1})</h2>
   @pagination(page, pageCount)
-  <form class="form-inline" action="@com.keepit.controllers.admin.routes.SliderAdminController.searchDomainNormalization()" method="POST">
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.UrlController.searchDomainNormalization()" method="POST">
     @if(searchTerm.isDefined){
       <input type="text" name="searchTerm" value="@{searchTerm.get}"/>
     } else {
@@ -47,26 +47,26 @@
     }
     <input type="submit" value="Search"/></br>
     @if(searchTerm.isDefined){
-      <a href="@com.keepit.controllers.admin.routes.SliderAdminController.normSchemePageView(0)">Clear search</a>
+      <a href="@com.keepit.controllers.admin.routes.UrlController.normSchemePageView(0)">Clear search</a>
     }
   </form>
 
   <table class = "table table-bordered">
     <tr>
       <th>#</th>
-      <th>domain id</th>
-      <th>hostname</th>
+      <th>rule id</th>
+      <th>pattern</th>
       <th>state</th>
       <th>scheme</th>
     </tr>
   
-  @for((domain, i) <- domains.zipWithIndex) {
+  @for((rule, i) <- rules.zipWithIndex) {
     <tr>
       <td>@{i + 1 + page*maxPageSize}</td>
-      <td>@domain.id.get</td>
-      <td><a href="@com.keepit.controllers.admin.routes.SliderAdminController.editDomainNormScheme(domain.id.get)"> @domain.hostname</td>
-      <td>@domain.state</td>
-      <td>@domain.normalizationScheme.map(_.scheme)</td>
+      <td>@rule.id.get</td>
+      <td><a href="@com.keepit.controllers.admin.routes.UrlController.editDomainNormScheme(rule.id.get)"> @rule.pattern</td>
+      <td>@rule.state</td>
+      <td>@rule.normalization.map(_.scheme)</td>
     </tr>
   }
 

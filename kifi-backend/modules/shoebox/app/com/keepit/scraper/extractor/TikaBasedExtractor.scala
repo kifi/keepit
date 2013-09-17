@@ -59,7 +59,23 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper:
     }
   }
 
-  def getContent() = output.toString
+  private[this] lazy val _content = output.toString
 
-  def getMetadata(name: String) = Option(metadata.get(name))
+  def getContent() = _content
+
+  def getMetadata(name: String): Option[String] = {
+    def initCap(str: String) = {
+      if (str.length > 0) {
+        str.substring(0,1).toUpperCase + str.substring(1).toLowerCase
+      } else {
+        str
+      }
+    }
+
+    Option(metadata.get(name))
+      .orElse(Option(metadata.get(name.toLowerCase)))
+      .orElse(Option(metadata.get(name.toUpperCase)))
+      .orElse(Option(metadata.get(initCap(name))))
+  }
+
 }

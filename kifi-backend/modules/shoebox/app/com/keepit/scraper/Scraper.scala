@@ -41,7 +41,7 @@ class Scraper @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   healthcheckPlugin: HealthcheckPlugin,
   bookmarkRepo: BookmarkRepo,
-  unscrapableRepo: UnscrapableRepo,
+  urlPatternRuleRepo: UrlPatternRuleRepo,
   s3ScreenshotStore: S3ScreenshotStore)
     extends Logging {
 
@@ -217,7 +217,7 @@ class Scraper @Inject() (
 
   protected def isUnscrapable(url: String, destinationUrl: Option[String]) = {
     db.readOnly { implicit s =>
-      (unscrapableRepo.contains(url) || (destinationUrl.isDefined && unscrapableRepo.contains(destinationUrl.get)))
+      (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
     }
   }
 
@@ -242,7 +242,10 @@ class Scraper @Inject() (
             val signature = Signature(Seq(title, description.getOrElse(""), content))
 
             // now detect the document change
-            val docChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
+            val docChanged = {
+              normalizedUri.title != Option(title) || // title change should always invoke indexing
+              signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
+            }
 
             // if unchanged, don't trigger indexing. buf if SCRAPE_WANTED or SCRAPE_FAILED, we always change the state and invoke indexing.
             if (!docChanged &&
@@ -284,15 +287,12 @@ class Scraper @Inject() (
     }
   }
 
-  private[this] def getTitle(x: Extractor): String = {
-    x.getMetadata("title").getOrElse("")
-  }
-  private[this] def getDescription(x: Extractor): Option[String] = {
-    x.getMetadata("description").orElse(x.getMetadata("Description")).orElse(x.getMetadata("DESCRIPTION"))
-  }
-  private[this] def getKeywords(x: Extractor): Option[String] = {
-    x.getKeywords
-  }
+  private[this] def getTitle(x: Extractor): String = x.getMetadata("title").getOrElse("")
+
+  private[this] def getDescription(x: Extractor): Option[String] = x.getMetadata("description")
+
+  private[this] def getKeywords(x: Extractor): Option[String] = x.getKeywords
+
   private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
 
