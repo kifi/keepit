@@ -115,7 +115,6 @@ noticesPane = function() {
         notice.twoParticipants = nParticipants == 2;
         notice.threeParticipants = nParticipants == 3;
         notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
-        notice.text = notice.text.length > 200 ? notice.text.substring(0, 190) + "…" : notice.text;
         return render("html/metro/notice_message", notice);
       case "global":
         return render("html/metro/notice_global", notice);
