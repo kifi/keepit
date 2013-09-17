@@ -1,0 +1,40 @@
+package com.keepit.model
+
+import org.specs2.mutable.Specification
+import com.google.inject.Injector
+import com.keepit.common.db.Id
+import com.keepit.test._
+import com.keepit.common.db.SequenceNumber
+import org.joda.time.DateTime
+import com.keepit.common.time.zones.PT
+
+class RenormalizedURLTest extends Specification with ShoeboxTestInjector{
+  "RenormalizedURLRepo" should {
+    "work" in {
+      withDb() { implicit injector =>
+        val repo = inject[RenormalizedURLRepo]
+        
+        db.readWrite{ implicit s =>
+          (1 to 5).map{ i =>
+            val tmp = RenormalizedURL(urlId = Id[URL](i), newUriId = Id[NormalizedURI](i))
+            repo.save(tmp)
+          }
+        }
+        
+        implicit def intToSeq(x : Int) = SequenceNumber(x)
+        
+        val records = db.readOnly{ implicit s =>
+          val records = repo.getChangesBetween(0, 5, state = RenormalizedURLStates.ACTIVE)
+          records.size === 5
+          records
+        }
+        
+        db.readWrite{ implicit s => 
+          records.foreach{ r => repo.saveWithoutIncreSeqnum(r.withState(RenormalizedURLStates.APPLIED))}
+          repo.getChangesBetween(0, 5, state = RenormalizedURLStates.APPLIED).size === 5
+        }
+          
+      }
+    }
+  }
+}
