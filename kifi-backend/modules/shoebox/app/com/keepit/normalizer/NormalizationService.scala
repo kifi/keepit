@@ -21,6 +21,7 @@ import com.keepit.common.db.Id
 trait NormalizationService {
   def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]]
   def normalize(uriString: String)(implicit session: RSession): String
+  def prenormalize(uriString: String)(implicit session: RSession): String
 }
 
 @Singleton
@@ -29,10 +30,24 @@ class NormalizationServiceImpl @Inject() (
   failedContentCheckRepo: FailedContentCheckRepo,
   normalizedURIRepo: NormalizedURIRepo,
   uriIntegrityPlugin: UriIntegrityPlugin,
-  scraperPlugin: ScraperPlugin,
+  priorKnowledge: PriorKnowledge,
   healthcheckPlugin: HealthcheckPlugin) extends NormalizationService with Logging {
 
-  def normalize(uriString: String)(implicit session: RSession): String = normalizedURIRepo.getByUri(uriString).map(_.url).getOrElse(Prenormalizer(uriString))
+  def normalize(uriString: String)(implicit session: RSession): String = normalizedURIRepo.getByUri(uriString).map(_.url).getOrElse(prenormalize(uriString))
+  def prenormalize(uriString: String)(implicit session: RSession): String = {
+    val withStandardPrenormalizationOption = URI.safelyParse(uriString).map(Prenormalizer)
+    val withPreferredSchemeOption = for {
+      prenormalized <- withStandardPrenormalizationOption
+      schemeNormalizer <- priorKnowledge.getPreferredSchemeNormalizer(uriString)
+    } yield schemeNormalizer(prenormalized)
+
+    val prenormalizedStringOption = for {
+      prenormalizedURI <- withPreferredSchemeOption orElse withStandardPrenormalizationOption
+      prenormalizedString <- prenormalizedURI.safelyToString()
+    } yield prenormalizedString
+
+    prenormalizedStringOption.getOrElse(uriString)
+  }
 
   def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
     for {
@@ -43,15 +58,13 @@ class NormalizationServiceImpl @Inject() (
 
 
   private def processUpdate(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]] = {
-    implicit val uriRepo: NormalizedURIRepo = normalizedURIRepo
-    implicit val scraper: ScraperPlugin = scraperPlugin
 
     val relevantCandidates = getRelevantCandidates(current, candidates)
-    val priorKnowledge = PriorKnowledge(current)
-    val findStrongerCandidate = FindStrongerCandidate(current, priorKnowledge)
+    val contentChecks = db.readOnly { implicit session => priorKnowledge.getContentChecks(current.url) }
+    val findStrongerCandidate = FindStrongerCandidate(current, Action(current, contentChecks))
 
     for { (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(relevantCandidates) } yield {
-      priorKnowledge.contentChecks.foreach(persistFailedAttempts(_))
+      contentChecks.foreach(persistFailedAttempts(_))
       for {
         successfulCandidate <- successfulCandidateOption
         newReference <- migrate(current, successfulCandidate, weakerCandidates)
@@ -62,7 +75,7 @@ class NormalizationServiceImpl @Inject() (
   private def getRelevantCandidates(current: NormalizedURI, candidates: Seq[NormalizationCandidate]) = {
 
     val prenormalizedCandidates = candidates.map {
-      case UntrustedCandidate(url, normalization) => UntrustedCandidate(Prenormalizer(url), normalization)
+      case UntrustedCandidate(url, normalization) => db.readOnly { implicit session => UntrustedCandidate(prenormalize(url), normalization) }
       case candidate: TrustedCandidate => candidate
     }
 
@@ -79,7 +92,7 @@ class NormalizationServiceImpl @Inject() (
         referenceURI <- URI.parse(referenceUrl)
         variations <- Try {
           for {
-            normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS
+            normalization <- Normalization.schemes
             urlVariation <- SchemeNormalizer(normalization)(referenceURI).safelyToString()
             uri <- db.readOnly { implicit session => normalizedURIRepo.getByNormalizedUrl(urlVariation) }
           } yield (normalization, uri)
@@ -95,7 +108,7 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private case class FindStrongerCandidate(currentReference: NormalizedURI, priorKnowledge: PriorKnowledge) {
+  private case class FindStrongerCandidate(currentReference: NormalizedURI, oracle: NormalizationCandidate => Action) {
 
     def apply(candidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] =
       findCandidate(candidates.sortBy(_.normalization).reverse)
@@ -109,10 +122,10 @@ class NormalizationServiceImpl @Inject() (
           if (currentReference.normalization == Some(strongerCandidate.normalization)) assert(currentReference.url != strongerCandidate.url)
 
           db.readOnly { implicit session =>
-            priorKnowledge(strongerCandidate) match {
-              case PriorKnowledge.ACCEPT => Future.successful((Some(strongerCandidate), weakerCandidates))
-              case PriorKnowledge.REJECT => findCandidate(weakerCandidates)
-              case PriorKnowledge.Check(contentCheck) =>
+            oracle(strongerCandidate) match {
+              case Accept => Future.successful((Some(strongerCandidate), weakerCandidates))
+              case Reject => findCandidate(weakerCandidates)
+              case Check(contentCheck) =>
                 if (currentReference.url == strongerCandidate.url) Future.successful(Some(strongerCandidate), weakerCandidates)
                 else for {
                   contentCheck <- contentCheck(strongerCandidate)(session)

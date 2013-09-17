@@ -19,8 +19,8 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.model.NormalizedURIRepoImpl
 import com.keepit.model.ScrapeInfoRepo
-import com.keepit.model.Unscrapable
-import com.keepit.model.UnscrapableRepo
+import com.keepit.model.UrlPatternRule
+import com.keepit.model.UrlPatternRuleRepo
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.ArticleStore
 
@@ -33,7 +33,7 @@ class ScraperController @Inject() (
   scrapeInfoRepo: ScrapeInfoRepo,
   normalizedURIRepo: NormalizedURIRepo,
   articleStore: ArticleStore,
-  unscrapableRepo: UnscrapableRepo,
+  urlPatternRuleRepo: UrlPatternRuleRepo,
   duplicateDocumentRepo: DuplicateDocumentRepo,
   followRepo: FollowRepo,
   deeplinkRepo: DeepLinkRepo,
@@ -84,7 +84,7 @@ class ScraperController @Inject() (
 
   def getUnscrapable() = AdminHtmlAction { implicit request =>
     val docs = db.readOnly { implicit conn =>
-      unscrapableRepo.allActive()
+      urlPatternRuleRepo.allActive().filter(_.isUnscrapable)
     }
 
     Ok(html.admin.unscrapable(docs))
@@ -114,7 +114,7 @@ class ScraperController @Inject() (
     }
     val pattern = form.get("pattern").get
     db.readWrite { implicit conn =>
-      unscrapableRepo.save(Unscrapable(pattern = pattern))
+      urlPatternRuleRepo.save(UrlPatternRule(pattern = pattern, isUnscrapable = true))
     }
     Redirect(com.keepit.controllers.admin.routes.ScraperController.getUnscrapable())
   }

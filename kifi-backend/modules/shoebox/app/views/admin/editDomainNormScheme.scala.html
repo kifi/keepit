@@ -1,10 +1,10 @@
-@(domain: com.keepit.classify.Domain, normSchemeForm: Form[Normalization], schemeOptions: Seq[(String, String)])
+@(rule: com.keepit.model.UrlPatternRule, normSchemeForm: Form[Normalization], schemeOptions: Seq[(String, String)])
 
 @import helper._
 
 @admin("select domain normalization scheme for:" ){
-  <h2>@domain.hostname </h2>
-  @form(com.keepit.controllers.admin.routes.SliderAdminController.saveDomainNormScheme(domain.id.get)){
+  <h2>@rule.pattern </h2>
+  @form(com.keepit.controllers.admin.routes.UrlController.saveDomainNormScheme(rule.id.get)){
   	<fieldset>
   	@select(
   	  normSchemeForm("scheme"),
@@ -14,7 +14,7 @@
   </fieldset>
   <div class = "actions">
     <input type="submit" value="modify scheme" class="btn primary"> or 
-            <a href="@com.keepit.controllers.admin.routes.SliderAdminController.normSchemePageView(0)" class="btn">Cancel</a> 
+            <a href="@com.keepit.controllers.admin.routes.UrlController.normSchemePageView(0)" class="btn">Cancel</a>
   </div>	
 
   }	
