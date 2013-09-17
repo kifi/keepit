@@ -225,7 +225,7 @@ class UrlController @Inject() (
     searchTerm match {
       case None => Redirect(routes.UrlController.normSchemePageView(0))
       case Some(term) =>
-        val rules = db.readOnly{ implicit s => urlPatternRuleRepo.get(term) }
+        val rules = db.readOnly{ implicit s => urlPatternRuleRepo.findAll(term) }
         Ok(html.admin.domainNormalization(rules, 0, rules.size, 1, rules.size, searchTerm))
     }
   }
@@ -256,7 +256,7 @@ class UrlController @Inject() (
 
   def getPatterns = AdminHtmlAction { implicit request =>
     val patterns = db.readOnly { implicit session =>
-      urlPatternRuleRepo.all
+      urlPatternRuleRepo.all.sortBy(_.id.get.id)
     }
     Ok(html.admin.urlPatternRules(patterns))
   }
