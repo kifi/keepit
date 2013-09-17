@@ -64,8 +64,7 @@ object ApplicationBuild extends Build {
       ExclusionRule(organization = "javax.jms"),
       ExclusionRule(organization = "com.sun.jdmk"),
       ExclusionRule(organization = "com.sun.jmx"),
-      ExclusionRule(organization = "org.jboss.netty"),
-      ExclusionRule(organization = "org.slf4j")
+      ExclusionRule(organization = "org.jboss.netty")
     ))
 
     val searchDependencies = Seq(
@@ -86,8 +85,7 @@ object ApplicationBuild extends Build {
     )
 
     val heimdalDependencies = Seq(
-      "org.reactivemongo" %% "reactivemongo" % "0.9",
-      "org.reactivemongo" %% "play2-reactivemongo" % "0.9"
+      "org.reactivemongo" %% "reactivemongo" % "0.9"
     ) map (_.excludeAll(
       ExclusionRule(organization = "org.slf4j")
     ))
