@@ -33,6 +33,7 @@ import ExecutionContext.Implicits.global
 
 
 class MainQueryParser(
+  lang: Lang,
   analyzer: Analyzer,
   stemmingAnalyzer: Analyzer,
   baseBoost: Float,
@@ -79,7 +80,7 @@ class MainQueryParser(
             phraseDetector.detectAll(getStemmedTermArray)
           }
           if (p.size > 0) p
-          else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer)
+          else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
         } else {
           Set.empty[(Int, Int)]
         }

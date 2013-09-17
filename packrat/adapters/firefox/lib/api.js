@@ -336,19 +336,36 @@ exports.tabs = {
       if (page && /^https?:/.test(page.url)) callback(page);
     }
   },
-  emit: function(tab, type, data) {
-    var currTab = pages[tab.id];
-    if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
-      if (currTab.ready) {
-        exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data, "url:", tab.url);
-        workers[tab.id].forEach(function(worker) {
+  emit: function(tab, type, data, opts) {
+    var page = pages[tab.id];
+    if (page && (page === tab || page.url.match(hostRe)[0] == tab.url.match(hostRe)[0])) {
+      for (var emitted, arr = workers[tab.id], i = 0; i < arr.length; i++) {
+        var worker = arr[i];
+        if (worker.handling[type]) {
           worker.port.emit(type, data);
-        });
-      } else {
-        (currTab.toEmit || (currTab.toEmit = [])).push([type, data]);
+          if (!emitted) {
+            emitted = true;
+            exports.log("[api.tabs.emit]", tab.id, "type:", type, "data:", data, "url:", tab.url);
+          }
+        }
+      }
+      if (!emitted && opts && opts.queue) {
+        if (page.toEmit) {
+          if (opts.queue === 1) {
+            for (var i = 0; i < page.toEmit.length; i++) {
+              if (page.toEmit[i][0] === type) {
+                page.toEmit[i][1] = data;
+                return;
+              }
+            }
+          }
+          page.toEmit.push([type, data]);
+        } else {
+          page.toEmit = [[type, data]];
+        }
       }
     } else {
-      exports.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "->", currTab && currTab.url);
+      exports.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "->", page && page.url);
     }
   },
   get: function(pageId) {
@@ -371,7 +388,6 @@ exports.tabs = {
     focus: new Listeners,
     blur: new Listeners,
     loading: new Listeners,
-    ready: new Listeners,
     unload: new Listeners}};
 
 exports.timers = timers;
@@ -425,7 +441,6 @@ tabs
 })
 .on("ready", function(tab) {
   exports.log("[tabs.ready]", tab.id, tab.url);
-  pages[tab.id] || createPage(tab);
 });
 
 windows
@@ -510,31 +525,12 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
         let tab = worker.tab, page = pages[tab.id];
         exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
         let injected = markInjected({}, o);
-        let pw = workers[tab.id];
-        pw.push(worker);
-        worker.on("pageshow", function() {
-          if (!page.ready && /^https?:/.test(page.url)) {
-            exports.log("[pageshow] tab:", tab.id, "url:", tab.url);
-            // marking and dispatching ready here instead of when tabs "ready" fires because:
-            //  1. content scripts are not necessarily attached yet when tabs "ready" fires
-            //  2. certain calls from content scripts fail if page is not yet visible
-            //     (see https://bugzilla.mozilla.org/show_bug.cgi?id=766088#c2)
-            page.ready = true;
-
-            (page.toEmit || []).forEach(function emit(m) {
-              exports.log("[pageshow:emit]", tab.id, m[0], m[1] != null ? m[1] : "");
-              worker.port.emit.apply(worker.port, m);
-            });
-            delete page.toEmit;
-
-            dispatch.call(exports.tabs.on.ready, page);  // must run only once per page, not per content script on page
-          }
+        workers[tab.id].push(worker);
+        worker.on("pageshow", function() {  // navigated forward or back to page. https://bugzilla.mozilla.org/show_bug.cgi?id=766088#c2
+          exports.log("[pageshow] tab:", tab.id, "url:", tab.url);
+          emitQueuedMessages(page, worker);
         }).on("pagehide", function() {
           exports.log("[pagehide] tab:", tab.id);
-          pw.length = 0;
-        }).on("detach", function() {
-          exports.log("[detach] tab:", tab.id);
-          pw.length = 0;
         });
         Object.keys(portHandlers).forEach(function(type) {
           worker.port.on(type, function(data, callbackId) {
@@ -543,6 +539,14 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
                 worker.port.emit("api:respond", callbackId, response);
               }, page);
           });
+        });
+        worker.handling = {};
+        worker.port.on("api:handling", function(types) {
+          exports.log("[api:handling]", types);
+          for each (let type in types) {
+            worker.handling[type] = true;
+          }
+          emitQueuedMessages(page, worker);
         });
         worker.port.on("api:require", function(paths, callbackId) {
           var o = deps(paths, injected);
@@ -553,6 +557,24 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       }});
   });
 }, 0);
+
+function emitQueuedMessages(page, worker) {
+  if (page.toEmit) {
+    for (var i = 0; i < page.toEmit.length;) {
+      var m = page.toEmit[i];
+      if (worker.handling[m[0]]) {
+        exports.log("[emitQueuedMessages]", page.id, m[0], m[1] != null ? m[1] : "");
+        worker.port.emit.apply(worker.port, m);
+        page.toEmit.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
+    if (!page.toEmit.length) {
+      delete page.toEmit;
+    }
+  }
+}
 
 function removeFromWindow(win) {
   if (win.removeIcon) {
