@@ -54,10 +54,9 @@ api = function() {
       },
       on: function(handlers) {
         for (var type in handlers) {
-          if (handlers.hasOwnProperty(type)) {
-            self.port.on(type, handlers[type]);
-          }
+          self.port.on(type, handlers[type]);
         }
+        self.port.emit("api:handling", Object.keys(handlers));
       }},
     require: function(paths, callback) {
       var callbackId = nextCallbackId++;

@@ -1,6 +1,7 @@
 var api = api || require("./api");
 
 const NOTIFICATION_BATCH_SIZE = 10;
+const hostRe = /^https?:\/\/([^\/]*)/;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
@@ -469,7 +470,6 @@ api.port.on({
     }
   },
   set_keeper_pos: function(o, _, tab) {
-    const hostRe = /^https?:\/\/([^\/]*)/;
     for (var nUri in pageData) {
       if (nUri.match(hostRe)[1] == o.host) {
         pageData[nUri].position = o.pos;
@@ -626,31 +626,33 @@ api.port.on({
     socket.send(["get_networks", friendId], respond);
   },
   open_deep_link: function(data, _, tab) {
-    var n;
-                                      // on a tab that is the old normalized URI, and we know about the new normalization
-    var uriData = pageData[data.nUri] || pageData[(n = api.tabs.anyAt(data.nUri)) && n.nUri];
-
-    if (uriData) {
-      var tab = tab.nUri == data.nUri ? tab : uriData.tabs[0];
-      if (tab.ready) {
-        api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: data.locator});
-      } else {
-        createDeepLinkListener(data.locator, tab.id);
+    var tabAtNewNormUri, d =
+      pageData[data.nUri] ||
+      pageData[(tabAtNewNormUri = api.tabs.anyAt(data.nUri)) && tabAtNewNormUri.nUri];  // data associated with old URI normalization
+    if (d) {
+      goToDeepLink(tab.nUri == data.nUri ? tab : d.tabs[0]);
+    } else {
+      api.tabs.open(data.nUri, goToDeepLink);
+    }
+    function goToDeepLink(tab) {
+      if (data.locator) {
+        api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: data.locator}, {queue: 1});
       }
       api.tabs.select(tab.id);
-    } else {
-      api.tabs.open(data.nUri, function(tabId) {
-        if (data.locator) {
-          createDeepLinkListener(data.locator, tabId);
-        }
-      });
     }
   },
   remove_notification: function(o) {
     removeNotificationPopups(o.associatedId);
   },
-  add_deep_link_listener: function(locator, _, tab) {
-    createDeepLinkListener(locator, tab.id);
+  handle_deep_link: function handleDeepLink(o, _, tab, retrySec) {
+    tab = api.tabs.get(tab.id);
+    if (tab && o.uri.match(hostRe)[1] == tab.url.match(hostRe)[1]) {
+      api.log("[handleDeepLink]", tab.id, o);
+      api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: o.locator}, {queue: 1});
+    } else if ((retrySec = retrySec || .5) < 5) {
+      api.log("[handleDeepLink]", tab.id, "retrying in", retrySec, "sec");
+      setTimeout(handleDeepLink.bind(null, o, null, tab, retrySec + .5), retrySec * 1000);
+    }
   },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
@@ -674,7 +676,7 @@ function sendNotificationToTabs(n) {
   function tellTab(tab) {
     if (told[tab.id]) return;
     told[tab.id] = true;
-    api.tabs.emit(tab, "new_notification", n);
+    api.tabs.emit(tab, "new_notification", n, {queue: true});
   }
 }
 
@@ -796,37 +798,17 @@ function getTimeLastRead(n, d) {
     n.category == "message" && d.lastMessageRead ? (d.lastMessageRead[n.locator.split("/")[2]] || 0) : 0);
 }
 
-function createDeepLinkListener(locator, tabId) {
-  var createdTime = Date.now();
-  api.tabs.on.ready.add(function deepLinkListener(tab) {
-    if (Date.now() - createdTime > 15000) {
-      api.tabs.on.ready.remove(deepLinkListener);
-      api.log("[createDeepLinkListener] Listener timed out.");
-      return;
-    }
-    if (tab.id == tabId) {
-      // uncomment second clause below to develop /r/ page using production deep links
-      var hasForwarded = !(new RegExp("^" + webBaseUri() + "/r/", "").test(tab.url)) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
-      if (hasForwarded) {
-        api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, locator);
-        api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: locator});
-        api.tabs.on.ready.remove(deepLinkListener);
-      }
-    }
-  });
-}
-
 function initTab(tab, d) {  // d is pageData[tab.nUri]
   api.log("[initTab]", tab.id, "inited:", tab.inited);
 
   d.counts.n = numNotificationsNotVisited;
-  api.tabs.emit(tab, "counts", d.counts);
+  api.tabs.emit(tab, "counts", d.counts, {queue: 1});
   if (tab.inited) return;
   tab.inited = true;
 
   if (ruleSet.rules.message && d.counts.m) {  // open immediately to unread message(s)
     var ids = unreadThreadIds(d.threads, d.lastMessageRead);
-    api.tabs.emit(tab, "open_to", {trigger: "message", locator: "/messages" + (ids.length > 1 ? "" : "/" + ids[0])});
+    api.tabs.emit(tab, "open_to", {trigger: "message", locator: "/messages" + (ids.length > 1 ? "" : "/" + ids[0])}, {queue: 1});
     ids.forEach(function(id) {
       socket.send(["get_thread", id]);
     });
@@ -838,15 +820,14 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
       api.log("[initTab]", tab.id, "shown before");
     } else {
       if (api.prefs.get("showSlider")) {
-        api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll);
+        api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll, {queue: 1});
       }
       tab.autoShowSec = (ruleSet.rules.focus || [])[0];
       if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
         scheduleAutoShow(tab);
       }
-
       if (d.keepers.length) {
-        api.tabs.emit(tab, "keepers", {keepers: d.keepers, otherKeeps: d.otherKeeps});
+        api.tabs.emit(tab, "keepers", {keepers: d.keepers, otherKeeps: d.otherKeeps}, {queue: 1});
       }
     }
   }
@@ -887,7 +868,7 @@ function tellTabsNoticeCountIfChanged() {
     var d = pageData[tab.nUri];
     if (d && d.counts && d.counts.n != numNotificationsNotVisited) {
       d.counts.n = numNotificationsNotVisited;
-      api.tabs.emit(tab, "counts", d.counts);
+      api.tabs.emit(tab, "counts", d.counts, {queue: 1});
     }
   });
 }
@@ -897,7 +878,7 @@ function tellTabsIfCountChanged(d, key, count) {
     d.counts[key] = count;
     d.counts.n = numNotificationsNotVisited;
     d.tabs.forEach(function(tab) {
-      api.tabs.emit(tab, "counts", d.counts);
+      api.tabs.emit(tab, "counts", d.counts, {queue: 1});
     });
   }
 }
@@ -952,7 +933,7 @@ function ymd(d) {  // yyyy-mm-dd local date
 
 // kifi icon in location bar
 api.icon.on.click.add(function(tab) {
-  api.tabs.emit(tab, "button_click");
+  api.tabs.emit(tab, "button_click", null, {queue: 1});
 });
 
 function subscribe(tab) {
@@ -1064,9 +1045,10 @@ function setIcon(tab, kept) {
 
 function sendInit(tab, d) {
   api.tabs.emit(tab, "init", {
-    kept: d.kept,
-    position: d.position,
-    hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive});
+      kept: d.kept,
+      position: d.position,
+      hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive
+    }, {queue: 1});
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
@@ -1122,6 +1104,7 @@ api.tabs.on.blur.add(function(tab) {
 api.tabs.on.loading.add(function(tab) {
   api.log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab);
   subscribe(tab);
+  logEvent("extension", "pageLoad");
 });
 
 const searchPrefetchCache = {};  // for searching before the results page is ready
@@ -1153,11 +1136,6 @@ function getPrefetched(request, cb) {
   }
 }
 
-api.tabs.on.ready.add(function(tab) {
-  api.log("#b8a", "[tabs.on.ready] %i %o", tab.id, tab);
-  logEvent("extension", "pageLoad");
-});
-
 api.tabs.on.unload.add(function(tab) {
   api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
@@ -1184,7 +1162,7 @@ function scheduleAutoShow(tab) {
       delete tab.autoShowTimer;
       if (api.prefs.get("showSlider")) {
         api.log("[autoShow]", tab.id);
-        api.tabs.emit(tab, "auto_show");
+        api.tabs.emit(tab, "auto_show", null, {queue: 1});
       }
     }, tab.autoShowSec * 1000);
   }
@@ -1284,7 +1262,7 @@ function getRules() {
 
 // ===== Session management
 
-var session, socket, onReadyTemp;
+var session, socket, onLoadingTemp;
 
 function connectSync() {
   getRules();
@@ -1335,7 +1313,7 @@ function startSession(callback, retryMs) {
     delete session.patterns;
     delete session.installationId;
 
-    api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
+    api.tabs.on.loading.remove(onLoadingTemp), onLoadingTemp = null;
     api.tabs.each(function(page) {
       api.tabs.emit(page, "session_change", session);
     });
@@ -1356,10 +1334,10 @@ function startSession(callback, retryMs) {
       } else {
         api.tabs.open(webBaseUri());
       }
-      api.tabs.on.ready.add(onReadyTemp = function(tab) {
+      api.tabs.on.loading.add(onLoadingTemp = function(tab) {
         // if kifi.com home page, retry first authentication
         if (tab.url.replace(/\/#.*$/, "") === webBaseUri()) {
-          api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
+          api.tabs.on.loading.remove(onLoadingTemp), onLoadingTemp = null;
           startSession(callback, retryMs);
         }
       });
@@ -1404,7 +1382,7 @@ function deauthenticate() {
       }
       api.tabs.each(function(tab) {
         api.icon.set(tab, "icons/keep.faint.png");
-        api.tabs.emit(tab, "session_change", undefined);
+        api.tabs.emit(tab, "session_change", null);
       });
     }
   })

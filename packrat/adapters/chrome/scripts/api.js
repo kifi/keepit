@@ -98,7 +98,7 @@ var api = api || function() {  // idempotent for Chrome
       },
       on: function(handlers) {
         msgHandlers.push(handlers);
-        port || createPort();
+        api.port.emit('api:handling', Object.keys(handlers));
       }},
     require: function(paths, callback) {
       if (requireQueue) {

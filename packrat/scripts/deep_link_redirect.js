@@ -5,11 +5,12 @@
 !function run(json, e) {
   var msg = document.getElementsByClassName('kifi-deep-link-no-extension')[0];
   if (msg) {
+    debugger;
     msg.style.display = "none";
     var link = JSON.parse(json);
-    api.port.emit("add_deep_link_listener", link.locator);
-    if (link.uri) {
-      window.location = link.uri;
+    if (link.url) {
+      api.port.emit("handle_deep_link", link);
+      window.location = link.url;
     }
   } else {
     document.addEventListener("DOMContentLoaded", run.bind(null, json));

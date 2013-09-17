@@ -466,8 +466,9 @@ if (searchUrlRe.test(document.URL)) !function() {
         configureHover(html, {canLeaveFor: 600, click: "toggle"});
       });
     }).on("click", ".kifi-chatter-deeplink", function() {
-      api.port.emit("add_deep_link_listener", $(this).data("locator"));
-      location.href = $(this).closest("li.g").find("h3.r a")[0].href;
+      var url = $(this).closest("li.g").find("h3.r a")[0].href;
+      api.port.emit("handle_deep_link", {url: url, locator: $(this).data("locator")});
+      location.href = url;
     });
   }
 
