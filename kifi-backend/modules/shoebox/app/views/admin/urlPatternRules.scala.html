@@ -4,7 +4,7 @@
 @admin("Url Pattern Rules", stylesheets = List("admin_slider")) {
 <h3>URLs with specific behavior</h3>
 
-<div><span class="label">Note:</span> Changes take effect immediately (next page load) for all kifi users when you click <b>Save</b> below.</div>
+<div><span class="label">Note:</span> Top active rules have higher precedence. Changes take effect immediately (next page load) for all kifi users when you click <b>Save</b> below.</div>
 
 <form class="url-patterns" action="@com.keepit.controllers.admin.routes.UrlController.savePatterns" method="POST">
   <table class="table table-condensed table-striped">
