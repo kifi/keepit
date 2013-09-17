@@ -7,9 +7,9 @@
   if (msg) {
     msg.style.display = "none";
     var link = JSON.parse(json);
-    api.port.emit("add_deep_link_listener", link.locator);
-    if (link.uri) {
-      window.location = link.uri;
+    if (link.url) {
+      api.port.emit("await_deep_link", link);
+      window.location = link.url;
     }
   } else {
     document.addEventListener("DOMContentLoaded", run.bind(null, json));
