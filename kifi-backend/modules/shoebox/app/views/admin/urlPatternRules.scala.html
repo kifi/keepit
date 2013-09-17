@@ -6,7 +6,7 @@
 
 <div><span class="label">Note:</span> Changes take effect immediately (next page load) for all kifi users when you click <b>Save</b> below.</div>
 
-<form class="patterns" action="@com.keepit.controllers.admin.routes.UrlController.savePatterns" method="POST">
+<form class="url-patterns" action="@com.keepit.controllers.admin.routes.UrlController.savePatterns" method="POST">
   <table class="table table-condensed table-striped">
     <thead>
       <tr>
@@ -48,7 +48,7 @@
 
 <script>
 $(function() {
-  $(".patterns")
+  $(".url-patterns")
   .on("keydown keypress keyup mousedown mouseup blur", ".url-pattern,.url-example", updateRow)
   .submit(function(e) {
     if ($(this).find(".error").focus().select().length) {
