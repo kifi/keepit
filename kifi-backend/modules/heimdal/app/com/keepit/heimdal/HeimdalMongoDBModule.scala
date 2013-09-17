@@ -1,6 +1,7 @@
 package com.keepit.heimdal
 
 import reactivemongo.api.MongoDriver
+import reactivemongo.core.actors.Authenticate
 
 import com.keepit.common.healthcheck.{HealthcheckPlugin}
 
@@ -23,9 +24,13 @@ case class ProdMongoModule() extends MongoModule {
   @Singleton
   @Provides
   def userEventLoggingRepo(healthcheckPlugin: HealthcheckPlugin): UserEventLoggingRepo = {
-    val config = current.configuration.getString("mongodb.main").get
+    val nodeA = current.configuration.getString("mongodb.heimdal.nodeA").get
+    val nodeB = current.configuration.getString("mongodb.heimdal.nodeB").get
+    val username = current.configuration.getString("mongodb.heimdal.username").get
+    val password = current.configuration.getString("mongodb.heimdal.password").get
+    val auth = Authenticate("heimdal", username, password)
     val driver = new MongoDriver
-    val connection = driver.connection(List(config))
+    val connection = driver.connection(List(nodeA, nodeB), List(auth, auth), 10, Some("UserEventLoggingMongoActorSystem"))
     val db = connection("heimdal")
     val collection = db("user_events")
     new ProdUserEventLoggingRepo(collection, healthcheckPlugin)
