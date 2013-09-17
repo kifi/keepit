@@ -56,8 +56,8 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
         inject[UrlPatternRuleRepo] must be(repo) // singleton
 
         val (p1, p2) = inject[Database].readWrite{ implicit session =>
-          (repo.save(UrlPatternRule(pattern = """^https?://www\.42go\.com""", showSlider = false)),
-            repo.save(UrlPatternRule(pattern = """://(www\.|)hulu\.com/watch/""", showSlider = true)))
+          (repo.save(UrlPatternRule(pattern = """^https?://www\.42go\.com""", doNotSlide = true)),
+            repo.save(UrlPatternRule(pattern = """://(www\.|)hulu\.com/watch/""", doNotSlide = false)))
         }
 
         inject[Database].readOnly{ implicit session =>
