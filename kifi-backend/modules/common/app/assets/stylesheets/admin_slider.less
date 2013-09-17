@@ -30,32 +30,35 @@
   color: red;
 }
 
-.slider-patterns {
+.url-patterns {
   margin: 10px 0;
+  vertical-align: top;
 }
-.slider-patterns th:first-child,
-.slider-patterns td:first-child,
-.slider-patterns th:last-child,
-.slider-patterns td:last-child {
-  width: 5%;
+.url-patterns th:first-child,
+.url-patterns td:first-child,
+.url-patterns th:nth-child(n+4),
+.url-patterns td:nth-child(n+4) {
+  width: 7%;
   text-align: center;
-  vertical-align: middle;
 }
-.slider-patterns td:nth-child(2),
-.slider-patterns td:nth-child(3) {
+.url-patterns td:nth-child(2),
+.url-patterns td:nth-child(3) {
   padding-right: 20px;
 }
-.slider-patterns input[type=text] {
+.url-patterns input[type=text] {
   margin: 0;
   width: 100%;
 }
-.slider-patterns .match-y:before {
+.url-patterns select {
+ width:auto;
+}
+.url-patterns .match-y:before {
   content: "\2714";
   font-size: 24px;
   line-height: 24px;
   color: green;
 }
-.slider-patterns .match-n:before {
+.url-patterns .match-n:before {
   content: "\2297";
   font-size: 36px;
   line-height: 24px;
