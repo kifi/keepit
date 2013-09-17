@@ -61,8 +61,8 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
 
   @Singleton
   @Provides
-  def unscrapableAllCache(outerRepo: FortyTwoCachePlugin) =
-    new UnscrapableAllCache((outerRepo, 30 days))
+  def urlPatternRuleAllCache(outerRepo: FortyTwoCachePlugin) =
+    new UrlPatternRuleAllCache((outerRepo, 30 days))
 
   @Singleton
   @Provides

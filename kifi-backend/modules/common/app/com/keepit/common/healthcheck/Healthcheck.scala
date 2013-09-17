@@ -110,7 +110,7 @@ class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHos
       sender.sendMail(ElectronicMail(
         from = Healthcheck.OPS_OF_THE_WEEK,
         to = EmailAddresses.ASANA_PROD_HEALTH::Healthcheck.OPS_OF_THE_WEEK::Nil,
-        cc = EmailAddresses.ENG_EMAILS,
+        cc = (EmailAddresses.ENG_EMAILS.toSet - EmailAddresses.JARED).toSeq,
         subject = subject,
         htmlBody = views.html.email.healthcheckMail(history, started, host.host).body,
         textBody = Some(views.html.email.healthcheckAsanaMail(history, started, host.host).body),
