@@ -396,8 +396,10 @@ const socketHandlers = {
   unread_notifications_count: function(count) {
     // see comment in syncNumNotificationsNotVisited() :(
     if (numNotificationsNotVisited != count) {
-      socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
-      reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
+      if (notifications) {
+        socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
+        reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
+      }
       numNotificationsNotVisited = count;
       tellTabsNoticeCountIfChanged();
     }
