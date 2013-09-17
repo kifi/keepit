@@ -246,13 +246,14 @@ api = function() {
       });
       port.onDisconnect.addListener(function() {
         api.log("#0a0", "[onDisconnect]", tab.id);
+        delete ports[tab.id].handling;
         delete ports[tab.id];
       });
     }
   });
 
   function respondToTab(callbackId, response) {
-    this.postMessage(["api:respond", callbackId, response]);
+    this.handling && this.postMessage(["api:respond", callbackId, response]);
   }
 
   function injectContentScripts(page) {
