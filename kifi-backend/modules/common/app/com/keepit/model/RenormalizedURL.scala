@@ -4,18 +4,19 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 
 case class RenormalizedURL(
-  id: Id[RenormalizedURL],
+  id: Option[Id[RenormalizedURL]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   urlId: Id[URL],
   newUriId: Id[NormalizedURI],
-  state: State[RenormalizedURL],
+  state: State[RenormalizedURL] = RenormalizedURLStates.ACTIVE,
   seq: SequenceNumber = SequenceNumber.ZERO
 ) extends Model[RenormalizedURL] {
+  def withId(id: Id[RenormalizedURL]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[RenormalizedURL]) = copy(state = state)
 }
 
-object RenormalizedURL extends States[RenormalizedURL]{
+object RenormalizedURLStates extends States[RenormalizedURL]{
   val APPLIED = State[RenormalizedURL]("applied")
 }
