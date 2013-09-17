@@ -39,7 +39,8 @@ function getSnippetFormatter() {
       parts[i] = parts[i].replace(/\\\]/g, "]");
     }
 
-    return Mustache.escape(parts.join(""));
+    var escaped = Mustache.escape(parts.join(""));
+    return escaped.length > 200 ? escaped.substring(0, 190) + "…" : escaped;
   }
 }
 
