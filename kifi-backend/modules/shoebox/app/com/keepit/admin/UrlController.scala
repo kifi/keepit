@@ -275,7 +275,8 @@ class UrlController @Inject() (
           normalization = body("normalization_" + key) match {
             case "None" => None
             case scheme => Some(Normalization(scheme))
-          }
+          },
+          trustedDomain = Some(body("trusted_domain_" + key)).filter(!_.isEmpty)
         )
 
         if (newPat != oldPat) {
@@ -292,7 +293,8 @@ class UrlController @Inject() (
           normalization = body("new_normalization") match {
             case "None" => None
             case scheme => Some(Normalization(scheme))
-          }
+          },
+          trustedDomain = Some(body("new_trusted_domain")).filter(!_.isEmpty)
         ))
       }
     }

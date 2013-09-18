@@ -4,13 +4,17 @@
 }
 .url-patterns th:first-child,
 .url-patterns td:first-child,
-.url-patterns th:nth-child(n+4),
-.url-patterns td:nth-child(n+4) {
+.url-patterns th:nth-child(n+4):nth-child(-n+6),
+.url-patterns td:nth-child(n+4):nth-child(-n+6) {
   width: 7%;
   text-align: center;
 }
+.url-patterns th:nth-child(7) {
+  text-align: center;
+}
 .url-patterns td:nth-child(2),
-.url-patterns td:nth-child(3) {
+.url-patterns td:nth-child(3)
+.url-patterns td:nth-child(7){
   padding-right: 20px;
 }
 .url-patterns input[type=text] {
