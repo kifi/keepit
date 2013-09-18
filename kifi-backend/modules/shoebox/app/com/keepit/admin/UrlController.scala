@@ -210,50 +210,6 @@ class UrlController @Inject() (
     }
   }
 
-  def normSchemePageView(page: Int = 0) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 50
-    val (rules, totalCount) = db.readOnly{ implicit s =>
-      urlPatternRuleRepo.normSchemePage(page, PAGE_SIZE)
-    }
-    val pageCount = (totalCount * 1.0 / PAGE_SIZE).ceil.toInt
-    Ok(html.admin.domainNormalization(rules, page, totalCount, pageCount, PAGE_SIZE, None))
-  }
-
-  def searchDomainNormalization() = AdminHtmlAction{ implicit request =>
-    val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
-    val searchTerm = form.flatMap{ _.get("searchTerm") }
-    searchTerm match {
-      case None => Redirect(routes.UrlController.normSchemePageView(0))
-      case Some(term) =>
-        val rules = db.readOnly{ implicit s => urlPatternRuleRepo.findAll(term) }
-        Ok(html.admin.domainNormalization(rules, 0, rules.size, 1, rules.size, searchTerm))
-    }
-  }
-
-  val normSchemeForm = Form(
-    mapping("scheme"-> of[String])(Normalization.apply)(Normalization.unapply)
-  )
-
-  val normSchemeOptions = Normalization.schemes.map{x => (x.scheme, x.scheme)}.toSeq
-
-  def editDomainNormScheme(id: Id[UrlPatternRule]) = Action { implicit request =>
-    val rule = db.readOnly{ implicit s => urlPatternRuleRepo.get(id) }
-    Ok(html.admin.editDomainNormScheme(rule, normSchemeForm.fill(rule.normalization.getOrElse(Normalization(""))), normSchemeOptions))
-  }
-
-  def saveDomainNormScheme(id: Id[UrlPatternRule]) = Action { implicit request =>
-    val rule = db.readOnly{ implicit s => urlPatternRuleRepo.get(id) }
-    normSchemeForm.bindFromRequest.fold(
-      formWithErrors => BadRequest,
-      normalization => {
-        val modifiedRule = if (normalization.scheme == "") rule.copy(normalization = None)
-        else rule.copy(normalization = Some(normalization))
-        db.readWrite{implicit s => urlPatternRuleRepo.save(modifiedRule)}
-        Redirect(routes.UrlController.normSchemePageView(0))
-      }
-    )
-  }
-
   def getPatterns = AdminHtmlAction { implicit request =>
     val patterns = db.readOnly { implicit session =>
       urlPatternRuleRepo.all.sortBy(_.id.get.id)
@@ -263,7 +219,7 @@ class UrlController @Inject() (
 
   def savePatterns = AdminHtmlAction { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
-    val toBeBroadcasted = db.readWrite { implicit session =>
+    db.readWrite { implicit session =>
       for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
         val id = Id[UrlPatternRule](key.toLong)
         val oldPat = urlPatternRuleRepo.get(id)
@@ -272,11 +228,11 @@ class UrlController @Inject() (
           example = Some(body("example_" + key)).filter(!_.isEmpty),
           state = if (body.contains("active_" + key)) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
           isUnscrapable = body.contains("unscrapable_"+ key),
-          doNotSlide = body.contains("no-slide_" + key),
           normalization = body("normalization_" + key) match {
             case "None" => None
             case scheme => Some(Normalization(scheme))
-          }
+          },
+          trustedDomain = Some(body("trusted_domain_" + key)).filter(!_.isEmpty)
         )
 
         if (newPat != oldPat) {
@@ -290,16 +246,14 @@ class UrlController @Inject() (
           example = Some(body("new_example")).filter(!_.isEmpty),
           state = if (body.contains("new_active")) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
           isUnscrapable = body.contains("new_unscrapable"),
-          doNotSlide = body.contains("no-slide-slider"),
           normalization = body("new_normalization") match {
             case "None" => None
             case scheme => Some(Normalization(scheme))
-          }
+          },
+          trustedDomain = Some(body("new_trusted_domain")).filter(!_.isEmpty)
         ))
       }
-      urlPatternRuleRepo.getSliderNotShown()
     }
-    eliza.sendToAllUsers(Json.arr("url_patterns", toBeBroadcasted))
     Redirect(routes.UrlController.getPatterns)
   }
 }
