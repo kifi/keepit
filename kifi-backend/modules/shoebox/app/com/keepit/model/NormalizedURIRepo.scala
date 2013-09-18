@@ -1,14 +1,14 @@
 package com.keepit.model
 
-import com.keepit.common.logging.Logging
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
-import com.keepit.normalizer.{Prenormalizer, NormalizationService, NormalizationCandidate}
+import com.keepit.normalizer.{NormalizationService, NormalizationCandidate}
 import scala.concurrent.ExecutionContext.Implicits.global
+import play.modules.statsd.api.Statsd
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
@@ -30,7 +30,8 @@ class NormalizedURIRepoImpl @Inject() (
   urlHashCache: NormalizedURIUrlHashCache,
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizationServiceProvider: Provider[NormalizationService],
-  urlRepoProvider: Provider[URLRepo])
+  urlRepoProvider: Provider[URLRepo],
+  )
   extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
@@ -45,12 +46,11 @@ class NormalizedURIRepoImpl @Inject() (
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
-    def restriction = column[Restriction]("restriction", O.Nullable)
-    def normalization = column[Normalization]("normalization")
-    def redirect = column[Id[NormalizedURI]]("redirect")
-    def redirectTime = column[DateTime]("redirect_time")
+    def normalization = column[Normalization]("normalization", O.Nullable)
+    def redirect = column[Id[NormalizedURI]]("redirect", O.Nullable)
+    def redirectTime = column[DateTime]("redirect_time", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~
-        screenshotUpdatedAt.? ~ restriction.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
+        screenshotUpdatedAt.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
   }
 
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
@@ -117,33 +117,41 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
-    val hash = NormalizedURI.hashUrl(normalizedUrl)
-    urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
-      (for (t <- table if t.urlHash === hash) yield t).firstOption
+    Statsd.time(key = "normalizedURIRepo.getByNormalizedUrl") {
+        val hash = NormalizedURI.hashUrl(normalizedUrl)
+      urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
+        (for (t <- table if t.urlHash === hash) yield t).firstOption
+      }
     }
   }
 
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    getByNormalizedUrl(Prenormalizer(url)) map {
-      case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
-      case uri => uri
+    Statsd.time(key = "normalizedURIRepo.getByUri") {
+      getByNormalizedUrl(prenormalize(url)) map {
+        case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
+        case uri => uri
+      }
     }
   }
 
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
-    val normalizedUri = getByUri(url) match {
-      case Some(uri) => uri
-      case None => {
-        val newUri = save(NormalizedURI.withHash(normalizedUrl = Prenormalizer(url)))
-        urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-        newUri
+    Statsd.time(key = "normalizedURIRepo.internByUri") {
+        val normalizedUri = getByUri(url) match {
+        case Some(uri) => uri
+        case None => {
+          val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalize(url)))
+          urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
+          newUri
+        }
       }
+      session.onTransactionSuccess(normalizationServiceProvider.get.update(normalizedUri, candidates: _*))
+      normalizedUri
     }
-    session.onTransactionSuccess(normalizationServiceProvider.get.update(normalizedUri, candidates: _*))
-    normalizedUri
   }
   
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI] = {
     (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
+
+  private def prenormalize(uriString: String)(implicit session: RSession): String = Statsd.time(key = "normalizedURIRepo.prenormalize") { normalizationServiceProvider.get.prenormalize(uriString) }
 }

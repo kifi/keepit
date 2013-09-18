@@ -39,7 +39,7 @@ class ServiceDiscoveryImpl @Inject() (
     services: FortyTwoServices,
     amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
     scheduler: Scheduler,
-    servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: Nil)
+    servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: Nil)
   extends ServiceDiscovery with Logging {
 
   private var myNode: Option[Node] = None
@@ -88,6 +88,7 @@ class ServiceDiscoveryImpl @Inject() (
 
   private def keepAlive() : Unit = {
     scheduler.scheduleOnce(2 minutes){
+      forceUpdate()
       if (stillRegistered) {
         keepAlive()
       } else {

@@ -35,4 +35,6 @@ object Normalization {
     HTTPM -> 7,
     MOVED -> 8
   )
+
+  lazy val schemes = Set(HTTPM, HTTPSM, HTTPWWW, HTTP, HTTPSWWW, HTTPS)
 }

@@ -67,7 +67,7 @@ var tile = tile || function() {  // idempotent for Chrome
       if (!onScroll) {
         var lastScrollTime = 0;
         document.addEventListener("scroll", onScroll = function(e) {
-          var t = e.timeStamp || +new Date;
+          var t = e.timeStamp || Date.now();
           if (t - lastScrollTime > 100) {  // throttling to avoid measuring DOM too freq
             lastScrollTime = t;
             var hPage = document.body.scrollHeight;
@@ -170,7 +170,7 @@ var tile = tile || function() {  // idempotent for Chrome
     tile.remove();
   }
   tile = document.createElement("div");
-  tile.dataset.t0 = +new Date;
+  tile.dataset.t0 = Date.now();
   tile.id = tile.className = "kifi-tile";
   tile.style.display = "none";
   tile.innerHTML =

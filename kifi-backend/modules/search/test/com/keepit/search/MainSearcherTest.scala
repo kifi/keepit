@@ -86,6 +86,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
       id = normalizedUriId,
       title = title,
       description = None,
+      keywords = None,
       media = None,
       content = content,
       scrapedAt = currentDateTime,

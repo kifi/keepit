@@ -1,17 +1,17 @@
-@(uri: String, locator: String)
+@(url: String, locator: String)
 <!doctype html>
-<html data-kifi-deep-link='{"locator":"@locator"}'>
+<html data-kifi-deep-link='{"url":"@url","locator":"@locator"}'>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   setTimeout(function() {
     document.querySelector(".kifi-deep-link-no-extension").style.visibility = "visible";
   }, 100);
   setTimeout(function() {
-    location.href = "@uri";
+    location.href = "@url";
   }, 2000);
 });
 </script>
 <div class="kifi-deep-link-no-extension" style="visibility:hidden">
-  It appears that this browser doesn't have KiFi installed. We're sending you along to the page anyway.
+  It appears that this browser doesn’t have Kifi installed. We’re sending you along to the page anyway.
 </div>
 </html>

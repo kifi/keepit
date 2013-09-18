@@ -6,7 +6,7 @@ import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError, Healthcheck}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import play.api.Plugin
@@ -44,9 +44,19 @@ private[mail] class MailSenderActor @Inject() (
 
   def receive() = {
     case ProcessOutbox =>
-      db.readOnly { implicit s =>
-        mailRepo.outbox() map mailRepo.get
-      } foreach { mail =>
+      val emailsToSend = db.readOnly { implicit s =>
+          mailRepo.outbox() map { email =>
+            try {
+              Some(mailRepo.get(email))
+            } catch {
+              case ex: Throwable =>
+                healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(s"[MailSenderActor]: ${ex.getMessage}")))
+                None
+            }
+        }
+      } flatten
+
+      emailsToSend.foreach { mail =>
         self ! ProcessMail(mail)
       }
     case ProcessMail(mail) => mailProvider.sendMail(mail)

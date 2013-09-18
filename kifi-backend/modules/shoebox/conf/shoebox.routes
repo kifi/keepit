@@ -165,9 +165,6 @@ GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperControl
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
 GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup
-GET     /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.getUnscrapable()
-POST    /admin/data/previewUnscrapable     @com.keepit.controllers.admin.ScraperController.previewUnscrapable()
-POST    /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.createUnscrapable()
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
@@ -175,6 +172,8 @@ GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlControl
 GET     /admin/data/batchMerge          @com.keepit.controllers.admin.UrlController.batchMerge
 GET     /admin/data/canonical       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
 GET     /admin/data/redirect       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
+GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.getPatterns
+POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
@@ -260,8 +259,6 @@ POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
-GET     /admin/slider/domainNormSchemeView @com.keepit.controllers.admin.SliderAdminController.normSchemePageView(page: Int ?= 0)
-POST     /admin/slider/searchDomainNormalization @com.keepit.controllers.admin.SliderAdminController.searchDomainNormalization()
 
 GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase

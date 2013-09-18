@@ -1,40 +1,27 @@
 package com.keepit.normalizer
 
-import com.keepit.common.net.URI
-import com.keepit.model.{NormalizedURIRepo, NormalizedURI}
+import com.keepit.model.UrlPatternRuleRepo
 import com.keepit.scraper.ScraperPlugin
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.db.slick.DBSession.RSession
 
-case class PriorKnowledge(currentReference: NormalizedURI)(implicit normalizedURIRepo: NormalizedURIRepo, scraperPlugin: ScraperPlugin) {
-  lazy val contentChecks = PriorKnowledge.getContentChecks(currentReference.url)
+@Singleton
+class PriorKnowledge @Inject() (urlPatternRuleRepo: UrlPatternRuleRepo, scraperPlugin: ScraperPlugin) {
+  implicit val scraper = scraperPlugin
 
-  def apply(candidate: NormalizationCandidate): PriorKnowledge.Action = candidate match {
-    case _: TrustedCandidate => PriorKnowledge.ACCEPT
-    case _: UntrustedCandidate => contentChecks.find(_.isDefinedAt(candidate)).map(PriorKnowledge.Check).getOrElse(PriorKnowledge.REJECT)
-  }
-}
-
-object PriorKnowledge {
-
-  sealed trait Action
-  case object ACCEPT extends Action
-  case object REJECT extends Action
-  case class Check(contentCheck: ContentCheck) extends Action
-
-  val trustedDomains = Set.empty[String]
-  private def canBeTrusted(domain: String): Option[String] = trustedDomains.find(trustedDomain => domain.endsWith(trustedDomain))
-  private def getDomain(referenceUrl: String): Option[String] = for { uri <- URI.safelyParse(referenceUrl); host <- uri.host } yield host.name
-  private def getTrustedDomain(referenceUrl: String): Option[String] = for { domain <- getDomain(referenceUrl); trustedDomain <- canBeTrusted(domain) } yield trustedDomain
-
-  def getContentChecks(referenceUrl: String)(implicit scraperPlugin: ScraperPlugin): Seq[ContentCheck] = {
+  def getContentChecks(referenceUrl: String)(implicit session: RSession): Seq[ContentCheck] = {
 
     referenceUrl match {
       case LinkedInNormalizer.linkedInPrivateProfile(_, id) => Seq(LinkedInProfileCheck(id.toLong))
-      case LinkedInNormalizer.linkedInPublicProfile(_, _) => Seq(SignatureCheck(referenceUrl, "linkedin.com"))
       case _ => {
-        val trustedDomain = getTrustedDomain(referenceUrl)
+        val trustedDomain = urlPatternRuleRepo.getTrustedDomain(referenceUrl)
         if (trustedDomain.isDefined) Seq(SignatureCheck(referenceUrl, trustedDomain.get)) else Seq.empty
       }
     }
   }
 
+  def getPreferredSchemeNormalizer(url: String)(implicit session: RSession): Option[StaticNormalizer] = urlPatternRuleRepo.getPreferredNormalization(url).map(SchemeNormalizer(_))
+
 }
+
+

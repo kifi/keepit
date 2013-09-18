@@ -15,7 +15,7 @@ import com.keepit.common.net.URI
 
 object DefaultExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
-  def apply(uri: URI) = new DefaultExtractor(uri.toString, Scraper.maxContentChars, htmlMapper)
+  def apply(uri: URI) = apply(uri.toString)
   def apply(url: String) = new DefaultExtractor(url, Scraper.maxContentChars, htmlMapper)
 
   private val htmlMapper = Some(new DefaultHtmlMapper {
@@ -28,17 +28,68 @@ object DefaultExtractorProvider extends ExtractorProvider {
   })
 }
 
-class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
-  protected def getContentHandler = new DefaultContentHandler(output, metadata)
+object DefaultExtractor {
+  val specialRegex = """[,;:/]\s*""".r
+  val spaceRegex = """\s+""".r
 }
 
-class DefaultContentHandler(handler: ContentHandler, metadata: Metadata) extends ContentHandlerDecorator(handler) {
+class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
+  private[this] val handler: DefaultContentHandler = new DefaultContentHandler(output, metadata, url)
+
+  protected def getContentHandler: ContentHandler = handler
+
+  override def getKeywords(): Option[String] = {
+    val str = (handler.getKeywords.map{ _.mkString(", ") } ++ getValidatedMetaTagKeywords).mkString(" | ")
+    if (str.length > 0) Some(str) else None
+  }
+
+  private def getValidatedMetaTagKeywords: Option[String] = {
+    getMetadata("keywords").flatMap{ meta =>
+      import DefaultExtractor._
+      val phrases = specialRegex.split(meta).filter{ _.length > 0 }.toSeq
+      val allPhrases = phrases.foldLeft(phrases){ (phrases, onePhrase) => phrases ++ spaceRegex.split(onePhrase).filter{ _.length > 0 }.toSeq }
+      val validator = new KeywordValidator(allPhrases)
+
+      validator.startDocument()
+
+      getMetadata("title").foreach{ title =>
+        validator.characters(title.toCharArray)
+        validator.break()
+      }
+      getMetadata("description").foreach{ description =>
+        validator.characters(description.toCharArray)
+        validator.break()
+      }
+      handler.getKeywords.foreach{ keywords => // keywords from URI path
+        keywords.foreach{ keyword =>
+          validator.characters(keyword.toCharArray)
+          validator.break()
+        }
+      }
+      validator.characters(getContent().toCharArray) // content
+
+      validator.endDocument()
+
+      if (validator.coverage > 0.3d) Some(meta) else None
+    }
+  }
+}
+
+class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: String) extends ContentHandlerDecorator(handler) {
+
+  private[this] var keywordValidatorContentHandler: Option[KeywordValidatorContentHandler] = None
+
+  def getKeywords:Option[Seq[String]] = keywordValidatorContentHandler.map{ _.keywords }
 
   override def startDocument() {
     // enable boilerpipe only for HTML
     Option(metadata.get("Content-Type")).foreach{ contentType =>
       if (contentType startsWith MimeTypes.HTML) {
-        setContentHandler(new BoilerpipeContentHandler(new TextOutputContentHandler(handler)))
+        val keywordValidator = new KeywordValidator(URITokenizer.getTokens(uri))
+        keywordValidatorContentHandler = Some(
+          new KeywordValidatorContentHandler(keywordValidator, new BoilerpipeContentHandler(new TextOutputContentHandler(handler)))
+        )
+        setContentHandler(keywordValidatorContentHandler.get)
       } else {
         setContentHandler(new DehyphenatingTextOutputContentHandler(handler))
       }

@@ -16,7 +16,7 @@
   width: 322px;
   height: auto;
   background: #34495e;
-  font: 12px "Helvetica Neue",arial,sans-serif;
+  font: 12px Arial, sans-serif;
   text-align: left;
   direction: ltr;
   z-index: 999999999991;
@@ -186,7 +186,7 @@ div.kifi-pane-head-settings-menu {
   right: 50px;
   text-align: left;
   line-height: 20px;
-  font: 16px/1.5 "Helvetica Neue",arial,sans-serif !important;
+  font: 16px/1.5 Arial, sans-serif !important;
   color: #515051;
   background-color: #474e54;
   color: #fff !important;

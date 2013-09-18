@@ -9,7 +9,6 @@ import com.keepit.common.controller.FortyTwoCookies.{KifiInstallationCookie, Imp
 import securesocial.core._
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.{ExternalId, State, Id}
-import com.keepit.common.social.{ConnectionUpdater}
 import com.keepit.common.db.slick.DBSession.RSession
 import play.api.mvc._
 import com.keepit.model.ExperimentType
@@ -29,7 +28,6 @@ class ShoeboxActionAuthenticator @Inject() (
   fortyTwoServices: FortyTwoServices,
   healthcheckPlugin: HealthcheckPlugin,
   impersonateCookie: ImpersonateCookie,
-  connectionUpdater: ConnectionUpdater,
   kifiInstallationCookie: KifiInstallationCookie)
   extends ActionAuthenticator with SecureSocial with Logging {
 
