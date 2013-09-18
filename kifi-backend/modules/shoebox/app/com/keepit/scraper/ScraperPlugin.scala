@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
@@ -28,8 +28,8 @@ case class ScrapeBasicArticle(url: String, customExtractor: Option[Extractor])
 
 private[scraper] class ScraperActor @Inject() (
     scraper: Scraper,
-    healthcheckPlugin: HealthcheckPlugin)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+    airbrake: AirbrakeNotifier)
+  extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case Scrape =>
@@ -42,8 +42,8 @@ private[scraper] class ScraperActor @Inject() (
 
 private[scraper] class ReadOnlyScraperActor @Inject() (
   scraper: Scraper,
-  healthcheckPlugin: HealthcheckPlugin
-) extends FortyTwoActor(healthcheckPlugin) with Logging {
+  airbrake: AirbrakeNotifier
+) extends FortyTwoActor(airbrake) with Logging {
   def receive() = {
     case ScrapeBasicArticle(url, customExtractor) => sender ! scraper.getBasicArticle(url, customExtractor)
     case m => throw new Exception("unknown message %s".format(m))

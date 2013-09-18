@@ -3,7 +3,6 @@ package com.keepit.common.actor
 import akka.actor._
 import akka.testkit.TestActorRef
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
-import com.keepit.common.akka.AlertingActor
 
 @Singleton
 class ActorInstance[T <: Actor] @Inject() (

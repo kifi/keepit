@@ -17,6 +17,7 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.akka.TestKitScope
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 class DomainClassifierTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
@@ -27,7 +28,8 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
     FakeDomainTagImporterModule(),
     TestActorSystemModule(Some(system)),
     FakeShoeboxServiceModule(),
-    TestSearchServiceClientModule()
+    TestSearchServiceClientModule(),
+    FakeAirbrakeModule()
   )
 
   "The domain classifier" should {

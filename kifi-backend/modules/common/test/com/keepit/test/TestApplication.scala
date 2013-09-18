@@ -10,6 +10,7 @@ import play.api.Mode
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 class TestApplicationFromGlobal(override val path: File, _global: FortyTwoGlobal)
   extends play.api.test.FakeApplication(path = path) {
@@ -34,5 +35,5 @@ class TestApplication(overridingModules: Module*)(implicit path: File = new File
 
 trait TestInjector extends EmptyInjector {
   val mode = Mode.Test
-  lazy val module = Modules.combine(FakeClockModule(), FakeHealthcheckModule())
+  lazy val module = Modules.combine(FakeClockModule(), FakeHealthcheckModule(), FakeAirbrakeModule())
 }

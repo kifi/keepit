@@ -9,7 +9,7 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.model._
@@ -86,9 +86,9 @@ class EventWriter @Inject() (
 }
 
 class EventStreamActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     eventWriter: EventWriter)
-  extends FortyTwoActor(healthcheckPlugin) {
+  extends FortyTwoActor(airbrake) {
 
   val (eventEnumerator, eventChannel) = Concurrent.broadcast[JsValue]
 

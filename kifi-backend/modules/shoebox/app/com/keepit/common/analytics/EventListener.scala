@@ -7,7 +7,7 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
@@ -91,10 +91,10 @@ class EventHelper @Inject() (
 }
 
 class EventHelperActor @Inject() (
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   listeners: Set[EventListener],
   eventStream: EventStream)
-  extends FortyTwoActor(healthcheckPlugin) {
+  extends FortyTwoActor(airbrake) {
 
   def receive = {
     case event: Event =>

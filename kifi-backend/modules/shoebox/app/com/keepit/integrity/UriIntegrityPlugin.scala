@@ -5,7 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.time._
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.actor.ActorInstance
@@ -41,9 +41,9 @@ class UriIntegrityActor @Inject()(
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   centralConfig: CentralConfig,
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   scraper: ScraperPlugin
-) extends FortyTwoActor(healthcheckPlugin) with Logging {
+) extends FortyTwoActor(airbrake) with Logging {
 
   private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
@@ -54,7 +54,7 @@ class UriIntegrityActor @Inject()(
           log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
           bookmarkRepo.removeFromCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
           bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None
-        } 
+        }
         case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
           if (bm.state == BookmarkStates.INACTIVE) bookmarkRepo.save(bm.withActive(true))
           bookmarkRepo.save(oldBm.withActive(false));
@@ -82,9 +82,9 @@ class UriIntegrityActor @Inject()(
    */
   private def processMerge(change: ChangedURI)(implicit session: RWSession): (Option[NormalizedURI], Option[ChangedURI]) = {
     val (oldUriId, newUriId) = (change.oldUriId, change.newUriId)
-    if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) { 
+    if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) {
       if (oldUriId == newUriId) changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
-      (None, None) 
+      (None, None)
     } else {
       val oldUri = uriRepo.get(oldUriId)
       val newUri = uriRepo.get(newUriId) match {
@@ -99,11 +99,11 @@ class UriIntegrityActor @Inject()(
       val toBeScraped = if ( oldUri.state != NormalizedURIStates.ACTIVE && oldUri.state != NormalizedURIStates.INACTIVE && (newUri.state == NormalizedURIStates.ACTIVE || newUri.state == NormalizedURIStates.INACTIVE)){
         Some(uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED)))
       } else None
-      
+
       uriRepo.getByRedirection(oldUri.id.get).foreach{ uri =>
         uriRepo.save(uri.withRedirect(newUriId, currentDateTime))
-      }  
-        
+      }
+
       uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
 
       /**
@@ -123,9 +123,9 @@ class UriIntegrityActor @Inject()(
       followRepo.getByUri(oldUriId, excludeState = None).map{ follow =>
         followRepo.save(follow.withNormUriId(newUriId))
       }
-      
+
       val saved = changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
-      
+
       (toBeScraped, Some(saved))
     }
   }
@@ -211,7 +211,7 @@ class UriIntegrityPluginImpl @Inject() (
   def handleChangedUri(change: UriChangeMessage) = {
     actor.ref ! change
   }
-  
+
   def batchUpdateMerge(batchSize: Int) = actor.ref.ask(BatchUpdateMerge(batchSize))(1 minute).mapTo[Int]
 
 }

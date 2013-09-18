@@ -11,7 +11,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.service.FortyTwoServices
@@ -29,10 +29,10 @@ private[mail] class InvitationMailActor @Inject() (
     userValueRepo: UserValueRepo,
     emailAddressRepo: EmailAddressRepo,
     invitationRepo: InvitationRepo,
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices
-    ) extends FortyTwoActor(healthcheckPlugin) with Logging {
+    ) extends FortyTwoActor(airbrake) with Logging {
 
   private val ResentKey = "invitation_email_resent"
   private val TimeBeforeResend = Days.THREE
