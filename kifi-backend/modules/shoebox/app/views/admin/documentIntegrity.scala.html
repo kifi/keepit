@@ -31,8 +31,6 @@
             handleDuplicates("merge", $(this).data("id"), this, function(element) { $(element).parents("tbody").hide(); });
           }).on("click", ".merge", function() {
             handleDuplicate("merge", $(this).data("id"), this, function(element) { $(element).parents("tr").hide(); });
-          }).on("click", ".unscrapable", function() {
-            document.location = "@com.keepit.controllers.admin.routes.ScraperController.getUnscrapable"
           });
       });
     </script>
@@ -40,7 +38,7 @@
     <div class="navbar">
         <div class="navbar-inner">
             <ul class="nav">
-                <li><a href="@com.keepit.controllers.admin.routes.ScraperController.getUnscrapable()">Unscrapables</a></li>
+                <li><a href="@com.keepit.controllers.admin.routes.UrlController.getPatterns()">Unscrapables</a></li>
                 <li><a href="@com.keepit.controllers.admin.routes.UrlController.orphanCleanup()">Clean up Orphans</a></li>
                 <li><a href="@com.keepit.controllers.admin.routes.UrlController.renormalize()">Renormalize</a></li>
                 <li><a href="@com.keepit.controllers.admin.routes.UrlController.duplicateDocumentDetection()">De-duplicate Documents</a></li>
@@ -66,7 +64,6 @@
                         <div class="btn-group">
                             <div class="btn btn-info ignore_all" data-id="@dupeGroup.normUriId">Ignore All</div>
                             <div class="btn btn-info merge_all" data-id="@dupeGroup.normUriId">Merge All</div>
-                            <div class="btn btn-info unscrapable" data-id="@dupeGroup.normUriId">Unscrapable</div>
                         </div>
                     </td>
                 </tr>
@@ -79,7 +76,6 @@
                             <div class="btn-group">
                                 <div class="btn ignore" data-id="@dupe.id">Ignore</div>
                                 <div class="btn merge" data-id="@dupe.id">Merge</div>
-                                <div class="btn unscrapable" data-id="@dupe.id">Unscrapable</div>
                             </div>
                         </td>
                     </tr>

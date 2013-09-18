@@ -1,0 +1,38 @@
+.url-patterns {
+  margin: 10px 0;
+  vertical-align: top;
+}
+.url-patterns th:first-child,
+.url-patterns td:first-child,
+.url-patterns th:nth-child(n+4):nth-child(-n+6),
+.url-patterns td:nth-child(n+4):nth-child(-n+6) {
+  width: 7%;
+  text-align: center;
+}
+.url-patterns th:nth-child(7) {
+  text-align: center;
+}
+.url-patterns td:nth-child(2),
+.url-patterns td:nth-child(3)
+.url-patterns td:nth-child(7){
+  padding-right: 20px;
+}
+.url-patterns input[type=text] {
+  margin: 0;
+  width: 100%;
+}
+.url-patterns select {
+  width:auto;
+}
+.url-patterns .match-y:before {
+  content: "\2714";
+  font-size: 24px;
+  line-height: 24px;
+  color: green;
+}
+.url-patterns .match-n:before {
+  content: "\2297";
+  font-size: 36px;
+  line-height: 24px;
+  color: red;
+}
