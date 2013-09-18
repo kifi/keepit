@@ -14,6 +14,7 @@ object URLHistoryCause {
   val CREATE = URLHistoryCause("create")
   val SPLIT = URLHistoryCause("split")
   val MERGE = URLHistoryCause("merge")
+  val MIGRATED = URLHistoryCause("migrated")
 }
 case class URLHistory(date: DateTime, id: Id[NormalizedURI], cause: URLHistoryCause = URLHistoryCause.CREATE)
 
