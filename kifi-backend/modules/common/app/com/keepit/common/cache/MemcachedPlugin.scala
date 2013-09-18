@@ -3,7 +3,7 @@ package com.keepit.common.cache
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 import net.spy.memcached.auth.{PlainCallbackHandler, AuthDescriptor}
-import net.spy.memcached.{ConnectionFactoryBuilder, AddrUtil, MemcachedClient}
+import net.spy.memcached.{CachedData, ConnectionFactoryBuilder, AddrUtil, MemcachedClient}
 import play.api.cache.{CacheAPI, CachePlugin}
 import play.api.{Logger, Play, Application}
 import scala.util.control.Exception._
@@ -35,10 +35,43 @@ class MemcachedSlf4JLogger(name: String) extends AbstractLogger(name) {
 @Singleton
 class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
 
+  val compressThreshold:Int = 400000 // TODO: make configurable
+  val compressMethod:String = "gzip"
+  val maxThreshold:Int = 900000
+
   lazy val logger = Logger("memcached.plugin")
   import java.io._
 
   class CustomSerializing extends SerializingTranscoder{
+
+    override def encode(o:Object):CachedData = { // SerializingTranscoder does not compress JSON
+      o match {
+        case s:String => {
+          var b:Array[Byte] = encodeString(s)
+          var flags:Int = 0
+          if (b.length > compressThreshold) {
+            val ts = System.currentTimeMillis
+            val compressed = compressMethod match {
+              case "gzip" => compress(b)
+              case _ => throw new UnsupportedOperationException(s"Compression method $compressMethod not supported")
+            }
+            val lapsed = System.currentTimeMillis - ts
+            if (compressed.length < b.length) {
+              logger.info(s"Compressed ${o.getClass.getName}: ${b.length} => ${compressed.length} in $lapsed ms")
+              b = compressed
+              flags = 2 // COMPRESSED -- @see SerializingTranscoder
+            } else {
+              logger.warn(s"Compression INCREASED size of ${o.getClass.getName}: ${b.length} => ${compressed.length} in $lapsed ms")
+            }
+          }
+          if (b.length > maxThreshold) {
+            throw new CacheSizeLimitExceededException(s"object $o size=${b.length} is greater than memcached max threshold=$maxThreshold")
+          }
+          new CachedData(flags, b, getMaxSize)
+        }
+        case _ => super.encode(o)
+      }
+    }
 
     // You should not catch exceptions and return nulls here,
     // because you should cancel the future returned by asyncGet() on any exception.
