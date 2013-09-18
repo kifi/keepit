@@ -285,12 +285,12 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       val keyS = key.toString
       // workaround for memcached-specific 1M size limit
       properlyBoxed match {
-        case s:String => {
-          if (s.length + keyS.length > 400000) { // imprecise -- convert to (utf-8) byte[] TODO: compress if we do need to cache large data
-            repo.remove(keyS)
-            throw new CacheSizeLimitExceededException(s"KV(string) not cached: key.len=${keyS.length} ($keyS) val.len=${s.length} (${s.take(100)})")
-          }
-        }
+//        case s:String => {
+//          if (s.length + keyS.length > 400000) { // imprecise -- convert to (utf-8) byte[] TODO: compress if we do need to cache large data
+//            repo.remove(keyS)
+//            throw new CacheSizeLimitExceededException(s"KV(string) not cached: key.len=${keyS.length} ($keyS) val.len=${s.length} (${s.take(100)})")
+//          }
+//        }
         case a:Array[Byte] => {
           if (a.length + keyS.length > 900000) {
             repo.remove(keyS)
