@@ -175,10 +175,6 @@ GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlControl
 GET     /admin/data/batchMerge          @com.keepit.controllers.admin.UrlController.batchMerge
 GET     /admin/data/canonical       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
 GET     /admin/data/redirect       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
-GET     /admin/data/domainNormSchemeView @com.keepit.controllers.admin.UrlController.normSchemePageView(page: Int ?= 0)
-POST    /admin/data/searchDomainNormalization @com.keepit.controllers.admin.UrlController.searchDomainNormalization()
-POST    /admin/data/DomainNormScheme @com.keepit.controllers.admin.UrlController.saveDomainNormScheme(id: Id[com.keepit.model.UrlPatternRule])
-GET     /admin/data/DomainNormScheme  @com.keepit.controllers.admin.UrlController.editDomainNormScheme(id: Id[com.keepit.model.UrlPatternRule])
 GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.getPatterns
 POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
 
