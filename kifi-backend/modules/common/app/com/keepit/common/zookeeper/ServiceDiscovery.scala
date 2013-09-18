@@ -158,7 +158,7 @@ class ServiceDiscoveryImpl @Inject() (
 
     log.info("Running self check")
     services.currentService.selfCheck().onComplete{
-      case Success(passed) => if (passed) changeStatus(ServiceStatus.UP) else changeStatus(ServiceStatus.SELFCHECK_FAIL)
+      case Success(passed) => if (passed) { Thread.sleep(20000); changeStatus(ServiceStatus.UP) } else changeStatus(ServiceStatus.SELFCHECK_FAIL)
       case Failure(e) => changeStatus(ServiceStatus.SELFCHECK_FAIL)
     }
   }
