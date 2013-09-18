@@ -68,5 +68,5 @@ api = function() {
     }};
 }();
 
-/^Mac/.test(navigator.platform) && api.require(['styles/mac.css'], api.noop);
+/^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);
 

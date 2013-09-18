@@ -272,7 +272,7 @@ class UrlController @Inject() (
           example = Some(body("example_" + key)).filter(!_.isEmpty),
           state = if (body.contains("active_" + key)) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
           isUnscrapable = body.contains("unscrapable_"+ key),
-          showSlider = body.contains("show-slider_" + key),
+          doNotSlide = body.contains("no-slide_" + key),
           normalization = body("normalization_" + key) match {
             case "None" => None
             case scheme => Some(Normalization(scheme))
@@ -290,7 +290,7 @@ class UrlController @Inject() (
           example = Some(body("new_example")).filter(!_.isEmpty),
           state = if (body.contains("new_active")) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
           isUnscrapable = body.contains("new_unscrapable"),
-          showSlider = body.contains("new_show-slider"),
+          doNotSlide = body.contains("no-slide-slider"),
           normalization = body("new_normalization") match {
             case "None" => None
             case scheme => Some(Normalization(scheme))

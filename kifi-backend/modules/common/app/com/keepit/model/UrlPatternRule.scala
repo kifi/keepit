@@ -16,7 +16,7 @@ case class UrlPatternRule(
   pattern: String,
   example: Option[String] = None,
   isUnscrapable: Boolean = false,
-  showSlider: Boolean = true,
+  doNotSlide: Boolean = true,
   normalization: Option[Normalization] = None,
   trustedDomain: Option[String] = None
 ) extends Model[UrlPatternRule] {
@@ -37,7 +37,7 @@ object UrlPatternRule {
       (__ \ 'pattern).format[String] and
       (__ \ 'example).formatNullable[String] and
       (__ \ 'isUnscrapable).format[Boolean] and
-      (__ \ 'showSlider).format[Boolean] and
+      (__ \ 'doNotSlide).format[Boolean] and
       (__ \ 'normalization).formatNullable[Normalization] and
       (__ \ 'trustedDomain).formatNullable[String]
     )(UrlPatternRule.apply, unlift(UrlPatternRule.unapply))
@@ -45,7 +45,7 @@ object UrlPatternRule {
 
 case class UrlPatternRuleAllKey() extends Key[Seq[UrlPatternRule]] {
   override val version = 1
-  val namespace = "static_rule_all"
+  val namespace = "url_pattern_rule_all"
   def toKey(): String = "all"
 }
 
