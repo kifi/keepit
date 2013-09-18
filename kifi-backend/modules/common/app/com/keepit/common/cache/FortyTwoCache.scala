@@ -1,21 +1,25 @@
 package com.keepit.common.cache
 
 import scala.collection.concurrent.{TrieMap => ConcurrentMap}
-import play.api.libs.concurrent.Execution.Implicits._
-import scala.concurrent.duration._
-import com.google.inject.{Inject, Singleton}
-import play.api.libs.json._
-import play.api.Plugin
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
-import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent._
-import play.modules.statsd.api.Statsd
-import com.keepit.common.time._
-import com.keepit.serializer.{Serializer, BinaryFormat}
+import scala.concurrent.duration._
+
+import java.util.concurrent.atomic.AtomicInteger
+
+import net.codingwell.scalaguice.ScalaModule
 import net.sf.ehcache._
 import net.sf.ehcache.config.CacheConfiguration
-import net.codingwell.scalaguice.ScalaModule
+
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
+import com.keepit.common.time._
+import com.keepit.serializer.{Serializer, BinaryFormat}
+
+import play.api.Plugin
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
+import play.modules.statsd.api.Statsd
 
 
 object CacheStatistics extends Logging {
