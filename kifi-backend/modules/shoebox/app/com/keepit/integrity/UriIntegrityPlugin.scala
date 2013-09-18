@@ -22,7 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 trait UriChangeMessage
 
 case class MergedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends UriChangeMessage
-case class SplittedUri(url: URL, newUri: Id[NormalizedURI]) extends UriChangeMessage
+case class URLMigration(url: URL, newUri: Id[NormalizedURI]) extends UriChangeMessage
 case class BatchUpdateMerge(batchSize: Int)
 
 class UriIntegrityActor @Inject()(
@@ -160,7 +160,7 @@ class UriIntegrityActor @Inject()(
   def receive = {
     case BatchUpdateMerge(batchSize) => Future.successful(batchUpdateMerge(batchSize)) pipeTo sender
     case MergedUri(oldUri, newUri) => db.readWrite{ implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) }   // process later
-    case SplittedUri(url, newUri) => db.readWrite{ implicit s => handleURLMigration(url, newUri)}
+    case URLMigration(url, newUri) => db.readWrite{ implicit s => handleURLMigration(url, newUri)}
   }
 
 }

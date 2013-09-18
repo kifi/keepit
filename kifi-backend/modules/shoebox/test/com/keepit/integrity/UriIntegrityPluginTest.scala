@@ -96,7 +96,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         centralConfig(new ChangedUriSeqNumKey()) === Some(1)
         
         // split
-        plugin.handleChangedUri(SplittedUri(urls(2), uris(3).id.get))
+        plugin.handleChangedUri(URLMigration(urls(2), uris(3).id.get))
         
         db.readOnly{ implicit s =>
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
