@@ -45,7 +45,7 @@ object UrlPatternRule {
 
 case class UrlPatternRuleAllKey() extends Key[Seq[UrlPatternRule]] {
   override val version = 1
-  val namespace = "static_rule_all"
+  val namespace = "url_pattern_rule_all"
   def toKey(): String = "all"
 }
 
