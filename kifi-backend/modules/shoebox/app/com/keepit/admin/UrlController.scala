@@ -263,7 +263,7 @@ class UrlController @Inject() (
 
   def savePatterns = AdminHtmlAction { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
-    val toBeBroadcasted = db.readWrite { implicit session =>
+    db.readWrite { implicit session =>
       for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
         val id = Id[UrlPatternRule](key.toLong)
         val oldPat = urlPatternRuleRepo.get(id)
@@ -272,7 +272,6 @@ class UrlController @Inject() (
           example = Some(body("example_" + key)).filter(!_.isEmpty),
           state = if (body.contains("active_" + key)) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
           isUnscrapable = body.contains("unscrapable_"+ key),
-          doNotSlide = body.contains("no-slide_" + key),
           normalization = body("normalization_" + key) match {
             case "None" => None
             case scheme => Some(Normalization(scheme))
@@ -290,16 +289,13 @@ class UrlController @Inject() (
           example = Some(body("new_example")).filter(!_.isEmpty),
           state = if (body.contains("new_active")) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
           isUnscrapable = body.contains("new_unscrapable"),
-          doNotSlide = body.contains("no-slide-slider"),
           normalization = body("new_normalization") match {
             case "None" => None
             case scheme => Some(Normalization(scheme))
           }
         ))
       }
-      urlPatternRuleRepo.getSliderNotShown()
     }
-    eliza.sendToAllUsers(Json.arr("url_patterns", toBeBroadcasted))
     Redirect(routes.UrlController.getPatterns)
   }
 }

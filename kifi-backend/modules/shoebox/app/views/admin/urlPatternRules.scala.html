@@ -1,7 +1,7 @@
 @(patterns: Seq[UrlPatternRule])
 @import com.keepit.model.Normalization
 
-@admin("Url Pattern Rules", stylesheets = List("admin_slider")) {
+@admin("Url Pattern Rules", stylesheets = List("admin_data_integrity")) {
 <h3>URLs with specific behavior</h3>
 
 <div><span class="label">Note:</span> Top active rules have higher precedence. Changes take effect immediately (next page load) for all kifi users when you click <b>Save</b> below.</div>
@@ -15,7 +15,6 @@
         <th>Test It
         <th>Do They Match?
         <th>Do Not Scrape
-        <th>Do Not Slide
         <th>Normalize Url Scheme
     </thead>
     @for(pattern <- patterns) {
@@ -25,7 +24,6 @@
       <td class="control-group"><input type="text" class="url-example" name="example_@pattern.id.get" value="@pattern.example.getOrElse("")">
       <td class="url-match">
       <td><input type="checkbox" class="checkbox" name="unscrapable_@pattern.id.get" @if(pattern.isUnscrapable) {checked}>
-      <td><input type="checkbox" class="checkbox" name="no-slide_@pattern.id.get" @if(pattern.doNotSlide) {checked}>
       <td><select name="normalization_@pattern.id.get">
           <option name="None" value="None" @if(pattern.normalization.isEmpty) {selected}>Don't
           @for(norm <- com.keepit.model.Normalization.schemes.toSeq.sorted) { <option name="@norm.scheme" value="@norm.scheme" @if(pattern.normalization == Some(norm)) {selected}>@norm.scheme }
@@ -36,7 +34,6 @@
       <td class="control-group"><input type="text" class="url-example" name="new_example">
       <td class="url-match">
       <td><input type="checkbox" class="checkbox" name="new_unscrapable">
-      <td><input type="checkbox" class="checkbox" name="new_no-slide">
       <td><select name="new_normalization">
         <option name="None" value="None" selected>Don't
         @for(norm <- com.keepit.model.Normalization.schemes.toSeq.sorted) { <option name="@norm.scheme" value="@norm.scheme">@norm.scheme }
