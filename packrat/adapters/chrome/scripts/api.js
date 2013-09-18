@@ -110,4 +110,4 @@ var api = api || function() {  // idempotent for Chrome
     url: chrome.runtime.getURL};
 }();
 
-/^Mac/.test(navigator.platform) && api.require(['styles/mac.css'], api.noop);
+/^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);
