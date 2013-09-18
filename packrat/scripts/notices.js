@@ -70,8 +70,11 @@ noticesPane = function() {
         api.port.emit("notifications_pane", true);
 
         $markAll = $box.find(".kifi-pane-mark-notices-read").click(function() {
-          var data = $notices.find(".kifi-notice").data();
-          api.port.emit("all_notifications_visited", data.id, data.createdAt);
+          var o = $notices.find(".kifi-notice").toArray().reduce(function(o, el) {
+            var t = new Date(el.dataset.createdAt);
+            return t > o.time ? {time: t, id: el.dataset.id} : o;
+          }, {time: 0});
+          api.port.emit("all_notifications_visited", o);
           // not updating DOM until response received due to bulk nature of action
         }).toggle(numNotVisited > 0);
 

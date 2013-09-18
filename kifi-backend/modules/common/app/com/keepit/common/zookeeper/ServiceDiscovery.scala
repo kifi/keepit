@@ -88,6 +88,7 @@ class ServiceDiscoveryImpl @Inject() (
 
   private def keepAlive() : Unit = {
     scheduler.scheduleOnce(2 minutes){
+      forceUpdate()
       if (stillRegistered) {
         keepAlive()
       } else {

@@ -612,9 +612,9 @@ api.port.on({
       socket.send(["set_last_notify_read_time", t]);
     }
   },
-  all_notifications_visited: function(id, time) {
-    markAllNoticesVisited(id, time);
-    socket.send(["set_all_notifications_visited", id]);
+  all_notifications_visited: function(o) {
+    markAllNoticesVisited(o.id, o.time);
+    socket.send(["set_all_notifications_visited", o.id]);
   },
   session: function(_, respond) {
     respond(session);
