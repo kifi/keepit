@@ -32,9 +32,10 @@ case class EhCacheCacheModule() extends CachePluginModule {
   }
 }
 
-case class HashMapMemoryCacheModule() extends CachePluginModule {
+case class HashMapMemoryCacheModule(bindsFortyTwoCache:Boolean = true) extends CachePluginModule {
   def configure {
-    bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
+    if (bindsFortyTwoCache) // make optional to facilitate local testing
+      bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[InMemoryCachePlugin].to[HashMapMemoryCache]
   }
 }

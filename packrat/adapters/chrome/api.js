@@ -273,7 +273,9 @@ api = function() {
     });
 
     function done(n) {
-      if (n < scripts.length) {
+      if (page !== pages[page.id]) {
+        return;
+      } else if (n < scripts.length) {
         injectWithDeps(page.id, scripts[n][0], injected, function(paths) {
           for (var i in paths) {
             injected[paths[i]] = true;
