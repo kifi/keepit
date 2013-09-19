@@ -21,7 +21,9 @@ object Normalization {
   val HTTP = Normalization("http://")
   val HTTPWWW = Normalization("http://www")
   val HTTPSM = Normalization("https://m")
+  val HTTPSMOBILE = Normalization("http://mobile")
   val HTTPM = Normalization("http://m")
+  val HTTPMOBILE = Normalization("http://mobile")
   val MOVED = Normalization("301")
 
   lazy val priority = Map[Normalization, Int](
@@ -32,9 +34,11 @@ object Normalization {
     HTTP -> 4,
     HTTPWWW -> 5,
     HTTPSM -> 6,
+    HTTPSMOBILE -> 6,
     HTTPM -> 7,
-    MOVED -> 8
+    HTTPMOBILE -> 7,
+    MOVED -> Int.MaxValue
   )
 
-  lazy val schemes = Set(HTTPM, HTTPSM, HTTPWWW, HTTP, HTTPSWWW, HTTPS)
+  lazy val schemes = Set(HTTPMOBILE, HTTPM, HTTPSMOBILE, HTTPSM, HTTPWWW, HTTP, HTTPSWWW, HTTPS)
 }
