@@ -18,6 +18,8 @@ import securesocial.core._
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
 
+import com.keepit.common.healthcheck.FakeAirbrakeModule
+
 class ExtErrorReportControllerTest extends Specification with ShoeboxApplicationInjector {
 
   def fakeRequest(json: JsValue) = {
@@ -38,7 +40,7 @@ class ExtErrorReportControllerTest extends Specification with ShoeboxApplication
 
   "ExtAuthController" should {
     "start" in {
-      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule())) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule(), FakeAirbrakeModule())) {
         val fakeHealthcheck = inject[FakeHealthcheck]
         fakeHealthcheck.errorCount() === 0
 

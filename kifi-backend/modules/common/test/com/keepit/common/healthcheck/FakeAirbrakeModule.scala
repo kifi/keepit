@@ -8,22 +8,19 @@ import com.keepit.common.service.{FortyTwoServices, ServiceVersion}
 import play.api.Mode
 import play.api.Mode.Mode
 import com.keepit.common.time._
+import com.keepit.common.service.FakeServiceModule
 
 case class FakeAirbrakeModule() extends AirbrakeModule {
 
   def configure(): Unit = {
+    install(FakeClockModule())
+    install(FakeServiceModule())
     bind[AirbrakeNotifier].to[FakeAirbrakeNotifier]
   }
 
-  lazy val fakeServices = new FortyTwoServices(new SystemClock(), Mode.Test, None, None) {
-      override lazy val currentVersion = ServiceVersion("0.0.0")
-      override lazy val compilationTime = new SystemClock().now()
-      override lazy val baseUrl = "test_kifi.com"
-    }
-
   @Provides
-  def formatter(playMode: Mode): AirbrakeFormatter = {
-    new AirbrakeFormatter("fakeApiKey", Mode.Test, fakeServices)
+  def formatter(playMode: Mode, service: FortyTwoServices): AirbrakeFormatter = {
+    new AirbrakeFormatter("fakeApiKey", Mode.Test, service)
   }
 }
 

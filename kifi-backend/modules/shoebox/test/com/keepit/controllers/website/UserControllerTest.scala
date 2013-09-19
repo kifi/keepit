@@ -4,6 +4,7 @@ import org.specs2.mutable.Specification
 
 import net.codingwell.scalaguice.ScalaModule
 
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.controller.FortyTwoCookies.{KifiInstallationCookie, ImpersonateCookie}
 import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
 import com.keepit.common.db.slick.Database
@@ -58,6 +59,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
   private class WithUserController extends WithApplication(new ShoeboxApplication(new ScalaModule {
     def configure() {
       install(FakeMailModule())
+      install(FakeAirbrakeModule())
       bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
       bind[HttpClient].toInstance(new FakeHttpClient())
       bind[ImpersonateCookie].toInstance(new ImpersonateCookie(Some("dev.ezkeep.com")))
