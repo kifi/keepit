@@ -18,4 +18,11 @@ package object common {
     def withSideEffect(fun: A => Unit): A = { fun(a); a }
     def tap(fun: A => Unit): A = withSideEffect(fun)
   }
+
+  implicit class SpiltCombinator[A, B](val a: A) extends AnyVal {
+    def split(t: A => Boolean)(y: A => B, z: A => B) = {
+      if (t(a)) y(a)
+      else z(a)
+    }
+  }
 }
