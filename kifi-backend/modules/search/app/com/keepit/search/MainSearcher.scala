@@ -17,6 +17,7 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.util.PriorityQueue
+import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.analytics.{EventFamilies, Events}
@@ -77,6 +78,7 @@ class MainSearcher(
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
+  val percentMatchForHotDocs = config.asFloat("percentMatchForHotDocs")
   val recencyBoost = config.asFloat("recencyBoost")
   val newContentBoost = config.asFloat("newContentBoost")
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
@@ -188,8 +190,10 @@ class MainSearcher(
     // TODO: use user profile info as a bias
     lang = LangDetector.detectShortText(queryString, langProbabilities)
 
+    val hotDocs = new HotDocSetFilter()
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
+    parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
     parsedQuery = parser.parse(queryString)
 
@@ -212,6 +216,8 @@ class MainSearcher(
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
       Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
+      hotDocs.setHotDocs(personalizedSearcher.hotDocs)
+      hotDocs.setClickBoosts(clickBoosts)
 
       val tLucene = currentDateTime.getMillis()
       personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
@@ -439,12 +445,18 @@ class MainSearcher(
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     // TODO: use user profile info as a bias
     lang = LangDetector.detectShortText(queryString, langProbabilities)
+    val hotDocs = new HotDocSetFilter()
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
+    parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
+      hotDocs.setHotDocs(personalizedSearcher.hotDocs)
+      val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
+      hotDocs.setClickBoosts(clickBoosts)
+
       (query, personalizedSearcher.explain(query, uriId.id))
     }
   }

@@ -18,6 +18,7 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -28,7 +29,8 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     TestAnalyticsModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
-    TestSearchServiceClientModule()
+    TestSearchServiceClientModule(),
+    FakeAirbrakeModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

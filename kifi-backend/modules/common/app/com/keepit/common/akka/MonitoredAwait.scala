@@ -5,11 +5,9 @@ import scala.concurrent.Await
 import scala.concurrent.Awaitable
 import scala.concurrent.duration._
 import com.google.inject.Inject
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin}
 
-class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
+class MonitoredAwait @Inject() (airbrake: AirbrakeNotifier, healthcheckPlugin: HealthcheckPlugin) {
 
   def result[T](awaitable: Awaitable[T], atMost: Duration, errorMessage: String, valueOnFailure: T): T = {
     val caller = Thread.currentThread().getStackTrace()(2)
@@ -20,7 +18,7 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
       Await.result(awaitable, atMost)
     } catch {
       case ex: Throwable =>
-        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(s"[$errorMessage]: ${ex.getMessage}")))
+        airbrake.notify(AirbrakeError(ex, Some(s"[$errorMessage]: ${ex.getMessage}")))
         valueOnFailure
     } finally {
       sw.stop()
@@ -38,7 +36,7 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
     } catch {
       case ex: Throwable =>
         if (healthcheckPlugin.isWarm)
-          healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(s"[$errorMessage]: ${ex.getMessage}")))
+          airbrake.notify(AirbrakeError(ex, Some(s"[$errorMessage]: ${ex.getMessage}")))
         throw ex
     } finally {
       sw.stop()

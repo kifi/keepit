@@ -55,7 +55,7 @@ class ExpertRecommenderControllerImpl @Inject()(
     val flag = centralConfig(flagKey)
     val rcmder = createExpertRecommender(flag)
     modelFlag = flag
-    initScoreMap(rcmder)
+//   initScoreMap(rcmder)
 
     centralConfig.onChange(flagKey){ flagOpt =>
       val newFlag = centralConfig(flagKey)

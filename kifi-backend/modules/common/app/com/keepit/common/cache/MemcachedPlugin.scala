@@ -11,6 +11,7 @@ import net.spy.memcached.transcoders.{Transcoder, SerializingTranscoder}
 import net.spy.memcached.compat.log.{Level, AbstractLogger}
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import play.api.Play.current
+import com.keepit.common.logging.Logging
 
 class MemcachedSlf4JLogger(name: String) extends AbstractLogger(name) {
 
@@ -57,11 +58,11 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
             }
             val lapsed = System.currentTimeMillis - ts
             if (compressed.length < b.length) {
-              logger.info(s"Compressed ${o.getClass.getName}: ${b.length} => ${compressed.length} in $lapsed ms")
+              logger.info(s"Compressed($compressMethod) ${s.take(200)}: ${b.length} => ${compressed.length} in $lapsed ms")
               b = compressed
-              flags = 2 // COMPRESSED -- @see SerializingTranscoder
+              flags = 2 // COMPRESSED (gzip) -- @see SerializingTranscoder
             } else {
-              logger.warn(s"Compression INCREASED size of ${o.getClass.getName}: ${b.length} => ${compressed.length} in $lapsed ms")
+              logger.warn(s"Compression($compressMethod) INCREASED size of ${s.take(200)}: ${b.length} => ${compressed.length} in $lapsed ms")
             }
           }
           if (b.length > maxThreshold) {

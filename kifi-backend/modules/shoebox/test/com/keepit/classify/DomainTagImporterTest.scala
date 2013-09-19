@@ -14,6 +14,7 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
@@ -24,7 +25,8 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification wi
     FakeDomainTagImporterModule(),
     TestActorSystemModule(Some(system)),
     TestSearchServiceClientModule(),
-    FakeShoeboxServiceModule()
+    FakeShoeboxServiceModule(),
+    FakeAirbrakeModule()
   )
 
   "The domain tag importer" should {

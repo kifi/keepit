@@ -7,6 +7,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError, Healthcheck}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import play.api.Plugin
@@ -38,9 +39,10 @@ private[mail] case class ProcessMail(mailId: ElectronicMail)
 private[mail] class MailSenderActor @Inject() (
     db: Database,
     mailRepo: ElectronicMailRepo,
+    airbrake: AirbrakeNotifier,
     healthcheckPlugin: HealthcheckPlugin,
     mailProvider: MailProvider)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+  extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case ProcessOutbox =>

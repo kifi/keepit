@@ -22,7 +22,6 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.analytics.TestAnalyticsModule
-import com.keepit.common.healthcheck.DevAirbrakeModule
 import com.keepit.model.TestSliderHistoryTrackerModule
 import com.keepit.classify.FakeDomainTagImporterModule
 import com.keepit.learning.topicmodel.FakeWordTopicModule
@@ -30,6 +29,7 @@ import com.keepit.learning.topicmodel.DevTopicModelModule
 import com.keepit.learning.topicmodel.DevTopicStoreModule
 import com.keepit.eliza.TestElizaServiceClientModule
 import com.keepit.scraper.FakeScraperModule
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -53,12 +53,12 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeDomainTagImporterModule(),
         FakeWordTopicModule(),
         DevTopicModelModule(),
-        DevAirbrakeModule(),
         DevTopicStoreModule(),
         GeckoboardModule(),
         FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
         FakeScraperModule(), // This one should not be required once the Scraper is off Shoebox
-        TestElizaServiceClientModule()
+        TestElizaServiceClientModule(),
+        FakeAirbrakeModule()
       )) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {

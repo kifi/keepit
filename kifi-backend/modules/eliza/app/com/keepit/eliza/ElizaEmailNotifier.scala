@@ -5,7 +5,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.model.{User}
@@ -35,19 +35,19 @@ object MessageLookHereRemover {
 case object SendEmails
 
 class ElizaEmailNotifierActor @Inject() (
-    healthcheck: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     db: Database,
     clock: Clock,
     userThreadRepo: UserThreadRepo,
     messageRepo: MessageRepo,
     threadRepo: MessageThreadRepo,
     shoebox: ShoeboxServiceClient
-  ) extends FortyTwoActor(healthcheck) with Logging {
+  ) extends FortyTwoActor(airbrake) with Logging {
 
 
   def receive = {
     case SendEmails => {
-      val unseenUserThreads = db.readOnly { implicit session => 
+      val unseenUserThreads = db.readOnly { implicit session =>
         userThreadRepo.getUserThreadsForEmailing(clock.now.minusMinutes(15))
       }
       unseenUserThreads.foreach { userThread =>

@@ -7,6 +7,7 @@ import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorInstance
@@ -18,9 +19,10 @@ import scala.concurrent.duration._
 case object Update
 
 private[graph] class URIGraphActor @Inject() (
+    airbrake: AirbrakeNotifier,
     healthcheckPlugin: HealthcheckPlugin,
     uriGraph: URIGraph)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+  extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case Update => try {

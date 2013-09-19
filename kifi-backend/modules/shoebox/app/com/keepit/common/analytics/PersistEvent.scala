@@ -32,8 +32,11 @@ case class Persist(event: Event, queueTime: DateTime)
 case class PersistMany(events: Seq[Event], queueTime: DateTime)
 
 private[analytics] class PersistEventActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin, eventHelper: EventHelper, eventRepo: EventRepo)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
+    eventHelper: EventHelper,
+    eventRepo: EventRepo)
+  extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case Persist(event, queueTime) =>

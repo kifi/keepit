@@ -1,7 +1,7 @@
 package com.keepit.shoebox
 
 import java.io._
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.actor.ActorInstance
 import com.keepit.search.Lang
@@ -49,10 +49,10 @@ case object StartImport extends PhraseMessage
 case object EndImport extends PhraseMessage
 
 private class PhraseImporterActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     dbConnection: Database,
     phraseRepo: PhraseRepo)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+  extends FortyTwoActor(airbrake) with Logging {
 
   private val GROUP_SIZE = 500
 
