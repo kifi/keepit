@@ -27,6 +27,7 @@ import scala.concurrent.Future
 import com.keepit.model.BrowsingHistory
 import com.keepit.model.ClickHistory
 import com.keepit.common.akka.MonitoredAwait
+import scala.collection.mutable.{Set=>MutableSet}
 
 object PersonalizedSearcher {
   private val scale = 100
@@ -65,9 +66,12 @@ class PersonalizedSearcher(override val indexReader: WrappedIndexReader, myUris:
 extends Searcher(indexReader) with Logging {
   import PersonalizedSearcher._
 
+  val hotDocs = MutableSet.empty[Long]
+
   override protected def getSemanticVectorComposer(term: Term) = {
     val subReaders = indexReader.wrappedSubReaders
     val composer = new SemanticVectorComposer
+    var hotDocs = new ArrayBuffer[Long]
     var i = 0
     while (i < subReaders.length) {
       val subReader = subReaders(i)
@@ -77,10 +81,16 @@ extends Searcher(indexReader) with Logging {
         while (tp.nextDoc() < NO_MORE_DOCS) {
           val id = idMapper.getId(tp.docID())
           val weight = {
-            if (clickFilter.mayContain(id)) scaledWeightClickHistory
-            else if (browsingFilter.mayContain(id)) scaledWeightBrowsingHistory
-            else if (myUris.contains(id)) scaledWeightMyBookMarks
-            else 0
+            if (browsingFilter.mayContain(id)){
+              if (browsingFilter.mayContain(id, 2)) hotDocs += id
+              scaledWeightBrowsingHistory
+            } else if (clickFilter.mayContain(id)) {
+              scaledWeightClickHistory
+            } else if (myUris.contains(id)) {
+              scaledWeightMyBookMarks
+            } else {
+              0
+            }
           }
           if (weight > 0) {
             var freq = tp.freq()
