@@ -7,6 +7,7 @@ import org.specs2.mutable.Specification
 import scala.concurrent.duration.Duration
 import com.keepit.inject._
 import play.api.test.Helpers._
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 case class TestJsonCacheData(name: String, age: Int)
 
@@ -68,7 +69,7 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
   }
 
   "BinaryCacheImpl Instance" should {
-    withInjector(EhCacheCacheModule()){ implicit injector =>
+    withInjector(EhCacheCacheModule(), FakeAirbrakeModule()){ implicit injector =>
       val cachePlugin = inject[FortyTwoCachePlugin]
       val cache = new TestBinaryCache((cachePlugin, Duration(7, "days")))
       "yield the value Array[Byte](2,3,7)" in {
@@ -92,7 +93,7 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
   }
 
   "PrimitiveCacheImpl Instance" should {
-    withInjector(EhCacheCacheModule()){ implicit injector =>
+    withInjector(EhCacheCacheModule(), FakeAirbrakeModule()){ implicit injector =>
       val cachePlugin = inject[FortyTwoCachePlugin]
       val cache = new TestPrimitiveCache((cachePlugin, Duration(7, "days")))
       "yield the value 4.2141" in {
@@ -106,7 +107,7 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
   }
 
   "StringCacheImpl Instance" should {
-    withInjector(EhCacheCacheModule()){ implicit injector =>
+    withInjector(EhCacheCacheModule(), FakeAirbrakeModule()){ implicit injector =>
       val cachePlugin = inject[FortyTwoCachePlugin]
       val cache = new TestStringCache((cachePlugin, Duration(7, "days")))
       "yield the value 'fortytwo'" in {
