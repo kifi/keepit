@@ -9,7 +9,6 @@ import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.{HealthcheckPlugin}
 
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.libs.iteratee.Concurrent
@@ -36,7 +35,6 @@ class ExtMessagingController @Inject() (
     protected val healthcheckPlugin: HealthcheckPlugin
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
-
 
   /*********** REST *********************/
 
@@ -88,9 +86,7 @@ class ExtMessagingController @Inject() (
     }
   }
 
-
   /*********** WEBSOCKETS ******************/
-
 
   protected def onConnect(socket: SocketInfo) : Unit = {
     notificationRouter.registerUserSocket(socket)
@@ -149,7 +145,7 @@ class ExtMessagingController @Inject() (
     },
     "get_missed_notifications" -> { case JsString(time) +: _ =>
       val notices = messagingController.getSendableNotificationsAfter(socket.userId, parseStandardTime(time))
-      socket.channel.push(Json.arr("missed_notifications", notices))
+      socket.channel.push(Json.arr("missed_notifications", notices, currentDateTime))
     },
     "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
       val notices = messagingController.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
@@ -172,6 +168,9 @@ class ExtMessagingController @Inject() (
       val threadInfos = messagingController.getThreadInfos(socket.userId, url)
       socket.channel.push(Json.arr("thread_infos", threadInfos))
     },
+    "set_notfication_unread" -> { case JsString(threadId) +: _ =>
+      messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
+    },
     "log_event" -> { case JsObject(pairs) +: _ =>
       implicit val experimentFormat = State.format[ExperimentType]
       val eventJson = JsObject(pairs).deepMerge(
@@ -180,11 +179,4 @@ class ExtMessagingController @Inject() (
       shoebox.logEvent(socket.userId, eventJson)
     }
   )
-
-
-
-
 }
-
-
-

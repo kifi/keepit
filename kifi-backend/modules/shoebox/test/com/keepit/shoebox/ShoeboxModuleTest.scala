@@ -18,7 +18,6 @@ import scala.collection.JavaConversions._
 import scala.reflect.ManifestFactory.classType
 import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse}
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
 import com.keepit.common.store.ShoeboxFakeStoreModule
@@ -30,6 +29,7 @@ import com.keepit.learning.topicmodel.DevTopicModelModule
 import com.keepit.learning.topicmodel.DevTopicStoreModule
 import com.keepit.eliza.TestElizaServiceClientModule
 import com.keepit.scraper.FakeScraperModule
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -43,7 +43,6 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeMailModule(),
         FakeHttpClientModule(FakeClientResponse.fakeAmazonDiscoveryClient),
         FakeDiscoveryModule(),
-        ShoeboxWebSocketModule(),
         TestActorSystemModule(),
         TestShoeboxSecureSocialModule(),
         ShoeboxFakeStoreModule(),
@@ -58,7 +57,8 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         GeckoboardModule(),
         FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
         FakeScraperModule(), // This one should not be required once the Scraper is off Shoebox
-        TestElizaServiceClientModule()
+        TestElizaServiceClientModule(),
+        FakeAirbrakeModule()
       )) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {

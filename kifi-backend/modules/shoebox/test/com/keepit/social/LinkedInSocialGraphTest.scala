@@ -13,7 +13,7 @@ import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.social.{SocialNetworks, SocialId}
 
-class LinkedInSocialGraphTest extends Specification with ShoeboxApplicationInjector {
+class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
 
   import LinkedInSocialGraph.ProfileFieldSelector
 
@@ -33,7 +33,7 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxApplicationInjec
 
   "LinkedInSocialGraph" should {
     "fetch from linkedin" in {
-      running(new ShoeboxApplication(FakeHttpClientModule(fakeLinkedInResponse))) {
+      withDb(FakeHttpClientModule(fakeLinkedInResponse)) { implicit injector =>
 
         val oAuth2Info = OAuth2Info("this_is_my_token")
         val socialUser = SocialUser(IdentityId("rFOBMp35vZ", "linkedin"), "Greg", "Methvin", "Greg Methvin",

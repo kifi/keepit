@@ -82,15 +82,15 @@ trait Indexable[T] {
     doc
   }
 
-  protected def buildKeywordField(fieldName: String, keyword: String) = {
+  protected def buildKeywordField(fieldName: String, keyword: String): Field = {
     new Field(fieldName, keyword, keywordFieldType)
   }
 
-  protected def buildTextField(fieldName: String, fieldValue: String) = {
+  protected def buildTextField(fieldName: String, fieldValue: String): Field = {
     new Field(fieldName, fieldValue, textFieldType)
   }
 
-  protected def buildTextField(fieldName: String, fieldValue: String, analyzer: Analyzer) = {
+  protected def buildTextField(fieldName: String, fieldValue: String, analyzer: Analyzer): Field = {
     val ts = analyzer.createLazyTokenStream(fieldName, fieldValue)
     new Field(fieldName, ts, textFieldType)
   }
@@ -138,6 +138,11 @@ trait Indexable[T] {
 
   def buildBinaryDocValuesField(fieldName: String, bytes: Array[Byte]): Field = {
     new BinaryDocValuesField(fieldName, new BytesRef(bytes))
+  }
+
+  def buildTokenizedDomainField(fieldName: String, host: Seq[String], analyzer: Analyzer = DefaultAnalyzer.defaultAnalyzer): Field = {
+    val text = host.map{ name => "-_".foldLeft(name){ (n, c) => n.replace(c, ' ') }}.mkString(" ")
+    buildTextField(fieldName, text)
   }
 }
 

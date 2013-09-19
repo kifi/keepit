@@ -33,6 +33,7 @@ import ExecutionContext.Implicits.global
 
 
 class MainQueryParser(
+  lang: Lang,
   analyzer: Analyzer,
   stemmingAnalyzer: Analyzer,
   baseBoost: Float,
@@ -73,14 +74,18 @@ class MainQueryParser(
         query.setBoost(baseBoost)
 
         val phrases = if (numStemmedTerms > 1 && (phraseBoost > 0.0f || phraseProximityBoost > 0.0f)) {
-          val p = phraseDetector.detect(getStemmedTermArray)
+          val p = if (phraseProximityBoost > 0.0f) {
+            phraseDetector.detect(getStemmedTermArray)
+          } else {
+            phraseDetector.detectAll(getStemmedTermArray)
+          }
           if (p.size > 0) p
-          else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer)
+          else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
         } else {
           Set.empty[(Int, Int)]
         }
 
-        val textQuery = if (phraseBoost > 0.0f && phrases.nonEmpty) {
+        val textQuery = if (phraseBoost > 0.0f && phraseProximityBoost > 0.0f && phrases.nonEmpty) {
           new AdditiveBoostQuery(query, Array[Query](createPhraseQueries(phrases)))
         } else {
           query
@@ -104,9 +109,9 @@ class MainQueryParser(
           auxStrengths += phraseProximityBoost
         } else if (proximityBoost > 0.0f && numStemmedTerms > 1) {
           val proxQ = new DisjunctionMaxQuery(0.0f)
-          proxQ.add(ProximityQuery(getStemmedTerms("cs")))
-          proxQ.add(ProximityQuery(getStemmedTerms("ts")))
-          proxQ.add(ProximityQuery(getStemmedTerms("title_stemmed")))
+          proxQ.add(ProximityQuery(getStemmedTerms("cs"), phrases, phraseBoost))
+          proxQ.add(ProximityQuery(getStemmedTerms("ts"), phrases, phraseBoost))
+          proxQ.add(ProximityQuery(getStemmedTerms("title_stemmed"), phrases, phraseBoost))
           auxQueries += namedQuery("proximity", proxQ)
           auxStrengths += proximityBoost
         }

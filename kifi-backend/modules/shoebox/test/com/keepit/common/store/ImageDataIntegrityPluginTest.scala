@@ -14,6 +14,7 @@ import akka.testkit.TestKit
 import play.api.test.Helpers.running
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
@@ -28,6 +29,7 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
   "The image data integrity plugin" should {
     "verify all pictures" in {
       running(new ShoeboxApplication(
+        FakeAirbrakeModule(),
         imageDataIntegrityTestPluginModule,
         TestActorSystemModule(Some(system)),
         TestShoeboxSecureSocialModule(),

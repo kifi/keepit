@@ -1,9 +1,9 @@
 // @require styles/metro/notices.css
+// @require scripts/api.js
 // @require scripts/html/metro/notices.js
 // @require scripts/html/metro/notice_global.js
 // @require scripts/html/metro/notice_message.js
 // @require scripts/formatting.js
-// @require scripts/api.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/scrollable.js
@@ -51,7 +51,7 @@ noticesPane = function() {
           if(this.dataset.locator) {
             api.port.emit("open_deep_link", {nUri: this.dataset.uri, locator: this.dataset.locator});
           } else if(this.dataset.category == "global") {
-            markVisited("global", undefined, undefined, undefined, this.dataset.id);
+            markVisited("global", undefined, undefined, this.dataset.id);
             api.port.emit("set_global_read", {noticeId: this.dataset.id});
             if (this.dataset.uri) {
               window.open(this.dataset.uri, "_blank")
@@ -70,8 +70,11 @@ noticesPane = function() {
         api.port.emit("notifications_pane", true);
 
         $markAll = $box.find(".kifi-pane-mark-notices-read").click(function() {
-          var data = $notices.find(".kifi-notice").data();
-          api.port.emit("all_notifications_visited", data.id, data.createdAt);
+          var o = $notices.find(".kifi-notice").toArray().reduce(function(o, el) {
+            var t = new Date(el.dataset.createdAt);
+            return t > o.time ? {time: t, id: el.dataset.id} : o;
+          }, {time: 0});
+          api.port.emit("all_notifications_visited", o);
           // not updating DOM until response received due to bulk nature of action
         }).toggle(numNotVisited > 0);
 
@@ -91,7 +94,7 @@ noticesPane = function() {
           break;
         case "markOneVisited":
           console.log("marking one", a)
-          markVisited(a.category, a.nUri, a.time, a.locator, a.id);
+          markVisited(a.category, a.time, a.locator, a.id);
           $markAll.toggle(a.numNotVisited > 0);
           break;
         case "markAllVisited":
@@ -136,14 +139,13 @@ noticesPane = function() {
     api.port.emit("notifications_read", notices[0].time);
   }
 
-  function markVisited(category, nUri, timeStr, locator, id) {
+  function markVisited(category, timeStr, locator, id) {
     var time = new Date(timeStr);  // event time, not notification time
     $notices.find(".kifi-notice-" + category + ":not(.kifi-notice-visited)").each(function() {
       console.log("trying",id, this.dataset.id )
       if(id && id == this.dataset.id) {
         this.classList.add("kifi-notice-visited");
-      } else if (this.dataset.uri == nUri &&
-          dateWithoutMs(this.dataset.createdAt) <= time &&
+      } else if (dateWithoutMs(this.dataset.createdAt) <= time &&
           (!locator || this.dataset.locator == locator)) {
         this.classList.add("kifi-notice-visited");
       }

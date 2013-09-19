@@ -245,7 +245,7 @@ slider2 = function() {
   function showSlider(trigger, callback) {
     api.log("[showSlider]", trigger);
 
-    lastShownAt = +new Date;
+    lastShownAt = Date.now();
     $slider = $();  // creation in progress (prevents multiple)
 
     createSlider(function() {
@@ -578,7 +578,7 @@ slider2 = function() {
               var q, el = this;
               if (e.which == 13 && (q = el.value.trim())) {
                 api.port.emit("session", function(session) {
-                  var uri = session && ~session.experiments.indexOf("website") ? "https://www.kifi.com/site/search?q=" : "https://www.google.com/search?q=";
+                  var uri = session ? "https://www.kifi.com/find?q=" : "https://www.google.com/search?q=";
                   window.open(uri + encodeURIComponent(q).replace(/%20/g, "+"));
                   el.value = "";
                 });

@@ -1,7 +1,8 @@
-// API for content scripts (idempotent b/c Chrome sometimes injects twice)
+// API for content scripts
 
-var api = api || function() {
+var api = api || function() {  // idempotent for Chrome
   var msgHandlers = [], callbacks = {}, nextCallbackId = 1, port;
+
   function createPort() {
     port = chrome.runtime.connect({name: ""});
     port.onMessage.addListener(function(msg) {
@@ -14,10 +15,7 @@ var api = api || function() {
           cb(msg[2]);
         }
       } else if (kind == "api:injected") {
-        msg[1].forEach(function(path) {
-          injected[path] = true;
-        });
-        api.log("[api:injected]", Object.keys(injected));
+        markInjected(msg[1]);
         requireNext();
       } else {
         var data = msg[1], handler;
@@ -39,16 +37,21 @@ var api = api || function() {
     });
   }
 
-  var requireQueue = [], injected = {};
+  function markInjected(paths) {
+    for (var o = api.injected, i = 0; i < paths.length; i++) {
+      var path = paths[i];
+      o[path] = (o[path] || 0) + 1;
+    }
+  }
+
+  var requireQueue;
   function requireNow(paths, callback) {
-    if (typeof paths == 'string' ? injected[paths] : !(paths = paths.filter(notInjected)).length) {
+    if (typeof paths == 'string' ? api.injected[paths] : !(paths = paths.filter(notInjected)).length) {
       done();
     } else {
       requireQueue = requireQueue || [];
-      api.port.emit("api:require", {paths: paths, injected: injected}, function(paths) {
-        for (var i = 0; i < paths.length; i++) {
-          injected[paths[i]] = true;
-        }
+      api.port.emit("api:require", {paths: paths, injected: api.injected}, function(paths) {
+        markInjected(paths);
         done();
       });
     }
@@ -68,15 +71,17 @@ var api = api || function() {
     }
   }
   function notInjected(path) {
-    return !injected[path];
+    return !api.injected[path];
   }
 
   return {
+    injected: {'scripts/api.js': 1},
     log: window.suppressLog ? function() {} : function() {
       var d = new Date, ds = d.toString();
       arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
       console.log.apply(console, arguments);
     },
+    mutationsFirePromptly: true,
     noop: function() {},
     onEnd: [],
     port: {
@@ -93,7 +98,7 @@ var api = api || function() {
       },
       on: function(handlers) {
         msgHandlers.push(handlers);
-        port || createPort();
+        api.port.emit('api:handling', Object.keys(handlers));
       }},
     require: function(paths, callback) {
       if (requireQueue) {
@@ -104,3 +109,5 @@ var api = api || function() {
     },
     url: chrome.runtime.getURL};
 }();
+
+/^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);

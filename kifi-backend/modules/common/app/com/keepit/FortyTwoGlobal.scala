@@ -24,6 +24,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   } catch {
     case e: Throwable =>
       injector.instance[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API))
+      injector.instance[HealthcheckPlugin]
       throw e
   }
 

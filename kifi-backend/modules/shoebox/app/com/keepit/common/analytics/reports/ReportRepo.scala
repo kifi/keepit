@@ -9,7 +9,6 @@ import com.keepit.common.time._
 import com.keepit.search.SearchConfigExperiment
 import com.mongodb.casbah.Imports._
 import com.keepit.serializer.EventSerializer
-import com.keepit.serializer.SearchStatisticsSerializer
 
 object Parsers {
   type ParsedDBObject = (DateTime, Map[String, String])
@@ -562,67 +561,4 @@ class DailyGoogleResultClickedByExperimentRepo @Inject() (store: MongoEventStore
 
 class DailyKifiResultClickedByExperimentRepo @Inject() (store: MongoEventStore, val experiment: Option[SearchConfigExperiment]) extends DailyByExperimentRepo(store) {
   override val eventName = "kifiResultClicked"
-}
-
-class DailySearchStatisticsReportRepo @Inject() (store: MongoEventStore) extends ReportRepo(store) with Logging {
-  override val reportName = "DailySearchStatistics"
-
-  def get(startDate: DateTime, endDate: DateTime): Report = {
-    val selector = MongoSelector(EventFamilies.SERVER_SEARCH).withEventName("search_statistics")
-    val cursor = store.find(selector)
-    val rows = cursor.flatMap { iter =>
-      val data = EventSerializer.eventSerializer.mongoReads(iter).get
-      val dateTime = data.createdAt
-      val meta = data.metaData.metaData
-
-      try {
-        val searchStat = SearchStatisticsSerializer.serializer.reads(meta).get
-        val qInfo = searchStat.basicQueryInfo
-        val uriInfo = searchStat.uriInfo
-        val lscores = searchStat.luceneScores
-        val sInfo = searchStat.searchResultInfo
-        val label = searchStat.uriLabel
-
-        implicit def intToString(x: Int) = x.toString
-        implicit def longToString(x: Long) = x.toString
-        implicit def floatToString(x: Float) = x.toString
-        implicit def boolToString(x: Boolean) = x.toString
-
-        Some(ReportRow(dateTime, Map[String, Any](
-          "queryUUID" -> qInfo.queryUUID.id,
-          "queryString" -> qInfo.queryString,
-          "userId" -> qInfo.userId.id,
-
-          "uriId" -> uriInfo.uriId.id,
-          "textScore" -> uriInfo.textScore,
-          "bookmarkScore" -> uriInfo.bookmarkScore,
-          "recencyScore" -> uriInfo.recencyScore,
-          "clickBoost" -> uriInfo.clickBoost,
-          "isMyBookmark" -> uriInfo.isMyBookmark,
-          "isPrivate" -> uriInfo.isPrivate,
-          "friendsKeepsCount" -> uriInfo.friendsKeepsCount,
-          "totalCounts" -> uriInfo.totalCounts,
-
-          "multiplicativeBoost" -> lscores.multiplicativeBoost,
-          "additiveBoost" -> lscores.additiveBoost,
-          "percentMatch" -> lscores.percentMatch,
-          "semanticVector" -> lscores.semanticVector,
-          "phraseProximity" -> lscores.phraseProximity,
-
-          "myHits" -> sInfo.myHits,
-          "friendsHits" -> sInfo.friendsHits,
-          "othersHits" -> sInfo.othersHits,
-          "svVariance" -> sInfo.svVariance,
-          "svExistenceVar" -> sInfo.svExistenceVar,
-
-          "clicked" -> label.clicked,
-          "isCorrectlyRanked" -> label.isCorrectlyRanked
-        ).mapValues(_.toString)))
-      } catch {
-        case e: Exception => None // serialization error.
-      }
-    }.toList
-
-    Report(reportName = reportName, reportVersion = reportVersion, list = rows)
-  }
 }

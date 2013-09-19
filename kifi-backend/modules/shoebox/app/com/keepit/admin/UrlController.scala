@@ -6,7 +6,6 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.time._
-import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.common.mail._
 import play.api.libs.concurrent.Akka
 import scala.concurrent.duration._
@@ -16,15 +15,21 @@ import com.google.inject.Inject
 import com.keepit.integrity.OrphanCleaner
 import com.keepit.integrity.DuplicateDocumentDetection
 import com.keepit.integrity.DuplicateDocumentsProcessor
-import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.integrity.UriIntegrityPlugin
-import com.keepit.integrity.ChangedUri
-import com.keepit.integrity.MergedUri
+import com.keepit.normalizer.NormalizationService
+import scala.concurrent.Await
+import play.api.data.Form
+import play.api.data.Forms._
+import com.keepit.model.DuplicateDocument
 import com.keepit.integrity.SplittedUri
-import org.joda.time.DateTime
-import com.keepit.common.time.zones.PT
-import com.keepit.normalizer.Prenormalizer
-
+import com.keepit.common.healthcheck.BabysitterTimeout
+import com.keepit.normalizer.TrustedCandidate
+import com.keepit.integrity.MergedUri
+import com.keepit.integrity.HandleDuplicatesAction
+import play.api.mvc.Action
+import play.api.data.format.Formats._
+import play.api.libs.json.Json
+import com.keepit.eliza.ElizaServiceClient
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -36,7 +41,6 @@ class UrlController @Inject() (
   userRepo: UserRepo,
   bookmarkRepo: BookmarkRepo,
   collectionRepo: CollectionRepo,
-  commentRepo: CommentRepo,
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   changedUriRepo: ChangedURIRepo,
@@ -45,8 +49,10 @@ class UrlController @Inject() (
   orphanCleaner: OrphanCleaner,
   dupeDetect: DuplicateDocumentDetection,
   duplicatesProcessor: DuplicateDocumentsProcessor,
-  uriIntegrityPlugin: UriIntegrityPlugin)
-    extends AdminController(actionAuthenticator) {
+  uriIntegrityPlugin: UriIntegrityPlugin,
+  normalizationService: NormalizationService,
+  urlPatternRuleRepo: UrlPatternRuleRepo,
+  eliza: ElizaServiceClient) extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -89,7 +95,7 @@ class UrlController @Inject() (
             case Some(nuri) => (nuri, URLHistoryCause.MERGE)
             // No normalized URI exists for this url, create one
             case None => {
-              val tmp = NormalizedURI.withHash(Prenormalizer(url.url))
+              val tmp = NormalizedURI.withHash(normalizationService.prenormalize(url.url))
               val nuri = if (!readOnly) uriRepo.save(tmp) else tmp
               (nuri, URLHistoryCause.SPLIT)
             }
@@ -112,40 +118,6 @@ class UrlController @Inject() (
     }
 
     "%s urls processed, changes:<br>\n<br>\n%s".format(urlsSize, changes)
-  }
-
-  private def fixCommentSeqNum: Unit = {
-    import com.keepit.model.CommentStates
-    log.info("started comment seq num fix")
-    var count = 0
-    var done = false
-    while (!done) {
-      db.readWrite { implicit session =>
-        val comments = commentRepo.getCommentsChanged(SequenceNumber.MinValue, 100)
-        val lastCount = count
-        done = comments.isEmpty || comments.exists{ comment =>
-          if (comment.seq.value != 0L) true
-          else {
-            commentRepo.save(comment)
-            count += 1
-            false
-          }
-        }
-        log.info(s"... fixed seq num of ${count - lastCount} comments")
-      }
-    }
-    log.info(s"finished comment seq num fix: ${count}")
-  }
-
-  def fixSeqNum = AdminHtmlAction { request =>
-    Akka.future {
-      try {
-        fixCommentSeqNum
-      } catch {
-        case ex: Throwable => log.error(ex.getMessage, ex)
-      }
-    }
-    Ok("sequence number fix started")
   }
 
   def orphanCleanup() = AdminHtmlAction { implicit request =>
@@ -198,99 +170,93 @@ class UrlController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.UrlController.documentIntegrity())
   }
   
-  def mergedUriView(page: Int = 0) = AdminHtmlAction{ request =>
+  def normalizationView(page: Int = 0) = AdminHtmlAction{ request =>
+    implicit val playRequest = request.request
     val PAGE_SIZE = 50
-    val (totalCount, changes) = db.readOnly{ implicit s =>
-      val totalCount = changedUriRepo.allAppliedCount()
-      val changes = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
+    val (pendingCount, appliedCount, applied) = db.readOnly{ implicit s =>
+      val totalCount = changedUriRepo.count
+      val appliedCount = changedUriRepo.allAppliedCount()
+      val applied = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
         (uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId), change.updatedAt.date.toString())
       }
-      (totalCount, changes)
+      (totalCount - appliedCount, appliedCount, applied)
     }
-    val pageCount = (totalCount*1.0 / PAGE_SIZE).ceil.toInt
-    Ok(html.admin.mergedUri(changes, page, totalCount, pageCount, PAGE_SIZE))
+    val pageCount = (appliedCount*1.0 / PAGE_SIZE).ceil.toInt
+    Ok(html.admin.normalization(applied, page, appliedCount, pendingCount, pageCount, PAGE_SIZE))
   }
   
   def batchMerge = AdminHtmlAction{ request =>
-    uriIntegrityPlugin.batchUpdateMerge()
-    Ok("Will do batch merging uris")
+    implicit val playRequest = request.request
+    Await.result(uriIntegrityPlugin.batchUpdateMerge(), 5 seconds)
+    Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0))
   }
-  
-  def handleDupBookmarks(readOnly: Boolean = true) = AdminHtmlAction{ request =>
-    val dups = db.readOnly{ implicit s =>
-      bookmarkRepo.detectDuplicates()
-    }
-    var info = Vector.empty[(Long, Long, Long, String, String, Long, String)]
-    db.readWrite{ implicit s =>
-      dups.foreach{ case (userId, uriId) =>
-        val dup = bookmarkRepo.getByUser(userId).filter(_.uriId == uriId).sortBy(_.seq)
-        dup.dropRight(1).foreach{ bm =>
-          if (!readOnly) bookmarkRepo.save(bm.withActive(false))
-          if (bm.state == BookmarkStates.ACTIVE) info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_inactiveated")
-        }
-        val toBeKept = dup.last
-        info = info :+ (toBeKept.id.get.id, toBeKept.userId.id, toBeKept.uriId.id, toBeKept.title.getOrElse(""), toBeKept.state.value, toBeKept.seq.value, "to_be_Kept")
-      }
-      val msg = s"readOnly Mode = ${readOnly}. ${info.size} bookmarks affected. (bookmarkId, userId, uriId, bookmarkTitle, state, seqNum, action) are: \n" + info.mkString("\n")
-      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-       subject = "Duplicate Bookmarks Report", htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
-    }
-    Ok(s"OK. Detecting duplicated bookmarks. ReadOnly Mode = ${readOnly}. Will send report emails")
-  }
-  
-  def deleteDupBookmarks(readOnly: Boolean = true) = AdminHtmlAction{ request =>
-    val dups = db.readOnly{ implicit s =>
-      bookmarkRepo.detectDuplicates()
-    }
-    var info = Vector.empty[(Long, Long, Long, String, String, Long, String)]
-    db.readWrite{ implicit s =>
-      dups.foreach{ case (userId, uriId) =>
-        val dup = bookmarkRepo.getByUser(userId, excludeState = None).filter(_.uriId == uriId).sortBy(_.seq)
-        val (inactive, active) = dup.partition( _.state == BookmarkStates.INACTIVE)
-        
-        active.foreach{ bm => 
-          info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "to_be_Kept")
-        }
 
-        inactive.foreach { bm =>
-          val ktcs = ktcRepo.getByBookmark(bm.id.get, excludeState = None)
-          if (ktcs.size > 0) {
-            active.find(_.uriId == bm.uriId) match {
-              case Some(bm2) => {
-                info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "in collection, can_be_deleted" + s" and be replaced by ${bm2.id}")
-                if (!readOnly) {
-                  ktcs.map { ktc =>
-                    if (!ktcRepo.getBookmarksInCollection(ktc.collectionId).contains(bm2.id.get)) {
-                      ktcRepo.save(ktc.copy(bookmarkId = bm2.id.get))
-                    } else {
-                      ktcRepo.delete(ktc.id.get)   // if same collection has a dup bookmark, remove this ktc.
-                    }
-                  }
-                  bookmarkRepo.delete(bm.id.get)   // it's now not referenced by any ktc. can be deleted.
-                }
-              }
-              case None => info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "in collection, cannot_be_deleted")
-            }
-          } else {
-            if (!readOnly) bookmarkRepo.delete(bm.id.get)
-            info = info :+ (bm.id.get.id, bm.userId.id, bm.uriId.id, bm.title.getOrElse(""), bm.state.value, bm.seq.value, "not in collection, to_be_deleted")
-          }
+  def redirect(oldUrl: String, newUrl: String, canonical: Boolean = false) = AdminHtmlAction { request =>
+    db.readOnly { implicit session =>
+      (uriRepo.getByUri(oldUrl), uriRepo.getByUri(newUrl)) match {
+        case (None, _) => Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUrl} could not be found.")
+        case (_, None) => Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUrl} could not be found.")
+        case (_, Some(newUri)) if newUri.normalization.isEmpty && !canonical =>
+          Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUri.id.get}: ${newUri.url} isn't normalized.")
+        case (Some(oldUri), Some(newUri)) => {
+          val normalization = if (canonical) Normalization.CANONICAL else newUri.normalization.get
+          val result = Await.result(normalizationService.update(oldUri, TrustedCandidate(newUri.url, normalization)), 5 seconds)
+          if (result.isDefined)
+            Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to ${newUri.id.get}: ${newUri.url}")
+          else
+            Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} cannot be redirected to ${newUri.id.get}: ${newUri.url}")
         }
       }
-      val msg = s"readOnly Mode = ${readOnly}. ${info.size} bookmarks affected. (bookmarkId, userId, uriId, bookmarkTitle, state, seqNum, action) are: \n" + info.mkString("\n")
-      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-       subject = "Duplicate Bookmarks Report", htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
     }
-    Ok(s"OK. Deleting duplicated bookmarks. ReadOnly Mode = ${readOnly}. Will send report emails")
   }
 
-  def invalidateSimpleNormalizations(readOnly: Boolean = true) = AdminHtmlAction{ request =>
-    val toBeInvalidated = db.readWrite { implicit s => uriRepo.invalidateSimpleNormalizations(readOnly) }
-    Ok(s"[READONLY = ${readOnly}] TO BE INVALIDATED: ${toBeInvalidated.length} uris. \n" + toBeInvalidated.map(_.url).mkString("\n"))
+  def getPatterns = AdminHtmlAction { implicit request =>
+    val patterns = db.readOnly { implicit session =>
+      urlPatternRuleRepo.all.sortBy(_.id.get.id)
     }
+    Ok(html.admin.urlPatternRules(patterns))
+  }
 
+  def savePatterns = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
+    db.readWrite { implicit session =>
+      for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
+        val id = Id[UrlPatternRule](key.toLong)
+        val oldPat = urlPatternRuleRepo.get(id)
+        val newPat = oldPat.copy(
+          pattern = body("pattern_" + key),
+          example = Some(body("example_" + key)).filter(!_.isEmpty),
+          state = if (body.contains("active_" + key)) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
+          isUnscrapable = body.contains("unscrapable_"+ key),
+          normalization = body("normalization_" + key) match {
+            case "None" => None
+            case scheme => Some(Normalization(scheme))
+          },
+          trustedDomain = Some(body("trusted_domain_" + key)).filter(!_.isEmpty)
+        )
+
+        if (newPat != oldPat) {
+          urlPatternRuleRepo.save(newPat)
+        }
+      }
+      val newPat = body("new_pattern")
+      if (newPat.nonEmpty) {
+        urlPatternRuleRepo.save(UrlPatternRule(
+          pattern = newPat,
+          example = Some(body("new_example")).filter(!_.isEmpty),
+          state = if (body.contains("new_active")) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
+          isUnscrapable = body.contains("new_unscrapable"),
+          normalization = body("new_normalization") match {
+            case "None" => None
+            case scheme => Some(Normalization(scheme))
+          },
+          trustedDomain = Some(body("new_trusted_domain")).filter(!_.isEmpty)
+        ))
+      }
+    }
+    Redirect(routes.UrlController.getPatterns)
+  }
 }
-
 
 case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
 case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes: Seq[DisplayedDuplicate])

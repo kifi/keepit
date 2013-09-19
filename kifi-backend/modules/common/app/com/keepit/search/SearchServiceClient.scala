@@ -11,7 +11,6 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.templates.Html
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import com.keepit.serializer.UriLabelSerializer
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
 import scala.concurrent.Promise
@@ -52,7 +51,6 @@ trait SearchServiceClient extends ServiceClient {
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
   def resetUserConfig(id: Id[User]): Unit
   def getSearchDefaultConfig: Future[SearchConfig]
-  def getSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], labeledUris: Map[Id[NormalizedURI], UriLabel]): Future[JsArray]
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html]
@@ -75,21 +73,6 @@ class SearchServiceClientImpl(
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Unit = {
     val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))
     call(Search.internal.logResultClicked(), json)
-  }
-
-  def getSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], labeledUris: Map[Id[NormalizedURI], UriLabel]): Future[JsArray] = {
-    val uriIds = labeledUris.map(_._1).map(id => id.id)
-    val uriLabels = labeledUris.map(_._2).map{label => UriLabelSerializer.serializer.writes(label)}
-    val json = Json.obj(
-        "queryUUID" -> queryUUID,
-        "queryString" -> queryString,
-        "userId" -> userId.id,
-        "uriIds" -> uriIds,
-        "uriLabels" -> uriLabels
-        )
-    call(Search.internal.getSearchStatistics, json).map{
-        r => r.json.as[JsArray]
-    }
   }
 
   def updateURIGraph(): Unit = {

@@ -1,4 +1,5 @@
 package com.keepit.learning.topicmodel
+
 import play.api.test.Helpers._
 import com.keepit.test._
 import com.keepit.common.db._
@@ -180,6 +181,7 @@ trait TopicUpdaterTestHelper extends ShoeboxApplicationInjector {
         id = normalizedUriId,
         title = title,
         description = None,
+        keywords = None,
         media = None,
         content = content,
         scrapedAt = currentDateTime,

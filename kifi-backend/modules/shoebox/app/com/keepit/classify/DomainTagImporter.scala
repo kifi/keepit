@@ -24,6 +24,7 @@ import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail, LocalPostOffice, PostOffice}
 import com.keepit.common.time._
@@ -67,8 +68,9 @@ private[classify] class DomainTagImportActor @Inject() (
   settings: DomainTagImportSettings,
   postOffice: LocalPostOffice,
   healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   implicit private val fortyTwoServices: FortyTwoServices)
-    extends FortyTwoActor(healthcheckPlugin) with Logging {
+    extends FortyTwoActor(airbrake) with Logging {
 
   import DomainTagImportEvents._
 

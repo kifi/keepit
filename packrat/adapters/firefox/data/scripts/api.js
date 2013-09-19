@@ -38,6 +38,7 @@ api = function() {
       }
       console.log("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'", args.join(" "));
     },
+    mutationsFirePromptly: false,
     noop: function() {},
     onEnd: [],  // TODO: find an event that will allows us to invoke these
     port: {
@@ -53,10 +54,9 @@ api = function() {
       },
       on: function(handlers) {
         for (var type in handlers) {
-          if (handlers.hasOwnProperty(type)) {
-            self.port.on(type, handlers[type]);
-          }
+          self.port.on(type, handlers[type]);
         }
+        self.port.emit("api:handling", Object.keys(handlers));
       }},
     require: function(paths, callback) {
       var callbackId = nextCallbackId++;
@@ -67,3 +67,6 @@ api = function() {
       return self.options.dataUriPrefix + path;
     }};
 }();
+
+/^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);
+

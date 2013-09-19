@@ -1,0 +1,83 @@
+@(applied: Seq[(NormalizedURI, NormalizedURI, String)], page: Int, appliedCount: Int, pendingCount: Int, pageCount: Int, maxPageSize: Int)(implicit flash: Flash)
+
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered pagination-mini">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @for(i <- 0 to (pageCount - 1)) {
+        @if(i == page) {
+          <li class="disabled">
+            <a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(i)">@{i + 1}</a>
+          </li>
+        } else {
+          <li class="active">
+            <a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(i)">@{i + 1}</a>
+          </li>
+        }
+      }
+      <li>
+        @if(applied.size > 0) {
+          <a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
+
+@admin(appliedCount + " Redirection Events"){
+
+    <div class="container"><button class="btn btn-primary pull-right" type="button" id="process" style="margin-bottom: 10px">Process @pendingCount Pending Events Now</button></div>
+
+    <form class="form-horizontal pull-right" action="@com.keepit.controllers.admin.routes.UrlController.redirect()" method = "GET">
+        <input type="text" name="oldUrl" placeholder="Old Url">
+        <div class="input-append">
+          <input type="text" name="newUrl" placeholder="New Url">
+            <label class="add-on btn-danger" style="margin-bottom: 0"><input type="checkbox" name="canonical" value="true" style="margin-top: 0" > canonical</label>
+        </div>
+        <button type="submit" class="btn">Redirect</button>
+        <div class="text-success">@flash.get("result").getOrElse("")</div>
+    </form>
+
+        <h2> Showing @applied.size (page @{page + 1}) </h2>
+
+  @pagination(page, pageCount)
+  <table class = "table table-bordered">
+  <tr>
+    <th>#</th>
+    <th>Time</th>
+    <th>IDs</th>
+    <th>URLs</th>
+    <th>Normalizations</th>
+  </tr>
+  
+  @applied.zipWithIndex.map{ case ((oldUri, newUri, time), i) =>
+    <tr>
+      <th rowspan="2"> @{applied.size - i} </th>
+      <th rowspan="2"> @time </th>
+      <td>@oldUri.id</td> <td><a href = "@oldUri.url">@oldUri.url</td><td>@oldUri.normalization.map(_.scheme)</td>
+    </tr>
+    <tr>
+      <td>@newUri.id</td> <td><a href = "@newUri.url" >@newUri.url</td><td>@newUri.normalization.map(_.scheme)</td>
+  </tr>
+    
+  }
+
+  </table>
+
+}
+
+<script>
+  $("#process").click(function() { location = "@com.keepit.controllers.admin.routes.UrlController.batchMerge"; } );
+</script>

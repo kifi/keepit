@@ -1,23 +1,28 @@
 package com.keepit.common.cache
 
 import scala.collection.concurrent.{TrieMap => ConcurrentMap}
-import play.api.libs.concurrent.Execution.Implicits._
-import scala.concurrent.duration._
-import com.google.inject.{Inject, Singleton}
-import play.api.libs.json._
-import play.api.Plugin
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
-import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent._
-import play.modules.statsd.api.Statsd
-import com.keepit.common.time._
-import com.keepit.serializer.{Serializer, BinaryFormat}
+import scala.concurrent.duration._
+
+import java.util.concurrent.atomic.AtomicInteger
+
+import net.codingwell.scalaguice.ScalaModule
 import net.sf.ehcache._
 import net.sf.ehcache.config.CacheConfiguration
-import net.codingwell.scalaguice.ScalaModule
+
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.logging.Logging
+import com.keepit.common.time._
+import com.keepit.serializer.{Serializer, BinaryFormat}
+
+import play.api.Plugin
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
+import play.modules.statsd.api.Statsd
 
 
-object CacheStatistics {
+object CacheStatistics extends Logging {
   private val hitsMap = ConcurrentMap[String, AtomicInteger]()
   private val missesMap = ConcurrentMap[String, AtomicInteger]()
   private val setsMap = ConcurrentMap[String, AtomicInteger]()
@@ -37,9 +42,10 @@ object CacheStatistics {
     Statsd.increment(s"$cachePlugin.$namespace.hits")
     Statsd.timing(s"$cachePlugin.$namespace.hits", millis)
   }
-  def recordMiss(cachePlugin: String, namespace: String) {
+  def recordMiss(cachePlugin: String, namespace: String, fullKey: String) {
     incrCount(s"$cachePlugin.$namespace", missesMap)
     Statsd.increment(s"$cachePlugin.$namespace.misses")
+    log.warn(s"Cache miss on key $fullKey in $cachePlugin")
   }
 
   def recordSet(cachePlugin: String, namespace: String, millis: Long) {
@@ -128,6 +134,8 @@ trait Key[T] {
   def toKey(): String
   override final def toString: String = namespace + "%" + version + "#" + toKey()
 }
+
+case class CacheSizeLimitExceededException(msg:String) extends Exception(msg)
 
 trait ObjectCache[K <: Key[T], T] {
   val outerCache: Option[ObjectCache[K, T]] = None
@@ -247,8 +255,8 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
           CacheStatistics.recordHit("Cache", key.namespace, getEnd - getStart)
         }
         case None => {
-          CacheStatistics.recordMiss(repo.toString, key.namespace)
-          if (outerCache isEmpty) CacheStatistics.recordMiss("Cache", key.namespace)
+          CacheStatistics.recordMiss(repo.toString, key.namespace, key.toString)
+          if (outerCache isEmpty) CacheStatistics.recordMiss("Cache", key.namespace, key.toString)
         }
       }
       objOpt
@@ -274,11 +282,32 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
             case (isDefined: Boolean, x: java.lang.Character) => (isDefined, x.charValue())
             case (isDefined: Boolean, x: java.lang.Boolean) => (isDefined, x.booleanValue())
             case (false, _) => (false, null)
-            case x: scala.Array[_] => x
+            case x: scala.Array[Byte] => x // we only support byte[]
             case x: JsValue => Json.stringify(x)
             case x: String => x
           }
-      repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
+      val keyS = key.toString
+      // workaround for memcached-specific 1M size limit
+      properlyBoxed match {
+//        case s:String => {
+//          if (s.length + keyS.length > 400000) { // imprecise -- convert to (utf-8) byte[] TODO: compress if we do need to cache large data
+//            repo.remove(keyS)
+//            throw new CacheSizeLimitExceededException(s"KV(string) not cached: key.len=${keyS.length} ($keyS) val.len=${s.length} (${s.take(100)})")
+//          }
+//        }
+        case a:Array[Byte] => {
+          if (a.length + keyS.length > 900000) {
+            repo.remove(keyS)
+            throw new CacheSizeLimitExceededException(s"KV(byte[]) not cached: key.len=${keyS.length} ($keyS) val.len=${a.length}")
+          }
+        }
+        case _ => // ignore
+      }
+      var ttlInSeconds = ttl match {
+        case _ : Duration.Infinite => 0
+        case _ => ttl.toSeconds.toInt
+      }
+      repo.set(keyS, properlyBoxed, ttlInSeconds)
       val setEnd = currentDateTime.getMillis()
       CacheStatistics.recordSet(repo.toString, key.namespace, setEnd - setStart)
       if (outerCache isEmpty) CacheStatistics.recordSet("Cache", key.namespace, setEnd - setStart)

@@ -17,6 +17,7 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.util.PriorityQueue
+import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.analytics.{EventFamilies, Events}
@@ -26,7 +27,6 @@ import play.api.libs.json._
 import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
-import com.keepit.serializer.SearchResultInfoSerializer
 import com.keepit.search.query.LuceneExplanationExtractor
 import com.keepit.search.query.LuceneScoreNames
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -78,6 +78,7 @@ class MainSearcher(
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
+  val percentMatchForHotDocs = config.asFloat("percentMatchForHotDocs")
   val recencyBoost = config.asFloat("recencyBoost")
   val newContentBoost = config.asFloat("newContentBoost")
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
@@ -189,8 +190,10 @@ class MainSearcher(
     // TODO: use user profile info as a bias
     lang = LangDetector.detectShortText(queryString, langProbabilities)
 
+    val hotDocs = new HotDocSetFilter()
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
+    parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
     parsedQuery = parser.parse(queryString)
 
@@ -213,6 +216,8 @@ class MainSearcher(
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
       Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
+      hotDocs.setHotDocs(personalizedSearcher.hotDocs)
+      hotDocs.setClickBoosts(clickBoosts)
 
       val tLucene = currentDateTime.getMillis()
       personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
@@ -400,10 +405,6 @@ class MainSearcher(
     Statsd.timing("mainSearch.total", millisPassed)
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
-    val searchResultInfo = SearchResultInfo(myTotal, friendsTotal, othersTotal, svVar, svExistVar)
-    val searchResultJson = SearchResultInfoSerializer.serializer.writes(searchResultInfo)
-    val metaData = Json.obj("queryUUID" -> JsString(searchResultUuid.id), "searchResultInfo" -> searchResultJson)
-    shoeboxClient.persistServerSearchEvent(metaData)
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
 
@@ -460,6 +461,7 @@ class MainSearcher(
   }
 
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
+  def getBookmarkId(uriId: Id[NormalizedURI]): Long = myUriEdgeAccessor.getBookmarkId(uriId.id)
 }
 
 class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {

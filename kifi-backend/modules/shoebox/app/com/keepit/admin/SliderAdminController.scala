@@ -3,9 +3,7 @@ package com.keepit.controllers.admin
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.future
 import scala.concurrent.promise
-
 import org.joda.time._
-
 import com.google.inject.Inject
 import com.keepit.classify._
 import com.keepit.common.analytics.{MongoEventStore, EventFamilies, MongoSelector}
@@ -17,10 +15,15 @@ import com.keepit.model.{SliderRuleRepo, SliderRuleStates}
 import com.keepit.model.{URLPattern, URLPatternRepo, URLPatternStates}
 import com.mongodb.casbah.Imports._
 import com.keepit.eliza.ElizaServiceClient
-
 import play.api.libs.json.{JsBoolean, JsArray, JsObject, Json}
 import play.api.mvc.Action
 import views.html
+import play.api.data.Forms._
+import play.api.data._
+import play.api.data.format.Formats._
+import com.keepit.model.Normalization
+
+
 
 class SliderAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,

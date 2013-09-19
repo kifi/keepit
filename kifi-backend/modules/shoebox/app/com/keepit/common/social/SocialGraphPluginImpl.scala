@@ -2,7 +2,7 @@ package com.keepit.common.social
 
 import com.keepit.model.{SocialUserInfoStates, SocialConnection, SocialUserInfoRepo, SocialUserInfo}
 import com.google.inject.Inject
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.logging.Logging
@@ -19,7 +19,7 @@ private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
 private case object FetchAll
 
 private[social] class SocialGraphActor @Inject() (
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   graphs: Set[SocialGraph],
   db: Database,
   socialRepo: SocialUserInfoRepo,
@@ -27,7 +27,7 @@ private[social] class SocialGraphActor @Inject() (
   socialUserImportFriends: SocialUserImportFriends,
   socialUserImportEmail: SocialUserImportEmail,
   socialUserCreateConnections: UserConnectionCreator)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+  extends FortyTwoActor(airbrake) with Logging {
 
   private val networkTypeToGraph: Map[SocialNetworkType, SocialGraph] =
     graphs.map(graph => graph.networkType -> graph).toMap

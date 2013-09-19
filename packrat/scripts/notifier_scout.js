@@ -6,9 +6,16 @@ var notifierScout = notifierScout || function() {  // idempotent for Chrome
     session_change: function(s) {
       if (!s) {
         var notifications = document.getElementsByClassName("kifi-notify-item-wrapper");
-        while(notifications.length > 0){
-          notifications[0].parentNode.removeChild(notifications[0]);
+        while (notifications.length) {
+          notifications[0].remove();
         }
+      }
+    },
+    remove_notification: function(associatedId) {
+      if (document.querySelector(".kifi-notify-item-wrapper[data-associated-id='" + associatedId + "']")) {
+        api.require("scripts/notifier.js", function() {
+          notifier.removeByAssociatedId(associatedId);
+        });
       }
     },
     new_notification: function(n) {

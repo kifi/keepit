@@ -7,15 +7,14 @@ import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
-import com.keepit.model._
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.model._
+import com.keepit.social.{SocialNetworkType, SocialGraphPlugin}
 
 import play.api.Play.current
 import play.api._
-import play.api.libs.MimeTypes
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
-import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
 
 class HomeController @Inject() (db: Database,
   userRepo: UserRepo,
@@ -32,19 +31,12 @@ class HomeController @Inject() (db: Database,
   fortyTwoServices: FortyTwoServices)
   extends WebsiteController(actionAuthenticator) {
 
-  private def userCanSeeKifiSite[A](implicit request: AuthenticatedRequest[A]): Boolean =
-    (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.WEBSITE)).nonEmpty || Play.isDev
+  private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
+    db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
+  }
 
-  private def userCanInvite[A](implicit request: AuthenticatedRequest[A]): Boolean =
-    (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty || Play.isDev
-
-  def kifiSite(path: String, id: String) = AuthenticatedHtmlAction { implicit request =>
-    if (userCanSeeKifiSite) {
-      Play.resourceAsStream(s"public/site/$path") map { stream =>
-        val result = Ok.stream(Enumerator.fromStream(stream))
-        MimeTypes.forFileName(path) map (result as _) getOrElse result
-      } getOrElse NotFound
-    } else NotFound
+  private def setHasSeenInstall()(implicit request: AuthenticatedRequest[_]): Unit = {
+    db.readWrite { implicit s => userValueRepo.setValue(request.userId, "has_seen_install", true.toString) }
   }
 
   def version = Action {
@@ -52,28 +44,22 @@ class HomeController @Inject() (db: Database,
   }
 
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
-
     if (request.user.state == UserStates.PENDING) {
       pendingHome()
+    } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
+      Redirect(routes.HomeController.install())
     } else {
-      val friendsOnKifi = db.readOnly { implicit session =>
-        userConnectionRepo.getConnectedUsers(request.user.id.get).map { u =>
-          val user = userRepo.get(u)
-          if(user.state == UserStates.ACTIVE) Some(user.externalId)
-          else None
-        }.flatten
-      }
-
-      val networks = db.readOnly { implicit s =>
-        val socialUsers = socialUserRepo.getByUser(request.userId)
-        SocialNetworks.ALL.map(n => n -> socialUsers.exists(_.networkType == n))
-      }
-
-      Ok(views.html.website.userHome(request.user, friendsOnKifi, networks, userCanInvite, userCanSeeKifiSite))
+      Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
   }, unauthenticatedAction = { implicit request =>
     Ok(views.html.website.welcome())
   })
+
+  def kifiSiteRedirect(path: String) = Action {
+    MovedPermanently(s"/$path")
+  }
+
+  def homeWithParam(id: String) = home
 
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
     val user = request.user
@@ -142,6 +128,7 @@ class HomeController @Inject() (db: Database,
         }
       }
     }
+    setHasSeenInstall()
     Ok(views.html.website.install(request.user))
   }
 

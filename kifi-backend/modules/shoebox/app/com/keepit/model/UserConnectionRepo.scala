@@ -8,7 +8,7 @@ import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.serializer.TraversableFormat
 
 @ImplementedBy(classOf[UserConnectionRepoImpl])
@@ -19,6 +19,7 @@ trait UserConnectionRepo extends Repo[UserConnection] {
   def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession)
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int
+  def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit
 }
 
 case class UnfriendedConnectionsKey(userId: Id[User]) extends Key[Set[Id[User]]] {
@@ -85,6 +86,16 @@ class UserConnectionRepoImpl @Inject() (
       ((for (c <- table if c.user1 === id && c.state === UserConnectionStates.UNFRIENDED) yield c.user2) union
           (for (c <- table if c.user2 === id && c.state === UserConnectionStates.UNFRIENDED) yield c.user1)).list.toSet
     }
+  }
+
+  def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit = {
+    val changedUserIds = (for {
+      c <- table if c.user1 === userId || c.user1 === userId
+    } yield (c.user1, c.user2)).list.foldLeft(Set[Id[User]]()) { case (set, (a, b)) => set + a + b }
+    (for {
+      c <- table if c.user1 === userId || c.user1 === userId
+    } yield c.state ~ c.updatedAt).update(UserConnectionStates.INACTIVE -> clock.now())
+    changedUserIds foreach invalidateCache
   }
 
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int = {

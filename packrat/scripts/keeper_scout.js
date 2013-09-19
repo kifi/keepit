@@ -7,7 +7,7 @@ function logEvent() {  // parameters defined in main.js
 }
 
 var tile = tile || function() {  // idempotent for Chrome
-  api.log("[scout]", location.hostname);
+  api.log("[keeper_scout]", location.hostname);
 
   window.onerror = function(message, url, lineNo) {
     if (!/https?\:/.test(url)) {  // this is probably from extension code, not from the website we're running this on
@@ -58,22 +58,16 @@ var tile = tile || function() {  // idempotent for Chrome
       setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
-      if (!tile || !tile.parentNode) return;
-
-      var n = Math.max(counts.m, counts.n);
-      if (n) {
-        tileCount.textContent = n;
-        tile.insertBefore(tileCount, tileCard.nextSibling);
-      } else if (tileCount.parentNode) {
-        tileCount.remove();
+      if (!tile) {
+        return;
       }
-      tile.dataset.counts = JSON.stringify(counts);
+      updateCounts(counts);
     },
     scroll_rule: function(r) {
       if (!onScroll) {
         var lastScrollTime = 0;
         document.addEventListener("scroll", onScroll = function(e) {
-          var t = e.timeStamp || +new Date;
+          var t = e.timeStamp || Date.now();
           if (t - lastScrollTime > 100) {  // throttling to avoid measuring DOM too freq
             lastScrollTime = t;
             var hPage = document.body.scrollHeight;
@@ -122,6 +116,17 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   }
 
+  function updateCounts(counts) {
+    var n = Math.max(counts.m, counts.n);
+    if (n) {
+      tileCount.textContent = n;
+      tile.insertBefore(tileCount, tileCard.nextSibling);
+    } else if (tileCount.parentNode) {
+      tileCount.remove();
+    }
+    tile.dataset.counts = JSON.stringify(counts);
+  }
+
   function toggleLoginDialog() {
     api.require("scripts/dialog.js", function() {
       kifiDialog.toggleLoginDialog();
@@ -165,7 +170,7 @@ var tile = tile || function() {  // idempotent for Chrome
     tile.remove();
   }
   tile = document.createElement("div");
-  tile.dataset.t0 = +new Date;
+  tile.dataset.t0 = Date.now();
   tile.id = tile.className = "kifi-tile";
   tile.style.display = "none";
   tile.innerHTML =

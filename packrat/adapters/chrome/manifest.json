@@ -18,7 +18,55 @@
   "background": {
     "page": "main.html"
   },
-  "content_scripts": [],
+  "content_scripts": [
+    {
+      "js": [
+        "scripts/api.js",
+        "scripts/deep_link_redirect.js"
+      ],
+      "matches": [
+        "*://www.kifi.com/r/*",
+        "*://kifi.com/r/*",
+        "*://www.keepitfindit.com/r/*",
+        "*://keepitfindit.com/r/*",
+        "*://dev.ezkeep.com/r/*"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "js": [
+        "scripts/api.js",
+        "scripts/lib/jquery.js",
+        "scripts/lib/jquery-bindhover.js",
+        "scripts/lib/mustache.js",
+        "scripts/render.js",
+        "scripts/html/search/google.js",
+        "scripts/html/search/google_hits.js",
+        "scripts/html/search/google_hit.js",
+        "scripts/google_inject.js"
+      ],
+      "css": [
+        "styles/google_inject.css",
+        "styles/friend_card.css"
+      ],
+      "matches": ["<all_urls>"],
+      "include_globs": [
+        "*://www.google.c??/",
+        "*://www.google.c??/search*",
+        "*://www.google.c??/webhp*",
+        "*://www.google.com.??/",
+        "*://www.google.com.??/search*",
+        "*://www.google.com.??/webhp*",
+        "*://www.google.co.??/",
+        "*://www.google.co.??/search*",
+        "*://www.google.co.??/webhp*",
+        "*://www.google.??/",
+        "*://www.google.??/search*",
+        "*://www.google.??/webhp*"
+      ],
+      "run_at": "document_start"
+    }
+  ],
   "permissions": [
     "tabs",
     "bookmarks",

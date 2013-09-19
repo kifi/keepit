@@ -7,7 +7,6 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
 import com.keepit.search.{TestSearchServiceClientModule, Lang}
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
-import com.keepit.realtime.ShoeboxWebSocketModule
 
 import play.api.libs.json.{Json, JsNumber, JsArray}
 import play.api.test.FakeRequest
@@ -19,6 +18,7 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -30,7 +30,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     TestSearchServiceClientModule(),
-    ShoeboxWebSocketModule()
+    FakeAirbrakeModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

@@ -1,6 +1,7 @@
 var api = api || require("./api");
 
 const NOTIFICATION_BATCH_SIZE = 10;
+const hostRe = /^https?:\/\/([^\/]*)/;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
@@ -100,7 +101,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (socket) {
     socket.send(["log_event", ev]);
   } else {
-    ev.time = +new Date;
+    ev.time = Date.now();
     logEvent.queue.push(ev);
     if (logEvent.queue.length > 50) {
       logEvent.queue.shift();  // discard oldest
@@ -109,7 +110,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
 }
 logEvent.queue = [];
 logEvent.catchUp = function() {
-  var t = +new Date;
+  var t = Date.now();
   while (logEvent.queue.length) {
     var ev = logEvent.queue.shift();
     ev.msAgo = t - ev.time;
@@ -188,20 +189,11 @@ const socketHandlers = {
       }
     }
     if (insertNewNotification(n)) {
-      var told = {};
-      api.tabs.eachSelected(tellTab);
-      tabsShowingNotificationsPane.forEach(tellTab);
-      tellTabsNoticeCountIfChanged();
-      api.play("media/notification.mp3");
-    }
-    function tellTab(tab) {
-      if (told[tab.id]) return;
-      told[tab.id] = true;
-      api.tabs.emit(tab, "new_notification", n);
+      sendNotificationToTabs(n);
     }
   },
-  missed_notifications: function(arr) {
-    api.log("[socket:missed_notifications]", arr);
+  missed_notifications: function(arr, serverTime) {
+    api.log("[socket:missed_notifications]", arr, serverTime);
     for (var i = arr.length - 1; ~i; i--) {
       arr[i].category = (arr[i].category || "message").toLowerCase();
       if (pageData[arr[i].url]) {
@@ -217,6 +209,8 @@ const socketHandlers = {
       }
       if (!insertNewNotification(arr[i])) {
         arr.splice(i, 1);
+      } else if ((new Date(serverTime) - new Date(notifications[0].time)) < 1000*60) {
+        sendNotificationToTabs(arr[i]);
       }
     }
     if (arr.length) {
@@ -235,7 +229,6 @@ const socketHandlers = {
   },
   all_notifications_visited: function(id, time) {
     api.log("[socket:all_notifications_visited]", id, time);
-    syncNumNotificationsNotVisited();
     markAllNoticesVisited(id, time);
   },
   thread: function(th) {
@@ -363,6 +356,10 @@ const socketHandlers = {
         }
       }
 
+      if (i == n) {
+        socket.send(["get_threads_by_url", message.url]);
+      }
+
       // ensure marked read if from this user
       if (message.user.id == session.userId) {
         if (new Date(message.createdAt) > new Date(d.lastMessageRead[threadId] || 0)) {
@@ -378,27 +375,33 @@ const socketHandlers = {
   },
   message_read: function(nUri, threadId, time, messageId) {
     api.log("[socket:message_read]", nUri, threadId, time);
-    var d = pageData[nUri];
 
-    syncNumNotificationsNotVisited(); // see comment in function :(
+    removeNotificationPopups(threadId);
 
-    if (!d || !d.lastMessageRead || new Date(d.lastMessageRead[threadId] || 0) < new Date(time)) {
-      markNoticesVisited("message", nUri, messageId, time, "/messages/" + threadId);
-      if (d && d.lastMessageRead) {
+    var hasThreadId = hasId(threadId);
+    for (var page in pageData) {
+      var d = pageData[page];
+      if (d.threads.filter(hasThreadId).length > 0) {
         d.lastMessageRead[threadId] = time;
+        var thread = d.threads.filter(hasId(threadId))[0];
         d.tabs.forEach(function(tab) {
-          api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
+          api.tabs.emit(tab, "thread_info", {thread: thread, read: d.lastMessageRead[threadId]});
         });
         tellTabsIfCountChanged(d, "m", messageCount(d));
       }
-      tellTabsNoticeCountIfChanged();
     }
+    markNoticesVisited("message", messageId, time, "/messages/" + threadId);
+
+    tellTabsNoticeCountIfChanged();
   },
   unread_notifications_count: function(count) {
     // see comment in syncNumNotificationsNotVisited() :(
     if (numNotificationsNotVisited != count) {
+      if (notifications) {
+        socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
+        reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
+      }
       numNotificationsNotVisited = count;
-      reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
       tellTabsNoticeCountIfChanged();
     }
   }
@@ -467,13 +470,12 @@ api.port.on({
     }
   },
   set_keeper_pos: function(o, _, tab) {
-    const hostRe = /^https?:\/\/([^\/]*)/;
     for (var nUri in pageData) {
       if (nUri.match(hostRe)[1] == o.host) {
         pageData[nUri].position = o.pos;
       }
     }
-    ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos}, respond);
+    ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
   set_enter_to_send: function(data) {
     session.prefs.enterToSend = data;
@@ -499,28 +501,30 @@ api.port.on({
       respond(o);
     });
   },
-  set_message_read: function(o, _, tab) {
-    var d = pageData[tab.nUri];
-    var unreadNotification = false;
-    for (var i = 0; i < notifications.length; i++) {
-      if (notifications[i].unread && (notifications[i].thread == o.threadId || notifications[i].id == o.messageId)) {
-        unreadNotification = true;
-        o.messageId = notifications[i].id;
+  message_rendered: function(o, _, tab) {
+    whenTabFocused(tab, o.threadId, function (tab) {
+      var d = pageData[tab.nUri];
+      var unreadNotification = false;
+      for (var i = 0; i < notifications.length; i++) {
+        if (notifications[i].unread && (notifications[i].thread == o.threadId || notifications[i].id == o.messageId)) {
+          unreadNotification = true;
+          o.messageId = notifications[i].id;
+        }
       }
-    }
 
-    if (o.forceSend || unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) >= new Date(d.lastMessageRead[o.threadId] || 0))) {
-      markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
-      if (d && d.lastMessageRead) {
-        d.lastMessageRead[o.threadId] = o.time;
-        tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
+      if (o.forceSend || unreadNotification || (!d || !d.lastMessageRead || new Date(o.time) >= new Date(d.lastMessageRead[o.threadId] || 0))) {
+        markNoticesVisited("message", o.messageId, o.time, "/messages/" + o.threadId);
+        if (d && d.lastMessageRead) {
+          d.lastMessageRead[o.threadId] = o.time;
+          tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
+        }
+        tellTabsNoticeCountIfChanged();  // visible tabs
+        socket.send(["set_message_read", o.messageId]);
       }
-      tellTabsNoticeCountIfChanged();  // visible tabs
-      socket.send(["set_message_read", o.messageId]);
-    }
+    });
   },
   set_global_read: function(o, _, tab) {
-    markNoticesVisited("global", undefined, o.noticeId);
+    markNoticesVisited("global", o.noticeId);
     tellTabsNoticeCountIfChanged();  // visible tabs
     socket.send(["set_global_read", o.noticeId]);
   },
@@ -554,6 +558,7 @@ api.port.on({
       notificationsCallbacks.push(reply);
     }
     function reply() {
+      syncNumNotificationsNotVisited(); // sanity checking
       respond({
         notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
         timeLastSeen: timeNotificationsLastSeen.toISOString(),
@@ -607,9 +612,9 @@ api.port.on({
       socket.send(["set_last_notify_read_time", t]);
     }
   },
-  all_notifications_visited: function(id, time) {
-    markAllNoticesVisited(id, time);
-    socket.send(["set_all_notifications_visited", id]);
+  all_notifications_visited: function(o) {
+    markAllNoticesVisited(o.id, o.time);
+    socket.send(["set_all_notifications_visited", o.id]);
   },
   session: function(_, respond) {
     respond(session);
@@ -620,32 +625,52 @@ api.port.on({
   get_networks: function(friendId, respond) {
     socket.send(["get_networks", friendId], respond);
   },
-  open_deep_link: function(data, _, tab) {
-    var uriData = pageData[data.nUri];
-    if (uriData) {
-      var tab = tab.nUri == data.nUri ? tab : uriData.tabs[0];
-      if (tab.ready) {
-        api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: data.locator});
-      } else {
-        createDeepLinkListener(data.locator, tab.id);
-      }
-      api.tabs.select(tab.id);
+  open_deep_link: function(link, _, tab) {
+    if (tab.nUri == link.nUri) {
+      awaitDeepLink(link, tab.id);
     } else {
-      api.tabs.open(data.nUri, function(tabId) {
-        if (data.locator) {
-          createDeepLinkListener(data.locator, tabId);
-        }
-      });
+      var d = pageData[link.nUri];
+      if ((tab = d ? d.tabs[0] : api.tabs.anyAt(link.nUri))) {  // page’s normalized URI may have changed
+        awaitDeepLink(link, tab.id);
+        api.tabs.select(tab.id);
+      } else {
+        api.tabs.open(link.nUri, function(tabId) {
+          awaitDeepLink(link, tabId);
+        });
+      }
     }
   },
-  add_deep_link_listener: function(locator, _, tab) {
-    createDeepLinkListener(locator, tab.id);
+  remove_notification: function(o) {
+    removeNotificationPopups(o.associatedId);
+  },
+  await_deep_link: function(link, _, tab) {
+    awaitDeepLink(link, tab.id);
   },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
     //reportError(data.message, data.url, data.lineNo);
   }
 });
+
+function removeNotificationPopups(associatedId) {
+  api.tabs.each(function(page) {
+    api.tabs.emit(page, "remove_notification", associatedId);
+  });
+}
+
+function sendNotificationToTabs(n) {
+  var told = {};
+  api.tabs.eachSelected(tellTab);
+  tabsShowingNotificationsPane.forEach(tellTab);
+  tellTabsNoticeCountIfChanged();
+  api.play("media/notification.mp3");
+
+  function tellTab(tab) {
+    if (told[tab.id]) return;
+    told[tab.id] = true;
+    api.tabs.emit(tab, "new_notification", n, {queue: true});
+  }
+}
 
 function insertNewNotification(n) {
   if (!notifications) return false;
@@ -656,7 +681,7 @@ function insertNewNotification(n) {
         return false;
       }
       break;
-    } else if (notifications[i].locator == n.locator) {
+    } else if ((n.thread && notifications[i].thread == n.thread) || (notifications[i].id == n.id)) {
       // there is already a more recent notification for this thread
       return false;
     }
@@ -672,9 +697,9 @@ function insertNewNotification(n) {
     }
   }
 
-  while(++i < notifications.length) {
+  while (++i < notifications.length) {
     var n2 = notifications[i];
-    if (n2.thread == n.thread || n.locator == n2.locator) {
+    if ((n.thread && n2.thread == n.thread) || (n.id == n2.id)) {
       notifications.splice(i--, 1);
       if (n2.unread) {
         decrementNumNotificationsNotVisited(n2);
@@ -698,29 +723,27 @@ function syncNumNotificationsNotVisited() {
 }
 
 // id is of last read message, timeStr is its createdAt time (not notification's).
-// If category is global, we do not check the nUri, timeStr, and locator because id identifies
+// If category is global, we do not check the timeStr, and locator because id identifies
 // it sufficiently. `undefined` can be passed in for everything but category and id.
-function markNoticesVisited(category, nUri, id, timeStr, locator) {
+function markNoticesVisited(category, id, timeStr, locator) {
   var time = timeStr ? new Date(timeStr) : null;
   notifications && notifications.forEach(function(n, i) {
-    if ((!nUri || n.url == nUri) &&
-        (!locator || n.locator == locator) &&
+    if ((!locator || n.locator == locator) &&
         (n.id == id || new Date(n.time) <= time)) {
-      n.unread = false;
-      decrementNumNotificationsNotVisited(n);
+      if (n.unread) {
+        n.unread = false;
+        decrementNumNotificationsNotVisited(n);
+      }
     }
   });
   tabsShowingNotificationsPane.forEach(function(tab) {
     api.tabs.emit(tab, "notifications_visited", {
       category: category,
-      nUri: nUri,
       time: timeStr,
       locator: locator,
       id: id,
       numNotVisited: numNotificationsNotVisited});
   });
-
-  syncNumNotificationsNotVisited(); // see comment in function :(
 }
 
 function markAllNoticesVisited(id, timeStr) {  // id and time of most recent notification to mark
@@ -767,37 +790,32 @@ function getTimeLastRead(n, d) {
     n.category == "message" && d.lastMessageRead ? (d.lastMessageRead[n.locator.split("/")[2]] || 0) : 0);
 }
 
-function createDeepLinkListener(locator, tabId) {
-  var createdTime = Date.now();
-  api.tabs.on.ready.add(function deepLinkListener(tab) {
-    if (Date.now() - createdTime > 15000) {
-      api.tabs.on.ready.remove(deepLinkListener);
-      api.log("[createDeepLinkListener] Listener timed out.");
-      return;
+function awaitDeepLink(link, tabId, retrySec) {
+  if (link.locator) {
+    var tab = api.tabs.get(tabId);
+    if (tab && (link.url || link.nUri).match(hostRe)[1] == tab.url.match(hostRe)[1]) {
+      api.log("[awaitDeepLink]", tabId, link);
+      api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: link.locator}, {queue: 1});
+    } else if ((retrySec = retrySec || .5) < 5) {
+      api.log("[awaitDeepLink]", tabId, "retrying in", retrySec, "sec");
+      setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
     }
-    if (tab.id == tabId) {
-      // uncomment second clause below to develop /r/ page using production deep links
-      var hasForwarded = !(new RegExp("^" + webBaseUri() + "/r/", "").test(tab.url)) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
-      if (hasForwarded) {
-        api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, locator);
-        api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: locator});
-        api.tabs.on.ready.remove(deepLinkListener);
-      }
-    }
-  });
+  } else {
+    api.log("[awaitDeepLink] no locator", tabId, link);
+  }
 }
 
 function initTab(tab, d) {  // d is pageData[tab.nUri]
   api.log("[initTab]", tab.id, "inited:", tab.inited);
 
   d.counts.n = numNotificationsNotVisited;
-  api.tabs.emit(tab, "counts", d.counts);
+  api.tabs.emit(tab, "counts", d.counts, {queue: 1});
   if (tab.inited) return;
   tab.inited = true;
 
   if (ruleSet.rules.message && d.counts.m) {  // open immediately to unread message(s)
     var ids = unreadThreadIds(d.threads, d.lastMessageRead);
-    api.tabs.emit(tab, "open_to", {trigger: "message", locator: "/messages" + (ids.length > 1 ? "" : "/" + ids[0])});
+    api.tabs.emit(tab, "open_to", {trigger: "message", locator: "/messages" + (ids.length > 1 ? "" : "/" + ids[0])}, {queue: 1});
     ids.forEach(function(id) {
       socket.send(["get_thread", id]);
     });
@@ -809,15 +827,14 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
       api.log("[initTab]", tab.id, "shown before");
     } else {
       if (api.prefs.get("showSlider")) {
-        api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll);
+        api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll, {queue: 1});
       }
       tab.autoShowSec = (ruleSet.rules.focus || [])[0];
       if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
         scheduleAutoShow(tab);
       }
-
       if (d.keepers.length) {
-        api.tabs.emit(tab, "keepers", {keepers: d.keepers, otherKeeps: d.otherKeeps});
+        api.tabs.emit(tab, "keepers", {keepers: d.keepers, otherKeeps: d.otherKeeps}, {queue: 1});
       }
     }
   }
@@ -835,7 +852,7 @@ function messageCount(d) {
     var th = d.threads[i], thReadTime = new Date(d.lastMessageRead[th.id] || 0);
     for (var id in th.messageTimes) {
       if (new Date(th.messageTimes[id]) > thReadTime) {
-        n++;
+        n++; break;
       }
     }
   }
@@ -858,7 +875,7 @@ function tellTabsNoticeCountIfChanged() {
     var d = pageData[tab.nUri];
     if (d && d.counts && d.counts.n != numNotificationsNotVisited) {
       d.counts.n = numNotificationsNotVisited;
-      api.tabs.emit(tab, "counts", d.counts);
+      api.tabs.emit(tab, "counts", d.counts, {queue: 1});
     }
   });
 }
@@ -868,7 +885,7 @@ function tellTabsIfCountChanged(d, key, count) {
     d.counts[key] = count;
     d.counts.n = numNotificationsNotVisited;
     d.tabs.forEach(function(tab) {
-      api.tabs.emit(tab, "counts", d.counts);
+      api.tabs.emit(tab, "counts", d.counts, {queue: 1});
     });
   }
 }
@@ -923,7 +940,7 @@ function ymd(d) {  // yyyy-mm-dd local date
 
 // kifi icon in location bar
 api.icon.on.click.add(function(tab) {
-  api.tabs.emit(tab, "button_click");
+  api.tabs.emit(tab, "button_click", null, {queue: 1});
 });
 
 function subscribe(tab) {
@@ -948,6 +965,10 @@ function subscribe(tab) {
   var d = pageData[tab.nUri || tab.url];
 
   if (d) {  // no need to ask server again
+    if (d.cacheIsDirty) {
+      socket.send(["get_threads_by_url", tab.nUri || tab.url]);
+      d.cacheIsDirty = false;
+    }
     if (tab.nUri) {  // tab is already initialized
       if (d.counts) {
         d.counts.n = numNotificationsNotVisited;
@@ -967,8 +988,8 @@ function subscribe(tab) {
 
       api.log("[subscribe]", resp);
       var uri = resp.normalized;
-      var uri_1 = resp.uri_1;
-      var uri_2 = resp.uri_2;
+      var uri_1 = resp.uri_1 || resp;
+      var uri_2 = resp.uri_2 || resp;
 
       if ((api.tabs.get(tab.id) || {}).url != tab.url) return;
       d = pageData[uri] = pageData[uri] || new PageData;
@@ -1031,9 +1052,10 @@ function setIcon(tab, kept) {
 
 function sendInit(tab, d) {
   api.tabs.emit(tab, "init", {
-    kept: d.kept,
-    position: d.position,
-    hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive});
+      kept: d.kept,
+      position: d.position,
+      hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive
+    }, {queue: 1});
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
@@ -1057,10 +1079,23 @@ function clone(o) {
   return c;
 }
 
+function whenTabFocused(tab, key, callback) {
+  if (api.tabs.isFocused(tab)) {
+    callback(tab);
+  } else {
+    (tab.focusCallbacks = tab.focusCallbacks || {})[key] = callback;
+  }
+}
 // ===== Browser event listeners
 
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
+
+  for(var key in tab.focusCallbacks) {
+    tab.focusCallbacks[key](tab);
+  }
+
+  delete tab.focusCallbacks;
   subscribe(tab);
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
@@ -1076,6 +1111,7 @@ api.tabs.on.blur.add(function(tab) {
 api.tabs.on.loading.add(function(tab) {
   api.log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab);
   subscribe(tab);
+  logEvent("extension", "pageLoad");
 });
 
 const searchPrefetchCache = {};  // for searching before the results page is ready
@@ -1107,11 +1143,6 @@ function getPrefetched(request, cb) {
   }
 }
 
-api.tabs.on.ready.add(function(tab) {
-  api.log("#b8a", "[tabs.on.ready] %i %o", tab.id, tab);
-  logEvent("extension", "pageLoad");
-});
-
 api.tabs.on.unload.add(function(tab) {
   api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
@@ -1138,7 +1169,7 @@ function scheduleAutoShow(tab) {
       delete tab.autoShowTimer;
       if (api.prefs.get("showSlider")) {
         api.log("[autoShow]", tab.id);
-        api.tabs.emit(tab, "auto_show");
+        api.tabs.emit(tab, "auto_show", null, {queue: 1});
       }
     }, tab.autoShowSec * 1000);
   }
@@ -1238,7 +1269,7 @@ function getRules() {
 
 // ===== Session management
 
-var session, socket, onReadyTemp;
+var session, socket, onLoadingTemp;
 
 function connectSync() {
   getRules();
@@ -1262,22 +1293,25 @@ function startSession(callback, retryMs) {
     api.log("[authenticate:done] reason: %s session: %o", api.loadReason, data);
     logEvent("extension", "authenticated");
 
-    connectSync();
-
     session = data;
     session.prefs = {}; // to come via socket
     socket = api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
+      for (var nUri in pageData) {
+        pageData[nUri].cacheIsDirty = true;
+      }
       socket.send(["get_last_notify_read_time"]);
+      connectSync();
       if (!notifications) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
       }
+      syncNumNotificationsNotVisited();
+      api.tabs.eachSelected(subscribe);
     }, function onDisconnect(why) {
       reportError("socket disconnect (" + why + ")");
     });
     logEvent.catchUp();
-    syncNumNotificationsNotVisited();
 
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
@@ -1286,8 +1320,7 @@ function startSession(callback, retryMs) {
     delete session.patterns;
     delete session.installationId;
 
-    api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
-    api.tabs.eachSelected(subscribe);
+    api.tabs.on.loading.remove(onLoadingTemp), onLoadingTemp = null;
     api.tabs.each(function(page) {
       api.tabs.emit(page, "session_change", session);
     });
@@ -1308,10 +1341,10 @@ function startSession(callback, retryMs) {
       } else {
         api.tabs.open(webBaseUri());
       }
-      api.tabs.on.ready.add(onReadyTemp = function(tab) {
+      api.tabs.on.loading.add(onLoadingTemp = function(tab) {
         // if kifi.com home page, retry first authentication
         if (tab.url.replace(/\/#.*$/, "") === webBaseUri()) {
-          api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
+          api.tabs.on.loading.remove(onLoadingTemp), onLoadingTemp = null;
           startSession(callback, retryMs);
         }
       });
@@ -1356,7 +1389,7 @@ function deauthenticate() {
       }
       api.tabs.each(function(tab) {
         api.icon.set(tab, "icons/keep.faint.png");
-        api.tabs.emit(tab, "session_change", undefined);
+        api.tabs.emit(tab, "session_change", null);
       });
     }
   })

@@ -14,6 +14,7 @@ class PersonalSearchHitSerializer extends Writes[PersonalSearchHit] {
 
     json = addMatches(json, hit)
     json = addCollections(json, hit)
+    json = json ++ hit.bookmarkId.map(id => Json.obj("id" -> id.id)).getOrElse(Json.obj())
     json
   }
 

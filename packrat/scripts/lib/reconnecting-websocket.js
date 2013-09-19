@@ -3,13 +3,13 @@ function ReconnectingWebSocket(opts) {
   var ws, self = this, buffer = [], disTimeout, pingTimeout, lastRecOrPingTime, retryConnectDelayMs = minRetryConnectDelayMs;
 
   this.send = function(data) {
-    if (ws && ws.greeted && ws.readyState == WebSocket.OPEN) {
+    if (ws && ws.readyState == WebSocket.OPEN && !disTimeout) {
       ws.send(data);
       if (new Date - lastRecOrPingTime > idlePingDelayMs) {  // a way to recover from timeout failure/unreliability
         ping();
       }
     } else {
-      buffer.push([data, +new Date]);
+      buffer.push([data, Date.now()]);
     }
   };
   this.close = function() {
@@ -68,18 +68,13 @@ function ReconnectingWebSocket(opts) {
   function onMessage1(e) {
     clearTimeout(disTimeout), disTimeout = null;
     pingTimeout = setTimeout(ping, idlePingDelayMs);
-    lastRecOrPingTime = +new Date;
+    lastRecOrPingTime = Date.now();
     if (e.data === '["hi"]') {
       api.log("#0bf", "[RWS.onMessage1]", e.data);
-      ws.greeted = true;
       ws.onmessage = onMessageN;
       retryConnectDelayMs = minRetryConnectDelayMs;
       opts.onConnect();
-      while (buffer.length) {
-        var a = buffer.shift();
-        api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
-        ws.send(a[0]);
-      }
+      sendBuffer();
     } else if (e.data === '["denied"]') {
       api.log("#a00", "[RWS.onMessage1]", e.data);
       disconnect("onMessage1");
@@ -92,11 +87,20 @@ function ReconnectingWebSocket(opts) {
   function onMessageN(e) {
     clearTimeout(disTimeout), disTimeout = null;
     clearTimeout(pingTimeout), pingTimeout = setTimeout(ping, idlePingDelayMs);
-    lastRecOrPingTime = +new Date;
+    lastRecOrPingTime = Date.now();
     if (e.data === '["pong"]') {
       api.log("#0ac", "[RWS.pong]");
+      sendBuffer();
     } else {
       opts.onMessage.call(self, e);
+    }
+  }
+
+  function sendBuffer() {
+    while (buffer.length) {
+      var a = buffer.shift();
+      api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
+      ws.send(a[0]);
     }
   }
 
@@ -111,6 +115,6 @@ function ReconnectingWebSocket(opts) {
     clearTimeout(pingTimeout), pingTimeout = null;
     clearTimeout(disTimeout), disTimeout = setTimeout(disconnect.bind(null, "ping", 2), 2000);  // expecting onMessageN "pong"
     ws.send('["ping"]');
-    lastRecOrPingTime = +new Date;
+    lastRecOrPingTime = Date.now();
   }
 }

@@ -133,7 +133,8 @@ class BookmarkStore @Inject() (
         bookmark.url,
         bookmark.createdAt.getMillis,
         bookmark.isPrivate,
-        bookmark.uriId)
+        bookmark.uriId,
+        Some(bookmark.externalId))
 
       doc.add(buildBinaryDocValuesField(recField, r))
 

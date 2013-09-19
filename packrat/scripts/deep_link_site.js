@@ -1,7 +1,6 @@
 // @match /^https?:\/\/(dev\.ezkeep\.com:8080|(www\.)?(kifi|keepitfindit)\.com)\/(?!r\/).*/
 // @require scripts/api.js
 
-
 document.addEventListener('click', function(e) {
   var uri, loc;
   if (!e.button && (uri = e.target.href) && (loc = e.target.dataset.locator)) {

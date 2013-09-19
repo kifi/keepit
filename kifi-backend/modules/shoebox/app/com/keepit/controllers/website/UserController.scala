@@ -7,10 +7,10 @@ import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, 
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
+import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail, LocalPostOffice}
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.model._
-import com.keepit.realtime.{DeviceType, UrbanAirship}
 
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
@@ -29,21 +29,8 @@ class UserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   friendRequestRepo: FriendRequestRepo,
   searchFriendRepo: SearchFriendRepo,
-  urbanAirship: UrbanAirship)
+  postOffice: LocalPostOffice)
     extends WebsiteController(actionAuthenticator) {
-
-  def registerDevice(deviceType: String) = AuthenticatedJsonToJsonAction { implicit request =>
-    (request.body \ "token").asOpt[String] map { token =>
-      val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType))
-      Ok(Json.obj(
-        "token" -> device.token
-      ))
-    } getOrElse {
-      BadRequest(Json.obj(
-        "error" -> "Body must contain a token parameter"
-      ))
-    }
-  }
 
   def friends() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
@@ -258,17 +245,40 @@ class UserController @Inject() (
     }
   }
 
+  def getInviteCounts() = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s =>
+      val availableInvites = userValueRepo.getValue(request.userId, "availableInvites").map(_.toInt).getOrElse(6)
+      val invitesLeft = availableInvites - invitationRepo.getByUser(request.userId).length
+      Ok(Json.obj(
+        "total" -> availableInvites,
+        "left" -> invitesLeft
+      )).withHeaders("Cache-Control" -> "private, max-age=300")
+    }
+  }
+
+  def needMoreInvites() = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      postOffice.sendMail(ElectronicMail(
+        from = EmailAddresses.INVITATION,
+        to = Seq(EmailAddresses.EFFI),
+        subject = s"${request.user.firstName} ${request.user.lastName} wants more invites.",
+        htmlBody = s"Go to https://admin.kifi.com/admin/user/${request.userId} to give more invites.",
+        category = PostOffice.Categories.INVITATION))
+    }
+    Ok
+  }
+
   def getAllConnections(search: Option[String], network: Option[String],
       after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
-    @inline def socialIdString(sui: SocialUserInfo) = s"${sui.networkType}/${sui.socialId.id}"
+    @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
     @inline def normalize(str: String) =
       Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
     val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
-    @inline def searchScore(sui: SocialUserInfo): Int = {
-      if (network.exists(sui.networkType.name !=)) 0
+    @inline def searchScore(sci: SocialConnectionInfo): Int = {
+      if (network.exists(sci.networkType.name !=)) 0
       else if (searchTerms.isEmpty) 1
       else {
-        val name = normalize(sui.fullName)
+        val name = normalize(sci.fullName)
         if (searchTerms.exists(!name.contains(_))) 0
         else {
           val names = name.split("\\s+").filterNot(_.isEmpty)
@@ -279,30 +289,29 @@ class UserController @Inject() (
       }
     }
 
-    def getWithInviteStatus(sui: SocialUserInfo)(implicit s: RSession): (SocialUserInfo, String) =
-      sui -> sui.userId.map(_ => "joined").getOrElse {
-        invitationRepo.getByRecipient(sui.id.get) collect {
+    def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) =
+      sci -> sci.userId.map(_ => "joined").getOrElse {
+        invitationRepo.getByRecipient(sci.id) collect {
           case inv if inv.state != InvitationStates.INACTIVE => "invited"
         } getOrElse ""
       }
 
-    def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialUserInfo] =
-      socialConnectionRepo.getSocialUserConnections(sui.id.get) filter (searchScore(_) > 0)
+    def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialConnectionInfo] =
+      socialConnectionRepo.getSocialConnectionInfo(sui.id.get) filter (searchScore(_) > 0)
 
-    val unfilteredConnections = db.readOnly { implicit s =>
-      socialUserRepo.getByUser(request.userId)
+    val connections = db.readOnly { implicit s =>
+      val filteredConnections = socialUserRepo.getByUser(request.userId)
         .flatMap(getFilteredConnections)
-        .map(getWithInviteStatus)
-        .sortBy { case (sui, status) => (-searchScore(sui), normalize(sui.fullName)) }
-    }
+        .sortBy { case sui => (-searchScore(sui), normalize(sui.fullName)) }
 
-    val connections = (after match {
-      case Some(id) => unfilteredConnections.dropWhile { case (sui, _) => socialIdString(sui) != id } match {
-        case hd +: tl => tl
-        case tl => tl
-      }
-      case None => unfilteredConnections
-    }).take(limit)
+      (after match {
+        case Some(id) => filteredConnections.dropWhile(socialIdString(_) != id) match {
+          case hd +: tl => tl
+          case tl => tl
+        }
+        case None => filteredConnections
+      }).take(limit).map(getWithInviteStatus)
+    }
 
     Ok(JsArray(connections.map { conn =>
       Json.obj(

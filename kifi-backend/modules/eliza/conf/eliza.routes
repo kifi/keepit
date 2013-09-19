@@ -10,6 +10,7 @@ POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterCo
 
 GET     /eliza/ext/ws                     @com.keepit.eliza.ExtMessagingController.websocket()
 POST    /eliza/ext/chatter                @com.keepit.eliza.ExtMessagingController.getChatter()
+POST    /eliza/devices/:deviceType        @com.keepit.eliza.ExtDevicesController.registerDevice(deviceType:String)
 
 ##########################################
 #INTERNAL ROUTES/Eliza

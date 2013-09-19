@@ -4,7 +4,7 @@ import play.api.Plugin
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.joda.time.DateTime
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
@@ -108,10 +108,6 @@ class DailyAdminReports @Inject() (
   Seq(dailyUniqueDepricatedAddBookmarks, dailySearchQueriesReport)
 )
 
-class DailySearchStatisticsReports @Inject() (
-    dailySearchStatstics: DailySearchStatisticsReportRepo)
-  extends ReportGroup("DailySearchStatistics", Seq(dailySearchStatstics))
-
 
 trait ReportBuilderPlugin extends Plugin {
   def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo) : Unit
@@ -173,9 +169,9 @@ private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, 
 private[reports] case class BuildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup)
 
 private[reports] class ReportBuilderActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     reportStore: ReportStore)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+  extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case BuildReport(startDate, endDate, report) =>

@@ -46,8 +46,7 @@ class AdminEventController @Inject() (
   activeUsersReports: ActiveUsersReports,
   dailyReports: DailyReports,
   dailyAdminReports: DailyAdminReports,
-  reportBuilderPlugin: ReportBuilderPlugin,
-  dailySearchStatisticsReports: DailySearchStatisticsReports)
+  reportBuilderPlugin: ReportBuilderPlugin)
     extends AdminController(actionAuthenticator) {
 
   val ReportFields = Seq(
@@ -93,7 +92,6 @@ class AdminEventController @Inject() (
       case "experiment" =>
         val activeExperiments = db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }
         reportBuilderPlugin.searchExperimentReports(activeExperiments)
-      case "daily_search_statisitcs" => dailySearchStatisticsReports
       case unknown => throw new Exception("Unknown report: %s".format(unknown))
     }
     rb.buildReports(rb.defaultStartTime, rb.defaultEndTime, reportGroup)

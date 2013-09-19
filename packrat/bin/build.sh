@@ -25,6 +25,7 @@ for d in icons images media scripts styles; do
   cp -R $d out/chrome/
   cp -R $d out/firefox/data/
 done
+mv out/chrome/scripts/lib/reconnecting-websocket.js out/chrome/
 
 for f in $(find html -name '*.html'); do
   f2="out/chrome/scripts/"${f/%.html/.js}
@@ -38,7 +39,7 @@ for f in $(find html -name '*.html'); do
 done
 
 for f in $(find out/chrome/scripts -name '*.js'); do
-  echo "//@ sourceURL=http://kifi/${f:19}" >> $f
+  echo "api.injected['${f:11}']=1;"$'\n'"//@ sourceURL=http://kifi/${f:19}" >> $f
 done
 
 cp main.js out/chrome/
@@ -48,21 +49,22 @@ matches=()
 cssDeps=()
 jsDeps=()
 for s in $(find scripts -name '*.js'); do
-  match=$(head -1 $s | grep '^// @match ' | cut -c11-)
-  req=$(head -30 $s | grep '^// @require ' | cut -c13-)
-  css=$(echo "$req" | grep css$)
-  js=$(echo "$req" | grep js$)
-  if [ "$match" != "" ]; then
-    matches=("${matches[@]}" "\n  [\"$s\", ${match}]")
+  lines=$(head -20 $s | grep '^// @')
+  match=$(echo -n "$lines" | grep '^// @match ' | cut -c11-)
+  req=$(echo -n "$lines" | grep '^// @require ' | cut -c13-)
+  css=$(echo -n "$req" | grep 'css$')
+  js=$(echo -n "$req" | grep 'js$')
+  asap=$(echo -n "$lines" | grep -c '^// @asap')
+  if [ -n "$match" ]; then
+    matches=("${matches[@]}" "\n  [\"$s\", $match, $asap]")
   fi
-  if [ "$css" != "" ]; then
+  if [ -n "$css" ]; then
     cssDeps=("${cssDeps[@]}" "\n  \"$s\": [\n$(echo "$css" | sed -e 's/^/    "/g' -e 's/$/",/g')\n  ]")
   fi
-  if [ "$js" != "" ]; then
+  if [ -n "$js" ]; then
     jsDeps=("${jsDeps[@]}" "\n  \"$s\": [\n$(echo "$js" | sed -e 's/^/    "/g' -e 's/$/",/g')\n  ]")
   fi
 done
-
 savedIFS="$IFS"
 IFS=,
 echo -e "meta = {\n  contentScripts: [${matches[*]}],\n  styleDeps: {${cssDeps[*]}},\n  scriptDeps: {${jsDeps[*]}}};" > out/chrome/meta.js
