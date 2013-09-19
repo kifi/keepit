@@ -78,12 +78,13 @@ api = function() {
   });
 
   const httpRe = /^https?:/;
-  const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
-  const plusPattern = /\+/g;
+  const googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
+  const plusRe = /\+/g;
   chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
-    var match = details.url.match(googleSearchPattern);
+    var match = details.url.match(googleSearchRe);
     if (match && details.frameId === 0) {
-      dispatch.call(api.on.search, decodeURIComponent(match[1].replace(plusPattern, ' ')));
+      var query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
+      if (query) dispatch.call(api.on.search, query);
     }
   });
 
