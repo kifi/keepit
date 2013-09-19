@@ -36,20 +36,20 @@ class ServiceController @Inject() (
         val threadName = thread.getName
         val isOurCodeInThisStack = stackTrace.filter(s => (s.getClassName + s.getMethodName).toLowerCase.contains("com.keepit")).nonEmpty
 
-        if (!onlyShowUs || isOurCodeInThisStack) {
-          if (threadName.toLowerCase.contains(name.toLowerCase) && thread.getState.toString.toLowerCase.contains(state.toLowerCase)) {
-            if (stack.isEmpty || stackTrace.filter(s => (s.getClassName + s.getMethodName).toLowerCase.contains(stack.toLowerCase)).nonEmpty) {
-              val header = s"${thread.getName}\t(${thread.getState.toString})"
-              val stackStr = stackTrace.map { st =>
-                val matchName = (st.getClassName + st.getMethodName).toLowerCase
-                val comKeepitMatch = if (matchName.contains("com.keepit.")) "*" else ""
-                val stackMatch = if (stack.nonEmpty && matchName.contains(stack.toLowerCase)) "*"
-                else ""
-                s"$comKeepitMatch\t$stackMatch\t${st.getClassName}.${st.getMethodName}:${st.getLineNumber}"
-              } mkString("\n")
-              Some(header + "\n" + stackStr)
-            } else None
-          } else None
+        if ((!onlyShowUs || isOurCodeInThisStack)
+          && (threadName.toLowerCase.contains(name.toLowerCase) && thread.getState.toString.toLowerCase.contains(state.toLowerCase))
+          && (stack.isEmpty || stackTrace.filter(s => (s.getClassName + s.getMethodName).toLowerCase.contains(stack.toLowerCase)).nonEmpty)) {
+
+          val header = s"${thread.getName}\t(${thread.getState.toString})"
+          val stackStr = stackTrace.map { st =>
+            val matchName = (st.getClassName + st.getMethodName).toLowerCase
+            val comKeepitMatch = if (matchName.contains("com.keepit.")) "*" else ""
+            val stackMatch = if (stack.nonEmpty && matchName.contains(stack.toLowerCase)) "*"
+            else ""
+            s"$comKeepitMatch\t$stackMatch\t${st.getClassName}.${st.getMethodName}:${st.getLineNumber}"
+          } mkString("\n")
+          Some(header + "\n" + stackStr)
+          
         } else None
       }.flatten.mkString("\n\n")
       Ok(allThreads)
