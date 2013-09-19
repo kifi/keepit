@@ -41,7 +41,7 @@ class Scraper @Inject() (
   bookmarkRepo: BookmarkRepo,
   urlPatternRuleRepo: UrlPatternRuleRepo,
   s3ScreenshotStore: S3ScreenshotStore,
-  normalizationService: NormalizationService)
+  normalizationServiceProvider: Provider[NormalizationService])
     extends Logging {
 
   implicit val config = scraperConfig
@@ -329,7 +329,7 @@ class Scraper @Inject() (
     val candidateUri = normalizedURIRepo.internByUri(redirect.newDestination)
     candidateUri.normalization.map { normalization =>
       val toBeRedirected = uri.withNormalization(Normalization.MOVED)
-      session.onTransactionSuccess(normalizationService.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization)))
+      session.onTransactionSuccess(normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization)))
       toBeRedirected
     }
   }

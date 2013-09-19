@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.google.inject.Injector
+import com.google.inject.{Provider, Injector}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
@@ -290,7 +290,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
   def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher)(implicit injector: Injector) = {
     new Scraper(inject[Database], mockHttpFetcher, articleStore, config,
       inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin],
-      inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore, inject[NormalizationService]) {
+      inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore, inject[Provider[NormalizationService]]) {
       override protected def getExtractor(url: String): Extractor = {
         new TikaBasedExtractor(url, 10000, None) {
           protected def getContentHandler = new BodyContentHandler(output)
