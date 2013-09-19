@@ -48,15 +48,9 @@ class ServiceController @Inject() (
                 s"$comKeepitMatch\t$stackMatch\t${st.getClassName}.${st.getMethodName}:${st.getLineNumber}"
               } mkString("\n")
               Some(header + "\n" + stackStr)
-            } else {
-              None
-            }
-          } else {
-            None
-          }
-        } else {
-          None
-        }
+            } else None
+          } else None
+        } else None
       }.flatten.mkString("\n\n")
       Ok(allThreads)
     }
