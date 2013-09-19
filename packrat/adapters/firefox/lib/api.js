@@ -26,8 +26,6 @@ const tabs = require("sdk/tabs");
 const workerNs = require('sdk/core/namespace').ns();
 
 const httpRe = /^https?:/;
-const hostRe = /^https?:\/\/[^\/]*/;
-const stripHashRe = /^[^#]*/;
 
 const pages = {}, tabsById = {};
 function createPage(tab) {
@@ -480,6 +478,7 @@ for each (let win in windows) {
 
 // navigation handling
 
+const stripHashRe = /^[^#]*/;
 const googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
 const plusRe = /\+/g;
 
@@ -500,16 +499,16 @@ require('./location').onChange(function(tabId, newPage) {
       let query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
       if (query) dispatch.call(exports.on.search, query);
     }
-    dispatch.call(exports.tabs.on.loading, page);
+    if (httpRe.test(page.url)) {
+      dispatch.call(exports.tabs.on.loading, page);
+    }
   } else {
     let page = pages[tabId];
-    if (page.url.match(stripHashRe)[0] === tab.url.match(stripHashRe)[0]) {  // fragment-only change
-      page.url = tab.url;
-    } else if (page.url != tab.url) {
-      if (httpRe.test(page.url)) {
-        dispatch.call(api.tabs.on.unload, page);
+    if (page.url != tab.url) {
+      if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != tab.url.match(stripHashRe)[0]) {
+        dispatch.call(exports.tabs.on.unload, page, true);
         page.url = tab.url;
-        dispatch.call(api.tabs.on.loading, page);
+        dispatch.call(exports.tabs.on.loading, page);
       } else {
         page.url = tab.url;
       }
