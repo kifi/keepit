@@ -1,4 +1,4 @@
-package com.keepit.common.net.uri
+package com.keepit.common.net
 
 import com.keepit.common.strings.UTF8
 import java.net.{URLEncoder, URLDecoder}
