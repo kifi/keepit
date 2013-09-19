@@ -82,7 +82,20 @@ class UrlController @Inject() (
         case _ => (false, None)
       }
     }
-    var changes = Vector.empty[URL]
+    
+    def sendEmail(changes: Vector[(URL, Option[NormalizedURI])], readOnly: Boolean)(implicit session: RWSession) = {
+      val (total, batchSize) = (changes.size, 1000)
+      val index = ((0 to total/batchSize).map(_*batchSize) :+ total).distinct
+      (0 to (index.size - 2)).foreach{ i =>
+        val sub = changes.slice(index(i), index(i+1))
+        val title = "Renormalization Report: " + s"part ${i+1} of ${index.size - 1}. ReadOnly Mode = ${readOnly}. Num of affected URL: ${total}"
+        val msg = sub.map( x => x._1.url + s"\ncurrent uri: ${ uriRepo.get(x._1.normalizedUriId).url }" + "\n--->\n" + x._2.map{_.url}).mkString("\n\n")
+        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.YINGJIE),
+        subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
+      }
+    }
+    
+    var changes = Vector.empty[(URL, Option[NormalizedURI])]
 
     db.readWrite { implicit session =>
       val urls = domain match {
@@ -90,19 +103,17 @@ class UrlController @Inject() (
         case None => urlRepo.all
       }
 
-      urls.foreach { url =>
+      urls.filter(_.state == URLStates.ACTIVE)foreach { url =>
         needRenormalization(url) match {
           case (true, newUriOpt) => {
-            changes = changes :+ url
+            changes = changes :+ (url, newUriOpt)
             if (!readOnly) newUriOpt.map { uri => renormRepo.save(RenormalizedURL(urlId = url.id.get, newUriId = uri.id.get)) }
           }
           case _ =>
         }
       }
-
-      val msg = s"ReadOnly Mode = ${readOnly}. ${changes.size} url need to be renormalized.\n" + changes.map(_.url).mkString("\n")
-      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-        subject = "Renormalization Report", htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
+      changes = changes.sortBy(_._1.url)
+      sendEmail(changes, readOnly)
     }
   }
 
