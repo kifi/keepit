@@ -67,7 +67,7 @@ class AdminHealthController @Inject() (
       Ok("Should not see that!")
     } catch {
       case e: Throwable =>
-        airbrake.notifyError(AirbrakeError(request, e))
+        airbrake.notify(AirbrakeError(request, e))
         Ok(s"handbrake error sent for $e")
     }
   }

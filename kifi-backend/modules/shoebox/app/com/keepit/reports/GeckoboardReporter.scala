@@ -8,7 +8,7 @@ import com.keepit.model.BookmarkRepo
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorInstance
@@ -21,10 +21,9 @@ import scala.concurrent.duration._
 import us.theatr.akka.quartz.QuartzActor
 
 private[reports] class GeckoboardReporterActor @Inject() (
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   geckoboardPublisher: GeckoboardPublisher)
-
-extends FortyTwoActor(healthcheckPlugin) with Logging {
+    extends FortyTwoActor(airbrake) with Logging {
   def receive() = {
     case widget: GeckoboardWidget[_] => geckoboardPublisher.publish(widget)
     case m => throw new Exception("unknown message %s".format(m))

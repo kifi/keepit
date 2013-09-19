@@ -28,10 +28,10 @@ class AirbrakeTest extends Specification with TestInjector {
 
   "AirbrakeTest" should {
     "format only error" in {
-      withInjector(TestFortyTwoModule(), StandaloneTestActorSystemModule(), FakeHttpClientModule(), FakeAirbrakeModule()) { implicit injector =>
-        val notifyer = inject[FakeAirbrakeNotifier]
+      withInjector(TestFortyTwoModule(), StandaloneTestActorSystemModule(), FakeHttpClientModule()) { implicit injector =>
+        val formatter = inject[AirbrakeFormatter]
         val error = AirbrakeError(new IllegalArgumentException("hi there"))
-        val xml = notifyer.format(error)
+        val xml = formatter.format(error)
         println(xml)
         validate(xml)
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
@@ -44,14 +44,14 @@ class AirbrakeTest extends Specification with TestInjector {
     }
 
     "format with url and no params" in {
-      withInjector(TestFortyTwoModule(), StandaloneTestActorSystemModule(), FakeHttpClientModule(), FakeAirbrakeModule()) { implicit injector =>
-        val notifyer = inject[FakeAirbrakeNotifier]
+      withInjector(TestFortyTwoModule(), StandaloneTestActorSystemModule(), FakeHttpClientModule()) { implicit injector =>
+        val formatter = inject[AirbrakeFormatter]
         val error = AirbrakeError(
             exception = new IllegalArgumentException("hi there"),
             message = None,
             url = Some("http://www.kifi.com/hi"),
             method = Some("POST"))
-        val xml = notifyer.format(error)
+        val xml = formatter.format(error)
         println(xml)
         validate(xml)
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>

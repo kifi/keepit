@@ -3,7 +3,7 @@ package com.keepit.common.healthcheck
 import com.google.inject.Inject
 import com.google.inject.ImplementedBy
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.AlertingActor
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
@@ -21,9 +21,11 @@ import play.api.mvc._
 case class AirbrakeNotice(xml: NodeSeq)
 
 private[healthcheck] class AirbrakeNotifierActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
-    airbrakeSender: AirbrakeSender)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+    airbrakeSender: AirbrakeSender,
+    formatter: AirbrakeFormatter)
+  extends AlertingActor with Logging {
+
+  def alert(reason: Throwable, message: Option[Any]) = self ! AirbrakeNotice(formatter.format(error(reason, message)))
 
   def receive() = {
     case AirbrakeNotice(xml) => airbrakeSender.send(xml); println(xml)
@@ -45,11 +47,7 @@ class AirbrakeSender @Inject() (httpClient: HttpClient) extends Logging {
     }
 }
 
-trait AirbrakeNotifier {
-  def notifyError(error: AirbrakeError): Unit
-  val apiKey: String
-  val playMode: Mode
-  val service: FortyTwoServices
+class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices) {
 
   private def formatStacktrace(traceElements: Array[StackTraceElement]) =
     traceElements.filter(e => !e.getFileName.contains("Airbrake")).map(e => {
@@ -113,13 +111,15 @@ trait AirbrakeNotifier {
     </notice>
 }
 
+trait AirbrakeNotifier {
+  def notify(error: AirbrakeError): Unit
+}
+
 // apiKey is per service type (showbox, search etc)
 class AirbrakeNotifierImpl (
-  val apiKey: String,
   actor: ActorInstance[AirbrakeNotifierActor],
-  val playMode: Mode,
-  val service: FortyTwoServices) extends AirbrakeNotifier {
+  formatter: AirbrakeFormatter) extends AirbrakeNotifier {
 
-  def notifyError(error: AirbrakeError): Unit = actor.ref ! AirbrakeNotice(format(error))
+  def notify(error: AirbrakeError): Unit = actor.ref ! AirbrakeNotice(formatter.format(error))
 }
 
