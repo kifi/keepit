@@ -24,6 +24,7 @@ trait UriChangeMessage
 case class MergedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends UriChangeMessage
 case class URLMigration(url: URL, newUri: Id[NormalizedURI]) extends UriChangeMessage
 case class BatchUpdateMerge(batchSize: Int)
+case class BatchURLMigration(batchSize: Int)
 
 class UriIntegrityActor @Inject()(
   db: Database,
@@ -40,6 +41,7 @@ class UriIntegrityActor @Inject()(
   scrapeInfoRepo: ScrapeInfoRepo,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
+  renormRepo: RenormalizedURLRepo,
   centralConfig: CentralConfig,
   healthcheckPlugin: HealthcheckPlugin,
   scraper: ScraperPlugin
@@ -83,11 +85,11 @@ class UriIntegrityActor @Inject()(
    * NOTE: We have 1-1 mapping from entities to url, the only exception (as of writing) is normalizedUri-url mapping, which is 1 to n.
    * A migration from uriA to uriB is (almost) equivalent to N url to uriB migrations, where the N urls are currently associated with uriA.
    */
-  private def processMerge(change: ChangedURI)(implicit session: RWSession): (Seq[Option[NormalizedURI]], Option[ChangedURI]) = {
+  private def processMerge(change: ChangedURI)(implicit session: RWSession): Seq[Option[NormalizedURI]] = {
     val (oldUriId, newUriId) = (change.oldUriId, change.newUriId)
     if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) { 
       if (oldUriId == newUriId) changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
-      (Nil, None) 
+      Nil
     } else {
       val oldUri = uriRepo.get(oldUriId)
       val newUri = uriRepo.get(newUriId) match {
@@ -106,7 +108,7 @@ class UriIntegrityActor @Inject()(
 
       val saved = changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
       
-      (toBeScraped, Some(saved))
+      toBeScraped
     }
   }
 
@@ -138,13 +140,13 @@ class UriIntegrityActor @Inject()(
   private def batchUpdateMerge(batchSize: Int): Int = {
     val toMerge = getOverDueList(batchSize)
     log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
-    val toScrapeAndSavedChange = db.readWrite{ implicit s =>
+    val toScrape = db.readWrite{ implicit s =>
       toMerge.map{ change => processMerge(change) }
     }
-    toScrapeAndSavedChange.map(_._2).filter(_.isDefined).sortBy(_.get.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.get.seq.value) }
+    toMerge.sortBy(_.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pairs of uris merged. zookeeper seqNum updated.")
     
-    val uniqueToScrape = toScrapeAndSavedChange.map(_._1).flatten.filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values
+    val uniqueToScrape = toScrape.flatten.filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values
     log.info(s"start scraping ${uniqueToScrape.size} pages")
     uniqueToScrape.map{ x => scraper.asyncScrape(x.get)}
     toMerge.size
@@ -156,11 +158,40 @@ class UriIntegrityActor @Inject()(
       case Some(seqNum) => db.readOnly{ implicit s => changedUriRepo.getChangesSince(SequenceNumber(seqNum), fetchSize, state = ChangedURIStates.ACTIVE)}
     }
   }
+  
+  private def batchURLMigration(batchSize: Int) = {
+    val toMigrate = getOverDueURLMigrations(batchSize)
+    log.info(s"${toMigrate.size} urls need renormalization")
+    
+    val toScrapes = db.readWrite{ implicit s => 
+      toMigrate.map{ renormURL =>
+        val url = urlRepo.get(renormURL.urlId)
+        val toScrape = handleURLMigration(url, renormURL.newUriId, delayScrape = true)
+        renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.APPLIED))
+        toScrape
+      }
+    }
+    toMigrate.sortBy(_.seq).lastOption.map{ x => centralConfig.update(new URLMigrationSeqNumKey(), x.seq.value)}
+    val uniqueToScrape = toScrapes.filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values
+    
+    log.info(s"${toMigrate.size} urls renormalized. start scraping ${uniqueToScrape.size} pages")
+    uniqueToScrape.foreach{ x => scraper.asyncScrape(x.get)}
+  }
+  
+  private def getOverDueURLMigrations(fetchSize: Int = -1) = {
+    val lowSeq = centralConfig(new URLMigrationSeqNumKey()) match {
+      case None => SequenceNumber(0)
+      case Some(seqNum) => SequenceNumber(seqNum)
+    }
+    db.readOnly{ implicit s => renormRepo.getChangesSince(lowSeq, fetchSize, state = RenormalizedURLStates.ACTIVE)}
+  }
+  
 
   def receive = {
     case BatchUpdateMerge(batchSize) => Future.successful(batchUpdateMerge(batchSize)) pipeTo sender
     case MergedUri(oldUri, newUri) => db.readWrite{ implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) }   // process later
     case URLMigration(url, newUri) => db.readWrite{ implicit s => handleURLMigration(url, newUri)}
+    case BatchURLMigration(batchSize) => batchURLMigration(batchSize)
   }
 
 }
@@ -181,6 +212,7 @@ class UriIntegrityPluginImpl @Inject() (
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
      scheduleTask(actor.system, 1 minutes, 45 seconds, actor.ref, BatchUpdateMerge(50))
+     scheduleTask(actor.system, 1 minutes, 60 seconds, actor.ref, BatchUpdateMerge(100))
   }
   override def onStop() {
      log.info("stopping UriIntegrityPluginImpl")
