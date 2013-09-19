@@ -29,5 +29,5 @@ case class FakeAirbrakeModule() extends AirbrakeModule {
 
 @Singleton
 class FakeAirbrakeNotifier @Inject() (clock: Clock) extends AirbrakeNotifier {
-  def notify(error: AirbrakeError): Unit = {}
+  def notify(error: AirbrakeError): AirbrakeError = error
 }
