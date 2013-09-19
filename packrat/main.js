@@ -798,7 +798,7 @@ function awaitDeepLink(link, tabId, retrySec) {
       api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: link.locator}, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {
       api.log("[awaitDeepLink]", tabId, "retrying in", retrySec, "sec");
-      setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
+      api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
     }
   } else {
     api.log("[awaitDeepLink] no locator", tabId, link);
@@ -1330,7 +1330,7 @@ function startSession(callback, retryMs) {
     api.log("[startSession:fail] xhr.status:", xhr.status);
     if (!xhr.status || xhr.status >= 500) {  // server down or no network connection, so consider retrying
       if (retryMs) {
-        setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
+        api.timers.setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
       }
     } else if (getStored("kifi_installation_id")) {
       openLogin(callback, retryMs);
