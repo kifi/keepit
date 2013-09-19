@@ -1,6 +1,8 @@
 // API for main.js
 
 api = function() {
+  const httpRe = /^https?:/;
+
   function dispatch() {
     var args = arguments;
     this.forEach(function(f) {f.apply(null, args)});
@@ -77,9 +79,10 @@ api = function() {
     }
   });
 
-  const httpRe = /^https?:/;
+  const stripHashRe = /^[^#]*/;
   const googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
   const plusRe = /\+/g;
+
   chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
     var match = details.url.match(googleSearchRe);
     if (match && details.frameId === 0) {
@@ -116,8 +119,8 @@ api = function() {
     api.log("#666", "[onHistoryStateUpdated]", e.tabId, e);
     var page = pages[e.tabId];
     if (page.url != e.url) {
-      if (httpRe.test(page.url)) {
-        dispatch.call(api.tabs.on.unload, page);
+      if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != e.url.match(stripHashRe)[0]) {
+        dispatch.call(api.tabs.on.unload, page, true);
         page.url = e.url;
         dispatch.call(api.tabs.on.loading, page);
       } else {

@@ -1091,7 +1091,7 @@ function whenTabFocused(tab, key, callback) {
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
 
-  for(var key in tab.focusCallbacks) {
+  for (var key in tab.focusCallbacks) {
     tab.focusCallbacks[key](tab);
   }
 
@@ -1143,10 +1143,8 @@ function getPrefetched(request, cb) {
   }
 }
 
-api.tabs.on.unload.add(function(tab) {
+api.tabs.on.unload.add(function(tab, historyApi) {
   api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
-  api.timers.clearTimeout(tab.autoShowTimer);
-  delete tab.autoShowTimer;
   var d = pageData[tab.nUri];
   if (d) {
     for (var i = 0; i < d.tabs.length; i++) {
@@ -1157,6 +1155,14 @@ api.tabs.on.unload.add(function(tab) {
     if (!d.tabs.length) {
       delete pageData[tab.nUri];
     }
+  }
+  api.timers.clearTimeout(tab.autoShowTimer);
+  delete tab.autoShowTimer;
+  delete tab.nUri;
+  delete tab.inited;
+  delete tab.focusCallbacks;
+  if (historyApi) {
+    api.tabs.emit(tab, "reset");
   }
 });
 
