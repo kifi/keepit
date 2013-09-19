@@ -217,6 +217,7 @@ class MainSearcher(
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
       Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
       hotDocs.setHotDocs(personalizedSearcher.hotDocs)
+      hotDocs.setClickBoosts(clickBoosts)
 
       val tLucene = currentDateTime.getMillis()
       personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
