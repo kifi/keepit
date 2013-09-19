@@ -126,7 +126,7 @@ object ApplicationBuild extends Build {
     val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m")
 
     val _testOptions = Seq(
-      Tests.Argument("sequential", "false"),
+      Tests.Argument("sequential", "true"),
       Tests.Argument("threadsNb", "16"),
       Tests.Argument("showtimes", "true"),
       Tests.Argument("stopOnFail", "true"),
@@ -140,8 +140,8 @@ object ApplicationBuild extends Build {
       templatesImport ++= _templatesImport,
 
       javaOptions in test ++= javaTestOptions,
-      Keys.fork in Test := false,
-      parallelExecution in Test := true,
+      Keys.fork in Test := true,
+      parallelExecution in Test := false,
       testOptions in Test ++= _testOptions,
       EclipseKeys.skipParents in ThisBuild := false,
       sources in doc in Compile := List()
