@@ -2,7 +2,7 @@ package com.keepit.integrity
 
 import com.keepit.common.logging.Logging
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -42,10 +42,10 @@ private[integrity] case object CleanOrphans
 private[integrity] case object Cron
 
 private[integrity] class DataIntegrityActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     db: Database,
     orphanCleaner: OrphanCleaner)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+  extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case CleanOrphans =>

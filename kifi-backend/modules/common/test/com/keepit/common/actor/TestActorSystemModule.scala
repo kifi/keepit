@@ -7,12 +7,14 @@ import com.keepit.inject.AppScoped
 import play.api.Play.current
 import akka.testkit.TestKit
 import scala.concurrent.future
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) extends ActorSystemModule {
 
   lazy val system = systemOption.getOrElse(ActorSystem("test-actor-system", current.configuration.underlying, current.classloader))
 
   def configure() {
+    install(FakeAirbrakeModule())
     bind[ActorBuilder].to[TestActorBuilderImpl]
     bind[Scheduler].to[FakeScheduler]
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]

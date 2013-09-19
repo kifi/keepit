@@ -13,7 +13,7 @@ import com.google.inject.{Inject, ImplementedBy}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.net.NonOKResponseException
 import com.keepit.common.strings._
@@ -25,14 +25,14 @@ private case class FetchDomainInfo(domain: String)
 private case class FetchTags(domain: String)
 
 private[classify] class DomainClassificationActor @Inject() (
-  healthcheck: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   db: Database,
   client: HttpClient,
   updater: SensitivityUpdater,
   domainRepo: DomainRepo,
   tagRepo: DomainTagRepo,
   domainToTagRepo: DomainToTagRepo)
-    extends FortyTwoActor(healthcheck) {
+    extends FortyTwoActor(airbrake) {
 
   private final val KEY = "42go42"
 
