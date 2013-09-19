@@ -7,29 +7,6 @@ import scala.util.{Failure, Success, Try}
 
 object URI extends Logging {
 
-  def needRenormalization(uriString: String) = { // for migration from the old URI parser
-    import com.keepit.common.net.{URI => OldURI}
-    import com.keepit.common.net.{Query => OldQuery}
-    import com.keepit.common.net.{Param => OldParam}
-
-    (safelyParse(uriString), OldURI.safelyParse(uriString)) match {
-      case (Some(URI(scheme1, userInfo1, host1, port1, path1, query1, fragment1)), Some(OldURI(scheme2, userInfo2, host2, port2, path2, query2, fragment2))) =>
-        if (scheme1 != scheme2 || userInfo1 != userInfo2 || host1.map(_.toString) != host2.map(_.toString) || port1 != port2 || path1 != path2|| fragment1 != fragment2) {
-          true
-        } else {
-           (query1, query2) match {
-             case (Some(query1), Some(query2)) =>
-               if (query1.params.size != query2.params.size) true
-               else query1.params.map{case Param(name, value) => (name, value)} != query2.params.map{case OldParam(name, value) => (name, value)}
-             case (None, None) => false
-             case _ => true
-           }
-         }
-      case (None, None) => false
-      case _ => true
-    }
-  }
-
   def parse(uriString: String): Try[URI] = Try {
     val raw = uriString.trim
     val uri = URIParser.parseAll(URIParser.uri, raw).get
