@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import java.io.OutputStreamWriter
 import com.keepit.common.store.FakeS3ScreenshotStore
+import com.keepit.normalizer.NormalizationService
 
 class ScraperTest extends Specification with ShoeboxTestInjector {
   val config = ScraperConfig(
@@ -289,7 +290,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
   def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher)(implicit injector: Injector) = {
     new Scraper(inject[Database], mockHttpFetcher, articleStore, config,
       inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin],
-      inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore) {
+      inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore, inject[NormalizationService]) {
       override protected def getExtractor(url: String): Extractor = {
         new TikaBasedExtractor(url, 10000, None) {
           protected def getContentHandler = new BodyContentHandler(output)

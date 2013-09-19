@@ -21,6 +21,8 @@ import com.keepit.model.ScrapeInfo
 import com.keepit.search.Article
 import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.normalizer.{TrustedCandidate, NormalizationService}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Scraper {
   val BATCH_SIZE = 100
@@ -38,7 +40,8 @@ class Scraper @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
   bookmarkRepo: BookmarkRepo,
   urlPatternRuleRepo: UrlPatternRuleRepo,
-  s3ScreenshotStore: S3ScreenshotStore)
+  s3ScreenshotStore: S3ScreenshotStore,
+  normalizationService: NormalizationService)
     extends Logging {
 
   implicit val config = scraperConfig
@@ -313,9 +316,21 @@ class Scraper @Inject() (
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect])(implicit session: RWSession): NormalizedURI = {
     val (permanentRedirects, otherRedirects) = redirects.partition(_.isPermanent)
     val withRestriction = otherRedirects.headOption.map { redirect => uri.copy(restriction = Some(Restriction(redirect.statusCode))) }
-    val redirected = permanentRedirects.find(redirect => redirect.isAbsolute && redirect.currentLocation == uri.url).map(recordPermanentRedirect(withRestriction.getOrElse(uri), _))
-    redirected orElse withRestriction getOrElse uri
+    val toBeRedirected = for {
+      redirect <- permanentRedirects.find(redirect => redirect.isAbsolute && redirect.currentLocation == uri.url)
+      toBeRedirected <- recordPermanentRedirect(withRestriction.getOrElse(uri), redirect)
+    } yield toBeRedirected
+    toBeRedirected orElse withRestriction getOrElse uri
   }
 
-  private def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit session: RWSession): NormalizedURI = uri
+  private def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit session: RWSession): Option[NormalizedURI] = {
+    require(redirect.statusCode == 301, "HTTP redirect is not permanent.")
+    require(redirect.currentLocation == uri.url, "Current Location of HTTP redirect does not match normalized Uri.")
+    val candidateUri = normalizedURIRepo.internByUri(redirect.newDestination)
+    candidateUri.normalization.map { normalization =>
+      val toBeRedirected = uri.withNormalization(Normalization.MOVED)
+      session.onTransactionSuccess(normalizationService.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization)))
+      toBeRedirected
+    }
+  }
 }

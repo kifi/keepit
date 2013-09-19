@@ -5,7 +5,6 @@ import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.model._
 import com.keepit.common.logging.Logging
-import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import scala.util.{Try, Failure}
 import com.keepit.common.healthcheck.HealthcheckError

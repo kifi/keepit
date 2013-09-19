@@ -45,11 +45,12 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
+    def restriction = column[Restriction]("restriction", O.Nullable)
     def normalization = column[Normalization]("normalization", O.Nullable)
     def redirect = column[Id[NormalizedURI]]("redirect", O.Nullable)
     def redirectTime = column[DateTime]("redirect_time", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~
-        screenshotUpdatedAt.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
+        screenshotUpdatedAt.? ~ restriction.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
   }
 
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
