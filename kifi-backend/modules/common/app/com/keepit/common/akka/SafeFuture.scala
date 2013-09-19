@@ -5,7 +5,7 @@ import scala.concurrent.duration.Duration
 import scala.util.Try
 import play.api.{Logger}
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import play.api.Play.current
 
 class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit executor: ExecutionContext) extends Future[T] {
@@ -18,10 +18,10 @@ class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit ex
           cause.printStackTrace() // should always work, to stdout
           try {
             // Needs a running Play application. May fail.
-            Logger(getClass).error(s"[SafeFuture] Failure of future${name.map(": " + _).getOrElse("")}", cause)
+            Logger(getClass).error(s"[SafeFuture] Failure of future [${name.getOrElse("")}]", cause)
             val fortyTwoInjector = current.global.asInstanceOf[FortyTwoGlobal].injector
-            fortyTwoInjector.getInstance(classOf[HealthcheckPlugin]).addError(
-              HealthcheckError(Some(cause), None, None, Healthcheck.INTERNAL, Some(s"[SafeFuture]: ${cause.getMessage}"))
+            fortyTwoInjector.getInstance(classOf[AirbrakeNotifier]).notify(
+              AirbrakeError(cause, Some(s"SafeFuture[${name.getOrElse("")}]: ${cause.getMessage}"))
             )
           } catch {
             case _: Throwable => // tried our best.

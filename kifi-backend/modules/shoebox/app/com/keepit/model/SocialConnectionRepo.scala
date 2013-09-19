@@ -22,15 +22,6 @@ trait SocialConnectionRepo extends Repo[SocialConnection] {
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int
 }
 
-case class SocialUserConnectionsKey(id: Id[SocialUserInfo]) extends Key[Seq[SocialConnectionInfo]] {
-  val namespace = "social_user_connections"
-  override val version = 2
-  def toKey(): String = id.id.toString
-}
-
-class SocialUserConnectionsCache(inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[SocialUserConnectionsKey, Seq[SocialConnectionInfo]](inner, outer: _*)
-
 case class SocialConnectionInfo(
   id: Id[SocialUserInfo],
   userId: Option[Id[User]],
@@ -67,6 +58,15 @@ object SocialConnectionInfo {
   def fromSocialUser(sui: SocialUserInfo): SocialConnectionInfo =
     SocialConnectionInfo(sui.id.get, sui.userId, sui.fullName, sui.pictureUrl, sui.socialId, sui.networkType)
 }
+
+case class SocialUserConnectionsKey(id: Id[SocialUserInfo]) extends Key[Seq[SocialConnectionInfo]] {
+  val namespace = "social_user_connections"
+  override val version = 2
+  def toKey(): String = id.id.toString
+}
+
+class SocialUserConnectionsCache(inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[SocialUserConnectionsKey, Seq[SocialConnectionInfo]](inner, outer: _*)
 
 @Singleton
 class SocialConnectionRepoImpl @Inject() (

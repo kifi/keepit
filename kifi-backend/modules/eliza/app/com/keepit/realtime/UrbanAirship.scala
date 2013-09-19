@@ -1,7 +1,7 @@
 package com.keepit.realtime
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Future, future}
 import scala.slick.driver.BasicProfile
 import scala.slick.lifted.BaseTypeMapper
 
@@ -120,13 +120,18 @@ class UrbanAirshipImpl @Inject()(
 
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device = {
     log.info(s"Registering device: $token (user $userId)")
-    db.readWrite { implicit s =>
+    val device = db.readWrite { implicit s =>
       deviceRepo.get(userId, token, deviceType) match {
         case Some(d) if d.state == DeviceStates.ACTIVE => d
         case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE))
         case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType))
       }
     }
+    future {
+      val devices = db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
+      devices.foreach{ updateDeviceState(_) }
+    }
+    device
   }
 
   def notifyUser(userId: Id[User], notification: PushNotification): Unit = {
