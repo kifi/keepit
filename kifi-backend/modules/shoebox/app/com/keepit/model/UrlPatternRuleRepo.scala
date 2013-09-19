@@ -15,7 +15,6 @@ trait UrlPatternRuleRepo extends Repo[UrlPatternRule] {
   def getTrustedDomain(url: String)(implicit session: RSession): Option[String]
   def getPreferredNormalization(url: String)(implicit session: RSession): Option[Normalization]
   def normSchemePage(page: Int, pageSize: Int)(implicit session: RSession): (Seq[UrlPatternRule], Int)
-  def getSliderNotShown()(implicit session: RSession): Seq[UrlPatternRule]
 }
 
 @Singleton
@@ -34,10 +33,9 @@ class UrlPatternRuleRepoImpl @Inject() (
     def pattern = column[String]("pattern", O.NotNull)
     def example = column[String]("example", O.Nullable)
     def isUnscrapable = column[Boolean]("is_unscrapable", O.NotNull)
-    def doNotSlide = column[Boolean]("do_not_slide", O.NotNull)
     def normalization = column[Normalization]("normalization", O.Nullable)
     def trustedDomain = column[String]("trusted_domain", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ state ~ pattern ~ example.? ~ isUnscrapable ~ doNotSlide ~ normalization.? ~ trustedDomain.? <> (UrlPatternRule.apply _, UrlPatternRule.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ state ~ pattern ~ example.? ~ isUnscrapable ~ normalization.? ~ trustedDomain.? <> (UrlPatternRule.apply _, UrlPatternRule.unapply _)
   }
 
   private var allMemCache: Option[Seq[UrlPatternRule]] = None
@@ -62,7 +60,6 @@ class UrlPatternRuleRepoImpl @Inject() (
   def isUnscrapable(url: String)(implicit session: RSession): Boolean = findFirst(url).map(_.isUnscrapable).getOrElse(false)
   def getTrustedDomain(url: String)(implicit session: RSession): Option[String] = for { rule <- findFirst(url); trustedDomain <- rule.trustedDomain } yield trustedDomain
   def getPreferredNormalization(url: String)(implicit session: RSession): Option[Normalization] = for { rule <- findFirst(url); normalization <- rule.normalization } yield normalization
-  def getSliderNotShown()(implicit session: RSession): Seq[UrlPatternRule] = allActive().filter(_.doNotSlide)
 
   def normSchemePage(page: Int, pageSize: Int)(implicit session: RSession): (Seq[UrlPatternRule], Int) = {
     val ds = (for (d <- table if d.state =!= UrlPatternRuleStates.INACTIVE && d.normalization.isNotNull) yield d).sortBy(_.pattern).list

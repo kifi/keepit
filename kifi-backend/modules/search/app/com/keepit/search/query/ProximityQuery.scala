@@ -31,7 +31,9 @@ object ProximityQuery {
   def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]) = {
     val notInPhrase = termIds.clone
     phrases.foreach{ case (pos, len) =>
-      (pos until (pos + len)).foreach{ idx => notInPhrase(idx) = -1 }
+      if (pos + len <= notInPhrase.length) {
+        (pos until (pos + len)).foreach{ idx => notInPhrase(idx) = -1 }
+      }
     }
 
     (notInPhrase.filter{ _ >= 0 }.map{ id => (Seq(id), TermMatch(1).asInstanceOf[Match]) } ++

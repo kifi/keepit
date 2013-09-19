@@ -8,6 +8,7 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.inject._
@@ -20,8 +21,9 @@ case object Index
 
 private[index] class ArticleIndexerActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     articleIndexer: ArticleIndexer)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+  extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case Index => try {

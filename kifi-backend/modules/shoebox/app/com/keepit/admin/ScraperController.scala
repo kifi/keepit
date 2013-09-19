@@ -81,42 +81,5 @@ class ScraperController @Inject() (
       case None => errorMsg(id)
     }
   }
-
-  def getUnscrapable() = AdminHtmlAction { implicit request =>
-    val docs = db.readOnly { implicit conn =>
-      urlPatternRuleRepo.allActive().filter(_.isUnscrapable)
-    }
-
-    Ok(html.admin.unscrapable(docs))
-  }
-
-  def previewUnscrapable() = AdminHtmlAction { implicit request =>
-    val form = request.request.body.asFormUrlEncoded match {
-      case Some(req) => req.map(r => (r._1 -> r._2.head))
-      case None => throw new Exception("No form data given.")
-    }
-    val pattern = form.get("pattern").get
-    val numRecords = form.get("count").get.toInt
-    val records = {
-      val (destinSet, normSet) = db.readWrite { implicit conn =>
-        val paged = scrapeInfoRepo.page(0, numRecords)
-        (paged.map(si => si.destinationUrl).flatten, paged.map(si => normalizedURIRepo.get(si.uriId).url))
-      }
-      destinSet.filter(_.matches(pattern)) ++ normSet.filter(_.matches(pattern))
-    }
-    Ok(html.admin.unscrapablePreview(pattern, numRecords, records))
-  }
-
-  def createUnscrapable() = AdminHtmlAction { implicit request =>
-    val form = request.request.body.asFormUrlEncoded match {
-      case Some(req) => req.map(r => (r._1 -> r._2.head))
-      case None => throw new Exception("No form data given.")
-    }
-    val pattern = form.get("pattern").get
-    db.readWrite { implicit conn =>
-      urlPatternRuleRepo.save(UrlPatternRule(pattern = pattern, isUnscrapable = true))
-    }
-    Redirect(com.keepit.controllers.admin.routes.ScraperController.getUnscrapable())
-  }
 }
 
