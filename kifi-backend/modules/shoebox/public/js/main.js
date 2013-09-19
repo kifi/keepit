@@ -7,7 +7,12 @@ var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 var compareSearch = {usage: "search", sensitivity: "base"};
 var compareSort = {numeric: true};
 
-$.ajaxSetup({cache: true, crossDomain: true, xhrFields: {withCredentials: true}});
+$.ajaxSetup({
+	timeout: 10000,
+	cache: true,
+	crossDomain: true,
+	xhrFields: {withCredentials: true}
+});
 
 $.timeago.settings.localeTitle = true;
 $.extend($.timeago.settings.strings, {
