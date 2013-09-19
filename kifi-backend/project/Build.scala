@@ -138,9 +138,9 @@ object ApplicationBuild extends Build {
       routesImport ++= _routesImport,
       resolvers ++= commonResolvers,
       templatesImport ++= _templatesImport,
-      javaOptions in test ++= javaTestOptions,
 
       javaOptions in test ++= javaTestOptions,
+      Keys.fork in Test := false,
       parallelExecution in Test := true,
       testOptions in Test ++= _testOptions,
       EclipseKeys.skipParents in ThisBuild := false,
