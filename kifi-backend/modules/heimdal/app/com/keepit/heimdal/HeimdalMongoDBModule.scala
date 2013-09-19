@@ -30,7 +30,7 @@ case class ProdMongoModule() extends MongoModule {
     val password = current.configuration.getString("mongodb.heimdal.password").get
     val auth = Authenticate("heimdal", username, password)
     val driver = new MongoDriver
-    val connection = driver.connection(List(nodeA, nodeB), List(auth, auth), 10, Some("UserEventLoggingMongoActorSystem"))
+    val connection = driver.connection(List(nodeA), List(auth), 10, Some("UserEventLoggingMongoActorSystem"))
     val db = connection("heimdal")
     val collection = db("user_events")
     new ProdUserEventLoggingRepo(collection, healthcheckPlugin)
