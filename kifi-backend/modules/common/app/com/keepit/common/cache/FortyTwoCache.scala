@@ -11,7 +11,7 @@ import net.sf.ehcache._
 import net.sf.ehcache.config.CacheConfiguration
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.serializer.{Serializer, BinaryFormat}
@@ -63,7 +63,7 @@ object CacheStatistics extends Logging {
 }
 
 trait FortyTwoCachePlugin extends Plugin {
-  private[cache] def onError(error: HealthcheckError) {}
+  private[cache] def onError(error: AirbrakeError) {}
 
   def get(key: String): Option[Any]
   def remove(key: String): Unit
@@ -77,12 +77,12 @@ trait InMemoryCachePlugin extends FortyTwoCachePlugin
 @Singleton
 class MemcachedCache @Inject() (
   val cache: MemcachedPlugin,
-  val healthcheck: HealthcheckPlugin) extends FortyTwoCachePlugin {
+  val airbrake: AirbrakeNotifier) extends FortyTwoCachePlugin {
   def get(key: String): Option[Any] =
     cache.api.get(key)
 
-  override def onError(he: HealthcheckError) {
-    healthcheck.addError(he)
+  override def onError(error: AirbrakeError) {
+    airbrake.notify(error)
   }
 
   def remove(key: String) {
@@ -103,7 +103,11 @@ class MemcachedCache @Inject() (
 class EhCacheConfiguration extends CacheConfiguration
 
 @Singleton
-class EhCacheCache @Inject() (config: EhCacheConfiguration, val healthcheck: HealthcheckPlugin) extends InMemoryCachePlugin {
+class EhCacheCache @Inject() (
+  config: EhCacheConfiguration,
+  val airbrake: AirbrakeNotifier)
+    extends InMemoryCachePlugin {
+
   lazy val (manager, cache) = {
     val manager = CacheManager.create()
     val cache = new Cache(config)
@@ -112,7 +116,7 @@ class EhCacheCache @Inject() (config: EhCacheConfiguration, val healthcheck: Hea
   }
   override def onStart() { cache }
   override def onStop() { manager. shutdown() }
-  override def onError(he: HealthcheckError) { healthcheck.addError(he) }
+  override def onError(error: AirbrakeError) { airbrake.notify(error) }
 
   def get(key: String): Option[Any] = Option(cache.get(key)).map(_.getObjectValue)
   def remove(key: String) { cache.remove(key) }
@@ -242,8 +246,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     val getStart = currentDateTime.getMillis()
     val valueOpt = try repo.get(key.toString) catch {
       case e: Throwable =>
-        repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some(s"Failed fetching key $key from $repo")))
+        repo.onError(AirbrakeError(e, Some(s"Failed fetching key $key from $repo")))
         None
     }
     try {
@@ -262,8 +265,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       objOpt
     } catch {
       case e: Throwable =>
-        repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some(s"Failed deserializing key $key from $repo, got raw value $valueOpt")))
+        repo.onError(AirbrakeError(e, Some(s"Failed deserializing key $key from $repo, got raw value $valueOpt")))
         repo.remove(key.toString)
         None
     }
@@ -313,8 +315,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       if (outerCache isEmpty) CacheStatistics.recordSet("Cache", key.namespace, setEnd - setStart)
     } catch {
       case e: Throwable =>
-        repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some(s"Failed setting key $key in $repo")))
+        repo.onError(AirbrakeError(e, Some(s"Failed setting key $key in $repo")))
         throw e
     }
   }
@@ -322,8 +323,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   def remove(key: K) {
     try repo.remove(key.toString) catch {
       case e: Throwable =>
-        repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some(s"Failed removing key $key from $repo")))
+        repo.onError(AirbrakeError(e, Some(s"Failed removing key $key from $repo")))
         None
     }
     outerCache map {outer => outer.remove(key)}
