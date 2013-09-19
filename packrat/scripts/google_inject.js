@@ -143,7 +143,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         onShow();
       } else {
         $res.data("onShow", onShow);
-        $status.attr("data-n", resp.hits.length).addClass(resp.show ? "kifi-promote" : "").layout();
+        $status.attr("data-n", resp.hits.length).addClass(resp.show && resp.hits.length ? "kifi-promote" : "").layout();
       }
       $status.parent().removeClass("kifi-loading");
 
