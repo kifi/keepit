@@ -1,21 +1,30 @@
 package com.keepit.search.query.parser
 
 import com.keepit.search.query.BooleanQueryWithPercentMatch
-import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.ConditionalQuery
+import com.keepit.search.query.MediaQuery
+import com.keepit.search.query.SiteQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanClause._
-import org.apache.lucene.analysis.Analyzer
+import org.apache.lucene.search.Filter
 import scala.collection.mutable.ArrayBuffer
-import com.keepit.search.query.MediaQuery
 
 trait PercentMatch extends QueryParser {
 
   private[this] var percentMatch: Float = 0.0f
+  private[this] var percentMatchForHotDocs: Float = 1.0f
+  private[this] var hotDocFilter: Option[Filter] = None
 
-  def setPercentMatch(value: Float) { percentMatch = value }
+  def setPercentMatch(value: Float): Unit = {
+    percentMatch = value
+  }
+
+  def setPercentMatchForHotDocs(value: Float, hotDocs: Filter): Unit = {
+    percentMatchForHotDocs = value
+    hotDocFilter = Option(hotDocs)
+  }
 
   override protected def getBooleanQuery(clauses: ArrayBuffer[BooleanClause]): Option[Query] = {
     if (clauses.isEmpty) {
@@ -23,6 +32,7 @@ trait PercentMatch extends QueryParser {
     } else {
       val query = new BooleanQueryWithPercentMatch(false) // ignore disableCoord. we always enable coord and control the behavior thru a Similarity instance
       query.setPercentMatch(percentMatch)
+      hotDocFilter.foreach{ f => query.setPercentMatchForHotDocs(percentMatchForHotDocs, f) }
 
       val (specialClauses, otherClauses) = clauses.partition{ clause => (clause.getQuery.isInstanceOf[SiteQuery] || clause.getQuery.isInstanceOf[MediaQuery]) && !clause.isProhibited }
       otherClauses.foreach{ clause => query.add(clause) }
