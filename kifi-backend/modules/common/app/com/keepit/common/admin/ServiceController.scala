@@ -49,10 +49,10 @@ class ServiceController @Inject() (
             s"$comKeepitMatch\t$stackMatch\t${st.getClassName}.${st.getMethodName}:${st.getLineNumber}"
           } mkString("\n")
           Some(header + "\n" + stackStr)
-          
+
         } else None
       }.flatten.mkString("\n\n")
-      Ok(allThreads)
+      Ok(allThreads + "\n\n")
     }
 
     def threadSummary = Action { request =>
@@ -73,7 +73,7 @@ class ServiceController @Inject() (
         .map(th => s"${th._2}\t${th._1}")
         .mkString("\n")
 
-      Ok(displayOut)
+      Ok(displayOut + "\n\n")
     }
 
 }
