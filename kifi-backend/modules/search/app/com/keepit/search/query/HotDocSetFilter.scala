@@ -6,9 +6,11 @@ import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.DocIdSet
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.Filter
 import org.apache.lucene.util.Bits
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.search.index.IdMapper
 
 class HotDocSetFilter extends Filter {
   private[this] var ids: collection.Set[Long] = Set()
@@ -29,21 +31,22 @@ class HotDocSetFilter extends Filter {
           }
           buf.sorted
         }
-
         new DocIdSet {
-
           override def iterator(): DocIdSetIterator = throw new UnsupportedOperationException
-
-          override def bits(): Bits = new Bits {
-            private[this] val docidSet = docidBuf.toSet
-            private[this] val mapper = reader.getIdMapper
-            private[this] val clickBoosts = boosts
-
-            override def get(doc: Int): Boolean = (docidSet.contains(doc) || clickBoosts(mapper.getId(doc)) > 1.0f)
-            override def length(): Int = reader.maxDoc
-          }
+          override def bits(): Bits = new HotDocSet(docidBuf.toSet, boosts, reader.getIdMapper)
         }
+
       case _ => throw new IllegalArgumentException("the reader is not WrappedSubReader")
     }
   }
 }
+
+class HotDocSet(docids: Set[Int], clickBoosts: ResultClickBoosts, mapper: IdMapper) extends Bits {
+  override def get(doc: Int): Boolean = (docids.contains(doc) || clickBoosts(mapper.getId(doc)) > 1.0f)
+  override def length(): Int = mapper.maxDoc
+
+  def explain(doc: Int): Explanation = {
+    new Explanation(if (get(doc)) 1.0f else 0.0f, s"hot(id-match=${docids.contains(doc)}, boosted=${clickBoosts(mapper.getId(doc)) > 1.0f})")
+  }
+}
+
