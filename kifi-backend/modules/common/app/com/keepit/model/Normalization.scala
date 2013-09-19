@@ -21,7 +21,7 @@ object Normalization {
   val HTTP = Normalization("http://")
   val HTTPWWW = Normalization("http://www")
   val HTTPSM = Normalization("https://m")
-  val HTTPSMOBILE = Normalization("http://mobile")
+  val HTTPSMOBILE = Normalization("https://mobile")
   val HTTPM = Normalization("http://m")
   val HTTPMOBILE = Normalization("http://mobile")
   val MOVED = Normalization("301")
