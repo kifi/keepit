@@ -217,8 +217,7 @@ class MainSearcher(
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
       Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
-      hotDocs.setHotDocs(personalizedSearcher.hotDocs)
-      hotDocs.setClickBoosts(clickBoosts)
+      hotDocs.set(personalizedSearcher.browsingFilter, clickBoosts)
 
       val tLucene = currentDateTime.getMillis()
       personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
@@ -455,9 +454,8 @@ class MainSearcher(
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
-      hotDocs.setHotDocs(personalizedSearcher.hotDocs)
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
-      hotDocs.setClickBoosts(clickBoosts)
+      hotDocs.set(personalizedSearcher.browsingFilter, clickBoosts)
 
       (query, personalizedSearcher.explain(query, uriId.id))
     }
