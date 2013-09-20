@@ -16,7 +16,7 @@ import com.keepit.model.{User, NormalizedURI}
 
 import play.api.test.Helpers._
 import play.api.libs.json.{Json}
-import com.keepit.realtime.UrbanAirship
+import com.keepit.realtime.{UrbanAirship, FakeUrbanAirshipImpl}
 
 
 class MessagingTest extends Specification with DbTestInjector {
@@ -30,7 +30,7 @@ class MessagingTest extends Specification with DbTestInjector {
     val notificationRouter = inject[NotificationRouter]
     val clock = inject[Clock]
     val uriNormalizationUpdater: UriNormalizationUpdater = null
-    val urbanAirship:UrbanAirship = null
+    val urbanAirship: UrbanAirship = new FakeUrbanAirshipImpl()
     val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, clock, uriNormalizationUpdater, urbanAirship)
 
     val user1 = Id[User](42)
