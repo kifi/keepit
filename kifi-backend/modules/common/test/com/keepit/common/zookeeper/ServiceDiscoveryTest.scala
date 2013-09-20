@@ -42,7 +42,7 @@ class ServiceDiscoveryTest extends Specification with DeprecatedTestInjector {
       withInjector() { implicit injector =>
         val zk = inject[ZooKeeperClient]
         val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], inject[Scheduler], ServiceType.TEST_MODE::Nil)
-        val registeredNode = discovery.register()
+        val registeredNode = discovery.register(doKeepAlive = false)
         fromByteArray(zk.get(registeredNode)) === RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.STARTING, ServiceType.TEST_MODE))
       }
     }
