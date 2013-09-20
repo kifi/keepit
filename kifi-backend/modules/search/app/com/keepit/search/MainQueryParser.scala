@@ -7,7 +7,6 @@ import com.keepit.search.query.parser.DefaultSyntax
 import com.keepit.search.query.parser.PercentMatch
 import com.keepit.search.query.parser.QueryExpansion
 import com.keepit.search.query.parser.QueryParserException
-import com.keepit.search.query.Coordinator
 import com.keepit.search.query.ProximityQuery
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.SemanticVectorQuery
@@ -22,7 +21,6 @@ import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import scala.collection.mutable.ArrayBuffer
-import com.keepit.search.query.AdditiveBoostQuery
 import com.keepit.search.query.MultiplicativeBoostQuery
 import com.keepit.search.query.BoostQuery
 import com.keepit.search.query.PhraseProximityQuery
@@ -85,12 +83,6 @@ class MainQueryParser(
           Set.empty[(Int, Int)]
         }
 
-        val textQuery = if (phraseBoost > 0.0f && phraseProximityBoost > 0.0f && phrases.nonEmpty) {
-          new AdditiveBoostQuery(query, Array[Query](createPhraseQueries(phrases)))
-        } else {
-          query
-        }
-
         val auxQueries = ArrayBuffer.empty[Query]
         val auxStrengths = ArrayBuffer.empty[Float]
 
@@ -117,9 +109,9 @@ class MainQueryParser(
         }
 
         if (!auxQueries.isEmpty) {
-          new MultiplicativeBoostQuery(textQuery, auxQueries.toArray, auxStrengths.toArray)
+          new MultiplicativeBoostQuery(query, auxQueries.toArray, auxStrengths.toArray)
         } else {
-          textQuery
+          query
         }
       }
     }
