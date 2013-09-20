@@ -31,6 +31,8 @@ import play.api.data.format.Formats._
 import play.api.libs.json.Json
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.zookeeper.CentralConfig
+import com.keepit.integrity.RenormalizationCheckKey
 
 
 class UrlController @Inject() (
@@ -55,6 +57,7 @@ class UrlController @Inject() (
   normalizationService: NormalizationService,
   urlPatternRuleRepo: UrlPatternRuleRepo,
   renormRepo: RenormalizedURLRepo,
+  centralConfig: CentralConfig,
   eliza: ElizaServiceClient) extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
@@ -95,13 +98,26 @@ class UrlController @Inject() (
       }
     }
     
+    def getUrlList() = {
+      val urls = db.readOnly { implicit s =>
+        domain match {
+          case Some(domainStr) => urlRepo.getByDomain(domainStr)
+          case None => urlRepo.all
+        }
+      }
+      val lastId = centralConfig(new RenormalizationCheckKey())
+    }
+    
     var changes = Vector.empty[(URL, Option[NormalizedURI])]
 
-    db.readWrite { implicit session =>
-      val urls = domain match {
+    val urls = db.readOnly { implicit s =>
+      domain match {
         case Some(domainStr) => urlRepo.getByDomain(domainStr)
         case None => urlRepo.all
       }
+    }
+    
+    db.readWrite { implicit session =>
 
       urls.filter(_.state == URLStates.ACTIVE)foreach { url =>
         needRenormalization(url) match {
