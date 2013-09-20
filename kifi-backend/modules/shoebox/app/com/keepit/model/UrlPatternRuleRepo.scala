@@ -14,7 +14,6 @@ trait UrlPatternRuleRepo extends Repo[UrlPatternRule] {
   def isUnscrapable(url: String)(implicit session: RSession): Boolean
   def getTrustedDomain(url: String)(implicit session: RSession): Option[String]
   def getPreferredNormalization(url: String)(implicit session: RSession): Option[Normalization]
-  def normSchemePage(page: Int, pageSize: Int)(implicit session: RSession): (Seq[UrlPatternRule], Int)
 }
 
 @Singleton
@@ -60,11 +59,4 @@ class UrlPatternRuleRepoImpl @Inject() (
   def isUnscrapable(url: String)(implicit session: RSession): Boolean = findFirst(url).map(_.isUnscrapable).getOrElse(false)
   def getTrustedDomain(url: String)(implicit session: RSession): Option[String] = for { rule <- findFirst(url); trustedDomain <- rule.trustedDomain } yield trustedDomain
   def getPreferredNormalization(url: String)(implicit session: RSession): Option[Normalization] = for { rule <- findFirst(url); normalization <- rule.normalization } yield normalization
-
-  def normSchemePage(page: Int, pageSize: Int)(implicit session: RSession): (Seq[UrlPatternRule], Int) = {
-    val ds = (for (d <- table if d.state =!= UrlPatternRuleStates.INACTIVE && d.normalization.isNotNull) yield d).sortBy(_.pattern).list
-    (ds.drop(page*pageSize).take(pageSize), ds.size)
-  }
-
-
 }
