@@ -6,7 +6,7 @@ import com.keepit.common.time.Clock
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
-import com.keepit.normalizer.{NormalizationService, NormalizationCandidate}
+import com.keepit.normalizer.{SchemeNormalizer, NormalizationService, NormalizationCandidate}
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.modules.statsd.api.Statsd
 
@@ -45,11 +45,12 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
+    def restriction = column[Restriction]("restriction", O.Nullable)
     def normalization = column[Normalization]("normalization", O.Nullable)
     def redirect = column[Id[NormalizedURI]]("redirect", O.Nullable)
     def redirectTime = column[DateTime]("redirect_time", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~
-        screenshotUpdatedAt.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
+        screenshotUpdatedAt.? ~ restriction.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
   }
 
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
@@ -135,16 +136,17 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
     Statsd.time(key = "normalizedURIRepo.internByUri") {
-        val normalizedUri = getByUri(url) match {
-        case Some(uri) => uri
+      getByUri(url) match {
+        case Some(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(uri, isNew = false, candidates)); uri
         case None => {
-          val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalize(url)))
+          val normalizedUrl = prenormalize(url)
+          val normalization = findNormalization(normalizedUrl)
+          val newUri = save(NormalizedURI.withHash(normalizedUrl = normalizedUrl, normalization = normalization))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
+          session.onTransactionSuccess(normalizationServiceProvider.get.update(newUri, isNew = true, candidates))
           newUri
         }
       }
-      session.onTransactionSuccess(normalizationServiceProvider.get.update(normalizedUri, candidates: _*))
-      normalizedUri
     }
   }
   
@@ -153,4 +155,6 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   private def prenormalize(uriString: String)(implicit session: RSession): String = Statsd.time(key = "normalizedURIRepo.prenormalize") { normalizationServiceProvider.get.prenormalize(uriString) }
+  private def findNormalization(normalizedUrl: String): Option[Normalization] =
+    SchemeNormalizer.generateVariations(normalizedUrl).find { case (_, url) => (url == normalizedUrl) }.map { case (normalization, _) => normalization }
 }

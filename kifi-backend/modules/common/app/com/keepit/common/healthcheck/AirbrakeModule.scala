@@ -23,8 +23,8 @@ case class ProdAirbrakeModule() extends AirbrakeModule {
   }
 
   @Provides
-  def airbrakeProvider(actor: ActorInstance[AirbrakeNotifierActor], formatter: AirbrakeFormatter): AirbrakeNotifier = {
-    new AirbrakeNotifierImpl(actor, formatter)
+  def airbrakeProvider(actor: ActorInstance[AirbrakeNotifierActor]): AirbrakeNotifier = {
+    new AirbrakeNotifierImpl(actor)
   }
 
 }
@@ -37,7 +37,7 @@ case class DevAirbrakeModule() extends AirbrakeModule {
   def airbrakeProvider(httpClient: HttpClient, actor: ActorInstance[AirbrakeNotifierActor], mode: Mode, fortyTwoServices: FortyTwoServices): AirbrakeNotifier = {
     new AirbrakeNotifier() {
       val apiKey: String = "fakeApiKey"
-      def notify(error: AirbrakeError): Unit = println(error)
+      def notify(error: AirbrakeError): AirbrakeError = {println(error); error}
       val playMode: Mode = mode
       val service: FortyTwoServices = fortyTwoServices
     }

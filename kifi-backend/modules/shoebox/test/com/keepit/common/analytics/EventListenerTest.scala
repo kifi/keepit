@@ -20,17 +20,17 @@ class EventListenerTest extends Specification with ShoeboxApplicationInjector {
 
   def setup()(implicit injector: Injector) = {
     db.readWrite {implicit s =>
-      val normUrlId = uriRepo.save(NormalizedURI.withHash("http://www.google.com/")).id.get
-      val url = urlRepo.save(URLFactory(url = "http://www.google.com/", normalizedUriId = normUrlId))
+      val normUrl = uriRepo.save(NormalizedURI.withHash("http://www.google.com/"))
+      val url = urlRepo.save(URLFactory(url = "http://www.google.com/", normalizedUriId = normUrl.id.get))
       val user = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
       val bookmark = bookmarkRepo.save(BookmarkFactory(
-        title = "test",
-        url = url,
-        uriId = normUrlId,
+        uri = normUrl,
         userId = user.id.get,
+        title = Some("test"),
+        url = url,
         source = BookmarkSource("HOVER_KEEP")
       ))
-      (normUrlId, url, user, bookmark)
+      (normUrl.id.get, url, user, bookmark)
     }
   }
 

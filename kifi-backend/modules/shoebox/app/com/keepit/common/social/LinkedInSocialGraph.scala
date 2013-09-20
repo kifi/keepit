@@ -3,6 +3,7 @@ package com.keepit.common.social
 import scala.concurrent.Future
 
 import com.google.inject.Inject
+import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.HttpClient
 import com.keepit.model.{SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
@@ -10,11 +11,11 @@ import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGra
 
 import play.api.libs.json._
 import play.api.libs.ws.WS
-import com.keepit.common.db.slick.Database
 
 object LinkedInSocialGraph {
   val ProfileFields = Seq("id","firstName","lastName","pictureUrl","publicProfileUrl")
   val ProfileFieldSelector = ProfileFields.mkString("(",",",")")
+  val ConnectionsPageSize = 500
 }
 
 class LinkedInSocialGraph @Inject() (
@@ -78,8 +79,9 @@ class LinkedInSocialGraph @Inject() (
     "body" -> body
   )
 
-  private def connectionsUrl(id: SocialId, accessToken: String): String = {
-    s"https://api.linkedin.com/v1/people/$id/connections:$ProfileFieldSelector?format=json&oauth2_access_token=$accessToken"
+  private def connectionsUrl(id: SocialId, accessToken: String, start: Int, count: Int): String = {
+    s"https://api.linkedin.com/v1/people/$id/connections:$ProfileFieldSelector?format=json" +
+        s"&start=$start&count=$count&oauth2_access_token=$accessToken"
   }
 
   private def profileUrl(id: SocialId, accessToken: String): String = {
@@ -97,12 +99,15 @@ class LinkedInSocialGraph @Inject() (
     } getOrElse sui
   }
 
+  private def getJson(url: String): JsValue = client.longTimeout().get(url).json
+
   private def getJson(socialUserInfo: SocialUserInfo): Seq[JsValue] = {
+    import LinkedInSocialGraph.{ConnectionsPageSize => PageSize}
     val token = getAccessToken(socialUserInfo)
     val sid = socialUserInfo.socialId
-    for (url <- Seq(connectionsUrl(sid, token), profileUrl(sid, token))) yield {
-      client.longTimeout().get(url).json
-    }
+    val connectionsPages = Stream.from(0).map { n => getJson(connectionsUrl(sid, token, n*PageSize, PageSize)) }
+    val numPages = 1 + connectionsPages.indexWhere(json => (json \ "_count").asOpt[Int].getOrElse(0) < PageSize)
+    connectionsPages.take(numPages).toIndexedSeq :+ getJson(profileUrl(sid, token))
   }
 
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) =

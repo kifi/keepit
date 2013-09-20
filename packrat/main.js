@@ -798,7 +798,7 @@ function awaitDeepLink(link, tabId, retrySec) {
       api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: link.locator}, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {
       api.log("[awaitDeepLink]", tabId, "retrying in", retrySec, "sec");
-      setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
+      api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
     }
   } else {
     api.log("[awaitDeepLink] no locator", tabId, link);
@@ -1091,7 +1091,7 @@ function whenTabFocused(tab, key, callback) {
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
 
-  for(var key in tab.focusCallbacks) {
+  for (var key in tab.focusCallbacks) {
     tab.focusCallbacks[key](tab);
   }
 
@@ -1143,10 +1143,8 @@ function getPrefetched(request, cb) {
   }
 }
 
-api.tabs.on.unload.add(function(tab) {
+api.tabs.on.unload.add(function(tab, historyApi) {
   api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
-  api.timers.clearTimeout(tab.autoShowTimer);
-  delete tab.autoShowTimer;
   var d = pageData[tab.nUri];
   if (d) {
     for (var i = 0; i < d.tabs.length; i++) {
@@ -1157,6 +1155,14 @@ api.tabs.on.unload.add(function(tab) {
     if (!d.tabs.length) {
       delete pageData[tab.nUri];
     }
+  }
+  api.timers.clearTimeout(tab.autoShowTimer);
+  delete tab.autoShowTimer;
+  delete tab.nUri;
+  delete tab.inited;
+  delete tab.focusCallbacks;
+  if (historyApi) {
+    api.tabs.emit(tab, "reset");
   }
 });
 
@@ -1330,7 +1336,7 @@ function startSession(callback, retryMs) {
     api.log("[startSession:fail] xhr.status:", xhr.status);
     if (!xhr.status || xhr.status >= 500) {  // server down or no network connection, so consider retrying
       if (retryMs) {
-        setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
+        api.timers.setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
       }
     } else if (getStored("kifi_installation_id")) {
       openLogin(callback, retryMs);
