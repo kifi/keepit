@@ -121,16 +121,8 @@ class UrlController @Inject() (
     }
     
     // main code
-    
     var changes = Vector.empty[(URL, Option[NormalizedURI])]
-
-    val urls = db.readOnly { implicit s =>
-      domain match {
-        case Some(domainStr) => urlRepo.getByDomain(domainStr)
-        case None => urlRepo.all
-      }
-    }
-    
+    val urls = getUrlList()
     val batchUrls = batch[URL](urls, batchSize = 500)     // avoid long DB write lock.
     
     batchUrls.map { urls =>
