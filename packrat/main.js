@@ -36,20 +36,20 @@ function clearDataCache() {
 
 function PageData() {
   this.tabs = [];
-  this.on2Callbacks = [];
 }
 PageData.prototype = {
-  on2: function(cb) {
-    if (this.counts) {
+  withThreadData: function(cb) {
+    if (this.threadDataReceived) {
       cb();
     } else {
-      this.on2Callbacks.push(cb);
+      (this.threadDataCallbacks || (this.threadDataCallbacks = [])).push(cb);
     }
   },
-  dispatchOn2: function() {
-    while (this.on2Callbacks.length) {
-      this.on2Callbacks.shift()();
+  dispatchThreadData: function() {
+    for (var arr = this.threadDataCallbacks; arr && arr.length;) {
+      arr.shift()();
     }
+    delete this.threadDataCallbacks;
   }};
 
 // ===== Server requests
@@ -265,11 +265,11 @@ const socketHandlers = {
       var d = pageData[u];
       d.counts = {n: 0, m: messageCount(d)};
       d.threadDataReceived = true;
+      d.dispatchThreadData();
       if (d.pageDetailsReceived) {
         d.tabs.forEach(function(tab) {
           initTab(tab, d);
         });
-        d.dispatchOn2();
       }
       // Push threads with any new messages to relevant tabs and load+push their messages too.
       var threadsPrev = threadsPrevByUri[u], threadsWithNewMessages = [];
@@ -522,13 +522,13 @@ api.port.on({
   },
   threads: function(_, respond, tab) {
     var d = pageData[tab.nUri];
-    if (d) d.on2(function() {
+    if (d) d.withThreadData(function() {
       respond({threads: d.threads, read: d.lastMessageRead});
     });
   },
   thread: function(data, respond, tab) {
     var d = pageData[tab.nUri];
-    if (d) d.on2(function() {
+    if (d) d.withThreadData(function() {
       var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
       if (th && messageData[th.id]) {
         if (data.respond) {
@@ -1006,14 +1006,12 @@ function subscribe(tab) {
       d.counts = d.counts || {m:0, n:0};
       d.lastMessageRead = d.lastMessageRead || {};
       d.pageDetailsReceived = true;
+
       if (d.threadDataReceived) {
         d.tabs.forEach(function(tab) {
           initTab(tab, d);
         });
-        d.dispatchOn2();
       }
-
-      tellTabsNoticeCountIfChanged();
     }, function fail(xhr) {
       if (xhr.status == 403) {
         session = null;
