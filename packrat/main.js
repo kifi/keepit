@@ -980,32 +980,30 @@ function subscribe(tab) {
 
       api.log("[subscribe]", resp);
       var uri = resp.normalized;
-      var uri_1 = resp.uri_1 || resp;
-      var uri_2 = resp.uri_2 || resp;
 
       if ((api.tabs.get(tab.id) || {}).url != tab.url) return;
       d = pageData[uri] = pageData[uri] || new PageData;
       finish(uri);
 
-      // uri_1
-      d.kept = uri_1.kept;
-      d.position = uri_1.position;
-      d.neverOnSite = uri_1.neverOnSite;
-      d.sensitive = uri_1.sensitive;
+      d.kept = resp.kept;
+      d.position = resp.position;
+      d.neverOnSite = resp.neverOnSite;
+      d.sensitive = resp.sensitive;
+      d.shown = resp.shown;
+      d.keepers = resp.keepers || [];
+      d.keeps = resp.keeps || 0;
+      d.otherKeeps = d.keeps - d.keepers.length - (d.kept === "public");
+      d.pageDetailsReceived = true;
+
+      // TODO: don’t initialize this thread data here as if it were known
+      d.threads = d.threads || [];
+      d.counts = d.counts || {m:0, n:0};
+      d.lastMessageRead = d.lastMessageRead || {};
+
       d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
         sendInit(tab, d);
       });
-
-      // uri_2
-      d.shown = uri_2.shown;
-      d.keepers = uri_2.keepers || [];
-      d.keeps = uri_2.keeps || 0;
-      d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
-      d.threads = d.threads || [];
-      d.counts = d.counts || {m:0, n:0};
-      d.lastMessageRead = d.lastMessageRead || {};
-      d.pageDetailsReceived = true;
 
       if (d.threadDataReceived) {
         d.tabs.forEach(function(tab) {
