@@ -24,6 +24,8 @@ class HotDocSetFilter extends Filter {
   }
 
   override def getDocIdSet(context: AtomicReaderContext, acceptDocs: Bits): DocIdSet = {
+    if (browsingFilter == null || boosts == null) throw new IllegalStateException("missing browsing history and result click boosts")
+
     context.reader match {
       case reader: WrappedSubReader =>
         new DocIdSet {
