@@ -19,17 +19,27 @@ import scala.xml._
 
 import play.api.mvc._
 
-case class AirbrakeNotice(xml: NodeSeq)
+case class AirbrakeNotice(error: AirbrakeError)
 
 private[healthcheck] class AirbrakeNotifierActor @Inject() (
     airbrakeSender: AirbrakeSender,
     formatter: AirbrakeFormatter)
   extends AlertingActor with Logging {
 
-  def alert(reason: Throwable, message: Option[Any]) = self ! AirbrakeNotice(formatter.format(error(reason, message)))
+  def alert(reason: Throwable, message: Option[Any]) = self ! AirbrakeNotice(error(reason, message))
 
   def receive() = {
-    case AirbrakeNotice(xml) => airbrakeSender.send(xml); println(xml)
+    case AirbrakeNotice(error) => {
+      try {
+        val xml = formatter.format(error)
+        airbrakeSender.send(xml);
+        println(xml)
+      } catch {
+        case e: Throwable =>
+          log.error(s"can't format or send error $error")
+          throw e
+      }
+    }
     case m => throw new Exception(s"unknown message $m")
   }
 }
@@ -51,7 +61,7 @@ class AirbrakeSender @Inject() (httpClient: HttpClient) extends Logging {
 class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices) {
 
   private def formatStacktrace(traceElements: Array[StackTraceElement]) =
-    traceElements.filter(e => !e.getFileName.contains("Airbrake")).map(e => {
+    traceElements.filter(e => e != null && e.getFileName != null && !e.getFileName.contains("Airbrake")).map(e => {
       <line method={e.getMethodName} file={e.getFileName} number={e.getLineNumber.toString}/>
     })
 
@@ -121,11 +131,10 @@ trait AirbrakeNotifier {
 
 // apiKey is per service type (showbox, search etc)
 class AirbrakeNotifierImpl (
-  actor: ActorInstance[AirbrakeNotifierActor],
-  formatter: AirbrakeFormatter) extends AirbrakeNotifier with Logging {
+  actor: ActorInstance[AirbrakeNotifierActor]) extends AirbrakeNotifier with Logging {
 
   def notify(error: AirbrakeError): AirbrakeError = {
-    actor.ref ! AirbrakeNotice(formatter.format(error))
+    actor.ref ! AirbrakeNotice(error)
     log.error(error.toString())
     error
   }
