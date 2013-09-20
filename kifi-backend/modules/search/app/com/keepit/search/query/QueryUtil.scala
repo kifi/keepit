@@ -50,20 +50,12 @@ object QueryUtil extends Logging {
     }
   }
 
-  def emptyScorer(weight: Weight) = new Scorer(weight) with Coordinator {
+  def emptyScorer(weight: Weight) = new Scorer(weight) {
     override def score(): Float = 0.0f
     override def docID() = NO_MORE_DOCS
     override def nextDoc(): Int = NO_MORE_DOCS
     override def advance(target: Int): Int = NO_MORE_DOCS
     override def freq() = 0
-  }
-
-  def toScorerWithCoordinator(scorer: Scorer) = new Scorer(null.asInstanceOf[Weight]) with Coordinator {
-    override def score() = scorer.score()
-    override def docID() = scorer.docID()
-    override def nextDoc() = scorer.nextDoc()
-    override def advance(target: Int) = scorer.advance(target)
-    override def freq() = scorer.freq()
   }
 
   def copy(query: TermQuery, field: String): Query = {

@@ -12,7 +12,7 @@ object ArticleVisibility {
 class ArticleVisibility(reader: WrappedSubReader) {
   import ArticleVisibility._
 
-  private val redirect: DocIdSetIterator = {
+  private[this] val redirect: DocIdSetIterator = {
     val it = reader.termDocsEnum(redirectTerm)
     if (it == null) QueryUtil.emptyDocsEnum else it
   }
