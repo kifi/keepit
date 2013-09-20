@@ -5,6 +5,7 @@ const hostRe = /^https?:\/\/([^\/]*)/;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
+var threadCallbacks = {};
 
 // ===== Cached data from server
 
@@ -236,15 +237,10 @@ const socketHandlers = {
     var d = pageData[th.uri];
     if (d) {
       messageData[th.id] = th.messages;
-      if (d.threadCallbacks) {
-        for (var i = 0; i < d.threadCallbacks.length; i++) {
-          var cb = d.threadCallbacks[i];
-          if (th.id == cb.id || th.messages.some(hasId(cb.id))) {
-            cb.respond({id: th.id, messages: th.messages, participants: th.messages[0].participants});
-            d.threadCallbacks.splice(i--, 1);
-          }
-        }
+      for (var arr = threadCallbacks[th.id], i = 0; arr && i < arr.length; i++) {
+        arr[i]({id: th.id, messages: th.messages, participants: th.messages[0].participants});
       }
+      delete threadCallbacks[th.id];
     } else {
       api.log("[socket:thread]", "Can't process thread, no pageData")
     }
@@ -280,18 +276,19 @@ const socketHandlers = {
         });
         d.dispatchOn2();
       }
+      // Push threads with any new messages to relevant tabs and load+push their messages too.
       var threadsPrev = threadsPrevByUri[u], threadsWithNewMessages = [];
       d.threads.forEach(function(th) {
         var thPrev = threadsPrev.filter(hasId(th.id))[0];
         var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
         if (numNew) {
           socket.send(["get_thread", th.id]);
-          (d.threadCallbacks = d.threadCallbacks || []).push({id: th.id, respond: function(th) {
+          (threadCallbacks[th.id] || (threadCallbacks[th.id] = [])).push(function(th) {
             d.tabs.forEach(function(tab) {
               // TODO: may want to special case (numNew == 1) for an animation
               api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
             });
-          }});
+          });
           threadsWithNewMessages.push(th);
         }
       });
@@ -546,7 +543,7 @@ api.port.on({
         var id = (th || data).id;
         socket.send(["get_thread", id]);
         if (data.respond) {
-          (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond});
+          (threadCallbacks[id] || (threadCallbacks[id] = [])).push(respond);
         }
       }
     });
