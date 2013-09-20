@@ -11,6 +11,7 @@ import play.api.mvc._
 import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
 import scala.collection.JavaConversions._
+import sun.management.ManagementFactory
 
 class ServiceController @Inject() (
     serviceDiscovery: ServiceDiscovery) extends Controller with Logging {
@@ -31,8 +32,21 @@ class ServiceController @Inject() (
 
     def threadDetails(name: String = "", state: String = "", stack: String = "") = Action { request =>
       val onlyShowUs = request.queryString.get("us").nonEmpty
+      val hideStack = request.queryString.get("hideStack").nonEmpty
+      val cpuTime = request.queryString.get("cpuSample").map(_.head.toInt)
 
-      val allThreads = Thread.getAllStackTraces.map { case (thread, stackTrace) =>
+      val threads = Thread.getAllStackTraces()
+
+      val cpuTimes = threads.map(t => t._1.getId() -> getCpu(t._1.getId()))
+      val totalCPUTime = cpuTimes.values.sum
+      val (secondCpuTimes, diffCpuTime) = if (cpuTime.nonEmpty) {
+        Thread.sleep(cpuTime.get)
+        val newTimes = threads.map(t => t._1.getId() -> getCpu(t._1.getId()))
+        val diffTime = newTimes.values.sum - totalCPUTime
+        (Some(newTimes), Some(diffTime))
+      } else (None, None)
+
+      val allThreads = threads.map { case (thread, stackTrace) =>
         val threadName = thread.getName
         val isOurCodeInThisStack = stackTrace.filter(s => (s.getClassName + s.getMethodName).toLowerCase.contains("com.keepit")).nonEmpty
 
@@ -40,19 +54,30 @@ class ServiceController @Inject() (
           && (threadName.toLowerCase.contains(name.toLowerCase) && thread.getState.toString.toLowerCase.contains(state.toLowerCase))
           && (stack.isEmpty || stackTrace.filter(s => (s.getClassName + s.getMethodName).toLowerCase.contains(stack.toLowerCase)).nonEmpty)) {
 
-          val header = s"${thread.getName}\t(${thread.getState.toString})"
-          val stackStr = stackTrace.map { st =>
+          val cpuShare = (cpuTimes.getOrElse(thread.getId(), 0L).toDouble / totalCPUTime.toDouble) * 100
+          val header = f"${thread.getName}\t${thread.getState.toString}\t$cpuShare%1.2f%" +
+            (if (cpuTime.nonEmpty) {
+              val tid = thread.getId()
+              val threadCpuShare = ((secondCpuTimes.get(tid) - cpuTimes(tid)).toDouble / diffCpuTime.get.toDouble) * 100
+              f"\t$threadCpuShare%1.2f%"
+            } else "")
+          val stackStr = if(!hideStack) stackTrace.map { st =>
             val matchName = (st.getClassName + st.getMethodName).toLowerCase
             val comKeepitMatch = if (matchName.contains("com.keepit.")) "*" else ""
             val stackMatch = if (stack.nonEmpty && matchName.contains(stack.toLowerCase)) "*"
             else ""
             s"$comKeepitMatch\t$stackMatch\t${st.getClassName}.${st.getMethodName}:${st.getLineNumber}"
-          } mkString("\n")
+          } mkString("\n") else ""
           Some(header + "\n" + stackStr)
 
         } else None
       }.flatten.mkString("\n\n")
       Ok(allThreads + "\n\n")
+    }
+
+    private val lolbean = ManagementFactory.getThreadMXBean()
+    private def getCpu(tid: Long) = {
+      lolbean.getThreadCpuTime(tid)
     }
 
     def threadSummary = Action { request =>
