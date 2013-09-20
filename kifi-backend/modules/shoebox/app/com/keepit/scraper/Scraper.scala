@@ -15,16 +15,14 @@ import org.joda.time.Seconds
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.store.S3ScreenshotStore
 import org.joda.time.Days
-import net.codingwell.scalaguice.ScalaModule
-import com.keepit.inject.AppScoped
-import scala.util.Failure
-import scala.Some
-import com.keepit.model.NormalizedURI
+import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.HealthcheckError
-import scala.util.Success
 import com.keepit.model.ScrapeInfo
 import com.keepit.search.Article
 import com.keepit.common.net.URI
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.normalizer.{TrustedCandidate, NormalizationService}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Scraper {
   val BATCH_SIZE = 100
@@ -41,8 +39,9 @@ class Scraper @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   healthcheckPlugin: HealthcheckPlugin,
   bookmarkRepo: BookmarkRepo,
-  unscrapableRepo: UnscrapableRepo,
-  s3ScreenshotStore: S3ScreenshotStore)
+  urlPatternRuleRepo: UrlPatternRuleRepo,
+  s3ScreenshotStore: S3ScreenshotStore,
+  normalizationServiceProvider: Provider[NormalizationService])
     extends Logging {
 
   implicit val config = scraperConfig
@@ -119,13 +118,14 @@ class Scraper @Inject() (
       val latestUri = normalizedURIRepo.get(uri.id.get)
       if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
       else fetchedArticle match {
-        case Scraped(article, signature) =>
+        case Scraped(article, signature, redirects) =>
           // store a scraped article in a store map
           articleStore += (latestUri.id.get -> article)
 
           val scrapedURI = {
             // first update the uri state to SCRAPED
-            val savedUri = normalizedURIRepo.save(latestUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+            val toBeSaved = processRedirects(latestUri, redirects).withTitle(article.title).withState(NormalizedURIStates.SCRAPED)
+            val savedUri = normalizedURIRepo.save(toBeSaved)
             // then update the scrape schedule
             scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
             bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
@@ -134,6 +134,7 @@ class Scraper @Inject() (
             savedUri
           }
           log.debug("fetched uri %s => %s".format(scrapedURI, article))
+
 
           def shouldUpdateScreenshot(uri: NormalizedURI) = {
             uri.screenshotUpdatedAt map { update =>
@@ -144,10 +145,11 @@ class Scraper @Inject() (
             s3ScreenshotStore.updatePicture(scrapedURI)
 
           (scrapedURI, Some(article))
-        case NotScrapable(destinationUrl) =>
+        case NotScrapable(destinationUrl, redirects) =>
           val unscrapableURI = {
             scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-            normalizedURIRepo.save(latestUri.withState(NormalizedURIStates.UNSCRAPABLE))
+            val toBeSaved = processRedirects(latestUri, redirects).withState(NormalizedURIStates.UNSCRAPABLE)
+            normalizedURIRepo.save(toBeSaved)
           }
           (unscrapableURI, None)
         case NotModified =>
@@ -160,6 +162,7 @@ class Scraper @Inject() (
               id = latestUri.id.get,
               title = latestUri.title.getOrElse(""),
               description = None,
+              keywords = None,
               media = None,
               content = "",
               scrapedAt = currentDateTime,
@@ -216,7 +219,7 @@ class Scraper @Inject() (
 
   protected def isUnscrapable(url: String, destinationUrl: Option[String]) = {
     db.readOnly { implicit s =>
-      (unscrapableRepo.contains(url) || (destinationUrl.isDefined && unscrapableRepo.contains(destinationUrl.get)))
+      (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
     }
   }
 
@@ -231,16 +234,20 @@ class Scraper @Inject() (
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
           if (isUnscrapable(url, fetchStatus.destinationUrl)) {
-            NotScrapable(fetchStatus.destinationUrl)
+            NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects)
           } else {
             val content = extractor.getContent
             val title = getTitle(extractor)
             val description = getDescription(extractor)
+            val keywords = getKeywords(extractor)
             val media = getMediaTypeString(extractor)
             val signature = Signature(Seq(title, description.getOrElse(""), content))
 
             // now detect the document change
-            val docChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
+            val docChanged = {
+              normalizedUri.title != Option(title) || // title change should always invoke indexing
+              signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
+            }
 
             // if unchanged, don't trigger indexing. buf if SCRAPE_WANTED or SCRAPE_FAILED, we always change the state and invoke indexing.
             if (!docChanged &&
@@ -257,6 +264,7 @@ class Scraper @Inject() (
                   id = normalizedUri.id.get,
                   title = title,
                   description = description,
+                  keywords = keywords,
                   media = media,
                   content = content,
                   scrapedAt = currentDateTime,
@@ -268,7 +276,8 @@ class Scraper @Inject() (
                   contentLang = Some(contentLang),
                   destinationUrl = fetchStatus.destinationUrl
                ),
-               signature)
+               signature,
+               fetchStatus.redirects)
             }
           }
         case HttpStatus.SC_NOT_MODIFIED =>
@@ -281,19 +290,19 @@ class Scraper @Inject() (
     }
   }
 
-  private[this] def getTitle(x: Extractor): String = {
-    x.getMetadata("title").getOrElse("")
-  }
-  private[this] def getDescription(x: Extractor): Option[String] = {
-    x.getMetadata("description").orElse(x.getMetadata("Description")).orElse(x.getMetadata("DESCRIPTION"))
-  }
+  private[this] def getTitle(x: Extractor): String = x.getMetadata("title").getOrElse("")
+
+  private[this] def getDescription(x: Extractor): Option[String] = x.getMetadata("description")
+
+  private[this] def getKeywords(x: Extractor): Option[String] = x.getKeywords
+
   private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
 
   def close() {
     httpFetcher.close()
   }
-  
+
   private[this] def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
     title = getTitle(extractor),
     content = extractor.getContent,
@@ -303,4 +312,25 @@ class Scraper @Inject() (
     httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
     destinationUrl = Some(destinationUrl)
   )
+
+  private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect])(implicit session: RWSession): NormalizedURI = {
+    val (permanentRedirects, otherRedirects) = redirects.partition(_.isPermanent)
+    val withRestriction = otherRedirects.headOption.map { redirect => uri.copy(restriction = Some(Restriction(redirect.statusCode))) }
+    val toBeRedirected = for {
+      redirect <- permanentRedirects.find(redirect => redirect.isAbsolute && redirect.currentLocation == uri.url)
+      toBeRedirected <- recordPermanentRedirect(withRestriction.getOrElse(uri), redirect)
+    } yield toBeRedirected
+    toBeRedirected orElse withRestriction getOrElse uri
+  }
+
+  private def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit session: RWSession): Option[NormalizedURI] = {
+    require(redirect.statusCode == 301, "HTTP redirect is not permanent.")
+    require(redirect.currentLocation == uri.url, "Current Location of HTTP redirect does not match normalized Uri.")
+    val candidateUri = normalizedURIRepo.internByUri(redirect.newDestination)
+    candidateUri.normalization.map { normalization =>
+      val toBeRedirected = uri.withNormalization(Normalization.MOVED)
+      session.onTransactionSuccess(normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization)))
+      toBeRedirected
+    }
+  }
 }

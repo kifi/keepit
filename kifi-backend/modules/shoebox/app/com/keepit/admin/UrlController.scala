@@ -6,7 +6,6 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.time._
-import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.common.mail._
 import play.api.libs.concurrent.Akka
 import scala.concurrent.duration._
@@ -16,15 +15,16 @@ import com.google.inject.Inject
 import com.keepit.integrity.OrphanCleaner
 import com.keepit.integrity.DuplicateDocumentDetection
 import com.keepit.integrity.DuplicateDocumentsProcessor
-import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.integrity.UriIntegrityPlugin
-import com.keepit.integrity.MergedUri
+import com.keepit.normalizer.NormalizationService
+import com.keepit.model.DuplicateDocument
 import com.keepit.integrity.SplittedUri
-import org.joda.time.DateTime
-import com.keepit.common.time.zones.PT
-import com.keepit.normalizer.{TrustedCandidate, NormalizationService, Prenormalizer}
-import scala.concurrent.Await
-
+import com.keepit.common.healthcheck.BabysitterTimeout
+import com.keepit.normalizer.TrustedCandidate
+import com.keepit.integrity.MergedUri
+import com.keepit.integrity.HandleDuplicatesAction
+import com.keepit.eliza.ElizaServiceClient
+import com.keepit.common.akka.MonitoredAwait
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -45,8 +45,10 @@ class UrlController @Inject() (
   dupeDetect: DuplicateDocumentDetection,
   duplicatesProcessor: DuplicateDocumentsProcessor,
   uriIntegrityPlugin: UriIntegrityPlugin,
-  normalizationService: NormalizationService)
-    extends AdminController(actionAuthenticator) {
+  normalizationService: NormalizationService,
+  urlPatternRuleRepo: UrlPatternRuleRepo,
+  eliza: ElizaServiceClient,
+  monitoredAwait: MonitoredAwait) extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -89,7 +91,7 @@ class UrlController @Inject() (
             case Some(nuri) => (nuri, URLHistoryCause.MERGE)
             // No normalized URI exists for this url, create one
             case None => {
-              val tmp = NormalizedURI.withHash(Prenormalizer(url.url))
+              val tmp = NormalizedURI.withHash(normalizationService.prenormalize(url.url))
               val nuri = if (!readOnly) uriRepo.save(tmp) else tmp
               (nuri, URLHistoryCause.SPLIT)
             }
@@ -181,7 +183,7 @@ class UrlController @Inject() (
   
   def batchMerge = AdminHtmlAction{ request =>
     implicit val playRequest = request.request
-    Await.result(uriIntegrityPlugin.batchUpdateMerge(), 5 seconds)
+    monitoredAwait.result(uriIntegrityPlugin.batchUpdateMerge(), 1 minute, "Manual merge failed.")
     Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0))
   }
 
@@ -194,7 +196,7 @@ class UrlController @Inject() (
           Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUri.id.get}: ${newUri.url} isn't normalized.")
         case (Some(oldUri), Some(newUri)) => {
           val normalization = if (canonical) Normalization.CANONICAL else newUri.normalization.get
-          val result = Await.result(normalizationService.update(oldUri, TrustedCandidate(newUri.url, normalization)), 5 seconds)
+          val result = monitoredAwait.result(normalizationService.update(oldUri, TrustedCandidate(newUri.url, normalization)), 1 minute, "Manual normalization update failed.")
           if (result.isDefined)
             Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to ${newUri.id.get}: ${newUri.url}")
           else
@@ -203,8 +205,54 @@ class UrlController @Inject() (
       }
     }
   }
-}
 
+  def getPatterns = AdminHtmlAction { implicit request =>
+    val patterns = db.readOnly { implicit session =>
+      urlPatternRuleRepo.all.sortBy(_.id.get.id)
+    }
+    Ok(html.admin.urlPatternRules(patterns))
+  }
+
+  def savePatterns = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
+    db.readWrite { implicit session =>
+      for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
+        val id = Id[UrlPatternRule](key.toLong)
+        val oldPat = urlPatternRuleRepo.get(id)
+        val newPat = oldPat.copy(
+          pattern = body("pattern_" + key),
+          example = Some(body("example_" + key)).filter(!_.isEmpty),
+          state = if (body.contains("active_" + key)) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
+          isUnscrapable = body.contains("unscrapable_"+ key),
+          normalization = body("normalization_" + key) match {
+            case "None" => None
+            case scheme => Some(Normalization(scheme))
+          },
+          trustedDomain = Some(body("trusted_domain_" + key)).filter(!_.isEmpty)
+        )
+
+        if (newPat != oldPat) {
+          urlPatternRuleRepo.save(newPat)
+        }
+      }
+      val newPat = body("new_pattern")
+      if (newPat.nonEmpty) {
+        urlPatternRuleRepo.save(UrlPatternRule(
+          pattern = newPat,
+          example = Some(body("new_example")).filter(!_.isEmpty),
+          state = if (body.contains("new_active")) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
+          isUnscrapable = body.contains("new_unscrapable"),
+          normalization = body("new_normalization") match {
+            case "None" => None
+            case scheme => Some(Normalization(scheme))
+          },
+          trustedDomain = Some(body("new_trusted_domain")).filter(!_.isEmpty)
+        ))
+      }
+    }
+    Redirect(routes.UrlController.getPatterns)
+  }
+}
 
 case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
 case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes: Seq[DisplayedDuplicate])

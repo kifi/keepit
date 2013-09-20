@@ -4,12 +4,11 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.controller.FortyTwoCookies.{KifiInstallationCookie, ImpersonateCookie}
 import securesocial.core._
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.{ExternalId, State, Id}
-import com.keepit.common.social.{ConnectionUpdater}
 import com.keepit.common.db.slick.DBSession.RSession
 import play.api.mvc._
 import com.keepit.model.ExperimentType
@@ -27,9 +26,8 @@ class ShoeboxActionAuthenticator @Inject() (
   userExperimentRepo: UserExperimentRepo,
   userRepo: UserRepo,
   fortyTwoServices: FortyTwoServices,
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   impersonateCookie: ImpersonateCookie,
-  connectionUpdater: ConnectionUpdater,
   kifiInstallationCookie: KifiInstallationCookie)
   extends ActionAuthenticator with SecureSocial with Logging {
 
@@ -133,14 +131,9 @@ class ShoeboxActionAuthenticator @Inject() (
         }
       } catch {
         case e: Throwable =>
-          val globalError = healthcheckPlugin.addError(HealthcheckError(
-            error = Some(e),
-            method = Some(request.method.toUpperCase()),
-            path = Some(request.path),
-            callType = Healthcheck.API,
-            errorMessage = Some("Error executing with userId %s, experiments [%s], installation %s".format(
-              userId, experiments.mkString(","), kifiInstallationId.getOrElse("NA")))))
-          log.error("healthcheck reported [%s]".format(globalError.id), e)
+          val globalError = airbrake.notify(AirbrakeError(request, e,
+              s"Error executing with userId $userId, experiments [$experiments.mkString(',')], installation kifiInstallationId.getOrElse('-')"))
+          log.error("error reported [$globalError.id]", e)
           throw ReportedException(globalError.id, e)
       }
     }

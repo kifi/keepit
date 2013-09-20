@@ -6,7 +6,9 @@
   </ol>
 {{/anyResults}}
 {{^anyResults}}
-  <div id="kifi-res-list" class="kifi-res-none">Sorry, no keeps match this filter.</div>
+  <div id="kifi-res-list" class="kifi-res-none"{{^filter}} style="display:none"{{/filter}}>
+    Sorry, no keeps match this {{#filter}}filter{{/filter}}{{^filter}}search query{{/filter}}.
+  </div>
 {{/anyResults}}
 
 <div class="kifi-res-end"{{^show}} style="display:none"{{/show}}>{{!

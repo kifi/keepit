@@ -109,8 +109,8 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[URL](profile)
   }
 
-  implicit object UnscrapableIdTypeMapper extends BaseTypeMapper[Id[Unscrapable]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[Unscrapable](profile)
+  implicit object UrlPatternRuleIdTypeMapper extends BaseTypeMapper[Id[UrlPatternRule]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[UrlPatternRule](profile)
   }
 
   implicit object NormalizedURIIdTypeMapper extends BaseTypeMapper[Id[NormalizedURI]] {
@@ -249,6 +249,10 @@ object FortyTwoTypeMappers {
 
   implicit object NormalizationTypeMapper extends BaseTypeMapper[Normalization] {
     def apply(profile: BasicProfile) = new NormalizationMapperDelegate(profile)
+  }
+
+  implicit object RestrictionTypeMapper extends BaseTypeMapper[Restriction] {
+    def apply(profile: BasicProfile) = new RestrictionMapperDelegate(profile)
   }
 
   implicit object JsArrayTypeMapper extends BaseTypeMapper[JsArray] {
@@ -623,3 +627,11 @@ class NormalizationMapperDelegate[T](profile: BasicProfile) extends StringMapper
   def safeDestToSource(str: String): Normalization = Normalization(str)
 }
 
+//************************************
+//       Restriction -> String
+//************************************
+class RestrictionMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[Restriction](profile) {
+  def zero = Restriction("")
+  def sourceToDest(value: Restriction): String = value.context
+  def safeDestToSource(str: String): Restriction = Restriction(str)
+}

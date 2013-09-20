@@ -7,6 +7,7 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{NonOKResponseException, ClientResponse, HttpClient}
 import com.keepit.common.plugin._
@@ -23,8 +24,9 @@ private[store] class ImageDataIntegrityActor @Inject() (
     userRepo: UserRepo,
     store: S3ImageStore,
     client: HttpClient,
-    healthcheckPlugin: HealthcheckPlugin
-  ) extends FortyTwoActor(healthcheckPlugin) with Logging {
+    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier
+  ) extends FortyTwoActor(airbrake) with Logging {
 
   private val httpClient: HttpClient = client.longTimeout()
 

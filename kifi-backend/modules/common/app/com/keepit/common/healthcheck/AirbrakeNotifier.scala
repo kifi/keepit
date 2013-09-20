@@ -1,9 +1,10 @@
 package com.keepit.common.healthcheck
 
+import com.keepit.common.db.ExternalId
 import com.google.inject.Inject
 import com.google.inject.ImplementedBy
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.AlertingActor
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
@@ -18,15 +19,27 @@ import scala.xml._
 
 import play.api.mvc._
 
-case class AirbrakeNotice(xml: NodeSeq)
+case class AirbrakeNotice(error: AirbrakeError)
 
 private[healthcheck] class AirbrakeNotifierActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
-    airbrakeSender: AirbrakeSender)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+    airbrakeSender: AirbrakeSender,
+    formatter: AirbrakeFormatter)
+  extends AlertingActor with Logging {
+
+  def alert(reason: Throwable, message: Option[Any]) = self ! AirbrakeNotice(error(reason, message))
 
   def receive() = {
-    case AirbrakeNotice(xml) => airbrakeSender.send(xml); println(xml)
+    case AirbrakeNotice(error) => {
+      try {
+        val xml = formatter.format(error)
+        airbrakeSender.send(xml);
+        println(xml)
+      } catch {
+        case e: Throwable =>
+          log.error(s"can't format or send error $error")
+          throw e
+      }
+    }
     case m => throw new Exception(s"unknown message $m")
   }
 }
@@ -37,22 +50,18 @@ class AirbrakeSender @Inject() (httpClient: HttpClient) extends Logging {
   def send(xml: NodeSeq) = httpClient.
     withHeaders("Content-type" -> "text/xml").
     postXmlFuture("http://airbrakeapp.com/notifier_api/v2/notices", xml) map { res =>
-      val xml = res.xml
-      val id = (xml \ "id").head.text
-      val url = (xml \ "url").head.text
-      log.info(s"sent to airbreak error $id more info at $url")
-      println(s"sent to airbreak error $id more info at $url")
+      val xmlRes = res.xml
+      val id = (xmlRes \ "id").head.text
+      val url = (xmlRes \ "url").head.text
+      log.info(s"sent to airbreak error $id more info at $url: $xml")
+      println(s"sent to airbreak error $id more info at $url: $xml")
     }
 }
 
-trait AirbrakeNotifier {
-  def notifyError(error: AirbrakeError): Unit
-  val apiKey: String
-  val playMode: Mode
-  val service: FortyTwoServices
+class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices) {
 
   private def formatStacktrace(traceElements: Array[StackTraceElement]) =
-    traceElements.filter(e => !e.getFileName.contains("Airbrake")).map(e => {
+    traceElements.filter(e => e != null && e.getFileName != null && !e.getFileName.contains("Airbrake")).map(e => {
       <line method={e.getMethodName} file={e.getFileName} number={e.getLineNumber.toString}/>
     })
 
@@ -64,22 +73,25 @@ trait AirbrakeNotifier {
     case true => Nil
   }
 
-  private def formatHeaders(params: Map[String,Seq[String]]) = params.isEmpty match {
+  private def formatHeaders(params: Map[String,Seq[String]], id: ExternalId[AirbrakeError]) = params.isEmpty match {
     case false =>
-      (<session>{params.flatMap(e => {
+      (<session>
+        <var key="InternalErrorId">{id.id}</var>
+        {params.flatMap(e => {
           <var key={e._1}>{e._2.mkString(" ")}</var>
-      })}</session>)::Nil
+        }
+      )}</session>)::Nil
     case true => Nil
   }
 
   //todo(eishay): add component and session
-  private def noticeRequest(url: String, params: Map[String, Seq[String]], method: Option[String], headers: Map[String, Seq[String]]) =
+  private def noticeRequest(url: String, params: Map[String, Seq[String]], method: Option[String], headers: Map[String, Seq[String]], id: ExternalId[AirbrakeError]) =
     <request>
       <url>{url}</url>
       <component/>
       { formatParams(params) }
       { method.map(m => <action>{m}</action>).getOrElse(<action/>) }
-      { formatHeaders(headers.toMap) }
+      { formatHeaders(headers.toMap, id) }
     </request>
 
   private def noticeError(error: Throwable, message: Option[String]) =
@@ -92,7 +104,7 @@ trait AirbrakeNotifier {
     </error>
 
   private def noticeEntities(error: AirbrakeError) =
-    (Some(noticeError(error.exception, error.message)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers)} :: Nil).flatten
+    (Some(noticeError(error.exception, error.message)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers, error.id)} :: Nil).flatten
 
   //http://airbrake.io/airbrake_2_3.xsd
   private[healthcheck] def format(error: AirbrakeError) =
@@ -113,13 +125,18 @@ trait AirbrakeNotifier {
     </notice>
 }
 
+trait AirbrakeNotifier {
+  def notify(error: AirbrakeError): AirbrakeError
+}
+
 // apiKey is per service type (showbox, search etc)
 class AirbrakeNotifierImpl (
-  val apiKey: String,
-  actor: ActorInstance[AirbrakeNotifierActor],
-  val playMode: Mode,
-  val service: FortyTwoServices) extends AirbrakeNotifier {
+  actor: ActorInstance[AirbrakeNotifierActor]) extends AirbrakeNotifier with Logging {
 
-  def notifyError(error: AirbrakeError): Unit = actor.ref ! AirbrakeNotice(format(error))
+  def notify(error: AirbrakeError): AirbrakeError = {
+    actor.ref ! AirbrakeNotice(error)
+    log.error(error.toString())
+    error
+  }
 }
 

@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.google.inject.Injector
+import com.google.inject.{Provider, Injector}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import java.io.OutputStreamWriter
 import com.keepit.common.store.FakeS3ScreenshotStore
+import com.keepit.normalizer.NormalizationService
 
 class ScraperTest extends Specification with ShoeboxTestInjector {
   val config = ScraperConfig(
@@ -42,7 +43,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
 
         result must beAnInstanceOf[Scraped] // Article
         (result: @unchecked) match {
-          case Scraped(article, signature) =>
+          case Scraped(article, signature, redirects) =>
             article.title === "foo"
             article.content === "this is a body text. bar."
         }
@@ -289,7 +290,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
   def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher)(implicit injector: Injector) = {
     new Scraper(inject[Database], mockHttpFetcher, articleStore, config,
       inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin],
-      inject[BookmarkRepo], inject[UnscrapableRepo], new FakeS3ScreenshotStore) {
+      inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore, inject[Provider[NormalizationService]]) {
       override protected def getExtractor(url: String): Extractor = {
         new TikaBasedExtractor(url, 10000, None) {
           protected def getContentHandler = new BodyContentHandler(output)

@@ -23,7 +23,7 @@ import scala.concurrent.duration._
 import ArticleRecordSerializer._
 
 object ArticleIndexer {
-  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE)
+  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE, REDIRECTED)
   def shouldDelete(uri: NormalizedURI): Boolean = toBeDeletedStates.contains(uri.state)
 }
 
@@ -132,10 +132,7 @@ class ArticleIndexer @Inject() (
           val contentAnalyzer = DefaultAnalyzer.forIndexing(contentLang)
           val contentAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(contentLang)
 
-          val content = article.description match {
-            case Some(desc) => desc + "\n\n" + article.content
-            case None => article.content
-          }
+          val content = (Seq(article.content) ++ article.description ++ article.keywords).mkString("\n\n")
 
           doc.add(buildTextField("t", article.title, titleAnalyzer))
           doc.add(buildTextField("ts", article.title, titleAnalyzerWithStemmer))

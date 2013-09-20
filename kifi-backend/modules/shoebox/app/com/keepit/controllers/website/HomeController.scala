@@ -7,15 +7,14 @@ import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
-import com.keepit.model._
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.model._
+import com.keepit.social.{SocialNetworkType, SocialGraphPlugin}
 
 import play.api.Play.current
 import play.api._
-import play.api.http.MimeTypes
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
-import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
 
 class HomeController @Inject() (db: Database,
   userRepo: UserRepo,
@@ -32,6 +31,14 @@ class HomeController @Inject() (db: Database,
   fortyTwoServices: FortyTwoServices)
   extends WebsiteController(actionAuthenticator) {
 
+  private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
+    db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
+  }
+
+  private def setHasSeenInstall()(implicit request: AuthenticatedRequest[_]): Unit = {
+    db.readWrite { implicit s => userValueRepo.setValue(request.userId, "has_seen_install", true.toString) }
+  }
+
   def version = Action {
     Ok(fortyTwoServices.currentVersion.toString)
   }
@@ -39,8 +46,10 @@ class HomeController @Inject() (db: Database,
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
     if (request.user.state == UserStates.PENDING) {
       pendingHome()
+    } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
+      Redirect(routes.HomeController.install())
     } else {
-      Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as MimeTypes.HTML
+      Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
   }, unauthenticatedAction = { implicit request =>
     Ok(views.html.website.welcome())
@@ -119,6 +128,7 @@ class HomeController @Inject() (db: Database,
         }
       }
     }
+    setHasSeenInstall()
     Ok(views.html.website.install(request.user))
   }
 

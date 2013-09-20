@@ -67,7 +67,7 @@ var tile = tile || function() {  // idempotent for Chrome
       if (!onScroll) {
         var lastScrollTime = 0;
         document.addEventListener("scroll", onScroll = function(e) {
-          var t = e.timeStamp || +new Date;
+          var t = e.timeStamp || Date.now();
           if (t - lastScrollTime > 100) {  // throttling to avoid measuring DOM too freq
             lastScrollTime = t;
             var hPage = document.body.scrollHeight;
@@ -81,7 +81,8 @@ var tile = tile || function() {  // idempotent for Chrome
           }
         });
       }
-    }
+    },
+    reset: cleanUpDom.bind(null, true)
   });
   function onKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey) {  // ⌘-shift-[key], ctrl-shift-[key]
@@ -170,7 +171,7 @@ var tile = tile || function() {  // idempotent for Chrome
     tile.remove();
   }
   tile = document.createElement("div");
-  tile.dataset.t0 = +new Date;
+  tile.dataset.t0 = Date.now();
   tile.id = tile.className = "kifi-tile";
   tile.style.display = "none";
   tile.innerHTML =
@@ -211,17 +212,21 @@ var tile = tile || function() {  // idempotent for Chrome
     tile.style["transform" in tile.style ? "transform" : "webkitTransform"] = "translate(0," + px + "px)";
   }
 
-  function cleanUpDom() {
+  function cleanUpDom(leaveTileInDoc) {
     window.removeEventListener("resize", onResize);
     if (onScroll) {
       document.removeEventListener("scroll", onScroll);
       onScroll = null;
     }
     if (tile) {
-      tile.remove();
+      if (leaveTileInDoc) {
+        tile.style.display = "none";
+      } else {
+        tile.remove();
+      }
     }
     if (window.slider2) {
-      slider2.hidePane(false);
+      slider2.hidePane();
     }
   }
 

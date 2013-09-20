@@ -23,7 +23,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
     return this.on("mouseover.bindHover", selector, function(e) {
       if (e.relatedTarget && this.contains(e.relatedTarget)) return;
       var $a = $(this), data = getOrCreateData($a);
-      data.mouseoverTimeStamp = e.timeStamp || +new Date;
+      data.mouseoverTimeStamp = e.timeStamp || Date.now();
       data.mouseoverEl = e.target;
       if (!data.$h) {  // fresh start
         createHover($a, data, create);
@@ -38,7 +38,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       if (e.relatedTarget && this.contains(e.relatedTarget)) return;
       var $a = $(this), data = getOrCreateData($a);
       clearTimeout(data.show), delete data.show;
-      data.mouseoutTimeStamp = e.timeStamp || +new Date;
+      data.mouseoutTimeStamp = e.timeStamp || Date.now();
       if ($a.hasClass("kifi-hover-showing")) {
         if (data.opts && data.opts.hideAfter) {
           clearTimeout(data.hide), delete data.hide;
@@ -73,7 +73,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
   };
 
   function createHover($a, data, create, showImmediately) {
-    var createStartTime = +new Date;
+    var createStartTime = Date.now();
     create.call($a[0], function configureHover(hover, opts) {
       if (!opts && typeof hover == "object" && !hover.nodeType && !hover.jquery) {  // hover is really opts
         createFromDataAttr(hover).call($a[0], configureHover);
@@ -107,7 +107,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
     if (!data.$h || $a.hasClass("kifi-hover-showing") || isFadingOut(data)) return;
     data.$h.appendTo($a).each(function(){this.offsetHeight});
     $a.addClass("kifi-hover-showing");
-    data.showTime = +new Date;
+    data.showTime = Date.now();
     if (data.opts.hideAfter) {
       data.hide = setTimeout(hide.bind(this), data.opts.hideAfter);
     }
@@ -122,7 +122,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
     }
     if ($a.hasClass("kifi-hover-showing")) {
       $a.removeClass("kifi-hover-showing");
-      data.fadeOutStartTime = +new Date;
+      data.fadeOutStartTime = Date.now();
       data.$h.on("transitionend", function end(e) {
         if (e.target === this && e.originalEvent.propertyName === "opacity") {
           delete data.fadeOutStartTime;

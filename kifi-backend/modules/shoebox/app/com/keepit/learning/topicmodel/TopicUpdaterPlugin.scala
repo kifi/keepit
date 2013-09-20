@@ -6,7 +6,7 @@ import akka.util.Timeout
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.SequenceNumber
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorInstance
@@ -23,10 +23,10 @@ case object ContinueRemodel
 case object SwitchModel
 
 private[topicmodel] class TopicUpdaterActor @Inject() (
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   topicUpdater: TopicUpdater,
   topicRemodeler: TopicRemodeler
-) extends FortyTwoActor(healthcheckPlugin) with Logging {
+) extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case UpdateTopic => topicUpdater.update()

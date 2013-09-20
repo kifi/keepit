@@ -39,7 +39,7 @@ class ServiceDiscoveryImpl @Inject() (
     services: FortyTwoServices,
     amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
     scheduler: Scheduler,
-    servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: Nil)
+    servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: Nil)
   extends ServiceDiscovery with Logging {
 
   private var myNode: Option[Node] = None
@@ -88,6 +88,7 @@ class ServiceDiscoveryImpl @Inject() (
 
   private def keepAlive() : Unit = {
     scheduler.scheduleOnce(2 minutes){
+      forceUpdate()
       if (stillRegistered) {
         keepAlive()
       } else {
@@ -157,7 +158,7 @@ class ServiceDiscoveryImpl @Inject() (
 
     log.info("Running self check")
     services.currentService.selfCheck().onComplete{
-      case Success(passed) => if (passed) changeStatus(ServiceStatus.UP) else changeStatus(ServiceStatus.SELFCHECK_FAIL)
+      case Success(passed) => if (passed) { Thread.sleep(20000); changeStatus(ServiceStatus.UP) } else changeStatus(ServiceStatus.SELFCHECK_FAIL)
       case Failure(e) => changeStatus(ServiceStatus.SELFCHECK_FAIL)
     }
   }

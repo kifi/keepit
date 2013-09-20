@@ -8,6 +8,7 @@ import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.{HealthcheckPlugin}
+import com.keepit.heimdal.{HeimdalServiceClient}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -28,12 +29,12 @@ class ExtMessagingController @Inject() (
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
     db: Database,
-    eventStatsdInterceptor: EventStatsdInterceptor,
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
     protected val clock: Clock,
-    protected val healthcheckPlugin: HealthcheckPlugin
+    protected val healthcheckPlugin: HealthcheckPlugin,
+    protected val heimdal: HeimdalServiceClient
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
@@ -169,12 +170,14 @@ class ExtMessagingController @Inject() (
       val threadInfos = messagingController.getThreadInfos(socket.userId, url)
       socket.channel.push(Json.arr("thread_infos", threadInfos))
     },
+    "set_notfication_unread" -> { case JsString(threadId) +: _ =>
+      messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
+    },
     "log_event" -> { case JsObject(pairs) +: _ =>
       implicit val experimentFormat = State.format[ExperimentType]
       val eventJson = JsObject(pairs).deepMerge(
         Json.obj("experiments" -> socket.experiments)
       )
-      eventStatsdInterceptor.intercept(eventJson)
       shoebox.logEvent(socket.userId, eventJson)
     }
   )

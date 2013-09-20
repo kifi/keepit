@@ -9,7 +9,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
@@ -46,7 +46,7 @@ private object KeepType {
 }
 
 class MailToKeepActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     settings: MailToKeepServerSettings,
     bookmarkInterner: BookmarkInterner,
     EventPersister: EventPersister,
@@ -55,7 +55,7 @@ class MailToKeepActor @Inject() (
     db: Database,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices
-  ) extends FortyTwoActor(healthcheckPlugin) with Logging {
+  ) extends FortyTwoActor(airbrake) with Logging {
 
   // add +$emailLabel to the end if provided
   // this is so in dev mode we can append your username so as not to conflict with prod emails

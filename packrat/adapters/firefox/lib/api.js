@@ -18,19 +18,22 @@ function markInjected(inj, o) {
 const self = require("sdk/self"), data = self.data, load = data.load.bind(data), url = data.url.bind(url);
 const timers = require("sdk/timers");
 const { Ci, Cc } = require("chrome");
-const WM = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
 const {deps} = require("./deps");
 const {Listeners} = require("./listeners");
 const icon = require("./icon");
 const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
-const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(\.[a-z]{2})?\/(|search|webhp)\?(|.*&)q=([^&]*)/;
+const workerNs = require('sdk/core/namespace').ns();
 
-const pages = {}, workers = {}, tabsById = {};  // all by tab.id
+const httpRe = /^https?:/;
+
+const pages = {}, tabsById = {};
 function createPage(tab) {
   if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
-  (workers[tab.id] || (workers[tab.id] = [])).length = 0;
-  return pages[tab.id] = {id: tab.id, url: tab.url};
+  exports.log('[createPage]', tab.id, tab.url);
+  var page = pages[tab.id] = {id: tab.id, url: tab.url};
+  workerNs(page).workers = [];
+  return page;
 }
 
 exports.bookmarks = require("./bookmarks");
@@ -40,7 +43,7 @@ exports.icon = {
   set: function(page, path) {
     if (page === pages[page.id]) {
       page.icon = path;
-      exports.log("page:", page);
+      exports.log("[api.icon.set]", page.id, path);
       var tab = tabsById[page.id], win = tab.window;
       if (tab === win.tabs.activeTab) {
         icon.show(win, url(path));
@@ -303,7 +306,6 @@ function onSocketMessage(socketId, data) {
 
 exports.storage = require("sdk/simple-storage").storage;
 
-const hostRe = /^https?:\/\/[^\/]*/;
 exports.tabs = {
   anyAt: function(url) {
     for each (let page in pages) {
@@ -327,28 +329,47 @@ exports.tabs = {
   },
   each: function(callback) {
     for each (let page in pages) {
-      if (/^https?:/.test(page.url)) callback(page);
+      if (httpRe.test(page.url)) callback(page);
     }
   },
   eachSelected: function(callback) {
     for each (let win in windows) {
       var page = pages[win.tabs.activeTab.id];
-      if (page && /^https?:/.test(page.url)) callback(page);
+      if (page && httpRe.test(page.url)) callback(page);
     }
   },
-  emit: function(tab, type, data) {
-    var currTab = pages[tab.id];
-    if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
-      if (currTab.ready) {
-        exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data, "url:", tab.url);
-        workers[tab.id].forEach(function(worker) {
+  emit: function(tab, type, data, opts) {
+    var emitted;
+    const page = pages[tab.id];
+    if (page === tab) {
+      for (let worker of workerNs(page).workers) {
+        if (worker.handling[type]) {
           worker.port.emit(type, data);
-        });
-      } else {
-        (currTab.toEmit || (currTab.toEmit = [])).push([type, data]);
+          if (!emitted) {
+            emitted = true;
+            exports.log("[api.tabs.emit]", tab.id, "type:", type, "data:", data, "url:", tab.url);
+          }
+        }
       }
-    } else {
-      exports.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "->", currTab && currTab.url);
+    }
+    if (!emitted) {
+      if (opts && opts.queue) {
+        if (page.toEmit) {
+          if (opts.queue === 1) {
+            for (var i = 0; i < page.toEmit.length; i++) {
+              if (page.toEmit[i][0] === type) {
+                page.toEmit[i][1] = data;
+                return;
+              }
+            }
+          }
+          page.toEmit.push([type, data]);
+        } else {
+          page.toEmit = [[type, data]];
+        }
+      } else {
+        exports.log("[api.tabs.emit]", tab.id, "type:", type, "neither emitted nor queued for:", tab.url);
+      }
     }
   },
   get: function(pageId) {
@@ -371,7 +392,6 @@ exports.tabs = {
     focus: new Listeners,
     blur: new Listeners,
     loading: new Listeners,
-    ready: new Listeners,
     unload: new Listeners}};
 
 exports.timers = timers;
@@ -386,13 +406,8 @@ tabs
 })
 .on("close", function(tab) {
   exports.log("[tabs.close]", tab.id, tab.url);
-  var page = pages[tab.id];
-  delete pages[tab.id];
-  delete workers[tab.id];
+  onPageHide(tab.id);
   delete tabsById[tab.id];
-  if (/^https?:/.test(page.url)) {
-    dispatch.call(exports.tabs.on.unload, page);
-  }
 })
 .on("activate", function(tab) {
   var page = pages[tab.id];
@@ -408,7 +423,7 @@ tabs
       } else {
         page = createPage(tab);
       }
-      if (tab.window === windows.activeWindow && /^https?:/.test(page.url)) {
+      if (tab.window === windows.activeWindow && httpRe.test(page.url)) {
         dispatch.call(exports.tabs.on.focus, page);
       }
     }
@@ -418,14 +433,13 @@ tabs
   exports.log("[tabs.deactivate]", tab.id, tab.url);
   if (tab.window === windows.activeWindow) {
     var page = pages[tab.id];
-    if (page && /^https?:/.test(page.url)) {
+    if (page && httpRe.test(page.url)) {
       dispatch.call(exports.tabs.on.blur, page);
     }
   }
 })
 .on("ready", function(tab) {
   exports.log("[tabs.ready]", tab.id, tab.url);
-  pages[tab.id] || createPage(tab);
 });
 
 windows
@@ -439,13 +453,13 @@ windows
 })
 .on("activate", function(win) {
   var page = pages[win.tabs.activeTab.id];
-  if (page && /^https?:/.test(page.url)) {
+  if (page && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.focus, page);
   }
 })
 .on("deactivate", function(win) {
   var page = pages[win.tabs.activeTab.id];
-  if (page && /^https?:/.test(page.url)) {
+  if (page && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.blur, page);
   }
 });
@@ -460,44 +474,63 @@ for each (let win in windows) {
     tabsById[tab.id] = tab;
     pages[tab.id] || createPage(tab);
   }
-};
+}
+
+// navigation handling
+
+const stripHashRe = /^[^#]*/;
+const googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
+const plusRe = /\+/g;
+
+require('./location').onChange(function(tabId, newPage) {
+  const tab = tabsById[tabId];
+  exports.log('[location:change]', tabId, 'newPage:', newPage, tab.url);
+  if (newPage) {
+    onPageHide(tab.id);
+
+    // Note: It’s possible that this page shouldn’t actually be created, since Firefox will grab the actual
+    // page from the bfcache. If we detect that in the PageMod pageshow handler below, we discard this page.
+    // TODO: Find a way to detect at this point whether the page will be coming from the bfcache and recover
+    // our old page object if it is.
+    let page = createPage(tab);
+
+    let match = googleSearchRe.exec(tab.url);
+    if (match) {
+      let query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
+      if (query) dispatch.call(exports.on.search, query);
+    }
+    if (httpRe.test(page.url)) {
+      dispatch.call(exports.tabs.on.loading, page);
+    }
+  } else {
+    let page = pages[tabId];
+    if (page.url != tab.url) {
+      if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != tab.url.match(stripHashRe)[0]) {
+        dispatch.call(exports.tabs.on.unload, page, true);
+        page.url = tab.url;
+        dispatch.call(exports.tabs.on.loading, page);
+      } else {
+        page.url = tab.url;
+      }
+    }
+  }
+});
+
+function onPageHide(tabId) {
+  const page = pages[tabId];
+  if (page) {
+    delete pages[tabId];
+    if (httpRe.test(page.url)) {
+      dispatch.call(exports.tabs.on.unload, page);
+    }
+  }
+}
 
 // attaching content scripts
-
-let {PageMod} = require("sdk/page-mod");
-PageMod({
-  include: /^https?:.*/,
-  contentScriptFile: url("scripts/start.js"),
-  contentScriptWhen: "start",
-  attachTo: ["existing", "top"],
-  onAttach: function(worker) {
-    var tab = worker.tab;
-    exports.log("[onAttach]", tab.id, "start.js", tab.url);
-    worker.port.on("api:start", function() {
-      exports.log("[api:start]", tab.id, tab.url);
-      var oldPage = pages[tab.id];
-      if (oldPage && /^https?:/.test(oldPage.url)) {
-        dispatch.call(exports.tabs.on.unload, oldPage);
-      }
-      var page = createPage(tab);
-      var searchQuery = decodeURIComponent(((page.url.match(googleSearchPattern) || [])[4] || '').replace(/\+/g, ' '));
-      if (searchQuery) dispatch.call(exports.on.search, searchQuery);
-      dispatch.call(exports.tabs.on.loading, page);
-    });
-    worker.port.on("api:nav", function() {
-      exports.log("[api:nav]", tab.id, tab.url);
-      var oldPage = pages[tab.id];
-      if (oldPage) {
-        dispatch.call(exports.tabs.on.unload, oldPage);
-      }
-      dispatch.call(exports.tabs.on.loading, createPage(tab));
-    });
-  }});
-
 timers.setTimeout(function() {  // async to allow main.js to complete (so portHandlers can be defined)
+  const {PageMod} = require("sdk/page-mod");
   require("./meta").contentScripts.forEach(function(arr) {
-    var path = arr[0], urlRe = arr[1];
-    var o = deps(path);
+    const path = arr[0], urlRe = arr[1], o = deps(path);
     exports.log("defining PageMod:", path, "deps:", o);
     PageMod({
       include: urlRe,
@@ -507,34 +540,25 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentScriptOptions: {dataUriPrefix: url(""), dev: prefs.env == "development"},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
-        let tab = worker.tab, page = pages[tab.id];
+        const tab = worker.tab, page = pages[tab.id];
         exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
-        let injected = markInjected({}, o);
-        let pw = workers[tab.id];
-        pw.push(worker);
-        worker.on("pageshow", function() {
-          if (!page.ready && /^https?:/.test(page.url)) {
-            exports.log("[pageshow] tab:", tab.id, "url:", tab.url);
-            // marking and dispatching ready here instead of when tabs "ready" fires because:
-            //  1. content scripts are not necessarily attached yet when tabs "ready" fires
-            //  2. certain calls from content scripts fail if page is not yet visible
-            //     (see https://bugzilla.mozilla.org/show_bug.cgi?id=766088#c2)
-            page.ready = true;
-
-            (page.toEmit || []).forEach(function emit(m) {
-              exports.log("[pageshow:emit]", tab.id, m[0], m[1] != null ? m[1] : "");
-              worker.port.emit.apply(worker.port, m);
-            });
-            delete page.toEmit;
-
-            dispatch.call(exports.tabs.on.ready, page);  // must run only once per page, not per content script on page
+        const injected = markInjected({}, o);
+        const workers = workerNs(page).workers;
+        workers.push(worker);
+        worker.on("pageshow", function() {  // pageshow/pagehide discussion at bugzil.la/766088#c2
+          if (pages[tab.id] !== page) {  // bfcache used
+            exports.log("[api:pageshow] tab:", tab.id, "updating:", pages[tab.id], "->", page);
+            pages[tab.id] = page;
+          } else if (page.url !== tab.url) {  // shouldn’t happen
+            exports.log("[api:pageshow] tab:", tab.id, "updating:", page.url, "->", tab.url);
+            page.url = tab.url;
+          } else {
+            exports.log("[api:pageshow] tab:", tab.id, "url:", tab.url);
           }
+          emitQueuedMessages(page, worker);
         }).on("pagehide", function() {
           exports.log("[pagehide] tab:", tab.id);
-          pw.length = 0;
-        }).on("detach", function() {
-          exports.log("[detach] tab:", tab.id);
-          pw.length = 0;
+          onPageHide(tab.id);
         });
         Object.keys(portHandlers).forEach(function(type) {
           worker.port.on(type, function(data, callbackId) {
@@ -543,6 +567,14 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
                 worker.port.emit("api:respond", callbackId, response);
               }, page);
           });
+        });
+        worker.handling = {};
+        worker.port.on("api:handling", function(types) {
+          exports.log("[api:handling]", types);
+          for each (let type in types) {
+            worker.handling[type] = true;
+          }
+          emitQueuedMessages(page, worker);
         });
         worker.port.on("api:require", function(paths, callbackId) {
           var o = deps(paths, injected);
@@ -553,6 +585,24 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       }});
   });
 }, 0);
+
+function emitQueuedMessages(page, worker) {
+  if (page.toEmit) {
+    for (var i = 0; i < page.toEmit.length;) {
+      var m = page.toEmit[i];
+      if (worker.handling[m[0]]) {
+        exports.log("[emitQueuedMessages]", page.id, m[0], m[1] != null ? m[1] : "");
+        worker.port.emit.apply(worker.port, m);
+        page.toEmit.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
+    if (!page.toEmit.length) {
+      delete page.toEmit;
+    }
+  }
+}
 
 function removeFromWindow(win) {
   if (win.removeIcon) {

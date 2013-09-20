@@ -58,7 +58,8 @@
 
 .fancybox-error {
 	color: #444;
-	font: 14px/20px "Helvetica Neue",Helvetica,Arial,sans-serif;
+	font-size: 14px;
+	line-height: 20px;
 	margin: 0;
 	padding: 15px;
 	white-space: nowrap;
@@ -193,7 +194,9 @@
 
 .fancybox-title {
 	visibility: hidden;
-	font: normal 13px/20px "Helvetica Neue",Helvetica,Arial,sans-serif;
+	font-size: 13px;
+	line-height: 20px;
+	font-weight: normal;
 	position: relative;
 	text-shadow: none;
 	z-index: 8050;

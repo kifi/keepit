@@ -5,7 +5,8 @@ input[type="text"] {margin: 0; padding: 0; border: none; background: #fff}
 img {vertical-align: middle; border: none}
 menu,ol,ul {list-style: none; padding: 0; margin: 0}
 
-body {font-family: "Helvetica Neue",Helvetica,Arial,sans-serif}
+body {font-family: Arial,sans-serif}
+.mac body {font-family: "Helvetica Neue",Helvetica,Arial,sans-serif}
 a[href] {color: #0089d5; text-decoration: none}
 ::-webkit-input-placeholder{color: #b6c3cc}
 :-moz-placeholder {color: #b6c3cc}

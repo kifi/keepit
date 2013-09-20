@@ -2,29 +2,20 @@ package com.keepit.common.social
 
 import org.joda.time.DateTime
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.social.{SocialNetworkType, SocialId}
-import com.keepit.eliza.ElizaServiceClient
 
 import play.api.libs.json.Json
 
 object UserConnectionCreator {
   private val UpdatedUserConnectionsKey = "updated_user_connections"
-}
-
-@ImplementedBy(classOf[NoOpConnectionUpdater])
-trait ConnectionUpdater {
-  def updateConnectionsIfNecessary(userId: Id[User])
-}
-
-class NoOpConnectionUpdater extends ConnectionUpdater {
-  def updateConnectionsIfNecessary(userId: Id[User]) {}
 }
 
 class UserConnectionCreator @Inject() (
@@ -36,7 +27,7 @@ class UserConnectionCreator @Inject() (
     clock: Clock,
     basicUserRepo: BasicUserRepo,
     eliza: ElizaServiceClient)
-  extends ConnectionUpdater with Logging {
+  extends Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
       network: SocialNetworkType): Seq[SocialConnection] = {
@@ -44,12 +35,6 @@ class UserConnectionCreator @Inject() (
     val socialConnections = createNewConnections(socialUserInfo, socialIds, network)
     socialUserInfo.userId.map(updateUserConnections)
     socialConnections
-  }
-
-  def updateConnectionsIfNecessary(userId: Id[User]) {
-    if (getConnectionsLastUpdated(userId).isEmpty) {
-      updateUserConnections(userId)
-    }
   }
 
   def getConnectionsLastUpdated(userId: Id[User]): Option[DateTime] = db.readOnly { implicit s =>

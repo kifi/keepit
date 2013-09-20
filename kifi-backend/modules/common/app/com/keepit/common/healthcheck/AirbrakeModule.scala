@@ -17,11 +17,16 @@ case class ProdAirbrakeModule() extends AirbrakeModule {
   def configure() {}
 
   @Provides
-  @AppScoped
-  def airbrakeProvider(httpClient: HttpClient, actor: ActorInstance[AirbrakeNotifierActor], playMode: Mode, service: FortyTwoServices): AirbrakeNotifier = {
+  def formatter(playMode: Mode, service: FortyTwoServices): AirbrakeFormatter = {
     val apiKey = Play.current.configuration.getString("airbrake.key").get
-    new AirbrakeNotifierImpl(apiKey, actor, playMode, service)
+    new AirbrakeFormatter(apiKey, playMode, service)
   }
+
+  @Provides
+  def airbrakeProvider(actor: ActorInstance[AirbrakeNotifierActor]): AirbrakeNotifier = {
+    new AirbrakeNotifierImpl(actor)
+  }
+
 }
 
 case class DevAirbrakeModule() extends AirbrakeModule {
@@ -29,12 +34,12 @@ case class DevAirbrakeModule() extends AirbrakeModule {
 
   @Provides
   @AppScoped
-  def airbrakeProvider(httpClient: HttpClient, actor: ActorInstance[AirbrakeNotifierActor], playMode: Mode, service: FortyTwoServices): AirbrakeNotifier = {
+  def airbrakeProvider(httpClient: HttpClient, actor: ActorInstance[AirbrakeNotifierActor], mode: Mode, fortyTwoServices: FortyTwoServices): AirbrakeNotifier = {
     new AirbrakeNotifier() {
       val apiKey: String = "fakeApiKey"
-      def notifyError(error: AirbrakeError): Unit = println(error)
-      val playMode: Mode = playMode
-      val service: FortyTwoServices = service
+      def notify(error: AirbrakeError): AirbrakeError = {println(error); error}
+      val playMode: Mode = mode
+      val service: FortyTwoServices = fortyTwoServices
     }
   }
 }

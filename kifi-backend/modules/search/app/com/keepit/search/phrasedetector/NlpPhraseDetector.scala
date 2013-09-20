@@ -2,7 +2,7 @@ package com.keepit.search.phrasedetector
 
 import org.apache.lucene.analysis.Analyzer
 import com.keepit.search.nlp.NlpParser
-import com.keepit.search.LangDetector
+import com.keepit.search.Lang
 import com.keepit.search.query.QueryUtil
 import scala.collection.mutable.{ListBuffer, Map => MutMap}
 
@@ -12,8 +12,8 @@ object NlpPhraseDetector {
   val UPPER_LIMIT = 100
 
   // analyzer should be consistent with the one in mainSearcher
-  def detectAll(queryText: String, analyzer: Analyzer) = {
-    if (!toDetect(queryText)) Set.empty[(Int, Int)]
+  def detectAll(queryText: String, analyzer: Analyzer, lang: Lang) = {
+    if (!toDetect(queryText, lang)) Set.empty[(Int, Int)]
     else {
       val cons = NlpParser.getNonOverlappingConstituents(queryText)     // token offsets
       val termPos = QueryUtil.getTermOffsets(analyzer, queryText).map{x => (x._1, x._2 - 1)}       // char offsets
@@ -41,11 +41,11 @@ object NlpPhraseDetector {
     }
   }
 
-  private def toDetect(queryText: String): Boolean = {
+  private def toDetect(queryText: String, lang: Lang): Boolean = {
+    if (lang.lang != "en") return false
     if (queryText.length() > UPPER_LIMIT || queryText.length() < LOWER_LIMIT) return false
     if (queryText.split(" ").filter(!_.isEmpty).size <= 1) return false
     if (queryText.toCharArray.exists(x => !(x.isLetterOrDigit || x.isSpaceChar))) return false
-    if (LangDetector.detect(queryText).lang != "en" && LangDetector.detectShortText(queryText).lang != "en" ) return false
     return true
   }
 

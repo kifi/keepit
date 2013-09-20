@@ -1,6 +1,6 @@
 package com.keepit.common.social
 
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import akka.util.Timeout
@@ -18,11 +18,11 @@ private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
 private case object RefreshAll
 
 private[social] class SocialGraphRefresherActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     socialGraphPlugin : SocialGraphPlugin,
     db: Database,
     socialRepo: SocialUserInfoRepo)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+  extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case RefreshAll => {

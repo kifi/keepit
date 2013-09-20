@@ -12,25 +12,26 @@ import scala.concurrent.duration._
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "phraseProximityBoost" -> "0.95",     // could be too aggressive?
+      "phraseProximityBoost" -> "0.0",     // disabled
       "phraseBoost" -> "0.5",
       "siteBoost" -> "1.0",
       "similarity" -> "default",
       "svWeightMyBookMarks" -> "1",
       "svWeightBrowsingHistory" -> "2",
-      "svWeightClickHistory" -> "3",
+      "svWeightClickHistory" -> "2",
       "maxResultClickBoost" -> "20.0",
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",
       "sharingBoostInNetwork" -> "0.5",
       "sharingBoostOutOfNetwork" -> "0.1",
       "percentMatch" -> "75",
+      "percentMatchForHotDocs" -> "100",
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
       "newContentBoost" -> "1.0",
       "newContentDiscoveryThreshold" -> "0.5",
       "tailCutting" -> "0.25",
-      "proximityBoost" -> "0.8",
+      "proximityBoost" -> "0.95",
       "semanticBoost" -> "0.8",
       "dampingHalfDecayMine" -> "7.0",
       "dampingHalfDecayFriends" -> "5.0",
@@ -53,6 +54,7 @@ object SearchConfig {
       "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
       "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
       "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF)",
+      "percentMatchForHotDocs" -> "the minimum percentage of search terms have to match (weighted by IDF) for hot docs (useful pages)",
       "halfDecayHours" -> "the time the recency boost becomes half",
       "recencyBoost" -> "importance of the recent bookmarks",
       "newContentBoost" -> "importance of a new content introduced to the network",
