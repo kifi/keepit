@@ -6,7 +6,6 @@ import com.keepit.search.query.parser.DefaultSyntax
 import com.keepit.search.query.parser.PercentMatch
 import com.keepit.search.query.parser.QueryExpansion
 import com.keepit.search.query.parser.QueryParserException
-import com.keepit.search.query.Coordinator
 import com.keepit.search.query.ProximityQuery
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.SemanticVectorQuery
