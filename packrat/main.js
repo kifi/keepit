@@ -234,16 +234,11 @@ const socketHandlers = {
   },
   thread: function(th) {
     api.log("[socket:thread]", th);
-    var d = pageData[th.uri];
-    if (d) {
-      messageData[th.id] = th.messages;
-      for (var arr = threadCallbacks[th.id], i = 0; arr && i < arr.length; i++) {
-        arr[i]({id: th.id, messages: th.messages, participants: th.messages[0].participants});
-      }
-      delete threadCallbacks[th.id];
-    } else {
-      api.log("[socket:thread]", "Can't process thread, no pageData")
+    messageData[th.id] = th.messages;
+    for (var arr = threadCallbacks[th.id]; arr && arr.length;) {
+      arr.shift()({id: th.id, messages: th.messages, participants: th.messages[0].participants});
     }
+    delete threadCallbacks[th.id];
   },
   thread_infos: function(infos) {
     var threadsPrevByUri = {};
