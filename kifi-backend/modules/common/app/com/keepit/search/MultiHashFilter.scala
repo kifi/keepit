@@ -22,6 +22,8 @@ class MultiHashFilter[T](tableSize: Int, filter: Array[Byte], numHashFuncs: Int,
 
   @inline private[this] def init(k: Long): Long = k & 0x7FFFFFFFFFFFFFFFL
   @inline private[this] def next(v: Long): Long = (v * 0x5DEECE66DL + 0x123456789L) & 0x7FFFFFFFFFFFFFFFL // linear congruential generator
+  @inline private[this] def pos(v: Long, tsize: Long): Int = (v % tsize).toInt
+  @inline private[this] def fingerprint(v: Long, tsize: Long): Byte = ((v / tsize) & 0xFFL).toByte
 
   def put(key: Long): Unit = {
     var v = init(key)
@@ -29,10 +31,7 @@ class MultiHashFilter[T](tableSize: Int, filter: Array[Byte], numHashFuncs: Int,
     val tsize = tableSize.toLong
     while (i < numHashFuncs) {
       v = next(v)
-      val pos = (v % tsize).toInt
-      val fingerprint = ((v / tsize) & 0xFFL).toByte
-
-      filter(pos) = fingerprint
+      filter(pos(v, tsize)) = fingerprint(v, tsize)
 
       i += 1
     }
@@ -45,10 +44,7 @@ class MultiHashFilter[T](tableSize: Int, filter: Array[Byte], numHashFuncs: Int,
     val tsize = tableSize.toLong
     while (i < numHashFuncs) {
       v = next(v)
-      val pos = (v % tsize).toInt
-      val fingerprint = ((v / tsize) & 0xFFL).toByte
-
-      if (filter(pos) == fingerprint) {
+      if (filter(pos(v, tsize)) == fingerprint(v, tsize)) {
         matchCount += 1
         if (matchCount >= minFingerprintMatches) return true
       }
