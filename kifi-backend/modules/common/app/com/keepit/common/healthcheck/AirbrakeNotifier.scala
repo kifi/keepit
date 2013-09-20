@@ -9,7 +9,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
 
-import play.api.Mode.Mode
+import play.api.Mode._
 
 import akka.actor._
 
@@ -118,11 +118,17 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
       { noticeEntities(error) }
       <server-environment>
         <project-root>{service.currentService}</project-root>
-        <environment-name>{playMode.toString}</environment-name>
+        <environment-name>{modeToRailsNaming(playMode)}</environment-name>
         <app-version>{service.currentVersion}</app-version>
         <hostname>{service.baseUrl}</hostname>
       </server-environment>
     </notice>
+
+  private def modeToRailsNaming(mode: Mode) = mode match {
+    case Test => "test"
+    case Prod => "production"
+    case Dev => "development"
+  }
 }
 
 trait AirbrakeNotifier {
