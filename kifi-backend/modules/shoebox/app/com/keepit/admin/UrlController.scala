@@ -136,11 +136,11 @@ class UrlController @Inject() (
             case _ =>
           }
         }
-        changes = changes.sortBy(_._1.url)
       }
       urls.lastOption.map{ url => centralConfig.update(renormKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
     }
     
+    changes = changes.sortBy(_._1.url)
     db.readWrite{ implicit s =>
       sendEmail(changes, readOnly)
     }
