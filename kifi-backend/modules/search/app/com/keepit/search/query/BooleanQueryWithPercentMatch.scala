@@ -211,8 +211,15 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         }
         sumExpl.setMatch(true)
         sumExpl.setValue(sum)
-        val hot = if (hotDocSet.get(doc)) ", hot!" else ""
-        sumExpl.setDescription(s"percentMatch(${overlapValue/totalValue*100}% = ${overlapValue}/${totalValue}${hot}), sum of:")
+
+        val hot = hotDocSet match {
+          case h: HotDocSet =>
+            h.explain(doc)
+          case _ =>
+            if (hotDocSet.get(doc)) new Explanation(1.0f, "hot") else new Explanation(0.0f, "")
+        }
+
+        sumExpl.setDescription(s"percentMatch(${overlapValue/totalValue*100}% = ${overlapValue}/${totalValue}, ${hot.getDescription}), sum of:")
 
         if (disableCoord) {
           sumExpl

@@ -87,7 +87,8 @@ object ApplicationBuild extends Build {
     val heimdalDependencies = Seq(
       "org.reactivemongo" %% "reactivemongo" % "0.9"
     ) map (_.excludeAll(
-      ExclusionRule(organization = "org.slf4j")
+      ExclusionRule(organization = "org.slf4j"),
+      ExclusionRule(organization = "ch.qos.logback")
     ))
 
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",

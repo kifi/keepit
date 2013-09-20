@@ -11,11 +11,21 @@ case class SchemeNormalizer(normalization: Normalization) extends StaticNormaliz
     case Array(httpScheme, domainPrefix) => URI(None, Some(httpScheme), uri.userInfo, uri.host.map(cleanPrefix(_)).map(addPrefix(_, domainPrefix)), uri.port, uri.path, uri.query, uri.fragment)
   }
 
-  private def cleanPrefix(host: Host, prefixes: Set[String] = Set("www", "m")) = host match {
+  private def cleanPrefix(host: Host, prefixes: Set[String] = Set("www", "m", "mobile")) = host match {
     case Host(domain @ _*) if (domain.nonEmpty && (prefixes.contains(domain.last))) => Host(domain.take(domain.size - 1):_*)
     case _ => host
   }
 
   private def addPrefix(host: Host, prefix: String) = Host(host.domain :+ prefix :_*)
 
+}
+
+object SchemeNormalizer {
+  def generateVariations(url: String): Seq[(Normalization, String)] = {
+    URI.safelyParse(url) map { uri => for {
+        normalization <- Normalization.schemes.toSeq
+        urlVariation <- SchemeNormalizer(normalization)(uri).safelyToString()
+      } yield (normalization, urlVariation)
+    }
+  } getOrElse(Seq())
 }

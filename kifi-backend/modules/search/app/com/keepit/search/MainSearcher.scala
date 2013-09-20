@@ -445,12 +445,18 @@ class MainSearcher(
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     // TODO: use user profile info as a bias
     lang = LangDetector.detectShortText(queryString, langProbabilities)
+    val hotDocs = new HotDocSetFilter()
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
+    parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
+      hotDocs.setHotDocs(personalizedSearcher.hotDocs)
+      val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
+      hotDocs.setClickBoosts(clickBoosts)
+
       (query, personalizedSearcher.explain(query, uriId.id))
     }
   }
