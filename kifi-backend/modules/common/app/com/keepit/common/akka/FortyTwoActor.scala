@@ -7,7 +7,7 @@ trait AlertingActor extends Actor {
   def alert(reason: Throwable, message: Option[Any])
   def error(reason: Throwable, message: Option[Any]) =
     AirbrakeError(exception = reason,
-      message = Some("Actor ${this.getClass.getSimpleName} threw an uncaught exception. Message: ${message.getOrElse('')}")
+      message = Some(s"Actor ${this.getClass.getSimpleName} threw an uncaught exception. Message: ${message.getOrElse("")}")
     )
 
   override def preRestart(reason: Throwable, message: Option[Any]) {

@@ -118,6 +118,9 @@ class ArticleIndexer @Inject() (
       val doc = super.buildDocument
       getArticle(id = uri.id.get, maxRetry = 5, minSleepTime = 1000) match {
         case Some(article) =>
+          uri.restriction.map{ reason =>
+            doc.add(buildKeywordField(ArticleVisibility.redirectTerm.field(), ArticleVisibility.redirectTerm.text()))
+          }
           val titleLang = article.titleLang.getOrElse(Lang("en"))
           val contentLang = article.contentLang.getOrElse(Lang("en"))
           doc.add(buildKeywordField("cl", contentLang.lang))
