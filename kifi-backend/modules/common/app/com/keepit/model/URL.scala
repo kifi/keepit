@@ -33,7 +33,8 @@ case class URL (
   domain: Option[String],
   normalizedUriId: Id[NormalizedURI],
   history: Seq[URLHistory] = Seq(),
-  state: State[URL] = URLStates.ACTIVE
+  state: State[URL] = URLStates.ACTIVE,
+  renormalizationCheck: Option[Boolean] = None
 ) extends Model[URL] {
   def withId(id: Id[URL]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)

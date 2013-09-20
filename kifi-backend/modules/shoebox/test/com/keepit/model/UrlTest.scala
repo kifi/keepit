@@ -43,5 +43,43 @@ class UrlTest extends Specification with ShoeboxTestInjector {
       val uri = URLFactory("https://mail.google.com/mail/u/1/", Id[NormalizedURI](42))
       uri.domain === Some("mail.google.com")
     }
+    
+    "correctly retrieve renormalization list" in {
+      withDb() { implicit injector =>
+        val repo = inject[URLRepo]
+        val uriRepo = inject[NormalizedURIRepo]
+        inject[Database].readWrite{ implicit s =>
+          val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
+          (1 to 5).foreach{ i =>
+            val url = "www.google.com/" + i
+            repo.save(URL(url = url, domain = Some("google"), normalizedUriId = uri1.id.get))
+          } 
+          
+          val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com/", Some("Bing")))
+          (6 to 10).foreach{ i =>
+            val url = "www.bing.com/" + i
+            repo.save(URL(url = url, domain = Some("bing"), normalizedUriId = uri2.id.get))
+          }
+          
+          val uri3 = uriRepo.save(NormalizedURI.withHash("http://42go.com"))
+          (11 to 15).foreach{ i =>
+            val url = "42go.com/" + i
+            repo.save(URL(url = url, domain = None, normalizedUriId = uri3.id.get))
+          }
+          
+          repo.getRenormalizationList(Id[URL](0), fetchSize = 100).size === 15
+          repo.getRenormalizationList(Id[URL](0), domain = Some("google"), fetchSize = 100).size === 5
+          repo.getRenormalizationList(Id[URL](0), domain = Some("bing"), fetchSize = 10).foreach{ url =>
+            repo.save(url.copy(renormalizationCheck = Some(true)))
+          }
+          repo.getRenormalizationList(Id[URL](0), fetchSize = 100).size === 10
+          repo.getRenormalizationList(Id[URL](0), domain = Some("bing"), fetchSize = 100).size === 0
+          repo.getLastRenormalizationId() === Some(Id[URL](10))
+          repo.getLastRenormalizationId(domain = Some("bing")) === Some(Id[URL](10))
+          repo.getLastRenormalizationId(domain = Some("google")) === None
+          repo.getRenormalizationList(Id[URL](2), domain = Some("google"), fetchSize = 100).size === 3
+        }
+      }
+    }
   }
 }
