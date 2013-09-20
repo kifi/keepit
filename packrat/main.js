@@ -158,19 +158,10 @@ const socketHandlers = {
   notifications: function(arr, numNotVisited) {  // initial load of notifications
     api.log("[socket:notifications]", arr, numNotVisited);
     if (!notifications) {
-      notifications = arr;
       for (var i = 0; i < arr.length; i++) {
-        arr[i].category = (arr[i].category || "message").toLowerCase();
-        // remove current user from participants
-        if(arr[i].participants) {
-          for (var j = 0, len = arr[i].participants.length; j < len; j++) {
-            if (arr[i].participants[j].id == session.userId) {
-              arr[i].participants.splice(j, 1);
-              len--;
-            }
-          }
-        }
+        standardizeNotification(arr[i]);
       }
+      notifications = arr;
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
       numNotificationsNotVisited = numNotVisited;
       while (notificationsCallbacks.length) {
@@ -181,14 +172,7 @@ const socketHandlers = {
   },
   notification: function(n) {  // a new notification (real-time)
     api.log("[socket:notification]", n);
-    n.category = (n.category || "message").toLowerCase();
-    n.participants = n.participants || [];
-    for (var j = 0, len = n.participants.length; j < len; j++) {
-      if (n.participants[j].id == session.userId) {
-        n.participants.splice(j, 1);
-        len--;
-      }
-    }
+    standardizeNotification(n);
     if (insertNewNotification(n)) {
       sendNotificationToTabs(n);
     }
@@ -196,22 +180,15 @@ const socketHandlers = {
   missed_notifications: function(arr, serverTime) {
     api.log("[socket:missed_notifications]", arr, serverTime);
     for (var i = arr.length - 1; ~i; i--) {
-      arr[i].category = (arr[i].category || "message").toLowerCase();
-      if (pageData[arr[i].url]) {
-        socket.send(["get_threads_by_url", arr[i].url]);
+      var n = arr[i];
+      standardizeNotification(n);
+      if (pageData[n.url]) {
+        socket.send(["get_threads_by_url", n.url]);
       }
-      if (arr[i].participants) {
-        for (var j = 0, len = arr[i].participants.length; j < len; j++) {
-          if (arr[i].participants[j].id == session.userId) {
-            arr[i].participants.splice(j, 1);
-            len--;
-          }
-        }
-      }
-      if (!insertNewNotification(arr[i])) {
+      if (!insertNewNotification(n)) {
         arr.splice(i, 1);
       } else if ((new Date(serverTime) - new Date(notifications[0].time)) < 1000*60) {
-        sendNotificationToTabs(arr[i]);
+        sendNotificationToTabs(n);
       }
     }
     if (arr.length) {
@@ -568,16 +545,7 @@ api.port.on({
     } else {
       socket.send(["get_old_notifications", timeStr, NOTIFICATION_BATCH_SIZE], function(arr) {
         for (var i = 0; i < arr.length; i++) {
-          arr[i].category = (arr[i].category || "message").toLowerCase();
-          // remove current user from participants
-          if (arr[i].participants) {
-            for (var j = 0, len = arr[i].participants.length; j < len; j++) {
-              if (arr[i].participants[j].id == session.userId) {
-                arr[i].participants.splice(j, 1);
-                len--;
-              }
-            }
-          }
+          standardizeNotification(arr[i]);
         }
         if (notifications[notifications.length - 1] === oldest) {
           notifications.push.apply(notifications, arr);
@@ -648,6 +616,15 @@ function removeNotificationPopups(associatedId) {
   api.tabs.each(function(page) {
     api.tabs.emit(page, "remove_notification", associatedId);
   });
+}
+
+function standardizeNotification(n) {
+  n.category = (n.category || "message").toLowerCase();
+  for (var i = n.participants ? n.participants.length : 0; i--;) {
+    if (n.participants[i].id == session.userId) {
+      n.participants.splice(i, 1);
+    }
+  }
 }
 
 function sendNotificationToTabs(n) {
