@@ -35,11 +35,11 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
     id.map { db.readOnly { implicit session => uriRepo.get(_) }}
   }
 
-  val modules = Seq(TestFortyTwoModule(), FakeDiscoveryModule(), FakeScraperModule(Some(fakeArticles)), FakeAirbrakeModule(), StandaloneTestActorSystemModule(), new ScalaModule { def configure() { bind[NormalizationService].to[NormalizationServiceImpl] }})
-
+  val modules = Seq(TestFortyTwoModule(), FakeDiscoveryModule(), FakeScraperModule(Some(fakeArticles)),
+                    FakeAirbrakeModule(), StandaloneTestActorSystemModule(),
+                    new ScalaModule { def configure() { bind[NormalizationService].to[NormalizationServiceImpl] }})
 
   "NormalizationService" should {
-
 
     withDb(modules:_*) { implicit injector =>
       implicit val system = inject[ActorSystem]

@@ -38,7 +38,6 @@ class AirbrakeTest extends Specification with TestInjector {
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
         (xml \ "error" \ "message").head === <message>java.lang.IllegalArgumentException: hi there</message>
         (xml \ "error" \ "backtrace" \ "line").head === <line method="withInjector" file="InjectorProvider.scala" number="39"/>
-        (xml \ "error" \ "backtrace" \ "line").last === <line method="main" file="ForkMain.java" number="84"/>
         (xml \ "server-environment" \ "environment-name").head === <environment-name>Test</environment-name>
       }
     }
@@ -58,7 +57,6 @@ class AirbrakeTest extends Specification with TestInjector {
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
         (xml \ "error" \ "message").head === <message>java.lang.IllegalArgumentException: hi there</message>
         (xml \ "error" \ "backtrace" \ "line").head === <line method="withInjector" file="InjectorProvider.scala" number="39"/>
-        (xml \ "error" \ "backtrace" \ "line").last === <line method="main" file="ForkMain.java" number="84"/>
         (xml \ "server-environment" \ "environment-name").head === <environment-name>Test</environment-name>
         (xml \ "request" \ "url").head === <url>http://www.kifi.com/hi</url>
         (xml \ "request" \ "action").head === <action>POST</action>

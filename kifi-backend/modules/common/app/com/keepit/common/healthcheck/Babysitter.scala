@@ -23,15 +23,15 @@ case class BabysitterTimeout(warnTimeout: FiniteDuration, errorTimeout: FiniteDu
 
 class BabysitterImpl @Inject() (
     clock: Clock,
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     scheduler: Scheduler) extends Babysitter with Logging {
   def watch[A](timeout: BabysitterTimeout)(block: => A): A = {
     val startTime = clock.now()
     val e = new Exception("Babysitter error timeout after %s millis".format(timeout.errorTimeout.toMillis))
-    val pointer = new AtomicReference[ExternalId[HealthcheckError]]()
+    val pointer = new AtomicReference[ExternalId[AirbrakeError]]()
     val babysitter = scheduler.scheduleOnce(timeout.errorTimeout) {
       log.error(e.getStackTrace() mkString "\n  ")
-      val error = healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage())))
+      val error = airbrake.notify(AirbrakeError(e, Some(e.getMessage())))
       pointer.set(error.id)
     }
     val result = try {
@@ -40,10 +40,10 @@ class BabysitterImpl @Inject() (
     finally {
       val endTime = clock.now()
       val difference = endTime.getMillis - endTime.getMillis
-      val healthcheckError = Option(pointer.get) map {he => "HealthcheckError %s".format(he)} getOrElse "No Healthcheck Error"
+      val error = Option(pointer.get) map {he => "error %s".format(he)} getOrElse "No Error"
       if(difference > timeout.warnTimeout.toMillis) {
         val e = new Exception("Babysitter timeout [%s]. Process took %s millis, timeout was set to %s millis".
-                                format(healthcheckError, difference, timeout.warnTimeout.toMillis))
+                                format(error, difference, timeout.warnTimeout.toMillis))
         log.warn(e.getStackTrace() mkString "\n  ")
       }
       babysitter.cancel
