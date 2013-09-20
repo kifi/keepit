@@ -76,8 +76,26 @@ class UrlController @Inject() (
     }
     Ok("Started!")
   }
-
+  
   def doRenormalize(readOnly: Boolean = true, domain: Option[String] = None) = {
+    
+    val renormKey = RenormalizationCheckKey()
+    
+    def getUrlList() = {
+      val urls = db.readOnly { implicit s =>
+        domain match {
+          case Some(domainStr) => urlRepo.getByDomain(domainStr)
+          case None => urlRepo.all
+        }
+      }.sortBy(_.id.get.id)
+      
+      val lastId = centralConfig(renormKey) match {
+        case Some(id) => id
+        case None => 0
+      }
+      urls.filter(_.id.get.id > lastId).filter(_.state == URLStates.ACTIVE)
+    }
+    
     def needRenormalization(url: URL)(implicit session: RWSession): (Boolean, Option[NormalizedURI]) = {
       uriRepo.getByUri(url.url) match {
         case None => if (!readOnly) (true, Some(uriRepo.internByUri(url.url))) else (true, None)
@@ -86,27 +104,23 @@ class UrlController @Inject() (
       }
     }
     
-    def sendEmail(changes: Vector[(URL, Option[NormalizedURI])], readOnly: Boolean)(implicit session: RWSession) = {
-      val (total, batchSize) = (changes.size, 1000)
+    def batch[T](obs: Seq[T], batchSize: Int): Seq[Seq[T]] = {
+      val total = obs.size
       val index = ((0 to total/batchSize).map(_*batchSize) :+ total).distinct
-      (0 to (index.size - 2)).foreach{ i =>
-        val sub = changes.slice(index(i), index(i+1))
-        val title = "Renormalization Report: " + s"part ${i+1} of ${index.size - 1}. ReadOnly Mode = ${readOnly}. Num of affected URL: ${total}"
-        val msg = sub.map( x => x._1.url + s"\ncurrent uri: ${ uriRepo.get(x._1.normalizedUriId).url }" + "\n--->\n" + x._2.map{_.url}).mkString("\n\n")
+      (0 to (index.size - 2)).map{ i => obs.slice(index(i), index(i+1)) }
+    }
+    
+    def sendEmail(changes: Vector[(URL, Option[NormalizedURI])], readOnly: Boolean)(implicit session: RWSession) = {
+      val batchChanges = batch[(URL, Option[NormalizedURI])](changes, batchSize = 1000)
+      batchChanges.zipWithIndex.map{ case (batch, i) =>
+        val title = "Renormalization Report: " + s"part ${i+1} of ${batchChanges.size}. ReadOnly Mode = ${readOnly}. Num of affected URL: ${changes.size}"
+        val msg = batch.map( x => x._1.url + s"\ncurrent uri: ${ uriRepo.get(x._1.normalizedUriId).url }" + "\n--->\n" + x._2.map{_.url}).mkString("\n\n")
         postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.YINGJIE),
         subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
       }
     }
     
-    def getUrlList() = {
-      val urls = db.readOnly { implicit s =>
-        domain match {
-          case Some(domainStr) => urlRepo.getByDomain(domainStr)
-          case None => urlRepo.all
-        }
-      }
-      val lastId = centralConfig(new RenormalizationCheckKey())
-    }
+    // main code
     
     var changes = Vector.empty[(URL, Option[NormalizedURI])]
 
@@ -117,18 +131,25 @@ class UrlController @Inject() (
       }
     }
     
-    db.readWrite { implicit session =>
-
-      urls.filter(_.state == URLStates.ACTIVE)foreach { url =>
-        needRenormalization(url) match {
-          case (true, newUriOpt) => {
-            changes = changes :+ (url, newUriOpt)
-            if (!readOnly) newUriOpt.map { uri => renormRepo.save(RenormalizedURL(urlId = url.id.get, newUriId = uri.id.get)) }
+    val batchUrls = batch[URL](urls, batchSize = 500)     // avoid long DB write lock.
+    
+    batchUrls.map { urls =>
+      db.readWrite { implicit s =>
+        urls.foreach { url =>
+          needRenormalization(url) match {
+            case (true, newUriOpt) => {
+              changes = changes :+ (url, newUriOpt)
+              if (!readOnly) newUriOpt.map { uri => renormRepo.save(RenormalizedURL(urlId = url.id.get, newUriId = uri.id.get)) }
+            }
+            case _ =>
           }
-          case _ =>
         }
+        changes = changes.sortBy(_._1.url)
       }
-      changes = changes.sortBy(_._1.url)
+      urls.lastOption.map{ url => centralConfig.update(renormKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
+    }
+    
+    db.readWrite{ implicit s =>
       sendEmail(changes, readOnly)
     }
   }
