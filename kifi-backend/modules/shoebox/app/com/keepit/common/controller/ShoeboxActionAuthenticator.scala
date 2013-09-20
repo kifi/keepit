@@ -133,7 +133,7 @@ class ShoeboxActionAuthenticator @Inject() (
         case e: Throwable =>
           val globalError = airbrake.notify(AirbrakeError(request, e,
               s"Error executing with userId $userId, experiments [$experiments.mkString(',')], installation kifiInstallationId.getOrElse('-')"))
-          log.error("error reported [$globalError.id]", e)
+          log.error(s"error reported [${globalError.id}]", e)
           throw ReportedException(globalError.id, e)
       }
     }

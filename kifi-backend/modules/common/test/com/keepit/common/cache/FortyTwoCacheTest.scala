@@ -55,7 +55,7 @@ class TestStringCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), 
 class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
 
   "JsonCacheImpl Instance" should {
-    withInjector(EhCacheCacheModule()){ implicit injector =>
+    withInjector(EhCacheCacheModule(), FakeAirbrakeModule()){ implicit injector =>
       val cachePlugin = inject[FortyTwoCachePlugin]
       val cache = new TestJsonCache((cachePlugin, Duration(7, "days")))
       "yield the value TestJsonCacheData('hello', 42)" in {
