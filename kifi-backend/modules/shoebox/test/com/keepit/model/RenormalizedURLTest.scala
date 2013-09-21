@@ -16,7 +16,7 @@ class RenormalizedURLTest extends Specification with ShoeboxTestInjector{
         
         db.readWrite{ implicit s =>
           (1 to 5).map{ i =>
-            val tmp = RenormalizedURL(urlId = Id[URL](i), newUriId = Id[NormalizedURI](i))
+            val tmp = RenormalizedURL(urlId = Id[URL](i), oldUriId = Id[NormalizedURI](100), newUriId = Id[NormalizedURI](i))
             repo.save(tmp)
           }
         }
