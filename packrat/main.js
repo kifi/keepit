@@ -868,7 +868,7 @@ function subscribe(tab) {
 
   if (d) {  // no need to ask server again
     if (d.threadDataIsStale) {
-      loadThreadData(d.nUri);
+      loadThreadData(d.nUri || tab.nUri || tab.url);
       d.threadDataIsStale = false;
     }
     if (tab.nUri) {  // tab is already initialized
