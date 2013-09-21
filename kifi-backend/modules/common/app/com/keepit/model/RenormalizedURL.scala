@@ -8,7 +8,7 @@ case class RenormalizedURL(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   urlId: Id[URL],
-  oldUriId: Option[Id[NormalizedURI]] = None,       // could be None, if we have changed 'static' normalizer
+  oldUriId: Id[NormalizedURI],
   newUriId: Id[NormalizedURI],
   state: State[RenormalizedURL] = RenormalizedURLStates.ACTIVE,
   seq: SequenceNumber = SequenceNumber.ZERO
