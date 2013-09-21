@@ -182,9 +182,13 @@ const socketHandlers = {
     for (var i = arr.length - 1; ~i; i--) {
       var n = arr[i];
       standardizeNotification(n);
+
       if (pageData[n.url]) {
-        socket.send(["get_threads_by_url", n.url]);
+        // One ThreadInfo in d.threads and messageData[threadId] may be outdated.
+        // Really only need to load the ThreadInfo and any new messages on the thread.
+        loadThreadData(n.url);
       }
+
       if (!insertNewNotification(n)) {
         arr.splice(i, 1);
       } else if ((new Date(serverTime) - new Date(notifications[0].time)) < 1000*60) {
@@ -217,84 +221,19 @@ const socketHandlers = {
     }
     delete threadCallbacks[th.id];
   },
-  thread_infos: function(infos) {
-    var threadsPrevByUri = {};
-    infos.forEach(function(t) {
-      var d = pageData[t.nUrl];
-      if (d) {
-        t.participants = t.participants || [];
-        for (var j = t.participants.length; --j >= 0;) {
-          if (t.participants[j].id == session.userId) {
-            t.participants.splice(j, 1);
-          }
-        }
-
-        if (!threadsPrevByUri[t.nUrl]) {
-          threadsPrevByUri[t.nUrl] = d.threads, d.threads = [t];
-          d.lastMessageRead = d.lastMessageRead || {};
-        } else {
-          d.threads.push(t);
-        }
-        d.lastMessageRead[t.id] = t.lastMessageRead;
-      }
-    });
-    for (var u in threadsPrevByUri) {
-      var d = pageData[u];
-      d.counts = {n: 0, m: messageCount(d)};
-      d.threadDataReceived = true;
-      d.dispatchThreadData();
-      if (d.pageDetailsReceived) {
-        d.tabs.forEach(function(tab) {
-          initTab(tab, d);
-        });
-      }
-      // Push threads with any new messages to relevant tabs and load+push their messages too.
-      var threadsPrev = threadsPrevByUri[u], threadsWithNewMessages = [];
-      d.threads.forEach(function(th) {
-        var thPrev = threadsPrev.filter(hasId(th.id))[0];
-        var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
-        if (numNew) {
-          socket.send(["get_thread", th.id]);
-          (threadCallbacks[th.id] || (threadCallbacks[th.id] = [])).push(function(th) {
-            d.tabs.forEach(function(tab) {
-              // TODO: may want to special case (numNew == 1) for an animation
-              api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
-            });
-          });
-          threadsWithNewMessages.push(th);
-        }
-      });
-      if (threadsWithNewMessages.length == 1) {
-        var th = threadsWithNewMessages[0];
-        d.tabs.forEach(function(tab) {
-          api.tabs.emit(tab, "thread_info", {thread: th, read: d.lastMessageRead[th.id]});
-        });
-      } else if (threadsWithNewMessages.length > 1) {
-        d.tabs.forEach(function(tab) {
-          api.tabs.emit(tab, "threads", {threads: d.threads, readTimes: d.lastMessageRead, userId: session.userId});
-        });
-      }
-    }
-  },
   message: function(threadId, message) {
     api.log("[socket:message]", threadId, message, message.nUrl);
     var d = pageData[message.nUrl];
     if (d && !(messageData[threadId] || []).some(hasId(message.id))) {
-
-      // insert message in chronological order
-
-      // update thread
-      var thread;
-      for (var i = 0, n = d.threads.length; i < n; i++) {
-        if (d.threads[i].id == threadId) {
-          thread = d.threads[i];
-
+      var thread = (d.threads || []).filter(hasId(threadId))[0];
+      if (thread) {
           var messages;
           if (thread.messageCount >= 1) {
             messages = messageData[threadId];
             if (messages) {
+              // insert message in chronological order
               var t = new Date(message.createdAt);
-              for (i = messages.length; i > 0 && new Date(messages[i-1].createdAt) > t; i--);
+              for (var i = messages.length; i > 0 && new Date(messages[i-1].createdAt) > t; i--);
               messages.splice(i, 0, message);
             }
           } else {
@@ -309,24 +248,15 @@ const socketHandlers = {
           thread.lastCommentedAt = lastMessage.createdAt;
           thread.messageCount = messages.length;
           messages.forEach(function(m) { thread.messageTimes[m.id] = m.createdAt; });
-          thread.participants = messageData[threadId][messages.length-1].participants;
-          for (var j = thread.participants.length; --j >= 0;) {
-            if (thread.participants[j].id == session.userId) {
-              thread.participants.splice(j, 1);
-            }
-          }
+          thread.participants = lastMessage.participants.filter(idIsNot(session.userId));
 
-          // insert thread in chronological order
+          // keep thread in chronological order
           //var t = new Date(thread.lastCommmentedAt);
           //for (i = d.threads.length; i > 0 && new Date(d.threads[i-1].lastCommentedAt) > t; i--);
           //d.threads.splice(i, 0, thread);
-
-          break;
-        }
-      }
-
-      if (i == n) {
-        socket.send(["get_threads_by_url", message.url]);
+      } else {
+        // this is the first message of a new thread, so we should fetch its thread data
+        loadThreadData(message.nUrl);
       }
 
       // ensure marked read if from this user
@@ -453,11 +383,14 @@ api.port.on({
   log_event: function(data) {
     logEvent.apply(null, data);
   },
-  send_message: function(data, respond) {
+  send_message: function(data, respond, tab) {
     api.log("[send_message]", data);
+    var nUri = tab.nUri || data.url;
     ajax("eliza", "POST", "/eliza/messages", data, function(o) {
-      socket.send(["get_threads_by_url", data.url]);
       api.log("[send_message] resp:", o);
+      // need ThreadInfo for this thread (new or merged), as well as the sent message.
+      // might be nice to get them in the response instead of requesting over the socket.
+      loadThreadData(nUri);
       respond(o);
     });
   },
@@ -934,9 +867,9 @@ function subscribe(tab) {
   var d = pageData[tab.nUri || tab.url];
 
   if (d) {  // no need to ask server again
-    if (d.cacheIsDirty) {
-      socket.send(["get_threads_by_url", tab.nUri || tab.url]);
-      d.cacheIsDirty = false;
+    if (d.threadDataIsStale) {
+      loadThreadData(d.nUri);
+      d.threadDataIsStale = false;
     }
     if (tab.nUri) {  // tab is already initialized
       if (d.counts) {
@@ -953,10 +886,13 @@ function subscribe(tab) {
     }
   } else {
     ajax("POST", "/ext/pageDetails", {url: tab.url}, function success(resp) {
-      socket.send(["get_threads_by_url", tab.nUri || tab.url]);
+      api.log("[subscribe] pageDetails:", resp);
 
-      api.log("[subscribe]", resp);
       var uri = resp.normalized;
+
+      // the initial load of the page’s thread data. probably want to prefetch threads
+      // that have any unread messages, but only in that case.
+      loadThreadData(uri);
 
       if ((api.tabs.get(tab.id) || {}).url != tab.url) return;
       d = pageData[uri] = pageData[uri] || new PageData;
@@ -1008,6 +944,63 @@ function subscribe(tab) {
     d.tabs.push(tab);
     api.log("[subscribe:finish]", tab.id);
   }
+}
+
+function loadThreadData(url) {
+  socket.send(["get_threads", url], function(threads) {
+    var d = pageData[url] || pageData[threads.length ? threads[0].nUrl : ''];
+    if (!d) return;
+
+    var oldMessageCounts = !d.threads ? {} : d.threads.reduce(function(o, th) {
+      o[th.id] = th.messageCount;
+      return o;
+    }, {});
+
+    d.threads = threads;
+    d.lastMessageRead = d.lastMessageRead || {};
+    threads.forEach(function(t) {
+      t.participants = t.participants.filter(idIsNot(session.userId));
+      d.lastMessageRead[t.id] = t.lastMessageRead;  // TODO: make sure we do not clobber greater/later timestamp
+    });
+    d.counts = {n: 0, m: messageCount(d)};
+    d.dispatchThreadData();
+
+    if (!d.threadDataReceived) {
+      d.threadDataReceived = true;
+      if (d.pageDetailsReceived) {
+        d.tabs.forEach(function(tab) {
+          initTab(tab, d);
+        });
+      }
+    }
+
+    // Push threads with any new messages to relevant tabs and load+push their messages too.
+
+    var threadsWithNewMessages = [];
+    threads.forEach(function(th) {
+      var numNew = th.messageCount - (oldMessageCounts[th.id] || 0);
+      if (numNew) {
+        socket.send(["get_thread", th.id]);
+        (threadCallbacks[th.id] || (threadCallbacks[th.id] = [])).push(function(th) {
+          d.tabs.forEach(function(tab) {
+            // TODO: may want to special case (numNew == 1) for an animation
+            api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
+          });
+        });
+        threadsWithNewMessages.push(th);
+      }
+    });
+    if (threadsWithNewMessages.length == 1) {  // special cased to trigger an animation
+      var th = threadsWithNewMessages[0];
+      d.tabs.forEach(function(tab) {
+        api.tabs.emit(tab, "thread_info", {thread: th, read: d.lastMessageRead[th.id]});
+      });
+    } else if (threadsWithNewMessages.length > 1) {
+      d.tabs.forEach(function(tab) {
+        api.tabs.emit(tab, "threads", {threads: d.threads, readTimes: d.lastMessageRead, userId: session.userId});
+      });
+    }
+  });
 }
 
 function setIcon(tab, kept) {
@@ -1154,7 +1147,11 @@ function compilePatterns(arr) {
 }
 
 function hasId(id) {
-  return function(o) {return o.id == id};
+  return function(o) {return o.id === id};
+}
+
+function idIsNot(id) {
+  return function(o) {return o.id !== id};
 }
 
 function getId(o) {
@@ -1268,7 +1265,7 @@ function startSession(callback, retryMs) {
     session.prefs = {}; // to come via socket
     socket = api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
       for (var nUri in pageData) {
-        pageData[nUri].cacheIsDirty = true;
+        pageData[nUri].threadDataIsStale = true;
       }
       socket.send(["get_last_notify_read_time"]);
       connectSync();
