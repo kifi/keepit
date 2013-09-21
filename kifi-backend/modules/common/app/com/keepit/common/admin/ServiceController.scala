@@ -25,22 +25,30 @@ class ServiceController @Inject() (
     }
 
 
-    def threadDetails(name: String = "", state: String = "", stack: String = "") = Action { request =>
-      Async {
-        SafeFuture {
-          val _stack = if(request.queryString.get("42").nonEmpty) "42" else stack
-          val hideStack = request.queryString.get("hideStack").nonEmpty
-          val cpuTime = if (request.queryString.get("sample").nonEmpty) {
-            request.queryString.get("sample").map { s =>
-              val t = s.headOption.getOrElse("1000")
-              Math.max(Math.min(1000, (if(t == "") "1000" else t).toInt), 10000)
-            }
-          } else None
-
-          val stats = ThreadStatistics.build(name, state, _stack, cpuTime, hideStack).sortWith((a,b) => a.cpuInfo.usage.getOrElse(0.0) > b.cpuInfo.usage.getOrElse(0.0))
-          Ok(stats.map(_.toTSV()).mkString("\n\n"))
+    def threadDetails(name: String = "", state: String = "", stack: String = "", sort: String = "") = Action { request =>
+      val _stack = if(request.queryString.get("42").nonEmpty) "42" else stack
+      val hideStack = request.queryString.get("hideStack").nonEmpty
+      val short = request.queryString.get("short").nonEmpty
+      val cpuTime = if (request.queryString.get("sample").nonEmpty) {
+        request.queryString.get("sample").map { s =>
+          val t = s.headOption.getOrElse("1000")
+          Math.min(Math.max(1000, (if(t == "") "1000" else t).toInt), 10000)
         }
-       }
+      } else None
+
+      val stats = ThreadStatistics.build(name, state, _stack, cpuTime, hideStack, short)
+      val largestName = if(stats.nonEmpty) stats.map(f => f.name.length).max else 0
+
+      val statsSorted = sort match {
+        case "" | "cpu" if cpuTime.isDefined =>
+          stats.sortWith((a,b) => a.cpuInfo.usage.getOrElse(0.0) > b.cpuInfo.usage.getOrElse(0.0))
+        case "share" =>
+          stats.sortWith((a,b) => a.cpuInfo.totalShare > b.cpuInfo.totalShare)
+        case _ => // name
+          stats.sortWith((a,b) => a.name.toLowerCase < b.name.toLowerCase)
+      }
+
+      Ok(statsSorted.map(_.toTSV(largestName)).mkString("\n\n"))
     }
 
     def threadSummary = Action { request =>
