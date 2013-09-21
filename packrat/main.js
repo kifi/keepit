@@ -5,6 +5,7 @@ const hostRe = /^https?:\/\/([^\/]*)/;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
+var threadCallbacks = {};
 
 // ===== Cached data from server
 
@@ -35,20 +36,20 @@ function clearDataCache() {
 
 function PageData() {
   this.tabs = [];
-  this.on2Callbacks = [];
 }
 PageData.prototype = {
-  on2: function(cb) {
-    if (this.counts) {
+  withThreadData: function(cb) {
+    if (this.threadDataReceived) {
       cb();
     } else {
-      this.on2Callbacks.push(cb);
+      (this.threadDataCallbacks || (this.threadDataCallbacks = [])).push(cb);
     }
   },
-  dispatchOn2: function() {
-    while (this.on2Callbacks.length) {
-      this.on2Callbacks.shift()();
+  dispatchThreadData: function() {
+    for (var arr = this.threadDataCallbacks; arr && arr.length;) {
+      arr.shift()();
     }
+    delete this.threadDataCallbacks;
   }};
 
 // ===== Server requests
@@ -157,19 +158,10 @@ const socketHandlers = {
   notifications: function(arr, numNotVisited) {  // initial load of notifications
     api.log("[socket:notifications]", arr, numNotVisited);
     if (!notifications) {
-      notifications = arr;
       for (var i = 0; i < arr.length; i++) {
-        arr[i].category = (arr[i].category || "message").toLowerCase();
-        // remove current user from participants
-        if(arr[i].participants) {
-          for (var j = 0, len = arr[i].participants.length; j < len; j++) {
-            if (arr[i].participants[j].id == session.userId) {
-              arr[i].participants.splice(j, 1);
-              len--;
-            }
-          }
-        }
+        standardizeNotification(arr[i]);
       }
+      notifications = arr;
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
       numNotificationsNotVisited = numNotVisited;
       while (notificationsCallbacks.length) {
@@ -180,14 +172,7 @@ const socketHandlers = {
   },
   notification: function(n) {  // a new notification (real-time)
     api.log("[socket:notification]", n);
-    n.category = (n.category || "message").toLowerCase();
-    n.participants = n.participants || [];
-    for (var j = 0, len = n.participants.length; j < len; j++) {
-      if (n.participants[j].id == session.userId) {
-        n.participants.splice(j, 1);
-        len--;
-      }
-    }
+    standardizeNotification(n);
     if (insertNewNotification(n)) {
       sendNotificationToTabs(n);
     }
@@ -195,22 +180,15 @@ const socketHandlers = {
   missed_notifications: function(arr, serverTime) {
     api.log("[socket:missed_notifications]", arr, serverTime);
     for (var i = arr.length - 1; ~i; i--) {
-      arr[i].category = (arr[i].category || "message").toLowerCase();
-      if (pageData[arr[i].url]) {
-        socket.send(["get_threads_by_url", arr[i].url]);
+      var n = arr[i];
+      standardizeNotification(n);
+      if (pageData[n.url]) {
+        socket.send(["get_threads_by_url", n.url]);
       }
-      if (arr[i].participants) {
-        for (var j = 0, len = arr[i].participants.length; j < len; j++) {
-          if (arr[i].participants[j].id == session.userId) {
-            arr[i].participants.splice(j, 1);
-            len--;
-          }
-        }
-      }
-      if (!insertNewNotification(arr[i])) {
+      if (!insertNewNotification(n)) {
         arr.splice(i, 1);
       } else if ((new Date(serverTime) - new Date(notifications[0].time)) < 1000*60) {
-        sendNotificationToTabs(arr[i]);
+        sendNotificationToTabs(n);
       }
     }
     if (arr.length) {
@@ -233,21 +211,11 @@ const socketHandlers = {
   },
   thread: function(th) {
     api.log("[socket:thread]", th);
-    var d = pageData[th.uri];
-    if (d) {
-      messageData[th.id] = th.messages;
-      if (d.threadCallbacks) {
-        for (var i = 0; i < d.threadCallbacks.length; i++) {
-          var cb = d.threadCallbacks[i];
-          if (th.id == cb.id || th.messages.some(hasId(cb.id))) {
-            cb.respond({id: th.id, messages: th.messages, participants: th.messages[0].participants});
-            d.threadCallbacks.splice(i--, 1);
-          }
-        }
-      }
-    } else {
-      api.log("[socket:thread]", "Can't process thread, no pageData")
+    messageData[th.id] = th.messages;
+    for (var arr = threadCallbacks[th.id]; arr && arr.length;) {
+      arr.shift()({id: th.id, messages: th.messages, participants: th.messages[0].participants});
     }
+    delete threadCallbacks[th.id];
   },
   thread_infos: function(infos) {
     var threadsPrevByUri = {};
@@ -274,24 +242,25 @@ const socketHandlers = {
       var d = pageData[u];
       d.counts = {n: 0, m: messageCount(d)};
       d.threadDataReceived = true;
+      d.dispatchThreadData();
       if (d.pageDetailsReceived) {
         d.tabs.forEach(function(tab) {
           initTab(tab, d);
         });
-        d.dispatchOn2();
       }
+      // Push threads with any new messages to relevant tabs and load+push their messages too.
       var threadsPrev = threadsPrevByUri[u], threadsWithNewMessages = [];
       d.threads.forEach(function(th) {
         var thPrev = threadsPrev.filter(hasId(th.id))[0];
         var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
         if (numNew) {
           socket.send(["get_thread", th.id]);
-          (d.threadCallbacks = d.threadCallbacks || []).push({id: th.id, respond: function(th) {
+          (threadCallbacks[th.id] || (threadCallbacks[th.id] = [])).push(function(th) {
             d.tabs.forEach(function(tab) {
               // TODO: may want to special case (numNew == 1) for an animation
               api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
             });
-          }});
+          });
           threadsWithNewMessages.push(th);
         }
       });
@@ -530,13 +499,13 @@ api.port.on({
   },
   threads: function(_, respond, tab) {
     var d = pageData[tab.nUri];
-    if (d) d.on2(function() {
+    if (d) d.withThreadData(function() {
       respond({threads: d.threads, read: d.lastMessageRead});
     });
   },
   thread: function(data, respond, tab) {
     var d = pageData[tab.nUri];
-    if (d) d.on2(function() {
+    if (d) d.withThreadData(function() {
       var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
       if (th && messageData[th.id]) {
         if (data.respond) {
@@ -546,7 +515,7 @@ api.port.on({
         var id = (th || data).id;
         socket.send(["get_thread", id]);
         if (data.respond) {
-          (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond});
+          (threadCallbacks[id] || (threadCallbacks[id] = [])).push(respond);
         }
       }
     });
@@ -576,16 +545,7 @@ api.port.on({
     } else {
       socket.send(["get_old_notifications", timeStr, NOTIFICATION_BATCH_SIZE], function(arr) {
         for (var i = 0; i < arr.length; i++) {
-          arr[i].category = (arr[i].category || "message").toLowerCase();
-          // remove current user from participants
-          if (arr[i].participants) {
-            for (var j = 0, len = arr[i].participants.length; j < len; j++) {
-              if (arr[i].participants[j].id == session.userId) {
-                arr[i].participants.splice(j, 1);
-                len--;
-              }
-            }
-          }
+          standardizeNotification(arr[i]);
         }
         if (notifications[notifications.length - 1] === oldest) {
           notifications.push.apply(notifications, arr);
@@ -656,6 +616,15 @@ function removeNotificationPopups(associatedId) {
   api.tabs.each(function(page) {
     api.tabs.emit(page, "remove_notification", associatedId);
   });
+}
+
+function standardizeNotification(n) {
+  n.category = (n.category || "message").toLowerCase();
+  for (var i = n.participants ? n.participants.length : 0; i--;) {
+    if (n.participants[i].id == session.userId) {
+      n.participants.splice(i, 1);
+    }
+  }
 }
 
 function sendNotificationToTabs(n) {
@@ -988,40 +957,36 @@ function subscribe(tab) {
 
       api.log("[subscribe]", resp);
       var uri = resp.normalized;
-      var uri_1 = resp.uri_1 || resp;
-      var uri_2 = resp.uri_2 || resp;
 
       if ((api.tabs.get(tab.id) || {}).url != tab.url) return;
       d = pageData[uri] = pageData[uri] || new PageData;
       finish(uri);
 
-      // uri_1
-      d.kept = uri_1.kept;
-      d.position = uri_1.position;
-      d.neverOnSite = uri_1.neverOnSite;
-      d.sensitive = uri_1.sensitive;
+      d.kept = resp.kept;
+      d.position = resp.position;
+      d.neverOnSite = resp.neverOnSite;
+      d.sensitive = resp.sensitive;
+      d.shown = resp.shown;
+      d.keepers = resp.keepers || [];
+      d.keeps = resp.keeps || 0;
+      d.otherKeeps = d.keeps - d.keepers.length - (d.kept === "public");
+      d.pageDetailsReceived = true;
+
+      // TODO: don’t initialize this thread data here as if it were known
+      d.threads = d.threads || [];
+      d.counts = d.counts || {m:0, n:0};
+      d.lastMessageRead = d.lastMessageRead || {};
+
       d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
         sendInit(tab, d);
       });
 
-      // uri_2
-      d.shown = uri_2.shown;
-      d.keepers = uri_2.keepers || [];
-      d.keeps = uri_2.keeps || 0;
-      d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
-      d.threads = d.threads || [];
-      d.counts = d.counts || {m:0, n:0};
-      d.lastMessageRead = d.lastMessageRead || {};
-      d.pageDetailsReceived = true;
       if (d.threadDataReceived) {
         d.tabs.forEach(function(tab) {
           initTab(tab, d);
         });
-        d.dispatchOn2();
       }
-
-      tellTabsNoticeCountIfChanged();
     }, function fail(xhr) {
       if (xhr.status == 403) {
         session = null;
@@ -1091,7 +1056,7 @@ function whenTabFocused(tab, key, callback) {
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
 
-  for(var key in tab.focusCallbacks) {
+  for (var key in tab.focusCallbacks) {
     tab.focusCallbacks[key](tab);
   }
 
@@ -1143,10 +1108,8 @@ function getPrefetched(request, cb) {
   }
 }
 
-api.tabs.on.unload.add(function(tab) {
+api.tabs.on.unload.add(function(tab, historyApi) {
   api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
-  api.timers.clearTimeout(tab.autoShowTimer);
-  delete tab.autoShowTimer;
   var d = pageData[tab.nUri];
   if (d) {
     for (var i = 0; i < d.tabs.length; i++) {
@@ -1157,6 +1120,14 @@ api.tabs.on.unload.add(function(tab) {
     if (!d.tabs.length) {
       delete pageData[tab.nUri];
     }
+  }
+  api.timers.clearTimeout(tab.autoShowTimer);
+  delete tab.autoShowTimer;
+  delete tab.nUri;
+  delete tab.inited;
+  delete tab.focusCallbacks;
+  if (historyApi) {
+    api.tabs.emit(tab, "reset");
   }
 });
 

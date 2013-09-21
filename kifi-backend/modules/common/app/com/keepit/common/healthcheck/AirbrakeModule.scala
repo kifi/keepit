@@ -23,8 +23,8 @@ case class ProdAirbrakeModule() extends AirbrakeModule {
   }
 
   @Provides
-  def airbrakeProvider(actor: ActorInstance[AirbrakeNotifierActor], formatter: AirbrakeFormatter): AirbrakeNotifier = {
-    new AirbrakeNotifierImpl(actor, formatter)
+  def airbrakeProvider(actor: ActorInstance[AirbrakeNotifierActor]): AirbrakeNotifier = {
+    new AirbrakeNotifierImpl(actor)
   }
 
 }

@@ -17,22 +17,17 @@ import com.keepit.integrity.DuplicateDocumentDetection
 import com.keepit.integrity.DuplicateDocumentsProcessor
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.normalizer.NormalizationService
-import scala.concurrent.Await
-import play.api.data.Form
-import play.api.data.Forms._
 import com.keepit.model.DuplicateDocument
 import com.keepit.integrity.URLMigration
 import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.normalizer.TrustedCandidate
 import com.keepit.integrity.MergedUri
 import com.keepit.integrity.HandleDuplicatesAction
-import play.api.mvc.Action
-import play.api.data.format.Formats._
-import play.api.libs.json.Json
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.integrity.RenormalizationCheckKey
+import com.keepit.common.akka.MonitoredAwait
 
 
 class UrlController @Inject() (
@@ -58,7 +53,8 @@ class UrlController @Inject() (
   urlPatternRuleRepo: UrlPatternRuleRepo,
   renormRepo: RenormalizedURLRepo,
   centralConfig: CentralConfig,
-  eliza: ElizaServiceClient) extends AdminController(actionAuthenticator) {
+  eliza: ElizaServiceClient,
+  monitoredAwait: MonitoredAwait) extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -213,8 +209,13 @@ class UrlController @Inject() (
   
   def batchMerge = AdminHtmlAction{ request =>
     implicit val playRequest = request.request
-    Await.result(uriIntegrityPlugin.batchUpdateMerge(), 5 seconds)
-    Redirect(routes.UrlController.normalizationView(0))
+    monitoredAwait.result(uriIntegrityPlugin.batchUpdateMerge(), 1 minute, "Manual merge failed.")
+    Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0))
+  }
+  
+  def batchURLMigration = AdminHtmlAction{ request =>
+    uriIntegrityPlugin.batchURLMigration(500)
+    Ok("Ok. Start migration of 500 urls")
   }
 
   def redirect(oldUrl: String, newUrl: String, canonical: Boolean = false) = AdminHtmlAction { request =>
@@ -226,7 +227,7 @@ class UrlController @Inject() (
           Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUri.id.get}: ${newUri.url} isn't normalized.")
         case (Some(oldUri), Some(newUri)) => {
           val normalization = if (canonical) Normalization.CANONICAL else newUri.normalization.get
-          val result = Await.result(normalizationService.update(oldUri, TrustedCandidate(newUri.url, normalization)), 5 seconds)
+          val result = monitoredAwait.result(normalizationService.update(oldUri, TrustedCandidate(newUri.url, normalization)), 1 minute, "Manual normalization update failed.")
           if (result.isDefined)
             Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to ${newUri.id.get}: ${newUri.url}")
           else

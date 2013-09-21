@@ -61,7 +61,7 @@ class NamedWeight(query: NamedQuery, searcher: IndexSearcher) extends Weight {
   }
 }
 
-class NamedScorer(weight: Weight, subScorer: Scorer) extends Scorer(weight) with Coordinator {
+class NamedScorer(weight: Weight, subScorer: Scorer) extends Scorer(weight) {
   private[this] var scoredDoc = -1
   private[this] var savedScore = 0.0f
 
@@ -76,9 +76,4 @@ class NamedScorer(weight: Weight, subScorer: Scorer) extends Scorer(weight) with
   override def freq() = subScorer.freq()
 
   def getScore(doc: Int) = if (doc == scoredDoc) savedScore else 0.0f
-}
-
-class NamedScorerWithCoordinator(subWeight: Weight, subScorer: Scorer with Coordinator)
-extends NamedScorer(subWeight, subScorer) with Coordinator {
-  override def coord: Float = subScorer.coord
 }

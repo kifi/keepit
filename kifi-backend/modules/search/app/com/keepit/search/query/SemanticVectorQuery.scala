@@ -151,7 +151,7 @@ private[query] final class DocAndVector(tp: DocsAndPositionsEnum, vector: Semant
         if (payload.length == SemanticVector.arraySize) {
           vector.similarity(payload.bytes, payload.offset) * weight
         } else {
-          log.error("wrong payload size: ${payload.length}")
+          log.error(s"wrong payload size: ${payload.length}")
           0.0f
         }
       } else {

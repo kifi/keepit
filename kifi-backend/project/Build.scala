@@ -87,7 +87,8 @@ object ApplicationBuild extends Build {
     val heimdalDependencies = Seq(
       "org.reactivemongo" %% "reactivemongo" % "0.9"
     ) map (_.excludeAll(
-      ExclusionRule(organization = "org.slf4j")
+      ExclusionRule(organization = "org.slf4j"),
+      ExclusionRule(organization = "ch.qos.logback")
     ))
 
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
@@ -126,7 +127,7 @@ object ApplicationBuild extends Build {
     val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m")
 
     val _testOptions = Seq(
-      Tests.Argument("sequential", "false"),
+      Tests.Argument("sequential", "true"),
       Tests.Argument("threadsNb", "16"),
       Tests.Argument("showtimes", "true"),
       Tests.Argument("stopOnFail", "true"),
@@ -138,10 +139,10 @@ object ApplicationBuild extends Build {
       routesImport ++= _routesImport,
       resolvers ++= commonResolvers,
       templatesImport ++= _templatesImport,
-      javaOptions in test ++= javaTestOptions,
 
       javaOptions in test ++= javaTestOptions,
-      parallelExecution in Test := true,
+      Keys.fork in Test := true,
+      parallelExecution in Test := false,
       testOptions in Test ++= _testOptions,
       EclipseKeys.skipParents in ThisBuild := false,
       sources in doc in Compile := List()

@@ -51,7 +51,6 @@ class UriIntegrityActor @Inject()(
   private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
-      assume(bms.size == 1, s"user ${userId.id} has ${bms.size} bookmarks referencing uri ${oldBm.uriId}")
       bookmarkRepo.getByUriAndUser(newUriId, userId, excludeState = None) match {
         case None => {
           log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
@@ -116,6 +115,7 @@ class UriIntegrityActor @Inject()(
    * url now pointing to a new uri, any entity related to that url should update its uri reference.
    */
   private def handleURLMigration(url: URL, newUriId: Id[NormalizedURI], delayScrape: Boolean = false)(implicit session: RWSession): Option[NormalizedURI] = {
+      log.info(s"migrating url ${url.id} to new uri: ${newUriId}")
       urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MIGRATED)))
       val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
       if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None))
@@ -141,7 +141,16 @@ class UriIntegrityActor @Inject()(
     val toMerge = getOverDueList(batchSize)
     log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
     val toScrape = db.readWrite{ implicit s =>
-      toMerge.map{ change => processMerge(change) }
+      toMerge.map{ change => 
+        try{
+          processMerge(change) 
+        } catch {
+          case e: Exception => {
+            changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
+            Nil
+          }
+        }
+      }
     }
     toMerge.sortBy(_.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pairs of uris merged. zookeeper seqNum updated.")
@@ -201,6 +210,7 @@ class UriIntegrityActor @Inject()(
 trait UriIntegrityPlugin extends SchedulingPlugin  {
   def handleChangedUri(change: UriChangeMessage): Unit
   def batchUpdateMerge(batchSize: Int = -1): Future[Int]
+  def batchURLMigration(batchSize: Int = -1): Unit
 }
 
 @Singleton
@@ -212,7 +222,7 @@ class UriIntegrityPluginImpl @Inject() (
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
      scheduleTask(actor.system, 1 minutes, 45 seconds, actor.ref, BatchUpdateMerge(50))
-     scheduleTask(actor.system, 1 minutes, 60 seconds, actor.ref, BatchUpdateMerge(100))
+     scheduleTask(actor.system, 1 minutes, 60 seconds, actor.ref, BatchURLMigration(100))
   }
   override def onStop() {
      log.info("stopping UriIntegrityPluginImpl")
@@ -223,5 +233,6 @@ class UriIntegrityPluginImpl @Inject() (
   }
 
   def batchUpdateMerge(batchSize: Int) = actor.ref.ask(BatchUpdateMerge(batchSize))(1 minute).mapTo[Int]
+  def batchURLMigration(batchSize: Int) = actor.ref ! BatchURLMigration(batchSize)
 
 }

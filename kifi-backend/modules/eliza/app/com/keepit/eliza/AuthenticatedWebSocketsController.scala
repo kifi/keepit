@@ -8,10 +8,12 @@ import com.keepit.social.{SocialNetworkType, SocialId}
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError, Healthcheck}
+import com.keepit.heimdal.{UserEvent, UserEventContextBuilder, UserEventType, HeimdalServiceClient}
+import com.keepit.common.akka.SafeFuture
 
 import scala.concurrent.stm.{Ref, atomic}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{Future, Promise, future}
 import scala.concurrent.duration._
 import scala.util.Random
 import scala.collection.concurrent.TrieMap
@@ -42,6 +44,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val actorSystem: ActorSystem
   protected val clock: Clock
   protected val healthcheckPlugin: HealthcheckPlugin
+  protected val heimdal: HeimdalServiceClient
 
   protected def onConnect(socket: SocketInfo) : Unit
   protected def onDisconnect(socket: SocketInfo) : Unit
@@ -172,6 +175,20 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 Some(c)
               }
             }
+            
+            //testing heimdal
+            SafeFuture {
+              val contextBuilder = new UserEventContextBuilder()
+              contextBuilder += ("requestType", jsArr.value(0).as[String])
+              contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+              contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
+              contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
+              streamSession.experiments.foreach{ experiment => 
+                contextBuilder += ("experiment", experiment.toString)
+              }
+              heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_in_2")))
+            }
+
             log.info("WS request for: " + jsArr)
             Statsd.increment(s"websocket.handler.${jsArr.value(0)}")
             Statsd.time(s"websocket.handler.${jsArr.value(0)}") {handler(jsArr.value.tail)}

@@ -211,8 +211,15 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         }
         sumExpl.setMatch(true)
         sumExpl.setValue(sum)
-        val hot = if (hotDocSet.get(doc)) ", hot!" else ""
-        sumExpl.setDescription(s"percentMatch(${overlapValue/totalValue*100}% = ${overlapValue}/${totalValue}${hot}), sum of:")
+
+        val hot = hotDocSet match {
+          case h: HotDocSet =>
+            h.explain(doc)
+          case _ =>
+            if (hotDocSet.get(doc)) new Explanation(1.0f, "hot") else new Explanation(0.0f, "")
+        }
+
+        sumExpl.setDescription(s"percentMatch(${overlapValue/totalValue*100}% = ${overlapValue}/${totalValue}, ${hot.getDescription}), sum of:")
 
         if (disableCoord) {
           sumExpl
@@ -257,7 +264,7 @@ object BooleanScorer {
     def disjunction() = {
       new BooleanOrScorer(weight, optional, coordFactorForOptional, threshold, thresholdForHotDocs, optionalValue, hotDocSet)
     }
-    def prohibit(source: Scorer with Coordinator) = {
+    def prohibit(source: Scorer) = {
       new BooleanNotScorer(weight, source, prohibited)
     }
 
@@ -274,7 +281,7 @@ object BooleanScorer {
   }
 }
 
-class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float, maxOverlapValue: Float, numSubScores: Int) extends Scorer(weight) with Coordinator {
+class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float, maxOverlapValue: Float, numSubScores: Int) extends Scorer(weight) {
 
   private[this] val overlapValueUnit = maxOverlapValue / numSubScores
   private[this] val maxOptionalOverlapValue = maxOverlapValue - required.value
@@ -313,11 +320,9 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
   }
 
   override def freq(): Int = 1
-
-  override def coord = overlapValueUnit / (overlapValueUnit + (maxOptionalOverlapValue - optional.value))
 }
 
-class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Scorer], val value: Float) extends Scorer(weight) with Coordinator {
+class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Scorer], val value: Float) extends Scorer(weight) {
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -362,13 +367,11 @@ class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Sc
   }
 
   override def freq(): Int = 1
-
-  override def coord = 1.0f
 }
 
 class BooleanOrScorer(weight: Weight, scorers: Array[(Scorer, Float)], coordFactors: Array[Float],
                       threshold: Float, thresholdForHotDocs: Float, maxOverlapValue: Float, hotDocSet: Bits)
-extends Scorer(weight) with Coordinator with Logging {
+extends Scorer(weight) with Logging {
 
   private[this] var doc = -1
   private[this] var scoreValue = 0.0f
@@ -447,10 +450,9 @@ extends Scorer(weight) with Coordinator with Logging {
   override def freq(): Int = 1
 
   def value = overlapValue
-  override def coord = overlapValueUnit / (overlapValueUnit + (maxOverlapValue - overlapValue))
 }
 
-class BooleanNotScorer(weight: Weight, scorer: Scorer with Coordinator, prohibited: Array[Scorer]) extends Scorer(weight) with Coordinator {
+class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]) extends Scorer(weight) {
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -477,8 +479,6 @@ class BooleanNotScorer(weight: Weight, scorer: Scorer with Coordinator, prohibit
   }
 
   override def freq(): Int = 1
-
-  override def coord = scorer.coord
 
   private def isProhibited = {
     prohibited.exists{ n =>

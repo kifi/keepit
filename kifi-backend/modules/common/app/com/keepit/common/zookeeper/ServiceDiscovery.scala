@@ -22,7 +22,7 @@ import org.apache.zookeeper.CreateMode._
 
 trait ServiceDiscovery {
   def serviceCluster(serviceType: ServiceType): ServiceCluster
-  def register(): Node
+  def register(doKeepAlive: Boolean = true): Node
   def unRegister(): Unit = {}
   def isLeader(): Boolean
   def myClusterSize: Int = 0
@@ -116,9 +116,7 @@ class ServiceDiscoveryImpl @Inject() (
     }
   }
 
-
-
-  def register(): Node = {
+  def register(doKeepAlive: Boolean = true): Node = {
     watchServices()
     val myServiceType: ServiceType = services.currentService
     log.info(s"registered clusters: $clusters, my service is $myServiceType")
@@ -128,14 +126,14 @@ class ServiceDiscoveryImpl @Inject() (
     myNode = Some(zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL))
     myCluster.register(myNode.get, thisRemoteService)
     log.info(s"registered as node ${myNode.get}")
-    keepAlive()
+    if (doKeepAlive) keepAlive()
     myNode.get
   }
 
   override def unRegister(): Unit = myNode map {node => zk.deleteNode(node)}
 
   def changeStatus(newStatus: ServiceStatus) : Unit = {
-    myNode.map { node => 
+    myNode.map { node =>
       val thisServiceInstance = clusters(services.currentService).instanceForNode(node)
       thisServiceInstance.foreach{ serviceInstance =>
         log.info(s"Changing instance status to $newStatus")
@@ -152,23 +150,20 @@ class ServiceDiscoveryImpl @Inject() (
     }
   }
 
-  def myVersion: ServiceVersion = services.currentVersion 
+  def myVersion: ServiceVersion = services.currentVersion
 
   def startSelfCheck(): Unit = future {
-
     log.info("Running self check")
     services.currentService.selfCheck().onComplete{
       case Success(passed) => if (passed) { Thread.sleep(20000); changeStatus(ServiceStatus.UP) } else changeStatus(ServiceStatus.SELFCHECK_FAIL)
       case Failure(e) => changeStatus(ServiceStatus.SELFCHECK_FAIL)
     }
   }
-  
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
   implicit val serviceStatusFormat = ServiceStatus.format
   implicit val ipAddressFormat = Json.format[IpAddress]
   implicit val serviceTypeFormat = ServiceType.format
-  
 
 }
 

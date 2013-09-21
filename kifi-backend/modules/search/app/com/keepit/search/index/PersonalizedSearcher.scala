@@ -61,17 +61,14 @@ object PersonalizedSearcher {
 }
 
 class PersonalizedSearcher(override val indexReader: WrappedIndexReader, myUris: Set[Long],
-                           browsingFilter: MultiHashFilter[BrowsingHistory], clickFilter: MultiHashFilter[ClickHistory],
+                           val browsingFilter: MultiHashFilter[BrowsingHistory], val clickFilter: MultiHashFilter[ClickHistory],
                            scaledWeightMyBookMarks: Int, scaledWeightBrowsingHistory: Int, scaledWeightClickHistory: Int)
 extends Searcher(indexReader) with Logging {
   import PersonalizedSearcher._
 
-  val hotDocs = MutableSet.empty[Long]
-
   override protected def getSemanticVectorComposer(term: Term) = {
     val subReaders = indexReader.wrappedSubReaders
     val composer = new SemanticVectorComposer
-    var hotDocs = new ArrayBuffer[Long]
     var i = 0
     while (i < subReaders.length) {
       val subReader = subReaders(i)
@@ -82,7 +79,6 @@ extends Searcher(indexReader) with Logging {
           val id = idMapper.getId(tp.docID())
           val weight = {
             if (browsingFilter.mayContain(id)){
-              if (browsingFilter.mayContain(id, 2)) hotDocs += id
               scaledWeightBrowsingHistory
             } else if (clickFilter.mayContain(id)) {
               scaledWeightClickHistory

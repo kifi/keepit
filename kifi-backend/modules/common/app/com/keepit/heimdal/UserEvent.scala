@@ -53,6 +53,25 @@ object UserEventContext {
   }
 }
 
+class UserEventContextBuilder {
+  val data = new scala.collection.mutable.HashMap[String, Seq[ContextData]]()
+
+  def +=(key: String, value: Double) : Unit = {
+    val currentValues = data.getOrElse(key,Seq[ContextData]())
+    data(key) = (currentValues :+ ContextDoubleData(value)).toSet.toSeq
+  }
+
+  def +=(key: String, value: String) : Unit = {
+    val currentValues = data.getOrElse(key,Seq[ContextData]())
+    data(key) = (currentValues :+ ContextStringData(value)).toSet.toSeq
+  }
+
+  def build : UserEventContext = {
+    UserEventContext(Map(data.toSeq:_*))
+  }
+}
+
+
 case class UserEvent(
   userId: Long,
   context: UserEventContext,
