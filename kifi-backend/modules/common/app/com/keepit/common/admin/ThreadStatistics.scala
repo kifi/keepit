@@ -1,7 +1,7 @@
 package com.keepit.common.admin
 
 import scala.collection.JavaConversions._
-import sun.management.ManagementFactory
+import java.lang.management.ManagementFactory
 
 case class ThreadCPUInfo(totalShare: Double, usage: Option[Double]) {
   def toTSV() = {
