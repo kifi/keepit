@@ -97,7 +97,7 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
 }
 
 class MultiplicativeBoostScorer(weight: MultiplicativeBoostWeight, textScorer: Scorer, boosterScorers: Array[Scorer], boosterStrengths: Array[Float])
-extends Scorer(weight) with Coordinator with Logging {
+extends Scorer(weight) with Logging {
   private[this] var doc = -1
   private[this] var scoredDoc = -1
   private[this] var scr = 0.0f

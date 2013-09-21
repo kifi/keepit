@@ -5,11 +5,8 @@ import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.model._
 import com.keepit.common.logging.Logging
-import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
-import scala.util.{Try, Failure}
 import com.keepit.common.healthcheck.HealthcheckError
-import scala.util.Success
 import com.keepit.integrity.{MergedUri, UriIntegrityPlugin}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -19,7 +16,8 @@ import com.keepit.common.db.Id
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]]
+  def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = update(current, false, candidates)
+  def update(current: NormalizedURI, isNew: Boolean, candidates: Seq[NormalizationCandidate]): Future[Option[Id[NormalizedURI]]]
   def normalize(uriString: String)(implicit session: RSession): String
   def prenormalize(uriString: String)(implicit session: RSession): String
 }
@@ -49,9 +47,10 @@ class NormalizationServiceImpl @Inject() (
     prenormalizedStringOption.getOrElse(uriString)
   }
 
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
+  def update(current: NormalizedURI, isNew: Boolean, candidates: Seq[NormalizationCandidate]): Future[Option[Id[NormalizedURI]]] = {
+    val relevantCandidates = getRelevantCandidates(current, isNew, candidates)
     for {
-      newReferenceOption <- processUpdate(current, candidates:_*)
+      newReferenceOption <- processUpdate(current, relevantCandidates: _*)
       newReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(current, newReferenceOption)
     } yield newReferenceOptionAfterAdditionalUpdates.map(_.id.get)
   } tap(_.onFailure { case e => healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Normalization update failed: ${e.getMessage}"))) })
@@ -59,11 +58,10 @@ class NormalizationServiceImpl @Inject() (
 
   private def processUpdate(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]] = {
 
-    val relevantCandidates = getRelevantCandidates(current, candidates)
     val contentChecks = db.readOnly { implicit session => priorKnowledge.getContentChecks(current.url) }
     val findStrongerCandidate = FindStrongerCandidate(current, Action(current, contentChecks))
 
-    for { (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(relevantCandidates) } yield {
+    for { (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(candidates) } yield {
       contentChecks.foreach(persistFailedAttempts(_))
       for {
         successfulCandidate <- successfulCandidateOption
@@ -72,40 +70,24 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private def getRelevantCandidates(current: NormalizedURI, candidates: Seq[NormalizationCandidate]) = {
+  private def getRelevantCandidates(current: NormalizedURI, isNew: Boolean, candidates: Seq[NormalizationCandidate]) = {
 
     val prenormalizedCandidates = candidates.map {
       case UntrustedCandidate(url, normalization) => db.readOnly { implicit session => UntrustedCandidate(prenormalize(url), normalization) }
       case candidate: TrustedCandidate => candidate
     }
 
-    current.normalization match {
-      case Some(currentNormalization) => prenormalizedCandidates.filter(candidate => candidate.normalization > currentNormalization || (candidate.normalization == currentNormalization && candidate.url != current.url))
-      case None => prenormalizedCandidates ++ findVariations(current.url).map { case (normalization, uri) => TrustedCandidate(uri.url, uri.normalization.getOrElse(normalization)) }
-    }
+    if (isNew || current.normalization.isEmpty)
+      prenormalizedCandidates ++ findVariations(current.url).map { case (normalization, uri) => TrustedCandidate(uri.url, uri.normalization.getOrElse(normalization)) }
+    else
+      prenormalizedCandidates.filter(candidate => candidate.normalization > current.normalization.get || (candidate.normalization == current.normalization.get && candidate.url != current.url))
   }
 
-  private def findVariations(referenceUrl: String): Seq[(Normalization, NormalizedURI)] = {
-
-    val variationsTry =
-      for {
-        referenceURI <- URI.parse(referenceUrl)
-        variations <- Try {
-          for {
-            normalization <- Normalization.schemes
-            urlVariation <- SchemeNormalizer(normalization)(referenceURI).safelyToString()
-            uri <- db.readOnly { implicit session => normalizedURIRepo.getByNormalizedUrl(urlVariation) }
-          } yield (normalization, uri)
-        }
-      } yield variations
-
-    variationsTry match {
-      case Success(variations) => variations.toSeq
-      case Failure(e) => {
-        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Url variations could not be generated: ${e.getMessage}")))
-        Seq.empty
-      }
-    }
+  private def findVariations(referenceUrl: String): Seq[(Normalization, NormalizedURI)] = db.readOnly { implicit session =>
+    for {
+      (normalization, urlVariation) <- SchemeNormalizer.generateVariations(referenceUrl)
+      uri <- normalizedURIRepo.getByNormalizedUrl(urlVariation)
+    } yield (normalization, uri)
   }
 
   private case class FindStrongerCandidate(currentReference: NormalizedURI, oracle: NormalizationCandidate => Action) {
@@ -119,7 +101,6 @@ class NormalizationServiceImpl @Inject() (
         case Seq(strongerCandidate, weakerCandidates @ _*) => {
           assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization)
           assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization)
-          if (currentReference.normalization == Some(strongerCandidate.normalization)) assert(currentReference.url != strongerCandidate.url)
 
           db.readOnly { implicit session =>
             oracle(strongerCandidate) match {
@@ -189,9 +170,9 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private def getURIsToBeFurtherUpdated(currentReference: NormalizedURI, newReference: NormalizedURI): Set[NormalizedURI] = db.readOnly { implicit session =>
-
+    val haveBeenUpdated = Set(currentReference.url, newReference.url)
     val toBeUpdated = for {
-      url <- Set(currentReference.url, newReference.url)
+      url <- haveBeenUpdated
       (_, normalizedURI) <- findVariations(url) if normalizedURI.normalization.isEmpty || normalizedURI.normalization.get <= newReference.normalization.get
       toBeUpdated <- (normalizedURI.state, normalizedURI.redirect) match {
         case (NormalizedURIStates.INACTIVE, _) => None
@@ -203,8 +184,7 @@ class NormalizationServiceImpl @Inject() (
       }
     } yield toBeUpdated
 
-    val toBeExcluded = Set(currentReference.url, newReference.url)
-    toBeUpdated.filter(uri => !toBeExcluded.contains(uri.url))
+    toBeUpdated.filter(uri => !haveBeenUpdated.contains(uri.url))
   }
 
   private def persistFailedAttempts(contentCheck: ContentCheck): Unit = {

@@ -7,6 +7,7 @@ import com.keepit.search.graph.URIGraphSearcherWithUser
 import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet
 import com.keepit.search.index.ArticleRecord
+import com.keepit.search.index.ArticleVisibility
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.PersonalizedSearcher
 import com.keepit.common.db.{Id, ExternalId}
@@ -216,11 +217,11 @@ class MainSearcher(
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
       Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
-      hotDocs.setHotDocs(personalizedSearcher.hotDocs)
-      hotDocs.setClickBoosts(clickBoosts)
+      hotDocs.set(personalizedSearcher.browsingFilter, clickBoosts)
 
       val tLucene = currentDateTime.getMillis()
       personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
+        val visibility = new ArticleVisibility(reader)
         val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
@@ -233,10 +234,10 @@ class MainSearcher(
               if (myUriEdgeAccessor.seek(id)) {
                 myHits.insert(id, score * clickBoost, score, newSemanticScore, clickBoost, true, !myUriEdgeAccessor.isPublic)
               } else {
-                friendsHits.insert(id, score * clickBoost, score, newSemanticScore, clickBoost, false, false)
+                if (visibility.isVisible(doc)) friendsHits.insert(id, score * clickBoost, score, newSemanticScore, clickBoost, false, false)
               }
             } else if (filter.includeOthers) {
-              othersHits.insert(id, score * clickBoost, score, newSemanticScore, clickBoost, false, false)
+              if (visibility.isVisible(doc)) othersHits.insert(id, score * clickBoost, score, newSemanticScore, clickBoost, false, false)
             }
           }
           doc = scorer.nextDoc()
@@ -453,9 +454,8 @@ class MainSearcher(
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
-      hotDocs.setHotDocs(personalizedSearcher.hotDocs)
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
-      hotDocs.setClickBoosts(clickBoosts)
+      hotDocs.set(personalizedSearcher.browsingFilter, clickBoosts)
 
       (query, personalizedSearcher.explain(query, uriId.id))
     }

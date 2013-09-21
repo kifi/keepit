@@ -50,7 +50,7 @@ class ExtEventController @Inject() (
     val json = request.body
     (json \ "version").as[Int] match {
       case 1 => createEventsFromPayload(json, request.user, request.experiments)
-      case i => throw new Exception("Unknown events version: $i")
+      case i => throw new Exception(s"Unknown events version: $i")
     }
     Ok(JsObject(Seq("stored" -> JsString("ok"))))
   }

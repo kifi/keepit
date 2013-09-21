@@ -251,6 +251,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new NormalizationMapperDelegate(profile)
   }
 
+  implicit object RestrictionTypeMapper extends BaseTypeMapper[Restriction] {
+    def apply(profile: BasicProfile) = new RestrictionMapperDelegate(profile)
+  }
+
   implicit object JsArrayTypeMapper extends BaseTypeMapper[JsArray] {
     def apply(profile: BasicProfile) = new JsArrayMapperDelegate(profile)
   }
@@ -623,3 +627,11 @@ class NormalizationMapperDelegate[T](profile: BasicProfile) extends StringMapper
   def safeDestToSource(str: String): Normalization = Normalization(str)
 }
 
+//************************************
+//       Restriction -> String
+//************************************
+class RestrictionMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[Restriction](profile) {
+  def zero = Restriction("")
+  def sourceToDest(value: Restriction): String = value.context
+  def safeDestToSource(str: String): Restriction = Restriction(str)
+}

@@ -25,10 +25,7 @@ const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
 const workerNs = require('sdk/core/namespace').ns();
 
-const googleSearchPattern = /^https?:\/\/www\.google\.[a-z]{2,3}(\.[a-z]{2})?\/(|search|webhp)\?(|.*&)q=([^&]*)/;
 const httpRe = /^https?:/;
-const hostRe = /^https?:\/\/[^\/]*/;
-const stripHashRe = /^[^#]*/;
 
 const pages = {}, tabsById = {};
 function createPage(tab) {
@@ -481,6 +478,10 @@ for each (let win in windows) {
 
 // navigation handling
 
+const stripHashRe = /^[^#]*/;
+const googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
+const plusRe = /\+/g;
+
 require('./location').onChange(function(tabId, newPage) {
   const tab = tabsById[tabId];
   exports.log('[location:change]', tabId, 'newPage:', newPage, tab.url);
@@ -493,21 +494,21 @@ require('./location').onChange(function(tabId, newPage) {
     // our old page object if it is.
     let page = createPage(tab);
 
-    let match = googleSearchPattern.exec(tab.url);
+    let match = googleSearchRe.exec(tab.url);
     if (match) {
-      let query = decodeURIComponent(match[4].replace(/\+/g, ' '));
+      let query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
       if (query) dispatch.call(exports.on.search, query);
     }
-    dispatch.call(exports.tabs.on.loading, page);
+    if (httpRe.test(page.url)) {
+      dispatch.call(exports.tabs.on.loading, page);
+    }
   } else {
     let page = pages[tabId];
-    if (page.url.match(stripHashRe)[0] === tab.url.match(stripHashRe)[0]) {  // fragment-only change
-      page.url = tab.url;
-    } else if (page.url != tab.url) {
-      if (httpRe.test(page.url)) {
-        dispatch.call(api.tabs.on.unload, page);
+    if (page.url != tab.url) {
+      if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != tab.url.match(stripHashRe)[0]) {
+        dispatch.call(exports.tabs.on.unload, page, true);
         page.url = tab.url;
-        dispatch.call(api.tabs.on.loading, page);
+        dispatch.call(exports.tabs.on.loading, page);
       } else {
         page.url = tab.url;
       }
