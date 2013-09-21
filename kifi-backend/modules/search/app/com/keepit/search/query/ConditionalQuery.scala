@@ -18,7 +18,7 @@ import org.apache.lucene.util.ToStringUtils
 import java.util.{Set => JSet}
 
 
-class ConditionalQuery(val source: Query, val condition: Query) extends Query with Coordinator {
+class ConditionalQuery(val source: Query, val condition: Query) extends Query {
 
   override def createWeight(searcher: IndexSearcher): Weight = new ConditionalWeight(this, searcher.asInstanceOf[Searcher])
 
@@ -111,26 +111,14 @@ class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Wei
     val sourceScorer = sourceWeight.scorer(context, true, false, acceptDocs)
     if (sourceScorer == null) null
     else {
-      // main scorer has to implement Coordinator trait
-      val mainScorer = if (sourceScorer.isInstanceOf[Coordinator]) {
-        sourceScorer.asInstanceOf[Scorer with Coordinator]
-      } else {
-        QueryUtil.toScorerWithCoordinator(sourceScorer)
-      }
-
-      if (mainScorer == null) null
-      else {
-        val conditionScorer = conditionWeight.scorer(context, true, false, acceptDocs)
-        if (conditionScorer == null) null
-        else {
-          new ConditionalScorer(this, mainScorer, conditionScorer)
-        }
-      }
+     val conditionScorer = conditionWeight.scorer(context, true, false, acceptDocs)
+     if (conditionScorer == null) null
+     else new ConditionalScorer(this, sourceScorer, conditionScorer)
     }
   }
 }
 
-class ConditionalScorer(weight: ConditionalWeight, sourceScorer: Scorer with Coordinator, conditionScorer: Scorer) extends Scorer(weight) with Coordinator {
+class ConditionalScorer(weight: ConditionalWeight, sourceScorer: Scorer, conditionScorer: Scorer) extends Scorer(weight) {
   private[this] var doc = -1
 
   override def docID(): Int = doc
@@ -152,5 +140,4 @@ class ConditionalScorer(weight: ConditionalWeight, sourceScorer: Scorer with Coo
   }
   override def score() = sourceScorer.score()
   override def freq() = 1
-  override def coord = sourceScorer.coord
 }
