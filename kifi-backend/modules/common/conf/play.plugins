@@ -1,3 +1,4 @@
+1500:com.typesafe.plugin.CommonsMailerPlugin
 9994:com.keepit.social.SecureSocialAuthenticatorStore
 9995:com.keepit.social.SecureSocialIdGenerator
 9996:securesocial.core.providers.utils.DefaultPasswordValidator
@@ -6,4 +7,5 @@
 9999:securesocial.core.providers.utils.BCryptPasswordHasher
 10001:com.keepit.social.providers.FacebookProvider
 10002:com.keepit.social.providers.LinkedInProvider
-10003:com.keepit.common.cache.PlayCachePlugin
+10003:com.keepit.social.providers.UsernamePasswordProvider
+10004:com.keepit.common.cache.PlayCachePlugin
