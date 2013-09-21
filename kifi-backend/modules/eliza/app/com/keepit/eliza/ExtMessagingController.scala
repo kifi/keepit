@@ -168,8 +168,13 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr("thread_infos", threadInfos))
     },
     "get_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-      val threadInfos = messagingController.getThreadInfos(socket.userId, url)
-      socket.channel.push(Json.arr(requestId.toLong, threadInfos))
+      // remove after clients are off 2.6.6 and on 2.6.7+
+      if (url == null || url == "null") {
+        // Ignore for now to stop exceptions. Leaks some memory on client, but it's a bad request.
+      } else {
+        val threadInfos = messagingController.getThreadInfos(socket.userId, url)
+        socket.channel.push(Json.arr(requestId.toLong, threadInfos))
+      }
     },
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
       messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
