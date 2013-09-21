@@ -27,8 +27,9 @@ class RenormalizedURLRepoImpl @Inject()(
   override val table = new RepoTable[RenormalizedURL](db, "renormalized_url"){
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def newUriId = column[Id[NormalizedURI]]("new_uri_id", O.NotNull)
+    def oldUriId = column[Id[NormalizedURI]]("old_uri_id", O.Nullable)
     def seq = column[SequenceNumber]("seq", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ urlId ~ newUriId ~ state ~ seq <> (RenormalizedURL.apply _, RenormalizedURL.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ urlId ~ oldUriId.? ~ newUriId ~ state ~ seq <> (RenormalizedURL.apply _, RenormalizedURL.unapply _)
   }
   
   override def save(model: RenormalizedURL)(implicit session: RWSession) = {

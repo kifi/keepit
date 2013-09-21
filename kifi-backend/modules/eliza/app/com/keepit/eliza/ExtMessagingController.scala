@@ -114,14 +114,11 @@ class ExtMessagingController @Inject() (
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
-        messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { messages =>
-        log.info(s"[get_thread] got messages: $messages")
-        val url = messages.headOption.map(_.nUrl).getOrElse("") //TODO: this needs to change when we have detached threads!
+      messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { msgs =>
+        log.info(s"[get_thread] got messages: $msgs")
+        val url = msgs.headOption.map(_.nUrl).getOrElse("")  // needs to change when we have detached threads
         socket.channel.push(
-          Json.arr("thread",
-            Json.obj("id" -> threadId, "uri" -> url, "messages" -> messages.reverse)
-          )
-        )
+          Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse)))
       }
     },
     "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
@@ -166,9 +163,13 @@ class ExtMessagingController @Inject() (
       messagingController.setNotificationReadForMessage(socket.userId, ExternalId[Message](messageId))
       messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
     },
-    "get_threads_by_url" -> { case JsString(url) +: _ =>
+    "get_threads_by_url" -> { case JsString(url) +: _ =>  // deprecated in favor of "get_threads"
       val threadInfos = messagingController.getThreadInfos(socket.userId, url)
       socket.channel.push(Json.arr("thread_infos", threadInfos))
+    },
+    "get_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
+      val threadInfos = messagingController.getThreadInfos(socket.userId, url)
+      socket.channel.push(Json.arr(requestId.toLong, threadInfos))
     },
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
       messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
