@@ -26,29 +26,52 @@ class ServiceController @Inject() (
 
 
     def threadDetails(name: String = "", state: String = "", stack: String = "", sort: String = "") = Action { request =>
-      val _stack = if(request.queryString.get("42").nonEmpty) "42" else stack
-      val hideStack = request.queryString.get("hideStack").nonEmpty
-      val short = request.queryString.get("short").nonEmpty
-      val cpuTime = if (request.queryString.get("sample").nonEmpty) {
-        request.queryString.get("sample").map { s =>
-          val t = s.headOption.getOrElse("1000")
-          Math.min(Math.max(1000, (if(t == "") "1000" else t).toInt), 10000)
+      if (request.queryString.get("help").nonEmpty) {
+        Ok("""
+             |Usage: http://server:9000/internal/common/threadDetails
+             |Options:
+             |    name=$       filter threads by thread name containing $, default: ''
+             |    state=$      filter threads by state containing $, default: ''
+             |    stack=$      filter threads by stack trace containing $, default: ''
+             |    sort         sort results by name, cpu, or share, default: 'name'
+             |    [sample=$]   sample cpu for usage, default: not set, if present, 1000
+             |    [42]         shortcut to `stack=com.keepit`, default: not set
+             |    [hideStack]  hide stacktrace in results, default: not set
+             |    [short]      display only the most relevant stack trace element, default: not set
+             |
+             |Common usages:
+             |    http://server:9000/internal/common/threadDetails?42
+             |    http://server:9000/internal/common/threadDetails?sample&short
+             |    http://server:9000/internal/common/threadDetails?stack=controller
+             |
+             |See: https://team42.atlassian.net/wiki/display/ENG/View+thread+details+of+a+running+server
+             |
+             |""".stripMargin)
+      } else {
+        val _stack = if(request.queryString.get("42").nonEmpty) "42" else stack
+        val hideStack = request.queryString.get("hideStack").nonEmpty
+        val short = request.queryString.get("short").nonEmpty
+        val cpuTime = if (request.queryString.get("sample").nonEmpty) {
+          request.queryString.get("sample").map { s =>
+            val t = s.headOption.getOrElse("1000")
+            Math.min(Math.max(1000, (if(t == "") "1000" else t).toInt), 10000)
+          }
+        } else None
+
+        val stats = ThreadStatistics.build(name, state, _stack, cpuTime, hideStack, short)
+        val largestName = if(stats.nonEmpty) stats.map(f => f.name.length).max else 0
+
+        val statsSorted = sort match {
+          case "" | "cpu" if cpuTime.isDefined =>
+            stats.sortWith((a,b) => a.cpuInfo.usage.getOrElse(0.0) > b.cpuInfo.usage.getOrElse(0.0))
+          case "share" =>
+            stats.sortWith((a,b) => a.cpuInfo.totalShare > b.cpuInfo.totalShare)
+          case _ => // name
+            stats.sortWith((a,b) => a.name.toLowerCase < b.name.toLowerCase)
         }
-      } else None
 
-      val stats = ThreadStatistics.build(name, state, _stack, cpuTime, hideStack, short)
-      val largestName = if(stats.nonEmpty) stats.map(f => f.name.length).max else 0
-
-      val statsSorted = sort match {
-        case "" | "cpu" if cpuTime.isDefined =>
-          stats.sortWith((a,b) => a.cpuInfo.usage.getOrElse(0.0) > b.cpuInfo.usage.getOrElse(0.0))
-        case "share" =>
-          stats.sortWith((a,b) => a.cpuInfo.totalShare > b.cpuInfo.totalShare)
-        case _ => // name
-          stats.sortWith((a,b) => a.name.toLowerCase < b.name.toLowerCase)
+        Ok(statsSorted.map(_.toTSV(largestName)).mkString("\n\n"))
       }
-
-      Ok(statsSorted.map(_.toTSV(largestName)).mkString("\n\n"))
     }
 
     def threadSummary = Action { request =>
