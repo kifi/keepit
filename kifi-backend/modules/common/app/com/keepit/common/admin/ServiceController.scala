@@ -1,16 +1,12 @@
 package com.keepit.common.admin
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstance, ServiceCluster}
-import com.keepit.common.service.{ServiceType, ServiceStatus}
-import com.keepit.common.amazon.{AmazonInstanceInfo}
+import com.keepit.common.zookeeper.ServiceDiscovery
 import com.google.inject.Inject
-import views.html
 import com.keepit.common.logging.Logging
 import play.api.mvc._
-import scala.util.{Failure, Success, Try}
-import scala.util.matching.Regex
 import scala.collection.JavaConversions._
+import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits._
 
 class ServiceController @Inject() (
     serviceDiscovery: ServiceDiscovery) extends Controller with Logging {
@@ -30,29 +26,21 @@ class ServiceController @Inject() (
 
 
     def threadDetails(name: String = "", state: String = "", stack: String = "") = Action { request =>
-      val onlyShowUs = request.queryString.get("us").nonEmpty
+      Async {
+        SafeFuture {
+          val _stack = if(request.queryString.get("42").nonEmpty) "42" else stack
+          val hideStack = request.queryString.get("hideStack").nonEmpty
+          val cpuTime = if (request.queryString.get("sample").nonEmpty) {
+            request.queryString.get("sample").map { s =>
+              val t = s.headOption.getOrElse("1000")
+              Math.max(Math.min(1000, (if(t == "") "1000" else t).toInt), 10000)
+            }
+          } else None
 
-      val allThreads = Thread.getAllStackTraces.map { case (thread, stackTrace) =>
-        val threadName = thread.getName
-        val isOurCodeInThisStack = stackTrace.filter(s => (s.getClassName + s.getMethodName).toLowerCase.contains("com.keepit")).nonEmpty
-
-        if ((!onlyShowUs || isOurCodeInThisStack)
-          && (threadName.toLowerCase.contains(name.toLowerCase) && thread.getState.toString.toLowerCase.contains(state.toLowerCase))
-          && (stack.isEmpty || stackTrace.filter(s => (s.getClassName + s.getMethodName).toLowerCase.contains(stack.toLowerCase)).nonEmpty)) {
-
-          val header = s"${thread.getName}\t(${thread.getState.toString})"
-          val stackStr = stackTrace.map { st =>
-            val matchName = (st.getClassName + st.getMethodName).toLowerCase
-            val comKeepitMatch = if (matchName.contains("com.keepit.")) "*" else ""
-            val stackMatch = if (stack.nonEmpty && matchName.contains(stack.toLowerCase)) "*"
-            else ""
-            s"$comKeepitMatch\t$stackMatch\t${st.getClassName}.${st.getMethodName}:${st.getLineNumber}"
-          } mkString("\n")
-          Some(header + "\n" + stackStr)
-
-        } else None
-      }.flatten.mkString("\n\n")
-      Ok(allThreads + "\n\n")
+          val stats = ThreadStatistics.build(name, state, _stack, cpuTime, hideStack).sortWith((a,b) => a.cpuInfo.usage.getOrElse(0.0) > b.cpuInfo.usage.getOrElse(0.0))
+          Ok(stats.map(_.toTSV()).mkString("\n\n"))
+        }
+       }
     }
 
     def threadSummary = Action { request =>
