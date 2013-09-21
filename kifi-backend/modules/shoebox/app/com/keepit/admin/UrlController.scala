@@ -119,7 +119,7 @@ class UrlController @Inject() (
     // main code
     var changes = Vector.empty[(URL, Option[NormalizedURI])]
     val urls = getUrlList()
-    val batchUrls = batch[URL](urls, batchSize = 500)     // avoid long DB write lock.
+    val batchUrls = batch[URL](urls, batchSize = 100)     // avoid long DB write lock.
     
     batchUrls.map { urls =>
       db.readWrite { implicit s =>
@@ -127,7 +127,8 @@ class UrlController @Inject() (
           needRenormalization(url) match {
             case (true, newUriOpt) => {
               changes = changes :+ (url, newUriOpt)
-              if (!readOnly) newUriOpt.map { uri => renormRepo.save(RenormalizedURL(urlId = url.id.get, newUriId = uri.id.get)) }
+              if (changes.size % 100 == 0) log.info(s"renormalization: ${changes.size} urls scanned.")
+              if (!readOnly) newUriOpt.map { uri => renormRepo.save(RenormalizedURL(urlId = url.id.get, oldUriId = url.normalizedUriId, newUriId = uri.id.get)) }
             }
             case _ =>
           }
