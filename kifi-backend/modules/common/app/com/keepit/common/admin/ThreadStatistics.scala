@@ -15,7 +15,7 @@ case class StackTraceInfo(className: String, method: String, line: Int, matchesF
   def contains(filter: String) = (className + method).toLowerCase.contains(filter.toLowerCase)
 
   def toTSV() = {
-    s"$matchesFilter\t$className.$method:$line"
+    s"\n$matchesFilter\t$className.$method:$line"
   }
 }
 case class ThreadStatistics(name: String, state: String, stackInfo: Seq[StackTraceInfo], cpuInfo: ThreadCPUInfo, id: Long) {
@@ -23,14 +23,16 @@ case class ThreadStatistics(name: String, state: String, stackInfo: Seq[StackTra
   def nameContains(filter: String) = name.toLowerCase.contains(filter.toLowerCase)
   def stateContains(filter: String) = state.toLowerCase.contains(filter.toLowerCase)
 
-  def toTSV() = {
-    s"$name\t$state\t${cpuInfo.toTSV()}\n${stackInfo.map(_.toTSV).mkString("\n")}\n"
+  def toTSV(largestName: Int = 0, charsPerTab: Int = 8) = {
+    val nameTabs = "\t" * ((-(largestName % charsPerTab)+(name.length % charsPerTab)+largestName-name.length)/charsPerTab)
+    val stateTabs = "\t" * (if (state.length < 8) 1 else 0)
+    s"$name$nameTabs\t$state$stateTabs\t${cpuInfo.toTSV()}${stackInfo.map(_.toTSV).mkString("")}"
   }
 }
 
 object ThreadStatistics {
 
-  def build(nameFilter: String, stateFilter: String, stackFilter: String, cpuSampleMs: Option[Int] = None, hideStack: Boolean) = {
+  def build(nameFilter: String, stateFilter: String, stackFilter: String, cpuSampleMs: Option[Int], hideStack: Boolean, short: Boolean) = {
     val onlyShowUs = stackFilter == "42"
 
     val threads = Thread.getAllStackTraces().toMap
@@ -50,12 +52,23 @@ object ThreadStatistics {
         val cpuInfo = new ThreadCPUInfo(cpuShare, cpuUsage.get(thread.getId()).map(_._2).flatten)
 
         val header = f"${thread.getName}\t${thread.getState.toString}\t$cpuShare%1.2f%"
-        val stackInfos = if(!hideStack) stackTrace.map { st =>
-          val matches = if (stackFilter.nonEmpty && (st.getClassName + st.getMethodName).toLowerCase.contains(stackFilter.toLowerCase)) "*"
-            else if (isOurCodeInThisStack && (st.getClassName + st.getMethodName).toLowerCase.contains("com.keepit")) "#"
+        val stackInfos = if(!hideStack) {
+          val _stackTrace = if (short) {
+            val filtered = Seq("java.lang.Thread", "sun.misc", "java.util.concurrent", "scala.concurrent", "akka.util.internal", "sun.nio.ch", "java.lang.Object", "java.lang.ref", "org.jboss.netty")
+            stackTrace.collectFirst {
+              case st if st.getClassName.contains("com.keepit") => Seq(st)
+            }.orElse(stackTrace.collectFirst {
+              case st if filtered.filter(st.getClassName.startsWith).isEmpty => Seq(st)
+            }).getOrElse(Seq())
+          } else stackTrace.toSeq
+
+          _stackTrace.map { st =>
+            val matches = if (stackNoCaseMatch(st, stackFilter)) "*"
+            else if (isOurCodeInThisStack && stackNoCaseMatch(st, "com.keepit")) "#"
             else ""
-          new StackTraceInfo(st.getClassName, st.getMethodName, st.getLineNumber, matches)
-        }.toSeq else Seq()
+            new StackTraceInfo(st.getClassName, st.getMethodName, st.getLineNumber, matches)
+          }.toSeq
+        } else Seq()
         Some(new ThreadStatistics(thread.getName, thread.getState.toString, stackInfos, cpuInfo, thread.getId))
 
       } else None
@@ -66,6 +79,8 @@ object ThreadStatistics {
   private def getCpu(tid: Long) = {
     lolbean.getThreadCpuTime(tid)
   }
+
+  private def stackNoCaseMatch(st: StackTraceElement, filter: String) = filter.nonEmpty && (st.getClassName + st.getMethodName).toLowerCase.contains(filter.toLowerCase)
 
   private def sampleThreadCPU(threads: Map[Thread, Array[StackTraceElement]], cpuSampleMs: Option[Int]): Map[Long, (Double, Option[Double])] = {
     val threadsCount = threads.size
