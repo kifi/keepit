@@ -175,6 +175,7 @@ class ExtMessagingController @Inject() (
         val threadInfos = messagingController.getThreadInfos(socket.userId, url)
         socket.channel.push(Json.arr(requestId.toLong, threadInfos))
       }
+      case _ => // for cases when url is JsNull
     },
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
       messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
