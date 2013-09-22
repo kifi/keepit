@@ -1,5 +1,7 @@
 package com.keepit.common.net
 
+import com.google.inject.Provider
+
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -52,7 +54,7 @@ case class HttpClientImpl(
     timeoutUnit: TimeUnit = TimeUnit.SECONDS,
     headers: Seq[(String, String)] = List(),
     healthcheckPlugin: HealthcheckPlugin,
-    airbrake: AirbrakeNotifier) extends HttpClient {
+    airbrake: Provider[AirbrakeNotifier]) extends HttpClient {
 
   private val validResponseClass = 2
 
@@ -63,10 +65,10 @@ case class HttpClientImpl(
       case cause: ConnectException =>
         if (healthcheckPlugin.isWarm) {
           val ex = new ConnectException(s"${cause.getMessage}. Requesting $url.").initCause(cause)
-          airbrake.notify(ex)
+          airbrake.get.notify(ex)
         }
       case ex: Exception =>
-        airbrake.notify(ex)
+        airbrake.get.notify(ex)
     }
   }
 
