@@ -21,10 +21,12 @@ import play.api.mvc._
 
 class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices) {
 
-  private def formatCauseStacktrace(causeOpt: Option[Throwable]) = causeOpt match {
+  private def formatCauseStacktrace(causeOpt: Option[Throwable]): NodeSeq = causeOpt match {
     case Some(error) =>
-      <line method="-------------" file="Cause" number=""/> ++
-      formatStacktrace(error.getStackTrace)
+      {<line method="-------------" file="-----------" number=""/>
+       <line method="" file={"Cause: " + error.toString} number=""/>} ++
+      formatStacktrace(error.getStackTrace) ++
+      formatCauseStacktrace(Option(error.getCause))
     case None =>
       Seq()
   }
@@ -59,7 +61,6 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
     case true => Nil
   }
 
-  //todo(eishay): add component and session
   private def noticeRequest(url: String, params: Map[String, Seq[String]], method: Option[String], headers: Map[String, Seq[String]], id: ExternalId[AirbrakeError]) =
     <request>
       <url>{url}</url>
@@ -69,23 +70,22 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
       { formatHeaders(headers.toMap, id) }
     </request>
 
-  private def noticeError(error: Throwable, message: Option[String]) =
+  def noticeError(error: Throwable, causeError: Throwable, message: Option[String]) =
     <error>
-      <class>{error.getClass.getName}</class>
-      <message>{ message.getOrElse("") + error.toString() }</message>
+      <class>{causeError.getClass.getName}</class>
+      <message>{ message.getOrElse("") + causeError.toString() }</message>
       <backtrace>
-        { formatStacktrace(error.getStackTrace) }
-        { formatCauseStacktrace(Option(error.getCause)) }
+        { formatStacktrace(error.getStackTrace) ++ formatCauseStacktrace(Option(error.getCause)) }
       </backtrace>
     </error>
 
-  private def cause(error: Throwable): Throwable = Option(error.getCause) match {
+  def cause(error: Throwable): Throwable = Option(error.getCause) match {
     case None => error
     case Some(errorCause) => cause(errorCause)
   }
 
   private def noticeEntities(error: AirbrakeError) =
-    (Some(noticeError(cause(error.exception), error.message)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers, error.id)} :: Nil).flatten
+    (Some(noticeError(error.exception, cause(error.exception), error.message)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers, error.id)} :: Nil).flatten
 
   //http://airbrake.io/airbrake_2_3.xsd
   private[healthcheck] def format(error: AirbrakeError) =
