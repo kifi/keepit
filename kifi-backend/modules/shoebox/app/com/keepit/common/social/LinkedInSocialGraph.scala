@@ -3,12 +3,15 @@ package com.keepit.common.social
 import scala.concurrent.Future
 
 import com.google.inject.Inject
+import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{NonOKResponseException, HttpClient}
+import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model.{SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
 import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
 
+import play.api.http.Status._
 import play.api.libs.json._
 import play.api.libs.ws.WS
 
@@ -30,8 +33,27 @@ class LinkedInSocialGraph @Inject() (
 
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
     val credentials = socialUserInfo.credentials.get
+
+    def fail(msg: String, state: State[SocialUserInfo] = FETCH_FAIL) {
+      log.warn(msg)
+      db.readWrite { implicit s =>
+        socialRepo.save(socialUserInfo.withState(state).withLastGraphRefresh())
+      }
+    }
+
     val jsons = if (credentials.oAuth2Info.isDefined) {
-      getJson(socialUserInfo)
+      try {
+        getJson(socialUserInfo)
+      } catch {
+        case e @ NonOKResponseException(url, response, _) =>
+          if (response.status == UNAUTHORIZED) {
+            fail(s"LinkedIn account $socialUserInfo is unauthorized. Response: ${response.json}", APP_NOT_AUTHORIZED)
+            Seq()
+          } else {
+            fail(s"Error fetching LinkedIn connections for $socialUserInfo. Response: ${response.json}")
+            throw e
+          }
+      }
     } else {
       log.warn(s"LinkedIn app not authorized with OAuth2 for $socialUserInfo; not fetching connections.")
       db.readWrite { implicit s =>
