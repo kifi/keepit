@@ -15,10 +15,9 @@ import com.keepit.model.BrowsingHistory
 class BrowsingHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int,
     browsingHistoryRepo: BrowsingHistoryRepo, db: Database) extends BrowsingHistoryTracker with Logging {
 
-
-  def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
+  def add(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]) = {
     val filter = getMultiHashFilter(userId)
-    filter.put(uriId.id)
+    uriIds.foreach{ uriId => filter.put(uriId.id) }
 
     db.readWrite(attempts=3) { implicit session =>
       browsingHistoryRepo.save(browsingHistoryRepo.getByUserId(userId) match {
