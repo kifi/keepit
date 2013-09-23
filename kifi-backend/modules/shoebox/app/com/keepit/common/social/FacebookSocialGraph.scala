@@ -56,10 +56,10 @@ class FacebookSocialGraph @Inject() (
             fail(s"App not authorized for social user $socialUserInfo; not fetching connections.", APP_NOT_AUTHORIZED)
             Seq()
           case (_, Some(PasswordChanged)) =>
-            fail(s"Facebook password changed for social user $socialUserInfo; not fetching connections.")
+            fail(s"Facebook password changed for social user $socialUserInfo; not fetching connections.", APP_NOT_AUTHORIZED)
             Seq()
           case (_, Some(Expired)) =>
-            fail(s"Token expired for social user $socialUserInfo; not fetching connections.")
+            fail(s"Token expired for social user $socialUserInfo; not fetching connections.", APP_NOT_AUTHORIZED)
             Seq()
           case (_, Some(UnconfirmedUser)) =>
             // this happens when a user deactivates their facebook account
