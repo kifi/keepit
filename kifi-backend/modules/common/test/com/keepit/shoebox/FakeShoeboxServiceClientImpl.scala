@@ -413,9 +413,9 @@ class FakeClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: I
 class FakeBrowsingHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends BrowsingHistoryTracker with Logging {
   val allUserBrowsingHistories = MutableMap[Id[User], BrowsingHistory]()
 
-  def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
+  def add(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]) = {
     val filter = getMultiHashFilter(userId)
-    filter.put(uriId.id)
+    uriIds.foreach{ uriId => filter.put(uriId.id)}
 
     val userBrowsingHistory = allUserBrowsingHistories.get(userId) match {
         case Some(bh) =>

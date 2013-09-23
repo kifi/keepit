@@ -26,6 +26,10 @@ import scala.collection.JavaConversions._
 import scala.math._
 
 object ProximityQuery {
+
+  val maxLength = 64  // we use first 64 terms (enough?)
+  val gapPenalty = 0.05f
+
   def apply(terms: Seq[Term], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f) = new ProximityQuery(terms, phrases, phraseBoost)
 
   def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]) = {
@@ -39,8 +43,6 @@ object ProximityQuery {
     (notInPhrase.filter{ _ >= 0 }.map{ id => (Seq(id), TermMatch(1).asInstanceOf[Match]) } ++
       phrases.map{ case (pos, len) => (termIds.slice(pos, pos + len).toSeq, (if (len == 1) TermMatch(1) else PhraseMatch(pos, len)).asInstanceOf[Match]) })
   }
-
-  val gapPenalty = 0.05f
 }
 
 class ProximityQuery(val terms: Seq[Term], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float) extends Query {
@@ -62,13 +64,12 @@ class ProximityQuery(val terms: Seq[Term], val phrases: Set[(Int, Int)] = Set(),
 }
 
 class ProximityWeight(query: ProximityQuery) extends Weight {
-  // we use first 64 terms (enough?)
 
   private[this] var value = 0.0f
 
   private[this] val termIdMap = {
     var id = -1
-    query.terms.take(64).foldLeft(Map.empty[Term, Int]){ (m, term) =>
+    query.terms.take(ProximityQuery.maxLength).foldLeft(Map.empty[Term, Int]){ (m, term) =>
       if (m.contains(term)) m
       else {
         id += 1
@@ -76,7 +77,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       }
     }
   }
-  private[this] val termIds = query.terms.take(64).map(termIdMap).toArray
+  private[this] val termIds = query.terms.take(ProximityQuery.maxLength).map(termIdMap).toArray
   private[this] val phraseMatcher: Option[PhraseMatcher] = {
     if (query.phrases.isEmpty) None else Some(new PhraseMatcher(ProximityQuery.buildPhraseDict(termIds, query.phrases)))
   }
