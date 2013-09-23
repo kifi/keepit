@@ -4,13 +4,10 @@ package com.keepit.model
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.DBSession.RSession
 
-//import com.keepit.common.db.Id._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ExternalId, Id, State}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-
-//import play.api.libs.concurrent.Execution.Implicits._
 
 @ImplementedBy(classOf[UserCredRepoImpl])
 trait UserCredRepo extends Repo[UserCred] {
@@ -21,7 +18,6 @@ trait UserCredRepo extends Repo[UserCred] {
 @Singleton
 class UserCredRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) extends DbRepo[UserCred] with UserCredRepo with Logging {
 
-  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
   import FortyTwoTypeMappers._

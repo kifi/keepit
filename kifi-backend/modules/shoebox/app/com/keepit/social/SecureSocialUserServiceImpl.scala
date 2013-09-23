@@ -39,30 +39,15 @@ class SecureSocialUserPluginImpl @Inject() (
     }
 
   def find(id: IdentityId): Option[SocialUser] = reportExceptions {
-    if (id.providerId == UsernamePasswordProvider.UsernamePassword) { // TODO: REMOVEME
-      log.info(s"[find(userpass)] id.userId=${id.userId} id.providerId=${id.providerId}")
-      db.readOnly { implicit s =>
-        val credOpt = userCredRepo.findByEmailOpt(id.userId)
-        credOpt match {
-          case Some(cred) => {
-            log.info(s"[find(userpass)] Found userCred=$cred")
-            val user = userRepo.getOpt(cred.userId).getOrElse(throw new Exception(s"userCred=$cred references invalid userId=${cred.userId}"))
-            Some(new SocialUser(id, user.firstName, user.lastName, user.firstName + " " + user.lastName, Some(id.userId), None, AuthenticationMethod.UserPassword, None, None, Some(PasswordInfo(cred.provider, cred.credentials, None))))
-          }
-          case None => None
-        }
-      }
-    } else {
-      db.readOnly { implicit s =>
-        socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
-      } match {
-        case None =>
-          log.info("No SocialUserInfo found for %s".format(id))
-          None
-        case Some(user) =>
-          log.info("User found: %s for %s".format(user, id))
-          user.credentials
-      }
+    db.readOnly { implicit s =>
+      socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
+    } match {
+      case None =>
+        log.info("No SocialUserInfo found for %s".format(id))
+        None
+      case Some(user) =>
+        log.info("User found: %s for %s".format(user, id))
+        user.credentials
     }
   }
 
@@ -71,8 +56,7 @@ class SecureSocialUserPluginImpl @Inject() (
       val (userId, socialUser) = getUserIdAndSocialUser(identity)
       log.info(s"[save] persisting (social|42) user $socialUser")
       val socialUserInfo = internUser(
-        SocialId(
-          socialUser.identityId.userId),
+        SocialId(socialUser.identityId.userId),
         SocialNetworkType(socialUser.identityId.providerId),
         socialUser,
         userId)
