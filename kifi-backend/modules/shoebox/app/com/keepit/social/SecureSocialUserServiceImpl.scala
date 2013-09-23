@@ -70,68 +70,18 @@ class SecureSocialUserPluginImpl @Inject() (
     db.readWrite { implicit s =>
       val (userId, socialUser) = getUserIdAndSocialUser(identity)
       log.info(s"[save] persisting (social|42) user $socialUser")
-      if (identity.authMethod == AuthenticationMethod.UserPassword) {
-        log.info(s"[save(userpass)] User $identity is authenticated by ${identity.authMethod}")
-        val userOpt = userId orElse {
-          socialUser.email flatMap (userCredRepo.findByEmailOpt(_)) map (_.userId)
-        } flatMap userRepo.getOpt
-        log.info(s"[save(userpass)] Retrieved user=$userOpt")
-        userOpt match {
-          case Some(u) => {
-            log.error(s"Identity $identity already exists $u")
-            Thread.dumpStack()
-            // throw new Exception(s"User $identity already exists") // no-op (it's apparently being called by authenticate -- not sure why)
-          }
-          case None => {
-            val user = createUser(socialUser)
-            val savedU = userRepo.save(user)
-            log.info(s"[save(userpass)] Persisted $socialUser into userRepo as $user saved=$savedU")
-            val cred =
-              UserCred(
-                userId = savedU.id.get,
-                loginName = identity.email.getOrElse(throw new Exception),
-                provider = "bcrypt" /* hard-coded */,
-                credentials = identity.passwordInfo.get.password,
-                salt = identity.passwordInfo.get.salt.getOrElse(""))
-            val savedCred = userCredRepo.save(cred)
-            log.info(s"[save(userpass)] Persisted $cred into userCredRepo as $savedCred")
-
-            val nType = SocialNetworks.FORTYTWO // Type(socialUser.identityId.providerId) // hard-coded
-            val sId = SocialId(socialUser.identityId.userId)
-            log.info(s"[save(userpass)] nType=$nType sId=$sId userId=${savedU.id.get}")
-
-            val suiOpt = socialUserInfoRepo.getOpt(sId, nType) match {
-              case Some(sui) => {
-                log.info(s"[save(userpass)] sui=$sui")
-              }
-              case None => {
-                log.info("s[save(userpass)] sui not found.")
-                val userInfo =
-                  SocialUserInfo(
-                    userId = Some(savedU.id.get),//verify saved
-                    socialId = sId,
-                    networkType = nType,
-                    pictureUrl = socialUser.avatarUrl,
-                    fullName = socialUser.fullName,
-                    credentials = Some(socialUser))
-                log.info(s"[save(userpass)] SocialUserInfo created is $userInfo")
-                val sui = socialUserInfoRepo.save(userInfo)
-                log.info(s"[save(userpass)] sui=$sui")
-              }
-            }
-          }
-        }
-        socialUser
-      } else {
-        val socialUserInfo = internUser(
-          SocialId(socialUser.identityId.userId), SocialNetworkType(socialUser.identityId.providerId), socialUser, userId)
-        require(socialUserInfo.credentials.isDefined,
-          "social user info's credentials is not defined: %s".format(socialUserInfo))
-        require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
+      val socialUserInfo = internUser(
+        SocialId(
+          socialUser.identityId.userId),
+        SocialNetworkType(socialUser.identityId.providerId),
+        socialUser,
+        userId)
+      require(socialUserInfo.credentials.isDefined, "social user info's credentials is not defined: %s".format(socialUserInfo))
+      require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
+      if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
         socialGraphPlugin.asyncFetch(socialUserInfo)
-        log.info("persisting %s into %s".format(socialUser, socialUserInfo))
-        socialUser
-      }
+      log.info("[save] persisting %s into %s".format(socialUser, socialUserInfo))
+      socialUser
     }
   }
 
@@ -152,6 +102,7 @@ class SecureSocialUserPluginImpl @Inject() (
   private def internUser(
       socialId: SocialId, socialNetworkType: SocialNetworkType,
       socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
+    log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId")
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
     val userOpt = userId orElse {
       // TODO: better way of dealing with emails that already exist; for now just link accounts
@@ -179,12 +130,25 @@ class SecureSocialUserPluginImpl @Inject() (
       case None =>
         val user = userOpt getOrElse userRepo.save(createUser(socialUser))
         log.info("creating new SocialUserInfo for %s".format(user))
+
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
           socialId = socialId, networkType = socialNetworkType, pictureUrl = socialUser.avatarUrl,
           fullName = socialUser.fullName, credentials = Some(socialUser))
         log.info("SocialUserInfo created is %s".format(userInfo))
-
         val sui = socialUserInfoRepo.save(userInfo)
+
+        if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
+          val cred =
+            UserCred(
+              userId = user.id.get,
+              loginName = socialUser.email.getOrElse(throw new Exception),
+              provider = "bcrypt" /* hard-coded */,
+              credentials = socialUser.passwordInfo.get.password,
+              salt = socialUser.passwordInfo.get.salt.getOrElse(""))
+          val savedCred = userCredRepo.save(cred)
+          log.info(s"[save(userpass)] Persisted $cred into userCredRepo as $savedCred")
+        }
+
         if (userOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
         sui
     }
@@ -213,7 +177,7 @@ class SecureSocialUserPluginImpl @Inject() (
     }
   }
 
-  val tokenMap = collection.mutable.Map.empty[String, Token] // REMOVEME -- pure hack
+  val tokenMap = collection.mutable.Map.empty[String, Token] // REMOVEME
 
   def save(token: Token) {
     log.info(s"[save] token=(${token.email}, ${token.uuid}, ${token.isSignUp}, ${token.isExpired}")
