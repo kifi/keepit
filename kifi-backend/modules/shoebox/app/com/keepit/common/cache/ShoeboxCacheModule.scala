@@ -74,6 +74,11 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
+  def httpProxyAllCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new HttpProxyAllCache((innerRepo, 1 second), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
   def userExternalIdCache(outerRepo: FortyTwoCachePlugin) =
     new UserExternalIdCache((outerRepo, 24 hours))
 
