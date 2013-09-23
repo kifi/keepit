@@ -162,7 +162,16 @@ class UriIntegrityActor @Inject()(
     val toMerge = getOverDueList(batchSize)
     log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
     val toScrapeAndSavedChange = db.readWrite{ implicit s =>
-      toMerge.map{ change => processMerge(change) }
+      toMerge.map{ change => 
+        try{
+          processMerge(change) 
+        } catch {
+          case e: Exception => {
+            changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
+            (None, None)
+          }
+        }
+      }
     }
     toScrapeAndSavedChange.map(_._2).filter(_.isDefined).sortBy(_.get.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.get.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pairs of uris merged. zookeeper seqNum updated.")

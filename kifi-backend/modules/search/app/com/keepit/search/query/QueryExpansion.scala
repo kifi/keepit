@@ -1,7 +1,6 @@
 package com.keepit.search.query.parser
 
 import com.keepit.classify.Domain
-import com.keepit.search.query.Coordinator
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.SiteQuery
 import org.apache.lucene.index.Term

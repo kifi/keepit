@@ -1,7 +1,7 @@
 package com.keepit.realtime
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, future}
+import scala.concurrent.{Future, future, Promise}
 import scala.slick.driver.BasicProfile
 import scala.slick.lifted.BaseTypeMapper
 
@@ -184,3 +184,10 @@ class UrbanAirshipImpl @Inject()(
     }
   }
 }
+
+class FakeUrbanAirshipImpl extends UrbanAirship {
+  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device = ???
+  def notifyUser(userId: Id[User], notification: PushNotification): Unit = {}
+  def sendNotification(device: Device, notification: PushNotification): Unit = {}
+  def updateDeviceState(device: Device): Future[Device] = Promise.successful(device).future
+} 

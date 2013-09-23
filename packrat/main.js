@@ -5,6 +5,7 @@ const hostRe = /^https?:\/\/([^\/]*)/;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
+var threadCallbacks = {};
 
 // ===== Cached data from server
 
@@ -35,20 +36,20 @@ function clearDataCache() {
 
 function PageData() {
   this.tabs = [];
-  this.on2Callbacks = [];
 }
 PageData.prototype = {
-  on2: function(cb) {
-    if (this.counts) {
+  withThreadData: function(cb) {
+    if (this.threadDataReceived) {
       cb();
     } else {
-      this.on2Callbacks.push(cb);
+      (this.threadDataCallbacks || (this.threadDataCallbacks = [])).push(cb);
     }
   },
-  dispatchOn2: function() {
-    while (this.on2Callbacks.length) {
-      this.on2Callbacks.shift()();
+  dispatchThreadData: function() {
+    for (var arr = this.threadDataCallbacks; arr && arr.length;) {
+      arr.shift()();
     }
+    delete this.threadDataCallbacks;
   }};
 
 // ===== Server requests
@@ -157,19 +158,10 @@ const socketHandlers = {
   notifications: function(arr, numNotVisited) {  // initial load of notifications
     api.log("[socket:notifications]", arr, numNotVisited);
     if (!notifications) {
-      notifications = arr;
       for (var i = 0; i < arr.length; i++) {
-        arr[i].category = (arr[i].category || "message").toLowerCase();
-        // remove current user from participants
-        if(arr[i].participants) {
-          for (var j = 0, len = arr[i].participants.length; j < len; j++) {
-            if (arr[i].participants[j].id == session.userId) {
-              arr[i].participants.splice(j, 1);
-              len--;
-            }
-          }
-        }
+        standardizeNotification(arr[i]);
       }
+      notifications = arr;
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
       numNotificationsNotVisited = numNotVisited;
       while (notificationsCallbacks.length) {
@@ -180,14 +172,7 @@ const socketHandlers = {
   },
   notification: function(n) {  // a new notification (real-time)
     api.log("[socket:notification]", n);
-    n.category = (n.category || "message").toLowerCase();
-    n.participants = n.participants || [];
-    for (var j = 0, len = n.participants.length; j < len; j++) {
-      if (n.participants[j].id == session.userId) {
-        n.participants.splice(j, 1);
-        len--;
-      }
-    }
+    standardizeNotification(n);
     if (insertNewNotification(n)) {
       sendNotificationToTabs(n);
     }
@@ -195,22 +180,19 @@ const socketHandlers = {
   missed_notifications: function(arr, serverTime) {
     api.log("[socket:missed_notifications]", arr, serverTime);
     for (var i = arr.length - 1; ~i; i--) {
-      arr[i].category = (arr[i].category || "message").toLowerCase();
-      if (pageData[arr[i].url]) {
-        socket.send(["get_threads_by_url", arr[i].url]);
+      var n = arr[i];
+      standardizeNotification(n);
+
+      if (pageData[n.url]) {
+        // One ThreadInfo in d.threads and messageData[threadId] may be outdated.
+        // Really only need to load the ThreadInfo and any new messages on the thread.
+        loadThreadData(n.url);
       }
-      if (arr[i].participants) {
-        for (var j = 0, len = arr[i].participants.length; j < len; j++) {
-          if (arr[i].participants[j].id == session.userId) {
-            arr[i].participants.splice(j, 1);
-            len--;
-          }
-        }
-      }
-      if (!insertNewNotification(arr[i])) {
+
+      if (!insertNewNotification(n)) {
         arr.splice(i, 1);
       } else if ((new Date(serverTime) - new Date(notifications[0].time)) < 1000*60) {
-        sendNotificationToTabs(arr[i]);
+        sendNotificationToTabs(n);
       }
     }
     if (arr.length) {
@@ -233,99 +215,25 @@ const socketHandlers = {
   },
   thread: function(th) {
     api.log("[socket:thread]", th);
-    var d = pageData[th.uri];
-    if (d) {
-      messageData[th.id] = th.messages;
-      if (d.threadCallbacks) {
-        for (var i = 0; i < d.threadCallbacks.length; i++) {
-          var cb = d.threadCallbacks[i];
-          if (th.id == cb.id || th.messages.some(hasId(cb.id))) {
-            cb.respond({id: th.id, messages: th.messages, participants: th.messages[0].participants});
-            d.threadCallbacks.splice(i--, 1);
-          }
-        }
-      }
-    } else {
-      api.log("[socket:thread]", "Can't process thread, no pageData")
+    messageData[th.id] = th.messages;
+    for (var arr = threadCallbacks[th.id]; arr && arr.length;) {
+      arr.shift()({id: th.id, messages: th.messages, participants: th.messages[0].participants});
     }
-  },
-  thread_infos: function(infos) {
-    var threadsPrevByUri = {};
-    infos.forEach(function(t) {
-      var d = pageData[t.nUrl];
-      if (d) {
-        t.participants = t.participants || [];
-        for (var j = t.participants.length; --j >= 0;) {
-          if (t.participants[j].id == session.userId) {
-            t.participants.splice(j, 1);
-          }
-        }
-
-        if (!threadsPrevByUri[t.nUrl]) {
-          threadsPrevByUri[t.nUrl] = d.threads, d.threads = [t];
-          d.lastMessageRead = d.lastMessageRead || {};
-        } else {
-          d.threads.push(t);
-        }
-        d.lastMessageRead[t.id] = t.lastMessageRead;
-      }
-    });
-    for (var u in threadsPrevByUri) {
-      var d = pageData[u];
-      d.counts = {n: 0, m: messageCount(d)};
-      d.threadDataReceived = true;
-      if (d.pageDetailsReceived) {
-        d.tabs.forEach(function(tab) {
-          initTab(tab, d);
-        });
-        d.dispatchOn2();
-      }
-      var threadsPrev = threadsPrevByUri[u], threadsWithNewMessages = [];
-      d.threads.forEach(function(th) {
-        var thPrev = threadsPrev.filter(hasId(th.id))[0];
-        var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
-        if (numNew) {
-          socket.send(["get_thread", th.id]);
-          (d.threadCallbacks = d.threadCallbacks || []).push({id: th.id, respond: function(th) {
-            d.tabs.forEach(function(tab) {
-              // TODO: may want to special case (numNew == 1) for an animation
-              api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
-            });
-          }});
-          threadsWithNewMessages.push(th);
-        }
-      });
-      if (threadsWithNewMessages.length == 1) {
-        var th = threadsWithNewMessages[0];
-        d.tabs.forEach(function(tab) {
-          api.tabs.emit(tab, "thread_info", {thread: th, read: d.lastMessageRead[th.id]});
-        });
-      } else if (threadsWithNewMessages.length > 1) {
-        d.tabs.forEach(function(tab) {
-          api.tabs.emit(tab, "threads", {threads: d.threads, readTimes: d.lastMessageRead, userId: session.userId});
-        });
-      }
-    }
+    delete threadCallbacks[th.id];
   },
   message: function(threadId, message) {
     api.log("[socket:message]", threadId, message, message.nUrl);
     var d = pageData[message.nUrl];
     if (d && !(messageData[threadId] || []).some(hasId(message.id))) {
-
-      // insert message in chronological order
-
-      // update thread
-      var thread;
-      for (var i = 0, n = d.threads.length; i < n; i++) {
-        if (d.threads[i].id == threadId) {
-          thread = d.threads[i];
-
+      var thread = (d.threads || []).filter(hasId(threadId))[0];
+      if (thread) {
           var messages;
           if (thread.messageCount >= 1) {
             messages = messageData[threadId];
             if (messages) {
+              // insert message in chronological order
               var t = new Date(message.createdAt);
-              for (i = messages.length; i > 0 && new Date(messages[i-1].createdAt) > t; i--);
+              for (var i = messages.length; i > 0 && new Date(messages[i-1].createdAt) > t; i--);
               messages.splice(i, 0, message);
             }
           } else {
@@ -340,24 +248,15 @@ const socketHandlers = {
           thread.lastCommentedAt = lastMessage.createdAt;
           thread.messageCount = messages.length;
           messages.forEach(function(m) { thread.messageTimes[m.id] = m.createdAt; });
-          thread.participants = messageData[threadId][messages.length-1].participants;
-          for (var j = thread.participants.length; --j >= 0;) {
-            if (thread.participants[j].id == session.userId) {
-              thread.participants.splice(j, 1);
-            }
-          }
+          thread.participants = lastMessage.participants.filter(idIsNot(session.userId));
 
-          // insert thread in chronological order
+          // keep thread in chronological order
           //var t = new Date(thread.lastCommmentedAt);
           //for (i = d.threads.length; i > 0 && new Date(d.threads[i-1].lastCommentedAt) > t; i--);
           //d.threads.splice(i, 0, thread);
-
-          break;
-        }
-      }
-
-      if (i == n) {
-        socket.send(["get_threads_by_url", message.url]);
+      } else {
+        // this is the first message of a new thread, so we should fetch its thread data
+        loadThreadData(message.nUrl);
       }
 
       // ensure marked read if from this user
@@ -484,11 +383,14 @@ api.port.on({
   log_event: function(data) {
     logEvent.apply(null, data);
   },
-  send_message: function(data, respond) {
+  send_message: function(data, respond, tab) {
     api.log("[send_message]", data);
+    var nUri = tab.nUri || data.url;
     ajax("eliza", "POST", "/eliza/messages", data, function(o) {
-      socket.send(["get_threads_by_url", data.url]);
       api.log("[send_message] resp:", o);
+      // need ThreadInfo for this thread (new or merged), as well as the sent message.
+      // might be nice to get them in the response instead of requesting over the socket.
+      loadThreadData(nUri);
       respond(o);
     });
   },
@@ -530,13 +432,13 @@ api.port.on({
   },
   threads: function(_, respond, tab) {
     var d = pageData[tab.nUri];
-    if (d) d.on2(function() {
+    if (d) d.withThreadData(function() {
       respond({threads: d.threads, read: d.lastMessageRead});
     });
   },
   thread: function(data, respond, tab) {
     var d = pageData[tab.nUri];
-    if (d) d.on2(function() {
+    if (d) d.withThreadData(function() {
       var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
       if (th && messageData[th.id]) {
         if (data.respond) {
@@ -546,7 +448,7 @@ api.port.on({
         var id = (th || data).id;
         socket.send(["get_thread", id]);
         if (data.respond) {
-          (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond});
+          (threadCallbacks[id] || (threadCallbacks[id] = [])).push(respond);
         }
       }
     });
@@ -576,16 +478,7 @@ api.port.on({
     } else {
       socket.send(["get_old_notifications", timeStr, NOTIFICATION_BATCH_SIZE], function(arr) {
         for (var i = 0; i < arr.length; i++) {
-          arr[i].category = (arr[i].category || "message").toLowerCase();
-          // remove current user from participants
-          if (arr[i].participants) {
-            for (var j = 0, len = arr[i].participants.length; j < len; j++) {
-              if (arr[i].participants[j].id == session.userId) {
-                arr[i].participants.splice(j, 1);
-                len--;
-              }
-            }
-          }
+          standardizeNotification(arr[i]);
         }
         if (notifications[notifications.length - 1] === oldest) {
           notifications.push.apply(notifications, arr);
@@ -656,6 +549,15 @@ function removeNotificationPopups(associatedId) {
   api.tabs.each(function(page) {
     api.tabs.emit(page, "remove_notification", associatedId);
   });
+}
+
+function standardizeNotification(n) {
+  n.category = (n.category || "message").toLowerCase();
+  for (var i = n.participants ? n.participants.length : 0; i--;) {
+    if (n.participants[i].id == session.userId) {
+      n.participants.splice(i, 1);
+    }
+  }
 }
 
 function sendNotificationToTabs(n) {
@@ -965,9 +867,9 @@ function subscribe(tab) {
   var d = pageData[tab.nUri || tab.url];
 
   if (d) {  // no need to ask server again
-    if (d.cacheIsDirty) {
-      socket.send(["get_threads_by_url", tab.nUri || tab.url]);
-      d.cacheIsDirty = false;
+    if (d.threadDataIsStale) {
+      loadThreadData(d.nUri || tab.nUri || tab.url);
+      d.threadDataIsStale = false;
     }
     if (tab.nUri) {  // tab is already initialized
       if (d.counts) {
@@ -984,44 +886,43 @@ function subscribe(tab) {
     }
   } else {
     ajax("POST", "/ext/pageDetails", {url: tab.url}, function success(resp) {
-      socket.send(["get_threads_by_url", tab.nUri || tab.url]);
+      api.log("[subscribe] pageDetails:", resp);
 
-      api.log("[subscribe]", resp);
       var uri = resp.normalized;
-      var uri_1 = resp.uri_1 || resp;
-      var uri_2 = resp.uri_2 || resp;
+
+      // the initial load of the page’s thread data. probably want to prefetch threads
+      // that have any unread messages, but only in that case.
+      loadThreadData(uri);
 
       if ((api.tabs.get(tab.id) || {}).url != tab.url) return;
       d = pageData[uri] = pageData[uri] || new PageData;
       finish(uri);
 
-      // uri_1
-      d.kept = uri_1.kept;
-      d.position = uri_1.position;
-      d.neverOnSite = uri_1.neverOnSite;
-      d.sensitive = uri_1.sensitive;
+      d.kept = resp.kept;
+      d.position = resp.position;
+      d.neverOnSite = resp.neverOnSite;
+      d.sensitive = resp.sensitive;
+      d.shown = resp.shown;
+      d.keepers = resp.keepers || [];
+      d.keeps = resp.keeps || 0;
+      d.otherKeeps = d.keeps - d.keepers.length - (d.kept === "public");
+      d.pageDetailsReceived = true;
+
+      // TODO: don’t initialize this thread data here as if it were known
+      d.threads = d.threads || [];
+      d.counts = d.counts || {m:0, n:0};
+      d.lastMessageRead = d.lastMessageRead || {};
+
       d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
         sendInit(tab, d);
       });
 
-      // uri_2
-      d.shown = uri_2.shown;
-      d.keepers = uri_2.keepers || [];
-      d.keeps = uri_2.keeps || 0;
-      d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
-      d.threads = d.threads || [];
-      d.counts = d.counts || {m:0, n:0};
-      d.lastMessageRead = d.lastMessageRead || {};
-      d.pageDetailsReceived = true;
       if (d.threadDataReceived) {
         d.tabs.forEach(function(tab) {
           initTab(tab, d);
         });
-        d.dispatchOn2();
       }
-
-      tellTabsNoticeCountIfChanged();
     }, function fail(xhr) {
       if (xhr.status == 403) {
         session = null;
@@ -1043,6 +944,63 @@ function subscribe(tab) {
     d.tabs.push(tab);
     api.log("[subscribe:finish]", tab.id);
   }
+}
+
+function loadThreadData(url) {
+  socket.send(["get_threads", url], function(threads) {
+    var d = pageData[url] || pageData[threads.length ? threads[0].nUrl : ''];
+    if (!d) return;
+
+    var oldMessageCounts = !d.threads ? {} : d.threads.reduce(function(o, th) {
+      o[th.id] = th.messageCount;
+      return o;
+    }, {});
+
+    d.threads = threads;
+    d.lastMessageRead = d.lastMessageRead || {};
+    threads.forEach(function(t) {
+      t.participants = t.participants.filter(idIsNot(session.userId));
+      d.lastMessageRead[t.id] = t.lastMessageRead;  // TODO: make sure we do not clobber greater/later timestamp
+    });
+    d.counts = {n: 0, m: messageCount(d)};
+    d.dispatchThreadData();
+
+    if (!d.threadDataReceived) {
+      d.threadDataReceived = true;
+      if (d.pageDetailsReceived) {
+        d.tabs.forEach(function(tab) {
+          initTab(tab, d);
+        });
+      }
+    }
+
+    // Push threads with any new messages to relevant tabs and load+push their messages too.
+
+    var threadsWithNewMessages = [];
+    threads.forEach(function(th) {
+      var numNew = th.messageCount - (oldMessageCounts[th.id] || 0);
+      if (numNew) {
+        socket.send(["get_thread", th.id]);
+        (threadCallbacks[th.id] || (threadCallbacks[th.id] = [])).push(function(th) {
+          d.tabs.forEach(function(tab) {
+            // TODO: may want to special case (numNew == 1) for an animation
+            api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
+          });
+        });
+        threadsWithNewMessages.push(th);
+      }
+    });
+    if (threadsWithNewMessages.length == 1) {  // special cased to trigger an animation
+      var th = threadsWithNewMessages[0];
+      d.tabs.forEach(function(tab) {
+        api.tabs.emit(tab, "thread_info", {thread: th, read: d.lastMessageRead[th.id]});
+      });
+    } else if (threadsWithNewMessages.length > 1) {
+      d.tabs.forEach(function(tab) {
+        api.tabs.emit(tab, "threads", {threads: d.threads, readTimes: d.lastMessageRead, userId: session.userId});
+      });
+    }
+  });
 }
 
 function setIcon(tab, kept) {
@@ -1189,7 +1147,11 @@ function compilePatterns(arr) {
 }
 
 function hasId(id) {
-  return function(o) {return o.id == id};
+  return function(o) {return o.id === id};
+}
+
+function idIsNot(id) {
+  return function(o) {return o.id !== id};
 }
 
 function getId(o) {
@@ -1303,7 +1265,7 @@ function startSession(callback, retryMs) {
     session.prefs = {}; // to come via socket
     socket = api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
       for (var nUri in pageData) {
-        pageData[nUri].cacheIsDirty = true;
+        pageData[nUri].threadDataIsStale = true;
       }
       socket.send(["get_last_notify_read_time"]);
       connectSync();
@@ -1402,6 +1364,19 @@ function deauthenticate() {
 }
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
+
+setTimeout(function(){
+  for(var a={},b=0;38>b;b++) // 38 = 42 - 42/10
+    a[parseInt(" 0 5 611214041 h j s x1n3c3i3j3k3l3m3n6g6r6t6u6v6w6x6y6zcyczd0d1d2d3dgdhdkdl".substr(2*b,2),36).toString(2)]=" |_i(mMe/\\n\ngor.cy!W:ahst')V,v24Juwbdl".charAt(b);
+  for(var d=[],b=0;263>b;b++) // lowest prime that is an irregular prime, an Eisenstein prime, a long prime, a Chen prime, a Gaussian prime, a happy prime, a sexy prime, a safe prime, and a Higgs prime. I think.
+    d.push(("000"+parseInt("1b123ebe88bc92fc7b6f4fee9c5e582f36ec9b500550157b55cdb19b55cc355db01b6dbb534d9caf9dab6aaaadb8e27c4d3673b55a93be954abaaeaab9c7d9f69a4efa5ed75736d3ba8e6d79b74979b5734f9a6e6da7d8e88fcff8bda5ff2c3e00da6a1d6fd2c2ebfbf9f63c7f8fafc230f89618c7ffbc1aeda60eaf53c7e8081fd2000".charAt(b),16).toString(2)).substr(-4));
+  for(var e=d.join(""),f="",g=0;g<e.length;) {
+    for(var h="";!(h in a);)
+      h+=e[g],g++;
+    f+=a[h]
+  }
+  api.log("\n"+f);
+},0);
 
 logEvent("extension", "started");
 

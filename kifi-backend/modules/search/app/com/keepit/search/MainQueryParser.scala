@@ -1,13 +1,11 @@
 package com.keepit.search
 
-import com.keepit.classify.Domain
 import com.keepit.search.phrasedetector.{PhraseDetector, NlpPhraseDetector}
 import com.keepit.search.query.parser.QueryParser
 import com.keepit.search.query.parser.DefaultSyntax
 import com.keepit.search.query.parser.PercentMatch
 import com.keepit.search.query.parser.QueryExpansion
 import com.keepit.search.query.parser.QueryParserException
-import com.keepit.search.query.Coordinator
 import com.keepit.search.query.ProximityQuery
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.SemanticVectorQuery
@@ -22,7 +20,6 @@ import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import scala.collection.mutable.ArrayBuffer
-import com.keepit.search.query.AdditiveBoostQuery
 import com.keepit.search.query.MultiplicativeBoostQuery
 import com.keepit.search.query.BoostQuery
 import com.keepit.search.query.PhraseProximityQuery
@@ -75,20 +72,14 @@ class MainQueryParser(
 
         val phrases = if (numStemmedTerms > 1 && (phraseBoost > 0.0f || phraseProximityBoost > 0.0f)) {
           val p = if (phraseProximityBoost > 0.0f) {
-            phraseDetector.detect(getStemmedTermArray)
+            phraseDetector.detect(getStemmedTermArray(ProximityQuery.maxLength))
           } else {
-            phraseDetector.detectAll(getStemmedTermArray)
+            phraseDetector.detectAll(getStemmedTermArray(ProximityQuery.maxLength))
           }
           if (p.size > 0) p
           else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
         } else {
           Set.empty[(Int, Int)]
-        }
-
-        val textQuery = if (phraseBoost > 0.0f && phraseProximityBoost > 0.0f && phrases.nonEmpty) {
-          new AdditiveBoostQuery(query, Array[Query](createPhraseQueries(phrases)))
-        } else {
-          query
         }
 
         val auxQueries = ArrayBuffer.empty[Query]
@@ -117,9 +108,9 @@ class MainQueryParser(
         }
 
         if (!auxQueries.isEmpty) {
-          new MultiplicativeBoostQuery(textQuery, auxQueries.toArray, auxStrengths.toArray)
+          new MultiplicativeBoostQuery(query, auxQueries.toArray, auxStrengths.toArray)
         } else {
-          textQuery
+          query
         }
       }
     }

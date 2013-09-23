@@ -177,8 +177,7 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
       var count = 0.0f
       var i = 0
       while (i < positions.length) {
-        val vhash = valueHash(value, positions(i))
-        if (values(i) == vhash) count += 1.0f
+        if (values(i) == valueHash(value, positions(i))) count += 1.0f
         i += 1
       }
       count/norm
@@ -188,15 +187,14 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
       var count = 0
       var i = 0
       while (i < positions.length) {
-        val vhash = valueHash(value, positions(i))
-        if (values(i) == vhash) count += 1
+        if (values(i) == valueHash(value, positions(i))) count += 1
         i += 1
       }
       count
     }
   }
 
-  def valueHash(value: Long, position: Int): Int = {
+  @inline private[this] def valueHash(value: Long, position: Int): Int = {
     // 32-bit integer, excluding zero. zero is special
     (((value * position.toLong) ^ value) % 0xFFFFFFFFL + 1L).toInt
   }
