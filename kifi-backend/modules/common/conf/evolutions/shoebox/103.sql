@@ -11,7 +11,7 @@ CREATE TABLE http_proxy (
     hostname varchar(2048) NOT NULL,
     port int NOT NULL,
     scheme varchar(32) NOT NULL,
-    login varchar(2048) NULL,
+    username varchar(2048) NULL,
     password varchar(2048) NULL,
 
     PRIMARY KEY (id),

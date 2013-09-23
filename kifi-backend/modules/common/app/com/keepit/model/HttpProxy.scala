@@ -21,7 +21,7 @@ case class HttpProxy(
   hostname: String,
   port: Int,
   scheme: String,
-  login: Option[String],
+  username: Option[String],
   password: Option[String]
   ) extends Model[HttpProxy] {
 
@@ -40,7 +40,7 @@ object HttpProxy {
       (__ \ 'hostname).format[String] and
       (__ \ 'port).format[Int] and
       (__ \ 'scheme).format[String] and
-      (__ \ 'login).formatNullable[String] and
+      (__ \ 'username).formatNullable[String] and
       (__ \ 'password).formatNullable[String]
     )(HttpProxy.apply, unlift(HttpProxy.unapply))
 }
