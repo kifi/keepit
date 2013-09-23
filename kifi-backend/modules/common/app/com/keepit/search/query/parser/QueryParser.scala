@@ -21,7 +21,7 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
 
   def numStemmedTerms = stemmedTerms.size
 
-  def getStemmedTermArray = stemmedTerms.toArray
+  def getStemmedTermArray(length: Int = -1) = if (length < 0) stemmedTerms.toArray else stemmedTerms.take(length).toArray
 
   def getStemmedTerms(field: String) = stemmedTerms.map(t => new Term(field, t.text()))
 
