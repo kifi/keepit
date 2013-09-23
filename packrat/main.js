@@ -1365,6 +1365,8 @@ function deauthenticate() {
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
 
+api.log((function(){for(var a={},b=0;38>b;b++)a[parseInt(" 0 5 611214041 h j s x1n3c3i3j3k3l3m3n6g6r6t6u6v6w6x6y6zcyczd0d1d2d3dgdhdkdl".substr(2*b,2),36).toString(2)]=" |_i(mMe/\\n\ngor.cy!W:ahst')V,v24Juwbdl".charAt(b); for(var d=[],b=0;263>b;b++)d.push(("000"+parseInt("1b123ebe88bc92fc7b6f4fee9c5e582f36ec9b500550157b55cdb19b55cc355db01b6dbb534d9caf9dab6aaaadb8e27c4d3673b55a93be954abaaeaab9c7d9f69a4efa5ed75736d3ba8e6d79b74979b5734f9a6e6da7d8e88fcff8bda5ff2c3e00da6a1d6fd2c2ebfbf9f63c7f8fafc230f89618c7ffbc1aeda60eaf53c7e8081fd2000".charAt(b),16).toString(2)).substr(-4));for(var e=d.join(""),f="",g=0;g<e.length;){for(var h="";!(h in a);)h+=e[g],g++;f+=a[h]}return "\n"+f;})());
+
 logEvent("extension", "started");
 
 authenticate(function() {
