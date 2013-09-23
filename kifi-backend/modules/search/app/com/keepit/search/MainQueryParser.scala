@@ -1,6 +1,5 @@
 package com.keepit.search
 
-import com.keepit.classify.Domain
 import com.keepit.search.phrasedetector.{PhraseDetector, NlpPhraseDetector}
 import com.keepit.search.query.parser.QueryParser
 import com.keepit.search.query.parser.DefaultSyntax
@@ -73,9 +72,9 @@ class MainQueryParser(
 
         val phrases = if (numStemmedTerms > 1 && (phraseBoost > 0.0f || phraseProximityBoost > 0.0f)) {
           val p = if (phraseProximityBoost > 0.0f) {
-            phraseDetector.detect(getStemmedTermArray)
+            phraseDetector.detect(getStemmedTermArray(ProximityQuery.maxLength))
           } else {
-            phraseDetector.detectAll(getStemmedTermArray)
+            phraseDetector.detectAll(getStemmedTermArray(ProximityQuery.maxLength))
           }
           if (p.size > 0) p
           else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
