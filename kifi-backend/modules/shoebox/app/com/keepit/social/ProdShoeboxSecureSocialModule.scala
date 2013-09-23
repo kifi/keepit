@@ -33,12 +33,13 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
+    userCredRepo: UserCredRepo,
     imageStore: S3ImageStore,
     healthcheckPlugin: HealthcheckPlugin,
     emailRepo: EmailAddressRepo,
     socialGraphPlugin: SocialGraphPlugin
   ): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
-    db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, emailRepo, socialGraphPlugin
+    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, healthcheckPlugin, emailRepo, socialGraphPlugin
   )
 }
 
