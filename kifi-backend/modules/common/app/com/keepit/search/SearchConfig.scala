@@ -25,7 +25,7 @@ object SearchConfig {
       "sharingBoostInNetwork" -> "0.5",
       "sharingBoostOutOfNetwork" -> "0.1",
       "percentMatch" -> "75",
-      "percentMatchForHotDocs" -> "100",
+      "percentMatchForHotDocs" -> "60",
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
       "newContentBoost" -> "1.0",
