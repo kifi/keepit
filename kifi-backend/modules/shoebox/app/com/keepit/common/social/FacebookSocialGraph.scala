@@ -33,8 +33,8 @@ class FacebookSocialGraph @Inject() (
   val networkType = SocialNetworks.FACEBOOK
 
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
-    val jsons = try {
-      fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo)))
+    val jsonsOpt = try {
+      Some(fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo))))
     } catch {
       case e @ NonOKResponseException(url, response, _) =>
         import FacebookSocialGraph.ErrorSubcodes._
@@ -54,30 +54,32 @@ class FacebookSocialGraph @Inject() (
         (errorCode, errorSub) match {
           case (_, Some(AppNotInstalled)) =>
             fail(s"App not authorized for social user $socialUserInfo; not fetching connections.", APP_NOT_AUTHORIZED)
-            Seq()
+            None
           case (_, Some(PasswordChanged)) =>
             fail(s"Facebook password changed for social user $socialUserInfo; not fetching connections.", APP_NOT_AUTHORIZED)
-            Seq()
+            None
           case (_, Some(Expired)) =>
             fail(s"Token expired for social user $socialUserInfo; not fetching connections.", APP_NOT_AUTHORIZED)
-            Seq()
+            None
           case (_, Some(UnconfirmedUser)) =>
             // this happens when a user deactivates their facebook account
             fail(s"Sessions not allowed for social user $socialUserInfo; not fetching connections.", INACTIVE)
-            Seq()
+            None
           case _ =>
             fail(s"Error fetching Facebook connections for $socialUserInfo.")
             throw e
         }
     }
-    jsons.headOption.map { json =>
-      SocialUserRawInfo(
-        socialUserInfo.userId,
-        socialUserInfo.id,
-        SocialId((json \ "username").asOpt[String].getOrElse((json \ "id").as[String])),
-        SocialNetworks.FACEBOOK,
-        (json \ "name").asOpt[String].getOrElse(socialUserInfo.fullName),
-        jsons)
+    jsonsOpt.flatMap { jsons =>
+      jsons.headOption.map { json =>
+        SocialUserRawInfo(
+          socialUserInfo.userId,
+          socialUserInfo.id,
+          SocialId((json \ "username").asOpt[String].getOrElse((json \ "id").as[String])),
+          SocialNetworks.FACEBOOK,
+          (json \ "name").asOpt[String].getOrElse(socialUserInfo.fullName),
+          jsons)
+      }
     }
   }
 
@@ -108,12 +110,9 @@ class FacebookSocialGraph @Inject() (
     oAuth2Info.accessToken
   }
 
-  private def fetchJsons(url: String): List[JsValue] = {
+  private def fetchJsons(url: String): Seq[JsValue] = {
     val jsons = get(url)
-    nextPageUrl(jsons) match {
-      case None => List(jsons)
-      case Some(nextUrl) => jsons :: fetchJsons(nextUrl)
-    }
+    jsons +: nextPageUrl(jsons).toSeq.flatMap(fetchJsons)
   }
 
   private[social] def nextPageUrl(json: JsValue): Option[String] = (json \ "friends" \ "paging" \ "next").asOpt[String]

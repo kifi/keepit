@@ -41,14 +41,14 @@ class LinkedInSocialGraph @Inject() (
       }
     }
 
-    val jsons = if (credentials.oAuth2Info.isDefined) {
+    val jsonsOpt = if (credentials.oAuth2Info.isDefined) {
       try {
-        getJson(socialUserInfo)
+        Some(getJson(socialUserInfo))
       } catch {
         case e @ NonOKResponseException(url, response, _) =>
           if (response.status == UNAUTHORIZED) {
             fail(s"LinkedIn account $socialUserInfo is unauthorized. Response: ${response.json}", APP_NOT_AUTHORIZED)
-            Seq()
+            None
           } else {
             fail(s"Error fetching LinkedIn connections for $socialUserInfo. Response: ${response.json}")
             throw e
@@ -59,16 +59,18 @@ class LinkedInSocialGraph @Inject() (
       db.readWrite { implicit s =>
         socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
       }
-      Seq()
+      None
     }
 
-    Some(SocialUserRawInfo(
-      socialUserInfo.userId,
-      socialUserInfo.id,
-      SocialId(credentials.identityId.userId),
-      SocialNetworks.LINKEDIN,
-      credentials.fullName,
-      jsons))
+    jsonsOpt map {
+      SocialUserRawInfo(
+        socialUserInfo.userId,
+        socialUserInfo.id,
+        SocialId(credentials.identityId.userId),
+        SocialNetworks.LINKEDIN,
+        credentials.fullName,
+        _)
+    }
   }
 
   def extractEmails(parentJson: JsValue): Seq[String] = (parentJson \ "emailAddress").asOpt[String].toSeq
