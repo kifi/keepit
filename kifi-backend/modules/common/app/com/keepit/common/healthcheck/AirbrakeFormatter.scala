@@ -73,7 +73,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
   def noticeError(error: Throwable, causeError: Throwable, message: Option[String]) =
     <error>
       <class>{causeError.getClass.getName}</class>
-      <message>{ message.getOrElse("") + causeError.toString() }</message>
+      <message>{ ( message.getOrElse("") + " " + causeError.toString()).trim }</message>
       <backtrace>
         { formatStacktrace(error.getStackTrace) ++ formatCauseStacktrace(Option(error.getCause)) }
       </backtrace>
