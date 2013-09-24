@@ -4,7 +4,7 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
@@ -37,7 +37,7 @@ private[index] class ArticleIndexerActor @Inject() (
           healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH, errorMessage = Some("Error indexing articles")))
           sender ! -1
       }
-    case m => throw new Exception("unknown message %s".format(m))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

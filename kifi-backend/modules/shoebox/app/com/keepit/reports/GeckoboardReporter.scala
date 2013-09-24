@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.keepit.model.BookmarkRepo
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
@@ -26,7 +26,7 @@ private[reports] class GeckoboardReporterActor @Inject() (
     extends FortyTwoActor(airbrake) with Logging {
   def receive() = {
     case widget: GeckoboardWidget[_] => geckoboardPublisher.publish(widget)
-    case m => throw new Exception("unknown message %s".format(m))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

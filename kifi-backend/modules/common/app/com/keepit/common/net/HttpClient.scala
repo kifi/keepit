@@ -1,5 +1,7 @@
 package com.keepit.common.net
 
+import com.google.inject.Provider
+
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -11,9 +13,7 @@ import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin}
 import scala.xml._
 
 case class NonOKResponseException(url: String, response: ClientResponse, requestBody: Option[Any] = None)
@@ -53,7 +53,8 @@ case class HttpClientImpl(
     timeout: Long = 2,
     timeoutUnit: TimeUnit = TimeUnit.SECONDS,
     headers: Seq[(String, String)] = List(),
-    healthcheckPlugin: HealthcheckPlugin) extends HttpClient {
+    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: Provider[AirbrakeNotifier]) extends HttpClient {
 
   private val validResponseClass = 2
 
@@ -64,10 +65,10 @@ case class HttpClientImpl(
       case cause: ConnectException =>
         if (healthcheckPlugin.isWarm) {
           val ex = new ConnectException(s"${cause.getMessage}. Requesting $url.").initCause(cause)
-          healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+          airbrake.get.notify(ex)
         }
       case ex: Exception =>
-        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        airbrake.get.notify(ex)
     }
   }
 

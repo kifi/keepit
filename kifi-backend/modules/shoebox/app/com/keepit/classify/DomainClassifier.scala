@@ -11,7 +11,7 @@ import java.util.UUID
 import com.coremedia.iso.Hex.encodeHex
 import com.google.inject.{Inject, ImplementedBy}
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
@@ -106,6 +106,7 @@ private[classify] class DomainClassificationActor @Inject() (
         }
       }
       sender ! res.getOrElse(false)
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

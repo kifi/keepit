@@ -5,15 +5,14 @@ import com.keepit.common.logging.Logging
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable.Queue
-import akka.actor.Actor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.util.{Success, Failure}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import scala.concurrent.duration._
 import akka.util.Timeout
 import play.api.Plugin
-
-
 
 @ImplementedBy(classOf[RemotePostOfficeImpl])
 trait RemotePostOffice {
@@ -39,8 +38,10 @@ case class SendEmail(mail: ElectronicMail) extends PostOfficeMessage
 case class QueueEmail(mail: ElectronicMail) extends PostOfficeMessage
 case object SendQueuedEmails extends PostOfficeMessage
 
-class RemotePostOfficeActor @Inject() (shoeboxClient: ShoeboxServiceClient)
-  extends Actor { // we cannot use an AlertingActor, because this generated Healthcheck errors on failure
+class RemotePostOfficeActor @Inject() (
+  airbrake: AirbrakeNotifier,
+  shoeboxClient: ShoeboxServiceClient)
+  extends FortyTwoActor(airbrake) {
 
   val mailQueue = Queue[ElectronicMail]()
   val Max8M = 8 * 1024 * 1024
@@ -55,6 +56,7 @@ class RemotePostOfficeActor @Inject() (shoeboxClient: ShoeboxServiceClient)
       mailQueue.enqueue(mail)
     case SendQueuedEmails =>
       mailQueue.foreach( mail => self ! SendEmail(mail))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 
