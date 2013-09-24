@@ -9,10 +9,10 @@ var api = api || function() {  // idempotent for Chrome
       var kind = msg[0];
       if (kind == "api:respond") {
         var id = msg[1], cb = callbacks[id];
-        log("[onMessage] response:", msg[2] != null ? msg[2] : "")();
+        log("[api:respond]", cb && cb[0] || "", msg[2] != null ? msg[2] : "")();
         if (cb) {
           delete callbacks[id];
-          cb(msg[2]);
+          cb[1](msg[2]);
         }
       } else if (kind == "api:injected") {
         markInjected(msg[1]);
@@ -86,7 +86,7 @@ var api = api || function() {  // idempotent for Chrome
         }
         if (callback) {
           var callbackId = nextCallbackId++;
-          callbacks[callbackId] = callback;
+          callbacks[callbackId] = [type, callback];
         }
         port || createPort();
         port.postMessage([type, data, callbackId]);
