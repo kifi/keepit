@@ -25,7 +25,7 @@ for d in icons images media scripts styles; do
   cp -R $d out/chrome/
   cp -R $d out/firefox/data/
 done
-mv out/chrome/scripts/lib/reconnecting-websocket.js out/chrome/
+mv out/chrome/scripts/lib/rwsocket.js out/chrome/
 
 for f in $(find html -name '*.html'); do
   f2="out/chrome/scripts/"${f/%.html/.js}
