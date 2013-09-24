@@ -80,7 +80,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
         return;
       }
       if (data.mouseoutTimeStamp > data.mouseoverTimeStamp) {
-        api.log("[bindHover.configureHover] left before could configure");
+        log("[bindHover.configureHover] left before could configure")();
         return;
       }
       if (data.$h) return;  // old attempt may have succeeded very slowly
@@ -129,7 +129,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
           data.$h.off("transitionend", end).remove();
           delete data.$h;
           if (data.mouseoverTimeStamp > data.mouseoutTimeStamp && this.contains(data.mouseoverEl)) {
-            api.log("[bindHover.hide:transitionend] faking mouseout");
+            log("[bindHover.hide:transitionend] faking mouseout")();
             $a.trigger($.Event("mouseout", {relatedTarget: document}));
           }
         }

@@ -122,7 +122,7 @@ noticesPane = function() {
       case "global":
         return render("html/metro/notice_global", notice);
       default:
-        api.log("#a00", "[renderNotice] unrecognized category", notice.category);
+        log("#a00", "[renderNotice] unrecognized category", notice.category)();
         return "";
     }
   }

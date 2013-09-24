@@ -1,4 +1,5 @@
 var api = api || require("./api");
+var log = log || api.log;
 
 const NOTIFICATION_BATCH_SIZE = 10;
 const hostRe = /^https?:\/\/([^\/]*)/;
@@ -21,7 +22,7 @@ var ruleSet = {};
 var urlPatterns = [];
 
 function clearDataCache() {
-  api.log("[clearDataCache]");
+  log("[clearDataCache]")();
   pageData = {};
   messageData = {};
   notifications = null;
@@ -85,7 +86,7 @@ const eventFamilies = {slider:1, search:1, extension:1, account:1, notification:
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
-    api.log("#800", "[logEvent] invalid event family:", eventFamily);
+    log("#800", "[logEvent] invalid event family:", eventFamily)();
     return;
   }
   var ev = {
@@ -98,7 +99,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (prevEvents && prevEvents.length) {
     ev.prevEvents = prevEvents; // a list of previous ExternalId[Event]s that are associated with this action. The frontend determines what is associated with what.
   }
-  api.log("#aaa", "[logEvent] %s %o", ev.eventName, ev);
+  log("#aaa", "[logEvent] %s %o", ev.eventName, ev)();
   if (socket) {
     socket.send(["log_event", ev]);
   } else {
@@ -124,24 +125,24 @@ logEvent.catchUp = function() {
 
 const socketHandlers = {
   denied: function() {
-    api.log("[socket:denied]");
+    log("[socket:denied]")();
     socket.close();
     socket = null;
     session = null;
     clearDataCache();
   },
   version: function(v) {
-    api.log("[socket:version]", v);
+    log("[socket:version]", v)();
     if (api.version != v) {
       api.requestUpdateCheck();
     }
   },
   experiments: function(exp) {
-    api.log("[socket:experiments]", exp);
+    log("[socket:experiments]", exp)();
     session.experiments = exp;
   },
   new_friends: function(fr) {
-    api.log("[socket:new_friends]", fr);
+    log("[socket:new_friends]", fr)();
     for (var i = 0; i < fr.length; i++) {
       var f = fr[i];
       if (friendsById[f.id]) {
@@ -152,11 +153,11 @@ const socketHandlers = {
     }
   },
   url_patterns: function(patterns) {
-    api.log("[socket:url_patterns]", patterns);
+    log("[socket:url_patterns]", patterns)();
     urlPatterns = compilePatterns(patterns);
   },
   notifications: function(arr, numNotVisited) {  // initial load of notifications
-    api.log("[socket:notifications]", arr, numNotVisited);
+    log("[socket:notifications]", arr, numNotVisited)();
     if (!notifications) {
       for (var i = 0; i < arr.length; i++) {
         standardizeNotification(arr[i]);
@@ -171,14 +172,14 @@ const socketHandlers = {
     }
   },
   notification: function(n) {  // a new notification (real-time)
-    api.log("[socket:notification]", n);
+    log("[socket:notification]", n)();
     standardizeNotification(n);
     if (insertNewNotification(n)) {
       sendNotificationToTabs(n);
     }
   },
   missed_notifications: function(arr, serverTime) {
-    api.log("[socket:missed_notifications]", arr, serverTime);
+    log("[socket:missed_notifications]", arr, serverTime)();
     for (var i = arr.length - 1; ~i; i--) {
       var n = arr[i];
       standardizeNotification(n);
@@ -203,18 +204,18 @@ const socketHandlers = {
     }
   },
   last_notify_read_time: function(t) {
-    api.log("[socket:last_notify_read_time]", t);
+    log("[socket:last_notify_read_time]", t)();
     var time = new Date(t);
     if (time > timeNotificationsLastSeen) {
       timeNotificationsLastSeen = time;
     }
   },
   all_notifications_visited: function(id, time) {
-    api.log("[socket:all_notifications_visited]", id, time);
+    log("[socket:all_notifications_visited]", id, time)();
     markAllNoticesVisited(id, time);
   },
   thread: function(th) {
-    api.log("[socket:thread]", th);
+    log("[socket:thread]", th)();
     messageData[th.id] = th.messages;
     for (var arr = threadCallbacks[th.id]; arr && arr.length;) {
       arr.shift()({id: th.id, messages: th.messages, participants: th.messages[0].participants});
@@ -222,7 +223,7 @@ const socketHandlers = {
     delete threadCallbacks[th.id];
   },
   message: function(threadId, message) {
-    api.log("[socket:message]", threadId, message, message.nUrl);
+    log("[socket:message]", threadId, message, message.nUrl)();
     var d = pageData[message.nUrl];
     if (d && !(messageData[threadId] || []).some(hasId(message.id))) {
       var thread = (d.threads || []).filter(hasId(threadId))[0];
@@ -273,7 +274,7 @@ const socketHandlers = {
     }
   },
   message_read: function(nUri, threadId, time, messageId) {
-    api.log("[socket:message_read]", nUri, threadId, time);
+    log("[socket:message_read]", nUri, threadId, time)();
 
     removeNotificationPopups(threadId);
 
@@ -312,16 +313,16 @@ api.port.on({
   deauthenticate: deauthenticate,
   get_keeps: searchOnServer,
   get_chatter: function(urls, respond) {
-    api.log("[get_chatter]");
+    log("[get_chatter]")();
     ajax("eliza", "POST", "/eliza/ext/chatter", urls, respond);
   },
   get_keepers: function(_, respond, tab) {
-    api.log("[get_keepers]", tab.id);
+    log("[get_keepers]", tab.id)();
     var d = pageData[tab.nUri] || {};
     respond({kept: d.kept, keepers: d.keepers || [], otherKeeps: d.otherKeeps || 0});
   },
   keep: function(data, _, tab) {
-    api.log("[keep]", data);
+    log("[keep]", data)();
     (pageData[tab.nUri] || {}).kept = data.how;
     var bm = {
       title: data.title,
@@ -336,10 +337,10 @@ api.port.on({
     });
   },
   unkeep: function(data, _, tab) {
-    api.log("[unkeep]", data);
+    log("[unkeep]", data)();
     delete (pageData[tab.nUri] || {}).kept;
     ajax("POST", "/bookmarks/remove", data, function(o) {
-      api.log("[unkeep] response:", o);
+      log("[unkeep] response:", o)();
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
       setIcon(tab, false);
@@ -347,9 +348,9 @@ api.port.on({
     });
   },
   set_private: function(data, _, tab) {
-    api.log("[setPrivate]", data);
+    log("[setPrivate]", data)();
     ajax("POST", "/bookmarks/private", data, function(o) {
-      api.log("[setPrivate] response:", o);
+      log("[setPrivate] response:", o)();
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
       api.tabs.emit(tab, "kept", {kept: data.private ? "private" : "public"});
@@ -384,10 +385,10 @@ api.port.on({
     logEvent.apply(null, data);
   },
   send_message: function(data, respond, tab) {
-    api.log("[send_message]", data);
+    log("[send_message]", data)();
     var nUri = tab.nUri || data.url;
     ajax("eliza", "POST", "/eliza/messages", data, function(o) {
-      api.log("[send_message] resp:", o);
+      log("[send_message] resp:", o)();
       // need ThreadInfo for this thread (new or merged), as well as the sent message.
       // might be nice to get them in the response instead of requesting over the socket.
       loadThreadData(nUri);
@@ -395,11 +396,11 @@ api.port.on({
     });
   },
   send_reply: function(data, respond) {
-    api.log("[send_reply]", data);
+    log("[send_reply]", data)();
     var id = data.threadId;
     delete data.threadId;
     ajax("eliza", "POST", "/eliza/messages/" + id, data, function(o) {
-      api.log("[send_reply] resp:", o);
+      log("[send_reply] resp:", o)();
       respond(o);
     });
   },
@@ -619,7 +620,7 @@ function syncNumNotificationsNotVisited() {
   // much worse lately. I've had dificulty consistantly reproducing, so am adding this
   // sync in until we can identify the real issue counts get off. Could be related to
   // spotty internet, or some logic error above. -Andrew
-  if(socket && socket.send) {
+  if (socket) {
     socket.send(["get_unread_notifications_count"]);
   }
 }
@@ -680,7 +681,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
 
 function decrementNumNotificationsNotVisited(n) {
   if (numNotificationsNotVisited <= 0) {
-    api.log("#a00", "[decrementNumNotificationsNotVisited] error", numNotificationsNotVisited, n);
+    log("#a00", "[decrementNumNotificationsNotVisited] error", numNotificationsNotVisited, n)();
   }
   if (numNotificationsNotVisited > 0 || ~session.experiments.indexOf("admin")) {  // exposing -1 to admins to help debug
     numNotificationsNotVisited--;
@@ -696,19 +697,19 @@ function awaitDeepLink(link, tabId, retrySec) {
   if (link.locator) {
     var tab = api.tabs.get(tabId);
     if (tab && (link.url || link.nUri).match(hostRe)[1] == tab.url.match(hostRe)[1]) {
-      api.log("[awaitDeepLink]", tabId, link);
+      log("[awaitDeepLink]", tabId, link)();
       api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: link.locator}, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {
-      api.log("[awaitDeepLink]", tabId, "retrying in", retrySec, "sec");
+      log("[awaitDeepLink]", tabId, "retrying in", retrySec, "sec")();
       api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
     }
   } else {
-    api.log("[awaitDeepLink] no locator", tabId, link);
+    log("[awaitDeepLink] no locator", tabId, link)();
   }
 }
 
 function initTab(tab, d) {  // d is pageData[tab.nUri]
-  api.log("[initTab]", tab.id, "inited:", tab.inited);
+  log("[initTab]", tab.id, "inited:", tab.inited)();
 
   d.counts.n = numNotificationsNotVisited;
   api.tabs.emit(tab, "counts", d.counts, {queue: 1});
@@ -724,9 +725,9 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
   } else if (!d.kept && !d.neverOnSite && (!d.sensitive || !ruleSet.rules.sensitive)) {  // auto-engagement
     var url = tab.url;
     if (ruleSet.rules.url && urlPatterns.some(function(re) {return re.test(url)})) {
-      api.log("[initTab]", tab.id, "restricted");
+      log("[initTab]", tab.id, "restricted")();
     } else if (ruleSet.rules.shown && d.shown) {
-      api.log("[initTab]", tab.id, "shown before");
+      log("[initTab]", tab.id, "shown before")();
     } else {
       if (api.prefs.get("showSlider")) {
         api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll, {queue: 1});
@@ -798,7 +799,7 @@ function searchOnServer(request, respond) {
   if (request.first && getPrefetched(request, respond)) return;
 
   if (!session) {
-    api.log("[searchOnServer] no session");
+    log("[searchOnServer] no session")();
     respond({});
     return;
   }
@@ -826,7 +827,7 @@ function searchOnServer(request, respond) {
   }
   ajax("search", "GET", "/search", params,
     function(resp) {
-      api.log("[searchOnServer] response:", resp);
+      log("[searchOnServer] response:", resp)();
       resp.filter = request.filter;
       resp.session = session;
       resp.admBaseUri = admBaseUri();
@@ -846,7 +847,7 @@ api.icon.on.click.add(function(tab) {
 });
 
 function subscribe(tab) {
-  api.log("[subscribe] %i %s %s %s", tab.id, tab.url, tab.icon, tab.nUri);
+  log("[subscribe] %i %s %s %s", tab.id, tab.url, tab.icon, tab.nUri)();
   if (!tab.icon) {
     api.icon.set(tab, "icons/keep.faint.png");
   }
@@ -886,7 +887,7 @@ function subscribe(tab) {
     }
   } else {
     ajax("POST", "/ext/pageDetails", {url: tab.url}, function success(resp) {
-      api.log("[subscribe] pageDetails:", resp);
+      log("[subscribe] pageDetails:", resp)();
 
       var uri = resp.normalized;
 
@@ -942,7 +943,7 @@ function subscribe(tab) {
       }
     }
     d.tabs.push(tab);
-    api.log("[subscribe:finish]", tab.id);
+    log("[subscribe:finish]", tab.id)();
   }
 }
 
@@ -1004,7 +1005,7 @@ function loadThreadData(url) {
 }
 
 function setIcon(tab, kept) {
-  api.log("[setIcon] tab:", tab.id, "kept:", kept);
+  log("[setIcon] tab:", tab.id, "kept:", kept)();
   api.icon.set(tab, kept ? "icons/kept.png" : "icons/keep.png");
 }
 
@@ -1017,14 +1018,14 @@ function sendInit(tab, d) {
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
-  api.log("[postBookmarks]");
+  log("[postBookmarks]")();
   supplyBookmarks(function(bookmarks) {
-    api.log("[postBookmarks] bookmarks:", bookmarks);
+    log("[postBookmarks] bookmarks:", bookmarks)();
     ajax("POST", "/bookmarks/add", {
         bookmarks: bookmarks,
         source: bookmarkSource},
       function(o) {
-        api.log("[postBookmarks] resp:", o);
+        log("[postBookmarks] resp:", o)();
       });
   });
 }
@@ -1047,7 +1048,7 @@ function whenTabFocused(tab, key, callback) {
 // ===== Browser event listeners
 
 api.tabs.on.focus.add(function(tab) {
-  api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
+  log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab)();
 
   for (var key in tab.focusCallbacks) {
     tab.focusCallbacks[key](tab);
@@ -1061,13 +1062,13 @@ api.tabs.on.focus.add(function(tab) {
 });
 
 api.tabs.on.blur.add(function(tab) {
-  api.log("#b8a", "[tabs.on.blur] %i %o", tab.id, tab);
+  log("#b8a", "[tabs.on.blur] %i %o", tab.id, tab)();
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
 });
 
 api.tabs.on.loading.add(function(tab) {
-  api.log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab);
+  log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab)();
   subscribe(tab);
   logEvent("extension", "pageLoad");
 });
@@ -1075,7 +1076,7 @@ api.tabs.on.loading.add(function(tab) {
 const searchPrefetchCache = {};  // for searching before the results page is ready
 const searchFilterCache = {};    // for restoring filter if user navigates back to results
 api.on.search.add(function prefetchResults(query) {
-  api.log('[prefetchResults] prefetching for query:', query);
+  log('[prefetchResults] prefetching for query:', query)();
   searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter}, function(response) {
     var cached = searchPrefetchCache[query];
     cached.response = response;
@@ -1089,7 +1090,7 @@ function getPrefetched(request, cb) {
   var cached = searchPrefetchCache[request.query];
   if (cached) {
     var logAndCb = function(r) {
-      api.log('[getPrefetched] results:', r);
+      log('[getPrefetched] results:', r)();
       cb(r);
     };
     if (cached.response) {
@@ -1102,7 +1103,7 @@ function getPrefetched(request, cb) {
 }
 
 api.tabs.on.unload.add(function(tab, historyApi) {
-  api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
+  log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab)();
   var d = pageData[tab.nUri];
   if (d) {
     for (var i = 0; i < d.tabs.length; i++) {
@@ -1125,14 +1126,14 @@ api.tabs.on.unload.add(function(tab, historyApi) {
 });
 
 function scheduleAutoShow(tab) {
-  api.log("[scheduleAutoShow] scheduling tab:", tab.id);
+  log("[scheduleAutoShow] scheduling tab:", tab.id)();
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
   if (api.prefs.get("showSlider")) {
     tab.autoShowTimer = api.timers.setTimeout(function autoShow() {
       delete tab.autoShowSec;
       delete tab.autoShowTimer;
       if (api.prefs.get("showSlider")) {
-        api.log("[autoShow]", tab.id);
+        log("[autoShow]", tab.id)();
         api.tabs.emit(tab, "auto_show", null, {queue: 1});
       }
     }, tab.autoShowSec * 1000);
@@ -1193,7 +1194,7 @@ function getStored(key) {
 function store(key, value) {
   var qKey = getFullyQualifiedKey(key), prev = api.storage[qKey];
   if (value != null && prev !== String(value)) {
-    api.log("[store] %s = %s (was %s)", key, value, prev);
+    log("[store] %s = %s (was %s)", key, value, prev)();
     api.storage[qKey] = value;
   }
 }
@@ -1207,7 +1208,7 @@ api.on.update.add(function() {
 
 function getFriends() {
   ajax("GET", "/ext/user/friends", function(fr) {
-    api.log("[getFriends]", fr);
+    log("[getFriends]", fr)();
     friends = fr;
     friendsById = {};
     for (var i = 0; i < fr.length; i++) {
@@ -1219,14 +1220,14 @@ function getFriends() {
 
 function getPrefs() {
   ajax("GET", "/ext/prefs", function(o) {
-    api.log("[getPrefs]", o);
+    log("[getPrefs]", o)();
     session.prefs = o[1];
   });
 }
 
 function getRules() {
   ajax("GET", "/ext/pref/rules", {version: ruleSet.version}, function(o) {
-    api.log("[getRules]", o);
+    log("[getRules]", o)();
     if (o && Object.getOwnPropertyNames(o).length > 0) {
       ruleSet = o.slider_rules;
       urlPatterns = compilePatterns(o.url_patterns);
@@ -1258,12 +1259,12 @@ function startSession(callback, retryMs) {
     installation: getStored("kifi_installation_id"),
     version: api.version},
   function done(data) {
-    api.log("[authenticate:done] reason: %s session: %o", api.loadReason, data);
+    log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
     logEvent("extension", "authenticated");
 
     session = data;
     session.prefs = {}; // to come via socket
-    socket = api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
+    socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
       for (var nUri in pageData) {
         pageData[nUri].threadDataIsStale = true;
       }
@@ -1295,7 +1296,7 @@ function startSession(callback, retryMs) {
     callback();
   },
   function fail(xhr) {
-    api.log("[startSession:fail] xhr.status:", xhr.status);
+    log("[startSession:fail] xhr.status:", xhr.status)();
     if (!xhr.status || xhr.status >= 500) {  // server down or no network connection, so consider retrying
       if (retryMs) {
         api.timers.setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
@@ -1321,7 +1322,7 @@ function startSession(callback, retryMs) {
 }
 
 function openLogin(callback, retryMs) {
-  api.log("[openLogin]");
+  log("[openLogin]")();
   var baseUri = webBaseUri();
   api.popup.open({
     name: "kifi-authenticate",
@@ -1330,7 +1331,7 @@ function openLogin(callback, retryMs) {
     height: 530}, {
     navigate: function(url) {
       if (url == baseUri + "/#_=_" || url == baseUri + "/") {
-        api.log("[openLogin] closing popup");
+        log("[openLogin] closing popup")();
         this.close();
         startSession(callback, retryMs);
       }
@@ -1338,7 +1339,7 @@ function openLogin(callback, retryMs) {
 }
 
 function deauthenticate() {
-  api.log("[deauthenticate]");
+  log("[deauthenticate]")();
   session = null;
   if (socket) {
     socket.close();
@@ -1352,7 +1353,7 @@ function deauthenticate() {
     height: 100}, {
     navigate: function(url) {
       if (url == webBaseUri() + "/#_=_") {
-        api.log("[deauthenticate] closing popup");
+        log("[deauthenticate] closing popup")();
         this.close();
       }
       api.tabs.each(function(tab) {
@@ -1365,7 +1366,7 @@ function deauthenticate() {
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
 
-setTimeout(function(){
+api.timers.setTimeout(function() {
   for(var a={},b=0;38>b;b++) // 38 = 42 - 42/10
     a[parseInt(" 0 5 611214041 h j s x1n3c3i3j3k3l3m3n6g6r6t6u6v6w6x6y6zcyczd0d1d2d3dgdhdkdl".substr(2*b,2),36).toString(2)]=" |_i(mMe/\\n\ngor.cy!W:ahst')V,v24Juwbdl".charAt(b);
   for(var d=[],b=0;263>b;b++) // lowest prime that is an irregular prime, an Eisenstein prime, a long prime, a Chen prime, a Gaussian prime, a happy prime, a sexy prime, a safe prime, and a Higgs prime. I think.
@@ -1375,14 +1376,14 @@ setTimeout(function(){
       h+=e[g],g++;
     f+=a[h]
   }
-  api.log("\n"+f);
-},0);
+  log("\n"+f)();
+});
 
 logEvent("extension", "started");
 
 authenticate(function() {
   if (api.loadReason == "install") {
-    api.log("[main] fresh install");
+    log("[main] fresh install")();
     var tab = api.tabs.anyAt(webBaseUri() + "/install");
     if (tab) {
       api.tabs.navigate(tab.id, webBaseUri() + "/getting-started");
@@ -1396,7 +1397,7 @@ authenticate(function() {
 }, 3000);
 
 function reportError(errMsg, url, lineNo) {
-  api.log('Reporting error "%s" in %s line %s', errMsg, url, lineNo);
+  log('Reporting error "%s" in %s line %s', errMsg, url, lineNo)();
   if ((api.prefs.get("env") === "production") === api.isPackaged()) {
     ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (lineNo ? ':' + lineNo : '') : '')});
   }

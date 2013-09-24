@@ -93,7 +93,6 @@ class MainSearcher(
   val svWeightClickHistory = config.asInt("svWeightClickHistory")
   val similarity = Similarity(config.asString("similarity"))
   val phraseBoost = config.asFloat("phraseBoost")
-  val phraseProximityBoost = config.asFloat("phraseProximityBoost")
   val siteBoost = config.asFloat("siteBoost")
   val minMyBookmarks = config.asInt("minMyBookmarks")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
@@ -192,7 +191,7 @@ class MainSearcher(
     lang = LangDetector.detectShortText(queryString, langProbabilities)
 
     val hotDocs = new HotDocSetFilter()
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
@@ -447,7 +446,7 @@ class MainSearcher(
     // TODO: use user profile info as a bias
     lang = LangDetector.detectShortText(queryString, langProbabilities)
     val hotDocs = new HotDocSetFilter()
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
