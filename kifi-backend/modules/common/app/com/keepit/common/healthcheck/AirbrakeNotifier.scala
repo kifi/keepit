@@ -37,12 +37,12 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
       } catch {
         case e: Throwable =>
           log.error(s"can't format or send error $error")
-          if (!selfError)
-            throw e
-          else
+          if (!selfError) throw e
+          else {
             e.printStackTrace
             log.error(s"can't deal with error: $error", e)
             //todo(eishay): how about sending a direct email only once per lifetime?
+          }
       }
     }
     case m => self ! AirbrakeNotice(throw new UnsupportedActorMessage(s"unknown message $m"), true)
