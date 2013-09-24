@@ -44,4 +44,5 @@ abstract class ShoeboxModule(
   val clickHistoryModule = ShoeboxClickHistoryModule()
   val browsingHistoryModule = ShoeboxBrowsingHistoryModule()
 
+  val mailerModule = PlayMailerModule()
 }
