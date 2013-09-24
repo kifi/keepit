@@ -23,6 +23,7 @@ import org.apache.lucene.util.ToStringUtils
 import java.lang.{Float => JFloat}
 import java.util.{Set => JSet}
 import scala.collection.JavaConversions._
+import scala.collection.mutable.ArrayBuffer
 import scala.math._
 
 object ProximityQuery {
@@ -30,7 +31,7 @@ object ProximityQuery {
   val maxLength = 64  // we use first 64 terms (enough?)
   val gapPenalty = 0.05f
 
-  def apply(terms: Seq[Term], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f) = new ProximityQuery(terms, phrases, phraseBoost)
+  def apply(terms: Seq[Seq[Term]], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f) = new ProximityQuery(terms, phrases, phraseBoost)
 
   def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]) = {
     val notInPhrase = termIds.clone
@@ -45,15 +46,18 @@ object ProximityQuery {
   }
 }
 
-class ProximityQuery(val terms: Seq[Term], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float) extends Query {
+class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float) extends Query {
 
   override def createWeight(searcher: IndexSearcher): Weight = new ProximityWeight(this)
 
   override def rewrite(reader: IndexReader): Query = this
 
-  override def extractTerms(out: JSet[Term]): Unit = out.addAll(terms)
+  override def extractTerms(out: JSet[Term]): Unit = terms.foreach{ ts => out.addAll(ts) }
 
-  override def toString(s: String) = "proximity(%s)%s".format(terms.mkString(","), ToStringUtils.boost(getBoost()))
+  override def toString(s: String) = {
+    val termsString = terms.map{ t => if (t.size == 1) t.head.toString else t.mkString("(", ",", ")") }.mkString(",")
+    s"proximity(${termsString})${ToStringUtils.boost(getBoost())}"
+  }
 
   override def equals(obj: Any): Boolean = obj match {
     case prox: ProximityQuery => (terms == prox.terms && getBoost() == prox.getBoost())
@@ -69,7 +73,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
   private[this] val termIdMap = {
     var id = -1
-    query.terms.take(ProximityQuery.maxLength).foldLeft(Map.empty[Term, Int]){ (m, term) =>
+    query.terms.take(ProximityQuery.maxLength).foldLeft(Map.empty[Seq[Term], Int]){ (m, term) =>
       if (m.contains(term)) m
       else {
         id += 1
@@ -106,7 +110,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       val phrasesOpt = if (query.phrases.isEmpty) {
         None
       } else {
-        Some(query.phrases.map{ case (pos, len) => query.terms.slice(pos , pos + len).map(_.text).mkString(" ") }.mkString("[", " ; ", "]"))
+        Some(query.phrases.map{ case (pos, len) => query.terms.slice(pos , pos + len).map(_.head.text).mkString(" ") }.mkString("[", " ; ", "]"))
       }
 
       result.setDescription("proximity(%s), product of:".format(query.terms.mkString(",") + phrasesOpt.getOrElse("")))
@@ -126,24 +130,15 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
   def getQuery() = query
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    if (query.terms.size > 0) {
-      val tps = termIdMap.map{ case (term, id) =>
-        val termText = term.text()
-        makePositionAndId(context, term, id, acceptDocs)
-      }.toArray
-      new ProximityScorer(this, tps, termIds, phraseMatcher, query.phraseBoost)
-    } else {
-      null
+    val buf = new ArrayBuffer[PositionAndId](termIdMap.size)
+    termIdMap.foreach{ case (equivTerms, id) =>
+      equivTerms.foreach{ term =>
+        val enum = termPositionsEnum(context, term, acceptDocs)
+        if (enum != null) buf += new PositionAndId(enum, term.text(), id)
+      }
     }
-  }
 
-  private def makePositionAndId(context: AtomicReaderContext, term: Term, id: Int, acceptDocs: Bits) = {
-    val enum = termPositionsEnum(context, term, acceptDocs)
-    if (enum == null) {
-      new PositionAndId(EmptyDocsAndPositionsEnum, term.text(), id)
-    } else {
-      new PositionAndId(enum, term.text(), id)
-    }
+    if (buf.isEmpty) null else new ProximityScorer(this, buf.toArray, termIds, phraseMatcher, query.phraseBoost)
   }
 }
 
@@ -189,7 +184,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
   private[this] var scoredDoc = -1
   private[this] val weightVal = weight.getWeightValue
 
-  private[this] val pq = new PriorityQueue[PositionAndId](termIds.length) {
+  private[this] val pq = new PriorityQueue[PositionAndId](tps.length) {
     override def lessThan(nodeA: PositionAndId, nodeB: PositionAndId) = {
       if (nodeA.doc == nodeB.doc) nodeA.pos < nodeB.pos
       else nodeA.doc < nodeB.doc
