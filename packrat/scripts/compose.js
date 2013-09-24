@@ -223,7 +223,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       $menu.remove();
       if (toggle) {
         enterToSend = !enterToSend;
-        api.log("[enterToSend]", enterToSend);
+        log("[enterToSend]", enterToSend)();
         tipTextNode.nodeValue = enterToSend ? tipTextNode.nodeValue.replace(prefix, "") : prefix + tipTextNode.nodeValue;
         api.port.emit("set_enter_to_send", enterToSend);
       }
@@ -263,7 +263,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
   });
 
   function setFocus() {
-    api.log("[setFocus]");
+    log("[setFocus]")();
     if ($t.length) {  // timeout avoids Chrome transition displacement glitch
       setTimeout($f.focus.bind($f.find("#token-input-kifi-compose-to")));
     } else {
@@ -274,7 +274,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
   function updateMaxHeight() {
     var hNew = Math.max(0, $c[0].offsetHeight - $f[0].offsetHeight);
     if (hNew != hOld) {
-      api.log("[updateMaxHeight]", hOld, "->", hNew);
+      log("[updateMaxHeight]", hOld, "->", hNew)();
       var scrollTop = elScroll.scrollTop;
       elAbove.style.maxHeight = hNew + "px";
       if (hOld) {

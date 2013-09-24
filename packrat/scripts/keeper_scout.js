@@ -7,7 +7,7 @@ function logEvent() {  // parameters defined in main.js
 }
 
 var tile = tile || function() {  // idempotent for Chrome
-  api.log("[keeper_scout]", location.hostname);
+  log("[keeper_scout]", location.hostname)();
 
   window.onerror = function(message, url, lineNo) {
     if (!/https?\:/.test(url)) {  // this is probably from extension code, not from the website we're running this on
@@ -73,9 +73,9 @@ var tile = tile || function() {  // idempotent for Chrome
             var hPage = document.body.scrollHeight;
             var hViewport = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"].clientHeight;
             var hSeen = window.pageYOffset + hViewport;
-            api.log("[onScroll]", Math.round(hSeen / hPage * 10000) / 100, ">", r[1], "% and", hPage, ">", r[0] * hViewport, "?");
+            log("[onScroll]", Math.round(hSeen / hPage * 10000) / 100, ">", r[1], "% and", hPage, ">", r[0] * hViewport, "?")();
             if (hPage > r[0] * hViewport && hSeen > (r[1] / 100) * hPage) {
-              api.log("[onScroll] showing");
+              log("[onScroll] showing")();
               keeper("show", "scroll");
             }
           }
@@ -208,7 +208,7 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function setTileVertOffset(px) {
-    api.log("[setTileVertOffset] px:", px);
+    log("[setTileVertOffset] px:", px)();
     tile.style["transform" in tile.style ? "transform" : "webkitTransform"] = "translate(0," + px + "px)";
   }
 
