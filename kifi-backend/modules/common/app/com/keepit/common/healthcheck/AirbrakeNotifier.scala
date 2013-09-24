@@ -45,7 +45,7 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
             //todo(eishay): how about sending a direct email only once per lifetime?
       }
     }
-    case m => self ! AirbrakeNotice(throw new UnsupportedActorMessage(s"unknown message $m"), selfError)
+    case m => self ! AirbrakeNotice(throw new UnsupportedActorMessage(s"unknown message $m"), true)
   }
 }
 
