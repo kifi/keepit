@@ -9,7 +9,7 @@ var api = api || function() {  // idempotent for Chrome
       var kind = msg[0];
       if (kind == "api:respond") {
         var id = msg[1], cb = callbacks[id];
-        api.log("[onMessage] response:", msg[2] != null ? msg[2] : "");
+        log("[onMessage] response:", msg[2] != null ? msg[2] : "")();
         if (cb) {
           delete callbacks[id];
           cb(msg[2]);
@@ -19,7 +19,7 @@ var api = api || function() {  // idempotent for Chrome
         requireNext();
       } else {
         var data = msg[1], handler;
-        api.log("[onMessage]", kind, data != null ? data : "");
+        log("[onMessage]", kind, data != null ? data : "")();
         for (var i in msgHandlers) {
           if (handler = msgHandlers[i][kind]) {
             handler(data);
@@ -28,7 +28,7 @@ var api = api || function() {  // idempotent for Chrome
       }
     });
     port.onDisconnect.addListener(function() {
-      api.log("[onDisconnect]");
+      log("[onDisconnect]")();
       api.port.on = api.port.emit = api.noop;
       for (var i in api.onEnd) {
         api.onEnd[i]();
@@ -76,11 +76,6 @@ var api = api || function() {  // idempotent for Chrome
 
   return {
     injected: {'scripts/api.js': 1},
-    log: window.suppressLog ? function() {} : function() {
-      var d = new Date, ds = d.toString();
-      arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
-      console.log.apply(console, arguments);
-    },
     mutationsFirePromptly: true,
     noop: function() {},
     onEnd: [],
@@ -109,5 +104,11 @@ var api = api || function() {  // idempotent for Chrome
     },
     url: chrome.runtime.getURL};
 }();
+
+var log = log || (window.suppressLog ? api.noop : function() {
+  var d = new Date, ds = d.toString();
+  arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
+  return console.log.apply.bind(console.log, console, arguments);
+});
 
 /^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);

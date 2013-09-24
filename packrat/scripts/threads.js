@@ -107,7 +107,7 @@ threadsPane = function() {
         text: text,
         recipients: recipientIds}),
       function(resp) {
-        api.log("[sendMessage] resp:", resp);
+        log("[sendMessage] resp:", resp)();
         var friends = $container.find(".kifi-compose-to").data("friends").reduce(function(o, f) {
           o[f.id] = f;
           return o;

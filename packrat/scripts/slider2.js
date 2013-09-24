@@ -48,7 +48,7 @@ slider2 = function() {
   }
 
   api.onEnd.push(function() {
-    api.log("[slider2:onEnd]");
+    log("[slider2:onEnd]")();
     $pane && $pane.remove();
     $slider && $slider.remove();
     $(tile).remove();
@@ -59,7 +59,7 @@ slider2 = function() {
   function createSlider(callback, locator) {
     var kept = tile && tile.dataset.kept;
     var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"m":0}');
-    api.log("[createSlider] kept: %s counts: %o", kept || "no", counts);
+    log("[createSlider] kept: %s counts: %o", kept || "no", counts)();
 
     render("html/metro/slider2", {
       "bgDir": api.url("images/keeper"),
@@ -79,14 +79,14 @@ slider2 = function() {
         } else if (!$pane && !data.dragStarting && !data.$dragGlass) {
           if (e.relatedTarget) {
             if (!this.contains(e.relatedTarget)) {
-              api.log("[slider.mouseout] hiding");
+              log("[slider.mouseout] hiding")();
               hideSlider("mouseout");
             }
           } else {  // out of window
-            api.log("[slider.mouseout] out of window");
+            log("[slider.mouseout] out of window")();
             document.documentElement.addEventListener("mouseover", function f(e) {
               this.removeEventListener("mouseover", f, true);
-              api.log("[document.mouseover]", e.target);
+              log("[document.mouseover]", e.target)();
               if ($slider && !$slider[0].contains(e.target)) {
                 hideSlider("mouseout");
               }
@@ -100,7 +100,7 @@ slider2 = function() {
         data.mousedownEvent = e.originalEvent;
       }).mouseup(function() {
         if (data.dragTimer || data.dragStarting) {
-          api.log("[mouseup]");
+          log("[mouseup]")();
           clearTimeout(data.dragTimer), delete data.dragTimer;
           delete data.dragStarting;
         }
@@ -242,7 +242,7 @@ slider2 = function() {
   }
 
   function showSlider(trigger, callback) {
-    api.log("[showSlider]", trigger);
+    log("[showSlider]", trigger)();
 
     lastShownAt = Date.now();
     $slider = $();  // creation in progress (prevents multiple)
@@ -293,14 +293,14 @@ slider2 = function() {
   }
 
   function startDrag(data) {
-    api.log("[startDrag]");
+    log("[startDrag]")();
     clearTimeout(data.dragTimer);
     delete data.dragTimer;
     data.dragStarting = true;
     api.require("scripts/lib/jquery-ui-draggable.min.js", function() {
       if (data.dragStarting) {
         delete data.dragStarting;
-        api.log("[startDrag] installing draggable");
+        log("[startDrag] installing draggable")();
         data.$dragGlass = $("<div class=kifi-slider2-drag-glass>").mouseup(stopDrag).appendTo(tile.parentNode);
         $(tile).draggable({axis: "y", containment: "window", scroll: false, stop: stopDrag})[0]
           .dispatchEvent(data.mousedownEvent); // starts drag
@@ -308,7 +308,7 @@ slider2 = function() {
       function stopDrag() {
         var r = tile.getBoundingClientRect(), fromBot = window.innerHeight - r.bottom;
         var pos = r.top >= 0 && r.top < fromBot ? {top: r.top} : {bottom: Math.max(0, fromBot)};
-        api.log("[stopDrag] top:", r.top, "bot:", r.bottom, JSON.stringify(pos));
+        log("[stopDrag] top:", r.top, "bot:", r.bottom, JSON.stringify(pos))();
         $(tile).draggable("destroy");
         data.$dragGlass.remove();
         delete data.$dragGlass;
@@ -322,11 +322,11 @@ slider2 = function() {
   var idleTimer = {
     start: function(ms) {
       idleTimer.ms = ms = ms > 0 ? ms : idleTimer.ms;
-      api.log("[idleTimer.start]", ms, "ms");
+      log("[idleTimer.start]", ms, "ms")();
       var t = idleTimer;
       clearTimeout(t.timeout);
       t.timeout = setTimeout(function hideSliderIdle() {
-        api.log("[hideSliderIdle]");
+        log("[hideSliderIdle]")();
         hideSlider("idle");
       }, ms);
       $slider
@@ -335,7 +335,7 @@ slider2 = function() {
       delete t.dead;
     },
     clear: function() {
-      api.log("[idleTimer.clear]");
+      log("[idleTimer.clear]")();
       var t = idleTimer;
       clearTimeout(t.timeout);
       delete t.timeout;
@@ -343,7 +343,7 @@ slider2 = function() {
     kill: function() {
       var t = idleTimer;
       if (t.dead) return;
-      api.log("[idleTimer.kill]");
+      log("[idleTimer.kill]")();
       clearTimeout(t.timeout);
       delete t.timeout;
       $slider
@@ -353,21 +353,21 @@ slider2 = function() {
     }};
 
   function keepPage(how) {
-    api.log("[keepPage]", how);
+    log("[keepPage]", how)();
     updateKeptDom(how);
     api.port.emit("keep", withUrls({title: document.title, how: how}));
     logEvent("slider", "keep", {isPrivate: how == "private"});
   }
 
   function unkeepPage() {
-    api.log("[unkeepPage]", document.URL);
+    log("[unkeepPage]", document.URL)();
     updateKeptDom("");
     api.port.emit("unkeep", withUrls({}));
     logEvent("slider", "unkeep");
   }
 
   function toggleKeep(how) {
-    api.log("[toggleKeep]", how);
+    log("[toggleKeep]", how)();
     updateKeptDom(how);
     api.port.emit("set_private", withUrls({private: how == "private"}));
   }
@@ -393,7 +393,7 @@ slider2 = function() {
       if (participants) {
         respond(participants, locator);
       } else {
-        api.log("[createTemplateParams] getting thread for participants");
+        log("[createTemplateParams] getting thread for participants")();
         api.port.emit("thread", {id: id, respond: true}, function(th) {
           respond(th.participants, "/messages/" + th.id);
         });
@@ -404,7 +404,7 @@ slider2 = function() {
     }};
 
   function showPane(locator, back, paramsArg) {
-    api.log("[showPane]", locator, back ? "back" : "");
+    log("[showPane]", locator, back ? "back" : "")();
     var pane = toPaneName(locator);
     (createTemplateParams[pane] || function(cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function(params, canonicalLocator) {
       var loc = canonicalLocator || locator;
@@ -415,7 +415,7 @@ slider2 = function() {
   }
 
   function showPane2(locator, back, pane, params) {  // only called by showPane
-    api.log("[showPane2]", locator, pane);
+    log("[showPane2]", locator, pane)();
     if ($pane) {
       var left = back || toPaneIdx(pane) < toPaneIdx(toPaneName(paneHistory[0]));
       $slider.find(".kifi-at").removeClass("kifi-at").end()
@@ -606,7 +606,7 @@ slider2 = function() {
   }
 
   function hidePane(leaveSlider) {
-    api.log("[hidePane]");
+    log("[hidePane]")();
     if (leaveSlider) {
       $(tile).css({top: "", bottom: "", transform: ""}).insertAfter($pane);
       $slider.prependTo(tile).layout();
@@ -654,7 +654,7 @@ slider2 = function() {
     thread: function($box, locator) {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
       var threadId = locator.split("/")[2];
-      api.log("[populatePane] getting thread for messages", threadId);
+      log("[populatePane] getting thread for messages", threadId)();
       api.require("scripts/thread.js", function() {
         api.port.emit("thread", {id: threadId, respond: true}, function(th) {
           api.port.emit("session", function(session) {
@@ -740,9 +740,9 @@ slider2 = function() {
   return {
     show: function(trigger) {  // trigger is for the event log (e.g. "tile", "auto", "scroll")
       if ($slider) {
-        api.log("[show] already showing");
+        log("[show] already showing")();
       } else {
-        api.log("[show]", trigger);
+        log("[show]", trigger)();
         if (trigger == "tile") {
           showSlider(trigger, growSlider.bind(null, "", "kifi-wide"));
         } else if (!lastShownAt) { // auto-show only if not already shown
@@ -754,15 +754,15 @@ slider2 = function() {
       }
     },
     showPane: function(trigger, locator) {
-      api.log("[showPane]", trigger, locator);
+      log("[showPane]", trigger, locator)();
       showPane(locator);
     },
     togglePane: function(trigger, locator) {
       if ($pane && (!locator || paneHistory[0] == locator)) {
-        api.log("[togglePane] hiding", locator || "");
+        log("[togglePane] hiding", locator || "")();
         hidePane();
       } else {
-        api.log("[togglePane] showing", locator || "");
+        log("[togglePane] showing", locator || "")();
         showPane(locator || "/notices");
       }
     },

@@ -1,6 +1,6 @@
 // API for content scripts
 
-api = function() {
+const api = function() {
   var nextCallbackId = 1, callbacks = {};
 
   function invokeCallback(callbackId, response) {
@@ -27,17 +27,6 @@ api = function() {
 
   return {
     dev: self.options.dev,
-    log: function() {
-      var d = new Date, ds = d.toString();
-      var args = Array.prototype.slice.apply(arguments);
-      for (var i = 0; i < args.length; i++) {
-        var arg = args[i];
-        if (typeof arg == "object") {
-          args[i] = JSON.stringify(arg);
-        }
-      }
-      console.log("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'", args.join(" "));
-    },
     mutationsFirePromptly: false,
     noop: function() {},
     onEnd: [],  // TODO: find an event that will allows us to invoke these
@@ -68,5 +57,20 @@ api = function() {
     }};
 }();
 
-/^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);
+function log() {
+  var d = new Date, ds = d.toString();
+  for (var args = Array.slice(arguments), i = 0; i < args.length; i++) {
+    var arg = args[i];
+    if (typeof arg == "object") {
+      try {
+        args[i] = JSON.stringify(arg);
+      } catch (e) {
+        args[i] = String(arg) + "{" + Object.keys(arg).join(",") + "}";
+      }
+    }
+  }
+  args.unshift("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'");
+  return console.log.apply.bind(console.log, console, args);
+}
 
+/^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);

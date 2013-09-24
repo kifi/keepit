@@ -20,7 +20,7 @@ $.fn.layout = function() {
 
 // We check the pattern because Chrome match/glob patterns aren't powerful enough. crbug.com/289057
 if (searchUrlRe.test(document.URL)) !function() {
-  api.log("[google_inject]");
+  log("[google_inject]")();
 
   function logEvent() {  // parameters defined in main.js
     api.port.emit("log_event", Array.prototype.slice.call(arguments));
@@ -63,7 +63,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     var hash = location.hash, qs = /[#&]q=/.test(hash) ? hash : location.search;
     var isV = /[?#&]tbm=/.test(qs);
     if (isV !== isVertical) {
-      api.log("[checkSearchType] search type:", isV ? "vertical" : "web");
+      log("[checkSearchType] search type:", isV ? "vertical" : "web")();
       isVertical = isV;
     }
   }
@@ -74,16 +74,16 @@ if (searchUrlRe.test(document.URL)) !function() {
     var q = ($qp.val() || $q.val() || fallbackQuery || "").trim().replace(/\s+/g, " ");  // TODO: also detect "Showing results for" and prefer that
     var f = arguments.length > 1 ? newFilter : filter;
     if (q == query && areSameFilter(f, filter)) {
-      api.log("[search] nothing new, query:", q, "filter:", f);
+      log("[search] nothing new, query:", q, "filter:", f)();
       return;
     }
     query = q;
     filter = f;
     if (!q) {
-      api.log("[search] empty query");
+      log("[search] empty query")();
       return;
     }
-    api.log("[search] query:", q, "filter:", f);
+    log("[search] query:", q, "filter:", f)();
 
     $status.removeAttr("data-n").removeClass("kifi-promote").parent().addClass("kifi-loading");
     $res.find("#kifi-res-list,.kifi-res-end").css("opacity", .2).slideUp(200);
@@ -95,15 +95,15 @@ if (searchUrlRe.test(document.URL)) !function() {
     var t1 = tQuery = Date.now();
     api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
       if (q != query || !areSameFilter(f, filter)) {
-        api.log("[results] ignoring for query:", q, "filter:", f);
+        log("[results] ignoring for query:", q, "filter:", f)();
         return;
       } else if (!resp.session) {
-        api.log("[results] no user info");
+        log("[results] no user info")();
         return;
       }
 
       var now = tKifiResultsReceived = Date.now();
-      api.log("[results] response after", now - t1, "ms:", resp);
+      log("[results] response after", now - t1, "ms:", resp)();
       if (!newFilter) {
         clicks.kifi.length = clicks.google.length = 0;
       }
@@ -126,7 +126,7 @@ if (searchUrlRe.test(document.URL)) !function() {
 
       var inDoc = document.contains($res[0]);
       var expanded = Boolean(resp.show && (!inDoc || !(tGoogleResultsShown >= tQuery) || f));
-      api.log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc);
+      log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc)();
       resp.hits.forEach(processHit);
       appendResults(expanded);
       if (inDoc) {
@@ -179,7 +179,7 @@ if (searchUrlRe.test(document.URL)) !function() {
   }
 
   $(window).on("hashchange", function() {
-    api.log("[hashchange]");
+    log("[hashchange]")();
     checkSearchType();
     search();  // needed for switch from shopping to web search, for example
   }).on("beforeunload", function(e) {
@@ -202,7 +202,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     for (var i = 0; i < mutations.length; i++) {
       for (var j = 0, nodes = mutations[i].addedNodes; j < nodes.length; j++) {
         if (nodes[j].id === "ires") {
-          api.log("[withMutations] Google results inserted");
+          log("[withMutations] Google results inserted")();
           tGoogleResultsShown = Date.now();
           if (attachKifiRes(nodes[j]) && !(tKifiResultsShown >= tKifiResultsReceived)) {
             tKifiResultsShown = tGoogleResultsShown;
@@ -263,7 +263,7 @@ if (searchUrlRe.test(document.URL)) !function() {
   });
 
   api.onEnd.push(function() {
-    api.log("[google_inject:onEnd]");
+    log("[google_inject:onEnd]")();
     $(window).off("hashchange unload");
     observer.disconnect();
     $q.off("input");
@@ -328,7 +328,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       $(this).closest(".kifi-res-more").removeClass("kifi-over");
     }).on("click", ".kifi-res-more-a", function(e) {
       if (e.which > 1) return;
-      api.log("[moreClick] shown:", response.hits.length, "avail:", response.nextHits);
+      log("[moreClick] shown:", response.hits.length, "avail:", response.nextHits)();
       if (response.nextHits) {
         renderMore();
         prefetchMore();
@@ -485,13 +485,13 @@ if (searchUrlRe.test(document.URL)) !function() {
         filter: response.filter,
         mayHaveMore: response.mayHaveMore},
       {google_hit: "google_hit"}));
-    api.log("[appendResults] done");
+    log("[appendResults] done")();
   }
 
   function loadChatter(hits) {
     if (!hits.length) return;
     api.port.emit("get_chatter", hits.map(function(h) {return h.bookmark.url}), function gotChatter(chatter) {
-      api.log("[gotChatter]", chatter);
+      log("[gotChatter]", chatter)();
       var bgImg = "url(" + api.url("images/chatter.png") + ")";
       for (var url in chatter) {
         var o = chatter[url];
@@ -515,7 +515,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         "context": response.context
       }, function onPrefetchResponse(resp) {
         if (response === origResp) {
-          api.log("[onPrefetchResponse]", resp);
+          log("[onPrefetchResponse]", resp)();
           resp.hits.forEach(processHit);
 
           response.nextHits = resp.hits;
@@ -534,7 +534,7 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   function renderMore() {
     var hits = response.nextHits;
-    api.log("[renderMore] hits:", hits);
+    log("[renderMore] hits:", hits)();
     response.hits.push.apply(response.hits, hits);
     response.uuid = response.nextUUID;
     response.context = response.nextContext;
@@ -621,7 +621,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     function prepFriendsTokenInput() {
       var $in = $res.find("#kifi-filter-det");
       api.port.emit("get_friends", function(friends) {
-        api.log("friends:", friends);
+        log("friends:", friends)();
         for (var i in friends) {
           var f = friends[i];
           f.name = f.firstName + " " + f.lastName;
@@ -658,14 +658,14 @@ if (searchUrlRe.test(document.URL)) !function() {
               });
             },
             onAdd: function(friend) {
-              api.log("[onAdd]", friend.id, friend.name);
+              log("[onAdd]", friend.id, friend.name)();
               var who = filter.who.length > 1 ? filter.who + "." + friend.id : friend.id;
               search(null, $.extend({}, filter, {who: who}));
               $in.nextAll(".kifi-filter-detail-clear").addClass("kifi-visible");
               addTime = Date.now();
             },
             onDelete: function(friend) {
-              api.log("[onDelete]", friend.id, friend.name);
+              log("[onDelete]", friend.id, friend.name)();
               var who = filter.who.split(".").filter(function(id) {return id != friend.id}).join(".") || "f";
               search(null, $.extend({}, filter, {who: who}));
               if (who == "f") {
