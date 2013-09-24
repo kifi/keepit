@@ -18,10 +18,9 @@ trait MailSenderPlugin extends Plugin {
 }
 
 class MailSenderPluginImpl @Inject() (
-    actor: ActorInstance[MailSenderActor])
+    actor: ActorInstance[MailSenderActor],
+    val schedulingProperties: SchedulingProperties) //only on leader
   extends Logging with MailSenderPlugin with SchedulingPlugin {
-
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
