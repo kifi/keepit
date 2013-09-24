@@ -423,6 +423,7 @@ var slider2 = function() {
         } else {
           paneHistory.unshift(locator);
         }
+        api.port.emit("pane", {old: $pane[0].dataset.locator, new: locator});
         $pane[0].dataset.locator = locator;
         populatePane($new, pane, locator);
       });
@@ -450,6 +451,7 @@ var slider2 = function() {
             $("html").addClass("kifi-pane-parent");
             $pane = $(html);
             $pane[0].dataset.locator = locator;
+            api.port.emit("pane", {new: locator});
             if (bringSlider) {
               $pane.append($slider).appendTo(tile.parentNode);
             } else {
@@ -607,6 +609,7 @@ var slider2 = function() {
         window.dispatchEvent(new Event("resize"));  // for other page scripts
       }
     });
+    api.port.emit("pane", {old: $pane[0].dataset.locator});
     $pane = paneHistory = null;
     $("html").removeClass("kifi-with-pane");
   }
