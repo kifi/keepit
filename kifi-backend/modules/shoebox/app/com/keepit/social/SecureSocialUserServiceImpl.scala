@@ -1,7 +1,7 @@
 package com.keepit.social
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.db.slick.Database
+import com.keepit.common.db.slick.{DBSession, Database}
 import com.keepit.model._
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
@@ -10,9 +10,9 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.{ExternalId, Id}
 import play.api.{Application, Play}
 import Play.current
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.inject.AppScoped
-import securesocial.core.providers.Token
+import securesocial.core.providers.{UsernamePasswordProvider, Token}
 import scala.Some
 import com.keepit.model.User
 import com.keepit.common.healthcheck.HealthcheckError
@@ -24,6 +24,7 @@ class SecureSocialUserPluginImpl @Inject() (
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
+  userCredRepo: UserCredRepo,
   imageStore: S3ImageStore,
   healthcheckPlugin: HealthcheckPlugin,
   emailRepo: EmailAddressRepo,
@@ -53,14 +54,17 @@ class SecureSocialUserPluginImpl @Inject() (
   def save(identity: Identity): SocialUser = reportExceptions {
     db.readWrite { implicit s =>
       val (userId, socialUser) = getUserIdAndSocialUser(identity)
-      log.info("persisting social user %s".format(socialUser))
+      log.info(s"[save] persisting (social|42) user $socialUser")
       val socialUserInfo = internUser(
-        SocialId(socialUser.identityId.userId), SocialNetworkType(socialUser.identityId.providerId), socialUser, userId)
-      require(socialUserInfo.credentials.isDefined,
-        "social user info's credentials is not defined: %s".format(socialUserInfo))
+        SocialId(socialUser.identityId.userId),
+        SocialNetworkType(socialUser.identityId.providerId),
+        socialUser,
+        userId)
+      require(socialUserInfo.credentials.isDefined, "social user info's credentials is not defined: %s".format(socialUserInfo))
       require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
-      socialGraphPlugin.asyncFetch(socialUserInfo)
-      log.info("persisting %s into %s".format(socialUser, socialUserInfo))
+      if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
+        socialGraphPlugin.asyncFetch(socialUserInfo)
+      log.info("[save] persisting %s into %s".format(socialUser, socialUserInfo))
       socialUser
     }
   }
@@ -82,6 +86,7 @@ class SecureSocialUserPluginImpl @Inject() (
   private def internUser(
       socialId: SocialId, socialNetworkType: SocialNetworkType,
       socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
+    log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId")
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
     val userOpt = userId orElse {
       // TODO: better way of dealing with emails that already exist; for now just link accounts
@@ -109,21 +114,65 @@ class SecureSocialUserPluginImpl @Inject() (
       case None =>
         val user = userOpt getOrElse userRepo.save(createUser(socialUser))
         log.info("creating new SocialUserInfo for %s".format(user))
+
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
           socialId = socialId, networkType = socialNetworkType, pictureUrl = socialUser.avatarUrl,
           fullName = socialUser.fullName, credentials = Some(socialUser))
         log.info("SocialUserInfo created is %s".format(userInfo))
-
         val sui = socialUserInfoRepo.save(userInfo)
+
+        if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
+          val cred =
+            UserCred(
+              userId = user.id.get,
+              loginName = socialUser.email.getOrElse(throw new Exception),
+              provider = "bcrypt" /* hard-coded */,
+              credentials = socialUser.passwordInfo.get.password,
+              salt = socialUser.passwordInfo.get.salt.getOrElse(""))
+          val savedCred = userCredRepo.save(cred)
+          log.info(s"[save(userpass)] Persisted $cred into userCredRepo as $savedCred")
+        }
+
         if (userOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
         sui
     }
   }
 
-  // TODO(greg): implement when we start using the UsernamePasswordProvider
-  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = ???
-  def save(token: Token) {}
-  def findToken(token: String): Option[Token] = None
+  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = reportExceptions {
+    db.readOnly { implicit s =>
+      providerId match {
+        case UsernamePasswordProvider.UsernamePassword =>
+          val cred = userCredRepo.findByEmailOpt(email)
+          log.info(s"[findByEmail] $email provider=$providerId cred=$cred")
+          cred match {
+            case Some(c:UserCred) => {
+              val user = userRepo.get(c.userId)
+              val res = Some(SocialUser(IdentityId(email, providerId), user.firstName, user.lastName, user.firstName + " " + user.lastName, Some(email), None, AuthenticationMethod.UserPassword, None, None, Some(PasswordInfo(c.provider, c.credentials, Some(c.salt)))))
+              log.info(s"[findByEmail] user=$user socialUser=$res")
+              res
+            }
+            case None => {
+              log.info(s"[findByEmail] email=$email not found")
+              None
+            }
+          }
+        case _ => None
+      }
+    }
+  }
+
+  val tokenMap = collection.mutable.Map.empty[String, Token] // REMOVEME
+
+  def save(token: Token) {
+    log.info(s"[save] token=(${token.email}, ${token.uuid}, ${token.isSignUp}, ${token.isExpired}")
+    tokenMap += (token.uuid -> token)
+  }
+
+  def findToken(token: String): Option[Token] = {
+    val res = tokenMap.get(token)
+    log.info(s"[findToken] token=$token res=$res")
+    res
+  }
   def deleteToken(uuid: String) {}
   def deleteExpiredTokens() {}
 }
@@ -135,7 +184,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   sessionRepo: UserSessionRepo,
   healthcheckPlugin: HealthcheckPlugin,
   app: Application)
-  extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin  {
+  extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin with Logging  {
 
   private def reportExceptions[T](f: => T): Either[Error, T] =
     try Right(f) catch { case ex: Throwable =>
@@ -145,8 +194,10 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     }
 
   private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = {
-    val (socialId, provider) = (SocialId(authenticator.identityId.userId), SocialNetworkType(authenticator.identityId.providerId))
-    val userId = db.readOnly { implicit s => socialUserInfoRepo.get(socialId, provider).userId }
+    val snType = SocialNetworkType(authenticator.identityId.providerId) // userpass -> fortytwo
+    val (socialId, provider) = (SocialId(authenticator.identityId.userId), snType)
+    log.info(s"[sessionFromAuthenticator] auth=$authenticator socialId=$socialId, provider=$provider")
+    val userId = db.readOnly { implicit s => socialUserInfoRepo.get(socialId, provider).userId }                           // another dependency on socialUserInfo
     UserSession(
       userId = userId,
       externalId = ExternalId[UserSession](authenticator.id),
@@ -176,6 +227,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
 
   def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptions {
     val newSession = sessionFromAuthenticator(authenticator)
+    log.info(s"[save] authenticator=$authenticator newSession=$newSession")
     authenticatorFromSession {
       val oldSessionOpt = db.readOnly { implicit s => sessionRepo.getOpt(newSession.externalId) }
       if (oldSessionOpt.exists(!needsUpdate(_, newSession))) {
@@ -197,13 +249,17 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
       case ex: Throwable => None
     }
 
-    externalIdOpt flatMap { externalId =>
+    val res = externalIdOpt flatMap { externalId =>
       db.readOnly { implicit s =>
-        sessionRepo.getOpt(externalId)
+        val sess = sessionRepo.getOpt(externalId)
+        log.info(s"[find] sessionRepo.get($externalId)=$sess")
+        sess
       } collect {
         case s if s.isValid => authenticatorFromSession(s)
       }
     }
+    log.info(s"[find] id=$id res=$res")
+    res
   }
   def delete(id: String): Either[Error, Unit] = reportExceptions {
     db.readWrite { implicit s =>
