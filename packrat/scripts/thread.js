@@ -12,10 +12,29 @@
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/prevent_ancestor_scroll.js
 
-threadPane = function() {
+panes.thread = function() {
+  const handlers = {
+    message: function(o) {
+      update(o.threadId, o.message, o.userId);
+    },
+    thread: function(o) {
+      updateAll(o.id, o.messages, o.userId);
+    }};
+
   var $holder = $(), buffer = {};
   return {
-    render: function($container, threadId, messages, session) {
+    render: function($container, locator) {
+      var threadId = locator.split("/")[2];
+      log("[panes.thread.render]", threadId)();
+      api.port.emit("thread", {id: threadId, respond: true}, function(th) {
+        api.port.emit("session", function(session) {
+          renderThread($container, th.id, th.messages, session);
+          api.port.on(handlers);
+        });
+      });
+    }};
+
+  function renderThread($container, threadId, messages, session) {
       messages.forEach(function(m) {
         m.isLoggedInUser = m.user.id == session.userId;
       });
@@ -49,6 +68,7 @@ threadPane = function() {
           if ($holder.length && this.contains($holder[0])) {
             $holder = $();
             $(window).off("resize.thread");
+            api.port.off(handlers);
           }
         });
 
@@ -63,8 +83,9 @@ threadPane = function() {
         }
 
         if (messages.length) emitRead(threadId, messages[messages.length - 1], true);
-    },
-    update: function(threadId, message, userId) {
+  }
+
+  function update(threadId, message, userId) {
       if ($holder.length && $holder.data("threadId") == threadId) {
         renderMessage(message, userId, function($m) {
           if (!message.isLoggedInUser ||
@@ -81,8 +102,9 @@ threadPane = function() {
         buffer.threadId = threadId;
         buffer.message = message;
       }
-    },
-    updateAll: function(threadId, messages, userId) {
+  }
+
+  function updateAll(threadId, messages, userId) {
       if ($holder.length && $holder.data("threadId") == threadId) {
         var arr = new Array(messages.length), n = 0;
         messages.forEach(function(m, i) {
@@ -95,7 +117,7 @@ threadPane = function() {
           });
         })
       }
-    }};
+  }
 
   function sendReply($container, threadId, session, e, text) {
     var $reply, resp;
