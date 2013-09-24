@@ -4,7 +4,7 @@ import com.keepit.common.db.ExternalId
 import com.google.inject.Inject
 import com.google.inject.ImplementedBy
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.AlertingActor
+import com.keepit.common.akka.{AlertingActor, UnsupportedActorMessage}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
@@ -40,7 +40,7 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
           throw e
       }
     }
-    case m => throw new Exception(s"unknown message $m")
+    case m => self ! AirbrakeNotice(throw new UnsupportedActorMessage(s"unknown message $m"))
   }
 }
 

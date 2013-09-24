@@ -23,7 +23,7 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 
 import play.api.Play.current
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.plugin.SchedulingProperties
 
 case object Load
@@ -58,7 +58,7 @@ private[analytics] class PersistEventActor @Inject() (
       }
     case PersistMany(events, queueTime) =>
       events foreach ( self ! Persist(_, queueTime) )
-    case m => throw new Exception("unknown message %s".format(m))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

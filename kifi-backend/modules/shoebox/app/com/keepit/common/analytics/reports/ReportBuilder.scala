@@ -7,7 +7,7 @@ import org.joda.time.DateTime
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.search.{SearchConfigExperiment}
@@ -185,7 +185,6 @@ private[reports] class ReportBuilderActor @Inject() (
       val outputReport = builtReports.foldRight(Report("","",Nil))((a,b) => a + b)
       val report = outputReport.copy(reportName = reportGroup.name)
       reportStore += (report.persistenceKey -> report)
-    case unknown =>
-      throw new Exception("unknown message: %s".format(unknown))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }

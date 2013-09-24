@@ -19,3 +19,5 @@ trait AlertingActor extends Actor {
 abstract class FortyTwoActor(airbrake: AirbrakeNotifier) extends AlertingActor {
   def alert(reason: Throwable, message: Option[Any]) = airbrake.notify(error(reason, message))
 }
+
+class UnsupportedActorMessage(any: Any) extends IllegalStateException(if (any != null) any.toString else "Message is NULL")

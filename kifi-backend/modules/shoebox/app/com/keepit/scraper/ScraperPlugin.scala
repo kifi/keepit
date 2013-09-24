@@ -16,7 +16,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Plugin
 
 import scala.concurrent.duration._
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
@@ -36,7 +36,7 @@ private[scraper] class ScraperActor @Inject() (
       log.info("Starting scraping session")
       sender ! scraper.run()
     case ScrapeInstance(uri) => sender ! scraper.safeProcessURI(uri)
-    case m => throw new Exception("unknown message %s".format(m))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 
@@ -46,7 +46,7 @@ private[scraper] class ReadOnlyScraperActor @Inject() (
 ) extends FortyTwoActor(airbrake) with Logging {
   def receive() = {
     case ScrapeBasicArticle(url, customExtractor) => sender ! scraper.getBasicArticle(url, customExtractor)
-    case m => throw new Exception("unknown message %s".format(m))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

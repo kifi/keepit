@@ -7,7 +7,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
 import scala.concurrent.duration._
 import com.keepit.scraper.ScraperPlugin
@@ -162,9 +162,9 @@ class UriIntegrityActor @Inject()(
     val toMerge = getOverDueList(batchSize)
     log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
     val toScrapeAndSavedChange = db.readWrite{ implicit s =>
-      toMerge.map{ change => 
+      toMerge.map{ change =>
         try{
-          processMerge(change) 
+          processMerge(change)
         } catch {
           case e: Exception => {
             changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
@@ -192,10 +192,9 @@ class UriIntegrityActor @Inject()(
     case BatchUpdateMerge(batchSize) => Future.successful(batchUpdateMerge(batchSize)) pipeTo sender
     case MergedUri(oldUri, newUri) => db.readWrite{ implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) }   // process later
     case SplittedUri(url, newUri) => handleSplit(url, newUri)
+    case m => throw new UnsupportedActorMessage(m)
   }
-
 }
-
 
 @ImplementedBy(classOf[UriIntegrityPluginImpl])
 trait UriIntegrityPlugin extends SchedulingPlugin  {

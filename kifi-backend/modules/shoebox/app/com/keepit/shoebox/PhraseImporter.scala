@@ -2,7 +2,7 @@ package com.keepit.shoebox
 
 import java.io._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.search.Lang
 import com.keepit.common.db.Id
@@ -65,6 +65,7 @@ private class PhraseImporterActor @Inject() (
       finally {
         dbConnection.readWrite(implicit s => PhraseImporter.endImport)
       }
+    case m => throw new UnsupportedActorMessage(m)
   }
 
   def importFromFile(file: File) {
