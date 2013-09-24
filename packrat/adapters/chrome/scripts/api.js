@@ -105,10 +105,10 @@ var api = api || function() {  // idempotent for Chrome
     url: chrome.runtime.getURL};
 }();
 
-var log = log || (window.suppressLog ? api.noop : function() {
+var log = log || function() {
   var d = new Date, ds = d.toString();
   arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
   return console.log.apply.bind(console.log, console, arguments);
-});
+};
 
 /^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);
