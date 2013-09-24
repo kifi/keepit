@@ -234,7 +234,7 @@ exports.socket = {
     } else {
       socketPage = require("sdk/page-worker").Page({
         contentScriptFile: [
-          data.url("scripts/lib/reconnecting-websocket.js"),
+          data.url("scripts/lib/rwsocket.js"),
           data.url("scripts/workers/socket.js")],
         contentScriptWhen: "start",
         contentScriptOptions: {socketId: socketId, url: url},
