@@ -1,6 +1,5 @@
 package com.keepit.search
 
-import com.keepit.classify.Domain
 import com.keepit.search.phrasedetector.{PhraseDetector, NlpPhraseDetector}
 import com.keepit.search.query.parser.QueryParser
 import com.keepit.search.query.parser.DefaultSyntax
@@ -34,11 +33,9 @@ class MainQueryParser(
   lang: Lang,
   analyzer: Analyzer,
   stemmingAnalyzer: Analyzer,
-  baseBoost: Float,
   proximityBoost: Float,
   semanticBoost: Float,
   phraseBoost: Float,
-  phraseProximityBoost: Float,
   override val siteBoost: Float,
   phraseDetector: PhraseDetector
 ) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
@@ -69,16 +66,9 @@ class MainQueryParser(
     super.parse(queryText).map{ query =>
       if (numStemmedTerms <= 0) query
       else {
-        query.setBoost(baseBoost)
-
-        val phrases = if (numStemmedTerms > 1 && (phraseBoost > 0.0f || phraseProximityBoost > 0.0f)) {
-          val p = if (phraseProximityBoost > 0.0f) {
-            phraseDetector.detect(getStemmedTermArray)
-          } else {
-            phraseDetector.detectAll(getStemmedTermArray)
-          }
-          if (p.size > 0) p
-          else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
+        val phrases = if (numStemmedTerms > 1 && phraseBoost > 0.0f) {
+          val p = phraseDetector.detectAll(getStemmedTermArray(ProximityQuery.maxLength))
+          if (p.size > 0) p else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
         } else {
           Set.empty[(Int, Int)]
         }
@@ -87,23 +77,16 @@ class MainQueryParser(
         val auxStrengths = ArrayBuffer.empty[Float]
 
         if (semanticBoost > 0.0f) {
-          val svq = SemanticVectorQuery(getStemmedTerms("sv"), fallbackField = "title_stemmed")
+          val svq = SemanticVectorQuery(svTerms, fallbackField = "title_stemmed")
           auxQueries += namedQuery("semantic vector", svq)
           auxStrengths += semanticBoost
         }
 
-        if (phraseProximityBoost > 0.0f && phrases.nonEmpty) {
-          val phraseProxQ = new DisjunctionMaxQuery(0.0f)
-          phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("cs"), phrases))
-          phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("ts"), phrases))
-          phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("title_stemmed"), phrases))
-          auxQueries += namedQuery("proximity", phraseProxQ)
-          auxStrengths += phraseProximityBoost
-        } else if (proximityBoost > 0.0f && numStemmedTerms > 1) {
+        if (proximityBoost > 0.0f && numStemmedTerms > 1) {
           val proxQ = new DisjunctionMaxQuery(0.0f)
-          proxQ.add(ProximityQuery(getStemmedTerms("cs"), phrases, phraseBoost))
-          proxQ.add(ProximityQuery(getStemmedTerms("ts"), phrases, phraseBoost))
-          proxQ.add(ProximityQuery(getStemmedTerms("title_stemmed"), phrases, phraseBoost))
+          proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost))
+          proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost))
+          proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), phrases, phraseBoost))
           auxQueries += namedQuery("proximity", proxQ)
           auxStrengths += proximityBoost
         }
@@ -115,5 +98,13 @@ class MainQueryParser(
         }
       }
     }
+  }
+
+  private[this] def proxTermsFor(field: String): Seq[Seq[Term]] = {
+    getStemmedTerms.map{ t => new Term(field, t.text()) }.map{ Seq(_) }
+  }
+
+  private[this] def svTerms: Seq[Term] = {
+    getStemmedTerms.map{ t => new Term("sv", t.text()) }
   }
 }

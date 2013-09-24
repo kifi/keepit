@@ -36,6 +36,7 @@ object ApplicationBuild extends Build {
     val commonDependencies = Seq(
       jdbc,
       "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
+      "com.typesafe" %% "play-plugins-mailer" % "2.1-RC2",
       "securesocial" %% "securesocial" % "master-20130808",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",

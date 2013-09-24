@@ -55,7 +55,7 @@ threadPane = function() {
         // It's important that we check the buffer after rendering the messages, to avoid creating a window
         // of time during which we might miss an incoming message on this thread.
         if (buffer.threadId == threadId && !messages.some(function(m) {return m.id == buffer.message.id})) {
-          api.log("[render] appending buffered message", buffer.message.id);
+          log("[render] appending buffered message", buffer.message.id)();
           messages.push(buffer.message);
           renderMessage(buffer.message, session.userId, function($m) {
             $holder.append($m).scrollToBottom();
@@ -70,7 +70,7 @@ threadPane = function() {
           if (!message.isLoggedInUser ||
               !$holder.find(".kifi-message-sent[data-id=" + message.id + "]").length &&
               !$holder.find(".kifi-message-sent[data-id=]").get().some(function(el) {
-                api.log("[update] comparing message text");
+                log("[update] comparing message text")();
                 return $(el).data("text") === message.text;
               })) {
             $holder.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
@@ -100,7 +100,7 @@ threadPane = function() {
   function sendReply($container, threadId, session, e, text) {
     var $reply, resp;
     api.port.emit("send_reply", {text: text, threadId: threadId}, function(o) {
-      api.log("[sendReply] resp:", o);
+      log("[sendReply] resp:", o)();
       updateSentReply($reply, resp = o);
     });
     renderMessage({

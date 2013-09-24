@@ -27,7 +27,7 @@
         </a>
       </div>
       <div class="networks">
-      @for(network <- SocialNetworks.ALL.sortBy(network => !socialUser.exists(_.networkType == network))) {
+      @for(network <- SocialNetworks.SUPPORTED.sortBy(network => !socialUser.exists(_.networkType == network))) {
         @if(socialUser.isEmpty || socialUser.get.networkType == network) {
           <a href="@com.keepit.controllers.core.routes.AuthController.login(network.name)" class="big blue btn">
             Log in with @network.displayName

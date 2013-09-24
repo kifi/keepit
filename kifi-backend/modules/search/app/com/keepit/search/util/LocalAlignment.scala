@@ -46,7 +46,7 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
   private[this] var lastPos = -1
   private[this] var dist = 1
 
-  private[this] def getGapPenalty(distance: Int): Float = gapPenalty * distance.toFloat
+  @inline private[this] def getGapPenalty(distance: Int): Float = gapPenalty * distance.toFloat
 
   def maxScore: Float = {
      // max possible local alignment score
@@ -97,11 +97,11 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
   private[this] var matchedPhrases = Set.empty[PhraseMatch]
   private[this] var dictSize = phraseMatcher.size
 
-  private def flush(): Unit = {
+  private[this] def flush(): Unit = {
     while (processedPos < bufferedPos) { processOnePosition() }
   }
 
-  private def processOnePosition(): Unit = {
+  @inline private[this] def processOnePosition(): Unit = {
     processedPos += 1
     if (matching(processedPos % bufSize)) localAlignment.update(ids(processedPos % bufSize), processedPos)
   }
@@ -148,6 +148,7 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
   def score: Float = {
     localAlignment.score * ((1.0f - phraseBoost) + (matchedPhrases.size / dictSize) * phraseBoost)
   }
+
   def maxScore = localAlignment.maxScore
 }
 
