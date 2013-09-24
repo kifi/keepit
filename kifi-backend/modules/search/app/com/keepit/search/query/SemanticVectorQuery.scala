@@ -15,6 +15,7 @@ import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.search.ComplexExplanation
 import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.similarities.Similarity
@@ -25,6 +26,7 @@ import org.apache.lucene.util.ToStringUtils
 import java.util.{Set => JSet}
 import java.lang.{Float => JFloat}
 import scala.collection.JavaConversions._
+import scala.collection.mutable.ArrayBuffer
 import scala.math._
 
 object SemanticVectorQuery {
@@ -59,11 +61,12 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
   private[this] val (termList, idfSum) = {
     var sum = 0.0f
-    val terms = query.terms.toList.map{ term =>
+    val terms = new ArrayBuffer[(Term, Term, SemanticVector, Float)]
+    query.terms.foreach{ term =>
       val vector = searcher.getSemanticVector(term)
       val idf = searcher.idf(term)
       sum += idf
-      (term, new Term(query.fallbackField, term.text), vector, idf)
+      terms += ((term, new Term(query.fallbackField, term.text), vector, idf))
     }
     (terms, sum)
   }
@@ -124,15 +127,13 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   }
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    val davs = termList.flatMap{ case (primaryTerm, secondaryTerm, vector, idf) =>
-      Option(searcher.getSemanticVectorEnum(context, primaryTerm, secondaryTerm, acceptDocs)).map{ tp => new DocAndVector(tp, vector, idf * value) }
+    val davs = new ArrayBuffer[DocAndVector](termList.size)
+    termList.foreach{ case (primaryTerm, secondaryTerm, vector, idf) =>
+      val tp = searcher.getSemanticVectorEnum(context, primaryTerm, secondaryTerm, acceptDocs)
+      if (tp != null) davs += new DocAndVector(tp, vector, idf * value)
     }
 
-    if (!davs.isEmpty) {
-      new SemanticVectorScorer(this, davs)
-    } else {
-      QueryUtil.emptyScorer(this)
-    }
+    if (davs.isEmpty) null else new SemanticVectorScorer(this, davs)
   }
 }
 
@@ -168,7 +169,7 @@ private[query] final class DocAndVector(tp: DocsAndPositionsEnum, vector: Semant
   }
 }
 
-class SemanticVectorScorer(weight: SemanticVectorWeight, davs: List[DocAndVector]) extends Scorer(weight) {
+class SemanticVectorScorer(weight: SemanticVectorWeight, davs: Seq[DocAndVector]) extends Scorer(weight) {
   private[this] var curDoc = -1
   private[this] var svScore = 0.0f
   private[this] var scoredDoc = -1
@@ -199,7 +200,7 @@ class SemanticVectorScorer(weight: SemanticVectorWeight, davs: List[DocAndVector
 
   override def advance(target: Int): Int = {
     var top = pq.top
-    val doc = if (target <= curDoc && curDoc < DocIdSetIterator.NO_MORE_DOCS) curDoc + 1 else target
+    val doc = if (target <= curDoc && curDoc < NO_MORE_DOCS) curDoc + 1 else target
     while (top.doc < doc) {
       top.fetchDoc(doc)
       top = pq.updateTop()
