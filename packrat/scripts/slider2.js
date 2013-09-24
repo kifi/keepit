@@ -324,21 +324,14 @@ slider2 = function() {
     start: function(ms) {
       log("[idleTimer.start]", ms, "ms")();
       clearTimeout(this.timeout), this.timeout = setTimeout(hideSlider.bind(null, "idle"), ms);
-      $slider
-        .on("mouseenter.idle", this.clear.bind(this))
-        .on("mouseleave.idle", this.start.bind(this, ms));
-      delete this.dead;
-    },
-    clear: function() {
-      log("[idleTimer.clear]")();
-      clearTimeout(this.timeout), delete this.timeout;
+      $slider.on("mouseenter.idle", $.proxy(this, "kill"));
     },
     kill: function() {
-      if (this.dead) return;
-      log("[idleTimer.kill]")();
-      clearTimeout(this.timeout), delete this.timeout;
-      $slider && $slider.off(".idle");
-      this.dead = true;
+      if (this.timeout) {
+        log("[idleTimer.kill]")();
+        clearTimeout(this.timeout), delete this.timeout;
+        $slider && $slider.off(".idle");
+      }
     }};
 
   function keepPage(how) {
