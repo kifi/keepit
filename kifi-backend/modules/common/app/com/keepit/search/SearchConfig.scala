@@ -12,8 +12,7 @@ import scala.concurrent.duration._
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "phraseProximityBoost" -> "0.0",     // disabled
-      "phraseBoost" -> "0.5",
+      "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
       "similarity" -> "default",
       "svWeightMyBookMarks" -> "1",
@@ -41,8 +40,7 @@ object SearchConfig {
     )
   private[this] val descriptions =
     Map[String, String](
-      "phraseProximityBoost" -> "boost value for phrase proximity",
-      "phraseBoost" -> "boost value for the detected phrase",
+      "phraseBoost" -> "boost value for the detected phrase [0f,1f]",
       "siteBoost" -> "boost value for matching website names and domains",
       "similarity" -> "similarity characteristics",
       "svWeightMyBookMarks" -> "semantics vector weight for my bookmarks",
