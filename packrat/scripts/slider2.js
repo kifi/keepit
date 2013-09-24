@@ -268,6 +268,7 @@ slider2 = function() {
 
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
+    log("[hideSlider]", trigger)();
     idleTimer.kill();
     $slider.addClass("kifi-hiding")
     .off("transitionend")
@@ -321,35 +322,23 @@ slider2 = function() {
 
   var idleTimer = {
     start: function(ms) {
-      idleTimer.ms = ms = ms > 0 ? ms : idleTimer.ms;
       log("[idleTimer.start]", ms, "ms")();
-      var t = idleTimer;
-      clearTimeout(t.timeout);
-      t.timeout = setTimeout(function hideSliderIdle() {
-        log("[hideSliderIdle]")();
-        hideSlider("idle");
-      }, ms);
+      clearTimeout(this.timeout), this.timeout = setTimeout(hideSlider.bind(null, "idle"), ms);
       $slider
-        .off("mouseenter", t.clear).on("mouseenter", t.clear)
-        .off("mouseleave", t.start).on("mouseleave", t.start);
-      delete t.dead;
+        .on("mouseenter.idle", this.clear.bind(this))
+        .on("mouseleave.idle", this.start.bind(this, ms));
+      delete this.dead;
     },
     clear: function() {
       log("[idleTimer.clear]")();
-      var t = idleTimer;
-      clearTimeout(t.timeout);
-      delete t.timeout;
+      clearTimeout(this.timeout), delete this.timeout;
     },
     kill: function() {
-      var t = idleTimer;
-      if (t.dead) return;
+      if (this.dead) return;
       log("[idleTimer.kill]")();
-      clearTimeout(t.timeout);
-      delete t.timeout;
-      $slider
-        .off("mouseenter", t.clear)
-        .off("mouseleave", t.start);
-      t.dead = true;
+      clearTimeout(this.timeout), delete this.timeout;
+      $slider && $slider.off(".idle");
+      this.dead = true;
     }};
 
   function keepPage(how) {
