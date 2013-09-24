@@ -619,7 +619,7 @@ function syncNumNotificationsNotVisited() {
   // much worse lately. I've had dificulty consistantly reproducing, so am adding this
   // sync in until we can identify the real issue counts get off. Could be related to
   // spotty internet, or some logic error above. -Andrew
-  if(socket && socket.send) {
+  if (socket) {
     socket.send(["get_unread_notifications_count"]);
   }
 }
@@ -1263,10 +1263,7 @@ function startSession(callback, retryMs) {
 
     session = data;
     session.prefs = {}; // to come via socket
-    if (socket) {
-      socket.close();
-    }
-    socket = api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
+    socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
       for (var nUri in pageData) {
         pageData[nUri].threadDataIsStale = true;
       }
