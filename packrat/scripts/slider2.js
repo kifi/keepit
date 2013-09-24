@@ -234,7 +234,6 @@ slider2 = function() {
             showPane(locator);
           }
         } else if (!$("html").hasClass("kifi-pane-parent")) { // ensure it's finished hiding
-          idleTimer.kill();
           showPane(locator);
         }
       });
@@ -448,6 +447,7 @@ slider2 = function() {
         populatePane[pane]($new, locator);
       });
     } else {
+      idleTimer.kill();
       paneHistory = [locator];
       var bringSlider = !$slider;
       if (bringSlider) {
