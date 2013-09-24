@@ -1,13 +1,18 @@
-var api = {log: function() {
+function log() {
   var d = new Date, ds = d.toString(), a = Array.slice(arguments);
   for (var i = 0; i < a.length; i++) {
     var v = a[i];
     if (typeof v == "object") {
-      a[i] = JSON.stringify(v);
+      try {
+        a[i] = JSON.stringify(v);
+      } catch (e) {
+        a[i] = String(v) + "{" + Object.keys(v).join(",") + "}";
+      }
     }
   }
-  console.log("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'", a.join(" "));
-}};
+  a.unshift("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'");
+  return console.log.apply.bind(console.log, console, a);
+}
 
 var sockets = {};
 self.port.on("open_socket", openSocket);
@@ -18,7 +23,7 @@ if (self.options) {
 }
 
 function openSocket(socketId, url) {
-  api.log("[worker:openSocket]", socketId, url);
+  log("[worker:openSocket]", socketId, url)();
   sockets[socketId] = new ReconnectingWebSocket({
     url: url,
     onConnect: function() {
@@ -33,7 +38,7 @@ function openSocket(socketId, url) {
 }
 
 function closeSocket(socketId) {
-  api.log("[worker:closeSocket]", socketId);
+  log("[worker:closeSocket]", socketId)();
   var socket = sockets[socketId];
   if (socket) {
     socket.close();
@@ -44,7 +49,7 @@ function closeSocket(socketId) {
 function socketSend(socketId, data) {
   var socket = sockets[socketId];
   if (socket) {
-    api.log("[worker:socketSend]", socketId, data);
+    log("[worker:socketSend]", socketId, data)();
     socket.send(JSON.stringify(data));
   } else {
     console.error("[worker:socketSend] no socket", socketId, data);
