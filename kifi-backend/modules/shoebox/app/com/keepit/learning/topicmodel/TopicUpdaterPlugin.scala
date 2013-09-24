@@ -4,7 +4,7 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -42,7 +42,7 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
 
     case Remodel => topicRemodeler.remodel(continueFromLastInteruption = false)
     case ContinueRemodel => topicRemodeler.remodel(continueFromLastInteruption = true)
-    case m => throw new Exception("unknown message %s".format(m))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

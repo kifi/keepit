@@ -2,17 +2,14 @@ package com.keepit.reports
 
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.geckoboard._
-import akka.actor._
 import akka.util.Timeout
 import com.keepit.model.{BookmarkRepo, BookmarkSource}
 import com.keepit.model.ExperimentTypes.DONT_SHOW_IN_ANALYTICS_STR
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.common.actor.ActorInstance
 import com.keepit.common.time._
 import com.keepit.inject._
 import play.api.Plugin

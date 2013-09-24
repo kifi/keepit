@@ -6,7 +6,7 @@ import org.jsoup.Jsoup
 
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -128,6 +128,7 @@ class MailToKeepActor @Inject() (
       } finally {
         store.close()
       }
+    case m => throw new UnsupportedActorMessage(m)
   }
 
   private def sendReply(message: javax.mail.Message, htmlBody: String) {
