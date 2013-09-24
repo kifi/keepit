@@ -65,6 +65,10 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     allowCrossOrigin(request, BadRequest(msg))
   }
 
+  override def onRouteRequest(request: RequestHeader) = super.onRouteRequest(request).orElse {
+    Some(request.path).filter(_.endsWith("/")).map(p => Action(Results.MovedPermanently(p.dropRight(1))))
+  }
+
   override def onHandlerNotFound(request: RequestHeader): Result = {
     val errorId = ExternalId[Exception]()
     log.warn("Handler Not Found %s: on %s".format(errorId, request.path))
