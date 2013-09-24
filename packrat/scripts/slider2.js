@@ -447,7 +447,6 @@ slider2 = function() {
         populatePane[pane]($new, locator);
       });
     } else {
-      idleTimer.kill();
       paneHistory = [locator];
       var bringSlider = !$slider;
       if (bringSlider) {
@@ -455,6 +454,7 @@ slider2 = function() {
           $slider.addClass("kifi-wide");
         }, locator);
       } else {
+        idleTimer.kill();
         $slider.find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
       }
       api.port.emit("session", function(session) {
