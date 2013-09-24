@@ -98,9 +98,7 @@ panes.notices = function() {
           $notices = $markAll = null;
           $(window).off("resize.notices");
           api.port.off(handlers);
-          api.port.emit("notifications_pane", false);
         });
-        api.port.emit("notifications_pane", true);
 
         $markAll = $box.find(".kifi-pane-mark-notices-read").click(function() {
           var o = $notices.find(".kifi-notice").toArray().reduce(function(o, el) {
