@@ -19,17 +19,17 @@ import scala.xml._
 
 import play.api.mvc._
 
-case class AirbrakeNotice(error: AirbrakeError)
+case class AirbrakeNotice(error: AirbrakeError, selfError: Boolean = false)
 
 private[healthcheck] class AirbrakeNotifierActor @Inject() (
     airbrakeSender: AirbrakeSender,
     formatter: AirbrakeFormatter)
   extends AlertingActor with Logging {
 
-  def alert(reason: Throwable, message: Option[Any]) = self ! AirbrakeNotice(error(reason, message))
+  def alert(reason: Throwable, message: Option[Any]) = self ! AirbrakeNotice(error(reason, message), true)
 
   def receive() = {
-    case AirbrakeNotice(error) => {
+    case AirbrakeNotice(error, selfError) => {
       try {
         val xml = formatter.format(error)
         airbrakeSender.send(xml);
@@ -37,10 +37,15 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
       } catch {
         case e: Throwable =>
           log.error(s"can't format or send error $error")
-          throw e
+          if (!selfError)
+            throw e
+          else
+            e.printStackTrace
+            log.error(s"can't deal with error: $error", e)
+            //todo(eishay): how about sending a direct email only once per lifetime?
       }
     }
-    case m => self ! AirbrakeNotice(throw new UnsupportedActorMessage(s"unknown message $m"))
+    case m => self ! AirbrakeNotice(throw new UnsupportedActorMessage(s"unknown message $m"), selfError)
   }
 }
 
