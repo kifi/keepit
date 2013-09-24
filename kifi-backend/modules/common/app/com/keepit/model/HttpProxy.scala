@@ -27,6 +27,7 @@ case class HttpProxy(
 
   def withId(id: Id[HttpProxy]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def isActive = this.state == UrlPatternRuleStates.ACTIVE
 
 }
 

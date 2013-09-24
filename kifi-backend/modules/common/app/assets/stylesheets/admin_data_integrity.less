@@ -1,11 +1,14 @@
-.url-patterns {
+.url-patterns,
+.proxies {
   margin: 10px 0;
   vertical-align: top;
 }
 .url-patterns th:first-child,
 .url-patterns td:first-child,
 .url-patterns th:nth-child(n+4):nth-child(-n+6),
-.url-patterns td:nth-child(n+4):nth-child(-n+6) {
+.url-patterns td:nth-child(n+4):nth-child(-n+6),
+.proxies th:first-child,
+.proxies td:first-child {
   width: 7%;
   text-align: center;
 }
@@ -13,15 +16,22 @@
   text-align: center;
 }
 .url-patterns td:nth-child(2),
-.url-patterns td:nth-child(3)
-.url-patterns td:nth-child(7){
+.url-patterns td:nth-child(3),
+.url-patterns td:nth-child(7),
+.proxies td:nth-child(2),
+.proxies td:nth-child(3),
+.proxies td:nth-child(6),
+.proxies td:nth-child(7){
   padding-right: 20px;
 }
-.url-patterns input[type=text] {
+.url-patterns input[type=text],
+.proxies input[type=text] {
   margin: 0;
   width: 100%;
 }
-.url-patterns select {
+.url-patterns select,
+.proxies select,
+.proxies input[type=number] {
   width:auto;
 }
 .url-patterns .match-y:before {
