@@ -13,10 +13,33 @@
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/prevent_ancestor_scroll.js
 
-threadsPane = function() {
+panes.threads = function() {
+  const handlers = {
+    thread_info: function(o) {
+      update(o.thread, o.read);
+    },
+    message: function(o) {
+      update(o.thread, o.read);
+    },
+    threads: function(o) {
+      updateAll(o.threads, o.readTimes, o.userId);
+    }};
+
   var $list = $();
   return {
-    render: function($container, o, prefs) {
+    render: function($container) {
+      api.port.emit("threads", function(o) {
+        api.port.emit("session", function(session) {
+          renderThreads($container, o, session.prefs);
+          api.port.on(handlers);
+          o.threads.forEach(function(th) {
+            api.port.emit("thread", {id: th.id});  // preloading
+          });
+        });
+      });
+    }};
+
+  function renderThreads($container, o, prefs) {
       o.threads.forEach(function(t) {
         var n = messageCount(t, new Date(o.read[t.id] || 0));
         t.messageCount = n < -9 ? "9+" : Math.abs(n);
@@ -38,7 +61,7 @@ threadsPane = function() {
         thread: "thread",
         compose: "compose"
       })).prependTo($container)
-      // TODO: unindent below
+
         .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
         .on("click", "a[href^='x-kifi-sel:']", function(e) {
           e.preventDefault();
@@ -61,9 +84,11 @@ threadsPane = function() {
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           $list.length = 0;
           $(window).off("resize.threads");
+          api.port.off(handlers);
         });
-    },
-    update: function(thread, readTime) {
+  }
+
+  function update(thread, readTime) {
       if ($list.length && thread) {
         renderThread(thread, readTime, function($th) {
           var $old = $list.children("[data-id=" + thread.id + "],[data-id=]").first();
@@ -86,8 +111,9 @@ threadsPane = function() {
           }
         });
       }
-    },
-    updateAll: function(threads, readTimes, userId) {
+  }
+
+  function updateAll(threads, readTimes, userId) {
       var arr = new Array(threads.length), n = 0;
       threads.forEach(function(th, i) {
         renderThread(th, readTimes[th.id], function($th) {
@@ -98,7 +124,7 @@ threadsPane = function() {
           }
         });
       })
-    }};
+  }
 
   function sendMessage($container, e, text, recipientIds) {
     // logEvent("slider", "message");

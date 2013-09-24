@@ -92,8 +92,17 @@ var api = api || function() {  // idempotent for Chrome
         port.postMessage([type, data, callbackId]);
       },
       on: function(handlers) {
-        msgHandlers.push(handlers);
-        api.port.emit('api:handling', Object.keys(handlers));
+        if (msgHandlers.indexOf(handlers) < 0) {
+          msgHandlers.push(handlers);
+          api.port.emit('api:handling', Object.keys(handlers));
+        }
+      },
+      off: function(handlers) {
+        for (var i = msgHandlers.length; i--;) {
+          if (msgHandlers[i] === handlers) {
+            msgHandlers.splice(i, 1);
+          }
+        }
       }},
     require: function(paths, callback) {
       if (requireQueue) {
