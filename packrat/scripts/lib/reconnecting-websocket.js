@@ -5,7 +5,7 @@ function ReconnectingWebSocket(opts) {
   this.send = function(data) {
     if (ws && ws.readyState == WebSocket.OPEN && !disTimeout) {
       ws.send(data);
-      if (new Date - lastRecOrPingTime > idlePingDelayMs) {  // a way to recover from timeout failure/unreliability
+      if (Date.now() - lastRecOrPingTime > idlePingDelayMs) {  // a way to recover from timeout failure/unreliability
         ping();
       }
     } else {
@@ -99,7 +99,7 @@ function ReconnectingWebSocket(opts) {
   function sendBuffer() {
     while (buffer.length) {
       var a = buffer.shift();
-      api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
+      api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", Date.now() - a[1], (wordRe.exec(a[0]) || a)[0]);
       ws.send(a[0]);
     }
   }
