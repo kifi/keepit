@@ -29,9 +29,10 @@ object EmailAddresses {
   case object RAY extends SystemEmailAddress("ray@42go.com")
   case object CONGRATS extends SystemEmailAddress("congrats@kifi.com")
   case object ASANA_PROD_HEALTH extends SystemEmailAddress("x+7368498674275@mail.asana.com")
+  case object NOTIFY extends SystemEmailAddress("42.notify@gmail.com")
 
   val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, GREG, ANDREW, YINGJIE, LÉO, STEPHEN, RAY)
-  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, NOTIFICATIONS, ENG, CONGRATS, ASANA_PROD_HEALTH, EDUARDO, EFFI)
+  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, NOTIFICATIONS, ENG, CONGRATS, ASANA_PROD_HEALTH, EDUARDO, EFFI, NOTIFY)
 
   val ALL_EMAILS = ENG_EMAILS ++ NON_ENG_EMAILS
 
