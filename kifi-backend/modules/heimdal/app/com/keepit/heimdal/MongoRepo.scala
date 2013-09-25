@@ -42,6 +42,8 @@ trait MongoRepo[T] {
     val bson = toBSON(obj)
     safeInsert(bson)
   }
+
+  //protected def performAggregation(command: Aggregate)
 }
 
 trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
