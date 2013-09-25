@@ -10,7 +10,8 @@ object Restriction {
     new Writes[Restriction]{ def writes(o: Restriction) = JsString(o.context) }
   )
 
-  def apply(statusCode: Int): Restriction = Restriction(s"HTTP ${statusCode}")
+  def http(statusCode: Int): Restriction = Restriction(s"HTTP ${statusCode}")
   val http = """^HTTP (\d{3})$""".r
+  val redirects = Seq(http(302), http(303), http(307))
 
 }
