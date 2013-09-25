@@ -147,7 +147,7 @@ class InviteController @Inject() (db: Database,
       invitation match {
         case Some(invite) if (invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE) =>
           val socialUser = socialUserInfoRepo.get(invitation.get.recipientSocialUserId)
-          Ok(views.html.website.welcome(Some(id), Some(socialUser)))
+          Ok(views.html.website.welcome(Some(id), Some(socialUser), passwordAuth = Play.isDev))
         case _ =>
           Redirect(routes.HomeController.home)
       }
