@@ -858,7 +858,7 @@ function subscribe(tab) {
   }
 
   if (session == null) {
-    api.log("[subscribe] user not logged in")
+    log("[subscribe] user not logged in")();
     if (!getStored("user_logout")) { // user did not explicitly log out using our logout process
       ajax("GET", "/ext/authed", function userIsLoggedIn() {
         // user is now logged in
