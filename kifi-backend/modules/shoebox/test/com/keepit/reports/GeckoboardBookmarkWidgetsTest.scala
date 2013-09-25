@@ -23,8 +23,7 @@ import scala.concurrent.duration._
 import org.specs2.mutable._
 import play.api.libs.json._
 
-class
-GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicationInjector {
+class GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicationInjector {
 
   val hover = BookmarkSource("HOVER_KEEP")
   val initLoad = BookmarkSource("INIT_LOAD")

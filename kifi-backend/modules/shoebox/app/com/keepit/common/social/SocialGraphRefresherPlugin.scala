@@ -8,7 +8,7 @@ import akka.actor._
 import com.google.inject.Inject
 import com.keepit.common.db.slick._
 import scala.concurrent.duration._
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.plugin._
 import com.keepit.common.actor.ActorInstance
 import play.api.Plugin
@@ -35,7 +35,7 @@ private[social] class SocialGraphRefresherActor @Inject() (
       log.info("found socialUserInfo that need to be refreshed %s".format(userInfo))
       socialGraphPlugin.asyncFetch(userInfo)
     }
-    case m => throw new Exception("unknown message %s".format(m))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

@@ -7,7 +7,7 @@ import org.joda.time.DateTime
 
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageStore
@@ -99,6 +99,7 @@ class EventStreamActor @Inject() (
       notifyAll(event)
     case ReplyEcho =>
       eventChannel.push(Json.obj("echo" -> System.currentTimeMillis.toString))
+    case m => throw new UnsupportedActorMessage(m)
   }
 
   def notifyAll(event: JsValue) {

@@ -20,7 +20,7 @@ import com.keepit.model.ScrapeInfo
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 
 
@@ -57,8 +57,7 @@ private[integrity] class DataIntegrityActor @Inject() (
     case Cron =>
       if (currentDateTime.hourOfDay().get() == 21) // 9pm PST
         self ! CleanOrphans
-    case unknown =>
-      throw new Exception("unknown message: %s".format(unknown))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

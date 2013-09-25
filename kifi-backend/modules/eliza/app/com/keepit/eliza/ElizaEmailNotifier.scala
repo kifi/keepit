@@ -4,7 +4,7 @@ import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
@@ -31,7 +31,6 @@ object MessageLookHereRemover {
   }
 }
 
-
 case object SendEmails
 
 class ElizaEmailNotifierActor @Inject() (
@@ -43,7 +42,6 @@ class ElizaEmailNotifierActor @Inject() (
     threadRepo: MessageThreadRepo,
     shoebox: ShoeboxServiceClient
   ) extends FortyTwoActor(airbrake) with Logging {
-
 
   def receive = {
     case SendEmails => {
@@ -89,11 +87,10 @@ class ElizaEmailNotifierActor @Inject() (
           shoebox.sendMailToUser(userThread.user, email)
 
           db.readWrite{ implicit session => userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther) }
-
-
         }
       }
     }
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

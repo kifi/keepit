@@ -1,4 +1,4 @@
-1500:com.typesafe.plugin.CommonsMailerPlugin
+1500:com.keepit.common.mail.PlayMailerPlugin
 9994:com.keepit.social.SecureSocialAuthenticatorStore
 9995:com.keepit.social.SecureSocialIdGenerator
 9996:securesocial.core.providers.utils.DefaultPasswordValidator

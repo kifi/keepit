@@ -7,7 +7,7 @@ import scala.concurrent.duration._
 import com.google.inject.Inject
 import com.google.inject.ImplementedBy
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.AlertingActor
+import com.keepit.common.akka.{AlertingActor, UnsupportedActorMessage}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.EmailAddresses
@@ -160,7 +160,7 @@ class HealthcheckActor @Inject() (
       errors(signature) = history
     case email: ElectronicMail => emailSender.sendMail(email)
 
-    case m => throw new Exception("unknown message %s".format(m))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

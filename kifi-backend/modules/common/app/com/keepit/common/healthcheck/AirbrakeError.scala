@@ -36,4 +36,8 @@ object AirbrakeError {
           params = request.queryString,
           method = Some(request.method),
           headers = request.headers.toMap)
+
+  implicit def error(t: Throwable): AirbrakeError = AirbrakeError(t)
+
 }
+
