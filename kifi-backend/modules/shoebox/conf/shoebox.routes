@@ -184,7 +184,7 @@ POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.sa
 GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperController.getProxies
 POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperController.saveProxies
 GET     /admin/data/scrape        @com.keepit.controllers.admin.ScraperController.searchScraper
-GET     /admin/data/scrape/regex  @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: String ?= "", withinHours: Int ?= 8)
+GET     /admin/data/scrape/regex  @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: String ?= "", withinMinutes: Int ?= 8)
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex

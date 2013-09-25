@@ -616,12 +616,12 @@ class MessagingController @Inject() (
     }
   }
 
-  def getThreadInfos(userId: Id[User], url: String): Seq[ElizaThreadInfo] = {
-    val uriIdOpt = Await.result(shoebox.getNormalizedURIByURL(url), 2 seconds).map(_.id.get) // todo: Remove await
-    uriIdOpt.map{ uriId =>
+  def getThreadInfos(userId: Id[User], url: String): (Option[NormalizedURI], Seq[ElizaThreadInfo]) = {
+    val nUriOpt = Await.result(shoebox.getNormalizedURIByURL(url), 2 seconds) // todo: Remove await
+    val infos = nUriOpt.map { nUri =>
       val threads = db.readOnly { implicit session =>
-        val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
-        threadIds.map(threadRepo.get(_))
+        val threadIds = userThreadRepo.getThreads(userId, nUri.id)
+        threadIds.map(threadRepo.get)
       }.filter(_.replyable)
       buildThreadInfos(userId, threads, url)
     } getOrElse {
@@ -629,6 +629,7 @@ class MessagingController @Inject() (
     } sortWith { (a,b) =>
       a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
     }
+    (nUriOpt, infos)
   }
 
   def getChatter(userId: Id[User], urls: Seq[String]) = {
