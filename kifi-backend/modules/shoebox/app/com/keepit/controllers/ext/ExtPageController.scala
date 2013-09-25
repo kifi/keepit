@@ -64,9 +64,10 @@ class ExtPageController @Inject() (
     val url = (request.body \ "url").as[String]
 
     val (nUriStr, nUri, domain, bookmark, position, neverOnSite, host) = db.readOnly { implicit session =>
-      val pUri: String = normalizationService.prenormalize(url)
-      val nUri: Option[NormalizedURI] = normalizedURIRepo.getByNormalizedUrl(pUri)
-      val nUriStr: String = nUri.map(_.url).getOrElse(pUri)
+      val (nUriStr, nUri) = normalizedURIRepo.getByUriOrElsePrenormalize(url) match {
+        case Left(nUri) => (nUri.url, Some(nUri))
+        case Right(pUri) => (pUri, None)
+      }
       val bookmark: Option[Bookmark] = nUri.flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, userId)
       }
