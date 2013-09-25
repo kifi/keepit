@@ -48,7 +48,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
-        val msg1 = messagingController.sendNewMessage(user1, user2n3Set, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
+        val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Set, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
         val msg2 = messagingController.sendMessage(user1, msg1.thread, "Domination!", None)
 
         val messageIds : Seq[Option[Id[Message]]] = messagingController.getThreads(user2).flatMap(messagingController.getThreadMessages(_, None)).map(_.id)
