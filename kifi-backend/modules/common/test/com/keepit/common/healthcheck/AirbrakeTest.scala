@@ -62,6 +62,8 @@ class AirbrakeTest extends Specification with TestInjector {
         (xml \ "error" \ "message").head === <message>java.lang.NullPointerException</message>
         (xml \ "error" \ "backtrace" \ "line").size === 190
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
+        (xml \ "server-environment" \ "app-version").head.text === "0.0.0"
+        (xml \ "server-environment" \ "project-root").head.text === "TEST_MODE"
       }
     }
 
