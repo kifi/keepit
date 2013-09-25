@@ -50,11 +50,11 @@ class ExtMessagingController @Inject() (
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).flatMap { recipientSet =>
-      val (thread, message) = messagingController.sendNewMessage(request.user.id.get, recipientSet, urls, title, text)
-      val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(thread.externalId, None)
+      val (threadInfo, message) = messagingController.sendNewMessage(request.user.id.get, recipientSet, urls, title, text)
+      val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(threadInfo, None)
       val tDiff = currentDateTime.getMillis - tStart.getMillis
       Statsd.timing(s"messaging.newMessage", tDiff)
-      val threadInfoOpt = (o \ "url").asOpt[String].map(u => messagingController.buildThreadInfos(request.user.id.get, Seq(thread), u).headOption).flatten
+      val threadInfoOpt = (o \ "url").asOpt[String].map(u => messagingController.buildThreadInfos(request.user.id.get, Seq(threadInfo), u).headOption).flatten
       messageThreadFut map { messages => // object instantiated earlier to give Future head start
         Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages))
       }

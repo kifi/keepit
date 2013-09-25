@@ -498,23 +498,20 @@ class MessagingController @Inject() (
     getThreadMessages(thread, pageOpt)
   }
 
-  def getThreadMessages(threadId: Id[MessageThread], pageOpt: Option[Int]) : Seq[Message] = {
-    val thread = db.readOnly{ implicit session =>
-      threadRepo.get(threadId)
-    }
-    getThreadMessages(thread, pageOpt)
+  def getThreadMessages(threadId: Id[MessageThread], pageOpt: Option[Int]): Seq[Message] = {
+    getThreadMessages(db.readOnly(threadRepo.get(threadId)(_)), pageOpt)
   }
 
-  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[Seq[MessageWithBasicUser]] = {
-    val thread = db.readOnly{ implicit session =>
-      threadRepo.get(threadExtId)
-    }
-    log.info(s"[get_thread] got thread for extId $threadExtId: $thread")
+  def participantsToBasicUsers(participants: MessageThreadParticipants): Future[Map[Id[User], BasicUser]] =
+    shoebox.getBasicUsers(participants.participants.keySet.toSeq)
+
+
+  def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[Seq[MessageWithBasicUser]] = {
     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-    log.info(s"[get_thread] got participants for extId $threadExtId: $participantSet")
+    log.info(s"[get_thread] got participants for extId ${thread.externalId}: $participantSet")
     shoebox.getBasicUsers(participantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread, pageOpt)
-      log.info(s"[get_thread] got raw messages for extId $threadExtId: $messages")
+      log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: $messages")
       messages.map { message =>
         MessageWithBasicUser(
           id           = message.externalId,
@@ -527,6 +524,12 @@ class MessagingController @Inject() (
         )
       }
     }
+
+  }
+
+  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[Seq[MessageWithBasicUser]] = {
+    val thread = db.readOnly(threadRepo.get(threadExtId)(_))
+    getThreadMessagesWithBasicUser(thread, pageOpt)
   }
 
   def getThread(threadExtId: ExternalId[MessageThread]) : MessageThread = {

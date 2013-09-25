@@ -224,7 +224,7 @@ const socketHandlers = {
   },
   message: function(threadId, message) {
     log("[socket:message]", threadId, message, message.nUrl)();
-    var d = pageData[message.nUrl];
+    var d = pageData[message.nUrl] || pageData[message.url];
     if (d && !(messageData[threadId] || []).some(hasId(message.id))) {
       var thread = (d.threads || []).filter(hasId(threadId))[0];
       if (thread) {
