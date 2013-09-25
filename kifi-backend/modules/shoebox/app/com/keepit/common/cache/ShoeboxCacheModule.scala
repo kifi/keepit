@@ -70,7 +70,12 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Singleton
   @Provides
   def urlPatternRuleAllCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UrlPatternRuleAllCache((innerRepo, 1 second), (outerRepo, 30 days))
+    new UrlPatternRuleAllCache((innerRepo, 10 minutes), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
+  def httpProxyAllCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new HttpProxyAllCache((innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides

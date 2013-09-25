@@ -16,6 +16,7 @@ case class UrlPatternRule(
   pattern: String,
   example: Option[String] = None,
   isUnscrapable: Boolean = false,
+  useProxy: Option[Id[HttpProxy]] = None,
   normalization: Option[Normalization] = None,
   trustedDomain: Option[String] = None
 ) extends Model[UrlPatternRule] {
@@ -36,13 +37,14 @@ object UrlPatternRule {
       (__ \ 'pattern).format[String] and
       (__ \ 'example).formatNullable[String] and
       (__ \ 'isUnscrapable).format[Boolean] and
+      (__ \ 'useProxy).formatNullable(Id.format[HttpProxy]) and
       (__ \ 'normalization).formatNullable[Normalization] and
       (__ \ 'trustedDomain).formatNullable[String]
     )(UrlPatternRule.apply, unlift(UrlPatternRule.unapply))
 }
 
 case class UrlPatternRuleAllKey() extends Key[Seq[UrlPatternRule]] {
-  override val version = 2
+  override val version = 3
   val namespace = "url_pattern_rule_all"
   def toKey(): String = "all"
 }

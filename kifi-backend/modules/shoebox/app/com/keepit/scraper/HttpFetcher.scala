@@ -3,51 +3,48 @@ package com.keepit.scraper
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import org.apache.http.auth.AuthScope
-import org.apache.http.auth.UsernamePasswordCredentials
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.entity.GzipDecompressingEntity
 import org.apache.http.client.entity.DeflateDecompressingEntity
-import org.apache.http.client.params.ClientPNames
-import org.apache.http.conn.scheme.PlainSocketFactory
-import org.apache.http.conn.scheme.Scheme
-import org.apache.http.conn.scheme.SchemeRegistry
 import org.apache.http.HttpHeaders.{CONTENT_TYPE, IF_MODIFIED_SINCE, LOCATION}
 import org.apache.http._
-import org.apache.http.impl.client.DefaultHttpClient
-import org.apache.http.impl.conn.PoolingClientConnectionManager
-import org.apache.http.params.HttpParams
-import org.apache.http.params.BasicHttpParams
-import org.apache.http.params.HttpConnectionParams
-import org.apache.http.params.HttpProtocolParams
+import org.apache.http.impl.client.{BasicCredentialsProvider, HttpClientBuilder}
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.protocol.BasicHttpContext
 import org.apache.http.protocol.HttpContext
 import org.apache.http.util.EntityUtils
-import java.io.{InputStream, IOException}
+import java.io.IOException
 import scala.util.Try
 import com.keepit.common.net.URI
+import org.apache.http.config.RegistryBuilder
+import org.apache.http.conn.socket.{PlainConnectionSocketFactory, ConnectionSocketFactory}
+import org.apache.http.client.config.RequestConfig
+import com.keepit.model.HttpProxy
+import org.apache.http.auth.{UsernamePasswordCredentials, AuthScope}
+import org.apache.http.client.protocol.HttpClientContext
 
 trait HttpFetcher {
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
   def close()
 }
 
 class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean) extends HttpFetcher with Logging {
   val cm = if (trustBlindly) {
-    val registry = new SchemeRegistry
-    registry.register(new Scheme("http", 80, PlainSocketFactory.getSocketFactory()))
-    registry.register(new Scheme("https", 443, UnsafeSSLSocketFactory()))
-    new PoolingClientConnectionManager(registry)
+    val registry = RegistryBuilder.create[ConnectionSocketFactory]
+    registry.register("http", PlainConnectionSocketFactory.INSTANCE)
+    registry.register("https", UnsafeSSLSocketFactory())
+    new PoolingHttpClientConnectionManager(registry.build())
   } else {
-    new PoolingClientConnectionManager
+    new PoolingHttpClientConnectionManager
   }
   cm.setMaxTotal(100)
 
-  val httpParams = new BasicHttpParams
-  HttpConnectionParams.setConnectionTimeout(httpParams, connectionTimeout)
-  HttpConnectionParams.setSoTimeout(httpParams, soTimeOut)
-  HttpProtocolParams.setUserAgent(httpParams, userAgent)
-  val httpClient = new DefaultHttpClient(cm, httpParams)
+  val defaultRequestConfig = RequestConfig.custom().setConnectTimeout(connectionTimeout).setSocketTimeout(soTimeOut).build()
+
+  private val httpClientBuilder = HttpClientBuilder.create()
+  httpClientBuilder.setDefaultRequestConfig(defaultRequestConfig)
+  httpClientBuilder.setConnectionManager(cm)
+  httpClientBuilder.setUserAgent(userAgent)
 
   // track redirects
   val redirectInterceptor = new HttpResponseInterceptor() {
@@ -64,7 +61,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
       }
     }
   }
-  httpClient.addResponseInterceptor(redirectInterceptor)
+  httpClientBuilder.addInterceptorFirst(redirectInterceptor)
 
   // transfer encoding
   val encodingInterceptor = new HttpResponseInterceptor() {
@@ -90,20 +87,33 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
       }
     }
   }
-  httpClient.addResponseInterceptor(encodingInterceptor)
+  httpClientBuilder.addInterceptorFirst(encodingInterceptor)
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
+  val httpClient = httpClientBuilder.build()
 
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
 
     val httpGet = new HttpGet(url)
+    val httpContext = new BasicHttpContext()
+
+    proxy.map { httpProxy =>
+      val requestConfigWithProxy = RequestConfig.copy(defaultRequestConfig).setProxy(new HttpHost(httpProxy.hostname, httpProxy.port, httpProxy.scheme)).build()
+      httpGet.setConfig(requestConfigWithProxy)
+      for {
+        user <- httpProxy.username
+        password <- httpProxy.password
+      } yield {
+        val credentials = new BasicCredentialsProvider()
+        credentials.setCredentials(new AuthScope(httpProxy.hostname, httpProxy.port), new UsernamePasswordCredentials(user, password))
+        httpContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credentials)
+      }
+    }
 
     ifModifiedSince.foreach{ ifModifiedSince =>
       httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.toHttpHeaderString)
     }
 
-    log.info("executing request " + httpGet.getURI())
-
-    val httpContext = new BasicHttpContext()
+    log.info("executing request " + httpGet.getURI() + proxy.map(httpProxy => s" via ${httpProxy.alias}").getOrElse(""))
 
     httpContext.setAttribute("scraper_destination_url", url)
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
@@ -163,7 +173,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
   }
 
   def close() {
-    httpClient.getConnectionManager().shutdown()
+    httpClient.close()
   }
 }
 
