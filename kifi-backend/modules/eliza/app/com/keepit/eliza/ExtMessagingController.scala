@@ -164,7 +164,7 @@ class ExtMessagingController @Inject() (
       messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
     },
     "get_threads_by_url" -> { case JsString(url) +: _ =>  // deprecated in favor of "get_threads"
-      val threadInfos = messagingController.getThreadInfos(socket.userId, url)
+      val (_, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
       socket.channel.push(Json.arr("thread_infos", threadInfos))
     },
     "get_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
@@ -172,8 +172,8 @@ class ExtMessagingController @Inject() (
       if (url == null || url == "null") {
         // Ignore for now to stop exceptions. Leaks some memory on client, but it's a bad request.
       } else {
-        val threadInfos = messagingController.getThreadInfos(socket.userId, url)
-        socket.channel.push(Json.arr(requestId.toLong, threadInfos))
+        val (nUriOpt, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
+        socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriOpt.map(_.url)))
       }
       case _ => // for cases when url is JsNull
     },
