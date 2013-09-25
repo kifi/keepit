@@ -11,6 +11,8 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.shoebox.BrowsingHistoryTracker
 import play.api.libs.json._
 import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits._
+
 
 private case class SendableBookmark(
   id: ExternalId[Bookmark],
