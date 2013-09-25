@@ -68,7 +68,7 @@ trait DefaultSyntax extends QueryParser {
     m.group(1)
   }
 
-  def parseQueryTerm(): String = {
+  private def parseQueryTerm(): String = {
     (termRegex findPrefixMatchOf buf) match {
       case Some(m) => getTerm(m)
       case _ =>
@@ -79,28 +79,17 @@ trait DefaultSyntax extends QueryParser {
     }
   }
 
-  def parseQuotedQueryTerm(): String = {
-    (quotedTermRegex findPrefixMatchOf buf) match {
-      case Some(m) => getTerm(m)
-      case _ => ""
-    }
-  }
+  private def matchQuotedQueryTerm(): Option[Match] = (quotedTermRegex findPrefixMatchOf buf)
 
   private def parseFieldQuery(): QuerySpec = {
     val defaultOccur = parseQualifier()
     val field = parseFieldName()
     val occur = parseQualifier(defaultOccur)
 
-    var term = parseQuotedQueryTerm()
-    var quoted = false
-
-    if (term.length > 0) {
-      quoted = true
-    } else {
-      term = parseQueryTerm()
+    matchQuotedQueryTerm() match {
+      case Some(m) => QuerySpec(occur, field, getTerm(m), true)
+      case _ => QuerySpec(occur, field, parseQueryTerm(), false)
     }
-
-    QuerySpec(occur, field, term, quoted)
   }
 
   @tailrec
