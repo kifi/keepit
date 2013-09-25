@@ -352,7 +352,8 @@ class MessagingController @Inject() (
     "b80511f6-8248-4799-a17d-f86c1508c90d", // léo
     "597e6c13-5093-4cba-8acc-93318987d8ee", // stephen
     "147c5562-98b1-4fc1-946b-3873ac4a45b4", // eduardo
-    "70927814-6a71-4eb4-85d4-a60164bae96c"  // ray
+    "70927814-6a71-4eb4-85d4-a60164bae96c", // ray
+    "9c211915-2413-4030-8efa-d7a9cfc77359"  // joon
   )
   val product = Seq (
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
