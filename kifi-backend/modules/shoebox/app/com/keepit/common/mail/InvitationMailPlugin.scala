@@ -8,7 +8,7 @@ import com.google.inject.{ImplementedBy, Inject}
 import play.api.Plugin
 
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -58,6 +58,7 @@ private[mail] class InvitationMailActor @Inject() (
           db.readWrite { implicit s => userValueRepo.setValue(userId, ResentKey, true.toString) }
         }
       }
+    case m => throw new UnsupportedActorMessage(m)
   }
 
   private def sendNotification(userId: Id[User], subject: String, body: User => String) {

@@ -3,7 +3,7 @@ package com.keepit.common.analytics
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.{ Inject, Singleton, Provider }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -101,6 +101,7 @@ class EventHelperActor @Inject() (
       eventStream.streamEvent(event)
       val events = listeners.filter(_.onEvent.isDefinedAt(event))
       events.map(_.onEvent(event))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

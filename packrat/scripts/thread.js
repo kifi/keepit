@@ -12,10 +12,29 @@
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/prevent_ancestor_scroll.js
 
-threadPane = function() {
+panes.thread = function() {
+  const handlers = {
+    message: function(o) {
+      update(o.threadId, o.message, o.userId);
+    },
+    thread: function(o) {
+      updateAll(o.id, o.messages, o.userId);
+    }};
+
   var $holder = $(), buffer = {};
   return {
-    render: function($container, threadId, messages, session) {
+    render: function($container, locator) {
+      var threadId = locator.split("/")[2];
+      log("[panes.thread.render]", threadId)();
+      api.port.emit("thread", {id: threadId, respond: true}, function(th) {
+        api.port.emit("session", function(session) {
+          renderThread($container, th.id, th.messages, session);
+          api.port.on(handlers);
+        });
+      });
+    }};
+
+  function renderThread($container, threadId, messages, session) {
       messages.forEach(function(m) {
         m.isLoggedInUser = m.user.id == session.userId;
       });
@@ -49,13 +68,14 @@ threadPane = function() {
           if ($holder.length && this.contains($holder[0])) {
             $holder = $();
             $(window).off("resize.thread");
+            api.port.off(handlers);
           }
         });
 
         // It's important that we check the buffer after rendering the messages, to avoid creating a window
         // of time during which we might miss an incoming message on this thread.
         if (buffer.threadId == threadId && !messages.some(function(m) {return m.id == buffer.message.id})) {
-          api.log("[render] appending buffered message", buffer.message.id);
+          log("[render] appending buffered message", buffer.message.id)();
           messages.push(buffer.message);
           renderMessage(buffer.message, session.userId, function($m) {
             $holder.append($m).scrollToBottom();
@@ -63,14 +83,15 @@ threadPane = function() {
         }
 
         if (messages.length) emitRead(threadId, messages[messages.length - 1], true);
-    },
-    update: function(threadId, message, userId) {
+  }
+
+  function update(threadId, message, userId) {
       if ($holder.length && $holder.data("threadId") == threadId) {
         renderMessage(message, userId, function($m) {
           if (!message.isLoggedInUser ||
               !$holder.find(".kifi-message-sent[data-id=" + message.id + "]").length &&
               !$holder.find(".kifi-message-sent[data-id=]").get().some(function(el) {
-                api.log("[update] comparing message text");
+                log("[update] comparing message text")();
                 return $(el).data("text") === message.text;
               })) {
             $holder.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
@@ -81,8 +102,9 @@ threadPane = function() {
         buffer.threadId = threadId;
         buffer.message = message;
       }
-    },
-    updateAll: function(threadId, messages, userId) {
+  }
+
+  function updateAll(threadId, messages, userId) {
       if ($holder.length && $holder.data("threadId") == threadId) {
         var arr = new Array(messages.length), n = 0;
         messages.forEach(function(m, i) {
@@ -95,12 +117,12 @@ threadPane = function() {
           });
         })
       }
-    }};
+  }
 
   function sendReply($container, threadId, session, e, text) {
     var $reply, resp;
     api.port.emit("send_reply", {text: text, threadId: threadId}, function(o) {
-      api.log("[sendReply] resp:", o);
+      log("[sendReply] resp:", o)();
       updateSentReply($reply, resp = o);
     });
     renderMessage({

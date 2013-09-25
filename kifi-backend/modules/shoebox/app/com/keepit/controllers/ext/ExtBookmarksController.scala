@@ -8,7 +8,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-
+import com.keepit.shoebox.BrowsingHistoryTracker
 import play.api.libs.json._
 
 private case class SendableBookmark(
@@ -36,6 +36,7 @@ class ExtBookmarksController @Inject() (
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
   searchClient: SearchServiceClient,
+  browsingHistoryTracker: BrowsingHistoryTracker,
   healthcheck: HealthcheckPlugin)
     extends BrowserExtensionController(actionAuthenticator) {
 
@@ -86,7 +87,8 @@ class ExtBookmarksController @Inject() (
         log.info("adding bookmarks of user %s".format(userId))
         val experiments = request.experiments
         val user = db.readOnly { implicit s => userRepo.get(userId) }
-        bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
+        val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
+        browsingHistoryTracker.add(userId, bookmarks.map(_.uriId))
         searchClient.updateURIGraph()
         Ok(JsObject(Seq()))
     }

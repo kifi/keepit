@@ -62,11 +62,8 @@ exports.loadReason = {upgrade: "update", downgrade: "update"}[self.loadReason] |
 
 const hexRe = /^#[0-9a-f]{3}$/i;
 exports.log = function() {
-  var d = new Date, ds = d.toString(), args = Array.slice(arguments);
-  if (hexRe.test(args[0])) {
-    args.shift();
-  }
-  for (var i = 0; i < args.length; i++) {
+  var d = new Date, ds = d.toString(), t = "[" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "]";
+  for (var args = Array.slice(arguments), i = 0; i < args.length; i++) {
     var arg = args[i];
     if (typeof arg == "object") {
       try {
@@ -76,7 +73,12 @@ exports.log = function() {
       }
     }
   }
-  console.log("[" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "]", args.join(" "));
+  if (hexRe.test(args[0])) {
+    args[0] = t;
+  } else {
+    args.unshift(t);
+  }
+  return console.log.apply.bind(console.log, console, args);
 };
 exports.log.error = function(exception, context) {
   console.error((context ? "[" + context + "] " : "") + exception);
@@ -232,7 +234,7 @@ exports.socket = {
     } else {
       socketPage = require("sdk/page-worker").Page({
         contentScriptFile: [
-          data.url("scripts/lib/reconnecting-websocket.js"),
+          data.url("scripts/lib/rwsocket.js"),
           data.url("scripts/workers/socket.js")],
         contentScriptWhen: "start",
         contentScriptOptions: {socketId: socketId, url: url},
@@ -252,7 +254,7 @@ function onSocketConnect(socketId) {
     try {
       socket.onConnect();
     } catch (e) {
-      exports.log.error("onSocketConnect:" + socketId, e);
+      exports.log.error(e, "onSocketConnect:" + socketId);
     }
   } else {
     exports.log("[onSocketConnect] Ignoring, no socket", socketId);
@@ -264,7 +266,7 @@ function onSocketDisconnect(socketId, why) {
     try {
       socket.onDisconnect(why);
     } catch (e) {
-      exports.log.error("onSocketDisconnect:" + socketId + ": " + why, e);
+      exports.log.error(e, "onSocketDisconnect:" + socketId + ": " + why);
     }
   } else {
     exports.log("[onSocketDisconnect] Ignoring, no socket", socketId);
@@ -300,7 +302,7 @@ function onSocketMessage(socketId, data) {
       exports.log("[api.socket.receive] Ignoring, not array", msg);
     }
   } catch (e) {
-    exports.log.error("api.socket.receive:" + socketId + ":" + data, e);
+    exports.log.error(e, "api.socket.receive:" + socketId + ":" + data);
   }
 }
 

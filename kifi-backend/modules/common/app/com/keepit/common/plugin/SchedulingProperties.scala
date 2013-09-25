@@ -6,7 +6,7 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 @ImplementedBy(classOf[SchedulingPropertiesImpl])
 trait SchedulingProperties {
   def allowScheduling: Boolean
-  def neverAllowScheduling: Boolean = allowScheduling
+  def neverAllowScheduling: Boolean = !allowScheduling
 }
 
 @Singleton

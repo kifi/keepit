@@ -1,6 +1,18 @@
 // API for main.js
 
-api = function() {
+const hexRe = /^#[0-9a-f]{3}$/i;
+function log() {
+  var d = new Date, ds = d.toString(), t = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] ", args = arguments, a0 = args[0];
+  if (hexRe.test(a0)) {
+    args[0] = "%c" + t + args[1];
+    args[1] = "color:" + a0;
+  } else {
+    args[0] = t + a0;
+  }
+  return console.log.apply.bind(console.log, console, args);
+}
+
+var api = function() {
   const httpRe = /^https?:/;
 
   function dispatch() {
@@ -32,18 +44,18 @@ api = function() {
   }
 
   chrome.pageAction.onClicked.addListener(function(tab) {
-    api.log("[pageAction.onClicked]", tab);
+    log("[pageAction.onClicked]", tab)();
     dispatch.call(api.icon.on.click, pages[tab.id]);
   });
 
   chrome.runtime.onStartup.addListener(function() {
-    api.log("[onStartup]");
+    log("[onStartup]")();
     api.loadReason = "startup";
     dispatch.call(api.on.startup);
   });
 
   chrome.runtime.onInstalled.addListener(function(details) {
-    api.log("[onInstalled] details:", details);
+    log("[onInstalled] details:", details)();
     if (details.reason === "install" || details.reason === "update") {
       api.loadReason = details.reason;
       dispatch.call(api.on[details.reason]);
@@ -52,19 +64,19 @@ api = function() {
 
   var updateCheckRequested, updateVersion;
   chrome.runtime.onUpdateAvailable.addListener(function(details) {
-    api.log("#666", "[onUpdateAvailable]", updateVersion = details.version);
+    log("#666", "[onUpdateAvailable]", updateVersion = details.version)();
     if (updateCheckRequested) {
       chrome.runtime.reload();
     }
   });
 
   chrome.tabs.onCreated.addListener(function(tab) {
-    api.log("#666", "[tabs.onCreated]", tab.id, tab.url);
+    log("#666", "[tabs.onCreated]", tab.id, tab.url)();
     normalTab[tab.id] = !!selectedTabIds[tab.windowId];
   });
 
   chrome.tabs.onActivated.addListener(function(info) {
-    api.log("#666", "[tabs.onActivated] tab info:", info);
+    log("#666", "[tabs.onActivated] tab info:", info)();
     var prevPageId = selectedTabIds[info.windowId];
     if (prevPageId) { // ignore popups, etc.
       selectedTabIds[info.windowId] = info.tabId;
@@ -96,27 +108,27 @@ api = function() {
       var page = pages[details.tabId];
       if (page) {
         if (page.url === details.url) {
-          api.log("[onDOMContentLoaded]", details.tabId, details.url);
+          log("[onDOMContentLoaded]", details.tabId, details.url)();
         } else {
-          api.log("#a00", "[onDOMContentLoaded] %i url mismatch:\n%s\n%s", details.tabId, details.url, page.url);
+          log("#a00", "[onDOMContentLoaded] %i url mismatch:\n%s\n%s", details.tabId, details.url, page.url)();
         }
         injectContentScripts(page);
       } else if (normalTab[details.tabId]) {
-        api.log("#a00", "[onDOMContentLoaded] no page for", details.tabId, details.url);
+        log("#a00", "[onDOMContentLoaded] no page for", details.tabId, details.url)();
       }
     }
   });
 
   chrome.webNavigation.onCommitted.addListener(function(e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    api.log("#666", "[onCommitted]", e.tabId, e);
+    log("#666", "[onCommitted]", e.tabId, e)();
     onRemoved(e.tabId, {temp: true});
     createPage(e.tabId, e.url);
   });
 
   chrome.webNavigation.onHistoryStateUpdated.addListener(function(e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    api.log("#666", "[onHistoryStateUpdated]", e.tabId, e);
+    log("#666", "[onHistoryStateUpdated]", e.tabId, e)();
     var page = pages[e.tabId];
     if (page.url != e.url) {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != e.url.match(stripHashRe)[0]) {
@@ -131,18 +143,18 @@ api = function() {
 
   chrome.webNavigation.onReferenceFragmentUpdated.addListener(function(e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    api.log("#666", "[onReferenceFragmentUpdated]", e.tabId, e);
+    log("#666", "[onReferenceFragmentUpdated]", e.tabId, e)();
     pages[e.tabId].url = e.url;
   });
 
   chrome.tabs.onUpdated.addListener(function(tabId, change) {
     if ((change.status || change.url) && normalTab[tabId]) {
-      api.log("#666", "[tabs.onUpdated] %i change: %o", tabId, change);
+      log("#666", "[tabs.onUpdated] %i change: %o", tabId, change)();
     }
   });
 
   chrome.tabs.onReplaced.addListener(function(newTabId, oldTabId) {
-    api.log("#666", "[tabs.onReplaced]", oldTabId, "->", newTabId);
+    log("#666", "[tabs.onReplaced]", oldTabId, "->", newTabId)();
     normalTab[newTabId] = normalTab[oldTabId];
     onRemoved(oldTabId);
     for (var winId in selectedTabIds) {
@@ -185,7 +197,7 @@ api = function() {
     topNormalWinId = win && win.type == "normal" ? win.id : chrome.windows.WINDOW_ID_NONE;
   });
   chrome.windows.onFocusChanged.addListener(function(winId) {
-    api.log("[onFocusChanged] win %o -> %o", focusedWinId, winId);
+    log("[onFocusChanged] win %o -> %o", focusedWinId, winId)();
     if (focusedWinId > 0) {
       var page = pages[selectedTabIds[focusedWinId]];
       if (page && httpRe.test(page.url)) {
@@ -228,7 +240,7 @@ api = function() {
         for (var i = 0; i < page.toEmit.length;) {
           var m = page.toEmit[i];
           if (port.handling[m[0]]) {
-            api.log("#0c0", "[api:handling:emit] %i %s %o", page.id, m[0], m[1] != null ? m[1] : "");
+            log("#0c0", "[api:handling:emit] %i %s %o", page.id, m[0], m[1] != null ? m[1] : "")();
             port.postMessage(m);
             page.toEmit.splice(i, 1);
           } else {
@@ -250,10 +262,10 @@ api = function() {
     }};
   chrome.runtime.onConnect.addListener(function(port) {
     var tab = port.sender.tab;
-    api.log("#0a0", "[onConnect]", port.name, tab && tab.id, tab && tab.url);
+    log("#0a0", "[onConnect]", port.name, tab && tab.id, tab && tab.url)();
     if (port.sender.id === chrome.runtime.id && tab) {
       if (ports[tab.id]) {
-        api.log("#a00", "[onConnect] %i disconnecting prev port", tab.id);
+        log("#a00", "[onConnect] %i disconnecting prev port", tab.id)();
         ports[tab.id].disconnect();
       }
       ports[tab.id] = port;
@@ -263,14 +275,14 @@ api = function() {
         var kind = msg[0], data = msg[1], callbackId = msg[2];
         var handler = portHandlers[kind];
         if (page && handler) {
-          api.log("#0a0", "[onMessage] %i %s", tab.id, kind, data != null ? data : "");
+          log("#0a0", "[onMessage] %i %s", tab.id, kind, data != null ? data : "")();
           handler(data, respondToTab.bind(port, callbackId), page, port);
         } else {
-          api.log("#a00", "[onMessage] %i %s %s %O %s", tab.id, kind, "ignored, page:", page, "handler:", !!handler);
+          log("#a00", "[onMessage] %i %s %s %O %s", tab.id, kind, "ignored, page:", page, "handler:", !!handler)();
         }
       });
       port.onDisconnect.addListener(function() {
-        api.log("#0a0", "[onDisconnect]", tab.id);
+        log("#0a0", "[onDisconnect]", tab.id)();
         delete ports[tab.id].handling;
         delete ports[tab.id];
       });
@@ -284,14 +296,14 @@ api = function() {
   function injectContentScripts(page) {
     if (page.injecting || page.injected) return;
     if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
-      api.log("[injectContentScripts] forbidden", page.url);
+      log("[injectContentScripts] forbidden", page.url)();
       return;
     }
     page.injecting = true;
 
     var scripts = meta.contentScripts.filter(function(cs) { return !cs[2] && cs[1].test(page.url) });
 
-    var js = api.prefs.get('suppressLog') ? 'var suppressLog=true;' : '', injected;
+    var js = api.prefs.get('suppressLog') ? 'function log() {return log}' : '', injected;
     chrome.tabs.executeScript(page.id, {code: js + "this.api&&api.injected", runAt: "document_start"}, function(arr) {
       injected = arr[0] || {};
       done(0);
@@ -331,7 +343,7 @@ api = function() {
       var n = 0, N = paths.length;
       if (N) {
         paths.forEach(function(path) {
-          api.log("#bbb", "[injectWithDeps] %i %s", tabId, path);
+          log("#bbb", "[injectWithDeps] %i %s", tabId, path)();
           inject(tabId, {file: path, runAt: "document_end"}, function() {
             if (++n === N) {
               callback();
@@ -344,7 +356,7 @@ api = function() {
     }
   }
 
-  const hostRe = /^https?:\/\/[^\/]*/, hexRe = /^#[0-9a-f]{3}$/i;
+  const hostRe = /^https?:\/\/[^\/]*/;
   return {
     bookmarks: {
       create: function(parentId, name, url, callback) {
@@ -400,17 +412,6 @@ api = function() {
       return !!chrome.runtime.getManifest().update_url;
     },
     loadReason: "enable",  // assuming "enable" by elimination
-    log: function() {
-      var d = new Date, ds = d.toString(), t = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] ";
-      if (hexRe.test(arguments[0])) {
-        var c = arguments[0];
-        arguments[0] = "%c" + t + arguments[1];
-        arguments[1] = "color:" + c;
-      } else {
-        arguments[0] = t + arguments[0];
-      }
-      console.log.apply(console, arguments);
-    },
     on: {
       search: new Listeners,
       install: new Listeners,
@@ -507,7 +508,7 @@ api = function() {
       } else {
         updateCheckRequested = true;
         chrome.runtime.requestUpdateCheck(function(status) {
-          api.log("[requestUpdateCheck]", status);
+          log("[requestUpdateCheck]", status)();
         });
       }
     },
@@ -528,23 +529,23 @@ api = function() {
               if (id > 0) {
                 var cb = callbacks[id];
                 if (cb) {
-                  api.log("#0ac", "[socket.receive] response", id, "(" + (new Date - cb[1]) +  "ms)");
+                  log("#0ac", "[socket.receive] response", id, "(" + (new Date - cb[1]) +  "ms)")();
                   delete callbacks[id];
                   cb[0].apply(null, msg);
                 } else {
-                  api.log("#0ac", "[socket.receive] ignoring", [id].concat(msg));
+                  log("#0ac", "[socket.receive] ignoring", [id].concat(msg))();
                 }
               } else {
                 var handler = handlers[id];
                 if (handler) {
-                  api.log("#0ac", "[socket.receive]", id);
+                  log("#0ac", "[socket.receive]", id)();
                   handler.apply(null, msg);
                 } else {
-                  api.log("#0ac", "[socket.receive] ignoring", [id].concat(msg));
+                  log("#0ac", "[socket.receive] ignoring", [id].concat(msg))();
                 }
               }
             } else {
-              api.log("#0ac", "[socket.receive] ignoring", msg);
+              log("#0ac", "[socket.receive] ignoring", msg)();
             }
           }});
         var socket = {
@@ -555,7 +556,7 @@ api = function() {
               callbacks[id] = [callback, Date.now()];
               arr.splice(1, 0, id);
             }
-            api.log("#0ac", "[socket.send]", arr);
+            log("#0ac", "[socket.send]", arr)();
             rws.send(JSON.stringify(arr));
           },
           close: function() {
@@ -601,7 +602,7 @@ api = function() {
         if (page && (page === tab || page.url.match(hostRe)[0] == tab.url.match(hostRe)[0])) {
           var port = ports[tab.id];
           if (port && port.handling[type]) {
-            api.log("#0c0", "[api.tabs.emit] %i %s %O", tab.id, type, data);
+            log("#0c0", "[api.tabs.emit] %i %s %O", tab.id, type, data)();
             port.postMessage([type, data]);
           } else if (opts && opts.queue) {
             if (page.toEmit) {
@@ -619,7 +620,7 @@ api = function() {
             }
           }
         } else {
-          api.log("#a00", "[api.tabs.emit] suppressed %i %s navigated: %s -> %s", tab.id, type, tab.url, page && page.url);
+          log("#a00", "[api.tabs.emit] suppressed %i %s navigated: %s -> %s", tab.id, type, tab.url, page && page.url)();
         }
       },
       get: function(tabId) {

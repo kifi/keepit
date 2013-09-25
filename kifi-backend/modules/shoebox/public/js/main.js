@@ -3,6 +3,7 @@ var wwwDomain = 'https://www.kifi.com';
 //xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
+var xhrBaseSearch = xhrDomain.replace('api', 'search') + '/search';
 
 var compareSearch = {usage: "search", sensitivity: "base"};
 var compareSort = {numeric: true};
@@ -845,7 +846,7 @@ $(function() {
 		$query.attr("data-q", q);
 		if (!$query.val()) $query.val(q).focus().closest($queryWrap).removeClass('empty');
 		var context = searchResponse && searchResponse.context;
-		$.getJSON(xhrDomain + '/search', {q: q, f: "a", maxHits: 30, context: context}, function(data) {
+		$.getJSON(xhrBaseSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
 			updateCollectionsIfAnyUnknown(data.hits);
 			$.when(promise.me, promise.collections).done(function() {
 				searchResponse = data;
