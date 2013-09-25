@@ -1,5 +1,8 @@
 package com.keepit
 
+import java.io.File
+
+import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.HealthcheckError
@@ -9,12 +12,13 @@ import com.keepit.common.net.URI
 import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
+import com.typesafe.config.ConfigFactory
+
 import play.api._
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.modules.statsd.api.{Statsd, StatsdFilter}
 import play.utils.Threads
-import com.keepit.common.amazon.AmazonInstanceInfo
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(LoggingFilter, new StatsdFilter()) with Logging with EmptyInjector {
@@ -58,6 +62,14 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     serviceDiscovery.forceUpdate()
   }
 
+  // Get a file within the .fortytwo folder in the user's home directory
+  def getUserFile(filename: String): File =
+    new File(Seq(System.getProperty("user.home"), ".fortytwo", filename).mkString(File.separator))
+
+  override def onLoadConfig(config: Configuration, path: File, classloader: ClassLoader, mode: Mode.Mode) = {
+    val localConfig = Configuration(ConfigFactory.parseFile(getUserFile("local.conf")))
+    super.onLoadConfig(config ++ localConfig, path, classloader, mode)
+  }
   override def onBadRequest(request: RequestHeader, error: String): Result = {
     val errorId = ExternalId[Exception]()
     val msg = "BAD REQUEST: %s: [%s] on %s:%s query: %s".format(errorId, error, request.method, request.path, request.queryString.mkString("::"))
