@@ -22,11 +22,9 @@ $.fn.scrollToBottom = function() {
 };
 
 const CO_KEY = /^Mac/.test(navigator.platform) ? "⌘" : "Ctrl";
-var noticesPane, threadsPane, threadPane;  // stubs
-noticesPane = threadsPane = threadPane = {update: $.noop, updateAll: $.noop};
+const panes = {};
 
-slider2 = function() {
-
+var slider2 = function() {
   var $slider, $pane, paneHistory, lastShownAt;
 
   document.addEventListener("keydown", onKeyDown, true);
@@ -425,8 +423,9 @@ slider2 = function() {
         } else {
           paneHistory.unshift(locator);
         }
+        api.port.emit("pane", {old: $pane[0].dataset.locator, new: locator});
         $pane[0].dataset.locator = locator;
-        populatePane[pane]($new, locator);
+        populatePane($new, pane, locator);
       });
     } else {
       paneHistory = [locator];
@@ -452,6 +451,7 @@ slider2 = function() {
             $("html").addClass("kifi-pane-parent");
             $pane = $(html);
             $pane[0].dataset.locator = locator;
+            api.port.emit("pane", {new: locator});
             if (bringSlider) {
               $pane.append($slider).appendTo(tile.parentNode);
             } else {
@@ -580,7 +580,7 @@ slider2 = function() {
             });
             $("html").addClass("kifi-with-pane");
             var $box = $pane.find(".kifi-pane-box");
-            populatePane[pane]($box, locator);
+            populatePane($box, pane, locator);
           });
         });
       });
@@ -609,42 +609,19 @@ slider2 = function() {
         window.dispatchEvent(new Event("resize"));  // for other page scripts
       }
     });
+    api.port.emit("pane", {old: $pane[0].dataset.locator});
     $pane = paneHistory = null;
     $("html").removeClass("kifi-with-pane");
   }
 
-  const populatePane = {
-    notices: function($box) {
-      api.port.emit("notifications", function(o) {
-        api.require("scripts/notices.js", function() {
-          noticesPane.render($box.find(".kifi-pane-tall"), o.notifications, o.timeLastSeen, o.numNotVisited);
-        });
-      });
-    },
-    threads: function($box) {
-      api.port.emit("threads", function(o) {
-        api.port.emit("session", function(session) {
-          api.require("scripts/threads.js", function() {
-            threadsPane.render($box.find(".kifi-pane-tall"), o, session.prefs);
-            o.threads.forEach(function(th) {
-              api.port.emit("thread", {id: th.id});  // preloading
-            });
-          });
-        });
-      });
-    },
-    thread: function($box, locator) {
-      var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-      var threadId = locator.split("/")[2];
-      log("[populatePane] getting thread for messages", threadId)();
-      api.require("scripts/thread.js", function() {
-        api.port.emit("thread", {id: threadId, respond: true}, function(th) {
-          api.port.emit("session", function(session) {
-            threadPane.render($tall, th.id, th.messages, session);
-          });
-        });
-      });
+  function populatePane($box, name, locator) {
+    var $tall = $box.find(".kifi-pane-tall");
+    if (name == "thread") {
+      $tall.css("margin-top", $box.find(".kifi-thread-who").outerHeight());
     }
+    api.require("scripts/" + name + ".js", function() {
+      panes[name].render($tall, locator);
+    });
   };
 
   function formatCountHtml(kept, numFriends, numOthers) {
@@ -681,31 +658,6 @@ slider2 = function() {
   api.port.on({
     kept: function(o) {
       updateKeptDom(o.kept);
-    },
-    new_notification: function(n) {
-      noticesPane.update([n], "new");
-    },
-    missed_notifications: function(arr) {
-      noticesPane.update(arr, "new");
-    },
-    notifications_visited: function(o) {
-      noticesPane.update(o, "markOneVisited");
-    },
-    all_notifications_visited: function(o) {
-      noticesPane.update(o, "markAllVisited");
-    },
-    thread_info: function(o) {
-      threadsPane.update(o.thread, o.read);
-    },
-    threads: function(o) {
-      threadsPane.updateAll(o.threads, o.readTimes, o.userId);
-    },
-    message: function(o) {
-      threadsPane.update(o.thread, o.read);
-      threadPane.update(o.threadId, o.message, o.userId);
-    },
-    thread: function(o) {
-      threadPane.updateAll(o.id, o.messages, o.userId);
     },
     counts: function(o) {
       if (!$slider) return;

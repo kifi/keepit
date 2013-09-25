@@ -2,9 +2,12 @@ var api = api || require("./api");
 var log = log || api.log;
 
 const NOTIFICATION_BATCH_SIZE = 10;
-const hostRe = /^https?:\/\/([^\/]*)/;
 
-var tabsShowingNotificationsPane = [];
+//                            | sub |    |------- country domain -------|-- generic domain --|           |-- port? --|
+const domainRe = /^https?:\/\/[^\/]*?((?:[^.\/]+\.[^.\/]{2,3}\.[^.\/]{2}|[^.\/]+\.[^.\/]{2,6}|localhost))(?::\d{2,5})?(?:$|\/)/;
+const hostRe = /^https?:\/\/([^\/]+)/;
+
+var tabsByLocator = {};
 var notificationsCallbacks = [];
 var threadCallbacks = {};
 
@@ -197,7 +200,7 @@ const socketHandlers = {
       }
     }
     if (arr.length) {
-      tabsShowingNotificationsPane.forEach(function(tab) {
+      (tabsByLocator['/notices'] || []).forEach(function(tab) {
         api.tabs.emit(tab, "missed_notifications", arr);
       });
       tellTabsNoticeCountIfChanged();
@@ -491,13 +494,18 @@ api.port.on({
       });
     }
   },
-  notifications_pane: function(showing, _, tab) {
-    for (var i = 0; i < tabsShowingNotificationsPane.length; i++) {
-      if (tabsShowingNotificationsPane[i].id === tab.id) {
-        tabsShowingNotificationsPane.splice(i--, 1);
+  pane: function(o, _, tab) {
+    if (o.old) {
+      var arr = (tabsByLocator[o.old] || []).filter(idIsNot(tab.id));
+      if (arr.length) {
+        tabsByLocator[o.old] = arr;
+      } else {
+        delete tabsByLocator[o.old];
       }
     }
-    if (showing) tabsShowingNotificationsPane.push(tab);
+    if (o.new) {
+      (tabsByLocator[o.new] || (tabsByLocator[o.new] = [])).push(tab);
+    }
   },
   notifications_read: function(t) {
     var time = new Date(t);
@@ -585,7 +593,7 @@ function standardizeNotification(n) {
 function sendNotificationToTabs(n) {
   var told = {};
   api.tabs.eachSelected(tellTab);
-  tabsShowingNotificationsPane.forEach(tellTab);
+  (tabsByLocator['/notices'] || []).forEach(tellTab);
   tellTabsNoticeCountIfChanged();
   api.play("media/notification.mp3");
 
@@ -660,7 +668,7 @@ function markNoticesVisited(category, id, timeStr, locator) {
       }
     }
   });
-  tabsShowingNotificationsPane.forEach(function(tab) {
+  (tabsByLocator['/notices'] || []).forEach(function(tab) {
     api.tabs.emit(tab, "notifications_visited", {
       category: category,
       time: timeStr,
@@ -690,7 +698,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
   numNotificationsNotVisited = notifications.filter(function(n) {
     return n.unread;
   }).length;
-  tabsShowingNotificationsPane.forEach(function(tab) {
+  (tabsByLocator['/notices'] || []).forEach(function(tab) {
     api.tabs.emit(tab, "all_notifications_visited", {
       id: id,
       time: timeStr,
@@ -717,7 +725,7 @@ function getTimeLastRead(n, d) {
 function awaitDeepLink(link, tabId, retrySec) {
   if (link.locator) {
     var tab = api.tabs.get(tabId);
-    if (tab && (link.url || link.nUri).match(hostRe)[1] == tab.url.match(hostRe)[1]) {
+    if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
       log("[awaitDeepLink]", tabId, link)();
       api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: link.locator}, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {
@@ -874,7 +882,7 @@ function subscribe(tab) {
   }
 
   if (session == null) {
-    api.log("[subscribe] user not logged in")
+    log("[subscribe] user not logged in")();
     if (!getStored("user_logout")) { // user did not explicitly log out using our logout process
       ajax("GET", "/ext/authed", function userIsLoggedIn() {
         // user is now logged in

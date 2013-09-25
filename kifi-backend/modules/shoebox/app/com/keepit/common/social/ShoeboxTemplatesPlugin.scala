@@ -12,10 +12,6 @@ class ShoeboxTemplatesPlugin(app: Application) extends DefaultTemplatesPlugin(ap
   override def getLoginPage[A](
       implicit request: Request[A], form: Form[(String, String)], msg: Option[String]): Html = {
     log.info(s"[getLoginPage] request=$request form=$form")
-    if (form != null) { // REMOVEME
-      super.getLoginPage(request, form, msg)
-    } else {
-      views.html.website.welcome(msg = msg.map(Messages(_)) orElse request.flash.get("error"), skipLetMeIn = true)
-    }
+    views.html.website.welcome(msg = msg.map(Messages(_)) orElse request.flash.get("error"), skipLetMeIn = true)
   }
 }

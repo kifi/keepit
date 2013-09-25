@@ -12,7 +12,7 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
   def allActive(implicit session: RSession): Seq[ScrapeInfo]
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo]
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo]
-  def setForRescrapeByRegex(urlRegex: String, within: Int, failureLimit: Int = 0)(implicit session: RSession): Int
+  def setForRescrapeByRegex(urlRegex: String, withinMinutes: Int, failureLimit: Int = 0)(implicit session: RSession): Int
 }
 
 @Singleton
@@ -53,9 +53,9 @@ class ScrapeInfoRepoImpl @Inject() (
     (if (limit > 0) q.take(limit) else q).list
   }
 
-  def setForRescrapeByRegex(urlRegex: String, withinHours: Int, failureLimit: Int = 0)(implicit session: RSession): Int = {
+  def setForRescrapeByRegex(urlRegex: String, withinMinutes: Int, failureLimit: Int = 0)(implicit session: RSession): Int = {
     val now = currentDateTime
-    val withinSeconds = withinHours * 60 * 60
+    val withinSeconds = withinMinutes * 60
     var updateCount = 0
     (for (s <- table if (s.state is ScrapeInfoStates.ACTIVE)
       && (s.failures <= failureLimit)

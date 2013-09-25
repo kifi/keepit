@@ -9,10 +9,10 @@ var api = api || function() {  // idempotent for Chrome
       var kind = msg[0];
       if (kind == "api:respond") {
         var id = msg[1], cb = callbacks[id];
-        log("[onMessage] response:", msg[2] != null ? msg[2] : "")();
+        log("[api:respond]", cb && cb[0] || "", msg[2] != null ? msg[2] : "")();
         if (cb) {
           delete callbacks[id];
-          cb(msg[2]);
+          cb[1](msg[2]);
         }
       } else if (kind == "api:injected") {
         markInjected(msg[1]);
@@ -86,14 +86,23 @@ var api = api || function() {  // idempotent for Chrome
         }
         if (callback) {
           var callbackId = nextCallbackId++;
-          callbacks[callbackId] = callback;
+          callbacks[callbackId] = [type, callback];
         }
         port || createPort();
         port.postMessage([type, data, callbackId]);
       },
       on: function(handlers) {
-        msgHandlers.push(handlers);
-        api.port.emit('api:handling', Object.keys(handlers));
+        if (msgHandlers.indexOf(handlers) < 0) {
+          msgHandlers.push(handlers);
+          api.port.emit('api:handling', Object.keys(handlers));
+        }
+      },
+      off: function(handlers) {
+        for (var i = msgHandlers.length; i--;) {
+          if (msgHandlers[i] === handlers) {
+            msgHandlers.splice(i, 1);
+          }
+        }
       }},
     require: function(paths, callback) {
       if (requireQueue) {

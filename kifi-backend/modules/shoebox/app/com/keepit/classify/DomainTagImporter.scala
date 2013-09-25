@@ -19,7 +19,7 @@ import com.google.inject.{Provides, ImplementedBy, Inject, Singleton}
 
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -82,7 +82,7 @@ private[classify] class DomainTagImportActor @Inject() (
   // the size of the group of domains to insert at a time
   private val GROUP_SIZE = 500
 
- def receive = {
+  def receive = {
     case RefetchAll =>
       try {
         val outputFilename = FILE_FORMAT.format(clock.now.toString(DATE_FORMAT))
@@ -170,6 +170,7 @@ private[classify] class DomainTagImportActor @Inject() (
       } catch {
         case e: Exception => failWithException(REMOVE_TAG_FAILURE, e)
       }
+    case m => throw new UnsupportedActorMessage(m)
   }
 
   private def persistEvent(eventName: String, metaData: JsObject) {

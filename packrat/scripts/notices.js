@@ -20,17 +20,49 @@
 // Notifications should only be marked as seen (and new highlight faded away) if the page is visible
 // (TBD whether focus is also required).
 
-noticesPane = function() {
+panes.notices = function() {
   const PIXELS_FROM_BOTTOM = 40; // load more notifications when this many pixels from the bottom
   const NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
   const NEW_FADE_DURATION = 3000; // length of the fade
 
-  var $notices, $markAll;
+  const handlers = {
+    new_notification: function(n) {
+      log("[new_notification]", n)();
+      showNew([n]);
+      if (n.unread) {
+        $markAll.show();
+      }
+    },
+    missed_notifications: function(arr) {
+      log("[missed_notifications]", arr)();
+      showNew(arr);
+      if (arr.some(function(n) {return n.unread})) {
+        $markAll.show();
+      }
+    },
+    notifications_visited: function(o) {
+      log("[notifications_visited]", o)();
+      markVisited(o.category, o.time, o.locator, o.id);
+      $markAll.toggle(o.numNotVisited > 0);
+    },
+    all_notifications_visited: function(o) {
+      log("[all_notifications_visited]", o)();
+      markAllVisited(o.id, o.time);
+      $markAll.toggle(o.numNotVisited > 0);
+    }};
 
+  var $notices, $markAll;
   return {
-    render: function($container, notices, timeLastSeen, numNotVisited) {
+    render: function($container) {
+      api.port.emit("notifications", function(o) {
+        renderNotices($container, o.notifications, o.timeLastSeen, o.numNotVisited);
+        api.port.on(handlers);
+      });
+    }};
+
+  function renderNotices($container, notices, timeLastSeen, numNotVisited) {
       timeLastSeen = new Date(+new Date(timeLastSeen) + 1000); // hack for old data that did not have millis presision
-      // TODO: unindent below
+
         $notices = $(render("html/metro/notices", {}))
           .append(notices.map(function(n) {
             return renderNotice(n, n.unread && new Date(n.time) > timeLastSeen);
@@ -63,11 +95,10 @@ noticesPane = function() {
         fadeOutNew($notices.find(".kifi-notice-new"));
 
         var $box = $container.closest(".kifi-pane-box").on("kifi:remove", function() {
-          $notices = null;
+          $notices = $markAll = null;
           $(window).off("resize.notices");
-          api.port.emit("notifications_pane", false);
+          api.port.off(handlers);
         });
-        api.port.emit("notifications_pane", true);
 
         $markAll = $box.find(".kifi-pane-mark-notices-read").click(function() {
           var o = $notices.find(".kifi-notice").toArray().reduce(function(o, el) {
@@ -81,29 +112,7 @@ noticesPane = function() {
         if (notices.length && new Date(notices[0].time) > timeLastSeen) {
           api.port.emit("notifications_read", notices[0].time);
         }
-    },
-    update: function(a, kind) {
-      if (!$notices) return;
-      switch(kind) {
-        case "new":
-          console.log("adding new", a)
-          showNew(a);
-          if (a.some(function(n) { return n.unread; })) {
-            $markAll.show();
-          }
-          break;
-        case "markOneVisited":
-          console.log("marking one", a)
-          markVisited(a.category, a.time, a.locator, a.id);
-          $markAll.toggle(a.numNotVisited > 0);
-          break;
-        case "markAllVisited":
-          console.log("making all", a)
-          markAllVisited(a.id, a.time);
-          $markAll.toggle(a.numNotVisited > 0);
-          break;
-      }
-    }};
+  }
 
   function renderNotice(notice, isNew) {
     notice.isNew = isNew;

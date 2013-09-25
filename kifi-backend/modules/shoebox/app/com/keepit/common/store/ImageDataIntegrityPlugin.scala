@@ -3,7 +3,7 @@ package com.keepit.common.store
 import scala.concurrent.duration._
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
@@ -61,6 +61,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
           }
         }
       }
+    case m => throw new UnsupportedActorMessage(m)
   }
 
   private type ImageResponseInfo = ((String, ClientResponse), Option[(String, ClientResponse)])

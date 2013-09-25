@@ -4,7 +4,7 @@ import scala.concurrent.duration._
 
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError, Healthcheck}
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -62,6 +62,6 @@ private[mail] class MailSenderActor @Inject() (
         self ! ProcessMail(mail)
       }
     case ProcessMail(mail) => mailProvider.sendMail(mail)
-    case unknown => throw new Exception("unknown message: %s".format(unknown))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
