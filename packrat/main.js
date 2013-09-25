@@ -534,6 +534,27 @@ api.port.on({
       }
     }
   },
+  open_login_popup: function(o) {
+    var baseUri = webBaseUri();
+    api.popup.open({
+      name: o.id || "kifi-popup",
+      url: o.url,
+      width: 1020,
+      height: 530}, {
+      navigate: function(url) {
+        var window = this;
+        if (url == baseUri + "/#_=_" || url == baseUri + "/") {
+          ajax("GET", "/ext/authed", function userIsLoggedIn() {
+            // user is now logged in
+            authenticate(function() {
+              log("[open_login_popup] closing popup")();
+              window.close();
+            });
+          });
+        }
+      }
+    });
+  },
   remove_notification: function(o) {
     removeNotificationPopups(o.associatedId);
   },
