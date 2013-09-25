@@ -41,7 +41,7 @@ object ApplicationBuild extends Build {
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
-      "org.apache.httpcomponents" % "httpclient" % "4.2.4",
+      "org.apache.httpcomponents" % "httpclient" % "4.3",
       "org.apache.tika" % "tika-parsers" % "1.3",
       "org.apache.commons" % "commons-math3" % "3.1.1",
       "org.apache.zookeeper" % "zookeeper" % "3.4.5",
