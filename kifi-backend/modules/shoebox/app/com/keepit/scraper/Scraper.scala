@@ -70,7 +70,7 @@ class Scraper @Inject() (
   def getBasicArticle(url: String, customExtractor: Option[Extractor] = None): Option[BasicArticle] = {
     val extractor = customExtractor.getOrElse(getExtractor(url))
     try {
-      val fetchStatus = httpFetcher.fetch(url) { input => extractor.process(input) }
+      val fetchStatus = httpFetcher.fetch(url, proxy = getProxy(url)) { input => extractor.process(input) }
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK if !(isUnscrapable(url, fetchStatus.destinationUrl)) => Some(basicArticle(url, extractor))
@@ -229,7 +229,7 @@ class Scraper @Inject() (
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
     try {
-      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince){ input => extractor.process(input) }
+      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, proxy = getProxy(url)){ input => extractor.process(input) }
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
@@ -298,6 +298,7 @@ class Scraper @Inject() (
 
   private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
+  private[this] def getProxy(url: String) = db.readOnly { implicit session => urlPatternRuleRepo.getProxy(url) }
 
   def close() {
     httpFetcher.close()
