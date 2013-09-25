@@ -8,7 +8,7 @@ import org.apache.http.client.entity.GzipDecompressingEntity
 import org.apache.http.client.entity.DeflateDecompressingEntity
 import org.apache.http.HttpHeaders.{CONTENT_TYPE, IF_MODIFIED_SINCE, LOCATION}
 import org.apache.http._
-import org.apache.http.impl.client.HttpClientBuilder
+import org.apache.http.impl.client.{BasicCredentialsProvider, HttpClientBuilder}
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.protocol.BasicHttpContext
 import org.apache.http.protocol.HttpContext
@@ -19,9 +19,12 @@ import com.keepit.common.net.URI
 import org.apache.http.config.RegistryBuilder
 import org.apache.http.conn.socket.{PlainConnectionSocketFactory, ConnectionSocketFactory}
 import org.apache.http.client.config.RequestConfig
+import com.keepit.model.HttpProxy
+import org.apache.http.auth.{UsernamePasswordCredentials, AuthScope}
+import org.apache.http.client.protocol.HttpClientContext
 
 trait HttpFetcher {
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
   def close()
 }
 
@@ -36,12 +39,10 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
   }
   cm.setMaxTotal(100)
 
-  val defaultRequestConfigBuilder = RequestConfig.custom()
-  defaultRequestConfigBuilder.setConnectTimeout(connectionTimeout)
-  defaultRequestConfigBuilder.setSocketTimeout(soTimeOut)
+  val defaultRequestConfig = RequestConfig.custom().setConnectTimeout(connectionTimeout).setSocketTimeout(soTimeOut).build()
 
-  val httpClientBuilder = HttpClientBuilder.create()
-  httpClientBuilder.setDefaultRequestConfig(defaultRequestConfigBuilder.build)
+  private val httpClientBuilder = HttpClientBuilder.create()
+  httpClientBuilder.setDefaultRequestConfig(defaultRequestConfig)
   httpClientBuilder.setConnectionManager(cm)
   httpClientBuilder.setUserAgent(userAgent)
 
@@ -90,17 +91,29 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
 
   val httpClient = httpClientBuilder.build()
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
 
     val httpGet = new HttpGet(url)
+    val httpContext = new BasicHttpContext()
+
+    proxy.map { httpProxy =>
+      val requestConfigWithProxy = RequestConfig.copy(defaultRequestConfig).setProxy(new HttpHost(httpProxy.hostname, httpProxy.port, httpProxy.scheme)).build()
+      httpGet.setConfig(requestConfigWithProxy)
+      for {
+        user <- httpProxy.username
+        password <- httpProxy.password
+      } yield {
+        val credentials = new BasicCredentialsProvider()
+        credentials.setCredentials(new AuthScope(httpProxy.hostname, httpProxy.port), new UsernamePasswordCredentials(user, password))
+        httpContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credentials)
+      }
+    }
 
     ifModifiedSince.foreach{ ifModifiedSince =>
       httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.toHttpHeaderString)
     }
 
-    log.info("executing request " + httpGet.getURI())
-
-    val httpContext = new BasicHttpContext()
+    log.info("executing request " + httpGet.getURI() + proxy.map(httpProxy => s" via ${httpProxy.alias}").getOrElse(""))
 
     httpContext.setAttribute("scraper_destination_url", url)
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
