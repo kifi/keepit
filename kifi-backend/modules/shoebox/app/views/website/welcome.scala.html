@@ -1,5 +1,5 @@
 @(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None,
-    msg: Option[String] = None, skipLetMeIn: Boolean = false)
+    msg: Option[String] = None, skipLetMeIn: Boolean = false, passwordAuth: Boolean = false)
 
 @helper.main(title = "Welcome to Kifi!", hiddenElements = Seq("header"), head = Html(s"""
     <meta property="og:url" content="https://www.kifi.com${id map (com.keepit.controllers.website.routes.InviteController.acceptInvite(_).url) getOrElse com.keepit.controllers.website.routes.HomeController.home()}">
@@ -41,6 +41,16 @@
       }
       </div>
       <div class="powered">Powered by Kifi Konnect</div>
+      @if(passwordAuth) {
+        <a href="javascript:" class="btn" id="userpass-login">Log in with username/password</a>
+        <div class="userpass">
+          <form method="post" action="@com.keepit.controllers.core.routes.AuthController.login("userpass")">
+            <input type="text" placeholder="Email Address" name="username"><br>
+            <input type="password" placeholder="Password" name="password"><br>
+            <input type="submit" value="Log in">
+          </form>
+        </div>
+      }
     </div>
   </section>
 }
@@ -49,6 +59,9 @@
 $(function() {
   $("#letmein").click(function() {
     $(".welcome_btn").addClass("clicked");
+  });
+  $("#userpass-login").click(function() {
+    $(".userpass").addClass("clicked");
   });
 });
 </script>
