@@ -81,6 +81,10 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def markPending(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession) : Unit
 
+  def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message], newJson: JsValue)(implicit session: RWSession) : Unit
+
+  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession) : Seq[UserThread]
+
 }
 
 
@@ -257,5 +261,12 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationPending).update(true)
   }
 
+  def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message], newJson: JsValue)(implicit session: RWSession) : Unit = {
+    (for (row <- table if row.user===userId &&row.thread===threadId && row.lastMsgFromOther===messageId) yield row.lastNotification).update(newJson)
+  }
+
+  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession) : Seq[UserThread] = {
+    (for (row <- table if row.uriId===uriId) yield row).list
+  }
 
 }

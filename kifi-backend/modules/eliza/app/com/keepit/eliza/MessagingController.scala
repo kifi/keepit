@@ -185,6 +185,27 @@ class MessagingController @Inject() (
     })
   }
 
+  def verifyAllNotifications() = Action { request => //Use with caution, very expensive! 
+    //Will need to change when we have detached threads.
+    //currently only verifies 
+    SafeFuture{
+      log.warn("Starting notification verification!")
+      val userThreads : Seq[UserThread] = db.readOnly{ implicit session => userThreadRepo.all }
+      val nUrls : Map[Id[MessageThread], Option[String]] = db.readOnly{ implicit session => threadRepo.all } map { thread => (thread.id.get, thread.url) } toMap
+      
+      userThreads.foreach{ userThread =>
+        if (userThread.uriId.isDefined) {
+          nUrls(userThread.thread).foreach{ correctNUrl =>
+            log.warn(s"Verifying notification on user thread ${userThread.id.get}")
+            uriNormalizationUpdater.fixLastNotificationJson(userThread, correctNUrl)
+          }
+        }
+      }
+    }
+
+    Status(202)
+  }
+
 
   def createGlobalNotificaiton(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
     db.readWrite { implicit session =>
