@@ -7,7 +7,7 @@ CREATE TABLE http_proxy (
     state varchar(20) NOT NULL,
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
-    alias varchar(256) NOT NULL,
+    alias varchar(32) NOT NULL,
     hostname varchar(2048) NOT NULL,
     port int NOT NULL,
     scheme varchar(32) NOT NULL,
