@@ -22,6 +22,8 @@ POST  /internal/eliza/sendToAllUsers            @com.keepit.eliza.ElizaControlle
 GET   /internal/eliza/connectedClientCount      @com.keepit.eliza.ElizaController.connectedClientCount
 POST  /internal/eliza/sendGlobalNotification    @com.keepit.eliza.MessagingController.sendGlobalNotification
 
+GET   /internal/eliza/verifyAllNotifications    @com.keepit.eliza.MessagingController.verifyAllNotifications
+
 POST /internal/eliza/importThread               @com.keepit.eliza.MessagingController.importThread()
 
 

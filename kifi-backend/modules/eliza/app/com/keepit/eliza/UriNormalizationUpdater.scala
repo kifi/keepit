@@ -15,6 +15,8 @@ import akka.actor.ActorSystem
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
+import play.api.libs.json.{Json, JsObject}
+
 import com.google.inject.{Inject, Singleton}
 
 
@@ -42,14 +44,37 @@ class UriNormalizationUpdater @Inject() (
       case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSequenceNumber && serviceDiscovery.isLeader) => {
         val updatesFuture = shoebox.getNormalizedUriUpdates(localSequenceNumber, remoteSequenceNumber)
         updatesFuture.map{ updates =>
-          updateTables(updates)
-          system.scheduler.scheduleOnce(1 minutes){
-            updateTables(updates)
-          } 
+          applyUpdates(updates)
           db.readWrite{ implicit session => renormRepo.addNew(remoteSequenceNumber, updates.size, updates.map{_._1}) }
         }
       }
       case _ => 
+    }
+  }
+
+  private def applyUpdates(updates: Seq[(Id[NormalizedURI], NormalizedURI)]) : Unit = {
+    val userThreadUpdates = db.readOnly { implicit session => updates.map{ //Note: This will need to change when we have detached threads!
+        case (oldId, newNUri) => (userThreadRepo.getByUriId(oldId), newNUri.url)
+      }
+    }
+    updateTables(updates)
+    userThreadUpdates.map{
+      case (userThreads, newNUrl) => userThreads.map(fixLastNotificationJson(_, newNUrl))
+    }
+    system.scheduler.scheduleOnce(1 minutes){
+      applyUpdates(updates)
+    } 
+  }
+
+  def fixLastNotificationJson(userThread: UserThread, newNUrl: String) : Unit = {
+    val newJson = userThread.lastNotification match {
+      case obj: JsObject => obj.deepMerge(Json.obj("url"->newNUrl))
+      case x => x
+    }
+    userThread.lastMsgFromOther.foreach { msgId =>
+      db.readWrite{ implicit session =>
+        userThreadRepo.updateLastNotificationForMessage(userThread.user, userThread.thread, msgId, newJson)
+      }
     }
   }
 
