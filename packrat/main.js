@@ -2,7 +2,10 @@ var api = api || require("./api");
 var log = log || api.log;
 
 const NOTIFICATION_BATCH_SIZE = 10;
-const hostRe = /^https?:\/\/([^\/]*)/;
+
+//                            | sub |    |------- country domain -------|-- generic domain --|           |-- port? --|
+const domainRe = /^https?:\/\/[^\/]*?((?:[^.\/]+\.[^.\/]{2,3}\.[^.\/]{2}|[^.\/]+\.[^.\/]{2,6}|localhost))(?::\d{2,5})?(?:$|\/)/;
+const hostRe = /^https?:\/\/([^\/]+)/;
 
 var tabsByLocator = {};
 var notificationsCallbacks = [];
@@ -701,7 +704,7 @@ function getTimeLastRead(n, d) {
 function awaitDeepLink(link, tabId, retrySec) {
   if (link.locator) {
     var tab = api.tabs.get(tabId);
-    if (tab && (link.url || link.nUri).match(hostRe)[1] == tab.url.match(hostRe)[1]) {
+    if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
       log("[awaitDeepLink]", tabId, link)();
       api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: link.locator}, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {
