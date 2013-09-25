@@ -64,7 +64,7 @@ class ExtPageController @Inject() (
     val url = (request.body \ "url").as[String]
 
     val (nUriStr, nUri, domain, bookmark, position, neverOnSite, host) = db.readOnly { implicit session =>
-      val (nUriStr, nUri) = normalizedURIRepo.getByUriOrElsePrenormalize(url) match {
+      val (nUriStr, nUri) = normalizedURIRepo.getByUriOrPrenormalize(url) match {
         case Left(nUri) => (nUri.url, Some(nUri))
         case Right(pUri) => (pUri, None)
       }
