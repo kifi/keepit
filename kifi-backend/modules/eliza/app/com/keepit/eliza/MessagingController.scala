@@ -247,7 +247,7 @@ class MessagingController @Inject() (
   }
 
 
-  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String) : Seq[ElizaThreadInfo]  = {
+  private[eliza] def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String) : Seq[ElizaThreadInfo]  = {
     //get all involved users
     val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.all).getOrElse(Set())}
     //get all basic users
@@ -382,7 +382,7 @@ class MessagingController @Inject() (
   }
 
 
-  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urls: JsObject, titleOpt: Option[String], messageText: String) : Message = {
+  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urls: JsObject, titleOpt: Option[String], messageText: String) : (MessageThread, Message) = {
     val participants = recipients + from
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
@@ -402,7 +402,7 @@ class MessagingController @Inject() (
       }
       thread
     }
-    sendMessage(from, thread, messageText, urlOpt, nUriOpt)
+    (thread, sendMessage(from, thread, messageText, urlOpt, nUriOpt))
 
   }
 
