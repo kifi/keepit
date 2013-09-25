@@ -315,13 +315,19 @@ class Scraper @Inject() (
   )
 
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect])(implicit session: RWSession): NormalizedURI = {
-    val (permanentRedirects, otherRedirects) = redirects.partition(_.isPermanent)
-    val withRestriction = otherRedirects.headOption.map { redirect => uri.copy(restriction = Some(Restriction(redirect.statusCode))) }
+    val immediateRedirect = redirects.find(_.currentLocation == uri.url)
+
+    val withUpdatedRestriction = immediateRedirect.map(redirect => Restriction.http(redirect.statusCode)) match {
+      case Some(httpRestriction) if Restriction.redirects.contains(httpRestriction) => addRedirectRestriction(uri, httpRestriction)
+      case _ => removeRedirectRestriction(uri)
+    }
+
     val toBeRedirected = for {
-      redirect <- permanentRedirects.find(redirect => redirect.isAbsolute && redirect.currentLocation == uri.url)
-      toBeRedirected <- recordPermanentRedirect(withRestriction.getOrElse(uri), redirect)
+      redirect <- immediateRedirect if redirect.isPermanent && redirect.isAbsolute
+      toBeRedirected <- recordPermanentRedirect(withUpdatedRestriction, redirect)
     } yield toBeRedirected
-    toBeRedirected orElse withRestriction getOrElse uri
+
+    toBeRedirected getOrElse withUpdatedRestriction
   }
 
   private def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit session: RWSession): Option[NormalizedURI] = {
@@ -336,4 +342,11 @@ class Scraper @Inject() (
       toBeRedirected
     }
   }
+
+  private def removeRedirectRestriction(uri: NormalizedURI): NormalizedURI = uri.restriction match {
+    case Some(restriction) if Restriction.redirects.contains(restriction) => uri.copy(restriction = None)
+    case _ => uri
+  }
+
+  private def addRedirectRestriction(uri: NormalizedURI, restriction: Restriction): NormalizedURI = uri.copy(restriction = Some(restriction))
 }
