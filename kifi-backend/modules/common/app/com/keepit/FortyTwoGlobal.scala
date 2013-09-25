@@ -66,6 +66,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   }
 
   override def onRouteRequest(request: RequestHeader) = super.onRouteRequest(request).orElse {
+    // todo: Check if there is a handler before 301ing.
     Some(request.path).filter(_.endsWith("/")).map(p => Action(Results.MovedPermanently(p.dropRight(1))))
   }
 

@@ -40,12 +40,18 @@ kifiDialog = function() {
         removeDialog();
       });
       $dialog.on('click', '.kifi-facebook', function() {
-        document.location = "https://www.kifi.com/login/facebook";
+        api.port.emit("open_login_popup", {
+          id: "kifi-authenticate",
+          url: "https://www.kifi.com/login/facebook"
+        });
         removeDialog();
         return false;
       });
       $dialog.on('click', '.kifi-linkedin', function() {
-        document.location = "https://www.kifi.com/login/linkedin";
+        api.port.emit("open_login_popup", {
+          id: "kifi-authenticate",
+          url: "https://www.kifi.com/login/linkedin"
+        });
         removeDialog();
         return false;
       });
