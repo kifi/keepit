@@ -14,12 +14,13 @@ import play.modules.statsd.api.Statsd
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getScraped(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
-  def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI]
+  def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
+  def getByUriOrElsePrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String]
+  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
+  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
 }
 
 @Singleton
@@ -125,23 +126,29 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     }
   }
 
-  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    Statsd.time(key = "normalizedURIRepo.getByUri") {
-      getByNormalizedUrl(prenormalize(url)) map {
+  def getByUriOrElsePrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String] = {
+    val prenormalizedUrl = prenormalize(url)
+    val normalizedUri = getByNormalizedUrl(prenormalizedUrl) map {
         case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
         case uri => uri
       }
+    normalizedUri.map(Left.apply).getOrElse(Right(prenormalizedUrl))
+  }
+
+
+  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
+    Statsd.time(key = "normalizedURIRepo.getByUri") {
+      getByUriOrElsePrenormalize(url: String).left.toOption
     }
   }
 
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
     Statsd.time(key = "normalizedURIRepo.internByUri") {
-      getByUri(url) match {
-        case Some(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(uri, isNew = false, candidates)); uri
-        case None => {
-          val normalizedUrl = prenormalize(url)
-          val normalization = findNormalization(normalizedUrl)
-          val newUri = save(NormalizedURI.withHash(normalizedUrl = normalizedUrl, normalization = normalization))
+      getByUriOrElsePrenormalize(url) match {
+        case Left(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(uri, isNew = false, candidates)); uri
+        case Right(prenormalizedUrl) => {
+          val normalization = findNormalization(prenormalizedUrl)
+          val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
           session.onTransactionSuccess(normalizationServiceProvider.get.update(newUri, isNew = true, candidates))
           newUri
@@ -150,7 +157,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     }
   }
   
-  def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RWSession): Seq[NormalizedURI] = {
+  def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI] = {
     (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
 
