@@ -194,7 +194,7 @@ POST     /admin/search/spell/buildDict         @com.keepit.controllers.admin.Adm
 GET     /admin/search/spell         @com.keepit.controllers.admin.AdminSpellCorrectorController.spellController
 GET     /admin/search/spell/test-correct  @com.keepit.controllers.admin.AdminSpellCorrectorController.correctSpelling(query: String)
 GET     /admin/search/scrape        @com.keepit.controllers.admin.ScraperController.searchScraper
-GET     /admin/search/scrape/regex  @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: String ?= "", withinHours: Int ?= 8)
+GET     /admin/search/scrape/regex  @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: String ?= "", withinMinutes: Int ?= 60)
 GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.AdminSearchPerformanceController.viewSearchPerformance
 
 
