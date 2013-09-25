@@ -18,7 +18,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getScraped(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
-  def getByUriOrElsePrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String]
+  def getByUriOrPrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String]
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
 }
@@ -126,7 +126,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     }
   }
 
-  def getByUriOrElsePrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String] = {
+  def getByUriOrPrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String] = {
     val prenormalizedUrl = prenormalize(url)
     val normalizedUri = getByNormalizedUrl(prenormalizedUrl) map {
         case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
@@ -138,13 +138,13 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
     Statsd.time(key = "normalizedURIRepo.getByUri") {
-      getByUriOrElsePrenormalize(url: String).left.toOption
+      getByUriOrPrenormalize(url: String).left.toOption
     }
   }
 
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
     Statsd.time(key = "normalizedURIRepo.internByUri") {
-      getByUriOrElsePrenormalize(url) match {
+      getByUriOrPrenormalize(url) match {
         case Left(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(uri, isNew = false, candidates)); uri
         case Right(prenormalizedUrl) => {
           val normalization = findNormalization(prenormalizedUrl)
