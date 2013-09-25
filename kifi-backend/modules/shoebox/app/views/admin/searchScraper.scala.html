@@ -8,7 +8,7 @@
 
 <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperController.rescrapeByRegex()" method = "GET">
       <input type="text" name="urlRegex" placeholder="Url pattern e.g %.pdf">
-      <input type="number" min="0" name="withinHours" placeholder="Within 8 hours">
+      <input type="number" min="0" name="withinMinutes" placeholder="Within 30 minutes">
     <button type="submit" class="btn">Rescrape</button>
   <div class="text-success">
     @flash.get("success").getOrElse("")
