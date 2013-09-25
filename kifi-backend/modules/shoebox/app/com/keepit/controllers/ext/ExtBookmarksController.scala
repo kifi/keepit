@@ -10,6 +10,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.shoebox.BrowsingHistoryTracker
 import play.api.libs.json._
+import com.keepit.common.akka.SafeFuture
 
 private case class SendableBookmark(
   id: ExternalId[Bookmark],
@@ -84,13 +85,15 @@ class ExtBookmarksController @Inject() (
     bookmarkSource match {
       case Some("PLUGIN_START") => Forbidden
       case _ =>
-        log.info("adding bookmarks of user %s".format(userId))
-        val experiments = request.experiments
-        val user = db.readOnly { implicit s => userRepo.get(userId) }
-        val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
-        browsingHistoryTracker.add(userId, bookmarks.map(_.uriId))
-        searchClient.updateURIGraph()
-        Ok(JsObject(Seq()))
+        SafeFuture {
+          log.info("adding bookmarks of user %s".format(userId))
+          val experiments = request.experiments
+          val user = db.readOnly { implicit s => userRepo.get(userId) }
+          val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
+          browsingHistoryTracker.add(userId, bookmarks.map(_.uriId))
+          searchClient.updateURIGraph()
+        }
+        Status(202)
     }
   }
 
