@@ -65,6 +65,7 @@ class MainQueryParser(
 
   override def parse(queryText: CharSequence): Option[Query] = {
     super.parse(queryText).map{ query =>
+      val numStemmedTerms = getStemmedTerms.size
       if (numStemmedTerms <= 0) query
       else {
         val phrases = if (numStemmedTerms > 1 && phraseBoost > 0.0f) {

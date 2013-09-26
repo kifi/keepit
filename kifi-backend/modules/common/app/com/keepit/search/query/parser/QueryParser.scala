@@ -17,9 +17,7 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
 
   protected val stemmedTerms = new ArrayBuffer[Term]
 
-  def numStemmedTerms = stemmedTerms.size
-
-  def getStemmedTerms = stemmedTerms
+  def getStemmedTerms: IndexedSeq[Term] = stemmedTerms
 
   def parse(queryText: CharSequence): Option[Query]
 
