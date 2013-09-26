@@ -5,7 +5,7 @@ import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
 import reactivemongo.bson.{BSONValue, BSONDouble, BSONString, BSONDocument, BSONArray, BSONDateTime}
-import reactivemongo.core.commands.{PipelineOperator, Match, GroupField, SumValue, Unwind, Project}
+import reactivemongo.core.commands.{PipelineOperator, Match, GroupField, SumValue, Unwind, Project, Sort, Descending}
 
 
 sealed trait ComparisonOperator {
@@ -97,7 +97,8 @@ class GroupedCountMetricDefinition(eventsToConsider: Set[UserEventType], context
 
     val grouping = GroupField(groupField)("count" -> SumValue(1))
 
-    Seq(timeWindowSelector, eventSelector, contextSelector, grouping, Unwind("_id"))
+
+    Seq(timeWindowSelector, eventSelector, contextSelector, grouping, Unwind("_id"), Sort(Seq(Descending("count"))))
   }
 }
 
