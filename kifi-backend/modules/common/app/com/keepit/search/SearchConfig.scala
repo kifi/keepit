@@ -14,6 +14,7 @@ object SearchConfig {
     Map[String, String](
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
+      "concatBoost" -> "0.0",
       "similarity" -> "default",
       "svWeightMyBookMarks" -> "1",
       "svWeightBrowsingHistory" -> "2",
@@ -42,6 +43,7 @@ object SearchConfig {
     Map[String, String](
       "phraseBoost" -> "boost value for the detected phrase [0f,1f]",
       "siteBoost" -> "boost value for matching website names and domains",
+      "concatBoost" -> "boost value for concatenated terms",
       "similarity" -> "similarity characteristics",
       "svWeightMyBookMarks" -> "semantics vector weight for my bookmarks",
       "svWeightBrowsingHistory" -> "semantic vector weight for browsing history",
