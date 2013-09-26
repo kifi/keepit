@@ -104,7 +104,7 @@ class GroupedEventCountMetricDefinition(eventsToConsider: EventSet, contextRestr
 
     val grouping = GroupField(groupField)("count" -> SumValue(1))
 
-    if (breakDown) Seq(timeWindowSelector, eventSelector, contextSelector, grouping, Unwind("_id"), Sort(Seq(Descending("count"))))
+    if (breakDown) Seq(timeWindowSelector, eventSelector, contextSelector, Unwind(groupField), grouping, Sort(Seq(Descending("count"))))
     else Seq(timeWindowSelector, eventSelector, contextSelector, grouping, Sort(Seq(Descending("count"))))
   }
 }
