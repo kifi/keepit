@@ -6,8 +6,9 @@ import com.keepit.common.akka.SafeFuture
 
 import reactivemongo.bson.BSONDocument
 import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.core.commands.{PipelineOperator, Aggregate}
 
-import scala.concurrent.Promise
+import scala.concurrent.{Promise, Future}
 import scala.concurrent.ExecutionContext.Implicits.global //Might want to change this to a custom play one
 import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
 
@@ -41,6 +42,12 @@ trait MongoRepo[T] {
   def insert(obj: T) : Unit = {
     val bson = toBSON(obj)
     safeInsert(bson)
+  }
+
+  def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
+    val collectionName = collection.name
+    val db = collection.db
+    db.command(Aggregate(collectionName,command)) 
   }
 }
 
