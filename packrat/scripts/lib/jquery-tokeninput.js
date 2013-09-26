@@ -325,8 +325,9 @@ $.TokenList = function (input, url_or_data, settings) {
                             hidden_input.change();
                         } else if(previous_token.length) {
                             select_token($(previous_token.get(0)));
+                        } else {
+                            hide_dropdown();
                         }
-
                         return false;
                     } else if($(this).val().length === 1) {
                         hide_dropdown();
@@ -363,7 +364,7 @@ $.TokenList = function (input, url_or_data, settings) {
 
                 case KEY.ESCAPE:
                   hide_dropdown();
-                  return true;
+                  return false;
 
                 default:
                     if(String.fromCharCode(event.which)) {
@@ -834,14 +835,17 @@ $.TokenList = function (input, url_or_data, settings) {
 
     // Highlight the query part of the search term
     function highlight_term(value, term) {
-        return value.replace(
-          new RegExp(
-            "(?![^&;]+;)(?!<[^<>]*)(" + regexp_escape(term) + ")(?![^<>]*>)(?![^&;]+;)",
-            "gi"
-          ), function(match, p1) {
-            return "<b>" + escapeHTML(p1) + "</b>";
+        var ret = "";
+        for (var i = 0; i <= value.length; i++) {
+          var cval = value.substr(i, term.length);
+          if (0 === term.localeCompare(cval, undefined, {usage: "search", sensitivity: "base"})) {
+            ret += "<b>" + escapeHTML(cval) + "</b>";
+            i += cval.length-1;
+          } else {
+            ret += value.charAt(i);
           }
-        );
+        }
+        return ret;
     }
 
     function find_value_and_highlight_term(template, value, term) {
@@ -899,6 +903,8 @@ $.TokenList = function (input, url_or_data, settings) {
             if($(input).data("settings").noResultsText) {
                 dropdown.html("<p>" + escapeHTML($(input).data("settings").noResultsText) + "</p>");
                 show_dropdown();
+            } else {
+              hide_dropdown();
             }
         }
     }
@@ -998,9 +1004,51 @@ $.TokenList = function (input, url_or_data, settings) {
                 $.ajax(ajax_params);
             } else if($(input).data("settings").local_data) {
                 // Do the search through local data
-                var results = $.grep($(input).data("settings").local_data, function (row) {
-                    return row[$(input).data("settings").propertyToSearch].toLowerCase().indexOf(query.toLowerCase()) > -1;
-                });
+                var results = [];
+                $(input).data("settings").local_data.forEach(function (row) {
+                    var terms = $.trim(query.toLowerCase()).split(/\s+/);
+                    var n = $.trim(row[$(input).data("settings").propertyToSearch]).split(/\s+/);
+
+                    var score = 0;
+                    var termsPresent = 0;
+                    for (var tIdx = 0; tIdx < terms.length; tIdx++) {
+                      var term = terms[tIdx].toLowerCase();
+                      var termPresent = false;
+                      var tScore = 0;
+                      for (var nIdx = 0; nIdx < n.length; nIdx++) {
+                        var name = n[nIdx].toLowerCase();
+                        if (0 === term.localeCompare(name.substring(0, term.length), undefined, {usage: "search", sensitivity: "base"})) {
+                          if (name == term) tScore += 4; // exact same
+                          else if (name.length == term.length) tScore += 3; // locale same
+
+                          if (tIdx == nIdx) tScore += 5;
+                          else if (tIdx < nIdx) tScore += 3;
+                          else tScore += 2;
+                          termPresent = true;
+                        }
+                        if (!termPresent && name.indexOf(term) > -1) {
+                          termPresent = true;
+                          tScore += 1;
+                        }
+                        if (termPresent) break;
+                      }
+                      if (termPresent) {
+                        score += tScore;
+                        termsPresent++;
+                      } else {
+                        break;
+                      }
+                    }
+                    if (termsPresent != terms.length) {
+                      score = 0;
+                    }
+
+                    if (row[$(input).data("settings").propertyToSearch].toLowerCase().indexOf(query.toLowerCase()) > -1) {
+                      score += 2;
+                    }
+                    if (score > 0) results.push({score: score, row: row})
+                })
+                results = results.sort(function(a, b) { return b.score - a.score; }).map(function (a) { return a.row; });
 
                 cache.add(cache_key, results);
                 if($.isFunction($(input).data("settings").onResult)) {
