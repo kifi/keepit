@@ -1461,6 +1461,16 @@ $(function() {
 	}
 
 	var hideAddCollTimeout;
+
+	// closes the detail pane when user clicks outside of the pane/keep
+	$(document).on('click', function(e) {
+		var $target = $(e.target);
+		if (!(e.isDefaultPrevented() || $target.closest('.detail,.keep,:focusable').length)) {
+			if ($main.find('.keep.detailed:not(.selected)').removeClass('detailed').length) {
+				updateKeepDetails();
+			}
+		}
+	});
 	$detail.on('click', '.page-x', function() {
 		$main.find('.keep.detailed').removeClass('detailed');
 		hideKeepDetails();
