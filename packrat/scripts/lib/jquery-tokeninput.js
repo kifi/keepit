@@ -1025,8 +1025,7 @@ $.TokenList = function (input, url_or_data, settings) {
                           else if (tIdx < nIdx) tScore += 3;
                           else tScore += 2;
                           termPresent = true;
-                        }
-                        if (!termPresent && name.indexOf(term) > -1) {
+                        } else if (name.indexOf(term) > -1) {
                           termPresent = true;
                           tScore += 1;
                         }
