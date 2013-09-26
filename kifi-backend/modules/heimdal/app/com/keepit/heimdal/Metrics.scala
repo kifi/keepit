@@ -67,19 +67,21 @@ case class OrContextRestriction(restrictions: ContextRestriction*) extends Conte
   def toBSONMatchDocument: BSONDocument = BSONDocument("$or" -> BSONArray(restrictions.map(_.toBSONMatchDocument)))
 }
 
+case object NoContextRestriction extends ContextRestriction {
+  def toBSONMatchDocument: BSONDocument = BSONDocument()
+}
 
-// sealed trait UserSet
-// case class SpecificUserSet(ids: Set[Long]) extends UserSet
-// case object AllUsers extends UserSet
+
+
 
 sealed trait MetricDefinition {
-  protected def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): Seq[PipelineOperator]
+  def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): Seq[PipelineOperator]
 }
 
 sealed trait SimpleMetricDefinition extends MetricDefinition
 
 class GroupedCountMetricDefinition(eventsToConsider: Set[UserEventType], contextRestriction: ContextRestriction, groupField: String) extends SimpleMetricDefinition {
-  protected def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): Seq[PipelineOperator] = {
+  def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): Seq[PipelineOperator] = {
     val timeWindowSelector = Match(BSONDocument(
       "time" -> BSONDocument(
         "$gte" -> BSONDateTime(startTime.getMillis),
@@ -103,17 +105,9 @@ class SimpleCountMetricDefinition(eventsToConsider: Set[UserEventType], contextR
   extends GroupedCountMetricDefinition(eventsToConsider, contextRestriction, "_") //This is bit of a hack to keep it dry. Could be done more efficiently with "find(...).count()". (-Stephen)
 
 
-//manager takes metrics, stores their type and definition and configuration in db (metric repo) (won't change on code cahnge!)
-//manager iterates over all metrics every ? seconds and updates them one tipe step one at a time.
 
-//metric controller can add metrics through json post endpoint, query metrics through get endpoint (name, time window, time start, time step) will compute from exiting data by averaging
 
-//dashboard manager uploads to geckoboard (and others)
 
-// sealed trait Metric
-
-// sealed trait SnapshotMetric 
-// sealed trait ContinuousMetric
 
 
 
