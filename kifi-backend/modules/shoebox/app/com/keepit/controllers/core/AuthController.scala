@@ -1,14 +1,20 @@
 package com.keepit.controllers.core
 
+import com.google.inject.Inject
 import com.keepit.common.controller.{ActionAuthenticator, ShoeboxServiceController}
+import com.keepit.common.db.slick.Database
+import com.keepit.model.UserCredRepo
 
+import play.api.data.Forms._
+import play.api.data._
 import play.api.http.HeaderNames
 import play.api.libs.json.Json
 import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
+import securesocial.core.providers.utils.GravatarHelper
 
-class AuthController extends ShoeboxServiceController {
+class AuthController @Inject() (db: Database, userCredRepo: UserCredRepo) extends ShoeboxServiceController {
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
@@ -54,5 +60,49 @@ class AuthController extends ShoeboxServiceController {
         res.withSession(if (isLogin) getSession(res) - ActionAuthenticator.FORTYTWO_USER_ID else getSession(res, true))
       case res => res
     }
+  }
+
+  private case class RegistrationInfo(email: String, password: String, firstName: String, lastName: String)
+
+  private val emailPasswordForm = Form[RegistrationInfo](
+    mapping(
+      "email" -> email.verifying("Email is invalid", email => db.readOnly { implicit s =>
+        userCredRepo.findByEmailOpt(email).isEmpty
+      }),
+      "firstname" -> nonEmptyText,
+      "lastname" -> nonEmptyText,
+      "password" -> tuple("1" -> nonEmptyText, "2" -> nonEmptyText)
+        .verifying("Passwords do not match", pw => pw._1 == pw._2).transform(_._1, (a: String) => (a, a))
+    )
+    (RegistrationInfo.apply)
+    (RegistrationInfo.unapply)
+  )
+
+  def signup() = Action { implicit request =>
+    Ok(views.html.website.signup())
+  }
+
+  def handleSignup() = Action { implicit request =>
+    emailPasswordForm.bindFromRequest.fold(
+      formWithErrors => BadRequest(views.html.website.signup(Some(formWithErrors.errors.mkString(", ")))),
+      { case RegistrationInfo(email, firstName, lastName, password) =>
+        val identity: Identity = SocialUser(
+          identityId = IdentityId(email, "userpass"),
+          firstName = firstName,
+          lastName = lastName,
+          fullName = s"$firstName $lastName",
+          email = Some(email),
+          avatarUrl = GravatarHelper.avatarFor(email),
+          authMethod = AuthenticationMethod.UserPassword,
+          passwordInfo = Some(Registry.hashers.currentHasher.hash(password))
+        )
+        UserService.save(identity)
+        Authenticator.create(identity).fold(
+          error => InternalServerError(views.html.website.signup(Some("Cannot create user"))),
+          authenticator => Redirect("/")
+            .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
+            .withCookies(authenticator.toCookie)
+        )
+     })
   }
 }
