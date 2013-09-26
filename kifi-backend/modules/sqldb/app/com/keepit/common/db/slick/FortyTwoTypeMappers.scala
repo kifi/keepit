@@ -149,6 +149,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Collection](profile)
   }
 
+  implicit object HttpProxyIdTypeMapper extends BaseTypeMapper[Id[HttpProxy]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[HttpProxy](profile)
+  }
+
   //States
   implicit object NormalizedURIStateTypeMapper extends BaseTypeMapper[State[NormalizedURI]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI](profile)

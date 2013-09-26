@@ -25,16 +25,19 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
     case Some(error) =>
       {<line method="-------------" file="-----------" number=""/>
        <line method="" file={"Cause: " + error.toString} number=""/>} ++
-      formatStacktrace(error.getStackTrace) ++
+      formatStacktrace(error) ++
       formatCauseStacktrace(Option(error.getCause))
     case None =>
       Seq()
   }
 
-  private def formatStacktrace(traceElements: Array[StackTraceElement]) =
-    traceElements.filter(e => e != null && e.getFileName != null && !e.getFileName.contains("Airbrake")).map(e => {
-      <line method={ignoreAnonfun(e.getClassName) + "#" + e.getMethodName} file={e.getFileName} number={e.getLineNumber.toString}/>
-    })
+  private def formatStacktrace(error: Throwable) = {
+    <line method={error.toString} file="-----------" number=""/> ++ {
+      error.getStackTrace.filter(e => e != null && e.getFileName != null && !e.getFileName.contains("Airbrake")).map(e => {
+        <line method={ignoreAnonfun(e.getClassName) + "#" + e.getMethodName} file={e.getFileName} number={e.getLineNumber.toString}/>
+      })
+    }
+  }
 
   private def ignoreAnonfun(klazz: String) = klazz.
     replaceAll("""\$\$anonfun.*""", "[a]").
@@ -75,7 +78,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
       <class>{causeError.getClass.getName}</class>
       <message>{ ( message.getOrElse("") + " " + causeError.toString()).trim }</message>
       <backtrace>
-        { formatStacktrace(error.getStackTrace) ++ formatCauseStacktrace(Option(error.getCause)) }
+        { formatStacktrace(error) ++ formatCauseStacktrace(Option(error.getCause)) }
       </backtrace>
     </error>
 

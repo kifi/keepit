@@ -185,6 +185,27 @@ class MessagingController @Inject() (
     })
   }
 
+  def verifyAllNotifications() = Action { request => //Use with caution, very expensive! 
+    //Will need to change when we have detached threads.
+    //currently only verifies 
+    SafeFuture{
+      log.warn("Starting notification verification!")
+      val userThreads : Seq[UserThread] = db.readOnly{ implicit session => userThreadRepo.all }
+      val nUrls : Map[Id[MessageThread], Option[String]] = db.readOnly{ implicit session => threadRepo.all } map { thread => (thread.id.get, thread.url) } toMap
+      
+      userThreads.foreach{ userThread =>
+        if (userThread.uriId.isDefined) {
+          nUrls(userThread.thread).foreach{ correctNUrl =>
+            log.warn(s"Verifying notification on user thread ${userThread.id.get}")
+            uriNormalizationUpdater.fixLastNotificationJson(userThread, correctNUrl)
+          }
+        }
+      }
+    }
+
+    Status(202)
+  }
+
 
   def createGlobalNotificaiton(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
     db.readWrite { implicit session =>
@@ -247,7 +268,7 @@ class MessagingController @Inject() (
   }
 
 
-  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String) : Seq[ElizaThreadInfo]  = {
+  private[eliza] def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String) : Seq[ElizaThreadInfo]  = {
     //get all involved users
     val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.all).getOrElse(Set())}
     //get all basic users
@@ -352,7 +373,8 @@ class MessagingController @Inject() (
     "b80511f6-8248-4799-a17d-f86c1508c90d", // léo
     "597e6c13-5093-4cba-8acc-93318987d8ee", // stephen
     "147c5562-98b1-4fc1-946b-3873ac4a45b4", // eduardo
-    "70927814-6a71-4eb4-85d4-a60164bae96c"  // ray
+    "70927814-6a71-4eb4-85d4-a60164bae96c", // ray
+    "9c211915-2413-4030-8efa-d7a9cfc77359"  // joon
   )
   val product = Seq (
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
@@ -382,7 +404,7 @@ class MessagingController @Inject() (
   }
 
 
-  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urls: JsObject, titleOpt: Option[String], messageText: String) : Message = {
+  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urls: JsObject, titleOpt: Option[String], messageText: String) : (MessageThread, Message) = {
     val participants = recipients + from
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
@@ -402,7 +424,7 @@ class MessagingController @Inject() (
       }
       thread
     }
-    sendMessage(from, thread, messageText, urlOpt, nUriOpt)
+    (thread, sendMessage(from, thread, messageText, urlOpt, nUriOpt))
 
   }
 
@@ -498,23 +520,20 @@ class MessagingController @Inject() (
     getThreadMessages(thread, pageOpt)
   }
 
-  def getThreadMessages(threadId: Id[MessageThread], pageOpt: Option[Int]) : Seq[Message] = {
-    val thread = db.readOnly{ implicit session =>
-      threadRepo.get(threadId)
-    }
-    getThreadMessages(thread, pageOpt)
+  def getThreadMessages(threadId: Id[MessageThread], pageOpt: Option[Int]): Seq[Message] = {
+    getThreadMessages(db.readOnly(threadRepo.get(threadId)(_)), pageOpt)
   }
 
-  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[Seq[MessageWithBasicUser]] = {
-    val thread = db.readOnly{ implicit session =>
-      threadRepo.get(threadExtId)
-    }
-    log.info(s"[get_thread] got thread for extId $threadExtId: $thread")
+  def participantsToBasicUsers(participants: MessageThreadParticipants): Future[Map[Id[User], BasicUser]] =
+    shoebox.getBasicUsers(participants.participants.keySet.toSeq)
+
+
+  def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[Seq[MessageWithBasicUser]] = {
     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-    log.info(s"[get_thread] got participants for extId $threadExtId: $participantSet")
+    log.info(s"[get_thread] got participants for extId ${thread.externalId}: $participantSet")
     shoebox.getBasicUsers(participantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread, pageOpt)
-      log.info(s"[get_thread] got raw messages for extId $threadExtId: $messages")
+      log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: $messages")
       messages.map { message =>
         MessageWithBasicUser(
           id           = message.externalId,
@@ -527,6 +546,12 @@ class MessagingController @Inject() (
         )
       }
     }
+
+  }
+
+  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[Seq[MessageWithBasicUser]] = {
+    val thread = db.readOnly(threadRepo.get(threadExtId)(_))
+    getThreadMessagesWithBasicUser(thread, pageOpt)
   }
 
   def getThread(threadExtId: ExternalId[MessageThread]) : MessageThread = {

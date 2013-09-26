@@ -2,7 +2,10 @@ var api = api || require("./api");
 var log = log || api.log;
 
 const NOTIFICATION_BATCH_SIZE = 10;
-const hostRe = /^https?:\/\/([^\/]*)/;
+
+//                            | sub |    |------- country domain -------|-- generic domain --|           |-- port? --|
+const domainRe = /^https?:\/\/[^\/]*?((?:[^.\/]+\.[^.\/]{2,3}\.[^.\/]{2}|[^.\/]+\.[^.\/]{2,6}|localhost))(?::\d{2,5})?(?:$|\/)/;
+const hostRe = /^https?:\/\/([^\/]+)/;
 
 var tabsByLocator = {};
 var notificationsCallbacks = [];
@@ -224,7 +227,7 @@ const socketHandlers = {
   },
   message: function(threadId, message) {
     log("[socket:message]", threadId, message, message.nUrl)();
-    var d = pageData[message.nUrl];
+    var d = pageData[message.nUrl] || pageData[message.url];
     if (d && !(messageData[threadId] || []).some(hasId(message.id))) {
       var thread = (d.threads || []).filter(hasId(threadId))[0];
       if (thread) {
@@ -539,6 +542,27 @@ api.port.on({
       }
     }
   },
+  open_login_popup: function(o) {
+    var baseUri = webBaseUri();
+    api.popup.open({
+      name: o.id || "kifi-popup",
+      url: o.url,
+      width: 1020,
+      height: 530}, {
+      navigate: function(url) {
+        var window = this;
+        if (url == baseUri + "/#_=_" || url == baseUri + "/") {
+          ajax("GET", "/ext/authed", function userIsLoggedIn() {
+            // user is now logged in
+            authenticate(function() {
+              log("[open_login_popup] closing popup")();
+              window.close();
+            });
+          });
+        }
+      }
+    });
+  },
   remove_notification: function(o) {
     removeNotificationPopups(o.associatedId);
   },
@@ -701,7 +725,7 @@ function getTimeLastRead(n, d) {
 function awaitDeepLink(link, tabId, retrySec) {
   if (link.locator) {
     var tab = api.tabs.get(tabId);
-    if (tab && (link.url || link.nUri).match(hostRe)[1] == tab.url.match(hostRe)[1]) {
+    if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
       log("[awaitDeepLink]", tabId, link)();
       api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: link.locator}, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {

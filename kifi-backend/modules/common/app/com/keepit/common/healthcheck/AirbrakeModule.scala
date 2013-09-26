@@ -33,10 +33,14 @@ case class DevAirbrakeModule() extends AirbrakeModule {
   def configure() {}
 
   @Provides
+  def formatter(playMode: Mode, service: FortyTwoServices): AirbrakeFormatter = {
+    new AirbrakeFormatter("fakeApiKey", playMode, service)
+  }
+
+  @Provides
   @AppScoped
   def airbrakeProvider(httpClient: HttpClient, actor: ActorInstance[AirbrakeNotifierActor], mode: Mode, fortyTwoServices: FortyTwoServices): AirbrakeNotifier = {
     new AirbrakeNotifier() {
-      val apiKey: String = "fakeApiKey"
       def notify(error: AirbrakeError): AirbrakeError = {println(error); error}
       val playMode: Mode = mode
       val service: FortyTwoServices = fortyTwoServices

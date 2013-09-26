@@ -156,19 +156,22 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
 
     val recipientAddr: Array[Address] = Play.isProd match {
       case true => (mail.to map { e => new InternetAddress(e.address) }).toArray
-      case false => Array(new InternetAddress(System.getProperty("user.name") + "+test_to@42go.com"))
+      case false => Array(new InternetAddress(fortyTwoUsername + "+test_to@42go.com"))
     }
     message.setSubject(mail.subject)
     message.addRecipients(Message.RecipientType.TO, recipientAddr)
     if (!mail.cc.isEmpty) {
       val recipientCCAddr: Array[Address] = Play.isProd match {
         case true => (mail.cc map { e => new InternetAddress(e.address) }).toArray
-        case false => Array(new InternetAddress(System.getProperty("user.name") + "+test_cc@42go.com"))
+        case false => Array(new InternetAddress(fortyTwoUsername + "+test_cc@42go.com"))
       }
       message.addRecipients(Message.RecipientType.CC, recipientCCAddr)
     }
     message
   }
+
+  private def fortyTwoUsername =
+    Play.configuration.getString("fortytwo.username") getOrElse System.getProperty("user.name")
 
   private def mailError(mailId: ExternalId[ElectronicMail], message: String, transport: Transport): ElectronicMail = {
     val mail = db.readOnly {implicit s =>
