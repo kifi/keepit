@@ -24,10 +24,11 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getBookmarksChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
-  def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit
+  def delete(id: Id[Bookmark])(implicit session: RSession): Unit
   def save(model: Bookmark)(implicit session: RWSession): Bookmark
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
   def removeFromCache(bookmark: Bookmark)(implicit session: RSession): Unit
+  def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark]
 }
 
 @Singleton
@@ -162,4 +163,8 @@ class BookmarkRepoImpl @Inject() (
     q.list.distinct
   }
 
+  def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark] = {
+    val activeBookmarks = getByUri(uriId)
+    if (activeBookmarks.isEmpty) None else Some(activeBookmarks.maxBy(_.updatedAt.getMillis))
+  }
 }
