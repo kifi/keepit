@@ -176,7 +176,7 @@ var tile = tile || function() {  // idempotent for Chrome
   tile.style.display = "none";
   tile.innerHTML =
     "<div class=kifi-tile-card>" +
-    "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
+    "<div class=kifi-tile-keep></div>" +
     "<div class=kifi-tile-kept></div></div>";
   tile["kifi:position"] = positionTile;
   tile.addEventListener("mouseover", function(e) {
