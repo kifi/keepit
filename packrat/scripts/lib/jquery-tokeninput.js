@@ -1003,9 +1003,18 @@ $.TokenList = function (input, url_or_data, settings) {
                 // Make the request
                 $.ajax(ajax_params);
             } else if($(input).data("settings").local_data) {
+                // See if we have cache of query minus one character. Can help speed things up.
+                query = $.trim(query);
+
+                var queryData;
+                if (query.length > 1 && (v = cache.get(query.substr(0, query.length - 1) + computeURL()))) {
+                    queryData = v;
+                } else {
+                    queryData = $(input).data("settings").local_data;
+                }
                 // Do the search through local data
                 var results = [];
-                $(input).data("settings").local_data.forEach(function (row) {
+                queryData.forEach(function (row) {
                     var terms = $.trim(query.toLowerCase()).split(/\s+/);
                     var n = $.trim(row[$(input).data("settings").propertyToSearch]).split(/\s+/);
 
@@ -1042,9 +1051,6 @@ $.TokenList = function (input, url_or_data, settings) {
                       score = 0;
                     }
 
-                    if (row[$(input).data("settings").propertyToSearch].toLowerCase().indexOf(query.toLowerCase()) > -1) {
-                      score += 2;
-                    }
                     if (score > 0) results.push({score: score, row: row})
                 })
                 results = results.sort(function(a, b) { return b.score - a.score; }).map(function (a) { return a.row; });
