@@ -7,7 +7,9 @@ import org.joda.time.DateTime
 
 import reactivemongo.bson.{BSONDocument, BSONDateTime, BSONValue, BSONLong, BSONString, BSONDouble, BSONArray}
 import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.core.commands.PipelineOperator
 
+import scala.concurrent.{Promise, Future}
 
 
 
@@ -47,4 +49,9 @@ class ProdUserEventLoggingRepo(val collection: BSONCollection, protected val hea
 
 class DevUserEventLoggingRepo(val collection: BSONCollection, protected val healthcheckPlugin: HealthcheckPlugin) extends UserEventLoggingRepo {
   override def insert(obj: UserEvent) : Unit = {}
+  override def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
+    Promise.successful(
+      Stream(BSONDocument("command" -> BSONArray(command.map(_.makePipe))))
+    ).future
+  }
 }
