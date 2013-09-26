@@ -77,7 +77,11 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
       None
     }
   }
+
+  protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query]
 }
+
+case class QuerySpec(occur: Occur, field: String, term: String, quoted: Boolean)
 
 class QueryParserException(msg: String) extends Exception(msg)
 
