@@ -11,7 +11,7 @@ import scala.slick.util.CloseableIterator
 
 @ImplementedBy(classOf[ContactInfoRepoImpl])
 trait ContactInfoRepo extends Repo[ContactInfo] {
-  def getByUserId(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[ContactInfo]
+  def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[ContactInfo]
 }
 
 @Singleton
@@ -32,7 +32,7 @@ class ContactInfoRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ email ~ origin.? ~ name.? ~ firstName.? ~ lastName.? ~ pictureUrl.? ~ parentId.? <> (ContactInfo.apply _, ContactInfo.unapply _)
   }
 
-  def getByUserId(userId: Id[User], maxRows:Int)(implicit session: RSession): CloseableIterator[ContactInfo] =
+  def getByUserIdIter(userId: Id[User], maxRows:Int)(implicit session: RSession): CloseableIterator[ContactInfo] =
     (for(f <- table if f.userId === userId) yield f).elementsTo(maxRows)
 }
 
