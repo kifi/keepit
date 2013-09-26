@@ -90,7 +90,7 @@ class GroupedCountMetricDefinition(eventsToConsider: Set[UserEventType], context
     ))
     val eventSelector = Match(BSONDocument(
       "event_type" -> BSONDocument(
-        "$in" -> BSONArray(eventsToConsider.toSeq.map(_.name))
+        "$in" -> BSONArray(eventsToConsider.toSeq.map(eventType => BSONString(eventType.name)))
       )
     ))
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
