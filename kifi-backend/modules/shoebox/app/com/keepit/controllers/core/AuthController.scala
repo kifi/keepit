@@ -7,6 +7,7 @@ import com.keepit.model.UserCredRepo
 
 import play.api.data.Forms._
 import play.api.data._
+import play.api.data.validation.Constraints
 import play.api.http.HeaderNames
 import play.api.libs.json.Json
 import play.api.mvc._
@@ -73,6 +74,7 @@ class AuthController @Inject() (db: Database, userCredRepo: UserCredRepo) extend
       "lastname" -> nonEmptyText,
       "password" -> tuple("1" -> nonEmptyText, "2" -> nonEmptyText)
         .verifying("Passwords do not match", pw => pw._1 == pw._2).transform(_._1, (a: String) => (a, a))
+        .verifying(Constraints.minLength(7))
     )
     (RegistrationInfo.apply)
     (RegistrationInfo.unapply)
@@ -84,7 +86,7 @@ class AuthController @Inject() (db: Database, userCredRepo: UserCredRepo) extend
 
   def handleSignup() = Action { implicit request =>
     emailPasswordForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(views.html.website.signup(Some(formWithErrors.errors.mkString(", ")))),
+      formWithErrors => BadRequest(views.html.website.signup(Some("Please fill out all fields"))),
       { case RegistrationInfo(email, firstName, lastName, password) =>
         val identity: Identity = SocialUser(
           identityId = IdentityId(email, "userpass"),
