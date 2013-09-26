@@ -37,6 +37,7 @@ class MainQueryParser(
   semanticBoost: Float,
   phraseBoost: Float,
   override val siteBoost: Float,
+  override val concatBoost: Float,
   phraseDetector: PhraseDetector
 ) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
 

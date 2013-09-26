@@ -62,7 +62,9 @@ object QueryUtil extends Logging {
     if (query == null) null
     else {
       val term = new Term(field, query.getTerm().text())
-      new TermQuery(term)
+      val newQuery = new TermQuery(term)
+      newQuery.setBoost(query.getBoost())
+      newQuery
     }
   }
 
@@ -73,6 +75,7 @@ object QueryUtil extends Logging {
       val positions = query.getPositions()
       val terms = query.getTerms()
       val newTerms = terms.zip(positions).map{ case (t, p) => newQuery.add(new Term(field, t.text()), p) }
+      newQuery.setBoost(query.getBoost())
       newQuery
     }
   }
