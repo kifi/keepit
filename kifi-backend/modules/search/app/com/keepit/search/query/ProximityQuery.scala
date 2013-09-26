@@ -88,7 +88,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
   private[this] val maxRawScore = LocalAlignment(termIds, phraseMatcher, query.phraseBoost, ProximityQuery.gapPenalty).maxScore
 
-  def getWeightValue = value / maxRawScore
+  def getCalibrationValue = value / maxRawScore
 
   override def scoresDocsOutOfOrder() = false
 
@@ -182,7 +182,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
   private[this] var curDoc = -1
   private[this] var proximityScore = 0.0f
   private[this] var scoredDoc = -1
-  private[this] val weightVal = weight.getWeightValue
+  private[this] val weightVal = weight.getCalibrationValue
 
   private[this] val pq = new PriorityQueue[PositionAndId](tps.length) {
     override def lessThan(nodeA: PositionAndId, nodeB: PositionAndId) = {

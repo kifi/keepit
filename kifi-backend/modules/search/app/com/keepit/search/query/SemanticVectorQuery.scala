@@ -188,7 +188,7 @@ class SemanticVectorScorer(weight: SemanticVectorWeight, davs: Seq[DocAndVector]
         sum += top.scoreAndNext()
         top = pq.updateTop()
       }
-      if (sum > 0.0f) svScore = sum else svScore = Float.MinPositiveValue
+      svScore = sum
       scoredDoc = doc
     }
     svScore
