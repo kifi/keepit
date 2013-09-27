@@ -19,21 +19,32 @@ import scala.xml._
 
 import play.api.mvc._
 
+case class ErrorWithStack(error: Throwable, stack: Seq[StackTraceElement]) {
+  override def toString(): String = error.toString
+  val cause: Option[ErrorWithStack] = Option(error.getCause).map(e => ErrorWithStack(e))
+  val rootCause: ErrorWithStack = cause.map(c => c.rootCause).getOrElse(this)
+}
+
+object ErrorWithStack {
+  def apply(error: Throwable): ErrorWithStack =
+    ErrorWithStack(error,
+      error.getStackTrace.filter(e => e != null && e.getFileName != null && !e.getFileName.contains("Airbrake")))
+}
+
 class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices) {
 
-  private def formatCauseStacktrace(causeOpt: Option[Throwable]): NodeSeq = causeOpt match {
+  private def formatCauseStacktrace(causeOpt: Option[ErrorWithStack]): NodeSeq = causeOpt match {
     case Some(error) =>
-      {<line method="-------------" file="-----------" number=""/>
-       <line method="" file={"Cause: " + error.toString} number=""/>} ++
+      {<line method="" file={"Cause: " + error.toString} number=""/>} ++
       formatStacktrace(error) ++
-      formatCauseStacktrace(Option(error.getCause))
+      formatCauseStacktrace(error.cause)
     case None =>
       Seq()
   }
 
-  private def formatStacktrace(error: Throwable) = {
+  private def formatStacktrace(error: ErrorWithStack) = {
     <line method={error.toString} file="-----------" number=""/> ++ {
-      error.getStackTrace.filter(e => e != null && e.getFileName != null && !e.getFileName.contains("Airbrake")).map(e => {
+      error.stack.map(e => {
         <line method={ignoreAnonfun(e.getClassName) + "#" + e.getMethodName} file={e.getFileName} number={e.getLineNumber.toString}/>
       })
     }
@@ -53,7 +64,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
     case true => Nil
   }
 
-  private def formatHeaders(params: Map[String,Seq[String]], id: ExternalId[AirbrakeError]) = params.isEmpty match {
+  private def formatHeaders(params: Map[String, Seq[String]], id: ExternalId[AirbrakeError]) = params.isEmpty match {
     case false =>
       (<session>
         <var key="InternalErrorId">{id.id}</var>
@@ -73,22 +84,17 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
       { formatHeaders(headers.toMap, id) }
     </request>
 
-  def noticeError(error: Throwable, causeError: Throwable, message: Option[String]) =
+  def noticeError(error: ErrorWithStack, message: Option[String]) =
     <error>
-      <class>{causeError.getClass.getName}</class>
-      <message>{ ( message.getOrElse("") + " " + causeError.toString()).trim }</message>
+      <class>{ error.rootCause.error.getClass.getName }</class>
+      <message>{ ( message.getOrElse("") + " " + error.rootCause.error.toString()).trim }</message>
       <backtrace>
-        { formatStacktrace(error) ++ formatCauseStacktrace(Option(error.getCause)) }
+        { formatStacktrace(error) ++ formatCauseStacktrace(error.cause) }
       </backtrace>
     </error>
 
-  def cause(error: Throwable): Throwable = Option(error.getCause) match {
-    case None => error
-    case Some(errorCause) => cause(errorCause)
-  }
-
   private def noticeEntities(error: AirbrakeError) =
-    (Some(noticeError(error.exception, cause(error.exception), error.message)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers, error.id)} :: Nil).flatten
+    (Some(noticeError(ErrorWithStack(error.exception), error.message)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers, error.id)} :: Nil).flatten
 
   //http://airbrake.io/airbrake_2_3.xsd
   private[healthcheck] def format(error: AirbrakeError) =

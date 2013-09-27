@@ -31,23 +31,21 @@ class AirbrakeTest extends Specification with TestInjector {
     "format stack trace with x2 cause" in {
       val formatter = new AirbrakeFormatter(null, null, null)
       val error = new IllegalArgumentException("hi there", new Exception("middle thing" , new IllegalStateException("its me")))
-      val xml = formatter.noticeError(error, formatter.cause(error), None)
-      println(xml)
+      val xml = formatter.noticeError(ErrorWithStack(error), None)
       val lines = (xml \\ "line").toVector
       lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="-----------" number=""/>
       lines(1) === <line method="org.specs2.mutable.SpecificationFeatures[a][a]#apply" file="Specification.scala" number="34"/>
-      lines.size === 187
+      lines.size === 185
     }
 
     "format stack trace with x1 cause" in {
       val formatter = new AirbrakeFormatter(null, null, null)
       val error = new IllegalArgumentException("hi there", new IllegalStateException("its me"))
-      val xml = formatter.noticeError(error, formatter.cause(error), None)
-      println(xml)
+      val xml = formatter.noticeError(ErrorWithStack(error), None)
       val lines = (xml \\ "line").toVector
       lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="-----------" number=""/>
       lines(1) === <line method="org.specs2.mutable.SpecificationFeatures[a][a]#apply" file="Specification.scala" number="34"/>
-      lines.size === 124
+      lines.size === 123
     }
 
     "format only error" in {
@@ -55,12 +53,11 @@ class AirbrakeTest extends Specification with TestInjector {
         val formatter = inject[AirbrakeFormatter]
         val error = AirbrakeError(new IllegalArgumentException("hi there", new IllegalStateException("its me", new NullPointerException())))
         val xml = formatter.format(error)
-        println(xml)
         validate(xml)
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.NullPointerException</class>
         (xml \ "error" \ "message").head === <message>java.lang.NullPointerException</message>
-        (xml \ "error" \ "backtrace" \ "line").size === 190
+        (xml \ "error" \ "backtrace" \ "line").size === 188
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
         (xml \ "server-environment" \ "app-version").head.text === "0.0.0"
         (xml \ "server-environment" \ "project-root").head.text === "TEST_MODE"
@@ -76,7 +73,6 @@ class AirbrakeTest extends Specification with TestInjector {
             url = Some("http://www.kifi.com/hi"),
             method = Some("POST"))
         val xml = formatter.format(error)
-        println(xml)
         validate(xml)
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
