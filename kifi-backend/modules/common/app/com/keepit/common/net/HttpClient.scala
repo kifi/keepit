@@ -60,8 +60,6 @@ case class HttpClientImpl(
 
   private val validResponseClass = 2
 
-  implicit val duration = Duration(timeout, timeoutUnit)
-
   override val defaultOnFailure: String => PartialFunction[Throwable, Unit] = { url =>
     {
       case cause: ConnectException =>
