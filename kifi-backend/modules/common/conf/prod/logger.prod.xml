@@ -4,7 +4,7 @@
   <!-- always a good activate OnConsoleStatusListener -->
   <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener" />
 
-  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+  <appender name="app_log" class="ch.qos.logback.core.rolling.RollingFileAppender">
    <file>log/app.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
      <fileNamePattern>log/app.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
@@ -13,9 +13,32 @@
      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
    </encoder>
   </appender>
-  <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
-    <appender-ref ref="FILE" />
+
+  <appender name="async_app_log" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="app_log" />
   </appender>
+
+  <!-- ================================ -->
+
+  <appender name="access" class="ch.qos.logback.core.rolling.RollingFileAppender">
+   <file>log/access.log</file>
+   <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+     <fileNamePattern>log/access.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+   </rollingPolicy>
+   <encoder>
+     <pattern>%d{HH:mm:ss.SSS} - %msg%n</pattern>
+   </encoder>
+  </appender>
+
+  <appender name="async_access" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="access" />
+  </appender>
+
+  <logger name="com.keepit.access" level="DEBUG">
+    <appender-ref ref="async_access" />
+  </logger>
+
+  <!-- ================================ -->
 
   <logger name="com.mysql" level="ERROR"/>
   <logger name="com.jolbox.bonecp" level="INFO"/>
@@ -23,6 +46,7 @@
   <logger name="securesocial.core" level="DEBUG"/>
 
   <root level="INFO">
-    <appender-ref ref="ASYNC" />
+    <appender-ref ref="async_app_log" />
   </root>
+
 </configuration>
