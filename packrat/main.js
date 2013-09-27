@@ -392,8 +392,20 @@ api.port.on({
     var nUri = tab.nUri || data.url;
     ajax("eliza", "POST", "/eliza/messages", data, function(o) {
       log("[send_message] resp:", o)();
-      // need ThreadInfo for this thread (new or merged), as well as the sent message.
-      // might be nice to get them in the response instead of requesting over the socket.
+
+      var d = pageData[nUri];
+      var threadId = o.threadInfo.id;
+      messageData[threadId] = o.messages;
+      if (d) {
+        var thread = (d.threads || []).filter(hasId(threadId))[0];
+        if (thread) thread = o.threadInfo;
+        else d.threads.push(o.threadInfo);
+
+        var lastMessage = o.messages.slice(-1)[0];
+        if (new Date(lastMessage.createdAt) > new Date(d.lastMessageRead[threadId] || 0)) {
+          d.lastMessageRead[threadId] = lastMessage.createdAt;
+        }
+      }
       loadThreadData(nUri);
       respond(o);
     });
