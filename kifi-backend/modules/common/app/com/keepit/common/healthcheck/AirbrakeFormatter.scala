@@ -21,10 +21,29 @@ import play.api.mvc._
 
 class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices) {
 
-  private def formatStacktrace(traceElements: Array[StackTraceElement]) =
-    traceElements.filter(e => e != null && e.getFileName != null && !e.getFileName.contains("Airbrake")).map(e => {
-      <line method={e.getMethodName} file={e.getFileName} number={e.getLineNumber.toString}/>
-    })
+  private def formatCauseStacktrace(causeOpt: Option[Throwable]): NodeSeq = causeOpt match {
+    case Some(error) =>
+      {<line method="-------------" file="-----------" number=""/>
+       <line method="" file={"Cause: " + error.toString} number=""/>} ++
+      formatStacktrace(error) ++
+      formatCauseStacktrace(Option(error.getCause))
+    case None =>
+      Seq()
+  }
+
+  private def formatStacktrace(error: Throwable) = {
+    <line method={error.toString} file="-----------" number=""/> ++ {
+      error.getStackTrace.filter(e => e != null && e.getFileName != null && !e.getFileName.contains("Airbrake")).map(e => {
+        <line method={ignoreAnonfun(e.getClassName) + "#" + e.getMethodName} file={e.getFileName} number={e.getLineNumber.toString}/>
+      })
+    }
+  }
+
+  private def ignoreAnonfun(klazz: String) = klazz.
+    replaceAll("""\$\$anonfun.*""", "[a]").
+    replaceAll("""\$\$anon""", "[a]").
+    replaceAll("""\$[0-9]""", "").
+    replaceAll("""\$class""", "")
 
   private def formatParams(params: Map[String,Seq[String]]) = params.isEmpty match {
     case false =>
@@ -45,7 +64,6 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
     case true => Nil
   }
 
-  //todo(eishay): add component and session
   private def noticeRequest(url: String, params: Map[String, Seq[String]], method: Option[String], headers: Map[String, Seq[String]], id: ExternalId[AirbrakeError]) =
     <request>
       <url>{url}</url>
@@ -55,17 +73,22 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
       { formatHeaders(headers.toMap, id) }
     </request>
 
-  private def noticeError(error: Throwable, message: Option[String]) =
+  def noticeError(error: Throwable, causeError: Throwable, message: Option[String]) =
     <error>
-      <class>{error.getClass.getName}</class>
-      <message>{ message.getOrElse("") + error.toString() }</message>
+      <class>{causeError.getClass.getName}</class>
+      <message>{ ( message.getOrElse("") + " " + causeError.toString()).trim }</message>
       <backtrace>
-        { formatStacktrace(error.getStackTrace) }
+        { formatStacktrace(error) ++ formatCauseStacktrace(Option(error.getCause)) }
       </backtrace>
     </error>
 
+  def cause(error: Throwable): Throwable = Option(error.getCause) match {
+    case None => error
+    case Some(errorCause) => cause(errorCause)
+  }
+
   private def noticeEntities(error: AirbrakeError) =
-    (Some(noticeError(error.exception, error.message)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers, error.id)} :: Nil).flatten
+    (Some(noticeError(error.exception, cause(error.exception), error.message)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers, error.id)} :: Nil).flatten
 
   //http://airbrake.io/airbrake_2_3.xsd
   private[healthcheck] def format(error: AirbrakeError) =

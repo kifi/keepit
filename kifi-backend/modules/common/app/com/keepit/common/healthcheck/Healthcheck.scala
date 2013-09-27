@@ -7,11 +7,9 @@ import scala.concurrent.duration._
 import com.google.inject.Inject
 import com.google.inject.ImplementedBy
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.AlertingActor
+import com.keepit.common.akka.{AlertingActor, UnsupportedActorMessage}
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.mail.EmailAddresses
-import com.keepit.common.mail.PostOffice
+import com.keepit.common.mail._
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
@@ -22,9 +20,13 @@ import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Plugin
 import play.api.templates.Html
-import com.keepit.common.mail.RemotePostOffice
 import scala.concurrent.ExecutionContext.Implicits.global
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.common.healthcheck.HealthcheckErrorSignature
+import scala.Some
+import com.keepit.common.healthcheck.HealthcheckHost
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.HealthcheckErrorHistory
 
 object Healthcheck {
 
@@ -110,7 +112,7 @@ class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHos
       sender.sendMail(ElectronicMail(
         from = Healthcheck.OPS_OF_THE_WEEK,
         to = EmailAddresses.ASANA_PROD_HEALTH::Healthcheck.OPS_OF_THE_WEEK::Nil,
-        cc = (EmailAddresses.ENG_EMAILS.toSet - EmailAddresses.JARED).toSeq,
+        cc = (EmailAddresses.ENG_EMAILS.toSet - EmailAddresses.JARED - EmailAddresses.JOON).toSeq,
         subject = subject,
         htmlBody = views.html.email.healthcheckMail(history, started, host.host).body,
         textBody = Some(views.html.email.healthcheckAsanaMail(history, started, host.host).body),
@@ -160,7 +162,7 @@ class HealthcheckActor @Inject() (
       errors(signature) = history
     case email: ElectronicMail => emailSender.sendMail(email)
 
-    case m => throw new Exception("unknown message %s".format(m))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 

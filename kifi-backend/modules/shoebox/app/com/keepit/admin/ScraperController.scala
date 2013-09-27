@@ -3,24 +3,12 @@ package com.keepit.controllers.admin
 import scala.Option.option2Iterable
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import com.google.inject.ImplementedBy
 import com.google.inject.Inject
-import com.google.inject.Singleton
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.AdminController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.model.BookmarkRepo
-import com.keepit.model.BookmarkRepoImpl
-import com.keepit.model.DeepLinkRepo
-import com.keepit.model.DuplicateDocumentRepo
-import com.keepit.model.FollowRepo
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURIRepo
-import com.keepit.model.NormalizedURIRepoImpl
-import com.keepit.model.ScrapeInfoRepo
-import com.keepit.model.UrlPatternRule
-import com.keepit.model.UrlPatternRuleRepo
+import com.keepit.model._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.ArticleStore
 
@@ -33,11 +21,11 @@ class ScraperController @Inject() (
   scrapeInfoRepo: ScrapeInfoRepo,
   normalizedURIRepo: NormalizedURIRepo,
   articleStore: ArticleStore,
-  urlPatternRuleRepo: UrlPatternRuleRepo,
   duplicateDocumentRepo: DuplicateDocumentRepo,
   followRepo: FollowRepo,
   deeplinkRepo: DeepLinkRepo,
-  bookmarkRepo: BookmarkRepo)
+  bookmarkRepo: BookmarkRepo,
+  httpProxyRepo: HttpProxyRepo)
     extends AdminController(actionAuthenticator) {
 
   def scrape = AdminHtmlAction { implicit request =>
@@ -52,12 +40,12 @@ class ScraperController @Inject() (
     Ok(html.admin.searchScraper())
   }
 
-  def rescrapeByRegex(urlRegex: String, withinHours: Int) = AdminHtmlAction { implicit request =>
+  def rescrapeByRegex(urlRegex: String, withinMinutes: Int) = AdminHtmlAction { implicit request =>
     val updateCount = db.readWrite { implicit session =>
-      scrapeInfoRepo.setForRescrapeByRegex(urlRegex, withinHours)
+      scrapeInfoRepo.setForRescrapeByRegex(urlRegex, withinMinutes)
     }
     Redirect(com.keepit.controllers.admin.routes.ScraperController.searchScraper).flashing(
-        "success" -> "%s page(s) matching %s to be rescraped within %s hour(s). ".format(updateCount,urlRegex,withinHours)
+        "success" -> "%s page(s) matching %s to be rescraped within %s minutes(s). ".format(updateCount, urlRegex, withinMinutes)
       )
   }
 
@@ -81,5 +69,48 @@ class ScraperController @Inject() (
       case None => errorMsg(id)
     }
   }
+
+  def getProxies = AdminHtmlAction { implicit request =>
+    val proxies = db.readOnly { implicit session => httpProxyRepo.all() }
+    Ok(html.admin.proxies(proxies))
+  }
+
+  def saveProxies = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
+    db.readWrite { implicit session =>
+      for (key <- body.keys.filter(_.startsWith("alias_")).map(_.substring(6))) {
+        val id = Id[HttpProxy](key.toLong)
+        val oldProxy = httpProxyRepo.get(id)
+        val newProxy = oldProxy.copy(
+          state = if (body.contains("active_" + key)) HttpProxyStates.ACTIVE else HttpProxyStates.INACTIVE,
+          alias = body("alias_" + key),
+          hostname = body("hostname_" + key),
+          port = body("port_"+ key).toInt,
+          scheme = body("scheme_" + key),
+          username = Some(body("username_" + key)).filter(!_.isEmpty),
+          password = Some(body("password_" + key)).filter(!_.isEmpty)
+        )
+
+        if (newProxy != oldProxy) {
+          httpProxyRepo.save(newProxy)
+        }
+      }
+      val newProxy = body("new_alias")
+      if (newProxy.nonEmpty) {
+        httpProxyRepo.save(HttpProxy(
+          state = if (body.contains("new_active")) HttpProxyStates.ACTIVE else HttpProxyStates.INACTIVE,
+          alias = body("new_alias"),
+          hostname = body("new_hostname"),
+          port = body("new_port").toInt,
+          scheme = body("new_scheme"),
+          username = Some(body("new_username")).filter(!_.isEmpty),
+          password = Some(body("new_password")).filter(!_.isEmpty)
+        ))
+      }
+    }
+    Redirect(routes.ScraperController.getProxies)
+  }
+
+
 }
 

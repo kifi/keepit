@@ -17,13 +17,7 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
 
   protected val stemmedTerms = new ArrayBuffer[Term]
 
-  def hasStemmedTerms = !stemmedTerms.isEmpty
-
-  def numStemmedTerms = stemmedTerms.size
-
-  def getStemmedTermArray = stemmedTerms.toArray
-
-  def getStemmedTerms(field: String) = stemmedTerms.map(t => new Term(field, t.text()))
+  def getStemmedTerms: IndexedSeq[Term] = stemmedTerms
 
   def parse(queryText: CharSequence): Option[Query]
 
@@ -46,7 +40,7 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
   def getStemmedFieldQuery(field: String, queryText: String): Option[Query] = {
     val it = new TermIterator(field, queryText, stemmingAnalyzer) with Position with TermInterceptor {
       def process(t: Term): Term = {
-        stemmedTerms += t
+        if (field == "") stemmedTerms += t
         t
       }
     }
@@ -77,7 +71,11 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
       None
     }
   }
+
+  protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query]
 }
+
+case class QuerySpec(occur: Occur, field: String, term: String, quoted: Boolean)
 
 class QueryParserException(msg: String) extends Exception(msg)
 

@@ -16,4 +16,4 @@ GET     /internal/clusters/refresh            @com.keepit.common.admin.ServiceCo
 GET		  /internal/clusters/mystatus			      @com.keepit.common.admin.ServiceController.myStatus
 GET		  /internal/clusters/topology			      @com.keepit.common.admin.ServiceController.topology
 GET     /internal/common/threadSummary        @com.keepit.common.admin.ServiceController.threadSummary
-GET     /internal/common/threadDetails        @com.keepit.common.admin.ServiceController.threadDetails(name: String ?= "", state: String ?= "", stack ?= "")
+GET     /internal/common/threadDetails        @com.keepit.common.admin.ServiceController.threadDetails(name: String ?= "", state: String ?= "", stack: String ?= "", sort: String ?= "")

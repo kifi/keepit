@@ -7,9 +7,9 @@ import com.keepit.test.ShoeboxTestInjector
 
 class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
 
-  "Unscrapable" should {
+  "UrlPatternRule" should {
 
-    "persist & use unscrapable patterns w/ appropriate caching" in {
+    "persist & use patterns w/ appropriate caching" in {
       withDb() { implicit injector =>
 
         val urlPatternRuleCache = inject[UrlPatternRuleRepoImpl].urlPatternRuleAllCache
@@ -23,7 +23,7 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
           urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === false
 
           urlPatternRuleRepo.allActive().length === 2
-          urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined
+          urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === true
           urlPatternRuleCache.get(UrlPatternRuleAllKey()).get.length === 2
 
           urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://app.asana.com.*$", isUnscrapable = true))

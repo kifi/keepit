@@ -36,12 +36,13 @@ object ApplicationBuild extends Build {
     val commonDependencies = Seq(
       jdbc,
       "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
+      "com.typesafe" %% "play-plugins-mailer" % "2.1-RC2",
       "securesocial" %% "securesocial" % "master-20130808",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
-      "org.apache.httpcomponents" % "httpclient" % "4.2.4",
+      "org.apache.httpcomponents" % "httpclient" % "4.3",
       "org.apache.tika" % "tika-parsers" % "1.3",
       "org.apache.commons" % "commons-math3" % "3.1.1",
       "org.apache.zookeeper" % "zookeeper" % "3.4.5",
@@ -85,7 +86,8 @@ object ApplicationBuild extends Build {
     )
 
     val heimdalDependencies = Seq(
-      "org.reactivemongo" %% "reactivemongo" % "0.9"
+      "org.reactivemongo" %% "reactivemongo" % "0.9",
+      "org.reactivemongo" %% "play2-reactivemongo" % "0.9"
     ) map (_.excludeAll(
       ExclusionRule(organization = "org.slf4j"),
       ExclusionRule(organization = "ch.qos.logback")

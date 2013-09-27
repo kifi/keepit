@@ -30,23 +30,26 @@ object PhraseDetector {
 @Singleton
 class PhraseDetector @Inject() (indexer: PhraseIndexer) {
 
-  def detect(terms: Array[Term]) = {
+  def detect(terms: IndexedSeq[Term]) = {
     RemoveOverlapping.removeInclusions(detectAll(terms))
   }
 
-  def detectAll(terms: Array[Term]) = {
+  def detectAll(terms: IndexedSeq[Term]) = {
     var result = Set.empty[(Int, Int)] // (position, length)
     val pq = new PQ(terms.size)
 
-    val pterms = terms.map{ term => PhraseDetector.createTerm(term.text()) }.zipWithIndex
+    val pterms = terms.map{ term => PhraseDetector.createTerm(term.text()) }
     indexer.getSearcher.indexReader.leaves.foreach{ subReaderContext =>
-      pterms.foreach{ case (pterm, index) =>
-        val tp = subReaderContext.reader.termPositionsEnum(pterm)
+      val numTerms = pterms.size
+      var index = 0
+      while (index < numTerms) {
+        val tp = subReaderContext.reader.termPositionsEnum(pterms(index))
         if (tp == null) { // found a gap here
-          findPhrases(pq){ (position, length) => result += ((position, length)) }
+          findPhrases(pq){ (position, length) => result += ((position, length)) } // pq will be cleared after execution
         } else {
           pq.insertWithOverflow(new Word(index, tp))
         }
+        index += 1
       }
       findPhrases(pq){ (position, length) => result += ((position, length)) }
     }

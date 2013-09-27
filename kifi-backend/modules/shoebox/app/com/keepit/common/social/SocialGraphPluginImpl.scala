@@ -4,7 +4,7 @@ import com.keepit.model.{SocialUserInfoStates, SocialConnection, SocialUserInfoR
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
@@ -48,29 +48,30 @@ private[social] class SocialGraphActor @Inject() (
     case FetchUserInfoQuietly(socialUserInfo) =>
       fetchUserInfo(socialUserInfo)
 
-    case m => throw new Exception("unknown message %s".format(m))
+    case m => throw new UnsupportedActorMessage(m)
   }
 
   def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[SocialConnection] = {
     try {
       require(socialUserInfo.credentials.isDefined,
         s"SocialUserInfo's credentials are not defined: $socialUserInfo")
-      val graph = networkTypeToGraph(socialUserInfo.networkType)
-      graph.fetchSocialUserRawInfo(socialUserInfo).toSeq flatMap { rawInfo =>
-        rawInfo.jsons flatMap graph.extractEmails map (socialUserImportEmail.importEmail(socialUserInfo.userId.get, _))
+      networkTypeToGraph.get(socialUserInfo.networkType).toSeq flatMap { graph =>
+        graph.fetchSocialUserRawInfo(socialUserInfo).toSeq flatMap { rawInfo =>
+          rawInfo.jsons flatMap graph.extractEmails map (socialUserImportEmail.importEmail(socialUserInfo.userId.get, _))
 
-        socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
+          socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
-        val friends = rawInfo.jsons flatMap graph.extractFriends
-        socialUserImportFriends.importFriends(friends)
-        val connections = socialUserCreateConnections.createConnections(
-          socialUserInfo, friends.map(_._1.socialId), graph.networkType)
+          val friends = rawInfo.jsons flatMap graph.extractFriends
+          socialUserImportFriends.importFriends(friends)
+          val connections = socialUserCreateConnections.createConnections(
+            socialUserInfo, friends.map(_._1.socialId), graph.networkType)
 
-        val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
-        db.readWrite { implicit c =>
-          socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
+          val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
+          db.readWrite { implicit c =>
+            socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
+          }
+          connections
         }
-        connections
       }
     } catch {
       case ex: Exception =>

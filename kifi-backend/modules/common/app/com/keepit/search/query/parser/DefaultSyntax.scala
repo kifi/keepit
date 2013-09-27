@@ -17,8 +17,6 @@ object DefaultSyntax {
   val termRegex = """([^\p{Zs}]+)[\p{Zs}$]*""".r
   val quotedTermRegex = """\"((([^\"])|(\"[^\p{Zs}]))*)\"([\p{Zs}$]*)""".r
   val endOfQueryRegex = """($)""".r
-
-  case class QuerySpec(occur: Occur, field: String, term: String, quoted: Boolean)
 }
 
 trait DefaultSyntax extends QueryParser {
@@ -68,7 +66,7 @@ trait DefaultSyntax extends QueryParser {
     m.group(1)
   }
 
-  def parseQueryTerm(): String = {
+  private def parseQueryTerm(): String = {
     (termRegex findPrefixMatchOf buf) match {
       case Some(m) => getTerm(m)
       case _ =>
@@ -79,28 +77,17 @@ trait DefaultSyntax extends QueryParser {
     }
   }
 
-  def parseQuotedQueryTerm(): String = {
-    (quotedTermRegex findPrefixMatchOf buf) match {
-      case Some(m) => getTerm(m)
-      case _ => ""
-    }
-  }
+  private def matchQuotedQueryTerm(): Option[Match] = (quotedTermRegex findPrefixMatchOf buf)
 
   private def parseFieldQuery(): QuerySpec = {
     val defaultOccur = parseQualifier()
     val field = parseFieldName()
     val occur = parseQualifier(defaultOccur)
 
-    var term = parseQuotedQueryTerm()
-    var quoted = false
-
-    if (term.length > 0) {
-      quoted = true
-    } else {
-      term = parseQueryTerm()
+    matchQuotedQueryTerm() match {
+      case Some(m) => QuerySpec(occur, field, getTerm(m), true)
+      case _ => QuerySpec(occur, field, parseQueryTerm(), false)
     }
-
-    QuerySpec(occur, field, term, quoted)
   }
 
   @tailrec
@@ -117,14 +104,17 @@ trait DefaultSyntax extends QueryParser {
     } else {
       inputText = queryText
       buf = removeLeadingSpaces(queryText)
-      val querySpecList = parse(Nil)
-      val clauses = querySpecList.foldLeft(ArrayBuffer.empty[BooleanClause]) { (clauses, spec) =>
-        val query = getFieldQuery(spec.field, spec.term, spec.quoted)
-        query.foreach{ query => clauses += new BooleanClause(query, spec.occur) }
-        clauses
-      }
-      getBooleanQuery(clauses)
+      buildQuery(parse(Nil))
     }
+  }
+
+  override protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query] = {
+    val clauses = querySpecList.foldLeft(ArrayBuffer.empty[BooleanClause]) { (clauses, spec) =>
+      val query = getFieldQuery(spec.field, spec.term, spec.quoted)
+      query.foreach{ query => clauses += new BooleanClause(query, spec.occur) }
+      clauses
+    }
+    getBooleanQuery(clauses)
   }
 }
 

@@ -30,6 +30,7 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def emailAddressRepo(implicit injector: Injector) = inject[EmailAddressRepo]
   def invitationRepo(implicit injector: Injector) = inject[InvitationRepo]
   def urlPatternRuleRepo(implicit injector: Injector) = inject[UrlPatternRuleRepo]
+  def httpProxyRepo(implicit injector: Injector) = inject[HttpProxyRepo]
   def notificationRepo(implicit injector: Injector) = inject[UserNotificationRepo]
   def scrapeInfoRepo(implicit injector: Injector) = inject[ScrapeInfoRepo]
   def phraseRepo(implicit injector: Injector) = inject[PhraseRepo]

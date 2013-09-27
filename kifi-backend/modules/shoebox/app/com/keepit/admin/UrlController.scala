@@ -53,6 +53,7 @@ class UrlController @Inject() (
   urlPatternRuleRepo: UrlPatternRuleRepo,
   renormRepo: RenormalizedURLRepo,
   centralConfig: CentralConfig,
+  httpProxyRepo: HttpProxyRepo,
   eliza: ElizaServiceClient,
   monitoredAwait: MonitoredAwait) extends AdminController(actionAuthenticator) {
 
@@ -253,10 +254,10 @@ class UrlController @Inject() (
   }
 
   def getPatterns = AdminHtmlAction { implicit request =>
-    val patterns = db.readOnly { implicit session =>
-      urlPatternRuleRepo.all.sortBy(_.id.get.id)
+    val (patterns, proxies) = db.readOnly { implicit session =>
+      (urlPatternRuleRepo.all.sortBy(_.id.get.id), httpProxyRepo.all())
     }
-    Ok(html.admin.urlPatternRules(patterns))
+    Ok(html.admin.urlPatternRules(patterns, proxies))
   }
 
   def savePatterns = AdminHtmlAction { implicit request =>
@@ -270,6 +271,10 @@ class UrlController @Inject() (
           example = Some(body("example_" + key)).filter(!_.isEmpty),
           state = if (body.contains("active_" + key)) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
           isUnscrapable = body.contains("unscrapable_"+ key),
+          useProxy = body("proxy_" + key) match {
+            case "None" => None
+            case proxy_id => Some(Id[HttpProxy](proxy_id.toLong))
+          },
           normalization = body("normalization_" + key) match {
             case "None" => None
             case scheme => Some(Normalization(scheme))
@@ -288,6 +293,10 @@ class UrlController @Inject() (
           example = Some(body("new_example")).filter(!_.isEmpty),
           state = if (body.contains("new_active")) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
           isUnscrapable = body.contains("new_unscrapable"),
+          useProxy = body("new_proxy") match {
+            case "None" => None
+            case proxy_id => Some(Id[HttpProxy](proxy_id.toLong))
+          },
           normalization = body("new_normalization") match {
             case "None" => None
             case scheme => Some(Normalization(scheme))

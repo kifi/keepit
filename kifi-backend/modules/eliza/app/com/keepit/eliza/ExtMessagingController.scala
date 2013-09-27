@@ -49,11 +49,15 @@ class ExtMessagingController @Inject() (
       (o \ "recipients").as[Seq[String]])
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
-    val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).map{ recipientSet =>
-      val message : Message = messagingController.sendNewMessage(request.user.id.get, recipientSet, urls, title, text)
+    val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).flatMap { recipientSet =>
+      val (threadInfo, message) = messagingController.sendNewMessage(request.user.id.get, recipientSet, urls, title, text)
+      val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(threadInfo, None)
       val tDiff = currentDateTime.getMillis - tStart.getMillis
       Statsd.timing(s"messaging.newMessage", tDiff)
-      Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
+      val threadInfoOpt = (o \ "url").asOpt[String].map(u => messagingController.buildThreadInfos(request.user.id.get, Seq(threadInfo), u).headOption).flatten
+      messageThreadFut map { messages => // object instantiated earlier to give Future head start
+        Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages))
+      }
     }
     Async(responseFuture)
   }
@@ -164,12 +168,18 @@ class ExtMessagingController @Inject() (
       messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
     },
     "get_threads_by_url" -> { case JsString(url) +: _ =>  // deprecated in favor of "get_threads"
-      val threadInfos = messagingController.getThreadInfos(socket.userId, url)
+      val (_, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
       socket.channel.push(Json.arr("thread_infos", threadInfos))
     },
     "get_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-      val threadInfos = messagingController.getThreadInfos(socket.userId, url)
-      socket.channel.push(Json.arr(requestId.toLong, threadInfos))
+      // remove after clients are off 2.6.6 and on 2.6.7+
+      if (url == null || url == "null") {
+        // Ignore for now to stop exceptions. Leaks some memory on client, but it's a bad request.
+      } else {
+        val (nUriOpt, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
+        socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriOpt.map(_.url)))
+      }
+      case _ => // for cases when url is JsNull
     },
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
       messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
