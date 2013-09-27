@@ -86,10 +86,7 @@ class UrlController @Inject() (
         }
       }.sortBy(_.id.get.id)
       
-      val lastId = centralConfig(renormKey) match {
-        case Some(id) => id
-        case None => 0
-      }
+      val lastId = centralConfig(renormKey) getOrElse 0L
       urls.filter(_.id.get.id > lastId).filter(_.state == URLStates.ACTIVE)
     }
     

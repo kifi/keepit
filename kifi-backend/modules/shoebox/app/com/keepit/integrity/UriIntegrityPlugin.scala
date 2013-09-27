@@ -162,10 +162,8 @@ class UriIntegrityActor @Inject()(
   }
 
   private def getOverDueList(fetchSize: Int = -1) = {
-    centralConfig(new ChangedUriSeqNumKey()) match {
-      case None => db.readOnly{ implicit s => changedUriRepo.getChangesSince(SequenceNumber(0), fetchSize, state = ChangedURIStates.ACTIVE)}
-      case Some(seqNum) => db.readOnly{ implicit s => changedUriRepo.getChangesSince(SequenceNumber(seqNum), fetchSize, state = ChangedURIStates.ACTIVE)}
-    }
+    val lowSeq = centralConfig(new ChangedUriSeqNumKey()) getOrElse 0L
+    db.readOnly{ implicit s => changedUriRepo.getChangesSince(SequenceNumber(lowSeq), fetchSize, state = ChangedURIStates.ACTIVE)}
   }
   
   private def batchURLMigration(batchSize: Int) = {
@@ -188,11 +186,8 @@ class UriIntegrityActor @Inject()(
   }
   
   private def getOverDueURLMigrations(fetchSize: Int = -1) = {
-    val lowSeq = centralConfig(new URLMigrationSeqNumKey()) match {
-      case None => SequenceNumber(0)
-      case Some(seqNum) => SequenceNumber(seqNum)
-    }
-    db.readOnly{ implicit s => renormRepo.getChangesSince(lowSeq, fetchSize, state = RenormalizedURLStates.ACTIVE)}
+    val lowSeq = centralConfig(new URLMigrationSeqNumKey()) getOrElse 0L
+    db.readOnly{ implicit s => renormRepo.getChangesSince(SequenceNumber(lowSeq), fetchSize, state = RenormalizedURLStates.ACTIVE)}
   }
   
 

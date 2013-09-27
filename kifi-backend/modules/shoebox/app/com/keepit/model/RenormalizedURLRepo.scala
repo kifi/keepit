@@ -60,7 +60,6 @@ class RenormalizedURLRepoImpl @Inject()(
       s <- urlRepo.table if r.urlId === s.id 
     } yield (r, s)).sortBy(_._2.url).drop(pageNum * pageSize).take(pageSize).map{_._1}.list
     
-    //(for (r <- table if r.state =!= RenormalizedURLStates.INACTIVE) yield r).sortBy(_.updatedAt).drop(pageNum * pageSize).take(pageSize).list
   }
   
   def activeCount()(implicit session: RSession): Int = {
