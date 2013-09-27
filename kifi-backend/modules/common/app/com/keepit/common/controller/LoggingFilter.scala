@@ -17,7 +17,7 @@ object LoggingFilter extends EssentialFilter {
 
       def logTime(result: PlainResult): Result = {
         val time = System.currentTimeMillis - start
-        Logger.info(s"${rh.method} ${rh.uri} took ${time}ms and returned ${result.header.status}")
+        Logger("com.keepit.access").info(s"[IN] ${rh.method} ${rh.uri} took [${time}ms] and returned ${result.header.status}")
         result.withHeaders("Request-Time" -> time.toString, "Spaceship" -> host)
       }
 
