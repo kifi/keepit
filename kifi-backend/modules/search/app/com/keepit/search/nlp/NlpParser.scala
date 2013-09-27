@@ -3,7 +3,7 @@ package com.keepit.search.nlp
 import scala.collection.JavaConversions._
 import edu.stanford.nlp.trees._;
 import edu.stanford.nlp.parser.lexparser.LexicalizedParser
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.ArrayBuffer
 
 object NlpParser {
   val enabled = true
@@ -28,7 +28,7 @@ object NlpParser {
 
   // return: (start, end), include endpoints.
   private def getSegments(cons: Set[Constituent]): Seq[(Int, Int)] = {
-    var segs = ListBuffer.empty[(Int, Int)]
+    var segs = new ArrayBuffer[(Int, Int)]
     if (cons.size == 0) {
       return segs
     }
@@ -41,10 +41,10 @@ object NlpParser {
       val nextStart = pair._2 + 1
       while(i < sortedPairs.size && sortedPairs(i)._1 < nextStart) i += 1
     }
-    segs.toList
+    segs
   }
 
-  def getTaggedSegments(text: String) = {
+  def getTaggedSegments(text: String): Seq[(String, String)]  = {
     val tree = parser.parse(text)
     val cons = tree.constituents()
     val leaves = tree.getLeaves[Tree]()
@@ -58,7 +58,7 @@ object NlpParser {
     tagged
   }
 
-  def getNonOverlappingConstituents(text: String) = {
+  def getNonOverlappingConstituents(text: String): Seq[(Int, Int)]  = {
     val tree = parser.parse(text)
     val cons = tree.constituents()
     val pairs = cons.map{x => (x.start(), x.end())}.toSeq
@@ -66,17 +66,16 @@ object NlpParser {
   }
 
   // NOTE: also removes single term constituents
-  def removeOverlapping(segments: Seq[(Int, Int)]) = {
+  def removeOverlapping(segments: Seq[(Int, Int)]): Seq[(Int, Int)] = {
     val sorted = segments.filter(x => x._1 < x._2).sortWith((a, b) => (a._2 < b._2) || (a._2 == b._2 && a._1 < b._1) )    // sort by right endpoint, then by length of interval
-    val rv = ListBuffer.empty[(Int, Int)]
+    val rv = new ArrayBuffer[(Int, Int)]
     var pos = -1
-    for(i <- 0 until sorted.size){
-      val seg = sorted(i)
-      if ( seg._1 > pos ){
+    sorted.foreach{ seg =>
+      if ( seg._1 > pos ) {
         pos = seg._2
         rv.append(seg)
       }
     }
-    rv.toSeq
+    rv
   }
 }
