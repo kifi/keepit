@@ -218,6 +218,20 @@ class UrlController @Inject() (
     uriIntegrityPlugin.batchURLMigration(500)
     Ok("Ok. Start migration of 500 urls")
   }
+  
+  def renormalizationView(page: Int = 0) = AdminHtmlAction{ request =>
+    val PAGE_SIZE = 200
+    val (renorms, totalCount) = db.readOnly{ implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount())}
+    val pageCount = (totalCount*1.0 / PAGE_SIZE).ceil.toInt
+    val info = db.readOnly{ implicit s =>
+      renorms.map{ renorm => (
+        urlRepo.get(renorm.urlId).url,
+        uriRepo.get(renorm.oldUriId).url,
+        uriRepo.get(renorm.newUriId).url
+      )}
+    }
+    Ok(html.admin.renormalizationView(info, page, totalCount, pageCount, PAGE_SIZE))
+  }
 
   def redirect(oldUrl: String, newUrl: String, canonical: Boolean = false) = AdminHtmlAction { request =>
     db.readOnly { implicit session =>

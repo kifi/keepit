@@ -12,6 +12,8 @@ trait RenormalizedURLRepo extends Repo[RenormalizedURL]{
   def getChangesSince(num: SequenceNumber, limit: Int, state: State[RenormalizedURL] = RenormalizedURLStates.APPLIED)(implicit session: RSession): Seq[RenormalizedURL]
   def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[RenormalizedURL] = RenormalizedURLStates.APPLIED)(implicit session: RSession): Seq[RenormalizedURL]   // (low, high]
   def saveWithoutIncreSeqnum(model: RenormalizedURL)(implicit session: RWSession): RenormalizedURL     // useful when we track processed merge requests
+  def pageView(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[RenormalizedURL]
+  def activeCount()(implicit session: RSession): Int
 }
 
 @Singleton
@@ -50,4 +52,13 @@ class RenormalizedURLRepoImpl @Inject()(
   def saveWithoutIncreSeqnum(model: RenormalizedURL)(implicit session: RWSession): RenormalizedURL = {
     super.save(model)
   }
+  
+  def pageView(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[RenormalizedURL] = {
+    (for (r <- table if r.state =!= RenormalizedURLStates.INACTIVE) yield r).sortBy(_.updatedAt).drop(pageNum * pageSize).take(pageSize).list
+  }
+  
+  def activeCount()(implicit session: RSession): Int = {
+    (for (r <- table if r.state =!= RenormalizedURLStates.INACTIVE) yield r).list.size
+  }
+
 }
