@@ -400,6 +400,13 @@ api.port.on({
         var thread = (d.threads || []).filter(hasId(threadId))[0];
         if (thread) {
           thread = o.threadInfo;
+          thread.participants = thread.participants.filter(idIsNot(session.userId));
+          for (var i = d.threads.length-1; i >= 0; i--) {
+            if (d.threads[i].id == thread.id) {
+              d.threads[i] = thread;
+              break;
+            }
+          }
         } else {
           d.threads.push(o.threadInfo);
         }
