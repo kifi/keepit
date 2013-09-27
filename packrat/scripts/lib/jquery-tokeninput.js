@@ -325,8 +325,6 @@ $.TokenList = function (input, url_or_data, settings) {
                             hidden_input.change();
                         } else if(previous_token.length) {
                             select_token($(previous_token.get(0)));
-                        } else {
-                            hide_dropdown();
                         }
                         return false;
                     } else if($(this).val().length === 1) {
