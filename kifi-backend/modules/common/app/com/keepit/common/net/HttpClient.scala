@@ -16,6 +16,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin}
 import scala.xml._
 
+import play.api.Logger
+
 case class NonOKResponseException(url: String, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"Requesting $url ${requestBody.map{b => b.toString}}, got a ${response.status}. Body: ${response.body}")
 
@@ -57,8 +59,6 @@ case class HttpClientImpl(
     airbrake: Provider[AirbrakeNotifier]) extends HttpClient {
 
   private val validResponseClass = 2
-
-  implicit val duration = Duration(timeout, timeoutUnit)
 
   override val defaultOnFailure: String => PartialFunction[Throwable, Unit] = { url =>
     {
@@ -204,8 +204,13 @@ private[net] class Request(wsRequest: WSRequestHolder) extends Logging {
     res
   }
 
-  private def logResponse(startTime: Long, method: String, isSuccess: Boolean) =
-    log.info(s"""[${System.currentTimeMillis - startTime}ms] [$method] ${wsRequest.url} [${wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&"}] (success = $isSuccess)""")
+  private val accessLog = Logger("com.keepit.access")
+
+  private def logResponse(startTime: Long, method: String, isSuccess: Boolean) = {
+    val time = System.currentTimeMillis - startTime
+    val queryString = wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&"
+    accessLog.info(s"""[OUT] [$method] ${wsRequest.url} took [${time}ms] with params [${queryString}] (success = $isSuccess)""")
+  }
 }
 
 trait ClientResponse {

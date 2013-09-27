@@ -326,7 +326,6 @@ $.TokenList = function (input, url_or_data, settings) {
                         } else if(previous_token.length) {
                             select_token($(previous_token.get(0)));
                         }
-
                         return false;
                     } else if($(this).val().length === 1) {
                         hide_dropdown();
@@ -363,7 +362,7 @@ $.TokenList = function (input, url_or_data, settings) {
 
                 case KEY.ESCAPE:
                   hide_dropdown();
-                  return true;
+                  return false;
 
                 default:
                     if(String.fromCharCode(event.which)) {
@@ -834,14 +833,8 @@ $.TokenList = function (input, url_or_data, settings) {
 
     // Highlight the query part of the search term
     function highlight_term(value, term) {
-        return value.replace(
-          new RegExp(
-            "(?![^&;]+;)(?!<[^<>]*)(" + regexp_escape(term) + ")(?![^<>]*>)(?![^&;]+;)",
-            "gi"
-          ), function(match, p1) {
-            return "<b>" + escapeHTML(p1) + "</b>";
-          }
-        );
+        var ret = scoreCandidate($.trim(term.toLowerCase()).split(/\s+/), $.trim(value).split(/\s+/), true);
+        return ret.formatted;
     }
 
     function find_value_and_highlight_term(template, value, term) {
@@ -899,6 +892,8 @@ $.TokenList = function (input, url_or_data, settings) {
             if($(input).data("settings").noResultsText) {
                 dropdown.html("<p>" + escapeHTML($(input).data("settings").noResultsText) + "</p>");
                 show_dropdown();
+            } else {
+              hide_dropdown();
             }
         }
     }
@@ -997,10 +992,28 @@ $.TokenList = function (input, url_or_data, settings) {
                 // Make the request
                 $.ajax(ajax_params);
             } else if($(input).data("settings").local_data) {
+                // See if we have cache of query minus one character. Can help speed things up.
+                query = $.trim(query);
+
+                var queryData;
+                if (query.length > 1 && (v = cache.get(query.substr(0, query.length - 1) + computeURL()))) {
+                    queryData = v;
+                } else {
+                    queryData = $(input).data("settings").local_data;
+                }
                 // Do the search through local data
-                var results = $.grep($(input).data("settings").local_data, function (row) {
-                    return row[$(input).data("settings").propertyToSearch].toLowerCase().indexOf(query.toLowerCase()) > -1;
-                });
+                var results = [];
+                var terms = $.trim(query.toLowerCase()).split(/\s+/);
+
+                queryData.forEach(function (row) {
+                    var n = $.trim(row[$(input).data("settings").propertyToSearch]).split(/\s+/);
+
+                    var res = scoreCandidate(terms, n);
+                    if (res) {
+                        results.push({score: res.score, row: row})
+                    }
+                })
+                results = results.sort(function(a, b) { return b.score - a.score; }).map(function (a) { return a.row; });
 
                 cache.add(cache_key, results);
                 if($.isFunction($(input).data("settings").onResult)) {
@@ -1009,6 +1022,69 @@ $.TokenList = function (input, url_or_data, settings) {
                 populate_dropdown(query, results);
             }
         }
+    }
+
+    function scoreCandidate(terms, names, formatResult) {
+        var formatResult = formatResult || false;
+
+        var score = 0;
+        var termsPresent = 0;
+        var highlighted = {};
+        var lowerName = names.map(function(n) { return n.toLowerCase(); });
+
+        for (var tIdx = 0; tIdx < terms.length; tIdx++) {
+          var term = terms[tIdx];
+          var maxTScore = 0;
+          var tHighlight = "";
+          var highlightedNIdx = -1;
+          for (var nIdx = 0; nIdx < names.length; nIdx++) {
+            var tScore = 0;
+            var name = lowerName[nIdx];
+            var nMatchIdx = -1;
+            if (0 === term.localeCompare(name.substring(0, term.length), undefined, {usage: "search", sensitivity: "base"})) {
+              if (name == term) tScore += 4; // exact same
+              else if (name.length == term.length) tScore += 3; // locale same
+              else if (term == name.substring(0, term.length)) tScore += 2; // substring exact same
+
+              if (tIdx == nIdx) tScore += 5;
+              else if (tIdx < nIdx) tScore += 3;
+              else tScore += 2;
+              nMatchIdx = 0;
+            } else if ((x = name.indexOf(term)) > -1) {
+              nMatchIdx = x;
+              tScore += 1;
+            }
+            if (tScore > maxTScore) {
+              if (formatResult) {
+                  highlightedNIdx = nIdx;
+                  tHighlight = names[nIdx].substr(0, nMatchIdx)
+                                 + "<b>" + names[nIdx].substr(nMatchIdx, term.length)
+                                 + "</b>" + names[nIdx].substr(nMatchIdx + term.length)
+              }
+              maxTScore = tScore;
+            }
+          }
+
+          if (maxTScore) {
+            if (formatResult) highlighted[highlightedNIdx] = tHighlight;
+            score += maxTScore;
+            termsPresent++;
+          } else {
+            return;
+          }
+        }
+        if (termsPresent != terms.length) return;
+
+        if (formatResult) {
+            var fmtName = "";
+            for (var i = 0; i < names.length; i++) {
+                if (highlighted[i]) fmtName += highlighted[i] + " ";
+                else fmtName += names[i] + " ";
+            }
+            return { score: score, formatted: fmtName };
+        }
+
+        return { score: score };
     }
 
     // compute the dynamic URL

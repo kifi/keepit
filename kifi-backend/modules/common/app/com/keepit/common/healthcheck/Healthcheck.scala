@@ -22,11 +22,7 @@ import play.api.Plugin
 import play.api.templates.Html
 import scala.concurrent.ExecutionContext.Implicits.global
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.healthcheck.HealthcheckErrorSignature
 import scala.Some
-import com.keepit.common.healthcheck.HealthcheckHost
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.HealthcheckErrorHistory
 
 object Healthcheck {
 

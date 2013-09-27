@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.time.RichDateTime
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.cache.GlobalCacheStatistics
 import com.keepit.common.healthcheck._
 
 import scala.util.Random
@@ -27,7 +27,7 @@ class AdminHealthController @Inject() (
   def serviceView = AdminHtmlAction { implicit request =>
     val errorCount = healthcheckPlugin.errorCount
     val recentErrors = healthcheckPlugin.errors()
-    val cacheStats = CacheStatistics.getStatistics
+    val cacheStats = GlobalCacheStatistics.getStatistics
     val (totalHits, totalMisses, totalSets) = (cacheStats.map(_._2).sum, cacheStats.map(_._3).sum, cacheStats.map(_._4).sum)
     Ok(html.admin.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString,
         services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
