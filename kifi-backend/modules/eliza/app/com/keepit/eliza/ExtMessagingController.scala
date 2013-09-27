@@ -56,7 +56,7 @@ class ExtMessagingController @Inject() (
       Statsd.timing(s"messaging.newMessage", tDiff)
       val threadInfoOpt = (o \ "url").asOpt[String].map(u => messagingController.buildThreadInfos(request.user.id.get, Seq(threadInfo), u).headOption).flatten
       messageThreadFut map { messages => // object instantiated earlier to give Future head start
-        Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages))
+        Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages.reverse))
       }
     }
     Async(responseFuture)
