@@ -36,7 +36,6 @@ case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experimen
 
 case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User], experiments: Set[State[ExperimentType]])
 
-
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   protected val shoebox: ShoeboxServiceClient
@@ -50,28 +49,26 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected def onDisconnect(socket: SocketInfo) : Unit
   protected def websocketHandlers(socket: SocketInfo) : Map[String, Seq[JsValue] => Unit]
 
-
-
   private def asyncIteratee(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
     import play.api.libs.iteratee._
     def step(i: Input[JsArray]): Iteratee[JsArray, Unit] = i match {
       case Input.EOF => Done(Unit, Input.EOF)
       case Input.Empty => Cont[JsArray, Unit](i => step(i))
       case Input.El(e) =>
-        Akka.future { 
+        Akka.future {
           try {
             f(e)
           } catch {
             case ex: Throwable => healthcheckPlugin.addError(
               HealthcheckError(
-                error = Some(ex), 
-                method = Some("ws"), 
-                path = e.value.headOption.map(_.toString), 
+                error = Some(ex),
+                method = Some("ws"),
+                path = e.value.headOption.map(_.toString),
                 callType = Healthcheck.INTERNAL,
                 errorMessage = Some(s"Error on ws call ${e.toString}")
               )
             )
-          } 
+          }
         }
         Cont[JsArray, Unit](i => step(i))
     }
@@ -175,7 +172,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 Some(c)
               }
             }
-            
+
             //testing heimdal
             // SafeFuture {
             //   val contextBuilder = new UserEventContextBuilder()
@@ -183,7 +180,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
             //   contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
             //   contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
             //   contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
-            //   streamSession.experiments.foreach{ experiment => 
+            //   streamSession.experiments.foreach{ experiment =>
             //     contextBuilder += ("experiment", experiment.toString)
             //   }
             //   heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_in_2")))
