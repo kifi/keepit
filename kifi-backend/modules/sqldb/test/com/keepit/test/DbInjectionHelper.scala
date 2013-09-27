@@ -49,7 +49,7 @@ trait DbInjectionHelper { self: InjectorProvider =>
     val s = db.masterDb.createSession.forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
     try {
       s.withTransaction {
-        f(new RWSession(s))
+        f(new RWSession(Database.Master, s))
       }
     } finally s.close()
   }
