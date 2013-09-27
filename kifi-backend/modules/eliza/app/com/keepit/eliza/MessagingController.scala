@@ -185,14 +185,14 @@ class MessagingController @Inject() (
     })
   }
 
-  def verifyAllNotifications() = Action { request => //Use with caution, very expensive! 
+  def verifyAllNotifications() = Action { request => //Use with caution, very expensive!
     //Will need to change when we have detached threads.
-    //currently only verifies 
+    //currently only verifies
     SafeFuture{
       log.warn("Starting notification verification!")
       val userThreads : Seq[UserThread] = db.readOnly{ implicit session => userThreadRepo.all }
       val nUrls : Map[Id[MessageThread], Option[String]] = db.readOnly{ implicit session => threadRepo.all } map { thread => (thread.id.get, thread.url) } toMap
-      
+
       userThreads.foreach{ userThread =>
         if (userThread.uriId.isDefined) {
           nUrls(userThread.thread).foreach{ correctNUrl =>
@@ -268,7 +268,7 @@ class MessagingController @Inject() (
   }
 
 
-  private[eliza] def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String) : Seq[ElizaThreadInfo]  = {
+  private[eliza] def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
     //get all involved users
     val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.all).getOrElse(Set())}
     //get all basic users
@@ -300,7 +300,7 @@ class MessagingController @Inject() (
         lastCommentedAt=lastMessage.createdAt,
         lastMessageRead=userThreads(thread.id.get).lastSeen,
         nUrl = thread.nUrl.getOrElse(""),
-        url = requestUrl
+        url = requestUrl.getOrElse("")
       )
 
     }
@@ -641,6 +641,13 @@ class MessagingController @Inject() (
     }
   }
 
+  def getThreadInfo(userId: Id[User], threadExtId: ExternalId[MessageThread]): ElizaThreadInfo = {
+    val thread = db.readOnly { implicit session =>
+      threadRepo.get(threadExtId)
+    }
+    buildThreadInfos(userId, Seq(thread), None).head
+  }
+
   def getThreadInfos(userId: Id[User], url: String): (Option[NormalizedURI], Seq[ElizaThreadInfo]) = {
     val nUriOpt = Await.result(shoebox.getNormalizedURIByURL(url), 2 seconds) // todo: Remove await
     val infos = nUriOpt.map { nUri =>
@@ -648,7 +655,7 @@ class MessagingController @Inject() (
         val threadIds = userThreadRepo.getThreads(userId, nUri.id)
         threadIds.map(threadRepo.get)
       }.filter(_.replyable)
-      buildThreadInfos(userId, threads, url)
+      buildThreadInfos(userId, threads, Some(url))
     } getOrElse {
       Seq[ElizaThreadInfo]()
     } sortWith { (a,b) =>
