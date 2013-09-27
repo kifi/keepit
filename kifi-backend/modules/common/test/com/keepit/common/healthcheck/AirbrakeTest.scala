@@ -33,7 +33,7 @@ class AirbrakeTest extends Specification with TestInjector {
       val error = new IllegalArgumentException("hi there", new Exception("middle thing" , new IllegalStateException("its me")))
       val xml = formatter.noticeError(ErrorWithStack(error), None)
       val lines = (xml \\ "line").toVector
-      lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="-----------" number=""/>
+      lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="Specification.scala" number="34"/>
       lines(1) === <line method="org.specs2.mutable.SpecificationFeatures[a][a]#apply" file="Specification.scala" number="34"/>
       lines.size === 185
     }
@@ -43,7 +43,7 @@ class AirbrakeTest extends Specification with TestInjector {
       val error = new IllegalArgumentException("hi there", new IllegalStateException("its me"))
       val xml = formatter.noticeError(ErrorWithStack(error), None)
       val lines = (xml \\ "line").toVector
-      lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="-----------" number=""/>
+      lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="Specification.scala" number="34"/>
       lines(1) === <line method="org.specs2.mutable.SpecificationFeatures[a][a]#apply" file="Specification.scala" number="34"/>
       lines.size === 123
     }
