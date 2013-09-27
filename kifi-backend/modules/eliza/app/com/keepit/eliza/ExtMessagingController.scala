@@ -54,7 +54,9 @@ class ExtMessagingController @Inject() (
       val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(threadInfo, None)
       val tDiff = currentDateTime.getMillis - tStart.getMillis
       Statsd.timing(s"messaging.newMessage", tDiff)
-      val threadInfoOpt = (o \ "url").asOpt[String].map(u => messagingController.buildThreadInfos(request.user.id.get, Seq(threadInfo), u).headOption).flatten
+      val threadInfoOpt = (o \ "url").asOpt[String].map { url =>
+        messagingController.buildThreadInfos(request.user.id.get, Seq(threadInfo), Some(url)).headOption
+      }.flatten
       messageThreadFut map { messages => // object instantiated earlier to give Future head start
         Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages))
       }
@@ -124,6 +126,11 @@ class ExtMessagingController @Inject() (
         socket.channel.push(
           Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse)))
       }
+    },
+    "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
+      log.info(s"[get_thread_info] user ${socket.userId} requesting thread extId $threadId")
+      val info = messagingController.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
+      socket.channel.push(Json.arr(requestId.toLong, info))
     },
     "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
       val messageId = ExternalId[Message](notifId)
