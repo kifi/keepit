@@ -1,7 +1,7 @@
 package com.keepit.shoebox
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._

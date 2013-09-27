@@ -20,8 +20,8 @@ case class ElizaThreadInfo(
     createdAt: DateTime,
     lastCommentedAt: DateTime,
     lastMessageRead: Option[DateTime],
-    nUrl: String,
-    url: String)
+    nUrl: Option[String],
+    url: Option[String])
 
 object ElizaThreadInfo {
   implicit val writesThreadInfo = (
@@ -36,7 +36,7 @@ object ElizaThreadInfo {
     (__ \ 'createdAt).write[DateTime] and
     (__ \ 'lastCommentedAt).write[DateTime] and
     (__ \ 'lastMessageRead).writeNullable[DateTime] and
-    (__ \ 'nUrl).write[String] and 
-    (__ \ 'url).write[String]
+    (__ \ 'nUrl).writeNullable[String] and
+    (__ \ 'url).writeNullable[String]
   )(unlift(ElizaThreadInfo.unapply))
 }
