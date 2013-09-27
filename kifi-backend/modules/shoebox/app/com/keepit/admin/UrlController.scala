@@ -226,6 +226,7 @@ class UrlController @Inject() (
     val pageCount = (totalCount*1.0 / PAGE_SIZE).ceil.toInt
     val info = db.readOnly{ implicit s =>
       renorms.map{ renorm => (
+        renorm.state.toString,
         urlRepo.get(renorm.urlId).url,
         uriRepo.get(renorm.oldUriId).url,
         uriRepo.get(renorm.newUriId).url

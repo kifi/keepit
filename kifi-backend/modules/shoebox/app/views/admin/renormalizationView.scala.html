@@ -1,4 +1,4 @@
-@(renorms: Seq[(String, String, String)], page: Int, totalCount: Int, pageCount: Int, maxPageSize: Int)
+@(renorms: Seq[(String, String, String, String)], page: Int, totalCount: Int, pageCount: Int, maxPageSize: Int)
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -42,16 +42,18 @@
 
   @pagination(page, pageCount)
   <table class = "table table-bordered" style="table-layout:fixed; word-wrap: break-word">
-  <col width = "5%"><col width = "15%"><col width="80%">
+  <col width = "5%"><col width = "10%"><col width = "10%"><col width="75%">
   <tr>
     <th>#</th>
+    <th>state</th>
     <th>fields</th>
     <th>URLs</th>
   </tr>
   
-  @renorms.zipWithIndex.map{ case ((url, oldUri, newUri), i) =>
+  @renorms.zipWithIndex.map{ case ((state, url, oldUri, newUri), i) =>
     <tr>
       <th rowspan="3"> @i </th>
+      <th rowspan="3"> @state </th>
       <th>original url</th> <td><a href = "@url" >@url</td>
     </tr>
 

@@ -19,7 +19,8 @@ trait RenormalizedURLRepo extends Repo[RenormalizedURL]{
 @Singleton
 class RenormalizedURLRepoImpl @Inject()(
   val db: DataBaseComponent,
-  val clock: Clock
+  val clock: Clock,
+  val urlRepo: URLRepoImpl
 ) extends DbRepo[RenormalizedURL] with RenormalizedURLRepo {
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
@@ -54,7 +55,12 @@ class RenormalizedURLRepoImpl @Inject()(
   }
   
   def pageView(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[RenormalizedURL] = {
-    (for (r <- table if r.state =!= RenormalizedURLStates.INACTIVE) yield r).sortBy(_.updatedAt).drop(pageNum * pageSize).take(pageSize).list
+    (for { 
+      r <- table if r.state =!= RenormalizedURLStates.INACTIVE
+      s <- urlRepo.table if r.urlId === s.id 
+    } yield (r, s)).sortBy(_._2.url).drop(pageNum * pageSize).take(pageSize).map{_._1}.list
+    
+    //(for (r <- table if r.state =!= RenormalizedURLStates.INACTIVE) yield r).sortBy(_.updatedAt).drop(pageNum * pageSize).take(pageSize).list
   }
   
   def activeCount()(implicit session: RSession): Int = {
