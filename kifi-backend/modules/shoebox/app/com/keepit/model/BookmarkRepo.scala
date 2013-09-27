@@ -167,8 +167,10 @@ class BookmarkRepoImpl @Inject() (
 
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark] = {
     latestBookmarkUriCache.getOrElseOpt(LatestBookmarkUriKey(uriId)) {
-      val activeBookmarks = getByUri(uriId)
-      if (activeBookmarks.isEmpty) None else Some(activeBookmarks.maxBy(_.updatedAt.getMillis))
+      val bookmarks = for { bookmark <- table if bookmark.uriId === uriId } yield bookmark
+      val max = bookmarks.map(_.updatedAt).max
+      val latest = for { bookmark <- bookmarks if bookmark.updatedAt >= max } yield bookmark
+      latest.sortBy(_.updatedAt desc).firstOption
     }
   }
 }
