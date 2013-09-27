@@ -47,12 +47,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val startMessage = ">>>>>>>>>> FortyTwo [%s] service %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
         this, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
     log.info(startMessage)
-    injector.instance[AppScope].onStart(app)
-    if (app.mode != Mode.Test && app.mode != Mode.Dev) {
-      Statsd.increment("deploys", 42)
-      injector.instance[HealthcheckPlugin].reportStart()
-      injector.instance[HealthcheckPlugin].warmUp()
-    }
 
     val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
     log.info(s"Amazon up! $amazonInstanceInfo")
@@ -60,6 +54,15 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     serviceDiscovery.register()
     serviceDiscovery.startSelfCheck()
     serviceDiscovery.forceUpdate()
+
+    injector.instance[AppScope].onStart(app)
+    if (app.mode != Mode.Test && app.mode != Mode.Dev) {
+      Statsd.increment("deploys", 42)
+      injector.instance[HealthcheckPlugin].reportStart()
+      injector.instance[HealthcheckPlugin].warmUp()
+    }
+
+
   }
 
   // Get a file within the .fortytwo folder in the user's home directory
