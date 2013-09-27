@@ -122,9 +122,7 @@ class ExtMessagingController @Inject() (
       log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
       messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { msgs =>
         log.info(s"[get_thread] got messages: $msgs")
-        val url = msgs.headOption.map(_.nUrl).getOrElse("")  // needs to change when we have detached threads
-        socket.channel.push(
-          Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse)))
+        socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "messages" -> msgs.reverse)))
       }
     },
     "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
