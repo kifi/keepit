@@ -409,7 +409,6 @@ api.port.on({
           d.lastMessageRead[threadId] = lastMessage.createdAt;
         }
       }
-      loadThreadData(nUri);
       respond(o);
     });
   },
