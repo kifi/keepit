@@ -51,7 +51,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
       throw ex
   }
 
-  private val accessLog = Logger("com.keepit.access")
+  private lazy val accessLog = Logger("com.keepit.access")
 
   def += (kv: (A, B)) = {
     val startTime = System.currentTimeMillis
