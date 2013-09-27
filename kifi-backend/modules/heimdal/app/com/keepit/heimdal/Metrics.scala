@@ -5,7 +5,7 @@ import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
 import reactivemongo.bson.{BSONValue, BSONDouble, BSONString, BSONDocument, BSONArray, BSONDateTime}
-import reactivemongo.core.commands.{PipelineOperator, Match, GroupField, SumValue, Unwind, Project, Sort, Descending}
+import reactivemongo.core.commands.{PipelineOperator, Match, GroupField, SumValue, Unwind, Project, Sort, Descending, AddToSet}
 
 
 sealed trait ComparisonOperator {
@@ -104,7 +104,7 @@ class GroupedEventCountMetricDefinition(eventsToConsider: EventSet, contextRestr
 
     val grouping = GroupField(groupField)("count" -> SumValue(1))
 
-    if (breakDown) Seq(timeWindowSelector, eventSelector, contextSelector, grouping, Unwind("_id"), Sort(Seq(Descending("count"))))
+    if (breakDown) Seq(timeWindowSelector, eventSelector, contextSelector, Unwind(groupField), grouping, Sort(Seq(Descending("count"))))
     else Seq(timeWindowSelector, eventSelector, contextSelector, grouping, Sort(Seq(Descending("count"))))
   }
 }
@@ -114,8 +114,30 @@ class SimpleEventCountMetricDefinition(eventsToConsider: EventSet, contextRestri
 
 
 
+class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction, groupField: String, breakDown : Boolean = false) extends SimpleMetricDefinition {
+  def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): Seq[PipelineOperator] = {
+    val timeWindowSelector = Match(BSONDocument(
+      "time" -> BSONDocument(
+        "$gte" -> BSONDateTime(startTime.getMillis),
+        "$lt"  -> BSONDateTime(startTime.getMillis + timeWindowSize.toMillis)
+      )
+    ))
+    val eventSelector = eventsToConsider match {
+      case SpecificEventSet(events) =>
+        Match(BSONDocument(
+          "event_type" -> BSONDocument(
+            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
+          )
+        ))
+      case AllEvents =>Match(BSONDocument())
+    }
+    val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
+    val grouping = GroupField(groupField)("users" -> AddToSet("$user_id"))
 
-// class GroupedUserCountMetricDefinition
+    if (breakDown) Seq(timeWindowSelector, eventSelector, contextSelector, Unwind(groupField), grouping, Unwind("users"), GroupField("_id")("count" -> SumValue(1), "users" -> AddToSet("$users")), Sort(Seq(Descending("count"))))
+    else Seq(timeWindowSelector, eventSelector, contextSelector, grouping, Unwind("users"), GroupField("_id")("count" -> SumValue(1), "users" -> AddToSet("$users")), Sort(Seq(Descending("count"))))
+  }
+}
 
 
