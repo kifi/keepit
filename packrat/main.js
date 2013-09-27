@@ -398,8 +398,11 @@ api.port.on({
       messageData[threadId] = o.messages;
       if (d) {
         var thread = (d.threads || []).filter(hasId(threadId))[0];
-        if (thread) thread = o.threadInfo;
-        else d.threads.push(o.threadInfo);
+        if (thread) {
+          thread = o.threadInfo;
+        } else {
+          d.threads.push(o.threadInfo);
+        }
 
         var lastMessage = o.messages.slice(-1)[0];
         if (new Date(lastMessage.createdAt) > new Date(d.lastMessageRead[threadId] || 0)) {
