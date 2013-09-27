@@ -578,7 +578,11 @@ var api = function() {
         }
       },
       select: function(tabId) {
-        chrome.tabs.update(tabId, {active: true});
+        chrome.tabs.update(tabId, {active: true}, function(tab) {
+          if (tab) {
+            chrome.windows.update(tab.windowId, {focused: true});
+          }
+        });
       },
       open: function(url, callback) {
         chrome.tabs.create({url: url}, function(tab) {
