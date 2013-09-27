@@ -241,6 +241,42 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "update restriction upon detection of a temporary redirect" in {
+      withDb() { implicit injector =>
+        val uriRepo = inject[NormalizedURIRepo]
+        val uri = inject[Database].readWrite { implicit s =>
+          uriRepo.save(NormalizedURI.withHash(title = Some("movedTemporarily"), normalizedUrl = "http://www.keepit.com/movedTemporarily", state = NormalizedURIStates.SCRAPE_WANTED))
+        }
+        val store = new FakeArticleStore()
+        val scraper = getMockScraper(store)
+        scraper.run.head._1.restriction === Some(Restriction.http(302))
+      }
+    }
+
+    "update restriction upon detection of a fishy permanent redirect" in {
+      withDb() { implicit injector =>
+        val uriRepo = inject[NormalizedURIRepo]
+        val bookmarkRepo = inject[BookmarkRepo]
+        val (uri, info, user) = db.readWrite { implicit s =>
+          val uri = uriRepo.save(NormalizedURI.withHash(title = Some("movedPermanently"), normalizedUrl = "http://www.keepit.com/movedPermanently", state = NormalizedURIStates.SCRAPE_WANTED))
+          val info = scrapeInfoRepo.getByUri(uri.id.get).get
+          val user = userRepo.save(User(firstName = "Léo", lastName = "Grimaldi"))
+          (uri, info, user)
+        }
+
+        val store = new FakeArticleStore()
+        val scraper = getMockScraper(store)
+        scraper.run.head._1.restriction === None
+
+        db.readWrite { implicit s =>
+          scrapeInfoRepo.save(info.withNextScrape(currentDateTime))
+          bookmarkRepo.save(Bookmark(uriId = uri.id.get, userId = user.id.get, url = uri.url, source = BookmarkSource.hover))
+        }
+
+        scraper.run.head._1.restriction === Some(Restriction.http(301))
+      }
+    }
   }
 
   private[this] def scrapeAndUpdateScrapeInfo(info: ScrapeInfo, scraper: Scraper)(implicit injector: Injector): ScrapeInfo = {
@@ -279,6 +315,22 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
               case Some(_) =>
                 HttpFetchStatus(HttpStatus.SC_NOT_MODIFIED, None, httpContext)
             }
+          case "http://www.keepit.com/movedPermanently" =>
+            val input = toHttpInputStream(htmlTemplate.format(suffix, suffix))
+            input.setContentType("text/html")
+            f(input)
+            val destinationUrl = "http://www.kifi.com/weAreHereNow"
+            httpContext.setAttribute("scraper_destination_url", destinationUrl)
+            httpContext.setAttribute("redirects", Seq(HttpRedirect(301, url, destinationUrl)))
+            HttpFetchStatus(HttpStatus.SC_OK, None, httpContext)
+          case "http://www.keepit.com/movedTemporarily" =>
+            val input = toHttpInputStream(htmlTemplate.format(suffix, suffix))
+            input.setContentType("text/html")
+            f(input)
+            val destinationUrl = "http://www.keepit.com/loginPlease"
+            httpContext.setAttribute("scraper_destination_url", destinationUrl)
+            httpContext.setAttribute("redirects", Seq(HttpRedirect(302, url, destinationUrl)))
+            HttpFetchStatus(HttpStatus.SC_OK, None, httpContext)
           case _ =>
             HttpFetchStatus(HttpStatus.SC_NOT_FOUND, Some("not found"), httpContext)
         }

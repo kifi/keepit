@@ -11,8 +11,8 @@ import com.google.inject.Injector
 
 class BookmarkTest extends Specification with ShoeboxTestInjector {
 
-  val hover = BookmarkSource("HOVER_KEEP")
-  val initLoad = BookmarkSource("INIT_LOAD")
+  val hover = BookmarkSource.hover
+  val initLoad = BookmarkSource.initLoad
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)

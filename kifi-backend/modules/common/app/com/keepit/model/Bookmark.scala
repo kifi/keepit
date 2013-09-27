@@ -102,6 +102,8 @@ case class BookmarkSource(value: String) {
 
 object BookmarkSource {
   implicit def source(value: String) = BookmarkSource(value)
+  val hover = BookmarkSource("HOVER_KEEP")
+  val initLoad = BookmarkSource("INIT_LOAD")
 }
 
 object BookmarkFactory {

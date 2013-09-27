@@ -38,7 +38,8 @@ class BookmarkRepoImpl @Inject() (
   val countCache: BookmarkCountCache,
   val keepToCollectionRepo: KeepToCollectionRepoImpl,
   collectionRepo: CollectionRepo,
-  bookmarkUriUserCache: BookmarkUriUserCache)
+  bookmarkUriUserCache: BookmarkUriUserCache,
+  latestBookmarkUriCache: LatestBookmarkUriCache)
   extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
 
   import DBSession._
@@ -71,6 +72,7 @@ class BookmarkRepoImpl @Inject() (
   override def invalidateCache(bookmark: Bookmark)(implicit session: RSession) = {
     bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
     countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
+    latestBookmarkUriCache.set(LatestBookmarkUriKey(bookmark.uriId), bookmark)
     bookmark
   }
 
@@ -164,7 +166,9 @@ class BookmarkRepoImpl @Inject() (
   }
 
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark] = {
-    val activeBookmarks = getByUri(uriId)
-    if (activeBookmarks.isEmpty) None else Some(activeBookmarks.maxBy(_.updatedAt.getMillis))
+    latestBookmarkUriCache.getOrElseOpt(LatestBookmarkUriKey(uriId)) {
+      val activeBookmarks = getByUri(uriId)
+      if (activeBookmarks.isEmpty) None else Some(activeBookmarks.maxBy(_.updatedAt.getMillis))
+    }
   }
 }
