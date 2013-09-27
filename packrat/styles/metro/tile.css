@@ -57,7 +57,8 @@
   backface-visibility: hidden;
   transition: visibility 0s .125s; /* broken backface-visibility workaround */
 }
-.kifi-tile-keep {
+.kifi-tile-keep { /* tile_logo.png */
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADQAAAAeCAQAAADJRvUwAAAB0klEQVR4Ab3WP0iVXwDH4VNe+yOhllQmokINRktTRQhiRkMFOdZQQ1tLOOQgFKWTYwTSj/gR6uzWYEgJgkMYQVMlGIKDEJEJmWVye4K4cDhwRd/03s93Oxx47ru87w2WxVZVCVtag0tuuatNSBek1f4zcUSfDwCGSgNVeuAHbB9007RZI5rFsxoTSBsWBB3GzRlzNivUA2BBXeEsV4ThyV8mD/jldBaowpJYT+H0nhh5wzoLP2JcbDQLVC3GQ0Fw2IrYT+fife/FprNAwYzYdUHQK8bt5PaI2GA26LwVwHM5QTAltmRXcrvZPGBWfTYoOKbPoGsFJmdN7IWQzn53DOpWI6wHNetKdsUeB1Um74CgSYw5Q4X9p1qlunh7vSc66qu0V3K6zOh2SqvLnnotaLFeJ9X6ol+b49oNWCwG7fZG2qImQZcYbzeEkopBj6VxUdh+6Ko0BoTth874Jm1SRXZI60bQR2mfNAibhEa1FNYobASl5XUKm4PST0NW6L5QDmjCzvJA8w6UB2LMjvJA9JYKeiYtr700UKN30hbUlwKqdcJ3aS9VlAIKbkijvzRQ8L+03y5sFSr+33uvKWmf7dMhxqTgkDWxRwlUZVVsOSjT/gAqEZpmhTmyWwAAAABJRU5ErkJggg==);
   background-color: #263f5c;
   background-size: 26px auto;
   background-position: center;

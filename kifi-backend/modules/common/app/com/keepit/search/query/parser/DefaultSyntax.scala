@@ -17,8 +17,6 @@ object DefaultSyntax {
   val termRegex = """([^\p{Zs}]+)[\p{Zs}$]*""".r
   val quotedTermRegex = """\"((([^\"])|(\"[^\p{Zs}]))*)\"([\p{Zs}$]*)""".r
   val endOfQueryRegex = """($)""".r
-
-  case class QuerySpec(occur: Occur, field: String, term: String, quoted: Boolean)
 }
 
 trait DefaultSyntax extends QueryParser {
@@ -106,14 +104,17 @@ trait DefaultSyntax extends QueryParser {
     } else {
       inputText = queryText
       buf = removeLeadingSpaces(queryText)
-      val querySpecList = parse(Nil)
-      val clauses = querySpecList.foldLeft(ArrayBuffer.empty[BooleanClause]) { (clauses, spec) =>
-        val query = getFieldQuery(spec.field, spec.term, spec.quoted)
-        query.foreach{ query => clauses += new BooleanClause(query, spec.occur) }
-        clauses
-      }
-      getBooleanQuery(clauses)
+      buildQuery(parse(Nil))
     }
+  }
+
+  override protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query] = {
+    val clauses = querySpecList.foldLeft(ArrayBuffer.empty[BooleanClause]) { (clauses, spec) =>
+      val query = getFieldQuery(spec.field, spec.term, spec.quoted)
+      query.foreach{ query => clauses += new BooleanClause(query, spec.occur) }
+      clauses
+    }
+    getBooleanQuery(clauses)
   }
 }
 

@@ -61,4 +61,5 @@ object BookmarkQueryParser {
 class BookmarkQueryParser(defaultAnalyzer: Analyzer, stemmingAnalyzer: Analyzer)
 extends QueryParser(defaultAnalyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
   override val siteBoost = 1.0f
+  override val concatBoost = 1.0f
 }

@@ -318,7 +318,9 @@ exports.tabs = {
   },
   select: function(tabId) {
     exports.log("[api.tabs.select]", tabId);
-    tabsById[tabId].activate();
+    var tab = tabsById[tabId];
+    tab.activate();
+    tab.window.activate();
   },
   open: function(url, callback) {
     exports.log("[api.tabs.open]", url);
@@ -382,12 +384,11 @@ exports.tabs = {
     return win === windows.activeWindow && tab === win.tabs.activeTab;
   },
   navigate: function(tabId, url) {
-    var tab = tabsById[tabId], win;
+    var tab = tabsById[tabId];
     if (tab) {
       tab.url = url;
-      win = tab.window;
-      if (tab != win.activeTab) tab.activate();
-      if (win != windows.activeWindow) win.activate();
+      tab.activate();
+      tab.window.activate();
     }
   },
   on: {
