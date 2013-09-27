@@ -7,7 +7,7 @@
 
 POST  /internal/heimdal/trackEvent        @com.keepit.heimdal.controllers.EventTrackingController.trackInternalEvent()
 
-GET   /internal/heimdal/adhocMetric       @com.keepit.heimdal.controllers.AnalyticsController.adhocMetric(from : String, to: String ?= "now", events: String ?="all", groupBy: String ?="_", breakDown : String ?= "false")
+GET   /internal/heimdal/adhocMetric       @com.keepit.heimdal.controllers.AnalyticsController.adhocMetric(from : String, to: String ?= "now", events: String ?="all", groupBy: String ?="_", breakDown : String ?= "false", mode: String ?= "count")
 
 
 
