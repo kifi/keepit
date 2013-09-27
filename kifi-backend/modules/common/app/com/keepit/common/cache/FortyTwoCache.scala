@@ -50,36 +50,43 @@ trait CacheStatistics extends Logging {
   }
   private val accessLog = Logger("com.keepit.access")
 
-  def recordHit(cachePlugin: String, namespace: String, fullKey: String, millis: Long) {
-    incrCount(s"$cachePlugin.$namespace", global.hitsMap)
-    Statsd.increment(s"$cachePlugin.$namespace.hits")
-    Statsd.timing(s"$cachePlugin.$namespace.hits", millis)
-    accessLog.info(s"""[CACHE] [$cachePlugin] HIT  $fullKey took [${millis}ms]""")
+  def recordHit(cachePlugin: String, logAccess: Boolean, namespace: String, fullKey: String, millis: Long) {
+    val name = s"$cachePlugin.$namespace"
+    incrCount(name, global.hitsMap)
+    Statsd.increment(s"$name.hits")
+    Statsd.timing(s"$name.hits", millis)
+    if (logAccess) accessLog.info(s"""[CACHE] [$cachePlugin] HIT  $fullKey took [${millis}ms]""")
   }
 
-  def recordMiss(cachePlugin: String, namespace: String, fullKey: String, millis: Long) {
-    incrCount(s"$cachePlugin.$namespace", global.missesMap)
-    Statsd.increment(s"$cachePlugin.$namespace.misses")
+  def recordMiss(cachePlugin: String, logAccess: Boolean, namespace: String, fullKey: String, millis: Long) {
+    val name = s"$cachePlugin.$namespace"
+    incrCount(s"$name", global.missesMap)
+    Statsd.increment(s"$name.misses")
     log.warn(s"Cache miss on key $fullKey in $cachePlugin")
-    accessLog.info(s"""[CACHE] [$cachePlugin] MISS $fullKey took [${millis}ms]""")
+    if (logAccess) accessLog.info(s"""[CACHE] [$cachePlugin] MISS $fullKey took [${millis}ms]""")
   }
 
-  def recordSet(cachePlugin: String, namespace: String, fullKey: String, millis: Long) {
-    incrCount(s"$cachePlugin.$namespace", global.setsMap)
-    Statsd.increment(s"$cachePlugin.$namespace.sets")
-    Statsd.timing(s"$cachePlugin.$namespace.sets", millis)
-    accessLog.info(s"""[CACHE] [$cachePlugin] SET  $fullKey took [${millis}ms]""")
+  def recordSet(cachePlugin: String, logAccess: Boolean, namespace: String, fullKey: String, millis: Long) {
+    val name = s"$cachePlugin.$namespace"
+    incrCount(s"$name", global.setsMap)
+    Statsd.increment(s"$name.sets")
+    Statsd.timing(s"$name.sets", millis)
+    if (logAccess) accessLog.info(s"""[CACHE] [$cachePlugin] SET  $fullKey took [${millis}ms]""")
   }
 }
 
 trait FortyTwoCachePlugin extends Plugin {
   private[cache] def onError(error: AirbrakeError) {}
 
+  private[cache] val logAccess: Boolean = false
+
   def get(key: String): Option[Any]
   def remove(key: String): Unit
   def set(key: String, value: Any, expiration: Int = 0): Unit
 
   override def enabled = true
+
+  override def toString = "Cache"
 }
 
 trait InMemoryCachePlugin extends FortyTwoCachePlugin
@@ -89,24 +96,21 @@ class MemcachedCache @Inject() (
   val cache: MemcachedPlugin,
   val airbrake: AirbrakeNotifier) extends FortyTwoCachePlugin {
 
-  def get(key: String): Option[Any] =
-    cache.api.get(key)
+  override private[cache] val logAccess = true
+
+  def get(key: String): Option[Any] = cache.api.get(key)
 
   override def onError(error: AirbrakeError) {
     airbrake.notify(error)
   }
 
-  def remove(key: String) {
-    cache.api.remove(key)
-  }
+  def remove(key: String) = cache.api.remove(key)
 
   def set(key: String, value: Any, expiration: Int = 0): Unit = future {
     cache.api.set(key, value, expiration)
   }
 
-  override def onStop() {
-    cache.onStop()
-  }
+  override def onStop() = cache.onStop()
 
   override def toString = "Memcached"
 }
@@ -264,12 +268,12 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] with CacheStatisti
       val time = currentDateTime.getMillis() - getStart
       objOpt match {
         case Some(_) => {
-          recordHit(repo.toString, key.namespace, key.toString, time)
-          recordHit("Cache", key.namespace, key.toString, time)
+          recordHit(repo.toString, repo.logAccess, key.namespace, key.toString, time)
+          recordHit("Cache", repo.logAccess, key.namespace, key.toString, time)
         }
         case None => {
-          recordMiss(repo.toString, key.namespace, key.toString, time)
-          if (outerCache isEmpty) recordMiss("Cache", key.namespace, key.toString, time)
+          recordMiss(repo.toString, repo.logAccess, key.namespace, key.toString, time)
+          if (outerCache isEmpty) recordMiss("Cache", repo.logAccess, key.namespace, key.toString, time)
         }
       }
       objOpt
@@ -321,8 +325,8 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] with CacheStatisti
       }
       repo.set(keyS, properlyBoxed, ttlInSeconds)
       val setEnd = currentDateTime.getMillis()
-      recordSet(repo.toString, key.namespace, key.toString, setEnd - setStart)
-      if (outerCache isEmpty) recordSet("Cache", key.namespace, key.toString, setEnd - setStart)
+      recordSet(repo.toString, repo.logAccess, key.namespace, key.toString, setEnd - setStart)
+      if (outerCache isEmpty) recordSet("Cache", repo.logAccess, key.namespace, key.toString, setEnd - setStart)
     } catch {
       case e: Throwable =>
         repo.onError(AirbrakeError(e, Some(s"Failed setting key $key in $repo")))
