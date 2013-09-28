@@ -24,10 +24,11 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getBookmarksChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
-  def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit
+  def delete(id: Id[Bookmark])(implicit session: RSession): Unit
   def save(model: Bookmark)(implicit session: RWSession): Bookmark
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
   def removeFromCache(bookmark: Bookmark)(implicit session: RSession): Unit
+  def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark]
 }
 
 @Singleton
@@ -37,7 +38,8 @@ class BookmarkRepoImpl @Inject() (
   val countCache: BookmarkCountCache,
   val keepToCollectionRepo: KeepToCollectionRepoImpl,
   collectionRepo: CollectionRepo,
-  bookmarkUriUserCache: BookmarkUriUserCache)
+  bookmarkUriUserCache: BookmarkUriUserCache,
+  latestBookmarkUriCache: LatestBookmarkUriCache)
   extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
 
   import DBSession._
@@ -70,6 +72,7 @@ class BookmarkRepoImpl @Inject() (
   override def invalidateCache(bookmark: Bookmark)(implicit session: RSession) = {
     bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
     countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
+    latestBookmarkUriCache.set(LatestBookmarkUriKey(bookmark.uriId), bookmark)
     bookmark
   }
 
@@ -162,4 +165,12 @@ class BookmarkRepoImpl @Inject() (
     q.list.distinct
   }
 
+  def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark] = {
+    latestBookmarkUriCache.getOrElseOpt(LatestBookmarkUriKey(uriId)) {
+      val bookmarks = for { bookmark <- table if bookmark.uriId === uriId } yield bookmark
+      val max = bookmarks.map(_.updatedAt).max
+      val latest = for { bookmark <- bookmarks if bookmark.updatedAt >= max } yield bookmark
+      latest.sortBy(_.updatedAt desc).firstOption
+    }
+  }
 }
