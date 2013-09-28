@@ -462,7 +462,9 @@ var slider2 = function() {
             .on("transitionend", function onPaneShown(e) {
               if (e.target !== this) return;
               $pane.off("transitionend", onPaneShown);
-              if (!bringSlider) {
+              if (bringSlider) {
+                tile.style.display = "block"; // in case sensitive
+              } else {
                 $pane.before(tile);
                 $slider.appendTo($pane);
               }
