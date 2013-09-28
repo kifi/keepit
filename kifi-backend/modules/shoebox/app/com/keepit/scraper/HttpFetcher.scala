@@ -185,6 +185,7 @@ case class HttpFetchStatus(statusCode: Int, message: Option[String], context: Ht
 case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination: String) {
   def isPermanent = (statusCode == HttpStatus.SC_MOVED_PERMANENTLY)
   def isAbsolute = HttpRedirect.isAbsolute(currentLocation) && HttpRedirect.isAbsolute(newDestination)
+  def isLocatedAt(url: String) = (currentLocation == url)
 }
 
 object HttpRedirect {

@@ -12,6 +12,6 @@ object Restriction {
 
   def http(statusCode: Int): Restriction = Restriction(s"HTTP ${statusCode}")
   val http = """^HTTP (\d{3})$""".r
-  val redirects = Seq(http(302), http(303), http(307))
+  val redirects = Seq(301, 302, 303, 307).map(http(_))
 
 }

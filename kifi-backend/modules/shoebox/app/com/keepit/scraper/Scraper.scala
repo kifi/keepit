@@ -20,7 +20,7 @@ import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.model.ScrapeInfo
 import com.keepit.search.Article
 import com.keepit.common.net.URI
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.normalizer.{TrustedCandidate, NormalizationService}
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -315,25 +315,17 @@ class Scraper @Inject() (
   )
 
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect])(implicit session: RWSession): NormalizedURI = {
-    val immediateRedirect = redirects.find(_.currentLocation == uri.url)
-
-    val withUpdatedRestriction = immediateRedirect.map(redirect => Restriction.http(redirect.statusCode)) match {
-      case Some(httpRestriction) if Restriction.redirects.contains(httpRestriction) => addRedirectRestriction(uri, httpRestriction)
+    redirects.find(_.isLocatedAt(uri.url)) match {
+      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => updateRedirectRestriction(uri, redirect)
+      case Some(permanentRedirect) if permanentRedirect.isAbsolute => recordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
       case _ => removeRedirectRestriction(uri)
     }
-
-    val toBeRedirected = for {
-      redirect <- immediateRedirect if redirect.isPermanent && redirect.isAbsolute
-      toBeRedirected <- recordPermanentRedirect(withUpdatedRestriction, redirect)
-    } yield toBeRedirected
-
-    toBeRedirected getOrElse withUpdatedRestriction
   }
 
-  private def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit session: RWSession): Option[NormalizedURI] = {
-    require(redirect.statusCode == 301, "HTTP redirect is not permanent.")
-    require(redirect.currentLocation == uri.url, "Current Location of HTTP redirect does not match normalized Uri.")
-    for {
+  private def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit session: RWSession): NormalizedURI = {
+    require(redirect.isPermanent, "HTTP redirect is not permanent.")
+    require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
+    val toBeRedirected = for {
       candidateUri <- normalizedURIRepo.getByUri(redirect.newDestination)
       normalization <- candidateUri.normalization
     } yield {
@@ -341,6 +333,8 @@ class Scraper @Inject() (
       session.onTransactionSuccess(normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization)))
       toBeRedirected
     }
+
+    toBeRedirected getOrElse uri
   }
 
   private def removeRedirectRestriction(uri: NormalizedURI): NormalizedURI = uri.restriction match {
@@ -348,5 +342,14 @@ class Scraper @Inject() (
     case _ => uri
   }
 
-  private def addRedirectRestriction(uri: NormalizedURI, restriction: Restriction): NormalizedURI = uri.copy(restriction = Some(restriction))
+  private def updateRedirectRestriction(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = {
+    val restriction = Restriction.http(redirect.statusCode)
+    if (Restriction.redirects.contains(restriction)) uri.copy(restriction = Some(restriction)) else removeRedirectRestriction(uri)
+  }
+
+  private def hasFishy301(movedUri: NormalizedURI)(implicit session: RSession): Boolean = {
+    val hasFishy301Restriction = movedUri.restriction == Some(Restriction.http(301))
+    val wasKeptRecently = bookmarkRepo.latestBookmark(movedUri.id.get).map(_.updatedAt.isAfter(currentDateTime.minusHours(1))).getOrElse(false)
+    hasFishy301Restriction || wasKeptRecently
+  }
 }
