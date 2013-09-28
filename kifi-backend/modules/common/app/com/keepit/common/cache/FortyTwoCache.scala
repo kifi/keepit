@@ -269,11 +269,11 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] with CacheStatisti
       objOpt match {
         case Some(_) => {
           recordHit(repo.toString, repo.logAccess, key.namespace, key.toString, time)
-          recordHit("Cache", repo.logAccess, key.namespace, key.toString, time)
+          recordHit("Cache", false, key.namespace, key.toString, time)
         }
         case None => {
           recordMiss(repo.toString, repo.logAccess, key.namespace, key.toString, time)
-          if (outerCache isEmpty) recordMiss("Cache", repo.logAccess, key.namespace, key.toString, time)
+          if (outerCache isEmpty) recordMiss("Cache", false, key.namespace, key.toString, time)
         }
       }
       objOpt
@@ -326,7 +326,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] with CacheStatisti
       repo.set(keyS, properlyBoxed, ttlInSeconds)
       val setEnd = currentDateTime.getMillis()
       recordSet(repo.toString, repo.logAccess, key.namespace, key.toString, setEnd - setStart)
-      if (outerCache isEmpty) recordSet("Cache", repo.logAccess, key.namespace, key.toString, setEnd - setStart)
+      if (outerCache isEmpty) recordSet("Cache", false, key.namespace, key.toString, setEnd - setStart)
     } catch {
       case e: Throwable =>
         repo.onError(AirbrakeError(e, Some(s"Failed setting key $key in $repo")))

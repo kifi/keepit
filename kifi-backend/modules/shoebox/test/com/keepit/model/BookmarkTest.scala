@@ -11,8 +11,8 @@ import com.google.inject.Injector
 
 class BookmarkTest extends Specification with ShoeboxTestInjector {
 
-  val hover = BookmarkSource("HOVER_KEEP")
-  val initLoad = BookmarkSource("INIT_LOAD")
+  val hover = BookmarkSource.hover
+  val initLoad = BookmarkSource.initLoad
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
@@ -152,14 +152,37 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
     
     "get by exclude state should work" in {
        withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, url1, _) = setup()
-        db.readWrite{ implicit s =>
-          val bm = bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get)
-          bookmarkRepo.save(bm.get.withActive(false))
-          bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get).size === 0
-          bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get, excludeState = None).size === 1
+         val (user1, user2, uri1, uri2, url1, _) = setup()
+         db.readWrite{ implicit s =>
+           val bm = bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get)
+           bookmarkRepo.save(bm.get.withActive(false))
+           bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get).size === 0
+           bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get, excludeState = None).size === 1
         }
-       }
+      }
+    }
+
+    "get the latest updated bookmark for a specific uri" in {
+      withDb() { implicit injector =>
+        db.readWrite{ implicit s =>
+          val uri = uriRepo.save(NormalizedURI.withHash("http://www.kifi.com"))
+          val uriId = uri.id.get
+          val url = uri.url
+          val firstUserId = userRepo.save(User(firstName = "Léo", lastName = "Grimaldi")).id.get
+          val secondUserId = userRepo.save(User(firstName = "Eishay", lastName = "Smith")).id.get
+
+          bookmarkRepo.latestBookmark(uriId) === None
+
+          val firstUserBookmark = bookmarkRepo.save(Bookmark(userId = firstUserId, uriId = uriId, url = url, source = hover))
+          bookmarkRepo.latestBookmark(uriId).flatMap(_.id) === firstUserBookmark.id
+
+          val secondUserBookmark = bookmarkRepo.save(Bookmark(userId = secondUserId, uriId = uriId, url = url, source = hover))
+          bookmarkRepo.latestBookmark(uriId).flatMap(_.id) === secondUserBookmark.id
+
+          val latestBookmark = bookmarkRepo.save(firstUserBookmark)
+          bookmarkRepo.latestBookmark(uriId).flatMap(_.id) === latestBookmark.id
+        }
+      }
     }
   }
 }
