@@ -394,26 +394,16 @@ api.port.on({
       log("[send_message] resp:", o)();
 
       var d = pageData[nUri];
-      var threadId = o.threadInfo.id;
-      messageData[threadId] = o.messages;
+      var thread = o.threadInfo;
+      messageData[thread.id] = o.messages;
       if (d) {
-        var thread = (d.threads || []).filter(hasId(threadId))[0];
-        if (thread) {
-          thread = o.threadInfo;
-          thread.participants = thread.participants.filter(idIsNot(session.userId));
-          for (var i = d.threads.length-1; i >= 0; i--) {
-            if (d.threads[i].id == thread.id) {
-              d.threads[i] = thread;
-              break;
-            }
-          }
-        } else {
-          d.threads.push(o.threadInfo);
-        }
+        thread.participants = thread.participants.filter(idIsNot(session.userId));
+        d.threads = d.threads.filter(idIsNot(thread.id));
+        d.threads.push(thread);  // maintaining chronological order
 
-        var lastMessage = o.messages.slice(-1)[0];
-        if (new Date(lastMessage.createdAt) > new Date(d.lastMessageRead[threadId] || 0)) {
-          d.lastMessageRead[threadId] = lastMessage.createdAt;
+        var lastMessage = o.messages[o.messages.length - 1];
+        if (new Date(lastMessage.createdAt) > new Date(d.lastMessageRead[thread.id] || 0)) {
+          d.lastMessageRead[thread.id] = lastMessage.createdAt;
         }
       }
       respond(o);
