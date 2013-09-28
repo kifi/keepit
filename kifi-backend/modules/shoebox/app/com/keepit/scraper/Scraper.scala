@@ -316,7 +316,7 @@ class Scraper @Inject() (
 
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect])(implicit session: RWSession): NormalizedURI = {
     redirects.find(_.isLocatedAt(uri.url)) match {
-      case Some(redirect) if !redirect.isPermanent || isFishy(uri) => updateRedirectRestriction(uri, redirect)
+      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => updateRedirectRestriction(uri, redirect)
       case Some(permanentRedirect) if permanentRedirect.isAbsolute => recordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
       case _ => removeRedirectRestriction(uri)
     }
@@ -347,7 +347,7 @@ class Scraper @Inject() (
     if (Restriction.redirects.contains(restriction)) uri.copy(restriction = Some(restriction)) else removeRedirectRestriction(uri)
   }
 
-  private def isFishy(movedUri: NormalizedURI)(implicit session: RSession): Boolean = {
+  private def hasFishy301(movedUri: NormalizedURI)(implicit session: RSession): Boolean = {
     val hasFishy301Restriction = movedUri.restriction == Some(Restriction.http(301))
     val wasKeptRecently = bookmarkRepo.latestBookmark(movedUri.id.get).map(_.updatedAt.isAfter(currentDateTime.minusHours(1))).getOrElse(false)
     hasFishy301Restriction || wasKeptRecently

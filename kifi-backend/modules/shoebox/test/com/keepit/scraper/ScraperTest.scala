@@ -245,36 +245,50 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
     "update restriction upon detection of a temporary redirect" in {
       withDb() { implicit injector =>
         val uriRepo = inject[NormalizedURIRepo]
-        val uri = inject[Database].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           uriRepo.save(NormalizedURI.withHash(title = Some("movedTemporarily"), normalizedUrl = "http://www.keepit.com/movedTemporarily", state = NormalizedURIStates.SCRAPE_WANTED))
         }
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
-        scraper.run.head._1.restriction === Some(Restriction.http(302))
+        val updatedUri = scraper.run.head._1
+        updatedUri.restriction === Some(Restriction.http(302))
+        updatedUri.normalization === None
+      }
+    }
+
+    "update normalization upon detection of a permanent redirect" in {
+      withDb() { implicit injector =>
+        val movedUri = db.readWrite { implicit s =>
+          uriRepo.save(NormalizedURI.withHash(title = Some("weAreHereNow"), normalizedUrl = "http://www.kifi.com/weAreHereNow", normalization = Some(Normalization.HTTPWWW)))
+          uriRepo.save(NormalizedURI.withHash(title = Some("movedPermanently"), normalizedUrl = "http://www.keepit.com/movedPermanently", state = NormalizedURIStates.SCRAPE_WANTED))
+        }
+
+        movedUri.normalization === None
+
+        val store = new FakeArticleStore()
+        val scraper = getMockScraper(store)
+        val updatedUri = scraper.run.head._1
+        updatedUri.restriction === None
+        updatedUri.normalization === Some(Normalization.MOVED)
       }
     }
 
     "update restriction upon detection of a fishy permanent redirect" in {
       withDb() { implicit injector =>
-        val uriRepo = inject[NormalizedURIRepo]
-        val bookmarkRepo = inject[BookmarkRepo]
-        val (uri, info, user) = db.readWrite { implicit s =>
+        val uri = db.readWrite { implicit s =>
           val uri = uriRepo.save(NormalizedURI.withHash(title = Some("movedPermanently"), normalizedUrl = "http://www.keepit.com/movedPermanently", state = NormalizedURIStates.SCRAPE_WANTED))
-          val info = scrapeInfoRepo.getByUri(uri.id.get).get
           val user = userRepo.save(User(firstName = "Léo", lastName = "Grimaldi"))
-          (uri, info, user)
+          bookmarkRepo.save(Bookmark(uriId = uri.id.get, userId = user.id.get, url = uri.url, source = BookmarkSource.hover))
+          uri
         }
+
+        uri.restriction === None
 
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
-        scraper.run.head._1.restriction === None
-
-        db.readWrite { implicit s =>
-          scrapeInfoRepo.save(info.withNextScrape(currentDateTime))
-          bookmarkRepo.save(Bookmark(uriId = uri.id.get, userId = user.id.get, url = uri.url, source = BookmarkSource.hover))
-        }
-
-        scraper.run.head._1.restriction === Some(Restriction.http(301))
+        val updatedUri = scraper.run.head._1
+        updatedUri.restriction === Some(Restriction.http(301))
+        updatedUri.normalization === None
       }
     }
   }
