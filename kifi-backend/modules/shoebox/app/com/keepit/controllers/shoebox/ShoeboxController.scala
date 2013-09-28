@@ -125,45 +125,37 @@ class ShoeboxController @Inject() (
     Ok("true")
   }
 
-  def getNormalizedURI(id: Long) = Action {
-    Async(SafeFuture{
-      val uri = db.readOnly { implicit s =>
-        normUriRepo.get(Id[NormalizedURI](id))
-      }
-      Ok(Json.toJson(uri))
-    })
+  def getNormalizedURI(id: Long) = SafeAsyncAction {
+    val uri = db.readOnly { implicit s =>
+      normUriRepo.get(Id[NormalizedURI](id))
+    }
+    Ok(Json.toJson(uri))
   }
 
-  def getNormalizedURIs(ids: String) = Action { request =>
-    Async(SafeFuture{
-      val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
-      val uris = db.readOnly { implicit s => uriIds map normUriRepo.get }
-      Ok(Json.toJson(uris))
-    })
+  def getNormalizedURIs(ids: String) = SafeAsyncAction { request =>
+    val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
+    val uris = db.readOnly { implicit s => uriIds map normUriRepo.get }
+    Ok(Json.toJson(uris))
   }
 
-  def getNormalizedURIByURL() = Action(parse.json) { request =>
-    Async(SafeFuture{
-      val url : String = Json.fromJson[String](request.body).get
-      val uriOpt = db.readWrite(attempts=2) { implicit s =>
-        normUriRepo.getByUri(url)
-      }
-      uriOpt match {
-        case Some(uri) => Ok(Json.toJson(uri))
-        case None => Ok(JsNull)
-      }
-    })
+  def getNormalizedURIByURL() = SafeAsyncAction(parse.json) { request =>
+    val url : String = Json.fromJson[String](request.body).get
+    val uriOpt = db.readWrite(attempts=2) { implicit s =>
+      normUriRepo.getByUri(url)
+    }
+    uriOpt match {
+      case Some(uri) => Ok(Json.toJson(uri))
+      case None => Ok(JsNull)
+    }
   }
 
-  def internNormalizedURI() = Action(parse.json) { request =>
-    Async(SafeFuture{
-      val o = request.body.as[JsObject]
-      val url = (o \ "url").as[String]
-      val uriId = db.readWrite(attempts=2) { implicit s =>
-        normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
-      }
-      Ok(Json.toJson(uriId))
-    })
+  def internNormalizedURI() = SafeAsyncAction(parse.json) { request =>
+    val o = request.body.as[JsObject]
+    val url = (o \ "url").as[String]
+    val uriId = db.readWrite(attempts=2) { implicit s =>
+      normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
+    }
+    Ok(Json.toJson(uriId))
   }
 
   def getBrowsingHistoryFilter(userId: Id[User]) = Action {
