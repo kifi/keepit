@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 import scala.concurrent.future
 import scala.concurrent.Future

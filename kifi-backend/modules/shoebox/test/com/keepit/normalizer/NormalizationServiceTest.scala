@@ -6,7 +6,7 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.scraper.{BasicArticle, FakeScraperModule}
 import com.keepit.model.{UrlPatternRule, NormalizedURIStates, NormalizedURI, Normalization}
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.akka.TestKitScope

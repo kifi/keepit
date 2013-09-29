@@ -10,7 +10,7 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.{HealthcheckPlugin}
 import com.keepit.heimdal.{HeimdalServiceClient}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.json.{Json, JsValue, JsArray, JsString, JsNumber, JsNull, JsObject}
@@ -56,7 +56,7 @@ class ExtMessagingController @Inject() (
       Statsd.timing(s"messaging.newMessage", tDiff)
       val threadInfoOpt = (o \ "url").asOpt[String].map(u => messagingController.buildThreadInfos(request.user.id.get, Seq(threadInfo), u).headOption).flatten
       messageThreadFut map { messages => // object instantiated earlier to give Future head start
-        Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages.reverse))
+        Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages))
       }
     }
     Async(responseFuture)

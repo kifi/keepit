@@ -1,6 +1,6 @@
 package com.keepit.common.controller
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import java.net.InetAddress
 

@@ -6,7 +6,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.model.Comment
 import com.keepit.search.SearchServiceClient
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class AdminCommentIndexController @Inject()(
   actionAuthenticator: ActionAuthenticator,

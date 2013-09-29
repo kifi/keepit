@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.future
 import scala.concurrent.promise
 import org.joda.time._

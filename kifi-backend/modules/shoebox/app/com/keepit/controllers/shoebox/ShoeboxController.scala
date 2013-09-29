@@ -29,7 +29,7 @@ import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.ClickHistoryTracker
 
 import scala.concurrent.future
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

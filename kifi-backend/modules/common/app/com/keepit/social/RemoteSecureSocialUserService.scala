@@ -15,7 +15,7 @@ import securesocial.core.IdentityId
 import com.keepit.common.healthcheck.HealthcheckError
 import securesocial.core.providers.Token
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.controller.{RemoteActionAuthenticator, ActionAuthenticator}
 import securesocial.controllers.{TemplatesPlugin, DefaultTemplatesPlugin}
 

@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import play.api.Play.current
 import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.search.SearchServiceClient
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.concurrent.Akka
 import play.api.libs.json.Json
 

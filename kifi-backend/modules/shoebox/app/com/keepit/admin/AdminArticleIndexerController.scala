@@ -6,7 +6,7 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import play.api.libs.json.{JsNumber, JsObject}
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.Inject

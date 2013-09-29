@@ -22,7 +22,7 @@ import com.keepit.search.Article
 import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.normalizer.{TrustedCandidate, NormalizationService}
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 object Scraper {
   val BATCH_SIZE = 100

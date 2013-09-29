@@ -74,7 +74,7 @@ class RemoteActionAuthenticator @Inject() (
   monitoredAwait: MonitoredAwait)
     extends ActionAuthenticator with SecureSocial with Logging {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
   private def getExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = shoeboxClient.getUserExperiments(userId)
 

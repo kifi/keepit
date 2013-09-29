@@ -6,7 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.search._
 import play.api.libs.json.JsObject
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import views.html
 
 class AdminSearchLabsController @Inject() (actionAuthenticator: ActionAuthenticator, searchClient: SearchServiceClient)

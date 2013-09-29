@@ -7,7 +7,7 @@ import play.modules.reactivemongo.json.ImplicitBSONHandlers._
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global //Might want to change this to a custom play one
+import play.api.libs.concurrent.Execution.Implicits.defaultContext //Might want to change this to a custom play one
 
 
 import com.google.inject.Inject
