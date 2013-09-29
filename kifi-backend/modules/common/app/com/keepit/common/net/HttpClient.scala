@@ -170,7 +170,7 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
     val start = System.currentTimeMillis
     val res = wsRequest.get()
     res.onComplete { resTry =>
-      logResponse(start, "GET", resTry.isSuccess, trackingId)
+      logResponse(start, "GET", resTry.isSuccess, trackingId, resTry.toOption)
     }
     res
   }
@@ -179,7 +179,7 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
     val start = System.currentTimeMillis
     val res = wsRequest.put(body)
     res.onComplete { resTry =>
-      logResponse(start, "PUT", resTry.isSuccess, trackingId)
+      logResponse(start, "PUT", resTry.isSuccess, trackingId, resTry.toOption)
     }
     res
   }
@@ -188,7 +188,7 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
     val start = System.currentTimeMillis
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(start, "POST", resTry.isSuccess, trackingId)
+      logResponse(start, "POST", resTry.isSuccess, trackingId, resTry.toOption)
     }
     res
   }
@@ -197,7 +197,7 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
     val start = System.currentTimeMillis
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(start, "POST", resTry.isSuccess, trackingId)
+      logResponse(start, "POST", resTry.isSuccess, trackingId, resTry.toOption)
     }
     res
   }
@@ -206,17 +206,24 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
     val start = System.currentTimeMillis
     val res = wsRequest.delete()
     res.onComplete { resTry =>
-      logResponse(start, "DELETE", resTry.isSuccess, trackingId)
+      logResponse(start, "DELETE", resTry.isSuccess, trackingId, resTry.toOption)
     }
     res
   }
 
   private val accessLog = Logger("com.keepit.access")
 
-  private def logResponse(startTime: Long, method: String, isSuccess: Boolean, trackingId: String) = {
+  private def logResponse(startTime: Long, method: String, isSuccess: Boolean, trackingId: String, resOpt: Option[Response]) = {
     val time = System.currentTimeMillis - startTime
+    //todo(eishay): the interesting part is the remote service and node id, to be logged
+    val remoteHost = resOpt.map(_.header(CommonHeaders.LocalHost)).flatten.getOrElse("NA")
+    val remoteTime = resOpt.map(_.header(CommonHeaders.ResponseTime)).flatten.map(_.toInt)
+    val waitTime = remoteTime map {rt => time - rt}
     val queryString = wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&"
-    accessLog.info(s"""[OUT] #${trackingId} [$method] ${wsRequest.url} took [${time}ms] with params [${queryString}] (success = $isSuccess)""")
+    accessLog.info(
+      s"[OUT] #${trackingId} [$method] ${wsRequest.url} from $remoteHost timing " +
+      s"[local:${time}ms,remote:${remoteTime.getOrElse("NA")},wait:${waitTime.getOrElse("NA")}] " +
+      s"with params [${queryString}] (success = $isSuccess)")
   }
 }
 
