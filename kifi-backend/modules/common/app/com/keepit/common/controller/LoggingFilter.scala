@@ -23,6 +23,7 @@ object LoggingFilter extends EssentialFilter {
           s"[HTTP-IN] #${trackingId} [${rh.method}] ${rh.uri} from ${rh.remoteAddress} to ${rh.host} took [${time}ms] and returned ${result.header.status}")
         result.withHeaders(
           CommonHeaders.ResponseTime -> time.toString,
+          //todo(eishay): the interesting part is the local service type and node id, to be sent
           CommonHeaders.LocalHost -> host)
       }
 
