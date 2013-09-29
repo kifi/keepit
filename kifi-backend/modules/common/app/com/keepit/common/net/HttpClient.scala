@@ -14,6 +14,7 @@ import play.api.libs.ws._
 import play.mvc._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin}
+import com.keepit.common.controller.CommonHeaders
 import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
 
@@ -162,7 +163,7 @@ case class HttpClientImpl(
 private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]) extends Logging {
 
   private val trackingId = RandomStringUtils.randomAlphanumeric(5)
-  private val headersWithTracking = ("tid", trackingId) :: headers
+  private val headersWithTracking = (CommonHeaders.TrackingId, trackingId) :: headers
   private val wsRequest = req.withHeaders(headersWithTracking: _*)
 
   def get() = {
