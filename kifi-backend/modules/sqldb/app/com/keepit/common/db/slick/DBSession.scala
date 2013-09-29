@@ -6,15 +6,19 @@ import scala.slick.session.{Session, ResultSetConcurrency, ResultSetType, Result
 import scala.concurrent._
 import scala.util.Try
 
+import play.api.Logger
+
 object DBSession {
-  abstract class SessionWrapper(_session: => Session) extends Session {
+  abstract class SessionWrapper(name: String, masterSlave: Database.DBMasterSlave, _session: => Session) extends Session {
     private var open = false
     private var doRollback = false
     private var transaction: Option[Promise[Unit]] = None
+    private var startTime: Long = -1
     lazy val session = {
       val s = _session
       if (inTransaction) s.conn.setAutoCommit(false)
       open = true
+      startTime = System.currentTimeMillis
       s
     }
 
@@ -29,7 +33,15 @@ object DBSession {
     override def resultSetType = session.resultSetType
     override def resultSetConcurrency = session.resultSetConcurrency
     override def resultSetHoldability = session.resultSetHoldability
-    def close() { if (open) session.close() }
+
+    private val accessLog = Logger("com.keepit.access")
+
+    def close(): Unit = if (open) {
+      session.close()
+      val time = System.currentTimeMillis - startTime
+      accessLog.info(s"""[DB] [$name] [$masterSlave] took [${time}ms]""")
+    }
+
     def rollback() { doRollback = true }
     def inTransaction = transaction.nonEmpty
 
@@ -66,9 +78,9 @@ object DBSession {
       rsHoldability: ResultSetHoldability = resultSetHoldability) = throw new UnsupportedOperationException
   }
 
-  abstract class RSession(roSession: => Session) extends SessionWrapper(roSession)
-  class ROSession(roSession: => Session) extends RSession(roSession)
-  class RWSession(rwSession: => Session) extends RSession(rwSession)
+  abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session) extends SessionWrapper(name, masterSlave, roSession)
+  class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session) extends RSession("RO", masterSlave, roSession)
+  class RWSession(masterSlave: Database.DBMasterSlave, rwSession: => Session) extends RSession("RW", masterSlave, rwSession)
 
   implicit def roToSession(roSession: ROSession): Session = roSession.session
   implicit def rwToSession(rwSession: RWSession): Session = rwSession.session
