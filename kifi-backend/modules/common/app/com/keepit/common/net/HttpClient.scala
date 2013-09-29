@@ -15,6 +15,7 @@ import play.mvc._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin}
 import scala.xml._
+import org.apache.commons.lang3.RandomStringUtils
 
 import play.api.Logger
 
@@ -54,7 +55,7 @@ trait HttpClient {
 case class HttpClientImpl(
     timeout: Long = 2,
     timeoutUnit: TimeUnit = TimeUnit.SECONDS,
-    headers: Seq[(String, String)] = List(),
+    headers: List[(String, String)] = List(),
     healthcheckPlugin: HealthcheckPlugin,
     airbrake: Provider[AirbrakeNotifier]) extends HttpClient {
 
@@ -152,18 +153,23 @@ case class HttpClientImpl(
   }
 
   private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, timeoutUnit))
-  private def req(url: String): Request = new Request(WS.url(url).withHeaders(headers: _*))
+  private def req(url: String): Request = new Request(WS.url(url), headers)
   private def res(request: Request, response: Response): ClientResponse = new ClientResponseImpl(request, response)
 
   def longTimeout(): HttpClientImpl = copy(timeout = 2, timeoutUnit = TimeUnit.MINUTES)
 }
 
-private[net] class Request(wsRequest: WSRequestHolder) extends Logging {
+private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]) extends Logging {
+
+  private val trackingId = RandomStringUtils.randomAlphanumeric(5)
+  private val headersWithTracking = ("tid", trackingId) :: headers
+  private val wsRequest = req.withHeaders(headersWithTracking: _*)
+
   def get() = {
     val start = System.currentTimeMillis
     val res = wsRequest.get()
     res.onComplete { resTry =>
-      logResponse(start, "GET", resTry.isSuccess)
+      logResponse(start, "GET", resTry.isSuccess, trackingId)
     }
     res
   }
@@ -172,7 +178,7 @@ private[net] class Request(wsRequest: WSRequestHolder) extends Logging {
     val start = System.currentTimeMillis
     val res = wsRequest.put(body)
     res.onComplete { resTry =>
-      logResponse(start, "PUT", resTry.isSuccess)
+      logResponse(start, "PUT", resTry.isSuccess, trackingId)
     }
     res
   }
@@ -181,7 +187,7 @@ private[net] class Request(wsRequest: WSRequestHolder) extends Logging {
     val start = System.currentTimeMillis
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(start, "POST", resTry.isSuccess)
+      logResponse(start, "POST", resTry.isSuccess, trackingId)
     }
     res
   }
@@ -190,7 +196,7 @@ private[net] class Request(wsRequest: WSRequestHolder) extends Logging {
     val start = System.currentTimeMillis
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(start, "POST", resTry.isSuccess)
+      logResponse(start, "POST", resTry.isSuccess, trackingId)
     }
     res
   }
@@ -199,17 +205,17 @@ private[net] class Request(wsRequest: WSRequestHolder) extends Logging {
     val start = System.currentTimeMillis
     val res = wsRequest.delete()
     res.onComplete { resTry =>
-      logResponse(start, "DELETE", resTry.isSuccess)
+      logResponse(start, "DELETE", resTry.isSuccess, trackingId)
     }
     res
   }
 
   private val accessLog = Logger("com.keepit.access")
 
-  private def logResponse(startTime: Long, method: String, isSuccess: Boolean) = {
+  private def logResponse(startTime: Long, method: String, isSuccess: Boolean, trackingId: String) = {
     val time = System.currentTimeMillis - startTime
     val queryString = wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&"
-    accessLog.info(s"""[OUT] [$method] ${wsRequest.url} took [${time}ms] with params [${queryString}] (success = $isSuccess)""")
+    accessLog.info(s"""[OUT] #${trackingId} [$method] ${wsRequest.url} took [${time}ms] with params [${queryString}] (success = $isSuccess)""")
   }
 }
 

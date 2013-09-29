@@ -10,6 +10,7 @@ import play.api.mvc._
 object LoggingFilter extends EssentialFilter {
 
   lazy val host: String = InetAddress.getLocalHost.getHostName
+  lazy val accessLog = Logger("com.keepit.access")
 
   def apply(next: EssentialAction) = new EssentialAction {
     def apply(rh: RequestHeader) = {
@@ -17,7 +18,9 @@ object LoggingFilter extends EssentialFilter {
 
       def logTime(result: PlainResult): Result = {
         val time = System.currentTimeMillis - start
-        Logger("com.keepit.access").info(s"[HTTP-IN] [${rh.method}] ${rh.uri} took [${time}ms] and returned ${result.header.status}")
+        val trackingId = rh.headers.get("tid").getOrElse("NA")
+        accessLog.info(
+          s"[HTTP-IN] #${trackingId} [${rh.method}] ${rh.uri} from ${rh.remoteAddress} to ${rh.host} took [${time}ms] and returned ${result.header.status}")
         result.withHeaders("Request-Time" -> time.toString, "Spaceship" -> host)
       }
 
