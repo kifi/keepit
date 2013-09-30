@@ -96,7 +96,8 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], cluster: ServiceCluster): ServiceDiscovery =
     new ServiceDiscovery {
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
-      def register(doKeepAlive: Boolean) = null
+      def register(doKeepAlive: Boolean) =
+        ServiceInstance(Node(cluster.serviceType.name + "_0"), RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.UP, cluster.serviceType), true)
       def isLeader() = true
       def changeStatus(newStatus: ServiceStatus): Unit = {}
       def startSelfCheck(): Unit = {}

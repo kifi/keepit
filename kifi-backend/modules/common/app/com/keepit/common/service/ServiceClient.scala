@@ -34,7 +34,9 @@ trait ServiceClient extends Logging {
   protected def url(path: String): String = s"${protocol}://${nextHost()}:${port}${path}"
 
   protected def urls(path: String): Seq[String] = {
-    val fullUrls = serviceCluster.allServices.filterNot(_.thisInstance == false).map{service => s"${protocol}://${service.instanceInfo.localHostname}:${port}${path}" }
+    val fullUrls = serviceCluster.allServices.filter(!_.thisInstance).map { service =>
+      s"${protocol}://${service.instanceInfo.localHostname}:${port}${path}"
+    }
     if (fullUrls.length==0) log.warn("Broadcasting to no-one!")
     fullUrls
   }
