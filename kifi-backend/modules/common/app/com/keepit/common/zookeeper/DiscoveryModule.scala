@@ -11,9 +11,11 @@ import com.keepit.common.service._
 import com.keepit.common.amazon._
 import com.keepit.common.net.HttpClient
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.KestrelCombinator
+import com.keepit.common.amazon.AmazonInstanceId
+
 import play.api.Play.current
 import scala.Some
-import com.keepit.common.amazon.AmazonInstanceId
 
 trait DiscoveryModule extends ScalaModule
 
@@ -85,11 +87,11 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
 
   @Provides
   @Singleton
-  def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster = {
-    val cluster = new ServiceCluster(serviceType)
-    cluster.register(ServiceInstance(Node(serviceType.name + "_0"), RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType), true))
-    cluster
-  }
+  def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster =
+    new ServiceCluster(serviceType) tap {
+      _.register(ServiceInstance(Node(s"${serviceType.name}_0"),
+        RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType), true))
+    }
 
   @Singleton
   @Provides
