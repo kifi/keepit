@@ -62,11 +62,11 @@
 	"validthis": true,
 
 	// Environments
-	"browser": false,
+	"browser": true,
 	"couch": false,
 	"devel": false,
 	"dojo": false,
-	"jquery": false,
+	"jquery": true,
 	"mootools": false,
 	"node": false,
 	"nonstandard": false,
