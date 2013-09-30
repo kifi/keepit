@@ -60,8 +60,8 @@ class ServiceClusterTest extends Specification {
       println(zk.nodes.mkString(" : "))
       zk.nodes.size === 2
 
-      cluster.registered(Node(s"$basePath/node_00000001")) === true
-      cluster.registered(Node(s"$basePath/node_00000002")) === true
+      cluster.registered(ServiceInstance(Node(s"$basePath/node_00000001"), remoteService1, false)) === true
+      cluster.registered(ServiceInstance(Node(s"$basePath/node_00000002"), remoteService2, false)) === true
     }
 
     "RR router" in {
