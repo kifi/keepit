@@ -50,7 +50,7 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
 }
 
 class AirbrakeSender @Inject() (httpClient: HttpClient) extends Logging {
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
   def send(xml: NodeSeq) = httpClient.
     withHeaders("Content-type" -> "text/xml").

@@ -4,7 +4,7 @@ import com.keepit.common.strings.{fromByteArray, toByteArray}
 import com.google.inject.{Inject, Singleton}
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import scala.concurrent.future
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 // //Sample Usage****************************************
 //

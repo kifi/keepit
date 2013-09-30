@@ -34,7 +34,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.concurrent.future
 import com.keepit.common.akka.MonitoredAwait

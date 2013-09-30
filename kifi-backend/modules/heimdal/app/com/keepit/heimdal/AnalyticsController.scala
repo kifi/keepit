@@ -6,7 +6,7 @@ import com.keepit.common.time._
 
 import org.joda.time.DateTime
 
-import scala.concurrent.ExecutionContext.Implicits.global //Might want to change this to a custom play one
+import play.api.libs.concurrent.Execution.Implicits.defaultContext //Might want to change this to a custom play one
 
 import play.api.mvc.Action
 import play.api.libs.json.{Json, JsObject, JsArray}

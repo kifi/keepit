@@ -1,6 +1,6 @@
 package com.keepit.common.social
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
 import com.google.inject.Inject

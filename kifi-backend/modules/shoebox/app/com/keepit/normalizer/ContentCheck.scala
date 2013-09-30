@@ -8,7 +8,7 @@ import com.keepit.model.Normalization
 import com.keepit.scraper.extractor.JsoupBasedExtractor
 import org.jsoup.nodes.Document
 import com.keepit.common.logging.Logging
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait ContentCheck extends PartialFunction[NormalizationCandidate, RSession => Future[Boolean]] {
   def getFailedAttempts(): Set[(String, String)]
