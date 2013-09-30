@@ -20,7 +20,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Plugin
 import play.api.templates.Html
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import net.codingwell.scalaguice.ScalaModule
 import scala.Some
 

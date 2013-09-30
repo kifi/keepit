@@ -12,7 +12,7 @@ import com.keepit.heimdal.{UserEvent, UserEventContextBuilder, UserEventType, He
 import com.keepit.common.akka.SafeFuture
 
 import scala.concurrent.stm.{Ref, atomic}
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Promise, future}
 import scala.concurrent.duration._
 import scala.util.Random

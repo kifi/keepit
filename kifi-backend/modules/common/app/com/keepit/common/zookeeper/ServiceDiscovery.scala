@@ -5,7 +5,7 @@ import com.keepit.common.strings._
 import com.keepit.common.service._
 import com.keepit.common.amazon._
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.collection.concurrent.TrieMap

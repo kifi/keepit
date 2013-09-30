@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.{HealthcheckPlugin}
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.json.Json
 import akka.actor.ActorSystem

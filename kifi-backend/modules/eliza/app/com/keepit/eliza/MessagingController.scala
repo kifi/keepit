@@ -12,7 +12,7 @@ import com.keepit.common.akka.SafeFuture
 
 import scala.concurrent.{Promise, future, Await, Future}
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
 

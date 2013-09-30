@@ -1,6 +1,6 @@
 package com.keepit.realtime
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, future, Promise}
 import scala.slick.driver.BasicProfile
 import scala.slick.lifted.BaseTypeMapper

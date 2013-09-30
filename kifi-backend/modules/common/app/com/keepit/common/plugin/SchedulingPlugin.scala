@@ -2,7 +2,7 @@ package com.keepit.common.plugin
 
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.actor.ActorInstance
 
 import akka.actor.{ActorSystem, Cancellable, ActorRef}

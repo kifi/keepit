@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import scala.util.Random
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.concurrent.duration._
 

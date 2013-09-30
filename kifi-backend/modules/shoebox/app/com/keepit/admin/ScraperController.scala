@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import scala.Option.option2Iterable
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator

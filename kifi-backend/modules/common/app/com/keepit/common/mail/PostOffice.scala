@@ -3,7 +3,7 @@ package com.keepit.common.mail
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.logging.Logging
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable.Queue
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
