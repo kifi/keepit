@@ -9,7 +9,7 @@ import scala.util.Try
 import play.api.Logger
 
 object DBSession {
-  abstract class SessionWrapper(name: String, _session: => Session) extends Session {
+  abstract class SessionWrapper(name: String, masterSlave: Database.DBMasterSlave, _session: => Session) extends Session {
     private var open = false
     private var doRollback = false
     private var transaction: Option[Promise[Unit]] = None
@@ -39,7 +39,7 @@ object DBSession {
     def close(): Unit = if (open) {
       session.close()
       val time = System.currentTimeMillis - startTime
-      accessLog.info(s"""[DB] [$name] took [${time}ms]""")
+      accessLog.info(s"""[DB] [$name] [$masterSlave] took [${time}ms]""")
     }
 
     def rollback() { doRollback = true }
@@ -78,9 +78,9 @@ object DBSession {
       rsHoldability: ResultSetHoldability = resultSetHoldability) = throw new UnsupportedOperationException
   }
 
-  abstract class RSession(name: String, roSession: => Session) extends SessionWrapper(name, roSession)
-  class ROSession(roSession: => Session) extends RSession("RO", roSession)
-  class RWSession(rwSession: => Session) extends RSession("RW", rwSession)
+  abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session) extends SessionWrapper(name, masterSlave, roSession)
+  class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session) extends RSession("RO", masterSlave, roSession)
+  class RWSession(masterSlave: Database.DBMasterSlave, rwSession: => Session) extends RSession("RW", masterSlave, rwSession)
 
   implicit def roToSession(roSession: ROSession): Session = roSession.session
   implicit def rwToSession(rwSession: RWSession): Session = rwSession.session

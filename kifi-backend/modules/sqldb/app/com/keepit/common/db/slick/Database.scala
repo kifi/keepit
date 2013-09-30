@@ -99,7 +99,7 @@ class Database @Inject() (
   }
 
   def readOnly[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = enteringSession {
-    val ro = new ROSession({
+    val ro = new ROSession(dbMasterSlave, {
       val handle = resolveDb(dbMasterSlave)
       Statsd.increment(s"db.read.${handle.masterSlave}")
       sessionProvider.createReadOnlySession(handle.slickDatabase)
@@ -108,7 +108,7 @@ class Database @Inject() (
   }
 
   def readWrite[T](f: RWSession => T): T = enteringSession {
-    val rw = new RWSession({
+    val rw = new RWSession(Master, {
       Statsd.increment("db.write.Master")
       sessionProvider.createReadWriteSession(db.masterDb)
     })
