@@ -3,6 +3,7 @@ var cdnBase = api.dev ?
   "//djty7jcqog9qu.cloudfront.net";
 
 var render = function() {
+  'use strict';
   return function(path, params, partials, callback) {  // partials and callback are both optional
     if (!callback && typeof partials == "function") {
       callback = partials, partials = null;

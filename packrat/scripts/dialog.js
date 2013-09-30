@@ -7,8 +7,9 @@ $.fn.layout = $.fn.layout || function() {
   return this.each(function() {this.clientHeight});  // forces layout
 };
 
-kifiDialog = function() {
-  
+var kifiDialog = function() {
+  'use strict';
+  return {toggleLoginDialog: toggleLoginDialog};
   function toggleLoginDialog() {
     render("html/login_dialog", {
       logo: api.url("images/kifi_logo_medium.png")
@@ -59,16 +60,11 @@ kifiDialog = function() {
 
       document.addEventListener("keydown", onKeyDown, true);
       function onKeyDown(e) {
-        if (e.keyCode == 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) { 
+        if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
           removeDialog();
           return false;
         }
       }
     });
   }
-  return {
-    toggleLoginDialog: function() {
-      toggleLoginDialog();
-    }
-  };
 }();

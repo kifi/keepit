@@ -13,7 +13,8 @@
 // @require scripts/prevent_ancestor_scroll.js
 
 panes.thread = function() {
-  const handlers = {
+  'use strict';
+  var handlers = {
     message: function(o) {
       update(o.threadId, o.message, o.userId);
     },
