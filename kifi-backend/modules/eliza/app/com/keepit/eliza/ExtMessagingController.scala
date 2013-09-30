@@ -45,10 +45,11 @@ class ExtMessagingController @Inject() (
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val tStart = currentDateTime
     val o = request.body
-    val (title, text, recipients) = (
+    val (title, text, recipients, version) = (
       (o \ "title").asOpt[String],
       (o \ "text").as[String].trim,
-      (o \ "recipients").as[Seq[String]])
+      (o \ "recipients").as[Seq[String]],
+      (o \ "extVersion").asOpt[String])
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).flatMap { recipientSet =>
@@ -79,6 +80,7 @@ class ExtMessagingController @Inject() (
           contextBuilder += ("threadId", threadInfo.id.get.id)
           contextBuilder += ("url", threadInfo.url.getOrElse(""))
           contextBuilder += ("isActuallyNew", messages.length<=1)
+          contextBuilder += ("extVersion", version.getOrElse(""))
           heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("new_message")))
         }
 
@@ -93,6 +95,7 @@ class ExtMessagingController @Inject() (
     val tStart = currentDateTime
     val o = request.body
     val text = (o \ "text").as[String].trim
+    val version = (o \ "extVersion").asOpt[String]
 
     val message = messagingController.sendMessage(request.user.id.get, threadExtId, text, None)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
@@ -108,6 +111,7 @@ class ExtMessagingController @Inject() (
       }
       contextBuilder += ("threadId", message.thread.id)
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
+      contextBuilder += ("extVersion", version.getOrElse(""))
       heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("reply_message")))
     }
 

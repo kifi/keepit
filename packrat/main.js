@@ -390,6 +390,7 @@ api.port.on({
   send_message: function(data, respond, tab) {
     log("[send_message]", data)();
     var nUri = tab.nUri || data.url;
+    data.extVersion = api.version;
     ajax("eliza", "POST", "/eliza/messages", data, function(o) {
       log("[send_message] resp:", o)();
 
@@ -413,6 +414,7 @@ api.port.on({
     log("[send_reply]", data)();
     var id = data.threadId;
     delete data.threadId;
+    data.extVersion = api.version;
     ajax("eliza", "POST", "/eliza/messages/" + id, data, function(o) {
       log("[send_reply] resp:", o)();
       respond(o);
