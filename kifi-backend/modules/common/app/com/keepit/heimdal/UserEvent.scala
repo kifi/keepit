@@ -61,6 +61,10 @@ class UserEventContextBuilder {
     data(key) = (currentValues :+ ContextDoubleData(value)).toSet.toSeq
   }
 
+  def +=(key: String, value: Boolean) : Unit = {
+    if (value) +=(key, 1.0) else +=(key, 0.0)
+  }
+
   def +=(key: String, value: String) : Unit = {
     val currentValues = data.getOrElse(key,Seq[ContextData]())
     data(key) = (currentValues :+ ContextStringData(value)).toSet.toSeq

@@ -153,6 +153,18 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
         onConnect(socketInfo)
 
+        //Analytics
+        SafeFuture {
+          val contextBuilder = new UserEventContextBuilder()
+          contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+          contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
+          contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
+          streamSession.experiments.foreach{ experiment =>
+            contextBuilder += ("experiment", experiment.toString)
+          }
+          heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_connect")))
+        }
+
         def endSession(reason: String)(implicit channel: Concurrent.Channel[JsArray]) = {
           atomic { implicit txn =>
             socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
@@ -161,6 +173,17 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           channel.push(Json.arr("goodbye", reason))
           channel.eofAndEnd()
           onDisconnect(socketInfo)
+          //Analytics
+          SafeFuture {
+            val contextBuilder = new UserEventContextBuilder()
+            contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+            contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
+            contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
+            streamSession.experiments.foreach{ experiment =>
+              contextBuilder += ("experiment", experiment.toString)
+            }
+            heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_disconnect")))
+          }
         }
 
         val iteratee = asyncIteratee { jsArr =>
