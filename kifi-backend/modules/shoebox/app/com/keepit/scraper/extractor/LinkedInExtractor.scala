@@ -16,9 +16,11 @@ class LinkedInExtractor(publicProfileUrl: String, maxContentChars: Int) extends 
 
   def parse(doc: Document) = {
 
-    val resume = doc.getElementById("content").text()
+    val title = doc.getElementById("member-1").text
+    val overview = doc.select("[id=overview] dd").text
+    val sections = doc.select("[id^=profile-] .content").text
     val id = idExtractor.parse(doc)
-    Seq(resume, id).filter(_.nonEmpty).mkString("\n")
+    Seq(title, overview, sections, id).filter(_.nonEmpty).mkString("\n")
   }
 }
 
