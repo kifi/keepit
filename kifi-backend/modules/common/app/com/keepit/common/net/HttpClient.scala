@@ -17,6 +17,8 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, Healthche
 import com.keepit.common.controller.CommonHeaders
 import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
+import play.modules.statsd.api.Statsd
+import com.keepit.common.service.FortyTwoServices
 
 import play.api.Logger
 
@@ -58,7 +60,8 @@ case class HttpClientImpl(
     timeoutUnit: TimeUnit = TimeUnit.SECONDS,
     headers: List[(String, String)] = List(),
     healthcheckPlugin: HealthcheckPlugin,
-    airbrake: Provider[AirbrakeNotifier]) extends HttpClient {
+    airbrake: Provider[AirbrakeNotifier],
+    services: FortyTwoServices) extends HttpClient {
 
   private val validResponseClass = 2
 
@@ -154,16 +157,17 @@ case class HttpClientImpl(
   }
 
   private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, timeoutUnit))
-  private def req(url: String): Request = new Request(WS.url(url), headers)
+  private def req(url: String): Request = new Request(WS.url(url), headers, services)
   private def res(request: Request, response: Response): ClientResponse = new ClientResponseImpl(request, response)
 
   def longTimeout(): HttpClientImpl = copy(timeout = 2, timeoutUnit = TimeUnit.MINUTES)
 }
 
-private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]) extends Logging {
+private[net] class Request(req: WSRequestHolder, headers: List[(String, String)], services: FortyTwoServices) extends Logging {
 
   private val trackingId = RandomStringUtils.randomAlphanumeric(5)
-  private val headersWithTracking = (CommonHeaders.TrackingId, trackingId) :: headers
+  private val headersWithTracking =
+    (CommonHeaders.TrackingId, trackingId) :: (CommonHeaders.LocalService, services.currentService.toString) :: headers
   private val wsRequest = req.withHeaders(headersWithTracking: _*)
 
   def get() = {
@@ -220,6 +224,10 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
     val remoteTime = resOpt.map(_.header(CommonHeaders.ResponseTime)).flatten.map(_.toInt)
     val waitTime = remoteTime map {rt => time - rt}
     val queryString = wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&"
+    // waitTime map {t =>
+    //   Statsd.timing(s"internalCall.remote.$remoteService.$remoteNodeId", t)
+    //   Statsd.timing(s"internalCall.local.$localService.$localNodeId", t)
+    // }
     accessLog.info(
       s"[OUT] #${trackingId} [$method] ${wsRequest.url} from $remoteHost timing " +
       s"[local:${time}ms,remote:${remoteTime.getOrElse("NA")},wait:${waitTime.getOrElse("NA")}] " +

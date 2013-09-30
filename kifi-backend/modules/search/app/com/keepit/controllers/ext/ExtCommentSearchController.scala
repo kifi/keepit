@@ -27,7 +27,6 @@ import com.keepit.serializer.CommentSearchResultSerializer.resSerializer
 import play.api.libs.json.Json
 import com.newrelic.api.agent.NewRelic
 import com.newrelic.api.agent.Trace
-import play.modules.statsd.api.Statsd
 import com.keepit.social.BasicUser
 
 class ExtCommentSearchController @Inject() (
