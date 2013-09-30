@@ -12,7 +12,9 @@ import play.api.libs.json._
 
 import com.google.inject.{Inject, Singleton}
 
-case class ServiceInstance(serviceType: ServiceType, node: Node, var remoteService: RemoteService) extends Logging {
+//thisInstance means the representation of the current running instance
+case class ServiceInstance(serviceType: ServiceType, node: Node, var remoteService: RemoteService, thisInstance: Boolean) extends Logging {
+
   lazy val id: Long = node.name.substring(node.name.lastIndexOf('_') + 1).toLong
 
   def instanceInfo : AmazonInstanceInfo = remoteService.amazonInstanceInfo
