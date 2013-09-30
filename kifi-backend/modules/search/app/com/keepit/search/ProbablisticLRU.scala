@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging
 
 import scala.math._
 import scala.concurrent.future
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.channels.FileChannel.MapMode
