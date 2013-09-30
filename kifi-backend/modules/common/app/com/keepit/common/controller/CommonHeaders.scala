@@ -4,4 +4,5 @@ object CommonHeaders {
   val TrackingId = "ti"
   val ResponseTime = "rt"
   val LocalHost = "lh"
+  val LocalService = "sr"
 }

@@ -52,10 +52,10 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
           val path = zk.createPath(Path("/fortytwo/services/SHOEBOX"))
           val firstNode = zk.createNode(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), fakeJson, EPHEMERAL_SEQUENTIAL)
           //zk.set(firstNode, Json.toJson(amazonInstanceInfo.copy(localHostname = "first")).toString)
-          val registeredNode = discovery.register()
+          val registeredInstance = discovery.register()
           println("registerred:::::")
-          println(registeredNode)
-          println(new String(zk.get(registeredNode)))
+          println(registeredInstance)
+          println(new String(zk.get(registeredInstance.node)))
           discovery.startSelfCheck()
           val thirdNode = zk.createNode(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), fakeJson, EPHEMERAL_SEQUENTIAL)
           //zk.set(thirdNode, Json.toJson(amazonInstanceInfo.copy(localHostname = "third")).toString)
@@ -76,7 +76,7 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
           Thread.sleep(10000)
           discovery.myClusterSize === 1
           discovery.isLeader() === true
-          println(new String(zk.get(registeredNode)))
+          println(new String(zk.get(registeredInstance.node)))
           discovery.unRegister()
           println("sleeping 4")
           Thread.sleep(10000)
