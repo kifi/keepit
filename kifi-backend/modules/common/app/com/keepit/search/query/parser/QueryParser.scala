@@ -40,7 +40,7 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
   def getStemmedFieldQuery(field: String, queryText: String): Option[Query] = {
     val it = new TermIterator(field, queryText, stemmingAnalyzer) with Position with TermInterceptor {
       def process(t: Term): Term = {
-        if (field == "") stemmedTerms += t
+        stemmedTerms += t
         t
       }
     }
