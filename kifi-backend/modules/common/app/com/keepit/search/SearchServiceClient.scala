@@ -9,7 +9,7 @@ import com.keepit.model.Comment
 import com.keepit.model.Collection
 import play.api.libs.json.{JsValue, Json}
 import play.api.templates.Html
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
