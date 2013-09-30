@@ -8,7 +8,9 @@ import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.{HealthcheckPlugin}
-import com.keepit.heimdal.{HeimdalServiceClient}
+import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
+import com.keepit.common.akka.SafeFuture
+
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -57,9 +59,32 @@ class ExtMessagingController @Inject() (
       val threadInfoOpt = (o \ "url").asOpt[String].map { url =>
         messagingController.buildThreadInfos(request.user.id.get, Seq(threadInfo), Some(url)).headOption
       }.flatten
+
+  
+
       messageThreadFut map { messages => // object instantiated earlier to give Future head start
+      
+        //Analytics
+        SafeFuture {
+          val contextBuilder = new UserEventContextBuilder()
+          contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+          contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
+          contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
+          recipientSet.foreach{ recipient => 
+            contextBuilder += ("recipient", recipient.id)
+          }
+          request.experiments.foreach{ experiment =>
+            contextBuilder += ("experiment", experiment.toString)
+          }
+          contextBuilder += ("threadId", threadInfo.id.get.id)
+          contextBuilder += ("url", threadInfo.url.getOrElse(""))
+          contextBuilder += ("isActuallyNew", messages.length<=1)
+          heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("new_message")))
+        }
+
         Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages))
       }
+
     }
     Async(responseFuture)
   }
@@ -71,6 +96,21 @@ class ExtMessagingController @Inject() (
 
     val message = messagingController.sendMessage(request.user.id.get, threadExtId, text, None)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
+
+    //Analytics
+    SafeFuture {
+      val contextBuilder = new UserEventContextBuilder()
+      contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+      contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
+      contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
+      request.experiments.foreach{ experiment =>
+        contextBuilder += ("experiment", experiment.toString)
+      }
+      contextBuilder += ("threadId", message.thread.id)
+      contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
+      heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("reply_message")))
+    }
+
     Statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }
