@@ -126,7 +126,7 @@ class ServiceDiscoveryImpl @Inject() (
     val instanceInfo = amazonInstanceInfoProvider.get
     val thisRemoteService = RemoteService(instanceInfo, ServiceStatus.STARTING, myServiceType)
     val myNode = zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
-    myInstance = Some(myCluster.register(ServiceInstance(myServiceType, myNode, thisRemoteService, true)))
+    myInstance = Some(myCluster.register(ServiceInstance(myNode, thisRemoteService, true)))
     log.info(s"registered as ${myInstance.get}")
     if (doKeepAlive) keepAlive()
     myInstance.get

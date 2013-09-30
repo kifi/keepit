@@ -72,7 +72,7 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
     }
     else {
       log.info(s"discovered new node $childNode: $remoteService, adding to ${newInstances.keys}")
-      newInstances(childNode) = ServiceInstance(serviceType, childNode, remoteService, false)
+      newInstances(childNode) = ServiceInstance(childNode, remoteService, false)
     }
   } catch {
     case t: Throwable =>

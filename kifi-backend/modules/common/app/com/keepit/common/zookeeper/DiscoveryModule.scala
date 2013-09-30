@@ -87,7 +87,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   @Singleton
   def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster = {
     val cluster = new ServiceCluster(serviceType)
-    cluster.register(ServiceInstance(serviceType, Node(serviceType.name + "_0"), RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType), true))
+    cluster.register(ServiceInstance(Node(serviceType.name + "_0"), RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType), true))
     cluster
   }
 
