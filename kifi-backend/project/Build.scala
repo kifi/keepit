@@ -178,7 +178,7 @@ object ApplicationBuild extends Build {
 
     val abook = play.Project("abook", appVersion, abookDependencies, path=file("modules/abook")).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val aaaMain = play.Project(appName, appVersion).settings(
       commonSettings: _*
