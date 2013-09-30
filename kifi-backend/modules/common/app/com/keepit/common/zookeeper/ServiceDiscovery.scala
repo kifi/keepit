@@ -119,7 +119,6 @@ class ServiceDiscoveryImpl @Inject() (
   }
 
   def register(doKeepAlive: Boolean = true): ServiceInstance = {
-    watchServices()
     val myServiceType: ServiceType = services.currentService
     log.info(s"registered clusters: $clusters, my service is $myServiceType")
     val myCluster = clusters(myServiceType)
@@ -128,6 +127,7 @@ class ServiceDiscoveryImpl @Inject() (
     val myNode = zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
     myInstance = Some(myCluster.register(ServiceInstance(myNode, thisRemoteService, true)))
     log.info(s"registered as ${myInstance.get}")
+    watchServices()
     if (doKeepAlive) keepAlive()
     myInstance.get
   }
