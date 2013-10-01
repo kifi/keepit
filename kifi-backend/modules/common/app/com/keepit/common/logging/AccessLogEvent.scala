@@ -6,7 +6,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.zookeeper.ServiceDiscovery
 import org.joda.time.format.DateTimeFormat
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.future
 
 sealed trait AccessLogEventType { val name: String }
 
