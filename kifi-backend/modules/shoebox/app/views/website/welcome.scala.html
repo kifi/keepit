@@ -1,5 +1,6 @@
-@(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None,
-    msg: Option[String] = None, skipLetMeIn: Boolean = false, passwordAuth: Boolean = false)
+@(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None, msg: Option[String] = None,
+    skipLetMeIn: Boolean = false, passwordAuth: Boolean = false,
+    authenticatedAs: Option[securesocial.core.SocialUser] = None)
 
 @helper.main(title = "Welcome to Kifi!", hiddenElements = Seq("header"), head = Html(s"""
     <meta property="og:url" content="https://www.kifi.com${id map (com.keepit.controllers.website.routes.InviteController.acceptInvite(_).url) getOrElse com.keepit.controllers.website.routes.HomeController.home()}">
@@ -10,6 +11,14 @@
     """)) {
   <section class="content clearfix text_center welcome">
     <h1>Welcome to the <img src="@routes.Assets.at("images/logo2.png")" width="103" height="58" class="logo2"> private beta!</h1>
+
+    @authenticatedAs.map { socialUser =>
+      <p class="authenticated-as">
+        Hi @socialUser.firstName!
+        You are currently logged in with @{SocialNetworkType(socialUser.identityId.providerId).displayName}.
+        <a href="@com.keepit.controllers.core.routes.AuthController.signup()">Create an account.</a>
+       </p>
+    }.getOrElse("")
 
     @msg.map { m =>
       <p class="error-message">@m</p>

@@ -5,7 +5,10 @@ import com.keepit.model.User
 
 import securesocial.core.{Identity, SocialUser}
 
-case class UserIdentity(userId: Option[Id[User]], socialUser: SocialUser) extends Identity {
+case class UserIdentity(
+  userId: Option[Id[User]],
+  socialUser: SocialUser,
+  allowSignup: Boolean = false) extends Identity {
   def identityId = socialUser.identityId
   def firstName = socialUser.firstName
   def lastName = socialUser.lastName
