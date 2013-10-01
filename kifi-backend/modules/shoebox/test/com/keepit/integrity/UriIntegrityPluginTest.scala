@@ -71,8 +71,8 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         }
 
         // merge
-        plugin.handleChangedUri(MergedUri(uris(0).id.get, uris(1).id.get))
-        plugin.batchUpdateMerge()
+        plugin.handleChangedUri(URIMigration(uris(0).id.get, uris(1).id.get))
+        plugin.batchURIMigration()
 
         // check redirection
         db.readOnly{ implicit s =>

@@ -21,7 +21,7 @@ import com.keepit.model.DuplicateDocument
 import com.keepit.integrity.URLMigration
 import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.normalizer.TrustedCandidate
-import com.keepit.integrity.MergedUri
+import com.keepit.integrity.URIMigration
 import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.db.slick.DBSession.RWSession
@@ -206,9 +206,9 @@ class UrlController @Inject() (
     Ok(html.admin.normalization(applied, page, appliedCount, pendingCount, pageCount, PAGE_SIZE))
   }
   
-  def batchMerge = AdminHtmlAction{ request =>
+  def batchURIMigration = AdminHtmlAction{ request =>
     implicit val playRequest = request.request
-    monitoredAwait.result(uriIntegrityPlugin.batchUpdateMerge(), 1 minute, "Manual merge failed.")
+    monitoredAwait.result(uriIntegrityPlugin.batchURIMigration(), 1 minute, "Manual merge failed.")
     Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0))
   }
   

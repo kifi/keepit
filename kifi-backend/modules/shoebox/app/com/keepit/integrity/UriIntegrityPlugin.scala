@@ -21,9 +21,9 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 trait UriChangeMessage
 
-case class MergedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends UriChangeMessage
+case class URIMigration(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends UriChangeMessage
 case class URLMigration(url: URL, newUri: Id[NormalizedURI]) extends UriChangeMessage
-case class BatchUpdateMerge(batchSize: Int)
+case class BatchURIMigration(batchSize: Int)
 case class BatchURLMigration(batchSize: Int)
 
 class UriIntegrityActor @Inject()(
@@ -192,8 +192,8 @@ class UriIntegrityActor @Inject()(
   
 
   def receive = {
-    case BatchUpdateMerge(batchSize) => Future.successful(batchUpdateMerge(batchSize)) pipeTo sender
-    case MergedUri(oldUri, newUri) => db.readWrite{ implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) }   // process later
+    case BatchURIMigration(batchSize) => Future.successful(batchUpdateMerge(batchSize)) pipeTo sender
+    case URIMigration(oldUri, newUri) => db.readWrite{ implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) }   // process later
     case URLMigration(url, newUri) => db.readWrite{ implicit s => handleURLMigration(url, newUri)}
     case BatchURLMigration(batchSize) => batchURLMigration(batchSize)
     case m => throw new UnsupportedActorMessage(m)
@@ -203,7 +203,7 @@ class UriIntegrityActor @Inject()(
 @ImplementedBy(classOf[UriIntegrityPluginImpl])
 trait UriIntegrityPlugin extends SchedulingPlugin  {
   def handleChangedUri(change: UriChangeMessage): Unit
-  def batchUpdateMerge(batchSize: Int = -1): Future[Int]
+  def batchURIMigration(batchSize: Int = -1): Future[Int]
   def batchURLMigration(batchSize: Int = -1): Unit
 }
 
@@ -215,7 +215,7 @@ class UriIntegrityPluginImpl @Inject() (
   override def enabled = true
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
-     scheduleTask(actor.system, 1 minutes, 45 seconds, actor.ref, BatchUpdateMerge(50))
+     scheduleTask(actor.system, 1 minutes, 45 seconds, actor.ref, BatchURIMigration(50))
      scheduleTask(actor.system, 1 minutes, 60 seconds, actor.ref, BatchURLMigration(100))
   }
   override def onStop() {
@@ -226,7 +226,7 @@ class UriIntegrityPluginImpl @Inject() (
     actor.ref ! change
   }
 
-  def batchUpdateMerge(batchSize: Int) = actor.ref.ask(BatchUpdateMerge(batchSize))(1 minute).mapTo[Int]
+  def batchURIMigration(batchSize: Int) = actor.ref.ask(BatchURIMigration(batchSize))(1 minute).mapTo[Int]
   def batchURLMigration(batchSize: Int) = actor.ref ! BatchURLMigration(batchSize)
 
 }
