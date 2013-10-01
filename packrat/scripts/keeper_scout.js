@@ -7,6 +7,7 @@ function logEvent() {  // parameters defined in main.js
 }
 
 var tile = tile || function() {  // idempotent for Chrome
+  'use strict';
   log("[keeper_scout]", location.hostname)();
 
   window.onerror = function(message, url, lineNo) {
@@ -247,8 +248,9 @@ var tile = tile || function() {  // idempotent for Chrome
   return tile;
 }();
 
-const linkedInProfileRe = /^https?:\/\/[a-z]{2,3}.linkedin.com\/profile\/view\?/;
+var linkedInProfileRe = /^https?:\/\/[a-z]{2,3}.linkedin.com\/profile\/view\?/;
 function withUrls(o) {
+  'use strict';
   o.url = document.URL;
   var el, cUrl = ~o.url.search(linkedInProfileRe) ?
     (el = document.querySelector('.public-profile>dd>:first-child')) && 'http://' + el.textContent :

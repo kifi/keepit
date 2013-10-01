@@ -21,11 +21,13 @@
 // (TBD whether focus is also required).
 
 panes.notices = function() {
-  const PIXELS_FROM_BOTTOM = 40; // load more notifications when this many pixels from the bottom
-  const NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
-  const NEW_FADE_DURATION = 3000; // length of the fade
+  'use strict';
 
-  const handlers = {
+  var PIXELS_FROM_BOTTOM = 40; // load more notifications when this many pixels from the bottom
+  var NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
+  var NEW_FADE_DURATION = 3000; // length of the fade
+
+  var handlers = {
     new_notification: function(n) {
       log("[new_notification]", n)();
       showNew([n]);

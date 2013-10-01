@@ -2,6 +2,7 @@
 // @require scripts/api.js
 
 document.addEventListener('click', function(e) {
+  'use strict';
   var uri, loc;
   if (!e.button && (uri = e.target.href) && (loc = e.target.dataset.locator)) {
     log('[deep_link_site:click]', uri, loc)();

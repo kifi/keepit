@@ -1,6 +1,7 @@
 // API for content scripts
 
 const api = function() {
+  // TODO: 'use strict'; after working around global definitions in eval’d scripts below
   var nextCallbackId = 1, callbacks = {};
 
   function invokeCallback(callbackId, response) {
@@ -58,6 +59,7 @@ const api = function() {
 }();
 
 function log() {
+  'use strict';
   var d = new Date, ds = d.toString();
   for (var args = Array.slice(arguments), i = 0; i < args.length; i++) {
     var arg = args[i];

@@ -1,4 +1,5 @@
 $(function() {
+  'use strict';
   var main = chrome.extension.getBackgroundPage(), api = main.api, env = api.prefs.get("env");
 
   $(api.isPackaged() ? null : "select").show()

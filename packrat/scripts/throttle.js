@@ -1,5 +1,6 @@
 // from underscore.js (w/minor tweaks)
 function throttle(func, wait) {
+	'use strict';
 	var context, args, result, timeout, previous = 0;
 	function later() {
 		previous = Date.now();
