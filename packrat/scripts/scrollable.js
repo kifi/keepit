@@ -1,6 +1,7 @@
 // @require scripts/throttle.js
 
 !function() {
+  'use strict';
   $.fn.scrollable = function(o) {
     return this.each(function() {
       o.$above.addClass("kifi-scrollable-above");

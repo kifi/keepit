@@ -1,3 +1,6 @@
+/*jshint globalstrict:true */
+'use strict';
+
 const {Ci} = require('chrome');
 const {browserWindows, BrowserWindow} = require('sdk/windows');
 const tabs = require('sdk/tabs');

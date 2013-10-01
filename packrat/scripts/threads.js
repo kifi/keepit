@@ -14,7 +14,8 @@
 // @require scripts/prevent_ancestor_scroll.js
 
 panes.threads = function() {
-  const handlers = {
+  'use strict';
+  var handlers = {
     thread_info: function(o) {
       update(o.thread, o.read);
     },
