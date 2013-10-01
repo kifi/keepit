@@ -25,17 +25,16 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(UserEventType(_)).toSet)
     if (mode=="users") {
       val definition = new GroupedUserCountMetricDefinition(eventsToConsider, NoContextRestriction, groupBy, doBreakDown)
-      // val resultFuture = metricManager.computeAdHocMteric(fromTime, toTime, definition).map{ aggregationResult =>
-      //   JsArray(aggregationResult.value.map(_.as[JsObject]).map{ obj =>
-      //     obj.deepMerge(Json.obj("count" -> (obj \ "users").as[JsArray].value.length))
-      //   })
-      // }
-      // Async(resultFuture.map(Ok(_))) 
       Async( metricManager.computeAdHocMteric(fromTime, toTime, definition).map(Ok(_)) ) 
     } else {
       val definition = new GroupedEventCountMetricDefinition(eventsToConsider, NoContextRestriction, groupBy, doBreakDown)
       Async( metricManager.computeAdHocMteric(fromTime, toTime, definition).map(Ok(_)) ) 
     }
+  }
+
+  def rawEvents(events: String, limit: Int) = Action { request =>
+    val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(UserEventType(_)).toSet)
+    Async(metricManager.getLatestRawEvents(eventsToConsider, limit).map(Ok(_)))
   }
 
 
