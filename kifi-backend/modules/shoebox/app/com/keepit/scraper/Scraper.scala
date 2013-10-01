@@ -6,8 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.search.ArticleStore
 import com.keepit.model._
-import com.keepit.scraper.extractor.DefaultExtractorProvider
-import com.keepit.scraper.extractor.Extractor
+import com.keepit.scraper.extractor.{ExtractorFactories, Extractor}
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.search.LangDetector
 import org.apache.http.HttpStatus
@@ -15,7 +14,6 @@ import org.joda.time.Seconds
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.store.S3ScreenshotStore
 import org.joda.time.Days
-import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.model.ScrapeInfo
 import com.keepit.search.Article
@@ -23,6 +21,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.normalizer.{TrustedCandidate, NormalizationService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.util.Success
 
 object Scraper {
   val BATCH_SIZE = 100
@@ -34,6 +33,7 @@ class Scraper @Inject() (
   db: Database,
   httpFetcher: HttpFetcher,
   articleStore: ArticleStore,
+  extractorFactories: ExtractorFactories,
   scraperConfig: ScraperConfig,
   scrapeInfoRepo: ScrapeInfoRepo,
   normalizedURIRepo: NormalizedURIRepo,
@@ -184,23 +184,7 @@ class Scraper @Inject() (
       }
   }
 
-  protected def getExtractor(url: String): Extractor = {
-    try {
-      URI.parse(url) match {
-        case Success(uri) =>
-          Extractor.factories.find(_.isDefinedAt(uri)).map{ f =>
-            f.apply(uri)
-          }.getOrElse(throw new Exception("failed to find an extractor factory"))
-        case Failure(_) =>
-          log.warn("uri parsing failed: [%s]".format(url))
-          DefaultExtractorProvider(url)
-      }
-    } catch {
-      case e: Throwable =>
-          log.warn("uri parsing failed: [%s][%s]".format(url, e.toString))
-          DefaultExtractorProvider(url)
-    }
-  }
+  protected def getExtractor(url: String): Extractor = extractorFactories.getExtractor(url)
 
   def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo): ScraperResult = {
     try {

@@ -1,15 +1,15 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.common.logging.Logging
-import com.keepit.scraper.Scraper
+import com.keepit.scraper.{HttpFetcher, Scraper}
 import org.apache.tika.sax.ContentHandlerDecorator
 import org.apache.tika.parser.html.DefaultHtmlMapper
 import org.apache.tika.parser.html.HtmlMapper
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 import com.keepit.common.net.{Host, URI}
+import com.keepit.search.Lang
 
-object YoutubeExtractorProvider extends ExtractorProvider {
+case class YoutubeExtractorProvider(httpFetcher: HttpFetcher) extends ExtractorProvider {
   def isDefinedAt(uri: URI) = {
     uri match {
       case URI(_, _, Some(Host("com", "youtube", _*)), _, Some(path), Some(query), _) =>
@@ -17,7 +17,7 @@ object YoutubeExtractorProvider extends ExtractorProvider {
       case _ => false
     }
   }
-  def apply(uri: URI) = new YoutubeExtractor(uri.toString, Scraper.maxContentChars, htmlMapper)
+  def apply(uri: URI) = new YoutubeExtractor(uri.toString, Scraper.maxContentChars, htmlMapper, httpFetcher)
 
   private val htmlMapper = Some(
     new DefaultHtmlMapper {
@@ -37,7 +37,7 @@ object YoutubeExtractorProvider extends ExtractorProvider {
   )
 }
 
-class YoutubeExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
+class YoutubeExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper], httpFetcher: HttpFetcher) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
   protected def getContentHandler = new YoutubeHandler(new TextOutputContentHandler(output))
 
   override def getContent() = {
@@ -49,6 +49,8 @@ class YoutubeExtractor(url: String, maxContentChars: Int, htmlMapper: Option[Htm
     buf.append(output.toString)
     buf.toString
   }
+
+  private def getClosedCaptions(): Map[Lang, String] = ???
 }
 
 class YoutubeHandler(handler: ContentHandler) extends ContentHandlerDecorator(handler) {
