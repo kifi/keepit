@@ -1,0 +1,108 @@
+.kifi-tagbox {
+  position: fixed;
+  top: 6px;
+  right: 6px;
+  width: 310px;
+  border: 4px solid #68829B;
+  border-radius: 5px;
+  background: white;
+}
+
+.kifi-tagbox-title {
+  background: #68829B;
+  font-size: 16px;
+  line-height: 32px;
+}
+
+.kifi-tagbox-title-text {
+  color: white;
+  text-align: center;
+}
+
+.kifi-tagbox-close {
+  color: white;
+  text-align: center;
+}
+
+.kifi-tagbox-suggest {
+  color: #858585;
+  background: #eff2f7;
+  min-height: 200px;
+}
+
+.kifi-tagbox-suggestion {
+  padding: 6px 12px;
+}
+
+.kifi-tagbox-suggestion:hover {
+  background: #b8c5d1;
+  color: white;
+  cursor: pointer;
+}
+
+.kifi-tagbox-new {
+  background: #d4e4f9;
+  padding: 6px 12px;
+}
+
+.kifi-tagbox-new-caption {
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.kifi-tagbox-new-text {
+}
+
+.kifi-tagbox-input-box {
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.kifi-tagbox-input-icon {
+  display: block;
+  width: 12px;
+  height: 16px;
+  background-image: url('images/keeper/tag_bullet_dark.2x.png');
+}
+
+.kifi-tagbox-input {
+  display: block;
+  position: relative;
+  padding: 10px 0;
+  border: 0;
+  margin: 0;
+  color: black;
+  background: transparent;
+  outline: 0;
+  z-index: 1;
+  font: inherit;
+}
+
+.kifi-tagbox-input-placeholder {
+  position: absolute;
+  padding: 10px 0;
+  color: #b8c5d1;
+}
+
+.kifi-tagbox-input-box.not-empty .kifi-tagbox-input-placeholder {
+  display: hidden;
+}
+
+.kifi-tagbox-tagged {
+  color: #b8c5d1;
+  background: white;
+  padding: 15px;
+}
+
+.kifi-tagbox-tagged-title {
+  font-size: 15px;
+  color: #b8c5d1;
+  padding: 10px;
+}
+
+.kifi-tagbox-tag {
+  float: left;
+  padding: 4px 10px;
+  color: white;
+  background: #b8c5d1;
+}

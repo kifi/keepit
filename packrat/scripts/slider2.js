@@ -44,6 +44,10 @@ var slider2 = function() {
       e.stopPropagation();
     }
   }
+        api.require("scripts/tagbox.js", function() {
+          log('require:tagbox')();
+          tagbox.toggle($slider);
+        });
 
   api.onEnd.push(function() {
     log("[slider2:onEnd]")();
@@ -200,6 +204,12 @@ var slider2 = function() {
         if (e.target === this) keepPage("private");
       }).on("click", ".kifi-slider2-kept-lock", function(e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
+      }).on("click", ".kifi-slider2-kept-tag", function(e) {
+        log('tag:click')();
+        api.require("scripts/tagbox.js", function() {
+          log('require:tagbox')();
+          tagbox.toggle($slider);
+        });
       }).bindHover(".kifi-slider2-x", function(configureHover) {
         this.style.overflow = "visible";
         configureHover({mustHoverFor: 700, hideAfter: 2500, click: "hide"});
