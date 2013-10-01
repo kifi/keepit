@@ -20,14 +20,15 @@
   width: 310px;
   border: 4px solid #68829B;
   border-radius: 5px;
-  background: white;
+  background: #68829B;
   font-family: Arial, sans-serif;
 }
 
 .kifi-tagbox-title {
-  background: #68829B;
+  position: relative;
   font-size: 16px;
-  line-height: 32px;
+  line-height: 29px;
+  margin-bottom: 4px;
 }
 
 .kifi-tagbox-title-text {
@@ -36,26 +37,41 @@
 }
 
 .kifi-tagbox-close {
-  color: white;
-  text-align: center;
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: block;
+  width: 13px;
+  height: 13px;
+  border: 8px solid transparent;
+  background-repeat: no-repeat;
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAQAAAADQ4RFAAAA0klEQVR4AXXUMW7DMBBE0alE5zhRrm0gMSxLvkfoKyhKYV/hB4ttSITzp34ViVXEOwdXTsiPwicHM0IiyJPoblmQlegZTMxJGuYJycQO0DNLsh9xpm9LZglcxMQyZoZsFOGZIUgkuw2YIYEcq9QRaVGwFVtLAhnmSYc8S+KQKHz/I7UhBtUBmgwy75KtPfOk79YyT/DMkwcPx4T/Y4WNviWZJ0KcxswTGXZlEl94kuxO31nshni252HxJPfWsBcfItjLk4YlmZFIdnBJ4hkLv0HQHxvW+Tv3j7AoAAAAAElFTkSuQmCC);
+  background-size: auto 13px;
+  vertical-align: middle;
 }
 
 .kifi-tagbox-input-box {
   display: block;
   font-size: 16px;
   padding: 10px 12px;
+  background: white;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.kifi-tagbox-input-icon {
-  padding: 0 8px;
-  margin-right: 5px;
+.kifi-tagbox-tag-icon {
+  display: block;
+  float: left;
+  width: 12px;
+  height: 16px;
+  margin-right: 8px;
   background-repeat: no-repeat;
-  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NLW4CURSG4SEhrYBQUNSUpBuATYBjAxhSgekaCL6CLgPRHVRNgsDzpwkhNEHUgEN0Tt+bUDO5d86dtrgrHved80bvs6WvZ+ywwZPvnc+ogFdIygsKfw3c4g3iMMHNbwM1TCGKGNW8gQbWEE8rPPgGWviA5LRHUwu0cXIcD/B4McDesjui7Qr0cbYcbVFHlHKPrWV/Rj8dGCKBWPQQOfQcNwmGP4ERJEMtI3Cn3I7M6FMZlTMCZeX2aEai6GYEutq9T2CNkuV5CSu/gG6ODooXHSwg+QK6L0PZaAFdCIRACIRACFgChysGDiYwvmJgbAIVxEgg/yRBjMo3wq1HgvDn6n8AAAAASUVORK5CYII=);
   background-size: auto 16px;
-  vertical-align: middle;
+}
+
+.kifi-tagbox-input-icon {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NLW4CURSG4SEhrYBQUNSUpBuATYBjAxhSgekaCL6CLgPRHVRNgsDzpwkhNEHUgEN0Tt+bUDO5d86dtrgrHved80bvs6WvZ+ywwZPvnc+ogFdIygsKfw3c4g3iMMHNbwM1TCGKGNW8gQbWEE8rPPgGWviA5LRHUwu0cXIcD/B4McDesjui7Qr0cbYcbVFHlHKPrWV/Rj8dGCKBWPQQOfQcNwmGP4ERJEMtI3Cn3I7M6FMZlTMCZeX2aEai6GYEutq9T2CNkuV5CSu/gG6ODooXHSwg+QK6L0PZaAFdCIRACIRACFgChysGDiYwvmJgbAIVxEgg/yRBjMo3wq1HgvDn6n8AAAAASUVORK5CYII=);
 }
 
 .kifi-tagbox-input-wrapper {
@@ -78,6 +94,7 @@
 .kifi-tagbox-input-placeholder {
   position: absolute;
   top: 0;
+  left: 0;
   color: #b8c5d1;
 }
 
@@ -109,12 +126,7 @@
 }
 
 .kifi-tagbox-suggestion-icon {
-  padding: 0 8px;
-  margin-right: 5px;
-  background-repeat: no-repeat;
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NPWoCURSG4RFEC8WfKmkiZAO6Ce3cgI2ksHENYp/CLMMimxjIDhTtAiJRwSKN6Syck/eCaYZ759xJYneLp/vOeaP3zc7XGB/Y4Mn3zmdUwAsk5RmFvwbKeIU4zFH6baCJN4giRiNvoIU1xNMKD76BDg6QnPZoa4EuvhzHIzxejbC37E7ougJDnC1HW9whSrnH1rI/Y5gOTJBALAaIHAaOmwSTn8AUkqGZEagrt1Mz+lRG1YxAVbk9mZEo+hmBvnbvE1ijYnlewcovoFugh+JVD0tIvoDuYigbLaALgRAIgRAIAUvgeMPA0QRmNwzMTKCGGAnknySIUfsGLlMukbhYQI0AAAAASUVORK5CYII=);
-  background-size: auto 16px;
-  vertical-align: middle;
 }
 
 .kifi-tagbox-suggestion:hover .kifi-tagbox-suggestion-icon {
