@@ -36,14 +36,14 @@ case class AccessLogTimer(eventType: AccessLogEventType, startTime: Long = Syste
   def done(remoteTime: Long = NoLongValue,
           statusCode: Int = NoIntValue,
           success: Option[Boolean] = None,//can't get away without option here
-          remoteHost: String = null.asInstanceOf[String],
-          targetHost: String = null.asInstanceOf[String],
-          remoteService: String = null.asInstanceOf[String],
+          remoteHost: String = null,
+          targetHost: String = null,
+          remoteService: String = null,
           remoteServiceId: Long = NoLongValue,
-          query: String = null.asInstanceOf[String],
-          trackingId: String = null.asInstanceOf[String],
-          method: String = null.asInstanceOf[String],
-          url: String = null.asInstanceOf[String]) = {
+          query: String = null,
+          trackingId: String = null,
+          method: String = null,
+          url: String = null) = {
     val now = System.currentTimeMillis
     AccessLogEvent(
       time = now,
