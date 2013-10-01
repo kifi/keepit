@@ -10,17 +10,16 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.shoebox.usersearch.UserIndex
-import com.keepit.eliza.ElizaServiceClient
-
+import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data.Forms._
 import play.api.data._
 import play.api.libs.json.Json
 import views.html
-import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
 
 case class UserStatistics(
     user: User,
@@ -54,6 +53,7 @@ class AdminUserController @Inject() (
     userIndex: UserIndex,
     emailAddressRepo: EmailAddressRepo,
     invitationRepo: InvitationRepo,
+    userSessionRepo: UserSessionRepo,
     clock: Clock,
     eliza: ElizaServiceClient) extends AdminController(actionAuthenticator) {
 
@@ -82,6 +82,8 @@ class AdminUserController @Inject() (
       userRepo.save(fromUser.withState(UserStates.INACTIVE))
 
       userConnectionRepo.deactivateAllConnections(fromUserId)
+
+      userSessionRepo.invalidateByUser(fromUserId)
     }
 
     for (su <- db.readOnly { implicit s => socialUserInfoRepo.getByUser(toUserId) }) {
