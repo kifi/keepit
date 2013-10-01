@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.social.{SocialNetworkType, SocialId}
 
 @ImplementedBy(classOf[UserSessionRepoImpl])
