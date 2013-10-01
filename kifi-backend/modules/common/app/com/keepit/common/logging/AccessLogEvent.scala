@@ -32,9 +32,10 @@ case class AccessLogTimer(eventType: AccessLogEventType, startTime: Long = Syste
 
   //using null for internal api to make the usage of the call much more friendly without having Some(foo) instead of just foo's
   def done(remoteTime: Long = NoLongValue,
-          returnCode: Int = NoIntValue,
+          statusCode: Int = NoIntValue,
           success: Option[Boolean] = None,//can't get away without option here
           remoteHost: String = null.asInstanceOf[String],
+          targetHost: String = null.asInstanceOf[String],
           remoteService: String = null.asInstanceOf[String],
           remoteServiceId: Long = NoLongValue,
           query: String = null.asInstanceOf[String],
@@ -47,9 +48,10 @@ case class AccessLogTimer(eventType: AccessLogEventType, startTime: Long = Syste
       duration = now - startTime,
       eventType = eventType,
       remoteTime = longOption(remoteTime),
-      returnCode = intOption(returnCode),
+      statusCode = intOption(statusCode),
       success = success,
       remoteHost = Option(remoteHost),
+      targetHost = Option(targetHost),
       remoteService = Option(remoteService),
       remoteServiceId = longOption(remoteServiceId),
       query = Option(query),
@@ -64,9 +66,10 @@ case class AccessLogEvent(
   duration: Long,
   eventType: AccessLogEventType,
   remoteTime: Option[Long],
-  returnCode: Option[Int],
+  statusCode: Option[Int],
   success: Option[Boolean],
   remoteHost: Option[String],
+  targetHost: Option[String],
   remoteService: Option[String],
   remoteServiceId: Option[Long],
   query: Option[String],
@@ -80,23 +83,27 @@ class AccessLog {
   private val accessLog = Logger("com.keepit.access")
   private val formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS")
 
-  def add(e: AccessLogEvent) = accessLog.info(format(e))
+  def add(e: AccessLogEvent): AccessLogEvent = {
+    accessLog.info(format(e))
+    e
+  }
 
   def format(e: AccessLogEvent): String = {
     val line: List[Option[String]] =
       Some(s"t:${formatter.print(e.time)}") ::
-      Some(s"duration:${e.duration}") ::
       Some(s"type:${e.eventType.name}") ::
+      Some(s"duration:${e.duration}") ::
+      e.method.map("method:" + _) ::
       e.remoteTime.map("remoteTime:" + _) ::
       e.remoteTime.map(t => "waitTime:" + (e.duration - t)) ::
-      e.returnCode.map("returnCode:" + _) ::
+      e.statusCode.map("statusCode:" + _) ::
       e.success.map("success:" + _) ::
       e.remoteHost.map("remoteHost:" + _) ::
+      e.targetHost.map("targetHost:" + _) ::
       e.remoteService.map("remoteService:" + _) ::
       e.remoteServiceId.map("remoteServiceId:" + _) ::
       e.query.map("query:" + _) ::
       e.trackingId.map("trackingId:" + _) ::
-      e.method.map("method:" + _) ::
       e.url.map("url:" + _) ::
       Nil
     line.flatten.mkString("\t")

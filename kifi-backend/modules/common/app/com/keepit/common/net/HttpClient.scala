@@ -173,51 +173,51 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
   private val wsRequest = req.withHeaders(headersWithTracking: _*)
 
   def get() = {
-    val event = AccessLogTimer(HTTP_OUT)
+    val timer = AccessLogTimer(HTTP_OUT)
     val res = wsRequest.get()
     res.onComplete { resTry =>
-      logResponse(event, "GET", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "GET", resTry.isSuccess, trackingId, resTry.toOption)
     }
     res
   }
 
   def put(body: JsValue) = {
-    val event = AccessLogTimer(HTTP_OUT)
+    val timer = AccessLogTimer(HTTP_OUT)
     val res = wsRequest.put(body)
     res.onComplete { resTry =>
-      logResponse(event, "PUT", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "PUT", resTry.isSuccess, trackingId, resTry.toOption)
     }
     res
   }
 
   def post(body: JsValue) = {
-    val event = AccessLogTimer(HTTP_OUT)
+    val timer = AccessLogTimer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(event, "POST", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "POST", resTry.isSuccess, trackingId, resTry.toOption)
     }
     res
   }
 
   def post(body: NodeSeq) = {
-    val event = AccessLogTimer(HTTP_OUT)
+    val timer = AccessLogTimer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(event, "POST", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "POST", resTry.isSuccess, trackingId, resTry.toOption)
     }
     res
   }
 
   def delete() = {
-    val event = AccessLogTimer(HTTP_OUT)
+    val timer = AccessLogTimer(HTTP_OUT)
     val res = wsRequest.delete()
     res.onComplete { resTry =>
-      logResponse(event, "DELETE", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "DELETE", resTry.isSuccess, trackingId, resTry.toOption)
     }
     res
   }
 
-  private def logResponse(event: AccessLogTimer, method: String, isSuccess: Boolean, trackingId: String, resOpt: Option[Response]) = {
+  private def logResponse(timer: AccessLogTimer, method: String, isSuccess: Boolean, trackingId: String, resOpt: Option[Response]) = {
     //todo(eishay): the interesting part is the remote service and node id, to be logged
     val remoteHost = resOpt.map(_.header(CommonHeaders.LocalHost)).flatten.getOrElse("NA")
     val remoteTime = resOpt.map(_.header(CommonHeaders.ResponseTime)).flatten.map(_.toLong).getOrElse(AccessLogTimer.NoLongValue)
@@ -226,13 +226,13 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
     //   Statsd.timing(s"internalCall.remote.$remoteService.$remoteNodeId", t)
     //   Statsd.timing(s"internalCall.local.$localService.$localNodeId", t)
     // }
-    accessLog.add(event.done(
+    accessLog.add(timer.done(
         remoteTime = remoteTime,
         success = Some(isSuccess),
         query = queryString,
         url = wsRequest.url,
         trackingId = trackingId,
-        returnCode = resOpt.map(_.status).getOrElse(AccessLogTimer.NoIntValue)))
+        statusCode = resOpt.map(_.status).getOrElse(AccessLogTimer.NoIntValue)))
   }
 }
 
