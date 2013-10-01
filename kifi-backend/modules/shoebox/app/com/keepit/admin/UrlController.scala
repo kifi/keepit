@@ -28,7 +28,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.integrity.RenormalizationCheckKey
 import com.keepit.common.akka.MonitoredAwait
-
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -55,7 +55,8 @@ class UrlController @Inject() (
   centralConfig: CentralConfig,
   httpProxyRepo: HttpProxyRepo,
   eliza: ElizaServiceClient,
-  monitoredAwait: MonitoredAwait) extends AdminController(actionAuthenticator) {
+  monitoredAwait: MonitoredAwait,
+  airbrake: AirbrakeNotifier) extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -68,7 +69,7 @@ class UrlController @Inject() (
       try {
         doRenormalize(readOnly, domain)
       } catch {
-        case ex: Throwable => log.error(ex.getMessage, ex)
+        case ex: Throwable => airbrake.notify(AirbrakeError(ex, Some(ex.getMessage)))
       }
     }
     Ok("Started!")
@@ -212,7 +213,7 @@ class UrlController @Inject() (
   
   def batchURLMigration = AdminHtmlAction{ request =>
     uriIntegrityPlugin.batchURLMigration(500)
-    Ok("Ok. Start migration of 500 urls")
+    Ok("Ok. Start migration of upto 500 urls")
   }
   
   def renormalizationView(page: Int = 0) = AdminHtmlAction{ request =>
