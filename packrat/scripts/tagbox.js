@@ -26,7 +26,7 @@ var tagbox = (function () {
 		},
 		hide: function () {
 			$tagbox.remove();
-      $tagbox = null;
+			$tagbox = null;
 		}
 	};
 
