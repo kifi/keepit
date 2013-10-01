@@ -4,10 +4,21 @@ import com.keepit.scraper.{HttpFetcher, HttpInputStream}
 import com.keepit.common.net.URI
 import scala.util.{Failure, Success}
 import com.keepit.common.logging.Logging
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ImplementedBy, Singleton, Inject}
+
+trait Extractor {
+  def process(input: HttpInputStream): Unit
+  def getContent(): String
+  def getMetadata(name: String): Option[String]
+  def getKeywords(): Option[String] = None
+}
+
+@ImplementedBy(classOf[ExtractorFactoryImpl])
+trait ExtractorFactory extends Function[String, Extractor]
 
 @Singleton
-class ExtractorFactories @Inject() (httpFetcher: HttpFetcher) extends Logging {
+class ExtractorFactoryImpl @Inject() (httpFetcher: HttpFetcher) extends ExtractorFactory with Logging {
+
   val all = Seq(
     YoutubeExtractorProvider(httpFetcher),
     GithubExtractorProvider,
@@ -15,7 +26,7 @@ class ExtractorFactories @Inject() (httpFetcher: HttpFetcher) extends Logging {
     DefaultExtractorProvider
   )
 
-  def getExtractor(url: String): Extractor = {
+  def apply(url: String): Extractor = {
     try {
       URI.parse(url) match {
         case Success(uri) =>
@@ -34,12 +45,4 @@ class ExtractorFactories @Inject() (httpFetcher: HttpFetcher) extends Logging {
   }
 }
 
-trait Extractor {
-  def process(input: HttpInputStream): Unit
-  def getContent(): String
-  def getMetadata(name: String): Option[String]
-  def getKeywords(): Option[String] = None
-}
-
 abstract class ExtractorProvider extends PartialFunction[URI, Extractor]
-

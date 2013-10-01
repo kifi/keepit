@@ -6,7 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.search.ArticleStore
 import com.keepit.model._
-import com.keepit.scraper.extractor.{ExtractorFactories, Extractor}
+import com.keepit.scraper.extractor.{ExtractorFactory, Extractor}
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.search.LangDetector
 import org.apache.http.HttpStatus
@@ -29,11 +29,12 @@ object Scraper {
   val maxContentChars = 100000 // 100K chars
 }
 
+@Singleton
 class Scraper @Inject() (
   db: Database,
   httpFetcher: HttpFetcher,
   articleStore: ArticleStore,
-  extractorFactories: ExtractorFactories,
+  extractorFactory: ExtractorFactory,
   scraperConfig: ScraperConfig,
   scrapeInfoRepo: ScrapeInfoRepo,
   normalizedURIRepo: NormalizedURIRepo,
@@ -68,7 +69,7 @@ class Scraper @Inject() (
   }
 
   def getBasicArticle(url: String, customExtractor: Option[Extractor] = None): Option[BasicArticle] = {
-    val extractor = customExtractor.getOrElse(getExtractor(url))
+    val extractor = customExtractor.getOrElse(extractorFactory(url))
     try {
       val fetchStatus = httpFetcher.fetch(url, proxy = getProxy(url)) { input => extractor.process(input) }
 
@@ -184,8 +185,6 @@ class Scraper @Inject() (
       }
   }
 
-  protected def getExtractor(url: String): Extractor = extractorFactories.getExtractor(url)
-
   def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo): ScraperResult = {
     try {
       URI.parse(normalizedUri.url) match {
@@ -209,7 +208,7 @@ class Scraper @Inject() (
 
   private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo): ScraperResult = {
     val url = normalizedUri.url
-    val extractor = getExtractor(url)
+    val extractor = extractorFactory(url)
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
     try {

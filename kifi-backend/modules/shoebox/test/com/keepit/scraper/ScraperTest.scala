@@ -8,7 +8,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.model._
 import com.keepit.search.ArticleStore
 import com.keepit.test.ShoeboxTestInjector
-import com.keepit.scraper.extractor.{ExtractorFactories, Extractor, TikaBasedExtractor}
+import com.keepit.scraper.extractor.{ExtractorFactory, Extractor, TikaBasedExtractor}
 import org.specs2.mutable._
 import org.apache.http.HttpStatus
 import org.apache.http.protocol.BasicHttpContext
@@ -352,15 +352,19 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
     }
   }
 
+  val mockExtractorFactory = new ExtractorFactory {
+    override def apply(url: String): Extractor = {
+      new TikaBasedExtractor(url, 10000, None) {
+        protected def getContentHandler = new BodyContentHandler(output)
+      }
+    }
+  }
+
   def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher)(implicit injector: Injector) = {
-    new Scraper(inject[Database], mockHttpFetcher, articleStore, new ExtractorFactories(mockHttpFetcher), config,
+    new Scraper(inject[Database], mockHttpFetcher, articleStore, mockExtractorFactory, config,
       inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin],
       inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore, inject[Provider[NormalizationService]]) {
-      override protected def getExtractor(url: String): Extractor = {
-        new TikaBasedExtractor(url, 10000, None) {
-          protected def getContentHandler = new BodyContentHandler(output)
-        }
-      }
+
     }
   }
 
