@@ -113,7 +113,7 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
       val dv = new DocAndVector(tp, vector, weight)
       dv.fetchDoc(doc)
       if (dv.doc == doc && weight > 0.0f) {
-        val sc = dv.scoreAndNext()
+        val sc = dv.score()
         val expl = new ComplexExplanation()
         expl.setDescription("term(%s)".format(term.toString))
         expl.addDetail(new Explanation(sc/weight, "similarity"))
@@ -139,12 +139,14 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
 private[query] final class DocAndVector(tp: DocsAndPositionsEnum, vector: SemanticVector, weight: Float) extends Logging {
   var doc = -1
+  var pos = -1
 
   def fetchDoc(target: Int) {
+    pos = -1
     doc = tp.advance(target)
   }
 
-  def scoreAndNext(): Float = {
+  def score(): Float = {
     val score = if (tp.freq() > 0) {
       tp.nextPosition()
       val payload = tp.getPayload()
@@ -162,8 +164,7 @@ private[query] final class DocAndVector(tp: DocsAndPositionsEnum, vector: Semant
     } else {
       0.0f
     }
-
-    doc = tp.nextDoc()
+    pos += 1
 
     score
   }
@@ -175,7 +176,7 @@ class SemanticVectorScorer(weight: SemanticVectorWeight, davs: Seq[DocAndVector]
   private[this] var scoredDoc = -1
 
   private[this] val pq = new PriorityQueue[DocAndVector](davs.size) {
-    override def lessThan(nodeA: DocAndVector, nodeB: DocAndVector) = (nodeA.doc < nodeB.doc)
+    override def lessThan(nodeA: DocAndVector, nodeB: DocAndVector) = (nodeA.doc < nodeB.doc || (nodeA.doc == nodeB.doc && nodeA.pos < nodeB.pos))
   }
   davs.foreach{ dav => pq.insertWithOverflow(dav) }
 
@@ -184,8 +185,8 @@ class SemanticVectorScorer(weight: SemanticVectorWeight, davs: Seq[DocAndVector]
     if (scoredDoc != doc) {
       var top = pq.top
       var sum = 0.0f
-      while (top.doc == doc) {
-        sum += top.scoreAndNext()
+      while (top.doc == doc && top.pos < 0) {
+        sum += top.score()
         top = pq.updateTop()
       }
       svScore = sum
@@ -199,8 +200,8 @@ class SemanticVectorScorer(weight: SemanticVectorWeight, davs: Seq[DocAndVector]
   override def nextDoc(): Int = advance(0)
 
   override def advance(target: Int): Int = {
-    var top = pq.top
     val doc = if (target <= curDoc && curDoc < NO_MORE_DOCS) curDoc + 1 else target
+    var top = pq.top
     while (top.doc < doc) {
       top.fetchDoc(doc)
       top = pq.updateTop()

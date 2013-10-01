@@ -35,26 +35,26 @@ object Searcher {
     private[this] var doc = -1
     private[this] var docPrimary = -1
     private[this] var docSecondary = -1
+    private[this] var tp = primary
 
     override def docID(): Int = doc
 
-    override def nextDoc(): Int = {
-      doc = doc + 1
-      if (docPrimary < doc) docPrimary = primary.advance(doc)
-      if (docSecondary < doc) docSecondary = secondary.advance(doc)
-      doc = min(docPrimary, docSecondary)
-      doc
-    }
+    override def nextDoc(): Int = advance(0)
 
     override def advance(target: Int): Int = {
       doc = if (doc < target) target else doc + 1
-      if (docPrimary <= target) docPrimary = primary.advance(doc)
-      if (docSecondary <= target) docSecondary = secondary.advance(doc)
-      doc = min(docPrimary, docSecondary)
+      if (docPrimary < doc) docPrimary = primary.advance(doc)
+      if (docSecondary < doc) docSecondary = secondary.advance(doc)
+      doc = if (docPrimary <= docSecondary) {
+        tp = primary
+        docPrimary
+      } else {
+        tp = secondary
+        docSecondary
+      }
       doc
     }
 
-    private def tp: DocsAndPositionsEnum = if (doc == docPrimary) primary else secondary
     override def freq(): Int = tp.freq()
     override def nextPosition(): Int = tp.nextPosition()
     override def getPayload(): BytesRef = tp.getPayload()
