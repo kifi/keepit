@@ -5,6 +5,8 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.zookeeper.ServiceDiscovery
 import org.joda.time.format.DateTimeFormat
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 sealed trait AccessLogEventType { val name: String }
 
@@ -84,7 +86,7 @@ class AccessLog {
   private val formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS")
 
   def add(e: AccessLogEvent): AccessLogEvent = {
-    accessLog.info(format(e))
+    future {accessLog.info(format(e)) }
     e
   }
 
