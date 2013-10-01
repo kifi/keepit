@@ -1,23 +1,20 @@
 package com.keepit.common.controller
 
+
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.db.slick.Database
-import com.keepit.model._
-import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.controller.FortyTwoCookies.{KifiInstallationCookie, ImpersonateCookie}
-import securesocial.core._
-import com.keepit.common.logging.Logging
-import com.keepit.common.db.{ExternalId, State, Id}
 import com.keepit.common.db.slick.DBSession.RSession
-import play.api.mvc._
-import com.keepit.model.ExperimentType
-import com.keepit.model.KifiInstallation
-import scala.Some
-import com.keepit.model.User
-import securesocial.core.SecuredRequest
-import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ExternalId, State, Id}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.model._
+import com.keepit.social.{SocialNetworkType, SocialId}
+
+import play.api.mvc._
+import securesocial.core._
 
 @Singleton
 class ShoeboxActionAuthenticator @Inject() (
@@ -32,40 +29,30 @@ class ShoeboxActionAuthenticator @Inject() (
   extends ActionAuthenticator with SecureSocial with Logging {
 
   private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId,
-                         socialNetworkType: SocialNetworkType)(implicit session: RSession): Id[User] = {
+                         socialNetworkType: SocialNetworkType)(implicit session: RSession): Option[Id[User]] = {
     userIdOpt match {
       case None =>
         val socialUser = socialUserInfoRepo.get(socialId, socialNetworkType)
-        socialUser.userId.getOrElse(
-          throw new IllegalStateException(s"User ID for social user not defined: $socialUser"))
+        socialUser.userId
       case Some(userId) =>
         val socialUser = socialUserInfoRepo.get(socialId, socialNetworkType)
         if (socialUser.userId.get != userId) {
           log.error(s"Social user id $socialUser does not match session user id $userId")
         }
-        userId
+        Some(userId)
     }
-  }
-
-  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId,
-                              socialNetworkType: SocialNetworkType): (Id[User], Set[State[ExperimentType]]) = {
-    val (userId, experiments) = db.readOnly { implicit session =>
-      val userId = loadUserId(userIdOpt, socialId, socialNetworkType)
-      (userId, getExperiments(userId))
-    }
-    (userId, experiments)
   }
 
   private def getExperiments(userId: Id[User])(implicit session: RSession): Set[State[ExperimentType]] = userExperimentRepo.getUserExperiments(userId)
 
-  private def authenticatedHandler[T](apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
-    val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
+  private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
+    val socialUser = request.user
     val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
     val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
-    val socialUser = request.user
-    val (userId, experiments) =
-      loadUserContext(userIdOpt, SocialId(socialUser.identityId.userId), SocialNetworkType(socialUser.identityId.providerId))
-    val newSession = session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)
+    val experiments = db.readOnly { implicit s => getExperiments(userId) }
+    val newSession =
+      if (session.get(ActionAuthenticator.FORTYTWO_USER_ID) == Some(userId.toString)) None
+      else Some(session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
     impersonatedUserIdOpt match {
       case Some(impExternalUserId) =>
         val (impExperiments, impSocialUser, impUserId) = db.readOnly { implicit session =>
@@ -86,10 +73,20 @@ class ShoeboxActionAuthenticator @Inject() (
       allowPending: Boolean,
       bodyParser: BodyParser[T],
       onAuthenticated: AuthenticatedRequest[T] => Result,
+      onSocialAuthenticated: SecuredRequest[T] => Result,
       onUnauthenticated: Request[T] => Result): Action[T] = UserAwareAction(bodyParser) { request =>
     val result = request.user match {
-      case Some(user) =>
-        authenticatedHandler(apiClient, allowPending)(onAuthenticated)(SecuredRequest(user, request))
+      case Some(identity) =>
+        val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
+        val uidOpt = db.readOnly { implicit s =>
+          loadUserId(userIdOpt, SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId))
+        }
+        uidOpt match {
+          case Some(userId) =>
+            authenticatedHandler(userId, apiClient, allowPending)(onAuthenticated)(SecuredRequest(identity, request))
+          case None =>
+            onSocialAuthenticated(SecuredRequest(identity, request))
+        }
       case None =>
         onUnauthenticated(request)
     }
@@ -111,8 +108,8 @@ class ShoeboxActionAuthenticator @Inject() (
   }
 
   private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
-                               experiments: Set[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
-                               newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
+     experiments: Set[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
+     newSession: Option[Session], request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = db.readOnly(implicit s => userRepo.get(userId))
     if (experiments.contains(ExperimentTypes.BLOCK) ||
       user.state == UserStates.BLOCKED ||
@@ -122,11 +119,9 @@ class ShoeboxActionAuthenticator @Inject() (
       log.warn(message)
       Forbidden(message)
     } else {
-      val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> fortyTwoServices.currentVersion.value)
-      log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
       try {
         action(AuthenticatedRequest[T](identity, userId, user, request, experiments, kifiInstallationId, adminUserId)) match {
-          case r: PlainResult => r.withSession(newSession)
+          case r: PlainResult => newSession map r.withSession getOrElse r
           case any: Result => any
         }
       } catch {

@@ -2,6 +2,7 @@
 // @require scripts/api.js
 
 var notifierScout = notifierScout || function() {  // idempotent for Chrome
+  'use strict';
   api.port.on({
     session_change: function(s) {
       if (!s) {

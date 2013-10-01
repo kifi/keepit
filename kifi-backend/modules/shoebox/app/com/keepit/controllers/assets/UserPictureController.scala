@@ -1,6 +1,6 @@
 package com.keepit.controllers.assets
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Try
 
 import com.google.inject.Inject

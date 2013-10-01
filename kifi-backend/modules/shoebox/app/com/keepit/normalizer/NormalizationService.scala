@@ -8,7 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.integrity.{URIMigration, UriIntegrityPlugin}
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import com.keepit.common.db.slick.Database
 import com.keepit.common._

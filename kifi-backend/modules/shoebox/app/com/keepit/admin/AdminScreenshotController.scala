@@ -9,7 +9,7 @@ import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.Inject
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.db.slick.Database
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class AdminScreenshotController @Inject() (
   actionAuthenticator: ActionAuthenticator,

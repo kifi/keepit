@@ -1,4 +1,5 @@
-//
+/*jshint globalstrict:true */
+'use strict';
 
 const { Ci, Cc } = require("chrome");
 const WM = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);

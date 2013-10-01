@@ -1,4 +1,5 @@
 function log() {
+  'use strict';
   var d = new Date, ds = d.toString(), a = Array.slice(arguments);
   for (var i = 0; i < a.length; i++) {
     var v = a[i];

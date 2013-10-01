@@ -7,7 +7,7 @@ import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
 import com.keepit.normalizer.{SchemeNormalizer, NormalizationService, NormalizationCandidate}
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])

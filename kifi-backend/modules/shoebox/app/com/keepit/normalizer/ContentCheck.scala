@@ -3,12 +3,10 @@ package com.keepit.normalizer
 import com.keepit.common.db.slick.DBSession.RSession
 import scala.concurrent.Future
 import com.keepit.scraper.{ScraperPlugin, Scraper, Signature}
-import com.keepit.common.net.URI
 import com.keepit.model.Normalization
-import com.keepit.scraper.extractor.JsoupBasedExtractor
-import org.jsoup.nodes.Document
+import com.keepit.scraper.extractor.LinkedInIdExtractor
 import com.keepit.common.logging.Logging
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait ContentCheck extends PartialFunction[NormalizationCandidate, RSession => Future[Boolean]] {
   def getFailedAttempts(): Set[(String, String)]
@@ -52,19 +50,17 @@ case class SignatureCheck(referenceUrl: String, trustedDomain: String)(implicit 
 
 case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: ScraperPlugin) extends ContentCheck with Logging {
 
-  def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInPublicProfile.findFirstIn(candidate.url).isDefined
+  def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInCanonicalPublicProfile.findFirstIn(candidate.url).isDefined
   protected def check(publicProfileCandidate: NormalizationCandidate)(implicit session: RSession) = {
-    val idExtractor = new JsoupBasedExtractor(publicProfileCandidate.url, Scraper.maxContentChars) {
-      def parse(doc: Document): String = doc.getElementsByTag("script").toString
-    }
+    val idExtractor = new LinkedInIdExtractor(publicProfileCandidate.url, Scraper.maxContentChars)
 
-    for { publicProfileOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(idExtractor)) } yield publicProfileOption match {
-      case Some(article) => article.content.contains(s"newTrkInfo = '${privateProfileId},' + document.referrer.substr(0,128)")
+    for { idArticleOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(idExtractor)) } yield {println(idArticleOption); idArticleOption match {
+      case Some(idArticle) => idArticle.content == privateProfileId.toString
       case None => {
         log.error(s"Content check of LinkedIn public profile ${publicProfileCandidate.url} for id ${privateProfileId} failed.")
         false
       }
-    }
+    }}
   }
   def getFailedAttempts() = Set.empty
 }

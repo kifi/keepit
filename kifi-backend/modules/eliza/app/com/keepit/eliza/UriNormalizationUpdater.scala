@@ -12,7 +12,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 
 import akka.actor.ActorSystem
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 
 import play.api.libs.json.{Json, JsObject}

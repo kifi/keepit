@@ -83,6 +83,15 @@ case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extend
 class BookmarkUriUserCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[BookmarkUriUserKey, Bookmark](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
+case class LatestBookmarkUriKey(uriId: Id[NormalizedURI]) extends Key[Bookmark] {
+  override val version = 1
+  val namespace = "latest_bookmark_uri"
+  def toKey(): String = uriId.toString
+}
+
+class LatestBookmarkUriCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LatestBookmarkUriKey, Bookmark](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 object BookmarkStates extends States[Bookmark]
 
 case class BookmarkSource(value: String) {
@@ -93,6 +102,8 @@ case class BookmarkSource(value: String) {
 
 object BookmarkSource {
   implicit def source(value: String) = BookmarkSource(value)
+  val hover = BookmarkSource("HOVER_KEEP")
+  val initLoad = BookmarkSource("INIT_LOAD")
 }
 
 object BookmarkFactory {

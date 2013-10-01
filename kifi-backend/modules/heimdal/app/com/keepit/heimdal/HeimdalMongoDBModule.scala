@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck.{HealthcheckPlugin}
 
 import net.codingwell.scalaguice.ScalaModule
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.{Provides, Singleton}
 

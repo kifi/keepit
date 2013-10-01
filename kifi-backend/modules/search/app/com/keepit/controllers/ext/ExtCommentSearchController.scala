@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 import scala.concurrent.future
 import scala.concurrent.Future
@@ -27,7 +27,6 @@ import com.keepit.serializer.CommentSearchResultSerializer.resSerializer
 import play.api.libs.json.Json
 import com.newrelic.api.agent.NewRelic
 import com.newrelic.api.agent.Trace
-import play.modules.statsd.api.Statsd
 import com.keepit.social.BasicUser
 
 class ExtCommentSearchController @Inject() (

@@ -1,11 +1,14 @@
+/*jshint globalstrict:true */
+"use strict";
+
 var api = api || require("./api");
 var log = log || api.log;
 
-const NOTIFICATION_BATCH_SIZE = 10;
+var NOTIFICATION_BATCH_SIZE = 10;
 
 //                            | sub |    |------- country domain -------|-- generic domain --|           |-- port? --|
-const domainRe = /^https?:\/\/[^\/]*?((?:[^.\/]+\.[^.\/]{2,3}\.[^.\/]{2}|[^.\/]+\.[^.\/]{2,6}|localhost))(?::\d{2,5})?(?:$|\/)/;
-const hostRe = /^https?:\/\/([^\/]+)/;
+var domainRe = /^https?:\/\/[^\/]*?((?:[^.\/]+\.[^.\/]{2,3}\.[^.\/]{2}|[^.\/]+\.[^.\/]{2,6}|localhost))(?::\d{2,5})?(?:$|\/)/;
+var hostRe = /^https?:\/\/([^\/]+)/;
 
 var tabsByLocator = {};
 var notificationsCallbacks = [];
@@ -85,7 +88,7 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 
 // ===== Event logging
 
-const eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
+var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
@@ -126,7 +129,7 @@ logEvent.catchUp = function() {
 
 // ===== WebSocket handlers
 
-const socketHandlers = {
+var socketHandlers = {
   denied: function() {
     log("[socket:denied]")();
     socket.close();
@@ -359,7 +362,7 @@ api.port.on({
       api.tabs.emit(tab, "kept", {kept: data.private ? "private" : "public"});
     });
   },
-  keeper_shown: function(_, _, tab) {
+  keeper_shown: function(_, __, tab) {
     (pageData[tab.nUri] || {}).shown = true;  // server already notified via event log
   },
   suppress_on_site: function(data, _, tab) {
@@ -390,11 +393,23 @@ api.port.on({
   send_message: function(data, respond, tab) {
     log("[send_message]", data)();
     var nUri = tab.nUri || data.url;
+    data.extVersion = api.version;
     ajax("eliza", "POST", "/eliza/messages", data, function(o) {
       log("[send_message] resp:", o)();
-      // need ThreadInfo for this thread (new or merged), as well as the sent message.
-      // might be nice to get them in the response instead of requesting over the socket.
-      loadThreadData(nUri);
+
+      var d = pageData[nUri];
+      var thread = o.threadInfo;
+      messageData[thread.id] = o.messages;
+      if (d) {
+        thread.participants = thread.participants.filter(idIsNot(session.userId));
+        d.threads = d.threads.filter(idIsNot(thread.id));
+        d.threads.push(thread);  // maintaining chronological order
+
+        var lastMessage = o.messages[o.messages.length - 1];
+        if (new Date(lastMessage.createdAt) > new Date(d.lastMessageRead[thread.id] || 0)) {
+          d.lastMessageRead[thread.id] = lastMessage.createdAt;
+        }
+      }
       respond(o);
     });
   },
@@ -402,6 +417,7 @@ api.port.on({
     log("[send_reply]", data)();
     var id = data.threadId;
     delete data.threadId;
+    data.extVersion = api.version;
     ajax("eliza", "POST", "/eliza/messages/" + id, data, function(o) {
       log("[send_reply] resp:", o)();
       respond(o);
@@ -1102,8 +1118,8 @@ api.tabs.on.loading.add(function(tab) {
   logEvent("extension", "pageLoad");
 });
 
-const searchPrefetchCache = {};  // for searching before the results page is ready
-const searchFilterCache = {};    // for restoring filter if user navigates back to results
+var searchPrefetchCache = {};  // for searching before the results page is ready
+var searchFilterCache = {};    // for restoring filter if user navigates back to results
 api.on.search.add(function prefetchResults(query) {
   log('[prefetchResults] prefetching for query:', query)();
   searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter}, function(response) {

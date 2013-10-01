@@ -1,15 +1,19 @@
 package com.keepit.model
 
+import org.joda.time.DateTime
+
 import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.time.Clock
 import com.keepit.common.logging.Logging
-import org.joda.time.DateTime
+import com.keepit.common.time._
 import com.keepit.social.{SocialNetworkType, SocialId}
 
 @ImplementedBy(classOf[UserSessionRepoImpl])
-trait UserSessionRepo extends Repo[UserSession] with ExternalIdColumnFunction[UserSession]
+trait UserSessionRepo extends Repo[UserSession] with ExternalIdColumnFunction[UserSession] {
+  def invalidateByUser(userId: Id[User])(implicit s: RWSession): Int
+}
 
 @Singleton
 class UserSessionRepoImpl @Inject() (
@@ -43,5 +47,13 @@ class UserSessionRepoImpl @Inject() (
   }
 
   override def get(id: ExternalId[UserSession])(implicit session: RSession): UserSession = getOpt(id).get
+
+  def invalidateByUser(userId: Id[User])(implicit s: RWSession): Int = {
+    (for (s <- table if s.userId === userId) yield s.externalId).list.foreach { id =>
+      externalIdCache.remove(UserSessionExternalIdKey(id))
+    }
+    (for (s <- table if s.userId === userId) yield s.state ~ s.updatedAt)
+      .update(UserSessionStates.INACTIVE -> clock.now())
+  }
 
 }

@@ -1,4 +1,6 @@
 // API for main.js
+/*jshint globalstrict:true */
+"use strict";
 
 function dispatch() {
   var args = arguments;

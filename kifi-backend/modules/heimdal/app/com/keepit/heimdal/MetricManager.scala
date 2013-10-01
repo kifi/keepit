@@ -6,9 +6,10 @@ import play.api.libs.json.{JsObject, JsNull, JsArray}
 import play.modules.reactivemongo.json.ImplicitBSONHandlers._
 
 import scala.concurrent.duration._
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global //Might want to change this to a custom play one
+import scala.concurrent.{Future, future}
+import play.api.libs.concurrent.Execution.Implicits.defaultContext //Might want to change this to a custom play one
 
+import reactivemongo.bson.{BSONDocument, BSONArray, BSONString, BSONDouble}
 
 import com.google.inject.Inject
 
@@ -23,5 +24,21 @@ class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo){
       })
     }
   } 
+
+  def getLatestRawEvents(eventsToConsider: EventSet, number: Int) : Future[JsArray] = {
+    val eventSelector = eventsToConsider match {
+      case SpecificEventSet(events) =>
+        BSONDocument(
+          "event_type" -> BSONDocument(
+            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
+          )
+        )
+      case AllEvents => BSONDocument()
+    }
+    val sortOrder = BSONDocument("time" -> BSONDouble(-1.0))
+    userEventLoggingRepo.collection.find(eventSelector).sort(sortOrder).cursor.collect[Seq](number).map{ events =>
+      JsArray(events)
+    }
+  }
 
 }

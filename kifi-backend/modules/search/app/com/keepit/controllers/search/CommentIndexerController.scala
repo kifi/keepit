@@ -10,7 +10,7 @@ import com.keepit.search.index.Indexer.CommitData
 import org.apache.lucene.document.Document
 import play.api.libs.json._
 import play.api.mvc.Action
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import views.html
 import scala.concurrent.Await
 import com.keepit.shoebox.ShoeboxServiceClient

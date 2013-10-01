@@ -43,33 +43,15 @@ class MainQueryParser(
 
   val namedQueryContext = new NamedQueryContext
 
-  private def createPhraseQueries(phrases: Set[(Int, Int)]): Query = {
-    var phraseQueries = new BooleanQuery(true)
-
-    phrases.foreach{ phrase =>
-      List("ts", "cs", "title_stemmed").foreach{ field =>
-        val phraseStart = phrase._1
-        val phraseEnd = phraseStart + phrase._2
-
-        // construct a phrase query
-        val phraseQuery = getStemmedPhrase(field, phraseStart, phraseEnd)
-
-        phraseQueries.add(phraseQuery, Occur.SHOULD)
-      }
-    }
-    phraseQueries.setBoost(phraseBoost)
-    phraseQueries
-  }
-
   private def namedQuery(name: String, query: Query) = new NamedQuery(name, query, namedQueryContext)
 
   override def parse(queryText: CharSequence): Option[Query] = {
     super.parse(queryText).map{ query =>
-      val numStemmedTerms = getStemmedTerms.size
-      if (numStemmedTerms <= 0) query
+      val numTextQueries = textQueries.size
+      if (numTextQueries <= 0) query
       else {
-        val phrases = if (numStemmedTerms > 1 && phraseBoost > 0.0f) {
-          val p = phraseDetector.detectAll(getStemmedTerms.take(ProximityQuery.maxLength))
+        val phrases = if (numTextQueries > 1 && phraseBoost > 0.0f) {
+          val p = phraseDetector.detectAll(phTerms)
           if (p.size > 0) p else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
         } else {
           Set.empty[(Int, Int)]
@@ -84,7 +66,7 @@ class MainQueryParser(
           auxStrengths += semanticBoost
         }
 
-        if (proximityBoost > 0.0f && numStemmedTerms > 1) {
+        if (proximityBoost > 0.0f && numTextQueries > 1) {
           val proxQ = new DisjunctionMaxQuery(0.0f)
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost))
           proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost))
@@ -102,11 +84,24 @@ class MainQueryParser(
     }
   }
 
+  private[this] def phTerms: IndexedSeq[Term] = {
+    textQueries.flatMap{ _.stems }
+  }
+
+
   private[this] def proxTermsFor(field: String): Seq[Seq[Term]] = {
-    getStemmedTerms.map{ t => new Term(field, t.text()) }.map{ Seq(_) }
+    textQueries.foldLeft(new ArrayBuffer[ArrayBuffer[Term]]){ (terms, q) =>
+      val concatTerms = q.concatStems.map{ new Term(field, _) }
+      q.stems.foreach{ t =>
+        val buf = ArrayBuffer(new Term(field, t.text))
+        buf ++= concatTerms
+        terms += buf
+      }
+      terms
+    }
   }
 
   private[this] def svTerms: Seq[Term] = {
-    getStemmedTerms.map{ t => new Term("sv", t.text()) }
+    textQueries.flatMap{ _.stems.map{ t => new Term("sv", t.text) } }
   }
 }

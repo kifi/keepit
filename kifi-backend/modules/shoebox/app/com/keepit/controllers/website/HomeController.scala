@@ -15,6 +15,7 @@ import play.api.Play.current
 import play.api._
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
+import securesocial.core.{SocialUser, SecuredRequest}
 
 class HomeController @Inject() (db: Database,
   userRepo: UserRepo,
@@ -52,7 +53,11 @@ class HomeController @Inject() (db: Database,
       Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
   }, unauthenticatedAction = { implicit request =>
-    Ok(views.html.website.welcome(passwordAuth = Play.isDev))
+    request match {
+      case SecuredRequest(identity, request) =>
+        Ok(views.html.website.welcome(passwordAuth = Play.isDev, authenticatedAs = Some(SocialUser(identity))))
+      case _ => Ok(views.html.website.welcome(passwordAuth = Play.isDev))
+    }
   })
 
   def kifiSiteRedirect(path: String) = Action {

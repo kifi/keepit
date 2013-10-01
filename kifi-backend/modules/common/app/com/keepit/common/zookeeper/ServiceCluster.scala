@@ -7,7 +7,7 @@ import com.keepit.common.strings._
 import com.keepit.common.service._
 import com.keepit.common.amazon._
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.collection.concurrent.TrieMap
 
@@ -25,12 +25,9 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
 
   val servicePath = Path(s"/fortytwo/services/${serviceType.name}")
   val serviceNodeMaster = Node(s"${servicePath.name}/${serviceType.name}_")
-  private var _myNode : Option[Node] = None
-
-  def myNode() : Option[Node] = _myNode
 
   def size: Int = instances.size
-  def registered(node: Node): Boolean = instances.contains(ensureFullPathNode(node))
+  def registered(instance: ServiceInstance): Boolean = instances.contains(ensureFullPathNode(instance.node))
   var leader: Option[ServiceInstance] = None
 
   override def toString(): String = s"""Service Cluster of $serviceType:
@@ -51,11 +48,10 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
   //This will includes all instances still registered with zookeeper including DOWN, STARTING, STOPPING states
   def allMembers : Vector[ServiceInstance] = routingList
 
-  def register(node: Node, remoteService: RemoteService): ServiceCluster = synchronized {
-    instances(node) = ServiceInstance(serviceType, node, remoteService)
-    _myNode = Some(node)
+  def register(instance: ServiceInstance): ServiceInstance = synchronized {
+    instances(instance.node) = instance
     resetRoutingList()
-    this
+    instance
   }
 
   def instanceForNode(node: Node) : Option[ServiceInstance] = instances.get(node)
@@ -76,7 +72,7 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
     }
     else {
       log.info(s"discovered new node $childNode: $remoteService, adding to ${newInstances.keys}")
-      newInstances(childNode) = ServiceInstance(serviceType, childNode, remoteService)
+      newInstances(childNode) = ServiceInstance(childNode, remoteService, false)
     }
   } catch {
     case t: Throwable =>
