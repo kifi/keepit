@@ -5,6 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
 
+import play.api.Play.current
 import play.api.mvc.{Result, Request}
 import securesocial.core.{Identity, UserService, IdentityProvider}
 
@@ -19,10 +20,12 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
     log.info(s"UserIdentityProvider got request: $request")
     log.info(s"session data: ${request.session.data}")
     val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map { id => Id[User](id.toLong) }
+    // TODO: remove when we split login and signup
+    val allowSignup = current.configuration.getBoolean("auth.auto-signup").getOrElse(true)
     doAuth() match {
       case Right(socialUser) =>
         val filledSocialUser = fillProfile(socialUser)
-        val saved = UserService.save(UserIdentity(userIdOpt, filledSocialUser))
+        val saved = UserService.save(UserIdentity(userIdOpt, filledSocialUser, allowSignup))
         Right(saved)
       case left => left
     }
