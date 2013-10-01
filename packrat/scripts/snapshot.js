@@ -213,4 +213,4 @@ var snapshot = function () {
     }
   }
 }
-};
+}();
