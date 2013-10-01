@@ -651,6 +651,7 @@ $(function() {
 	});
 	var inviteFilterTmpl = Tempo.prepare($('.above-invite-friends'))
 	var $nwFriendsLoading = $('.invite-friends-loading');
+	var noResultsTmpl = Handlebars.compile($('#no-results-template').html());
 	var friendsTimeout;
 	function filterFriends() {
 		clearTimeout(friendsTimeout);
@@ -694,6 +695,14 @@ $(function() {
 				friendsShowing.length = 0;
 			}
 			friendsShowing.push.apply(friendsShowing, friends);
+			var $noResults = $nwFriends.find('.no-results').empty().hide();
+			if (!friendsShowing.length) {
+				$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
+				$noResults.find('.refresh-friends').click(function () {
+					$('<form method="post">').attr('action', wwwDomain + '/friends/invite/refresh').appendTo('body').submit();
+				});
+				$noResults.find('.tell-us').click(sendFeedback);
+			}
 			nwFriendsTmpl.append(friends);
 			inviteFilterTmpl.render({results: friendsShowing.length, filter: filter});
 		});
@@ -1733,7 +1742,7 @@ $(function() {
 		delete d.undo, delete d.commit;
 	}
 
-	var $sendFeedback = $(".send-feedback").click(function() {
+	function sendFeedback() {
 		if (!window.UserVoice) {
 			window.UserVoice = [];
 			$.getScript("//widget.uservoice.com/2g5fkHnTzmxUgCEwjVY13g.js");
@@ -1745,7 +1754,9 @@ $(function() {
 			default_mode: 'support',
 			forum_id: 200379,
 			custom_template_id: 3305}]);
-	}).filter('.top-right-nav>*');
+	}
+
+	var $sendFeedback = $(".send-feedback").click(sendFeedback).filter('.top-right-nav>*');
 
 	function updateMe(data) {
 		me = data;
