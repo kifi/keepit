@@ -41,4 +41,6 @@ class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo){
     }
   }
 
+  //random change to make github realiza something happened
+
 }
