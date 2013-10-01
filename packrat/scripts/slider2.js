@@ -6,11 +6,15 @@
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
 
-$.fn.layout = function() {
-  return this.each(function() {this.clientHeight});  // forces layout
+$.fn.layout = function () {
+  'use strict';
+  return this.each(function () { /*jshint expr:true */
+    this.clientHeight;  // forces layout
+  });
 };
-$.fn.scrollToBottom = function() {
-  return this.each(function() {
+$.fn.scrollToBottom = function () {
+  'use strict';
+  return this.each(function () {
     var cH = this.clientHeight, sH = this.scrollHeight;
     if (cH < sH) {
       var sT = this.scrollTop, d = sH - sT - cH;
@@ -21,22 +25,23 @@ $.fn.scrollToBottom = function() {
   });
 };
 
-const CO_KEY = /^Mac/.test(navigator.platform) ? "⌘" : "Ctrl";
-const panes = {};
+var CO_KEY = /^Mac/.test(navigator.platform) ? '⌘' : 'Ctrl';
+var panes = {};
 
-var slider2 = function() {
+var slider2 = function () {
+  'use strict';
   var $slider, $pane, paneHistory, lastShownAt;
 
-  document.addEventListener("keydown", onKeyDown, true);
+  document.addEventListener('keydown', onKeyDown, true);
   function onKeyDown(e) {
-    if (e.keyCode == 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) {  // esc
-      var escHandler = $(document).data("esc");
+    if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) {  // esc
+      var escHandler = $(document).data('esc');
       if (escHandler) {
         escHandler();
       } else if ($pane) {
         hidePane();
       } else if ($slider) {
-        hideSlider("esc");
+        hideSlider('esc');
       } else {
         return;
       }
@@ -45,116 +50,119 @@ var slider2 = function() {
     }
   }
 
-  api.onEnd.push(function() {
-    log("[slider2:onEnd]")();
+  api.onEnd.push(function () {
+    log('[slider2:onEnd]')();
     $pane && $pane.remove();
     $slider && $slider.remove();
     $(tile).remove();
-    $("html").removeClass("kifi-with-pane kifi-pane-parent");
-    document.removeEventListener("keydown", onKeyDown, true);
+    $('html').removeClass('kifi-with-pane kifi-pane-parent');
+    document.removeEventListener('keydown', onKeyDown, true);
   });
 
   function createSlider(callback, locator) {
     var kept = tile && tile.dataset.kept;
     var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"m":0}');
-    log("[createSlider] kept: %s counts: %o", kept || "no", counts)();
+    log('[createSlider] kept: %s counts: %o', kept || 'no', counts)();
 
-    render("html/metro/slider2", {
-      "bgDir": api.url("images/keeper"),
-      "isKept": kept,
-      "isPrivate": kept == "private",
-      "noticesCount": Math.max(0, counts.n - counts.m),
-      "messageCount": counts.m,
-      "atNotices": "/notices" == locator,
-      "atMessages": /^\/messages/.test(locator)
-    }, function(html) {
+    render('html/metro/slider2', {
+      'bgDir': api.url('images/keeper'),
+      'isKept': kept,
+      'isPrivate': kept === 'private',
+      'noticesCount': Math.max(0, counts.n - counts.m),
+      'messageCount': counts.m,
+      'atNotices': '/notices' === locator,
+      'atMessages': /^\/messages/.test(locator)
+    }, function (html) {
       // attach event bindings
       $slider = $(html);
       var data = $slider.data();
-      $slider.mouseout(function(e) {
+      $slider.mouseout(function (e) {
         if (data.dragTimer) {
           startDrag(data);
         } else if (!$pane && !data.dragStarting && !data.$dragGlass) {
           if (e.relatedTarget) {
             if (!this.contains(e.relatedTarget)) {
-              log("[slider.mouseout] hiding")();
-              hideSlider("mouseout");
+              log('[slider.mouseout] hiding')();
+              hideSlider('mouseout');
             }
           } else {  // out of window
-            log("[slider.mouseout] out of window")();
-            document.documentElement.addEventListener("mouseover", function f(e) {
-              this.removeEventListener("mouseover", f, true);
-              log("[document.mouseover]", e.target)();
+            log('[slider.mouseout] out of window')();
+            document.documentElement.addEventListener('mouseover', function f(e) {
+              this.removeEventListener('mouseover', f, true);
+              log('[document.mouseover]', e.target)();
               if ($slider && !$slider[0].contains(e.target)) {
-                hideSlider("mouseout");
+                hideSlider('mouseout');
               }
             }, true);
           }
         }
-      }).mousedown(function(e) {
-        if (e.which != 1 || $pane) return;
+      }).mousedown(function (e) {
+        if (e.which !== 1 || $pane) return;
         e.preventDefault();  // prevents selection and selection scrolling
         data.dragTimer = setTimeout(startDrag.bind(null, data), 900);
         data.mousedownEvent = e.originalEvent;
-      }).mouseup(function() {
+      }).mouseup(function () {
         if (data.dragTimer || data.dragStarting) {
-          log("[mouseup]")();
+          log('[mouseup]')();
           clearTimeout(data.dragTimer), delete data.dragTimer;
           delete data.dragStarting;
         }
         delete data.mousedownEvent;
-      }).on("mousewheel", function(e) {
+      }).on('mousewheel', function (e) {
         e.preventDefault(); // crbug.com/151734
-      }).on("click", ".kifi-slider2-keep-btn", function(e) {
-        if (e.target !== this) return;
-        keepPage("public");
-        this.classList.add("kifi-hoverless");
-      }).on("click", ".kifi-slider2-kept-btn", function(e) {
-        if (e.target !== this) return;
-        unkeepPage();
-        this.classList.add("kifi-hoverless");
-      }).on("mouseover", ".kifi-slider2-keep-card", function() {
-        if ($slider.hasClass("kifi-auto")) {
-          growSlider("kifi-auto", "kifi-wide");
+      }).on('click', '.kifi-slider2-keep-btn', function (e) {
+        if (e.target === this) {
+          keepPage('public');
+          this.classList.add('kifi-hoverless');
         }
-      }).on("mouseover", ".kifi-slider2-keep-btn>.kifi-slider2-tip,.kifi-slider2-kept-btn>.kifi-slider2-tip", function() {
-        this.parentNode.classList.add("kifi-hoverless");
-      }).bindHover(".kifi-slider2-keep-btn,.kifi-slider2-kept-btn", function(configureHover) {
+      }).on('click', '.kifi-slider2-kept-btn', function (e) {
+        if (e.target === this) {
+          unkeepPage();
+          this.classList.add('kifi-hoverless');
+        }
+      }).on('mouseover', '.kifi-slider2-keep-card', function () {
+        if ($slider.hasClass('kifi-auto')) {
+          growSlider('kifi-auto', 'kifi-wide');
+        }
+      }).on('mouseover', '.kifi-slider2-keep-btn>.kifi-slider2-tip,.kifi-slider2-kept-btn>.kifi-slider2-tip', function () {
+        this.parentNode.classList.add('kifi-hoverless');
+      }).bindHover('.kifi-slider2-keep-btn,.kifi-slider2-kept-btn', function (configureHover) {
         var btn = this;
-        api.port.emit("get_keepers", function(o) {
+        api.port.emit('get_keepers', function (o) {
           if (o.keepers.length) {
-            render("html/metro/keepers", {
+            render('html/metro/keepers', {
               link: true,
               keepers: pick(o.keepers, 8),
               captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps)
-            }, function(html) {
-              configureHover($(html).data("keepers", o.keepers), {
+            }, function (html) {
+              configureHover($(html).data('keepers', o.keepers), {
                 mustHoverFor: 700,
                 canLeaveFor: 800,
                 hideAfter: 4000,
-                click: "hide",
-                position: positionIt});
+                click: 'hide',
+                position: positionIt
+              });
             });
           } else {
-            render("html/keeper/titled_tip", {
-              title: (o.kept ? "Unkeep" : "Keep") + " (" + CO_KEY + "+Shift+K)",
-              html: o.kept ? "Un-keeping this page will<br>remove it from your keeps." :
-                "Keeping this page helps you<br>easily find it later."
-            }, function(html) {
+            render('html/keeper/titled_tip', {
+              title: (o.kept ? 'Unkeep' : 'Keep') + ' (' + CO_KEY + '+Shift+K)',
+              html: o.kept ? 'Un-keeping this page will<br>remove it from your keeps.' :
+                'Keeping this page helps you<br>easily find it later.'
+            }, function (html) {
               configureHover(html, {
                 mustHoverFor: 700,
                 hideAfter: 4000,
-                click: "hide",
+                click: 'hide',
                 position: positionIt});
             });
           }
           function positionIt(w) {  // centered, or right-aligned if that would go off edge of page
             if (!$slider) return;
             var r1 = btn.getBoundingClientRect(), r2 = $slider[0].getBoundingClientRect();
-            this.style.right = Math.max((r1.width - w) / 2, r1.right - r2.right + 6) + "px";
+            this.style.right = Math.max((r1.width - w) / 2, r1.right - r2.right + 6) + 'px';
           }
         });
-      }).bindHover(".kifi-slider2-keeper", function(configureHover) {
+      }).bindHover(".kifi-slider2-keeper", function (configureHover) {
         var $a = $(this);
         var friend = $a.closest(".kifi-slider2-tip").data("keepers").filter(hasId($a.data("id")))[0];
         if (!friend) return;
@@ -162,10 +170,10 @@ var slider2 = function() {
           name: friend.firstName + " " + friend.lastName,
           id: friend.id,
           iconsUrl: api.url("images/social_icons.png")
-        }, function(html) {
+        }, function (html) {
           var $el = $(html);
           configureHover($el, {mustHoverFor: 100, canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
-          api.port.emit("get_networks", friend.id, function(networks) {
+          api.port.emit("get_networks", friend.id, function (networks) {
             for (nw in networks) {
               $el.find('.kifi-kcard-nw-' + nw)
                 .toggleClass('kifi-on', networks[nw].connected)
@@ -173,9 +181,9 @@ var slider2 = function() {
             }
           });
         });
-      }).on("mouseout", ".kifi-slider2-keep-btn,.kifi-slider2-kept-btn", function() {
+      }).on("mouseout", ".kifi-slider2-keep-btn,.kifi-slider2-kept-btn", function () {
         this.classList.remove("kifi-hoverless");
-      }).bindHover(".kifi-slider2-keep-lock,.kifi-slider2-kept-lock", function(configureHover) {
+      }).bindHover(".kifi-slider2-keep-lock,.kifi-slider2-kept-lock", function (configureHover) {
         var $card = $(this).closest(".kifi-slider2-keep-card");
         var kept = !$card.hasClass("kifi-unkept");
         var publicly = kept && $card.hasClass("kifi-public");
@@ -187,43 +195,43 @@ var slider2 = function() {
           "Keeping this privately allows you<br>to find this page easily without<br>letting anyone know you kept it." : publicly ?
           "This keep is public. Making it private<br>allows you to find it easily without<br>letting anyone know you kept it." :
           "This keep is private. Making it<br>public allows your friends to<br>discover that you kept it.";
-        render("html/keeper/titled_tip", {title: title, html: html}, function(html) {
+        render("html/keeper/titled_tip", {title: title, html: html}, function (html) {
           configureHover(html, {
             mustHoverFor: 700,
             hideAfter: 4000,
             click: "hide",
-            position: function(w) {
+            position: function (w) {
               this.style.left = 8 - w / 2 + "px";
             }});
         });
-      }).on("click", ".kifi-slider2-keep-lock", function(e) {
+      }).on("click", ".kifi-slider2-keep-lock", function (e) {
         if (e.target === this) keepPage("private");
-      }).on("click", ".kifi-slider2-kept-lock", function(e) {
+      }).on("click", ".kifi-slider2-kept-lock", function (e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
-      }).bindHover(".kifi-slider2-x", function(configureHover) {
+      }).bindHover(".kifi-slider2-x", function (configureHover) {
         this.style.overflow = "visible";
         configureHover({mustHoverFor: 700, hideAfter: 2500, click: "hide"});
-      }).on("click", ".kifi-slider2-x", function() {
+      }).on("click", ".kifi-slider2-x", function () {
         if ($pane) {
           hidePane(true);
         }
-      }).bindHover(".kifi-slider2-dock-btn", function(configureHover) {
+      }).bindHover(".kifi-slider2-dock-btn", function (configureHover) {
         var tip = {
           n: ["Notifications", "View all of your notifications.<br>Any new ones are highlighted."],
           m: ["Private Messages (" + CO_KEY + "+Shift+M)", "Send this page to friends<br>and start a discussion."]
         }[this.dataset.loc.substr(1,1)];
-        render("html/keeper/titled_tip", {title: tip[0], html: tip[1]}, function(html) {
+        render("html/keeper/titled_tip", {title: tip[0], html: tip[1]}, function (html) {
           configureHover(html, {
             mustHoverFor: 700,
             hideAfter: 4000,
             click: "hide",
-            position: function(w) {
+            position: function (w) {
               this.style.left = 21 - w / 2 + "px";
             }});
         });
-      }).on("mousedown", ".kifi-slider2-dock-btn", function(e) {
+      }).on("mousedown", ".kifi-slider2-dock-btn", function (e) {
         e.preventDefault();
-      }).on("click", ".kifi-slider2-dock-btn", function() {
+      }).on("click", ".kifi-slider2-dock-btn", function () {
         var locator = this.dataset.loc;
         if ($pane) {
           if (locator == paneHistory[0]) {
@@ -245,7 +253,7 @@ var slider2 = function() {
     lastShownAt = Date.now();
     $slider = $();  // creation in progress (prevents multiple)
 
-    createSlider(function() {
+    createSlider(function () {
       $slider.prependTo(tile);
 
       logEvent("slider", "sliderShown", withUrls({trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0)}));
@@ -270,7 +278,7 @@ var slider2 = function() {
     idleTimer.kill();
     $slider.addClass("kifi-hiding")
     .off("transitionend")
-    .on("transitionend", function(e) {
+    .on("transitionend", function (e) {
       if (e.target === this && e.originalEvent.propertyName == "opacity") {
         var css = JSON.parse(tile.dataset.pos || 0);
         if (css && !tile.style.top && !tile.style.bottom) {
@@ -296,7 +304,7 @@ var slider2 = function() {
     clearTimeout(data.dragTimer);
     delete data.dragTimer;
     data.dragStarting = true;
-    api.require("scripts/lib/jquery-ui-draggable.min.js", function() {
+    api.require("scripts/lib/jquery-ui-draggable.min.js", function () {
       if (data.dragStarting) {
         delete data.dragStarting;
         log("[startDrag] installing draggable")();
@@ -319,12 +327,12 @@ var slider2 = function() {
   }
 
   var idleTimer = {
-    start: function(ms) {
+    start: function (ms) {
       log("[idleTimer.start]", ms, "ms")();
       clearTimeout(this.timeout), this.timeout = setTimeout(hideSlider.bind(null, "idle"), ms);
       $slider.on("mouseenter.idle", $.proxy(this, "kill"));
     },
-    kill: function() {
+    kill: function () {
       if (this.timeout) {
         log("[idleTimer.kill]")();
         clearTimeout(this.timeout), delete this.timeout;
@@ -362,19 +370,19 @@ var slider2 = function() {
     return {messages: "threads", "messages/": "thread"}[name] || name;
   }
 
-  const paneIdxs = ["notices","threads","thread"];
+  var paneIdxs = ["notices","threads","thread"];
   function toPaneIdx(name) {
     return paneIdxs.indexOf(name);
   }
 
-  const createTemplateParams = {
-    thread: function(cb, locator, participants) {
+  var createTemplateParams = {
+    thread: function (cb, locator, participants) {
       var id = locator.split("/")[2];
       if (participants) {
         respond(participants, locator);
       } else {
         log("[createTemplateParams] getting thread for participants")();
-        api.port.emit("thread", {id: id, respond: true}, function(th) {
+        api.port.emit("thread", {id: id, respond: true}, function (th) {
           respond(th.participants, "/messages/" + th.id);
         });
       }
@@ -386,7 +394,7 @@ var slider2 = function() {
   function showPane(locator, back, paramsArg) {
     log("[showPane]", locator, back ? "back" : "")();
     var pane = toPaneName(locator);
-    (createTemplateParams[pane] || function(cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function(params, canonicalLocator) {
+    (createTemplateParams[pane] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params, canonicalLocator) {
       var loc = canonicalLocator || locator;
       if (loc !== (paneHistory && paneHistory[0])) {
         showPane2(loc, back, pane, params);
@@ -400,7 +408,7 @@ var slider2 = function() {
       var left = back || toPaneIdx(pane) < toPaneIdx(toPaneName(paneHistory[0]));
       $slider.find(".kifi-at").removeClass("kifi-at").end()
         .find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
-      render("html/metro/pane_" + pane, params, function(html) {
+      render("html/metro/pane_" + pane, params, function (html) {
         var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden");
         var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
         var $old = $cart.find(".kifi-pane-box");
@@ -431,15 +439,15 @@ var slider2 = function() {
       paneHistory = [locator];
       var bringSlider = !$slider;
       if (bringSlider) {
-        createSlider(function() {
+        createSlider(function () {
           $slider.addClass("kifi-wide");
         }, locator);
       } else {
         idleTimer.kill();
         $slider.find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
       }
-      api.port.emit("session", function(session) {
-        api.require("styles/metro/pane.css", function() {
+      api.port.emit("session", function (session) {
+        api.require("styles/metro/pane.css", function () {
           render("html/metro/pane", $.extend(params, {
             site: location.hostname,
             kifiLogoUrl: api.url("images/kifi_logo.png"),
@@ -447,7 +455,7 @@ var slider2 = function() {
           }), {
             pane: "pane_" + pane
           },
-          function(html) {
+          function (html) {
             $("html").addClass("kifi-pane-parent");
             $pane = $(html);
             $pane[0].dataset.locator = locator;
@@ -471,16 +479,16 @@ var slider2 = function() {
               $box.data("shown", true).triggerHandler("kifi:shown");
             })
             .bindHover(".kifi-pane-head-logo", {mustHoverFor: 700, hideAfter: 2500, click: "hide"})
-            .bindHover(".kifi-pane-head-feedback", function(configureHover) {
+            .bindHover(".kifi-pane-head-feedback", function (configureHover) {
               render("html/keeper/titled_tip", {
                 dir: "below",
                 title: "Give Us Feedback",
                 html: "Tell us your ideas for Kifi<br>or report an issue."
-              }, function(html) {
+              }, function (html) {
                 configureHover(html, {mustHoverFor: 700, hideAfter: 4000, click: "hide"});
               });
             })
-            .on("click", ".kifi-pane-head-feedback", function(e) {
+            .on("click", ".kifi-pane-head-feedback", function (e) {
               e.preventDefault();
               var width = 700;
               var height = 400;
@@ -491,16 +499,16 @@ var slider2 = function() {
                 "kifi-feedback",
                 "width="+width+",height="+height+",resizable,top="+top+",left="+left);
             })
-            .bindHover(".kifi-pane-head-settings:not(.kifi-active)", function(configureHover) {
+            .bindHover(".kifi-pane-head-settings:not(.kifi-active)", function (configureHover) {
               render("html/keeper/titled_tip", {
                 dir: "below",
                 title: "Settings",
                 html: "Customize your Kifi<br>experience."
-              }, function(html) {
+              }, function (html) {
                 configureHover(html, {mustHoverFor: 700, hideAfter: 3000, click: "hide"});
               });
             })
-            .on("mousedown", ".kifi-pane-head-settings", function(e) {
+            .on("mousedown", ".kifi-pane-head-settings", function (e) {
               e.preventDefault();
               var $sett = $(this).addClass("kifi-active");
               var $menu = $sett.next(".kifi-pane-head-settings-menu").fadeIn(50);
@@ -525,21 +533,21 @@ var slider2 = function() {
                 $sett.removeClass("kifi-active");
                 $hide.off("mouseenter", enterItem)
                     .off("mouseleave", leaveItem);
-                $menu.off("kifi:hide", hide).fadeOut(50, function() {
+                $menu.off("kifi:hide", hide).fadeOut(50, function () {
                   $menu.find(".kifi-hover").removeClass("kifi-hover");
                 });
               }
-              api.port.emit("get_suppressed", function(suppressed) {
+              api.port.emit("get_suppressed", function (suppressed) {
                 $hide.toggleClass("kifi-checked", !!suppressed);
               });
             })
-            .on("mouseup", ".kifi-pane-settings-hide", function(e) {
+            .on("mouseup", ".kifi-pane-settings-hide", function (e) {
               e.preventDefault();
               var $hide = $(this).toggleClass("kifi-checked");
               var checked = $hide.hasClass("kifi-checked");
               $(tile).toggle(!checked);
               api.port.emit("suppress_on_site", checked);
-              setTimeout(function() {
+              setTimeout(function () {
                 if (checked) {
                   hidePane();
                 } else {
@@ -547,37 +555,37 @@ var slider2 = function() {
                 }
               }, 150);
             })
-            .on("mouseup", ".kifi-pane-settings-sign-out", function(e) {
+            .on("mouseup", ".kifi-pane-settings-sign-out", function (e) {
               e.preventDefault();
               api.port.emit("deauthenticate");
               $(tile).hide();
-              setTimeout(function() {
+              setTimeout(function () {
                 hidePane();
                 $('<div class="kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/keep.faint.png') + '"> button above.</div>')
-                  .appendTo('body').delay(6000).fadeOut(1000, function() { $(this).remove(); });
+                  .appendTo('body').delay(6000).fadeOut(1000, function () { $(this).remove(); });
               }, 150);
               return;
             })
-            .on("keydown", ".kifi-pane-search", function(e) {
+            .on("keydown", ".kifi-pane-search", function (e) {
               var q, el = this;
               if (e.which == 13 && (q = el.value.trim())) {
-                api.port.emit("session", function(session) {
+                api.port.emit("session", function (session) {
                   var uri = session ? "https://www.kifi.com/find?q=" : "https://www.google.com/search?q=";
                   window.open(uri + encodeURIComponent(q).replace(/%20/g, "+"));
                   el.value = "";
                 });
               }
             })
-            .on("click", ".kifi-pane-back", function() {
+            .on("click", ".kifi-pane-back", function () {
               var loc = paneHistory[1] || this.dataset.loc;
               if (loc) {
                 showPane(loc, true);
               }
             })
-            .on("kifi:show-pane", function(e, loc, paramsArg) {
+            .on("kifi:show-pane", function (e, loc, paramsArg) {
               showPane(loc, false, paramsArg);
             })
-            .on("mousedown click keydown keypress keyup", function(e) {
+            .on("mousedown click keydown keypress keyup", function (e) {
               e.stopPropagation();
             });
             $("html").addClass("kifi-with-pane");
@@ -602,7 +610,7 @@ var slider2 = function() {
     }
     $pane
     .off("transitionend") // onPaneShown
-    .on("transitionend", function(e) {
+    .on("transitionend", function (e) {
       if (e.target === this) {
         var $pane = $(this);
         $pane.find(".kifi-pane-box").triggerHandler("kifi:remove");
@@ -621,7 +629,7 @@ var slider2 = function() {
     if (name == "thread") {
       $tall.css("margin-top", $box.find(".kifi-thread-who").outerHeight());
     }
-    api.require("scripts/" + name + ".js", function() {
+    api.require("scripts/" + name + ".js", function () {
       panes[name].render($tall, locator);
     });
   };
@@ -631,7 +639,7 @@ var slider2 = function() {
         kept ? "You" : null,
         numFriends ? plural(numFriends, "friend") : null,
         numOthers ? plural(numOthers, "other") : null]
-      .filter(function(v) {return v})
+      .filter(function (v) {return v})
       .join(" + ");
   }
 
@@ -654,18 +662,18 @@ var slider2 = function() {
   }
 
   function hasId(id) {
-    return function(o) {return o.id == id};
+    return function (o) {return o.id == id};
   }
 
   api.port.on({
-    kept: function(o) {
+    kept: function (o) {
       updateKeptDom(o.kept);
     },
-    counts: function(o) {
+    counts: function (o) {
       if (!$slider) return;
       var $btns = $slider.find(".kifi-slider2-dock-btn");
       [[".kifi-slider2-notices", Math.max(0, o.n - o.m)],
-       [".kifi-slider2-messages", o.m]].forEach(function(a) {
+       [".kifi-slider2-messages", o.m]].forEach(function (a) {
         $btns.filter(a[0]).find(".kifi-count")
           .text(a[1] || "")
           .css("display", a[1] ? "" : "none");
@@ -674,7 +682,7 @@ var slider2 = function() {
 
   // the keeper API
   return {
-    show: function(trigger) {  // trigger is for the event log (e.g. "tile", "auto", "scroll")
+    show: function (trigger) {  // trigger is for the event log (e.g. "tile", "auto", "scroll")
       if ($slider) {
         log("[show] already showing")();
       } else {
@@ -682,18 +690,18 @@ var slider2 = function() {
         if (trigger == "tile") {
           showSlider(trigger, growSlider.bind(null, "", "kifi-wide"));
         } else if (!lastShownAt) { // auto-show only if not already shown
-          showSlider(trigger, function() {
+          showSlider(trigger, function () {
             growSlider("kifi-tiny", "kifi-auto");
             idleTimer.start(5000);
           });
         }
       }
     },
-    showPane: function(trigger, locator) {
+    showPane: function (trigger, locator) {
       log("[showPane]", trigger, locator)();
       showPane(locator);
     },
-    togglePane: function(trigger, locator) {
+    togglePane: function (trigger, locator) {
       if ($pane && (!locator || paneHistory[0] == locator)) {
         log("[togglePane] hiding", locator || "")();
         hidePane();
@@ -702,19 +710,19 @@ var slider2 = function() {
         showPane(locator || "/notices");
       }
     },
-    hidePane: function(leaveSlider) {
+    hidePane: function (leaveSlider) {
       if ($pane) {
         hidePane(leaveSlider);
       }
     },
-    showKeepers: function(keepers, otherKeeps) {
+    showKeepers: function (keepers, otherKeeps) {
       if (lastShownAt) return;
-      var $tile = $(tile).bindHover(function(configureHover) {
+      var $tile = $(tile).bindHover(function (configureHover) {
         // TODO: preload friend pictures
         render("html/metro/keepers", {
           keepers: pick(keepers, 8),
           captionHtml: formatCountHtml(0, keepers.length, otherKeeps)
-        }, function(html) {
+        }, function (html) {
           configureHover(html, {mustHoverFor: 0, canLeaveFor: 1e9, click: "hide"});
         });
       }).on("transitionend", function unbindHover(e) {

@@ -3,8 +3,8 @@ Listeners.prototype = [];
 Listeners.prototype.constructor = Listeners;
 Listeners.prototype.add = Listeners.prototype.push;
 Listeners.prototype.remove = function(f) {
-  var i;
-  while ((i = this.indexOf(f)) >= 0) {
+  'use strict';
+  for (var i; ~(i = this.indexOf(f));) {
     this.splice(i, 1);
   }
 };
