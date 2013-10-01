@@ -5,7 +5,7 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.zookeeper.ServiceDiscovery
 import org.joda.time.format.DateTimeFormat
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.future
 
 sealed abstract class AccessLogEventType(val name: String)
