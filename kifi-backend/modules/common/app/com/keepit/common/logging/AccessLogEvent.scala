@@ -88,6 +88,8 @@ class AccessLog {
     e
   }
 
+  //using the "Labeled Tab-separated Values" format, for more info see http://ltsv.org
+  //making sure that values are always at the same order for readability
   def format(e: AccessLogEvent): String = {
     val line: List[Option[String]] =
       Some(s"t:${formatter.print(e.time)}") ::
