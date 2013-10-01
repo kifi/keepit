@@ -61,17 +61,17 @@ class ExtMessagingController @Inject() (
         messagingController.buildThreadInfos(request.user.id.get, Seq(thread), Some(url)).headOption
       }.flatten
 
-  
+
 
       messageThreadFut map { messages => // object instantiated earlier to give Future head start
-      
+
         //Analytics
         SafeFuture {
           val contextBuilder = new UserEventContextBuilder()
           contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
           contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
           contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
-          recipientSet.foreach{ recipient => 
+          recipientSet.foreach{ recipient =>
             contextBuilder += ("recipient", recipient.id)
           }
           request.experiments.foreach{ experiment =>
@@ -94,12 +94,12 @@ class ExtMessagingController @Inject() (
               }
             }
           }
-          
+
         }
 
         val tDiff = currentDateTime.getMillis - tStart.getMillis
         Statsd.timing(s"messaging.newMessage", tDiff)
-        Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages))
+        Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages.reverse))
       }
 
     }
@@ -126,7 +126,7 @@ class ExtMessagingController @Inject() (
       contextBuilder += ("threadId", message.thread.id)
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
       contextBuilder += ("extVersion", version.getOrElse(""))
-      thread.participants.foreach{_.allExcept(request.userId).foreach{ recipient => 
+      thread.participants.foreach{_.allExcept(request.userId).foreach{ recipient =>
         contextBuilder += ("recipient", recipient.id)
       }}
 
@@ -141,7 +141,7 @@ class ExtMessagingController @Inject() (
             heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("reply_message"), tStart))
           }
         }
-      }    
+      }
     }
 
     val tDiff = currentDateTime.getMillis - tStart.getMillis
