@@ -11,6 +11,8 @@ import com.keepit.common.healthcheck.{HealthcheckPlugin}
 import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
 import com.keepit.common.akka.SafeFuture
 
+import scala.util.{Success, Failure}
+
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -53,12 +55,10 @@ class ExtMessagingController @Inject() (
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).flatMap { recipientSet =>
-      val (threadInfo, message) = messagingController.sendNewMessage(request.user.id.get, recipientSet, urls, title, text)
-      val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(threadInfo, None)
-      val tDiff = currentDateTime.getMillis - tStart.getMillis
-      Statsd.timing(s"messaging.newMessage", tDiff)
+      val (thread, message) = messagingController.sendNewMessage(request.user.id.get, recipientSet, urls, title, text)
+      val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(thread, None)
       val threadInfoOpt = (o \ "url").asOpt[String].map { url =>
-        messagingController.buildThreadInfos(request.user.id.get, Seq(threadInfo), Some(url)).headOption
+        messagingController.buildThreadInfos(request.user.id.get, Seq(thread), Some(url)).headOption
       }.flatten
 
   
@@ -77,13 +77,28 @@ class ExtMessagingController @Inject() (
           request.experiments.foreach{ experiment =>
             contextBuilder += ("experiment", experiment.toString)
           }
-          contextBuilder += ("threadId", threadInfo.id.get.id)
-          contextBuilder += ("url", threadInfo.url.getOrElse(""))
+          contextBuilder += ("threadId", thread.id.get.id)
+          contextBuilder += ("url", thread.url.getOrElse(""))
           contextBuilder += ("isActuallyNew", messages.length<=1)
           contextBuilder += ("extVersion", version.getOrElse(""))
-          heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("new_message")))
+
+          thread.uriId.map{ uriId =>
+            shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
+              case Success(bookmarkOpt) => {
+                contextBuilder += ("isKeep", bookmarkOpt.isDefined)
+                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("new_message"), tStart))
+              }
+              case Failure(ex) => {
+                log.warn("Failed to check if url is a keep.")
+                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("new_message"), tStart))
+              }
+            }
+          }
+          
         }
 
+        val tDiff = currentDateTime.getMillis - tStart.getMillis
+        Statsd.timing(s"messaging.newMessage", tDiff)
         Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages))
       }
 
@@ -97,8 +112,7 @@ class ExtMessagingController @Inject() (
     val text = (o \ "text").as[String].trim
     val version = (o \ "extVersion").asOpt[String]
 
-    val message = messagingController.sendMessage(request.user.id.get, threadExtId, text, None)
-    val tDiff = currentDateTime.getMillis - tStart.getMillis
+    val (thread, message) = messagingController.sendMessage(request.user.id.get, threadExtId, text, None)
 
     //Analytics
     SafeFuture {
@@ -112,9 +126,25 @@ class ExtMessagingController @Inject() (
       contextBuilder += ("threadId", message.thread.id)
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
       contextBuilder += ("extVersion", version.getOrElse(""))
-      heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("reply_message")))
+      thread.participants.foreach{_.allExcept(request.userId).foreach{ recipient => 
+        contextBuilder += ("recipient", recipient.id)
+      }}
+
+      thread.uriId.map{ uriId =>
+        shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
+          case Success(bookmarkOpt) => {
+            contextBuilder += ("isKeep", bookmarkOpt.isDefined)
+            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("reply_message"), tStart))
+          }
+          case Failure(ex) => {
+            log.warn("Failed to check if url is a keep.")
+            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("reply_message"), tStart))
+          }
+        }
+      }    
     }
 
+    val tDiff = currentDateTime.getMillis - tStart.getMillis
     Statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }

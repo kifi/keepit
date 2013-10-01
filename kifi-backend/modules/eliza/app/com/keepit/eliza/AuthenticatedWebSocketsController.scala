@@ -153,6 +153,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
         onConnect(socketInfo)
 
+        val tStart = currentDateTime
         //Analytics
         SafeFuture {
           val contextBuilder = new UserEventContextBuilder()
@@ -162,10 +163,11 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           streamSession.experiments.foreach{ experiment =>
             contextBuilder += ("experiment", experiment.toString)
           }
-          heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_connect")))
+          heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_connect"), tStart))
         }
 
         def endSession(reason: String)(implicit channel: Concurrent.Channel[JsArray]) = {
+          val tStart = currentDateTime
           atomic { implicit txn =>
             socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
           }
@@ -182,7 +184,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
             streamSession.experiments.foreach{ experiment =>
               contextBuilder += ("experiment", experiment.toString)
             }
-            heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_disconnect")))
+            heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_disconnect"), tStart))
           }
         }
 
