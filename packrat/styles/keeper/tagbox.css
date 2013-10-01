@@ -18,17 +18,33 @@
   top: 6px;
   right: 6px;
   width: 310px;
-  border: 4px solid #68829B;
-  border-radius: 5px;
+  border: 5px solid #68829B;
+  border-radius: 9px;
   background: #68829B;
-  font-family: Arial, sans-serif;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-weight: normal;
+  -webkit-font-smoothing: antialiased;
+}
+
+.kifi-tagbox > *:last-child {
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.kifi-tagbox.attached {
+  border-bottom: 0;
+}
+
+.kifi-tagbox.attached, .kifi-tagbox.attached > *:last-child {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .kifi-tagbox-title {
   position: relative;
   font-size: 16px;
-  line-height: 29px;
-  margin-bottom: 4px;
+  line-height: 25px;
+  margin-bottom: 5px;
 }
 
 .kifi-tagbox-title-text {
@@ -43,21 +59,37 @@
   display: block;
   width: 13px;
   height: 13px;
-  border: 8px solid transparent;
+  border: 6px solid transparent;
+  border-radius: 20px;
+  margin-right: 5px;
   background-repeat: no-repeat;
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAQAAAADQ4RFAAAA0klEQVR4AXXUMW7DMBBE0alE5zhRrm0gMSxLvkfoKyhKYV/hB4ttSITzp34ViVXEOwdXTsiPwicHM0IiyJPoblmQlegZTMxJGuYJycQO0DNLsh9xpm9LZglcxMQyZoZsFOGZIUgkuw2YIYEcq9QRaVGwFVtLAhnmSYc8S+KQKHz/I7UhBtUBmgwy75KtPfOk79YyT/DMkwcPx4T/Y4WNviWZJ0KcxswTGXZlEl94kuxO31nshni252HxJPfWsBcfItjLk4YlmZFIdnBJ4hkLv0HQHxvW+Tv3j7AoAAAAAElFTkSuQmCC);
   background-size: auto 13px;
   vertical-align: middle;
 }
 
+.kifi-tagbox-close:hover {
+  background-color: #7492af;
+}
+
 .kifi-tagbox-input-box {
   display: block;
   font-size: 16px;
-  padding: 10px 12px;
+  padding: 10px 15px;
   background: white;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: text;
+}
+
+.kifi-tagbox-input-box table { 
+    border-spacing: 0;
+    border-collapse: collapse;
+}
+
+.kifi-tagbox-input-box table td, .kifi-tagbox-input-box table th {
+    padding: 0; /* 'cellpadding' equivalent */
 }
 
 .kifi-tagbox-tag-icon {
@@ -65,7 +97,7 @@
   float: left;
   width: 12px;
   height: 16px;
-  margin-right: 8px;
+  margin-right: 10px;
   background-repeat: no-repeat;
   background-size: auto 16px;
 }
@@ -74,14 +106,19 @@
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NLW4CURSG4SEhrYBQUNSUpBuATYBjAxhSgekaCL6CLgPRHVRNgsDzpwkhNEHUgEN0Tt+bUDO5d86dtrgrHved80bvs6WvZ+ywwZPvnc+ogFdIygsKfw3c4g3iMMHNbwM1TCGKGNW8gQbWEE8rPPgGWviA5LRHUwu0cXIcD/B4McDesjui7Qr0cbYcbVFHlHKPrWV/Rj8dGCKBWPQQOfQcNwmGP4ERJEMtI3Cn3I7M6FMZlTMCZeX2aEai6GYEutq9T2CNkuV5CSu/gG6ODooXHSwg+QK6L0PZaAFdCIRACIRACFgChysGDiYwvmJgbAIVxEgg/yRBjMo3wq1HgvDn6n8AAAAASUVORK5CYII=);
 }
 
+.kifi-tagbox-input-cell {
+  width: 100%;
+}
+
 .kifi-tagbox-input-wrapper {
-  display: inline;
   position: relative;
 }
 
 .kifi-tagbox-input {
-  display: inline;
   position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
   border: 0;
   margin: 0;
   color: black;
@@ -89,6 +126,9 @@
   outline: 0;
   z-index: 1;
   font: inherit;
+  //font-weight: 300;
+  //font-family: 'Helvetica Neue', Arial, sans-serif;
+  //-webkit-font-smoothing: antialiased;
 }
 
 .kifi-tagbox-input-placeholder {
@@ -98,6 +138,10 @@
   color: #b8c5d1;
 }
 
+.kifi-tagbox-input-box.focus .kifi-tagbox-input-placeholder {
+  color: #c8d5e1;
+}
+
 .kifi-tagbox-input-box.not-empty .kifi-tagbox-input-placeholder {
   display: hidden;
 }
@@ -105,13 +149,13 @@
 .kifi-tagbox-suggest {
   color: #858585;
   background: #eff2f7;
-  min-height: 200px;
+  //min-height: 200px;
   font-size: 14px;
 }
 
 .kifi-tagbox-suggestion {
   display: block;
-  padding: 7px 12px;
+  padding: 8px 15px;
   color: #858585;
   white-space: nowrap;
   overflow: hidden;
@@ -136,16 +180,35 @@
 .kifi-tagbox-new {
   display: block;
   background: #d4e4f9;
-  padding: 7px 12px;
-  padding-left: 33px;
+  padding: 10px 15px;
+  padding-left: 37px;
   color: #858585;
   text-decoration: none;
+}
+
+.kifi-tagbox-new:hover {
+  background: #bcd0ea;
+}
+
+.kifi-tagbox-empty {
+  font-size: 24px;
+  font-weight: 200;
+  -webkit-font-smoothing: antialiased;
+  padding: 60px 40px;
+  text-align: center;
+  background: #eff2f7;
+  color: #b8c5d1;
+}
+
+.kifi-tagbox-empty.light {
+  color: #b8c5d1;
+  background: white;
 }
 
 .kifi-tagbox-new-caption {
   display: block;
   font-size: 11px;
-  font-weight: bold;
+  font-weight: 600;
   text-transform: uppercase;
 }
 
@@ -155,38 +218,49 @@
 }
 
 .kifi-tagbox-tagged {
+  position: relative;
   color: #b8c5d1;
   background: white;
-  padding: 7px 12px;
+  padding: 15px;
 }
 
 .kifi-tagbox-tagged-title {
   font-size: 16px;
-  padding: 7px 0;
+  font-weight: 200;
+  margin-bottom: 14px;
   color: #b8c5d1;
+  -webkit-font-smoothing: antialiased;
 }
 
 .kifi-tagbox-tag {
   display: inline-block;
   font-size: 13px;
   padding: 4px 10px;
-  margin-bottom: 3px;
+  margin-right: 1px;
+  margin-bottom: 4px;
   color: white;
   background: #b8c5d1;
   text-decoration: none;
 }
 
+.kifi-tagbox-tag:hover {
+  background: #a0b1c2;
+}
+
+.kifi-tagbox-tag:active {
+  background: #8699ab;
+}
+
 .kifi-tagbox-clear {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  font-size: 11px;
+  right: 10px;
+  bottom: 6px;
+  font-size: 13px;
   line-height: normal;
-  padding: 4px 10px;
   color: #ababab;
   text-decoration: none;
 }
 
 .kifi-tagbox-clear:hover {
-  text-decoration: underline;
+  color: #0089d5;
 }
