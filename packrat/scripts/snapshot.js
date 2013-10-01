@@ -1,5 +1,6 @@
-var snapshot = {
-
+var snapshot = function () {
+  'use strict';
+  return {
   // Characters that must not be considered part of names/tokens.
   delim: /[#\.:> ]/,
 
@@ -211,4 +212,5 @@ var snapshot = {
       }
     }
   }
+}
 };

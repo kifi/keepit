@@ -6,7 +6,7 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.scraper.{BasicArticle, FakeScraperModule}
 import com.keepit.model.{UrlPatternRule, NormalizedURIStates, NormalizedURI, Normalization}
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.akka.TestKitScope
@@ -22,10 +22,10 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
 
   val fakeArticles: PartialFunction[(String, Option[Extractor]), BasicArticle] = {
     case ("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever")
-    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "newTrkInfo = '17558679,' + document.referrer.substr(0,128)")
+    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "17558679")
     case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content")
     case ("http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content")
-    case ("http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "newTrkInfo = '136123062,' + document.referrer.substr(0,128)")
+    case ("http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "136123062")
   }
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
@@ -133,7 +133,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
       "normalize a LinkedIn public profile to a vanity public url if this url is trusted" in new TestKitScope() {
         val publicUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3").get }
         updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo/", Normalization.CANONICAL)) === None
-        db.readWrite { implicit session => urlPatternRuleRepo.save(UrlPatternRule(pattern = LinkedInNormalizer.linkedInPublicProfile.toString(), trustedDomain = Some("""^https?://([a-z]{2,3})\.linkedin\.com/.*"""))) }
+        db.readWrite { implicit session => urlPatternRuleRepo.save(UrlPatternRule(pattern = LinkedInNormalizer.linkedInCanonicalPublicProfile.toString(), trustedDomain = Some("""^https?://([a-z]{2,3})\.linkedin\.com/.*"""))) }
         val vanityUri = updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo/", Normalization.CANONICAL)).get
         val latestPublicUri = db.readOnly { implicit session => uriRepo.get(publicUri.id.get) }
         val latestPrivateUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }

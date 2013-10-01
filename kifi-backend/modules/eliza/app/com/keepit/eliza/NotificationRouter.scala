@@ -9,7 +9,7 @@ import play.api.libs.json.{JsArray, Json}
 import play.modules.statsd.api.Statsd
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 
 import akka.actor.ActorSystem

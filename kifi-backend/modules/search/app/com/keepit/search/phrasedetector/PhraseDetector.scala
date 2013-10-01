@@ -34,8 +34,13 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     RemoveOverlapping.removeInclusions(detectAll(terms))
   }
 
-  def detectAll(terms: IndexedSeq[Term]) = {
+  def detectAll(terms: IndexedSeq[Term]): Set[(Int,Int)] = {
     var result = Set.empty[(Int, Int)] // (position, length)
+    detectInternal(terms){ (position, length) => result += ((position, length)) }
+    result
+  }
+
+  private def detectInternal(terms: IndexedSeq[Term])(f: (Int, Int)=>Unit): Unit = {
     val pq = new PQ(terms.size)
 
     val pterms = terms.map{ term => PhraseDetector.createTerm(term.text()) }
@@ -45,53 +50,42 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
       while (index < numTerms) {
         val tp = subReaderContext.reader.termPositionsEnum(pterms(index))
         if (tp == null) { // found a gap here
-          findPhrases(pq){ (position, length) => result += ((position, length)) } // pq will be cleared after execution
+          findPhrases(pq, f)// pq will be cleared after execution
         } else {
           pq.insertWithOverflow(new Word(index, tp))
         }
         index += 1
       }
-      findPhrases(pq){ (position, length) => result += ((position, length)) }
+      findPhrases(pq, f)
     }
-    result
   }
 
-  private def findPhrases(pq: PQ)(f: (Int, Int)=>Unit): Unit = {
-    if (pq.size > 1) {
+  private def findPhrases(pq: PQ, f: (Int, Int)=>Unit): Unit = {
+    var effectiveCount = pq.size - 1
+
+    if (effectiveCount > 0) {
       var top = pq.top
 
-      while (top != null && top.doc == -1) {
-        top = if (top.nextDoc() < NO_MORE_DOCS) {
-          pq.updateTop()
-        } else {
-          pq.pop()
-          pq.top
-        }
+      while (top.doc == -1) {
+        if (top.nextDoc() == NO_MORE_DOCS) effectiveCount -= 1
+        top = pq.updateTop()
       }
 
-      while (pq.size > 1) {
+      while (effectiveCount > 0) {
         val doc = top.doc
         val phraseIndex = top.index
         var phraseLength = 0
-        while (top != null && top.doc == doc && top.index == (phraseIndex + phraseLength) && top.hasPosition(phraseLength)) {
+        while (top.doc == doc && top.index == (phraseIndex + phraseLength) && top.hasPosition(phraseLength)) {
           phraseLength += 1
           if (top.isEndOfPhrase) {
             f(phraseIndex, phraseLength) // one phrase found
           }
-          top = if (top.nextDoc() < NO_MORE_DOCS) {
-            pq.updateTop()
-          } else {
-            pq.pop()
-            pq.top
-          }
+          if (top.nextDoc() == NO_MORE_DOCS) effectiveCount -= 1
+          top = pq.updateTop()
         }
-        while (top != null && top.doc == doc) {
-          top = if (top.nextDoc() < NO_MORE_DOCS) {
-            pq.updateTop()
-          } else {
-            pq.pop()
-            pq.top
-          }
+        while (top.doc == doc) {
+          if (top.nextDoc() == NO_MORE_DOCS) effectiveCount -= 1
+          top = pq.updateTop()
         }
       }
     }

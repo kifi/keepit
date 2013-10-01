@@ -2,21 +2,29 @@
 // @require scripts/render.js
 // @require styles/keeper/tagbox.css
 
-var tagbox = (function () {
+this.tagbox = (function (win) {
 	'use strict';
 
-	var $tagbox;
+	var $ = jQuery,
+		$tagbox;
 
 	return {
 		show: function ($slider) {
-			render('html/keeper/tagbox', {}, function (html) {
-				log('tagbox:render', $slider, html)();
+			win.render('html/keeper/tagbox', {}, function (html) {
+				win.log('tagbox:render', $slider, html)();
 				//$tagbox = $(html).appendTo($slider);
 				$tagbox = $(html).appendTo($('body'));
+				var input = $tagbox.find('input.kifi-tagbox-input')
+					.on('focus', function () {
+					$(this).closest('.kifi-tagbox-input-box').addClass('focus');
+				})
+					.on('blur', function () {
+					$(this).closest('.kifi-tagbox-input-box').removeClass('focus');
+				});
 			});
 		},
 		toggle: function ($slider) {
-			log('tagbox:toggle')();
+			win.log('tagbox:toggle')();
 			if ($tagbox) {
 				this.hide();
 			}
@@ -30,4 +38,4 @@ var tagbox = (function () {
 		}
 	};
 
-})();
+})(this);

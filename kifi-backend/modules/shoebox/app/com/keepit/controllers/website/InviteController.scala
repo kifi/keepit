@@ -1,18 +1,20 @@
 package com.keepit.controllers.website
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 import java.net.URLEncoder
 
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
-import com.keepit.common.db.ExternalId
-import com.keepit.common.db.State
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
+import com.keepit.common.db.{ExternalId, State}
 import com.keepit.common.net.HttpClient
 import com.keepit.common.social._
 import com.keepit.model._
-import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
+import com.keepit.social.{SocialGraphPlugin, SocialNetworks, SocialNetworkType, SocialId}
 
 import play.api.Play.current
 import play.api._
@@ -30,6 +32,7 @@ class InviteController @Inject() (db: Database,
   invitationRepo: InvitationRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   linkedIn: LinkedInSocialGraph,
+  socialGraphPlugin: SocialGraphPlugin,
   actionAuthenticator: ActionAuthenticator,
   httpClient: HttpClient)
     extends WebsiteController(actionAuthenticator) {
@@ -139,6 +142,15 @@ class InviteController @Inject() (db: Database,
         }
       }
     }
+  }
+
+  def refreshAllSocialInfo() = AuthenticatedHtmlAction { implicit request =>
+    for (info <- db.readOnly { implicit s =>
+      socialUserInfoRepo.getByUser(request.userId)
+    }) {
+      Await.result(socialGraphPlugin.asyncFetch(info), 5 minutes)
+    }
+    Redirect("/friends/invite")
   }
 
   def acceptInvite(id: ExternalId[Invitation]) = Action {

@@ -2,7 +2,7 @@ package com.keepit.common.analytics.reports
 
 import play.api.Plugin
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.joda.time.DateTime
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.actor.ActorInstance

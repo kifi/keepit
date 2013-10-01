@@ -197,7 +197,7 @@
 			<div class="profile" data-template>
 				<div class="profile-image" style="background-image: url(//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/200/{{pictureName}})"></div>
 				<div class="profile-details">
-					<div class="profile-name edit-container">
+					<div class="profile-name"><!-- TODO: edit-container -->
 						<span data-prop="firstName" data-placeholder="First Name" class="profile-firstname editable">{{firstName}}</span>
 						<span data-prop="lastName" data-placeholder="Last Name" class="profile-lastName editable">{{lastName}}</span>
 						<span class="edit">Edit</span>
@@ -321,6 +321,7 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 							</li>
 						</ul>
 						<img class="invite-friends-loading" src="assets/img/wait.gif">
+						<div class="no-results"></div>
 					</div>
 				</div>
 			</div>
@@ -498,8 +499,21 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 		</div>
 	</div>
 
+	<script type="text/x-handlebars" id="no-results-template">
+		<h2>We couldn't find any friends matching "{{filter}}"</h2>
+		<h3>Why did this happen?</h3>
+		<ol>
+			<li>Your friends list might not be up to date. <a href="javascript:" class="refresh-friends">Try refreshing your friends list.</a>
+			<li>Some of your friends might have privacy settings that prevent us from showing them.
+				You can still tell them to visit <a href="https://www.kifi.com/">kifi.com</a> and sign up.
+				Since they are friends with an existing kifi user, our user approval team will let them in.
+			<li>If you tried the above and think this might be our mistake, please <a href="javascript:" class="tell-us">tell us</a>.
+		</ol>
+	</script>
+
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 	<script>window.$||document.write('<script src=assets/js/jquery.min.js><\/script>');if(location.port&&location.port!=9000)window.History={options:{html4Mode:true}};</script>
+	<script src="assets/js/handlebars.min.js"></script>
 	<script src="assets/js/jquery.history.min.js"></script>
 	<script src="assets/js/jquery.timeago.min.js"></script>
 	<script src="assets/js/jquery-ui.min.js"></script>

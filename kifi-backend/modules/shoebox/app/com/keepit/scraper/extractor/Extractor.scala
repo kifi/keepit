@@ -7,6 +7,7 @@ object Extractor {
   val factories = Seq(
     YoutubeExtractorProvider,
     GithubExtractorProvider,
+    LinkedInExtractorProvider,
     DefaultExtractorProvider
   )
 }

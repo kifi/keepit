@@ -9,7 +9,7 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.core.commands.{PipelineOperator, Aggregate}
 
 import scala.concurrent.{Promise, Future}
-import scala.concurrent.ExecutionContext.Implicits.global //Might want to change this to a custom play one
+import play.api.libs.concurrent.Execution.Implicits.defaultContext //Might want to change this to a custom play one
 import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
 
 import play.modules.statsd.api.Statsd

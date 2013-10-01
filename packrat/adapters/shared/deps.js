@@ -1,4 +1,5 @@
 !function(exports, meta) {
+	'use strict';
 	exports.deps = function(paths, injected) {
 		paths = typeof paths == 'string' ? [paths] : paths;
 		var scripts = [], styles = {};

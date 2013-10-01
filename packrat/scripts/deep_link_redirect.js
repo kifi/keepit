@@ -3,6 +3,7 @@
 // @asap
 
 !function run(json, e) {
+  'use strict';
   var msg = document.getElementsByClassName('kifi-deep-link-no-extension')[0];
   if (msg) {
     msg.style.display = "none";

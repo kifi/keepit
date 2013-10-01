@@ -1,7 +1,8 @@
 // API for main.js
 
-const hexRe = /^#[0-9a-f]{3}$/i;
+var hexRe = /^#[0-9a-f]{3}$/i;
 function log() {
+  'use strict';
   var d = new Date, ds = d.toString(), t = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] ", args = arguments, a0 = args[0];
   if (hexRe.test(a0)) {
     args[0] = "%c" + t + args[1];
@@ -13,7 +14,8 @@ function log() {
 }
 
 var api = function() {
-  const httpRe = /^https?:/;
+  'use strict';
+  var httpRe = /^https?:/;
 
   function dispatch() {
     var args = arguments;
@@ -91,9 +93,9 @@ var api = function() {
     }
   });
 
-  const stripHashRe = /^[^#]*/;
-  const googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
-  const plusRe = /\+/g;
+  var stripHashRe = /^[^#]*/;
+  var googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
+  var plusRe = /\+/g;
 
   chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
     var match = details.url.match(googleSearchRe);
@@ -216,9 +218,9 @@ var api = function() {
     }
   });
 
-  const pages = {};  // by tab.id in "normal" windows only
-  const normalTab = {};  // by tab.id (true if tab is in a "normal" window)
-  const selectedTabIds = {};  // by window.id in "normal" windows only
+  var pages = {};  // by tab.id in "normal" windows only
+  var normalTab = {};  // by tab.id (true if tab is in a "normal" window)
+  var selectedTabIds = {};  // by window.id in "normal" windows only
   chrome.tabs.query({windowType: "normal"}, function(tabs) {
     tabs.forEach(function(tab) {
       normalTab[tab.id] = true;
@@ -231,7 +233,7 @@ var api = function() {
     });
   });
 
-  const ports = {}, portHandlers = {
+  var ports = {}, portHandlers = {
     "api:handling": function(data, _, page, port) {
       for (var i = 0; i < data.length; i++) {
         port.handling[data[i]] = true;
@@ -356,7 +358,7 @@ var api = function() {
     }
   }
 
-  const hostRe = /^https?:\/\/[^\/]*/;
+  var hostRe = /^https?:\/\/[^\/]*/;
   return {
     bookmarks: {
       create: function(parentId, name, url, callback) {
