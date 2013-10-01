@@ -231,6 +231,7 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
         success = Some(isSuccess),
         query = queryString,
         url = wsRequest.url,
+        trackingId = trackingId,
         returnCode = resOpt.map(_.status).getOrElse(AccessLogTimer.NoIntValue)))
   }
 }
