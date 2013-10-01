@@ -13,7 +13,8 @@ class AccessLogTest extends Specification with TestInjector {
       //do something
       val line = new AccessLog().format(access.done(remoteHost = "host42", method = "POST"))
       println(line)
-      line.contains("type:HTTP_OUT\tremoteHost:host42") === true
+      line.contains("type:HTTP_OUT") === true
+      line.contains("remoteHost:host42") === true
       line.contains("\tmethod:POST") === true
     }
   }
