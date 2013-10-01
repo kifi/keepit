@@ -8,16 +8,16 @@ import org.joda.time.format.DateTimeFormat
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.future
 
-sealed trait AccessLogEventType { val name: String }
+sealed abstract class AccessLogEventType(val name: String)
 
 object Access {
-  object DB extends AccessLogEventType { val name = "DB" }
-  object HTTP_IN extends AccessLogEventType { val name = "HTTP_IN" }
-  object HTTP_OUT extends AccessLogEventType { val name = "HTTP_OUT" }
-  object WS_IN extends AccessLogEventType { val name = "WS_IN" }
-  object WS_OUT extends AccessLogEventType { val name = "WS_OUT" }
-  object S3 extends AccessLogEventType { val name = "S3" }
-  object CACHE extends AccessLogEventType { val name = "CACHE" }
+  object DB extends AccessLogEventType("DB")
+  object HTTP_IN extends AccessLogEventType("HTTP_IN")
+  object HTTP_OUT extends AccessLogEventType("HTTP_OUT")
+  object WS_IN extends AccessLogEventType("WS_IN")
+  object WS_OUT extends AccessLogEventType("WS_OUT")
+  object S3 extends AccessLogEventType("S3")
+  object CACHE extends AccessLogEventType("CACHE")
 }
 
 object AccessLogTimer {
