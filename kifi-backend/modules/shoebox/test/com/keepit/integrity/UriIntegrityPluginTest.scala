@@ -90,7 +90,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         }
 
         val centralConfig = inject[CentralConfig]
-        centralConfig(new ChangedUriSeqNumKey()) === Some(1)
+        centralConfig(URIMigrationSeqNumKey) === Some(1)
 
         // split
 

@@ -31,7 +31,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
     val uriIntegrityPlugin = inject[UriIntegrityPlugin]
     val id = Await.result(normalizationService.update(uri, candidates: _*), Duration(1, SECONDS))
-    uriIntegrityPlugin.batchUpdateMerge()
+    uriIntegrityPlugin.batchURIMigration()
     id.map { db.readOnly { implicit session => uriRepo.get(_) }}
   }
 

@@ -7,7 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.logging.Logging 
-import com.keepit.integrity.ChangedUriSeqNumKey
+import com.keepit.integrity.URIMigrationSeqNumKey
 import com.keepit.common.zookeeper.ServiceDiscovery
 
 import akka.actor.ActorSystem
@@ -34,7 +34,7 @@ class UriNormalizationUpdater @Inject() (
     system: ActorSystem
   ) extends Logging {
 
-  centralConfig.onChange(ChangedUriSeqNumKey())(checkAndUpdate _)
+  centralConfig.onChange(URIMigrationSeqNumKey)(checkAndUpdate _)
 
   def localSequenceNumber: Long = db.readOnly{ implicit session => renormRepo.getCurrentSequenceNumber() }
 

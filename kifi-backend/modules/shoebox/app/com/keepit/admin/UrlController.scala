@@ -75,9 +75,7 @@ class UrlController @Inject() (
   }
   
   def doRenormalize(readOnly: Boolean = true, domain: Option[String] = None) = {
-    
-    val renormKey = RenormalizationCheckKey()
-    
+        
     def getUrlList() = {
       val urls = db.readOnly { implicit s =>
         domain match {
@@ -86,7 +84,7 @@ class UrlController @Inject() (
         }
       }.sortBy(_.id.get.id)
       
-      val lastId = centralConfig(renormKey) getOrElse 0L
+      val lastId = centralConfig(RenormalizationCheckKey) getOrElse 0L
       urls.filter(_.id.get.id > lastId).filter(_.state == URLStates.ACTIVE)
     }
     
@@ -132,7 +130,7 @@ class UrlController @Inject() (
           }
         }
       }
-      urls.lastOption.map{ url => centralConfig.update(renormKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
+      urls.lastOption.map{ url => centralConfig.update(RenormalizationCheckKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
     }
     
     changes = changes.sortBy(_._1.url)

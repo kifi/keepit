@@ -152,7 +152,7 @@ class UriIntegrityActor @Inject()(
         }
       }
     }
-    toMerge.sortBy(_.seq).lastOption.map{ x => centralConfig.update(new ChangedUriSeqNumKey(), x.seq.value) }
+    toMerge.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URIMigrationSeqNumKey, x.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pairs of uris merged. zookeeper seqNum updated.")
     
     val uniqueToScrape = toScrape.flatten.filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values
@@ -162,7 +162,7 @@ class UriIntegrityActor @Inject()(
   }
 
   private def getOverDueList(fetchSize: Int = -1) = {
-    val lowSeq = centralConfig(new ChangedUriSeqNumKey()) getOrElse 0L
+    val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse 0L
     db.readOnly{ implicit s => changedUriRepo.getChangesSince(SequenceNumber(lowSeq), fetchSize, state = ChangedURIStates.ACTIVE)}
   }
   
@@ -178,7 +178,7 @@ class UriIntegrityActor @Inject()(
         toScrape
       }
     }
-    toMigrate.sortBy(_.seq).lastOption.map{ x => centralConfig.update(new URLMigrationSeqNumKey(), x.seq.value)}
+    toMigrate.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URLMigrationSeqNumKey, x.seq.value)}
     val uniqueToScrape = toScrapes.filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values
     
     log.info(s"${toMigrate.size} urls renormalized. start scraping ${uniqueToScrape.size} pages")
@@ -186,7 +186,7 @@ class UriIntegrityActor @Inject()(
   }
   
   private def getOverDueURLMigrations(fetchSize: Int = -1) = {
-    val lowSeq = centralConfig(new URLMigrationSeqNumKey()) getOrElse 0L
+    val lowSeq = centralConfig(URLMigrationSeqNumKey) getOrElse 0L
     db.readOnly{ implicit s => renormRepo.getChangesSince(SequenceNumber(lowSeq), fetchSize, state = RenormalizedURLStates.ACTIVE)}
   }
   
