@@ -120,11 +120,53 @@ panes.thread = function() {
       }
   }
 
+  function handleReplyError($reply, status, originalText, threadId) {
+    $reply.data("error", status);
+    var $error = $reply.find(".kifi-message-sent-error");
+    if (!$error.length) {
+      $error = $('<div class="kifi-message-sent-error">').appendTo($reply);
+    }
+    var statusGroup = Math.floor(status / 100), errorText;
+
+    switch (statusGroup) {
+      case 0:
+        errorText = "whoops, no internet. retry sending?"; break;
+      case 4:
+        errorText = "weird, problem sending message. try again?"; break;
+      case 5:
+        errorText = "whoops, error sending message. retry?"; break;
+      default:
+        errorText = "strange, couldn't send message. retry?";
+    }
+    $reply.find(".kifi-message-body").css({opacity: 0.3});
+    $reply.find("time").text("").addClass("error-hidden");
+    $error.text(errorText).fadeIn(300).click(function() {
+      $(this).fadeOut(100);
+      $reply.find("time").removeClass("error-hidden");
+      retrySendReply($reply, originalText, threadId);
+    });
+  }
+
+  function retrySendReply($reply, originalText, threadId) {
+    api.port.emit("send_reply", {text: originalText, threadId: threadId}, function(o) {
+      log("[retrySendReply] resp:", o);
+      if (o.id) { // success, got a response
+        updateSentReply($reply, o);
+      } else {
+        handleReplyError($reply, o.status, originalText, threadId);
+      }
+    });
+  }
+
   function sendReply($container, threadId, session, e, text) {
     var $reply, resp;
     api.port.emit("send_reply", {text: text, threadId: threadId}, function(o) {
       log("[sendReply] resp:", o, $reply)();
-      updateSentReply($reply, resp = o);
+      if (o.id) { // success, got a response
+        updateSentReply($reply, resp = o);
+      } else {
+        handleReplyError($reply, o.status, text, threadId)
+      }
     });
     renderMessage({
       id: "",
@@ -153,10 +195,17 @@ panes.thread = function() {
   function updateSentReply($m, resp) {
     if ($m && resp) {
       $m.attr("data-id", resp.id);
+      $m.find(".kifi-message-body").css({opacity: undefined});
       $m.find("time")  // TODO: patch timeago to update attrs too
         .attr("datetime", resp.createdAt)
         .attr("title", getLocalDateFormatter()(resp.createdAt, function render(s) {return s}))
         .timeago("update", resp.createdAt);
+    } else if ($m) { // we do not have a response yet, but do have the element
+      setTimeout(function() {
+        if (!$m.attr("data-id") && $m.data("error") === undefined) {
+          $m.find("time").text("sending…")
+        }
+      }, 1000);
     }
   }
 

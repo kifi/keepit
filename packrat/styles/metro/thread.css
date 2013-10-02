@@ -19,6 +19,21 @@
   padding-bottom: 0;
   margin-bottom: 4px;
 }
+.kifi-message-sent-error {
+  position: absolute;
+  right: 10px;
+  top: -6px;
+  line-height: 12px;
+  font-size: 12px;
+  padding: 0 3px;
+  background-color: #fafafa;
+  color: #ff6677;
+  display: none;
+  cursor: pointer;
+}
+.kifi-message-sent-error:hover {
+  color: #cc5555;
+}
 .kifi-message-sent>time {
   position: absolute;
   right: 10px;
@@ -33,6 +48,9 @@
 .kifi-message-sent:hover>time,
 .kifi-messages-sent-inner:not(:hover)>.kifi-message-sent:last-child>time {
   display: block;
+}
+.kifi-message-sent:hover>time.error-hidden {
+  display:none;
 }
 img.kifi-message-pic {
   float: left;

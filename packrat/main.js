@@ -461,10 +461,13 @@ api.port.on({
     var id = data.threadId;
     delete data.threadId;
     data.extVersion = api.version;
-    ajax("eliza", "POST", "/eliza/messages/" + id, data, function(o) {
-      log("[send_reply] resp:", o)();
-      respond(o);
-    });
+    ajax("eliza", "POST", "/eliza/messages/" + id, data, sendReplyResp(respond), sendReplyResp(respond));
+    function sendReplyResp(resp) {
+      return function(o) {
+        log("[send_reply] resp:", o)();
+        resp(o);
+      }
+    }
   },
   message_rendered: function(o, _, tab) {
     whenTabFocused(tab, o.threadId, function (tab) {
