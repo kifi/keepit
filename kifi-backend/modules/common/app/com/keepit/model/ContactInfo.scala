@@ -10,7 +10,7 @@ case class ContactInfo (
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
   email: String,
-  origin: Option[String] = None,
+  origin: ABookOriginType,
   name: Option[String] = None,
   firstName: Option[String] = None,
   lastName: Option[String] = None,
@@ -32,7 +32,7 @@ object ContactInfo {
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'email).format[String] and
-    (__ \ 'origin).formatNullable[String] and
+    (__ \ 'origin).format[ABookOriginType] and
     (__ \ 'name).formatNullable[String] and
     (__ \ 'firstName).formatNullable[String] and
     (__ \ 'lastName).formatNullable[String] and
