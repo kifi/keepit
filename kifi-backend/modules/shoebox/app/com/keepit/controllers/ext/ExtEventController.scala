@@ -9,6 +9,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.db.slick.{Database}
 import com.keepit.common.akka.SafeFuture
+import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
 
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -21,6 +22,7 @@ class ExtEventController @Inject() (
   eventPersister: EventPersister,
   db: Database,
   userRepo: UserRepo,
+  heimdal: HeimdalServiceClient,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
@@ -43,6 +45,16 @@ class ExtEventController @Inject() (
       val event = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
       log.debug(s"Created new event: $event")
       eventPersister.persist(event)
+
+      //Mirroring to heimdal (temporary, will be the only destination soon without going through shoebox)
+      val contextBuilder = new UserEventContextBuilder()
+      experiments.foreach{ experiment =>
+        contextBuilder += ("experiment", experiment.toString)
+      }
+      metaData.fields.foreach{ 
+        case (key, value) => contextBuilder += ("metaData", key + "=>" + value.toString)
+      }
+      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType(s"old_${eventFamily}_${eventName}")))
 
     }
     Ok("")
