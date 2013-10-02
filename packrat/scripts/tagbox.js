@@ -208,7 +208,68 @@ this.tagbox = (function ($, win) {
 	}
 
 	return {
+		id: Date.now(),
 		myTags: win.myTags,
+		construct: function () {
+			if (!this.$tagbox) {
+				win.render('html/keeper/tagbox', null, this.init.bind(this));
+			}
+		},
+		init: function (html) {
+			this.$tagbox = $(html).appendTo($('body'));
+			this.initSuggest();
+			this.initInput();
+			this.initCloseIcon();
+			activateScroll('.kifi-tagbox-suggest');
+		},
+		initInput: function () {
+			var $inputbox = this.$inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
+			this.$input = $inputbox.find('input.kifi-tagbox-input');
+
+			this.initInputEvents();
+		},
+		initInputEvents: (function () {
+			function onLiveChange(e) {
+				var val = e.value;
+				this.$inputbox.toggleClass('empty', !val);
+				this.suggest(val);
+			}
+
+			function onFocus() {
+				$(this).closest('.kifi-tagbox-input-box').addClass('focus');
+			}
+
+			function onBlur() {
+				$(this).closest('.kifi-tagbox-input-box').removeClass('focus');
+			}
+
+			return function () {
+				var $input = this.$input;
+				$input.on('focus', onFocus);
+				$input.on('blur', onBlur);
+				$input.livechange({
+					on: onLiveChange,
+					context: this,
+					init: true
+				});
+			};
+		})(),
+		initCloseIcon: function () {
+			this.$tagbox.find('.kifi-tagbox-close').click(this.remove.bind(this));
+		},
+		initSuggest: function () {
+			this.$suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner');
+		},
+		destroy: function () {
+			if (this.$tagbox) {
+				deactivateScroll('.kifi-tagbox-suggest');
+				this.$input.remove();
+				this.$inputbox.remove();
+				this.$suggest.remove();
+				this.$tagbox.remove();
+				this.$tagbox = this.$inputbox = this.$input = this.$suggest = null;
+			}
+		},
 		filterTags: (function () {
 			var options = {
 				pre: '<b>',
@@ -236,8 +297,7 @@ this.tagbox = (function ($, win) {
 			};
 		})(),
 		suggest: function (val) {
-			this.$suggest.empty();
-			this.$inputbox.toggleClass('empty', !val);
+			this.emptySuggestions();
 
 			var matches = this.filterTags(val),
 				hasMatch = matches.length ? true : false;
@@ -247,68 +307,23 @@ this.tagbox = (function ($, win) {
 
 			this.$tagbox.toggleClass('suggested', hasMatch);
 		},
-		renderSuggestion: (function () {
-			function appendSuggestion(html) {
-				this.$suggest.append(html);
-			}
-
-			return function (item) {
-				win.render('html/keeper/tag-suggestion', item, appendSuggestion.bind(this));
-			};
-		})(),
+		emptySuggestions: function () {
+			this.$suggest.empty();
+		},
 		renderSuggestions: function (tags) {
 			tags.forEach(this.renderSuggestion, this);
 		},
-		initInputEvents: (function () {
-			function onLiveChange(e) {
-				this.suggest(e.value);
-			}
-
-			function onFocus() {
-				$(this).closest('.kifi-tagbox-input-box').addClass('focus');
-			}
-
-			function onBlur() {
-				$(this).closest('.kifi-tagbox-input-box').removeClass('focus');
-			}
-
-			return function () {
-				var $input = this.$input;
-				$input.on('focus', onFocus);
-				$input.on('blur', onBlur);
-				$input.livechange({
-					on: onLiveChange,
-					context: this,
-					init: true
-				});
-			};
-		})(),
-		initInput: function () {
-			var $inputbox = this.$inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
-			this.$input = $inputbox.find('input.kifi-tagbox-input');
-
-			this.initInputEvents();
+		renderSuggestion: function (item) {
+			win.render('html/keeper/tag-suggestion', item, this.appendSuggestion.bind(this));
 		},
-		initCloseIcon: function () {
-			this.$tagbox.find('.kifi-tagbox-close').click(this.remove.bind(this));
-		},
-		initSuggest: function () {
-			this.$suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner');
-		},
-		init: function () {
-			if (!this.$tagbox) {
-				var that = this;
-				win.render('html/keeper/tagbox', null, function (html) {
-					that.$tagbox = $(html).appendTo($('body'));
-					that.initInput();
-					that.initCloseIcon();
-					that.initSuggest();
-					activateScroll('.kifi-tagbox-suggest');
-				});
-			}
+		appendSuggestion: function (html) {
+			this.$suggest.append(html);
 		},
 		show: function ( /*$slider*/ ) {
-			this.init();
+			this.construct();
+		},
+		hide: function () {
+			this.destroy();
 		},
 		toggle: function ($slider) {
 			if (this.$tagbox) {
@@ -316,18 +331,6 @@ this.tagbox = (function ($, win) {
 			}
 			else {
 				this.show($slider);
-			}
-		},
-		hide: function () {
-			this.remove();
-		},
-		remove: function () {
-			if (this.$tagbox) {
-				deactivateScroll('.kifi-tagbox-suggest');
-				this.$input.remove();
-				this.$suggest.remove();
-				this.$tagbox.remove();
-				this.$tagbox = this.$inputbox = this.$input = this.$suggest = null;
 			}
 		}
 	};
