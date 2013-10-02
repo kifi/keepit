@@ -65,6 +65,7 @@ ThreadData.prototype = {
       }
     });
     this.threads = threads;
+    delete this.stale;
   },
   getThread: function (threadId) {
     return this.threads.filter(hasId(threadId))[0];
