@@ -84,12 +84,12 @@
 }
 
 .kifi-tagbox-input-box table { 
-    border-spacing: 0;
-    border-collapse: collapse;
+  border-spacing: 0;
+  border-collapse: collapse;
 }
 
 .kifi-tagbox-input-box table td, .kifi-tagbox-input-box table th {
-    padding: 0; /* 'cellpadding' equivalent */
+  padding: 0; /* 'cellpadding' equivalent */
 }
 
 .kifi-tagbox-tag-icon {
@@ -136,6 +136,7 @@
   top: 0;
   left: 0;
   color: #b8c5d1;
+  transition: color .2s linear;
 }
 
 .kifi-tagbox-input-box.focus .kifi-tagbox-input-placeholder {
@@ -147,10 +148,23 @@
 }
 
 .kifi-tagbox-suggest {
+  display: none;
+}
+
+.kifi-tagbox.suggested .kifi-tagbox-suggest {
+  display: block;
+}
+
+.kifi-tagbox-suggest-inner {
   color: #858585;
   background: #eff2f7;
-  //min-height: 200px;
+  min-height: 200px;
+  max-height: 400px;
+  overflow: scroll;
+  overflow-x: hidden;
+  overflow-y: scroll;
   font-size: 14px;
+  transition: height .2s ease;
 }
 
 .kifi-tagbox-suggestion {
@@ -198,11 +212,16 @@
   text-align: center;
   background: #eff2f7;
   color: #b8c5d1;
+  transition: background .3s linear;
 }
 
-.kifi-tagbox-empty.light {
+.kifi-tagbox.suggested .kifi-tagbox-empty {
   color: #b8c5d1;
   background: white;
+}
+
+.kifi-tagbox.tagged .kifi-tagbox-empty {
+  display: none;
 }
 
 .kifi-tagbox-new-caption {
@@ -218,10 +237,15 @@
 }
 
 .kifi-tagbox-tagged {
+  display: none;
   position: relative;
   color: #b8c5d1;
   background: white;
   padding: 15px;
+}
+
+.kifi-tagbox.tagged .kifi-tagbox-tagged {
+  display: block;
 }
 
 .kifi-tagbox-tagged-title {
