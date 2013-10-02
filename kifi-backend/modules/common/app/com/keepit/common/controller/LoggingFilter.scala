@@ -4,25 +4,31 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import java.net.InetAddress
 
-import play.api.Logger
+import com.keepit.common.logging.{AccessLogTimer, AccessLog}
+import com.keepit.common.logging.Access._
 import play.api.mvc._
 
 object LoggingFilter extends EssentialFilter {
 
   lazy val host: String = InetAddress.getLocalHost.getHostName
-  lazy val accessLog = Logger("com.keepit.access")
+  lazy val accessLog = new AccessLog()
 
   def apply(next: EssentialAction) = new EssentialAction {
     def apply(rh: RequestHeader) = {
-      val start = System.currentTimeMillis
+      val timer = AccessLogTimer(HTTP_IN)
 
       def logTime(result: PlainResult): Result = {
-        val time = System.currentTimeMillis - start
         val trackingId = rh.headers.get(CommonHeaders.TrackingId).getOrElse("NA")
-        accessLog.info(
-          s"[HTTP-IN] #${trackingId} [${rh.method}] ${rh.uri} from ${rh.remoteAddress} to ${rh.host} took [${time}ms] and returned ${result.header.status}")
+        val event = accessLog.add(timer.done(
+          trackingId = trackingId,
+          method = rh.method,
+          url = rh.uri,
+          remoteHost = rh.remoteAddress,
+          targetHost = rh.host,
+          statusCode = result.header.status
+        ))
         result.withHeaders(
-          CommonHeaders.ResponseTime -> time.toString,
+          CommonHeaders.ResponseTime -> event.duration.toString,
           //todo(eishay): the interesting part is the local service type and node id, to be sent
           CommonHeaders.LocalHost -> host)
       }
