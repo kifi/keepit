@@ -1,5 +1,6 @@
 package com.keepit.common.concurrent
 
+import com.keepit.common.logging.Logging
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -7,17 +8,17 @@ import scala.util.Try
 import scala.util.Success
 import scala.util.Failure
 
-object RetryFuture {
+object RetryFuture extends Logging {
 
   val immediately = new ExecutionContext {
     override def execute(runnable: Runnable): Unit = {
       try {
         runnable.run()
       } catch {
-        case t: Throwable =>
+        case t: Throwable => reportFailure(t)
       }
     }
-    override def reportFailure(t: Throwable): Unit = {}
+    override def reportFailure(t: Throwable): Unit = { log.error("retry failure", t) }
     override def prepare(): ExecutionContext = this
   }
 
@@ -28,19 +29,19 @@ object RetryFuture {
     var attempted = 0
 
     def handler(result: Try[T]): Unit = {
-      result match {
-        case Success(r) => p.success(r)
-        case Failure(t) =>
-          attempted += 1
-          if (attempted < attempts && resolve.isDefinedAt(t) && resolve(t)) {
-            try {
+      try {
+        result match {
+          case Success(r) => p.success(r)
+          case Failure(t) =>
+            attempted += 1
+            if (attempted < attempts && resolve.isDefinedAt(t) && resolve(t)) {
               f.onComplete{ handler(_) }(immediately) // run the handler immediately in the future completing thread
-            } catch {
-              case t: Throwable => p.failure(t)
-            }
           } else {
             p.failure(t)
           }
+        }
+      } catch {
+        case t: Throwable => p.failure(t)
       }
     }
 
