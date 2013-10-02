@@ -16,7 +16,7 @@ panes.thread = function() {
   'use strict';
   var handlers = {
     message: function(o) {
-      update(o.thread.id, o.message, o.userId);
+      update(o.threadId, o.message, o.userId);
     },
     thread: function(o) {
       updateAll(o.id, o.messages, o.userId);
