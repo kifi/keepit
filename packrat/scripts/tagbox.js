@@ -48,8 +48,7 @@ get
   }
  *   
  */
-
-var list = [
+this.myTags = [
 	{
 		id: 'f033afe4-bbb9-4609-ab8b-3e8aa968af21',
 		name: 'academic'
@@ -214,73 +213,81 @@ this.tagbox = (function (win) {
 		};
 	}
 
+	function onResize() {
+		this.data('antiscroll').refresh();
+	}
+
 	function activateScroll(selector) {
 		var $container = $(selector);
-		win.log('here0', $container.length)();
 		$container.antiscroll({
 			x: false
 		});
-		win.log('here1')();
-		$(win).on('resize' + selector, $container, function (e) {
-			var $container = e.data;
-			win.log('here2')();
-			$container.data('antiscroll').refresh();
-			win.log('here3')();
-		});
+		$(win).on('resize' + selector, onResize);
 	}
 
 	function deactivateScroll(selector) {
 		$(win).off('resize' + selector);
 	}
 
-	return {
-		initInputEvents: (function () {
-			function onLiveChange(e) {
-				var that = e.data;
-				that.$suggest.empty();
-				that.$inputbox.toggleClass('empty', !e.value);
-				filterAndRender(that, e.value);
-			}
+	function log() {
+		return win.log.apply(win, arguments)();
+	}
 
-			var filterTags = (function () {
-				function extractName(item) {
+	return {
+		myTags: win.myTags,
+		filterTags: (function () {
+
+			var options = {
+				pre: '<b>',
+				post: '</b>',
+				extract: function (item) {
 					return item.name;
 				}
+			};
 
-				function extractData(match) {
-					return {
-						id: match.original.id,
-						name: match.string
-					};
+			function extractData(match) {
+				return {
+					id: match.original.id,
+					name: match.string
+				};
+			}
+
+			return function (val, list) {
+				if (!list) {
+					list = this.myTags;
 				}
-
-				var options = {
-					pre: '<b>',
-					post: '</b>',
-					extract: extractName
-				};
-
-				return function (list, val) {
+				if (val) {
 					return win.fuzzy.filter(val, list, options).map(extractData);
-				};
-			})();
+				}
+				return list;
+			};
+		})(),
+    updateSuggestions: function() {
+    },
+		initInputEvents: (function () {
+			function onLiveChange(e) {
+				this.$suggest.empty();
+				this.$inputbox.toggleClass('empty', !e.value);
+				filterAndRender.call(this, e.value);
+			}
 
-			function filterAndRender(that, val) {
-				var matches = val ? filterTags(list, val) : list,
+			function filterAndRender(val) {
+				var matches = this.filterTags(val),
 					hasMatch = matches.length ? true : false;
 				if (hasMatch) {
-					matches.forEach(renderSuggestion, that);
+					matches.forEach(renderSuggestion, this);
 				}
 
-				that.$tagbox.toggleClass('suggested', hasMatch);
+				this.$tagbox.toggleClass('suggested', hasMatch);
 			}
 
 			function renderSuggestion(item) {
-				var that = this;
-				win.render('html/keeper/tag-suggestion', item, function (html) {
-					that.$suggest.append(html);
-				})
+				win.render('html/keeper/tag-suggestion', item, appendSuggestion.bind(this));
 			}
+
+      function appendSuggestion(html) {
+					this.$suggest.append(html);
+      }
 
 			function onFocus() {
 				$(this).closest('.kifi-tagbox-input-box').addClass('focus');
@@ -294,7 +301,7 @@ this.tagbox = (function (win) {
 				$input.on('focus', onFocus);
 				$input.on('blur', onBlur);
 				$input.on('keydown change input paste', createValueTimeout($input));
-				$input.on('livechange', this, onLiveChange);
+				$input.on('livechange', onLiveChange.bind(this));
 			};
 		})(),
 		initInput: function () {
@@ -320,7 +327,7 @@ this.tagbox = (function (win) {
 					that.$tagbox = $(html).appendTo($('body'));
 					that.initInput();
 					that.initCloseIcon();
-          that.initSuggest();
+					that.initSuggest();
 					activateScroll('.kifi-tagbox-suggest');
 				});
 			}
