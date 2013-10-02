@@ -70,8 +70,12 @@ ThreadData.prototype = {
   getThread: function (threadId) {
     return this.threads.filter(hasId(threadId))[0];
   },
-  addThread: function (thread) {
-    insertUpdateChronologically(this.threads, thread, 'lastCommentedAt');
+  addThread: function (th) {
+    th.participants = th.participants.filter(idIsNot(session.userId));
+    var old = insertUpdateChronologically(this.threads, th, 'lastCommentedAt');
+    if (old && old.lastMessageRead && new Date(old.lastMessageRead) > new Date(th.lastMessageRead || 0)) {
+      th.lastMessageRead = old.lastMessageRead;
+    }
   },
   getUnreadThreads: function() {
     var arr = [];
@@ -101,7 +105,7 @@ ThreadData.prototype = {
 };
 
 function insertUpdateChronologically(arr, o, time) {
-  var date = new Date(o[time]);
+  var date = new Date(o[time]), old;
   for (var i = arr.length; i--;) {
     var el = arr[i];
     if (date > new Date(el[time])) {
@@ -110,11 +114,13 @@ function insertUpdateChronologically(arr, o, time) {
     }
     if (o.id === el.id) {
       arr.splice(i, 1);
+      old = el;
     }
   }
   if (date) {
     arr.unshift(o);
   }
+  return old;
 }
 
 // ===== Server requests
@@ -312,12 +318,12 @@ var socketHandlers = {
         td.addThread(thread);
       } else if (td) {
         // this is probably the first message of a new thread
-        socket.send(["get_thread_info", id], td.addThread.bind(td));
+        socket.send(["get_thread_info", threadId], td.addThread.bind(td));
       }
 
       // ensure marked read if from this user
       if (message.user.id == session.userId) {
-        td.markRead(thread.id, message.createdAt);
+        td.markRead(threadId, message.createdAt);
       }
 
       forEachTabAt(message.url, message.nUrl, function(tab) {
