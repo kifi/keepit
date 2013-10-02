@@ -389,6 +389,28 @@ div.kifi-pane-empty>img {
 }
 
 /* thread pane */
+.kifi-thread-redirected {
+  position: absolute;
+  top: 5px;
+  left: 30px;
+  right: 30px;
+  background-color: #d1d8e1;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+}
+.kifi-thread-redirected-1 {
+  font-weight: bold;
+}
+.kifi-thread-redirected::after {
+  content: "\d7";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  line-height: 6px;
+  color: #777;
+}
 .kifi-thread-who {
   background-color: #ecf0f1;
   padding: 10px 12px;

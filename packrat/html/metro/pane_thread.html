@@ -17,5 +17,12 @@
       </div>
     {{/numParticipants}}
   </div>
-  <div class="kifi-pane-tall"></div>
+  <div class="kifi-pane-tall">
+  {{#redirected}}
+    <div class="kifi-thread-redirected">
+      <span class="kifi-thread-redirected-1">Looks like this website redirected you.</span>
+      Here’s the conversation anyway.
+    </div>
+  {{/redirected}}
+  </div>
 </div>

@@ -21,7 +21,7 @@ var tile = tile || function() {  // idempotent for Chrome
   api.port.on({
     session_change: onSessionChange,
     open_to: function(o) {
-      keeper("showPane", o.trigger, o.locator);
+      keeper("showPane", o.trigger, o.locator, o.redirected);
     },
     button_click: keeper.bind(null, "togglePane", "button"),
     auto_show: keeper.bind(null, "show", "auto"),
