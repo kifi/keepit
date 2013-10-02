@@ -79,7 +79,6 @@ case class HttpClientImpl(
     }
   }
 
-
   def withHeaders(hdrs: (String, String)*): HttpClient = this.copy(headers = headers ++ hdrs)
 
   def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(getFuture(url, onFailure))
@@ -173,7 +172,7 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
   private val wsRequest = req.withHeaders(headersWithTracking: _*)
 
   def get() = {
-    val timer = AccessLogTimer(HTTP_OUT)
+    val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.get()
     res.onComplete { resTry =>
       logResponse(timer, "GET", resTry.isSuccess, trackingId, resTry.toOption)
@@ -182,7 +181,7 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
   }
 
   def put(body: JsValue) = {
-    val timer = AccessLogTimer(HTTP_OUT)
+    val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.put(body)
     res.onComplete { resTry =>
       logResponse(timer, "PUT", resTry.isSuccess, trackingId, resTry.toOption)
@@ -191,7 +190,7 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
   }
 
   def post(body: JsValue) = {
-    val timer = AccessLogTimer(HTTP_OUT)
+    val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
       logResponse(timer, "POST", resTry.isSuccess, trackingId, resTry.toOption)
@@ -200,7 +199,7 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
   }
 
   def post(body: NodeSeq) = {
-    val timer = AccessLogTimer(HTTP_OUT)
+    val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
       logResponse(timer, "POST", resTry.isSuccess, trackingId, resTry.toOption)
@@ -209,7 +208,7 @@ private[net] class Request(req: WSRequestHolder, headers: List[(String, String)]
   }
 
   def delete() = {
-    val timer = AccessLogTimer(HTTP_OUT)
+    val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.delete()
     res.onComplete { resTry =>
       logResponse(timer, "DELETE", resTry.isSuccess, trackingId, resTry.toOption)
