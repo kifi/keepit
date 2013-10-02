@@ -1,13 +1,13 @@
-@(errorMessage: Option[String] = None)
+@(errorMessage: Option[String] = None, firstName: Option[String], lastName: Option[String], email: Option[String])
 
 @helper.main(title = "Sign up for Kifi!", hiddenElements = Seq("header")) {
 <section class="content clearfix text_center welcome">
   <h1>Sign up for Kifi!</h1>
   @errorMessage.map { msg => <p class="error-message">@msg</p> }
   <form action="" method="post">
-    <input type="text" name="firstname" placeholder="First Name"><br>
-    <input type="text" name="lastname" placeholder="Last Name"><br>
-    <input type="text" name="email" placeholder="Email"><br>
+    <input type="text" name="firstname" value="@firstName" placeholder="First Name"><br>
+    <input type="text" name="lastname" value="@lastName" placeholder="Last Name"><br>
+    <input type="text" name="email" value="@email" placeholder="Email"><br>
     <input type="password" name="password.1" placeholder="Password"><br>
     <input type="password" name="password.2" placeholder="Confirm Password"><br>
     <input type="submit" value="Create Account">
