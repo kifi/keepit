@@ -257,8 +257,8 @@ class ExtMessagingController @Inject() (
       if (url == null || url == "null") {
         // Ignore for now to stop exceptions. Leaks some memory on client, but it's a bad request.
       } else {
-        val (nUriOpt, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
-        socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriOpt.map(_.url)))
+        val (nUriStr, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
+        socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriStr))
       }
       case _ => // for cases when url is JsNull
     },
