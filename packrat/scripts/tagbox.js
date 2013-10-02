@@ -2,6 +2,7 @@
 // @require scripts/lib/fuzzy-min.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/render.js
+// @require scripts/livechange.js
 // @require styles/keeper/tagbox.css
 // @require html/keeper/tagbox.html
 // @require html/keeper/tag-suggestion.html
@@ -183,35 +184,8 @@ this.myTags = [
   }
 ];
 
-this.tagbox = (function (win) {
+this.tagbox = (function ($, win) {
 	'use strict';
-
-	var $ = jQuery;
-
-	function createValueTimeout($input) {
-		var lastVal = '',
-			tid;
-
-		function onTimeout() {
-			tid = null;
-			var val = $input.val() || '';
-			if (val !== lastVal) {
-				$input.trigger({
-					type: 'livechange',
-					value: val,
-					prevValue: lastVal
-				});
-				lastVal = val;
-			}
-		}
-
-		return function () {
-			if (tid) {
-				win.clearTimeout(tid);
-			}
-			tid = win.setTimeout(onTimeout, 1);
-		};
-	}
 
 	function onResize() {
 		this.data('antiscroll').refresh();
@@ -236,7 +210,6 @@ this.tagbox = (function (win) {
 	return {
 		myTags: win.myTags,
 		filterTags: (function () {
-
 			var options = {
 				pre: '<b>',
 				post: '</b>',
@@ -262,32 +235,34 @@ this.tagbox = (function (win) {
 				return list;
 			};
 		})(),
-    updateSuggestions: function() {
-    },
+		suggest: function (val) {
+			this.$suggest.empty();
+			this.$inputbox.toggleClass('empty', !val);
+
+			var matches = this.filterTags(val),
+				hasMatch = matches.length ? true : false;
+			if (hasMatch) {
+				this.renderSuggestions(matches);
+			}
+
+			this.$tagbox.toggleClass('suggested', hasMatch);
+		},
+		renderSuggestion: (function () {
+			function appendSuggestion(html) {
+				this.$suggest.append(html);
+			}
+
+			return function (item) {
+				win.render('html/keeper/tag-suggestion', item, appendSuggestion.bind(this));
+			};
+		})(),
+		renderSuggestions: function (tags) {
+			tags.forEach(this.renderSuggestion, this);
+		},
 		initInputEvents: (function () {
 			function onLiveChange(e) {
-				this.$suggest.empty();
-				this.$inputbox.toggleClass('empty', !e.value);
-				filterAndRender.call(this, e.value);
+				this.suggest(e.value);
 			}
-
-			function filterAndRender(val) {
-				var matches = this.filterTags(val),
-					hasMatch = matches.length ? true : false;
-				if (hasMatch) {
-					matches.forEach(renderSuggestion, this);
-				}
-
-				this.$tagbox.toggleClass('suggested', hasMatch);
-			}
-
-			function renderSuggestion(item) {
-				win.render('html/keeper/tag-suggestion', item, appendSuggestion.bind(this));
-			}
-
-      function appendSuggestion(html) {
-					this.$suggest.append(html);
-      }
 
 			function onFocus() {
 				$(this).closest('.kifi-tagbox-input-box').addClass('focus');
@@ -297,25 +272,25 @@ this.tagbox = (function (win) {
 				$(this).closest('.kifi-tagbox-input-box').removeClass('focus');
 			}
 
-			return function ($input) {
+			return function () {
+				var $input = this.$input;
 				$input.on('focus', onFocus);
 				$input.on('blur', onBlur);
-				$input.on('keydown change input paste', createValueTimeout($input));
-				$input.on('livechange', onLiveChange.bind(this));
+				$input.livechange({
+					on: onLiveChange,
+					context: this,
+					init: true
+				});
 			};
 		})(),
 		initInput: function () {
-			var $inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
-			this.$inputbox = $inputbox;
+			var $inputbox = this.$inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
+			this.$input = $inputbox.find('input.kifi-tagbox-input');
 
-			var $input = $inputbox.find('input.kifi-tagbox-input');
-			this.$input = $input;
-
-			this.initInputEvents($input);
+			this.initInputEvents();
 		},
 		initCloseIcon: function () {
-			var that = this;
-			this.$tagbox.find('.kifi-tagbox-close').click(that.remove.bind(that));
+			this.$tagbox.find('.kifi-tagbox-close').click(this.remove.bind(this));
 		},
 		initSuggest: function () {
 			this.$suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner');
@@ -357,4 +332,4 @@ this.tagbox = (function (win) {
 		}
 	};
 
-})(this);
+})(jQuery, this);
