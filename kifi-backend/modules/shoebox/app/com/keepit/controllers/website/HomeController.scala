@@ -5,17 +5,19 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.social.{SocialNetworkType, SocialGraphPlugin}
 
+import ActionAuthenticator.MaybeAuthenticatedRequest
 import play.api.Play.current
 import play.api._
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
-import securesocial.core.{SocialUser, SecuredRequest}
+import securesocial.core.SocialUser
 
 class HomeController @Inject() (db: Database,
   userRepo: UserRepo,
@@ -30,7 +32,7 @@ class HomeController @Inject() (db: Database,
   socialConnectionRepo: SocialConnectionRepo,
   socialGraphPlugin: SocialGraphPlugin,
   fortyTwoServices: FortyTwoServices)
-  extends WebsiteController(actionAuthenticator) {
+  extends WebsiteController(actionAuthenticator) with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
     db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
@@ -53,11 +55,7 @@ class HomeController @Inject() (db: Database,
       Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
   }, unauthenticatedAction = { implicit request =>
-    request match {
-      case SecuredRequest(identity, request) =>
-        Ok(views.html.website.welcome(passwordAuth = Play.isDev, authenticatedAs = Some(SocialUser(identity))))
-      case _ => Ok(views.html.website.welcome(passwordAuth = Play.isDev))
-    }
+    Ok(views.html.website.welcome(passwordAuth = Play.isDev, authenticatedAs = request.identityOpt.map(SocialUser(_))))
   })
 
   def kifiSiteRedirect(path: String) = Action {
