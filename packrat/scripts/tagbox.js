@@ -3,9 +3,10 @@
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/render.js
 // @require scripts/livechange.js
+// @require scripts/html/keeper/tagbox.js
+// @require scripts/html/keeper/tag-suggestion.js
+// @require scripts/html/keeper/tag-new.js
 // @require styles/keeper/tagbox.css
-// @require html/keeper/tagbox.html
-// @require html/keeper/tag-suggestion.html
 
 /**
  *
@@ -29,11 +30,11 @@
  *   Request URL: https://api.kifi.com/site/collections/all?sort=user&_=hm9pbqo7
  *   Request Method: GET
  *   Response: {
- *   	"keeps": 15,
- *   	"collections": [{
- *   			"id": "dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
- *   			"name": "hello",
- *   			"keeps": 0
+ *     "keeps": 15,
+ *     "collections": [{
+ *       "id": "dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+ *       "name": "hello",
+ *       "keeps": 0
  *     }]
  *   }
  *
@@ -227,8 +228,7 @@ this.tagbox = (function ($, win) {
 		/**
 		 * An array containing user's all tags
 		 *
-		 * @property tags
-		 * @type {Array}
+		 * @property {Object[]} tagbox.tags - User's tags
 		 */
 		tags: win.myTags,
 
@@ -241,18 +241,15 @@ this.tagbox = (function ($, win) {
 		 */
 		construct: function () {
 			if (!this.$tagbox) {
-				win.render('html/keeper/tagbox', null, this.init.bind(this));
+				this.init();
 			}
 		},
 
 		/**
-		 * Initializes a tag box.
-		 * This is a callback to be called after rendering a tag box html
-		 *
-		 * @param html A tag box HTML
+		 * Renders and initializes a tag box.
 		 */
-		init: function (html) {
-			this.$tagbox = $(html).appendTo($('body'));
+		init: function () {
+			this.$tagbox = $(win.render('html/keeper/tagbox')).appendTo($('body'));
 			this.initSuggest();
 			this.initInput();
 			this.initCloseIcon();
@@ -273,13 +270,23 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * Add event listeners to the input element.
-		 * This is called inside {@see initInput}
+		 * This is called inside {@link initInput}
+		 *
+		 * @see initInput
 		 */
 		addInputEvents: (function () {
 			function onLiveChange(e) {
-				var val = e.value;
-				this.$inputbox.toggleClass('empty', !val);
-				this.suggest(val);
+				var text = e.value;
+				text = text.trim();
+
+				var empty = !text;
+
+				this.$inputbox.toggleClass('empty', empty);
+				this.$tagbox.toggleClass('suggested', !empty);
+
+				if (text) {
+					this.suggest(text);
+				}
 			}
 
 			function onFocus() {
@@ -332,13 +339,61 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
+		 * Returns an index of the matched tag occurence for the given tag name.
+		 *
+		 * @param {string} text - An tag name to search for
+		 * @param {Object[]} [tags] - An array of tags to search from
+		 *
+		 * @return {number} An index of the first matched occurence. -1 if not found.
+		 */
+		indexOfTag: function (text, tags) {
+			text = this.normalizeTagNameForSearch(text);
+
+			if (text) {
+				if (!tags) {
+					tags = this.tags;
+				}
+
+				for (var i = 0, l = tags.length; i < l; i++) {
+					if (text === this.normalizeTagNameForSearch(tags[i].name)) {
+						return i;
+					}
+				}
+			}
+
+			return -1;
+		},
+
+		/**
+		 * Normalizes a tag name and returns the result.
+		 *
+		 * @param {string} text - A tag name to normalize
+		 *
+		 * @return {string} A normalized tag name
+		 */
+		normalizeTagName: function (text) {
+			return text && text.trim().replace(/\s+/g, ' ');
+		},
+
+		/**
+		 * Normalizes a tag name for search (case insensitive) and returns the result.
+		 *
+		 * @param {string} text - A tag name to normalize
+		 *
+		 * @return {string} A normalized tag name
+		 */
+		normalizeTagNameForSearch: function (text) {
+			return text && this.normalizeTagName(text).toLowerCase();
+		},
+
+		/**
 		 * Given an input string to match against,
 		 * it (fuzzy) filters and returns a new array of matched tags.
 		 *
-		 * @param val An input string to match against
-		 * @param tags [optional] An optional array of tags to search from
+		 * @param {string} text - An input string to match against
+		 * @param {Object[]} [tags] - An array of tags to search from
 		 *
-		 * @return filtered A new array of filtered tags
+		 * @return {Object[]} A new array of filtered tags
 		 */
 		filterTags: (function () {
 			var options = {
@@ -356,12 +411,12 @@ this.tagbox = (function ($, win) {
 				};
 			}
 
-			return function (val, tags) {
+			return function (text, tags) {
 				if (!tags) {
 					tags = this.tags;
 				}
-				if (val) {
-					return win.fuzzy.filter(val, tags, options).map(extractData);
+				if (text) {
+					return win.fuzzy.filter(text, tags, options).map(extractData);
 				}
 				return tags;
 			};
@@ -371,19 +426,20 @@ this.tagbox = (function ($, win) {
 		 * Given an input string to match against,
 		 * it rerenders tag suggestions.
 		 *
-		 * @param val An input string to match against
-		 * @param tags [optional] An optional array of tags to search from
+		 * @param {string} text - An input string to match against
+		 * @param {Object[]} [tags] - An array of tags to search from
 		 */
-		suggest: function (val, tags) {
+		suggest: function (text, tags) {
 			this.emptySuggestions();
 
-			var matches = this.filterTags(val, tags),
+			var matches = this.filterTags(text, tags),
 				hasMatch = matches.length ? true : false;
 			if (hasMatch) {
 				this.renderSuggestions(matches);
 			}
-
-			this.$tagbox.toggleClass('suggested', hasMatch);
+			if (this.indexOfTag(text) === -1) {
+				this.suggestNew(text);
+			}
 		},
 
 		/**
@@ -404,11 +460,22 @@ this.tagbox = (function ($, win) {
 		 * Renders and appends a suggestion for a given tag.
 		 */
 		renderSuggestion: function (item) {
-			win.render('html/keeper/tag-suggestion', item, this.appendSuggestion.bind(this));
+			this.appendSuggestion(win.render('html/keeper/tag-suggestion', item));
 		},
 
 		/**
-		 * Appends a suggestion html.
+		 * Renders and appends a new tag suggestion for a specified new name
+		 *
+		 * @param {string} name - a new tag name
+		 */
+		suggestNew: function (name) {
+			this.appendSuggestion(win.render('html/keeper/tag-new', {
+				name: name
+			}));
+		},
+
+		/**
+		 * Appends a html to suggestion box.
 		 */
 		appendSuggestion: function (html) {
 			this.$suggest.append(html);

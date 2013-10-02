@@ -203,19 +203,6 @@
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAQAAACiV3CzAAAA60lEQVR4Ae3LMU4CQRiG4W83RAt0lVBoo4kX0CtYwCFoiAWNZyD0Nt4CCy6xiTfQQG2IwYLERrShmVeKnezM7KBuYcfzVX/+vIrhlldeuEHViXAJ91h3JL8F+0xwPbD3U9DikVDO8bbgnBkxU85iwRVvbLPgMgw6rJz3gIvNBiywPui4QZ811pwTVOyUOdaavg2GGEo95KxHyTBEYoSv5QVH+EYJ72rLdagvlQ70KdcqVVu+6+hlZSI0o4mKNZkSEFVPdGls1uWZigQUYySlimgoLlXdx/8Hu2AXLFXHMtVYdYxFRo7hLww52TeyrdzuJXPukQAAAABJRU5ErkJggg==);
 }
 
-.kifi-tagbox-new {
-  display: block;
-  background: #d4e4f9;
-  padding: 10px 15px;
-  padding-left: 37px;
-  color: #858585;
-  text-decoration: none;
-}
-
-.kifi-tagbox-new:hover {
-  background: #bcd0ea;
-}
-
 .kifi-tagbox-empty {
   font-size: 24px;
   font-weight: 200;
@@ -234,6 +221,19 @@
 
 .kifi-tagbox.tagged .kifi-tagbox-empty {
   display: none;
+}
+
+.kifi-tagbox-new {
+  display: block;
+  background: #d4e4f9;
+  padding: 10px 15px;
+  padding-left: 37px;
+  color: #858585;
+  text-decoration: none;
+}
+
+.kifi-tagbox-new:hover {
+  background: #bcd0ea;
 }
 
 .kifi-tagbox-new-caption {
