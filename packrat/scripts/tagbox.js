@@ -7,48 +7,64 @@
 // @require html/keeper/tagbox.html
 // @require html/keeper/tag-suggestion.html
 
-/*
- * End Points
-create
-  Request URL:https://api.kifi.com/site/collections/create
-  Request Method: POST
-  Request Payload: {"name":"hello"}
-  Response: {"id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04","name":"hello"}
+/**
+ *
+ * ---------------
+ *     Tag Box    
+ * ---------------
+ *
+ * Tag box is an UI component that lets you conveniently tag your keep
+ * into existing and/or new collection(s).
+ *
+ * @author Joon Ho Cho <joon@42go.com>
+ * @date 10-02-2013
+ *
+ */
 
-Search\n- simple tuba ii brr tobacco brown",
-      "url":"http://www.6pm.com/simple-tuba-ii-brr-tobacco-brown"
-    }]
-  }
-  Response: {
-    "keeps":[{
-      "id":"88ed8dc9-a20d-49c6-98ef-1b554533b106",
-      "title":"Search\n- simple tuba ii brr tobacco brown",
-      "url":"http://www.6pm.com/simple-tuba-ii-brr-tobacco-brown",
-      "isPrivate":false
-    }],
-    "addedToCollection":1
-  }
-
-remove
-  Request URL: https://api.kifi.com/site/collections/dc76ee74-a141-4e96-a65f-e5ca58ddfe04/removeKeeps
-  Request Method: POST
-  Request Payload: ["88ed8dc9-a20d-49c6-98ef-1b554533b106"]
-  Response: {"removed":1}
-
-get
-  Request URL: https://api.kifi.com/site/collections/all?sort=user&_=hm9pbqo7
-  Request Method: GET
-  Response: {
-    "keeps":15,
-    "collections":[{
-      "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
-      "name":"hello",
-      "keeps":0
-    },{"id":"59db576a-5774-4850-a244-70fc54ea8b5c","name":"test","keeps":0}
-    ]
-  }
+/**
+ * Request End Points to Server 
+ * ----------------------------
+ * 
+ * GET
+ *   Request URL: https://api.kifi.com/site/collections/all?sort=user&_=hm9pbqo7
+ *   Request Method: GET
+ *   Response: {
+ *   	"keeps": 15,
+ *   	"collections": [{
+ *   			"id": "dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+ *   			"name": "hello",
+ *   			"keeps": 0
+ *     }]
+ *   }
+ *
+ * CREATE
+ *   Request URL:https://api.kifi.com/site/collections/create
+ *   Request Method: POST
+ *   Request Payload: {"name":"hello"}
+ *   Response: {"id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04","name":"hello"}
+ * 
+ * Search\n- simple tuba ii brr tobacco brown",
+ *       "url":"http://www.6pm.com/simple-tuba-ii-brr-tobacco-brown"
+ *     }]
+ *   }
+ *   Response: {
+ *     "keeps":[{
+ *       "id":"88ed8dc9-a20d-49c6-98ef-1b554533b106",
+ *       "title":"Search\n- simple tuba ii brr tobacco brown",
+ *       "url":"http://www.6pm.com/simple-tuba-ii-brr-tobacco-brown",
+ *       "isPrivate":false
+ *     }],
+ *     "addedToCollection":1
+ *   }
+ * 
+ * REMOVE
+ *   Request URL: https://api.kifi.com/site/collections/dc76ee74-a141-4e96-a65f-e5ca58ddfe04/removeKeeps
+ *   Request Method: POST
+ *   Request Payload: ["88ed8dc9-a20d-49c6-98ef-1b554533b106"]
+ *   Response: {"removed":1}
  *   
  */
+
 this.myTags = [
 	{
 		id: 'f033afe4-bbb9-4609-ab8b-3e8aa968af21',
@@ -208,13 +224,33 @@ this.tagbox = (function ($, win) {
 	}
 
 	return {
-		id: Date.now(),
-		myTags: win.myTags,
+		/**
+		 * An array containing user's all tags
+		 *
+		 * @property tags
+		 * @type {Array}
+		 */
+		tags: win.myTags,
+
+		/**
+		 * A TagBox constructor
+		 *
+		 * Renders and initializes a tag box if there is no live tag box available.
+		 *
+		 * @constructor
+		 */
 		construct: function () {
 			if (!this.$tagbox) {
 				win.render('html/keeper/tagbox', null, this.init.bind(this));
 			}
 		},
+
+		/**
+		 * Initializes a tag box.
+		 * This is a callback to be called after rendering a tag box html
+		 *
+		 * @param html A tag box HTML
+		 */
 		init: function (html) {
 			this.$tagbox = $(html).appendTo($('body'));
 			this.initSuggest();
@@ -222,13 +258,24 @@ this.tagbox = (function ($, win) {
 			this.initCloseIcon();
 			activateScroll('.kifi-tagbox-suggest');
 		},
+
+		/**
+		 * Initializes a input box inside a tag box.
+		 * Finds and caches input elements.
+		 * Add event listeners to the input element.
+		 */
 		initInput: function () {
 			var $inputbox = this.$inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
 			this.$input = $inputbox.find('input.kifi-tagbox-input');
 
-			this.initInputEvents();
+			this.addInputEvents();
 		},
-		initInputEvents: (function () {
+
+		/**
+		 * Add event listeners to the input element.
+		 * This is called inside {@see initInput}
+		 */
+		addInputEvents: (function () {
 			function onLiveChange(e) {
 				var val = e.value;
 				this.$inputbox.toggleClass('empty', !val);
@@ -254,12 +301,25 @@ this.tagbox = (function ($, win) {
 				});
 			};
 		})(),
+
+		/**
+		 * Finds and initializes a close button.
+		 */
 		initCloseIcon: function () {
 			this.$tagbox.find('.kifi-tagbox-close').click(this.destroy.bind(this));
 		},
+
+		/**
+		 * Finds and caches a suggestion box.
+		 */
 		initSuggest: function () {
 			this.$suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner');
 		},
+
+		/**
+		 * Destroys a tag box.
+		 * It removes all event listeners and caches to elements.
+		 */
 		destroy: function () {
 			if (this.$tagbox) {
 				deactivateScroll('.kifi-tagbox-suggest');
@@ -270,6 +330,16 @@ this.tagbox = (function ($, win) {
 				this.$tagbox = this.$inputbox = this.$input = this.$suggest = null;
 			}
 		},
+
+		/**
+		 * Given an input string to match against,
+		 * it (fuzzy) filters and returns a new array of matched tags.
+		 *
+		 * @param val An input string to match against
+		 * @param tags [optional] An optional array of tags to search from
+		 *
+		 * @return filtered A new array of filtered tags
+		 */
 		filterTags: (function () {
 			var options = {
 				pre: '<b>',
@@ -286,20 +356,28 @@ this.tagbox = (function ($, win) {
 				};
 			}
 
-			return function (val, list) {
-				if (!list) {
-					list = this.myTags;
+			return function (val, tags) {
+				if (!tags) {
+					tags = this.tags;
 				}
 				if (val) {
-					return win.fuzzy.filter(val, list, options).map(extractData);
+					return win.fuzzy.filter(val, tags, options).map(extractData);
 				}
-				return list;
+				return tags;
 			};
 		})(),
-		suggest: function (val) {
+
+		/**
+		 * Given an input string to match against,
+		 * it rerenders tag suggestions.
+		 *
+		 * @param val An input string to match against
+		 * @param tags [optional] An optional array of tags to search from
+		 */
+		suggest: function (val, tags) {
 			this.emptySuggestions();
 
-			var matches = this.filterTags(val),
+			var matches = this.filterTags(val, tags),
 				hasMatch = matches.length ? true : false;
 			if (hasMatch) {
 				this.renderSuggestions(matches);
@@ -307,24 +385,52 @@ this.tagbox = (function ($, win) {
 
 			this.$tagbox.toggleClass('suggested', hasMatch);
 		},
+
+		/**
+		 * Empties suggestion list.
+		 */
 		emptySuggestions: function () {
 			this.$suggest.empty();
 		},
+
+		/**
+		 * Renders and appends suggestions for given tags.
+		 */
 		renderSuggestions: function (tags) {
 			tags.forEach(this.renderSuggestion, this);
 		},
+
+		/**
+		 * Renders and appends a suggestion for a given tag.
+		 */
 		renderSuggestion: function (item) {
 			win.render('html/keeper/tag-suggestion', item, this.appendSuggestion.bind(this));
 		},
+
+		/**
+		 * Appends a suggestion html.
+		 */
 		appendSuggestion: function (html) {
 			this.$suggest.append(html);
 		},
+
+		/**
+		 * Shows a tag box.
+		 */
 		show: function ( /*$slider*/ ) {
 			this.construct();
 		},
+
+		/**
+		 * Hides a tag box.
+		 */
 		hide: function () {
 			this.destroy();
 		},
+
+		/**
+		 * It toggles (shows/hides) a tag box.
+		 */
 		toggle: function ($slider) {
 			if (this.$tagbox) {
 				this.hide();
