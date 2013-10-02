@@ -79,7 +79,6 @@ case class HttpClientImpl(
     }
   }
 
-
   def withHeaders(hdrs: (String, String)*): HttpClient = this.copy(headers = headers ++ hdrs)
 
   def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(getFuture(url, onFailure))
