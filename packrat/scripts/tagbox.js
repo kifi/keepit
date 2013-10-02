@@ -255,7 +255,7 @@ this.tagbox = (function ($, win) {
 			};
 		})(),
 		initCloseIcon: function () {
-			this.$tagbox.find('.kifi-tagbox-close').click(this.remove.bind(this));
+			this.$tagbox.find('.kifi-tagbox-close').click(this.destroy.bind(this));
 		},
 		initSuggest: function () {
 			this.$suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner');
