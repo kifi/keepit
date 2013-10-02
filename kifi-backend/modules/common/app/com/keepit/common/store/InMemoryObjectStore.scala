@@ -17,6 +17,7 @@ trait InMemoryObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
 
   def += (kv: (A, B)) = {
     localStore += kv
+    log.info(s"[+=] (${kv._1} -> ${kv._2}) localStore=$localStore")
     this
   }
 
@@ -26,4 +27,6 @@ trait InMemoryObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
   }
 
   def get(id: A): Option[B] = localStore.get(id)
+
+  override def toString =  s"[size=${localStore.size} keys=${localStore.keySet}"
 }
