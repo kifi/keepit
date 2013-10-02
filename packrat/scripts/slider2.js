@@ -375,31 +375,28 @@ var slider2 = function () {
     return paneIdxs.indexOf(name);
   }
 
-  var createTemplateParams = {
+  var createPaneParams = {
     thread: function (cb, locator, participants) {
-      var id = locator.split("/")[2];
       if (participants) {
-        respond(participants, locator);
+        respond(participants);
       } else {
-        log("[createTemplateParams] getting thread for participants")();
-        api.port.emit("thread", {id: id, respond: true}, function (th) {
-          respond(th.participants, "/messages/" + th.id);
-        });
+        var id = locator.substr(10);
+        log("[createPaneParams.thread] need participants", id)();
+        api.port.emit("participants", id, respond);
       }
-      function respond(p, canonicalLocator) {
-        cb({participants: p, numParticipants: p.length > 1 ? p.length : null}, canonicalLocator);
+      function respond(p) {
+        cb({participants: p, numParticipants: p.length > 1 ? p.length : null});
       }
     }};
 
   function showPane(locator, back, paramsArg) {
     log("[showPane]", locator, back ? "back" : "")();
-    var pane = toPaneName(locator);
-    (createTemplateParams[pane] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params, canonicalLocator) {
-      var loc = canonicalLocator || locator;
-      if (loc !== (paneHistory && paneHistory[0])) {
-        showPane2(loc, back, pane, params);
-      }
-    }, locator, paramsArg);
+    if (locator !== (paneHistory && paneHistory[0])) {
+      var pane = toPaneName(locator);
+      (createPaneParams[pane] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
+        showPane2(locator, back, pane, params);
+      }, locator, paramsArg);
+    }
   }
 
   function showPane2(locator, back, pane, params) {  // only called by showPane
