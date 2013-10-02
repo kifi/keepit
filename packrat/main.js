@@ -324,7 +324,7 @@ var socketHandlers = {
         socket.send(["get_thread_info", threadId], withThread);
       }
     }
-    function withThread(th);
+    function withThread(th) {
       td.addThread(th);
       if (message.user.id === session.userId) {
         td.markRead(th.id, message.createdAt);
@@ -858,8 +858,8 @@ function forEachTabAtUriAndLocator() { // (url[, url]..., loc, f)
       done[url] = true;
       var arr1, arr2;
       if ((arr1 = tabsByUrl[url]) && (arr2 = tabsByLocator[loc])) {
-        for (var i = arr1.length; i--;) {
-          var tab = arr1[i];
+        for (var j = arr1.length; j--;) {
+          var tab = arr1[j];
           if (~arr2.indexOf(tab)) {
             f(tab);
           }
