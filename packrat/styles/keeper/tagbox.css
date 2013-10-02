@@ -132,6 +132,7 @@
 }
 
 .kifi-tagbox-input-placeholder {
+  display: none;
   position: absolute;
   top: 0;
   left: 0;
@@ -143,8 +144,8 @@
   color: #c8d5e1;
 }
 
-.kifi-tagbox-input-box.not-empty .kifi-tagbox-input-placeholder {
-  display: hidden;
+.kifi-tagbox-input-box.empty .kifi-tagbox-input-placeholder {
+  display: block;
 }
 
 .kifi-tagbox-suggest {
@@ -158,13 +159,13 @@
 .kifi-tagbox-suggest-inner {
   color: #858585;
   background: #eff2f7;
-  min-height: 200px;
-  max-height: 400px;
+  min-height: 166px;
+  max-height: 279px;
+  padding: 8px 0;
   overflow: scroll;
   overflow-x: hidden;
   overflow-y: scroll;
   font-size: 14px;
-  transition: height .2s ease;
 }
 
 .kifi-tagbox-suggestion {
@@ -181,6 +182,17 @@
   background: #b8c5d1;
   color: white;
   cursor: pointer;
+}
+
+.kifi-tagbox-suggestion.highlight {
+  background: #b8c5d1;
+  color: white;
+  cursor: pointer;
+}
+
+.kifi-tagbox-suggestion:active {
+  background: #a0b1c2;
+  //background: #8699ab;
 }
 
 .kifi-tagbox-suggestion-icon {
