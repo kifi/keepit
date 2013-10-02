@@ -2,7 +2,8 @@ package com.keepit.controllers.core
 
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AuthenticatedRequest, WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
+import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.model.{SocialUserInfoRepo, UserCredRepo}
@@ -87,24 +88,28 @@ class AuthController @Inject() (
     (RegistrationInfo.unapply)
   )
 
-  def signup() = Action { implicit request =>
-    Ok(views.html.website.signup())
-  }
+  def signup() = HtmlAction(true)(authenticatedAction = doSignupPage(_), unauthenticatedAction = doSignupPage(_))
 
   def handleSignup() = HtmlAction(true)(authenticatedAction = doSignup(_), unauthenticatedAction = doSignup(_))
 
-  private def doSignup(implicit request: Request[_]) = {
-    val (userIdOpt, identityOpt) = request match {
-      case ar: AuthenticatedRequest[_] => (Some(ar.userId), Some(ar.identity))
-      case sr: SecuredRequest[_] => (None, Some(sr.user))
-      case _ => (None, None)
-    }
+  private def doSignupPage(implicit request: Request[_]): Result = {
+    val identity = request.identityOpt
+    Ok(views.html.website.signup(
+      errorMessage = request.flash.get("error"),
+      firstName = identity.map(_.firstName),
+      lastName = identity.map(_.lastName),
+      email = identity.flatMap(_.email)))
+  }
+
+  private def doSignup(implicit request: Request[_]): Result = {
     emailPasswordForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(views.html.website.signup(Some("Form is invalid"))),
+      formWithErrors => Redirect(routes.AuthController.handleSignup()).flashing(
+        "error" -> "Form is invalid"
+      ),
       { case RegistrationInfo(email, firstName, lastName, password) =>
         // TODO: sync this with the information in User
         val newIdentity = UserIdentity(
-          userId = userIdOpt,
+          userId = request.userIdOpt,
           socialUser = SocialUser(
             identityId = IdentityId(email, "userpass"),
             firstName = firstName,
@@ -118,7 +123,7 @@ class AuthController @Inject() (
           allowSignup = true)
         UserService.save(newIdentity)
         for {
-          identity <- identityOpt
+          identity <- request.identityOpt
           socialUserInfo <- db.readOnly { implicit s =>
             socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO)
           }
@@ -127,7 +132,9 @@ class AuthController @Inject() (
           UserService.save(UserIdentity(userId = Some(userId), socialUser = SocialUser(identity)))
         }
         Authenticator.create(newIdentity).fold(
-          error => InternalServerError(views.html.website.signup(Some("Cannot create user"))),
+          error => Redirect(routes.AuthController.handleSignup()).flashing(
+            "error" -> "Error creating user"
+          ),
           authenticator => Redirect("/")
             .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
             .withCookies(authenticator.toCookie)
