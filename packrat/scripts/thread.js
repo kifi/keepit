@@ -123,7 +123,7 @@ panes.thread = function() {
   function sendReply($container, threadId, session, e, text) {
     var $reply, resp;
     api.port.emit("send_reply", {text: text, threadId: threadId}, function(o) {
-      log("[sendReply] resp:", o)();
+      log("[sendReply] resp:", o, $reply)();
       updateSentReply($reply, resp = o);
     });
     renderMessage({
@@ -135,6 +135,7 @@ panes.thread = function() {
         firstName: session.name,
         lastName: ""}
     }, session.userId, function($m) {
+      log("[sendReply] init:", $m, resp)();
       updateSentReply($reply = $m, resp);
       $holder.append($m.data("text", text)).scrollToBottom();
     });
