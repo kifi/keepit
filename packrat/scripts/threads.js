@@ -17,9 +17,6 @@ panes.threads = function() {
   'use strict';
   var handlers = {
     thread_info: update,
-    message: function(o) {
-      update(o.thread);
-    },
     threads: updateAll};
 
   var $list = $();
