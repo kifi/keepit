@@ -36,23 +36,6 @@ class ExtUserController @Inject() (
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
 
-  def logEvent() = AuthenticatedJsonToJsonAction { request =>
-    Akka.future {
-      val o = request.body
-      val eventTime = clock.now.minusMillis((o \ "msAgo").asOpt[Int].getOrElse(0))
-      val eventFamily = EventFamilies((o \ "eventFamily").as[String])
-      val eventName = (o \ "eventName").as[String]
-      val installId = (o \ "installId").as[String]
-      val metaData = (o \ "metaData").asOpt[JsObject].getOrElse(Json.obj())
-      val prevEvents = (o \ "prevEvents").asOpt[Seq[String]].getOrElse(Seq.empty).map(ExternalId[Event])
-      val user = db.readOnly { implicit s => userRepo.get(request.user.id.get) }
-      val event = Events.userEvent(eventFamily, eventName, user, request.experiments, installId, metaData, prevEvents, eventTime)
-      log.debug("Created new event: %s".format(event))
-      EventPersister.persist(event)
-    }
-    Ok
-  }
-
   def getLoggedIn() = AuthenticatedJsonAction { request =>
     Ok("0")
   }
