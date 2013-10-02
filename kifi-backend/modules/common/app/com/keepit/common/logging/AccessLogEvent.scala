@@ -2,9 +2,12 @@ package com.keepit.common.logging
 
 import play.api.Logger
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.time.Clock
 import com.keepit.common.zookeeper.ServiceDiscovery
 import org.joda.time.format.DateTimeFormat
+import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.future
 
@@ -25,12 +28,14 @@ object AccessLogTimer {
   val NoIntValue: Int = -1
 }
 
-case class AccessLogTimer(eventType: AccessLogEventType, startTime: Long = System.currentTimeMillis) {
+case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
   import AccessLogTimer.{NoLongValue, NoIntValue}
 
   //since null.asInstanceOf[Long] is forced to be 0L instead of actually null
   private def longOption(l: Long): Option[Long] = if(l == NoLongValue) None else Some(l)
   private def intOption(i: Int): Option[Int] = if(i == NoIntValue) None else Some(i)
+
+  val startTime = clock.now()
 
   //using null for internal api to make the usage of the call much more friendly without having Some(foo) instead of just foo's
   def done(remoteTime: Long = NoLongValue,
@@ -44,10 +49,10 @@ case class AccessLogTimer(eventType: AccessLogEventType, startTime: Long = Syste
           trackingId: String = null,
           method: String = null,
           url: String = null) = {
-    val now = System.currentTimeMillis
+    val now = clock.now()
     AccessLogEvent(
       time = now,
-      duration = now - startTime,
+      duration = now.getMillis - startTime.getMillis,
       eventType = eventType,
       remoteTime = longOption(remoteTime),
       statusCode = intOption(statusCode),
@@ -64,7 +69,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, startTime: Long = Syste
 }
 
 case class AccessLogEvent(
-  time: Long,
+  time: DateTime,
   duration: Long,
   eventType: AccessLogEventType,
   remoteTime: Option[Long],
@@ -80,10 +85,12 @@ case class AccessLogEvent(
   url: Option[String])
 
 @Singleton
-class AccessLog {
+class AccessLog @Inject() (clock: Clock) {
 
   private val accessLog = Logger("com.keepit.access")
   private val formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS")
+
+  def timer(eventType: AccessLogEventType): AccessLogTimer = AccessLogTimer(eventType, clock)
 
   def add(e: AccessLogEvent): AccessLogEvent = {
     future {accessLog.info(format(e)) }

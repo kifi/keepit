@@ -21,7 +21,7 @@ import play.modules.statsd.api.{Statsd, StatsdFilter}
 import play.utils.Threads
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
-    extends WithFilters(LoggingFilter, new StatsdFilter()) with Logging with EmptyInjector {
+    extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
 
   override def getControllerInstance[A](clazz: Class[A]) = try {
     injector.getInstance(clazz)
@@ -61,8 +61,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       injector.instance[HealthcheckPlugin].reportStart()
       injector.instance[HealthcheckPlugin].warmUp()
     }
-
-
   }
 
   // Get a file within the .fortytwo folder in the user's home directory
