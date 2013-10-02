@@ -1,4 +1,4 @@
-#SHOEBOX
+#ABOOK
 
 # --- !Ups
 
@@ -12,9 +12,9 @@ CREATE TABLE abook (
 	origin varchar(128) NOT NULL,
 	raw_info_loc varchar(512),
 
-	PRIMARY KEY (id),
+	PRIMARY KEY (id)
 
-	CONSTRAINT address_book_f_user FOREIGN KEY (user_id) REFERENCES user(id)
+	-- CONSTRAINT abook_f_user FOREIGN KEY (user_id) REFERENCES user(id) -- user table in shoebox db; no links
 );
 
 # --- !Downs
