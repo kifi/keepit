@@ -9,6 +9,8 @@ import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.shoebox.BrowsingHistoryTracker
+import com.keepit.common.time._
+import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
 import play.api.libs.json._
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits._
@@ -40,7 +42,8 @@ class ExtBookmarksController @Inject() (
   userRepo: UserRepo,
   searchClient: SearchServiceClient,
   browsingHistoryTracker: BrowsingHistoryTracker,
-  healthcheck: HealthcheckPlugin)
+  healthcheck: HealthcheckPlugin,
+  heimdal: HeimdalServiceClient)
     extends BrowserExtensionController(actionAuthenticator) {
 
   def remove() = AuthenticatedJsonToJsonAction { request =>
@@ -79,6 +82,7 @@ class ExtBookmarksController @Inject() (
   }
 
   def addBookmarks() = AuthenticatedJsonToJsonAction { request =>
+    val tStart = currentDateTime
     val userId = request.userId
     val installationId = request.kifiInstallationId
     val json = request.body
@@ -94,6 +98,25 @@ class ExtBookmarksController @Inject() (
           val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
           browsingHistoryTracker.add(userId, bookmarks.map(_.uriId))
           searchClient.updateURIGraph()
+
+          //Analytics
+          SafeFuture{ bookmarks.foreach { bookmark =>
+            val contextBuilder = new UserEventContextBuilder()
+
+            contextBuilder += ("isPrivate", bookmark.isPrivate)
+            request.experiments.foreach{ experiment =>
+              contextBuilder += ("experiment", experiment.toString)
+            }
+            contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+            contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
+            contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
+            contextBuilder += ("url", bookmark.url)
+            contextBuilder += ("source", bookmarkSource.getOrElse("UNKNOWN"))
+            contextBuilder += ("hasTitle", bookmark.title.isDefined)
+
+            heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("keep"), tStart))
+          }}
+
         }
         Status(202)(JsNumber(0))
     }
