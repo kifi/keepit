@@ -261,7 +261,6 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .invites-left {float: right; margin-top: 2px; font-size: 13px; color: #818692; display: none}
 .invites-left>.num-invites {display: inline-block; border: 1px solid #b8c5d2; color: #628196; border-radius: 10.5px; padding: 0 12px; vertical-align: baseline; font-size: 12px; line-height: 20px; height: 19px; margin-left: 6px}
 @-moz-document url-prefix() {.invites-left>.num-invites {line-height: 19px}}
-.invite-num-results { float: right; color: #556179; font-size: 14px; margin: 10px 4px; max-width: 45%; }
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
 .invite-friends { position: absolute; top: 248px; bottom: 0; right: -1px; left: 20px; overflow: hidden}
 .invite-friend {display: block; background-color: #eff2f7; padding: 10px; margin-bottom: 12px; -moz-box-sizing: border-box; box-sizing: border-box; position: relative}
@@ -295,6 +294,12 @@ button.invite-send { position: absolute; right: 12px; bottom: 12px; font-size: 1
 .no-invites-dialog>.dialog-content { height: 200px; margin-top: -100px; width: 400px; margin-left: -200px; padding: 20px 30px; color: #66829b }
 .no-invites-dialog>.dialog-content>p { margin: 12px 0; }
 button.more-invites { display: block; font-size: 14px; border: none; outline: none; border-radius: 5px; padding: 8px 12px; margin: 24px auto; background: #6fa6ef; color: white; cursor: pointer; }
+
+.no-results { font-size: 18px; padding: 10px; font-weight: 300; -webkit-font-smoothing: antialiased;}
+.no-results>h2 { color: #929292; text-align: center; font-size: 24px; margin: 10px 0 50px 0; font-weight: 300; }
+.no-results>h3 { color: #737373; font-size: 18px; margin: 10px 0; }
+.no-results>ol { list-style: decimal outside; }
+.no-results>ol>li { color: #929292; margin: 10px 25px; }
 
 .friend-reqs-status {margin-bottom: 4px}
 .friend-reqs-status,

@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Promise}
 
 import play.api.libs.json.{JsArray, Json, JsObject}

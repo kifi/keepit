@@ -6,7 +6,7 @@ import com.keepit.model.{User}
 import com.keepit.common.db.{Id}
 
 import scala.concurrent.future
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.mvc.Action
 import play.api.libs.json.{JsObject, JsArray}

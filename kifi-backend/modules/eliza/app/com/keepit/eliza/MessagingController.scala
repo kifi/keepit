@@ -12,7 +12,7 @@ import com.keepit.common.akka.SafeFuture
 
 import scala.concurrent.{Promise, future, Await, Future}
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
 
@@ -401,19 +401,19 @@ class MessagingController @Inject() (
       }
       thread
     }
-    (thread, sendMessage(from, thread, messageText, urlOpt, nUriOpt))
+    sendMessage(from, thread, messageText, urlOpt, nUriOpt)
 
   }
 
 
-  def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, urlOpt: Option[String]): Message = {
+  def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, urlOpt: Option[String]): (MessageThread, Message) = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadId)
     }
     sendMessage(from, thread, messageText, urlOpt)
   }
 
-  def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, urlOpt: Option[String]): Message = {
+  def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, urlOpt: Option[String]): (MessageThread, Message) = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadId)
     }
@@ -421,7 +421,7 @@ class MessagingController @Inject() (
   }
 
 
-  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None) : Message = {
+  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None) : (MessageThread, Message) = {
     if (! thread.containsUser(from) || !thread.replyable) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
     log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session =>
@@ -471,7 +471,7 @@ class MessagingController @Inject() (
         }
       }
     }
-    message
+    (thread, message)
   }
 
 
@@ -625,20 +625,22 @@ class MessagingController @Inject() (
     buildThreadInfos(userId, Seq(thread), None).head
   }
 
-  def getThreadInfos(userId: Id[User], url: String): (Option[NormalizedURI], Seq[ElizaThreadInfo]) = {
-    val nUriOpt = Await.result(shoebox.getNormalizedURIByURL(url), 2 seconds) // todo: Remove await
-    val infos = nUriOpt.map { nUri =>
+  def getThreadInfos(userId: Id[User], url: String): (String, Seq[ElizaThreadInfo]) = {
+    val nUriOrPrenorm = Await.result(shoebox.getNormalizedUriByUrlOrPrenormalize(url), 2 seconds) // todo: Remove await
+    val (nUrlStr, unsortedInfos) = if (nUriOrPrenorm.isLeft) {
+      val nUri = nUriOrPrenorm.left.get
       val threads = db.readOnly { implicit session =>
         val threadIds = userThreadRepo.getThreads(userId, nUri.id)
         threadIds.map(threadRepo.get)
       }.filter(_.replyable)
-      buildThreadInfos(userId, threads, Some(url))
-    } getOrElse {
-      Seq[ElizaThreadInfo]()
-    } sortWith { (a,b) =>
+      (nUri.url, buildThreadInfos(userId, threads, Some(url)))
+    } else {
+      (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
+    }
+    val infos = unsortedInfos sortWith { (a,b) =>
       a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
     }
-    (nUriOpt, infos)
+    (nUrlStr, infos)
   }
 
   def getChatter(userId: Id[User], urls: Seq[String]) = {

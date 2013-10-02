@@ -7,6 +7,7 @@ function logEvent() {  // parameters defined in main.js
 }
 
 var tile = tile || function() {  // idempotent for Chrome
+  'use strict';
   log("[keeper_scout]", location.hostname)();
 
   window.onerror = function(message, url, lineNo) {
@@ -58,13 +59,10 @@ var tile = tile || function() {  // idempotent for Chrome
       setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
-      if (!tile) {
-        return;
-      }
-      updateCounts(counts);
+      tile && updateCounts(counts);
     },
     scroll_rule: function(r) {
-      if (!onScroll) {
+      if (!onScroll && !window.slider2) {
         var lastScrollTime = 0;
         document.addEventListener("scroll", onScroll = function(e) {
           var t = e.timeStamp || Date.now();
@@ -142,11 +140,11 @@ var tile = tile || function() {  // idempotent for Chrome
     } else if (!session) {
       toggleLoginDialog();
     } else {
-      if (onScroll && name != "showKeepers") {
-        document.removeEventListener("scroll", onScroll);
-        onScroll = null;
-      }
       api.require("scripts/slider2.js", function() {
+        if (onScroll && name != "showKeepers") {
+          document.removeEventListener("scroll", onScroll);
+          onScroll = null;
+        }
         slider2[args.shift()].apply(slider2, args);
       });
     }
@@ -247,8 +245,9 @@ var tile = tile || function() {  // idempotent for Chrome
   return tile;
 }();
 
-const linkedInProfileRe = /^https?:\/\/[a-z]{2,3}.linkedin.com\/profile\/view\?/;
+var linkedInProfileRe = /^https?:\/\/[a-z]{2,3}.linkedin.com\/profile\/view\?/;
 function withUrls(o) {
+  'use strict';
   o.url = document.URL;
   var el, cUrl = ~o.url.search(linkedInProfileRe) ?
     (el = document.querySelector('.public-profile>dd>:first-child')) && 'http://' + el.textContent :

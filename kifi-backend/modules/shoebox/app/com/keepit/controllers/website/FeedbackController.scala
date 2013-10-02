@@ -14,7 +14,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.crypto.UserVoiceTokenGenerator
 import com.keepit.common.store.S3ImageStore
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 
 class FeedbackController @Inject() (

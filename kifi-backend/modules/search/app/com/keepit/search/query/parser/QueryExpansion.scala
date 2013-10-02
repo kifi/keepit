@@ -19,12 +19,7 @@ trait QueryExpansion extends QueryParser {
   val siteBoost: Float
   val concatBoost: Float
 
-  def getStemmedPhrase(field: String, phraseStart: Int, phraseEnd: Int) = {
-    stemmedTerms.slice(phraseStart, phraseEnd).foldLeft(new PhraseQuery()){ (phraseQuery, term) =>
-      phraseQuery.add(new Term(field, term.text()))
-      phraseQuery
-    }
-  }
+  val textQueries: ArrayBuffer[TextQuery] = ArrayBuffer()
 
   override def getFieldQuery(field: String, queryText: String, quoted: Boolean): Option[Query] = {
     field.toLowerCase match {
@@ -59,6 +54,7 @@ trait QueryExpansion extends QueryParser {
     }
 
     val textQuery = new TextQuery
+    textQueries += textQuery
 
     super.getFieldQuery("t", queryText, quoted).foreach{ query =>
       textQuery.terms = extractTerms(query)
@@ -90,6 +86,8 @@ trait QueryExpansion extends QueryParser {
   private def addConcatQuery(textQuery: TextQuery, concat: (String, String)): Unit = {
     val (t1, t2) = concat
 
+    textQuery.concatStems += t2
+
     textQuery.add(new TermQuery(new Term("t", t1)), concatBoost)
     textQuery.add(new TermQuery(new Term("c", t1)), concatBoost)
     textQuery.add(new TermQuery(new Term("title", t1)), concatBoost)
@@ -106,10 +104,10 @@ trait QueryExpansion extends QueryParser {
     def append(terms: Array[Term], off: Int, end: Int): Unit = {
       if (off >= 0 && off < end) {
         var i = off
-          while (i < end) {
-            sb ++= terms(i).text
-            i += 1
-          }
+        while (i < end) {
+          sb ++= terms(i).text
+          i += 1
+        }
       }
     }
 

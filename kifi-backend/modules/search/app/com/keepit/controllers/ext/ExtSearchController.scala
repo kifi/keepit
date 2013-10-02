@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 import scala.concurrent.future
 import scala.concurrent.Future
@@ -108,7 +108,7 @@ class ExtSearchController @Inject() (
 
     val t4 = currentDateTime.getMillis()
 
-    val decorator = ResultDecorator(searcher, shoeboxClient, config)
+    val decorator = ResultDecorator(searcher, shoeboxClient, config, monitoredAwait)
     val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, searchExperimentId, experts)
     reportArticleSearchResult(searchRes)
 
@@ -175,20 +175,19 @@ class ExtSearchController @Inject() (
       searchExperimentId: Option[Id[SearchConfigExperiment]],
       expertsFuture: Future[Seq[Id[User]]]): PersonalSearchResultPacket = {
 
-    val future = decorator.decorate(res)
+    val decoratedResult = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
     val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
     val expertNames = {
       if (experts.size == 0) List.empty[String]
       else {
-        val idMap = monitoredAwait.result(shoeboxClient.getBasicUsers(experts), 100 milliseconds, s"getting experts' external ids", Map.empty[Id[User], BasicUser])
-        experts.flatMap{idMap.get(_)}.map{x => x.firstName + " " + x.lastName}
+        val idMap = decoratedResult.users
+        experts.flatMap{ expert => idMap.get(expert).map{x => x.firstName + " " + x.lastName} }
       }
     }
     log.info("experts recommended: " + expertNames.mkString(" ; "))
 
-    PersonalSearchResultPacket(res.uuid, res.query,
-      monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),
+    PersonalSearchResultPacket(res.uuid, res.query, decoratedResult.hits,
       res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, expertNames)
   }
 

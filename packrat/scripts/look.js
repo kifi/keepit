@@ -1,4 +1,5 @@
 function lookMouseDown(e) {
+  'use strict';
   if (e.which != 1) return;
   e.preventDefault();
   var el = snapshot.fuzzyFind(this.href.substr(11));

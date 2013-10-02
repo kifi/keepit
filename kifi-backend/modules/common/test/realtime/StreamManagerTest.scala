@@ -12,7 +12,7 @@ import play.api.test.Helpers._
 import com.keepit.common.db._
 import concurrent._
 import concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.specs2.execute.SkipException
 
 class StreamManagerTest extends SpecificationWithJUnit {

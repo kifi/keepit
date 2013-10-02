@@ -30,7 +30,7 @@ import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.common.akka.SafeFuture
 
 import scala.concurrent.future
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -140,13 +140,24 @@ class ShoeboxController @Inject() (
 
   def getNormalizedURIByURL() = SafeAsyncAction(parse.json) { request =>
     val url : String = Json.fromJson[String](request.body).get
-    val uriOpt = db.readWrite(attempts=2) { implicit s =>
+    val uriOpt = db.readOnly { implicit s =>
       normUriRepo.getByUri(url)
     }
     uriOpt match {
       case Some(uri) => Ok(Json.toJson(uri))
       case None => Ok(JsNull)
     }
+  }
+
+  def getNormalizedUriByUrlOrPrenormalize() = SafeAsyncAction(parse.json) { request =>
+    val url = Json.fromJson[String](request.body).get
+    val normalizedUriOrPrenormStr = db.readOnly { implicit s =>
+      normUriRepo.getByUriOrPrenormalize(url) match {
+        case Right(url) => Json.obj("url" -> url)
+        case Left(nuri) => Json.obj("normalizedURI" -> nuri)
+      }
+    }
+    Ok(normalizedUriOrPrenormStr)
   }
 
   def internNormalizedURI() = SafeAsyncAction(parse.json) { request =>

@@ -10,6 +10,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
 // recovery period during which clicks are ignored.
 
 !function($) {
+  'use strict';
   $.fn.bindHover = function(selector, create) {
     if (selector == "destroy") {
       return this.each(function() {

@@ -11,9 +11,11 @@ import com.keepit.common.service._
 import com.keepit.common.amazon._
 import com.keepit.common.net.HttpClient
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.KestrelCombinator
+import com.keepit.common.amazon.AmazonInstanceId
+
 import play.api.Play.current
 import scala.Some
-import com.keepit.common.amazon.AmazonInstanceId
 
 trait DiscoveryModule extends ScalaModule
 
@@ -86,14 +88,18 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   @Provides
   @Singleton
   def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster =
-    new ServiceCluster(serviceType).register(Node(serviceType.name + "_0"), RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType))
+    new ServiceCluster(serviceType) tap {
+      _.register(ServiceInstance(Node(s"${serviceType.name}_0"),
+        RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType), true))
+    }
 
   @Singleton
   @Provides
   def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], cluster: ServiceCluster): ServiceDiscovery =
     new ServiceDiscovery {
+      def thisInstance = Some(ServiceInstance(Node(cluster.serviceType.name + "_0"), RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.UP, cluster.serviceType), true))
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
-      def register(doKeepAlive: Boolean) = Node("me")
+      def register(doKeepAlive: Boolean) = thisInstance.get
       def isLeader() = true
       def changeStatus(newStatus: ServiceStatus): Unit = {}
       def startSelfCheck(): Unit = {}

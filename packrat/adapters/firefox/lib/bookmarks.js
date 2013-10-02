@@ -1,4 +1,6 @@
 // see https://developer.mozilla.org/en-US/docs/Places_Developer_Guide
+/*jshint globalstrict:true */
+'use strict';
 
 var { Cc, Ci } = require('chrome')
 var bookmarks = Cc["@mozilla.org/browser/nav-bookmarks-service;1"].getService(Ci.nsINavBookmarksService);

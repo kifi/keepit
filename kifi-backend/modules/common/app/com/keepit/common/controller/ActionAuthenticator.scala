@@ -1,6 +1,10 @@
 package com.keepit.common.controller
 
+import scala.concurrent.Future
+import scala.concurrent.duration._
+
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
@@ -8,15 +12,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.social.{SocialNetworkType, SocialId}
+
 import play.api.i18n.Messages
 import play.api.libs.json.JsNumber
 import play.api.mvc._
 import securesocial.core._
-import com.keepit.common.akka.MonitoredAwait
-import scala.concurrent.duration._
-import com.keepit.shoebox.ShoeboxServiceClient
-import scala.concurrent.Future
-import com.keepit.social.{SocialNetworkType, SocialId}
 
 case class ReportedException(val id: ExternalId[AirbrakeError], val cause: Throwable) extends Exception(id.toString, cause)
 
@@ -41,27 +43,46 @@ trait ActionAuthenticator extends SecureSocial {
       allowPending: Boolean,
       bodyParser: BodyParser[T],
       onAuthenticated: AuthenticatedRequest[T] => Result,
+      onSocialAuthenticated: SecuredRequest[T] => Result,
       onUnauthenticated: Request[T] => Result): Action[T]
 
   private[controller] def authenticatedAction[T](
       apiClient: Boolean,
       allowPending: Boolean,
       bodyParser: BodyParser[T],
-      onAuthenticated: AuthenticatedRequest[T] => Result): Action[T] =
+      onAuthenticated: AuthenticatedRequest[T] => Result,
+      onUnauthenticated: Request[T] => Result): Action[T] = {
+    authenticatedAction(
+      apiClient = apiClient,
+      allowPending = allowPending,
+      bodyParser = bodyParser,
+      onAuthenticated = onAuthenticated,
+      onSocialAuthenticated = onUnauthenticated,
+      onUnauthenticated = onUnauthenticated)
+  }
+
+  private[controller] def authenticatedAction[T](
+      apiClient: Boolean,
+      allowPending: Boolean,
+      bodyParser: BodyParser[T],
+      onAuthenticated: AuthenticatedRequest[T] => Result): Action[T] = {
+        val onUnauthenticated = { implicit request: Request[_] =>
+          if (apiClient) {
+            Forbidden(JsNumber(0))
+          } else {
+            Redirect("/login")
+                .flashing("error" -> Messages("securesocial.loginRequired"))
+                .withSession(session + (SecureSocial.OriginalUrlKey -> request.uri))
+          }
+        }
         authenticatedAction(
           apiClient = apiClient,
           allowPending = allowPending,
           bodyParser = bodyParser,
           onAuthenticated = onAuthenticated,
-          onUnauthenticated = { implicit request =>
-            if (apiClient) {
-              Forbidden(JsNumber(0))
-            } else {
-              Redirect("/login")
-                .flashing("error" -> Messages("securesocial.loginRequired"))
-                .withSession(session + (SecureSocial.OriginalUrlKey -> request.uri))
-            }
-          })
+          onSocialAuthenticated = onUnauthenticated,
+          onUnauthenticated = onUnauthenticated)
+  }
 }
 
 @Singleton
@@ -74,17 +95,11 @@ class RemoteActionAuthenticator @Inject() (
   monitoredAwait: MonitoredAwait)
     extends ActionAuthenticator with SecureSocial with Logging {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
   private def getExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = shoeboxClient.getUserExperiments(userId)
 
-  private def authenticatedHandler[T](apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
-      val userId = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)).getOrElse {
-        // If this fails, then SecureSocial says they're authenticated, but they're not.
-        monitoredAwait.result(shoeboxClient.getSocialUserInfoByNetworkAndSocialId(
-          SocialId(request.user.identityId.userId), SocialNetworkType(request.user.identityId.providerId)),
-          3 seconds, s"on social user id $request.user.id.id").get.userId.get
-      }
+  private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
       val experimentsFuture = getExperiments(userId).map(_.toSet)
       val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
       val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
@@ -111,10 +126,21 @@ class RemoteActionAuthenticator @Inject() (
       allowPending: Boolean,
       bodyParser: BodyParser[T],
       onAuthenticated: AuthenticatedRequest[T] => Result,
+      onSocialAuthenticated: SecuredRequest[T] => Result,
       onUnauthenticated: Request[T] => Result): Action[T] = UserAwareAction(bodyParser) { request =>
     val result = request.user match {
-      case Some(user) =>
-        authenticatedHandler(apiClient, allowPending)(onAuthenticated)(SecuredRequest(user, request))
+      case Some(socialUser) =>
+        val uidOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)).orElse {
+          monitoredAwait.result(shoeboxClient.getSocialUserInfoByNetworkAndSocialId(
+            SocialId(socialUser.identityId.userId), SocialNetworkType(socialUser.identityId.providerId)),
+            3 seconds, s"on social user id $request.user.id.id").flatMap(_.userId)
+        }
+        uidOpt match {
+          case Some(userId) =>
+            authenticatedHandler(userId, apiClient, allowPending)(onAuthenticated)(SecuredRequest(socialUser, request))
+          case None =>
+            onSocialAuthenticated(SecuredRequest(socialUser, request))
+        }
       case None =>
         onUnauthenticated(request)
     }
@@ -138,7 +164,6 @@ class RemoteActionAuthenticator @Inject() (
       experiments: Set[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
       newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = shoeboxClient.getUsers(Seq(userId)).map(_.head)
-    val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> fortyTwoServices.currentVersion.value)
     try {
       action(AuthenticatedRequest[T](identity, userId, monitoredAwait.result(user, 3 seconds, s"getting user $userId"), request, experiments, kifiInstallationId, adminUserId)) match {
         case r: PlainResult => r.withSession(newSession)

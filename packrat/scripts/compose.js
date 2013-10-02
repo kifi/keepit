@@ -1,6 +1,7 @@
 // @require scripts/scrollable.js
 
 function attachComposeBindings($c, composeTypeName, enterToSend) {
+  'use strict';
   var $f = $c.find(".kifi-compose");
   var $t = $f.find(".kifi-compose-to");
   var $d = $f.find(".kifi-compose-draft");

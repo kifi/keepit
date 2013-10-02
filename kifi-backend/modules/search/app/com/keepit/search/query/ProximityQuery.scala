@@ -104,23 +104,23 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
   override def explain(context: AtomicReaderContext, doc: Int) = {
     val sc = scorer(context, true, false, context.reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
+    val termsString = query.terms.map{ t => if (t.size == 1) t.head.toString else t.mkString("(", ",", ")") }.mkString(",")
+    val phrases = if (query.phrases.isEmpty) {
+      ""
+    } else {
+      query.phrases.map{ case (pos, len) => query.terms.slice(pos , pos + len).map(_.head.text).mkString(" ") }.mkString("[", " ; ", "]")
+    }
 
     val result = new ComplexExplanation()
     if (exists) {
-      val phrasesOpt = if (query.phrases.isEmpty) {
-        None
-      } else {
-        Some(query.phrases.map{ case (pos, len) => query.terms.slice(pos , pos + len).map(_.head.text).mkString(" ") }.mkString("[", " ; ", "]"))
-      }
-
-      result.setDescription("proximity(%s), product of:".format(query.terms.mkString(",") + phrasesOpt.getOrElse("")))
+      result.setDescription(s"proximity(${termsString + phrases}), product of:")
       val proxScore = sc.score
       result.setValue(proxScore)
       result.setMatch(true)
       result.addDetail(new Explanation(proxScore/value, "proximity score"))
       result.addDetail(new Explanation(value, "weight value"))
     } else {
-      result.setDescription("proximity(%s), doesn't match id %d".format(query.terms.mkString(","), doc))
+      result.setDescription(s"proximity(${termsString + phrases}), doesn't match id ${doc}")
       result.setValue(0)
       result.setMatch(false)
     }
