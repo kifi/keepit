@@ -95,7 +95,7 @@ class ExtBookmarksController @Inject() (
           browsingHistoryTracker.add(userId, bookmarks.map(_.uriId))
           searchClient.updateURIGraph()
         }
-        Status(202)
+        Status(202)(JsNumber(0))
     }
   }
 
