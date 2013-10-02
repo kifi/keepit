@@ -55,6 +55,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
+  def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]]
   def internNormalizedURI(urls: JsObject): Future[NormalizedURI]
   def sendMail(email: ElectronicMail): Future[Boolean]
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
@@ -275,6 +276,14 @@ class ShoeboxServiceClientImpl @Inject() (
         case js: JsValue => Some(Json.fromJson[NormalizedURI](js).get)
         case null => None
       }}
+
+  def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] =
+    call(Shoebox.internal.getNormalizedUriByUrlOrPrenormalize(), JsString(url)).map { r =>
+      (r.json \ "url").asOpt[String] match {
+        case Some(url) => Right(url)
+        case None => Left(Json.fromJson[NormalizedURI](r.json \ "normalizedURI").get)
+      }
+    }
 
   def internNormalizedURI(urls: JsObject): Future[NormalizedURI] = {
     call(Shoebox.internal.internNormalizedURI, urls).map(r => Json.fromJson[NormalizedURI](r.json).get)
