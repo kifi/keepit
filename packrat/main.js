@@ -6,7 +6,7 @@ var log = log || api.log;
 
 var NOTIFICATION_BATCH_SIZE = 10;
 
-//                            | sub |    |------- country domain -------|-- generic domain --|           |-- port? --|
+//                          | sub |    |------- country domain -------|-- generic domain --|           |-- port? --|
 var domainRe = /^https?:\/\/[^\/]*?((?:[^.\/]+\.[^.\/]{2,3}\.[^.\/]{2}|[^.\/]+\.[^.\/]{2,6}|localhost))(?::\d{2,5})?(?:$|\/)/;
 var hostRe = /^https?:\/\/([^\/]+)/;
 
@@ -299,6 +299,9 @@ var socketHandlers = {
   },
   message: function(threadId, message) {
     log("[socket:message]", threadId, message, message.nUrl)();
+    forEachTabAtLocator("/messages/" + threadId, function(tab) {
+      api.tabs.emit(tab, "message", {threadId: threadId, message: message, userId: session.userId});
+    });
     var messages = messageData[threadId];
     if (messages) {
       insertUpdateChronologically(messages, message, "createdAt");
@@ -315,19 +318,19 @@ var socketHandlers = {
         thread.messageCount = messages ? messages.length : (thread.messageCount + 1);
         thread.messageTimes[message.id] = message.createdAt;
         //thread.participants = lastMessage.participants.filter(idIsNot(session.userId)); // not yet needed
-        td.addThread(thread);
+        withThread(thread);
       } else if (td) {
         // this is probably the first message of a new thread
-        socket.send(["get_thread_info", threadId], td.addThread.bind(td));
+        socket.send(["get_thread_info", threadId], withThread);
       }
-
-      // ensure marked read if from this user
-      if (message.user.id == session.userId) {
-        td.markRead(threadId, message.createdAt);
+    }
+    function withThread(th);
+      td.addThread(th);
+      if (message.user.id === session.userId) {
+        td.markRead(th.id, message.createdAt);
       }
-
-      forEachTabAt(message.url, message.nUrl, function(tab) {
-        api.tabs.emit(tab, "message", {thread: thread, message: message, userId: session.userId});
+      forEachTabAtUriAndLocator(message.url, message.nUrl, "/messages", function(tab) {
+        api.tabs.emit(tab, "thread_info", th);
       });
       tellTabsUnreadThreadCountIfChanged(td, message.nUrl, message.url);
     }
@@ -845,13 +848,22 @@ function forEachTabAtLocator(loc, f) {
   }
 }
 
-function forEachTabAtUriAndLocator(nUri, loc, f) {
-  var arr1, arr2;
-  if ((arr1 = tabsByUrl[nUri]) && (arr2 = tabsByLocator[loc])) {
-    for (var i = arr1.length; i--;) {
-      var tab = arr1[i];
-      if (~arr2.indexOf(tab)) {
-        f(tab);
+function forEachTabAtUriAndLocator() { // (url[, url]..., loc, f)
+  var done = {};
+  var f = arguments[arguments.length - 1];
+  var loc = arguments[arguments.length - 2];
+  for (var i = arguments.length - 2; i--;) {
+    var url = arguments[i];
+    if (!done[url]) {
+      done[url] = true;
+      var arr1, arr2;
+      if ((arr1 = tabsByUrl[url]) && (arr2 = tabsByLocator[loc])) {
+        for (var i = arr1.length; i--;) {
+          var tab = arr1[i];
+          if (~arr2.indexOf(tab)) {
+            f(tab);
+          }
+        }
       }
     }
   }
@@ -1108,7 +1120,7 @@ function gotThreadDataFor(url, tab, threads, nUri) {
         forEachTabAtLocator('/messages/' + o.id, function(tab) {
           if (o.messages.length - oldMessageCount === 1) {
             api.tabs.emit(tab, 'message', {
-              thread: th,
+              threadId: o.id,
               message: o.messages.length[o.messages.length - 1],
               userId: session.userId});
           } else {
