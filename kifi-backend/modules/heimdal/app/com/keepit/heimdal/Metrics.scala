@@ -54,7 +54,7 @@ sealed trait ContextRestriction {
   def toBSONMatchDocument: BSONDocument
 }
 
-case class AnyContentRestriction(field: String, operator: ComparisonOperator) extends ContextRestriction {
+case class AnyContextRestriction(field: String, operator: ComparisonOperator) extends ContextRestriction {
   def toBSONMatchDocument: BSONDocument = BSONDocument(field -> operator.toBSONMatchFragment)
 }
 
