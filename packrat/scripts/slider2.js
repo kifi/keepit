@@ -389,11 +389,12 @@ var slider2 = function () {
       }
     }};
 
-  function showPane(locator, back, paramsArg) {
+  function showPane(locator, back, paramsArg, redirected) {
     log("[showPane]", locator, back ? "back" : "")();
     if (locator !== (paneHistory && paneHistory[0])) {
       var pane = toPaneName(locator);
       (createPaneParams[pane] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
+        params.redirected = redirected;
         showPane2(locator, back, pane, params);
       }, locator, paramsArg);
     }
@@ -694,9 +695,9 @@ var slider2 = function () {
         }
       }
     },
-    showPane: function (trigger, locator) {
+    showPane: function (trigger, locator, redirected) {
       log("[showPane]", trigger, locator)();
-      showPane(locator);
+      showPane(locator, false, null, redirected);
     },
     togglePane: function (trigger, locator) {
       if ($pane && (!locator || paneHistory[0] == locator)) {
