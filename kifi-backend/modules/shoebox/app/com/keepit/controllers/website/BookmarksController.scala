@@ -12,6 +12,8 @@ import com.keepit.common.time._
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
+import com.keepit.common.akka.SafeFuture
+import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.store.S3ScreenshotStore
@@ -68,7 +70,8 @@ class BookmarksController @Inject() (
     bookmarkInterner: BookmarkInterner,
     uriRepo: NormalizedURIRepo,
     actionAuthenticator: ActionAuthenticator,
-    s3ScreenshotStore: S3ScreenshotStore
+    s3ScreenshotStore: S3ScreenshotStore,
+    heimdal: HeimdalServiceClient
   )
   extends WebsiteController(actionAuthenticator) {
 
@@ -126,10 +129,30 @@ class BookmarksController @Inject() (
   }
 
   def keepMultiple() = AuthenticatedJsonAction { request =>
+    val tStart = currentDateTime
     request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { kwc =>
       val KeepInfosWithCollection(collection, keepInfos) = kwc
       val keeps = bookmarkInterner.internBookmarks(
         Json.toJson(keepInfos), request.user, request.experiments, "SITE").map(KeepInfo.fromBookmark)
+
+      //Analytics
+      SafeFuture{ keeps.foreach { bookmark =>
+        val contextBuilder = new UserEventContextBuilder()
+
+        contextBuilder += ("isPrivate", bookmark.isPrivate)
+        request.experiments.foreach{ experiment =>
+          contextBuilder += ("experiment", experiment.toString)
+        }
+        contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+        contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
+        contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
+        contextBuilder += ("url", bookmark.url)
+        contextBuilder += ("source", "SITE")
+        contextBuilder += ("hasTitle", bookmark.title.isDefined)
+
+        heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("keep"), tStart))
+      }}
+
       val addedToCollection = collection flatMap {
         case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
         case Right(name) => db.readWrite { implicit s =>
