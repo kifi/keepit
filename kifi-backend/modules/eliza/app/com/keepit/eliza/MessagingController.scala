@@ -625,20 +625,22 @@ class MessagingController @Inject() (
     buildThreadInfos(userId, Seq(thread), None).head
   }
 
-  def getThreadInfos(userId: Id[User], url: String): (Option[NormalizedURI], Seq[ElizaThreadInfo]) = {
-    val nUriOpt = Await.result(shoebox.getNormalizedURIByURL(url), 2 seconds) // todo: Remove await
-    val infos = nUriOpt.map { nUri =>
+  def getThreadInfos(userId: Id[User], url: String): (String, Seq[ElizaThreadInfo]) = {
+    val nUriOrPrenorm = Await.result(shoebox.getNormalizedUriByUrlOrPrenormalize(url), 2 seconds) // todo: Remove await
+    val (nUrlStr, unsortedInfos) = if (nUriOrPrenorm.isLeft) {
+      val nUri = nUriOrPrenorm.left.get
       val threads = db.readOnly { implicit session =>
         val threadIds = userThreadRepo.getThreads(userId, nUri.id)
         threadIds.map(threadRepo.get)
       }.filter(_.replyable)
-      buildThreadInfos(userId, threads, Some(url))
-    } getOrElse {
-      Seq[ElizaThreadInfo]()
-    } sortWith { (a,b) =>
+      (nUri.url, buildThreadInfos(userId, threads, Some(url)))
+    } else {
+      (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
+    }
+    val infos = unsortedInfos sortWith { (a,b) =>
       a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
     }
-    (nUriOpt, infos)
+    (nUrlStr, infos)
   }
 
   def getChatter(userId: Id[User], urls: Seq[String]) = {
