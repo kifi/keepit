@@ -93,6 +93,8 @@ object ApplicationBuild extends Build {
       ExclusionRule(organization = "ch.qos.logback")
     ))
 
+    val abookDependencies = Seq()
+
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
       "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
       "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140")
@@ -174,7 +176,11 @@ object ApplicationBuild extends Build {
       commonSettings: _*
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
+    val abook = play.Project("abook", appVersion, abookDependencies, path=file("modules/abook")).settings(
+      commonSettings: _*
+    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
+
     val aaaMain = play.Project(appName, appVersion).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile").aggregate(common, search, shoebox, eliza, heimdal)
+    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile", abook % "test->test;compile->compile").aggregate(common, search, shoebox, eliza, heimdal, abook)
 }
