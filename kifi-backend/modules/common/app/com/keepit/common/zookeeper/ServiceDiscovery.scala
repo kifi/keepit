@@ -31,6 +31,7 @@ trait ServiceDiscovery {
   def forceUpdate(): Unit
   def myStatus: Option[ServiceStatus]
   def myVersion: ServiceVersion
+  def thisInstance: Option[ServiceInstance]
 }
 
 @Singleton
@@ -43,6 +44,8 @@ class ServiceDiscoveryImpl @Inject() (
   extends ServiceDiscovery with Logging {
 
   private var myInstance: Option[ServiceInstance] = None
+
+  def thisInstance = myInstance
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()

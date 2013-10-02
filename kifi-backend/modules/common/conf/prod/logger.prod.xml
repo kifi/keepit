@@ -26,7 +26,7 @@
      <fileNamePattern>log/access.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
    </rollingPolicy>
    <encoder>
-     <pattern>%d{HH:mm:ss.SSS} - %msg%n</pattern>
+     <pattern>%msg%n</pattern>
    </encoder>
   </appender>
 
