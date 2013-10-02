@@ -30,7 +30,6 @@ GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
 
-POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
 POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportController.addErrorReport
 
 # This should match the output format of S3ImageConfig#keyByExternalId
