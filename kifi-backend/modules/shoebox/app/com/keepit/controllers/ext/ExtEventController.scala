@@ -37,7 +37,7 @@ class ExtEventController @Inject() (
       val eventTime = clock.now.minusMillis((o \ "msAgo").asOpt[Int].getOrElse(0))
       val eventFamily = EventFamilies((o \ "eventFamily").as[String])
       val eventName = (o \ "eventName").as[String]
-      val installId = (o \ "installId").as[String]
+      val installId = (o \ "installId").asOpt[String].getOrElse("NA")
       val metaData = (o \ "metaData").asOpt[JsObject].getOrElse(Json.obj())
       val prevEvents = (o \ "prevEvents").asOpt[Seq[String]].getOrElse(Seq.empty).map(ExternalId[Event])
       val experiments = (o \ "experiments").as[Seq[State[ExperimentType]]].toSet
