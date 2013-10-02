@@ -312,12 +312,12 @@ var socketHandlers = {
         td.addThread(thread);
       } else if (td) {
         // this is probably the first message of a new thread
-        socket.send(["get_thread_info", id], td.addThread.bind(td));
+        socket.send(["get_thread_info", threadId], td.addThread.bind(td));
       }
 
       // ensure marked read if from this user
       if (message.user.id == session.userId) {
-        td.markRead(thread.id, message.createdAt);
+        td.markRead(threadId, message.createdAt);
       }
 
       forEachTabAt(message.url, message.nUrl, function(tab) {
