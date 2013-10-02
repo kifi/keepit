@@ -231,7 +231,12 @@ class ShoeboxServiceClientImpl @Inject() (
       val query = needed.map(_.id).mkString(",")
       call(Shoebox.internal.getBasicUsers(query)).map { res =>
         val retrievedUsers = res.json.as[Map[String, BasicUser]]
-        cached ++ (retrievedUsers.map(u => Id[User](u._1.toLong) -> u._2))
+        cached ++ (retrievedUsers.map{ u =>
+          val id = Id[User](u._1.toLong)
+          val bu = u._2
+          cacheProvider.basicUserCache.set(BasicUserUserIdKey(id), Some(bu))
+          (id -> bu)
+        })
       }
     }
   }
@@ -458,7 +463,7 @@ class ShoeboxServiceClientImpl @Inject() (
       var m = Vector.empty[(Id[NormalizedURI], NormalizedURI)]
       r.json match {
         case jso: JsValue => {
-          val rv = jso.as[JsArray].value.foreach{  js => 
+          val rv = jso.as[JsArray].value.foreach{  js =>
             val id = Id[NormalizedURI]((js \ "id").as[Long])
             val uri = Json.fromJson[NormalizedURI](js \ "uri").get
             m = m :+ (id, uri)
