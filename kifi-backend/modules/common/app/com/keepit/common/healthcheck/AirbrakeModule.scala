@@ -41,6 +41,7 @@ case class DevAirbrakeModule() extends AirbrakeModule {
   @AppScoped
   def airbrakeProvider(httpClient: HttpClient, actor: ActorInstance[AirbrakeNotifierActor], mode: Mode, fortyTwoServices: FortyTwoServices): AirbrakeNotifier = {
     new AirbrakeNotifier() {
+      def reportDeployment(): Unit = ()
       def notify(error: AirbrakeError): AirbrakeError = {println(error); error}
       val playMode: Mode = mode
       val service: FortyTwoServices = fortyTwoServices
