@@ -318,9 +318,10 @@ this.tagbox = (function ($, win) {
 			var $tagbox = this.$tagbox,
 				$suggest = $tagbox.find('.kifi-tagbox-suggest-inner');
 
-			$tagbox.on('click', '.kifi-tagbox-suggestion', this.onClickSuggest.bind(this));
-
 			this.$suggest = $suggest;
+
+			$tagbox.on('click', '.kifi-tagbox-suggestion', this.onClickSuggestion.bind(this));
+
 			return $suggest;
 		},
 
@@ -359,15 +360,15 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Returns an index of the first matched tag occurence for the given tag name.
+		 * Returns an index of a tag with the given tag name.
 		 * Returns -1 if not found.
 		 *
 		 * @param {string} text - An tag name to search for
 		 * @param {Object[]} [tags] - An array of tags to search from
 		 *
-		 * @return {number} An index of the first matched occurence. -1 if not found.
+		 * @return {number} An index of a tag. -1 if not found.
 		 */
-		indexOfTag: function (text, tags) {
+		indexOfTagByName: function (text, tags) {
 			text = this.normalizeTagNameForSearch(text);
 
 			if (text) {
@@ -386,18 +387,56 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
+		 * Returns an index of a tag with the given id.
+		 * Returns -1 if not found.
+		 *
+		 * @param {string} id - An tag id to search for
+		 * @param {Object[]} [tags] - An array of tags to search from
+		 *
+		 * @return {number} An index of a tag. -1 if not found.
+		 */
+		indexOfTagById: function (id, tags) {
+			if (id) {
+				if (!tags) {
+					tags = this.tags;
+				}
+
+				for (var i = 0, l = tags.length; i < l; i++) {
+					if (id === tags[i].id) {
+						return i;
+					}
+				}
+			}
+
+			return -1;
+		},
+
+		/**
 		 * Tests whether a user has a tag.
 		 *
 		 * @param {string} text - An tag name to search for
 		 *
 		 * @return {boolean} Whether a user has a tag
 		 */
-		hasTag: function (name) {
-			return this.indexOfTag(name) !== -1;
+		hasTagByName: function (name) {
+			return this.indexOfTagByName(name) !== -1;
 		},
 
 		/**
-		 * Returns a tag item of the first matched tag occurence for the given tag name.
+		 * Returns a tag item with the given tag id.
+		 * Returns null if not found.
+		 *
+		 * @param {string} id - An tag id to search for
+		 *
+		 * @return {Object} The first matched tag item. null if not found.
+		 */
+		getTagById: function (id) {
+			var index = this.indexOfTagById(id);
+			return index === -1 ? null : this.tags[index];
+		},
+
+		/**
+		 * Returns a tag item with the given tag name.
 		 * Returns null if not found.
 		 *
 		 * @param {string} text - An tag name to search for
@@ -405,7 +444,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} The first matched tag item. null if not found.
 		 */
 		getTagByName: function (name) {
-			var index = this.indexOfTag(name);
+			var index = this.indexOfTagByName(name);
 			return index === -1 ? null : this.tags[index];
 		},
 
@@ -486,8 +525,9 @@ this.tagbox = (function ($, win) {
 		 *
 		 * @param {Object} event - A click event object
 		 */
-		onClickSuggest: function (e) {
+		onClickSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
+			log('onClickSuggestion');
 			this.addTag($suggestion.data('name'));
 		},
 
@@ -498,6 +538,7 @@ this.tagbox = (function ($, win) {
 		 */
 		onClickNewSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
+			log('onClickNewSuggestion');
 			this.addTag($suggestion.data('name'));
 		},
 
@@ -513,10 +554,12 @@ this.tagbox = (function ($, win) {
 
 			var matches = this.filterTags(text, tags),
 				hasMatch = matches.length ? true : false;
+
 			if (hasMatch) {
 				this.renderSuggestions(matches);
 			}
-			if (this.indexOfTag(text) === -1) {
+
+			if (this.indexOfTagByName(text) === -1) {
 				this.suggestNew(text);
 			}
 		},
@@ -563,7 +606,9 @@ this.tagbox = (function ($, win) {
 				name: name
 			}),
 				$suggestion = this.appendSuggestion(html);
+
 			$suggestion.click(this.createTag.bind(this, name));
+
 			return $suggestion;
 		},
 
@@ -590,10 +635,49 @@ this.tagbox = (function ($, win) {
 		 * @return {boolean} Whether a request was successfully made to the server
 		 */
 		createTag: function (name) {
-			return this.addTag({
-				id: '',
-				name: name
+			log('createTag: create a tag', name);
+			this.requestCreateTag(name, this.onCreateResponse);
+		},
+
+		/**
+		 * Makes a request to the server to create a tag for a user.
+		 *
+		 * @param {string} name - A tag name
+		 * @param {function} callback - A callback function to be called on server response
+		 * 
+		 * CREATE
+		 *   Request URL: https://api.kifi.com/site/collections/create
+		 *   Request Method: POST
+		 *   Request Payload: {"name":"hello"}
+		 *   Response: {
+		 *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+		 *     "name":"hello"
+		 *   }
+		 */
+		requestCreateTag: function (name, callback, that) {
+			callback.call(that || this, {
+				response: {
+					id: 'keep-tag-' + Date.now(),
+					name: name
+				}
 			});
+			/*
+			this.ajax({
+				url: 'https://api.kifi.com/site/collections/create',
+				type: 'POST',
+				data: {
+					name: name
+				},
+				complete: callback,
+				context: that || this
+			});
+      */
+		},
+
+		onCreateResponse: function (e) {
+			var tag = e.response;
+			this.tags.push(tag);
+			return this.addTag(tag.name);
 		},
 
 		/**
@@ -624,7 +708,7 @@ this.tagbox = (function ($, win) {
 		getKeep: function () {
 			return {
 				// TODO: @joon [10-02-2013 18:14] keep url
-				url: 'url'
+				url: 'myurl'
 			};
 		},
 
@@ -637,15 +721,17 @@ this.tagbox = (function ($, win) {
 		 */
 		addTag: function (name) {
 			if (this.isTagAdded(name)) {
+				log('addTag: already added', name);
 				return null;
 			}
 
 			var tag = this.getTagByName(name);
 			if (!tag) {
+				log('addTag: tag not found. create new tag', name);
 				return this.createTag(name);
 			}
 
-			// TODO: @joon [10-02-2013 17:52] request to server and do async
+			log('addTag: tag found. add it to a keep', name);
 			this.requestAddTag(tag.id, this.getKeep(), this.onAddResponse);
 		},
 
@@ -676,7 +762,15 @@ this.tagbox = (function ($, win) {
 		 *     "addedToCollection":1
 		 *   }
 		 */
-		requestAddTag: function (id, keep, callback) {
+		requestAddTag: function (id, keep, callback, that) {
+			callback.call(that || this, {
+				response: {
+					keeps: [keep],
+					addedToCollection: Math.random() < 0.8 ? 1 : 0
+				},
+				id: id
+			});
+			/*
 			this.ajax({
 				url: 'https://api.kifi.com/site/keeps/add',
 				type: 'POST',
@@ -684,17 +778,35 @@ this.tagbox = (function ($, win) {
 					collectionId: id,
 					keep: keep
 				},
-				complete: callback
+				complete: callback,
+				context: that || this
 			});
+      */
 		},
 
-		onAddResponse: function () {
-			this.$tagbox.addClass('tagged');
+		/**
+		 * A listener for server response from adding a tag to a keep.
+		 */
+		onAddResponse: function (e) {
+			var response = e.response;
+			if (response.addedToCollection) {
+				this.$tagbox.addClass('tagged');
 
-			var item = this.getTagByName(name),
-				html = win.render('html/keeper/tagbox-tag', item);
+				var item = this.getTagById(e.id);
+				if (!item) {
+					win.alert('Error: Tag not found.');
+					return;
+				}
 
-			return this.appendTag(html);
+				var name = this.normalizeTagNameForSearch(item.name);
+				this.tagsAdded[name] = item;
+
+				var html = win.render('html/keeper/tagbox-tag', item);
+				this.appendTag(html);
+				return;
+			}
+
+			win.alert('Error: Tag could not be added.');
 		},
 
 		/**
