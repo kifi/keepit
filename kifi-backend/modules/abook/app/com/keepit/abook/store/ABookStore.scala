@@ -25,5 +25,5 @@ case class ABookDevStoreModule() extends DevStoreModule(ABookProdStoreModule()) 
   @Singleton
   @Provides
   def addressBookRawInfoStore(amazonS3ClientProvider: Provider[AmazonS3]): ABookRawInfoStore =
-    whenConfigured("amazon.s3.social.bucket")(prodStoreModule.addressBookRawInfoStore(amazonS3ClientProvider.get)).getOrElse(new InMemoryABookRawInfoStoreImpl())
+    whenConfigured("amazon.s3.abook.bucket")(prodStoreModule.addressBookRawInfoStore(amazonS3ClientProvider.get)).getOrElse(new InMemoryABookRawInfoStoreImpl())
 }
