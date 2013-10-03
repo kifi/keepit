@@ -34,8 +34,13 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     RemoveOverlapping.removeInclusions(detectAll(terms))
   }
 
-  def detectAll(terms: IndexedSeq[Term]) = {
+  def detectAll(terms: IndexedSeq[Term]): Set[(Int,Int)] = {
     var result = Set.empty[(Int, Int)] // (position, length)
+    detectInternal(terms){ (position, length) => result += ((position, length)) }
+    result
+  }
+
+  private def detectInternal(terms: IndexedSeq[Term])(f: (Int, Int)=>Unit): Unit = {
     val pq = new PQ(terms.size)
 
     val pterms = terms.map{ term => PhraseDetector.createTerm(term.text()) }
@@ -45,53 +50,41 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
       while (index < numTerms) {
         val tp = subReaderContext.reader.termPositionsEnum(pterms(index))
         if (tp == null) { // found a gap here
-          findPhrases(pq){ (position, length) => result += ((position, length)) } // pq will be cleared after execution
+          findPhrases(pq, index - 1, f)// pq will be cleared after execution
         } else {
           pq.insertWithOverflow(new Word(index, tp))
         }
         index += 1
       }
-      findPhrases(pq){ (position, length) => result += ((position, length)) }
+      findPhrases(pq, index - 1, f)
     }
-    result
   }
 
-  private def findPhrases(pq: PQ)(f: (Int, Int)=>Unit): Unit = {
-    if (pq.size > 1) {
+  private def findPhrases(pq: PQ, maxIndex: Int, onMatch: (Int, Int)=>Unit): Unit = {
+    var effectiveCount = pq.size - 1
+
+    if (effectiveCount > 0) {
       var top = pq.top
 
-      while (top != null && top.doc == -1) {
-        top = if (top.nextDoc() < NO_MORE_DOCS) {
-          pq.updateTop()
-        } else {
-          pq.pop()
-          pq.top
-        }
+      while (top.doc == -1) {
+        if (top.nextDoc() == NO_MORE_DOCS) effectiveCount -= 1
+        top = pq.updateTop()
       }
 
-      while (pq.size > 1) {
+      while (effectiveCount > 0) {
         val doc = top.doc
-        val phraseIndex = top.index
-        var phraseLength = 0
-        while (top != null && top.doc == doc && top.index == (phraseIndex + phraseLength) && top.hasPosition(phraseLength)) {
-          phraseLength += 1
-          if (top.isEndOfPhrase) {
-            f(phraseIndex, phraseLength) // one phrase found
-          }
-          top = if (top.nextDoc() < NO_MORE_DOCS) {
-            pq.updateTop()
-          } else {
-            pq.pop()
-            pq.top
+        val phraseStart = top.index
+        if (phraseStart < maxIndex) { // the term at the maxIndex won't start a phrase
+          var wordOffset = 0
+          while (top.doc == doc && top.checkPosition(phraseStart, wordOffset, onMatch)) {
+            wordOffset += 1
+            if (top.nextDoc() == NO_MORE_DOCS) effectiveCount -= 1
+            top = pq.updateTop()
           }
         }
-        while (top != null && top.doc == doc) {
-          top = if (top.nextDoc() < NO_MORE_DOCS) {
-            pq.updateTop()
-          } else {
-            pq.pop()
-            pq.top
-          }
+        while (top.doc == doc) {
+          if (top.nextDoc() == NO_MORE_DOCS) effectiveCount -= 1
+          top = pq.updateTop()
         }
       }
     }
@@ -102,26 +95,27 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
 
     var doc = -1
 
-    private[this] var end = 0
-
     def nextDoc() = {
       doc = tp.nextDoc()
       doc
     }
 
-    def hasPosition(target: Int): Boolean = {
-      var freq = tp.freq()
-      while (freq > 0) {
-        var pos = tp.nextPosition()
-        end = pos & 1
-        pos = pos >> 1
-        if (pos >= target) return (pos == target)
-        freq -= 1
+    def checkPosition(phraseStart: Int, wordOffset: Int, onMatch: (Int, Int)=>Unit): Boolean = {
+      if (index == (phraseStart + wordOffset)) {
+        var freq = tp.freq()
+        while (freq > 0) {
+          var data = tp.nextPosition()
+          var pos = data >> 1
+          if (pos > wordOffset) return false
+          if (pos == wordOffset) {
+            if ((data & 1) == 1) onMatch(phraseStart, wordOffset+1) // one phrase matched
+            return true
+          }
+          freq -= 1
+        }
       }
       false
     }
-
-    def isEndOfPhrase = (end == 1)
   }
 
   private class PQ(sz: Int) extends PriorityQueue[Word](sz) {

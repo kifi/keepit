@@ -1,18 +1,15 @@
 package com.keepit.common.routes
 
 import com.keepit.common.db.ExternalId
-import com.keepit.model.User
+import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.common.db.State
-import com.keepit.model.NormalizedURI
-import com.keepit.model.Collection
-import com.keepit.model.Comment
 import com.keepit.search.SearchConfigExperiment
-import com.keepit.model.ExperimentType
-import com.keepit.model.UserSession
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
 import play.api.libs.json.JsArray
+import com.keepit.common.routes.Param
+import com.keepit.common.routes.ServiceRoute
 
 
 trait Service
@@ -54,6 +51,7 @@ object Shoebox extends Service {
     def getNormalizedURI(id: Long) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURI", Param("id", id))
     def getNormalizedURIs(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURIs", Param("ids", ids))
     def getNormalizedURIByURL() = ServiceRoute(POST, "/internal/shoebox/database/getNormalizedURIByURL")
+    def getNormalizedUriByUrlOrPrenormalize() = ServiceRoute(POST, "/internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize")
     def internNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/internNormalizedURI")
     def getUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getUsers", Param("ids", ids))
     def getUserIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/userIdsByExternalIds", Param("ids", ids))
@@ -148,6 +146,13 @@ object Eliza extends Service {
 object Heimdal extends Service {
   object internal {
     def trackEvent() = ServiceRoute(POST, "/internal/heimdal/trackEvent")
+  }
+}
+
+object ABook extends Service {
+  object internal {
+    def upload(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/upload")
+    def getContactsRawInfo(userId:Id[User], origin:ABookOriginType) = ServiceRoute(GET, s"/internal/abook/${userId.id}/${origin.name}/getContactsRawInfo")
   }
 }
 

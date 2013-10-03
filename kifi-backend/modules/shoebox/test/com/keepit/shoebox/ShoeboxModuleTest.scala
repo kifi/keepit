@@ -30,6 +30,7 @@ import com.keepit.learning.topicmodel.DevTopicStoreModule
 import com.keepit.eliza.TestElizaServiceClientModule
 import com.keepit.scraper.FakeScraperModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.heimdal.TestHeimdalServiceClientModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -58,7 +59,8 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
         FakeScraperModule(), // This one should not be required once the Scraper is off Shoebox
         TestElizaServiceClientModule(),
-        FakeAirbrakeModule()
+        FakeAirbrakeModule(),
+        TestHeimdalServiceClientModule()
       )) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {

@@ -220,6 +220,9 @@ class FakeShoeboxServiceClientImpl(
 
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]] = Future.successful(allNormalizedURIs.values.find(_.url == url))
 
+  def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = ???
+
+
   def internNormalizedURI(urls: JsObject): Future[NormalizedURI] = {
     val url = (urls \ "url").as[String]
     val uri = allNormalizedURIs.values.find(_.url == url).getOrElse {

@@ -1,4 +1,5 @@
 function getTextFormatter() {
+ 'use strict';
   return function(text, render) {
     // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
     text = render(text);
@@ -29,6 +30,7 @@ function getTextFormatter() {
 }
 
 function getSnippetFormatter() {
+ 'use strict';
   return function(text, render) {
     // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
     text = render(text);
@@ -45,6 +47,7 @@ function getSnippetFormatter() {
 }
 
 function getLocalDateFormatter() {
+ 'use strict';
   return function(text, render) {
     try {
       return new Date(render(text)).toString();
@@ -55,6 +58,7 @@ function getLocalDateFormatter() {
 }
 
 function convertDraftToText(html) {
+ 'use strict';
   html = html
     .replace(/<div><br\s*[\/]?><\/div>/gi, '\n')
     .replace(/<br\s*[\/]?>/gi, '\n')

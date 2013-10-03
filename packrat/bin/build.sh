@@ -32,7 +32,7 @@ for f in $(find html -name '*.html'); do
   mkdir -p `dirname $f2`
   echo -n "render.cache['${f%.html}']='" > $f2
   # replace newlines and subsequent whitespace with a single space, then close the JS string and assignment
-  cat $f | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n */ /g' -e "s/'/\\'/g" -e $'$s/$/\';/' >> $f2
+  cat $f | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n */ /g' -e "s/'/\\\\'/g" -e $'$s/$/\';/' >> $f2
   f3=${f2/chrome/firefox\/data}
   mkdir -p `dirname $f3`
   cp $f2 $f3

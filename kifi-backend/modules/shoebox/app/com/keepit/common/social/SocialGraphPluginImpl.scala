@@ -55,22 +55,24 @@ private[social] class SocialGraphActor @Inject() (
     try {
       require(socialUserInfo.credentials.isDefined,
         s"SocialUserInfo's credentials are not defined: $socialUserInfo")
-      networkTypeToGraph.get(socialUserInfo.networkType).toSeq flatMap { graph =>
-        graph.fetchSocialUserRawInfo(socialUserInfo).toSeq flatMap { rawInfo =>
-          rawInfo.jsons flatMap graph.extractEmails map (socialUserImportEmail.importEmail(socialUserInfo.userId.get, _))
+      socialUserInfo.userId.toSeq.flatMap { userId =>
+        networkTypeToGraph.get(socialUserInfo.networkType).toSeq flatMap { graph =>
+          graph.fetchSocialUserRawInfo(socialUserInfo).toSeq flatMap { rawInfo =>
+            rawInfo.jsons flatMap graph.extractEmails map (socialUserImportEmail.importEmail(userId, _))
 
-          socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
+            socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
-          val friends = rawInfo.jsons flatMap graph.extractFriends
-          socialUserImportFriends.importFriends(friends)
-          val connections = socialUserCreateConnections.createConnections(
-            socialUserInfo, friends.map(_._1.socialId), graph.networkType)
+            val friends = rawInfo.jsons flatMap graph.extractFriends
+            socialUserImportFriends.importFriends(friends)
+            val connections = socialUserCreateConnections.createConnections(
+              socialUserInfo, friends.map(_._1.socialId), graph.networkType)
 
-          val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
-          db.readWrite { implicit c =>
-            socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
+            val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
+            db.readWrite { implicit c =>
+              socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
+            }
+            connections
           }
-          connections
         }
       }
     } catch {

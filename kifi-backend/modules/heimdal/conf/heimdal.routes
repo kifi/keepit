@@ -7,7 +7,9 @@
 
 POST  /internal/heimdal/trackEvent        @com.keepit.heimdal.controllers.EventTrackingController.trackInternalEvent()
 
-GET   /internal/heimdal/adhocMetric       @com.keepit.heimdal.controllers.AnalyticsController.adhocMetric(from : String, to: String ?= "now", events: String ?="all", groupBy: String ?="_", breakDown : String ?= "false", mode: String ?= "count")
+GET   /internal/heimdal/adhocMetric       @com.keepit.heimdal.controllers.AnalyticsController.adhocMetric(from : String, to: String ?= "now", events: String ?="all", groupBy: String ?="_", breakDown : String ?= "false", mode: String ?= "count", filter: String ?="none", as: String?="pie")
+
+GET   /internal/heimdal/rawEvents         @com.keepit.heimdal.controllers.AnalyticsController.rawEvents(events: String ?="all", limit: Int ?= 10)
 
 
 

@@ -20,7 +20,7 @@ import scala.concurrent.duration._
 import scala.concurrent._
 import scala.util.Success
 import com.keepit.common.healthcheck._
-import ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 import com.keepit.learning.topicmodel._
 import com.keepit.common.controller.ShoeboxServiceController

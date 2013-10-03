@@ -17,7 +17,7 @@ class AdminClusterController @Inject() (
     httpClient: HttpClient,
     serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
-    val serviceTypes : List[ServiceType] =  ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: Nil
+    val serviceTypes : List[ServiceType] =  ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: Nil
 
     def clustersView = AdminHtmlAction { implicit request =>
         
@@ -26,9 +26,13 @@ class AdminClusterController @Inject() (
             serviceCluster.allMembers.map { serviceInstance =>
                 var isLeader = serviceCluster.leader.map(_==serviceInstance).getOrElse(false)
                 var testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email")
-                val versionResp = httpClient.get("http://" + serviceInstance.instanceInfo.localHostname + ":9000" + Common.internal.version().url)
+                val versionResp : String = try {
+                    httpClient.get("http://" + serviceInstance.instanceInfo.localHostname + ":9000" + Common.internal.version().url).body
+                } catch {
+                    case _ => "NA"
+                }
                 val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.localIp.ip).getHostName()
-                ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, ServiceVersion(versionResp.body))
+                ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, ServiceVersion(versionResp))
             }
         }
 

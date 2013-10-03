@@ -153,6 +153,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
         onConnect(socketInfo)
 
+        val tStart = currentDateTime
         //Analytics
         SafeFuture {
           val contextBuilder = new UserEventContextBuilder()
@@ -162,10 +163,11 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           streamSession.experiments.foreach{ experiment =>
             contextBuilder += ("experiment", experiment.toString)
           }
-          heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_connect")))
+          heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_connect"), tStart))
         }
 
         def endSession(reason: String)(implicit channel: Concurrent.Channel[JsArray]) = {
+          val tStart = currentDateTime
           atomic { implicit txn =>
             socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
           }
@@ -182,7 +184,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
             streamSession.experiments.foreach{ experiment =>
               contextBuilder += ("experiment", experiment.toString)
             }
-            heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_disconnect")))
+            heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_disconnect"), tStart))
           }
         }
 
@@ -199,18 +201,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               }
             }
             
-            //testing heimdal
-            SafeFuture {
-              val contextBuilder = new UserEventContextBuilder()
-              contextBuilder += ("requestType", jsArr.value(0).as[String])
-              contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-              contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
-              contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
-              streamSession.experiments.foreach{ experiment => 
-                contextBuilder += ("experiment", experiment.toString)
-              }
-              heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_in_2")))
-            }
 
             log.info("WS request for: " + jsArr)
             Statsd.increment(s"websocket.handler.${jsArr.value(0)}")

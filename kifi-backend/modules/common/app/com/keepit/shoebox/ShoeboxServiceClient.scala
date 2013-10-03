@@ -55,6 +55,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
+  def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]]
   def internNormalizedURI(urls: JsObject): Future[NormalizedURI]
   def sendMail(email: ElectronicMail): Future[Boolean]
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
@@ -231,7 +232,12 @@ class ShoeboxServiceClientImpl @Inject() (
       val query = needed.map(_.id).mkString(",")
       call(Shoebox.internal.getBasicUsers(query)).map { res =>
         val retrievedUsers = res.json.as[Map[String, BasicUser]]
-        cached ++ (retrievedUsers.map(u => Id[User](u._1.toLong) -> u._2))
+        cached ++ (retrievedUsers.map{ u =>
+          val id = Id[User](u._1.toLong)
+          val bu = u._2
+          cacheProvider.basicUserCache.set(BasicUserUserIdKey(id), Some(bu))
+          (id -> bu)
+        })
       }
     }
   }
@@ -275,6 +281,14 @@ class ShoeboxServiceClientImpl @Inject() (
         case js: JsValue => Some(Json.fromJson[NormalizedURI](js).get)
         case null => None
       }}
+
+  def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] =
+    call(Shoebox.internal.getNormalizedUriByUrlOrPrenormalize(), JsString(url)).map { r =>
+      (r.json \ "url").asOpt[String] match {
+        case Some(url) => Right(url)
+        case None => Left(Json.fromJson[NormalizedURI](r.json \ "normalizedURI").get)
+      }
+    }
 
   def internNormalizedURI(urls: JsObject): Future[NormalizedURI] = {
     call(Shoebox.internal.internNormalizedURI, urls).map(r => Json.fromJson[NormalizedURI](r.json).get)
@@ -458,7 +472,7 @@ class ShoeboxServiceClientImpl @Inject() (
       var m = Vector.empty[(Id[NormalizedURI], NormalizedURI)]
       r.json match {
         case jso: JsValue => {
-          val rv = jso.as[JsArray].value.foreach{  js => 
+          val rv = jso.as[JsArray].value.foreach{  js =>
             val id = Id[NormalizedURI]((js \ "id").as[Long])
             val uri = Json.fromJson[NormalizedURI](js \ "uri").get
             m = m :+ (id, uri)
