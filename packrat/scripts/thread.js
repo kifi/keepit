@@ -147,7 +147,7 @@ panes.thread = function() {
     $reply.find(".kifi-message-body").css({opacity: 0.3});
     $reply.find("time").text("").addClass("error-hidden");
     $error.text(errorText).fadeIn(300).click(function() {
-      $(this).fadeOut(100);
+      $(this).fadeOut(100).remove();
       $reply.find("time").removeClass("error-hidden");
       retrySendReply($reply, originalText, threadId);
     });
@@ -201,7 +201,7 @@ panes.thread = function() {
   function updateSentReply($m, resp) {
     if ($m && resp) {
       $m.attr("data-id", resp.id);
-      $m.find(".kifi-message-body").css({opacity: undefined});
+      $m.find(".kifi-message-body").css({opacity: ''});
       $m.find("time")  // TODO: patch timeago to update attrs too
         .attr("datetime", resp.createdAt)
         .attr("title", getLocalDateFormatter()(resp.createdAt, function render(s) {return s}))
