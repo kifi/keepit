@@ -20,7 +20,7 @@ import scala.xml._
 import play.api.mvc._
 
 case class AirbrakeErrorNotice(error: AirbrakeError, selfError: Boolean = false)
-case class AirbrakeDeploymentNotice(payload: String)
+object AirbrakeDeploymentNotice
 
 private[healthcheck] class AirbrakeNotifierActor @Inject() (
     airbrakeSender: AirbrakeSender,
@@ -33,8 +33,8 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
   var firstErrorReported = false
 
   def receive() = {
-    case AirbrakeDeploymentNotice(payload) =>
-      airbrakeSender.sendDeployment(payload)
+    case AirbrakeDeploymentNotice =>
+      airbrakeSender.sendDeployment(formatter.deploymentMessage)
     case AirbrakeErrorNotice(error, selfError) =>
       try {
         val xml = formatter.format(error)
@@ -89,12 +89,15 @@ class AirbrakeSender @Inject() (
 }
 
 trait AirbrakeNotifier {
+  def reportDeployment(): Unit
   def notify(error: AirbrakeError): AirbrakeError
 }
 
 // apiKey is per service type (showbox, search etc)
 class AirbrakeNotifierImpl (
   actor: ActorInstance[AirbrakeNotifierActor]) extends AirbrakeNotifier with Logging {
+
+  def reportDeployment(): Unit = actor.ref ! AirbrakeDeploymentNotice
 
   def notify(error: AirbrakeError): AirbrakeError = {
     actor.ref ! AirbrakeErrorNotice(error)
