@@ -19,7 +19,8 @@ import scala.xml._
 
 import play.api.mvc._
 
-case class AirbrakeNotice(error: AirbrakeError, selfError: Boolean = false)
+case class AirbrakeErrorNotice(error: AirbrakeError, selfError: Boolean = false)
+case class AirbrakeDeploymentNotice(payload: String)
 
 private[healthcheck] class AirbrakeNotifierActor @Inject() (
     airbrakeSender: AirbrakeSender,
@@ -27,15 +28,17 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
     formatter: AirbrakeFormatter)
   extends AlertingActor with Logging {
 
-  def alert(reason: Throwable, message: Option[Any]) = self ! AirbrakeNotice(error(reason, message), true)
+  def alert(reason: Throwable, message: Option[Any]) = self ! AirbrakeErrorNotice(error(reason, message), true)
 
   var firstErrorReported = false
 
   def receive() = {
-    case AirbrakeNotice(error, selfError) => {
+    case AirbrakeDeploymentNotice(payload) =>
+      airbrakeSender.sendDeployment(payload)
+    case AirbrakeErrorNotice(error, selfError) =>
       try {
         val xml = formatter.format(error)
-        airbrakeSender.send(xml);
+        airbrakeSender.sendError(xml)
         println(xml)
       } catch {
         case e: Throwable =>
@@ -50,8 +53,7 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
             }
           }
       }
-    }
-    case m => self ! AirbrakeNotice(throw new UnsupportedActorMessage(s"unknown message $m"), true)
+    case m => self ! AirbrakeErrorNotice(throw new UnsupportedActorMessage(s"unknown message $m"), true)
   }
 }
 
@@ -73,7 +75,9 @@ class AirbrakeSender @Inject() (
     }
   }
 
-  def send(xml: NodeSeq) = httpClient.
+  def sendDeployment(payload: String) = httpClient.postText("http://api.airbrake.io/deploys.txt", payload)
+
+  def sendError(xml: NodeSeq) = httpClient.
     withHeaders("Content-type" -> "text/xml").
     postXmlFuture("http://airbrakeapp.com/notifier_api/v2/notices", xml, defaultOnFailure) map { res =>
       val xmlRes = res.xml
@@ -93,7 +97,7 @@ class AirbrakeNotifierImpl (
   actor: ActorInstance[AirbrakeNotifierActor]) extends AirbrakeNotifier with Logging {
 
   def notify(error: AirbrakeError): AirbrakeError = {
-    actor.ref ! AirbrakeNotice(error)
+    actor.ref ! AirbrakeErrorNotice(error)
     log.error(error.toString())
     error
   }

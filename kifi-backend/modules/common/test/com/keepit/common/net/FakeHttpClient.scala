@@ -16,6 +16,9 @@ class FakeHttpClient(
   override def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a GET client")
   override def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a GET client")
   override def postXml(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a POST client")
+  override def postText(url: String,body: String,onFailure: => String => PartialFunction[Throwable,Unit]): com.keepit.common.net.ClientResponse = ???
+  override def postTextFuture(url: String,body: String,onFailure: => String => PartialFunction[Throwable,Unit]): scala.concurrent.Future[com.keepit.common.net.ClientResponse] = ???
+
   def posting(payload: String): FakeHttpPostClient = new FakeHttpPostClient(requestToResponse, {body =>
     if(payload != body.toString()) throw new Exception("expected %s doesn't match payload %s".format(payload, body))
   })
