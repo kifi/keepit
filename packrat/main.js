@@ -258,7 +258,9 @@ var socketHandlers = {
         sendNotificationToTabs(n);
       }
 
-      threadIds[n.threadId] = n.url;
+      if (n.thread) {
+        threadIds[n.thread] = n.url;
+      }
     }
     if (arr.length) {
       forEachTabAtLocator('/notices', function(tab) {
@@ -270,11 +272,11 @@ var socketHandlers = {
       var nUri = threadIds[id];
       var td = pageThreadData[nUri];
       if (td) {
-        socket.send(["get_thread_info", id], td.addThread.bind(td));
+        socket.send(["get_thread_info", id], td.addThread.bind(td));  // TODO: update open views in callback
       }
       if (messageData[id] && !threadCallbacks[id]) {
         socket.send(["get_thread", id]);  // TODO: "get_thread_since" (don't need messages already loaded)
-        threadCallbacks[id] = [];
+        threadCallbacks[id] = [];  // TODO: add callback that updates open views
       }
     }
   },
