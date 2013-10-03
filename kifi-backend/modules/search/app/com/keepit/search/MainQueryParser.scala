@@ -25,8 +25,6 @@ import com.keepit.search.query.BoostQuery
 import com.keepit.search.query.PhraseProximityQuery
 import com.keepit.search.query.NamedQueryContext
 import com.keepit.search.query.NamedQuery
-import scala.concurrent._
-import ExecutionContext.Implicits.global
 
 
 class MainQueryParser(

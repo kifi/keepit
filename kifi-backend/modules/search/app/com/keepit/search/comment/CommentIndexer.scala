@@ -28,7 +28,7 @@ import java.io.StringReader
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.concurrent.future
 import scala.concurrent.Promise
@@ -161,7 +161,7 @@ class CommentIndexer(
         val preferedLang = Lang("en")
 
         val normUriFuture = shoeboxClient.getNormalizedURI(parent.uriId)
-        val usersFutureFuture = recipientsFuture.map{ recipientIds =>
+        val usersFuture = recipientsFuture.flatMap{ recipientIds =>
           val participants = (recipientIds.toSet + parent.userId)
           shoeboxClient.getBasicUsers(participants.toSeq)
         }
@@ -199,7 +199,6 @@ class CommentIndexer(
 
 
         val participantIds = (Await.result(recipientsFuture, 180 seconds).toSet + parent.userId)
-        val usersFuture = Await.result(usersFutureFuture, 180 seconds) // is there a better way?
         val users = Await.result(usersFuture, 180 seconds)
 
         // user + comment text

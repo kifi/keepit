@@ -12,8 +12,6 @@ import com.google.inject.ImplementedBy
 import scala.Option.option2Iterable
 import scala.collection.mutable.{Map => MutMap}
 import com.google.inject.Singleton
-import scala.concurrent._
-import ExecutionContext.Implicits.global
 import com.keepit.common.zookeeper.CentralConfigKey
 import com.keepit.common.zookeeper.StringCentralConfigKey
 import com.keepit.common.zookeeper.CentralConfig
