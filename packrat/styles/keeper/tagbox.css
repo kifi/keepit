@@ -271,20 +271,50 @@
 .kifi-tagbox-tag {
   display: inline-block;
   font-size: 13px;
-  padding: 4px 10px;
-  margin-right: 1px;
+  line-height: 24px;
+  margin-right: 4px;
   margin-bottom: 4px;
+  text-align: center;
+}
+
+.kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {
+  display: inline-block;
+  float: left;
   color: white;
   background: #b8c5d1;
   text-decoration: none;
 }
 
-.kifi-tagbox-tag:hover {
+.kifi-tagbox-tag-name:hover, .kifi-tagbox-tag-remove:hover {
   background: #a0b1c2;
 }
 
-.kifi-tagbox-tag:active {
+.kifi-tagbox-tag-name:active, .kifi-tagbox-tag-remove:active {
   background: #8699ab;
+}
+
+.kifi-tagbox-tag-name {
+  padding: 0px 16px;
+  transition: all .15s linear;
+}
+
+.kifi-tagbox-tag-remove {
+  width: 0;
+  transition: all .15s linear;
+}
+
+.kifi-tagbox-tag-remove::before {
+  content: "\d7";
+  //position: relative;
+  //bottom: 1px;
+}
+
+.kifi-tagbox-tag:hover .kifi-tagbox-tag-name {
+  padding: 0px 7px;
+}
+
+.kifi-tagbox-tag:hover .kifi-tagbox-tag-remove {
+  width: 18px;
 }
 
 .kifi-tagbox-clear {

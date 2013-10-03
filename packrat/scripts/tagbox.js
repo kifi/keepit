@@ -6,6 +6,7 @@
 // @require scripts/html/keeper/tagbox.js
 // @require scripts/html/keeper/tag-suggestion.js
 // @require scripts/html/keeper/tag-new.js
+// @require scripts/html/keeper/tagbox-tag.js
 // @require styles/keeper/tagbox.css
 
 /**
@@ -42,20 +43,9 @@
  *   Request URL:https://api.kifi.com/site/collections/create
  *   Request Method: POST
  *   Request Payload: {"name":"hello"}
- *   Response: {"id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04","name":"hello"}
- * 
- * Search\n- simple tuba ii brr tobacco brown",
- *       "url":"http://www.6pm.com/simple-tuba-ii-brr-tobacco-brown"
- *     }]
- *   }
  *   Response: {
- *     "keeps":[{
- *       "id":"88ed8dc9-a20d-49c6-98ef-1b554533b106",
- *       "title":"Search\n- simple tuba ii brr tobacco brown",
- *       "url":"http://www.6pm.com/simple-tuba-ii-brr-tobacco-brown",
- *       "isPrivate":false
- *     }],
- *     "addedToCollection":1
+ *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+ *     "name":"hello"
  *   }
  * 
  * REMOVE
@@ -251,6 +241,7 @@ this.tagbox = (function ($, win) {
 		init: function () {
 			this.$tagbox = $(win.render('html/keeper/tagbox')).appendTo($('body'));
 			this.initSuggest();
+			this.initTagList();
 			this.initInput();
 			this.initCloseIcon();
 			activateScroll('.kifi-tagbox-suggest');
@@ -311,16 +302,37 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * Finds and initializes a close button.
+		 *
+		 * @return {jQuery} A jQuery object for close icon
 		 */
 		initCloseIcon: function () {
-			this.$tagbox.find('.kifi-tagbox-close').click(this.destroy.bind(this));
+			this.$tagbox.on('click', '.kifi-tagbox-close', this.hide.bind(this));
 		},
 
 		/**
 		 * Finds and caches a suggestion box.
+		 *
+		 * @return {jQuery} A jQuery object for suggestion list
 		 */
 		initSuggest: function () {
-			this.$suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner');
+			var $tagbox = this.$tagbox,
+				$suggest = $tagbox.find('.kifi-tagbox-suggest-inner');
+
+			$tagbox.on('click', '.kifi-tagbox-suggestion', this.onClickSuggest.bind(this));
+
+			this.$suggest = $suggest;
+			return $suggest;
+		},
+
+		/**
+		 * Finds and caches a tag list container.
+		 *
+		 * @return {jQuery} A jQuery object for tag list
+		 */
+		initTagList: function () {
+			var $tagList = this.$tagbox.find('.kifi-tagbox-tag-list');
+			this.$tagList = $tagList;
+			return $tagList;
 		},
 
 		/**
@@ -330,16 +342,25 @@ this.tagbox = (function ($, win) {
 		destroy: function () {
 			if (this.$tagbox) {
 				deactivateScroll('.kifi-tagbox-suggest');
+
 				this.$input.remove();
 				this.$inputbox.remove();
 				this.$suggest.remove();
 				this.$tagbox.remove();
-				this.$tagbox = this.$inputbox = this.$input = this.$suggest = null;
+				this.$tagList.remove();
+
+				this.$tagbox = null;
+				this.$inputbox = null;
+				this.$input = null;
+				this.$suggest = null;
+				this.$tagList = null;
+				this.tagsAdded = null;
 			}
 		},
 
 		/**
-		 * Returns an index of the matched tag occurence for the given tag name.
+		 * Returns an index of the first matched tag occurence for the given tag name.
+		 * Returns -1 if not found.
 		 *
 		 * @param {string} text - An tag name to search for
 		 * @param {Object[]} [tags] - An array of tags to search from
@@ -362,6 +383,43 @@ this.tagbox = (function ($, win) {
 			}
 
 			return -1;
+		},
+
+		/**
+		 * Tests whether a user has a tag.
+		 *
+		 * @param {string} text - An tag name to search for
+		 *
+		 * @return {boolean} Whether a user has a tag
+		 */
+		hasTag: function (name) {
+			return this.indexOfTag(name) !== -1;
+		},
+
+		/**
+		 * Returns a tag item of the first matched tag occurence for the given tag name.
+		 * Returns null if not found.
+		 *
+		 * @param {string} text - An tag name to search for
+		 *
+		 * @return {Object} The first matched tag item. null if not found.
+		 */
+		getTagByName: function (name) {
+			var index = this.indexOfTag(name);
+			return index === -1 ? null : this.tags[index];
+		},
+
+		/**
+		 * Returns an id of the first matched tag occurence for the given tag name.
+		 * Returns null if not found.
+		 *
+		 * @param {string} text - An tag name to search for
+		 *
+		 * @return {string} An id of the first matched occurence. null if not found.
+		 */
+		getTagIdByName: function (name) {
+			var item = this.getTagByName(name);
+			return item && item.id;
 		},
 
 		/**
@@ -407,7 +465,8 @@ this.tagbox = (function ($, win) {
 			function extractData(match) {
 				return {
 					id: match.original.id,
-					name: match.string
+					name: match.original.name,
+					html: match.string
 				};
 			}
 
@@ -421,6 +480,26 @@ this.tagbox = (function ($, win) {
 				return tags;
 			};
 		})(),
+
+		/**
+		 * On click listener for a tag suggestion.
+		 *
+		 * @param {Object} event - A click event object
+		 */
+		onClickSuggest: function (e) {
+			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
+			this.addTag($suggestion.data('name'));
+		},
+
+		/**
+		 * On click listener for a tag suggestion.
+		 *
+		 * @param {Object} event - A click event object
+		 */
+		onClickNewSuggestion: function (e) {
+			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
+			this.addTag($suggestion.data('name'));
+		},
 
 		/**
 		 * Given an input string to match against,
@@ -451,6 +530,8 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * Renders and appends suggestions for given tags.
+		 *
+		 * @param {Object[]} tags - An array of tag items to suggest
 		 */
 		renderSuggestions: function (tags) {
 			tags.forEach(this.renderSuggestion, this);
@@ -458,27 +539,173 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * Renders and appends a suggestion for a given tag.
+		 *
+		 * @param {Object} item - A tag object
+		 * @param {string} item.id - A tag id
+		 * @param {string} item.name - A tag name
+		 *
+		 * @return {jQuery} A jQuery object for the suggestion
 		 */
 		renderSuggestion: function (item) {
-			this.appendSuggestion(win.render('html/keeper/tag-suggestion', item));
+			var html = win.render('html/keeper/tag-suggestion', item);
+			return this.appendSuggestion(html);
 		},
 
 		/**
-		 * Renders and appends a new tag suggestion for a specified new name
+		 * Renders and appends a new tag suggestion for a specified new name.
 		 *
-		 * @param {string} name - a new tag name
+		 * @param {string} name - A new tag name
+		 *
+		 * @return {jQuery} A jQuery object for the new suggestion
 		 */
 		suggestNew: function (name) {
-			this.appendSuggestion(win.render('html/keeper/tag-new', {
+			var html = win.render('html/keeper/tag-new', {
 				name: name
-			}));
+			}),
+				$suggestion = this.appendSuggestion(html);
+			$suggestion.click(this.createTag.bind(this, name));
+			return $suggestion;
 		},
 
 		/**
 		 * Appends a html to suggestion box.
+		 *
+		 * @param {string} html - A html string to append to suggest list
+		 *
+		 * @return {jQuery} A jQuery object for the appended html
 		 */
 		appendSuggestion: function (html) {
-			this.$suggest.append(html);
+			return $(html).appendTo(this.$suggest);
+		},
+
+		/**
+		 * Creates a new tag for user.
+		 *
+		 * It sends a request to server to create a tag.
+		 * It calls the given callback, if any, on server response.
+		 *
+		 * @param {string} name - A new tag name
+		 * @param {function} callback - A callback to call on server response
+		 *
+		 * @return {boolean} Whether a request was successfully made to the server
+		 */
+		createTag: function (name) {
+			return this.addTag({
+				id: '',
+				name: name
+			});
+		},
+
+		/**
+		 * Cache for added tags
+		 *
+		 * @property {Object} tagsAdded
+		 */
+		tagsAdded: {},
+
+		/**
+		 * Tests whether a tag is added or not
+		 *
+		 * @param {string} name - A tag name
+		 *
+		 * @return {boolean} Whether a tag is already added
+		 */
+		isTagAdded: function (name) {
+			name = this.normalizeTagNameForSearch(name);
+			var tagsAdded = this.tagsAdded;
+			return tagsAdded.hasOwnProperty(name) && (tagsAdded[tagsAdded] ? true : false);
+		},
+
+		/**
+		 * Returns a keep information for this page.
+		 *
+		 * @return {Object} A keep
+		 */
+		getKeep: function () {
+			return {
+				// TODO: @joon [10-02-2013 18:14] keep url
+				url: 'url'
+			};
+		},
+
+		/**
+		 * Adds a tag to tag list.
+		 *
+		 * @param {string} name - A tag name
+		 *
+		 * @return {jQuery} A jQuery object for the added tag element
+		 */
+		addTag: function (name) {
+			if (this.isTagAdded(name)) {
+				return null;
+			}
+
+			var tag = this.getTagByName(name);
+			if (!tag) {
+				return this.createTag(name);
+			}
+
+			// TODO: @joon [10-02-2013 17:52] request to server and do async
+			this.requestAddTag(tag.id, this.getKeep(), this.onAddResponse);
+		},
+
+		/**
+		 * Makes a request to the server to add a tag to a keep.
+		 *
+		 * @param {string} id - A tag id
+		 * @param {Object} keep - A keep object
+		 * @param {function} callback - A callback function to be called on server response
+		 * 
+		 * ADD
+		 *   Request URL: https://api.kifi.com/site/keeps/add
+		 *   Request Method: POST
+		 *   Request Payload: {
+		 *     "collectionId":"f033afe4-bbb9-4609-ab8b-3e8aa968af21",
+		 *     "keeps":[{
+		 *       "title":"Use JSDoc: Index",
+		 *       "url":"http://usejsdoc.org/index.html"
+		 *     }]
+		 *   }
+		 *   Response: {
+		 *     "keeps": [{
+		 *       "id":"220c1ac7-6644-477f-872b-4088988d7810",
+		 *       "title":"Use JSDoc: Index",
+		 *       "url":"http://usejsdoc.org/index.html",
+		 *       "isPrivate":false
+		 *     }],
+		 *     "addedToCollection":1
+		 *   }
+		 */
+		requestAddTag: function (id, keep, callback) {
+			this.ajax({
+				url: 'https://api.kifi.com/site/keeps/add',
+				type: 'POST',
+				data: {
+					collectionId: id,
+					keep: keep
+				},
+				complete: callback
+			});
+		},
+
+		onAddResponse: function () {
+			this.$tagbox.addClass('tagged');
+
+			var item = this.getTagByName(name),
+				html = win.render('html/keeper/tagbox-tag', item);
+
+			return this.appendTag(html);
+		},
+
+		/**
+		 * Appends a html to tag list.
+		 *
+		 * @param {string} html - A html string to append to tag list
+		 *
+		 * @return {jQuery} A jQuery object for the appended html
+		 */
+		appendTag: function (html) {
+			return $(html).appendTo(this.$tagList);
 		},
 
 		/**
