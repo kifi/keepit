@@ -16,7 +16,7 @@ import scala.math.ceil
 import com.keepit.model.TopicName
 import play.api.libs.json.Json
 import scala.concurrent._
-import ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Random
 import com.keepit.search.ArticleStore
 import com.keepit.model.NormalizedURI
