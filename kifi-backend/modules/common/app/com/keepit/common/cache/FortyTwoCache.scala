@@ -15,6 +15,8 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.serializer.{Serializer, BinaryFormat}
+import com.keepit.common.logging.{AccessLogTimer, AccessLog}
+import com.keepit.common.logging.Access._
 
 import play.api.Logger
 import play.api.Plugin
@@ -360,22 +362,34 @@ class FortyTwoCacheImpl[K <: Key[T], T](
 ) extends FortyTwoCache[K, T] {
 
   // Constructor using a distinct serializer for each cache plugin
-  def this(innerMostPluginSettings: (FortyTwoCachePlugin, Duration, Serializer[T]), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration, Serializer[T])*) =
+  def this(
+      innerMostPluginSettings: (FortyTwoCachePlugin, Duration, Serializer[T]),
+      innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration, Serializer[T])*) =
     this(innerMostPluginSettings._1, innerMostPluginSettings._2, innerMostPluginSettings._3, FortyTwoCacheFactory[K, T](innerToOuterPluginSettings))
 
   // Constructor using the same serializer for each cache plugin
-  def this(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(serializer: Serializer[T]) =
+  def this(
+      innermostPluginSettings: (FortyTwoCachePlugin, Duration),
+      innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(serializer: Serializer[T]) =
     this((innermostPluginSettings._1, innermostPluginSettings._2, serializer), innerToOuterPluginSettings.map {case (plugin, ttl) => (plugin, ttl, serializer)}:_*)
 }
 
-class JsonCacheImpl[K <: Key[T], T](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: Format[T])
+class JsonCacheImpl[K <: Key[T], T](
+    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
+    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: Format[T])
   extends FortyTwoCacheImpl[K, T](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter))
 
-class BinaryCacheImpl[K <: Key[T], T](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: BinaryFormat[T])
+class BinaryCacheImpl[K <: Key[T], T](
+    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
+    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: BinaryFormat[T])
   extends FortyTwoCacheImpl[K, T](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter))
 
-class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal](
+    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
+    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends FortyTwoCacheImpl[K, P](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer[P])
 
-class StringCacheImpl[K <: Key[String]](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+class StringCacheImpl[K <: Key[String]](
+    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
+    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends FortyTwoCacheImpl[K, String](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer.string)
