@@ -68,7 +68,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 method = Some("ws"), 
                 path = e.value.headOption.map(_.toString), 
                 callType = Healthcheck.INTERNAL,
-                errorMessage = Some(s"Error on ws call ${e.toString} for user ${streamSession.userId.id} using ${streamSession}")
+                errorMessage = Some(s"Error on ws call ${e.toString} for user ${streamSession.userId.id} using ${streamSession.userAgent}")
               )
             )
           } 
