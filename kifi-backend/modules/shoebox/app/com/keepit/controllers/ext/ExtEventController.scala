@@ -53,7 +53,10 @@ class ExtEventController @Inject() (
       }
       metaData.fields.foreach{ 
         case (key, jsonValue) => {
-          val jsonString = jsonValue.toString
+          val jsonString = jsonValue match { 
+            case JsString(s) => s
+            case json => Json.stringify(json)
+          }
           val value = try {
             val parsedValue = jsonString.toBoolean
             contextBuilder += (key,parsedValue)
