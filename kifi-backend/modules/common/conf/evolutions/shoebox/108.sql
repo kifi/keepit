@@ -13,8 +13,6 @@ CREATE TABLE abook (
 	raw_info_loc varchar(512),
 
 	PRIMARY KEY (id)
-
-	-- CONSTRAINT abook_f_user FOREIGN KEY (user_id) REFERENCES user(id) -- user table in shoebox db; no links
 );
 
 # --- !Downs
