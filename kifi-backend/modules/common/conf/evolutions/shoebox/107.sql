@@ -16,11 +16,7 @@ CREATE TABLE contact_info (
 	picture_url varchar(2048),
   	parent_id bigint(20),                   -- for contacts with multiple emails
 
-	-- KEY (user_id,email),                 -- TODO: decide if we want to de-dup contacts or keep everything
 	PRIMARY KEY (id)
-
-	-- CONSTRAINT uc_contact_info_user_id_email UNIQUE (user_id,email),
-	-- CONSTRAINT contact_info_f_user FOREIGN KEY (user_id) REFERENCES user(id) -- user table in shoebox db; no links
 );
 
 # --- !Downs
