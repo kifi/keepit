@@ -201,6 +201,7 @@ panes.thread = function() {
   function updateSentReply($m, resp) {
     if ($m && resp) {
       $m.attr("data-id", resp.id);
+      $reply.data("error", undefined);
       $m.find(".kifi-message-body").css({opacity: ''});
       $m.find("time")  // TODO: patch timeago to update attrs too
         .attr("datetime", resp.createdAt)
