@@ -1242,7 +1242,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab)();
   var tabs = tabsByUrl[tab.nUri];
   for (var i = tabs && tabs.length; i--;) {
-    if (tabs[i].id === tab.id) {
+    if (tabs[i] === tab) {
       tabs.splice(i, 1);
     }
   }
@@ -1250,6 +1250,17 @@ api.tabs.on.unload.add(function(tab, historyApi) {
     delete tabsByUrl[tab.nUri];
     delete pageData[tab.nUri];
     delete pageThreadData[tab.nUri];
+  }
+  for (var loc in tabsByLocator) {
+    var tabs = tabsByLocator[loc];
+    for (var i = tabs.length; i--;) {
+      if (tabs[i] === tab) {
+        tabs.splice(i, 1);
+      }
+    }
+    if (!tabs.length) {
+      delete tabsByLocator[loc];
+    }
   }
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
