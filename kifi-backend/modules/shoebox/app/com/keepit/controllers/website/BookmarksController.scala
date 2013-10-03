@@ -298,7 +298,7 @@ class BookmarksController @Inject() (
     request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt) map { bc =>
       bc.copy(id = ExternalId.asOpt(id))
     } map { bc =>
-      val name = bc.name
+      val name = bc.name.trim.replaceAll("""\s+""", " ")
       if (name.length <= Collection.MaxNameLength) {
         db.readWrite { implicit s =>
           val existingCollection = collectionRepo.getByUserAndName(request.userId, name, None)
