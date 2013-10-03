@@ -1,6 +1,7 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/fuzzy-min.js
 // @require scripts/lib/antiscroll.min.js
+// @require scripts/lib/q.min.js
 // @require scripts/render.js
 // @require scripts/livechange.js
 // @require scripts/html/keeper/tagbox.js
@@ -214,6 +215,13 @@ this.tagbox = (function ($, win) {
 		return win.log.apply(win, arguments)();
 	}
 
+  // receive
+  /*
+  api.port.on({
+    tagged: function() {
+    }
+  });
+  */
 	return {
 		/**
 		 * An array containing user's all tags
@@ -543,6 +551,28 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
+		 * Filters out added tags and returns a new array of unadded tags.
+		 *
+		 * @param {Object[]} tags - An array of tags to apply filter to
+		 *
+		 * @return {Object[]} A new array of filtered tags
+		 */
+		filterOutAddedTags: function (tags) {
+			return tags.filter(this.unaddedTagFilter, this);
+		},
+
+		/**
+		 * Returns true if a tag has not been added to a keep, false otherwise.
+		 *
+		 * @param {Object} tag - A tag to test
+		 *
+		 * @return {boolean} true if a tag has not been added to a keep, false otherwise.
+		 */
+		unaddedTagFilter: function (tag) {
+			return !this.isTagAdded(tag.name);
+		},
+
+		/**
 		 * Given an input string to match against,
 		 * it rerenders tag suggestions.
 		 *
@@ -552,11 +582,15 @@ this.tagbox = (function ($, win) {
 		suggest: function (text, tags) {
 			this.emptySuggestions();
 
-			var matches = this.filterTags(text, tags),
-				hasMatch = matches.length ? true : false;
+			if (!tags) {
+				tags = this.tags;
+			}
+			tags = this.filterOutAddedTags(tags);
+			tags = this.filterTags(text, tags);
 
+			var hasMatch = tags.length ? true : false;
 			if (hasMatch) {
-				this.renderSuggestions(matches);
+				this.renderSuggestions(tags);
 			}
 
 			if (this.indexOfTagByName(text) === -1) {
@@ -592,6 +626,19 @@ this.tagbox = (function ($, win) {
 		renderSuggestion: function (item) {
 			var html = win.render('html/keeper/tag-suggestion', item);
 			return this.appendSuggestion(html);
+		},
+
+		/**
+		 * Removes a suggestion entry from a suggestion box.
+		 *
+		 * @param {string} name - A tag name to remove
+		 */
+		removeSuggestion: function (name) {
+			var id = this.getTagIdByName(name);
+			if (id) {
+				this.$suggest.find('.kifi-tagbox-suggestion[data-id=' + id + ']').remove();
+			}
+			else {}
 		},
 
 		/**
@@ -636,15 +683,20 @@ this.tagbox = (function ($, win) {
 		 */
 		createTag: function (name) {
 			log('createTag: create a tag', name);
-			this.requestCreateTag(name, this.onCreateResponse);
+			this.requestCreateTag(name)
+				.then(this.onCreateResponse.bind(this))
+				.fail(this.alertError.bind(this));
 		},
 
 		/**
-		 * Makes a request to the server to create a tag for a user.
+		 * Makes a request to the server to create a tag for a user
+		 * and returns a promise object.
+		 *
 		 *
 		 * @param {string} name - A tag name
-		 * @param {function} callback - A callback function to be called on server response
 		 * 
+		 * @return {Object} promise - A promise object
+		 *
 		 * CREATE
 		 *   Request URL: https://api.kifi.com/site/collections/create
 		 *   Request Method: POST
@@ -654,15 +706,31 @@ this.tagbox = (function ($, win) {
 		 *     "name":"hello"
 		 *   }
 		 */
-		requestCreateTag: function (name, callback, that) {
-			callback.call(that || this, {
-				response: {
-					id: 'keep-tag-' + Date.now(),
-					name: name
+		requestCreateTag: function (name) {
+			var deferred = Q.defer();
+      // send
+      log(api.port.emit, api.port.on);
+      //api.port.emit('tagit', data, success);
+
+			win.setTimeout(function () {
+				var res = null,
+					x = Math.random();
+				if (x < 0.1) {
+					deferred.reject(new Error('Timed out'));
 				}
-			});
+				else {
+					if (x < 0.9) {
+						res = {
+							id: 'keep-tag-' + Date.now(),
+							name: name
+						};
+					}
+					deferred.resolve(res);
+				}
+			}, 1);
+			return deferred.promise;
 			/*
-			this.ajax({
+			return Q(this.ajax({
 				url: 'https://api.kifi.com/site/collections/create',
 				type: 'POST',
 				data: {
@@ -670,14 +738,20 @@ this.tagbox = (function ($, win) {
 				},
 				complete: callback,
 				context: that || this
-			});
+			}));
       */
 		},
 
-		onCreateResponse: function (e) {
-			var tag = e.response;
-			this.tags.push(tag);
-			return this.addTag(tag.name);
+		onCreateResponse: function (tag) {
+			if (tag && tag.id) {
+				var name = tag.name;
+				this.$suggest.find('.kifi-tagbox-new[data-name=' + name + ']').remove();
+				this.tags.push(tag);
+				return this.addTag(name);
+			}
+			else {
+				throw new Error('Tag could not be created.');
+			}
 		},
 
 		/**
@@ -688,16 +762,16 @@ this.tagbox = (function ($, win) {
 		tagsAdded: {},
 
 		/**
-		 * Tests whether a tag is added or not
+		 * Tests whether a tag is added to a keep.
 		 *
 		 * @param {string} name - A tag name
 		 *
-		 * @return {boolean} Whether a tag is already added
+		 * @return {boolean} Whether a tag is already added to a keep
 		 */
 		isTagAdded: function (name) {
 			name = this.normalizeTagNameForSearch(name);
 			var tagsAdded = this.tagsAdded;
-			return tagsAdded.hasOwnProperty(name) && (tagsAdded[tagsAdded] ? true : false);
+			return tagsAdded.hasOwnProperty(name) && (tagsAdded[name] ? true : false);
 		},
 
 		/**
@@ -770,6 +844,24 @@ this.tagbox = (function ($, win) {
 				},
 				id: id
 			});
+			var deferred = Q.defer();
+			win.setTimeout(function () {
+				var res = null,
+					x = Math.random();
+				if (x < 0.1) {
+					deferred.reject(new Error('Timed out'));
+				}
+				else {
+					if (x < 0.9) {
+						res = {
+							id: 'keep-tag-' + Date.now(),
+							name: name
+						};
+					}
+					deferred.resolve(res);
+				}
+			}, 1);
+			return deferred.promise;
 			/*
 			this.ajax({
 				url: 'https://api.kifi.com/site/keeps/add',
@@ -794,19 +886,21 @@ this.tagbox = (function ($, win) {
 
 				var item = this.getTagById(e.id);
 				if (!item) {
-					win.alert('Error: Tag not found.');
+					this.alert('Error: Tag not found.');
 					return;
 				}
 
 				var name = this.normalizeTagNameForSearch(item.name);
 				this.tagsAdded[name] = item;
 
+				this.removeSuggestion(name);
+
 				var html = win.render('html/keeper/tagbox-tag', item);
 				this.appendTag(html);
 				return;
 			}
 
-			win.alert('Error: Tag could not be added.');
+			this.alert('Error: Tag could not be added.');
 		},
 
 		/**
@@ -844,6 +938,24 @@ this.tagbox = (function ($, win) {
 			else {
 				this.show($slider);
 			}
+		},
+
+		/**
+		 * Alerts user for an error.
+		 *
+		 * @param {Error} err - An error object
+		 */
+		alertError: function (err) {
+			this.alert(err.message);
+		},
+
+		/**
+		 * Alerts user for a message.
+		 *
+		 * @param {string} msg - A message to display
+		 */
+		alert: function (msg) {
+			win.alert(msg);
 		}
 	};
 
