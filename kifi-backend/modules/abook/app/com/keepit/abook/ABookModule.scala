@@ -14,4 +14,5 @@ abstract class ABookModule(
   // Service clients
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
+  val abookSlickModule = ABookSlickModule()
 }
