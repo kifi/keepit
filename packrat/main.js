@@ -813,7 +813,11 @@ function awaitDeepLink(link, tabId, retrySec) {
     var tab = api.tabs.get(tabId);
     if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
       log("[awaitDeepLink]", tabId, link)();
-      api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: link.locator}, {queue: 1});
+      api.tabs.emit(tab, "open_to", {
+        trigger: "deepLink",
+        locator: link.locator,
+        redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
+      }, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {
       log("[awaitDeepLink]", tabId, "retrying in", retrySec, "sec")();
       api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);

@@ -33,6 +33,12 @@ panes.thread = function() {
           api.port.on(handlers);
         });
       });
+      var $redirected = $container.find('.kifi-thread-redirected').click(function() {
+        $redirected.fadeOut(800, $.fn.remove.bind($redirected));
+      });
+      if ($redirected.length) {
+        setTimeout($.fn.triggerHandler.bind($redirected, 'click'), 5000);
+      }
     }};
 
   function renderThread($container, threadId, messages, session) {
