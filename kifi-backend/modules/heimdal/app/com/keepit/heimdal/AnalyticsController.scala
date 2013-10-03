@@ -25,6 +25,8 @@ import play.api.libs.json.{Json, JsObject, JsArray}
 
 import com.google.inject.Inject
 
+import views.html
+
 
 class AnalyticsController @Inject() (metricManager: MetricManager) extends HeimdalServiceController {
 
@@ -34,7 +36,7 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
   )
 
 
-  def adhocMetric(from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String) = Action{ request =>
+  def adhocMetric(from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, as: String) = Action{ request =>
     val doBreakDown = if (breakDown!="false" && groupBy!="_") true else false
     val fromTime = DateTime.parse(from)
     val toTime = if (to=="now") currentDateTime else DateTime.parse(to)
@@ -42,12 +44,23 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
 
     val contextRestriction  = definedRestrictions(filter)
 
-    if (mode=="users") {
+    val jsonFuture = if (mode=="users") {
       val definition = new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, groupBy, doBreakDown)
-      Async( metricManager.computeAdHocMteric(fromTime, toTime, definition).map(Ok(_)) ) 
+      metricManager.computeAdHocMteric(fromTime, toTime, definition)
     } else {
       val definition = new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, groupBy, doBreakDown)
-      Async( metricManager.computeAdHocMteric(fromTime, toTime, definition).map(Ok(_)) ) 
+      metricManager.computeAdHocMteric(fromTime, toTime, definition)
+    }
+
+    if (as=="json"){
+      Async(jsonFuture.map{ json => Ok(json)})
+    } else if (as=="pie") {
+      Async(jsonFuture.map{ json =>
+        var title = (if (mode=="users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'" 
+        Ok(html.adhocPieChart(Json.stringify(json), title))
+      })
+    } else {
+      Ok("'as' paramter must be either 'pie' or 'json'.")
     }
   }
 
