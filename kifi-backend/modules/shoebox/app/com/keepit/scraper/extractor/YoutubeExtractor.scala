@@ -8,8 +8,12 @@ import scala.collection.JavaConversions._
 import org.jsoup.parser.Parser
 import java.net.URLEncoder
 import java.util.regex.Pattern
+import com.keepit.model.UrlPatternRuleRepo
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.db.slick.Database
 
-case class YoutubeExtractorProvider(httpFetcher: HttpFetcher) extends ExtractorProvider {
+@Singleton
+class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher, db: Database, urlPatternRuleRepo: UrlPatternRuleRepo) extends ExtractorProvider {
   def isDefinedAt(uri: URI) = {
     uri match {
       case URI(_, _, Some(Host("com", "youtube", _*)), _, Some(path), Some(query), _) =>
@@ -17,10 +21,10 @@ case class YoutubeExtractorProvider(httpFetcher: HttpFetcher) extends ExtractorP
       case _ => false
     }
   }
-  def apply(uri: URI) = new YoutubeExtractor(uri.toString, Scraper.maxContentChars, httpFetcher)
+  def apply(uri: URI) = new YoutubeExtractor(uri.toString, Scraper.maxContentChars, httpFetcher, db: Database, urlPatternRuleRepo)
 }
 
-class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetcher) extends JsoupBasedExtractor(url, maxContentChars) {
+class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetcher, db: Database, urlPatternRuleRepo: UrlPatternRuleRepo) extends JsoupBasedExtractor(url, maxContentChars) {
 
   def parse(doc: Document): String = {
     val headline = doc.getElementById("watch-headline-title").text
@@ -49,7 +53,7 @@ class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetch
   private def findTrack(ttsParameters: String): Option[YoutubeTrack] = {
     val trackListUrl = "https://www.youtube.com/api/timedtext?asrs=1&type=list&tlangs=1&" + ttsParameters
     val trackListExtractor = new YoutubeTrackListExtractor(trackListUrl)
-    httpFetcher.fetch(trackListUrl)(trackListExtractor.process)
+    httpFetcher.fetch(trackListUrl, proxy = getProxy(url))(trackListExtractor.process)
     val tracks = trackListExtractor.getTracks()
     tracks.find(_.isDefault) orElse {
       tracks.find(_.isAutomatic).map(asr =>
@@ -70,7 +74,7 @@ class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetch
     val trackExtractor = new JsoupBasedExtractor(trackUrl, maxContentChars) {
       def parse(doc: Document): String = clean(doc.getElementsByTag("text").map(_.text).mkString(" "), "&quot;" -> "\"", "&amp;" -> "&", "&#39;" -> "'", "&lt;"-> "<", "&gt;" -> ">")
     }
-    httpFetcher.fetch(trackUrl)(trackExtractor.process)
+    httpFetcher.fetch(trackUrl, proxy = getProxy(url))(trackExtractor.process)
     log.info(s"Fetched ${(if (track.isDefault) "default " else "") + (if (track.isAutomatic) "automatic " else "") + track.langTranslated} closed captions for ${url}")
     trackExtractor.getContent()
   }
@@ -80,6 +84,8 @@ class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetch
     val regex = replacement.keysIterator.map(Pattern.quote).mkString("|").r
     regex.replaceAllIn(text, m => replacement(m.matched))
   }
+
+  private def getProxy(url: String) = db.readOnly { implicit session => urlPatternRuleRepo.getProxy(url) }
 }
 
 class YoutubeTrackListExtractor(trackListUrl: String) extends JsoupBasedExtractor(trackListUrl, Int.MaxValue, Some(Parser.xmlParser())) {
