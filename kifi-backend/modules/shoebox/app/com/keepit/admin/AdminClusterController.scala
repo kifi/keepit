@@ -40,7 +40,7 @@ class AdminClusterController @Inject() (
                 var isLeader = serviceCluster.leader.map(_==serviceInstance).getOrElse(false)
                 var testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email")
                 val versionResp : String = try {
-                    httpClient.get("http://" + serviceInstance.instanceInfo.localHostname + ":9000" + Common.internal.version().url).body
+                    httpClient.get("http://" + serviceInstance.instanceInfo.localHostname + ":9000" + Common.internal.version().url, httpClient.ignoreFailure).body
                 } catch {
                     case _ => "NA"
                 }
