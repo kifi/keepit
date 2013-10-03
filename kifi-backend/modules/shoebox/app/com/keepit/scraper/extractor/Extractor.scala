@@ -17,10 +17,10 @@ trait Extractor {
 trait ExtractorFactory extends Function[String, Extractor]
 
 @Singleton
-class ExtractorFactoryImpl @Inject() (httpFetcher: HttpFetcher) extends ExtractorFactory with Logging {
+class ExtractorFactoryImpl @Inject() (youtubeExtractorProvider: YoutubeExtractorProvider) extends ExtractorFactory with Logging {
 
   val all = Seq(
-    YoutubeExtractorProvider(httpFetcher),
+    youtubeExtractorProvider,
     GithubExtractorProvider,
     LinkedInExtractorProvider,
     DefaultExtractorProvider
