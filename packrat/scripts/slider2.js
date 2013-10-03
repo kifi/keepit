@@ -26,9 +26,9 @@ $.fn.scrollToBottom = function () {
 };
 
 var CO_KEY = /^Mac/.test(navigator.platform) ? '⌘' : 'Ctrl';
-var panes = {};
+var panes = panes || {};  // idempotent for Chrome
 
-var slider2 = function () {
+var slider2 = slider2 || function () {  // idempotent for Chrome
   'use strict';
   var $slider, $pane, paneHistory, lastShownAt;
 
