@@ -52,7 +52,21 @@ class ExtEventController @Inject() (
         contextBuilder += ("experiment", experiment.toString)
       }
       metaData.fields.foreach{ 
-        case (key, value) => contextBuilder += ("metaData", key + "=>" + value.toString)
+        case (key, jsonValue) => {
+          val jsonString = jsonValue.toString
+          val value = try {
+            val parsedValue = jsonString.toBoolean
+            contextBuilder += (key,parsedValue)
+          } catch {
+            case _ =>
+              try {
+                val parsedValue = jsonString.toDouble
+                contextBuilder += (key,parsedValue)
+              } catch {
+                case _ => contextBuilder += (key,jsonString)
+              } 
+          }
+        }
       }
       heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType(s"old_${eventFamily}_${eventName}")))
 
