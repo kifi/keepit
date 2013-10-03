@@ -2,12 +2,13 @@ package com.keepit.common.service
 
 import scala.concurrent.Future
 
+import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, ErrorMessage, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ClientResponse, HttpClient}
 import com.keepit.common.routes._
 import com.keepit.common.zookeeper.ServiceCluster
-
+import java.net.ConnectException
 import play.api.libs.json.{JsNull, JsValue}
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -42,11 +43,8 @@ trait ServiceClient extends Logging {
   }
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2): Future[ClientResponse] = {
-    var respFuture = callUrl(call, url(call.url), body)
-    (1 until attempts).foreach { _ =>
-        respFuture = respFuture.recoverWith {
-          case _ : java.net.ConnectException => callUrl(call, url(call.url), body, ignoreFailure=false)
-        }
+    val respFuture = RetryFuture(attempts, { case t : ConnectException => true }){
+      callUrl(call, url(call.url), body)
     }
     respFuture.onFailure{
       case ex: Throwable =>
