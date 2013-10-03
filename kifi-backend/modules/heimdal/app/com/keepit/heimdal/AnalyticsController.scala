@@ -12,7 +12,8 @@ import com.keepit.heimdal.{
   ContextRestriction, 
   AnyContextRestriction, 
   NotEqualTo,
-  ContextStringData
+  ContextStringData,
+  EventGrouping
 }
 import com.keepit.common.time._
 
@@ -45,10 +46,10 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     val contextRestriction  = definedRestrictions(filter)
 
     val jsonFuture = if (mode=="users") {
-      val definition = new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, groupBy, doBreakDown)
+      val definition = new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown)
       metricManager.computeAdHocMteric(fromTime, toTime, definition)
     } else {
-      val definition = new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, groupBy, doBreakDown)
+      val definition = new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown)
       metricManager.computeAdHocMteric(fromTime, toTime, definition)
     }
 
