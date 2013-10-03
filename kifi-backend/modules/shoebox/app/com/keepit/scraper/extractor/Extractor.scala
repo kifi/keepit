@@ -1,6 +1,6 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.scraper.{HttpFetcher, HttpInputStream}
+import com.keepit.scraper.HttpInputStream
 import com.keepit.common.net.URI
 import scala.util.{Failure, Success}
 import com.keepit.common.logging.Logging
@@ -10,7 +10,7 @@ trait Extractor {
   def process(input: HttpInputStream): Unit
   def getContent(): String
   def getMetadata(name: String): Option[String]
-  def getKeywords(): Option[String] = None
+  def getKeywords(): Option[String]
 }
 
 @ImplementedBy(classOf[ExtractorFactoryImpl])
