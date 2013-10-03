@@ -35,7 +35,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
 
   private def formatCauseStacktrace(causeOpt: Option[ErrorWithStack]): NodeSeq = causeOpt match {
     case Some(error) =>
-      {<line method="" file={"Cause: " + error.toString} number=""/>} ++
+      {<line method="" file={"========== Cause ========== " + error.toString} number="=========="/>} ++
       formatStacktrace(error) ++
       formatCauseStacktrace(error.cause)
     case None =>

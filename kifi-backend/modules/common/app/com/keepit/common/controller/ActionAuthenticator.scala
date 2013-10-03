@@ -36,12 +36,12 @@ object ActionAuthenticator {
   val FORTYTWO_USER_ID = "fortytwo_user_id"
 
   implicit class MaybeAuthenticatedRequest(val request: Request[_]) extends AnyVal {
-    def identityOpt = request match {
+    def identityOpt: Option[Identity] = request match {
       case ar: AuthenticatedRequest[_] => Some(ar.identity)
       case sr: SecuredRequest[_] => Some(sr.user)
       case _ => None
     }
-    def userIdOpt = request match {
+    def userIdOpt: Option[Id[User]] = request match {
       case ar: AuthenticatedRequest[_] => Some(ar.userId)
       case _ => None
     }
