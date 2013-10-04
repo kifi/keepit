@@ -680,19 +680,6 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Makes a request to the server to create a tag for a user
-		 * and returns a promise object.
-		 *
-		 *
-		 * @param {string} name - A tag name
-		 * 
-		 * @return {Object} A deferred promise object
-		 */
-		requestCreateTagByName: function (name) {
-			return this.request('create_tag', name, 'Could not create tag, "' + name + '"');
-		},
-
-		/**
 		 * CREATE
 		 *   Request URL: https://api.kifi.com/site/collections/create
 		 *   Request Method: POST
@@ -741,17 +728,6 @@ this.tagbox = (function ($, win) {
 			return this.requestAddTagById(tagId)
 				.then(this.onAddResponse.bind(this, tagId))
 				.fail(this.alertError.bind(this));
-		},
-
-		/**
-		 * Makes a request to the server to add a tag to a keep.
-		 *
-		 * @param {string} id - A tag id
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		requestAddTagById: function (id) {
-			return this.request('add_tag', id, 'Could not add tag, "' + name + '"');
 		},
 
 		/**
@@ -822,17 +798,6 @@ this.tagbox = (function ($, win) {
 			return this.requestRemoveTagById(tagId)
 				.then(this.onRemoveResponse.bind(this, tagId))
 				.fail(this.alertError.bind(this));
-		},
-
-		/**
-		 * Makes a request to the server to remove a tag from a keep.
-		 *
-		 * @param {string} id - A tag id
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		requestRemoveTagById: function (id) {
-			return this.request('remove_tag', id, 'Could not remove tag, "' + id + '"');
 		},
 
 		/**
@@ -920,6 +885,46 @@ this.tagbox = (function ($, win) {
 			return false;
 		},
 
+    //
+    // REQUESTS
+    //
+
+		/**
+		 * Makes a request to the server to create a tag for a user.
+		 * Returns a promise object.
+		 *
+		 * @param {string} name - A tag name
+		 * 
+		 * @return {Object} A deferred promise object
+		 */
+		requestCreateTagByName: function (name) {
+			return this.request('create_tag', name, 'Could not create tag, "' + name + '"');
+		},
+
+		/**
+		 * Makes a request to the server to add a tag to a keep.
+		 * Returns a promise object.
+		 *
+		 * @param {string} id - A tag id
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		requestAddTagById: function (id) {
+			return this.request('add_tag', id, 'Could not add tag, "' + id + '"');
+		},
+
+		/**
+		 * Makes a request to the server to remove a tag from a keep.
+		 * Returns a promise object.
+		 *
+		 * @param {string} id - A tag id
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		requestRemoveTagById: function (id) {
+			return this.request('remove_tag', id, 'Could not remove tag, "' + id + '"');
+		},
+
 		/**
 		 * Makes a request to the server and returns a deferred promise object.
 		 *
@@ -942,6 +947,10 @@ this.tagbox = (function ($, win) {
 			});
 			return deferred.promise;
 		},
+
+    //
+    // TEMPLATE RENDERERS
+    //
 
 		/**
 		 * Renders and returns a tag box html.
@@ -987,6 +996,10 @@ this.tagbox = (function ($, win) {
 			return win.render('html/keeper/tagbox-tag', tag);
 		},
 
+    //
+    // EVENT LISTENERS
+    //
+
 		/**
 		 * On click listener for a tag suggestion.
 		 *
@@ -1020,6 +1033,10 @@ this.tagbox = (function ($, win) {
 			this.removeTag($tag.data('name'));
 		},
 
+    //
+    // OTHER APIS
+    //
+
 		/**
 		 * Shows a tag box.
 		 */
@@ -1045,6 +1062,10 @@ this.tagbox = (function ($, win) {
 				this.show($slider);
 			}
 		},
+
+    //
+    // HELPER FUNCTIONS
+    //
 
 		/**
 		 * Alerts user for an error.
