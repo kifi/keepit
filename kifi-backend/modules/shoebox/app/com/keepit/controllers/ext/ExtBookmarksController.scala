@@ -40,11 +40,27 @@ class ExtBookmarksController @Inject() (
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
+  collectionRepo: CollectionRepo,
+  keepToCollectionRepo: KeepToCollectionRepo,
   searchClient: SearchServiceClient,
   browsingHistoryTracker: BrowsingHistoryTracker,
   healthcheck: HealthcheckPlugin,
   heimdal: HeimdalServiceClient)
     extends BrowserExtensionController(actionAuthenticator) {
+
+  def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
+    db.readWrite { implicit s =>
+      for {
+        uri <- uriRepo.getByUri(url)
+        bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
+        collection <- collectionRepo.getOpt(id)
+      } {
+        keepToCollectionRepo.remove(bookmarkId = bookmark.id.get, collectionId = collection.id.get)
+      }
+    }
+    Ok(Json.obj())
+  }
 
   def remove() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
