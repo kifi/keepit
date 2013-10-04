@@ -716,14 +716,13 @@ this.tagbox = (function ($, win) {
 		 */
 		requestCreateTag: function (name) {
 			var deferred = Q.defer();
-			// send
 			api.port.emit('create_tag', name, function (response) {
 				log('requestCreateTag.create_tag', this, arguments);
 				if (response.success) {
 					deferred.resolve(response);
 				}
 				else {
-					deferred.reject(new Error('Could not create a "' + name + '" tag'));
+					deferred.reject(new Error('Could not create tag, "' + name + '"'));
 				}
 			});
 			return deferred.promise;
@@ -823,7 +822,9 @@ this.tagbox = (function ($, win) {
 			}
 
 			log('addTag: tag found. add it to a keep', name);
-			this.requestAddTag(tag.id, this.getKeep(), this.onAddResponse);
+			this.requestAddTag(tag.id)
+				.then(this.onAddResponse.bind(this))
+				.fail(this.alertError.bind(this));
 		},
 
 		/**
@@ -853,7 +854,21 @@ this.tagbox = (function ($, win) {
 		 *     "addedToCollection":1
 		 *   }
 		 */
-		requestAddTag: function (id, keep, callback, that) {
+		requestAddTag: function (id) {
+			var deferred = Q.defer();
+			api.port.emit('add_tag', {
+				collectionId: id
+			}, function (response) {
+				log('requestAddTag.add_tag', this, arguments);
+				if (response.success) {
+					deferred.resolve(response);
+				}
+				else {
+					deferred.reject(new Error('Could not add tag, "' + name + '"'));
+				}
+			});
+			return deferred.promise;
+			/*
 			callback.call(that || this, {
 				response: {
 					keeps: [keep],
@@ -861,6 +876,7 @@ this.tagbox = (function ($, win) {
 				},
 				id: id
 			});
+      /*
 			var deferred = Q.defer();
 			win.setTimeout(function () {
 				var res = null,
@@ -879,6 +895,7 @@ this.tagbox = (function ($, win) {
 				}
 			}, 1);
 			return deferred.promise;
+      */
 			/*
 			this.ajax({
 				url: 'https://api.kifi.com/site/keeps/add',
@@ -896,12 +913,12 @@ this.tagbox = (function ($, win) {
 		/**
 		 * A listener for server response from adding a tag to a keep.
 		 */
-		onAddResponse: function (e) {
-			var response = e.response;
+		onAddResponse: function (response) {
+			log('onAddResponse', response);
 			if (response.addedToCollection) {
 				this.$tagbox.addClass('tagged');
 
-				var item = this.getTagById(e.id);
+				var item = this.getTagById(response.collectionId);
 				if (!item) {
 					this.alert('Error: Tag not found.');
 					return;
@@ -914,10 +931,10 @@ this.tagbox = (function ($, win) {
 
 				var html = win.render('html/keeper/tagbox-tag', item);
 				this.appendTag(html);
-				return;
 			}
-
-			this.alert('Error: Tag could not be added.');
+			else {
+				this.alert('Error: Tag could not be added.');
+			}
 		},
 
 		/**

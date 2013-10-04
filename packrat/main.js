@@ -605,19 +605,21 @@ api.port.on({
     }
 
     log("[create_tag]", data)();
-    ajax("POST", "/site/collections/create", data, function(o) {
-      log("[create_tag] response:", o)();
-      o.success = true;
+    ajax("POST", "/site/collections/create", data, function(response) {
+      log("[create_tag] response:", response)();
+      response.success = true;
       pageData[tab.nUri].tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "create_tag", o);
+        api.tabs.emit(tab, "create_tag", response);
       });
       if (callback) {
-        callback(o);
+        callback(response);
       }
-    }, function(e) {
+    }, function(response) {
       data.success = false;
       api.tabs.emit(tab, "create_tag", data);
-      callback(data);
+      if (callback) {
+        callback(data, response);
+      }
     });
   },
   /**
@@ -643,17 +645,32 @@ api.port.on({
    *     "addedToCollection":1
    *   }
    */
-  add_tag: function(data, _, tab) {
+  add_tag: function(data, callback, tab) {
+    if (typeof data === 'string') {
+      data = {
+        collectionId: data
+      };
+    }
+    data.keeps = [{
+      url: tab.nUri || tab.url
+    }];
     log("[add_tag]", data)();
-    ajax("POST", "/site/keeps/add", data, function(o) {
-      log("[add_tag] response:", o)();
-      data.success = true;
+    ajax("POST", "/site/keeps/add", data, function(response) {
+      log("[add_tag] response:", response)();
+      response.success = true;
+      response.collectionId = data.collectionId;
       pageData[tab.nUri].tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "add_tag", data);
+        api.tabs.emit(tab, "add_tag", response);
       });
-    }, function(e) {
+      if (callback) {
+        callback(response);
+      }
+    }, function(response) {
       data.success = false;
       api.tabs.emit(tab, "add_tag", data);
+      if (callback) {
+        callback(data, response);
+      }
     });
   },
   /**
