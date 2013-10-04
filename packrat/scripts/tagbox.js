@@ -223,6 +223,13 @@ this.tagbox = (function ($, win) {
 		tags: win.myTags,
 
 		/**
+		 * Cache for added tags
+		 *
+		 * @property {Object} tagsAdded
+		 */
+		tagsAdded: {},
+
+		/**
 		 * A TagBox constructor
 		 *
 		 * Renders and initializes a tag box if there is no live tag box available.
@@ -239,7 +246,7 @@ this.tagbox = (function ($, win) {
 		 * Renders and initializes a tag box.
 		 */
 		init: function () {
-			this.$tagbox = $(win.render('html/keeper/tagbox')).appendTo($('body'));
+			this.$tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
 			this.initSuggest();
 			this.initTagList();
 			this.initInput();
@@ -301,26 +308,23 @@ this.tagbox = (function ($, win) {
 		})(),
 
 		/**
-		 * Finds and initializes a close button.
-		 *
-		 * @return {jQuery} A jQuery object for close icon
+		 * Add a close event listener to close button.
 		 */
 		initCloseIcon: function () {
 			this.$tagbox.on('click', '.kifi-tagbox-close', this.hide.bind(this));
 		},
 
 		/**
-		 * Finds and caches a suggestion box.
+		 * Finds, initializes, and caches a suggestion box.
 		 *
 		 * @return {jQuery} A jQuery object for suggestion list
 		 */
 		initSuggest: function () {
-			var $tagbox = this.$tagbox,
-				$suggest = $tagbox.find('.kifi-tagbox-suggest-inner');
-
+			var $suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner');
 			this.$suggest = $suggest;
 
-			$tagbox.on('click', '.kifi-tagbox-suggestion', this.onClickSuggestion.bind(this));
+			$suggest.on('click', '.kifi-tagbox-suggestion', this.onClickSuggestion.bind(this));
+			$suggest.on('click', '.kifi-tagbox-new', this.onClickNewSuggestion.bind(this));
 
 			return $suggest;
 		},
@@ -333,6 +337,9 @@ this.tagbox = (function ($, win) {
 		initTagList: function () {
 			var $tagList = this.$tagbox.find('.kifi-tagbox-tag-list');
 			this.$tagList = $tagList;
+
+			$tagList.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
+
 			return $tagList;
 		},
 
@@ -360,66 +367,44 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Returns an index of a tag with the given tag name.
-		 * Returns -1 if not found.
-		 *
-		 * @param {string} text - An tag name to search for
-		 * @param {Object[]} [tags] - An array of tags to search from
-		 *
-		 * @return {number} An index of a tag. -1 if not found.
-		 */
-		indexOfTagByName: function (text, tags) {
-			text = this.normalizeTagNameForSearch(text);
-
-			if (text) {
-				if (!tags) {
-					tags = this.tags;
-				}
-
-				for (var i = 0, l = tags.length; i < l; i++) {
-					if (text === this.normalizeTagNameForSearch(tags[i].name)) {
-						return i;
-					}
-				}
-			}
-
-			return -1;
-		},
-
-		/**
 		 * Returns an index of a tag with the given id.
 		 * Returns -1 if not found.
 		 *
 		 * @param {string} id - An tag id to search for
-		 * @param {Object[]} [tags] - An array of tags to search from
 		 *
 		 * @return {number} An index of a tag. -1 if not found.
 		 */
-		indexOfTagById: function (id, tags) {
+		indexOfTagById: function (id) {
 			if (id) {
-				if (!tags) {
-					tags = this.tags;
-				}
-
+				var tags = this.tags;
 				for (var i = 0, l = tags.length; i < l; i++) {
 					if (id === tags[i].id) {
 						return i;
 					}
 				}
 			}
-
 			return -1;
 		},
 
 		/**
-		 * Tests whether a user has a tag.
+		 * Returns an index of a tag with the given tag name.
+		 * Returns -1 if not found.
 		 *
-		 * @param {string} text - An tag name to search for
+		 * @param {string} name - An tag name to search for
 		 *
-		 * @return {boolean} Whether a user has a tag
+		 * @return {number} An index of a tag. -1 if not found.
 		 */
-		hasTagByName: function (name) {
-			return this.indexOfTagByName(name) !== -1;
+		indexOfTagByName: function (name) {
+			name = this.normalizeTagNameForSearch(name);
+			if (name) {
+				var tags = this.tags;
+				for (var i = 0, l = tags.length; i < l; i++) {
+					if (name === this.normalizeTagNameForSearch(tags[i].name)) {
+						return i;
+					}
+				}
+			}
+			return -1;
 		},
 
 		/**
@@ -428,7 +413,7 @@ this.tagbox = (function ($, win) {
 		 *
 		 * @param {string} id - An tag id to search for
 		 *
-		 * @return {Object} The first matched tag item. null if not found.
+		 * @return {Object} A tag item. null if not found.
 		 */
 		getTagById: function (id) {
 			var index = this.indexOfTagById(id);
@@ -439,9 +424,9 @@ this.tagbox = (function ($, win) {
 		 * Returns a tag item with the given tag name.
 		 * Returns null if not found.
 		 *
-		 * @param {string} text - An tag name to search for
+		 * @param {string} name - An tag name to search for
 		 *
-		 * @return {Object} The first matched tag item. null if not found.
+		 * @return {Object} A tag item. null if not found.
 		 */
 		getTagByName: function (name) {
 			var index = this.indexOfTagByName(name);
@@ -449,12 +434,12 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Returns an id of the first matched tag occurence for the given tag name.
+		 * Returns an id of a tag with the given tag name.
 		 * Returns null if not found.
 		 *
-		 * @param {string} text - An tag name to search for
+		 * @param {string} name - An tag name to search for
 		 *
-		 * @return {string} An id of the first matched occurence. null if not found.
+		 * @return {string} A tag id. null if not found.
 		 */
 		getTagIdByName: function (name) {
 			var item = this.getTagByName(name);
@@ -464,23 +449,23 @@ this.tagbox = (function ($, win) {
 		/**
 		 * Normalizes a tag name and returns the result.
 		 *
-		 * @param {string} text - A tag name to normalize
+		 * @param {string} name - A tag name to normalize
 		 *
 		 * @return {string} A normalized tag name
 		 */
-		normalizeTagName: function (text) {
-			return text && text.trim().replace(/\s+/g, ' ');
+		normalizeTagName: function (name) {
+			return name && name.trim().replace(/\s+/g, ' ');
 		},
 
 		/**
 		 * Normalizes a tag name for search (case insensitive) and returns the result.
 		 *
-		 * @param {string} text - A tag name to normalize
+		 * @param {string} name - A tag name to normalize
 		 *
 		 * @return {string} A normalized tag name
 		 */
-		normalizeTagNameForSearch: function (text) {
-			return text && this.normalizeTagName(text).toLowerCase();
+		normalizeTagNameForSearch: function (name) {
+			return name && this.normalizeTagName(name).toLowerCase();
 		},
 
 		/**
@@ -519,28 +504,6 @@ this.tagbox = (function ($, win) {
 				return tags;
 			};
 		})(),
-
-		/**
-		 * On click listener for a tag suggestion.
-		 *
-		 * @param {Object} event - A click event object
-		 */
-		onClickSuggestion: function (e) {
-			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
-			log('onClickSuggestion');
-			this.addTag($suggestion.data('name'));
-		},
-
-		/**
-		 * On click listener for a tag suggestion.
-		 *
-		 * @param {Object} event - A click event object
-		 */
-		onClickNewSuggestion: function (e) {
-			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
-			log('onClickNewSuggestion');
-			this.addTag($suggestion.data('name'));
-		},
 
 		/**
 		 * Filters out added tags and returns a new array of unadded tags.
@@ -607,7 +570,7 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Renders and appends a suggestion for a given tag.
+		 * Renders and appends a suggestion for a given tag item.
 		 *
 		 * @param {Object} item - A tag object
 		 * @param {string} item.id - A tag id
@@ -616,8 +579,18 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the suggestion
 		 */
 		renderSuggestion: function (item) {
-			var html = win.render('html/keeper/tag-suggestion', item);
-			return this.appendSuggestion(html);
+			return this.appendSuggestion(this.renderTagSuggestionHtml(item));
+		},
+
+		/**
+		 * Renders and appends a new tag suggestion for a given name.
+		 *
+		 * @param {string} name - A new tag name
+		 *
+		 * @return {jQuery} A jQuery object for the new suggestion
+		 */
+		suggestNew: function (name) {
+			return this.appendSuggestion(this.renderTagSuggestionHtml(name));
 		},
 
 		/**
@@ -668,24 +641,6 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Renders and appends a new tag suggestion for a specified new name.
-		 *
-		 * @param {string} name - A new tag name
-		 *
-		 * @return {jQuery} A jQuery object for the new suggestion
-		 */
-		suggestNew: function (name) {
-			var html = win.render('html/keeper/tag-new', {
-				name: name
-			}),
-				$suggestion = this.appendSuggestion(html);
-
-			$suggestion.click(this.createTag.bind(this, name));
-
-			return $suggestion;
-		},
-
-		/**
 		 * Appends a html to suggestion box.
 		 *
 		 * @param {string} html - A html string to append to suggest list
@@ -695,13 +650,6 @@ this.tagbox = (function ($, win) {
 		appendSuggestion: function (html) {
 			return $(html).appendTo(this.$suggest);
 		},
-
-		/**
-		 * Cache for added tags
-		 *
-		 * @property {Object} tagsAdded
-		 */
-		tagsAdded: {},
 
 		/**
 		 * Tests whether a tag is added to a keep.
@@ -717,17 +665,6 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Returns a keep information for this page.
-		 *
-		 * @return {Object} A keep
-		 */
-		getKeep: function () {
-			return {
-				// TODO: @joon [10-02-2013 18:14] keep url
-			};
-		},
-
-		/**
 		 * Creates a new tag for user.
 		 * It sends a request to server to create a tag and returns a deferred object.
 		 *
@@ -737,7 +674,7 @@ this.tagbox = (function ($, win) {
 		 */
 		createTag: function (name) {
 			log('createTag: create a tag', name);
-			return this.requestCreateTag(name)
+			return this.requestCreateTagByName(name)
 				.then(this.onCreateResponse.bind(this))
 				.fail(this.alertError.bind(this));
 		},
@@ -751,18 +688,8 @@ this.tagbox = (function ($, win) {
 		 * 
 		 * @return {Object} A deferred promise object
 		 */
-		requestCreateTag: function (name) {
-			var deferred = Q.defer();
-			api.port.emit('create_tag', name, function (response) {
-				log('requestCreateTag.create_tag', this, arguments);
-				if (response.success) {
-					deferred.resolve(response);
-				}
-				else {
-					deferred.reject(new Error('Could not create tag, "' + name + '"'));
-				}
-			});
-			return deferred.promise;
+		requestCreateTagByName: function (name) {
+			return this.request('create_tag', name, 'Could not create tag, "' + name + '"');
 		},
 
 		/**
@@ -810,8 +737,9 @@ this.tagbox = (function ($, win) {
 			}
 
 			log('addTag: tag found. add it to a keep', name);
-			return this.requestAddTag(tag.id)
-				.then(this.onAddResponse.bind(this))
+			var tagId = tag.id;
+			return this.requestAddTagById(tagId)
+				.then(this.onAddResponse.bind(this, tagId))
 				.fail(this.alertError.bind(this));
 		},
 
@@ -822,18 +750,8 @@ this.tagbox = (function ($, win) {
 		 *
 		 * @return {Object} A deferred promise object
 		 */
-		requestAddTag: function (id) {
-			var deferred = Q.defer();
-			api.port.emit('add_tag', id, function (response) {
-				log('requestAddTag.add_tag', this, arguments);
-				if (response.success) {
-					deferred.resolve(response);
-				}
-				else {
-					deferred.reject(new Error('Could not add tag, "' + name + '"'));
-				}
-			});
-			return deferred.promise;
+		requestAddTagById: function (id) {
+			return this.request('add_tag', id, 'Could not add tag, "' + name + '"');
 		},
 
 		/**
@@ -859,28 +777,24 @@ this.tagbox = (function ($, win) {
 		 *     "addedToCollection":1
 		 *   }
 		 */
-		onAddResponse: function (response) {
+		onAddResponse: function (tagId, response) {
 			log('onAddResponse', response);
 
 			if (!response.addedToCollection) {
 				throw new Error('Tag could not be added.');
 			}
 
-			this.$tagbox.addClass('tagged');
-
-			var tagId = response.collectionId,
-				item = this.getTagById(tagId);
-			if (!item) {
+			var tag = this.getTagById(tagId);
+			if (!tag) {
 				throw new Error('Tag not found.');
 			}
 
-			var name = this.normalizeTagNameForSearch(item.name);
-			this.tagsAdded[name] = item;
+			var name = this.normalizeTagNameForSearch(tag.name);
+			this.tagsAdded[name] = tag;
 
 			this.removeSuggestionById(tagId);
 
-			var html = win.render('html/keeper/tagbox-tag', item);
-			return this.appendTag(html);
+			return this.addTag$(tag);
 		},
 
 		/**
@@ -904,8 +818,9 @@ this.tagbox = (function ($, win) {
 			}
 
 			log('removeTag: tag found. remove it from a keep', name);
-			return this.requestRemoveTag(tag.id)
-				.then(this.onRemoveResponse.bind(this))
+			var tagId = tag.id;
+			return this.requestRemoveTagById(tagId)
+				.then(this.onRemoveResponse.bind(this, tagId))
 				.fail(this.alertError.bind(this));
 		},
 
@@ -916,62 +831,193 @@ this.tagbox = (function ($, win) {
 		 *
 		 * @return {Object} A deferred promise object
 		 */
-		requestRemoveTag: function (id) {
-			var deferred = Q.defer();
-			api.port.emit('remove_tag', id, function (response) {
-				log('requestRemoveTag.remove_tag', this, arguments);
-				if (response.success) {
-					deferred.resolve(response);
-				}
-				else {
-					deferred.reject(new Error('Could not remove tag, "' + name + '"'));
-				}
-			});
-			return deferred.promise;
+		requestRemoveTagById: function (id) {
+			return this.request('remove_tag', id, 'Could not remove tag, "' + id + '"');
 		},
 
 		/**
 		 * A listener for server response from removing a tag from a keep.
 		 * 
 		 * REMOVE
-		 *   Request URL: https://api.kifi.com/site/collections/dc76ee74-a141-4e96-a65f-e5ca58ddfe04/removeKeeps
+		 *   Request URL: https://api.kifi.com/tags/dc76ee74-a141-4e96-a65f-e5ca58ddfe04/removeFromKeep
 		 *   Request Method: POST
-		 *   Request Payload: ["88ed8dc9-a20d-49c6-98ef-1b554533b106"]
-		 *   Response: {"removed":1}
+		 *   Request Payload: {
+		 *     url: "my.keep.com"
+		 *   }
+		 *   Response: {}
 		 */
-		onRemoveResponse: function (response) {
+		onRemoveResponse: function (tagId, response) {
 			log('onRemoveResponse', response);
 
-			if (!response.removed) {
-				throw new Error('Tag could not be removed.');
-			}
-
-			this.$tagbox.addClass('tagged');
-
-			var tagId = response.collectionId,
-				item = this.getTagById(tagId);
-			if (!item) {
+			var tag = this.getTagById(tagId);
+			if (!tag) {
 				throw new Error('Tag not found.');
 			}
 
-			var name = this.normalizeTagNameForSearch(item.name);
+			var name = this.normalizeTagNameForSearch(tag.name);
 			delete this.tagsAdded[name];
 
-			this.removeSuggestionById(tagId);
+			//this.addSuggestionById(tagId);
 
-			var html = win.render('html/keeper/tagbox-tag', item);
-			return this.appendTag(html);
+			return this.removeTag$ById(tagId);
 		},
 
 		/**
-		 * Appends a html to tag list.
+		 * Finds and returns jQuery object for a tag with the given id
 		 *
-		 * @param {string} html - A html string to append to tag list
+		 * @param {string} id - A tag id
 		 *
-		 * @return {jQuery} A jQuery object for the appended html
+		 * @return {jQuery} jQuery object for a tag with the given id
 		 */
-		appendTag: function (html) {
-			return $(html).appendTo(this.$tagList);
+		findTag$ById: function (id) {
+			if (id) {
+				var $tag = this.$tagList.find('.kifi-tagbox-tag[data-id=' + id + ']');
+				if ($tag.length) {
+					return $tag;
+				}
+			}
+			return null;
+		},
+
+		/**
+		 * Renders and adds a tag element if not already added.
+		 *
+		 * @param {Object} tag - A tag item
+		 *
+		 * @return {jQuery} A jQuery object for tag element
+		 */
+		addTag$: function (tag) {
+			var $tag = this.findTag$ById(tag.id);
+			if (!$tag) {
+				var html = this.renderTagHtml(tag);
+				this.$tagbox.addClass('tagged');
+				$tag = $(html).appendTo(this.$tagList);
+			}
+			return $tag;
+		},
+
+		/**
+		 * Updates (add/remove) 'tagged' class of the tagbox.
+		 */
+		updateTaggedClass: function () {
+			this.$tagbox.toggleClass('tagged', this.$tagList.children().length ? true : false);
+		},
+
+		/**
+		 * Finds and removes a tag by its id
+		 *
+		 * @param {string} id - A tag id
+		 *
+		 * @return {boolean} Whether a tag was found and removed
+		 */
+		removeTag$ById: function (id) {
+			var $tag = this.findTag$ById(id);
+			if ($tag.length) {
+				$tag.remove();
+				this.updateTaggedClass();
+				return true;
+			}
+			return false;
+		},
+
+		/**
+		 * Makes a request to the server and returns a deferred promise object.
+		 *
+		 * @param {string} name - A request name
+		 * @param {*} data - A request payload
+		 * @param {string} errorMsg - An error message
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		request: function (name, data, errorMsg) {
+			var deferred = Q.defer();
+			api.port.emit(name, data, function (response) {
+				log(name + '.response', this, arguments);
+				if (response.success) {
+					deferred.resolve(response);
+				}
+				else {
+					deferred.reject(new Error(errorMsg));
+				}
+			});
+			return deferred.promise;
+		},
+
+		/**
+		 * Renders and returns a tag box html.
+		 *
+		 * @return {string} tag box html
+		 */
+		renderTagBoxHtml: function () {
+			return win.render('html/keeper/tagbox');
+		},
+
+		/**
+		 * Renders and returns a tag suggestion html for a given tag item.
+		 *
+		 * @param {Object} tag - A tag item
+		 *
+		 * @return {string} tag suggestion html
+		 */
+		renderTagSuggestionHtml: function (tag) {
+			return win.render('html/keeper/tag-suggestion', tag);
+		},
+
+		/**
+		 * Renders and returns a new tag suggestion html for a given tag name.
+		 *
+		 * @param {string} name - A tag name
+		 *
+		 * @return {string} new tag suggestion html
+		 */
+		renderTagSuggestionHtml: function (name) {
+			return win.render('html/keeper/tag-new', {
+				name: name
+			});
+		},
+
+		/**
+		 * Renders and returns a tag item.
+		 *
+		 * @param {Object} tag - A tag item
+		 *
+		 * @return {string} tag html
+		 */
+		renderTagHtml: function (tag) {
+			return win.render('html/keeper/tagbox-tag', tag);
+		},
+
+		/**
+		 * On click listener for a tag suggestion.
+		 *
+		 * @param {Object} event - A click event object
+		 */
+		onClickSuggestion: function (e) {
+			log('onClickSuggestion');
+			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
+			this.addTag($suggestion.data('name'));
+		},
+
+		/**
+		 * On click listener for a new tag suggestion.
+		 *
+		 * @param {Object} event - A click event object
+		 */
+		onClickNewSuggestion: function (e) {
+			log('onClickNewSuggestion');
+			var $suggestion = $(e.target).closest('.kifi-tagbox-new');
+			this.createTag($suggestion.data('name'));
+		},
+
+		/**
+		 * On click listener for removing tag.
+		 *
+		 * @param {Object} event - A click event object
+		 */
+		onClickRemoveTag: function (e) {
+			log('onClickRemoveTag');
+			var $tag = $(e.target).closest('.kifi-tagbox-tag');
+			this.removeTag($tag.data('name'));
 		},
 
 		/**

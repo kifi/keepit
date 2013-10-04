@@ -678,14 +678,18 @@ api.port.on({
    * Makes a request to the server to remove a tag from a keep.
    * 
    * REMOVE
-   *   Request URL: https://api.kifi.com/site/collections/dc76ee74-a141-4e96-a65f-e5ca58ddfe04/removeKeeps
-   *   Request Method: POST
-   *   Request Payload: ["88ed8dc9-a20d-49c6-98ef-1b554533b106"]
-   *   Response: {"removed":1}
+		 *   Request URL: https://api.kifi.com/tags/dc76ee74-a141-4e96-a65f-e5ca58ddfe04/removeFromKeep
+		 *   Request Method: POST
+		 *   Request Payload: {
+		 *     url: "my.keep.com"
+		 *   }
+		 *   Response: {}
    */
   remove_tag: function(collectionId, callback, tab) {
     log("[remove_tag]", collectionId)();
-    ajax("POST", "/site/collections/" + collectionId + "/removeKeeps", [keepId], function(response) {
+    ajax("POST", "/tags/" + collectionId + "/removeFromKeep", {
+      url: tab.nUri || tab.url
+    }, function(response) {
       log("[remove_tag] response:", response)();
       response.success = true;
       response.collectionId = collectionId;
