@@ -1,0 +1,13 @@
+@(success: Boolean = false)
+
+@helper.main(title = "Kifi email verification", hiddenElements = Seq("header")) {
+<section class="content clearfix text_center welcome">
+  <h1>Kifi email verification</h1>
+  @if(success) {
+    <p>Congratulations. You have verified your Kifi email address.</p>
+  } else {
+    <p>Sorry. Your email verification request is no longer valid.</p>
+  }
+  <p><a href="/">Go back to kifi.com.</a></p>
+</section>
+}
