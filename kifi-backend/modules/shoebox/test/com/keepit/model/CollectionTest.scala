@@ -98,6 +98,20 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+    "delete tag from keep" in {
+      withDb() { implicit injector =>
+        val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
+        db.readWrite { implicit s =>
+          collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll1.id.get))
+          keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
+          keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get)
+          keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark2.id.get)
+          keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get) should not(throwAn[Exception])
+        }
+      }
+    }
     "get and cache collection ids for a bookmark" in {
       withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
