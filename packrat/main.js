@@ -586,15 +586,23 @@ api.port.on({
   },
   pane: function(o, _, tab) {
     if (o.old) {
-      var arr = (tabsByLocator[o.old] || []).filter(idIsNot(tab.id));
-      if (arr.length) {
-        tabsByLocator[o.old] = arr;
-      } else {
-        delete tabsByLocator[o.old];
+      var arr = tabsByLocator[o.old];
+      if (arr) {
+        arr = arr.filter(idIsNot(tab.id));
+        if (arr.length) {
+          tabsByLocator[o.old] = arr;
+        } else {
+          delete tabsByLocator[o.old];
+        }
       }
     }
     if (o.new) {
-      (tabsByLocator[o.new] || (tabsByLocator[o.new] = [])).push(tab);
+      var arr = tabsByLocator[o.new];
+      if (arr) {
+        arr = arr.filter(idIsNot(tab.id));
+        arr.push(tab);
+      }
+      tabsByLocator[o.new] = arr || [tab];
     }
   },
   notifications_read: function(t) {
