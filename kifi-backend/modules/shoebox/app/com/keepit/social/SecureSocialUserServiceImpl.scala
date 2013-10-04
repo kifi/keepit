@@ -84,9 +84,6 @@ class SecureSocialUserPluginImpl @Inject() (
       socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
       userId: Option[Id[User]], allowSignup: Boolean)(implicit session: RWSession): SocialUserInfo = {
     log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId")
-    def makeUser(): Option[User] = {
-      if (allowSignup) Some(userRepo.save(createUser(socialUser))) else None
-    }
 
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
     val existingUserOpt = userId orElse {
@@ -94,26 +91,32 @@ class SecureSocialUserPluginImpl @Inject() (
       socialUser.email flatMap (emailRepo.getByAddressOpt(_)) map (_.userId)
     } flatMap userRepo.getOpt
 
+    def getOrCreateUser(): Option[User] = existingUserOpt orElse {
+      if (allowSignup) Some(userRepo.save(createUser(socialUser))) else None
+    }
+
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
         // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
         if (suiOpt == Some(socialUserInfo)) socialUserInfo else socialUserInfoRepo.save(socialUserInfo)
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
-        val userOpt = existingUserOpt orElse makeUser()
+        val userOpt = getOrCreateUser()
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
 
         for (user <- userOpt; su <- socialUserInfoRepo.getByUser(user.id.get)
             if su.networkType == socialUserInfo.networkType && su.id.get != socialUserInfo.id.get) {
-          throw new IllegalStateException(s"Social user for ${su.networkType} is already connected: $su")
+          throw new IllegalStateException(
+            s"Can't connect $socialUserInfo to user ${user.id.get}. " +
+            s"Social user for network ${su.networkType} is already connected to user ${user.id.get}: $su")
         }
 
         val sui = socialUserInfoRepo.save(userOpt map socialUserInfo.withUser getOrElse socialUserInfo)
         for (user <- userOpt if existingUserOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
         sui
       case None =>
-        val userOpt = existingUserOpt orElse makeUser()
+        val userOpt = getOrCreateUser()
         log.info("creating new SocialUserInfo for %s".format(userOpt))
 
         val userInfo = SocialUserInfo(userId = userOpt.flatMap(_.id),//verify saved
@@ -124,13 +127,18 @@ class SecureSocialUserPluginImpl @Inject() (
 
         for (user <- userOpt) {
           if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
+            val email = socialUser.email.getOrElse(throw new IllegalStateException("user has no email"))
             val cred =
               UserCred(
                 userId = user.id.get,
-                loginName = socialUser.email.getOrElse(throw new Exception),
+                loginName = email,
                 provider = "bcrypt" /* hard-coded */,
                 credentials = socialUser.passwordInfo.get.password,
                 salt = socialUser.passwordInfo.get.salt.getOrElse(""))
+            val emailAddress = emailRepo.getByAddressOpt(address = email) getOrElse {
+              emailRepo.save(EmailAddress(userId = user.id.get, address = email))
+            }
+            log.info(s"[save(userpass)] Saved email is $emailAddress")
             val savedCred = userCredRepo.save(cred)
             log.info(s"[save(userpass)] Persisted $cred into userCredRepo as $savedCred")
           }

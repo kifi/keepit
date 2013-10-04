@@ -13,6 +13,7 @@ import javax.xml.validation.SchemaFactory
 import javax.xml.validation.{Validator => JValidator}
 import org.xml.sax.SAXException
 import java.io.StringReader
+import play.api.Mode.Test
 
 import scala.xml._
 
@@ -28,24 +29,35 @@ class AirbrakeTest extends Specification with TestInjector {
 
   "AirbrakeTest" should {
 
+    "deployment payload" in {
+      withInjector(TestFortyTwoModule()) { implicit injector =>
+        val formatter = inject[AirbrakeFormatter]
+        formatter.deploymentMessage === "api_key=fakeApiKey&deploy[rails_env]=test&deploy[scm_repository]=https://github.com/FortyTwoEng/keepit&deploy[scm_revision]=0.0.0"
+      }
+    }
+
     "format stack trace with x2 cause" in {
-      val formatter = new AirbrakeFormatter(null, null, null)
-      val error = new IllegalArgumentException("hi there", new Exception("middle thing" , new IllegalStateException("its me")))
-      val xml = formatter.noticeError(ErrorWithStack(error), None)
-      val lines = (xml \\ "line").toVector
-      lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="Specification.scala" number="34"/>
-      lines(1) === <line method="org.specs2.mutable.SpecificationFeatures[a][a]#apply" file="Specification.scala" number="34"/>
-      lines.size === 185
+      withInjector(TestFortyTwoModule()) { implicit injector =>
+        val formatter = inject[AirbrakeFormatter]
+        val error = new IllegalArgumentException("hi there", new Exception("middle thing" , new IllegalStateException("its me")))
+        val xml = formatter.noticeError(ErrorWithStack(error), None)
+        val lines = (xml \\ "line").toVector
+        lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="InjectorProvider.scala" number="39"/>
+        lines(1) === <line method="com.keepit.inject.InjectorProvider#withInjector" file="InjectorProvider.scala" number="39"/>
+        lines.size === 188
+      }
     }
 
     "format stack trace with x1 cause" in {
-      val formatter = new AirbrakeFormatter(null, null, null)
-      val error = new IllegalArgumentException("hi there", new IllegalStateException("its me"))
-      val xml = formatter.noticeError(ErrorWithStack(error), None)
-      val lines = (xml \\ "line").toVector
-      lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="Specification.scala" number="34"/>
-      lines(1) === <line method="org.specs2.mutable.SpecificationFeatures[a][a]#apply" file="Specification.scala" number="34"/>
-      lines.size === 123
+      withInjector(TestFortyTwoModule()) { implicit injector =>
+        val formatter = inject[AirbrakeFormatter]
+        val error = new IllegalArgumentException("hi there", new IllegalStateException("its me"))
+        val xml = formatter.noticeError(ErrorWithStack(error), None)
+        val lines = (xml \\ "line").toVector
+        lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="InjectorProvider.scala" number="39"/>
+        lines(1) === <line method="com.keepit.inject.InjectorProvider#withInjector" file="InjectorProvider.scala" number="39"/>
+        lines.size === 125
+      }
     }
 
     "format only error" in {

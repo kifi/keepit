@@ -20,8 +20,6 @@ import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent._
-import ExecutionContext.Implicits.global
 
 class CommentQueryParser(
   analyzer: Analyzer,

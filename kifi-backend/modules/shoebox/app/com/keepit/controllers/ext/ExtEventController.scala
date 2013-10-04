@@ -8,6 +8,8 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.db.slick.{Database}
+import com.keepit.common.akka.SafeFuture
+import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
 
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -15,17 +17,20 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
 
+import java.math.BigDecimal
+
 class ExtEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   eventPersister: EventPersister,
   db: Database,
   userRepo: UserRepo,
+  heimdal: HeimdalServiceClient,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def logEvent = Action { request =>
-    future{
+    SafeFuture{
       val req = request.body.asJson.get.asInstanceOf[JsObject]
       val userId = Id[User]((req \ "userId").as[Long])
       val o = (req \ "event").asInstanceOf[JsObject]
@@ -34,7 +39,7 @@ class ExtEventController @Inject() (
       val eventTime = clock.now.minusMillis((o \ "msAgo").asOpt[Int].getOrElse(0))
       val eventFamily = EventFamilies((o \ "eventFamily").as[String])
       val eventName = (o \ "eventName").as[String]
-      val installId = (o \ "installId").as[String]
+      val installId = (o \ "installId").asOpt[String].getOrElse("NA")
       val metaData = (o \ "metaData").asOpt[JsObject].getOrElse(Json.obj())
       val prevEvents = (o \ "prevEvents").asOpt[Seq[String]].getOrElse(Seq.empty).map(ExternalId[Event])
       val experiments = (o \ "experiments").as[Seq[State[ExperimentType]]].toSet
@@ -42,52 +47,36 @@ class ExtEventController @Inject() (
       val event = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
       log.debug(s"Created new event: $event")
       eventPersister.persist(event)
+
+      //Mirroring to heimdal (temporary, will be the only destination soon without going through shoebox)
+      val contextBuilder = new UserEventContextBuilder()
+      experiments.foreach{ experiment =>
+        contextBuilder += ("experiment", experiment.toString)
+      }
+      metaData.fields.foreach{ 
+        case (key, jsonValue) => {
+          val jsonString = jsonValue match { 
+            case JsString(s) => s
+            case json => Json.stringify(json)
+          }
+          val value = try {
+            val parsedValue = jsonString.toBoolean
+            contextBuilder += (key,parsedValue)
+          } catch {
+            case _ =>
+              try {
+                val parsedValue = new BigDecimal(jsonString).doubleValue
+                contextBuilder += (key,parsedValue)
+              } catch {
+                case _ => contextBuilder += (key,jsonString)
+              } 
+          }
+        }
+      }
+      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType(s"old_${eventFamily}_${eventName}")))
+
     }
     Ok("")
   }
 
-  def logUserEvents = AuthenticatedJsonToJsonAction { request =>
-    val json = request.body
-    (json \ "version").as[Int] match {
-      case 1 => createEventsFromPayload(json, request.user, request.experiments)
-      case i => throw new Exception(s"Unknown events version: $i")
-    }
-    Ok(JsObject(Seq("stored" -> JsString("ok"))))
-  }
-
-  private[ext] def createEventsFromPayload(params: JsValue, user: User, experiments: Set[State[ExperimentType]]) = {
-    val logRecievedTime = currentDateTime
-
-    val events = (params \ "events") match {
-      case JsArray(ev) => ev map (  _.as[JsObject] )
-      case _: JsValue => throw new Exception()
-    }
-
-    val logClientTime = (params \ "time").as[Int]
-    val globalInstallId = (params \ "installId").asOpt[String].getOrElse("")
-
-      events map { event =>
-        val eventTimeAgo = math.max(logClientTime - (event \ "time").as[Int],0)
-        val eventTime = logRecievedTime.minusMillis(eventTimeAgo)
-
-        val eventFamily = EventFamilies((event \ "eventFamily").as[String])
-        val eventName = (event \ "eventName").as[String]
-        val installId = (event \ "installId").asOpt[String].getOrElse(globalInstallId)
-        val metaData = (event \ "metaData").asOpt[JsObject].getOrElse(JsObject(Seq()))
-        val prevEvents = ((event \ "prevEvents") match {
-          case JsArray(s) =>
-            Some(s map { ext =>
-              ext match {
-                case JsString(id) => Some(ExternalId[Event](id))
-                case _: JsValue => None
-              }
-            } flatten)
-          case _: JsValue => None
-        }).getOrElse(Seq())
-        val newEvent = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
-        log.debug(s"Created new event: $newEvent")
-
-        eventPersister.persist(newEvent)
-      }
-  }
 }

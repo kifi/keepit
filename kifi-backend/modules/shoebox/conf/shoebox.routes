@@ -15,6 +15,7 @@ POST    /login/:provider            @com.keepit.controllers.core.AuthController.
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
 POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
 POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
+GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 
 POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
@@ -30,7 +31,6 @@ GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
 
-POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
 POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportController.addErrorReport
 
 # This should match the output format of S3ImageConfig#keyByExternalId
@@ -315,6 +315,7 @@ GET     /internal/version                             @com.keepit.controllers.we
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
 POST    /internal/shoebox/database/getNormalizedURIByURL       @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIByURL()
+POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize       @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedUriByUrlOrPrenormalize()
 POST    /internal/shoebox/database/internNormalizedURI       @com.keepit.controllers.shoebox.ShoeboxController.internNormalizedURI()
 GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)

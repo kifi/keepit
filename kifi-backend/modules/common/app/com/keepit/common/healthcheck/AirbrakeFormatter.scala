@@ -33,9 +33,15 @@ object ErrorWithStack {
 
 class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices) {
 
+  val deploymentMessage = {
+    val repo = "https://github.com/FortyTwoEng/keepit"
+    val version = service.currentVersion
+    s"api_key=$apiKey&deploy[rails_env]=$modeToRailsNaming&deploy[scm_repository]=$repo&deploy[scm_revision]=$version"
+  }
+
   private def formatCauseStacktrace(causeOpt: Option[ErrorWithStack]): NodeSeq = causeOpt match {
     case Some(error) =>
-      {<line method="" file={"Cause: " + error.toString} number=""/>} ++
+      {<line method="" file={"========== Cause ========== " + error.toString} number="=========="/>} ++
       formatStacktrace(error) ++
       formatCauseStacktrace(error.cause)
     case None =>
@@ -108,13 +114,13 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
       { noticeEntities(error) }
       <server-environment>
         <project-root>{service.currentService}</project-root>
-        <environment-name>{modeToRailsNaming(playMode)}</environment-name>
+        <environment-name>{modeToRailsNaming}</environment-name>
         <app-version>{service.currentVersion}</app-version>
         <hostname>{service.baseUrl}</hostname>
       </server-environment>
     </notice>
 
-  private def modeToRailsNaming(mode: Mode) = mode match {
+  lazy val modeToRailsNaming = playMode match {
     case Test => "test"
     case Prod => "production"
     case Dev => "development"

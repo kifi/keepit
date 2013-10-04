@@ -10,14 +10,27 @@ import com.google.inject.Inject
 import views.html
 import java.net.InetAddress
 
-case class ClusterMemberInfo(serviceType: ServiceType, zkid: Long, isLeader: Boolean, instanceInfo: AmazonInstanceInfo, localHostName:String, state: ServiceStatus, capabilities: List[String], version: ServiceVersion)
+case class ClusterMemberInfo(serviceType: ServiceType, zkid: Long, isLeader: Boolean, instanceInfo: AmazonInstanceInfo, localHostName:String, state: ServiceStatus, capabilities: List[String], version: ServiceVersion, name: String)
 
 class AdminClusterController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     httpClient: HttpClient,
     serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
-    val serviceTypes : List[ServiceType] =  ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: Nil
+    val serviceTypes : List[ServiceType] =  ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: Nil
+
+    val machineNames = Map[String, String](
+        "50.18.183.73"    -> "b01",
+        "184.169.164.108" -> "b02",
+        "50.18.123.43"    -> "b04",
+        "54.241.10.138"   -> "b05",
+        "204.236.164.58"  -> "b06",
+        "54.241.220.35"   -> "b07",
+        "184.169.206.118" -> "b08",
+        "54.215.103.202"  -> "b09",
+        "54.215.113.116"  -> "b10",
+        "54.219.29.184"   -> "b11"
+    )
 
     def clustersView = AdminHtmlAction { implicit request =>
         
@@ -26,9 +39,14 @@ class AdminClusterController @Inject() (
             serviceCluster.allMembers.map { serviceInstance =>
                 var isLeader = serviceCluster.leader.map(_==serviceInstance).getOrElse(false)
                 var testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email")
-                val versionResp = httpClient.get("http://" + serviceInstance.instanceInfo.localHostname + ":9000" + Common.internal.version().url)
+                val versionResp : String = try {
+                    httpClient.get("http://" + serviceInstance.instanceInfo.localHostname + ":9000" + Common.internal.version().url, httpClient.ignoreFailure).body
+                } catch {
+                    case _ => "NA"
+                }
                 val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.localIp.ip).getHostName()
-                ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, ServiceVersion(versionResp.body))
+                val name = machineNames.get(serviceInstance.instanceInfo.publicIp.toString).getOrElse("NA")
+                ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, ServiceVersion(versionResp), name)
             }
         }
 

@@ -21,7 +21,7 @@ var tile = tile || function() {  // idempotent for Chrome
   api.port.on({
     session_change: onSessionChange,
     open_to: function(o) {
-      keeper("showPane", o.trigger, o.locator);
+      keeper("showPane", o.trigger, o.locator, o.redirected);
     },
     button_click: keeper.bind(null, "togglePane", "button"),
     auto_show: keeper.bind(null, "show", "auto"),
@@ -59,13 +59,10 @@ var tile = tile || function() {  // idempotent for Chrome
       setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
-      if (!tile) {
-        return;
-      }
-      updateCounts(counts);
+      tile && updateCounts(counts);
     },
     scroll_rule: function(r) {
-      if (!onScroll) {
+      if (!onScroll && !window.slider2) {
         var lastScrollTime = 0;
         document.addEventListener("scroll", onScroll = function(e) {
           var t = e.timeStamp || Date.now();
@@ -143,11 +140,11 @@ var tile = tile || function() {  // idempotent for Chrome
     } else if (!session) {
       toggleLoginDialog();
     } else {
-      if (onScroll && name != "showKeepers") {
-        document.removeEventListener("scroll", onScroll);
-        onScroll = null;
-      }
       api.require("scripts/slider2.js", function() {
+        if (onScroll && name != "showKeepers") {
+          document.removeEventListener("scroll", onScroll);
+          onScroll = null;
+        }
         slider2[args.shift()].apply(slider2, args);
       });
     }

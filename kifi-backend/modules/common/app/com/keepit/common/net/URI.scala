@@ -121,6 +121,7 @@ class Query(val params: Seq[Param]) {
     case _ => false
   }
   def containsParam(name: String) = params.exists(_.name == name)
+  def getParam(name: String) = params.find(_.name == name)
 }
 
 case class Param(name: String, value: Option[String]) {

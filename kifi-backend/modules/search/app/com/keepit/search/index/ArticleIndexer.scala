@@ -17,7 +17,6 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 import com.keepit.search.SemanticVectorBuilder
 import com.google.inject.Inject
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import ArticleRecordSerializer._

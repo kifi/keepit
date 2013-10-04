@@ -17,9 +17,9 @@ import com.google.inject.Inject
 class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo){
 
   def computeAdHocMteric(startTime: DateTime, endTime: DateTime, definition: MetricDefinition): Future[JsArray]  = {
-    val pipeline = definition.aggregationForTimeWindow(startTime, Duration(endTime.getMillis - startTime.getMillis,"ms"))
+    val (pipeline, postprocess) = definition.aggregationForTimeWindow(startTime, Duration(endTime.getMillis - startTime.getMillis,"ms"))
     userEventLoggingRepo.performAggregation(pipeline).map{ bsonStream =>
-      JsArray( bsonStream.toSeq.map { bson =>
+      JsArray( postprocess(bsonStream).map { bson =>
         JsObjectReader.read(bson)
       })
     }

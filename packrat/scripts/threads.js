@@ -16,33 +16,26 @@
 panes.threads = function() {
   'use strict';
   var handlers = {
-    thread_info: function(o) {
-      update(o.thread, o.read);
-    },
-    message: function(o) {
-      update(o.thread, o.read);
-    },
-    threads: function(o) {
-      updateAll(o.threads, o.readTimes, o.userId);
-    }};
+    thread_info: update,
+    threads: updateAll};
 
   var $list = $();
   return {
     render: function($container) {
-      api.port.emit("threads", function(o) {
+      api.port.emit("threads", function(threads) {
         api.port.emit("session", function(session) {
-          renderThreads($container, o, session.prefs);
+          renderThreads($container, threads, session.prefs);
           api.port.on(handlers);
-          o.threads.forEach(function(th) {
+          threads.forEach(function(th) {
             api.port.emit("thread", {id: th.id});  // preloading
           });
         });
       });
     }};
 
-  function renderThreads($container, o, prefs) {
-      o.threads.forEach(function(t) {
-        var n = messageCount(t, new Date(o.read[t.id] || 0));
+  function renderThreads($container, threads, prefs) {
+      threads.forEach(function(t) {
+        var n = messageCount(t);
         t.messageCount = n < -9 ? "9+" : Math.abs(n);
         t.messagesUnread = n < 0;
         t.participantsPictured = t.participants.slice(0, 4);
@@ -51,7 +44,7 @@ panes.threads = function() {
         formatSnippet: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
         emptyUri: api.url("images/metro/bg_messages.png"),
-        threads: o.threads,
+        threads: threads,
         showTo: true,
         draftPlaceholder: "Type a message…",
         draftDefault: "Check this out.",
@@ -70,7 +63,7 @@ panes.threads = function() {
         .on("click", ".kifi-thread", function() {
           var $th = $(this), id = $th.data("id");
           var participants = $th.data("recipients") ||
-            o.threads.filter(function(t) {return t.id == id})[0].participants;
+            threads.filter(function(t) {return t.id === id})[0].participants;
           $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["/messages/" + id, participants])
         })
         .on("kifi:compose-submit", sendMessage.bind(null, $container))
@@ -89,9 +82,9 @@ panes.threads = function() {
         });
   }
 
-  function update(thread, readTime) {
+  function update(thread) {
       if ($list.length && thread) {
-        renderThread(thread, readTime, function($th) {
+        renderThread(thread, function($th) {
           var $old = $list.children("[data-id=" + thread.id + "],[data-id=]").first();
           if ($old.length) {
             var $thBelow = $old.nextAll(".kifi-thread");  // TODO: compare timestamps
@@ -114,10 +107,10 @@ panes.threads = function() {
       }
   }
 
-  function updateAll(threads, readTimes, userId) {
+  function updateAll(threads) {
       var arr = new Array(threads.length), n = 0;
       threads.forEach(function(th, i) {
-        renderThread(th, readTimes[th.id], function($th) {
+        renderThread(th, function($th) {
           arr[i] = $th;
           if (++n == arr.length) {
             $list.children(".kifi-thread").remove().end()
@@ -145,8 +138,8 @@ panes.threads = function() {
       });
   }
 
-  function renderThread(th, readTime, callback) {
-    var n = messageCount(th, new Date(readTime || 0));
+  function renderThread(th, callback) {
+    var n = messageCount(th);
     th.messageCount = n < -9 ? "9+" : Math.abs(n);
     th.messagesUnread = n < 0;
     th.participantsPictured = th.participants.slice(0, 4);
@@ -157,10 +150,10 @@ panes.threads = function() {
     });
   }
 
-  function messageCount(th, readTime) {
-    var nUnr = 0;
+  function messageCount(th) {
+    var nUnr = 0, readAt = new Date(th.lastMessageRead || 0);
     for (var id in th.messageTimes) {
-      if (new Date(th.messageTimes[id]) > readTime) {
+      if (new Date(th.messageTimes[id]) > readAt) {
         nUnr++;
       }
     }

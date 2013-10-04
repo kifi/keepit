@@ -5,8 +5,7 @@ import java.io.File
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
@@ -21,7 +20,7 @@ import play.modules.statsd.api.{Statsd, StatsdFilter}
 import play.utils.Threads
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
-    extends WithFilters(LoggingFilter, new StatsdFilter()) with Logging with EmptyInjector {
+    extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
 
   override def getControllerInstance[A](clazz: Class[A]) = try {
     injector.getInstance(clazz)
@@ -58,11 +57,10 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     injector.instance[AppScope].onStart(app)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
       Statsd.increment("deploys", 42)
+      injector.instance[AirbrakeNotifier].reportDeployment()
       injector.instance[HealthcheckPlugin].reportStart()
       injector.instance[HealthcheckPlugin].warmUp()
     }
-
-
   }
 
   // Get a file within the .fortytwo folder in the user's home directory

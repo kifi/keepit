@@ -32,7 +32,7 @@ import securesocial.core.{Authenticator, UserService, SecureSocial}
 
 import org.joda.time.DateTime
 
-case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
+case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]], userAgent: String)
 
 case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User], experiments: Set[State[ExperimentType]])
 
@@ -52,7 +52,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
 
 
-  private def asyncIteratee(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
+  private def asyncIteratee(streamSession: StreamSession)(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
     import play.api.libs.iteratee._
     def step(i: Input[JsArray]): Iteratee[JsArray, Unit] = i match {
       case Input.EOF => Done(Unit, Input.EOF)
@@ -68,7 +68,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 method = Some("ws"), 
                 path = e.value.headOption.map(_.toString), 
                 callType = Healthcheck.INTERNAL,
-                errorMessage = Some(s"Error on ws call ${e.toString}")
+                errorMessage = Some(s"Error on ws call ${e.toString} for user ${streamSession.userId.id} using ${streamSession.userAgent}")
               )
             )
           } 
@@ -129,13 +129,13 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               val impUserIdFuture = shoebox.getUserOpt(impExtUserId).map(_.get.id.get)
               impUserIdFuture.flatMap{ impUserId =>
                 shoebox.getSocialUserInfosByUserId(impUserId).map{ impSocUserInfo =>
-                  StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId))
+                  StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId), request.headers.get("User-Agent").getOrElse("NA"))
                 }
               }
             case None if experiments.contains(ExperimentTypes.ADMIN) =>
-              Promise.successful(StreamSession(userId, socialUser, experiments, Some(userId))).future
+              Promise.successful(StreamSession(userId, socialUser, experiments, Some(userId), request.headers.get("User-Agent").getOrElse("NA"))).future
             case _ =>
-              Promise.successful(StreamSession(userId, socialUser, experiments, None)).future
+              Promise.successful(StreamSession(userId, socialUser, experiments, None, request.headers.get("User-Agent").getOrElse("NA"))).future
           }
         }
       }
@@ -188,7 +188,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           }
         }
 
-        val iteratee = asyncIteratee { jsArr =>
+        val iteratee = asyncIteratee(streamSession) { jsArr =>
           Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
             atomic { implicit txn =>
               socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
@@ -201,18 +201,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               }
             }
             
-            //testing heimdal
-            SafeFuture {
-              val contextBuilder = new UserEventContextBuilder()
-              contextBuilder += ("requestType", jsArr.value(0).as[String])
-              contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-              contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
-              contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
-              streamSession.experiments.foreach{ experiment => 
-                contextBuilder += ("experiment", experiment.toString)
-              }
-              heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_in_2")))
-            }
 
             log.info("WS request for: " + jsArr)
             Statsd.increment(s"websocket.handler.${jsArr.value(0)}")

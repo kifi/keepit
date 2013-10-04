@@ -12,154 +12,159 @@
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/prevent_ancestor_scroll.js
 
-panes.thread = function() {
+panes.thread = function () {
   'use strict';
   var handlers = {
-    message: function(o) {
+    message: function (o) {
       update(o.threadId, o.message, o.userId);
     },
-    thread: function(o) {
+    thread: function (o) {
       updateAll(o.id, o.messages, o.userId);
     }};
 
   var $holder = $(), buffer = {};
   return {
-    render: function($container, locator) {
-      var threadId = locator.split("/")[2];
-      log("[panes.thread.render]", threadId)();
-      api.port.emit("thread", {id: threadId, respond: true}, function(th) {
-        api.port.emit("session", function(session) {
+    render: function ($container, locator) {
+      var threadId = locator.split('/')[2];
+      log('[panes.thread.render]', threadId)();
+      api.port.emit('thread', {id: threadId, respond: true}, function (th) {
+        api.port.emit('session', function (session) {
           renderThread($container, th.id, th.messages, session);
           api.port.on(handlers);
         });
       });
+      var $redirected = $container.find('.kifi-thread-redirected').click(function () {
+        $redirected.fadeOut(800, $.fn.remove.bind($redirected));
+      });
+      if ($redirected.length) {
+        setTimeout($.fn.triggerHandler.bind($redirected, 'click'), 5000);
+      }
     }};
 
   function renderThread($container, threadId, messages, session) {
-      messages.forEach(function(m) {
-        m.isLoggedInUser = m.user.id == session.userId;
+    messages.forEach(function (m) {
+      m.isLoggedInUser = m.user.id == session.userId;
+    });
+    $(render('html/metro/messages', {
+      formatMessage: getTextFormatter,
+      formatLocalDate: getLocalDateFormatter,
+      messages: messages,
+      draftPlaceholder: 'Type a message…',
+      submitButtonLabel: 'Send',
+      submitTip: (session.prefs.enterToSend ? '' : CO_KEY + '-') + 'Enter to send',
+      snapshotUri: api.url('images/snapshot.png')
+    }, {
+      message: 'message',
+      compose: 'compose'
+    }))
+    .prependTo($container)
+    .on('mousedown', 'a[href^="x-kifi-sel:"]', lookMouseDown)
+    .on('click', 'a[href^="x-kifi-sel:"]', function (e) {
+      e.preventDefault();
+    })
+    .on('kifi:compose-submit', sendReply.bind(null, $container, threadId, session))
+    .find('time').timeago();
+
+    attachComposeBindings($container, 'message', session.prefs.enterToSend);
+
+    $holder = $container.find('.kifi-messages-sent-inner').preventAncestorScroll().data('threadId', threadId);
+    var scroller = $container.find('.kifi-scroll-wrap').antiscroll({x: false}).data('antiscroll');
+    $(window).on('resize.thread', scroller.refresh.bind(scroller));
+
+    $container.closest('.kifi-pane-box').on('kifi:remove', function () {
+      if ($holder.length && this.contains($holder[0])) {
+        $holder = $();
+        $(window).off('resize.thread');
+        api.port.off(handlers);
+      }
+    });
+
+    // It's important that we check the buffer after rendering the messages, to avoid creating a window
+    // of time during which we might miss an incoming message on this thread.
+    if (buffer.threadId == threadId && !messages.some(function (m) {return m.id === buffer.message.id})) {
+      log('[render] appending buffered message', buffer.message.id)();
+      messages.push(buffer.message);
+      renderMessage(buffer.message, session.userId, function ($m) {
+        $holder.append($m).scrollToBottom();
       });
-      $(render("html/metro/messages", {
-        formatMessage: getTextFormatter,
-        formatLocalDate: getLocalDateFormatter,
-        messages: messages,
-        draftPlaceholder: "Type a message…",
-        submitButtonLabel: "Send",
-        submitTip: (session.prefs.enterToSend ? "" : CO_KEY + "-") + "Enter to send",
-        snapshotUri: api.url("images/snapshot.png")
-      }, {
-        message: "message",
-        compose: "compose"
-      })).prependTo($container)
-      // TODO: unindent below
-        .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
-        .on("click", "a[href^='x-kifi-sel:']", function(e) {
-          e.preventDefault();
-        })
-        .on("kifi:compose-submit", sendReply.bind(null, $container, threadId, session))
-        .find("time").timeago();
+    }
 
-        attachComposeBindings($container, "message", session.prefs.enterToSend);
-
-        $holder = $container.find(".kifi-messages-sent-inner").preventAncestorScroll().data("threadId", threadId);
-        var scroller = $container.find(".kifi-scroll-wrap").antiscroll({x: false}).data("antiscroll");
-        $(window).on("resize.thread", scroller.refresh.bind(scroller));
-
-        $container.closest(".kifi-pane-box").on("kifi:remove", function() {
-          if ($holder.length && this.contains($holder[0])) {
-            $holder = $();
-            $(window).off("resize.thread");
-            api.port.off(handlers);
-          }
-        });
-
-        // It's important that we check the buffer after rendering the messages, to avoid creating a window
-        // of time during which we might miss an incoming message on this thread.
-        if (buffer.threadId == threadId && !messages.some(function(m) {return m.id == buffer.message.id})) {
-          log("[render] appending buffered message", buffer.message.id)();
-          messages.push(buffer.message);
-          renderMessage(buffer.message, session.userId, function($m) {
-            $holder.append($m).scrollToBottom();
-          });
-        }
-
-        if (messages.length) emitRead(threadId, messages[messages.length - 1], true);
+    if (messages.length) {
+      emitRead(threadId, messages[messages.length - 1], true);
+    }
   }
 
   function update(threadId, message, userId) {
-      if ($holder.length && $holder.data("threadId") == threadId) {
-        renderMessage(message, userId, function($m) {
-          if (!message.isLoggedInUser ||
-              !$holder.find(".kifi-message-sent[data-id=" + message.id + "]").length &&
-              !$holder.find(".kifi-message-sent[data-id=]").get().some(function(el) {
-                log("[update] comparing message text")();
-                return $(el).data("text") === message.text;
-              })) {
-            $holder.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
-          }
-          emitRead(threadId, message);
-        });
-      } else {
-        buffer.threadId = threadId;
-        buffer.message = message;
-      }
+    if ($holder.length && $holder.data('threadId') == threadId) {
+      renderMessage(message, userId, function ($m) {
+        if (!message.isLoggedInUser ||
+            !$holder.find('.kifi-message-sent[data-id=' + message.id + ']').length &&
+            !$holder.find('.kifi-message-sent[data-id=]').get().some(function (el) {
+              log('[update] comparing message text')();
+              return $(el).data('text') === message.text;
+            })) {
+          $holder.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
+        }
+        emitRead(threadId, message);
+      });
+    } else {
+      buffer.threadId = threadId;
+      buffer.message = message;
+    }
   }
 
   function updateAll(threadId, messages, userId) {
-      if ($holder.length && $holder.data("threadId") == threadId) {
-        var arr = new Array(messages.length), n = 0;
-        messages.forEach(function(m, i) {
-          renderMessage(m, userId, function($m) {
-            arr[i] = $m;
-            if (++n == arr.length) {
-              $holder.find(".kifi-message-sent").remove().end().append(arr).scrollToBottom();
-              emitRead(threadId, messages[messages.length - 1]);
-            }
-          });
-        })
-      }
+    if ($holder.length && $holder.data('threadId') === threadId) {
+      var arr = new Array(messages.length), n = 0;
+      messages.forEach(function (m, i) {
+        renderMessage(m, userId, function ($m) {
+          arr[i] = $m;
+          if (++n === arr.length) {
+            $holder.find('.kifi-message-sent').remove().end().append(arr).scrollToBottom();
+            emitRead(threadId, messages[messages.length - 1]);
+          }
+        });
+      })
+    }
   }
 
   function sendReply($container, threadId, session, e, text) {
     var $reply, resp;
-    api.port.emit("send_reply", {text: text, threadId: threadId}, function(o) {
-      log("[sendReply] resp:", o)();
+    api.port.emit('send_reply', {text: text, threadId: threadId}, function (o) {
+      log('[sendReply] resp:', o)();
       updateSentReply($reply, resp = o);
     });
     renderMessage({
-      id: "",
+      id: '',
       createdAt: new Date().toISOString(),
       text: text,
-      user: {
-        id: session.userId,
-        firstName: session.name,
-        lastName: ""}
-    }, session.userId, function($m) {
+      user: {id: session.userId, firstName: session.name, lastName: ''}
+    }, session.userId, function ($m) {
       updateSentReply($reply = $m, resp);
-      $holder.append($m.data("text", text)).scrollToBottom();
+      $holder.append($m.data('text', text)).scrollToBottom();
     });
   }
 
   function renderMessage(m, userId, callback) {
     m.formatMessage = getTextFormatter;
     m.formatLocalDate = getLocalDateFormatter;
-    m.isLoggedInUser = m.user.id == userId;
-    render("html/metro/message", m, function(html) {
-      callback($(html).find("time").timeago().end());
+    m.isLoggedInUser = m.user.id === userId;
+    render('html/metro/message', m, function (html) {
+      callback($(html).find('time').timeago().end());
     });
   }
 
   function updateSentReply($m, resp) {
     if ($m && resp) {
-      $m.attr("data-id", resp.id);
-      $m.find("time")  // TODO: patch timeago to update attrs too
-        .attr("datetime", resp.createdAt)
-        .attr("title", getLocalDateFormatter()(resp.createdAt, function render(s) {return s}))
-        .timeago("update", resp.createdAt);
+      $m.attr('data-id', resp.id);
+      $m.find('time')  // TODO: patch timeago to update attrs too
+        .attr('datetime', resp.createdAt)
+        .attr('title', getLocalDateFormatter()(resp.createdAt, function render(s) {return s}))
+        .timeago('update', resp.createdAt);
     }
   }
 
   function emitRead(threadId, m, forceSend) {
-    api.port.emit("message_rendered", {threadId: threadId, messageId: m.id, time: m.createdAt, forceSend: forceSend || false});
+    api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt, forceSend: forceSend || false});
   }
 }();
