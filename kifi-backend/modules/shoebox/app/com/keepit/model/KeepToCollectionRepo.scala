@@ -21,6 +21,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def count(collId: Id[Collection])(implicit session: RSession): Int
   def delete(id: Id[KeepToCollection])(implicit session: RWSession): Unit
   def remove(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RWSession): Unit
+  def getOpt(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection]
 }
 
 @Singleton
@@ -85,8 +86,12 @@ class KeepToCollectionRepoImpl @Inject() (
     } yield c).length).firstOption.getOrElse(0)
   }
 
+  def getOpt(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection] = {
+    (for(r <- table if r.bookmarkId === bookmarkId && r.collectionId === collectionId) yield r).firstOption
+  }
+
   def remove(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RWSession): Unit = {
-    val q = (for(r <- table if r.bookmarkId === bookmarkId && r.collectionId === collectionId) yield r)
+    val q = for(r <- table if r.bookmarkId === bookmarkId && r.collectionId === collectionId) yield r
     q.firstOption.map { ktc =>
       collectionRepo.collectionChanged(ktc.collectionId, false)
       collectionsForBookmarkCache.remove(CollectionsForBookmarkKey(ktc.bookmarkId))
@@ -95,7 +100,7 @@ class KeepToCollectionRepoImpl @Inject() (
   }
 
   def delete(id: Id[KeepToCollection])(implicit session: RWSession): Unit = {
-    val q = (for(r <- table if r.id === id) yield r)
+    val q = for(r <- table if r.id === id) yield r
     q.firstOption.map{ ktc =>
       collectionRepo.collectionChanged(ktc.collectionId, false)
       collectionsForBookmarkCache.remove(CollectionsForBookmarkKey(ktc.bookmarkId))
