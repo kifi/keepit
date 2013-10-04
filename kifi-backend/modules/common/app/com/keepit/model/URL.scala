@@ -12,8 +12,7 @@ import play.api.libs.json._
 case class URLHistoryCause(value: String)
 object URLHistoryCause {
   val CREATE = URLHistoryCause("create")
-  val SPLIT = URLHistoryCause("split")
-  val MERGE = URLHistoryCause("merge")
+  val MIGRATED = URLHistoryCause("migrated")
 }
 case class URLHistory(date: DateTime, id: Id[NormalizedURI], cause: URLHistoryCause = URLHistoryCause.CREATE)
 

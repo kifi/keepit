@@ -18,13 +18,17 @@ import com.keepit.integrity.DuplicateDocumentsProcessor
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.normalizer.NormalizationService
 import com.keepit.model.DuplicateDocument
-import com.keepit.integrity.SplittedUri
+import com.keepit.integrity.URLMigration
 import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.normalizer.TrustedCandidate
-import com.keepit.integrity.MergedUri
+import com.keepit.integrity.URIMigration
 import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.zookeeper.CentralConfig
+import com.keepit.integrity.RenormalizationCheckKey
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -47,9 +51,12 @@ class UrlController @Inject() (
   uriIntegrityPlugin: UriIntegrityPlugin,
   normalizationService: NormalizationService,
   urlPatternRuleRepo: UrlPatternRuleRepo,
+  renormRepo: RenormalizedURLRepo,
+  centralConfig: CentralConfig,
   httpProxyRepo: HttpProxyRepo,
   eliza: ElizaServiceClient,
-  monitoredAwait: MonitoredAwait) extends AdminController(actionAuthenticator) {
+  monitoredAwait: MonitoredAwait,
+  airbrake: AirbrakeNotifier) extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -60,61 +67,77 @@ class UrlController @Inject() (
   def renormalize(readOnly: Boolean = true, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
     Akka.future {
       try {
-        val result = doRenormalize(readOnly, domain).replaceAll("\n","\n<br>")
-        db.readWrite { implicit s =>
-          postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-           subject = "Renormalization Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
-        }
+        doRenormalize(readOnly, domain)
       } catch {
-        case ex: Throwable => log.error(ex.getMessage, ex)
+        case ex: Throwable => airbrake.notify(AirbrakeError(ex, Some(ex.getMessage)))
       }
     }
-    Ok("Started! Will email %s".format(EmailAddresses.ENG))
+    Ok("Started!")
   }
-
+  
   def doRenormalize(readOnly: Boolean = true, domain: Option[String] = None) = {
-    // Processes all models that reference a `NormalizedURI`, and renormalizes all URLs.
-    val (urlsSize, changes) = db.readWrite {implicit session =>
-
-      val urls = domain match {
-        case Some(domainStr) => urlRepo.getByDomain(domainStr)
-        case None => urlRepo.all
+        
+    def getUrlList() = {
+      val urls = db.readOnly { implicit s =>
+        domain match {
+          case Some(domainStr) => urlRepo.getByDomain(domainStr)
+          case None => urlRepo.all
+        }
+      }.sortBy(_.id.get.id)
+      
+      val lastId = centralConfig(RenormalizationCheckKey) getOrElse 0L
+      urls.filter(_.id.get.id > lastId).filter(_.state == URLStates.ACTIVE)
+    }
+    
+    def needRenormalization(url: URL)(implicit session: RWSession): (Boolean, Option[NormalizedURI]) = {
+      uriRepo.getByUri(url.url) match {
+        case None => if (!readOnly) (true, Some(uriRepo.internByUri(url.url))) else (true, None)
+        case Some(uri) if (url.normalizedUriId != uri.id.get) => (true, Some(uri))
+        case _ => (false, None)
       }
-
-      val urlsSize = urls.size
-      val changes = scala.collection.mutable.Map[String, Int]()
-      changes += (("url", 0))
-
-      urls map { url =>
-        if (url.state == URLStates.ACTIVE) {
-          val (normalizedUri, reason) = uriRepo.getByUri(url.url) match {
-            // if nuri exists by current normalization rule, and if url.normalizedUriId was pointing to a different nuri, we need to merge
-            case Some(nuri) => (nuri, URLHistoryCause.MERGE)
-            // No normalized URI exists for this url, create one
-            case None => {
-              val tmp = NormalizedURI.withHash(normalizationService.prenormalize(url.url))
-              val nuri = if (!readOnly) uriRepo.save(tmp) else tmp
-              (nuri, URLHistoryCause.SPLIT)
+    }
+    
+    def batch[T](obs: Seq[T], batchSize: Int): Seq[Seq[T]] = {
+      val total = obs.size
+      val index = ((0 to total/batchSize).map(_*batchSize) :+ total).distinct
+      (0 to (index.size - 2)).map{ i => obs.slice(index(i), index(i+1)) }
+    }
+    
+    def sendEmail(changes: Vector[(URL, Option[NormalizedURI])], readOnly: Boolean)(implicit session: RWSession) = {
+      val batchChanges = batch[(URL, Option[NormalizedURI])](changes, batchSize = 1000)
+      batchChanges.zipWithIndex.map{ case (batch, i) =>
+        val title = "Renormalization Report: " + s"part ${i+1} of ${batchChanges.size}. ReadOnly Mode = ${readOnly}. Num of affected URL: ${changes.size}"
+        val msg = batch.map( x => x._1.url + s"\ncurrent uri: ${ uriRepo.get(x._1.normalizedUriId).url }" + "\n--->\n" + x._2.map{_.url}).mkString("\n\n")
+        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+        subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
+      }
+    }
+    
+    // main code
+    var changes = Vector.empty[(URL, Option[NormalizedURI])]
+    val urls = getUrlList()
+    val batchUrls = batch[URL](urls, batchSize = 100)     // avoid long DB write lock.
+    
+    batchUrls.map { urls =>
+      db.readWrite { implicit s =>
+        urls.foreach { url =>
+          needRenormalization(url) match {
+            case (true, newUriOpt) => {
+              changes = changes :+ (url, newUriOpt)
+              if (changes.size % 100 == 0) log.info(s"renormalization: ${changes.size} urls scanned.")
+              if (!readOnly) newUriOpt.map { uri => renormRepo.save(RenormalizedURL(urlId = url.id.get, oldUriId = url.normalizedUriId, newUriId = uri.id.get)) }
             }
-          }
-
-          // in readOnly mode, id maybe empty
-          if (normalizedUri.id.isEmpty || url.normalizedUriId.id != normalizedUri.id.get.id) {
-            changes("url") += 1
-            if (!readOnly) {
-              reason match {
-                case URLHistoryCause.MERGE => uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = url.normalizedUriId, newUri = normalizedUri.id.get))
-                case URLHistoryCause.SPLIT => uriIntegrityPlugin.handleChangedUri(SplittedUri(url = url, newUri = normalizedUri.id.get))
-              }
-
-            }
+            case _ =>
           }
         }
       }
-      (urlsSize, changes)
+      urls.lastOption.map{ url => centralConfig.update(RenormalizationCheckKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
     }
-
-    "%s urls processed, changes:<br>\n<br>\n%s".format(urlsSize, changes)
+    
+    changes = changes.sortBy(_._1.url)
+    db.readWrite{ implicit s =>
+      sendEmail(changes, readOnly)
+    }
   }
 
   def orphanCleanup() = AdminHtmlAction { implicit request =>
@@ -124,7 +147,7 @@ class UrlController @Inject() (
         orphanCleaner.cleanScrapeInfo(false)
       }
     }
-    Redirect(com.keepit.controllers.admin.routes.UrlController.documentIntegrity())
+    Redirect(routes.UrlController.documentIntegrity())
   }
 
   def documentIntegrity(page: Int = 0, size: Int = 50) = AdminHtmlAction { implicit request =>
@@ -164,7 +187,7 @@ class UrlController @Inject() (
 
   def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
     dupeDetect.asyncProcessDocuments()
-    Redirect(com.keepit.controllers.admin.routes.UrlController.documentIntegrity())
+    Redirect(routes.UrlController.documentIntegrity())
   }
   
   def normalizationView(page: Int = 0) = AdminHtmlAction{ request =>
@@ -182,26 +205,46 @@ class UrlController @Inject() (
     Ok(html.admin.normalization(applied, page, appliedCount, pendingCount, pageCount, PAGE_SIZE))
   }
   
-  def batchMerge = AdminHtmlAction{ request =>
+  def batchURIMigration = AdminHtmlAction{ request =>
     implicit val playRequest = request.request
-    monitoredAwait.result(uriIntegrityPlugin.batchUpdateMerge(), 1 minute, "Manual merge failed.")
+    monitoredAwait.result(uriIntegrityPlugin.batchURIMigration(), 1 minute, "Manual merge failed.")
     Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0))
+  }
+  
+  def batchURLMigration = AdminHtmlAction{ request =>
+    uriIntegrityPlugin.batchURLMigration(500)
+    Ok("Ok. Start migration of upto 500 urls")
+  }
+  
+  def renormalizationView(page: Int = 0) = AdminHtmlAction{ request =>
+    val PAGE_SIZE = 200
+    val (renorms, totalCount) = db.readOnly{ implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount())}
+    val pageCount = (totalCount*1.0 / PAGE_SIZE).ceil.toInt
+    val info = db.readOnly{ implicit s =>
+      renorms.map{ renorm => (
+        renorm.state.toString,
+        urlRepo.get(renorm.urlId).url,
+        uriRepo.get(renorm.oldUriId).url,
+        uriRepo.get(renorm.newUriId).url
+      )}
+    }
+    Ok(html.admin.renormalizationView(info, page, totalCount, pageCount, PAGE_SIZE))
   }
 
   def redirect(oldUrl: String, newUrl: String, canonical: Boolean = false) = AdminHtmlAction { request =>
     db.readOnly { implicit session =>
       (uriRepo.getByUri(oldUrl), uriRepo.getByUri(newUrl)) match {
-        case (None, _) => Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUrl} could not be found.")
-        case (_, None) => Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUrl} could not be found.")
+        case (None, _) => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUrl} could not be found.")
+        case (_, None) => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUrl} could not be found.")
         case (_, Some(newUri)) if newUri.normalization.isEmpty && !canonical =>
-          Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUri.id.get}: ${newUri.url} isn't normalized.")
+          Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUri.id.get}: ${newUri.url} isn't normalized.")
         case (Some(oldUri), Some(newUri)) => {
           val normalization = if (canonical) Normalization.CANONICAL else newUri.normalization.get
           val result = monitoredAwait.result(normalizationService.update(oldUri, TrustedCandidate(newUri.url, normalization)), 1 minute, "Manual normalization update failed.")
           if (result.isDefined)
-            Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to ${newUri.id.get}: ${newUri.url}")
+            Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to ${newUri.id.get}: ${newUri.url}")
           else
-            Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} cannot be redirected to ${newUri.id.get}: ${newUri.url}")
+            Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} cannot be redirected to ${newUri.id.get}: ${newUri.url}")
         }
       }
     }
