@@ -590,7 +590,7 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the new suggestion
 		 */
 		suggestNew: function (name) {
-			return this.appendSuggestion(this.renderTagSuggestionHtml(name));
+			return this.appendSuggestion(this.renderNewTagSuggestionHtml(name));
 		},
 
 		/**
@@ -885,9 +885,9 @@ this.tagbox = (function ($, win) {
 			return false;
 		},
 
-    //
-    // REQUESTS
-    //
+		//
+		// REQUESTS
+		//
 
 		/**
 		 * Makes a request to the server to create a tag for a user.
@@ -948,9 +948,9 @@ this.tagbox = (function ($, win) {
 			return deferred.promise;
 		},
 
-    //
-    // TEMPLATE RENDERERS
-    //
+		//
+		// TEMPLATE RENDERERS
+		//
 
 		/**
 		 * Renders and returns a tag box html.
@@ -979,7 +979,7 @@ this.tagbox = (function ($, win) {
 		 *
 		 * @return {string} new tag suggestion html
 		 */
-		renderTagSuggestionHtml: function (name) {
+		renderNewTagSuggestionHtml: function (name) {
 			return win.render('html/keeper/tag-new', {
 				name: name
 			});
@@ -996,9 +996,9 @@ this.tagbox = (function ($, win) {
 			return win.render('html/keeper/tagbox-tag', tag);
 		},
 
-    //
-    // EVENT LISTENERS
-    //
+		//
+		// EVENT LISTENERS
+		//
 
 		/**
 		 * On click listener for a tag suggestion.
@@ -1033,9 +1033,9 @@ this.tagbox = (function ($, win) {
 			this.removeTag($tag.data('name'));
 		},
 
-    //
-    // OTHER APIS
-    //
+		//
+		// OTHER APIS
+		//
 
 		/**
 		 * Shows a tag box.
@@ -1063,9 +1063,9 @@ this.tagbox = (function ($, win) {
 			}
 		},
 
-    //
-    // HELPER FUNCTIONS
-    //
+		//
+		// HELPER FUNCTIONS
+		//
 
 		/**
 		 * Alerts user for an error.
