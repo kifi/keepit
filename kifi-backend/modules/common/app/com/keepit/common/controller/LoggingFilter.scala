@@ -21,8 +21,7 @@ class LoggingFilter() extends EssentialFilter {
 
   def apply(next: EssentialAction) = new EssentialAction {
     def apply(rh: RequestHeader) = {
-      val timer = accessLog.timer(HTTP_IN)
-
+c
       def logTime(result: PlainResult): Result = {
         val trackingId = rh.headers.get(CommonHeaders.TrackingId).getOrElse("NA")
         val event = accessLog.add(timer.done(

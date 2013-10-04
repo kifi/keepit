@@ -97,7 +97,7 @@ case class HttpClientImpl(
 
   def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.post(body) map { r => res(request, r) }
+    val result = request.post(body) map { r => res(request, r, body) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -106,7 +106,7 @@ case class HttpClientImpl(
 
   def postTextFuture(url: String, body: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.post(body) map { r => res(request, r) }
+    val result = request.post(body) map { r => res(request, r, body) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -115,7 +115,7 @@ case class HttpClientImpl(
 
   def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.post(body) map { r => res(request, r) }
+    val result = request.post(body) map { r => res(request, r, body) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -125,7 +125,7 @@ case class HttpClientImpl(
 
   def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.put(body) map { r => res(request, r) }
+    val result = request.put(body) map { r => res(request, r, body) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -143,10 +143,10 @@ case class HttpClientImpl(
 
   private def req(url: String): Request = new Request(WS.url(url), headers, services, accessLog)
 
-  private def res(request: Request, response: Response): ClientResponse = {
+  private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
     val cr = new ClientResponseImpl(request, response)
     if (response.status / 100 != validResponseClass) {
-      throw new NonOKResponseException(request.req.url, cr)
+      throw new NonOKResponseException(request.req.url, cr, body)
     }
     cr
   }
@@ -226,7 +226,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     // }
     accessLog.add(timer.done(
         remoteTime = remoteTime,
-        success = Some(isSuccess),
+        result = if(isSuccess) "success" else "fail",
         query = queryString,
         url = wsRequest.url,
         trackingId = trackingId,
