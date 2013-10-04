@@ -146,7 +146,7 @@ class ExtMessagingController @Inject() (
 
     val tDiff = currentDateTime.getMillis - tStart.getMillis
     Statsd.timing(s"messaging.replyMessage", tDiff)
-    Ok(Json.obj("id" -> message.externalId.id, "createdAt" -> message.createdAt))
+    Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }
 
   def getChatter() = AuthenticatedJsonToJsonAction { request =>
