@@ -2,7 +2,7 @@ package com.keepit.abook
 
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.model.{ABook => ABookInfo, ABookRawInfo, ABookOriginType, ContactInfo, User}
+import com.keepit.model.{ABookInfo => ABookInfo, ABookRawInfo, ABookOriginType, ContactInfo, User}
 import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
@@ -21,8 +21,8 @@ trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit
-  def getABooks(userId:Id[User]):Future[Seq[ABookInfo]]
-  def getAllContactsRawInfo(userId:Id[User]):Future[Seq[ABookRawInfo]]
+  def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
+  def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getContactsRawInfo(userId:Id[User], origin:ABookOriginType):Future[Seq[ContactInfo]]
 }
 
@@ -38,14 +38,14 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.upload(userId, origin), Json.toJson(contacts))
   }
 
-  def getABooks(userId: Id[User]): Future[Seq[ABookInfo]] = {
-    call(ABook.internal.getABooksInfo(userId)).map { r =>
+  def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = {
+    call(ABook.internal.getABookInfos(userId)).map { r =>
       Json.fromJson[Seq[ABookInfo]](r.json).get
     }
   }
 
-  def getAllContactsRawInfo(userId: Id[User]): Future[Seq[ABookRawInfo]] = {
-    call(ABook.internal.getAllContactsRawInfo(userId)).map { r =>
+  def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = {
+    call(ABook.internal.getABookRawInfos(userId)).map { r =>
       Json.fromJson[Seq[ABookRawInfo]](r.json).get
     }
   }
@@ -65,9 +65,9 @@ class FakeABookServiceClientImpl(val healthcheck: HealthcheckPlugin) extends ABo
 
   def upload(userId: Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {}
 
-  def getABooks(userId: Id[User]): Future[Seq[ABookInfo]] = ???
+  def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = ???
 
-  def getAllContactsRawInfo(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
+  def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
 
   def getContactsRawInfo(userId: Id[User], origin: ABookOriginType): Future[Seq[ContactInfo]] = ???
 }

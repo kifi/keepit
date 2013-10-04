@@ -10,7 +10,7 @@
   bookmarkSearch: Option[String],
   allowedInvites: Int,
   emails: Seq[EmailAddress],
-  abooks: Seq[ABook],
+  abookInfos: Seq[ABookInfo],
   abookRawInfos: Seq[ABookRawInfo],
   collections: Seq[Collection],
   collectionFilter: Option[Id[Collection]])
@@ -124,12 +124,12 @@
 	    </li>
 	  </ul>
 	</div>
-  <h2>User kept @abooks.size address book(s)</h2>
+  <h2>User kept @abookInfos.size Address Book(s)</h2>
   <div class="row-fluid">
       @for(abookRawInfo <- abookRawInfos) {
         <h3>Address book type: @abookRawInfo.origin</h3>
         <div>
-          <table class="table table-bordered">
+          <table class="table table-condensed zebra-striped">
               @for(contact <- abookRawInfo.contacts.value) {
                 <tr><td>@contact</td></tr>
               }

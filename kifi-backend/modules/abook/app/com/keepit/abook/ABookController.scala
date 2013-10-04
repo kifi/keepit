@@ -14,7 +14,7 @@ class ABookController @Inject() (
   actionAuthenticator:ActionAuthenticator,
   db:Database,
   s3:ABookRawInfoStore,
-  abookRepo:ABookRepo,
+  abookInfoRepo:ABookInfoRepo,
   contactInfoRepo:ContactInfoRepo
 ) extends ABookServiceController {
 
@@ -33,15 +33,15 @@ class ABookController @Inject() (
     // TODO: cache (if needed)
 
     val abookRepoEntry = db.readWrite { implicit session =>
-      val abook = ABook(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key))
-      val oldVal = abookRepo.findByUserIdAndOriginOpt(userId, abookRawInfo.origin)
+      val abook = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key))
+      val oldVal = abookInfoRepo.findByUserIdAndOriginOpt(userId, abookRawInfo.origin)
       val entry = oldVal match {
         case Some(e) => {
           log.info(s"[upload] old entry for userId=$userId and origin=${abookRawInfo.origin} already exists: $oldVal")
           e
         }
         case None => {
-          val saved = abookRepo.save(abook)
+          val saved = abookInfoRepo.save(abook)
           log.info(s"[upload] created new abook entry for $userId and ${abookRawInfo.origin} saved entry=$saved")
           saved
         }
@@ -62,11 +62,11 @@ class ABookController @Inject() (
   }
 
 
-  def getAllContactsRawInfo(userId:Id[User]) = Action { request =>
-    val abooks = db.readOnly { implicit session =>
-      abookRepo.findByUserId(userId)
+  def getABookRawInfos(userId:Id[User]) = Action { request =>
+    val abookInfos = db.readOnly { implicit session =>
+      abookInfoRepo.findByUserId(userId)
     }
-    val abookRawInfos = abooks.foldLeft(Seq.empty[ABookRawInfo]) { (a, c) =>
+    val abookRawInfos = abookInfos.foldLeft(Seq.empty[ABookRawInfo]) { (a, c) =>
       a ++ {
         c.rawInfoLoc match {
           case Some(key) => {
@@ -74,9 +74,6 @@ class ABookController @Inject() (
             log.info(s"[getContactsRawInfo(${userId}) key=$key stored=$stored")
             stored match {
               case Some(abookRawInfo) => {
-//                val res = Json.fromJson[Seq[ContactInfo]](abookRawInfo.contacts).get
-//                log.info(s"[getContactsRawInfo(${userId}) s3.get($key)=$res")
-//                res
                 Seq(abookRawInfo)
               }
               case None => Seq.empty[ABookRawInfo]
@@ -86,16 +83,16 @@ class ABookController @Inject() (
         }
       }
     }
-    log.info(s"[getContactsRawInfo(${userId})=$abookRawInfos")
     val json = Json.toJson(abookRawInfos)
+    log.info(s"[getContactsRawInfo(${userId})=$abookRawInfos json=$json")
     Ok(json)
   }
 
-  def getABooksInfo(userId:Id[User]) = Action { request =>
-    val abooks = db.readOnly { implicit session =>
-      abookRepo.findByUserId(userId)
+  def getABookInfos(userId:Id[User]) = Action { request =>
+    val abookInfos = db.readOnly { implicit session =>
+      abookInfoRepo.findByUserId(userId)
     }
-    Ok(Json.toJson(abooks))
+    Ok(Json.toJson(abookInfos))
   }
 
 }
