@@ -3,24 +3,10 @@ package com.keepit.abook.store
 
 import com.keepit.common.db.{State, States, Id}
 import com.keepit.common.store._
-import com.keepit.model.{ABookOriginType, ABook, ContactInfo, User}
+import com.keepit.model._
 import com.amazonaws.services.s3._
 import play.api.libs.json.{JsArray, JsValue, Format}
-
-case class ABookRawInfo(userId:Id[User], origin:ABookOriginType, contacts:JsArray)
-
-object ABookRawInfo {
-  import play.api.libs.functional.syntax._
-  import play.api.libs.json._
-  import com.keepit.common.db.Id
-
-  implicit val format = (
-    (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'origin).format[String].inmap(ABookOriginType.apply _, unlift(ABookOriginType.unapply)) and
-    (__ \ 'contacts).format[JsArray]
-  )(ABookRawInfo.apply _, unlift(ABookRawInfo.unapply))
-
-}
+import com.keepit.common.store.S3Bucket
 
 trait ABookRawInfoStore extends ObjectStore[String, ABookRawInfo]
 
