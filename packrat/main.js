@@ -1135,7 +1135,7 @@ function gotThreadDataFor(url, tab, threads, nUri) {
           if (o.messages.length - oldMessageCount === 1) {
             api.tabs.emit(tab, 'message', {
               threadId: o.id,
-              message: o.messages.length[o.messages.length - 1],
+              message: o.messages[o.messages.length - 1],
               userId: session.userId});
           } else {
             api.tabs.emit(tab, 'thread', {id: o.id, messages: o.messages, userId: session.userId});
