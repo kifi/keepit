@@ -5,16 +5,16 @@ import com.keepit.scraper.HttpInputStream
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import org.jsoup.parser.Parser
+import java.util.regex.Pattern
 
-abstract class JsoupBasedExtractor(url: String, maxContentChars: Int, parser: Option[Parser] = None) extends Extractor with Logging {
+abstract class JsoupBasedExtractor(url: String, maxContentChars: Int) extends Extractor with Logging {
   protected var doc: Document = null
 
   def parse(doc: Document): String
 
   def process(input: HttpInputStream){
     try {
-      doc = parser.map(Jsoup.parse(input, null, url, _)).getOrElse(Jsoup.parse(input, null, url)) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8, Parser defaults to HTML
+      doc = Jsoup.parse(input, null, url) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8, Parser defaults to HTML
     } catch {
       case e: Throwable => log.error("Jsoup extraction failed: ", e)
     }
@@ -26,6 +26,13 @@ abstract class JsoupBasedExtractor(url: String, maxContentChars: Int, parser: Op
     content.take(maxContentChars)
   }
 
-  def getMetadata(name: String) = Option(doc.select("meta[name=" + name + "]").select("content").first()) map (_.toString)
+  def getMetadata(name: String): Option[String] = Option(doc.select("meta[name=" + name + "]").attr("content"))
+  def getKeywords(): Option[String] = getMetadata("keywords")
+
+  private[extractor] def replace(text: String, replacements: (String, String)*) = {
+    val replacement = replacements.toMap.withDefault(identity)
+    val regex = replacement.keysIterator.map(Pattern.quote).mkString("|").r
+    regex.replaceAllIn(text, m => replacement(m.matched))
+  }
 }
 

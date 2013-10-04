@@ -586,15 +586,23 @@ api.port.on({
   },
   pane: function(o, _, tab) {
     if (o.old) {
-      var arr = (tabsByLocator[o.old] || []).filter(idIsNot(tab.id));
-      if (arr.length) {
-        tabsByLocator[o.old] = arr;
-      } else {
-        delete tabsByLocator[o.old];
+      var arr = tabsByLocator[o.old];
+      if (arr) {
+        arr = arr.filter(idIsNot(tab.id));
+        if (arr.length) {
+          tabsByLocator[o.old] = arr;
+        } else {
+          delete tabsByLocator[o.old];
+        }
       }
     }
     if (o.new) {
-      (tabsByLocator[o.new] || (tabsByLocator[o.new] = [])).push(tab);
+      var arr = tabsByLocator[o.new];
+      if (arr) {
+        arr = arr.filter(idIsNot(tab.id));
+        arr.push(tab);
+      }
+      tabsByLocator[o.new] = arr || [tab];
     }
   },
   notifications_read: function(t) {
@@ -1127,7 +1135,7 @@ function gotThreadDataFor(url, tab, threads, nUri) {
           if (o.messages.length - oldMessageCount === 1) {
             api.tabs.emit(tab, 'message', {
               threadId: o.id,
-              message: o.messages.length[o.messages.length - 1],
+              message: o.messages[o.messages.length - 1],
               userId: session.userId});
           } else {
             api.tabs.emit(tab, 'thread', {id: o.id, messages: o.messages, userId: session.userId});
@@ -1242,7 +1250,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab)();
   var tabs = tabsByUrl[tab.nUri];
   for (var i = tabs && tabs.length; i--;) {
-    if (tabs[i].id === tab.id) {
+    if (tabs[i] === tab) {
       tabs.splice(i, 1);
     }
   }
@@ -1250,6 +1258,17 @@ api.tabs.on.unload.add(function(tab, historyApi) {
     delete tabsByUrl[tab.nUri];
     delete pageData[tab.nUri];
     delete pageThreadData[tab.nUri];
+  }
+  for (var loc in tabsByLocator) {
+    var tabs = tabsByLocator[loc];
+    for (var i = tabs.length; i--;) {
+      if (tabs[i] === tab) {
+        tabs.splice(i, 1);
+      }
+    }
+    if (!tabs.length) {
+      delete tabsByLocator[loc];
+    }
   }
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;

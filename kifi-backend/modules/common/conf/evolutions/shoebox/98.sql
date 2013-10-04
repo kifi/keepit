@@ -14,6 +14,11 @@ CREATE TABLE renormalized_url (
   PRIMARY KEY (id)
 );
 
+-- MySQL:
+-- CREATE TABLE renormalized_url_sequence (id INT NOT NULL);
+-- INSERT INTO renormalized_url_sequence VALUES (0);
+
+
 CREATE SEQUENCE renormalized_url_sequence;
 CREATE INDEX renormalized_url_seq_index on renormalized_url(seq);
 

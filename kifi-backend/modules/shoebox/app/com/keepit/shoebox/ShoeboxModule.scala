@@ -17,6 +17,7 @@ import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.common.healthcheck.AirbrakeModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
+import com.keepit.abook.ProdABookServiceClientModule
 
 abstract class ShoeboxModule(
   val secureSocialModule: SecureSocialModule,
@@ -35,6 +36,7 @@ abstract class ShoeboxModule(
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
+  val abookServiceClientModule = ProdABookServiceClientModule()
 
   val slickModule = ShoeboxSlickModule()
   val scraperModule = ScraperImplModule()

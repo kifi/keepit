@@ -3,6 +3,8 @@
 ##########################################
 
 POST     /internal/abook/:userId/:origin/upload                 @com.keepit.abook.ABookController.upload(userId:Id[User], origin:ABookOriginType)
+GET      /internal/abook/:userId/getABookInfos                  @com.keepit.abook.ABookController.getABookInfos(userId:Id[User])
+GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.ABookController.getABookRawInfos(userId:Id[User])
 GET      /internal/abook/:userId/:origin/getContactsRawInfo     @com.keepit.abook.ABookController.getContactsRawInfo(userId:Id[User], origin:ABookOriginType)
 
 ->  / common.Routes

@@ -17,6 +17,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
 
+import java.math.BigDecimal
+
 class ExtEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   eventPersister: EventPersister,
@@ -63,7 +65,7 @@ class ExtEventController @Inject() (
           } catch {
             case _ =>
               try {
-                val parsedValue = jsonString.toDouble
+                val parsedValue = new BigDecimal(jsonString).doubleValue
                 contextBuilder += (key,parsedValue)
               } catch {
                 case _ => contextBuilder += (key,jsonString)

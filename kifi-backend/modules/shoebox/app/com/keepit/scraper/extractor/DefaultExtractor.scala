@@ -1,6 +1,5 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.common.logging.Logging
 import com.keepit.scraper.Scraper
 import org.apache.tika.metadata.Metadata
 import org.apache.tika.parser.html.BoilerpipeContentHandler

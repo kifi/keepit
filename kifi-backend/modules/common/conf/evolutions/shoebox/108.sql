@@ -2,7 +2,7 @@
 
 # --- !Ups
 
-CREATE TABLE abook (
+CREATE TABLE abook_info (
 	id bigint(20) NOT NULL AUTO_INCREMENT,
 	created_at datetime NOT NULL,
 	updated_at datetime NOT NULL,
