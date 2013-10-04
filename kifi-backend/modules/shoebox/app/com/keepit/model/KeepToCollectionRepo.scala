@@ -1,12 +1,12 @@
 package com.keepit.model
 
+import scala.slick.lifted.Query
+
 import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, Id}
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
-import com.keepit.common.time.Clock
-import scala.Some
-import scala.slick.lifted.Query
+import com.keepit.common.time._
 
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
@@ -20,6 +20,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
                      (implicit session: RSession): Seq[KeepToCollection]
   def count(collId: Id[Collection])(implicit session: RSession): Int
   def delete(id: Id[KeepToCollection])(implicit session: RWSession): Unit
+  def remove(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -83,10 +84,22 @@ class KeepToCollectionRepoImpl @Inject() (
          b.state === BookmarkStates.ACTIVE && c.state === KeepToCollectionStates.ACTIVE
     } yield c).length).firstOption.getOrElse(0)
   }
-  
+
+  def remove(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RWSession): Unit = {
+    val q = (for(r <- table if r.bookmarkId === bookmarkId && r.collectionId === collectionId) yield r)
+    q.firstOption.map { ktc =>
+      collectionRepo.collectionChanged(ktc.collectionId, false)
+      collectionsForBookmarkCache.remove(CollectionsForBookmarkKey(ktc.bookmarkId))
+    }
+    q.map(c => c.state ~ c.updatedAt).update(KeepToCollectionStates.INACTIVE -> clock.now())
+  }
+
   def delete(id: Id[KeepToCollection])(implicit session: RWSession): Unit = {
     val q = (for(r <- table if r.id === id) yield r)
-    q.firstOption.map{ ktc => collectionRepo.collectionChanged(ktc.collectionId, false); collectionsForBookmarkCache.remove(CollectionsForBookmarkKey(ktc.bookmarkId)) }
+    q.firstOption.map{ ktc =>
+      collectionRepo.collectionChanged(ktc.collectionId, false)
+      collectionsForBookmarkCache.remove(CollectionsForBookmarkKey(ktc.bookmarkId))
+    }
     q.delete
   }
 

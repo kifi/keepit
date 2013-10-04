@@ -28,6 +28,8 @@ POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
+POST    /tags/:id/removeFromKeep    @com.keepit.controllers.ext.ExtBookmarksController.removeTag(id: ExternalId[Collection])
+
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
 
