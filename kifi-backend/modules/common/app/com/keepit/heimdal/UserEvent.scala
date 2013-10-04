@@ -44,7 +44,7 @@ object UserEventContext {
     def writes(obj: UserEventContext) : JsValue = {
       JsObject(obj.data.mapValues{ seq =>
         JsArray(seq.map{ _ match {
-          case ContextStringData(s)  => JsString(s)
+          case ContextStringData(s) => JsString(s)
           case ContextDoubleData(x) => JsNumber(x) 
         }})
       }.toSeq)
