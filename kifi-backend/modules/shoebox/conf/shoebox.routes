@@ -170,7 +170,9 @@ GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
-GET     /admin/data/batchMerge          @com.keepit.controllers.admin.UrlController.batchMerge
+GET     /admin/data/renormalization/:page @com.keepit.controllers.admin.UrlController.renormalizationView(page: Int)
+GET     /admin/data/batchURIMigration          @com.keepit.controllers.admin.UrlController.batchURIMigration
+GET     /admin/data/batchURLMigration   @com.keepit.controllers.admin.UrlController.batchURLMigration
 GET     /admin/data/redirect       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
 GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.getPatterns
 POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns

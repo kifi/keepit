@@ -1,4 +1,5 @@
-package com.keepit.common.net.uri
+package com.keepit.common.net
+
 
 import scala.util.parsing.combinator.RegexParsers
 
