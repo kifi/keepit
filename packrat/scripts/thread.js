@@ -95,12 +95,12 @@ panes.thread = function () {
 
   function update(threadId, message, userId) {
     if ($holder.length && $holder.data('threadId') === threadId) {
-      if (message.user.id !== userId ||
-          !$holder.find('.kifi-message-sent[data-id="' + message.id + '"]').length &&
-          !$holder.find('.kifi-message-sent[data-id=]').get().some(function (el) {
+      if (!$holder.find('.kifi-message-sent[data-id="' + message.id + '"]').length &&
+          (message.user.id !== userId ||
+           !$holder.find('.kifi-message-sent[data-id=]').get().some(function (el) {
             log('[update] comparing message text')();
             return $(el).data('text') === message.text;
-          })) {
+          }))) {
         var $m = renderMessage(message, userId);
         $holder.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
       }
