@@ -85,40 +85,34 @@ panes.threads = function () {
 
   function update(thread) {
     if ($list.length && thread) {
-      renderThread(thread, function ($th) {
-        var $old = $list.children('[data-id="' + thread.id + '"],[data-id=]').first();
-        if ($old.length) {
-          var $thBelow = $old.nextAll('.kifi-thread');  // TODO: compare timestamps
-          if (!$thBelow.length) {
-            $old.replaceWith($th);
-          } else {  // animate moving it down
-            var ms = 150 + 50 * $thBelow.length, $last = $thBelow.last();
-            var h = $old.outerHeight(true), top1 = $old[0].offsetTop, top2 = $last[0].offsetTop;
-            $th.css({position: 'absolute', left: 0, top: top1, width: '100%', marginTop: 0})
-            .insertAfter($last).animate({top: top2}, ms, function () {
-              $th.css({position: '', left: '', top: '', width: '', marginTop: ''});
-            });
-            $('<div>', {height: h}).replaceAll($old).slideUp(ms, remove);
-            $('<div>', {height: 0}).insertAfter($last).animate({height: h}, ms, remove);
-          }
-        } else {  // TODO: animate in from side? move others up first, and scroll down.
-          $list.append($th).scrollToBottom();
+      var $th = renderThread(thread);
+      var $old = $list.children('[data-id="' + thread.id + '"],[data-id=]').first();
+      if ($old.length) {
+        var $thBelow = $old.nextAll('.kifi-thread');  // TODO: compare timestamps
+        if (!$thBelow.length) {
+          $old.replaceWith($th);
+        } else {  // animate moving it down
+          var ms = 150 + 50 * $thBelow.length, $last = $thBelow.last();
+          var h = $old.outerHeight(true), top1 = $old[0].offsetTop, top2 = $last[0].offsetTop;
+          $th.css({position: 'absolute', left: 0, top: top1, width: '100%', marginTop: 0})
+          .insertAfter($last).animate({top: top2}, ms, function () {
+            $th.css({position: '', left: '', top: '', width: '', marginTop: ''});
+          });
+          $('<div>', {height: h}).replaceAll($old).slideUp(ms, remove);
+          $('<div>', {height: 0}).insertAfter($last).animate({height: h}, ms, remove);
         }
-      });
+      } else {  // TODO: animate in from side? move others up first, and scroll down.
+        $list.append($th).scrollToBottom();
+      }
     }
   }
 
   function updateAll(threads) {
-    var arr = new Array(threads.length), n = 0;
-    threads.forEach(function (th, i) {
-      renderThread(th, function ($th) {
-        arr[i] = $th;
-        if (++n === arr.length) {
-          $list.children('.kifi-thread').remove().end()
-            .append(arr).scrollToBottom();
-        }
-      });
-    })
+    var els = threads.map(function (th) {
+      return renderThread(th)[0];
+    });
+    $list.children('.kifi-thread').remove().end()
+      .append(els).scrollToBottom();
   }
 
   function sendMessage($container, e, text, recipientIds) {
@@ -138,16 +132,17 @@ panes.threads = function () {
       });
   }
 
-  function renderThread(th, callback) {
+  function renderThread(th) {
     var n = messageCount(th);
     th.messageCount = n < -9 ? '9+' : Math.abs(n);
     th.messagesUnread = n < 0;
     th.participantsPictured = th.participants.slice(0, 4);
     th.formatSnippet = getSnippetFormatter;
     th.formatLocalDate = getLocalDateFormatter;
-    render('html/metro/thread', th, function (html) {
-      callback($(html).data('participants', th. participants).find('time').timeago().end());
-    });
+    var $th = $(render('html/metro/thread', th))
+      .data('participants', th.participants);
+    $th.find('time').timeago();
+    return $th;
   }
 
   function messageCount(th) {
