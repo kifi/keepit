@@ -29,6 +29,9 @@ import com.google.inject.Inject
 import views.html
 
 
+//metric descriptor object which gets stored, basically containing the query parameters, plus status
+//allow sorting by _id instead of count (i.e. by key instead of value)
+
 class AnalyticsController @Inject() (metricManager: MetricManager) extends HeimdalServiceController {
 
   val definedRestrictions = Map[String, ContextRestriction](
@@ -76,10 +79,10 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
       val contextRestriction  = definedRestrictions(filter)
 
       val jsonFuture = if (mode=="users") {
-        val definition = new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown)
+        val definition = new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown, as=="hist")
         metricManager.computeAdHocMteric(fromTime, toTime, definition)
       } else {
-        val definition = new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown)
+        val definition = new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown, as=="hist")
         metricManager.computeAdHocMteric(fromTime, toTime, definition)
       }
 
@@ -89,6 +92,11 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
         Async(jsonFuture.map{ json =>
           var title = (if (mode=="users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'" 
           Ok(html.adhocPieChart(Json.stringify(json), title))
+        })
+      } else if (as=="hist"){
+        Async(jsonFuture.map{ json =>
+          var title = (if (mode=="users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'" 
+          Ok(html.adhocHistChart(Json.stringify(json), title))
         })
       } else {
         BadRequest("'as' paramter must be either 'pie' or 'json'.")
