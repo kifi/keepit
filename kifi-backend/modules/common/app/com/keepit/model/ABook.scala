@@ -4,6 +4,7 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.mvc.{PathBindable, QueryStringBindable}
+import play.api.libs.json.JsArray
 
 sealed abstract class ABookOriginType(val name:String) {
   override def toString:String = name
@@ -39,6 +40,21 @@ object ABookOrigins {
   case object IOS extends ABookOriginType("ios")
   case object GMAIL extends ABookOriginType("gmail")
   val ALL:Seq[ABookOriginType] = Seq(IOS, GMAIL)
+}
+
+case class ABookRawInfo(userId:Id[User], origin:ABookOriginType, contacts:JsArray)
+
+object ABookRawInfo {
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+  import com.keepit.common.db.Id
+
+  implicit val format = (
+    (__ \ 'userId).format(Id.format[User]) and
+      (__ \ 'origin).format[String].inmap(ABookOriginType.apply _, unlift(ABookOriginType.unapply)) and
+      (__ \ 'contacts).format[JsArray]
+    )(ABookRawInfo.apply _, unlift(ABookRawInfo.unapply))
+
 }
 
 case class ABook(id: Option[Id[ABook]] = None,

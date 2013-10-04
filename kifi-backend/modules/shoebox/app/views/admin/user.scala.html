@@ -10,6 +10,8 @@
   bookmarkSearch: Option[String],
   allowedInvites: Int,
   emails: Seq[EmailAddress],
+  abooks: Seq[ABook],
+  abookRawInfos: Seq[ABookRawInfo],
   collections: Seq[Collection],
   collectionFilter: Option[Id[Collection]])
 
@@ -122,7 +124,19 @@
 	    </li>
 	  </ul>
 	</div>
-
+  <h2>User kept @abooks.size address book(s)</h2>
+  <div class="row-fluid">
+      @for(abookRawInfo <- abookRawInfos) {
+        <h3>Address book type: @abookRawInfo.origin</h3>
+        <div>
+          <table class="table table-bordered">
+              @for(contact <- abookRawInfo.contacts.value) {
+                <tr><td>@contact</td></tr>
+              }
+          </table>
+        </div>
+      }
+  </div>
   <h2>User kept @totalBookmarks Bookmarks</h2>
   <h3>Showing @bookmarks.size Bookmarks of total @totalBookmarks</h3>
   <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get)" method="POST">

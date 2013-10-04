@@ -8,8 +8,6 @@ import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
 import play.api.libs.json.JsArray
-import com.keepit.common.routes.Param
-import com.keepit.common.routes.ServiceRoute
 
 
 trait Service
@@ -153,6 +151,8 @@ object ABook extends Service {
   object internal {
     def upload(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/upload")
     def getContactsRawInfo(userId:Id[User], origin:ABookOriginType) = ServiceRoute(GET, s"/internal/abook/${userId.id}/${origin.name}/getContactsRawInfo")
+    def getAllContactsRawInfo(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getAllContactsRawInfo")
+    def getABooksInfo(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABooksInfo")
   }
 }
 

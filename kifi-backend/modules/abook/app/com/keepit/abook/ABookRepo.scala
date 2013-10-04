@@ -11,6 +11,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 @ImplementedBy(classOf[ABookRepoImpl])
 trait ABookRepo extends Repo[ABook] {
   def findByUserIdAndOriginOpt(userId:Id[User], origin:ABookOriginType)(implicit session:RSession):Option[ABook]
+  def findByUserId(userId:Id[User])(implicit session:RSession):Seq[ABook]
 }
 
 class ABookRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) extends DbRepo[ABook] with ABookRepo with Logging {
@@ -29,5 +30,10 @@ class ABookRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) extend
   def findByUserIdAndOriginOpt(userId: Id[User], origin: ABookOriginType)(implicit session:RSession):Option[ABook] = {
     val q = for { c <- table if c.userId === userId && c.origin === origin } yield c
     q.firstOption
+  }
+
+  def findByUserId(userId: Id[User])(implicit session: RSession): Seq[ABook] = {
+    val q = for { c <- table if c.userId === userId } yield c
+    q.list
   }
 }
