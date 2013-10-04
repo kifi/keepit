@@ -673,6 +673,7 @@ api.port.on({
       }
     });
   },
+
   /**
    * Makes a request to the server to remove a tag from a keep.
    * 
@@ -682,19 +683,27 @@ api.port.on({
    *   Request Payload: ["88ed8dc9-a20d-49c6-98ef-1b554533b106"]
    *   Response: {"removed":1}
    */
-  remove_tag: function(data, _, tab) {
-    log("[remove_tag]", data)();
-    var collectionId = data.collectionId,
-      keepId = data.keepId;
-    ajax("POST", "/site/collections/" + collectionId + "/removeKeeps", [keepId], function(o) {
-      log("[remove_tag] response:", o)();
-      data.success = true;
+  remove_tag: function(collectionId, callback, tab) {
+    log("[remove_tag]", collectionId)();
+    ajax("POST", "/site/collections/" + collectionId + "/removeKeeps", [keepId], function(response) {
+      log("[remove_tag] response:", response)();
+      response.success = true;
+      response.collectionId = collectionId;
       pageData[tab.nUri].tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "remove_tag", data);
+        api.tabs.emit(tab, "remove_tag", response);
       });
-    }, function(e) {
-      data.success = false;
+      if (callback) {
+        callback(response);
+      }
+    }, function(response) {
+      var data = {
+        success: false,
+        collectionId: collectionId
+      };
       api.tabs.emit(tab, "remove_tag", data);
+      if (callback) {
+        callback(data, response);
+      }
     });
   },
   report_error: function(data, _, tag) {

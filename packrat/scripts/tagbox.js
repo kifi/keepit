@@ -39,22 +39,6 @@
  *       "keeps": 0
  *     }]
  *   }
- *
- * CREATE
- *   Request URL:https://api.kifi.com/site/collections/create
- *   Request Method: POST
- *   Request Payload: {"name":"hello"}
- *   Response: {
- *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
- *     "name":"hello"
- *   }
- * 
- * REMOVE
- *   Request URL: https://api.kifi.com/site/collections/dc76ee74-a141-4e96-a65f-e5ca58ddfe04/removeKeeps
- *   Request Method: POST
- *   Request Payload: ["88ed8dc9-a20d-49c6-98ef-1b554533b106"]
- *   Response: {"removed":1}
- *   
  */
 
 this.myTags = [
@@ -713,70 +697,6 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Creates a new tag for user.
-		 *
-		 * It sends a request to server to create a tag.
-		 * It calls the given callback, if any, on server response.
-		 *
-		 * @param {string} name - A new tag name
-		 * @param {function} callback - A callback to call on server response
-		 *
-		 * @return {boolean} Whether a request was successfully made to the server
-		 */
-		createTag: function (name) {
-			log('createTag: create a tag', name);
-			this.requestCreateTag(name)
-				.then(this.onCreateResponse.bind(this))
-				.fail(this.alertError.bind(this));
-		},
-
-		/**
-		 * Makes a request to the server to create a tag for a user
-		 * and returns a promise object.
-		 *
-		 *
-		 * @param {string} name - A tag name
-		 * 
-		 * @return {Object} promise - A promise object
-		 *
-		 * CREATE
-		 *   Request URL: https://api.kifi.com/site/collections/create
-		 *   Request Method: POST
-		 *   Request Payload: {"name":"hello"}
-		 *   Response: {
-		 *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
-		 *     "name":"hello"
-		 *   }
-		 */
-		requestCreateTag: function (name) {
-			var deferred = Q.defer();
-			api.port.emit('create_tag', name, function (response) {
-				log('requestCreateTag.create_tag', this, arguments);
-				if (response.success) {
-					deferred.resolve(response);
-				}
-				else {
-					deferred.reject(new Error('Could not create tag, "' + name + '"'));
-				}
-			});
-			return deferred.promise;
-		},
-
-		onCreateResponse: function (tag) {
-			if (!(tag && tag.id)) {
-				throw new Error('Tag could not be created.');
-			}
-
-			this.tags.push(tag);
-
-			var name = tag.name;
-
-			this.removeNewSuggestionByName(name);
-
-			return this.addTag(name);
-		},
-
-		/**
 		 * Cache for added tags
 		 *
 		 * @property {Object} tagsAdded
@@ -808,16 +728,79 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Adds a tag to tag list.
+		 * Creates a new tag for user.
+		 * It sends a request to server to create a tag and returns a deferred object.
+		 *
+		 * @param {string} name - A new tag name
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		createTag: function (name) {
+			log('createTag: create a tag', name);
+			return this.requestCreateTag(name)
+				.then(this.onCreateResponse.bind(this))
+				.fail(this.alertError.bind(this));
+		},
+
+		/**
+		 * Makes a request to the server to create a tag for a user
+		 * and returns a promise object.
+		 *
 		 *
 		 * @param {string} name - A tag name
+		 * 
+		 * @return {Object} A deferred promise object
+		 */
+		requestCreateTag: function (name) {
+			var deferred = Q.defer();
+			api.port.emit('create_tag', name, function (response) {
+				log('requestCreateTag.create_tag', this, arguments);
+				if (response.success) {
+					deferred.resolve(response);
+				}
+				else {
+					deferred.reject(new Error('Could not create tag, "' + name + '"'));
+				}
+			});
+			return deferred.promise;
+		},
+
+		/**
+		 * CREATE
+		 *   Request URL: https://api.kifi.com/site/collections/create
+		 *   Request Method: POST
+		 *   Request Payload: {"name":"hello"}
+		 *   Response: {
+		 *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+		 *     "name":"hello"
+		 *   }
+		 */
+		onCreateResponse: function (tag) {
+			if (!(tag && tag.id)) {
+				throw new Error('Tag could not be created.');
+			}
+
+			this.tags.push(tag);
+
+			var name = tag.name;
+
+			this.removeNewSuggestionByName(name);
+
+			return this.addTag(name);
+		},
+
+		/**
+		 * Adds a tag to the current keep's tag list.
+		 * It sends a request to server to add a tag and returns a deferred object.
 		 *
-		 * @return {jQuery} A jQuery object for the added tag element
+		 * @param {string} name - A tag name to add
+		 *
+		 * @return {Object} A deferred promise object
 		 */
 		addTag: function (name) {
 			if (this.isTagAdded(name)) {
 				log('addTag: already added', name);
-				return null;
+				return this.promiseFail('tag already added');
 			}
 
 			var tag = this.getTagByName(name);
@@ -827,7 +810,7 @@ this.tagbox = (function ($, win) {
 			}
 
 			log('addTag: tag found. add it to a keep', name);
-			this.requestAddTag(tag.id)
+			return this.requestAddTag(tag.id)
 				.then(this.onAddResponse.bind(this))
 				.fail(this.alertError.bind(this));
 		},
@@ -836,8 +819,25 @@ this.tagbox = (function ($, win) {
 		 * Makes a request to the server to add a tag to a keep.
 		 *
 		 * @param {string} id - A tag id
-		 * @param {Object} keep - A keep object
-		 * @param {function} callback - A callback function to be called on server response
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		requestAddTag: function (id) {
+			var deferred = Q.defer();
+			api.port.emit('add_tag', id, function (response) {
+				log('requestAddTag.add_tag', this, arguments);
+				if (response.success) {
+					deferred.resolve(response);
+				}
+				else {
+					deferred.reject(new Error('Could not add tag, "' + name + '"'));
+				}
+			});
+			return deferred.promise;
+		},
+
+		/**
+		 * A listener for server response from adding a tag to a keep.
 		 * 
 		 * ADD
 		 *   Request URL: https://api.kifi.com/site/keeps/add
@@ -859,65 +859,6 @@ this.tagbox = (function ($, win) {
 		 *     "addedToCollection":1
 		 *   }
 		 */
-		requestAddTag: function (id) {
-			var deferred = Q.defer();
-			api.port.emit('add_tag', {
-				collectionId: id
-			}, function (response) {
-				log('requestAddTag.add_tag', this, arguments);
-				if (response.success) {
-					deferred.resolve(response);
-				}
-				else {
-					deferred.reject(new Error('Could not add tag, "' + name + '"'));
-				}
-			});
-			return deferred.promise;
-			/*
-			callback.call(that || this, {
-				response: {
-					keeps: [keep],
-					addedToCollection: Math.random() < 0.8 ? 1 : 0
-				},
-				id: id
-			});
-      /*
-			var deferred = Q.defer();
-			win.setTimeout(function () {
-				var res = null,
-					x = Math.random();
-				if (x < 0.1) {
-					deferred.reject(new Error('Timed out'));
-				}
-				else {
-					if (x < 0.9) {
-						res = {
-							id: 'keep-tag-' + Date.now(),
-							name: name
-						};
-					}
-					deferred.resolve(res);
-				}
-			}, 1);
-			return deferred.promise;
-      */
-			/*
-			this.ajax({
-				url: 'https://api.kifi.com/site/keeps/add',
-				type: 'POST',
-				data: {
-					collectionId: id,
-					keep: keep
-				},
-				complete: callback,
-				context: that || this
-			});
-      */
-		},
-
-		/**
-		 * A listener for server response from adding a tag to a keep.
-		 */
 		onAddResponse: function (response) {
 			log('onAddResponse', response);
 
@@ -935,6 +876,86 @@ this.tagbox = (function ($, win) {
 
 			var name = this.normalizeTagNameForSearch(item.name);
 			this.tagsAdded[name] = item;
+
+			this.removeSuggestionById(tagId);
+
+			var html = win.render('html/keeper/tagbox-tag', item);
+			return this.appendTag(html);
+		},
+
+		/**
+		 * Removes a tag from current keep's tag list.
+		 * It sends a request to server to remove a tag and returns a deferred object.
+		 *
+		 * @param {string} name - A tag name to remove
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		removeTag: function (name) {
+			if (!this.isTagAdded(name)) {
+				log('removeTag: tag is not added.', name);
+				return this.promiseFail('tag is not added.');
+			}
+
+			var tag = this.getTagByName(name);
+			if (!tag) {
+				log('removeTag: tag not found.', name);
+				return this.promiseFail('tag not found.');
+			}
+
+			log('removeTag: tag found. remove it from a keep', name);
+			return this.requestRemoveTag(tag.id)
+				.then(this.onRemoveResponse.bind(this))
+				.fail(this.alertError.bind(this));
+		},
+
+		/**
+		 * Makes a request to the server to remove a tag from a keep.
+		 *
+		 * @param {string} id - A tag id
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		requestRemoveTag: function (id) {
+			var deferred = Q.defer();
+			api.port.emit('remove_tag', id, function (response) {
+				log('requestRemoveTag.remove_tag', this, arguments);
+				if (response.success) {
+					deferred.resolve(response);
+				}
+				else {
+					deferred.reject(new Error('Could not remove tag, "' + name + '"'));
+				}
+			});
+			return deferred.promise;
+		},
+
+		/**
+		 * A listener for server response from removing a tag from a keep.
+		 * 
+		 * REMOVE
+		 *   Request URL: https://api.kifi.com/site/collections/dc76ee74-a141-4e96-a65f-e5ca58ddfe04/removeKeeps
+		 *   Request Method: POST
+		 *   Request Payload: ["88ed8dc9-a20d-49c6-98ef-1b554533b106"]
+		 *   Response: {"removed":1}
+		 */
+		onRemoveResponse: function (response) {
+			log('onRemoveResponse', response);
+
+			if (!response.removed) {
+				throw new Error('Tag could not be removed.');
+			}
+
+			this.$tagbox.addClass('tagged');
+
+			var tagId = response.collectionId,
+				item = this.getTagById(tagId);
+			if (!item) {
+				throw new Error('Tag not found.');
+			}
+
+			var name = this.normalizeTagNameForSearch(item.name);
+			delete this.tagsAdded[name];
 
 			this.removeSuggestionById(tagId);
 
@@ -995,6 +1016,21 @@ this.tagbox = (function ($, win) {
 		 */
 		alert: function (msg) {
 			win.alert(msg);
+		},
+
+		/**
+		 * Promises a failure and returns a deferred promise object.
+		 *
+		 * @param {string} msg - An error message
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		promiseFail: function (msg) {
+			var deferred = Q.defer();
+			setTimeout(function () {
+				throw new Error(msg);
+			}, 1);
+			return deferred.promise;
 		}
 	};
 
