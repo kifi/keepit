@@ -356,6 +356,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
     override def apply(url: String): Extractor = {
       new TikaBasedExtractor(url, 10000, None) {
         protected def getContentHandler = new BodyContentHandler(output)
+        def getKeywords() = None
       }
     }
   }

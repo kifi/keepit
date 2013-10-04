@@ -7,7 +7,7 @@ import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.integrity.{MergedUri, UriIntegrityPlugin}
+import com.keepit.integrity.{URIMigration, UriIntegrityPlugin}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import com.keepit.common.db.slick.Database
@@ -135,7 +135,7 @@ class NormalizationServiceImpl @Inject() (
               saveAndLog(latestCurrent.withNormalization(weakerVariationCandidate.normalization))
             }
           }
-          uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = oldUriId, newUri = newUriId))
+          uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = oldUriId, newUri = newUriId))
           log.info(s"${oldUriId}: ${currentReference.url} will be redirected to ${newUriId}: ${newReference.url}")
         }
         Some(newReference)

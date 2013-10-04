@@ -127,13 +127,18 @@ class SecureSocialUserPluginImpl @Inject() (
 
         for (user <- userOpt) {
           if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
+            val email = socialUser.email.getOrElse(throw new IllegalStateException("user has no email"))
             val cred =
               UserCred(
                 userId = user.id.get,
-                loginName = socialUser.email.getOrElse(throw new Exception),
+                loginName = email,
                 provider = "bcrypt" /* hard-coded */,
                 credentials = socialUser.passwordInfo.get.password,
                 salt = socialUser.passwordInfo.get.salt.getOrElse(""))
+            val emailAddress = emailRepo.getByAddressOpt(address = email) getOrElse {
+              emailRepo.save(EmailAddress(userId = user.id.get, address = email))
+            }
+            log.info(s"[save(userpass)] Saved email is $emailAddress")
             val savedCred = userCredRepo.save(cred)
             log.info(s"[save(userpass)] Persisted $cred into userCredRepo as $savedCred")
           }
