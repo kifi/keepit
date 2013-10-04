@@ -215,12 +215,20 @@ this.tagbox = (function ($, win) {
 		return win.log.apply(win, arguments)();
 	}
 
-  // receive
-  /*
+	// receive
+	/*
   api.port.on({
     tagged: function() {
     }
   });
+  */
+
+	/*
+	api.port.on({
+		create_tag: function (response) {
+			if (response.success) {}
+		}
+	});
   */
 	return {
 		/**
@@ -708,10 +716,19 @@ this.tagbox = (function ($, win) {
 		 */
 		requestCreateTag: function (name) {
 			var deferred = Q.defer();
-      // send
-      log(api.port.emit, api.port.on);
-      //api.port.emit('tagit', data, success);
+			// send
+			api.port.emit('create_tag', name, function (response) {
+				log('requestCreateTag.create_tag', this, arguments);
+				if (response.success) {
+					deferred.resolve(response);
+				}
+				else {
+					deferred.reject(new Error('Could not create a "' + name + '" tag'));
+				}
+			});
+			return deferred.promise;
 
+			/*
 			win.setTimeout(function () {
 				var res = null,
 					x = Math.random();

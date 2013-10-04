@@ -597,22 +597,27 @@ api.port.on({
    *     "name":"hello"
    *   }
    */
-  create_tag: function(data, _, tab) {
+  create_tag: function(data, callback, tab) {
     if (typeof data === 'string') {
       data = {
         name: data
       };
     }
+
     log("[create_tag]", data)();
-    ajax("POST", "https://api.kifi.com/site/collections/create", data, function(o) {
+    ajax("POST", "/site/collections/create", data, function(o) {
       log("[create_tag] response:", o)();
-      data.success = true;
+      o.success = true;
       pageData[tab.nUri].tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "create_tag", data);
+        api.tabs.emit(tab, "create_tag", o);
       });
+      if (callback) {
+        callback(o);
+      }
     }, function(e) {
       data.success = false;
       api.tabs.emit(tab, "create_tag", data);
+      callback(data);
     });
   },
   /**
@@ -640,7 +645,7 @@ api.port.on({
    */
   add_tag: function(data, _, tab) {
     log("[add_tag]", data)();
-    ajax("POST", "https://api.kifi.com/site/keeps/add", data, function(o) {
+    ajax("POST", "/site/keeps/add", data, function(o) {
       log("[add_tag] response:", o)();
       data.success = true;
       pageData[tab.nUri].tabs.forEach(function(tab) {
@@ -664,7 +669,7 @@ api.port.on({
     log("[remove_tag]", data)();
     var collectionId = data.collectionId,
       keepId = data.keepId;
-    ajax("POST", "https://api.kifi.com/site/collections/" + collectionId + "/removeKeeps", [keepId], function(o) {
+    ajax("POST", "/site/collections/" + collectionId + "/removeKeeps", [keepId], function(o) {
       log("[remove_tag] response:", o)();
       data.success = true;
       pageData[tab.nUri].tabs.forEach(function(tab) {
