@@ -637,16 +637,50 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Removes a suggestion entry from a suggestion box.
+		 * Removes a suggestion entry from a suggestion box with the given id.
+		 *
+		 * @param {string} id - A tag id to remove
+		 *
+		 * @return {boolean} Whether an element has been removed
+		 */
+		removeSuggestionById: function (id) {
+			if (id) {
+				var $suggetion = this.$suggest.find('.kifi-tagbox-suggestion[data-id=' + id + ']');
+				if ($suggetion.length) {
+					$suggetion.remove();
+					return true;
+				}
+			}
+			return false;
+		},
+
+		/**
+		 * Removes a suggestion entry from a suggestion box with the given name.
 		 *
 		 * @param {string} name - A tag name to remove
+		 *
+		 * @return {boolean} Whether an element has been removed
 		 */
-		removeSuggestion: function (name) {
-			var id = this.getTagIdByName(name);
-			if (id) {
-				this.$suggest.find('.kifi-tagbox-suggestion[data-id=' + id + ']').remove();
+		removeSuggestionByName: function (name) {
+			return this.removeSuggestionById(this.getTagIdByName(name));
+		},
+
+		/**
+		 * Removes a suggestion entry from a suggestion box with the given name.
+		 *
+		 * @param {string} name - A tag name to remove
+		 *
+		 * @return {boolean} Whether an element has been removed
+		 */
+		removeNewSuggestionByName: function (name) {
+			if (name) {
+				var $suggetion = this.$suggest.find('.kifi-tagbox-new[data-name=' + name + ']');
+				if ($suggetion.length) {
+					$suggetion.remove();
+					return true;
+				}
 			}
-			else {}
+			return false;
 		},
 
 		/**
@@ -726,48 +760,20 @@ this.tagbox = (function ($, win) {
 				}
 			});
 			return deferred.promise;
-
-			/*
-			win.setTimeout(function () {
-				var res = null,
-					x = Math.random();
-				if (x < 0.1) {
-					deferred.reject(new Error('Timed out'));
-				}
-				else {
-					if (x < 0.9) {
-						res = {
-							id: 'keep-tag-' + Date.now(),
-							name: name
-						};
-					}
-					deferred.resolve(res);
-				}
-			}, 1);
-			return deferred.promise;
-			/*
-			return Q(this.ajax({
-				url: 'https://api.kifi.com/site/collections/create',
-				type: 'POST',
-				data: {
-					name: name
-				},
-				complete: callback,
-				context: that || this
-			}));
-      */
 		},
 
 		onCreateResponse: function (tag) {
-			if (tag && tag.id) {
-				var name = tag.name;
-				this.$suggest.find('.kifi-tagbox-new[data-name=' + name + ']').remove();
-				this.tags.push(tag);
-				return this.addTag(name);
-			}
-			else {
+			if (!(tag && tag.id)) {
 				throw new Error('Tag could not be created.');
 			}
+
+			this.tags.push(tag);
+
+			var name = tag.name;
+
+			this.removeNewSuggestionByName(name);
+
+			return this.addTag(name);
 		},
 
 		/**
@@ -798,7 +804,6 @@ this.tagbox = (function ($, win) {
 		getKeep: function () {
 			return {
 				// TODO: @joon [10-02-2013 18:14] keep url
-				url: 'myurl'
 			};
 		},
 
@@ -915,26 +920,26 @@ this.tagbox = (function ($, win) {
 		 */
 		onAddResponse: function (response) {
 			log('onAddResponse', response);
-			if (response.addedToCollection) {
-				this.$tagbox.addClass('tagged');
 
-				var item = this.getTagById(response.collectionId);
-				if (!item) {
-					this.alert('Error: Tag not found.');
-					return;
-				}
-
-				var name = this.normalizeTagNameForSearch(item.name);
-				this.tagsAdded[name] = item;
-
-				this.removeSuggestion(name);
-
-				var html = win.render('html/keeper/tagbox-tag', item);
-				this.appendTag(html);
+			if (!response.addedToCollection) {
+				throw new Error('Tag could not be added.');
 			}
-			else {
-				this.alert('Error: Tag could not be added.');
+
+			this.$tagbox.addClass('tagged');
+
+			var tagId = response.collectionId,
+				item = this.getTagById(tagId);
+			if (!item) {
+				throw new Error('Tag not found.');
 			}
+
+			var name = this.normalizeTagNameForSearch(item.name);
+			this.tagsAdded[name] = item;
+
+			this.removeSuggestionById(tagId);
+
+			var html = win.render('html/keeper/tagbox-tag', item);
+			return this.appendTag(html);
 		},
 
 		/**
@@ -980,7 +985,7 @@ this.tagbox = (function ($, win) {
 		 * @param {Error} err - An error object
 		 */
 		alertError: function (err) {
-			this.alert(err.message);
+			this.alert('Error: ' + err.message);
 		},
 
 		/**
