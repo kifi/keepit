@@ -13,7 +13,8 @@ import com.keepit.heimdal.{
   AnyContextRestriction, 
   NotEqualTo,
   ContextStringData,
-  EventGrouping
+  EventGrouping,
+  MetricDesriptor
 }
 import com.keepit.common.time._
 
@@ -21,7 +22,7 @@ import org.joda.time.DateTime
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext //Might want to change this to a custom play one
 
-import play.api.mvc.Action
+import play.api.mvc.{Action}
 import play.api.libs.json.{Json, JsObject, JsArray}
 
 import com.google.inject.Inject
@@ -31,10 +32,6 @@ import views.html
 
 class AnalyticsController @Inject() (metricManager: MetricManager) extends HeimdalServiceController {
 
-  val definedRestrictions = Map[String, ContextRestriction](
-    "none" -> NoContextRestriction,
-    "noadmins" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("admin")))
-  )
 
   val adhocHelp = """
     | Returns simple event statistics
@@ -63,7 +60,17 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     |   limit=$       Where $ is the number of events to return. Default: 10.
   """.stripMargin
 
-  // one hour back
+  def createMetric(name: String, start: String, window: Int, step: Int, description: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String) = Action { request =>
+    assert(window>0)
+    val startDT = DateTime.parse(start)
+    metricManager.createMetric(MetricDesriptor(name, startDT, window, step, description, if (events=="all") Seq() else events.split(","), groupBy, breakDown.toBoolean, mode, filter, startDT))
+    Ok("New metric created")
+  }
+
+  def updateMetrics() = Action { request =>
+    metricManager.updateAllMetrics()
+    Ok("Update has been triggered. Please be patient. Calling this repeatedly in rapid succession will only make it take longer. If you think it didn't work, wait at least 30 seconds.")
+  }
 
   def adhocMetric(from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, as: String) = Action{ request =>
     if (request.queryString.get("help").nonEmpty) Ok(adhocHelp)
@@ -73,13 +80,13 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
       val toTime = if (to=="now") currentDateTime else DateTime.parse(to)
       val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(UserEventType(_)).toSet)
 
-      val contextRestriction  = definedRestrictions(filter)
+      val contextRestriction  = metricManager.definedRestrictions(filter)
 
       val jsonFuture = if (mode=="users") {
-        val definition = new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown)
+        val definition = new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown, as=="hist")
         metricManager.computeAdHocMteric(fromTime, toTime, definition)
       } else {
-        val definition = new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown)
+        val definition = new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown, as=="hist")
         metricManager.computeAdHocMteric(fromTime, toTime, definition)
       }
 
@@ -89,6 +96,11 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
         Async(jsonFuture.map{ json =>
           var title = (if (mode=="users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'" 
           Ok(html.adhocPieChart(Json.stringify(json), title))
+        })
+      } else if (as=="hist"){
+        Async(jsonFuture.map{ json =>
+          var title = (if (mode=="users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'" 
+          Ok(html.adhocHistChart(Json.stringify(json), title))
         })
       } else {
         BadRequest("'as' paramter must be either 'pie' or 'json'.")
