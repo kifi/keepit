@@ -26,6 +26,10 @@ var friends = [];
 var friendsById = {};
 var ruleSet = {};
 var urlPatterns = [];
+var tags = [];
+var tagsById = [];
+var tagsFetched = null;
+var tagsListeners = [];
 
 function clearDataCache() {
   log("[clearDataCache]")();
@@ -39,6 +43,8 @@ function clearDataCache() {
   friendsById = {};
   ruleSet = {};
   urlPatterns = [];
+  tags = [];
+  tagsById = {};
 }
 
 function PageData() {
@@ -625,18 +631,15 @@ api.port.on({
     awaitDeepLink(link, tab.id);
   },
 
-  /**
-   *
-   * GET_TAGS
-   *   Request URL: /tags
-   *   Request Method: GET
-   *   Response: [{
-   *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
-   *     "name":"hello"
-   *   }]
-   */
-  get_tags: function(data, callback, tab) {
-    makeRequest(tab, "get_tags", "GET", "/tags", data, callback);
+  get_tags: function(_, respond) {
+    if (tagsFetched) {
+      respond({
+        success: true,
+        response: tags
+      });
+    }
+    else {
+    }
   },
 
   /**
@@ -650,7 +653,7 @@ api.port.on({
    *     "name":"hello"
    *   }]
    */
-  get_tags_by_url: function(data, callback, tab) {
+  get_tags_by_url: function(_, callback, tab) {
     makeRequest(tab, "get_tags_by_url", "POST", "/tagsByUrl", {
       url: tab.nUri || tab.url
     }, callback);
@@ -668,63 +671,42 @@ api.port.on({
    *     "name":"hello"
    *   }
    */
-  create_tag: function(data, callback, tab) {
-    if (typeof data === 'string') {
-      data = {
-        name: data
-      };
-    }
-    makeRequest(tab, "create_tag", "POST", "/site/collections/create", data, callback);
+  create_tag: function(name, callback, tab) {
+    makeRequest(tab, "create_tag", "POST", "/site/collections/create", {
+      name: name
+    }, callback);
   },
 
   /**
    * Makes a request to the server to add a tag to a keep.
    * 
    * ADD
-   *   Request URL: /site/keeps/add
-   *   Request Method: POST
-   *   Request Payload: {
-   *     "collectionId":"f033afe4-bbb9-4609-ab8b-3e8aa968af21",
-   *     "keeps":[{
-   *       "title":"Use JSDoc: Index",
-   *       "url":"http://usejsdoc.org/index.html"
-   *     }]
-   *   }
-   *   Response: {
-   *     "keeps": [{
-   *       "id":"220c1ac7-6644-477f-872b-4088988d7810",
-   *       "title":"Use JSDoc: Index",
-   *       "url":"http://usejsdoc.org/index.html",
-   *       "isPrivate":false
-   *     }],
-   *     "addedToCollection":1
-   *   }
-   */
-  add_tag: function(data, callback, tab) {
-    if (typeof data === 'string') {
-      data = {
-        collectionId: data
-      };
-    }
-    data.keeps = [{
-      url: tab.nUri || tab.url
-    }];
-    makeRequest(tab, "add_tag", "POST", "/site/keeps/add", data, callback);
-  },
-
-  /**
-   * Makes a request to the server to remove a tag from a keep.
-   * 
-   * REMOVE
-   *   Request URL: /tags/dc76ee74-a141-4e96-a65f-e5ca58ddfe04/removeFromKeep
+   *   Request URL: /tags/:id/addToKeep
    *   Request Method: POST
    *   Request Payload: {
    *     url: "my.keep.com"
    *   }
    *   Response: {}
    */
-  remove_tag: function(collectionId, callback, tab) {
-    makeRequest(tab, "remove_tag", "POST", "/tags/" + collectionId + "/removeFromKeep", {
+  add_tag: function(tagId, callback, tab) {
+    makeRequest(tab, "add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
+      url: tab.nUri || tab.url
+    }, callback);
+  },
+
+  /**
+   * Makes a request to the server to remove a tag from a keep.
+   * 
+   * REMOVE
+   *   Request URL: /tags/:id/removeFromKeep
+   *   Request Method: POST
+   *   Request Payload: {
+   *     url: "my.keep.com"
+   *   }
+   *   Response: {}
+   */
+  remove_tag: function(tagId, callback, tab) {
+    makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
       url: tab.nUri || tab.url
     }, callback);
   },
@@ -1407,6 +1389,34 @@ function getFriends() {
   });
 }
 
+/**
+ *
+ * GET_TAGS
+ *   Request URL: /tags
+ *   Request Method: GET
+ *   Response: [{
+ *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+ *     "name":"hello"
+ *   }]
+ */
+
+function getTags() {
+  ajax("GET", "/tags", function(tagList) {
+    log("[getTags]", tagList)();
+    tagsFetched = Date.now();
+    tags = tagList;
+    tagsById = {};
+    for (var i = 0, l = tagList.length, tag; i < l; i++) {
+      var tag = tagList[i];
+      tagsById[tag.id] = tag;
+    }
+    for (i = 0, l = tagsListeners.length; i < l; i++) {
+      tagsListeners[i](tagList);
+    }
+    tagsListeners.length = 0;
+  });
+}
+
 function getPrefs() {
   ajax("GET", "/ext/prefs", function(o) {
     log("[getPrefs]", o)();
@@ -1432,6 +1442,7 @@ var session, socket, onLoadingTemp;
 function connectSync() {
   getRules();
   getFriends();
+  getTags();
   getPrefs();
 }
 

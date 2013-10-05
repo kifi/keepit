@@ -122,7 +122,7 @@ this.tagbox = (function ($, win) {
 
 				this.$inputbox.toggleClass('empty', !text);
 
-        this.suggest(text);
+				this.suggest(text);
 			}
 
 			function onFocus() {
@@ -817,28 +817,12 @@ this.tagbox = (function ($, win) {
 		 * 
 		 * ADD
 		 *   Request Payload: {
-		 *     "collectionId":"f033afe4-bbb9-4609-ab8b-3e8aa968af21",
-		 *     "keeps":[{
-		 *       "title":"Use JSDoc: Index",
-		 *       "url":"http://usejsdoc.org/index.html"
-		 *     }]
+		 *     url: "my.keep.com"
 		 *   }
-		 *   Response: {
-		 *     "keeps": [{
-		 *       "id":"220c1ac7-6644-477f-872b-4088988d7810",
-		 *       "title":"Use JSDoc: Index",
-		 *       "url":"http://usejsdoc.org/index.html",
-		 *       "isPrivate":false
-		 *     }],
-		 *     "addedToCollection":1
-		 *   }
+		 *   Response: {}
 		 */
 		onAddResponse: function (tagId, response) {
 			log('onAddResponse', response);
-
-			if (!response.addedToCollection) {
-				throw new Error('Tag could not be added.');
-			}
 
 			var tag = this.getTagById(tagId);
 			if (!tag) {
