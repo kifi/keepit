@@ -632,13 +632,15 @@ api.port.on({
   },
 
   get_tags: function(_, respond) {
+    log("[get_tags] fetched=" + tagsFetched)();
     if (tagsFetched) {
       respond({
         success: true,
         response: tags
       });
     }
-    else {
+    else if (respond) {
+      tagsListeners.push(respond);
     }
   },
 
