@@ -6,7 +6,7 @@ import com.keepit.model.{ABookInfo => ABookInfo, ABookRawInfo, ABookOriginType, 
 import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 
@@ -28,7 +28,7 @@ trait ABookServiceClient extends ServiceClient {
 
 
 class ABookServiceClientImpl @Inject() (
-  val healthcheck: HealthcheckPlugin,
+  val airbrakeNotifier: AirbrakeNotifier,
   val httpClient: HttpClient,
   val serviceCluster: ServiceCluster
 )
@@ -57,7 +57,7 @@ class ABookServiceClientImpl @Inject() (
   }
 }
 
-class FakeABookServiceClientImpl(val healthcheck: HealthcheckPlugin) extends ABookServiceClient {
+class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ABookServiceClient {
 
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
 

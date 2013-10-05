@@ -1,7 +1,7 @@
 package com.keepit.shoebox
 
 import com.google.inject.{Provides, Singleton}
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck._
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 
@@ -15,21 +15,22 @@ case class TestShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
       shoeboxCacheProvided: ShoeboxCacheProvider,
       httpClient: HttpClient,
       serviceCluster: ServiceCluster,
-      healthcheck: HealthcheckPlugin): ShoeboxServiceClient =
-    new ShoeboxServiceClientImpl(serviceCluster, -1, httpClient,shoeboxCacheProvided, healthcheck)
-
+      airbrakeNotifier: AirbrakeNotifier): ShoeboxServiceClient =
+    new ShoeboxServiceClientImpl(serviceCluster, -1, httpClient, airbrakeNotifier, shoeboxCacheProvided)
 }
 
 case class FakeShoeboxServiceModule() extends ShoeboxServiceClientModule {
-  def configure(): Unit = {}
+  def configure(): Unit = {
+    install(FakeAirbrakeModule())
+  }
 
   @Singleton
   @Provides
   def fakeShoeboxServiceClient(
       clickHistoryTracker: ClickHistoryTracker,
       browsingHistoryTracker: BrowsingHistoryTracker,
-      healthcheck: HealthcheckPlugin): ShoeboxServiceClient =
-    new FakeShoeboxServiceClientImpl(clickHistoryTracker, browsingHistoryTracker, healthcheck)
+      airbrakeNotifier: AirbrakeNotifier): ShoeboxServiceClient =
+    new FakeShoeboxServiceClientImpl(clickHistoryTracker, browsingHistoryTracker, airbrakeNotifier)
 
   @Provides
   @Singleton

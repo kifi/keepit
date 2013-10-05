@@ -11,7 +11,6 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.State
-import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.net.HttpClient
@@ -38,6 +37,7 @@ import com.keepit.search.ArticleSearchResult
 import com.keepit.model.BrowsingHistoryUserIdKey
 import com.keepit.social.SocialId
 import com.keepit.model.NormalizedURIKey
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.UserConnectionIdKey
 import play.api.libs.json.JsObject
 import com.keepit.model.SocialUserInfoNetworkKey
@@ -113,8 +113,8 @@ class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
   override val port: Int,
   override val httpClient: HttpClient,
-  cacheProvider: ShoeboxCacheProvider,
-  val healthcheck: HealthcheckPlugin)
+  val airbrakeNotifier: AirbrakeNotifier,
+  cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient with Logging{
 
   // request consolidation
@@ -178,7 +178,6 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.fromJson[Seq[Long]](r.json).get.map(Id[User](_))
     }
   }
-
 
   def sendMail(email: ElectronicMail): Future[Boolean] = {
     call(Shoebox.internal.sendMail(), Json.toJson(email)).map(r => r.body.toBoolean)

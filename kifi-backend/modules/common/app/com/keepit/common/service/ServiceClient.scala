@@ -3,7 +3,7 @@ package com.keepit.common.service
 import scala.concurrent.Future
 
 import com.keepit.common.concurrent.RetryFuture
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, ErrorMessage, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ClientResponse, HttpClient}
 import com.keepit.common.routes._
@@ -23,7 +23,7 @@ trait ServiceClient extends Logging {
   protected def httpClient: HttpClient
 
   val serviceCluster: ServiceCluster
-  val healthcheck: HealthcheckPlugin
+  val airbrakeNotifier: AirbrakeNotifier
 
   private def nextHost(): String = serviceCluster.nextService map { service =>
     service.instanceInfo.localHostname
@@ -48,16 +48,21 @@ trait ServiceClient extends Logging {
     }
     respFuture.onFailure{
       case ex: Throwable =>
-        healthcheck.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        airbrakeNotifier.notify(AirbrakeError(
+          exception = ex,
+          message = Some(s"can't call service with body: $body and params: call.params"),
+          method = Some(call.method.toString),
+          url = Some(call.path)))
     }
     respFuture
   }
 
   protected def callUrl(call: ServiceRoute, url: String, body: JsValue, ignoreFailure: Boolean = false): Future[ClientResponse] = {
     if (url.length > ServiceClient.MaxUrlLength) {
-      healthcheck.addError(HealthcheckError(callType = Healthcheck.INTERNAL, errorMessage = Some(ErrorMessage(
-        "Request URI too long!", Some(s"Request URI length ${url.length} > ${ServiceClient.MaxUrlLength}: $url"
-      )))))
+      airbrakeNotifier.notify(AirbrakeError(
+        message = Some(s"Request URI length ${url.length} > ${ServiceClient.MaxUrlLength}: $url"),
+        method = Some(call.method.toString),
+        url = Some(s"$url/${call.path}")))
     }
     if (ignoreFailure) {
       call match {
