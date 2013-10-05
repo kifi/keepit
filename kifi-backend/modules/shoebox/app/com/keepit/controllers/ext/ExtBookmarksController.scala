@@ -62,6 +62,21 @@ class ExtBookmarksController @Inject() (
     Ok(Json.obj())
   }
 
+  def createTag() = AuthenticatedJsonToJsonAction { request =>
+    val name = (request.body \ "name").as[String].trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength)
+    db.readWrite { implicit s =>
+      val tag = collectionRepo.getByUserAndName(request.userId, name, excludeState = None) match {
+        case Some(t) if t.isActive => t
+        case Some(t) => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE))
+        case None => collectionRepo.save(Collection(userId = request.userId, name = name))
+      }
+      Ok(Json.obj(
+        "name" -> tag.name,
+        "id" -> tag.externalId.id
+      ))
+    }
+  }
+
   def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     db.readWrite { implicit s =>
