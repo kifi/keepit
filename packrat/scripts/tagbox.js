@@ -71,6 +71,20 @@ this.tagbox = (function ($, win) {
 		tagsAdded: {},
 
 		/**
+		 * Cache for tag names being created
+		 *
+		 * @property {Object} tagsBeingCreated
+		 */
+		tagsBeingCreated: {},
+
+		/**
+		 * Cache for busy tag ids waiting for server response
+		 *
+		 * @property {Object} busyTags
+		 */
+		busyTags: {},
+
+		/**
 		 * A TagBox constructor
 		 *
 		 * Renders and initializes a tag box if there is no live tag box available.
@@ -311,6 +325,8 @@ this.tagbox = (function ($, win) {
 				this.docClick = null;
 				this.tags = [];
 				this.tagsAdded = {};
+				this.tagsBeingCreated = {};
+				this.busyTags = {};
 			}
 		},
 
@@ -576,11 +592,24 @@ this.tagbox = (function ($, win) {
 		 *
 		 * @return {Object} A deferred promise object
 		 */
-		createTag: function (name) {
+		createTag: function (name, $suggestion) {
+			if (this.indexOfTagByName(name) !== -1) {
+				log('createTag: tag already exists. name=' + name);
+				return null;
+			}
+
+			if (this.isTagBusy(name)) {
+				log('createTag: tag is already being created. name=' + name);
+				return null;
+			}
+
+			this.addTagBusy(name, $suggestion || this.getNewTagSuggestion$ByName(name));
+
 			log('createTag: create a tag', name);
 			return this.requestCreateTagByName(name)
 				.then(this.onCreateResponse.bind(this))
-				.fail(this.alertError.bind(this));
+				.fail(this.alertError.bind(this))
+				.fin(this.removeTagBusy.bind(this, name));
 		},
 
 		/**
@@ -588,20 +617,29 @@ this.tagbox = (function ($, win) {
 		 * It sends a request to server to add a tag and returns a deferred object.
 		 *
 		 * @param {string} tagId - A tag id
+		 * @param {jQuery} [$suggestion] - jQuery object for suggestion
 		 *
 		 * @return {Object} A deferred promise object
 		 */
-		addTagById: function (tagId) {
+		addTagById: function (tagId, $suggestion) {
 			var $el = this.getTag$ById(tagId);
 			if ($el.length) {
 				log('addTagById: tag already added. tagId=' + tagId);
-				return this.promiseSuccess($el);
+				return null;
 			}
+
+			if (this.isTagBusy(tagId)) {
+				log('addTagById: tag is already being added. tagId=' + tagId);
+				return null;
+			}
+
+			this.addTagBusy(tagId, $suggestion || this.getSuggestion$ById(tagId));
 
 			log('addTagById: request to server. tagId=' + tagId);
 			return this.requestAddTagById(tagId)
 				.then(this.onAddResponse.bind(this, tagId))
-				.fail(this.alertError.bind(this));
+				.fail(this.alertError.bind(this))
+				.fin(this.removeTagBusy.bind(this, tagId));
 		},
 
 		/**
@@ -616,13 +654,39 @@ this.tagbox = (function ($, win) {
 			var $el = this.getTag$ById(tagId);
 			if (!$el.length) {
 				log('removeTagById: tag is not added. tagId=' + tagId);
-				return this.promiseSuccess(false);
+				return null;
 			}
+
+			if (this.isTagBusy(tagId)) {
+				log('removeTagById: tag is already being removed. tagId=' + tagId);
+				return null;
+			}
+
+			this.addTagBusy(tagId, $el);
 
 			log('removeTagById: request to server. tagId=' + tagId);
 			return this.requestRemoveTagById(tagId)
 				.then(this.onRemoveResponse.bind(this, tagId))
-				.fail(this.alertError.bind(this));
+				.fail(this.alertError.bind(this))
+				.fin(this.removeTagBusy.bind(this, tagId));
+		},
+
+		isTagBusy: function (tagId) {
+			return tagId in this.busyTags;
+		},
+
+		addTagBusy: function (tagId, $el) {
+			this.busyTags[tagId] = $el;
+			$el.addClass('busy');
+		},
+
+		removeTagBusy: function (tagId) {
+			var busyTags = this.busyTags,
+				$el = busyTags[tagId];
+
+			delete busyTags[tagId];
+
+			$el.removeClass('busy');
 		},
 
 		/**
@@ -975,11 +1039,13 @@ this.tagbox = (function ($, win) {
 			if (!($suggestion || ($suggestion = this.currentSuggestion))) {
 				return null;
 			}
+
 			var data = $suggestion.data(),
 				id = data.id;
 			if (id) {
-				return this.addTagById(id);
+				return this.addTagById(id, $suggestion);
 			}
+
 			return this.createTag(data.name);
 		},
 
@@ -1042,7 +1108,7 @@ this.tagbox = (function ($, win) {
 		 */
 		onClickSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
-			this.addTagById($suggestion.data('id'));
+			this.addTagById($suggestion.data('id'), $suggestion);
 		},
 
 		/**
@@ -1078,8 +1144,8 @@ this.tagbox = (function ($, win) {
 		 * @param {Object} event - A click event object
 		 */
 		onClickRemoveTag: function (e) {
-			var $tag = $(e.target).closest('.kifi-tagbox-tag');
-			this.removeTagById($tag.data('id'));
+			var tagId = $(e.target).closest('.kifi-tagbox-tag').data('id');
+			this.removeTagById(tagId);
 		},
 
 		//
@@ -1132,36 +1198,6 @@ this.tagbox = (function ($, win) {
 		 */
 		alert: function (msg) {
 			win.alert(msg);
-		},
-
-		/**
-		 * Promises a failure and returns a deferred promise object.
-		 *
-		 * @param {*} data - A data
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		promiseSuccess: function (data) {
-			var deferred = Q.defer();
-			setTimeout(function () {
-				deferred.resolve(data);
-			}, 1);
-			return deferred.promise;
-		},
-
-		/**
-		 * Promises a failure and returns a deferred promise object.
-		 *
-		 * @param {string} msg - An error message
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		promiseFail: function (msg) {
-			var deferred = Q.defer();
-			setTimeout(function () {
-				deferred.reject(new Error(msg));
-			}, 1);
-			return deferred.promise;
 		}
 	};
 

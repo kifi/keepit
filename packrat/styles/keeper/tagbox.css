@@ -198,6 +198,10 @@
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAQAAACiV3CzAAAA60lEQVR4Ae3LMU4CQRiG4W83RAt0lVBoo4kX0CtYwCFoiAWNZyD0Nt4CCy6xiTfQQG2IwYLERrShmVeKnezM7KBuYcfzVX/+vIrhlldeuEHViXAJ91h3JL8F+0xwPbD3U9DikVDO8bbgnBkxU85iwRVvbLPgMgw6rJz3gIvNBiywPui4QZ811pwTVOyUOdaavg2GGEo95KxHyTBEYoSv5QVH+EYJ72rLdagvlQ70KdcqVVu+6+hlZSI0o4mKNZkSEFVPdGls1uWZigQUYySlimgoLlXdx/8Hu2AXLFXHMtVYdYxFRo7hLww52TeyrdzuJXPukQAAAABJRU5ErkJggg==);
 }
 
+.kifi-tagbox-suggestion.busy {
+  background: #cccccc;
+}
+
 .kifi-tagbox-empty {
   font-size: 24px;
   font-weight: 200;
@@ -233,6 +237,10 @@
 
 .kifi-tagbox-new:active {
   background: #acc0da;
+}
+
+.kifi-tagbox-new.busy {
+  background: #cccccc;
 }
 
 .kifi-tagbox-new-caption {
@@ -274,13 +282,13 @@
   margin-right: 4px;
   margin-bottom: 4px;
   text-align: center;
+  background: #b8c5d1;
 }
 
 .kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {
   display: inline-block;
   float: left;
   color: white;
-  background: #b8c5d1;
   text-decoration: none;
 }
 
@@ -290,6 +298,10 @@
 
 .kifi-tagbox-tag-name:active, .kifi-tagbox-tag-remove:active {
   background: #8699ab;
+}
+
+.kifi-tagbox-tag.busy .kifi-tagbox-tag-name, .kifi-tagbox-tag.busy .kifi-tagbox-tag-remove {
+  background: #cccccc;
 }
 
 .kifi-tagbox-tag-name {
