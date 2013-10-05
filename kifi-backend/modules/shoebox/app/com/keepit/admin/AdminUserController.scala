@@ -182,8 +182,9 @@ class AdminUserController @Inject() (
     val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
-    val contacts:Seq[ABookRawInfo] = Await.result(abookClient.getABookRawInfos(userId), 5 seconds)
+    val contacts:Seq[ContactInfo] = Await.result(abookClient.getContactInfos(userId), 5 seconds)
     val abookInfos:Seq[ABookInfo] = Await.result(abookClient.getABookInfos(userId), 5 seconds)
+    // val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService() // REMOVEME
 
     Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
       fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails, abookInfos, contacts,
