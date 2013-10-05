@@ -63,9 +63,9 @@ class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metri
     val eventsToConsider = if (desc.events.isEmpty) AllEvents else SpecificEventSet(desc.events.toSet.map( (s: String) => UserEventType(s)) )
     val contextRestriction = definedRestrictions(desc.filter)
     val definition = if(desc.mode=="users") {
-      new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), desc.breakDown) 
+      new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), if (desc.groupBy.startsWith("context")) desc.breakDown else false) 
     } else {
-      new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), desc.breakDown) 
+      new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), if (desc.groupBy.startsWith("context")) desc.breakDown else false) 
     }
     val (pipeline, postprocess) = definition.aggregationForTimeWindow(tStart, Duration(tEnd.getMillis - tStart.getMillis,"ms"))
     val data: Seq[BSONDocument] = Await.result(userEventLoggingRepo.performAggregation(pipeline).map(postprocess(_)), 5 minutes)
@@ -81,13 +81,17 @@ class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metri
     val now = currentDateTime
     var desc = descriptor 
     while(now.isAfter(desc.start.plusHours(desc.window)) && now.isAfter(desc.lastUpdate.plusHours(desc.step))){
-      desc = updateMetricOnce(desc)
+      try {
+        desc = updateMetricOnce(desc)
+        } catch {
+          case x: Throwable => println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"); println(x); println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"); throw x;
+        }
     }
   }
 
   def updateAllMetrics(): Unit = {
     val descriptorsFuture : Future[Seq[MetricDesriptor]] = metricDescriptorRepo.all
-    descriptorsFuture.map{ descriptors=>
+    descriptorsFuture.map{ descriptors =>
       descriptors.foreach(updateMetricFully(_))
     }
   }
