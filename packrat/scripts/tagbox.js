@@ -104,9 +104,12 @@ this.tagbox = (function ($, win) {
 		 */
 		initInput: function () {
 			var $inputbox = this.$inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
-			this.$input = $inputbox.find('input.kifi-tagbox-input');
+			var $input = this.$input = $inputbox.find('input.kifi-tagbox-input');
 
 			this.addInputEvents();
+			setTimeout(function () {
+				$input.focus();
+			}, 1);
 		},
 
 		/**
@@ -133,6 +136,32 @@ this.tagbox = (function ($, win) {
 				$(this).closest('.kifi-tagbox-input-box').removeClass('focus');
 			}
 
+			var KEY_UP = 38,
+				KEY_DOWN = 40,
+				KEY_ENTER = 13,
+				KEY_ESC = 27,
+				KEY_TAB = 9;
+
+			function onKeydown(e) {
+				switch (e.which) {
+				case KEY_UP:
+					this.navigate('up');
+					break;
+				case KEY_DOWN:
+					this.navigate('down');
+					break;
+				case KEY_ENTER:
+					this.select();
+					break;
+				case KEY_ESC:
+					this.hide();
+					break;
+				case KEY_TAB:
+					this.select();
+					break;
+				}
+			}
+
 			return function () {
 				var $input = this.$input;
 				$input.on('focus', onFocus);
@@ -142,6 +171,7 @@ this.tagbox = (function ($, win) {
 					context: this,
 					init: true
 				});
+				$input.on('keydown', onKeydown.bind(this));
 			};
 		})(),
 
@@ -163,6 +193,7 @@ this.tagbox = (function ($, win) {
 
 			$suggest.on('click', '.kifi-tagbox-suggestion', this.onClickSuggestion.bind(this));
 			$suggest.on('click', '.kifi-tagbox-new', this.onClickNewSuggestion.bind(this));
+			$suggest.on('mouseover', this.onMouseoverSuggestion.bind(this));
 
 			return $suggest;
 		},
@@ -413,6 +444,8 @@ this.tagbox = (function ($, win) {
 			}
 
 			this.updateSuggestedClass();
+
+			this.navigateTo('first');
 		},
 
 		/**
@@ -783,6 +816,105 @@ this.tagbox = (function ($, win) {
 		},
 
 		//
+		// Key Handlers
+		//
+
+		/**
+		 * Currently highlighted suggestion.
+		 *
+		 * @property {jQuery} currentSuggestion - Currently highlighted suggestion.
+		 */
+		currentSuggestion: null,
+
+		/**
+		 * Navigates and highlight a tag suggestion.
+		 * Returns a newly highlighted suggestion.
+		 *
+		 * @param {string} dir - A direction to navigate
+		 *
+		 * @return {jQuery} newly highlighted suggestion
+		 */
+		navigate: function (dir) {
+			var $prev = this.currentSuggestion,
+				$next = null;
+			switch (dir) {
+			case 'up':
+				if ($prev) {
+					$next = $prev.prev();
+				}
+				else {
+					$next = this.$suggest.children(':last');
+				}
+				break;
+			case 'down':
+				if ($prev) {
+					$next = $prev.next();
+				}
+				else {
+					$next = this.$suggest.children(':first');
+				}
+				break;
+			default:
+				return;
+			}
+			return this.navigateTo($next, dir);
+		},
+
+		navigateTo: function ($suggestion) {
+			if ($suggestion === 'first' || $suggestion === 'last') {
+				$suggestion = this.$suggest.children(':' + $suggestion);
+			}
+			if (!($suggestion && $suggestion.length)) {
+				$suggestion = null;
+			}
+
+			var $prev = this.currentSuggestion;
+			this.currentSuggestion = $suggestion;
+
+			if ($prev) {
+				$prev.removeClass('focus');
+			}
+
+			if ($suggestion) {
+				$suggestion.addClass('focus');
+				this.scrolledIntoViewLazy($suggestion[0], 10);
+			}
+		},
+
+		scrolledIntoViewLazy: function (el, padding) {
+			var view = el.offsetParent,
+				viewTop = view.scrollTop,
+				viewHeight = view.clientHeight,
+				viewBottom = viewTop + viewHeight,
+				elemTop = el.offsetTop,
+				elemBottom = elemTop + el.offsetHeight;
+
+			if (elemBottom > viewBottom) {
+				view.scrollTop = elemBottom + padding - viewHeight;
+			}
+			else if (elemTop < viewTop) {
+				view.scrollTop = elemTop - padding;
+			}
+		},
+
+		/**
+		 * Selects and add a highlighted tag suggestion.
+		 *
+		 * @param {jQuery} [$suggestion] - jQuery object to select
+		 */
+		select: function ($suggestion) {
+			if (!($suggestion || ($suggestion = this.currentSuggestion))) {
+				return null;
+			}
+			var data = $suggestion.data(),
+				id = data.id;
+			if (id) {
+				return this.addTagById(id);
+			}
+			return this.createTag(data.name);
+		},
+
+		//
 		// TEMPLATE RENDERERS
 		//
 
@@ -854,6 +986,24 @@ this.tagbox = (function ($, win) {
 			log('onClickNewSuggestion');
 			var $suggestion = $(e.target).closest('.kifi-tagbox-new');
 			this.createTag($suggestion.data('name'));
+		},
+
+		/**
+		 * On mouseover listener for suggestion box.
+		 *
+		 * @param {Object} event - A mouseover event object
+		 */
+		onMouseoverSuggestion: function (e) {
+			log('onMouseoverSuggestion');
+			var $target = $(e.target),
+				$suggestion = $target.closest('.kifi-tagbox-suggestion');
+			if (!$suggestion.length) {
+				$suggestion = $target.closest('.kifi-tagbox-new');
+				if (!$suggestion.length) {
+					return;
+				}
+			}
+			this.navigateTo($suggestion);
 		},
 
 		/**
