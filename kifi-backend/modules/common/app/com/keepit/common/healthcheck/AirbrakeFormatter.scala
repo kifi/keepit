@@ -19,8 +19,10 @@ import scala.xml._
 
 import play.api.mvc._
 
+import AirbrakeError.MaxStringSize
+
 case class ErrorWithStack(error: Throwable, stack: Seq[StackTraceElement]) {
-  override def toString(): String = error.toString
+  override def toString(): String = error.toString.take(MaxStringSize)
   val cause: Option[ErrorWithStack] = Option(error.getCause).map(e => ErrorWithStack(e))
   val rootCause: ErrorWithStack = cause.map(c => c.rootCause).getOrElse(this)
 }

@@ -5,7 +5,7 @@ import java.io.File
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, HealthcheckError}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, HealthcheckError, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
@@ -27,7 +27,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   } catch {
     case e: Throwable =>
       injector.instance[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API))
-      injector.instance[HealthcheckPlugin]
       throw e
   }
 
@@ -93,10 +92,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     serviceDiscovery.changeStatus(ServiceStatus.SICK)
     val errorId = ex match {
-      case reported: ReportedException =>
-        reported.id
-      case _ =>
-        injector.instance[HealthcheckPlugin].addError(HealthcheckError(error = Some(ex), method = Some(request.method.toUpperCase()), path = Some(request.path), callType = Healthcheck.API)).id
+      case reported: ReportedException => reported.id
+      case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError(request, ex))
     }
     ex.printStackTrace()
     serviceDiscovery.startSelfCheck()
