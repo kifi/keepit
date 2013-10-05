@@ -92,8 +92,8 @@ this.tagbox = (function ($, win) {
 			this.initTagList();
 			this.initInput();
 			this.initCloseIcon();
-			this.initTags();
 			this.initPageTags();
+			this.initTags();
 			activateScroll('.kifi-tagbox-suggest');
 		},
 
@@ -189,7 +189,7 @@ this.tagbox = (function ($, win) {
 		initTags: function () {
 			log('initTags: get all tags');
 			return this.requestTags()
-				.then(this.onGetTagsResponse.bind(this))
+				.then(this.setTags.bind(this))
 				.then(this.updateSuggestion.bind(this))
 				.fail(this.alertError.bind(this));
 		},
@@ -202,7 +202,9 @@ this.tagbox = (function ($, win) {
 		initPageTags: function () {
 			log('initPageTags: get all tags by url');
 			return this.requestTagsByUrl()
-				.then(this.onGetTagsByUrlResponse.bind(this))
+				.then(this.rebuildTagsAdded.bind(this))
+				.then(this.updateTagList.bind(this))
+				.then(this.updateSuggestion.bind(this))
 				.fail(this.alertError.bind(this));
 		},
 
@@ -233,15 +235,15 @@ this.tagbox = (function ($, win) {
 		 * Returns an index of a tag with the given id.
 		 * Returns -1 if not found.
 		 *
-		 * @param {string} id - An tag id to search for
+		 * @param {string} tagId - An tag id to search for
 		 *
 		 * @return {number} An index of a tag. -1 if not found.
 		 */
-		indexOfTagById: function (id) {
-			if (id) {
+		indexOfTagById: function (tagId) {
+			if (tagId) {
 				var tags = this.tags;
 				for (var i = 0, l = tags.length; i < l; i++) {
-					if (id === tags[i].id) {
+					if (tagId === tags[i].id) {
 						return i;
 					}
 				}
@@ -262,7 +264,7 @@ this.tagbox = (function ($, win) {
 			if (name) {
 				var tags = this.tags;
 				for (var i = 0, l = tags.length; i < l; i++) {
-					if (name === this.normalizeTagNameForSearch(tags[i].name)) {
+					if (name === this.getNormalizedTagName(tags[i])) {
 						return i;
 					}
 				}
@@ -271,42 +273,27 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
+		 * Returns a normalized tag name for a tag item.
+		 *
+		 * @param {Object} tag - A tag item
+		 *
+		 * @return {string} A normalized tag name
+		 */
+		getNormalizedTagName: function (tag) {
+			return tag.normName || (tag.normName = this.normalizeTagNameForSearch(tag.name));
+		},
+
+		/**
 		 * Returns a tag item with the given tag id.
 		 * Returns null if not found.
 		 *
-		 * @param {string} id - An tag id to search for
+		 * @param {string} tagId - An tag id to search for
 		 *
 		 * @return {Object} A tag item. null if not found.
 		 */
-		getTagById: function (id) {
-			var index = this.indexOfTagById(id);
+		getTagById: function (tagId) {
+			var index = this.indexOfTagById(tagId);
 			return index === -1 ? null : this.tags[index];
-		},
-
-		/**
-		 * Returns a tag item with the given tag name.
-		 * Returns null if not found.
-		 *
-		 * @param {string} name - An tag name to search for
-		 *
-		 * @return {Object} A tag item. null if not found.
-		 */
-		getTagByName: function (name) {
-			var index = this.indexOfTagByName(name);
-			return index === -1 ? null : this.tags[index];
-		},
-
-		/**
-		 * Returns an id of a tag with the given tag name.
-		 * Returns null if not found.
-		 *
-		 * @param {string} name - An tag name to search for
-		 *
-		 * @return {string} A tag id. null if not found.
-		 */
-		getTagIdByName: function (name) {
-			var item = this.getTagByName(name);
-			return item && item.id;
 		},
 
 		/**
@@ -344,8 +331,8 @@ this.tagbox = (function ($, win) {
 			var options = {
 				pre: '<b>',
 				post: '</b>',
-				extract: function (item) {
-					return item.name;
+				extract: function (tag) {
+					return tag.name;
 				}
 			};
 
@@ -376,7 +363,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object[]} A new array of filtered tags
 		 */
 		filterOutAddedTags: function (tags) {
-			return tags.filter(this.unaddedTagFilter, this);
+			return (tags || this.tags).filter(this.unaddedTagFilter, this);
 		},
 
 		/**
@@ -387,7 +374,7 @@ this.tagbox = (function ($, win) {
 		 * @return {boolean} true if a tag has not been added to a keep, false otherwise.
 		 */
 		unaddedTagFilter: function (tag) {
-			return !this.isTagAdded(tag.name);
+			return !this.isTagAddedById(tag.id);
 		},
 
 		/**
@@ -414,80 +401,44 @@ this.tagbox = (function ($, win) {
 		 * @param {string} text - An input string to match against
 		 */
 		suggest: function (text) {
-			this.emptySuggestions();
-
 			var tags = this.tags;
 			tags = this.filterOutAddedTags(tags);
 			tags = this.filterTags(text, tags);
 
-			var hasMatch = tags.length ? true : false;
-			if (hasMatch) {
-				this.renderSuggestions(tags);
-			}
+			var html = tags.map(this.renderTagSuggestionHtml, this).join('');
+			this.$suggest.html(html);
 
-			if (this.indexOfTagByName(text) === -1) {
-				this.suggestNew(text);
+			if (text.trim() && this.indexOfTagByName(text) === -1) {
+				this.$suggest.append(this.renderNewTagSuggestionHtml(text));
 			}
 
 			this.updateSuggestedClass();
 		},
 
 		/**
-		 * Empties suggestion list.
+		 * Updates suggestion according to the current states (tags + input).
+		 *
+		 * @param {string} tags - A list of tags to render added
 		 */
-		emptySuggestions: function () {
-			this.$suggest.empty();
-		},
+		updateTagList: function (tags) {
+			var html = tags.map(this.renderTagHtml, this).join('');
+			this.$tagList.html(html);
 
-		/**
-		 * Renders and appends suggestions for given tags.
-		 *
-		 * @param {Object[]} tags - An array of tag items to suggest
-		 */
-		renderSuggestions: function (tags) {
-			tags.forEach(this.renderSuggestion, this);
-		},
-
-		/**
-		 * Renders and appends a suggestion for a given tag item.
-		 *
-		 * @param {Object} item - A tag object
-		 * @param {string} item.id - A tag id
-		 * @param {string} item.name - A tag name
-		 *
-		 * @return {jQuery} A jQuery object for the suggestion
-		 */
-		renderSuggestion: function (item) {
-			return this.appendSuggestion(this.renderTagSuggestionHtml(item));
-		},
-
-		/**
-		 * Renders and appends a new tag suggestion for a given name.
-		 *
-		 * @param {string} name - A new tag name
-		 *
-		 * @return {jQuery} A jQuery object for the new suggestion
-		 */
-		suggestNew: function (name) {
-			return this.appendSuggestion(this.renderNewTagSuggestionHtml(name));
+			this.$tagbox.toggleClass('tagged', tags.length ? true : false);
 		},
 
 		/**
 		 * Removes a suggestion entry from a suggestion box with the given id.
 		 *
-		 * @param {string} id - A tag id to remove
+		 * @param {string} tagId - A tag id to remove
 		 *
-		 * @return {boolean} Whether an element has been removed
+		 * @return {number} Number of elements removed
 		 */
-		removeSuggestionById: function (id) {
-			if (id) {
-				var $suggetion = this.$suggest.find('.kifi-tagbox-suggestion[data-id=' + id + ']');
-				if ($suggetion.length) {
-					$suggetion.remove();
-					return true;
-				}
-			}
-			return false;
+		removeSuggestionById: function (tagId) {
+			var $el = this.getSuggestion$ById(tagId),
+				len = $el.length;
+			$el.remove();
+			return len;
 		},
 
 		/**
@@ -495,52 +446,24 @@ this.tagbox = (function ($, win) {
 		 *
 		 * @param {string} name - A tag name to remove
 		 *
-		 * @return {boolean} Whether an element has been removed
-		 */
-		removeSuggestionByName: function (name) {
-			return this.removeSuggestionById(this.getTagIdByName(name));
-		},
-
-		/**
-		 * Removes a suggestion entry from a suggestion box with the given name.
-		 *
-		 * @param {string} name - A tag name to remove
-		 *
-		 * @return {boolean} Whether an element has been removed
+		 * @return {number} Number of elements removed
 		 */
 		removeNewSuggestionByName: function (name) {
-			if (name) {
-				var $suggetion = this.$suggest.find('.kifi-tagbox-new[data-name=' + name + ']');
-				if ($suggetion.length) {
-					$suggetion.remove();
-					return true;
-				}
-			}
-			return false;
-		},
-
-		/**
-		 * Appends a html to suggestion box.
-		 *
-		 * @param {string} html - A html string to append to suggest list
-		 *
-		 * @return {jQuery} A jQuery object for the appended html
-		 */
-		appendSuggestion: function (html) {
-			return $(html).appendTo(this.$suggest);
+			var $el = this.getNewTagSuggestion$ByName(name),
+				len = $el.length;
+			$el.remove();
+			return len;
 		},
 
 		/**
 		 * Tests whether a tag is added to a keep.
 		 *
-		 * @param {string} name - A tag name
+		 * @param {string} tagId - A tag id
 		 *
 		 * @return {boolean} Whether a tag is already added to a keep
 		 */
-		isTagAdded: function (name) {
-			name = this.normalizeTagNameForSearch(name);
-			var tagsAdded = this.tagsAdded;
-			return tagsAdded.hasOwnProperty(name) && (tagsAdded[name] ? true : false);
+		isTagAddedById: function (tagId) {
+			return tagId in this.tagsAdded;
 		},
 
 		/**
@@ -562,24 +485,18 @@ this.tagbox = (function ($, win) {
 		 * Adds a tag to the current keep's tag list.
 		 * It sends a request to server to add a tag and returns a deferred object.
 		 *
-		 * @param {string} name - A tag name to add
+		 * @param {string} tagId - A tag id
 		 *
 		 * @return {Object} A deferred promise object
 		 */
-		addTag: function (name) {
-			if (this.isTagAdded(name)) {
-				log('addTag: already added', name);
-				return this.promiseFail('tag already added');
+		addTagById: function (tagId) {
+			var $el = this.getTag$ById(tagId);
+			if ($el.length) {
+				log('addTagById: tag already added. tagId=' + tagId);
+				return this.promiseSuccess($el);
 			}
 
-			var tag = this.getTagByName(name);
-			if (!tag) {
-				log('addTag: tag not found. create new tag', name);
-				return this.createTag(name);
-			}
-
-			log('addTag: tag found. add it to a keep', name);
-			var tagId = tag.id;
+			log('addTagById: request to server. tagId=' + tagId);
 			return this.requestAddTagById(tagId)
 				.then(this.onAddResponse.bind(this, tagId))
 				.fail(this.alertError.bind(this));
@@ -589,44 +506,54 @@ this.tagbox = (function ($, win) {
 		 * Removes a tag from current keep's tag list.
 		 * It sends a request to server to remove a tag and returns a deferred object.
 		 *
-		 * @param {string} name - A tag name to remove
+		 * @param {string} tagId - A tag id
 		 *
 		 * @return {Object} A deferred promise object
 		 */
-		removeTag: function (name) {
-			if (!this.isTagAdded(name)) {
-				log('removeTag: tag is not added.', name);
-				return this.promiseFail('tag is not added.');
+		removeTagById: function (tagId) {
+			var $el = this.getTag$ById(tagId);
+			if (!$el.length) {
+				log('removeTagById: tag is not added. tagId=' + tagId);
+				return this.promiseSuccess(false);
 			}
 
-			var tag = this.getTagByName(name);
-			if (!tag) {
-				log('removeTag: tag not found.', name);
-				return this.promiseFail('tag not found.');
-			}
-
-			log('removeTag: tag found. remove it from a keep', name);
-			var tagId = tag.id;
+			log('removeTagById: request to server. tagId=' + tagId);
 			return this.requestRemoveTagById(tagId)
 				.then(this.onRemoveResponse.bind(this, tagId))
 				.fail(this.alertError.bind(this));
 		},
 
 		/**
+		 * Finds and returns jQuery object for a suggestion with the given id
+		 *
+		 * @param {string} tagId - A tag id
+		 *
+		 * @return {jQuery} jQuery object for a suggestion with the given id
+		 */
+		getSuggestion$ById: function (tagId) {
+			return this.$suggest.find('.kifi-tagbox-suggestion[data-id=' + tagId + ']');
+		},
+
+		/**
+		 * Finds and returns jQuery object for a new tag suggestion with the given name
+		 *
+		 * @param {string} name - A tag name
+		 *
+		 * @return {jQuery} jQuery object for a new tag suggestion with the given name
+		 */
+		getNewTagSuggestion$ByName: function (name) {
+			return this.$suggest.find('.kifi-tagbox-new[data-name=' + name + ']');
+		},
+
+		/**
 		 * Finds and returns jQuery object for a tag with the given id
 		 *
-		 * @param {string} id - A tag id
+		 * @param {string} tagId - A tag id
 		 *
 		 * @return {jQuery} jQuery object for a tag with the given id
 		 */
-		findTag$ById: function (id) {
-			if (id) {
-				var $tag = this.$tagList.find('.kifi-tagbox-tag[data-id=' + id + ']');
-				if ($tag.length) {
-					return $tag;
-				}
-			}
-			return null;
+		getTag$ById: function (tagId) {
+			return this.$tagList.find('.kifi-tagbox-tag[data-id=' + tagId + ']');
 		},
 
 		/**
@@ -637,8 +564,8 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for tag element
 		 */
 		addTag$: function (tag) {
-			var $tag = this.findTag$ById(tag.id);
-			if (!$tag) {
+			var $tag = this.getTag$ById(tag.id);
+			if (!$tag.length) {
 				var html = this.renderTagHtml(tag);
 				this.$tagbox.addClass('tagged');
 				$tag = $(html).appendTo(this.$tagList);
@@ -665,18 +592,18 @@ this.tagbox = (function ($, win) {
 		/**
 		 * Finds and removes a tag by its id
 		 *
-		 * @param {string} id - A tag id
+		 * @param {string} tagId - A tag id
 		 *
-		 * @return {boolean} Whether a tag was found and removed
+		 * @return {number} Number of elements removed
 		 */
-		removeTag$ById: function (id) {
-			var $tag = this.findTag$ById(id);
-			if ($tag.length) {
-				$tag.remove();
+		removeTag$ById: function (tagId) {
+			var $el = this.getTag$ById(tagId),
+				len = $el.length;
+			if (len) {
+				$el.remove();
 				this.updateTaggedClass();
-				return true;
 			}
-			return false;
+			return len;
 		},
 
 		//
@@ -719,24 +646,24 @@ this.tagbox = (function ($, win) {
 		 * Makes a request to the server to add a tag to a keep.
 		 * Returns a promise object.
 		 *
-		 * @param {string} id - A tag id
+		 * @param {string} tagId - A tag id
 		 *
 		 * @return {Object} A deferred promise object
 		 */
-		requestAddTagById: function (id) {
-			return this.request('add_tag', id, 'Could not add tag, "' + id + '"');
+		requestAddTagById: function (tagId) {
+			return this.request('add_tag', tagId, 'Could not add tag, "' + tagId + '"');
 		},
 
 		/**
 		 * Makes a request to the server to remove a tag from a keep.
 		 * Returns a promise object.
 		 *
-		 * @param {string} id - A tag id
+		 * @param {string} tagId - A tag id
 		 *
 		 * @return {Object} A deferred promise object
 		 */
-		requestRemoveTagById: function (id) {
-			return this.request('remove_tag', id, 'Could not remove tag, "' + id + '"');
+		requestRemoveTagById: function (tagId) {
+			return this.request('remove_tag', tagId, 'Could not remove tag, "' + tagId + '"');
 		},
 
 		/**
@@ -773,7 +700,7 @@ this.tagbox = (function ($, win) {
 		 *     "name":"hello"
 		 *   }]
 		 */
-		onGetTagsResponse: function (tags) {
+		setTags: function (tags) {
 			this.tags = tags;
 			return tags;
 		},
@@ -785,8 +712,11 @@ this.tagbox = (function ($, win) {
 		 *     "name":"hello"
 		 *   }]
 		 */
-		onGetTagsByUrlResponse: function (tags) {
-			//this.tags = tags;
+		rebuildTagsAdded: function (tags) {
+			var tagsAdded = this.tagsAdded = {};
+			for (var i = 0, l = tags.length; i < l; i++) {
+				tagsAdded[tags[i].id] = true;
+			}
 			return tags;
 		},
 
@@ -805,11 +735,9 @@ this.tagbox = (function ($, win) {
 
 			this.tags.push(tag);
 
-			var name = tag.name;
+			this.removeNewSuggestionByName(tag.name);
 
-			this.removeNewSuggestionByName(name);
-
-			return this.addTag(name);
+			return this.addTagById(tag.id);
 		},
 
 		/**
@@ -824,15 +752,14 @@ this.tagbox = (function ($, win) {
 		onAddResponse: function (tagId, response) {
 			log('onAddResponse', response);
 
+			this.tagsAdded[tagId] = true;
+
+			this.removeSuggestionById(tagId);
+
 			var tag = this.getTagById(tagId);
 			if (!tag) {
 				throw new Error('Tag not found.');
 			}
-
-			var name = this.normalizeTagNameForSearch(tag.name);
-			this.tagsAdded[name] = tag;
-
-			this.removeSuggestionById(tagId);
 
 			return this.addTag$(tag);
 		},
@@ -849,14 +776,7 @@ this.tagbox = (function ($, win) {
 		onRemoveResponse: function (tagId, response) {
 			log('onRemoveResponse', response);
 
-			var tag = this.getTagById(tagId);
-			if (!tag) {
-				throw new Error('Tag not found.');
-			}
-
-			var name = this.normalizeTagNameForSearch(tag.name);
-			delete this.tagsAdded[name];
-
+			delete this.tagsAdded[tagId];
 			//this.addSuggestionById(tagId);
 
 			return this.removeTag$ById(tagId);
@@ -922,7 +842,7 @@ this.tagbox = (function ($, win) {
 		onClickSuggestion: function (e) {
 			log('onClickSuggestion');
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
-			this.addTag($suggestion.data('name'));
+			this.addTagById($suggestion.data('id'));
 		},
 
 		/**
@@ -944,7 +864,7 @@ this.tagbox = (function ($, win) {
 		onClickRemoveTag: function (e) {
 			log('onClickRemoveTag');
 			var $tag = $(e.target).closest('.kifi-tagbox-tag');
-			this.removeTag($tag.data('name'));
+			this.removeTagById($tag.data('id'));
 		},
 
 		//
@@ -1002,6 +922,21 @@ this.tagbox = (function ($, win) {
 		/**
 		 * Promises a failure and returns a deferred promise object.
 		 *
+		 * @param {*} data - A data
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		promiseSuccess: function (data) {
+			var deferred = Q.defer();
+			setTimeout(function () {
+				deferred.resolve(data);
+			}, 1);
+			return deferred.promise;
+		},
+
+		/**
+		 * Promises a failure and returns a deferred promise object.
+		 *
 		 * @param {string} msg - An error message
 		 *
 		 * @return {Object} A deferred promise object
@@ -1009,7 +944,7 @@ this.tagbox = (function ($, win) {
 		promiseFail: function (msg) {
 			var deferred = Q.defer();
 			setTimeout(function () {
-				throw new Error(msg);
+				deferred.reject(new Error(msg));
 			}, 1);
 			return deferred.promise;
 		}
