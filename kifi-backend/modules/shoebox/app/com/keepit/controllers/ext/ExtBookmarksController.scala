@@ -62,6 +62,57 @@ class ExtBookmarksController @Inject() (
     Ok(Json.obj())
   }
 
+  def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
+    db.readWrite { implicit s =>
+      val bookmarkIdOpt = for {
+        uri <- uriRepo.getByUri(url)
+        bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
+      } yield bookmark.id.get
+      val collectionIdOpt = collectionRepo.getOpt(id).map(_.id.get)
+      (bookmarkIdOpt, collectionIdOpt) match {
+        case (Some(bookmarkId), Some(collectionId)) =>
+          keepToCollectionRepo.getOpt(bookmarkId, collectionId) match {
+            case Some(ktc) if ktc.state == KeepToCollectionStates.ACTIVE =>
+              ktc
+            case Some(ktc) =>
+              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+            case None =>
+              keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmarkId, collectionId = collectionId))
+          }
+          Ok(Json.obj())
+        case (_, None) =>
+          BadRequest(Json.obj("error" -> "Tag does not exist"))
+        case _ =>
+          BadRequest(Json.obj("error" -> "Keep does not exist"))
+      }
+    }
+  }
+
+  def tags() = AuthenticatedJsonAction { request =>
+    val tags = db.readOnly { implicit s =>
+      collectionRepo.getByUser(request.userId).map { coll =>
+        Json.obj("name" -> coll.name, "id" -> coll.externalId.id)
+      }
+    }
+    Ok(Json.toJson(tags))
+  }
+
+  def tagsByUrl() = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
+    val tags = db.readOnly { implicit s =>
+      for {
+        uri <- uriRepo.getByUri(url).toSeq
+        bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).toSeq
+        collectionId <- keepToCollectionRepo.getCollectionsForBookmark(bookmark.id.get)
+      } yield {
+        val coll = collectionRepo.get(collectionId)
+        Json.obj("name" -> coll.name, "id" -> coll.externalId.id)
+      }
+    }
+    Ok(Json.toJson(tags))
+  }
+
   def remove() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     val bookmark = db.readWrite { implicit s =>
