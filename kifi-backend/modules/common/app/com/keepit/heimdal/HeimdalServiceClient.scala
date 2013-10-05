@@ -1,12 +1,11 @@
 package com.keepit.heimdal
 
-
 import com.keepit.model.User
 import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 
@@ -22,24 +21,21 @@ trait HeimdalServiceClient extends ServiceClient {
   def trackEvent(event: UserEvent): Unit
 }
 
-
 class HeimdalServiceClientImpl @Inject() (
-    val healthcheck: HealthcheckPlugin,
+    val airbrakeNotifier: AirbrakeNotifier,
     val httpClient: HttpClient,
     val serviceCluster: ServiceCluster
-  ) 
+  )
   extends HeimdalServiceClient with Logging {
 
   def trackEvent(event: UserEvent) : Unit = {
     call(Heimdal.internal.trackEvent, Json.toJson(event))
   }
-
 }
 
-class FakeHeimdalServiceClientImpl(val healthcheck: HealthcheckPlugin) extends HeimdalServiceClient{
+class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient{
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def trackEvent(event: UserEvent) : Unit = {}
-
 }

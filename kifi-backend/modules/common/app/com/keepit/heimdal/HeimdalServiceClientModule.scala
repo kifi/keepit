@@ -1,7 +1,7 @@
 package com.keepit.heimdal
 
 import com.google.inject.{Provides, Singleton}
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
@@ -18,9 +18,9 @@ case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
   def heimdalServiceClient (
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
-    healthcheck: HealthcheckPlugin): HeimdalServiceClient = {
+    airbrakeNotifier: AirbrakeNotifier): HeimdalServiceClient = {
     new HeimdalServiceClientImpl(
-      healthcheck,
+      airbrakeNotifier,
       client,
       serviceDiscovery.serviceCluster(ServiceType.HEIMDAL)
       )
@@ -34,8 +34,8 @@ case class TestHeimdalServiceClientModule() extends HeimdalServiceClientModule {
 
   @Singleton
   @Provides
-  def heimdalServiceClient(healthcheck: HealthcheckPlugin): HeimdalServiceClient = {
-    new FakeHeimdalServiceClientImpl(healthcheck)
+  def heimdalServiceClient(airbrakeNotifier: AirbrakeNotifier): HeimdalServiceClient = {
+    new FakeHeimdalServiceClientImpl(airbrakeNotifier)
   }
 
 }

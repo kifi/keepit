@@ -1,6 +1,6 @@
 package com.keepit.shoebox
 
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.logging.Logging
@@ -30,7 +30,7 @@ import play.api.libs.json.JsObject
 class FakeShoeboxServiceClientImpl(
     clickHistoryTracker: ClickHistoryTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
-    val healthcheck: HealthcheckPlugin
+    val airbrakeNotifier: AirbrakeNotifier
   ) extends ShoeboxServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
   protected def httpClient: com.keepit.common.net.HttpClient = ???
