@@ -87,7 +87,7 @@ this.tagbox = (function ($, win) {
 		 * Renders and initializes a tag box.
 		 */
 		init: function () {
-			this.$tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
+			this.initTagBox();
 			this.initSuggest();
 			this.initTagList();
 			this.initInput();
@@ -96,6 +96,42 @@ this.tagbox = (function ($, win) {
 			this.initTags();
 			activateScroll('.kifi-tagbox-suggest');
 		},
+
+		/**
+		 * Finds, initializes, and caches a suggestion box.
+		 *
+		 * @return {jQuery} A jQuery object for suggestion list
+		 */
+		initTagBox: (function () {
+
+			var KEY_ESC = 27;
+
+			function onKeydown(e) {
+				if (e.which === KEY_ESC) {
+					this.hide();
+					e.preventDefault();
+				}
+			}
+
+			function onClick(e) {
+				if (!$(e.target).closest('.kifi-tagbox').length) {
+					this.hide();
+				}
+			}
+
+			return function () {
+				var $tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
+				this.$tagbox = $tagbox;
+
+				var docKeydown = this.docKeydown = onKeydown.bind(this);
+				$(document).keydown(docKeydown);
+
+				//var docClick = this.docClick = onClick.bind(this);
+				//$(document).click(docClick);
+
+				return $tagbox;
+			};
+		})(),
 
 		/**
 		 * Initializes a input box inside a tag box.
@@ -119,15 +155,6 @@ this.tagbox = (function ($, win) {
 		 * @see initInput
 		 */
 		addInputEvents: (function () {
-			function onLiveChange(e) {
-				var text = e.value;
-				text = text.trim();
-
-				this.$inputbox.toggleClass('empty', !text);
-
-				this.suggest(text);
-			}
-
 			function onFocus() {
 				$(this).closest('.kifi-tagbox-input-box').addClass('focus');
 			}
@@ -142,23 +169,43 @@ this.tagbox = (function ($, win) {
 				KEY_ESC = 27,
 				KEY_TAB = 9;
 
+			function onLiveChange(e) {
+				var text = e.value;
+				text = text.trim();
+
+				this.$inputbox.toggleClass('empty', !text);
+
+				this.suggest(text);
+			}
+
 			function onKeydown(e) {
+				var preventDefault = false;
 				switch (e.which) {
 				case KEY_UP:
 					this.navigate('up');
+					preventDefault = true;
 					break;
 				case KEY_DOWN:
 					this.navigate('down');
+					preventDefault = true;
 					break;
 				case KEY_ENTER:
 					this.select();
+					this.setInputValue();
+					preventDefault = true;
 					break;
 				case KEY_ESC:
 					this.hide();
+					preventDefault = true;
 					break;
 				case KEY_TAB:
 					this.select();
+					this.setInputValue();
+					preventDefault = true;
 					break;
+				}
+				if (preventDefault) {
+					e.preventDefault();
 				}
 			}
 
@@ -252,13 +299,18 @@ this.tagbox = (function ($, win) {
 				this.$suggest.remove();
 				this.$tagbox.remove();
 				this.$tagList.remove();
+				$(document).off('keydown', this.docKeydown);
+				$(document).off('click', this.docClick);
 
 				this.$tagbox = null;
 				this.$inputbox = null;
 				this.$input = null;
 				this.$suggest = null;
 				this.$tagList = null;
-				this.tagsAdded = null;
+				this.docKeydown = null;
+				this.docClick = null;
+				this.tags = [];
+				this.tagsAdded = {};
 			}
 		},
 
@@ -414,8 +466,24 @@ this.tagbox = (function ($, win) {
 		 * @return {string} current input value (trimmed).
 		 */
 		getInputValue: function () {
-			var text = this.$input.val();
+			var text = this.$input && this.$input.val();
 			return text && text.trim() || '';
+		},
+
+		/**
+		 * Sets a value to the input.
+		 *
+		 * @param {string} new input value.
+		 *
+		 * @return {jQuery} An jQuery object of the input
+		 */
+		setInputValue: function (val) {
+			var $input = this.$input || null;
+			if ($input) {
+				$input.val(val || '');
+				$input.focus();
+			}
+			return $input;
 		},
 
 		/**
@@ -437,10 +505,11 @@ this.tagbox = (function ($, win) {
 			tags = this.filterTags(text, tags);
 
 			var html = tags.map(this.renderTagSuggestionHtml, this).join('');
-			this.$suggest.html(html);
+			var $suggest = this.$suggest;
+			$suggest.html(html);
 
 			if (text.trim() && this.indexOfTagByName(text) === -1) {
-				this.$suggest.append(this.renderNewTagSuggestionHtml(text));
+				$suggest.append(this.renderNewTagSuggestionHtml(text));
 			}
 
 			this.updateSuggestedClass();
@@ -564,7 +633,7 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} jQuery object for a suggestion with the given id
 		 */
 		getSuggestion$ById: function (tagId) {
-			return this.$suggest.find('.kifi-tagbox-suggestion[data-id=' + tagId + ']');
+			return this.$suggest.find('.kifi-tagbox-suggestion[data-id="' + tagId + '"]');
 		},
 
 		/**
@@ -575,7 +644,7 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} jQuery object for a new tag suggestion with the given name
 		 */
 		getNewTagSuggestion$ByName: function (name) {
-			return this.$suggest.find('.kifi-tagbox-new[data-name=' + name + ']');
+			return this.$suggest.find('.kifi-tagbox-new[data-name="' + name + '"]');
 		},
 
 		/**
@@ -586,7 +655,7 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} jQuery object for a tag with the given id
 		 */
 		getTag$ById: function (tagId) {
-			return this.$tagList.find('.kifi-tagbox-tag[data-id=' + tagId + ']');
+			return this.$tagList.find('.kifi-tagbox-tag[data-id="' + tagId + '"]');
 		},
 
 		/**
@@ -972,7 +1041,6 @@ this.tagbox = (function ($, win) {
 		 * @param {Object} event - A click event object
 		 */
 		onClickSuggestion: function (e) {
-			log('onClickSuggestion');
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
 			this.addTagById($suggestion.data('id'));
 		},
@@ -983,7 +1051,6 @@ this.tagbox = (function ($, win) {
 		 * @param {Object} event - A click event object
 		 */
 		onClickNewSuggestion: function (e) {
-			log('onClickNewSuggestion');
 			var $suggestion = $(e.target).closest('.kifi-tagbox-new');
 			this.createTag($suggestion.data('name'));
 		},
@@ -994,7 +1061,6 @@ this.tagbox = (function ($, win) {
 		 * @param {Object} event - A mouseover event object
 		 */
 		onMouseoverSuggestion: function (e) {
-			log('onMouseoverSuggestion');
 			var $target = $(e.target),
 				$suggestion = $target.closest('.kifi-tagbox-suggestion');
 			if (!$suggestion.length) {
@@ -1012,7 +1078,6 @@ this.tagbox = (function ($, win) {
 		 * @param {Object} event - A click event object
 		 */
 		onClickRemoveTag: function (e) {
-			log('onClickRemoveTag');
 			var $tag = $(e.target).closest('.kifi-tagbox-tag');
 			this.removeTagById($tag.data('id'));
 		},

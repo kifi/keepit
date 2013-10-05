@@ -17,7 +17,7 @@
   position: fixed;
   top: 6px;
   right: 6px;
-  width: 310px;
+  width: 300px;
   border: 5px solid #68829B;
   border-radius: 9px;
   background: #68829B;
@@ -294,12 +294,12 @@
 
 .kifi-tagbox-tag-name {
   padding: 0px 16px;
-  transition: all .15s linear;
+  transition: all .1s linear;
 }
 
 .kifi-tagbox-tag-remove {
   width: 0;
-  transition: all .15s linear;
+  transition: all .1s linear;
 }
 
 .kifi-tagbox-tag-remove::before {
