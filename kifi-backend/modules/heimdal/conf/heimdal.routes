@@ -11,6 +11,9 @@ GET   /internal/heimdal/adhocMetric       @com.keepit.heimdal.controllers.Analyt
 
 GET   /internal/heimdal/rawEvents         @com.keepit.heimdal.controllers.AnalyticsController.rawEvents(events: String ?="all", limit: Int ?= 10)
 
+GET   /internal/heimdal/createMetric      @com.keepit.heimdal.controllers.AnalyticsController.createMetric(name: String, start: String, window: Int, step: Int, description: String ?= "No Description Given.", events: String ?= "all", groupBy: String ?="_", breakDown: String ?="false", mode: String ?= "count", filter: String ?= "none")
+
+GET  /internal/heimdal/updateMetrics      @com.keepit.heimdal.controllers.AnalyticsController.updateMetrics()
 
 
 ->  / common.Routes
