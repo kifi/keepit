@@ -89,6 +89,10 @@ object FortyTwoTypeMappers {
   }
 
   //Ids
+  implicit object ABookInfoTypeMapper extends BaseTypeMapper[Id[ABookInfo]] {
+    def apply(profile:BasicProfile) = new IdMapperDelegate[ABookInfo](profile)
+  }
+
   implicit object CommentIdTypeMapper extends BaseTypeMapper[Id[Comment]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Comment](profile)
   }
