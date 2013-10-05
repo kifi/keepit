@@ -21,7 +21,6 @@ case class AirbrakeError(
 
 object AirbrakeError {
   val MaxMessageSize = 10 * 1024 //10KB
-  val MaxStringSize = 1024 * 1024 //1MB
   def apply(request: RequestHeader, exception: Throwable): AirbrakeError =
     new AirbrakeError(
           exception = exception,
