@@ -24,158 +24,6 @@
  *
  */
 
-/**
- * Request End Points to Server 
- * ----------------------------
- * 
- * GET
- *   Request URL: https://api.kifi.com/site/collections/all?sort=user&_=hm9pbqo7
- *   Request Method: GET
- *   Response: {
- *     "keeps": 15,
- *     "collections": [{
- *       "id": "dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
- *       "name": "hello",
- *       "keeps": 0
- *     }]
- *   }
- */
-
-this.myTags = [
-	{
-		id: 'f033afe4-bbb9-4609-ab8b-3e8aa968af21',
-		name: 'academic'
-  },
-	{
-		id: 'f033afe4-bbb9-4609-ab8b-3e8aa968af21',
-		name: '안녕'
-  },
-	{
-		id: 'f033afe4-bbb9-4609-ab8b-3e8aa968af21',
-		name: '안녕하세요'
-  },
-	{
-		id: '65d0686f-c7cc-418c-ae21-f648e519960e',
-		name: 'school'
-  },
-	{
-		id: '6cd1c3b9-8ebc-4caa-98ce-289db1d39034',
-		name: 'programming'
-  },
-	{
-		id: '3be352c7-b6b1-4650-a36a-8ea9e7aa7ab4',
-		name: 'network programming'
-  },
-	{
-		id: '0bc6b719-9af9-45d0-bcb4-422b7486e5d5',
-		name: 'socialism'
-  },
-	{
-		id: 'f610ffd4-3e34-4b0b-a514-4b873a6c0fba',
-		name: 'social'
-  },
-	{
-		id: '08ef0c45-6441-4996-92df-e8802f4a81a4',
-		name: 'social network'
-  },
-	{
-		id: '4c26572c-b875-4c22-b46d-9e88497425b2',
-		name: 'web'
-  },
-	{
-		id: 'f31c5415-8e59-4697-a664-05f3f08cabea',
-		name: 'computer'
-  },
-	{
-		id: '1a3b0f76-d70e-44c7-a8a2-82e5425838d0',
-		name: 'tour'
-  },
-	{
-		id: '476e1320-b67c-408a-a349-8829a0d96141',
-		name: 'city'
-  },
-	{
-		id: '184d0b32-64c7-4023-be60-5194d471ae2e',
-		name: 'night life'
-  },
-	{
-		id: '88b34aa0-20b5-435d-afd9-a7c81ca516b8',
-		name: 'life style'
-  },
-	{
-		id: 'edf34fc7-9eb1-447d-ba22-3dd42adde4f8',
-		name: 'lifestyle'
-  },
-	{
-		id: '64f8746a-df8f-466c-8b4f-c25971b74738',
-		name: 'nightlife'
-  },
-	{
-		id: '0dd9bed9-8996-4014-b1a3-983d2c8b08fc',
-		name: 'keep'
-  },
-	{
-		id: 'da8f435b-3e89-4886-bcf8-d19f3a974c56',
-		name: 'shopping'
-  },
-	{
-		id: 'c673476a-35e7-4fe2-961f-c26a74ce41ed',
-		name: 'books'
-  },
-	{
-		id: '88e78bc4-2c28-4872-9047-b5fa17961a16',
-		name: 'reviews'
-  },
-	{
-		id: 'b3eeec76-51b7-4f64-9f94-cdfdd22205a2',
-		name: 'movies'
-  },
-	{
-		id: 'e06e18e7-b7c2-4421-ab31-a66bd1bef1d3',
-		name: 'fun'
-  },
-	{
-		id: 'a6515789-9cdf-45e4-9185-6471bce63a6d',
-		name: 'things'
-  },
-	{
-		id: '443362cd-e6c2-4229-9598-eeaf6ed4c5e2',
-		name: 'many'
-  },
-	{
-		id: '45eaae49-17a9-449b-bdbe-69642a44b7b6',
-		name: 'collection'
-  },
-	{
-		id: 'a9fbd403-3b81-4049-a9ef-02be5e4d59e1',
-		name: 'marvin'
-  },
-	{
-		id: '59db576a-5774-4850-a244-70fc54ea8b5c',
-		name: 'test'
-  },
-	{
-		id: '1e99ca1f-1a2c-4e69-9c4a-109ab4da8bf2',
-		name: 'personal'
-  },
-	{
-		id: '488ca2b7-415b-4952-a22c-3a2da55c1efa',
-		name: 'engis'
-  },
-	{
-		id: '310df722-eee8-4e88-acad-280445ff80ba',
-		name: 'mykeeps'
-  },
-	{
-		id: 'c97dae66-ea63-4596-8513-589f040eae4b',
-		name: 'this is test'
-  },
-	{
-		id: 'dc76ee74-a141-4e96-a65f-e5ca58ddfe04',
-		name: 'hello'
-  }
-];
-
 this.tagbox = (function ($, win) {
 	'use strict';
 
@@ -202,13 +50,6 @@ this.tagbox = (function ($, win) {
 	// receive
 	/*
   api.port.on({
-    tagged: function() {
-    }
-  });
-  */
-
-	/*
-	api.port.on({
 		create_tag: function (response) {
 			if (response.success) {}
 		}
@@ -220,7 +61,7 @@ this.tagbox = (function ($, win) {
 		 *
 		 * @property {Object[]} tagbox.tags - User's tags
 		 */
-		tags: win.myTags,
+		tags: [],
 
 		/**
 		 * Cache for added tags
@@ -251,6 +92,8 @@ this.tagbox = (function ($, win) {
 			this.initTagList();
 			this.initInput();
 			this.initCloseIcon();
+			this.initTags();
+			this.initPageTags();
 			activateScroll('.kifi-tagbox-suggest');
 		},
 
@@ -277,14 +120,9 @@ this.tagbox = (function ($, win) {
 				var text = e.value;
 				text = text.trim();
 
-				var empty = !text;
+				this.$inputbox.toggleClass('empty', !text);
 
-				this.$inputbox.toggleClass('empty', empty);
-				this.$tagbox.toggleClass('suggested', !empty);
-
-				if (text) {
-					this.suggest(text);
-				}
+        this.suggest(text);
 			}
 
 			function onFocus() {
@@ -341,6 +179,31 @@ this.tagbox = (function ($, win) {
 			$tagList.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
 
 			return $tagList;
+		},
+
+		/**
+		 * Makes a request to the server to get all tags owned by the user.
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		initTags: function () {
+			log('initTags: get all tags');
+			return this.requestTags()
+				.then(this.onGetTagsResponse.bind(this))
+				.then(this.updateSuggestion.bind(this))
+				.fail(this.alertError.bind(this));
+		},
+
+		/**
+		 * Makes a request to the server to get all tags on the page.
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		initPageTags: function () {
+			log('initPageTags: get all tags by url');
+			return this.requestTagsByUrl()
+				.then(this.onGetTagsByUrlResponse.bind(this))
+				.fail(this.alertError.bind(this));
 		},
 
 		/**
@@ -528,18 +391,32 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
+		 * Returns current input value (trimmed).
+		 *
+		 * @return {string} current input value (trimmed).
+		 */
+		getInputValue: function () {
+			var text = this.$input.val();
+			return text && text.trim() || '';
+		},
+
+		/**
+		 * Updates suggestion according to the current states (tags + input).
+		 */
+		updateSuggestion: function () {
+			this.suggest(this.getInputValue());
+		},
+
+		/**
 		 * Given an input string to match against,
 		 * it rerenders tag suggestions.
 		 *
 		 * @param {string} text - An input string to match against
-		 * @param {Object[]} [tags] - An array of tags to search from
 		 */
-		suggest: function (text, tags) {
+		suggest: function (text) {
 			this.emptySuggestions();
 
-			if (!tags) {
-				tags = this.tags;
-			}
+			var tags = this.tags;
 			tags = this.filterOutAddedTags(tags);
 			tags = this.filterTags(text, tags);
 
@@ -551,6 +428,8 @@ this.tagbox = (function ($, win) {
 			if (this.indexOfTagByName(text) === -1) {
 				this.suggestNew(text);
 			}
+
+			this.updateSuggestedClass();
 		},
 
 		/**
@@ -680,30 +559,6 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * CREATE
-		 *   Request URL: https://api.kifi.com/site/collections/create
-		 *   Request Method: POST
-		 *   Request Payload: {"name":"hello"}
-		 *   Response: {
-		 *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
-		 *     "name":"hello"
-		 *   }
-		 */
-		onCreateResponse: function (tag) {
-			if (!(tag && tag.id)) {
-				throw new Error('Tag could not be created.');
-			}
-
-			this.tags.push(tag);
-
-			var name = tag.name;
-
-			this.removeNewSuggestionByName(name);
-
-			return this.addTag(name);
-		},
-
-		/**
 		 * Adds a tag to the current keep's tag list.
 		 * It sends a request to server to add a tag and returns a deferred object.
 		 *
@@ -731,49 +586,6 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * A listener for server response from adding a tag to a keep.
-		 * 
-		 * ADD
-		 *   Request URL: https://api.kifi.com/site/keeps/add
-		 *   Request Method: POST
-		 *   Request Payload: {
-		 *     "collectionId":"f033afe4-bbb9-4609-ab8b-3e8aa968af21",
-		 *     "keeps":[{
-		 *       "title":"Use JSDoc: Index",
-		 *       "url":"http://usejsdoc.org/index.html"
-		 *     }]
-		 *   }
-		 *   Response: {
-		 *     "keeps": [{
-		 *       "id":"220c1ac7-6644-477f-872b-4088988d7810",
-		 *       "title":"Use JSDoc: Index",
-		 *       "url":"http://usejsdoc.org/index.html",
-		 *       "isPrivate":false
-		 *     }],
-		 *     "addedToCollection":1
-		 *   }
-		 */
-		onAddResponse: function (tagId, response) {
-			log('onAddResponse', response);
-
-			if (!response.addedToCollection) {
-				throw new Error('Tag could not be added.');
-			}
-
-			var tag = this.getTagById(tagId);
-			if (!tag) {
-				throw new Error('Tag not found.');
-			}
-
-			var name = this.normalizeTagNameForSearch(tag.name);
-			this.tagsAdded[name] = tag;
-
-			this.removeSuggestionById(tagId);
-
-			return this.addTag$(tag);
-		},
-
-		/**
 		 * Removes a tag from current keep's tag list.
 		 * It sends a request to server to remove a tag and returns a deferred object.
 		 *
@@ -798,33 +610,6 @@ this.tagbox = (function ($, win) {
 			return this.requestRemoveTagById(tagId)
 				.then(this.onRemoveResponse.bind(this, tagId))
 				.fail(this.alertError.bind(this));
-		},
-
-		/**
-		 * A listener for server response from removing a tag from a keep.
-		 * 
-		 * REMOVE
-		 *   Request URL: https://api.kifi.com/tags/dc76ee74-a141-4e96-a65f-e5ca58ddfe04/removeFromKeep
-		 *   Request Method: POST
-		 *   Request Payload: {
-		 *     url: "my.keep.com"
-		 *   }
-		 *   Response: {}
-		 */
-		onRemoveResponse: function (tagId, response) {
-			log('onRemoveResponse', response);
-
-			var tag = this.getTagById(tagId);
-			if (!tag) {
-				throw new Error('Tag not found.');
-			}
-
-			var name = this.normalizeTagNameForSearch(tag.name);
-			delete this.tagsAdded[name];
-
-			//this.addSuggestionById(tagId);
-
-			return this.removeTag$ById(tagId);
 		},
 
 		/**
@@ -865,7 +650,16 @@ this.tagbox = (function ($, win) {
 		 * Updates (add/remove) 'tagged' class of the tagbox.
 		 */
 		updateTaggedClass: function () {
-			this.$tagbox.toggleClass('tagged', this.$tagList.children().length ? true : false);
+			var add = this.$tagList.children().length ? true : false;
+			this.$tagbox.toggleClass('tagged', add);
+		},
+
+		/**
+		 * Updates (add/remove) 'suggested' class of the tagbox.
+		 */
+		updateSuggestedClass: function () {
+			var add = (this.getInputValue() || this.$suggest.children().length) ? true : false;
+			this.$tagbox.toggleClass('suggested', add);
 		},
 
 		/**
@@ -890,7 +684,27 @@ this.tagbox = (function ($, win) {
 		//
 
 		/**
-		 * Makes a request to the server to create a tag for a user.
+		 * Makes a request to the server to get all tags for the user.
+		 * Returns a promise object.
+		 * 
+		 * @return {Object} A deferred promise object
+		 */
+		requestTags: function () {
+			return this.request('get_tags', null, 'Could not load tags.');
+		},
+
+		/**
+		 * Makes a request to the server to get all tags associated with the current page for the user.
+		 * Returns a promise object.
+		 * 
+		 * @return {Object} A deferred promise object
+		 */
+		requestTagsByUrl: function () {
+			return this.request('get_tags_by_url', null, 'Could not load tags for the page.');
+		},
+
+		/**
+		 * Makes a request to the server to create a tag for the user.
 		 * Returns a promise object.
 		 *
 		 * @param {string} name - A tag name
@@ -936,16 +750,132 @@ this.tagbox = (function ($, win) {
 		 */
 		request: function (name, data, errorMsg) {
 			var deferred = Q.defer();
-			api.port.emit(name, data, function (response) {
-				log(name + '.response', this, arguments);
-				if (response.success) {
-					deferred.resolve(response);
+			api.port.emit(name, data, function (result) {
+				log(name + '.result', result);
+				if (result.success) {
+					deferred.resolve(result.response);
 				}
 				else {
 					deferred.reject(new Error(errorMsg));
 				}
 			});
 			return deferred.promise;
+		},
+
+		//
+		// RESPONSE HANDLERS
+		//
+
+		/**
+		 * GET_TAGS
+		 *   Response: [{
+		 *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+		 *     "name":"hello"
+		 *   }]
+		 */
+		onGetTagsResponse: function (tags) {
+			this.tags = tags;
+			return tags;
+		},
+
+		/**
+		 * GET_TAGS_BY_URL
+		 *   Response: [{
+		 *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+		 *     "name":"hello"
+		 *   }]
+		 */
+		onGetTagsByUrlResponse: function (tags) {
+			//this.tags = tags;
+			return tags;
+		},
+
+		/**
+		 * CREATE
+		 *   Request Payload: {"name":"hello"}
+		 *   Response: {
+		 *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+		 *     "name":"hello"
+		 *   }
+		 */
+		onCreateResponse: function (tag) {
+			if (!(tag && tag.id)) {
+				throw new Error('Tag could not be created.');
+			}
+
+			this.tags.push(tag);
+
+			var name = tag.name;
+
+			this.removeNewSuggestionByName(name);
+
+			return this.addTag(name);
+		},
+
+		/**
+		 * A listener for server response from adding a tag to a keep.
+		 * 
+		 * ADD
+		 *   Request Payload: {
+		 *     "collectionId":"f033afe4-bbb9-4609-ab8b-3e8aa968af21",
+		 *     "keeps":[{
+		 *       "title":"Use JSDoc: Index",
+		 *       "url":"http://usejsdoc.org/index.html"
+		 *     }]
+		 *   }
+		 *   Response: {
+		 *     "keeps": [{
+		 *       "id":"220c1ac7-6644-477f-872b-4088988d7810",
+		 *       "title":"Use JSDoc: Index",
+		 *       "url":"http://usejsdoc.org/index.html",
+		 *       "isPrivate":false
+		 *     }],
+		 *     "addedToCollection":1
+		 *   }
+		 */
+		onAddResponse: function (tagId, response) {
+			log('onAddResponse', response);
+
+			if (!response.addedToCollection) {
+				throw new Error('Tag could not be added.');
+			}
+
+			var tag = this.getTagById(tagId);
+			if (!tag) {
+				throw new Error('Tag not found.');
+			}
+
+			var name = this.normalizeTagNameForSearch(tag.name);
+			this.tagsAdded[name] = tag;
+
+			this.removeSuggestionById(tagId);
+
+			return this.addTag$(tag);
+		},
+
+		/**
+		 * A listener for server response from removing a tag from a keep.
+		 * 
+		 * REMOVE
+		 *   Request Payload: {
+		 *     url: "my.keep.com"
+		 *   }
+		 *   Response: {}
+		 */
+		onRemoveResponse: function (tagId, response) {
+			log('onRemoveResponse', response);
+
+			var tag = this.getTagById(tagId);
+			if (!tag) {
+				throw new Error('Tag not found.');
+			}
+
+			var name = this.normalizeTagNameForSearch(tag.name);
+			delete this.tagsAdded[name];
+
+			//this.addSuggestionById(tagId);
+
+			return this.removeTag$ById(tagId);
 		},
 
 		//
