@@ -9,6 +9,9 @@ import play.api.mvc.Action
 import com.keepit.abook.store.{ABookRawInfoStore}
 import play.api.libs.json.{JsValue, Json}
 import scala.Some
+import java.io.File
+import scala.collection.mutable
+import scala.io.Source
 
 class ABookController @Inject() (
   actionAuthenticator:ActionAuthenticator,
@@ -54,6 +57,73 @@ class ABookController @Inject() (
     Ok(Json.toJson(abookRepoEntry))
   }
 
+  object GMailCSVFields { // tied to Gmail CSV format
+    val FIRST_NAME = "First Name"
+    val LAST_NAME  = "Last Name"
+    val EMAIL1     = "E-mail Address"
+    val EMAIL2     = "E-mail 2 Address"
+    val EMAIL3     = "E-mail 3 Address"
+    val ALL = Seq(FIRST_NAME, LAST_NAME, EMAIL1, EMAIL2, EMAIL3)
+    val MIN = Seq(FIRST_NAME, LAST_NAME, EMAIL1)
+  }
+
+  // for testing only
+  def uploadGMailCSV(userId:Id[User]) = Action(parse.anyContent) { request =>
+    val csvFilePart = request.body.asMultipartFormData.get.file("gmail_csv") // TODO: revisit
+    val csvFile = csvFilePart.get.ref.file
+    log.info(s"[uploadGMailCSV] filePart=$csvFilePart file=$csvFile")
+
+    var headers:Seq[String] = Seq.empty[String]
+    var fieldLocations:Map[String, Int] = Map.empty[String, Int]
+    val contactInfoBuilder = mutable.ArrayBuilder.make[ContactInfo]
+
+    val savedABookInfo = db.readWrite { implicit session =>
+      val abookInfo = ABookInfo(userId = userId, origin = ABookOrigins.GMAIL)
+      val savedABookInfo = abookInfoRepo.save(abookInfo)
+      savedABookInfo
+    }
+
+    for (line <- Source.fromFile(csvFile).getLines) {
+      if (headers.isEmpty) {
+        headers = line.split(',').toSeq
+        fieldLocations = GMailCSVFields.ALL.foldLeft(Map.empty[String, Int]) { (a, c) =>
+          val idx = headers.indexOf(c)
+          if (idx != -1) {
+            a + (c -> idx)
+          } else a
+        }
+        if (fieldLocations.isEmpty || GMailCSVFields.MIN.forall(fieldLocations.get(_).isEmpty)) throw new IllegalArgumentException("invalid csv format")
+        log.info(s"[uploadGmailCSV] #headers=${headers.size} fieldLocations=${fieldLocations}")
+      } else {
+        import GMailCSVFields._
+        val fields = line.split(',')
+        val firstName = fields(fieldLocations.get(FIRST_NAME).get)
+        val lastName  = fields(fieldLocations.get(LAST_NAME).get)
+        val email = fields(fieldLocations.get(EMAIL1).get)
+        val contactInfo = ContactInfo(userId = userId, origin = ABookOrigins.GMAIL, abookId = savedABookInfo.id.get, name = Some(s"$firstName $lastName"), firstName = Some(firstName), lastName = Some(lastName), email = email)
+        contactInfoBuilder += contactInfo
+        fieldLocations.get(EMAIL2).map { idx =>
+          val e2 = fields(idx)
+          if (!e2.isEmpty) contactInfoBuilder += contactInfo.withEmail(e2) // TODO: parentId
+        }
+        fieldLocations.get(EMAIL3).map { idx =>
+          val e3 = fields(idx)
+          if (!e3.isEmpty) contactInfoBuilder += contactInfo.withEmail(e3)
+        }
+      }
+    }
+    val contactInfos = contactInfoBuilder.result
+    if (!contactInfos.isEmpty) {
+      // TODO: optimize
+      db.readWrite { implicit session =>
+        contactInfos.foreach { contactInfoRepo.save(_) }
+      }
+    }
+    log.info(s"[uploadGmailCSV] # contacts saved = ${contactInfos.length}")
+
+    Ok("Contacts uploaded")
+  }
+
   // for testing only
   def getContactsRawInfo(userId:Id[User],origin:ABookOriginType) = Action { request =>
     val stored = s3.get(toS3Key(userId, origin))
@@ -61,6 +131,12 @@ class ABookController @Inject() (
     Ok(Json.toJson(stored))
   }
 
+  def getContactInfos(userId:Id[User]) = Action { request =>
+    val contactInfos = db.readOnly { implicit session =>
+      contactInfoRepo.getByUserIdIter(userId, 5000) // TODO: handle large sizes
+    }.toSeq // TODO: optimize
+    Ok(Json.toJson(contactInfos))
+  }
 
   def getABookRawInfos(userId:Id[User]) = Action { request =>
     val abookInfos = db.readOnly { implicit session =>
