@@ -2,6 +2,7 @@ package com.keepit.search
 
 import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.BenchmarkResultsJson._
+import com.keepit.common.healthcheck.{AirbrakeNotifier, BenchmarkResults}
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
@@ -14,7 +15,6 @@ import scala.concurrent.Future
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
 import scala.concurrent.Promise
-import com.keepit.common.healthcheck.{HealthcheckPlugin, BenchmarkResults}
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
@@ -61,13 +61,11 @@ trait SearchServiceClient extends ServiceClient {
   def version(): Future[String]
 }
 
-
-
 class SearchServiceClientImpl(
     override val serviceCluster: ServiceCluster,
     override val port: Int,
     override val httpClient: HttpClient,
-    val healthcheck: HealthcheckPlugin)
+    val airbrakeNotifier: AirbrakeNotifier)
   extends SearchServiceClient() {
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Unit = {

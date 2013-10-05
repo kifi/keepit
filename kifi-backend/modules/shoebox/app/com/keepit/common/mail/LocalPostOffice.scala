@@ -16,8 +16,10 @@ class ShoeboxPostOfficeImpl @Inject() (mailRepo: ElectronicMailRepo)
       if (mail.htmlBody.value.size > PostOffice.BODY_MAX_SIZE ||
         mail.textBody.isDefined && mail.textBody.get.value.size > PostOffice.BODY_MAX_SIZE) {
         log.warn(s"PostOffice attempted to send an email (${mail.externalId}) longer than ${PostOffice.BODY_MAX_SIZE} bytes. Too big!")
-        mailRepo.save(mail.copy(
-          htmlBody = mail.htmlBody.value.take(PostOffice.BODY_MAX_SIZE - 20) + "<br>\n<br>\n(snip)").prepareToSend())
+        val prepMail = mail.copy(
+          htmlBody = mail.htmlBody.value.take(PostOffice.BODY_MAX_SIZE - 20) + "<br>\n<br>\n(snip)",
+          textBody = mail.textBody.map(_.value.take(PostOffice.BODY_MAX_SIZE - 20) + "\n(snip)")).prepareToSend()
+        mailRepo.save(prepMail)
       } else {
         mailRepo.save(mail.prepareToSend())
       }
