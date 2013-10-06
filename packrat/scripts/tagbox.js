@@ -92,6 +92,7 @@ this.tagbox = (function ($, win) {
 		 * @constructor
 		 */
 		construct: function () {
+			log('tagbox:construct');
 			if (!this.$tagbox) {
 				this.init();
 			}
@@ -101,6 +102,7 @@ this.tagbox = (function ($, win) {
 		 * Renders and initializes a tag box.
 		 */
 		init: function () {
+			log('tagbox:init');
 			this.initTagBox();
 			this.initSuggest();
 			this.initTagList();
@@ -122,26 +124,36 @@ this.tagbox = (function ($, win) {
 
 			function onKeydown(e) {
 				if (e.which === KEY_ESC) {
+					log('tagbox:document.esc');
 					this.hide();
+					e.stopPropagation();
+					e.stopImmediatePropagation();
 					e.preventDefault();
 				}
 			}
 
 			function onClick(e) {
 				if (!$(e.target).closest('.kifi-tagbox').length) {
+					log('tagbox:clickout', e.target);
 					this.hide();
 				}
 			}
 
+			function addDocListeners() {
+				var $doc = $(document),
+					onDocKeydown = this.onDocKeydown = onKeydown.bind(this),
+					onDocClick = this.onDocClick = onClick.bind(this);
+
+				this.$doc = $doc;
+				$doc.on('keydown', onDocKeydown);
+				$doc.on('click', onDocClick);
+			}
+
 			return function () {
-				var $tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
+				var $tagbox = $(this.renderTagBoxHtml()).appendTo(this.$slider);
 				this.$tagbox = $tagbox;
 
-				var docKeydown = this.docKeydown = onKeydown.bind(this);
-				$(document).keydown(docKeydown);
-
-				//var docClick = this.docClick = onClick.bind(this);
-				//$(document).click(docClick);
+				setTimeout(addDocListeners.bind(this), 50);
 
 				return $tagbox;
 			};
@@ -209,7 +221,17 @@ this.tagbox = (function ($, win) {
 					preventDefault = true;
 					break;
 				case KEY_ESC:
-					this.hide();
+					log('tagbox:input.esc', this.currentSuggestion);
+					if (this.currentSuggestion) {
+						this.navigateTo(null);
+						e.stopPropagation();
+						e.stopImmediatePropagation();
+					}
+					else {
+						this.hide();
+						e.stopPropagation();
+						e.stopImmediatePropagation();
+					}
 					preventDefault = true;
 					break;
 				case KEY_TAB:
@@ -305,7 +327,9 @@ this.tagbox = (function ($, win) {
 		 * It removes all event listeners and caches to elements.
 		 */
 		destroy: function () {
+			log('tagbox:destroy');
 			if (this.$tagbox) {
+				log('tagbox:destroy-inner');
 				deactivateScroll('.kifi-tagbox-suggest');
 
 				this.$input.remove();
@@ -313,16 +337,20 @@ this.tagbox = (function ($, win) {
 				this.$suggest.remove();
 				this.$tagbox.remove();
 				this.$tagList.remove();
-				$(document).off('keydown', this.docKeydown);
-				$(document).off('click', this.docClick);
 
+				var $doc = this.$doc;
+				$doc.off('keydown', this.onDocKeydown);
+				$doc.off('click', this.onDocClick);
+
+				this.$doc = null;
+				this.onDocKeydown = null;
+				this.onDocClick = null;
+				this.$slider = null;
 				this.$tagbox = null;
 				this.$inputbox = null;
 				this.$input = null;
 				this.$suggest = null;
 				this.$tagList = null;
-				this.docKeydown = null;
-				this.docClick = null;
 				this.tags = [];
 				this.tagsAdded = {};
 				this.tagsBeingCreated = {};
@@ -1155,7 +1183,8 @@ this.tagbox = (function ($, win) {
 		/**
 		 * Shows a tag box.
 		 */
-		show: function ( /*$slider*/ ) {
+		show: function ($slider) {
+			this.$slider = $slider;
 			this.construct();
 		},
 
