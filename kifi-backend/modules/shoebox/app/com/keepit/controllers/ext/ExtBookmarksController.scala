@@ -104,6 +104,20 @@ class ExtBookmarksController @Inject() (
     }
   }
 
+  def clearTags() = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
+    db.readWrite { implicit s =>
+      for {
+        u <- uriRepo.getByUri(url).toSeq
+        b <- bookmarkRepo.getByUri(u.id.get).toSeq
+        ktc <- keepToCollectionRepo.getByBookmark(b.id.get)
+      } {
+        keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+      }
+    }
+    Ok(Json.obj())
+  }
+
   def tags() = AuthenticatedJsonAction { request =>
     val tags = db.readOnly { implicit s =>
       collectionRepo.getByUser(request.userId).map { coll =>
