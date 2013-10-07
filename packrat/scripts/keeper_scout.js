@@ -40,7 +40,7 @@ var tile = tile || function() {  // idempotent for Chrome
         tile.removeAttribute("data-kept");
       }
       window.addEventListener("resize", onResize);
-      api.require("styles/metro/tile.css", function() {
+      api.require("styles/keeper/tile.css", function() {
         if (!o.hide) {
           tile.style.display = "";
         }
