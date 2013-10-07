@@ -14,7 +14,7 @@ import com.keepit.heimdal.{
   NotEqualTo,
   ContextStringData,
   EventGrouping,
-  MetricDesriptor
+  MetricDescriptor
 }
 import com.keepit.common.time._
 
@@ -26,6 +26,9 @@ import play.api.mvc.{Action}
 import play.api.libs.json.{Json, JsObject, JsArray}
 
 import com.google.inject.Inject
+
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 import views.html
 
@@ -60,17 +63,82 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     |   limit=$       Where $ is the number of events to return. Default: 10.
   """.stripMargin
 
+  val createHelp = """
+    | Creates simple sliding time window metric. Accessed at http://[184.169.206.118|b08]:9000/internal/heimdal/getMetric
+    | Usage: http://[184.169.206.118|b08]:9000/internal/heimdal/createMetric
+    | Options (all optional):
+    |   help          Print this message (ignoring all other parameters).
+    |   name=$        Unique identifier for this metric. Default: "default"  
+    |   start=$       Where $ is a valid ISO datetime string. Default: one hour ago.
+    |   window=$      Where $ is an integer specifing the sliding window size in hours. Default: 24.
+    |   step=$        Where $ is an integer specifing the sliding window step in hours (i.e. how often do we compute). Default: 24.
+    |   description=$ Where $ is a string describing the metric. Shows up in the UI.
+    |   events=$      Where $ is a comma seperated list of the event types to include or "all". Default: "all".
+    |   groupBy=$     Where $ is a event field name that the results will be grouped by. Default: no grouping .
+    |   breakDown=$   Where $ is 'true' or 'false'. 
+    |                 Setting this to 'true' means that if grouping by a field that can have multiple values the events will be broken down into multiple events with one value each. 
+    |                 Note that this caused events with the field missing to be ignored (will otherwise show up under 'null').
+    |                 Default: "false".
+    |   mode=$        Where $ is either "count" or "users". The former counts number of events, the latter counts (and returns, in json mode) distinct users. Default: "count".
+    |   fitler=$      Where $ specifies a filter name to exclude certain events. Currently supported: "none", "noadmins". Default: "none".
+  """.stripMargin
+
   def createMetric(name: String, start: String, window: Int, step: Int, description: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String) = Action { request =>
-    assert(window>0)
-    val startDT = DateTime.parse(start)
-    metricManager.createMetric(MetricDesriptor(name, startDT, window, step, description, if (events=="all") Seq() else events.split(","), groupBy, breakDown.toBoolean, mode, filter, startDT))
-    Ok("New metric created")
+    if (request.queryString.get("help").nonEmpty) Ok(createHelp)
+    else {
+      assert(window>0)
+      val startDT = DateTime.parse(start)
+      metricManager.createMetric(MetricDescriptor(name, startDT, window, step, description, if (events=="all") Seq() else events.split(","), groupBy, breakDown.toBoolean, mode, filter, startDT))
+      Ok("New metric created")
+    }
   }
 
   def updateMetrics() = Action { request =>
     metricManager.updateAllMetrics()
     Ok("Update has been triggered. Please be patient. Calling this repeatedly in rapid succession will only make it take longer. If you think it didn't work, wait at least 30 seconds.")
   }
+
+  def getAvailableMetrics = Action { request =>
+    Async(metricManager.getAvailableMetrics.map{ metricDescriptors =>
+      Ok(Json.toJson(metricDescriptors))
+    })
+  }
+
+  def getMetric(name: String, as: String) = Action { request => //this is going to need some serious refactoring at some point
+    val names : Seq[String] = if (name=="all") {
+      Await.result(metricManager.getAvailableMetrics.map{ metricDescriptors => metricDescriptors.map(_.name)}, 20 seconds)
+    } else {
+      name.split(",")
+    }
+
+    val infoOptions : Seq[(Option[MetricDescriptor], String)] = Await.result(
+      Future.sequence(names.map(metricManager.getMetricInfo(_))),
+      20 seconds
+    ).zip(names)
+
+    var json = Json.obj()
+    var errors = ""
+
+    infoOptions.foreach{
+      case (Some(desc), name) => {
+        val data = Await.result(metricManager.getMetric(name), 5 second)
+        if (data.isEmpty){
+          errors = errors + "No Data for Metric: " + name + "\n"
+        } else {
+          json = json.deepMerge{
+            Json.obj(s"[$name] ${desc.description}" -> Json.toJson(data))
+          }
+        }
+      }
+      case (None, name) => {
+        errors = errors + "Unknown Metric Name: " + name + "\n"
+      }
+    }
+
+    if (as=="json") Ok(json)
+    else Ok(html.storedMetricChart(json.toString, errors))
+
+  } 
 
   def adhocMetric(from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, as: String) = Action{ request =>
     if (request.queryString.get("help").nonEmpty) Ok(adhocHelp)

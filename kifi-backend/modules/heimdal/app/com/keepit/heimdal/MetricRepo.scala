@@ -5,6 +5,7 @@ import org.joda.time.DateTime
 import com.keepit.common.healthcheck.HealthcheckPlugin
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{JsObject, JsNull, JsArray, Json, Writes, JsValue}
 
 import reactivemongo.bson.{BSONDocument, BSONDateTime, BSONArray}
 import reactivemongo.api.collections.default.BSONCollection
@@ -14,6 +15,18 @@ import scala.concurrent.duration._
 
 
 case class MetricData(dt: DateTime, data: Seq[BSONDocument])
+
+object MetricData {
+  import play.modules.reactivemongo.json.ImplicitBSONHandlers._
+  implicit val writes = new Writes[MetricData]{
+    def writes(obj: MetricData): JsValue = {
+      Json.obj(
+        "time" -> obj.dt.getMillis,
+        "data" -> obj.data.map(JsObjectReader.read(_))
+      )
+    }
+  }
+}
 
 
 class MetricRepo(val collection: BSONCollection, protected val healthcheckPlugin: HealthcheckPlugin) extends MongoRepo[MetricData] {
