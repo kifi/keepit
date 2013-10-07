@@ -12,6 +12,7 @@
   emails: Seq[EmailAddress],
   abookInfos: Seq[ABookInfo],
   contactInfos: Seq[ContactInfo],
+  abookGMailCSVUploadEP: Option[String],
   collections: Seq[Collection],
   collectionFilter: Option[Id[Collection]])
 
@@ -144,6 +145,14 @@
             }
         </table>
     </div>
+  }
+  @if(abookGMailCSVUploadEP.isDefined) {
+    <h3>Upload Address book</h3>
+    <h4>Gmail Exported (Outlook-styled) CSV -- 42-internal testing only!</h4>
+    <form class="form-inline" action="@abookGMailCSVUploadEP.get" enctype="multipart/form-data" method="POST">
+        Gmail CSV file to upload: <input type=file name="gmail_csv">
+        <input type=submit value="Upload">
+    </form>
   }
   <h2>User kept @totalBookmarks Bookmarks</h2>
   <h3>Showing @bookmarks.size Bookmarks of total @totalBookmarks</h3>
