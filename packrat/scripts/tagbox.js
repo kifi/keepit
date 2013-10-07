@@ -314,8 +314,12 @@ this.tagbox = (function ($, win) {
 				.then(this.updateSuggestHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.updateSuggestion.bind(this))
-				.then(this.toggleHidden.bind(this, false))
+				.then(this.toggleLoading.bind(this, false))
 				.then(this.focusInput.bind(this))
+				.fail(function (err) {
+          this.hide();
+          throw err;
+        }.bind(this))
 				.fail(this.alertError.bind(this));
 		},
 
@@ -330,25 +334,24 @@ this.tagbox = (function ($, win) {
 				log('tagbox:destroy-inner');
 				deactivateScroll('.kifi-tagbox-suggest');
 
-				this.$input.remove();
-				this.$inputbox.remove();
-				this.$suggest.remove();
-				this.$tagbox.remove();
-				this.$tagList.remove();
+				'$input,$inputbox,$suggest,$tagbox,$tagList'.split(',').forEach(function (name) {
+					var $el = this[name];
+					if ($el) {
+						$el.remove();
+						this[name] = null;
+					}
+				}, this);
 
 				var $doc = this.$doc;
-				$doc.off('keydown', this.onDocKeydown);
-				$doc.off('click', this.onDocClick);
+				if ($doc) {
+					$doc.off('keydown', this.onDocKeydown);
+					$doc.off('click', this.onDocClick);
+				}
 
 				this.$doc = null;
 				this.onDocKeydown = null;
 				this.onDocClick = null;
 				this.$slider = null;
-				this.$tagbox = null;
-				this.$inputbox = null;
-				this.$input = null;
-				this.$suggest = null;
-				this.$tagList = null;
 				this.tags = [];
 				this.tagsAdded = {};
 				this.tagsBeingCreated = {};
@@ -542,8 +545,8 @@ this.tagbox = (function ($, win) {
 			return this.$tagbox.toggleClass(classname, add ? true : false);
 		},
 
-		toggleHidden: function (hidden) {
-			return this.toggleClass('hidden', hidden);
+		toggleLoading: function (loading) {
+			return this.toggleClass('loading', loading);
 		},
 
 		/**

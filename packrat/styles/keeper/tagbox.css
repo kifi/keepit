@@ -26,10 +26,6 @@
   -webkit-font-smoothing: antialiased;
 }
 
-.kifi-tagbox.hidden {
-  display: none;
-}
-
 .kifi-tagbox > *:last-child {
   border-bottom-left-radius: 6px;
   border-bottom-right-radius: 6px;
@@ -208,7 +204,7 @@
   background: #cccccc;
 }
 
-.kifi-tagbox-empty {
+.kifi-tagbox-empty, .kifi-tagbox-loading {
   font-size: 24px;
   font-weight: 200;
   -webkit-font-smoothing: antialiased;
@@ -227,6 +223,18 @@
 
 .kifi-tagbox.tagged .kifi-tagbox-empty {
   display: none;
+}
+
+.kifi-tagbox .kifi-tagbox-loading {
+  display: none;
+}
+
+.kifi-tagbox.loading .kifi-tagbox-empty, .kifi-tagbox.loading .kifi-tagbox-tagged, .kifi-tagbox.loading .kifi-tagbox-suggest {
+  display: none;
+}
+
+.kifi-tagbox.loading .kifi-tagbox-loading {
+  display: block;
 }
 
 .kifi-tagbox-new {
