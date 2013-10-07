@@ -1,8 +1,8 @@
-// @require styles/metro/thread.css
-// @require styles/metro/compose.css
-// @require scripts/html/metro/messages.js
-// @require scripts/html/metro/message.js
-// @require scripts/html/metro/compose.js
+// @require styles/keeper/thread.css
+// @require styles/keeper/compose.css
+// @require scripts/html/keeper/messages.js
+// @require scripts/html/keeper/message.js
+// @require scripts/html/keeper/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/formatting.js
 // @require scripts/look.js
@@ -45,7 +45,7 @@ panes.thread = function () {
     messages.forEach(function (m) {
       m.isLoggedInUser = m.user.id === session.userId;
     });
-    $(render('html/metro/messages', {
+    $(render('html/keeper/messages', {
       formatMessage: getTextFormatter,
       formatLocalDate: getLocalDateFormatter,
       messages: messages,
@@ -144,7 +144,7 @@ panes.thread = function () {
     m.formatMessage = getTextFormatter;
     m.formatLocalDate = getLocalDateFormatter;
     m.isLoggedInUser = m.user.id === userId;
-    return $(render('html/metro/message', m))
+    return $(render('html/keeper/message', m))
       .find('time').timeago().end();
   }
 

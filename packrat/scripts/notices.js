@@ -1,8 +1,8 @@
-// @require styles/metro/notices.css
+// @require styles/keeper/notices.css
 // @require scripts/api.js
-// @require scripts/html/metro/notices.js
-// @require scripts/html/metro/notice_global.js
-// @require scripts/html/metro/notice_message.js
+// @require scripts/html/keeper/notices.js
+// @require scripts/html/keeper/notice_global.js
+// @require scripts/html/keeper/notice_message.js
 // @require scripts/formatting.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
@@ -66,7 +66,7 @@ panes.notices = function () {
   function renderNotices($container, notices, timeLastSeen, numNotVisited) {
     timeLastSeen = new Date(+new Date(timeLastSeen) + 1000); // hack for old data that did not have millis presision
 
-    $notices = $(render('html/metro/notices', {}))
+    $notices = $(render('html/keeper/notices', {}))
       .append(notices.map(function (n) {
         return renderNotice(n, n.unread && new Date(n.time) > timeLastSeen);
       }).join(''))
@@ -130,9 +130,9 @@ panes.notices = function () {
       notice.twoParticipants = nParticipants === 2;
       notice.threeParticipants = nParticipants === 3;
       notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
-      return render('html/metro/notice_message', notice);
+      return render('html/keeper/notice_message', notice);
     case 'global':
-      return render('html/metro/notice_global', notice);
+      return render('html/keeper/notice_global', notice);
     default:
       log('#a00', '[renderNotice] unrecognized category', notice.category)();
       return '';
