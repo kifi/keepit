@@ -3,6 +3,7 @@
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
+// @require scripts/util.js
 // @require scripts/livechange.js
 // @require scripts/html/keeper/tagbox.js
 // @require scripts/html/keeper/tag-suggestion.js
@@ -11,7 +12,6 @@
 // @require styles/keeper/tagbox.css
 
 /**
- *
  * ---------------
  *     Tag Box    
  * ---------------
@@ -21,11 +21,12 @@
  *
  * @author Joon Ho Cho <joon@42go.com>
  * @date 10-02-2013
- *
  */
 
 this.tagbox = (function ($, win) {
 	'use strict';
+
+	var util = win.util;
 
 	function onResize() {
 		this.data('antiscroll').refresh();
@@ -109,6 +110,7 @@ this.tagbox = (function ($, win) {
 			this.initTagList();
 			this.initInput();
 			this.initCloseIcon();
+			this.initClearAll();
 			this.initTags();
 			activateScroll('.kifi-tagbox-suggest');
 		},
@@ -301,6 +303,13 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
+		 * Add a clear event listener to clear button.
+		 */
+		initClearAll: function () {
+			this.$tagbox.on('click', '.kifi-tagbox-clear', this.clearTags.bind(this));
+		},
+
+		/**
 		 * Makes a request to the server to get all tags owned by the user.
 		 * Makes a request to the server to get all tags on the page.
 		 *
@@ -310,16 +319,15 @@ this.tagbox = (function ($, win) {
 			log('initTags: get all tags');
 			Q.all([this.requestTags(), this.requestTagsByUrl()])
 				.spread(this.onFetchTags.bind(this))
-				.then(this.updateHeight.bind(this))
 				.then(this.updateSuggestHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.updateSuggestion.bind(this))
 				.then(this.toggleLoading.bind(this, false))
 				.then(this.focusInput.bind(this))
 				.fail(function (err) {
-          this.hide();
-          throw err;
-        }.bind(this))
+				this.hide();
+				throw err;
+			}.bind(this))
 				.fail(this.alertError.bind(this));
 		},
 
@@ -370,11 +378,9 @@ this.tagbox = (function ($, win) {
 		indexOfTagById: function (tagId) {
 			var tags = this.tags;
 			if (tagId && tags) {
-				for (var i = 0, l = tags.length; i < l; i++) {
-					if (tagId === tags[i].id) {
-						return i;
-					}
-				}
+				return util.keyOf(tags, function (tag) {
+					return tag.id === tagId;
+				});
 			}
 			return -1;
 		},
@@ -391,11 +397,9 @@ this.tagbox = (function ($, win) {
 			name = this.normalizeTagNameForSearch(name);
 			var tags = this.tags;
 			if (name && tags) {
-				for (var i = 0, l = tags.length; i < l; i++) {
-					if (name === this.getNormalizedTagName(tags[i])) {
-						return i;
-					}
-				}
+				return util.keyOf(tags, function (tag) {
+					return this.getNormalizedTagName(tag) === name;
+				}, this);
 			}
 			return -1;
 		},
@@ -541,10 +545,49 @@ this.tagbox = (function ($, win) {
 			this.suggest(this.getInputValue());
 		},
 
+		/**
+		 * Adds class from the root element.
+		 *
+		 * @param {string} A Class name to add.
+		 *
+		 * @return {jQuery} A jQuery object for the root element
+		 */
+		addClass: function () {
+			var $tagbox = this.$tagbox;
+			return $tagbox.addClass.apply($tagbox, arguments);
+		},
+
+		/**
+		 * Removes class from the root element.
+		 *
+		 * @param {string} A Class name to remove.
+		 *
+		 * @return {jQuery} A jQuery object for the root element
+		 */
+		removeClass: function () {
+			var $tagbox = this.$tagbox;
+			return $tagbox.removeClass.apply($tagbox, arguments);
+		},
+
+		/**
+		 * Toggles (Add/Remove) a class of the root element.
+		 *
+		 * @param {string} A Class name to toggle.
+		 * @param {boolean} Whether to add or remove
+		 *
+		 * @return {jQuery} A jQuery object for the root element
+		 */
 		toggleClass: function (classname, add) {
 			return this.$tagbox.toggleClass(classname, add ? true : false);
 		},
 
+		/**
+		 * Toggles a 'loading' class of the root element.
+		 *
+		 * @param {boolean} Whether to add or remove
+		 *
+		 * @return {jQuery} A jQuery object for the root element
+		 */
 		toggleLoading: function (loading) {
 			return this.toggleClass('loading', loading);
 		},
@@ -561,8 +604,8 @@ this.tagbox = (function ($, win) {
 			tags = this.filterOutAddedTags(tags);
 			tags = this.filterTagsByText(text, tags);
 
-			var html = tags.map(this.renderTagSuggestionHtml, this).join('');
-			var $suggest = this.$suggest;
+			var html = this.renderTagSuggestionsHtml(tags),
+				$suggest = this.$suggest;
 			$suggest.html(html);
 
 			if (text.trim() && this.indexOfTagByName(text) === -1) {
@@ -647,7 +690,7 @@ this.tagbox = (function ($, win) {
 			this.addTagBusy(name, $suggestion || this.getNewTagSuggestion$ByName(name));
 
 			log('createTag: create a tag', name);
-			return this.requestCreateTagByName(name)
+			return this.requestCreateAndAddTagByName(name)
 				.then(this.onCreateResponse.bind(this))
 				.fail(this.alertError.bind(this))
 				.fin(this.removeTagBusy.bind(this, name));
@@ -774,7 +817,7 @@ this.tagbox = (function ($, win) {
 			var $tag = this.getTag$ById(tag.id);
 			if (!$tag.length) {
 				var html = this.renderTagHtml(tag);
-				this.$tagbox.addClass('tagged');
+				this.addClass('tagged');
 				$tag = $(html).appendTo(this.$tagList);
 			}
 			return $tag;
@@ -817,9 +860,37 @@ this.tagbox = (function ($, win) {
 					}
 					else {
 						$suggest.append(html);
+						this.addClass('suggested');
 					}
 				}
 				this.updateTaggedClass();
+			}
+			return len;
+		},
+
+		/**
+		 * Clears all added tags
+		 */
+		clearTags$: function () {
+			var $tagList = this.$tagList,
+				len = $tagList.children().length;
+			if (len) {
+				$tagList.empty();
+				var tags = this.getAddedTags();
+				tags = this.filterTagsByText(this.getInputValue(), tags);
+				if (tags.length) {
+					var $suggest = this.$suggest,
+						$new = $suggest.find('.kifi-tagbox-new'),
+						html = this.renderTagSuggestionsHtml(tags);
+					if ($new.length) {
+						$new.before(html);
+					}
+					else {
+						$suggest.append(html);
+						this.addClass('suggested');
+					}
+				}
+				this.removeClass('tagged');
 			}
 			return len;
 		},
@@ -873,6 +944,18 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
+		 * Makes a request to the server to create/add a tag to a keep.
+		 * Returns a promise object.
+		 *
+		 * @param {string} name - A tag name
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		requestCreateAndAddTagByName: function (name) {
+			return this.request('create_and_add_tag', name, 'Could not add tag, "' + name + '"');
+		},
+
+		/**
 		 * Makes a request to the server to remove a tag from a keep.
 		 * Returns a promise object.
 		 *
@@ -882,6 +965,16 @@ this.tagbox = (function ($, win) {
 		 */
 		requestRemoveTagById: function (tagId) {
 			return this.request('remove_tag', tagId, 'Could not remove tag, "' + tagId + '"');
+		},
+
+		/**
+		 * Makes a request to the server to clear all tags from a keep.
+		 * Returns a promise object.
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		requestClearAll: function () {
+			return this.request('clear_tags', null, 'Could not clear tags');
 		},
 
 		/**
@@ -937,43 +1030,22 @@ this.tagbox = (function ($, win) {
 
 		getAddedTags: function () {
 			var tagsAdded = this.tagsAdded,
-				res = [],
 				tags = this.tags;
 			if (tagsAdded && tags) {
-				for (var i = 0, l = tags.length, tag; i < l; i++) {
-					tag = tags[i];
-					if (tag.id in tagsAdded) {
-						res.push(tag);
-					}
-				}
+				return tags.filter(function (tag) {
+					return tag.id in tagsAdded;
+				});
 			}
-			return res;
+			return [];
 		},
 
 		getAddedTagCount: function () {
-			var tags = this.tagsAdded;
-			return tags ? Object.keys(tags).length : 0;
-		},
-
-		updateHeight: function () {
-			var userTagCount = this.getTagCount(),
-				keepTagCount = this.getAddedTagCount();
-			return arguments;
+			return util.size(this.tagsAdded);
 		},
 
 		updateSuggestHeight: function () {
-			var height = this.minMax(32 * this.getTagCount(), 165, 265);
+			var height = util.minMax(32 * this.getTagCount(), 164, 265);
 			this.$suggest.height(height);
-		},
-
-		minMax: function (val, min, max) {
-			if (min != null && val <= min) {
-				val = min;
-			}
-			else if (max != null && val >= max) {
-				val = max;
-			}
-			return val;
 		},
 
 		/**
@@ -984,10 +1056,7 @@ this.tagbox = (function ($, win) {
 		 *   }]
 		 */
 		rebuildTagsAdded: function (addedTags) {
-			var tagsAdded = this.tagsAdded = {};
-			for (var i = 0, l = addedTags.length; i < l; i++) {
-				tagsAdded[addedTags[i].id] = true;
-			}
+			this.tagsAdded = util.toKeys(util.pluck(addedTags, 'id'), true);
 			return addedTags;
 		},
 
@@ -1007,8 +1076,9 @@ this.tagbox = (function ($, win) {
 			this.tags.push(tag);
 
 			this.removeNewSuggestionByName(tag.name);
+			this.onAddResponse.bind(this, tag.id, tag);
 
-			return this.addTagById(tag.id);
+			return tag;
 		},
 
 		/**
@@ -1051,6 +1121,24 @@ this.tagbox = (function ($, win) {
 			//this.addSuggestionById(tagId);
 
 			return this.removeTag$ById(tagId);
+		},
+
+		/**
+		 * A listener for server response from removing a tag from a keep.
+		 * 
+		 * REMOVE
+		 *   Request Payload: {
+		 *     url: "my.keep.com"
+		 *   }
+		 *   Response: {}
+		 */
+		onClearTagsResponse: function () {
+			log('onClearTagsResponse');
+
+			this.clearTags$();
+			this.tagsAdded = {};
+
+			return;
 		},
 
 		//
@@ -1183,6 +1271,17 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
+		 * Renders and returns html for a given tag items.
+		 *
+		 * @param {Object[]} tags - A list of tag items
+		 *
+		 * @return {string} html
+		 */
+		renderTagSuggestionsHtml: function (tags) {
+			return (tags && tags.length) ? tags.map(this.renderTagSuggestionHtml, this).join('') : '';
+		},
+
+		/**
 		 * Renders and returns a new tag suggestion html for a given tag name.
 		 *
 		 * @param {string} name - A tag name
@@ -1255,6 +1354,17 @@ this.tagbox = (function ($, win) {
 		onClickRemoveTag: function (e) {
 			var tagId = $(e.target).closest('.kifi-tagbox-tag').data('id');
 			this.removeTagById(tagId);
+		},
+
+		/**
+		 * Clears all added tags from current keep.
+		 *
+		 * @return {Object} A deferred promise object
+		 */
+		clearTags: function () {
+			return this.requestClearAll()
+				.then(this.onClearTagsResponse.bind(this))
+				.fail(this.alertError.bind(this));
 		},
 
 		//

@@ -680,6 +680,25 @@ api.port.on({
   },
 
   /**
+   * Makes a request to the server to create/add a tag to a keep.
+   * 
+   * ADD
+   *   Request URL: /tags/add
+   *   Request Method: POST
+   *   Request Payload: {
+   *     name: 'my tag name',
+   *     url: "my.keep.com"
+   *   }
+   *   Response: {}
+   */
+  create_and_add_tag: function(name, callback, tab) {
+    makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
+      name: name,
+      url: tab.nUri || tab.url
+    }, callback);
+  },
+
+  /**
    * Makes a request to the server to add a tag to a keep.
    * 
    * ADD
@@ -709,6 +728,23 @@ api.port.on({
    */
   remove_tag: function(tagId, callback, tab) {
     makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
+      url: tab.nUri || tab.url
+    }, callback);
+  },
+
+  /**
+   * Makes a request to the server to clear all tags from a keep.
+   * 
+   * REMOVE
+   *   Request URL: /tags/clear
+   *   Request Method: POST
+   *   Request Payload: {
+   *     url: "my.keep.com"
+   *   }
+   *   Response: {}
+   */
+  clear_tags: function(tagId, callback, tab) {
+    makeRequest(tab, "clear_tags", "POST", "/tags/clear", {
       url: tab.nUri || tab.url
     }, callback);
   },
