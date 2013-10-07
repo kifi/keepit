@@ -311,6 +311,7 @@ this.tagbox = (function ($, win) {
 			Q.all([this.requestTags(), this.requestTagsByUrl()])
 				.spread(this.onFetchTags.bind(this))
 				.then(this.updateHeight.bind(this))
+				.then(this.updateSuggestHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.updateSuggestion.bind(this))
 				.then(this.toggleHidden.bind(this, false))
@@ -802,6 +803,19 @@ this.tagbox = (function ($, win) {
 				len = $el.length;
 			if (len) {
 				$el.remove();
+				var tag = this.getTagById(tagId),
+					tags = this.filterTagsByText(this.getInputValue(), [tag]);
+				if (tags.length) {
+					var $suggest = this.$suggest,
+						$new = $suggest.find('.kifi-tagbox-new'),
+						html = this.renderTagSuggestionHtml(tags[0]);
+					if ($new.length) {
+						$new.before(html);
+					}
+					else {
+						$suggest.append(html);
+					}
+				}
 				this.updateTaggedClass();
 			}
 			return len;
@@ -942,6 +956,21 @@ this.tagbox = (function ($, win) {
 			var userTagCount = this.getTagCount(),
 				keepTagCount = this.getAddedTagCount();
 			return arguments;
+		},
+
+		updateSuggestHeight: function () {
+			var height = this.minMax(32 * this.getTagCount(), 165, 265);
+			this.$suggest.height(height);
+		},
+
+		minMax: function (val, min, max) {
+			if (min != null && val <= min) {
+				val = min;
+			}
+			else if (max != null && val >= max) {
+				val = max;
+			}
+			return val;
 		},
 
 		/**

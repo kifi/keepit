@@ -79,7 +79,7 @@
 .kifi-tagbox-input-box {
   display: block;
   font-size: 16px;
-  padding: 10px 15px;
+  padding: 3px 15px;
   background: white;
   white-space: nowrap;
   overflow: hidden;
@@ -100,10 +100,11 @@
   display: block;
   float: left;
   width: 12px;
-  height: 16px;
+  height: 32px;
   margin-right: 10px;
   background-repeat: no-repeat;
   background-size: auto 16px;
+  background-position-y: 8px;
 }
 
 .kifi-tagbox-input-icon {
@@ -164,8 +165,8 @@
   position: relative;
   color: #858585;
   background: #eff2f7;
-  min-height: 166px;
-  max-height: 280px;
+  min-height: 165px;
+  max-height: 265px;
   padding: 8px 0;
   overflow: scroll;
   overflow-x: hidden;
@@ -175,7 +176,8 @@
 
 .kifi-tagbox-suggestion {
   display: block;
-  padding: 8px 15px;
+  padding: 0px 15px;
+  line-height: 32px;
   color: #858585;
   white-space: nowrap;
   overflow: hidden;
@@ -210,6 +212,7 @@
   font-size: 24px;
   font-weight: 200;
   -webkit-font-smoothing: antialiased;
+  line-height: 30px;
   padding: 60px 40px;
   text-align: center;
   background: #eff2f7;
@@ -265,7 +268,7 @@
   color: #b8c5d1;
   background: white;
   padding: 15px;
-  height: 146px;
+  height: 150px;
 }
 
 .kifi-tagbox.tagged .kifi-tagbox-tagged {
