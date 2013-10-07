@@ -55,14 +55,16 @@ class LinkProcessingExtractorProvider @Inject() (httpFetcher: HttpFetcher, db: D
     val url = uri.toString()
     val absoluteLinkUrl = URI.url(uri, link.getUri)
     link match {
-      case _ if isAbout(url, absoluteLinkUrl) => Some(absoluteLinkUrl)
+      case _ if isAbout(url, link.getText, absoluteLinkUrl) => Some(absoluteLinkUrl)
       case _ => None
     }
   }
 
-  private def isAbout(baseUrl: String, aboutUrl: String): Boolean = {
-    val aboutPages = Seq("about", "aboutus", "about-us", "about_us", "apropos", "a-propos", "a_propos")
-    val aboutSuffix = ("/(" + aboutPages.mkString("|") + """)(\.[a-z]{2,4})?/?$""").r
-    aboutUrl.startsWith(baseUrl) && aboutSuffix.pattern.matcher(aboutUrl).find
+  private def isAbout(baseUrl: String, linkText: String, linkUrl: String): Boolean = {
+    val aboutText = Set("about", "about us", "a propos")
+    val concatenators = Set("","-", "_")
+    val aboutUrls = for { text <- aboutText; c <- concatenators } yield text.mkString(c)
+    val aboutUrlRegex = ("/(" + aboutUrls.mkString("|") + """)(\.[a-z]{2,4})?/?$""").r
+    linkUrl.startsWith(baseUrl) && (aboutText.contains(linkText.toLowerCase) || aboutUrlRegex.pattern.matcher(linkUrl).find)
   }
 }
