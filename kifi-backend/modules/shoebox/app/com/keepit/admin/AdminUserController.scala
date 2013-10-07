@@ -21,7 +21,8 @@ import play.api.data._
 import play.api.libs.json.Json
 import views.html
 import com.keepit.abook.ABookServiceClient
-import play.api.mvc.Action
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.service.ServiceType
 
 case class UserStatistics(
     user: User,
@@ -58,7 +59,8 @@ class AdminUserController @Inject() (
     userSessionRepo: UserSessionRepo,
     clock: Clock,
     eliza: ElizaServiceClient,
-    abookClient: ABookServiceClient) extends AdminController(actionAuthenticator) {
+    abookClient: ABookServiceClient,
+    serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
   implicit val dbMasterSlave = Database.Slave
 
@@ -184,10 +186,11 @@ class AdminUserController @Inject() (
 
     val contacts:Seq[ContactInfo] = Await.result(abookClient.getContactInfos(userId), 5 seconds)
     val abookInfos:Seq[ABookInfo] = Await.result(abookClient.getABookInfos(userId), 5 seconds)
-    // val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService() // REMOVEME
+    val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService()
+    val abookGmailCSVUploadEP = for (s <- abookServiceOpt) yield s"http://${s.instanceInfo.publicIp.ip}:9000/internal/abook/${user.id.get}/uploadGMailCSV"
 
     Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-      fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails, abookInfos, contacts,
+      fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, abookGmailCSVUploadEP,
       collections, collectionFilter))
   }
 
