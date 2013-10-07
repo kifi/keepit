@@ -51,14 +51,12 @@ class LinkProcessingExtractorProvider @Inject() (httpFetcher: HttpFetcher, db: D
   def isDefinedAt(uri: URI) = true
   def apply(uri: URI) = new LinkProcessingExtractor(uri.toString, Scraper.maxContentChars, DefaultExtractorProvider.htmlMapper, processLink(uri), httpFetcher, db, urlPatternRuleRepo)
 
-  private def processLink(uri: URI): Link => Option[String] = {
+  private def processLink(uri: URI)(link: Link): Option[String] = {
     val url = uri.toString()
-    link: Link => {
-      val absoluteLinkUrl = URI.url(uri, link.getUri)
-      link match {
-        case _ if isAbout(url, absoluteLinkUrl) => Some(absoluteLinkUrl)
-        case _ => None
-      }
+    val absoluteLinkUrl = URI.url(uri, link.getUri)
+    link match {
+      case _ if isAbout(url, absoluteLinkUrl) => Some(absoluteLinkUrl)
+      case _ => None
     }
   }
 
