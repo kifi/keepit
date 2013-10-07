@@ -17,7 +17,7 @@ object DefaultExtractorProvider extends ExtractorProvider {
   def apply(uri: URI) = apply(uri.toString)
   def apply(url: String) = new DefaultExtractor(url, Scraper.maxContentChars, htmlMapper)
 
-  private val htmlMapper = Some(new DefaultHtmlMapper {
+  val htmlMapper = Some(new DefaultHtmlMapper {
     override def mapSafeElement(name: String) = {
       name.toLowerCase match {
         case "option" => "option"

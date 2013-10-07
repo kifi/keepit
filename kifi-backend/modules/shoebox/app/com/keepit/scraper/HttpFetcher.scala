@@ -184,18 +184,10 @@ case class HttpFetchStatus(statusCode: Int, message: Option[String], context: Ht
 
 case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination: String) {
   def isPermanent = (statusCode == HttpStatus.SC_MOVED_PERMANENTLY)
-  def isAbsolute = HttpRedirect.isAbsolute(currentLocation) && HttpRedirect.isAbsolute(newDestination)
+  def isAbsolute = URI.isAbsolute(currentLocation) && URI.isAbsolute(newDestination)
   def isLocatedAt(url: String) = (currentLocation == url)
 }
 
 object HttpRedirect {
-  def isAbsolute(url: String) = url.toLowerCase.startsWith("http")
-  def withStandardizationEffort(statusCode: Int, currentLocation: String, newDestination: String): HttpRedirect = {
-    val standardizedOption = for {
-      uri <- URI.safelyParse(currentLocation) if isAbsolute(currentLocation) && !isAbsolute(newDestination)
-      scheme <- uri.scheme
-      host <- uri.host
-    } yield HttpRedirect(statusCode, currentLocation, scheme + "://" + host.name + newDestination)
-    standardizedOption.getOrElse(HttpRedirect(statusCode, currentLocation, newDestination))
-  }
+  def withStandardizationEffort(statusCode: Int, currentLocation: String, newDestination: String): HttpRedirect = HttpRedirect(statusCode, currentLocation, URI.url(currentLocation, newDestination))
 }
