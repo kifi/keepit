@@ -4,6 +4,7 @@ import com.keepit.common.logging.Logging
 import scala.collection.concurrent.{TrieMap=>ConcurrentMap}
 import scala.concurrent.duration._
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import java.lang.ref.WeakReference
 import java.lang.ref.ReferenceQueue
 
@@ -29,6 +30,14 @@ class RequestConsolidator[K, T](ttl: Duration) extends Logging {
 
     val now = System.currentTimeMillis
 
+    def createAndRegisterFuture = {
+      val promise = Promise[T]
+      val future = promise.future
+      futureRefMap.put(key, new FutureRef(key, future, now + ttlMillis, referenceQueue))
+      promise.completeWith(newFuture(key))
+      future
+    }
+
     futureRefMap.get(key) match {
       case Some(ref) =>
         val existingFuture = ref.get
@@ -37,15 +46,11 @@ class RequestConsolidator[K, T](ttl: Duration) extends Logging {
           existingFuture
         } else {
           log.debug("request expired. creating future.")
-          val future = newFuture(key)
-          futureRefMap.put(key, new FutureRef(key, future, now + ttlMillis, referenceQueue))
-          future
+          createAndRegisterFuture
         }
       case _ =>
         log.debug("request not found. creating future.")
-        val future = newFuture(key)
-        futureRefMap.put(key, new FutureRef(key, future, now + ttlMillis, referenceQueue))
-        future
+        createAndRegisterFuture
     }
   }
 
