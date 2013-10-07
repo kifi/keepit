@@ -219,7 +219,7 @@ class ExtBookmarksController @Inject() (
 
   private def getOrCreateTag(userId: Id[User], name: String)(implicit s: RWSession): Collection = {
     val normalizedName = name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength)
-    collectionRepo.getByUserAndName(userId, name, excludeState = None) match {
+    collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None) match {
       case Some(t) if t.isActive => t
       case Some(t) => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE))
       case None => collectionRepo.save(Collection(userId = userId, name = normalizedName))
