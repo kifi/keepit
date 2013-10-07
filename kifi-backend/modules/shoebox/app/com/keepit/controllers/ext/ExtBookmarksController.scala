@@ -1,6 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
+import com.keepit.common.KestrelCombinator
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
@@ -89,11 +90,12 @@ class ExtBookmarksController @Inject() (
   def addToUrl() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     val name = (request.body \ "name").as[String]
-    db.readWrite { implicit s =>
-      val tag = getOrCreateTag(request.userId, name)
-      addTagToUrl(request.user, request.experiments, url, tag.id.get)
+    val tag = db.readWrite { implicit s =>
+      getOrCreateTag(request.userId, name) tap { tag =>
+        addTagToUrl(request.user, request.experiments, url, tag.id.get)
+      }
     }
-    Ok(Json.obj())
+    Ok(Json.obj("name" -> tag.name, "id" -> tag.id.get))
   }
 
   def clearTags() = AuthenticatedJsonToJsonAction { request =>
