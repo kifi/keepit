@@ -56,6 +56,9 @@ class ExtSearchController @Inject() (
     val userId = request.userId
     log.info(s"""User ${userId} searched ${query.length} characters""")
 
+    // fetch user data in background
+    fetchUserDataInBackground(shoeboxClient, userId)
+
     val searchFilter = filter match {
       case Some("m") =>
         val collExtIds = coll.map{ _.split('.').flatMap(id => Try(ExternalId[Collection](id)).toOption) }
@@ -202,4 +205,13 @@ class ExtSearchController @Inject() (
     }
   }
 
+  private[this] def fetchUserDataInBackground(shoeboxClient: ShoeboxServiceClient, userId: Id[User]): Unit = {
+    future {
+      // following request must have request consolidation enabled, otherwise no use.
+      shoeboxClient.getFriends(userId)
+      shoeboxClient.getSearchFriends(userId)
+      shoeboxClient.getBrowsingHistoryFilter(userId)
+      shoeboxClient.getClickHistoryFilter(userId)
+    }
+  }
 }
