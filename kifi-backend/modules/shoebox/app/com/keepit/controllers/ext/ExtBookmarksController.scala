@@ -84,22 +84,24 @@ class ExtBookmarksController @Inject() (
         uri <- uriRepo.getByUri(url)
         bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
       } yield bookmark.id.get
-      val collectionIdOpt = collectionRepo.getOpt(id).map(_.id.get)
-      (bookmarkIdOpt, collectionIdOpt) match {
-        case (Some(bookmarkId), Some(collectionId)) =>
-          keepToCollectionRepo.getOpt(bookmarkId, collectionId) match {
-            case Some(ktc) if ktc.state == KeepToCollectionStates.ACTIVE =>
-              ktc
-            case Some(ktc) =>
-              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-            case None =>
-              keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmarkId, collectionId = collectionId))
-          }
-          Ok(Json.obj())
-        case (_, None) =>
-          BadRequest(Json.obj("error" -> "Tag does not exist"))
-        case _ =>
-          BadRequest(Json.obj("error" -> "Keep does not exist"))
+
+      collectionRepo.getOpt(id).map(_.id.get) map { collectionId =>
+        val bookmarkId = bookmarkIdOpt getOrElse {
+          bookmarkManager.internBookmarks(
+            Json.obj("url" -> url), request.user, request.experiments, BookmarkSource("TAGGED")
+          ).head.id.get
+        }
+        keepToCollectionRepo.getOpt(bookmarkId, collectionId) match {
+          case Some(ktc) if ktc.state == KeepToCollectionStates.ACTIVE =>
+            ktc
+          case Some(ktc) =>
+            keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+          case None =>
+            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmarkId, collectionId = collectionId))
+        }
+        Ok(Json.obj())
+      } getOrElse {
+        BadRequest(Json.obj("error" -> "noSuchTag"))
       }
     }
   }
