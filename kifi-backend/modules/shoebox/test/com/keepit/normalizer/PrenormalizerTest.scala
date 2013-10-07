@@ -123,6 +123,10 @@ class PrenormalizerTest extends Specification {
         "http://www1.bloomingdales.com/search/results.ognc?Action=sd&Keyword=juicy+couture&attrs=Department:Department:Dresses|Color:Color:Black&resultsPerPage=24&sortOption=*"
 
       Prenormalizer("http:///") === "http://"
+
+      // dots after the domain name
+      Prenormalizer("http://www.42go.com./team.html") === "http://www.42go.com./team.html"
+      Prenormalizer("http://www.42go.com..../team.html") === "http://www.42go.com..../team.html"
     }
 
     "use custom normalizer when applicable" in {
