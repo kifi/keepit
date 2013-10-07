@@ -313,6 +313,8 @@ this.tagbox = (function ($, win) {
 				.then(this.updateHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.updateSuggestion.bind(this))
+				.then(this.toggleHidden.bind(this, false))
+				.then(this.focusInput.bind(this))
 				.fail(this.alertError.bind(this));
 		},
 
@@ -535,6 +537,14 @@ this.tagbox = (function ($, win) {
 			this.suggest(this.getInputValue());
 		},
 
+		toggleClass: function (classname, add) {
+			return this.$tagbox.toggleClass(classname, add ? true : false);
+		},
+
+		toggleHidden: function (hidden) {
+			return this.toggleClass('hidden', hidden);
+		},
+
 		/**
 		 * Given an input string to match against,
 		 * it rerenders tag suggestions.
@@ -568,7 +578,7 @@ this.tagbox = (function ($, win) {
 				html = tags.map(this.renderTagHtml, this).join('');
 			this.$tagList.html(html);
 
-			this.$tagbox.toggleClass('tagged', tags.length ? true : false);
+			this.toggleClass('tagged', tags.length);
 		},
 
 		/**
@@ -770,16 +780,14 @@ this.tagbox = (function ($, win) {
 		 * Updates (add/remove) 'tagged' class of the tagbox.
 		 */
 		updateTaggedClass: function () {
-			var add = this.$tagList.children().length ? true : false;
-			this.$tagbox.toggleClass('tagged', add);
+			return this.toggleClass('tagged', this.$tagList.children().length);
 		},
 
 		/**
 		 * Updates (add/remove) 'suggested' class of the tagbox.
 		 */
 		updateSuggestedClass: function () {
-			var add = (this.getInputValue() || this.$suggest.children().length) ? true : false;
-			this.$tagbox.toggleClass('suggested', add);
+			return this.toggleClass('suggested', this.getInputValue() || this.$suggest.children().length);
 		},
 
 		/**
@@ -1080,8 +1088,12 @@ this.tagbox = (function ($, win) {
 		},
 
 		scrolledIntoViewLazy: function (el, padding) {
-			var view = el.offsetParent,
-				viewTop = view.scrollTop,
+			var view;
+			if (!(el && (view = el.offsetParent))) {
+				return;
+			}
+
+			var viewTop = view.scrollTop,
 				viewHeight = view.clientHeight,
 				viewBottom = viewTop + viewHeight,
 				elemTop = el.offsetTop,

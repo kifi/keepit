@@ -26,6 +26,10 @@
   -webkit-font-smoothing: antialiased;
 }
 
+.kifi-tagbox.hidden {
+  display: none;
+}
+
 .kifi-tagbox > *:last-child {
   border-bottom-left-radius: 6px;
   border-bottom-right-radius: 6px;
