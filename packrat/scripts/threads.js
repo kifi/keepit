@@ -1,8 +1,8 @@
-// @require styles/metro/threads.css
-// @require styles/metro/compose.css
-// @require scripts/html/metro/threads.js
-// @require scripts/html/metro/thread.js
-// @require scripts/html/metro/compose.js
+// @require styles/keeper/threads.css
+// @require styles/keeper/compose.css
+// @require scripts/html/keeper/threads.js
+// @require scripts/html/keeper/thread.js
+// @require scripts/html/keeper/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/formatting.js
@@ -41,10 +41,10 @@ panes.threads = function () {
       t.messagesUnread = n < 0;
       t.participantsPictured = t.participants.slice(0, 4);
     });
-    $(render('html/metro/threads', {
+    $(render('html/keeper/threads', {
       formatSnippet: getSnippetFormatter,
       formatLocalDate: getLocalDateFormatter,
-      emptyUri: api.url('images/metro/bg_messages.png'),
+      emptyUri: api.url('images/keeper/bg_messages.png'),
       threads: threads,
       showTo: true,
       draftPlaceholder: 'Type a message…',
@@ -139,7 +139,7 @@ panes.threads = function () {
     th.participantsPictured = th.participants.slice(0, 4);
     th.formatSnippet = getSnippetFormatter;
     th.formatLocalDate = getLocalDateFormatter;
-    var $th = $(render('html/metro/thread', th))
+    var $th = $(render('html/keeper/thread', th))
       .data('participants', th.participants);
     $th.find('time').timeago();
     return $th;
