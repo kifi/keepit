@@ -17,13 +17,13 @@ trait Extractor {
 trait ExtractorFactory extends Function[String, Extractor]
 
 @Singleton
-class ExtractorFactoryImpl @Inject() (youtubeExtractorProvider: YoutubeExtractorProvider) extends ExtractorFactory with Logging {
+class ExtractorFactoryImpl @Inject() (youtubeExtractorProvider: YoutubeExtractorProvider, linkProcessingExtractorProvider: LinkProcessingExtractorProvider) extends ExtractorFactory with Logging {
 
   val all = Seq(
     youtubeExtractorProvider,
     GithubExtractorProvider,
     LinkedInExtractorProvider,
-    DefaultExtractorProvider
+    linkProcessingExtractorProvider
   )
 
   def apply(url: String): Extractor = {
