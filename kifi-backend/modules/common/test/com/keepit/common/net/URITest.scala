@@ -77,12 +77,23 @@ class URITest extends Specification {
       val uri7 = URI.parse("http://www.linkedin.com/?trk=hb-0-h-logo").get
       val uri8 = URI.parse("http://www.linkedin.com/?trk=hb-0-h-logo").get
       val uri9 = URI.parse("http://www.linkedin.com/?trk=HB-0-H-LOGO").get
+
       uri1 === uri2
       uri2 !== uri3
       uri4 === uri5
       uri5 !== uri6
       uri7 === uri8
       uri8 !== uri9
+    }
+
+    "allow trailing dots after the domain name" in {
+      val singleDot = URI.parse("http://www.42go.com./team.html").get
+      val multipleDots = URI.parse("http://www.42go.com..../team.html").get
+
+      singleDot.toString === "http://www.42go.com./team.html"
+      singleDot.host === Some(Host("", "com", "42go", "www"))
+      multipleDots.toString === "http://www.42go.com..../team.html"
+      multipleDots.host === Some(Host("", "", "", "", "com", "42go", "www"))
     }
   }
 }
