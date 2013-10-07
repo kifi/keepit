@@ -279,6 +279,9 @@ var slider2 = function () {
 
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
+    if (window.tagbox && tagbox.active) {
+      return;
+    }
     log("[hideSlider]", trigger)();
     idleTimer.kill();
     $slider.addClass("kifi-hiding")
@@ -301,6 +304,9 @@ var slider2 = function () {
         $slider.remove(), $slider = null;
       }
     });
+    if (window.tagbox) {
+      tagbox.hide();
+    }
     logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
   }
 

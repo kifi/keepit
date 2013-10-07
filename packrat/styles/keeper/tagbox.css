@@ -161,7 +161,7 @@
   color: #858585;
   background: #eff2f7;
   min-height: 166px;
-  max-height: 279px;
+  max-height: 280px;
   padding: 8px 0;
   overflow: scroll;
   overflow-x: hidden;
@@ -261,6 +261,7 @@
   color: #b8c5d1;
   background: white;
   padding: 15px;
+  height: 146px;
 }
 
 .kifi-tagbox.tagged .kifi-tagbox-tagged {
@@ -275,6 +276,14 @@
   -webkit-font-smoothing: antialiased;
 }
 
+.kifi-tagbox-tag-list {
+  position: relative;
+  height: 100px;
+  overflow: scroll;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+
 .kifi-tagbox-tag {
   display: inline-block;
   font-size: 13px;
@@ -283,6 +292,9 @@
   margin-bottom: 4px;
   text-align: center;
   background: #b8c5d1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {

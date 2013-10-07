@@ -103,12 +103,12 @@ this.tagbox = (function ($, win) {
 		 */
 		init: function () {
 			log('tagbox:init');
+			this.active = true;
 			this.initTagBox();
 			this.initSuggest();
 			this.initTagList();
 			this.initInput();
 			this.initCloseIcon();
-			this.initPageTags();
 			this.initTags();
 			activateScroll('.kifi-tagbox-suggest');
 		},
@@ -133,27 +133,30 @@ this.tagbox = (function ($, win) {
 			}
 
 			function onClick(e) {
-				if (!$(e.target).closest('.kifi-tagbox').length) {
+				if (!$.contains(this.$tagbox[0], e.target)) {
 					log('tagbox:clickout', e.target);
 					this.hide();
 				}
 			}
 
 			function addDocListeners() {
-				var $doc = $(document),
-					onDocKeydown = this.onDocKeydown = onKeydown.bind(this),
-					onDocClick = this.onDocClick = onClick.bind(this);
+				if (this.$tagbox) {
+					var $doc = $(document),
+						onDocKeydown = this.onDocKeydown = onKeydown.bind(this),
+						onDocClick = this.onDocClick = onClick.bind(this);
 
-				this.$doc = $doc;
-				$doc.on('keydown', onDocKeydown);
-				$doc.on('click', onDocClick);
+					this.$doc = $doc;
+					$doc.on('keydown', onDocKeydown);
+					$doc.on('click', onDocClick);
+				}
 			}
 
 			return function () {
-				var $tagbox = $(this.renderTagBoxHtml()).appendTo(this.$slider);
+				//var $tagbox = $(this.renderTagBoxHtml()).appendTo(this.$slider);
+				var $tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
 				this.$tagbox = $tagbox;
 
-				setTimeout(addDocListeners.bind(this), 50);
+				win.setTimeout(addDocListeners.bind(this), 50);
 
 				return $tagbox;
 			};
@@ -166,12 +169,14 @@ this.tagbox = (function ($, win) {
 		 */
 		initInput: function () {
 			var $inputbox = this.$inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
-			var $input = this.$input = $inputbox.find('input.kifi-tagbox-input');
+			this.$input = $inputbox.find('input.kifi-tagbox-input');
 
 			this.addInputEvents();
-			setTimeout(function () {
-				$input.focus();
-			}, 1);
+			win.setTimeout(this.focusInput.bind(this), 1);
+		},
+
+		focusInput: function () {
+			return this.$input && this.$input.focus();
 		},
 
 		/**
@@ -297,26 +302,15 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * Makes a request to the server to get all tags owned by the user.
+		 * Makes a request to the server to get all tags on the page.
 		 *
 		 * @return {Object} A deferred promise object
 		 */
 		initTags: function () {
 			log('initTags: get all tags');
-			return this.requestTags()
-				.then(this.setTags.bind(this))
-				.then(this.updateSuggestion.bind(this))
-				.fail(this.alertError.bind(this));
-		},
-
-		/**
-		 * Makes a request to the server to get all tags on the page.
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		initPageTags: function () {
-			log('initPageTags: get all tags by url');
-			return this.requestTagsByUrl()
-				.then(this.rebuildTagsAdded.bind(this))
+			Q.all([this.requestTags(), this.requestTagsByUrl()])
+				.spread(this.onFetchTags.bind(this))
+				.then(this.updateHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.updateSuggestion.bind(this))
 				.fail(this.alertError.bind(this));
@@ -329,6 +323,7 @@ this.tagbox = (function ($, win) {
 		destroy: function () {
 			log('tagbox:destroy');
 			if (this.$tagbox) {
+				this.active = false;
 				log('tagbox:destroy-inner');
 				deactivateScroll('.kifi-tagbox-suggest');
 
@@ -367,8 +362,8 @@ this.tagbox = (function ($, win) {
 		 * @return {number} An index of a tag. -1 if not found.
 		 */
 		indexOfTagById: function (tagId) {
-			if (tagId) {
-				var tags = this.tags;
+			var tags = this.tags;
+			if (tagId && tags) {
 				for (var i = 0, l = tags.length; i < l; i++) {
 					if (tagId === tags[i].id) {
 						return i;
@@ -388,8 +383,8 @@ this.tagbox = (function ($, win) {
 		 */
 		indexOfTagByName: function (name) {
 			name = this.normalizeTagNameForSearch(name);
-			if (name) {
-				var tags = this.tags;
+			var tags = this.tags;
+			if (name && tags) {
 				for (var i = 0, l = tags.length; i < l; i++) {
 					if (name === this.getNormalizedTagName(tags[i])) {
 						return i;
@@ -454,7 +449,7 @@ this.tagbox = (function ($, win) {
 		 *
 		 * @return {Object[]} A new array of filtered tags
 		 */
-		filterTags: (function () {
+		filterTagsByText: (function () {
 			var options = {
 				pre: '<b>',
 				post: '</b>',
@@ -472,8 +467,8 @@ this.tagbox = (function ($, win) {
 			}
 
 			return function (text, tags) {
-				if (!tags) {
-					tags = this.tags;
+				if (!(tags || (tags = this.tags))) {
+					return [];
 				}
 				if (text) {
 					return win.fuzzy.filter(text, tags, options).map(extractData);
@@ -490,7 +485,10 @@ this.tagbox = (function ($, win) {
 		 * @return {Object[]} A new array of filtered tags
 		 */
 		filterOutAddedTags: function (tags) {
-			return (tags || this.tags).filter(this.unaddedTagFilter, this);
+			if (!(tags || (tags = this.tags))) {
+				return [];
+			}
+			return tags.filter(this.unaddedTagFilter, this);
 		},
 
 		/**
@@ -544,9 +542,10 @@ this.tagbox = (function ($, win) {
 		 * @param {string} text - An input string to match against
 		 */
 		suggest: function (text) {
+			log('tagbox.suggest', text);
 			var tags = this.tags;
 			tags = this.filterOutAddedTags(tags);
-			tags = this.filterTags(text, tags);
+			tags = this.filterTagsByText(text, tags);
 
 			var html = tags.map(this.renderTagSuggestionHtml, this).join('');
 			var $suggest = this.$suggest;
@@ -563,11 +562,10 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * Updates suggestion according to the current states (tags + input).
-		 *
-		 * @param {string} tags - A list of tags to render added
 		 */
-		updateTagList: function (tags) {
-			var html = tags.map(this.renderTagHtml, this).join('');
+		updateTagList: function () {
+			var tags = this.getAddedTags(),
+				html = tags.map(this.renderTagHtml, this).join('');
 			this.$tagList.html(html);
 
 			this.$tagbox.toggleClass('tagged', tags.length ? true : false);
@@ -609,7 +607,8 @@ this.tagbox = (function ($, win) {
 		 * @return {boolean} Whether a tag is already added to a keep
 		 */
 		isTagAddedById: function (tagId) {
-			return tagId in this.tagsAdded;
+			var map = this.tagsAdded;
+			return map != null && (tagId in map);
 		},
 
 		/**
@@ -894,9 +893,47 @@ this.tagbox = (function ($, win) {
 		 *     "name":"hello"
 		 *   }]
 		 */
+		onFetchTags: function (tags, addedTags) {
+			log('onFetchTags', tags, addedTags);
+			this.setTags(tags);
+			this.rebuildTagsAdded(addedTags);
+			return arguments;
+		},
+
 		setTags: function (tags) {
-			this.tags = tags;
+			this.tags = tags || [];
 			return tags;
+		},
+
+		getTagCount: function () {
+			var tags = this.tags;
+			return tags ? tags.length : 0;
+		},
+
+		getAddedTags: function () {
+			var tagsAdded = this.tagsAdded,
+				res = [],
+				tags = this.tags;
+			if (tagsAdded && tags) {
+				for (var i = 0, l = tags.length, tag; i < l; i++) {
+					tag = tags[i];
+					if (tag.id in tagsAdded) {
+						res.push(tag);
+					}
+				}
+			}
+			return res;
+		},
+
+		getAddedTagCount: function () {
+			var tags = this.tagsAdded;
+			return tags ? Object.keys(tags).length : 0;
+		},
+
+		updateHeight: function () {
+			var userTagCount = this.getTagCount(),
+				keepTagCount = this.getAddedTagCount();
+			return arguments;
 		},
 
 		/**
@@ -906,12 +943,12 @@ this.tagbox = (function ($, win) {
 		 *     "name":"hello"
 		 *   }]
 		 */
-		rebuildTagsAdded: function (tags) {
+		rebuildTagsAdded: function (addedTags) {
 			var tagsAdded = this.tagsAdded = {};
-			for (var i = 0, l = tags.length; i < l; i++) {
-				tagsAdded[tags[i].id] = true;
+			for (var i = 0, l = addedTags.length; i < l; i++) {
+				tagsAdded[addedTags[i].id] = true;
 			}
-			return tags;
+			return addedTags;
 		},
 
 		/**
@@ -1181,6 +1218,13 @@ this.tagbox = (function ($, win) {
 		//
 
 		/**
+		 * Whether a tag bax is active and visible
+		 *
+		 * @property {boolean}
+		 */
+		active: false,
+
+		/**
 		 * Shows a tag box.
 		 */
 		show: function ($slider) {
@@ -1217,6 +1261,8 @@ this.tagbox = (function ($, win) {
 		 * @param {Error} err - An error object
 		 */
 		alertError: function (err) {
+			log('Error: ' + err.message);
+			log(err.stack);
 			this.alert('Error: ' + err.message);
 		},
 
