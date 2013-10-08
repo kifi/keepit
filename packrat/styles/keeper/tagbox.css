@@ -139,6 +139,7 @@
 }
 .kifi-tagbox-input-cell {
   width: 100%;
+  vertical-align: middle;
 }
 .kifi-tagbox-input-wrapper {
   position: relative;
