@@ -110,7 +110,11 @@ class StopFilterFactories {
 
   private def load(stopSet: CharArraySet) = {
     new TokenFilterFactory {
-      def apply(tokenStream: TokenStream) = new StopFilter(version, tokenStream, stopSet)
+      def apply(tokenStream: TokenStream) = {
+        val stopFilter = new StopFilter(version, tokenStream, stopSet)
+        stopFilter.setEnablePositionIncrements(false)
+        stopFilter
+      }
     }
   }
 }
