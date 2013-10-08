@@ -10,6 +10,7 @@
 // @require scripts/html/keeper/tag-new.js
 // @require scripts/html/keeper/tagbox-tag.js
 // @require styles/keeper/tagbox.css
+// @require styles/animate-custom.css
 
 /**
  * ---------------
@@ -28,22 +29,6 @@ this.tagbox = (function ($, win) {
 
 	var util = win.util;
 
-	function onResize() {
-		this.data('antiscroll').refresh();
-	}
-
-	function activateScroll(selector) {
-		var $container = $(selector);
-		$container.antiscroll({
-			x: false
-		});
-		$(win).on('resize' + selector, onResize);
-	}
-
-	function deactivateScroll(selector) {
-		$(win).off('resize' + selector);
-	}
-
 	function log() {
 		return win.log.apply(win, arguments)();
 	}
@@ -56,6 +41,7 @@ this.tagbox = (function ($, win) {
 		}
 	});
   */
+
 	return {
 		/**
 		 * An array containing user's all tags
@@ -112,7 +98,7 @@ this.tagbox = (function ($, win) {
 			this.initCloseIcon();
 			this.initClearAll();
 			this.initTags();
-			activateScroll('.kifi-tagbox-suggest');
+			this.initScroll();
 		},
 
 		/**
@@ -294,7 +280,7 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for tag list
 		 */
 		initTagList: function () {
-			var $tagList = this.$tagbox.find('.kifi-tagbox-tag-list');
+			var $tagList = this.$tagbox.find('.kifi-tagbox-tag-list-inner');
 			this.$tagList = $tagList;
 
 			$tagList.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
@@ -324,11 +310,35 @@ this.tagbox = (function ($, win) {
 				.then(this.updateSuggestion.bind(this))
 				.then(this.toggleLoading.bind(this, false))
 				.then(this.focusInput.bind(this))
+				.then(this.updateScroll.bind(this))
 				.fail(function (err) {
 				this.hide();
 				throw err;
 			}.bind(this))
 				.fail(this.alertError.bind(this));
+		},
+
+		initScroll: function () {
+			var $suggestWrapper = this.$tagbox.find('.kifi-tagbox-suggest');
+			this.$suggestWrapper = $suggestWrapper;
+			$suggestWrapper.antiscroll({
+				x: false
+			});
+
+			var $tagListWrapper = this.$tagbox.find('.kifi-tagbox-tag-list');
+			this.$tagListWrapper = $tagListWrapper;
+			$tagListWrapper.antiscroll({
+				x: false
+			});
+
+			var winResizeListener = this.winResizeListener = this.updateScroll.bind(this);
+			$(win).on('resize.kifi-tagbox-suggest', winResizeListener);
+		},
+
+		updateScroll: function () {
+			log('updateScroll');
+			this.$tagListWrapper.data('antiscroll').refresh();
+			this.$suggestWrapper.data('antiscroll').refresh();
 		},
 
 		/**
@@ -340,9 +350,9 @@ this.tagbox = (function ($, win) {
 			if (this.$tagbox) {
 				this.active = false;
 				log('tagbox:destroy-inner');
-				deactivateScroll('.kifi-tagbox-suggest');
+				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
 
-				'$input,$inputbox,$suggest,$tagbox,$tagList'.split(',').forEach(function (name) {
+				'$input,$inputbox,$suggest,$suggestWrapper,$tagbox,$tagList,$tagListWrapper'.split(',').forEach(function (name) {
 					var $el = this[name];
 					if ($el) {
 						$el.remove();
@@ -613,6 +623,7 @@ this.tagbox = (function ($, win) {
 			}
 
 			this.updateSuggestedClass();
+      this.updateScroll();
 
 			this.navigateTo('first');
 		},
@@ -819,6 +830,7 @@ this.tagbox = (function ($, win) {
 				var html = this.renderTagHtml(tag);
 				this.addClass('tagged');
 				$tag = $(html).appendTo(this.$tagList);
+        this.updateScroll();
 			}
 			return $tag;
 		},
@@ -864,6 +876,7 @@ this.tagbox = (function ($, win) {
 					}
 				}
 				this.updateTaggedClass();
+        this.updateScroll();
 			}
 			return len;
 		},
@@ -891,6 +904,7 @@ this.tagbox = (function ($, win) {
 					}
 				}
 				this.removeClass('tagged');
+        this.updateScroll();
 			}
 			return len;
 		},
