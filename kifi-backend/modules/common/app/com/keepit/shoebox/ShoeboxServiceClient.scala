@@ -11,7 +11,6 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.State
-import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.net.HttpClient
@@ -38,6 +37,7 @@ import com.keepit.search.ArticleSearchResult
 import com.keepit.model.BrowsingHistoryUserIdKey
 import com.keepit.social.SocialId
 import com.keepit.model.NormalizedURIKey
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.UserConnectionIdKey
 import play.api.libs.json.JsObject
 import com.keepit.model.SocialUserInfoNetworkKey
@@ -113,8 +113,8 @@ class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
   override val port: Int,
   override val httpClient: HttpClient,
-  cacheProvider: ShoeboxCacheProvider,
-  val healthcheck: HealthcheckPlugin)
+  val airbrakeNotifier: AirbrakeNotifier,
+  cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient with Logging{
 
   // request consolidation
@@ -179,7 +179,6 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-
   def sendMail(email: ElectronicMail): Future[Boolean] = {
     call(Shoebox.internal.sendMail(), Json.toJson(email)).map(r => r.body.toBoolean)
   }
@@ -201,7 +200,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
     val (cachedUsers, needToGetUsers) = userIds.map({ u =>
-      u -> cacheProvider.externalUserIdCache.getOrElseOpt(ExternalUserIdKey(u))(None)
+      u -> cacheProvider.externalUserIdCache.get(ExternalUserIdKey(u))
     }).foldRight((Seq[Id[User]](), Seq[ExternalId[User]]())) { (uOpt, res) =>
       uOpt._2 match {
         case Some(uid) => (res._1 :+ uid, res._2)
@@ -220,7 +219,7 @@ class ShoeboxServiceClientImpl @Inject() (
     var cached = Map.empty[Id[User], BasicUser]
     val needed = new ArrayBuffer[Id[User]]
     userIds.foreach{ userId =>
-      cacheProvider.basicUserCache.getOrElseOpt(BasicUserUserIdKey(userId))(None) match {
+      cacheProvider.basicUserCache.get(BasicUserUserIdKey(userId)) match {
         case Some(bu) => cached += (userId -> bu)
         case None => needed += userId
       }

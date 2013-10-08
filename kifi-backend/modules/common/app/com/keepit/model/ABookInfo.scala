@@ -4,6 +4,7 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.mvc.{PathBindable, QueryStringBindable}
+import play.api.libs.json.JsArray
 
 sealed abstract class ABookOriginType(val name:String) {
   override def toString:String = name
@@ -41,32 +42,47 @@ object ABookOrigins {
   val ALL:Seq[ABookOriginType] = Seq(IOS, GMAIL)
 }
 
-case class ABook(id: Option[Id[ABook]] = None,
-    createdAt: DateTime = currentDateTime,
-    updatedAt: DateTime = currentDateTime,
-    state: State[ABook] = ABookStates.ACTIVE,
-    userId: Id[User],
-    origin: ABookOriginType,
-    rawInfoLoc: Option[String] = None
-  ) extends Model[ABook] {
-  def withId(id: Id[ABook]): ABook = this.copy(id = Some(id))
-  def withUpdateTime(now: DateTime): ABook = this.copy(updatedAt = now)
-}
+case class ABookRawInfo(userId:Id[User], origin:ABookOriginType, contacts:JsArray)
 
-object ABookStates extends States[ABook]
-
-object ABook {
+object ABookRawInfo {
   import play.api.libs.functional.syntax._
   import play.api.libs.json._
   import com.keepit.common.db.Id
 
   implicit val format = (
-      (__ \ 'id).formatNullable(Id.format[ABook]) and
+    (__ \ 'userId).format(Id.format[User]) and
+      (__ \ 'origin).format[String].inmap(ABookOriginType.apply _, unlift(ABookOriginType.unapply)) and
+      (__ \ 'contacts).format[JsArray]
+    )(ABookRawInfo.apply _, unlift(ABookRawInfo.unapply))
+
+}
+
+case class ABookInfo(id: Option[Id[ABookInfo]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    state: State[ABookInfo] = ABookStates.ACTIVE,
+    userId: Id[User],
+    origin: ABookOriginType,
+    rawInfoLoc: Option[String] = None
+  ) extends Model[ABookInfo] {
+  def withId(id: Id[ABookInfo]): ABookInfo = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime): ABookInfo = this.copy(updatedAt = now)
+}
+
+object ABookStates extends States[ABookInfo]
+
+object ABookInfo {
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+  import com.keepit.common.db.Id
+
+  implicit val format = (
+      (__ \ 'id).formatNullable(Id.format[ABookInfo]) and
       (__ \ 'createdAt).format[DateTime] and
       (__ \ 'updatedAt).format[DateTime] and
-      (__ \ 'state).format(State.format[ABook]) and
+      (__ \ 'state).format(State.format[ABookInfo]) and
       (__ \ 'userId).format(Id.format[User]) and
       (__ \ 'origin).format[ABookOriginType] and
       (__ \ 'rawInfoLoc).formatNullable[String]
-    )(ABook.apply, unlift(ABook.unapply))
+    )(ABookInfo.apply, unlift(ABookInfo.unapply))
 }

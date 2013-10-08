@@ -11,12 +11,12 @@ function lookMouseDown(e) {
     var elRect = el.getBoundingClientRect();
     var sTop = e.pageY - e.clientY, sLeft = e.pageX - e.clientX;
     var ms = scrollTo(elRect);
-    $("<div class=kifi-snapshot-highlight>").css({
+    $("<kifi class='kifi-root kifi-snapshot-highlight'>").css({
       left: aRect.left + sLeft,
       top: aRect.top + sTop,
       width: aRect.width,
       height: aRect.height
-    }).appendTo("html").animate({
+    }).appendTo("body").animate({
       left: elRect.left + sLeft - 3,
       top: elRect.top + sTop - 2,
       width: elRect.width + 6,

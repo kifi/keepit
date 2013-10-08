@@ -1,11 +1,12 @@
 package com.keepit.abook
 
 
-import com.keepit.model.{ABookOriginType, ContactInfo, User}
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.model.{ABookInfo => ABookInfo, ABookRawInfo, ABookOriginType, ContactInfo, User}
 import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 
@@ -20,11 +21,15 @@ trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit
+  def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
+  def getContactInfos(userId:Id[User]):Future[Seq[ContactInfo]]
+  def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
+  def getContactsRawInfo(userId:Id[User], origin:ABookOriginType):Future[Seq[ContactInfo]]
 }
 
 
 class ABookServiceClientImpl @Inject() (
-  val healthcheck: HealthcheckPlugin,
+  val airbrakeNotifier: AirbrakeNotifier,
   val httpClient: HttpClient,
   val serviceCluster: ServiceCluster
 )
@@ -34,13 +39,44 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.upload(userId, origin), Json.toJson(contacts))
   }
 
+  def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = {
+    call(ABook.internal.getABookInfos(userId)).map { r =>
+      Json.fromJson[Seq[ABookInfo]](r.json).get
+    }
+  }
+
+  def getContactInfos(userId: Id[User]): Future[Seq[ContactInfo]] = {
+    call(ABook.internal.getContactInfos(userId)).map { r =>
+      Json.fromJson[Seq[ContactInfo]](r.json).get
+    }
+  }
+
+  def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = {
+    call(ABook.internal.getABookRawInfos(userId)).map { r =>
+      Json.fromJson[Seq[ABookRawInfo]](r.json).get
+    }
+  }
+
+  def getContactsRawInfo(userId: Id[User], origin: ABookOriginType): Future[Seq[ContactInfo]] = {
+    call(ABook.internal.getContactsRawInfo(userId, origin)).map { r =>
+      Json.fromJson[Seq[ContactInfo]](r.json).get
+    }
+  }
 }
 
-class FakeABookServiceClientImpl(val healthcheck: HealthcheckPlugin) extends ABookServiceClient{
+class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ABookServiceClient {
 
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def upload(userId: Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {}
+
+  def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = ???
+
+  def getContactInfos(userId: Id[User]): Future[Seq[ContactInfo]] = ???
+
+  def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
+
+  def getContactsRawInfo(userId: Id[User], origin: ABookOriginType): Future[Seq[ContactInfo]] = ???
 }

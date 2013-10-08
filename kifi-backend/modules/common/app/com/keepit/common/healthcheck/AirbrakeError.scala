@@ -20,20 +20,21 @@ case class AirbrakeError(
     id: ExternalId[AirbrakeError] = ExternalId())
 
 object AirbrakeError {
-  def apply(request: Request[_], exception: Throwable): AirbrakeError =
+  val MaxStringSize = 1024 * 1024 //1MB
+  def apply(request: RequestHeader, exception: Throwable): AirbrakeError =
     new AirbrakeError(
           exception = exception,
-          url = Some(request.uri),
-          params = request.queryString,
+          url = Some(request.uri.take(MaxStringSize)),
+          params = request.queryString.take(MaxStringSize),
           method = Some(request.method),
           headers = request.headers.toMap)
 
-  def apply(request: Request[_], exception: Throwable, message: String): AirbrakeError =
+  def apply(request: RequestHeader, exception: Throwable, message: String): AirbrakeError =
     new AirbrakeError(
           exception = exception,
-          message = Some(message),
-          url = Some(request.uri),
-          params = request.queryString,
+          message = Some(message.take(MaxStringSize)),
+          url = Some(request.uri.take(MaxStringSize)),
+          params = request.queryString.take(MaxStringSize),
           method = Some(request.method),
           headers = request.headers.toMap)
 

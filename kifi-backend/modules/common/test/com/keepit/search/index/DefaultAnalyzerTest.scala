@@ -25,8 +25,8 @@ class DefaultAnalyzerTest extends Specification {
     "tokenize a string nicely" in {
       toTokenList(analyzer.tokenStream("b", "DefaultAnalyzer should tokenize a string nicely")) ===
         List(Token("<ALPHANUM>", "defaultanalyzer", 1),
-             Token("<ALPHANUM>", "tokenize", 2),
-             Token("<ALPHANUM>", "string", 2),
+             Token("<ALPHANUM>", "tokenize", 1),
+             Token("<ALPHANUM>", "string", 1),
              Token("<ALPHANUM>", "nicely", 1))
     }
 

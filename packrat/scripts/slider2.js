@@ -1,5 +1,6 @@
-// @require styles/metro/tile.css
-// @require styles/metro/slider2.css
+// @require styles/insulate.css
+// @require styles/keeper/tile.css
+// @require styles/keeper/slider2.css
 // @require styles/friend_card.css
 // @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-bindhover.js
@@ -64,14 +65,15 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"m":0}');
     log('[createSlider] kept: %s counts: %o', kept || 'no', counts)();
 
-    render('html/metro/slider2', {
+    render('html/keeper/slider2', {
       'bgDir': api.url('images/keeper'),
       'isKept': kept,
       'isPrivate': kept === 'private',
       'noticesCount': Math.max(0, counts.n - counts.m),
       'messageCount': counts.m,
       'atNotices': '/notices' === locator,
-      'atMessages': /^\/messages/.test(locator)
+      'atMessages': /^\/messages/.test(locator),
+      'tagEnabled': session.experiments.indexOf('tagging') !== -1
     }, function (html) {
       // attach event bindings
       $slider = $(html);
@@ -130,7 +132,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         var btn = this;
         api.port.emit('get_keepers', function (o) {
           if (o.keepers.length) {
-            render('html/metro/keepers', {
+            render('html/keeper/keepers', {
               link: true,
               keepers: pick(o.keepers, 8),
               captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps)
@@ -208,6 +210,11 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         if (e.target === this) keepPage("private");
       }).on("click", ".kifi-slider2-kept-lock", function (e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
+      }).on("click", ".kifi-slider2-kept-tag", function(e) {
+        api.require("scripts/tagbox.js", function() {
+          log('require:tagbox')();
+          tagbox.toggle($slider);
+        });
       }).bindHover(".kifi-slider2-x", function (configureHover) {
         this.style.overflow = "visible";
         configureHover({mustHoverFor: 700, hideAfter: 2500, click: "hide"});
@@ -274,6 +281,9 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
 
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
+    if (window.tagbox && tagbox.active) {
+      return;
+    }
     log("[hideSlider]", trigger)();
     idleTimer.kill();
     $slider.addClass("kifi-hiding")
@@ -296,6 +306,9 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         $slider.remove(), $slider = null;
       }
     });
+    if (window.tagbox) {
+      tagbox.hide();
+    }
     logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
   }
 
@@ -406,7 +419,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       var left = back || toPaneIdx(pane) < toPaneIdx(toPaneName(paneHistory[0]));
       $slider.find(".kifi-at").removeClass("kifi-at").end()
         .find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
-      render("html/metro/pane_" + pane, params, function (html) {
+      render("html/keeper/pane_" + pane, params, function (html) {
         var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden");
         var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
         var $old = $cart.find(".kifi-pane-box");
@@ -445,8 +458,8 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         $slider.find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
       }
       api.port.emit("session", function (session) {
-        api.require("styles/metro/pane.css", function () {
-          render("html/metro/pane", $.extend(params, {
+        api.require("styles/keeper/pane.css", function () {
+          render("html/keeper/pane", $.extend(params, {
             site: location.hostname,
             kifiLogoUrl: api.url("images/kifi_logo.png"),
             session: session
@@ -559,7 +572,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
               $(tile).hide();
               setTimeout(function () {
                 hidePane();
-                $('<div class="kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/keep.faint.png') + '"> button above.</div>')
+                $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/keep.faint.png') + '"> button above.</kifi>')
                   .appendTo('body').delay(6000).fadeOut(1000, function () { $(this).remove(); });
               }, 150);
               return;
@@ -717,7 +730,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       if (lastShownAt) return;
       var $tile = $(tile).bindHover(function (configureHover) {
         // TODO: preload friend pictures
-        render("html/metro/keepers", {
+        render("html/keeper/keepers", {
           keepers: pick(keepers, 8),
           captionHtml: formatCountHtml(0, keepers.length, otherKeeps)
         }, function (html) {

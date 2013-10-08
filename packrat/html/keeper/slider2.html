@@ -1,4 +1,4 @@
-<div class="kifi-slider2">
+<kifi class="kifi-root kifi-slider2">
   <span class="kifi-slider2-x" style="background-image:url({{bgDir}}/x.png)" data-tip-html="Hide Kifi (Esc)" data-tip-class="kifi-slider2-tip"></span>
   <span class="kifi-slider2-keep-card {{#isKept}}{{#isPrivate}}kifi-private{{/isPrivate}}{{^isPrivate}}kifi-public{{/isPrivate}}{{/isKept}}{{^isKept}}kifi-unkept{{/isKept}}">
     <span class="kifi-slider2-keep-side">
@@ -8,6 +8,9 @@
     <span class="kifi-slider2-kept-side">
       <span class="kifi-slider2-kept-btn kifi-hoverless"></span>
       <span class="kifi-slider2-kept-lock"></span>
+      {{#tagEnabled}}
+      <span class="kifi-slider2-kept-tag"></span>
+      {{/tagEnabled}}
     </span>
   </span>
   <span class="kifi-slider2-dock">
@@ -19,4 +22,4 @@
       <span class="kifi-count"{{^messageCount}} style="display:none"{{/messageCount}}>{{messageCount}}</span>
     </span>
   </span>
-</div>
+</kifi>
