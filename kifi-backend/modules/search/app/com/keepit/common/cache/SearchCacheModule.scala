@@ -72,7 +72,7 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Singleton
   @Provides
   def clickHistoryUserIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ClickHistoryUserIdCache((innerRepo, 50 milliseconds), (outerRepo, 7 days))
+    new ClickHistoryUserIdCache((innerRepo, 10 seconds), (outerRepo, 7 days))
 
   @Singleton
   @Provides
@@ -93,7 +93,7 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides
   def searchFriendsCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SearchFriendsCache((innerRepo, 10 seconds), (outerRepo, 7 days))
-  
+
   @Singleton
   @Provides
   def normalizedURIUrlHashCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

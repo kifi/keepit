@@ -56,6 +56,9 @@ class ExtSearchController @Inject() (
     val userId = request.userId
     log.info(s"""User ${userId} searched ${query.length} characters""")
 
+    // fetch user data in background
+    fetchUserDataInBackground(shoeboxClient, userId)
+
     val searchFilter = filter match {
       case Some("m") =>
         val collExtIds = coll.map{ _.split('.').flatMap(id => Try(ExternalId[Collection](id)).toOption) }
@@ -142,19 +145,15 @@ class ExtSearchController @Inject() (
   }
 
   private def getLangsPriorProbabilities(acceptLangs: Seq[String]): Map[Lang, Double] = {
-    val langs = acceptLangs.toSet.flatMap{ code: String =>
+    val majorLangs = acceptLangs.toSet.flatMap{ code: String =>
       val lang = code.substring(0,2)
       if (lang == "zh") Set("zh-cn", "zh-tw") else Set(lang)
     } + "en" // always include English
 
-    val majorLangs = 0.99999d
-    val size = langs.size
-    if (size == 0) {
-      Map(Lang("en") -> majorLangs)
-    } else {
-      val prob = (majorLangs / size) / size
-      langs.map{ (Lang(_) -> prob) }.toMap
-    }
+    val majorLangProb = 0.99999d
+    val numberOfLangs = majorLangs.size
+    val eachLangProb = (majorLangProb / numberOfLangs)
+    majorLangs.map{ (Lang(_) -> eachLangProb) }.toMap
   }
 
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
@@ -202,4 +201,13 @@ class ExtSearchController @Inject() (
     }
   }
 
+  private[this] def fetchUserDataInBackground(shoeboxClient: ShoeboxServiceClient, userId: Id[User]): Unit = {
+    future {
+      // following request must have request consolidation enabled, otherwise no use.
+      shoeboxClient.getFriends(userId)
+      shoeboxClient.getSearchFriends(userId)
+      shoeboxClient.getBrowsingHistoryFilter(userId)
+      shoeboxClient.getClickHistoryFilter(userId)
+    }
+  }
 }

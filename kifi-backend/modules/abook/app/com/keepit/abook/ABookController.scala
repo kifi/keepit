@@ -63,15 +63,23 @@ class ABookController @Inject() (
     val EMAIL1     = "E-mail Address"
     val EMAIL2     = "E-mail 2 Address"
     val EMAIL3     = "E-mail 3 Address"
+    // TODO: add other fields of interests
     val ALL = Seq(FIRST_NAME, LAST_NAME, EMAIL1, EMAIL2, EMAIL3)
     val MIN = Seq(FIRST_NAME, LAST_NAME, EMAIL1)
+  }
+
+  def withFields(fields:Array[String], locations:Map[String, Int])(key:String):String = {
+    val loc = locations.get(key).getOrElse(-1)
+    if (loc < 0 || loc >= fields.length) "" else fields(loc)
   }
 
   // for testing only
   def uploadGMailCSV(userId:Id[User]) = Action(parse.anyContent) { request =>
     val csvFilePart = request.body.asMultipartFormData.get.file("gmail_csv") // TODO: revisit
-    val csvFile = csvFilePart.get.ref.file
-    log.info(s"[uploadGMailCSV] filePart=$csvFilePart file=$csvFile")
+    val csvFile = File.createTempFile("abook", "csv")
+    csvFilePart.getOrElse(throw new IllegalArgumentException("form field gmail_csv not found")).ref.moveTo(csvFile, true)
+
+    log.info(s"[uploadGMailCSV] filePart=$csvFilePart file=${csvFile.getCanonicalFile} len=${csvFile.length}")
 
     var headers:Seq[String] = Seq.empty[String]
     var fieldLocations:Map[String, Int] = Map.empty[String, Int]
@@ -83,9 +91,9 @@ class ABookController @Inject() (
       savedABookInfo
     }
 
-    for (line <- Source.fromFile(csvFile).getLines) {
+    for (line <- Source.fromFile(csvFile)(io.Codec("iso-8859-1")).getLines) { // easier for testing; needs UTF-8 for real usage
       if (headers.isEmpty) {
-        headers = line.split(',').toSeq
+        headers = line.split(',') // TODO: REMOVEME
         fieldLocations = GMailCSVFields.ALL.foldLeft(Map.empty[String, Int]) { (a, c) =>
           val idx = headers.indexOf(c)
           if (idx != -1) {
@@ -96,19 +104,33 @@ class ABookController @Inject() (
         log.info(s"[uploadGmailCSV] #headers=${headers.size} fieldLocations=${fieldLocations}")
       } else {
         import GMailCSVFields._
-        val fields = line.split(',')
-        val firstName = fields(fieldLocations.get(FIRST_NAME).get)
-        val lastName  = fields(fieldLocations.get(LAST_NAME).get)
-        val email = fields(fieldLocations.get(EMAIL1).get)
-        val contactInfo = ContactInfo(userId = userId, origin = ABookOrigins.GMAIL, abookId = savedABookInfo.id.get, name = Some(s"$firstName $lastName"), firstName = Some(firstName), lastName = Some(lastName), email = email)
-        contactInfoBuilder += contactInfo
-        fieldLocations.get(EMAIL2).map { idx =>
-          val e2 = fields(idx)
-          if (!e2.isEmpty) contactInfoBuilder += contactInfo.withEmail(e2) // TODO: parentId
-        }
-        fieldLocations.get(EMAIL3).map { idx =>
-          val e3 = fields(idx)
-          if (!e3.isEmpty) contactInfoBuilder += contactInfo.withEmail(e3)
+        val fields = line.split(',') // TODO: REMOVEME
+        val f = withFields(fields, fieldLocations) _
+        val firstName = f(FIRST_NAME)
+        val lastName = f(LAST_NAME)
+        val email = f(EMAIL1)
+
+        if (!email.isEmpty) {
+          val cInfo = ContactInfo(
+            userId = userId,
+            origin = ABookOrigins.GMAIL,
+            abookId = savedABookInfo.id.get,
+            name = Some(s"${firstName} ${lastName}".trim),
+            firstName = Some(firstName),
+            lastName = Some(lastName),
+            email = email)
+          log.info(s"[uploadGmailCSV] cInfo=${cInfo}")
+          contactInfoBuilder += cInfo
+
+          val optFields = Seq(EMAIL2, EMAIL3)
+          for (opt <- optFields) {
+            val e = f(opt)
+            if (!e.isEmpty) {
+              val optInfo = cInfo.withEmail(e)
+              log.info(s"[uploadGmailCSV] optInfo=${optInfo}")
+              contactInfoBuilder += optInfo // TODO: parentId
+            }
+          }
         }
       }
     }
