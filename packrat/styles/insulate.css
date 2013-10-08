@@ -215,8 +215,12 @@
 .kifi-root.kifi-root span {
   display: inline;
 }
-.kifi-root.kifi-root img {
+.kifi-root.kifi-root img,
+.kifi-root.kifi-root button {
   display: inline-block;
+}
+.kifi-root.kifi-root b {
+  font-weight: bold;
 }
 .kifi-root.kifi-root :link,
 .kifi-root.kifi-root :visited,
@@ -224,9 +228,6 @@
 .kifi-root.kifi-root :visited:hover {
   color: -webkit-link;
   color: -moz-hyperlinktext;
-  text-decoration: none;
-  font-weight: inherit;
-  border: none;
   cursor: pointer;
 }
 .kifi-root.kifi-root ::-moz-placeholder {
