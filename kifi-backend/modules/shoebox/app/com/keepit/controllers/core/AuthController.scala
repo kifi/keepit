@@ -1,10 +1,17 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ActionAuthenticator, ShoeboxServiceController}
+import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
+import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.slick.Database
-import com.keepit.model.UserCredRepo
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail._
+import com.keepit.model.{EmailAddressRepo, SocialUserInfoRepo, UserCredRepo}
+import com.keepit.social.SocialId
+import com.keepit.social.SocialNetworks
+import com.keepit.social.UserIdentity
 
+import play.api.Play._
 import play.api.data.Forms._
 import play.api.data._
 import play.api.data.validation.Constraints
@@ -15,11 +22,20 @@ import securesocial.controllers.ProviderController
 import securesocial.core._
 import securesocial.core.providers.utils.GravatarHelper
 
-class AuthController @Inject() (db: Database, userCredRepo: UserCredRepo) extends ShoeboxServiceController {
+class AuthController @Inject() (
+    db: Database,
+    userCredRepo: UserCredRepo,
+    socialRepo: SocialUserInfoRepo,
+    actionAuthenticator: ActionAuthenticator,
+    emailRepo: EmailAddressRepo,
+    postOffice: LocalPostOffice
+  ) extends WebsiteController(actionAuthenticator) with Logging {
+
+  // Note: some of the below code is taken from ProviderController in SecureSocial
+  // Logout is still handled by SecureSocial directly.
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
-  // Some of the below code is taken from ProviderController in SecureSocial
   def mobileAuth(providerName: String) = Action(parse.json) { implicit request =>
     // format { "accessToken": "..." }
     val oauth2Info = request.body.asOpt[OAuth2Info]
@@ -36,9 +52,6 @@ class AuthController @Inject() (db: Database, userCredRepo: UserCredRepo) extend
       )
     } getOrElse NotFound(Json.obj("error" -> "user not found"))
   }
-
-  // These methods are nice wrappers for the SecureSocial authentication methods.
-  // Logout is still handled by SecureSocial directly.
 
   def login(provider: String) = getAuthAction(provider, isLogin = true)
   def loginByPost(provider: String) = getAuthAction(provider, isLogin = true)
@@ -80,31 +93,81 @@ class AuthController @Inject() (db: Database, userCredRepo: UserCredRepo) extend
     (RegistrationInfo.unapply)
   )
 
-  def signup() = Action { implicit request =>
-    Ok(views.html.website.signup())
+  def signup() = HtmlAction(true)(authenticatedAction = doSignupPage(_), unauthenticatedAction = doSignupPage(_))
+
+  def handleSignup() = HtmlAction(true)(authenticatedAction = doSignup(_), unauthenticatedAction = doSignup(_))
+
+  private def doSignupPage(implicit request: Request[_]): Result = {
+    val identity = request.identityOpt
+    Ok(views.html.website.signup(
+      errorMessage = request.flash.get("error"),
+      firstName = identity.map(_.firstName),
+      lastName = identity.map(_.lastName),
+      email = identity.flatMap(_.email)))
   }
 
-  def handleSignup() = Action { implicit request =>
+  private val url = current.configuration.getString("application.baseUrl").get
+
+  private def doSignup(implicit request: Request[_]): Result = {
     emailPasswordForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(views.html.website.signup(Some("Please fill out all fields"))),
+      formWithErrors => Redirect(routes.AuthController.handleSignup()).flashing(
+        "error" -> "Form is invalid"
+      ),
       { case RegistrationInfo(email, firstName, lastName, password) =>
-        val identity: Identity = SocialUser(
-          identityId = IdentityId(email, "userpass"),
-          firstName = firstName,
-          lastName = lastName,
-          fullName = s"$firstName $lastName",
-          email = Some(email),
-          avatarUrl = GravatarHelper.avatarFor(email),
-          authMethod = AuthenticationMethod.UserPassword,
-          passwordInfo = Some(Registry.hashers.currentHasher.hash(password))
-        )
-        UserService.save(identity)
-        Authenticator.create(identity).fold(
-          error => InternalServerError(views.html.website.signup(Some("Cannot create user"))),
+        // TODO: sync this with the information in User
+        val newIdentity = UserIdentity(
+          userId = request.userIdOpt,
+          socialUser = SocialUser(
+            identityId = IdentityId(email, "userpass"),
+            firstName = firstName,
+            lastName = lastName,
+            fullName = s"$firstName $lastName",
+            email = Some(email),
+            avatarUrl = GravatarHelper.avatarFor(email),
+            authMethod = AuthenticationMethod.UserPassword,
+            passwordInfo = Some(Registry.hashers.currentHasher.hash(password))
+          ),
+          allowSignup = true)
+        UserService.save(newIdentity)
+        for {
+          identity <- request.identityOpt
+          socialUserInfo <- db.readOnly { implicit s =>
+            socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO)
+          }
+          userId <- socialUserInfo.userId
+        } {
+          UserService.save(UserIdentity(userId = Some(userId), socialUser = SocialUser(identity)))
+        }
+        db.readWrite { implicit s =>
+          val emailWithVerification = emailRepo.getByAddressOpt(email)
+            .map(emailRepo.saveWithVerificationCode)
+            .get
+          postOffice.sendMail(ElectronicMail(
+            from = EmailAddresses.NOTIFY,
+            to = Seq(new EmailAddressHolder { val address = email }),
+            subject = "Confirm your email address for Kifi",
+            htmlBody = s"Please confirm your email address by going to " +
+              s"$url${routes.AuthController.verifyEmail(emailWithVerification.verificationCode.get)}",
+            category = ElectronicMailCategory("email_confirmation")
+          ))
+        }
+        Authenticator.create(newIdentity).fold(
+          error => Redirect(routes.AuthController.handleSignup()).flashing(
+            "error" -> "Error creating user"
+          ),
           authenticator => Redirect("/")
             .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
             .withCookies(authenticator.toCookie)
         )
-     })
+      })
+  }
+
+  def verifyEmail(code: String) = Action { implicit request =>
+    db.readWrite { implicit s =>
+      if (emailRepo.verifyByCode(code))
+        Ok(views.html.website.verifyEmail(success = true))
+      else
+        BadRequest(views.html.website.verifyEmail(success = false))
+    }
   }
 }

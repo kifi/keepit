@@ -1,7 +1,7 @@
 package com.keepit.eliza
 
 import com.google.inject.{Provides, Singleton}
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
@@ -18,24 +18,22 @@ case class ProdElizaServiceClientModule() extends ElizaServiceClientModule {
   def elizaServiceClient (
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
-    healthcheck: HealthcheckPlugin): ElizaServiceClient = {
+    airbrakeNotifier: AirbrakeNotifier): ElizaServiceClient = {
     new ElizaServiceClientImpl(
-      healthcheck,
+      airbrakeNotifier,
       client,
       serviceDiscovery.serviceCluster(ServiceType.ELIZA)
       )
   }
-
 }
-
 
 case class TestElizaServiceClientModule() extends ElizaServiceClientModule {
   def configure() {}
 
   @Singleton
   @Provides
-  def elizaServiceClient(healthcheck: HealthcheckPlugin): ElizaServiceClient = {
-    new FakeElizaServiceClientImpl(healthcheck)
+  def elizaServiceClient(airbrakeNotifier: AirbrakeNotifier): ElizaServiceClient = {
+    new FakeElizaServiceClientImpl(airbrakeNotifier)
   }
 
 }

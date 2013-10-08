@@ -5,8 +5,7 @@ import java.io.File
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, HealthcheckError, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
@@ -21,14 +20,13 @@ import play.modules.statsd.api.{Statsd, StatsdFilter}
 import play.utils.Threads
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
-    extends WithFilters(LoggingFilter, new StatsdFilter()) with Logging with EmptyInjector {
+    extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
 
   override def getControllerInstance[A](clazz: Class[A]) = try {
     injector.getInstance(clazz)
   } catch {
     case e: Throwable =>
       injector.instance[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API))
-      injector.instance[HealthcheckPlugin]
       throw e
   }
 
@@ -58,11 +56,10 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     injector.instance[AppScope].onStart(app)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
       Statsd.increment("deploys", 42)
+      injector.instance[AirbrakeNotifier].reportDeployment()
       injector.instance[HealthcheckPlugin].reportStart()
       injector.instance[HealthcheckPlugin].warmUp()
     }
-
-
   }
 
   // Get a file within the .fortytwo folder in the user's home directory
@@ -95,10 +92,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     serviceDiscovery.changeStatus(ServiceStatus.SICK)
     val errorId = ex match {
-      case reported: ReportedException =>
-        reported.id
-      case _ =>
-        injector.instance[HealthcheckPlugin].addError(HealthcheckError(error = Some(ex), method = Some(request.method.toUpperCase()), path = Some(request.path), callType = Healthcheck.API)).id
+      case reported: ReportedException => reported.id
+      case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError(request, ex))
     }
     ex.printStackTrace()
     serviceDiscovery.startSelfCheck()

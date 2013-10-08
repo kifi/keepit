@@ -1,6 +1,7 @@
 package com.keepit.normalizer
 
 import com.keepit.common.net.{Query, Host, URI}
+import com.keepit.common.net.Param
 
 object LinkedInNormalizer extends StaticNormalizer {
 
@@ -22,7 +23,7 @@ object LinkedInNormalizer extends StaticNormalizer {
     uri match {
       case URI(scheme, userInfo, host, port, path, query, _) => {
         uri.raw match {
-          case Some(linkedInPrivateProfile(country, id)) => URI(scheme, userInfo, normalize(host), port, path, Some(Query("id="+ id)), None)
+          case Some(linkedInPrivateProfile(country, id)) => URI(scheme, userInfo, normalize(host), port, path, Some(Query(Seq(Param("id", Some(id))))), None)
           case Some(linkedInCanonicalPublicProfile(country, slash)) => URI(scheme, userInfo, normalize(host), port, path.map(p => if (slash != null) p.dropRight(1) else p), None, None)
           case _ => DefaultNormalizer(uri)
         }

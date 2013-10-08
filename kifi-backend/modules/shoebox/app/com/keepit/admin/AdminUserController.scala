@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 
 import com.google.inject.Inject
@@ -20,6 +20,9 @@ import play.api.data.Forms._
 import play.api.data._
 import play.api.libs.json.Json
 import views.html
+import com.keepit.abook.ABookServiceClient
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.service.ServiceType
 
 case class UserStatistics(
     user: User,
@@ -55,7 +58,9 @@ class AdminUserController @Inject() (
     invitationRepo: InvitationRepo,
     userSessionRepo: UserSessionRepo,
     clock: Clock,
-    eliza: ElizaServiceClient) extends AdminController(actionAuthenticator) {
+    eliza: ElizaServiceClient,
+    abookClient: ABookServiceClient,
+    serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
   implicit val dbMasterSlave = Database.Slave
 
@@ -179,8 +184,13 @@ class AdminUserController @Inject() (
     val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
+    val contacts:Seq[ContactInfo] = Await.result(abookClient.getContactInfos(userId), 5 seconds)
+    val abookInfos:Seq[ABookInfo] = Await.result(abookClient.getABookInfos(userId), 5 seconds)
+    val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService()
+    val abookGmailCSVUploadEP = for (s <- abookServiceOpt) yield s"http://${s.instanceInfo.publicIp.ip}:9000/internal/abook/${user.id.get}/uploadGMailCSV"
+
     Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-      fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails,
+      fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, abookGmailCSVUploadEP,
       collections, collectionFilter))
   }
 

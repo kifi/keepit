@@ -142,9 +142,9 @@ var snapshot = function () {
     var elViewport = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"];
     var sel = {}, cX, cY;
     var $shades = $(["t","b","l","r"].map(function(s) {
-      return $("<div class='kifi-snapshot-shade kifi-snapshot-shade-" + s + "'>")[0];
+      return $("<kifi class='kifi-root kifi-snapshot-shade kifi-snapshot-shade-" + s + "'>")[0];
     }));
-    var $glass = $("<div class=kifi-snapshot-glass>").css("position", "fixed");
+    var $glass = $("<kifi class='kifi-root kifi-snapshot-glass'>").css("position", "fixed");
     var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
       updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
     });
@@ -213,4 +213,4 @@ var snapshot = function () {
     }
   }
 }
-};
+}();

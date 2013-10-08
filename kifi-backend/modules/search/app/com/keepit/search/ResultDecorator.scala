@@ -9,7 +9,6 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.index.Term
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Promise
 import scala.concurrent.{Future, promise}
 import scala.concurrent.duration._
@@ -18,17 +17,18 @@ import scala.collection.immutable.SortedMap
 import com.keepit.search.index.SymbolDecompounder
 import com.keepit.common.logging.Logging
 import com.keepit.social.BasicUser
+import com.keepit.common.akka.MonitoredAwait
 
 trait ResultDecorator {
-  def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]]
+  def decorate(resultSet: ArticleSearchResult): DecoratedResult
 }
 
 object ResultDecorator extends Logging {
 
   private[this] val emptyMatches = Seq.empty[(Int, Int)]
 
-  def apply(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, searchConfig: SearchConfig): ResultDecorator = {
-    new ResultDecoratorImpl(searcher, shoeboxClient)
+  def apply(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, searchConfig: SearchConfig, monitoredAwait: MonitoredAwait): ResultDecorator = {
+    new ResultDecoratorImpl(searcher, shoeboxClient, monitoredAwait)
   }
 
   def highlight(text: String, analyzer: Analyzer, field: String, terms: Option[Set[String]]): Seq[(Int, Int)] = {
@@ -100,9 +100,9 @@ object ResultDecorator extends Logging {
   }
 }
 
-class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient) extends ResultDecorator {
+class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends ResultDecorator {
 
-  override def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
+  override def decorate(resultSet: ArticleSearchResult): DecoratedResult = {
     val collectionSearcher = searcher.collectionSearcher
     val myCollectionEdgeSet = collectionSearcher.myCollectionEdgeSet
     val hits = resultSet.hits
@@ -147,7 +147,10 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
       }
     }
 
-    usersFuture.map{ basicUserMap =>
+    val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users")
+
+    new DecoratedResult(
+      basicUserMap,
       (hits, resultSet.scorings, personalSearchHits).zipped.toSeq.map { case (hit, score, personalHit) =>
         val users = hit.users.map(basicUserMap)
         val isNew = (!hit.isMyBookmark && score.recencyScore > 0.5f)
@@ -160,6 +163,8 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
           hit.score,
           isNew)
       }
-    }
+    )
   }
 }
+
+class DecoratedResult(val users: Map[Id[User], BasicUser], val hits: Seq[PersonalSearchResult])

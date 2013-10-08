@@ -9,8 +9,9 @@ case class ContactInfo (
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
+  abookId: Id[ABookInfo],
   email: String,
-  origin: Option[String] = None,
+  origin: ABookOriginType,
   name: Option[String] = None,
   firstName: Option[String] = None,
   lastName: Option[String] = None,
@@ -19,6 +20,7 @@ case class ContactInfo (
 ) extends Model[ContactInfo] {
   def withId(id: Id[ContactInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withEmail(email: String) = this.copy(email = email)
 }
 
 object ContactInfo {
@@ -31,8 +33,9 @@ object ContactInfo {
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'userId).format(Id.format[User]) and
+    (__ \ 'abookId).format(Id.format[ABookInfo]) and
     (__ \ 'email).format[String] and
-    (__ \ 'origin).formatNullable[String] and
+    (__ \ 'origin).format[ABookOriginType] and
     (__ \ 'name).formatNullable[String] and
     (__ \ 'firstName).formatNullable[String] and
     (__ \ 'lastName).formatNullable[String] and

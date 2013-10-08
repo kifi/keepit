@@ -89,6 +89,10 @@ object FortyTwoTypeMappers {
   }
 
   //Ids
+  implicit object ABookInfoTypeMapper extends BaseTypeMapper[Id[ABookInfo]] {
+    def apply(profile:BasicProfile) = new IdMapperDelegate[ABookInfo](profile)
+  }
+
   implicit object CommentIdTypeMapper extends BaseTypeMapper[Id[Comment]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Comment](profile)
   }
@@ -223,12 +227,16 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new BookmarkSourceMapperDelegate(profile)
   }
 
-  implicit object SocialNetworkTypeHistoryTypeMapper extends BaseTypeMapper[SocialNetworkType] {
+  implicit object SocialNetworkTypeTypeMapper extends BaseTypeMapper[SocialNetworkType] {
     def apply(profile: BasicProfile) = new SocialNetworkTypeMapperDelegate(profile)
   }
 
   implicit object SocialUserHistoryTypeMapper extends BaseTypeMapper[SocialUser] {
     def apply(profile: BasicProfile) = new SocialUserMapperDelegate(profile)
+  }
+
+  implicit object ABookOriginTypeMapper extends BaseTypeMapper[ABookOriginType] {
+    def apply(profile: BasicProfile) = new ABookOriginTypeMapperDelegate(profile)
   }
 
   implicit object SocialIdHistoryTypeMapper extends BaseTypeMapper[SocialId] {
@@ -463,13 +471,22 @@ class SocialNetworkTypeMapperDelegate(profile: BasicProfile) extends StringMappe
 }
 
 //************************************
-//       SocialNetworkType -> String
+//       SocialUser -> String
 //************************************
 class SocialUserMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[SocialUser](profile) {
   def zero = SocialUser(identityId = IdentityId("", ""), firstName = "", lastName = "",
     fullName = "", authMethod = AuthenticationMethod.OAuth2, email = None, avatarUrl = None)
   def sourceToDest(socialUser: SocialUser) = SocialUserSerializer.userSerializer.writes(socialUser).toString
   def safeDestToSource(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str)).get
+}
+
+//************************************
+//       ABookOriginType -> String
+//************************************
+class ABookOriginTypeMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[ABookOriginType](profile) {
+  def zero = ABookOrigins.IOS
+  def sourceToDest(abookOriginType:ABookOriginType) = ABookOriginType.unapply(abookOriginType).get
+  def safeDestToSource(str:String) = ABookOriginType(str)
 }
 
 //************************************

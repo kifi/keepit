@@ -2,7 +2,7 @@
 
 const api = function() {
   // TODO: 'use strict'; after working around global definitions in eval’d scripts below
-  var nextCallbackId = 1, callbacks = {};
+  var msgHandlers = [], nextCallbackId = 1, callbacks = {};
 
   function invokeCallback(callbackId, response) {
     var cb = callbacks[callbackId];
@@ -43,10 +43,22 @@ const api = function() {
         self.port.emit(type, data, callbackId);
       },
       on: function(handlers) {
-        for (var type in handlers) {
-          self.port.on(type, handlers[type]);
+        if (msgHandlers.indexOf(handlers) < 0) {
+          for (var type in handlers) {
+            self.port.on(type, handlers[type]);
+          }
+          self.port.emit("api:handling", Object.keys(handlers));
         }
-        self.port.emit("api:handling", Object.keys(handlers));
+      },
+      off: function(handlers) {
+        for (var i = msgHandlers.length; i--;) {
+          if (msgHandlers[i] === handlers) {
+            msgHandlers.splice(i, 1);
+            for (var type in handlers) {
+              self.port.removeListener(type, handlers[type]);
+            }
+          }
+        }
       }},
     require: function(paths, callback) {
       var callbackId = nextCallbackId++;

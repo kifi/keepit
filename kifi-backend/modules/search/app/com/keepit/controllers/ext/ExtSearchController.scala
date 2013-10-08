@@ -56,6 +56,9 @@ class ExtSearchController @Inject() (
     val userId = request.userId
     log.info(s"""User ${userId} searched ${query.length} characters""")
 
+    // fetch user data in background
+    fetchUserDataInBackground(shoeboxClient, userId)
+
     val searchFilter = filter match {
       case Some("m") =>
         val collExtIds = coll.map{ _.split('.').flatMap(id => Try(ExternalId[Collection](id)).toOption) }
@@ -108,7 +111,7 @@ class ExtSearchController @Inject() (
 
     val t4 = currentDateTime.getMillis()
 
-    val decorator = ResultDecorator(searcher, shoeboxClient, config)
+    val decorator = ResultDecorator(searcher, shoeboxClient, config, monitoredAwait)
     val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, searchExperimentId, experts)
     reportArticleSearchResult(searchRes)
 
@@ -142,19 +145,15 @@ class ExtSearchController @Inject() (
   }
 
   private def getLangsPriorProbabilities(acceptLangs: Seq[String]): Map[Lang, Double] = {
-    val langs = acceptLangs.toSet.flatMap{ code: String =>
+    val majorLangs = acceptLangs.toSet.flatMap{ code: String =>
       val lang = code.substring(0,2)
       if (lang == "zh") Set("zh-cn", "zh-tw") else Set(lang)
     } + "en" // always include English
 
-    val majorLangs = 0.99999d
-    val size = langs.size
-    if (size == 0) {
-      Map(Lang("en") -> majorLangs)
-    } else {
-      val prob = (majorLangs / size) / size
-      langs.map{ (Lang(_) -> prob) }.toMap
-    }
+    val majorLangProb = 0.99999d
+    val numberOfLangs = majorLangs.size
+    val eachLangProb = (majorLangProb / numberOfLangs)
+    majorLangs.map{ (Lang(_) -> eachLangProb) }.toMap
   }
 
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
@@ -175,20 +174,19 @@ class ExtSearchController @Inject() (
       searchExperimentId: Option[Id[SearchConfigExperiment]],
       expertsFuture: Future[Seq[Id[User]]]): PersonalSearchResultPacket = {
 
-    val future = decorator.decorate(res)
+    val decoratedResult = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
     val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
     val expertNames = {
       if (experts.size == 0) List.empty[String]
       else {
-        val idMap = monitoredAwait.result(shoeboxClient.getBasicUsers(experts), 100 milliseconds, s"getting experts' external ids", Map.empty[Id[User], BasicUser])
-        experts.flatMap{idMap.get(_)}.map{x => x.firstName + " " + x.lastName}
+        val idMap = decoratedResult.users
+        experts.flatMap{ expert => idMap.get(expert).map{x => x.firstName + " " + x.lastName} }
       }
     }
     log.info("experts recommended: " + expertNames.mkString(" ; "))
 
-    PersonalSearchResultPacket(res.uuid, res.query,
-      monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),
+    PersonalSearchResultPacket(res.uuid, res.query, decoratedResult.hits,
       res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, expertNames)
   }
 
@@ -203,4 +201,13 @@ class ExtSearchController @Inject() (
     }
   }
 
+  private[this] def fetchUserDataInBackground(shoeboxClient: ShoeboxServiceClient, userId: Id[User]): Unit = {
+    future {
+      // following request must have request consolidation enabled, otherwise no use.
+      shoeboxClient.getFriends(userId)
+      shoeboxClient.getSearchFriends(userId)
+      shoeboxClient.getBrowsingHistoryFilter(userId)
+      shoeboxClient.getClickHistoryFilter(userId)
+    }
+  }
 }

@@ -54,7 +54,7 @@ sealed trait ContextRestriction {
   def toBSONMatchDocument: BSONDocument
 }
 
-case class AnyContentRestriction(field: String, operator: ComparisonOperator) extends ContextRestriction {
+case class AnyContextRestriction(field: String, operator: ComparisonOperator) extends ContextRestriction {
   def toBSONMatchDocument: BSONDocument = BSONDocument(field -> operator.toBSONMatchFragment)
 }
 
@@ -77,14 +77,49 @@ case class SpecificEventSet(events: Set[UserEventType]) extends EventSet
 case object AllEvents extends EventSet
 
 
+sealed trait EventGrouping {
+    val fieldName: String
+    def group(in: Stream[BSONDocument]): Seq[BSONDocument]
+    val forceBreakdown : Boolean
+    val allowBreakdown : Boolean
+}
+
+object EventGrouping {
+  def apply(name: String) : EventGrouping = {
+    if (name.startsWith("@")) {
+      DerivedGrouping(name.tail)
+    } else {
+      NaturalGrouping(name)
+    }
+  }
+}
+
+case class NaturalGrouping(val fieldName: String) extends EventGrouping {
+  def group(in: Stream[BSONDocument]): Seq[BSONDocument] = in.toSeq
+  val forceBreakdown = false;
+  val allowBreakdown = true;
+}
+
+sealed trait DerivedGrouping extends EventGrouping 
+
+
+//location (country), weekday, hour of day, local hour of day, OS, browser
+object DerivedGrouping {
+  def apply(name: String): DerivedGrouping = {
+    null
+  } 
+}
+
+
+
 sealed trait MetricDefinition {
-  def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): Seq[PipelineOperator]
+  def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): (Seq[PipelineOperator], Stream[BSONDocument] => Seq[BSONDocument])
 }
 
 sealed trait SimpleMetricDefinition extends MetricDefinition
 
-class GroupedEventCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction, groupField: String, breakDown : Boolean = false) extends SimpleMetricDefinition {
-  def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): Seq[PipelineOperator] = {
+class GroupedEventCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction, groupField: EventGrouping, breakDown: Boolean = false, keySort : Boolean = false) extends SimpleMetricDefinition {
+  def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): (Seq[PipelineOperator], Stream[BSONDocument] => Seq[BSONDocument]) = {
     val timeWindowSelector = Match(BSONDocument(
       "time" -> BSONDocument(
         "$gte" -> BSONDateTime(startTime.getMillis),
@@ -102,20 +137,30 @@ class GroupedEventCountMetricDefinition(eventsToConsider: EventSet, contextRestr
     }
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
-    val grouping = GroupField(groupField)("count" -> SumValue(1))
+    val grouping = GroupField(groupField.fieldName)("count" -> SumValue(1))
 
-    if (breakDown) Seq(timeWindowSelector, eventSelector, contextSelector, Unwind(groupField), grouping, Sort(Seq(Descending("count"))))
-    else Seq(timeWindowSelector, eventSelector, contextSelector, grouping, Sort(Seq(Descending("count"))))
+    var pipeline: Seq[PipelineOperator] = Seq(timeWindowSelector, eventSelector, contextSelector)
+
+    if (breakDown || keySort ) pipeline = pipeline :+ Unwind(groupField.fieldName)
+
+    pipeline =  pipeline :+ grouping
+
+    if (keySort) pipeline = pipeline :+ Sort(Seq(Descending("_id")))
+    else pipeline = pipeline :+ Sort(Seq(Descending("count")))
+
+    val postprocess = (x: Stream[BSONDocument]) => x.toSeq
+    
+    (pipeline, postprocess)
   }
 }
 
 class SimpleEventCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction) 
-  extends GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, "_") //This is bit of a hack to keep it dry. Could be done more efficiently with "find(...).count()". (-Stephen)
+  extends GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, NaturalGrouping("_")) //This is bit of a hack to keep it dry. Could be done more efficiently with "find(...).count()". (-Stephen)
 
 
 
-class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction, groupField: String, breakDown : Boolean = false) extends SimpleMetricDefinition {
-  def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): Seq[PipelineOperator] = {
+class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction, groupField: EventGrouping, breakDown : Boolean = false, keySort : Boolean = false) extends SimpleMetricDefinition {
+  def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): (Seq[PipelineOperator], Stream[BSONDocument] => Seq[BSONDocument]) = {
     val timeWindowSelector = Match(BSONDocument(
       "time" -> BSONDocument(
         "$gte" -> BSONDateTime(startTime.getMillis),
@@ -133,10 +178,20 @@ class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestri
     }
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
-    val grouping = GroupField(groupField)("users" -> AddToSet("$user_id"))
+    val grouping = GroupField(groupField.fieldName)("users" -> AddToSet("$user_id"))
 
-    if (breakDown) Seq(timeWindowSelector, eventSelector, contextSelector, Unwind(groupField), grouping, Unwind("users"), GroupField("_id")("count" -> SumValue(1), "users" -> AddToSet("$users")), Sort(Seq(Descending("count"))))
-    else Seq(timeWindowSelector, eventSelector, contextSelector, grouping, Unwind("users"), GroupField("_id")("count" -> SumValue(1), "users" -> AddToSet("$users")), Sort(Seq(Descending("count"))))
+    var pipeline: Seq[PipelineOperator] = Seq(timeWindowSelector, eventSelector, contextSelector)
+
+    if (breakDown || keySort ) pipeline = pipeline :+ Unwind(groupField.fieldName)
+
+    pipeline = pipeline ++ Seq(grouping, Unwind("users"), GroupField("_id")("count" -> SumValue(1), "users" -> AddToSet("$users")))
+
+    if (keySort) pipeline = pipeline :+ Sort(Seq(Descending("_id")))
+    else pipeline = pipeline :+ Sort(Seq(Descending("count")))
+
+    val postprocess = (x: Stream[BSONDocument]) => x.toSeq
+    
+    (pipeline, postprocess)
   }
 }
 

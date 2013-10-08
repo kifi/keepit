@@ -15,6 +15,7 @@ POST    /login/:provider            @com.keepit.controllers.core.AuthController.
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
 POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
 POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
+GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 
 POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
@@ -27,10 +28,17 @@ POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
+GET     /tags                       @com.keepit.controllers.ext.ExtBookmarksController.tags()
+POST    /tagsByUrl                  @com.keepit.controllers.ext.ExtBookmarksController.tagsByUrl()
+POST    /tags/add                   @com.keepit.controllers.ext.ExtBookmarksController.addToUrl()
+POST    /tags/:id/removeFromKeep    @com.keepit.controllers.ext.ExtBookmarksController.removeTag(id: ExternalId[Collection])
+POST    /tags/:id/addToKeep         @com.keepit.controllers.ext.ExtBookmarksController.addTag(id: ExternalId[Collection])
+POST    /tags/create                @com.keepit.controllers.ext.ExtBookmarksController.createTag()
+POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksController.clearTags()
+
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
 
-POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
 POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportController.addErrorReport
 
 # This should match the output format of S3ImageConfig#keyByExternalId
@@ -170,7 +178,9 @@ GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
-GET     /admin/data/batchMerge          @com.keepit.controllers.admin.UrlController.batchMerge
+GET     /admin/data/renormalization/:page @com.keepit.controllers.admin.UrlController.renormalizationView(page: Int)
+GET     /admin/data/batchURIMigration          @com.keepit.controllers.admin.UrlController.batchURIMigration
+GET     /admin/data/batchURLMigration   @com.keepit.controllers.admin.UrlController.batchURLMigration
 GET     /admin/data/redirect       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
 GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.getPatterns
 POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
@@ -313,6 +323,7 @@ GET     /internal/version                             @com.keepit.controllers.we
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
 POST    /internal/shoebox/database/getNormalizedURIByURL       @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIByURL()
+POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize       @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedUriByUrlOrPrenormalize()
 POST    /internal/shoebox/database/internNormalizedURI       @com.keepit.controllers.shoebox.ShoeboxController.internNormalizedURI()
 GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)

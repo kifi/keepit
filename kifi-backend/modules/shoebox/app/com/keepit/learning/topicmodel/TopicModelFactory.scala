@@ -4,8 +4,6 @@ import com.google.inject.{Inject, Singleton, Provider}
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import play.api.Play._
-import scala.concurrent.Promise
 
 @Singleton
 class TopicModelAccessorFactory @Inject()(

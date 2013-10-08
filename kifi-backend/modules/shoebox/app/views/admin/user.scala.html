@@ -10,6 +10,9 @@
   bookmarkSearch: Option[String],
   allowedInvites: Int,
   emails: Seq[EmailAddress],
+  abookInfos: Seq[ABookInfo],
+  contactInfos: Seq[ContactInfo],
+  abookGMailCSVUploadEP: Option[String],
   collections: Seq[Collection],
   collectionFilter: Option[Id[Collection]])
 
@@ -122,7 +125,35 @@
 	    </li>
 	  </ul>
 	</div>
-
+  <h2>User has uploaded @abookInfos.size Address Book(s)</h2>
+  @if(abookInfos.size > 0) {
+    <h3>Address Book(s)</h3>
+    <table class="table table-condensed table-striped">
+        <tr><th>ABookId</th><th>Origin</th><th>State</th><th>RawInfoLoc</th></tr>
+        @for(abookInfo <- abookInfos) {
+            <tr><td>@abookInfo.id</td><td>@abookInfo.origin</td><td>@abookInfo.state</td><td>@abookInfo.rawInfoLoc</td></tr>
+        }
+    </table>
+  }
+  @if(contactInfos.size > 0) {
+    <h3>Contacts</h3>
+    <div class="scrollArea">
+        <table class="table table-condensed table-striped">
+            <tr><th>ContactId</th><th>Origin</th><th>ABookId</th><th>Name</th><th>Email</th></tr>
+            @for(contactInfo <- contactInfos) {
+                <tr><td>@contactInfo.id</td><td>@contactInfo.origin</td><td>@contactInfo.abookId</td><td>@contactInfo.name</td><td>@contactInfo.email</td></tr>
+            }
+        </table>
+    </div>
+  }
+  @if(abookGMailCSVUploadEP.isDefined) {
+    <h3>Upload Address book</h3>
+    <h4>Gmail Exported (Outlook-styled) CSV -- 42-internal testing only!</h4>
+    <form class="form-inline" action="@abookGMailCSVUploadEP.get" enctype="multipart/form-data" method="POST">
+        Gmail CSV file to upload: <input type=file name="gmail_csv">
+        <input type=submit value="Upload">
+    </form>
+  }
   <h2>User kept @totalBookmarks Bookmarks</h2>
   <h3>Showing @bookmarks.size Bookmarks of total @totalBookmarks</h3>
   <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get)" method="POST">
