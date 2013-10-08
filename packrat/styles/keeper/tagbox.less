@@ -290,10 +290,12 @@ display: block;
 
     &.focus {
       background: darken(@kifi-lightblue-d, 10%);
+      color: white !important; // style leak fix
     }
 
     &:active {
       background: darken(@kifi-lightblue-d, 20%);
+      color: white !important; // style leak fix
     }
 
     &.busy {

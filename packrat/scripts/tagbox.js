@@ -142,9 +142,11 @@ this.tagbox = (function ($, win) {
 			}
 
 			return function () {
-				var $tagbox = $(this.renderTagBoxHtml()).appendTo(this.$slider);
+				var $tagbox = $(this.renderTagBoxHtml()).prependTo(this.$slider);
 				//var $tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
 				this.$tagbox = $tagbox;
+
+        $tagbox.addClass('animated fadeInUp');
 
 				win.setTimeout(addDocListeners.bind(this), 50);
 

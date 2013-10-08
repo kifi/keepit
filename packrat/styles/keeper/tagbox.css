@@ -236,9 +236,11 @@
 }
 #kifi-tagbox .kifi-tagbox-new.focus {
   background: #a7c8f3;
+  color: white !important;
 }
 #kifi-tagbox .kifi-tagbox-new:active {
   background: #7aaced;
+  color: white !important;
 }
 #kifi-tagbox .kifi-tagbox-new.busy {
   background: #cccccc;
