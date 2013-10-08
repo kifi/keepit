@@ -559,7 +559,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
               $(tile).hide();
               setTimeout(function () {
                 hidePane();
-                $('<div class="kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/keep.faint.png') + '"> button above.</div>')
+                $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/keep.faint.png') + '"> button above.</kifi>')
                   .appendTo('body').delay(6000).fadeOut(1000, function () { $(this).remove(); });
               }, 150);
               return;
