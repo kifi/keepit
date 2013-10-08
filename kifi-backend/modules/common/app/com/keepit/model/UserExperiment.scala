@@ -33,6 +33,7 @@ object ExperimentTypes {
   val CAN_INVITE = State[ExperimentType]("can invite")
   val CAN_MESSAGE_ALL_USERS = State[ExperimentType]("can message all users")
   val PASSWORD_LOGIN = State[ExperimentType]("password login")
+  val TAGGING = State[ExperimentType]("tagging")
 
   val DONT_SHOW_IN_ANALYTICS = List(ADMIN, FAKE, BLOCK, INACTIVE)
   val DONT_SHOW_IN_ANALYTICS_STR = DONT_SHOW_IN_ANALYTICS map {s => s"'$s'"} mkString ","
@@ -47,6 +48,7 @@ object ExperimentTypes {
     case CAN_INVITE.value => CAN_INVITE
     case CAN_MESSAGE_ALL_USERS.value => CAN_MESSAGE_ALL_USERS
     case PASSWORD_LOGIN.value => PASSWORD_LOGIN
+    case TAGGING.value => TAGGING
   }
 }
 
