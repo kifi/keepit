@@ -34,13 +34,15 @@ this.tagbox = (function ($, win) {
 	}
 
 	// receive
-	/*
-  api.port.on({
-		create_tag: function (response) {
-			if (response.success) {}
+	api.port.on({
+		tags: function (tags) {
+			var tagbox = win.tagbox;
+			tagbox.tags = tags || [];
+			tagbox.updateTagList();
+			tagbox.updateSuggestion();
+			tagbox.updateScroll();
 		}
 	});
-  */
 
 	return {
 		/**
@@ -623,7 +625,7 @@ this.tagbox = (function ($, win) {
 			}
 
 			this.updateSuggestedClass();
-      this.updateScroll();
+			this.updateScroll();
 
 			this.navigateTo('first');
 		},
@@ -830,7 +832,7 @@ this.tagbox = (function ($, win) {
 				var html = this.renderTagHtml(tag);
 				this.addClass('tagged');
 				$tag = $(html).appendTo(this.$tagList);
-        this.updateScroll();
+				this.updateScroll();
 			}
 			return $tag;
 		},
@@ -876,7 +878,7 @@ this.tagbox = (function ($, win) {
 					}
 				}
 				this.updateTaggedClass();
-        this.updateScroll();
+				this.updateScroll();
 			}
 			return len;
 		},
@@ -904,7 +906,7 @@ this.tagbox = (function ($, win) {
 					}
 				}
 				this.removeClass('tagged');
-        this.updateScroll();
+				this.updateScroll();
 			}
 			return len;
 		},

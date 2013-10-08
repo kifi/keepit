@@ -319,6 +319,26 @@ var socketHandlers = {
   }
 };
 
+function eachTab(fn, that) {
+  return api.tabs.each(fn, that);
+}
+
+function emitAllTabs(name, data) {
+  return eachTab(function(tab) {
+    emitTab(tab, name, data);
+  });
+}
+
+function emitTab(tab, name, data, options) {
+  return api.tabs.emit(tab, name, data, options);
+}
+
+function emitTabsByUrl(url, name, data, options) {
+  return pageData[url].tabs.forEach(function(tab) {
+    api.tabs.emit(tab, name, data, options);
+  });
+}
+
 var makeRequest = (function() {
   function createSuccessCallback(tab, name, data, callback) {
     return function(response) {
@@ -328,9 +348,7 @@ var makeRequest = (function() {
         response: response,
         data: data
       };
-      pageData[tab.nUri].tabs.forEach(function(tab) {
-        api.tabs.emit(tab, name, result);
-      });
+      emitTabsByUrl(tab.nUri, name, result);
       if (callback) {
         callback(result);
       }
@@ -756,9 +774,7 @@ api.port.on({
 });
 
 function removeNotificationPopups(associatedId) {
-  api.tabs.each(function(page) {
-    api.tabs.emit(page, "remove_notification", associatedId);
-  });
+  emitAllTabs("remove_notification", associatedId);
 }
 
 function standardizeNotification(n) {
@@ -1528,9 +1544,7 @@ function startSession(callback, retryMs) {
     delete session.installationId;
 
     api.tabs.on.loading.remove(onLoadingTemp), onLoadingTemp = null;
-    api.tabs.each(function(page) {
-      api.tabs.emit(page, "session_change", session);
-    });
+    emitAllTabs("session_change", session);
     callback();
   },
   function fail(xhr) {
