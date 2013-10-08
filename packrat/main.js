@@ -387,7 +387,7 @@ function emitTab(tab, name, data, options) {
 }
 
 function emitTabsByUrl(url, name, data, options) {
-  return pageData[url].tabs.forEach(function(tab) {
+  return tabsByUrl[url].forEach(function(tab) {
     api.tabs.emit(tab, name, data, options);
   });
 }
@@ -757,7 +757,7 @@ api.port.on({
    */
   get_tags_by_url: function(_, callback, tab) {
     makeRequest(tab, "get_tags_by_url", "POST", "/tagsByUrl", {
-      url: tab.nUri || tab.url
+      url: tab.url
     }, callback);
   },
 
@@ -794,7 +794,7 @@ api.port.on({
   create_and_add_tag: function(name, callback, tab) {
     makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
       name: name,
-      url: tab.nUri || tab.url
+      url: tab.url
     }, callback);
   },
 
@@ -811,7 +811,7 @@ api.port.on({
    */
   add_tag: function(tagId, callback, tab) {
     makeRequest(tab, "add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
-      url: tab.nUri || tab.url
+      url: tab.url
     }, callback);
   },
 
@@ -828,7 +828,7 @@ api.port.on({
    */
   remove_tag: function(tagId, callback, tab) {
     makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
-      url: tab.nUri || tab.url
+      url: tab.url
     }, callback);
   },
 
@@ -845,7 +845,7 @@ api.port.on({
    */
   clear_tags: function(tagId, callback, tab) {
     makeRequest(tab, "clear_tags", "POST", "/tags/clear", {
-      url: tab.nUri || tab.url
+      url: tab.url
     }, callback);
   },
 

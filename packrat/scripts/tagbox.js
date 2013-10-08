@@ -142,7 +142,7 @@ this.tagbox = (function ($, win) {
 			}
 
 			return function () {
-				var $tagbox = $(this.renderTagBoxHtml()).prependTo(this.$slider);
+				var $tagbox = $(this.renderTagBoxHtml()).insertBefore(this.$slider);
 				//var $tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
 				this.$tagbox = $tagbox;
 
@@ -924,6 +924,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestTags: function () {
+      log('get_tags');
 			return this.request('get_tags', null, 'Could not load tags.');
 		},
 
@@ -934,6 +935,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestTagsByUrl: function () {
+      log('get_tags_by_url');
 			return this.request('get_tags_by_url', null, 'Could not load tags for the page.');
 		},
 
