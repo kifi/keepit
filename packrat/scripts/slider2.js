@@ -71,7 +71,8 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       'noticesCount': Math.max(0, counts.n - counts.m),
       'messageCount': counts.m,
       'atNotices': '/notices' === locator,
-      'atMessages': /^\/messages/.test(locator)
+      'atMessages': /^\/messages/.test(locator),
+      'tagEnabled': session.experiments.indexOf('tagging') !== -1
     }, function (html) {
       // attach event bindings
       $slider = $(html);
