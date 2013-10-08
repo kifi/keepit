@@ -95,7 +95,7 @@ class ExtBookmarksController @Inject() (
         addTagToUrl(request.user, request.experiments, url, tag.id.get)
       }
     }
-    Ok(Json.obj("name" -> tag.name, "id" -> tag.id.get.id))
+    Ok(Json.obj("name" -> tag.name, "id" -> tag.externalId.id))
   }
 
   def clearTags() = AuthenticatedJsonToJsonAction { request =>
