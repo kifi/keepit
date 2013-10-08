@@ -15,14 +15,26 @@
 }
 
 #kifi-tagbox {
+  @kifi-lightbluegray: #eff2f7;
+  @kifi-bluegray: #b8c5d1;
+  @kifi-bluegray-a: #a0b1c2;
+  @kifi-bluegray-8: #8699ab;
+  @kifi-lightblue-d: #d4e4f9;
+  @kifi-darkbluegray: #68829B;
+  @kifi-darkbluegray-hover: #7492af;
+  @kifi-gray-8: #858585;
+  @kifi-gray-a: #ababab;
+  @kifi-gray-c: #cccccc;
+  @kifi-link: #0089d5;
+
   &.kifi-tagbox {
     position: fixed;
     bottom: 54px;
     right: 6px;
     width: 300px;
-    border: 5px solid #68829B;
+    border: 5px solid @kifi-darkbluegray;
     border-radius: 9px;
-    background: #68829B;
+    background: @kifi-darkbluegray;
     font-family: 'Helvetica Neue', Arial, sans-serif;
     font-weight: normal;
     -webkit-font-smoothing: antialiased;
@@ -43,7 +55,7 @@
       }
 
       .kifi-tagbox-empty {
-        color: #b8c5d1;
+        color: @kifi-bluegray;
         background: white;
       }
 
@@ -114,7 +126,7 @@ display: block;
     vertical-align: middle;
 
     &:hover {
-      background-color: #7492af;
+      background-color: @kifi-darkbluegray-hover;
     }
   }
 
@@ -138,7 +150,7 @@ display: block;
     }
 
     &.focus .kifi-tagbox-input-placeholder {
-      color: #c8d5e1;
+      color: lighten(@kifi-bluegray, 10%);
     }
 
     &.empty .kifi-tagbox-input-placeholder {
@@ -191,7 +203,7 @@ display: block;
     position: absolute;
     top: 0;
     left: 0;
-    color: #b8c5d1;
+    color: @kifi-bluegray;
     transition: color .2s linear;
   }
 
@@ -201,8 +213,8 @@ display: block;
 
   .kifi-tagbox-suggest-inner {
     position: relative;
-    color: #858585;
-    background: #eff2f7;
+    color: @kifi-gray-8;
+    background: @kifi-lightbluegray;
     min-height: 164px;
     max-height: 265px;
     padding: 0px 0;
@@ -216,14 +228,19 @@ display: block;
     display: block;
     padding: 0px 15px;
     line-height: 32px;
-    color: #858585;
+    color: @kifi-gray-8;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     text-decoration: none;
 
+    .kifi-tagbox-suggestion-text {
+      color: inherit; // css leak fix
+      line-height: inherit; // css leak fix
+    }
+
     &.focus {
-      background: #b8c5d1;
+      background: @kifi-bluegray;
       color: white;
       cursor: pointer;
 
@@ -233,12 +250,11 @@ display: block;
     }
 
     &:active {
-      background: #a0b1c2;
-      //background: #8699ab;
+      background: @kifi-bluegray-a;
     }
 
     &.busy {
-      background: #cccccc;
+      background: @kifi-gray-c;
     }
   }
 
@@ -253,29 +269,29 @@ display: block;
     line-height: 30px;
     padding: 60px 40px;
     text-align: center;
-    background: #eff2f7;
-    color: #b8c5d1;
+    background: @kifi-lightbluegray;
+    color: @kifi-bluegray;
     transition: background .3s linear;
   }
 
   .kifi-tagbox-new {
     display: block;
-    background: #d4e4f9;
+    background: @kifi-lightblue-d;
     padding: 10px 15px;
     padding-left: 37px;
-    color: #858585;
+    color: @kifi-gray-8 !important; // css leak fix
     text-decoration: none;
 
     &.focus {
-      background: #bcd0ea;
+      background: darken(@kifi-lightblue-d, 10%);
     }
 
     &:active {
-      background: #acc0da;
+      background: darken(@kifi-lightblue-d, 20%);
     }
 
     &.busy {
-      background: #cccccc;
+      background: @kifi-gray-c;
     }
   }
 
@@ -294,7 +310,7 @@ display: block;
   .kifi-tagbox-tagged {
     display: none;
     position: relative;
-    color: #b8c5d1;
+    color: @kifi-bluegray;
     background: white;
     padding: 15px;
     height: 150px;
@@ -304,7 +320,7 @@ display: block;
     font-size: 16px;
     font-weight: 200;
     margin-bottom: 14px;
-    color: #b8c5d1;
+    color: @kifi-bluegray;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -327,7 +343,7 @@ display: block;
     margin-right: 4px;
     margin-bottom: 4px;
     text-align: center;
-    background: #b8c5d1;
+    background: @kifi-bluegray;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -343,7 +359,7 @@ display: block;
 
     &.busy {
       .kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {
-        background: #cccccc;
+        background: @kifi-gray-c;
       }
     }
   }
@@ -355,11 +371,11 @@ display: block;
     text-decoration: none;
 
     &:hover {
-      background: #a0b1c2;
+      background: @kifi-bluegray-a;
     }
 
     &:active {
-      background: #8699ab;
+      background: @kifi-bluegray-8;
     }
   }
 
@@ -385,11 +401,11 @@ display: block;
     bottom: 6px;
     font-size: 13px;
     line-height: normal;
-    color: #ababab;
+    color: @kifi-gray-a;
     text-decoration: none;
 
     &:hover {
-      color: #0089d5;
+      color: @kifi-link;
     }
   }
 }

@@ -18,9 +18,9 @@
   bottom: 54px;
   right: 6px;
   width: 300px;
-  border: 5px solid #68829B;
+  border: 5px solid #68829b;
   border-radius: 9px;
-  background: #68829B;
+  background: #68829b;
   font-family: 'Helvetica Neue', Arial, sans-serif;
   font-weight: normal;
   -webkit-font-smoothing: antialiased;
@@ -118,7 +118,7 @@
 
 }
 #kifi-tagbox .kifi-tagbox-input-box.focus .kifi-tagbox-input-placeholder {
-  color: #c8d5e1;
+  color: #d7dee5;
 }
 #kifi-tagbox .kifi-tagbox-input-box.empty .kifi-tagbox-input-placeholder {
   display: block;
@@ -188,6 +188,10 @@
   text-overflow: ellipsis;
   text-decoration: none;
 }
+#kifi-tagbox .kifi-tagbox-suggestion .kifi-tagbox-suggestion-text {
+  color: inherit;
+  line-height: inherit;
+}
 #kifi-tagbox .kifi-tagbox-suggestion.focus {
   background: #b8c5d1;
   color: white;
@@ -222,14 +226,14 @@
   background: #d4e4f9;
   padding: 10px 15px;
   padding-left: 37px;
-  color: #858585;
+  color: #858585 !important;
   text-decoration: none;
 }
 #kifi-tagbox .kifi-tagbox-new.focus {
-  background: #bcd0ea;
+  background: #a7c8f3;
 }
 #kifi-tagbox .kifi-tagbox-new:active {
-  background: #acc0da;
+  background: #7aaced;
 }
 #kifi-tagbox .kifi-tagbox-new.busy {
   background: #cccccc;
