@@ -97,7 +97,7 @@ case class HttpClientImpl(
 
   def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.post(body) map { r => res(request, r, body) }
+    val result = request.post(body) map { r => res(request, r, Some(body)) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -106,7 +106,7 @@ case class HttpClientImpl(
 
   def postTextFuture(url: String, body: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.post(body) map { r => res(request, r, body) }
+    val result = request.post(body) map { r => res(request, r, Some(body)) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -115,7 +115,7 @@ case class HttpClientImpl(
 
   def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.post(body) map { r => res(request, r, body) }
+    val result = request.post(body) map { r => res(request, r, Some(body)) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -125,12 +125,13 @@ case class HttpClientImpl(
 
   def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.put(body) map { r => res(request, r, body) }
+    val result = request.put(body) map { r => res(request, r, Some(body)) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
 
-  def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(deleteFuture(url, onFailure))
+  def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse =
+    await(deleteFuture(url, onFailure))
 
   def deleteFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
@@ -146,7 +147,7 @@ case class HttpClientImpl(
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
     val cr = new ClientResponseImpl(request, response)
     if (response.status / 100 != validResponseClass) {
-      throw new NonOKResponseException(request.req.url, cr, body)
+      throw new NonOKResponseException(request.req.url, cr, requestBody)
     }
     cr
   }

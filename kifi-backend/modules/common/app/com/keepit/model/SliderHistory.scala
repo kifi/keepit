@@ -3,7 +3,8 @@ package com.keepit.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.cache.{BinaryCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{BinaryCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
+import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 
 case class SliderHistory (
@@ -29,7 +30,7 @@ case class SliderHistoryUserIdKey(userId: Id[User]) extends Key[SliderHistory] {
   def toKey(): String = userId.id.toString
 }
 
-class SliderHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[SliderHistoryUserIdKey, SliderHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class SliderHistoryUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends BinaryCacheImpl[SliderHistoryUserIdKey, SliderHistory](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object SliderHistoryStates extends States[SliderHistory]

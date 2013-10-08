@@ -4,7 +4,8 @@ import scala.concurrent.duration._
 
 import org.joda.time.DateTime
 
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
 
@@ -50,7 +51,7 @@ case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
   def toKey(): String = userId.toString
 }
 
-class UserCollectionsCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[UserCollectionsKey, Seq[Collection]](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class UserCollectionsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserCollectionsKey, Seq[Collection]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object CollectionStates extends States[Collection]

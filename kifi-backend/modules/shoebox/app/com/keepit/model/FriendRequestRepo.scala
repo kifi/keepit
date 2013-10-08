@@ -3,7 +3,8 @@ package com.keepit.model
 import scala.concurrent.duration.Duration
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.cache.{Key, PrimitiveCacheImpl, FortyTwoCachePlugin}
+import com.keepit.common.cache.{Key, PrimitiveCacheImpl, FortyTwoCachePlugin, CacheStatistics}
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{States, Id, State}
@@ -26,8 +27,8 @@ case class FriendRequestCountKey(userId: Id[User]) extends Key[Int] {
   def toKey(): String = userId.toString
 }
 
-class FriendRequestCountCache(inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-    extends PrimitiveCacheImpl[FriendRequestCountKey, Int](inner, outer: _*)
+class FriendRequestCountCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+    extends PrimitiveCacheImpl[FriendRequestCountKey, Int](stats, accessLog, inner, outer: _*)
 
 @Singleton
 class FriendRequestRepoImpl @Inject() (

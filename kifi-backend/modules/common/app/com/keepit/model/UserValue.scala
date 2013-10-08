@@ -1,6 +1,8 @@
 package com.keepit.model
 
 import com.keepit.common.db._
+import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.cache.{StringCacheImpl, FortyTwoCachePlugin, Key}
@@ -26,7 +28,7 @@ case class UserValueKey(userId: Id[User], key: String) extends Key[String] {
   val namespace = "uservalue"
   def toKey(): String = userId.id + "_" + key
 }
-class UserValueCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends StringCacheImpl[UserValueKey](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class UserValueCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends StringCacheImpl[UserValueKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object UserValueStates extends States[UserValue]

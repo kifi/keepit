@@ -1,6 +1,7 @@
 package com.keepit.model
 
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
@@ -60,5 +61,5 @@ case class UserExperimentUserIdKey(userId: Id[User]) extends Key[Seq[State[Exper
   def toKey(): String = userId.id.toString
 }
 
-class UserExperimentCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[UserExperimentUserIdKey, Seq[State[ExperimentType]]](innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(State.format[ExperimentType]))
+class UserExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserExperimentUserIdKey, Seq[State[ExperimentType]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(State.format[ExperimentType]))
