@@ -36,23 +36,19 @@
     }
 
     @admin("Clusters Overview") {
-        <table class="table table-bordered">
-            <th>Service Type</th> <th>Zookeeper Id</th> <th>Leader?</th>  <th>IPs</th> <th>State</th> <th>Version</th> <th>Capabilities</th> <th>AWS Instance Details</th>
+        <table class="table table-condensed table-striped">
+            <thead>
+              <th>Type</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Version</th> <th>Instance</th> <th>AWS Details</th>
+            </thead>
+            <tbody>
             @for(cmi <- data) {
-                <tr>
+                <tr class="@(if (cmi.state.name!="up") "error" else "")" style="font-weight: @(if (cmi.isLeader) "bold" else "normal");">
                     <td>@cmi.serviceType.name</td>
                     <td>@cmi.zkid</td>
-                    <td>@cmi.isLeader</td>
-                    <td>@cmi.instanceInfo.localIp (@cmi.instanceInfo.localHostname) / @cmi.instanceInfo.publicIp </td>
+                    <td>@cmi.instanceInfo.localIp / @cmi.instanceInfo.publicIp </td>
                     <td>@cmi.state.name</td>
                     <td>@cmi.version</td>
-                    <td>
-                      <ul>
-                        @for(capability <- cmi.capabilities){
-                          <li>@capability</li>
-                        }
-                      </ul>
-                    </td>
+                    <td>@cmi.name</td>
                     <td>
                       <div id="@cmi.instanceInfo.instanceId" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
                         <div class="modal-header">
@@ -64,11 +60,13 @@
                         </div>
                       </div>
                       
-                      <button type="button" data-toggle="modal" data-target="#@cmi.instanceInfo.instanceId">Show</button>
+                      <button type="button" data-toggle="modal" data-target="#@cmi.instanceInfo.instanceId" style="width: 100%;">Show</button>
                     </td> 
                 </tr>
             }
+            </tbody>
         </table>
+        Leaders in Bold
         <script>
             setInterval(function(){location.reload();}, 5000);
         </script>

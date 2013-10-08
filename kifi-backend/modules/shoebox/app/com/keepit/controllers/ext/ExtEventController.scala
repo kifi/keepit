@@ -17,6 +17,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
 
+import java.math.BigDecimal
+
 class ExtEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   eventPersister: EventPersister,
@@ -52,7 +54,24 @@ class ExtEventController @Inject() (
         contextBuilder += ("experiment", experiment.toString)
       }
       metaData.fields.foreach{ 
-        case (key, value) => contextBuilder += ("metaData", key + "=>" + value.toString)
+        case (key, jsonValue) => {
+          val jsonString = jsonValue match { 
+            case JsString(s) => s
+            case json => Json.stringify(json)
+          }
+          val value = try {
+            val parsedValue = jsonString.toBoolean
+            contextBuilder += (key,parsedValue)
+          } catch {
+            case _ =>
+              try {
+                val parsedValue = new BigDecimal(jsonString).doubleValue
+                contextBuilder += (key,parsedValue)
+              } catch {
+                case _ => contextBuilder += (key,jsonString)
+              } 
+          }
+        }
       }
       heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType(s"old_${eventFamily}_${eventName}")))
 

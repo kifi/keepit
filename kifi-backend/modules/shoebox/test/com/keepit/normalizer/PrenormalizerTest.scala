@@ -97,15 +97,15 @@ class PrenormalizerTest extends Specification {
       Prenormalizer("http://keepitfindit.com/p?b=2&a=1&") === "http://keepitfindit.com/p?a=1&b=2"
       Prenormalizer("http://keepitfindit.com/p?b=2&c&a") === "http://keepitfindit.com/p?a&b=2&c"
       Prenormalizer("http://keepitfindit.com/p?a=1&c=3&b=2&a=0") === "http://keepitfindit.com/p?a=0&b=2&c=3"
-      Prenormalizer("http://keepitfindit.com/p?a=1=1") === "http://keepitfindit.com/p?a=1%3D1"
+      Prenormalizer("http://keepitfindit.com/p?a=1=1") === "http://keepitfindit.com/p?a=1=1"
       val escapedEqual = java.net.URLEncoder.encode("=", "UTF-8")
-      Prenormalizer("http://keepitfindit.com/p?a=1"+escapedEqual+"1") === "http://keepitfindit.com/p?a=1%3D1"
+      Prenormalizer("http://keepitfindit.com/p?a=1"+escapedEqual+"1") === "http://keepitfindit.com/p?a=1=1"
       Prenormalizer("http://keepitfindit.com?foo=1") === "http://keepitfindit.com/?foo=1"
       Prenormalizer("http://keepitfindit.com?&foo=1") === "http://keepitfindit.com/?foo=1"
 
       Prenormalizer("http://www.example.com/?q=a+b") === "http://www.example.com/?q=a+b"
-      Prenormalizer("http://www.example.com/display?category=foo/bar+baz") === "http://www.example.com/display?category=foo%2Fbar+baz"
-      Prenormalizer("http://www.example.com/display?category=foo%2Fbar%20baz") === "http://www.example.com/display?category=foo%2Fbar+baz"
+      Prenormalizer("http://www.example.com/display?category=foo/bar+baz") === "http://www.example.com/display?category=foo/bar+baz"
+      Prenormalizer("http://www.example.com/display?category=foo%2Fbar%20baz") === "http://www.example.com/display?category=foo/bar+baz"
       Prenormalizer("http://www.example.com/p?q=a b") === "http://www.example.com/p?q=a+b"
 
       Prenormalizer("http://www.example.com/search?width=100%&height=100%") === "http://www.example.com/search?height=100%25&width=100%25"
@@ -120,9 +120,13 @@ class PrenormalizerTest extends Specification {
 
     "handle edge cases" in {
       Prenormalizer("http://www1.bloomingdales.com/search/results.ognc?sortOption=*&Keyword=juicy%20couture&resultsPerPage=24&Action=sd&attrs=Department%3ADepartment%3ADresses|Color:Color:Black") ===
-        "http://www1.bloomingdales.com/search/results.ognc?Action=sd&Keyword=juicy+couture&attrs=Department%3ADepartment%3ADresses%7CColor%3AColor%3ABlack&resultsPerPage=24&sortOption=*"
+        "http://www1.bloomingdales.com/search/results.ognc?Action=sd&Keyword=juicy+couture&attrs=Department:Department:Dresses|Color:Color:Black&resultsPerPage=24&sortOption=*"
 
-      Prenormalizer("http:///") === "http:///"
+      Prenormalizer("http:///") === "http://"
+
+      // dots after the domain name
+      Prenormalizer("http://www.42go.com./team.html") === "http://www.42go.com./team.html"
+      Prenormalizer("http://www.42go.com..../team.html") === "http://www.42go.com..../team.html"
     }
 
     "use custom normalizer when applicable" in {

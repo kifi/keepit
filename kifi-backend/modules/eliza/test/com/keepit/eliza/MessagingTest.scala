@@ -67,15 +67,14 @@ class MessagingTest extends Specification with DbTestInjector {
     "merge and notify correctly" in {
       withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
 
-
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
-        var notified = scala.collection.concurrent.TrieMap[Id[User], Int]()  
+        var notified = scala.collection.concurrent.TrieMap[Id[User], Int]()
 
         notificationRouter.onNotification{ (userId, notification) =>
           // println(s"Got Notification $notification for $userId")
           if (notified.isDefinedAt(userId.get)) {
-            notified(userId.get) = notified(userId.get) + 1 
+            notified(userId.get) = notified(userId.get) + 1
           } else {
             notified(userId.get) = 1
           }
@@ -83,8 +82,8 @@ class MessagingTest extends Specification with DbTestInjector {
 
         val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Set, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat")
         val (thread2, msg2) = messagingController.sendNewMessage(user1, user2n3Set, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!")
-        
-        
+
+
         notified.isDefinedAt(user1)===false
         notified(user2)===2
 

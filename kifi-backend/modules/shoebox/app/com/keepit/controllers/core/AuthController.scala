@@ -1,14 +1,17 @@
 package com.keepit.controllers.core
 
-
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.model.{SocialUserInfoRepo, UserCredRepo}
-import com.keepit.social.{SocialNetworks, SocialId, UserIdentity}
+import com.keepit.common.mail._
+import com.keepit.model.{EmailAddressRepo, SocialUserInfoRepo, UserCredRepo}
+import com.keepit.social.SocialId
+import com.keepit.social.SocialNetworks
+import com.keepit.social.UserIdentity
 
+import play.api.Play._
 import play.api.data.Forms._
 import play.api.data._
 import play.api.data.validation.Constraints
@@ -23,7 +26,9 @@ class AuthController @Inject() (
     db: Database,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
-    actionAuthenticator: ActionAuthenticator
+    actionAuthenticator: ActionAuthenticator,
+    emailRepo: EmailAddressRepo,
+    postOffice: LocalPostOffice
   ) extends WebsiteController(actionAuthenticator) with Logging {
 
   // Note: some of the below code is taken from ProviderController in SecureSocial
@@ -101,6 +106,8 @@ class AuthController @Inject() (
       email = identity.flatMap(_.email)))
   }
 
+  private val url = current.configuration.getString("application.baseUrl").get
+
   private def doSignup(implicit request: Request[_]): Result = {
     emailPasswordForm.bindFromRequest.fold(
       formWithErrors => Redirect(routes.AuthController.handleSignup()).flashing(
@@ -131,6 +138,19 @@ class AuthController @Inject() (
         } {
           UserService.save(UserIdentity(userId = Some(userId), socialUser = SocialUser(identity)))
         }
+        db.readWrite { implicit s =>
+          val emailWithVerification = emailRepo.getByAddressOpt(email)
+            .map(emailRepo.saveWithVerificationCode)
+            .get
+          postOffice.sendMail(ElectronicMail(
+            from = EmailAddresses.NOTIFY,
+            to = Seq(new EmailAddressHolder { val address = email }),
+            subject = "Confirm your email address for Kifi",
+            htmlBody = s"Please confirm your email address by going to " +
+              s"$url${routes.AuthController.verifyEmail(emailWithVerification.verificationCode.get)}",
+            category = ElectronicMailCategory("email_confirmation")
+          ))
+        }
         Authenticator.create(newIdentity).fold(
           error => Redirect(routes.AuthController.handleSignup()).flashing(
             "error" -> "Error creating user"
@@ -140,5 +160,14 @@ class AuthController @Inject() (
             .withCookies(authenticator.toCookie)
         )
       })
+  }
+
+  def verifyEmail(code: String) = Action { implicit request =>
+    db.readWrite { implicit s =>
+      if (emailRepo.verifyByCode(code))
+        Ok(views.html.website.verifyEmail(success = true))
+      else
+        BadRequest(views.html.website.verifyEmail(success = false))
+    }
   }
 }

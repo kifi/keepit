@@ -49,6 +49,10 @@ trait MongoRepo[T] {
     val db = collection.db
     db.command(Aggregate(collectionName,command)) 
   }
+
+  def all: Future[Seq[T]] = collection.find(BSONDocument()).cursor.toList.map{ docs =>
+    docs.map(fromBSON(_))
+  }
 }
 
 trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?

@@ -1,4 +1,5 @@
-package com.keepit.common.net.uri
+package com.keepit.common.net
+
 
 import scala.util.parsing.combinator.RegexParsers
 
@@ -35,9 +36,14 @@ object URIParser extends RegexParsers {
 
   def addressIPv4: Parser[Host] = """(\d+)\.(\d+)\.(\d+)\.(\d+)""".r ^^ (Host(_))
 
-  def domain: Parser[Host] = rep1sep(domainPart, ".") ^^ { host => Host(host.reverse: _*) }
+  def domain: Parser[Host] = rep1sep(domainPart, ".") ~ (domainTrailingDots?) ^^ {
+    case host~None => Host(host.reverse: _*)
+    case host~Some(dots) => Host(dots.foldLeft(host.reverse){ (names, c) => ""::names }: _*)
+  }
 
   def domainPart: Parser[String] = """[^~/?#@:\.]+""".r ^^ (_.toLowerCase)
+
+  def domainTrailingDots: Parser[String] = """\.+""".r
 
   def port: Parser[String] = ":" ~> """\d+""".r
 

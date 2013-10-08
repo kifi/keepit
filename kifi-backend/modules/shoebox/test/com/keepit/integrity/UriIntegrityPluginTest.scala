@@ -71,8 +71,8 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         }
 
         // merge
-        plugin.handleChangedUri(MergedUri(uris(0).id.get, uris(1).id.get))
-        plugin.batchUpdateMerge()
+        plugin.handleChangedUri(URIMigration(uris(0).id.get, uris(1).id.get))
+        plugin.batchURIMigration()
 
         // check redirection
         db.readOnly{ implicit s =>
@@ -90,10 +90,11 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         }
 
         val centralConfig = inject[CentralConfig]
-        centralConfig(new ChangedUriSeqNumKey()) === Some(1)
+        centralConfig(URIMigrationSeqNumKey) === Some(1)
 
         // split
-        plugin.handleChangedUri(SplittedUri(urls(2), uris(3).id.get))
+
+        plugin.handleChangedUri(URLMigration(urls(2), uris(3).id.get))
 
         db.readOnly{ implicit s =>
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1

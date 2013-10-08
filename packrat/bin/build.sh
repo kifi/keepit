@@ -21,7 +21,7 @@ cp -R adapters/firefox out/
 cp adapters/shared/*.js out/chrome/
 cp adapters/shared/*.js out/firefox/lib/
 
-for d in icons images media scripts styles; do
+for d in icons images media scripts; do
   cp -R $d out/chrome/
   cp -R $d out/firefox/data/
 done
@@ -37,6 +37,15 @@ for f in $(find html -name '*.html'); do
   mkdir -p `dirname $f3`
   cp $f2 $f3
 done
+
+for d in $(find styles -type d -path 'styles/*'); do
+  mkdir -p "out/chrome/$d" "out/firefox/data/$d"
+done
+for f in $(find styles -name '*.css' -not -name 'insulate.css'); do
+  # repeat the first class name that occurs in each selector outside of parentheses since repetition is not allowed within :not(...)
+  sed -E -e 's/ *\/\*.*\*\/$//g' -e '/[,{]$/ s/(^|[^(])(\.[a-zA-Z0-9_-]*)/\1\2\2\2/' $f | tee "out/chrome/$f" > "out/firefox/data/$f"
+done
+cat styles/insulate.css | tee "out/chrome/styles/insulate.css" > "out/firefox/data/styles/insulate.css"
 
 for f in $(find out/chrome/scripts -name '*.js'); do
   echo "api.injected['${f:11}']=1;"$'\n'"//@ sourceURL=http://kifi/${f:19}" >> $f

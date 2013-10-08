@@ -31,9 +31,11 @@ case class HealthcheckError(
   id: ExternalId[HealthcheckError] = ExternalId(),
   createdAt: DateTime = currentDateTime) {
 
+  val Max8M = 8 * 1024 * 1024
+
   lazy val signature: HealthcheckErrorSignature = {
     val permText: String =
-      causeStacktraceHead(4).getOrElse(errorMessage.map(_.message).getOrElse("")) +
+      causeStacktraceHead(4).getOrElse(errorMessage.map(_.message.take(Max8M)).getOrElse("")) +
         path.getOrElse("") +
         method.getOrElse("") +
         callType.toString
@@ -95,7 +97,7 @@ case class HealthcheckError(
         .replaceAll("\\d", "*").take(60)
     error match {
       case None =>
-        val message = errorMessage.map(_.message).getOrElse(path.getOrElse(callType.toString()))
+        val message = errorMessage.map(_.message.take(Max8M)).getOrElse(path.getOrElse(callType.toString()))
         displayMessage(message)
       case Some(t) =>
         val source = cause(t)
