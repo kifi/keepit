@@ -49,10 +49,10 @@ class MainSearcherFactory @Inject() (
     config: SearchConfig,
     lastUUID: Option[ExternalId[ArticleSearchResultRef]]
   ) = {
+    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"), config.asBoolean("useS3FlowerFilter"))
     val uriGraphSearcher = getURIGraphSearcher(userId)
     val collectionSearcher = getCollectionSearcher(userId)
     val articleSearcher = articleIndexer.getSearcher
-    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"), config.asBoolean("useS3FlowerFilter"))
     val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
     val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
 
