@@ -115,3 +115,7 @@ kifi-backend/modules/common/common.iml
 kifi-backend/modules/search/search.iml
 kifi-backend/modules/shoebox/shoebox.iml
 target
+
+# Node.js #
+###########
+node_modules

@@ -6,6 +6,7 @@ function logEvent() {  // parameters defined in main.js
   api.port.emit("log_event", Array.prototype.slice.call(arguments));
 }
 
+var session;
 var tile = tile || function() {  // idempotent for Chrome
   'use strict';
   log("[keeper_scout]", location.hostname)();
@@ -16,7 +17,7 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   };
 
-  var session, whenSessionKnown = [], tileCard, tileCount, onScroll;
+  var whenSessionKnown = [], tileCard, tileCount, onScroll;
   api.port.emit("session", onSessionChange);
   api.port.on({
     session_change: onSessionChange,
