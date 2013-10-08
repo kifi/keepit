@@ -4,7 +4,7 @@ import org.joda.time.DateTime
 
 import com.keepit.common.time._
 
-import play.api.libs.json.{JsObject, JsNull, JsArray}
+import play.api.libs.json.{JsObject, JsNull, JsArray, Json}
 import play.modules.reactivemongo.json.ImplicitBSONHandlers._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -17,8 +17,11 @@ import reactivemongo.bson.{BSONDocument, BSONArray, BSONString, BSONDouble}
 import com.google.inject.Inject
 
 
-case class MetricDesriptor(name: String, start: DateTime, window: Int, step: Int, description: String, events: Seq[String], groupBy: String, breakDown: Boolean, mode: String, filter: String, lastUpdate: DateTime)
+case class MetricDescriptor(name: String, start: DateTime, window: Int, step: Int, description: String, events: Seq[String], groupBy: String, breakDown: Boolean, mode: String, filter: String, lastUpdate: DateTime)
 
+object MetricDescriptor {
+  implicit val format = Json.format[MetricDescriptor]
+}
 
 class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metricDescriptorRepo: MetricDescriptorRepo, metricRepoFactory: MetricRepoFactory){
 
@@ -52,12 +55,12 @@ class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metri
     }
   }
 
-  def createMetric(descriptor: MetricDesriptor): Unit = {
+  def createMetric(descriptor: MetricDescriptor): Unit = {
     metricDescriptorRepo.upsert(descriptor)
     metricRepoFactory.clear(descriptor.name)
   }
 
-  def updateMetricOnce(desc: MetricDesriptor): MetricDesriptor = {
+  def updateMetricOnce(desc: MetricDescriptor): MetricDescriptor = {
     val tStart = desc.lastUpdate.minusHours(desc.window).plusHours(desc.step)
     val tEnd = desc.lastUpdate.plusHours(desc.step)
     val eventsToConsider = if (desc.events.isEmpty) AllEvents else SpecificEventSet(desc.events.toSet.map( (s: String) => UserEventType(s)) )
@@ -77,7 +80,7 @@ class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metri
     newDesc
   }
 
-  def updateMetricFully(descriptor: MetricDesriptor): Unit = {
+  def updateMetricFully(descriptor: MetricDescriptor): Unit = {
     val now = currentDateTime
     var desc = descriptor 
     while(now.isAfter(desc.start.plusHours(desc.window)) && now.isAfter(desc.lastUpdate.plusHours(desc.step))){
@@ -89,10 +92,22 @@ class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metri
     }
   }
 
-  def updateAllMetrics(): Unit = {
-    val descriptorsFuture : Future[Seq[MetricDesriptor]] = metricDescriptorRepo.all
+  def updateAllMetrics(): Unit = synchronized {
+    val descriptorsFuture : Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
     descriptorsFuture.map{ descriptors =>
       descriptors.foreach(updateMetricFully(_))
+    }
+  }
+
+  def getAvailableMetrics: Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
+
+  def getMetricInfo(name: String): Future[Option[MetricDescriptor]] = {
+    metricDescriptorRepo.getByName(name)
+  }
+
+  def getMetric(name: String): Future[Seq[MetricData]] = {
+    metricRepoFactory(name).all.map{ dataPoints =>
+      dataPoints.sortBy( md => md.dt.getMillis )
     }
   }
 

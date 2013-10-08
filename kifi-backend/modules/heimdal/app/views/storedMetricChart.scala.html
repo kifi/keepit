@@ -1,0 +1,99 @@
+@(json: String, errors: String)
+
+<head>
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css">
+</head>
+
+
+<body>
+  <div style="color: red;"><strong>@errors</strong></div>
+  <div id="chart_container"></div>
+  <a href="/internal/heimdal/updateMetrics" class="btn btn-lg btn-primary btn-block">Update</a>
+  
+
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.2.1/lodash.min.js"></script>
+  <script type="text/javascript" src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+  <script type="text/javascript" src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+
+  <script type="text/javascript">
+    google.load('visualization', '1.0', {'packages':['corechart']});
+
+    function discoverKeys(rawData){
+      var keys = {}
+      rawData.forEach(function(datum){
+        datum.data.forEach(function(kv){
+          keys[kv._id] = true;
+        });
+      });
+      return _.keys(keys);
+    };
+
+    function objectify(rawData){
+      rawData.forEach(function(datum){
+        var newData = {};
+        datum.data.forEach(function(kv){
+          newData[kv._id] = kv.count;
+        });
+        datum.data = newData; 
+      });
+    }
+
+    var rawData = @Html(json);
+    var keys = {}
+    _.forEach(rawData, function(val, desc){
+      keys[desc] = discoverKeys(val);
+      objectify(val); 
+      var chartParent = $("#chart_container")
+      chartParent.append($('<div>', {id: desc, style:"width: 100%; height:50%;", text: "Rendering chart. Hold tight!"}))
+    });
+
+
+
+
+    google.setOnLoadCallback(drawAndRedraw);
+
+    function drawAndRedraw(){
+      drawChart();
+      window.onresize = function(){
+        drawChart();
+      }
+    }
+
+    function drawChart(){
+      _.forEach(rawData, function(val, desc){
+        var data = new google.visualization.DataTable();
+        data.addColumn("datetime")
+        keys[desc].forEach(function(key){
+          if (key==="null"){
+            if (keys[desc].length===1){
+              data.addColumn('number', "Count");
+            } else {
+              data.addColumn('number', "[Group Field Missing]");
+            }
+          } else {
+            data.addColumn('number', key);
+          }
+        });
+        rawData[desc].forEach(function(datum){
+          var row = [];
+          row.push(new Date(datum.time));
+          keys[desc].forEach(function(key){
+            row.push(datum.data[key] || 0)
+          });
+          data.addRow(row);
+        });
+
+        var options = {
+          'title': desc
+        };
+
+        var chart = new google.visualization.LineChart(document.getElementById(desc));
+        chart.draw(data, options);
+      });
+
+    };
+
+    
+  </script>
+</body>
