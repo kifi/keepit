@@ -44,9 +44,6 @@
 .kifi-messages-sent-inner:not(:hover)>.kifi-message-sent:last-child>time {
   display: block;
 }
-.kifi-message-sent>time.error-hidden {
-  display: none !important;
-}
 img.kifi-message-pic {
   float: left;
   width: 35px;

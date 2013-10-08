@@ -129,7 +129,8 @@ panes.thread = function () {
         $m.find('time')  // TODO: patch timeago to update attrs too
           .attr('datetime', o.createdAt)
           .attr('title', getLocalDateFormatter()(o.createdAt, function render(s) {return s}))
-          .timeago('update', o.createdAt);
+          .timeago('update', o.createdAt)
+          .css({display:''});
       } else {
         handleReplyError($m, o.status, text, threadId);
       }
@@ -145,7 +146,7 @@ panes.thread = function () {
 
     setTimeout(function() {
       if (!$m.attr('data-id') && !$m.data('error')) {
-        $m.find('time').text('');
+        $m.find('time').hide();
         $m.find('.kifi-message-status').text('sending…')
       }
     }, 1000);
@@ -172,11 +173,11 @@ panes.thread = function () {
         errorText = 'whoops, not delivered.';
     }
     $reply.find('.kifi-message-body').css({opacity: 0.3});
-    $reply.find('time').text('').addClass('error-hidden');
+    $reply.find('time').css({display:'none'});
     $error.html(errorText + ' <a href="javascript:">retry?</a>').css({cursor: 'pointer', color: '#a00'})
     .fadeIn(300).unbind('click').click(function() {
       $(this).fadeOut(100);
-      $reply.find('time').removeClass('error-hidden');
+      $reply.find('time').css({display:''});
       retrySendReply($reply, originalText, threadId);
     });
   }
