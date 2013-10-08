@@ -71,7 +71,8 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       'noticesCount': Math.max(0, counts.n - counts.m),
       'messageCount': counts.m,
       'atNotices': '/notices' === locator,
-      'atMessages': /^\/messages/.test(locator)
+      'atMessages': /^\/messages/.test(locator),
+      'tagEnabled': session.experiments.indexOf('tagging') !== -1
     }, function (html) {
       // attach event bindings
       $slider = $(html);
@@ -208,6 +209,11 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         if (e.target === this) keepPage("private");
       }).on("click", ".kifi-slider2-kept-lock", function (e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
+      }).on("click", ".kifi-slider2-kept-tag", function(e) {
+        api.require("scripts/tagbox.js", function() {
+          log('require:tagbox')();
+          tagbox.toggle($slider);
+        });
       }).bindHover(".kifi-slider2-x", function (configureHover) {
         this.style.overflow = "visible";
         configureHover({mustHoverFor: 700, hideAfter: 2500, click: "hide"});
@@ -274,6 +280,9 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
 
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
+    if (window.tagbox && tagbox.active) {
+      return;
+    }
     log("[hideSlider]", trigger)();
     idleTimer.kill();
     $slider.addClass("kifi-hiding")
@@ -296,6 +305,9 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         $slider.remove(), $slider = null;
       }
     });
+    if (window.tagbox) {
+      tagbox.hide();
+    }
     logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
   }
 
