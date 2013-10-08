@@ -14,410 +14,408 @@
   }
 }
 
-#kifi-tagbox {
-  @kifi-lightbluegray: #eff2f7;
-  @kifi-bluegray: #b8c5d1;
-  @kifi-bluegray-a: #a0b1c2;
-  @kifi-bluegray-8: #8699ab;
-  @kifi-lightblue-d: #d4e4f9;
-  @kifi-darkbluegray: #68829B;
-  @kifi-darkbluegray-hover: #7492af;
-  @kifi-gray-8: #858585;
-  @kifi-gray-a: #ababab;
-  @kifi-gray-c: #cccccc;
-  @kifi-link: #0089d5;
+@kifi-lightbluegray: #eff2f7;
+@kifi-bluegray: #b8c5d1;
+@kifi-bluegray-a: #a0b1c2;
+@kifi-bluegray-8: #8699ab;
+@kifi-lightblue-d: #d4e4f9;
+@kifi-darkbluegray: #68829B;
+@kifi-darkbluegray-hover: #7492af;
+@kifi-gray-8: #858585;
+@kifi-gray-a: #ababab;
+@kifi-gray-c: #cccccc;
+@kifi-link: #0089d5;
 
-  &.kifi-tagbox {
-    position: fixed;
-    bottom: 48px;
-    right: 0;
-    width: 300px;
-    border: 5px solid @kifi-darkbluegray;
-    border-radius: 9px;
-    background: @kifi-darkbluegray;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    font-weight: normal;
-    -webkit-font-smoothing: antialiased;
-    text-align: left;
+.kifi-tagbox {
+  position: fixed;
+  bottom: 48px;
+  right: 0;
+  width: 300px;
+  border: 5px solid @kifi-darkbluegray;
+  border-radius: 9px;
+  background: @kifi-darkbluegray;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-weight: normal;
+  -webkit-font-smoothing: antialiased;
+  text-align: left;
 
-    &.attached {
-      border-bottom: 0;
+  &.attached {
+    border-bottom: 0;
 
-      .kifi-tagbox-tagged, .kifi-tagbox-empty {
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-      }
+    .kifi-tagbox-tagged, .kifi-tagbox-empty {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+  }
+
+  &.suggested {
+    .kifi-tagbox-suggest {
+      display: block;
     }
 
-    &.suggested {
-      .kifi-tagbox-suggest {
-        display: block;
-      }
-
-      .kifi-tagbox-empty {
-        color: @kifi-bluegray;
-        background: white;
-      }
-
-      .kifi-tagbox-empty {
-        display: none;
-      }
-
-      &.tagged .kifi-tagbox-empty {
-        display: none;
-      }
+    .kifi-tagbox-empty {
+      color: @kifi-bluegray;
+      background: white;
     }
 
-    &.tagged {
-      .kifi-tagbox-empty {
-        display: none;
-      }
-
-      .kifi-tagbox-tagged {
-        display: block;
-      }
-    }
-
-    .kifi-tagbox-loading {
+    .kifi-tagbox-empty {
       display: none;
     }
 
-    &.loading {
-      .kifi-tagbox-empty, .kifi-tagbox-tagged, .kifi-tagbox-suggest {
-        display: none;
-      }
-
-      .kifi-tagbox-loading {
-display: block;
-      }
+    &.tagged .kifi-tagbox-empty {
+      display: none;
     }
   }
 
-  .kifi-tagbox-tagged, .kifi-tagbox-empty {
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
-  }
-
-  .kifi-tagbox-title {
-    position: relative;
-    font-size: 16px;
-    line-height: 25px;
-    margin-bottom: 5px;
-  }
-
-  .kifi-tagbox-title-text {
-    color: white;
-    text-align: center;
-    line-height: inherit; // style leak fix
-  }
-
-  .kifi-tagbox-close {
-    position: absolute;
-    top: 0;
-    right: 0;
-    display: block;
-    width: 13px;
-    height: 13px;
-    border: 6px solid transparent;
-    border-radius: 20px;
-    margin-right: 5px;
-    background-repeat: no-repeat;
-    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAQAAAADQ4RFAAAA0klEQVR4AXXUMW7DMBBE0alE5zhRrm0gMSxLvkfoKyhKYV/hB4ttSITzp34ViVXEOwdXTsiPwicHM0IiyJPoblmQlegZTMxJGuYJycQO0DNLsh9xpm9LZglcxMQyZoZsFOGZIUgkuw2YIYEcq9QRaVGwFVtLAhnmSYc8S+KQKHz/I7UhBtUBmgwy75KtPfOk79YyT/DMkwcPx4T/Y4WNviWZJ0KcxswTGXZlEl94kuxO31nshni252HxJPfWsBcfItjLk4YlmZFIdnBJ4hkLv0HQHxvW+Tv3j7AoAAAAAElFTkSuQmCC);
-    background-size: auto 13px;
-    vertical-align: middle;
-
-    &:hover {
-      background-color: @kifi-darkbluegray-hover;
-    }
-  }
-
-  .kifi-tagbox-input-box {
-    display: block;
-    font-size: 16px;
-    padding: 3px 15px;
-    background: white;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: text;
-
-    table {
-      border-spacing: 0;
-      border-collapse: collapse;
-
-      td, th {
-        padding: 0; /* 'cellpadding' equivalent */
-      }
+  &.tagged {
+    .kifi-tagbox-empty {
+      display: none;
     }
 
-    &.focus .kifi-tagbox-input-placeholder {
-      color: lighten(@kifi-bluegray, 10%);
-    }
-
-    &.empty .kifi-tagbox-input-placeholder {
+    .kifi-tagbox-tagged {
       display: block;
     }
   }
 
-  .kifi-tagbox-tag-icon {
-    display: block;
-    float: left;
-    width: 12px;
-    height: 32px;
-    margin-right: 10px;
-    background-repeat: no-repeat;
-    background-size: auto 16px;
-    background-position-y: 8px;
-  }
-
-  .kifi-tagbox-input-icon {
-    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NLW4CURSG4SEhrYBQUNSUpBuATYBjAxhSgekaCL6CLgPRHVRNgsDzpwkhNEHUgEN0Tt+bUDO5d86dtrgrHved80bvs6WvZ+ywwZPvnc+ogFdIygsKfw3c4g3iMMHNbwM1TCGKGNW8gQbWEE8rPPgGWviA5LRHUwu0cXIcD/B4McDesjui7Qr0cbYcbVFHlHKPrWV/Rj8dGCKBWPQQOfQcNwmGP4ERJEMtI3Cn3I7M6FMZlTMCZeX2aEai6GYEutq9T2CNkuV5CSu/gG6ODooXHSwg+QK6L0PZaAFdCIRACIRACFgChysGDiYwvmJgbAIVxEgg/yRBjMo3wq1HgvDn6n8AAAAASUVORK5CYII=);
-  }
-
-  .kifi-tagbox-input-cell {
-    width: 100%;
-  }
-
-  .kifi-tagbox-input-wrapper {
-    position: relative;
-  }
-
-  .kifi-tagbox-input {
-    position: relative;
-    display: block;
-    width: 100%;
-    padding: 0;
-    border: 0;
-    margin: 0;
-    color: black;
-    background: transparent;
-    outline: 0;
-    z-index: 1;
-    font: inherit;
-    //font-weight: 300;
-    //font-family: 'Helvetica Neue', Arial, sans-serif;
-    //-webkit-font-smoothing: antialiased;
-  }
-
-  .kifi-tagbox-input-placeholder {
+  .kifi-tagbox-loading {
     display: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    color: @kifi-bluegray;
-    transition: color .2s linear;
   }
 
-  .kifi-tagbox-suggest {
-    position: relative;
+  &.loading {
+    .kifi-tagbox-empty, .kifi-tagbox-tagged, .kifi-tagbox-suggest {
+      display: none;
+    }
+
+    .kifi-tagbox-loading {
+display: block;
+    }
+  }
+}
+
+.kifi-tagbox-tagged, .kifi-tagbox-empty {
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.kifi-tagbox-title {
+  position: relative;
+  font-size: 16px;
+  line-height: 25px;
+  margin-bottom: 5px;
+}
+
+.kifi-tagbox-title-text {
+  color: white;
+  text-align: center;
+  line-height: inherit; // style leak fix
+}
+
+.kifi-tagbox-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: block;
+  width: 13px;
+  height: 13px;
+  border: 6px solid transparent;
+  border-radius: 20px;
+  margin-right: 5px;
+  background-repeat: no-repeat;
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAQAAAADQ4RFAAAA0klEQVR4AXXUMW7DMBBE0alE5zhRrm0gMSxLvkfoKyhKYV/hB4ttSITzp34ViVXEOwdXTsiPwicHM0IiyJPoblmQlegZTMxJGuYJycQO0DNLsh9xpm9LZglcxMQyZoZsFOGZIUgkuw2YIYEcq9QRaVGwFVtLAhnmSYc8S+KQKHz/I7UhBtUBmgwy75KtPfOk79YyT/DMkwcPx4T/Y4WNviWZJ0KcxswTGXZlEl94kuxO31nshni252HxJPfWsBcfItjLk4YlmZFIdnBJ4hkLv0HQHxvW+Tv3j7AoAAAAAElFTkSuQmCC);
+  background-size: auto 13px;
+  vertical-align: middle;
+
+  &:hover {
+    background-color: @kifi-darkbluegray-hover;
+  }
+}
+
+.kifi-tagbox-input-box {
+  display: block;
+  font-size: 16px;
+  padding: 3px 15px;
+  background: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: text;
+
+  table {
+    border-spacing: 0;
+    border-collapse: collapse;
+
+    td, th {
+      padding: 0; /* 'cellpadding' equivalent */
+    }
   }
 
-  .kifi-tagbox-suggest-inner {
-    position: relative;
-    color: @kifi-gray-8;
-    background: @kifi-lightbluegray;
-    min-height: 164px;
-    max-height: 265px;
-    padding: 0;
-    overflow: scroll;
-    overflow-x: hidden;
-    overflow-y: scroll;
-    font-size: 14px;
+  &.focus .kifi-tagbox-input-placeholder {
+    color: lighten(@kifi-bluegray, 10%);
   }
 
-  .kifi-tagbox-suggestion {
+  &.empty .kifi-tagbox-input-placeholder {
     display: block;
-    padding: 0 15px;
-    line-height: 32px;
-    color: @kifi-gray-8 !important; // style leak fix
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-decoration: none;
-
-    * {
-      line-height: inherit; // style leak fix
-    }
-
-    .kifi-tagbox-suggestion-text {
-      color: inherit; // style leak fix
-      line-height: inherit; // style leak fix
-    }
-
-    &.focus {
-      background: @kifi-bluegray;
-      color: white !important; // style leak fix
-      cursor: pointer;
-
-      .kifi-tagbox-suggestion-icon {
-        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAQAAACiV3CzAAAA60lEQVR4Ae3LMU4CQRiG4W83RAt0lVBoo4kX0CtYwCFoiAWNZyD0Nt4CCy6xiTfQQG2IwYLERrShmVeKnezM7KBuYcfzVX/+vIrhlldeuEHViXAJ91h3JL8F+0xwPbD3U9DikVDO8bbgnBkxU85iwRVvbLPgMgw6rJz3gIvNBiywPui4QZ811pwTVOyUOdaavg2GGEo95KxHyTBEYoSv5QVH+EYJ72rLdagvlQ70KdcqVVu+6+hlZSI0o4mKNZkSEFVPdGls1uWZigQUYySlimgoLlXdx/8Hu2AXLFXHMtVYdYxFRo7hLww52TeyrdzuJXPukQAAAABJRU5ErkJggg==);
-      }
-    }
-
-    &:active {
-      background: @kifi-bluegray-a;
-    }
-
-    &.busy {
-      background: @kifi-gray-c;
-      cursor: progress;
-    }
   }
+}
 
-  .kifi-tagbox-suggestion-icon {
-    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NPWoCURSG4RFEC8WfKmkiZAO6Ce3cgI2ksHENYp/CLMMimxjIDhTtAiJRwSKN6Syck/eCaYZ759xJYneLp/vOeaP3zc7XGB/Y4Mn3zmdUwAsk5RmFvwbKeIU4zFH6baCJN4giRiNvoIU1xNMKD76BDg6QnPZoa4EuvhzHIzxejbC37E7ougJDnC1HW9whSrnH1rI/Y5gOTJBALAaIHAaOmwSTn8AUkqGZEagrt1Mz+lRG1YxAVbk9mZEo+hmBvnbvE1ijYnlewcovoFugh+JVD0tIvoDuYigbLaALgRAIgRAIAUvgeMPA0QRmNwzMTKCGGAnknySIUfsGLlMukbhYQI0AAAAASUVORK5CYII=);
-  }
+.kifi-tagbox-tag-icon {
+  display: block;
+  float: left;
+  width: 12px;
+  height: 32px;
+  margin-right: 10px;
+  background-repeat: no-repeat;
+  background-size: auto 16px;
+  background-position-y: 8px;
+}
 
-  .kifi-tagbox-empty, .kifi-tagbox-loading {
-    font-size: 24px;
-    font-weight: 200;
-    -webkit-font-smoothing: antialiased;
-    line-height: 30px;
-    padding: 60px 40px;
-    text-align: center;
-    background: @kifi-lightbluegray;
-    color: @kifi-bluegray;
-    transition: background .3s linear;
-  }
+.kifi-tagbox-input-icon {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NLW4CURSG4SEhrYBQUNSUpBuATYBjAxhSgekaCL6CLgPRHVRNgsDzpwkhNEHUgEN0Tt+bUDO5d86dtrgrHved80bvs6WvZ+ywwZPvnc+ogFdIygsKfw3c4g3iMMHNbwM1TCGKGNW8gQbWEE8rPPgGWviA5LRHUwu0cXIcD/B4McDesjui7Qr0cbYcbVFHlHKPrWV/Rj8dGCKBWPQQOfQcNwmGP4ERJEMtI3Cn3I7M6FMZlTMCZeX2aEai6GYEutq9T2CNkuV5CSu/gG6ODooXHSwg+QK6L0PZaAFdCIRACIRACFgChysGDiYwvmJgbAIVxEgg/yRBjMo3wq1HgvDn6n8AAAAASUVORK5CYII=);
+}
 
-  .kifi-tagbox-new {
-    display: block;
-    background: @kifi-lightblue-d;
-    padding: 10px 15px;
-    padding-left: 37px;
-    color: @kifi-gray-8 !important; // style leak fix
-    text-decoration: none;
+.kifi-tagbox-input-cell {
+  width: 100%;
+}
 
-    &.focus {
-      background: darken(@kifi-lightblue-d, 10%);
-      color: white !important; // style leak fix
-    }
+.kifi-tagbox-input-wrapper {
+  position: relative;
+}
 
-    &:active {
-      background: darken(@kifi-lightblue-d, 20%);
-      color: white !important; // style leak fix
-    }
+.kifi-tagbox-input {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  color: black;
+  background: transparent;
+  outline: 0;
+  z-index: 1;
+  font: inherit;
+  //font-weight: 300;
+  //font-family: 'Helvetica Neue', Arial, sans-serif;
+  //-webkit-font-smoothing: antialiased;
+}
 
-    &.busy {
-      background: @kifi-gray-c;
-      cursor: progress;
-    }
-  }
+.kifi-tagbox-input-placeholder {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: @kifi-bluegray;
+  transition: color .2s linear;
+}
 
-  .kifi-tagbox-new-caption {
-    display: block;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
+.kifi-tagbox-suggest {
+  position: relative;
+}
 
-  .kifi-tagbox-new-text {
-    display: block;
-    font-size: 16px;
-  }
+.kifi-tagbox-suggest-inner {
+  position: relative;
+  color: @kifi-gray-8;
+  background: @kifi-lightbluegray;
+  min-height: 164px;
+  max-height: 265px;
+  padding: 0;
+  overflow: scroll;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  font-size: 14px;
+}
 
-  .kifi-tagbox-tagged {
-    display: none;
-    position: relative;
-    color: @kifi-bluegray;
-    background: white;
-    padding: 15px;
-    height: 150px;
-  }
+.kifi-tagbox-suggestion {
+  display: block;
+  padding: 0 15px;
+  line-height: 32px;
+  color: @kifi-gray-8 !important; // style leak fix
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none;
 
-  .kifi-tagbox-tagged-title {
-    font-size: 16px;
-    font-weight: 200;
-    margin-bottom: 14px;
-    color: @kifi-bluegray;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  .kifi-tagbox-tag-list {
-    position: relative;
-  }
-
-  .kifi-tagbox-tag-list-inner {
-    position: relative;
-    height: 100px;
-    overflow: scroll;
-    overflow-x: hidden;
-    overflow-y: scroll;
-  }
-
-  .kifi-tagbox-tag {
-    display: inline-block;
-    font-size: 13px;
-    line-height: 24px;
-    margin-right: 4px;
-    margin-bottom: 4px;
-    text-align: center;
-    background: @kifi-bluegray;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-
-    &:hover {
-      .kifi-tagbox-tag-name {
-        padding: 0 7px;
-      }
-      .kifi-tagbox-tag-remove {
-        width: 18px;
-      }
-    }
-
-    &.busy {
-      cursor: progress;
-
-      .kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {
-        background: @kifi-gray-c;
-      }
-    }
-  }
-
-  .kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {
-    display: inline-block;
-    float: left;
-    color: white !important; // style leak fix
-    text-decoration: none;
+  * {
     line-height: inherit; // style leak fix
+  }
 
-    &:hover {
-      background: @kifi-bluegray-a;
-    }
+  .kifi-tagbox-suggestion-text {
+    color: inherit; // style leak fix
+    line-height: inherit; // style leak fix
+  }
 
-    &:active {
-      background: @kifi-bluegray-8;
+  &.focus {
+    background: @kifi-bluegray;
+    color: white !important; // style leak fix
+    cursor: pointer;
+
+    .kifi-tagbox-suggestion-icon {
+      background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAQAAACiV3CzAAAA60lEQVR4Ae3LMU4CQRiG4W83RAt0lVBoo4kX0CtYwCFoiAWNZyD0Nt4CCy6xiTfQQG2IwYLERrShmVeKnezM7KBuYcfzVX/+vIrhlldeuEHViXAJ91h3JL8F+0xwPbD3U9DikVDO8bbgnBkxU85iwRVvbLPgMgw6rJz3gIvNBiywPui4QZ811pwTVOyUOdaavg2GGEo95KxHyTBEYoSv5QVH+EYJ72rLdagvlQ70KdcqVVu+6+hlZSI0o4mKNZkSEFVPdGls1uWZigQUYySlimgoLlXdx/8Hu2AXLFXHMtVYdYxFRo7hLww52TeyrdzuJXPukQAAAABJRU5ErkJggg==);
     }
   }
 
-  .kifi-tagbox-tag-name {
-    padding: 0 16px;
-    transition: all .1s linear;
+  &:active {
+    background: @kifi-bluegray-a;
   }
 
-  .kifi-tagbox-tag-remove {
-    width: 0;
-    transition: all .1s linear;
+  &.busy {
+    background: @kifi-gray-c;
+    cursor: progress;
+  }
+}
 
-    &::before {
-      content: "\d7";
-      //position: relative;
-      //bottom: 1px;
+.kifi-tagbox-suggestion-icon {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NPWoCURSG4RFEC8WfKmkiZAO6Ce3cgI2ksHENYp/CLMMimxjIDhTtAiJRwSKN6Syck/eCaYZ759xJYneLp/vOeaP3zc7XGB/Y4Mn3zmdUwAsk5RmFvwbKeIU4zFH6baCJN4giRiNvoIU1xNMKD76BDg6QnPZoa4EuvhzHIzxejbC37E7ougJDnC1HW9whSrnH1rI/Y5gOTJBALAaIHAaOmwSTn8AUkqGZEagrt1Mz+lRG1YxAVbk9mZEo+hmBvnbvE1ijYnlewcovoFugh+JVD0tIvoDuYigbLaALgRAIgRAIAUvgeMPA0QRmNwzMTKCGGAnknySIUfsGLlMukbhYQI0AAAAASUVORK5CYII=);
+}
+
+.kifi-tagbox-empty, .kifi-tagbox-loading {
+  font-size: 24px;
+  font-weight: 200;
+  -webkit-font-smoothing: antialiased;
+  line-height: 30px;
+  padding: 60px 40px;
+  text-align: center;
+  background: @kifi-lightbluegray;
+  color: @kifi-bluegray;
+  transition: background .3s linear;
+}
+
+.kifi-tagbox-new {
+  display: block;
+  background: @kifi-lightblue-d;
+  padding: 10px 15px;
+  padding-left: 37px;
+  color: @kifi-gray-8 !important; // style leak fix
+  text-decoration: none;
+
+  &.focus {
+    background: darken(@kifi-lightblue-d, 10%);
+    color: white !important; // style leak fix
+  }
+
+  &:active {
+    background: darken(@kifi-lightblue-d, 20%);
+    color: white !important; // style leak fix
+  }
+
+  &.busy {
+    background: @kifi-gray-c;
+    cursor: progress;
+  }
+}
+
+.kifi-tagbox-new-caption {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.kifi-tagbox-new-text {
+  display: block;
+  font-size: 16px;
+}
+
+.kifi-tagbox-tagged {
+  display: none;
+  position: relative;
+  color: @kifi-bluegray;
+  background: white;
+  padding: 15px;
+  height: 150px;
+}
+
+.kifi-tagbox-tagged-title {
+  font-size: 16px;
+  font-weight: 200;
+  margin-bottom: 14px;
+  color: @kifi-bluegray;
+  -webkit-font-smoothing: antialiased;
+}
+
+.kifi-tagbox-tag-list {
+  position: relative;
+}
+
+.kifi-tagbox-tag-list-inner {
+  position: relative;
+  height: 100px;
+  overflow: scroll;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+
+.kifi-tagbox-tag {
+  display: inline-block;
+  font-size: 13px;
+  line-height: 24px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+  text-align: center;
+  background: @kifi-bluegray;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    .kifi-tagbox-tag-name {
+      padding: 0 7px;
+    }
+    .kifi-tagbox-tag-remove {
+      width: 18px;
     }
   }
 
-  .kifi-tagbox-clear {
-    position: absolute;
-    right: 10px;
-    bottom: 6px;
-    font-size: 13px;
-    line-height: normal;
-    color: @kifi-gray-a !important; // style leak fix
-    text-decoration: none;
+  &.busy {
+    cursor: progress;
 
-    &:hover {
-      color: @kifi-link !important; // style leak fix
+    .kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {
+      background: @kifi-gray-c;
     }
+  }
+}
+
+.kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {
+  display: inline-block;
+  float: left;
+  color: white !important; // style leak fix
+  text-decoration: none;
+  line-height: inherit; // style leak fix
+
+  &:hover {
+    background: @kifi-bluegray-a;
+  }
+
+  &:active {
+    background: @kifi-bluegray-8;
+  }
+}
+
+.kifi-tagbox-tag-name {
+  padding: 0 16px;
+  transition: all .1s linear;
+}
+
+.kifi-tagbox-tag-remove {
+  width: 0;
+  transition: all .1s linear;
+
+  &::before {
+    content: "\d7";
+    //position: relative;
+    //bottom: 1px;
+  }
+}
+
+.kifi-tagbox-clear {
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  font-size: 13px;
+  line-height: normal;
+  color: @kifi-gray-a !important; // style leak fix
+  text-decoration: none;
+
+  &:hover {
+    color: @kifi-link !important; // style leak fix
   }
 }
