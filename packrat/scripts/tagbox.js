@@ -1092,7 +1092,7 @@ this.tagbox = (function ($, win) {
 			this.tags.push(tag);
 
 			this.removeNewSuggestionByName(tag.name);
-			this.onAddResponse.bind(this, tag.id, tag);
+			this.onAddResponse(tag.id, tag);
 
 			return tag;
 		},
