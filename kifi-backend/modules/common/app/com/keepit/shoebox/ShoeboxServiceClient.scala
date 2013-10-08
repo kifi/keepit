@@ -200,7 +200,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
     val (cachedUsers, needToGetUsers) = userIds.map({ u =>
-      u -> cacheProvider.externalUserIdCache.getOrElseOpt(ExternalUserIdKey(u))(None)
+      u -> cacheProvider.externalUserIdCache.get(ExternalUserIdKey(u))
     }).foldRight((Seq[Id[User]](), Seq[ExternalId[User]]())) { (uOpt, res) =>
       uOpt._2 match {
         case Some(uid) => (res._1 :+ uid, res._2)
@@ -219,7 +219,7 @@ class ShoeboxServiceClientImpl @Inject() (
     var cached = Map.empty[Id[User], BasicUser]
     val needed = new ArrayBuffer[Id[User]]
     userIds.foreach{ userId =>
-      cacheProvider.basicUserCache.getOrElseOpt(BasicUserUserIdKey(userId))(None) match {
+      cacheProvider.basicUserCache.get(BasicUserUserIdKey(userId)) match {
         case Some(bu) => cached += (userId -> bu)
         case None => needed += userId
       }
