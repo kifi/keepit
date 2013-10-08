@@ -1,20 +1,21 @@
 /*
  * Clear fix
  */ 
-.kifi-group:before,
-.kifi-group:after {
-  content: "";
-  display: table;
-} 
-.kifi-group:after {
-  clear: both;
-}
 .kifi-group {
   zoom: 1; /* For IE 6/7 (trigger hasLayout) */
+
+  &::before, &::after {
+    content: "";
+    display: table;
+  } 
+
+  &::after {
+    clear: both;
+  }
 }
 
 #kifi-tagbox {
-  .kifi-tagbox {
+  &.kifi-tagbox {
     position: fixed;
     bottom: 54px;
     right: 6px;
@@ -25,20 +26,64 @@
     font-family: 'Helvetica Neue', Arial, sans-serif;
     font-weight: normal;
     -webkit-font-smoothing: antialiased;
-  }
+    text-align: left;
 
-  .kifi-tagbox.attached {
-    border-bottom: 0;
+    &.attached {
+      border-bottom: 0;
+
+      .kifi-tagbox-tagged, .kifi-tagbox-empty {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+    }
+
+    &.suggested {
+      .kifi-tagbox-suggest {
+        display: block;
+      }
+
+      .kifi-tagbox-empty {
+        color: #b8c5d1;
+        background: white;
+      }
+
+      .kifi-tagbox-empty {
+        display: none;
+      }
+
+      &.tagged .kifi-tagbox-empty {
+        display: none;
+      }
+    }
+
+    &.tagged {
+      .kifi-tagbox-empty {
+        display: none;
+      }
+
+      .kifi-tagbox-tagged {
+        display: block;
+      }
+    }
+
+    .kifi-tagbox-loading {
+      display: none;
+    }
+
+    &.loading {
+      .kifi-tagbox-empty, .kifi-tagbox-tagged, .kifi-tagbox-suggest {
+        display: none;
+      }
+
+      .kifi-tagbox-loading {
+display: block;
+      }
+    }
   }
 
   .kifi-tagbox-tagged, .kifi-tagbox-empty {
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
-  }
-
-  .kifi-tagbox.attached .kifi-tagbox-tagged, .kifi-tagbox.attached .kifi-tagbox-empty {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
   }
 
   .kifi-tagbox-title {
@@ -67,10 +112,10 @@
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAQAAAADQ4RFAAAA0klEQVR4AXXUMW7DMBBE0alE5zhRrm0gMSxLvkfoKyhKYV/hB4ttSITzp34ViVXEOwdXTsiPwicHM0IiyJPoblmQlegZTMxJGuYJycQO0DNLsh9xpm9LZglcxMQyZoZsFOGZIUgkuw2YIYEcq9QRaVGwFVtLAhnmSYc8S+KQKHz/I7UhBtUBmgwy75KtPfOk79YyT/DMkwcPx4T/Y4WNviWZJ0KcxswTGXZlEl94kuxO31nshni252HxJPfWsBcfItjLk4YlmZFIdnBJ4hkLv0HQHxvW+Tv3j7AoAAAAAElFTkSuQmCC);
     background-size: auto 13px;
     vertical-align: middle;
-  }
 
-  .kifi-tagbox-close:hover {
-    background-color: #7492af;
+    &:hover {
+      background-color: #7492af;
+    }
   }
 
   .kifi-tagbox-input-box {
@@ -82,15 +127,23 @@
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: text;
-  }
 
-  .kifi-tagbox-input-box table { 
-    border-spacing: 0;
-    border-collapse: collapse;
-  }
+    table {
+      border-spacing: 0;
+      border-collapse: collapse;
 
-  .kifi-tagbox-input-box table td, .kifi-tagbox-input-box table th {
-    padding: 0; /* 'cellpadding' equivalent */
+      td, th {
+        padding: 0; /* 'cellpadding' equivalent */
+      }
+    }
+
+    &.focus .kifi-tagbox-input-placeholder {
+      color: #c8d5e1;
+    }
+
+    &.empty .kifi-tagbox-input-placeholder {
+      display: block;
+    }
   }
 
   .kifi-tagbox-tag-icon {
@@ -142,20 +195,8 @@
     transition: color .2s linear;
   }
 
-  .kifi-tagbox-input-box.focus .kifi-tagbox-input-placeholder {
-    color: #c8d5e1;
-  }
-
-  .kifi-tagbox-input-box.empty .kifi-tagbox-input-placeholder {
-    display: block;
-  }
-
   .kifi-tagbox-suggest {
     position: relative;
-  }
-
-  .kifi-tagbox.suggested .kifi-tagbox-suggest {
-    display: block;
   }
 
   .kifi-tagbox-suggest-inner {
@@ -180,29 +221,29 @@
     overflow: hidden;
     text-overflow: ellipsis;
     text-decoration: none;
-  }
 
-  .kifi-tagbox-suggestion.focus {
-    background: #b8c5d1;
-    color: white;
-    cursor: pointer;
-  }
+    &.focus {
+      background: #b8c5d1;
+      color: white;
+      cursor: pointer;
 
-  .kifi-tagbox-suggestion:active {
-    background: #a0b1c2;
-    //background: #8699ab;
+      .kifi-tagbox-suggestion-icon {
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAQAAACiV3CzAAAA60lEQVR4Ae3LMU4CQRiG4W83RAt0lVBoo4kX0CtYwCFoiAWNZyD0Nt4CCy6xiTfQQG2IwYLERrShmVeKnezM7KBuYcfzVX/+vIrhlldeuEHViXAJ91h3JL8F+0xwPbD3U9DikVDO8bbgnBkxU85iwRVvbLPgMgw6rJz3gIvNBiywPui4QZ811pwTVOyUOdaavg2GGEo95KxHyTBEYoSv5QVH+EYJ72rLdagvlQ70KdcqVVu+6+hlZSI0o4mKNZkSEFVPdGls1uWZigQUYySlimgoLlXdx/8Hu2AXLFXHMtVYdYxFRo7hLww52TeyrdzuJXPukQAAAABJRU5ErkJggg==);
+      }
+    }
+
+    &:active {
+      background: #a0b1c2;
+      //background: #8699ab;
+    }
+
+    &.busy {
+      background: #cccccc;
+    }
   }
 
   .kifi-tagbox-suggestion-icon {
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NPWoCURSG4RFEC8WfKmkiZAO6Ce3cgI2ksHENYp/CLMMimxjIDhTtAiJRwSKN6Syck/eCaYZ759xJYneLp/vOeaP3zc7XGB/Y4Mn3zmdUwAsk5RmFvwbKeIU4zFH6baCJN4giRiNvoIU1xNMKD76BDg6QnPZoa4EuvhzHIzxejbC37E7ougJDnC1HW9whSrnH1rI/Y5gOTJBALAaIHAaOmwSTn8AUkqGZEagrt1Mz+lRG1YxAVbk9mZEo+hmBvnbvE1ijYnlewcovoFugh+JVD0tIvoDuYigbLaALgRAIgRAIAUvgeMPA0QRmNwzMTKCGGAnknySIUfsGLlMukbhYQI0AAAAASUVORK5CYII=);
-  }
-
-  .kifi-tagbox-suggestion.focus .kifi-tagbox-suggestion-icon {
-    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAQAAACiV3CzAAAA60lEQVR4Ae3LMU4CQRiG4W83RAt0lVBoo4kX0CtYwCFoiAWNZyD0Nt4CCy6xiTfQQG2IwYLERrShmVeKnezM7KBuYcfzVX/+vIrhlldeuEHViXAJ91h3JL8F+0xwPbD3U9DikVDO8bbgnBkxU85iwRVvbLPgMgw6rJz3gIvNBiywPui4QZ811pwTVOyUOdaavg2GGEo95KxHyTBEYoSv5QVH+EYJ72rLdagvlQ70KdcqVVu+6+hlZSI0o4mKNZkSEFVPdGls1uWZigQUYySlimgoLlXdx/8Hu2AXLFXHMtVYdYxFRo7hLww52TeyrdzuJXPukQAAAABJRU5ErkJggg==);
-  }
-
-  .kifi-tagbox-suggestion.busy {
-    background: #cccccc;
   }
 
   .kifi-tagbox-empty, .kifi-tagbox-loading {
@@ -217,37 +258,6 @@
     transition: background .3s linear;
   }
 
-  .kifi-tagbox.suggested .kifi-tagbox-empty {
-    color: #b8c5d1;
-    background: white;
-  }
-
-  /*
-  .kifi-tagbox.suggested .kifi-tagbox-empty {
-  display: none;
-  }
-
-  .kifi-tagbox.suggested.tagged .kifi-tagbox-empty {
-  display: none;
-  }
-   */
-
-  .kifi-tagbox.tagged .kifi-tagbox-empty {
-    display: none;
-  }
-
-  .kifi-tagbox .kifi-tagbox-loading {
-    display: none;
-  }
-
-  .kifi-tagbox.loading .kifi-tagbox-empty, .kifi-tagbox.loading .kifi-tagbox-tagged, .kifi-tagbox.loading .kifi-tagbox-suggest {
-    display: none;
-  }
-
-  .kifi-tagbox.loading .kifi-tagbox-loading {
-    display: block;
-  }
-
   .kifi-tagbox-new {
     display: block;
     background: #d4e4f9;
@@ -255,18 +265,18 @@
     padding-left: 37px;
     color: #858585;
     text-decoration: none;
-  }
 
-  .kifi-tagbox-new.focus {
-    background: #bcd0ea;
-  }
+    &.focus {
+      background: #bcd0ea;
+    }
 
-  .kifi-tagbox-new:active {
-    background: #acc0da;
-  }
+    &:active {
+      background: #acc0da;
+    }
 
-  .kifi-tagbox-new.busy {
-    background: #cccccc;
+    &.busy {
+      background: #cccccc;
+    }
   }
 
   .kifi-tagbox-new-caption {
@@ -288,10 +298,6 @@
     background: white;
     padding: 15px;
     height: 150px;
-  }
-
-  .kifi-tagbox.tagged .kifi-tagbox-tagged {
-    display: block;
   }
 
   .kifi-tagbox-tagged-title {
@@ -325,6 +331,21 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    &:hover {
+      .kifi-tagbox-tag-name {
+        padding: 0px 7px;
+      }
+      .kifi-tagbox-tag-remove {
+        width: 18px;
+      }
+    }
+
+    &.busy {
+      .kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {
+        background: #cccccc;
+      }
+    }
   }
 
   .kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {
@@ -332,18 +353,14 @@
     float: left;
     color: white;
     text-decoration: none;
-  }
 
-  .kifi-tagbox-tag-name:hover, .kifi-tagbox-tag-remove:hover {
-    background: #a0b1c2;
-  }
+    &:hover {
+      background: #a0b1c2;
+    }
 
-  .kifi-tagbox-tag-name:active, .kifi-tagbox-tag-remove:active {
-    background: #8699ab;
-  }
-
-  .kifi-tagbox-tag.busy .kifi-tagbox-tag-name, .kifi-tagbox-tag.busy .kifi-tagbox-tag-remove {
-    background: #cccccc;
+    &:active {
+      background: #8699ab;
+    }
   }
 
   .kifi-tagbox-tag-name {
@@ -354,20 +371,12 @@
   .kifi-tagbox-tag-remove {
     width: 0;
     transition: all .1s linear;
-  }
 
-  .kifi-tagbox-tag-remove::before {
-    content: "\d7";
-    //position: relative;
-    //bottom: 1px;
-  }
-
-  .kifi-tagbox-tag:hover .kifi-tagbox-tag-name {
-    padding: 0px 7px;
-  }
-
-  .kifi-tagbox-tag:hover .kifi-tagbox-tag-remove {
-    width: 18px;
+    &::before {
+      content: "\d7";
+      //position: relative;
+      //bottom: 1px;
+    }
   }
 
   .kifi-tagbox-clear {
@@ -378,9 +387,9 @@
     line-height: normal;
     color: #ababab;
     text-decoration: none;
-  }
 
-  .kifi-tagbox-clear:hover {
-    color: #0089d5;
+    &:hover {
+      color: #0089d5;
+    }
   }
 }

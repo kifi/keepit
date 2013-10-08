@@ -142,8 +142,8 @@ this.tagbox = (function ($, win) {
 			}
 
 			return function () {
-				//var $tagbox = $(this.renderTagBoxHtml()).appendTo(this.$slider);
-				var $tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
+				var $tagbox = $(this.renderTagBoxHtml()).appendTo(this.$slider);
+				//var $tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
 				this.$tagbox = $tagbox;
 
 				win.setTimeout(addDocListeners.bind(this), 50);
