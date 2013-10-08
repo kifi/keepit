@@ -1,4 +1,5 @@
 <div class="kifi-message-sent" data-id="{{id}}">
+  <div class="kifi-message-status"></div>
   <time datetime="{{createdAt}}">{{#formatLocalDate}}{{createdAt}}{{/formatLocalDate}}</time>
   <img class="kifi-message-pic{{#isLoggedInUser}} kifi-self{{/isLoggedInUser}}" src="{{cdnBase}}/users/{{user.id}}/pics/100/0.jpg">
   <div class="kifi-message-body">
