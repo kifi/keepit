@@ -108,6 +108,7 @@ display: block;
   .kifi-tagbox-title-text {
     color: white;
     text-align: center;
+    line-height: inherit; // style leak fix
   }
 
   .kifi-tagbox-close {
@@ -228,20 +229,24 @@ display: block;
     display: block;
     padding: 0 15px;
     line-height: 32px;
-    color: @kifi-gray-8;
+    color: @kifi-gray-8 !important; // style leak fix
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     text-decoration: none;
 
+    * {
+      line-height: inherit; // style leak fix
+    }
+
     .kifi-tagbox-suggestion-text {
-      color: inherit; // css leak fix
-      line-height: inherit; // css leak fix
+      color: inherit; // style leak fix
+      line-height: inherit; // style leak fix
     }
 
     &.focus {
       background: @kifi-bluegray;
-      color: white !important; // css leak fix
+      color: white !important; // style leak fix
       cursor: pointer;
 
       .kifi-tagbox-suggestion-icon {
@@ -255,6 +260,7 @@ display: block;
 
     &.busy {
       background: @kifi-gray-c;
+      cursor: progress;
     }
   }
 
@@ -279,7 +285,7 @@ display: block;
     background: @kifi-lightblue-d;
     padding: 10px 15px;
     padding-left: 37px;
-    color: @kifi-gray-8 !important; // css leak fix
+    color: @kifi-gray-8 !important; // style leak fix
     text-decoration: none;
 
     &.focus {
@@ -292,6 +298,7 @@ display: block;
 
     &.busy {
       background: @kifi-gray-c;
+      cursor: progress;
     }
   }
 
@@ -358,6 +365,8 @@ display: block;
     }
 
     &.busy {
+      cursor: progress;
+
       .kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {
         background: @kifi-gray-c;
       }
@@ -367,8 +376,9 @@ display: block;
   .kifi-tagbox-tag-name, .kifi-tagbox-tag-remove {
     display: inline-block;
     float: left;
-    color: white;
+    color: white !important; // style leak fix
     text-decoration: none;
+    line-height: inherit; // style leak fix
 
     &:hover {
       background: @kifi-bluegray-a;
@@ -401,11 +411,11 @@ display: block;
     bottom: 6px;
     font-size: 13px;
     line-height: normal;
-    color: @kifi-gray-a;
+    color: @kifi-gray-a !important; // style leak fix
     text-decoration: none;
 
     &:hover {
-      color: @kifi-link;
+      color: @kifi-link !important; // style leak fix
     }
   }
 }

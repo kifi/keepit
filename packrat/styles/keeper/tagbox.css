@@ -78,6 +78,7 @@
 #kifi-tagbox .kifi-tagbox-title-text {
   color: white;
   text-align: center;
+  line-height: inherit;
 }
 #kifi-tagbox .kifi-tagbox-close {
   position: absolute;
@@ -182,11 +183,14 @@
   display: block;
   padding: 0 15px;
   line-height: 32px;
-  color: #858585;
+  color: #858585 !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   text-decoration: none;
+}
+#kifi-tagbox .kifi-tagbox-suggestion * {
+  line-height: inherit;
 }
 #kifi-tagbox .kifi-tagbox-suggestion .kifi-tagbox-suggestion-text {
   color: inherit;
@@ -194,7 +198,7 @@
 }
 #kifi-tagbox .kifi-tagbox-suggestion.focus {
   background: #b8c5d1;
-  color: white;
+  color: white !important;
   cursor: pointer;
 }
 #kifi-tagbox .kifi-tagbox-suggestion.focus .kifi-tagbox-suggestion-icon {
@@ -205,6 +209,7 @@
 }
 #kifi-tagbox .kifi-tagbox-suggestion.busy {
   background: #cccccc;
+  cursor: progress;
 }
 #kifi-tagbox .kifi-tagbox-suggestion-icon {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NPWoCURSG4RFEC8WfKmkiZAO6Ce3cgI2ksHENYp/CLMMimxjIDhTtAiJRwSKN6Syck/eCaYZ759xJYneLp/vOeaP3zc7XGB/Y4Mn3zmdUwAsk5RmFvwbKeIU4zFH6baCJN4giRiNvoIU1xNMKD76BDg6QnPZoa4EuvhzHIzxejbC37E7ougJDnC1HW9whSrnH1rI/Y5gOTJBALAaIHAaOmwSTn8AUkqGZEagrt1Mz+lRG1YxAVbk9mZEo+hmBvnbvE1ijYnlewcovoFugh+JVD0tIvoDuYigbLaALgRAIgRAIAUvgeMPA0QRmNwzMTKCGGAnknySIUfsGLlMukbhYQI0AAAAASUVORK5CYII=);
@@ -237,6 +242,7 @@
 }
 #kifi-tagbox .kifi-tagbox-new.busy {
   background: #cccccc;
+  cursor: progress;
 }
 #kifi-tagbox .kifi-tagbox-new-caption {
   display: block;
@@ -291,6 +297,9 @@
 #kifi-tagbox .kifi-tagbox-tag:hover .kifi-tagbox-tag-remove {
   width: 18px;
 }
+#kifi-tagbox .kifi-tagbox-tag.busy {
+  cursor: progress;
+}
 #kifi-tagbox .kifi-tagbox-tag.busy .kifi-tagbox-tag-name,
 #kifi-tagbox .kifi-tagbox-tag.busy .kifi-tagbox-tag-remove {
   background: #cccccc;
@@ -299,8 +308,9 @@
 #kifi-tagbox .kifi-tagbox-tag-remove {
   display: inline-block;
   float: left;
-  color: white;
+  color: white !important;
   text-decoration: none;
+  line-height: inherit;
 }
 #kifi-tagbox .kifi-tagbox-tag-name:hover,
 #kifi-tagbox .kifi-tagbox-tag-remove:hover {
@@ -327,9 +337,9 @@
   bottom: 6px;
   font-size: 13px;
   line-height: normal;
-  color: #ababab;
+  color: #ababab !important;
   text-decoration: none;
 }
 #kifi-tagbox .kifi-tagbox-clear:hover {
-  color: #0089d5;
+  color: #0089d5 !important;
 }
