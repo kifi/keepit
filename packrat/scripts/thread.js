@@ -163,7 +163,7 @@ panes.thread = function () {
     }
     $reply.find('.kifi-message-body').css({opacity: 0.3});
     $reply.find('time').css({display:'none'});
-    $error.text(errorText + ' <a href="javascript:">retry?</a>').css({cursor: 'pointer', color: '#a00'})
+    $error.html(errorText + ' <a href="javascript:">retry?</a>').css({cursor: 'pointer', color: '#a00'})
     .fadeIn(300).off('click').click(function() {
       $(this).fadeOut(100);
       $reply.find('time').css({display:''});
