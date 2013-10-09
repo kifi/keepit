@@ -1629,7 +1629,7 @@ function clearSession() {
 
 function deauthenticate() {
   log("[deauthenticate]")();
-  endSession();
+  clearSession();
   api.popup.open({
     name: "kifi-deauthenticate",
     url: webBaseUri() + "/logout#_=_",
