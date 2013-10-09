@@ -122,14 +122,6 @@ panes.thread = function () {
   }
 
   function sendReply($container, threadId, session, e, text) {
-    api.port.emit('send_reply', {text: text, threadId: threadId}, function (o) {
-      log('[sendReply] resp:', o)();
-      $m.attr('data-id', o.id);
-      $m.find('time')  // TODO: patch timeago to update attrs too
-        .attr('datetime', o.createdAt)
-        .attr('title', getLocalDateFormatter()(o.createdAt, function render(s) {return s}))
-        .timeago('update', o.createdAt);
-    });
     var $m = renderMessage({
       id: '',
       createdAt: new Date().toISOString(),
@@ -138,6 +130,16 @@ panes.thread = function () {
     }, session.userId)
     .data('text', text);
     $holder.append($m).scrollToBottom();
+    
+    transmitReply($m, text, threadId);
+
+    setTimeout(function() {
+      if (!$m.attr('data-id') && !$m.data('error')) {
+        $m.find('time').hide();
+        $m.find('.kifi-message-status').text('sending…')
+      }
+    }, 1000);
+
   }
 
   function renderMessage(m, userId) {
@@ -147,6 +149,45 @@ panes.thread = function () {
     return $(render('html/keeper/message', m))
       .find('time').timeago().end();
   }
+
+  function handleReplyError($reply, status, originalText, threadId) {
+    $reply.data('error', true);
+    var $error = $reply.find('.kifi-message-status');
+    var errorText;
+    switch (status) {
+      case 0:
+      case 502:
+        errorText = 'whoops, no connection.'; break;
+      default:
+        errorText = 'whoops, not delivered.';
+    }
+    $reply.find('.kifi-message-body').css({opacity: 0.3});
+    $reply.find('time').css({display:'none'});
+    $error.html(errorText + ' <a href="javascript:">retry?</a>').css({cursor: 'pointer', color: '#a00'})
+    .fadeIn(300).off('click').click(function() {
+      $(this).fadeOut(100);
+      $reply.find('time').css({display:''});
+      transmitReply($reply, originalText, threadId);
+    });
+  }
+
+  function transmitReply($m, originalText, threadId) {
+    api.port.emit('send_reply', {text: originalText, threadId: threadId}, function(o) {
+      log('[transmitReply] resp:', o);
+      if (o.id) { // success, got a response
+        $m.attr('data-id', o.id);
+        $m.find('.kifi-message-body').css({opacity: ''});
+        $m.find('time')  // TODO: patch timeago to update attrs too
+          .attr('datetime', o.createdAt)
+          .attr('title', getLocalDateFormatter()(o.createdAt, function render(s) {return s}))
+          .timeago('update', o.createdAt)
+          .css({display:''});
+      } else {
+        handleReplyError($m, o.status, originalText, threadId);
+      }
+    });
+  }
+
 
   function emitRead(threadId, m, forceSend) {
     api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt, forceSend: forceSend || false});

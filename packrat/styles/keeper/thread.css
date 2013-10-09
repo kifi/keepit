@@ -19,6 +19,16 @@
   padding-bottom: 0;
   margin-bottom: 4px;
 }
+.kifi-message-status {
+  position: absolute;
+  right: 10px;
+  top: -6px;
+  line-height: 12px;
+  font-size: 12px;
+  padding: 0 3px;
+  background-color: #fafafa;
+  display: none;
+}
 .kifi-message-sent>time {
   position: absolute;
   right: 10px;
