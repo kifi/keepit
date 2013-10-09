@@ -90,7 +90,7 @@ class ExtPageController @Inject() (
       (nUriStr, nUri, domain, bookmark, tags, position, neverOnSite, host)
     }
 
-    val sensitive: Boolean = !request.experiments.contains(ExperimentTypes.NOT_SENSITIVE) &&
+    val sensitive: Boolean = !request.experiments.contains(ExperimentType.NOT_SENSITIVE) &&
       (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
 
     val shown = nUri.map { uri => historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false

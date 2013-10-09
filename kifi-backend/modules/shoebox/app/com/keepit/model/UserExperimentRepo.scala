@@ -9,12 +9,12 @@ import scala.Some
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
 trait UserExperimentRepo extends Repo[UserExperiment] {
-  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[State[ExperimentType]]
-  def get(userId: Id[User], experiment: State[ExperimentType],
+  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType]
+  def get(userId: Id[User], experiment: ExperimentType,
           excludeState: Option[State[UserExperiment]] = Some(UserExperimentStates.INACTIVE))
          (implicit session: RSession): Option[UserExperiment]
-  def getByType(experiment: State[ExperimentType])(implicit session: RSession): Seq[UserExperiment]
-  def hasExperiment(userId: Id[User], experimentType: State[ExperimentType])(implicit session: RSession): Boolean
+  def getByType(experiment: ExperimentType)(implicit session: RSession): Seq[UserExperiment]
+  def hasExperiment(userId: Id[User], experimentType: ExperimentType)(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -30,18 +30,18 @@ class UserExperimentRepoImpl @Inject()(
 
   override val table = new RepoTable[UserExperiment](db, "user_experiment") {
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def experimentType = column[State[ExperimentType]]("experiment_type", O.NotNull)
+    def experimentType = column[ExperimentType]("experiment_type", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ experimentType ~ state <> (UserExperiment,
       UserExperiment.unapply _)
   }
 
-  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[State[ExperimentType]] = {
+  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType] = {
     userExperimentCache.getOrElse(UserExperimentUserIdKey(userId)) {
       (for(f <- table if f.userId === userId && f.state === UserExperimentStates.ACTIVE) yield f.experimentType).list
     } toSet
   }
 
-  def get(userId: Id[User], experimentType: State[ExperimentType],
+  def get(userId: Id[User], experimentType: ExperimentType,
           excludeState: Option[State[UserExperiment]] = Some(UserExperimentStates.INACTIVE))
          (implicit session: RSession): Option[UserExperiment] = {
     (for {
@@ -49,7 +49,7 @@ class UserExperimentRepoImpl @Inject()(
     } yield f).firstOption
   }
 
-  def hasExperiment(userId: Id[User], experimentType: State[ExperimentType])(implicit session: RSession): Boolean = {
+  def hasExperiment(userId: Id[User], experimentType: ExperimentType)(implicit session: RSession): Boolean = {
     getUserExperiments(userId).contains(experimentType)
   }
 
@@ -58,7 +58,7 @@ class UserExperimentRepoImpl @Inject()(
     model
   }
 
-  def getByType(experiment: State[ExperimentType])(implicit session: RSession): Seq[UserExperiment] = {
+  def getByType(experiment: ExperimentType)(implicit session: RSession): Seq[UserExperiment] = {
     val q = for {
       f <- table if f.experimentType === experiment && f.state === UserExperimentStates.ACTIVE
     } yield f

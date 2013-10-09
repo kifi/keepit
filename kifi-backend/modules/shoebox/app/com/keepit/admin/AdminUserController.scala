@@ -28,7 +28,7 @@ case class UserStatistics(
     user: User,
     socialUsers: Seq[SocialUserInfo],
     bookmarksCount: Int,
-    experiments: Set[State[ExperimentType]],
+    experiments: Set[ExperimentType],
     kifiInstallations: Seq[KifiInstallation])
 
 class AdminUserController @Inject() (
@@ -272,7 +272,7 @@ class AdminUserController @Inject() (
   }
 
   def addExperiment(userId: Id[User], experiment: String) = AdminJsonAction { request =>
-    val expType = ExperimentTypes(experiment)
+    val expType = ExperimentType.get(experiment)
     db.readWrite { implicit session =>
       (userExperimentRepo.get(userId, expType, excludeState = None) match {
         case Some(ue) if ue.isActive => None
@@ -299,7 +299,7 @@ class AdminUserController @Inject() (
 
   def removeExperiment(userId: Id[User], experiment: String) = AdminJsonAction { request =>
     db.readWrite { implicit session =>
-      userExperimentRepo.get(userId, ExperimentTypes(experiment)).foreach { ue =>
+      userExperimentRepo.get(userId, ExperimentType.get(experiment)).foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
         eliza.sendToUser(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }

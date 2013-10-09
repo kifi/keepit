@@ -56,7 +56,7 @@ class ExtUserController @Inject() (
 
     // Apologies for this code. "Personal favor" for Danny. Doing it right should be speced and requires
     // two models, service clients, and caches.
-    val iNeededToDoThisIn20Minutes = if (request.experiments.contains(ExperimentTypes.ADMIN)) {
+    val iNeededToDoThisIn20Minutes = if (request.experiments.contains(ExperimentType.ADMIN)) {
       Seq(
         BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424201"), "FortyTwo Engineering", "", "0.jpg"),
         BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424202"), "FortyTwo Family", "", "0.jpg"),
@@ -70,7 +70,7 @@ class ExtUserController @Inject() (
 
 
   private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
-    experimentRepo.hasExperiment(userId, ExperimentTypes.CAN_MESSAGE_ALL_USERS)
+    experimentRepo.hasExperiment(userId, ExperimentType.CAN_MESSAGE_ALL_USERS)
   }
 
   def suppressSliderForSite() = AuthenticatedJsonToJsonAction { request =>

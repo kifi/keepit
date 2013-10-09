@@ -11,7 +11,7 @@ import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
-import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
+import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search._
 import com.keepit.serializer.PersonalSearchResultPacketSerializer.resSerializer
 import com.keepit.common.logging.Logging

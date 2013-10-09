@@ -222,7 +222,7 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  private def addTagToUrl(user: User, experiments: Set[State[ExperimentType]],
+  private def addTagToUrl(user: User, experiments: Set[ExperimentType],
       url: String, tagId: Id[Collection])(implicit s: RWSession): KeepToCollection = {
     val bookmarkIdOpt = for {
       uri <- uriRepo.getByUri(url)
