@@ -961,18 +961,6 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Makes a request to the server to create a tag for the user.
-		 * Returns a promise object.
-		 *
-		 * @param {string} name - A tag name
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		requestCreateTagByName: function (name) {
-			return this.request('create_tag', name, 'Could not create tag, "' + name + '"');
-		},
-
-		/**
 		 * Makes a request to the server to add a tag to a keep.
 		 * Returns a promise object.
 		 *
