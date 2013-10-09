@@ -105,10 +105,10 @@ class UrlController @Inject() (
     
     def sendStartEmail(urls: Seq[URL]) = {
       val title = "Renormalization Begins"
-      val msg = s"domain = ${domain}, ${urls.size} urls affected. readOnly = ${readOnly}"
+      val msg = s"domain = ${domain}, scanning ${urls.size} urls. readOnly = ${readOnly}"
       db.readWrite{ implicit s =>
         postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-        subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
+        subject = title, htmlBody = msg, category = PostOffice.Categories.ADMIN))
       }
     }
     
