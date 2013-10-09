@@ -4,7 +4,8 @@ import scala.concurrent.duration.Duration
 import scala.slick.lifted.Query
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
@@ -27,8 +28,8 @@ case class UnfriendedConnectionsKey(userId: Id[User]) extends Key[Set[Id[User]]]
   def toKey(): String = userId.id.toString
 }
 
-class UnfriendedConnectionsCache(inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UnfriendedConnectionsKey, Set[Id[User]]](inner, outer:_*)(TraversableFormat.set(Id.format[User]))
+class UnfriendedConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UnfriendedConnectionsKey, Set[Id[User]]](stats, accessLog, inner, outer:_*)(TraversableFormat.set(Id.format[User]))
 
 @Singleton
 class UserConnectionRepoImpl @Inject() (

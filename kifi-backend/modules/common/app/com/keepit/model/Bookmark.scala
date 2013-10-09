@@ -3,6 +3,7 @@ package com.keepit.model
 import scala.concurrent.duration._
 import org.joda.time.DateTime
 import com.keepit.common.cache._
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
@@ -71,8 +72,8 @@ case class BookmarkCountKey(userId: Option[Id[User]] = None) extends Key[Int] {
   def toKey(): String = userId map (_.toString) getOrElse "all"
 }
 
-class BookmarkCountCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends PrimitiveCacheImpl[BookmarkCountKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class BookmarkCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[BookmarkCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Bookmark] {
   override val version = 4
@@ -80,8 +81,8 @@ case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extend
   def toKey(): String = uriId.id + "#" + userId.id
 }
 
-class BookmarkUriUserCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[BookmarkUriUserKey, Bookmark](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class BookmarkUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[BookmarkUriUserKey, Bookmark](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class LatestBookmarkUriKey(uriId: Id[NormalizedURI]) extends Key[Bookmark] {
   override val version = 1
@@ -89,8 +90,8 @@ case class LatestBookmarkUriKey(uriId: Id[NormalizedURI]) extends Key[Bookmark] 
   def toKey(): String = uriId.toString
 }
 
-class LatestBookmarkUriCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[LatestBookmarkUriKey, Bookmark](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class LatestBookmarkUriCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LatestBookmarkUriKey, Bookmark](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object BookmarkStates extends States[Bookmark]
 

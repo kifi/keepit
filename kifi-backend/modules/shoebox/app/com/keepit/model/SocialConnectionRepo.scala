@@ -3,7 +3,8 @@ package com.keepit.model
 import scala.concurrent.duration.Duration
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
@@ -65,8 +66,8 @@ case class SocialUserConnectionsKey(id: Id[SocialUserInfo]) extends Key[Seq[Soci
   def toKey(): String = id.id.toString
 }
 
-class SocialUserConnectionsCache(inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[SocialUserConnectionsKey, Seq[SocialConnectionInfo]](inner, outer: _*)
+class SocialUserConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[SocialUserConnectionsKey, Seq[SocialConnectionInfo]](stats, accessLog, inner, outer: _*)
 
 @Singleton
 class SocialConnectionRepoImpl @Inject() (

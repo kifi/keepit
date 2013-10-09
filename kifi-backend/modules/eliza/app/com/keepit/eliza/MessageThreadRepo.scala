@@ -5,6 +5,8 @@ import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, Exter
 import com.keepit.common.db.slick.FortyTwoTypeMappers._
 import com.keepit.common.db.slick.{StringMapperDelegate}
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
 import com.keepit.common.time.{currentDateTime, zones, Clock}
 import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
@@ -23,12 +25,12 @@ class MessageThreadParticipants(val participants : Map[Id[User], DateTime]) {
 
   def contains(user: Id[User]) : Boolean = participants.contains(user)
   def allExcept(user: Id[User]) : Set[Id[User]] = participants.keySet - user
-  
+
   lazy val all = participants.keySet
   lazy val hash : Int = MurmurHash3.setHash(participants.keySet)
 
   override def equals(other: Any) : Boolean = other match {
-    case mtps: MessageThreadParticipants => super.equals(other) || mtps.participants.keySet == participants.keySet 
+    case mtps: MessageThreadParticipants => super.equals(other) || mtps.participants.keySet == participants.keySet
     case _ => false
   }
 
@@ -45,7 +47,7 @@ object MessageThreadParticipants{
             case (uid, timestamp) => (Id[User](uid.toLong), timestamp.as[DateTime])
           })
           JsSuccess(mtps)
-        }  
+        }
         case _ => JsError()
       }
     }
@@ -72,8 +74,8 @@ object MessageThreadParticipants{
 
 case class MessageThread(
     id: Option[Id[MessageThread]] = None,
-    createdAt: DateTime = currentDateTime(zones.PT), 
-    updateAt: DateTime = currentDateTime(zones.PT), 
+    createdAt: DateTime = currentDateTime(zones.PT),
+    updateAt: DateTime = currentDateTime(zones.PT),
     externalId: ExternalId[MessageThread] = ExternalId(),
     uriId: Option[Id[NormalizedURI]],
     url: Option[String],
@@ -82,11 +84,11 @@ case class MessageThread(
     participants: Option[MessageThreadParticipants],
     participantsHash: Option[Int],
     replyable: Boolean
-  ) 
+  )
   extends ModelWithExternalId[MessageThread] {
 
   def withId(id: Id[MessageThread]): MessageThread = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime) 
+  def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime)
 
   def containsUser(user: Id[User]) : Boolean = participants.map(_.contains(user)).getOrElse(false)
   def allUsersExcept(user: Id[User]) : Set[Id[User]] = participants.map(_.allExcept(user)).getOrElse(Set[Id[User]]())
@@ -102,11 +104,11 @@ object MessageThread {
     (__ \ 'externalId).format(ExternalId.format[MessageThread]) and
     (__ \ 'uriId).formatNullable(Id.format[NormalizedURI]) and
     (__ \ 'url).formatNullable[String] and
-    (__ \ 'nUrl).formatNullable[String] and    
-    (__ \ 'pageTitle).formatNullable[String] and  
+    (__ \ 'nUrl).formatNullable[String] and
+    (__ \ 'pageTitle).formatNullable[String] and
     (__ \ 'participants).formatNullable[MessageThreadParticipants] and
     (__ \ 'participantsHash).formatNullable[Int] and
-    (__ \ 'replyable).format[Boolean] 
+    (__ \ 'replyable).format[Boolean]
   )(MessageThread.apply, unlift(MessageThread.unapply))
 }
 
@@ -126,10 +128,10 @@ trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunctio
 
 @Singleton
 class MessageThreadRepoImpl @Inject() (
-    val clock: Clock, 
+    val clock: Clock,
     val db: DataBaseComponent,
-    val threadExternalIdCache: MessageThreadExternalIdCache 
-  ) 
+    val threadExternalIdCache: MessageThreadExternalIdCache
+  )
   extends DbRepo[MessageThread] with MessageThreadRepo with ExternalIdColumnDbFunction[MessageThread] {
 
   override val table = new RepoTable[MessageThread](db, "message_thread") with ExternalIdColumn[MessageThread] {
@@ -203,6 +205,6 @@ case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) ext
   def toKey(): String = externalId.id
 }
 
-class MessageThreadExternalIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[MessageThreadExternalIdKey, MessageThread](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class MessageThreadExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[MessageThreadExternalIdKey, MessageThread](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 

@@ -5,6 +5,7 @@ import scala.concurrent.duration._
 import org.joda.time.DateTime
 
 import com.keepit.common.cache._
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
 
@@ -45,8 +46,8 @@ case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
   def toKey(): String = externalId.id
 }
 
-class UserExternalIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UserExternalIdKey, User](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class UserExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserExternalIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class UserIdKey(id: Id[User]) extends Key[User] {
   override val version = 3
@@ -54,8 +55,8 @@ case class UserIdKey(id: Id[User]) extends Key[User] {
   def toKey(): String = id.id.toString
 }
 
-class UserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UserIdKey, User](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class UserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
   override val version = 3
@@ -63,8 +64,8 @@ case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
   def toKey(): String = id.id.toString
 }
 
-class ExternalUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[ExternalUserIdKey, Id[User]](innermostPluginSettings, innerToOuterPluginSettings:_*)(Id.format[User])
+class ExternalUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[ExternalUserIdKey, Id[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Id.format[User])
 
 object UserStates extends States[User] {
   val PENDING = State[User]("pending")

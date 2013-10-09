@@ -3,6 +3,7 @@ package com.keepit.common.cache
 import com.keepit.serializer._
 import play.api.libs.json._
 import com.keepit.test._
+import com.keepit.common.logging.AccessLog
 import org.specs2.mutable.Specification
 import scala.concurrent.duration.Duration
 import com.keepit.inject._
@@ -17,8 +18,8 @@ case class TestJsonCacheKey(id: String) extends Key[TestJsonCacheData] {
   def toKey = id
 }
 
-class TestJsonCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[TestJsonCacheKey, TestJsonCacheData](innermostPluginSettings, innerToOuterPluginSettings:_*)(Json.format[TestJsonCacheData])
+class TestJsonCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[TestJsonCacheKey, TestJsonCacheData](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Json.format[TestJsonCacheData])
 
 case class TestBinaryCacheKey(id: String) extends Key[Array[Byte]] {
   override val version = 1
@@ -31,8 +32,8 @@ object DummyBinarySerializer extends BinaryFormat[Array[Byte]] {
   def reads(x: Array[Byte]) = x
 }
 
-class TestBinaryCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[TestBinaryCacheKey, Array[Byte]](innermostPluginSettings, innerToOuterPluginSettings:_*)(DummyBinarySerializer)
+class TestBinaryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends BinaryCacheImpl[TestBinaryCacheKey, Array[Byte]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(DummyBinarySerializer)
 
 case class TestPrimitiveCacheKey(id: String) extends Key[Double] {
   override val version = 1
@@ -40,8 +41,8 @@ case class TestPrimitiveCacheKey(id: String) extends Key[Double] {
   def toKey = id
 }
 
-class TestPrimitiveCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends PrimitiveCacheImpl[TestPrimitiveCacheKey, Double](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class TestPrimitiveCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[TestPrimitiveCacheKey, Double](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class TestStringCacheKey(id: String) extends Key[String] {
   override val version = 1
@@ -49,15 +50,16 @@ case class TestStringCacheKey(id: String) extends Key[String] {
   def toKey =  id
 }
 
-class TestStringCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends StringCacheImpl[TestStringCacheKey](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class TestStringCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends StringCacheImpl[TestStringCacheKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
 
   "JsonCacheImpl Instance" should {
     withInjector(EhCacheCacheModule(), FakeAirbrakeModule()){ implicit injector =>
       val cachePlugin = inject[FortyTwoCachePlugin]
-      val cache = new TestJsonCache((cachePlugin, Duration(7, "days")))
+      val cache = new TestJsonCache(inject[CacheStatistics],
+          inject[AccessLog], (cachePlugin, Duration(7, "days")))
       "yield the value TestJsonCacheData('hello', 42)" in {
         cache.getOrElse(TestJsonCacheKey("hello_42"))(TestJsonCacheData("hello", 42)) === TestJsonCacheData("hello", 42)
       }
@@ -71,7 +73,8 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
   "BinaryCacheImpl Instance" should {
     withInjector(EhCacheCacheModule(), FakeAirbrakeModule()){ implicit injector =>
       val cachePlugin = inject[FortyTwoCachePlugin]
-      val cache = new TestBinaryCache((cachePlugin, Duration(7, "days")))
+      val cache = new TestBinaryCache(inject[CacheStatistics],
+          inject[AccessLog], (cachePlugin, Duration(7, "days")))
       "yield the value Array[Byte](2,3,7)" in {
         cache.getOrElse(TestBinaryCacheKey("hello_42"))(Array[Byte](2,3,7)) === Array[Byte](2,3,7)
       }
@@ -95,7 +98,8 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
   "PrimitiveCacheImpl Instance" should {
     withInjector(EhCacheCacheModule(), FakeAirbrakeModule()){ implicit injector =>
       val cachePlugin = inject[FortyTwoCachePlugin]
-      val cache = new TestPrimitiveCache((cachePlugin, Duration(7, "days")))
+      val cache = new TestPrimitiveCache(inject[CacheStatistics],
+          inject[AccessLog], (cachePlugin, Duration(7, "days")))
       "yield the value 4.2141" in {
         cache.getOrElse(TestPrimitiveCacheKey("hello_42"))(4.2141) === 4.2141
       }
@@ -108,8 +112,8 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
 
   "StringCacheImpl Instance" should {
     withInjector(EhCacheCacheModule(), FakeAirbrakeModule()){ implicit injector =>
-      val cachePlugin = inject[FortyTwoCachePlugin]
-      val cache = new TestStringCache((cachePlugin, Duration(7, "days")))
+      val cache = new TestStringCache(inject[CacheStatistics],
+          inject[AccessLog], (inject[FortyTwoCachePlugin], Duration(7, "days")))
       "yield the value 'fortytwo'" in {
         cache.getOrElse(TestStringCacheKey("hello_42"))("fortytwo") === "fortytwo"
       }
