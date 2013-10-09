@@ -5,7 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.time._
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
@@ -102,7 +102,7 @@ class UriIntegrityActor @Inject()(
 
       uriRepo.getByRedirection(oldUri.id.get).foreach{ uri =>
         uriRepo.save(uri.withRedirect(newUriId, currentDateTime))
-      }  
+      }
       uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
 
       val saved = changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
@@ -141,11 +141,12 @@ class UriIntegrityActor @Inject()(
     val toMerge = getOverDueList(batchSize)
     log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
     val toScrape = db.readWrite{ implicit s =>
-      toMerge.map{ change => 
+      toMerge.map{ change =>
         try{
           processMerge(change)
         } catch {
           case e: Exception => {
+            airbrake.notify(AirbrakeError(e, Some(e.getMessage)))
             changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
             Nil
           }
@@ -170,19 +171,26 @@ class UriIntegrityActor @Inject()(
     val toMigrate = getOverDueURLMigrations(batchSize)
     log.info(s"${toMigrate.size} urls need renormalization")
     
-    val toScrapes = db.readWrite{ implicit s => 
-      toMigrate.map{ renormURL =>
-        val url = urlRepo.get(renormURL.urlId)
-        val toScrape = handleURLMigration(url, renormURL.newUriId, delayScrape = true)
-        renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.APPLIED))
-        toScrape
+    val toScrapes = db.readWrite{ implicit s =>
+      toMigrate.flatMap{ renormURL =>
+        try {
+          val url = urlRepo.get(renormURL.urlId)
+          val toScrape = handleURLMigration(url, renormURL.newUriId, delayScrape = true)
+          renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.APPLIED))
+          toScrape
+        } catch {
+          case e: Exception =>
+            airbrake.notify(AirbrakeError(e, Some(e.getMessage)))
+            renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.INACTIVE))
+            None
+        }
       }
     }
     toMigrate.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URLMigrationSeqNumKey, x.seq.value)}
-    val uniqueToScrape = toScrapes.filter(_.isDefined).groupBy(_.get.url).mapValues(_.head).values
+    val uniqueToScrape = toScrapes.groupBy(_.url).mapValues(_.head).values
     
     log.info(s"${toMigrate.size} urls renormalized. start scraping ${uniqueToScrape.size} pages")
-    uniqueToScrape.foreach{ x => scraper.asyncScrape(x.get)}
+    uniqueToScrape.foreach{ x => scraper.asyncScrape(x)}
   }
   
   private def getOverDueURLMigrations(fetchSize: Int = -1) = {
