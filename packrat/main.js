@@ -29,10 +29,12 @@ var friends = [];
 var friendsById = {};
 var ruleSet = {};
 var urlPatterns = [];
+/*
 var tags = [];
 var tagsById = [];
 var tagsFetched = null;
 var tagsListeners = [];
+*/
 
 function clearDataCache() {
   log("[clearDataCache]")();
@@ -47,8 +49,10 @@ function clearDataCache() {
   friendsById = {};
   ruleSet = {};
   urlPatterns = [];
+  /*
   tags = [];
   tagsById = {};
+  */
 }
 
 function PageData() {
@@ -392,42 +396,33 @@ function emitTabsByUrl(url, name, data, options) {
   });
 }
 
-var makeRequest = (function() {
-  function createSuccessCallback(tab, name, data, callback) {
-    return function(response) {
-      log("[" + name + "] response:", response)();
-      var result = {
-        success: true,
-        response: response,
-        data: data
-      };
-      emitTabsByUrl(tab.nUri, name, result);
-      if (callback) {
-        callback(result);
-      }
-    };
-  }
 
-  function createErrorCallback(tab, name, data, callback) {
-    return function(response) {
-      log("[" + name + "] error:", response)();
-      var result = {
-        success: false,
-        response: response,
-        data: data
-      };
-      api.tabs.emit(tab, name, result);
-      if (callback) {
-        callback(result);
-      }
+function makeRequest(tab, name, method, url, data, callback) {
+  log("[" + name + "]", data)();
+  ajax(method, url, data, function(response) {
+    log("[" + name + "] response:", response)();
+    var result = {
+      success: true,
+      response: response,
+      data: data
     };
-  }
-
-  return function (tab, name, method, url, data, callback) {
-    log("[" + name + "]", data)();
-    return ajax(method, url, data, createSuccessCallback(tab, name, data, callback), createErrorCallback(tab, name, data, callback));
-  };
-})();
+    emitTabsByUrl(tab.nUri, name, result);
+    if (callback) {
+      callback(result);
+    }
+  }, function(response) {
+    log("[" + name + "] error:", response)();
+    var result = {
+      success: false,
+      response: response,
+      data: data
+    };
+    api.tabs.emit(tab, name, result);
+    if (callback) {
+      callback(result);
+    }
+  });
+}
 
 // ===== Handling messages from content scripts or other extension pages
 
@@ -736,8 +731,20 @@ api.port.on({
     awaitDeepLink(link, tab.id);
   },
 
-  get_tags: function(_, respond) {
-    log("[get_tags] fetched=" + tagsFetched)();
+  /**
+   *
+   * GET_TAGS
+   *   Request URL: /tags
+   *   Request Method: GET
+   *   Response: [{
+   *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+   *     "name":"hello"
+   *   }, ...]
+   */
+  get_tags: function(_, callback, tab) {
+    return makeRequest(tab, "get_tags", "GET", "/tags", null, callback);
+    /*
+    //log("[get_tags] fetched=" + tagsFetched)();
     if (tagsFetched) {
       respond({
         success: true,
@@ -747,6 +754,7 @@ api.port.on({
     else if (respond) {
       tagsListeners.push(respond);
     }
+    */
   },
 
   /**
@@ -758,10 +766,10 @@ api.port.on({
    *   Response: [{
    *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
    *     "name":"hello"
-   *   }]
+   *   }, ...]
    */
   get_tags_by_url: function(_, callback, tab) {
-    makeRequest(tab, "get_tags_by_url", "POST", "/tagsByUrl", {
+    return makeRequest(tab, "get_tags_by_url", "POST", "/tagsByUrl", {
       url: tab.url
     }, callback);
   },
@@ -779,7 +787,7 @@ api.port.on({
    *   }
    */
   create_tag: function(name, callback, tab) {
-    makeRequest(tab, "create_tag", "POST", "/site/collections/create", {
+    return makeRequest(tab, "create_tag", "POST", "/site/collections/create", {
       name: name
     }, callback);
   },
@@ -797,7 +805,7 @@ api.port.on({
    *   Response: {}
    */
   create_and_add_tag: function(name, callback, tab) {
-    makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
+    return makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
       name: name,
       url: tab.url
     }, callback);
@@ -815,7 +823,7 @@ api.port.on({
    *   Response: {}
    */
   add_tag: function(tagId, callback, tab) {
-    makeRequest(tab, "add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
+    return makeRequest(tab, "add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
       url: tab.url
     }, callback);
   },
@@ -832,7 +840,7 @@ api.port.on({
    *   Response: {}
    */
   remove_tag: function(tagId, callback, tab) {
-    makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
+    return makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
       url: tab.url
     }, callback);
   },
@@ -849,7 +857,7 @@ api.port.on({
    *   Response: {}
    */
   clear_tags: function(tagId, callback, tab) {
-    makeRequest(tab, "clear_tags", "POST", "/tags/clear", {
+    return makeRequest(tab, "clear_tags", "POST", "/tags/clear", {
       url: tab.url
     }, callback);
   },
@@ -1560,17 +1568,8 @@ function getFriends() {
   });
 }
 
-/**
- *
- * GET_TAGS
- *   Request URL: /tags
- *   Request Method: GET
- *   Response: [{
- *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
- *     "name":"hello"
- *   }]
- */
 
+/*
 function getTags() {
   ajax("GET", "/tags", function(tagList) {
     log("[getTags]", tagList)();
@@ -1587,6 +1586,7 @@ function getTags() {
     tagsListeners.length = 0;
   });
 }
+*/
 
 function getPrefs() {
   ajax("GET", "/ext/prefs", function(o) {
@@ -1613,7 +1613,7 @@ var session, socket, onLoadingTemp;
 function connectSync() {
   getRules();
   getFriends();
-  getTags();
+  //getTags();
   getPrefs();
 }
 
