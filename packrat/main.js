@@ -392,42 +392,35 @@ function emitTabsByUrl(url, name, data, options) {
   });
 }
 
-var makeRequest = (function() {
-  function createSuccessCallback(tab, name, data, callback) {
-    return function(response) {
-      log("[" + name + "] response:", response)();
-      var result = {
-        success: true,
-        response: response,
-        data: data
-      };
-      emitTabsByUrl(tab.nUri, name, result);
-      if (callback) {
-        callback(result);
-      }
-    };
-  }
 
-  function createErrorCallback(tab, name, data, callback) {
-    return function(response) {
-      log("[" + name + "] error:", response)();
-      var result = {
-        success: false,
-        response: response,
-        data: data
-      };
-      api.tabs.emit(tab, name, result);
-      if (callback) {
-        callback(result);
-      }
-    };
+function makeRequest(tab, name, method, url, data, callback) {
+  log("[" + name + "]", data)();
+  var deferred = Q.defer();
+  if (callback) {
+    deferred.then(callback);
+    deferred.fail(callback);
   }
-
-  return function (tab, name, method, url, data, callback) {
-    log("[" + name + "]", data)();
-    return ajax(method, url, data, createSuccessCallback(tab, name, data, callback), createErrorCallback(tab, name, data, callback));
-  };
-})();
+  ajax(method, url, data, function(response) {
+    log("[" + name + "] response:", response)();
+    var result = {
+      success: true,
+      response: response,
+      data: data
+    };
+    emitTabsByUrl(tab.nUri, name, result);
+    deferred.resolve(result);
+  }, function(response) {
+    log("[" + name + "] error:", response)();
+    var result = {
+      success: false,
+      response: response,
+      data: data
+    };
+    api.tabs.emit(tab, name, result);
+    deferred.reject(result);
+  });
+  return deferred.promise;
+}
 
 // ===== Handling messages from content scripts or other extension pages
 
@@ -761,7 +754,7 @@ api.port.on({
    *   }]
    */
   get_tags_by_url: function(_, callback, tab) {
-    makeRequest(tab, "get_tags_by_url", "POST", "/tagsByUrl", {
+    return makeRequest(tab, "get_tags_by_url", "POST", "/tagsByUrl", {
       url: tab.url
     }, callback);
   },
@@ -779,7 +772,7 @@ api.port.on({
    *   }
    */
   create_tag: function(name, callback, tab) {
-    makeRequest(tab, "create_tag", "POST", "/site/collections/create", {
+    return makeRequest(tab, "create_tag", "POST", "/site/collections/create", {
       name: name
     }, callback);
   },
@@ -797,7 +790,7 @@ api.port.on({
    *   Response: {}
    */
   create_and_add_tag: function(name, callback, tab) {
-    makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
+    return makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
       name: name,
       url: tab.url
     }, callback);
@@ -815,7 +808,7 @@ api.port.on({
    *   Response: {}
    */
   add_tag: function(tagId, callback, tab) {
-    makeRequest(tab, "add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
+    return makeRequest(tab, "add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
       url: tab.url
     }, callback);
   },
@@ -832,7 +825,7 @@ api.port.on({
    *   Response: {}
    */
   remove_tag: function(tagId, callback, tab) {
-    makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
+    return makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
       url: tab.url
     }, callback);
   },
@@ -849,7 +842,7 @@ api.port.on({
    *   Response: {}
    */
   clear_tags: function(tagId, callback, tab) {
-    makeRequest(tab, "clear_tags", "POST", "/tags/clear", {
+    return makeRequest(tab, "clear_tags", "POST", "/tags/clear", {
       url: tab.url
     }, callback);
   },
