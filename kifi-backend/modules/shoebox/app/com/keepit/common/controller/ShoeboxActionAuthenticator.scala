@@ -43,7 +43,7 @@ class ShoeboxActionAuthenticator @Inject() (
     }
   }
 
-  private def getExperiments(userId: Id[User])(implicit session: RSession): Set[State[ExperimentType]] = userExperimentRepo.getUserExperiments(userId)
+  private def getExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType] = userExperimentRepo.getUserExperiments(userId)
 
   private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
     val socialUser = request.user
@@ -101,17 +101,17 @@ class ShoeboxActionAuthenticator @Inject() (
     }.getOrElse(result)
   }
 
-  private[controller] def isAdmin(experiments: Set[State[ExperimentType]]) = experiments.contains(ExperimentTypes.ADMIN)
+  private[controller] def isAdmin(experiments: Set[ExperimentType]) = experiments.contains(ExperimentType.ADMIN)
 
   private[controller] def isAdmin(userId: Id[User]) = db.readOnly { implicit session =>
-    userExperimentRepo.hasExperiment(userId, ExperimentTypes.ADMIN)
+    userExperimentRepo.hasExperiment(userId, ExperimentType.ADMIN)
   }
 
   private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
-     experiments: Set[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
+     experiments: Set[ExperimentType], kifiInstallationId: Option[ExternalId[KifiInstallation]],
      newSession: Option[Session], request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = db.readOnly(implicit s => userRepo.get(userId))
-    if (experiments.contains(ExperimentTypes.BLOCK) ||
+    if (experiments.contains(ExperimentType.BLOCK) ||
       user.state == UserStates.BLOCKED ||
       user.state == UserStates.INACTIVE ||
       (!allowPending && user.state == UserStates.PENDING)) {

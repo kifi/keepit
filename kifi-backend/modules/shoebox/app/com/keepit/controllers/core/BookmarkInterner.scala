@@ -31,14 +31,14 @@ class BookmarkInterner @Inject() (
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
 
-  def internBookmarks(value: JsValue, user: User, experiments: Set[State[ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): List[Bookmark] = value match {
+  def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): List[Bookmark] = value match {
     case JsArray(elements) => (elements map {e => internBookmarks(e, user, experiments, source, installationId)} flatten).toList
     case json: JsObject if(json.keys.contains("children")) => internBookmarks(json \ "children" , user, experiments, source)
     case json: JsObject => List(internBookmark(json, user, experiments, source)).flatten
     case e: Throwable => throw new Exception("can't figure what to do with %s".format(e))
   }
 
-  def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, experiments: Set[State[ExperimentType]],
+  def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, experiments: Set[ExperimentType],
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String) = {
     db.readWrite(attempts = 2) { implicit s =>
       bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {
@@ -52,7 +52,7 @@ class BookmarkInterner @Inject() (
     }
   }
 
-  private def internBookmark(json: JsObject, user: User, experiments: Set[State[ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = try {
+  private def internBookmark(json: JsObject, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = try {
     val title = (json \ "title").asOpt[String]
     val url = (json \ "url").as[String]
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
