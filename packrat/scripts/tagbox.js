@@ -1,10 +1,10 @@
 // @require scripts/lib/jquery.js
+// @require scripts/lib/underscore.js
 // @require scripts/lib/fuzzy-min.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
 // @require scripts/util.js
-// @require scripts/livechange.js
 // @require scripts/html/keeper/tagbox.js
 // @require scripts/html/keeper/tag-suggestion.js
 // @require scripts/html/keeper/tag-new.js
@@ -200,13 +200,13 @@ this.tagbox = (function ($, win) {
 				KEY_ESC = 27,
 				KEY_TAB = 9;
 
-			function onLiveChange(e) {
-				var text = e.value;
-				text = text.trim();
-
-				this.$inputbox.toggleClass('empty', !text);
-
-				this.suggest(text);
+			function onInput(e) {
+				var text = e.target.value.trim();
+				if (text !== this.text) {
+					this.text = text;
+					this.$inputbox.toggleClass('empty', !text);
+					this.suggest(text);
+				}
 			}
 
 			function onKeydown(e) {
@@ -254,11 +254,7 @@ this.tagbox = (function ($, win) {
 				var $input = this.$input;
 				$input.on('focus', onFocus);
 				$input.on('blur', onBlur);
-				$input.livechange({
-					on: onLiveChange,
-					context: this,
-					init: true
-				});
+				$input.on('input', _.debounce(onInput.bind(this), 1)).triggerHandler('input');
 				$input.on('keydown', onKeydown.bind(this));
 			};
 		})(),
