@@ -323,7 +323,7 @@ this.tagbox = (function ($, win) {
 				this.hide();
 				throw err;
 			}.bind(this))
-				.fail(this.alertError.bind(this));
+				.fail(this.logError.bind(this));
 		},
 
 		initScroll: function () {
@@ -740,7 +740,7 @@ this.tagbox = (function ($, win) {
 			log('createTag: create a tag', name);
 			return this.requestCreateAndAddTagByName(name)
 				.then(this.onCreateResponse.bind(this))
-				.fail(this.alertError.bind(this))
+				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, name));
 		},
 
@@ -770,7 +770,7 @@ this.tagbox = (function ($, win) {
 			log('addTagById: request to server. tagId=' + tagId);
 			return this.requestAddTagById(tagId)
 				.then(this.onAddResponse.bind(this, tagId))
-				.fail(this.alertError.bind(this))
+				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 		},
 
@@ -799,7 +799,7 @@ this.tagbox = (function ($, win) {
 			log('removeTagById: request to server. tagId=' + tagId);
 			return this.requestRemoveTagById(tagId)
 				.then(this.onRemoveResponse.bind(this, tagId))
-				.fail(this.alertError.bind(this))
+				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 		},
 
@@ -1429,7 +1429,7 @@ this.tagbox = (function ($, win) {
 		clearTags: function () {
 			return this.requestClearAll()
 				.then(this.onClearTagsResponse.bind(this))
-				.fail(this.alertError.bind(this));
+				.fail(this.logError.bind(this));
 		},
 
 		//
@@ -1475,23 +1475,13 @@ this.tagbox = (function ($, win) {
 		//
 
 		/**
-		 * Alerts user for an error.
+		 * Logs error.
 		 *
 		 * @param {Error} err - An error object
 		 */
-		alertError: function (err) {
+		logError: function (err) {
 			log('Error: ' + err.message);
 			log(err.stack);
-			this.alert('Error: ' + err.message);
-		},
-
-		/**
-		 * Alerts user for a message.
-		 *
-		 * @param {string} msg - A message to display
-		 */
-		alert: function (msg) {
-			win.alert(msg);
 		}
 	};
 
