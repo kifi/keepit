@@ -1,4 +1,4 @@
-// @require scripts/throttle.js
+// @require scripts/lib/underscore.js
 
 !function() {
   'use strict';
@@ -7,7 +7,7 @@
       o.$above.addClass("kifi-scrollable-above");
       o.$below.addClass("kifi-scrollable-below");
       $(this).data(o);
-    }).scroll(throttle(onScroll, 50));
+    }).scroll(_.throttle(onScroll, 50));
   };
   function onScroll() {
     var sT = this.scrollTop, sH = this.scrollHeight, cH = this.clientHeight, o = $(this).data();
