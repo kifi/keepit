@@ -49,14 +49,17 @@ trait ObjectCache[K <: Key[T], T] {
     getFromInnerCache(key) match {
       case Some(valueOpt) => valueOpt
       case None => outerCache match {
-        case Some(cache) => cache.get(key)
+        case Some(cache) =>
+          val valueOpt = cache.get(key)
+          if (valueOpt.isDefined) setInnerCache(key, valueOpt)
+          valueOpt
         case None => None
       }
     }
   }
 
   def getOrElse(key: K)(orElse: => T): T = {
-    def fallback : T = {
+    def fallback: T = {
       val value = outerCache match {
         case Some(cache) => cache.getOrElse(key)(orElse)
         case None => orElse

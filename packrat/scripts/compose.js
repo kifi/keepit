@@ -81,6 +81,21 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       allowTabOut: true,
       tokenValue: "id",
       theme: "Kifi",
+      classes: {
+        tokenList: "kifi-ti-list",
+        token: "kifi-ti-token",
+        tokenReadOnly: "kifi-ti-token-readonly",
+        tokenDelete: "kifi-ti-token-delete",
+        selectedToken: "kifi-ti-token-selected",
+        highlightedToken: "kifi-ti-token-highlighted",
+        dropdown: "kifi-root kifi-ti-dropdown",
+        dropdownItem: "kifi-ti-dropdown-item",
+        dropdownItem2: "kifi-ti-dropdown-item",
+        selectedDropdownItem: "kifi-ti-dropdown-item-selected",
+        inputToken: "kifi-ti-token-input",
+        focused: "kifi-ti-focused",
+        disabled: "kifi-ti-disabled"
+      },
       zindex: 999999999992,
       resultsFormatter: function(f) {
         return "<li style='background-image:url(//" + cdnBase + "/users/" + f.id + "/pics/100/0.jpg)'>" +

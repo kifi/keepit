@@ -1,3 +1,4 @@
+// @require styles/insulate.css
 // @require styles/notifier.css
 // @require scripts/api.js
 // @require scripts/lib/jquery.js
@@ -84,7 +85,7 @@ var notifier = function() {
 
       var $wrap = $("#kifi-notify-notice-wrapper");
       if (!$wrap.length) {
-        $wrap = $("<div id=kifi-notify-notice-wrapper>").appendTo($("body")[0] || "html");
+        $wrap = $("<kifi id=kifi-notify-notice-wrapper class=kifi-root>").appendTo($("body")[0] || "html");
       }
       $wrap.addClass(params.wrapperClass).append($item);
 

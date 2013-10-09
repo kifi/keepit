@@ -84,5 +84,8 @@
 	"white": true,
 
 	// Globals
-	"globals": {}
+	"globals": {
+    "api": true,
+    "Q": true
+  }
 }

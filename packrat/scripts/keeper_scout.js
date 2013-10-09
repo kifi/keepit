@@ -6,6 +6,7 @@ function logEvent() {  // parameters defined in main.js
   api.port.emit("log_event", Array.prototype.slice.call(arguments));
 }
 
+var session;
 var tile = tile || function() {  // idempotent for Chrome
   'use strict';
   log("[keeper_scout]", location.hostname)();
@@ -16,7 +17,7 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   };
 
-  var session, whenSessionKnown = [], tileCard, tileCount, onScroll;
+  var whenSessionKnown = [], tileCard, tileCount, onScroll;
   api.port.emit("session", onSessionChange);
   api.port.on({
     session_change: onSessionChange,
@@ -40,7 +41,7 @@ var tile = tile || function() {  // idempotent for Chrome
         tile.removeAttribute("data-kept");
       }
       window.addEventListener("resize", onResize);
-      api.require("styles/keeper/tile.css", function() {
+      api.require(["styles/insulate.css", "styles/keeper/tile.css"], function() {
         if (!o.hide) {
           tile.style.display = "";
         }
@@ -168,10 +169,11 @@ var tile = tile || function() {  // idempotent for Chrome
   while (tile = document.getElementById("kifi-tile")) {
     tile.remove();
   }
-  tile = document.createElement("div");
-  tile.dataset.t0 = Date.now();
-  tile.id = tile.className = "kifi-tile";
+  tile = document.createElement("kifi");
+  tile.id = "kifi-tile";
+  tile.className = "kifi-root kifi-tile";
   tile.style.display = "none";
+  tile.dataset.t0 = Date.now();
   tile.innerHTML =
     "<div class=kifi-tile-card>" +
     "<div class=kifi-tile-keep></div>" +

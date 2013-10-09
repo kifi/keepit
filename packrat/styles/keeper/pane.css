@@ -43,6 +43,11 @@ html.kifi-pane-parent.kifi-with-pane {
 html.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode {
   margin-right: 0;
 }
+html.kifi-pane-parent,
+html.kifi-pane-parent>body {
+  -webkit-transform: none; /* crbug.com/66599 */
+  transform: none;
+}
 .kifi-pane+.kifi-tile {
   transition: -webkit-transform .25s ease-out;
   transition: transform .25s ease-out;
@@ -275,8 +280,6 @@ div.kifi-pane-head-settings-menu {
   font-size: 16px;
   line-height: 40px;
   color: #fff;
-}
-.kifi-pane-title {
   text-align: center;
 }
 .kifi-pane-title.kifi-scrollable-above {
