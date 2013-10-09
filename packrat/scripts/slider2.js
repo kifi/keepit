@@ -77,7 +77,8 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       // attach event bindings
       $slider = $(html);
       var data = $slider.data();
-      $slider.mouseout(function (e) {
+      $slider
+      .mouseout(function (e) {
         if (data.dragTimer) {
           startDrag(data);
         } else if (!$pane && !data.dragStarting && !data.$dragGlass) {
@@ -253,6 +254,13 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     });
   }
 
+  $(document).click(function(e) {
+    var target = e.target;
+    if (!$slider[0].contains(target) && !(tagbox && tagbox.contains(target))) {
+      hideSlider('clickout');
+    }
+  });
+
   function showSlider(trigger, callback) {
     log("[showSlider]", trigger)();
 
@@ -280,10 +288,12 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
 
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
-    if (window.tagbox && tagbox.active) {
+    log("[hideSlider]", trigger)();
+    var tagbox = window.tagbox;
+    if (tagbox && tagbox.active && trigger !== 'clickout') {
+      log("[hideSlider] tagbox is active. cancel hide")();
       return;
     }
-    log("[hideSlider]", trigger)();
     idleTimer.kill();
     $slider.addClass("kifi-hiding")
     .off("transitionend")
@@ -305,9 +315,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         $slider.remove(), $slider = null;
       }
     });
-    if (window.tagbox) {
-      tagbox.hide();
-    }
     logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
   }
 

@@ -123,14 +123,14 @@ this.tagbox = (function ($, win) {
 			}
 
 			function onClick(e) {
-				if (!$.contains(this.$tagbox[0], e.target)) {
+				if (!this.contains(e.target)) {
 					log('tagbox:clickout', e.target);
 					this.hide();
 				}
 			}
 
 			function addDocListeners() {
-				if (this.$tagbox) {
+				if (this.active) {
 					var $doc = $(document),
 						onDocKeydown = this.onDocKeydown = onKeydown.bind(this),
 						onDocClick = this.onDocClick = onClick.bind(this);
@@ -146,7 +146,7 @@ this.tagbox = (function ($, win) {
 				//var $tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
 				this.$tagbox = $tagbox;
 
-        $tagbox.addClass('animated fadeInUp');
+				$tagbox.addClass('animated fadeInUp');
 
 				win.setTimeout(addDocListeners.bind(this), 50);
 
@@ -341,8 +341,10 @@ this.tagbox = (function ($, win) {
 
 		updateScroll: function () {
 			log('updateScroll');
-			this.$tagListWrapper.data('antiscroll').refresh();
-			this.$suggestWrapper.data('antiscroll').refresh();
+			if (this.active) {
+				this.$tagListWrapper.data('antiscroll').refresh();
+				this.$suggestWrapper.data('antiscroll').refresh();
+			}
 		},
 
 		/**
@@ -351,7 +353,7 @@ this.tagbox = (function ($, win) {
 		 */
 		destroy: function () {
 			log('tagbox:destroy');
-			if (this.$tagbox) {
+			if (this.active) {
 				this.active = false;
 				log('tagbox:destroy-inner');
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
@@ -560,6 +562,18 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
+		 * Returns whether a tagbox contains the given element.
+		 *
+		 * @param {HTMLElement} el - an html element
+		 *
+		 * @return {boolean} Whether a tagbox contains the given element
+		 */
+		contains: function (el) {
+			var $tagbox = this.$tagbox;
+			return $tagbox != null && $tagbox[0].contains(el);
+		},
+
+		/**
 		 * Adds class from the root element.
 		 *
 		 * @param {string} A Class name to add.
@@ -568,7 +582,7 @@ this.tagbox = (function ($, win) {
 		 */
 		addClass: function () {
 			var $tagbox = this.$tagbox;
-			return $tagbox.addClass.apply($tagbox, arguments);
+			return $tagbox && $tagbox.addClass.apply($tagbox, arguments);
 		},
 
 		/**
@@ -580,7 +594,7 @@ this.tagbox = (function ($, win) {
 		 */
 		removeClass: function () {
 			var $tagbox = this.$tagbox;
-			return $tagbox.removeClass.apply($tagbox, arguments);
+			return $tagbox && $tagbox.removeClass.apply($tagbox, arguments);
 		},
 
 		/**
@@ -592,7 +606,8 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the root element
 		 */
 		toggleClass: function (classname, add) {
-			return this.$tagbox.toggleClass(classname, add ? true : false);
+			var $tagbox = this.$tagbox;
+			return $tagbox && $tagbox.toggleClass(classname, add ? true : false);
 		},
 
 		/**
@@ -613,6 +628,10 @@ this.tagbox = (function ($, win) {
 		 * @param {string} text - An input string to match against
 		 */
 		suggest: function (text) {
+			if (!this.active) {
+				return;
+			}
+
 			log('tagbox.suggest', text);
 			var tags = this.tags;
 			tags = this.filterOutAddedTags(tags);
@@ -636,11 +655,13 @@ this.tagbox = (function ($, win) {
 		 * Updates suggestion according to the current states (tags + input).
 		 */
 		updateTagList: function () {
-			var tags = this.getAddedTags(),
-				html = tags.map(this.renderTagHtml, this).join('');
-			this.$tagList.html(html);
+			if (this.active) {
+				var tags = this.getAddedTags(),
+					html = tags.map(this.renderTagHtml, this).join('');
+				this.$tagList.html(html);
 
-			this.toggleClass('tagged', tags.length);
+				this.toggleClass('tagged', tags.length);
+			}
 		},
 
 		/**
@@ -924,7 +945,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestTags: function () {
-      log('get_tags');
+			log('get_tags');
 			return this.request('get_tags', null, 'Could not load tags.');
 		},
 
@@ -935,7 +956,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestTagsByUrl: function () {
-      log('get_tags_by_url');
+			log('get_tags_by_url');
 			return this.request('get_tags_by_url', null, 'Could not load tags for the page.');
 		},
 
@@ -1064,8 +1085,10 @@ this.tagbox = (function ($, win) {
 		},
 
 		updateSuggestHeight: function () {
-			var height = util.minMax(32 * this.getTagCount(), 164, 265);
-			this.$suggest.height(height);
+			if (this.active) {
+				var height = util.minMax(32 * this.getTagCount(), 164, 265);
+				this.$suggest.height(height);
+			}
 		},
 
 		/**
@@ -1410,14 +1433,15 @@ this.tagbox = (function ($, win) {
 		 * Hides a tag box.
 		 */
 		hide: function () {
-			this.destroy();
+			this.addClass('animated fadeOutDown');
+			setTimeout(this.destroy.bind(this), 750);
 		},
 
 		/**
 		 * It toggles (shows/hides) a tag box.
 		 */
 		toggle: function ($slider) {
-			if (this.$tagbox) {
+			if (this.active) {
 				this.hide();
 			}
 			else {

@@ -1,3 +1,14 @@
+/**
+ * ----------------
+ *    livechange    
+ * ----------------
+ *
+ * livechange is a jQuery plugin that fires an 'livechange' event for every change in an input element.
+ *
+ * @author Joon Ho Cho <joon@42go.com>
+ * @date 10-08-2013
+ */
+
 (function ($, win) {
 	'use strict';
 
