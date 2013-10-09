@@ -37,8 +37,12 @@ var notifier = function() {
           image: cdnBase + "/users/" + o.author.id + "/pics/100/0.jpg",
           sticky: false,
           showForMs: 60000,
-          clickAction: function() {
-            api.port.emit("open_deep_link", {nUri: o.url, locator: o.locator});
+          clickAction: function(e) {
+            var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
+            api.port.emit("open_deep_link", {nUri: o.url, locator: o.locator, inThisTab: inThisTab});
+            if (inThisTab && o.url !== document.URL) {
+              window.location = o.url;
+            }
             return false;
           },
           associatedId: o.thread
@@ -54,11 +58,14 @@ var notifier = function() {
           image: o.image,
           sticky: o.isSticky || false,
           showForMs: o.showForMs || 60000,
-          clickAction: function() {
+          clickAction: function(e) {
             api.port.emit("set_global_read", {noticeId: o.id});
-            if (o.url) {
-              var win = window.open(o.url, "_blank");
-              win.focus();
+            if (o.url && o.url !== document.URL) {
+              if (inThisTab) {
+                window.location = o.url;
+              } else {
+                window.open(o.url, '_blank').focus();
+              }
             }
           },
           associatedId: o.id
@@ -112,10 +119,11 @@ var notifier = function() {
           startFadeTimer($item, params);
         }
       }).bind("click", function(event) {
+        if (event.which !== 1) return;
         if (params.closeOnClick) {
           removeSpecific($item, {}, true);
         }
-        params.clickAction();
+        return params.clickAction(event);
       });
 
       $item.find(".kifi-notify-close").click(function(event) {

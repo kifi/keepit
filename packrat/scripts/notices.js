@@ -82,14 +82,25 @@ panes.notices = function () {
     var scroller = $container.data('antiscroll');
     $(window).on('resize.notices', scroller.refresh.bind(scroller));
 
-    $notices.on('click', '.kifi-notice', function () {
-      if (this.dataset.locator) {
-        api.port.emit('open_deep_link', {nUri: this.dataset.uri, locator: this.dataset.locator});
+    $notices.on('click', '.kifi-notice', function (e) {
+      if (e.which !== 1) return;
+      var uri = this.dataset.uri;
+      var locator = this.dataset.locator;
+      var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
+      if (locator) {
+        api.port.emit('open_deep_link', {nUri: uri, locator: locator, inThisTab: inThisTab});
+        if (inThisTab && uri !== document.URL) {
+          window.location = uri;
+        }
       } else if (this.dataset.category === 'global') {
         markVisited('global', undefined, undefined, this.dataset.id);
         api.port.emit('set_global_read', {noticeId: this.dataset.id});
-        if (this.dataset.uri) {
-          window.open(this.dataset.uri, '_blank');
+        if (uri && uri !== document.URL) {
+          if (inThisTab) {
+            window.location = uri;
+          } else {
+            window.open(uri, '_blank').focus();
+          }
         }
       }
       return false;
