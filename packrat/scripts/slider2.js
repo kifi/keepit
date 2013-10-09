@@ -78,8 +78,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       // attach event bindings
       $slider = $(html);
       var data = $slider.data();
-      $slider
-      .mouseout(function (e) {
+      $slider.mouseout(function (e) {
         if (data.dragTimer) {
           startDrag(data);
         } else if (!$pane && !data.dragStarting && !data.$dragGlass) {
