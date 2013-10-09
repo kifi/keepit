@@ -12,6 +12,8 @@ import play.api.libs.json._
 import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
 import com.keepit.common.db.slick.FortyTwoTypeMappers.ByteArrayTypeMapper
 import com.keepit.common.db.slick.FortyTwoTypeMappers.UserIdTypeMapper
+import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.logging.AccessLog
 import scala.annotation.elidable
 import scala.annotation.elidable.ASSERTION
 import com.keepit.learning.topicmodel.TopicModelGlobal
@@ -77,8 +79,8 @@ case class UserTopicKey(userId: Id[User], userTopicFlag: String) extends Key[Use
   def toKey(): String = userId.toString + "#" + userTopicFlag
 }
 
-class UserTopicCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[UserTopicKey, UserTopic](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class UserTopicCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserTopicKey, UserTopic](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 
 trait UserTopicRepo extends Repo[UserTopic]{

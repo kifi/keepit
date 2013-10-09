@@ -8,6 +8,7 @@ import com.keepit.common.time._
 import com.keepit.common.time.DateTimeJsonFormat
 import org.joda.time.DateTime
 import com.keepit.common.cache._
+import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -52,7 +53,7 @@ case class HttpProxyAllKey() extends Key[Seq[HttpProxy]] {
   def toKey(): String = "all"
 }
 
-class HttpProxyAllCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[HttpProxyAllKey, Seq[HttpProxy]](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class HttpProxyAllCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[HttpProxyAllKey, Seq[HttpProxy]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object HttpProxyStates extends States[HttpProxy]

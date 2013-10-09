@@ -1,6 +1,8 @@
 package com.keepit.model
 
 import com.keepit.common.cache._
+import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
@@ -50,7 +52,7 @@ case class UserSessionExternalIdKey(externalId: ExternalId[UserSession]) extends
   def toKey(): String = externalId.id
 }
 
-class UserSessionExternalIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[UserSessionExternalIdKey, UserSession](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class UserSessionExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserSessionExternalIdKey, UserSession](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object UserSessionStates extends States[UserSession]

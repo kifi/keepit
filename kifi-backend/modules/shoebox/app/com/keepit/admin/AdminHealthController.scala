@@ -21,13 +21,14 @@ class AdminHealthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   healthcheckPlugin: HealthcheckPlugin,
   services: FortyTwoServices,
-  airbrake: AirbrakeNotifier)
+  airbrake: AirbrakeNotifier,
+  globalCacheStatistics: GlobalCacheStatistics)
     extends AdminController(actionAuthenticator) {
 
   def serviceView = AdminHtmlAction { implicit request =>
     val errorCount = healthcheckPlugin.errorCount
     val recentErrors = healthcheckPlugin.errors()
-    val cacheStats = GlobalCacheStatistics.getStatistics
+    val cacheStats = globalCacheStatistics.getStatistics
     val (totalHits, totalMisses, totalSets) = (cacheStats.map(_._2).sum, cacheStats.map(_._3).sum, cacheStats.map(_._4).sum)
     Ok(html.admin.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString,
         services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
