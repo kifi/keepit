@@ -44,6 +44,11 @@ this.tagbox = (function ($, win) {
 		}
 	});
 
+	api.onEnd.push(function () {
+		win.tagbox.destroy();
+		win.tagbox = null;
+	});
+
 	return {
 		/**
 		 * An array containing user's all tags
@@ -82,7 +87,7 @@ this.tagbox = (function ($, win) {
 		 */
 		construct: function () {
 			log('tagbox:construct');
-			if (!this.$tagbox) {
+			if (!this.$tagbox && this.getTimeSinceDestroyed() > 150) {
 				this.init();
 			}
 		},
@@ -123,21 +128,24 @@ this.tagbox = (function ($, win) {
 			}
 
 			function onClick(e) {
-				if (!$.contains(this.$tagbox[0], e.target)) {
+				if (!this.contains(e.target)) {
 					log('tagbox:clickout', e.target);
+					/*
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          */
 					this.hide();
 				}
 			}
 
 			function addDocListeners() {
-				if (this.$tagbox) {
-					var $doc = $(document),
-						onDocKeydown = this.onDocKeydown = onKeydown.bind(this),
+				if (this.active) {
+					var onDocKeydown = this.onDocKeydown = onKeydown.bind(this),
 						onDocClick = this.onDocClick = onClick.bind(this);
 
-					this.$doc = $doc;
-					$doc.on('keydown', onDocKeydown);
-					$doc.on('click', onDocClick);
+					$(document).on('keydown', onDocKeydown);
+					document.addEventListener('click', onDocClick, true);
 				}
 			}
 
@@ -146,7 +154,7 @@ this.tagbox = (function ($, win) {
 				//var $tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
 				this.$tagbox = $tagbox;
 
-        $tagbox.addClass('animated fadeInUp');
+				$tagbox.addClass('animated fadeInUp');
 
 				win.setTimeout(addDocListeners.bind(this), 50);
 
@@ -220,7 +228,7 @@ this.tagbox = (function ($, win) {
 				case KEY_ESC:
 					log('tagbox:input.esc', this.currentSuggestion);
 					if (this.currentSuggestion) {
-						this.navigateTo(null);
+						this.navigateTo(null, 'esc');
 						e.stopPropagation();
 						e.stopImmediatePropagation();
 					}
@@ -341,8 +349,14 @@ this.tagbox = (function ($, win) {
 
 		updateScroll: function () {
 			log('updateScroll');
-			this.$tagListWrapper.data('antiscroll').refresh();
-			this.$suggestWrapper.data('antiscroll').refresh();
+			if (this.active) {
+				this.$tagListWrapper.data('antiscroll').refresh();
+				this.$suggestWrapper.data('antiscroll').refresh();
+			}
+		},
+
+		getTimeSinceDestroyed: function () {
+			return Date.now() - (this.destroyedAt || 0);
 		},
 
 		/**
@@ -351,8 +365,9 @@ this.tagbox = (function ($, win) {
 		 */
 		destroy: function () {
 			log('tagbox:destroy');
-			if (this.$tagbox) {
+			if (this.active) {
 				this.active = false;
+				this.destroyedAt = Date.now();
 				log('tagbox:destroy-inner');
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
 
@@ -364,15 +379,18 @@ this.tagbox = (function ($, win) {
 					}
 				}, this);
 
-				var $doc = this.$doc;
-				if ($doc) {
-					$doc.off('keydown', this.onDocKeydown);
-					$doc.off('click', this.onDocClick);
+				var onDocKeydown = this.onDocKeydown;
+				if (onDocKeydown) {
+					$(document).off('keydown', this.onDocKeydown);
+					this.onDocKeydown = null;
 				}
 
-				this.$doc = null;
-				this.onDocKeydown = null;
-				this.onDocClick = null;
+				var onDocClick = this.onDocClick;
+				if (onDocClick) {
+					document.removeEventListener('click', onDocClick, true);
+					this.onDocClick = null;
+				}
+
 				this.$slider = null;
 				this.tags = [];
 				this.tagsAdded = {};
@@ -560,6 +578,18 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
+		 * Returns whether a tagbox contains the given element.
+		 *
+		 * @param {HTMLElement} el - an html element
+		 *
+		 * @return {boolean} Whether a tagbox contains the given element
+		 */
+		contains: function (el) {
+			var $tagbox = this.$tagbox;
+			return $tagbox != null && $tagbox[0].contains(el);
+		},
+
+		/**
 		 * Adds class from the root element.
 		 *
 		 * @param {string} A Class name to add.
@@ -568,7 +598,7 @@ this.tagbox = (function ($, win) {
 		 */
 		addClass: function () {
 			var $tagbox = this.$tagbox;
-			return $tagbox.addClass.apply($tagbox, arguments);
+			return $tagbox && $tagbox.addClass.apply($tagbox, arguments);
 		},
 
 		/**
@@ -580,7 +610,7 @@ this.tagbox = (function ($, win) {
 		 */
 		removeClass: function () {
 			var $tagbox = this.$tagbox;
-			return $tagbox.removeClass.apply($tagbox, arguments);
+			return $tagbox && $tagbox.removeClass.apply($tagbox, arguments);
 		},
 
 		/**
@@ -592,7 +622,8 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the root element
 		 */
 		toggleClass: function (classname, add) {
-			return this.$tagbox.toggleClass(classname, add ? true : false);
+			var $tagbox = this.$tagbox;
+			return $tagbox && $tagbox.toggleClass(classname, add ? true : false);
 		},
 
 		/**
@@ -613,6 +644,10 @@ this.tagbox = (function ($, win) {
 		 * @param {string} text - An input string to match against
 		 */
 		suggest: function (text) {
+			if (!this.active) {
+				return;
+			}
+
 			log('tagbox.suggest', text);
 			var tags = this.tags;
 			tags = this.filterOutAddedTags(tags);
@@ -629,18 +664,20 @@ this.tagbox = (function ($, win) {
 			this.updateSuggestedClass();
 			this.updateScroll();
 
-			this.navigateTo('first');
+			this.navigateTo('first', 'suggest');
 		},
 
 		/**
 		 * Updates suggestion according to the current states (tags + input).
 		 */
 		updateTagList: function () {
-			var tags = this.getAddedTags(),
-				html = tags.map(this.renderTagHtml, this).join('');
-			this.$tagList.html(html);
+			if (this.active) {
+				var tags = this.getAddedTags(),
+					html = tags.map(this.renderTagHtml, this).join('');
+				this.$tagList.html(html);
 
-			this.toggleClass('tagged', tags.length);
+				this.toggleClass('tagged', tags.length);
+			}
 		},
 
 		/**
@@ -924,7 +961,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestTags: function () {
-      log('get_tags');
+			log('get_tags');
 			return this.request('get_tags', null, 'Could not load tags.');
 		},
 
@@ -935,7 +972,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestTagsByUrl: function () {
-      log('get_tags_by_url');
+			log('get_tags_by_url');
 			return this.request('get_tags_by_url', null, 'Could not load tags for the page.');
 		},
 
@@ -1064,8 +1101,10 @@ this.tagbox = (function ($, win) {
 		},
 
 		updateSuggestHeight: function () {
-			var height = util.minMax(32 * this.getTagCount(), 164, 265);
-			this.$suggest.height(height);
+			if (this.active) {
+				var height = util.minMax(32 * this.getTagCount(), 164, 265);
+				this.$suggest.height(height);
+			}
 		},
 
 		/**
@@ -1203,13 +1242,15 @@ this.tagbox = (function ($, win) {
 			default:
 				return;
 			}
+			this.ignoreMouseover = true;
 			return this.navigateTo($next, dir);
 		},
 
-		navigateTo: function ($suggestion) {
+		navigateTo: function ($suggestion, src) {
 			if ($suggestion === 'first' || $suggestion === 'last') {
 				$suggestion = this.$suggest.children(':' + $suggestion);
 			}
+
 			if (!($suggestion && $suggestion.length)) {
 				$suggestion = null;
 			}
@@ -1223,7 +1264,10 @@ this.tagbox = (function ($, win) {
 
 			if ($suggestion) {
 				$suggestion.addClass('focus');
-				this.scrolledIntoViewLazy($suggestion[0], 10);
+
+				if (src !== 'mouseover') {
+					this.scrolledIntoViewLazy($suggestion[0], 10);
+				}
 			}
 		},
 
@@ -1355,6 +1399,11 @@ this.tagbox = (function ($, win) {
 		 * @param {Object} event - A mouseover event object
 		 */
 		onMouseoverSuggestion: function (e) {
+			if (this.ignoreMouseover) {
+				this.ignoreMouseover = false;
+				return;
+			}
+
 			var $target = $(e.target),
 				$suggestion = $target.closest('.kifi-tagbox-suggestion');
 			if (!$suggestion.length) {
@@ -1363,7 +1412,7 @@ this.tagbox = (function ($, win) {
 					return;
 				}
 			}
-			this.navigateTo($suggestion);
+			this.navigateTo($suggestion, 'mouseover');
 		},
 
 		/**
@@ -1417,7 +1466,7 @@ this.tagbox = (function ($, win) {
 		 * It toggles (shows/hides) a tag box.
 		 */
 		toggle: function ($slider) {
-			if (this.$tagbox) {
+			if (this.active) {
 				this.hide();
 			}
 			else {
