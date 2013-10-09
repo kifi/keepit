@@ -14,7 +14,7 @@
 
 /**
  * ---------------
- *     Tag Box    
+ *     Tag Box
  * ---------------
  *
  * Tag box is an UI component that lets you conveniently tag your keep
@@ -953,7 +953,7 @@ this.tagbox = (function ($, win) {
 		/**
 		 * Makes a request to the server to get all tags for the user.
 		 * Returns a promise object.
-		 * 
+		 *
 		 * @return {Object} A deferred promise object
 		 */
 		requestTags: function () {
@@ -964,7 +964,7 @@ this.tagbox = (function ($, win) {
 		/**
 		 * Makes a request to the server to get all tags associated with the current page for the user.
 		 * Returns a promise object.
-		 * 
+		 *
 		 * @return {Object} A deferred promise object
 		 */
 		requestTagsByUrl: function () {
@@ -977,7 +977,7 @@ this.tagbox = (function ($, win) {
 		 * Returns a promise object.
 		 *
 		 * @param {string} name - A tag name
-		 * 
+		 *
 		 * @return {Object} A deferred promise object
 		 */
 		requestCreateTagByName: function (name) {
@@ -1138,7 +1138,7 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * A listener for server response from adding a tag to a keep.
-		 * 
+		 *
 		 * ADD
 		 *   Request Payload: {
 		 *     url: "my.keep.com"
@@ -1162,7 +1162,7 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * A listener for server response from removing a tag from a keep.
-		 * 
+		 *
 		 * REMOVE
 		 *   Request Payload: {
 		 *     url: "my.keep.com"
@@ -1180,7 +1180,7 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * A listener for server response from removing a tag from a keep.
-		 * 
+		 *
 		 * REMOVE
 		 *   Request Payload: {
 		 *     url: "my.keep.com"
