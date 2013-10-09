@@ -1443,8 +1443,7 @@ this.tagbox = (function ($, win) {
 		 * Hides a tag box.
 		 */
 		hide: function () {
-			//this.addClass('animated fadeOutDown');
-			setTimeout(this.destroy.bind(this), 750);
+			this.destroy();
 		},
 
 		/**
