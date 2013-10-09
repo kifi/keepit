@@ -1,3 +1,4 @@
+// @require styles/insulate.css
 // @require styles/keeper/tile.css
 // @require styles/keeper/slider2.css
 // @require styles/friend_card.css
