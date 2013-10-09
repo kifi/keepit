@@ -3,8 +3,12 @@ package com.keepit.social
 import scala.concurrent.duration.Duration
 
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.model._
+import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.logging.AccessLog
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -40,5 +44,5 @@ case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
   def toKey(): String = userId.id.toString
 }
 
-class BasicUserUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[BasicUserUserIdKey, BasicUser](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class BasicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[BasicUserUserIdKey, BasicUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)

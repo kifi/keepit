@@ -97,7 +97,7 @@ case class HttpClientImpl(
 
   def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.post(body) map { r => res(request, r) }
+    val result = request.post(body) map { r => res(request, r, Some(body)) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -106,7 +106,7 @@ case class HttpClientImpl(
 
   def postTextFuture(url: String, body: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.post(body) map { r => res(request, r) }
+    val result = request.post(body) map { r => res(request, r, Some(body)) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -115,7 +115,7 @@ case class HttpClientImpl(
 
   def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.post(body) map { r => res(request, r) }
+    val result = request.post(body) map { r => res(request, r, Some(body)) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -125,12 +125,13 @@ case class HttpClientImpl(
 
   def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.put(body) map { r => res(request, r) }
+    val result = request.put(body) map { r => res(request, r, Some(body)) }
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
 
-  def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(deleteFuture(url, onFailure))
+  def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse =
+    await(deleteFuture(url, onFailure))
 
   def deleteFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
@@ -143,10 +144,10 @@ case class HttpClientImpl(
 
   private def req(url: String): Request = new Request(WS.url(url), headers, services, accessLog)
 
-  private def res(request: Request, response: Response): ClientResponse = {
+  private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
     val cr = new ClientResponseImpl(request, response)
     if (response.status / 100 != validResponseClass) {
-      throw new NonOKResponseException(request.req.url, cr)
+      throw new NonOKResponseException(request.req.url, cr, requestBody)
     }
     cr
   }
@@ -165,7 +166,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.get()
     res.onComplete { resTry =>
-      logResponse(timer, "GET", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "GET", resTry.isSuccess, trackingId, None, resTry.toOption)
     }
     res
   }
@@ -174,7 +175,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.put(body)
     res.onComplete { resTry =>
-      logResponse(timer, "PUT", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "PUT", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
     }
     res
   }
@@ -183,7 +184,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
     }
     res
   }
@@ -192,7 +193,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
     }
     res
   }
@@ -201,7 +202,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
     }
     res
   }
@@ -210,12 +211,12 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.delete()
     res.onComplete { resTry =>
-      logResponse(timer, "DELETE", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "DELETE", resTry.isSuccess, trackingId, None, resTry.toOption)
     }
     res
   }
 
-  private def logResponse(timer: AccessLogTimer, method: String, isSuccess: Boolean, trackingId: String, resOpt: Option[Response]) = {
+  private def logResponse(timer: AccessLogTimer, method: String, isSuccess: Boolean, trackingId: String, body: Option[Any], resOpt: Option[Response]) = {
     //todo(eishay): the interesting part is the remote service and node id, to be logged
     val remoteHost = resOpt.map(_.header(CommonHeaders.LocalHost)).flatten.getOrElse("NA")
     val remoteTime = resOpt.map(_.header(CommonHeaders.ResponseTime)).flatten.map(_.toLong).getOrElse(AccessLogTimer.NoLongValue)
@@ -226,9 +227,12 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     // }
     accessLog.add(timer.done(
         remoteTime = remoteTime,
-        success = Some(isSuccess),
+        result = if(isSuccess) "success" else "fail",
         query = queryString,
         url = wsRequest.url,
+        //Its a bit strange, but in this case we rather pass null to be consistent with the api
+        //taking only the first 200 chars of the body
+        body = body.map(_.toString.take(200)).getOrElse(null),
         trackingId = trackingId,
         statusCode = resOpt.map(_.status).getOrElse(AccessLogTimer.NoIntValue)))
   }

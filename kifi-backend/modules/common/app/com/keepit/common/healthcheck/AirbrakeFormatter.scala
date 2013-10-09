@@ -19,10 +19,10 @@ import scala.xml._
 
 import play.api.mvc._
 
-import AirbrakeError.MaxStringSize
+import AirbrakeError.MaxMessageSize
 
 case class ErrorWithStack(error: Throwable, stack: Seq[StackTraceElement]) {
-  override def toString(): String = error.toString.take(MaxStringSize)
+  override def toString(): String = error.toString.take(MaxMessageSize)
   val cause: Option[ErrorWithStack] = Option(error.getCause).map(e => ErrorWithStack(e))
   val rootCause: ErrorWithStack = cause.map(c => c.rootCause).getOrElse(this)
 }
@@ -35,7 +35,7 @@ object ErrorWithStack {
 
 class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices) {
 
-  val deploymentMessage = {
+  val deploymentMessage: String = {
     val repo = "https://github.com/FortyTwoEng/keepit"
     val version = service.currentVersion
     s"api_key=$apiKey&deploy[rails_env]=$modeToRailsNaming&deploy[scm_repository]=$repo&deploy[scm_revision]=$version"

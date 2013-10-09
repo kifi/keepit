@@ -75,7 +75,10 @@ class AirbrakeSender @Inject() (
     }
   }
 
-  def sendDeployment(payload: String) = httpClient.postText("http://api.airbrake.io/deploys.txt", payload)
+  def sendDeployment(payload: String) = {
+    log.info(s"announcing deployment to airbrake: $payload")
+    httpClient.postText("http://api.airbrake.io/deploys.txt", payload)
+  }
 
   def sendError(xml: NodeSeq) = httpClient.
     withHeaders("Content-type" -> "text/xml").

@@ -4,10 +4,13 @@ import scala.concurrent.duration.Duration
 
 import org.joda.time.DateTime
 
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.{State, ExternalId, Id}
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.logging.AccessLog
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -38,5 +41,8 @@ case class CommentWithBasicUserKey(commentId: Id[Comment]) extends Key[CommentWi
   def toKey(): String = commentId.id.toString
 }
 
-class CommentWithBasicUserCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[CommentWithBasicUserKey, CommentWithBasicUser](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class CommentWithBasicUserCache(
+  stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[CommentWithBasicUserKey, CommentWithBasicUser](
+  stats, accessLog,
+  innermostPluginSettings, innerToOuterPluginSettings:_*)

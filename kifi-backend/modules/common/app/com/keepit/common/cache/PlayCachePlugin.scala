@@ -1,6 +1,7 @@
 package com.keepit.common.cache
 
 import scala.concurrent.duration.Duration
+import com.keepit.common.logging.AccessLog
 
 import java.io.{ByteArrayOutputStream, ObjectOutputStream, ObjectInputStream, ByteArrayInputStream}
 
@@ -9,6 +10,7 @@ import net.codingwell.scalaguice.InjectorExtensions.enrichInjector
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.logging.Logging
 import com.keepit.serializer.BinaryFormat
+import com.keepit.common.logging.{AccessLogTimer, AccessLog}
 
 import play.api.Application
 import play.api.cache.{CacheAPI, CachePlugin}
@@ -20,8 +22,8 @@ class PlayCachePlugin(app: Application) extends CachePlugin {
   lazy val api = app.global.asInstanceOf[FortyTwoGlobal].injector.instance[PlayCacheApi]
 }
 
-class PlayCacheApi(inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[PlayCacheKey, Any](inner, outer: _*)(PlayBinaryFormat) with CacheAPI with Logging {
+class PlayCacheApi(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+  extends BinaryCacheImpl[PlayCacheKey, Any](stats, accessLog, inner, outer: _*)(PlayBinaryFormat) with CacheAPI with Logging {
 
   def set(key: String, value: Any, expiration: Int): Unit = {
     log.info(s"Setting cache key: $key, value: $value")

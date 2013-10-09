@@ -4,6 +4,7 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.cache._
+import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration._
 import scala.Some
 import net.codingwell.scalaguice.ScalaModule
@@ -31,8 +32,8 @@ case class ClickHistoryUserIdKey(userId: Id[User]) extends Key[ClickHistory] {
   def toKey(): String = userId.id.toString
 }
 
-class ClickHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[ClickHistoryUserIdKey, ClickHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class ClickHistoryUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends BinaryCacheImpl[ClickHistoryUserIdKey, ClickHistory](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object ClickHistoryStates extends States[ClickHistory]
 
