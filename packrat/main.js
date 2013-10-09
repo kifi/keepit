@@ -694,7 +694,7 @@ api.port.on({
     socket.send(["get_networks", friendId], respond);
   },
   open_deep_link: function(link, _, tab) {
-    if (tab.nUri === link.nUri) {
+    if (link.inThisTab || tab.nUri === link.nUri) {
       awaitDeepLink(link, tab.id);
     } else {
       var tabs = tabsByUrl[link.nUri];
@@ -786,7 +786,7 @@ api.port.on({
 
   /**
    * Makes a request to the server to create/add a tag to a keep.
-   * 
+   *
    * ADD
    *   Request URL: /tags/add
    *   Request Method: POST
@@ -805,7 +805,7 @@ api.port.on({
 
   /**
    * Makes a request to the server to add a tag to a keep.
-   * 
+   *
    * ADD
    *   Request URL: /tags/:id/addToKeep
    *   Request Method: POST
@@ -822,7 +822,7 @@ api.port.on({
 
   /**
    * Makes a request to the server to remove a tag from a keep.
-   * 
+   *
    * REMOVE
    *   Request URL: /tags/:id/removeFromKeep
    *   Request Method: POST
@@ -839,7 +839,7 @@ api.port.on({
 
   /**
    * Makes a request to the server to clear all tags from a keep.
-   * 
+   *
    * REMOVE
    *   Request URL: /tags/clear
    *   Request Method: POST
