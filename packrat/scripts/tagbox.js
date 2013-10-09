@@ -220,7 +220,7 @@ this.tagbox = (function ($, win) {
 				case KEY_ESC:
 					log('tagbox:input.esc', this.currentSuggestion);
 					if (this.currentSuggestion) {
-						this.navigateTo(null);
+						this.navigateTo(null, 'esc');
 						e.stopPropagation();
 						e.stopImmediatePropagation();
 					}
@@ -648,7 +648,7 @@ this.tagbox = (function ($, win) {
 			this.updateSuggestedClass();
 			this.updateScroll();
 
-			this.navigateTo('first');
+			this.navigateTo('first', 'suggest');
 		},
 
 		/**
@@ -1226,13 +1226,15 @@ this.tagbox = (function ($, win) {
 			default:
 				return;
 			}
+			this.ignoreMouseover = true;
 			return this.navigateTo($next, dir);
 		},
 
-		navigateTo: function ($suggestion) {
+		navigateTo: function ($suggestion, src) {
 			if ($suggestion === 'first' || $suggestion === 'last') {
 				$suggestion = this.$suggest.children(':' + $suggestion);
 			}
+
 			if (!($suggestion && $suggestion.length)) {
 				$suggestion = null;
 			}
@@ -1246,7 +1248,10 @@ this.tagbox = (function ($, win) {
 
 			if ($suggestion) {
 				$suggestion.addClass('focus');
-				this.scrolledIntoViewLazy($suggestion[0], 10);
+
+				if (src !== 'mouseover') {
+					this.scrolledIntoViewLazy($suggestion[0], 10);
+				}
 			}
 		},
 
@@ -1378,6 +1383,11 @@ this.tagbox = (function ($, win) {
 		 * @param {Object} event - A mouseover event object
 		 */
 		onMouseoverSuggestion: function (e) {
+			if (this.ignoreMouseover) {
+				this.ignoreMouseover = false;
+				return;
+			}
+
 			var $target = $(e.target),
 				$suggestion = $target.closest('.kifi-tagbox-suggestion');
 			if (!$suggestion.length) {
@@ -1386,7 +1396,7 @@ this.tagbox = (function ($, win) {
 					return;
 				}
 			}
-			this.navigateTo($suggestion);
+			this.navigateTo($suggestion, 'mouseover');
 		},
 
 		/**
