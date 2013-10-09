@@ -1,11 +1,11 @@
 /*
  * Clear fix
- */ 
+ */
 .kifi-group:before,
 .kifi-group:after {
   content: "";
   display: table;
-} 
+}
 .kifi-group:after {
   clear: both;
 }
@@ -83,7 +83,7 @@
   cursor: text;
 }
 
-.kifi-tagbox-input-box table { 
+.kifi-tagbox-input-box table {
   border-spacing: 0;
   border-collapse: collapse;
 }

@@ -1,6 +1,6 @@
 /**
  * ---------------
- *      Util 
+ *      Util
  * ---------------
  *
  * Contains utility functions
