@@ -730,138 +730,48 @@ api.port.on({
   await_deep_link: function(link, _, tab) {
     awaitDeepLink(link, tab.id);
   },
-
-  /**
-   *
-   * GET_TAGS
-   *   Request URL: /tags
-   *   Request Method: GET
-   *   Response: [{
-   *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
-   *     "name":"hello"
-   *   }, ...]
-   */
-  get_tags: function(_, callback, tab) {
-    return makeRequest(tab, "get_tags", "GET", "/tags", null, callback);
-    /*
-    //log("[get_tags] fetched=" + tagsFetched)();
-    if (tagsFetched) {
-      respond({
-        success: true,
-        response: tags
-      });
-    }
-    else if (respond) {
-      tagsListeners.push(respond);
-    }
-    */
+  get_tags: function(_, respond, tab) {
+    // TODO: return all tags from local cache
+    ajax('GET', '/tags', function(tags) {
+      log('[get_tags] response:', tags)();
+      var d = pageData[tab.nUri];
+      if (d) {
+        respond({
+          success: true,
+          response: {all: tags, page: d.tags}
+        });
+      }
+    }, function(xhr) {
+      log('[get_tags] error:', xhr)();
+      respond({status: xhr.status});
+    });
   },
-
-  /**
-   *
-   * GET_TAGS_BY_URL
-   *   Request URL: /tagsByUrl
-   *   Request Method: POST
-   *   Request Payload: {"url":"www.kifi.com"}
-   *   Response: [{
-   *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
-   *     "name":"hello"
-   *   }, ...]
-   */
-  get_tags_by_url: function(_, callback, tab) {
-    return makeRequest(tab, "get_tags_by_url", "POST", "/tagsByUrl", {
-      url: tab.url
-    }, callback);
-  },
-
-  /**
-   * Makes a request to the server to create a tag for a user.
-   *
-   * CREATE
-   *   Request URL: /site/collections/create
-   *   Request Method: POST
-   *   Request Payload: {"name":"hello"}
-   *   Response: {
-   *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
-   *     "name":"hello"
-   *   }
-   */
-  create_tag: function(name, callback, tab) {
-    return makeRequest(tab, "create_tag", "POST", "/site/collections/create", {
+  create_tag: function(name, respond, tab) {
+    makeRequest(tab, "create_tag", "POST", "/site/collections/create", {
       name: name
-    }, callback);
+    }, respond);
   },
-
-  /**
-   * Makes a request to the server to create/add a tag to a keep.
-   *
-   * ADD
-   *   Request URL: /tags/add
-   *   Request Method: POST
-   *   Request Payload: {
-   *     name: 'my tag name',
-   *     url: "my.keep.com"
-   *   }
-   *   Response: {}
-   */
-  create_and_add_tag: function(name, callback, tab) {
-    return makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
+  create_and_add_tag: function(name, respond, tab) {
+    makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
       name: name,
       url: tab.url
-    }, callback);
+    }, respond);
   },
-
-  /**
-   * Makes a request to the server to add a tag to a keep.
-   *
-   * ADD
-   *   Request URL: /tags/:id/addToKeep
-   *   Request Method: POST
-   *   Request Payload: {
-   *     url: "my.keep.com"
-   *   }
-   *   Response: {}
-   */
-  add_tag: function(tagId, callback, tab) {
-    return makeRequest(tab, "add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
+  add_tag: function(tagId, respond, tab) {
+    makeRequest(tab, "add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
       url: tab.url
-    }, callback);
+    }, respond);
   },
-
-  /**
-   * Makes a request to the server to remove a tag from a keep.
-   *
-   * REMOVE
-   *   Request URL: /tags/:id/removeFromKeep
-   *   Request Method: POST
-   *   Request Payload: {
-   *     url: "my.keep.com"
-   *   }
-   *   Response: {}
-   */
-  remove_tag: function(tagId, callback, tab) {
-    return makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
+  remove_tag: function(tagId, respond, tab) {
+    makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
       url: tab.url
-    }, callback);
+    }, respond);
   },
-
-  /**
-   * Makes a request to the server to clear all tags from a keep.
-   *
-   * REMOVE
-   *   Request URL: /tags/clear
-   *   Request Method: POST
-   *   Request Payload: {
-   *     url: "my.keep.com"
-   *   }
-   *   Response: {}
-   */
-  clear_tags: function(tagId, callback, tab) {
-    return makeRequest(tab, "clear_tags", "POST", "/tags/clear", {
+  clear_tags: function(tagId, respond, tab) {
+    makeRequest(tab, "clear_tags", "POST", "/tags/clear", {
       url: tab.url
-    }, callback);
+    }, respond);
   },
-
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
     //reportError(data.message, data.url, data.lineNo);
@@ -1258,6 +1168,7 @@ function gotPageDetailsFor(url, tab, resp) {
   var d = pageData[nUri] || new PageData;
 
   d.kept = resp.kept;
+  d.tags = resp.tags || [];
   d.position = resp.position;
   d.neverOnSite = resp.neverOnSite;
   d.sensitive = resp.sensitive;
