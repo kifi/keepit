@@ -259,7 +259,7 @@
 .kifi-root.kifi-root button {
   display: inline-block;
 }
-.kifi-root.kifi-root b {
+.kifi-root.kifi-root.kifi-root b {
   font-weight: bold;
 }
 .kifi-root.kifi-root :link,
