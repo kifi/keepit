@@ -44,6 +44,11 @@ this.tagbox = (function ($, win) {
 		}
 	});
 
+	api.onEnd.push(function () {
+		win.tagbox.destroy();
+		win.tagbox = null;
+	});
+
 	return {
 		/**
 		 * An array containing user's all tags
@@ -125,19 +130,20 @@ this.tagbox = (function ($, win) {
 			function onClick(e) {
 				if (!this.contains(e.target)) {
 					log('tagbox:clickout', e.target);
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
 					this.hide();
 				}
 			}
 
 			function addDocListeners() {
 				if (this.active) {
-					var $doc = $(document),
-						onDocKeydown = this.onDocKeydown = onKeydown.bind(this),
+					var onDocKeydown = this.onDocKeydown = onKeydown.bind(this),
 						onDocClick = this.onDocClick = onClick.bind(this);
 
-					this.$doc = $doc;
-					$doc.on('keydown', onDocKeydown);
-					$doc.on('click', onDocClick);
+					$(document).on('keydown', onDocKeydown);
+					document.addEventListener('click', onDocClick, true);
 				}
 			}
 
@@ -366,15 +372,18 @@ this.tagbox = (function ($, win) {
 					}
 				}, this);
 
-				var $doc = this.$doc;
-				if ($doc) {
-					$doc.off('keydown', this.onDocKeydown);
-					$doc.off('click', this.onDocClick);
+				var onDocKeydown = this.onDocKeydown;
+				if (onDocKeydown) {
+					$(document).off('keydown', this.onDocKeydown);
+					this.onDocKeydown = null;
 				}
 
-				this.$doc = null;
-				this.onDocKeydown = null;
-				this.onDocClick = null;
+				var onDocClick = this.onDocClick;
+				if (onDocClick) {
+					document.removeEventListener('click', onDocClick, true);
+					this.onDocClick = null;
+				}
+
 				this.$slider = null;
 				this.tags = [];
 				this.tagsAdded = {};

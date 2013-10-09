@@ -51,6 +51,14 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     }
   }
 
+  document.addEventListener('click', onClick, true);
+  function onClick(e) {
+    var target = e.target;
+    if ($slider && !($pane || $slider[0].contains(target) || isInsideTagbox(target))) {
+      hideSlider('clickout');
+    }
+  }
+
   api.onEnd.push(function () {
     log('[slider2:onEnd]')();
     $pane && $pane.remove();
@@ -58,6 +66,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     $(tile).remove();
     $('html').removeClass('kifi-with-pane kifi-pane-parent');
     document.removeEventListener('keydown', onKeyDown, true);
+    document.removeEventListener('click', onClick, true);
   });
 
   function createSlider(callback, locator) {
@@ -254,13 +263,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     });
   }
 
-  $(document).click(function(e) {
-    var target = e.target;
-    if (!$slider[0].contains(target) && !(tagbox && tagbox.contains(target))) {
-      hideSlider('clickout');
-    }
-  });
-
   function showSlider(trigger, callback) {
     log("[showSlider]", trigger)();
 
@@ -286,11 +288,20 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     });
   }
 
+  function isTagboxActive() {
+    var tagbox = window.tagbox;
+    return tagbox != null && tagbox.active;
+  }
+
+  function isInsideTagbox(el) {
+    var tagbox = window.tagbox;
+    return tagbox != null && tagbox.contains(el);
+  }
+
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
     log("[hideSlider]", trigger)();
-    var tagbox = window.tagbox;
-    if (tagbox && tagbox.active && trigger !== 'clickout') {
+    if (trigger !== 'clickout' && isTagboxActive()) {
       log("[hideSlider] tagbox is active. cancel hide")();
       return;
     }

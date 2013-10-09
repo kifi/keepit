@@ -1,4 +1,4 @@
-.animated{-webkit-animation-fill-mode:both;-moz-animation-fill-mode:both;-ms-animation-fill-mode:both;-o-animation-fill-mode:both;animation-fill-mode:both;-webkit-animation-duration:.75s;-moz-animation-duration:.75s;-ms-animation-duration:.75s;-o-animation-duration:.75s;animation-duration:.75s;}.animated.hinge{-webkit-animation-duration:.75s;-moz-animation-duration:.75s;-ms-animation-duration:.75s;-o-animation-duration:.75s;animation-duration:.75s;}@-webkit-keyframes flipInX {
+.animated{-webkit-animation-fill-mode:both;-moz-animation-fill-mode:both;-ms-animation-fill-mode:both;-o-animation-fill-mode:both;animation-fill-mode:both;-webkit-animation-duration:.5s;-moz-animation-duration:.5s;-ms-animation-duration:.5s;-o-animation-duration:.5s;animation-duration:.5s;}.animated.hinge{-webkit-animation-duration:.5s;-moz-animation-duration:.5s;-ms-animation-duration:.5s;-o-animation-duration:.5s;animation-duration:.5s;}@-webkit-keyframes flipInX {
     0% {
         -webkit-transform: perspective(400px) rotateX(90deg);
         opacity: 0;

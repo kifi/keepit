@@ -14,7 +14,7 @@
   clear: both;
 }
 .kifi-tagbox {
-  position: fixed;
+  position: absolute;
   bottom: 48px;
   right: 0;
   width: 300px;
@@ -26,11 +26,15 @@
   -webkit-font-smoothing: antialiased;
   text-align: left;
 }
-.kifi-tagbox.attached {
+.kifi-with-pane .kifi-tagbox {
+  bottom: 54px;
+  width: 312px;
   border-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
-.kifi-tagbox.attached .kifi-tagbox-tagged,
-.kifi-tagbox.attached .kifi-tagbox-empty {
+.kifi-with-pane .kifi-tagbox .kifi-tagbox-tagged,
+.kifi-with-pane .kifi-tagbox .kifi-tagbox-empty {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
@@ -54,6 +58,9 @@
   display: block;
 }
 .kifi-tagbox .kifi-tagbox-loading {
+  display: none;
+}
+.kifi-tagbox.loading {
   display: none;
 }
 .kifi-tagbox.loading .kifi-tagbox-empty,
