@@ -746,11 +746,6 @@ api.port.on({
       respond({status: xhr.status});
     });
   },
-  create_tag: function(name, respond, tab) {
-    makeRequest(tab, "create_tag", "POST", "/site/collections/create", {
-      name: name
-    }, respond);
-  },
   create_and_add_tag: function(name, respond, tab) {
     makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
       name: name,
