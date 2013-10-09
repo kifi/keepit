@@ -87,7 +87,7 @@ this.tagbox = (function ($, win) {
 		 */
 		construct: function () {
 			log('tagbox:construct');
-			if (!this.$tagbox) {
+			if (!this.$tagbox && this.getTimeSinceDestroyed() > 150) {
 				this.init();
 			}
 		},
@@ -130,9 +130,11 @@ this.tagbox = (function ($, win) {
 			function onClick(e) {
 				if (!this.contains(e.target)) {
 					log('tagbox:clickout', e.target);
+					/*
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
+          */
 					this.hide();
 				}
 			}
@@ -353,6 +355,10 @@ this.tagbox = (function ($, win) {
 			}
 		},
 
+		getTimeSinceDestroyed: function () {
+			return Date.now() - (this.destroyedAt || 0);
+		},
+
 		/**
 		 * Destroys a tag box.
 		 * It removes all event listeners and caches to elements.
@@ -361,6 +367,7 @@ this.tagbox = (function ($, win) {
 			log('tagbox:destroy');
 			if (this.active) {
 				this.active = false;
+				this.destroyedAt = Date.now();
 				log('tagbox:destroy-inner');
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
 
