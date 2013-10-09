@@ -311,8 +311,8 @@ this.tagbox = (function ($, win) {
 		 */
 		initTags: function () {
 			log('initTags: get all tags');
-			Q.all([this.requestTags(), this.requestTagsByUrl()])
-				.spread(this.onFetchTags.bind(this))
+			this.requestTags()
+				.then(this.onFetchTags.bind(this))
 				.then(this.updateSuggestHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.updateSuggestion.bind(this))
@@ -951,25 +951,13 @@ this.tagbox = (function ($, win) {
 		//
 
 		/**
-		 * Makes a request to the server to get all tags for the user.
-		 * Returns a promise object.
+		 * Retrieves all of the user's tags and a list of the ones applied to this page.
 		 *
 		 * @return {Object} A deferred promise object
 		 */
 		requestTags: function () {
 			log('get_tags');
 			return this.request('get_tags', null, 'Could not load tags.');
-		},
-
-		/**
-		 * Makes a request to the server to get all tags associated with the current page for the user.
-		 * Returns a promise object.
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		requestTagsByUrl: function () {
-			log('get_tags_by_url');
-			return this.request('get_tags_by_url', null, 'Could not load tags for the page.');
 		},
 
 		/**
@@ -1064,10 +1052,10 @@ this.tagbox = (function ($, win) {
 		 *     "name":"hello"
 		 *   }]
 		 */
-		onFetchTags: function (tags, addedTags) {
-			log('onFetchTags', tags, addedTags);
-			this.setTags(tags);
-			this.rebuildTagsAdded(addedTags);
+		onFetchTags: function (tags) {
+			log('onFetchTags', tags);
+			this.setTags(tags.all);
+			this.rebuildTagsAdded(tags.page);
 			return arguments;
 		},
 
