@@ -30,10 +30,10 @@ var friendsById = {};
 var ruleSet = {};
 var urlPatterns = [];
 /*
-//var tags = [];
-//var tagsById = [];
-//var tagsFetched = null;
-//var tagsListeners = [];
+var tags = [];
+var tagsById = [];
+var tagsFetched = null;
+var tagsListeners = [];
 */
 
 function clearDataCache() {
@@ -49,8 +49,10 @@ function clearDataCache() {
   friendsById = {};
   ruleSet = {};
   urlPatterns = [];
-  //tags = [];
-  //tagsById = {};
+  /*
+  tags = [];
+  tagsById = {};
+  */
 }
 
 function PageData() {
