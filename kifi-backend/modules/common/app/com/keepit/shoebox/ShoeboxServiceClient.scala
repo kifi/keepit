@@ -76,7 +76,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment]
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment]
-  def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]]
+  def getUserExperiments(userId: Id[User]): Future[Seq[ExperimentType]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
   def userChannelFanout(userId: Id[User], msg: JsArray): Seq[Future[Int]]
@@ -353,11 +353,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = {
+  def getUserExperiments(userId: Id[User]): Future[Seq[ExperimentType]] = {
     cacheProvider.userExperimentCache.get(UserExperimentUserIdKey(userId)) match {
       case Some(states) => Promise.successful(states).future
       case None => call(Shoebox.internal.getUserExperiments(userId)).map { r =>
-        r.json.as[Set[String]].map(State[ExperimentType](_)).toSeq
+        r.json.as[Set[String]].map(ExperimentType(_)).toSeq
       }
     }
   }

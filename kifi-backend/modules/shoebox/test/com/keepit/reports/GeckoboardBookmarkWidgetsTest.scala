@@ -36,7 +36,7 @@ class GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicatio
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
       val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
 
-      userExperimentRepo.save(UserExperiment(userId = user2.id.get, experimentType = State[ExperimentType]("admin")))
+      userExperimentRepo.save(UserExperiment(userId = user2.id.get, experimentType = ExperimentType("admin")))
       userExperimentRepo.count === 1
 
       uriRepo.count === 0

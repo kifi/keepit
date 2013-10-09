@@ -131,7 +131,7 @@ class EventMetadataSerializer extends Format[EventMetadata] {
           eventName = (json \ "eventName").as[String],
           userId = ExternalId[User]((json \ "userId").as[String]),
           installId = (json \ "installId").asOpt[String].getOrElse(""),
-          userExperiments = (json \ "userExperiments").as[Seq[String]] map {ux => ExperimentTypes(ux)} toSet,
+          userExperiments = (json \ "userExperiments").as[Seq[String]] map(ExperimentType.get) toSet,
           metaData = (json \ "metaData").asOpt[JsObject].getOrElse(JsObject(Seq())),
           prevEvents = (json \ "prevEvents").asOpt[Seq[String]] match {
             case Some(ev) => ev map { i => ExternalId[Event](i) }

@@ -1,6 +1,6 @@
 @(user: User,
   totalBookmarks: Int,
-  experiments: Set[State[ExperimentType]],
+  experiments: Set[ExperimentType],
   bookmarks: Seq[(Bookmark, NormalizedURI, Seq[String])],
   socialUsers: Seq[SocialUserInfo],
   socialConnections: Seq[SocialUserInfo],
@@ -62,10 +62,10 @@
       <tr>
         <th>Experiments</th>
         <td id="experiments" class="form-inline">
-          @for(exp <- Seq(ExperimentTypes.ADMIN, ExperimentTypes.BLOCK,
-              ExperimentTypes.NO_SEARCH_EXPERIMENTS, ExperimentTypes.FAKE, ExperimentTypes.INACTIVE,
-              ExperimentTypes.CAN_INVITE, ExperimentTypes.CAN_MESSAGE_ALL_USERS, ExperimentTypes.NOT_SENSITIVE,
-              ExperimentTypes.PASSWORD_LOGIN, ExperimentTypes.TAGGING)) {
+          @for(exp <- Seq(ExperimentType.ADMIN, ExperimentType.BLOCK,
+              ExperimentType.NO_SEARCH_EXPERIMENTS, ExperimentType.FAKE, ExperimentType.INACTIVE,
+              ExperimentType.CAN_INVITE, ExperimentType.CAN_MESSAGE_ALL_USERS, ExperimentType.NOT_SENSITIVE,
+              ExperimentType.PASSWORD_LOGIN, ExperimentType.TAGGING)) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(experiments.contains(exp)) {checked}>@exp.value
             </label>
