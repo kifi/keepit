@@ -17,9 +17,9 @@ function getTextFormatter() {
       for (var j = 1; j < bits.length; j += 3) {
         var escapedUri = Mustache.escape(bits[j]);
         if (escapedUri.charAt(0) == '(') {
-          escapedUri.slice(1);
+          escapedUri = escapedUri.slice(1);
           if (escapedUri.charAt(escapedUri.length - 1) == ')') {
-            escapedUri.slice(0,-1);
+            escapedUri = escapedUri.slice(0,-1);
           }
         }
         bits[j] = '<a target=_blank href="' + (bits[j+1] ? ""  : "http://") + escapedUri + '">' + escapedUri + "</a>";
