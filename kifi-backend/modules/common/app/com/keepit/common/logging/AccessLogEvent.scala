@@ -111,6 +111,7 @@ class AccessLog @Inject() (clock: Clock) {
       Some(s"type:${e.eventType.name}") ::
       Some(s"duration:${e.duration}") ::
       e.method.map("method:" + _) ::
+      e.trackingId.map("trackingId:" + _) ::
       e.key.map("key:" + _) ::
       e.space.map("space:" + _) ::
       e.remoteTime.map("remoteTime:" + _) ::
@@ -122,7 +123,6 @@ class AccessLog @Inject() (clock: Clock) {
       e.remoteService.map("remoteService:" + _) ::
       e.remoteServiceId.map("remoteServiceId:" + _) ::
       e.query.map("query:" + _) ::
-      e.trackingId.map("trackingId:" + _) ::
       e.url.map("url:" + _) ::
       Nil
     line.flatten.mkString("\t")
