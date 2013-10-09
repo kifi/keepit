@@ -13,9 +13,15 @@ function getTextFormatter() {
 
     for (i = 0; i < parts.length; i += 3) {
       // linkify URLs, from http://regex.info/listing.cgi?ed=3&p=207
-      var bits = parts[i].split(/(\b(?:(ftp|https?):\/\/[-\w]+(?:\.\w[-\w]*)+|(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/[^.!,?;"'<>()\[\]{}\s\x7F-\xFF]*(?:[.!,?]+[^.!,?;"'<>()\[\]{}\s\x7F-\xFF]+)*)?)/);
+      var bits = parts[i].split(/\(?(\b(?:(ftp|https?):\/\/[-\w]+(?:\.\w[-\w]*)+|(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/[^.!,?;"'<>\[\]{}\s\x7F-\xFF]*(?:[.!,?]+[^.!,?;"'<>\[\]{}\s\x7F-\xFF]+)*)?)/);
       for (var j = 1; j < bits.length; j += 3) {
         var escapedUri = Mustache.escape(bits[j]);
+        if (escapedUri.charAt(0) == '(') {
+          escapedUri.slice(1);
+          if (escapedUri.charAt(escapedUri.length - 1) == ')') {
+            escapedUri.slice(0,-1);
+          }
+        }
         bits[j] = '<a target=_blank href="' + (bits[j+1] ? ""  : "http://") + escapedUri + '">' + escapedUri + "</a>";
         bits[j+1] = "";
       }
