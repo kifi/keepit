@@ -68,10 +68,7 @@ class ExtBookmarksController @Inject() (
     val name = (request.body \ "name").as[String]
     db.readWrite { implicit s =>
       val tag = getOrCreateTag(request.userId, name)
-      Ok(Json.obj(
-        "name" -> tag.name,
-        "id" -> tag.externalId.id
-      ))
+      Ok(Json.toJson(SendableTag from tag))
     }
   }
 
@@ -95,7 +92,7 @@ class ExtBookmarksController @Inject() (
         addTagToUrl(request.user, request.experiments, url, tag.id.get)
       }
     }
-    Ok(Json.obj("name" -> tag.name, "id" -> tag.externalId.id))
+    Ok(Json.toJson(SendableTag from tag))
   }
 
   def clearTags() = AuthenticatedJsonToJsonAction { request =>
@@ -114,11 +111,9 @@ class ExtBookmarksController @Inject() (
 
   def tags() = AuthenticatedJsonAction { request =>
     val tags = db.readOnly { implicit s =>
-      collectionRepo.getByUser(request.userId).map { coll =>
-        Json.obj("name" -> coll.name, "id" -> coll.externalId.id)
-      }
+      collectionRepo.getByUser(request.userId)
     }
-    Ok(Json.toJson(tags))
+    Ok(Json.toJson(tags.map(SendableTag.from)))
   }
 
   def tagsByUrl() = AuthenticatedJsonToJsonAction { request =>
@@ -129,11 +124,10 @@ class ExtBookmarksController @Inject() (
         bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).toSeq
         collectionId <- keepToCollectionRepo.getCollectionsForBookmark(bookmark.id.get)
       } yield {
-        val coll = collectionRepo.get(collectionId)
-        Json.obj("name" -> coll.name, "id" -> coll.externalId.id)
+        collectionRepo.get(collectionId)
       }
     }
-    Ok(Json.toJson(tags))
+    Ok(Json.toJson(tags.map(SendableTag.from)))
   }
 
   def remove() = AuthenticatedJsonToJsonAction { request =>
