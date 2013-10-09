@@ -166,7 +166,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.get()
     res.onComplete { resTry =>
-      logResponse(timer, "GET", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "GET", resTry.isSuccess, trackingId, None, resTry.toOption)
     }
     res
   }
@@ -175,7 +175,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.put(body)
     res.onComplete { resTry =>
-      logResponse(timer, "PUT", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "PUT", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
     }
     res
   }
@@ -184,7 +184,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
     }
     res
   }
@@ -193,7 +193,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
     }
     res
   }
@@ -202,7 +202,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
     }
     res
   }
@@ -211,12 +211,12 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.delete()
     res.onComplete { resTry =>
-      logResponse(timer, "DELETE", resTry.isSuccess, trackingId, resTry.toOption)
+      logResponse(timer, "DELETE", resTry.isSuccess, trackingId, None, resTry.toOption)
     }
     res
   }
 
-  private def logResponse(timer: AccessLogTimer, method: String, isSuccess: Boolean, trackingId: String, resOpt: Option[Response]) = {
+  private def logResponse(timer: AccessLogTimer, method: String, isSuccess: Boolean, trackingId: String, body: Option[Any], resOpt: Option[Response]) = {
     //todo(eishay): the interesting part is the remote service and node id, to be logged
     val remoteHost = resOpt.map(_.header(CommonHeaders.LocalHost)).flatten.getOrElse("NA")
     val remoteTime = resOpt.map(_.header(CommonHeaders.ResponseTime)).flatten.map(_.toLong).getOrElse(AccessLogTimer.NoLongValue)
@@ -230,6 +230,9 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
         result = if(isSuccess) "success" else "fail",
         query = queryString,
         url = wsRequest.url,
+        //Its a bit strange, but in this case we rather pass null to be consistent with the api
+        //taking only the first 200 chars of the body
+        body = body.map(_.toString.take(200)).getOrElse(null),
         trackingId = trackingId,
         statusCode = resOpt.map(_.status).getOrElse(AccessLogTimer.NoIntValue)))
   }
