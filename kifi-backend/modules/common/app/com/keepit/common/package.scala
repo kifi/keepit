@@ -26,7 +26,7 @@ package object common {
     }
   }
 
-  implicit class Recoverable[A](val f: => A) extends AnyVal {
+  implicit class Recoverable[A](f: => A) {
     def recover(g: Throwable => A): A = {
       try { f }
       catch {
