@@ -205,12 +205,12 @@ class UrlController @Inject() (
     implicit val playRequest = request.request
     val PAGE_SIZE = 50
     val (pendingCount, appliedCount, applied) = db.readOnly{ implicit s =>
-      val totalCount = changedUriRepo.count
-      val appliedCount = changedUriRepo.allAppliedCount()
+      val activeCount = changedUriRepo.countState(ChangedURIStates.ACTIVE)
+      val appliedCount = changedUriRepo.countState(ChangedURIStates.APPLIED)
       val applied = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
         (uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId), change.updatedAt.date.toString())
       }
-      (totalCount - appliedCount, appliedCount, applied)
+      (activeCount, appliedCount, applied)
     }
     val pageCount = (appliedCount*1.0 / PAGE_SIZE).ceil.toInt
     Ok(html.admin.normalization(applied, page, appliedCount, pendingCount, pageCount, PAGE_SIZE))
