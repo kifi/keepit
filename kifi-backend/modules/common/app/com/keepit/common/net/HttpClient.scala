@@ -150,7 +150,7 @@ case class HttpClientImpl(
     cr
   }
 
-  def withTimeout(timeout: Int): HttpClientImpl = copy(timeout = 2)
+  def withTimeout(timeout: Int): HttpClientImpl = copy(timeout = timeout)
 }
 
 private[net] class Request(val req: WSRequestHolder, headers: List[(String, String)], services: FortyTwoServices, accessLog: AccessLog) extends Logging {
