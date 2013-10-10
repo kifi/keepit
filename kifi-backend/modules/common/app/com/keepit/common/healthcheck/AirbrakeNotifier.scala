@@ -75,12 +75,15 @@ class AirbrakeSender @Inject() (
     }
   }
 
-  def sendDeployment(payload: String) = {
+  def sendDeployment(payload: String): Unit = {
     log.info(s"announcing deployment to airbrake: $payload")
-    httpClient.postText("http://api.airbrake.io/deploys.txt", payload)
+    httpClient.
+      withTimeout(60000).
+      postTextFuture("http://api.airbrake.io/deploys.txt", payload)
   }
 
-  def sendError(xml: NodeSeq) = httpClient.
+  def sendError(xml: NodeSeq): Unit = httpClient.
+    withTimeout(60000).
     withHeaders("Content-type" -> "text/xml").
     postXmlFuture("http://airbrakeapp.com/notifier_api/v2/notices", xml, defaultOnFailure) map { res =>
       val xmlRes = res.xml
