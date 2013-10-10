@@ -16,6 +16,10 @@ GET     /link/:provider             @com.keepit.controllers.core.AuthController.
 POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
 POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
+GET     /resetPassword              @com.keepit.controllers.core.AuthController.resetPasswordPage()
+POST    /resetPassword              @com.keepit.controllers.core.AuthController.resetPassword()
+GET     /setPassword/:code          @com.keepit.controllers.core.AuthController.setNewPasswordPage(code: String)
+POST    /setPassword/:code          @com.keepit.controllers.core.AuthController.setNewPassword(code: String)
 
 POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
