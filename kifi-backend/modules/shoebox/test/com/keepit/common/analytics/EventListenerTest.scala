@@ -13,10 +13,11 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.eliza.TestElizaServiceClientModule
 
 class EventListenerTest extends Specification with ShoeboxApplicationInjector {
 
-  val eventListenerTestModules = Seq(TestActorSystemModule(), ShoeboxFakeStoreModule(), TestAnalyticsModule(), TestSearchServiceClientModule(), FakeShoeboxServiceModule())
+  val eventListenerTestModules = Seq(TestActorSystemModule(), ShoeboxFakeStoreModule(), TestAnalyticsModule(), TestSearchServiceClientModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule())
 
   def setup()(implicit injector: Injector) = {
     db.readWrite {implicit s =>
