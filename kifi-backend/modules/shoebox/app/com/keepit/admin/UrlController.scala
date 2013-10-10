@@ -127,7 +127,7 @@ class UrlController @Inject() (
     var changes = Vector.empty[(URL, Option[NormalizedURI])]
     val urls = getUrlList()
     sendStartEmail(urls)
-    val batchUrls = batch[URL](urls, batchSize = 100)     // avoid long DB write lock.
+    val batchUrls = batch[URL](urls, batchSize = 50)     // avoid long DB write lock.
     
     batchUrls.map { urls =>
       db.readWrite { implicit s =>
