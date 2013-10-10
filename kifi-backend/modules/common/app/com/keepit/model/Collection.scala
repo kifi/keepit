@@ -45,6 +45,17 @@ object Collection {
   val MaxNameLength = 64
 }
 
+case class SendableTag(
+  id: ExternalId[Collection],
+  name: String)
+
+object SendableTag {
+  private implicit val externalIdFormat = ExternalId.format[Collection]
+  implicit val writesSendableTag = Json.writes[SendableTag]
+
+  def from(c: Collection): SendableTag = SendableTag(c.externalId, c.name)
+}
+
 case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
   override val version = 2
   val namespace = "user_collections"

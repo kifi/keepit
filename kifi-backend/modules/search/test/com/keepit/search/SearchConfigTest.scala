@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
+import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.test.TestInjector
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._

@@ -27,7 +27,7 @@ case class AuthenticatedRequest[T](
     userId: Id[User],
     user: User,
     request: Request[T],
-    experiments: Set[State[ExperimentType]] = Set(),
+    experiments: Set[ExperimentType] = Set(),
     kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
     adminUserId: Option[Id[User]] = None)
   extends WrappedRequest(request)
@@ -109,7 +109,7 @@ class RemoteActionAuthenticator @Inject() (
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-  private def getExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = shoeboxClient.getUserExperiments(userId)
+  private def getExperiments(userId: Id[User]): Future[Seq[ExperimentType]] = shoeboxClient.getUserExperiments(userId)
 
   private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
       val experimentsFuture = getExperiments(userId).map(_.toSet)
@@ -120,8 +120,8 @@ class RemoteActionAuthenticator @Inject() (
       impersonatedUserIdOpt match {
         case Some(impExternalUserId) =>
           val impUserId = shoeboxClient.getUserIdsByExternalIds(Seq(impExternalUserId)).map(_.head)
-          val experiments = monitoredAwait.result(experimentsFuture, 3 second, s"on user id $userId", Set[State[ExperimentType]]())
-          if (!experiments.contains(ExperimentTypes.ADMIN)) throw new IllegalStateException(s"non admin user $userId tries to impersonate to $impUserId")
+          val experiments = monitoredAwait.result(experimentsFuture, 3 second, s"on user id $userId", Set[ExperimentType]())
+          if (!experiments.contains(ExperimentType.ADMIN)) throw new IllegalStateException(s"non admin user $userId tries to impersonate to $impUserId")
           val impSocialUserInfoFuture = shoeboxClient.getSocialUserInfosByUserId(userId)
 
           val impSocialUserInfo = monitoredAwait.result(impSocialUserInfoFuture, 3 seconds, s"on user id $userId")
@@ -129,7 +129,7 @@ class RemoteActionAuthenticator @Inject() (
           executeAction(authAction, monitoredAwait.result(impUserId, 3 seconds, s"on impersonating external user id $impExternalUserId"),
             impSocialUserInfo.head.credentials.get, experiments.toSet, kifiInstallationId, newSession, request.request, Some(userId), allowPending)
         case None =>
-          executeAction(authAction, userId, socialUser, monitoredAwait.result(experimentsFuture, 3 second, s"on experiments for user $userId", Set[State[ExperimentType]]()), kifiInstallationId, newSession, request.request, None, allowPending)
+          executeAction(authAction, userId, socialUser, monitoredAwait.result(experimentsFuture, 3 second, s"on experiments for user $userId", Set[ExperimentType]()), kifiInstallationId, newSession, request.request, None, allowPending)
       }
     }
 
@@ -167,13 +167,13 @@ class RemoteActionAuthenticator @Inject() (
     }.getOrElse(result)
   }
 
-  private[controller] def isAdmin(experiments: Set[State[ExperimentType]]) = experiments.contains(ExperimentTypes.ADMIN)
+  private[controller] def isAdmin(experiments: Set[ExperimentType]) = experiments.contains(ExperimentType.ADMIN)
 
   private[controller] def isAdmin(userId: Id[User]) = monitoredAwait.result(
-    getExperiments(userId).map(r => r.contains(ExperimentTypes.ADMIN)), 2 seconds, s"on is admin experiment for user $userId", false)
+    getExperiments(userId).map(r => r.contains(ExperimentType.ADMIN)), 2 seconds, s"on is admin experiment for user $userId", false)
 
   private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
-      experiments: Set[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
+      experiments: Set[ExperimentType], kifiInstallationId: Option[ExternalId[KifiInstallation]],
       newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = shoeboxClient.getUsers(Seq(userId)).map(_.head)
     try {

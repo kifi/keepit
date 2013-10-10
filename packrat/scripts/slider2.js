@@ -38,7 +38,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) {  // esc
       var escHandler = $(document).data('esc');
       if (escHandler) {
-        escHandler();
+        escHandler(e);
       } else if ($pane) {
         hidePane();
       } else if ($slider) {
@@ -51,6 +51,14 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     }
   }
 
+  document.addEventListener('click', onClick, true);
+  function onClick(e) {
+    var target = e.target;
+    if ($slider && !($pane || $slider[0].contains(target) || isInsideTagbox(target))) {
+      hideSlider('clickout');
+    }
+  }
+
   api.onEnd.push(function () {
     log('[slider2:onEnd]')();
     $pane && $pane.remove();
@@ -58,6 +66,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     $(tile).remove();
     $('html').removeClass('kifi-with-pane kifi-pane-parent');
     document.removeEventListener('keydown', onKeyDown, true);
+    document.removeEventListener('click', onClick, true);
   });
 
   function createSlider(callback, locator) {
@@ -211,6 +220,10 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       }).on("click", ".kifi-slider2-kept-lock", function (e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
       }).on("click", ".kifi-slider2-kept-tag", function(e) {
+        if (e.originalEvent.tagboxClosed) {
+          log('[tagbox:closed] ignore click event')();
+          return;
+        }
         api.require("scripts/tagbox.js", function() {
           log('require:tagbox')();
           tagbox.toggle($slider);
@@ -279,12 +292,23 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     });
   }
 
+  function isTagboxActive() {
+    var tagbox = window.tagbox;
+    return tagbox != null && tagbox.active;
+  }
+
+  function isInsideTagbox(el) {
+    var tagbox = window.tagbox;
+    return tagbox != null && tagbox.contains(el);
+  }
+
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
-    if (window.tagbox && tagbox.active) {
+    log("[hideSlider]", trigger)();
+    if (trigger !== 'clickout' && isTagboxActive()) {
+      log("[hideSlider] tagbox is active. cancel hide")();
       return;
     }
-    log("[hideSlider]", trigger)();
     idleTimer.kill();
     $slider.addClass("kifi-hiding")
     .off("transitionend")
@@ -306,9 +330,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         $slider.remove(), $slider = null;
       }
     });
-    if (window.tagbox) {
-      tagbox.hide();
-    }
     logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
   }
 

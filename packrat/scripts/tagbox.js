@@ -1,10 +1,10 @@
 // @require scripts/lib/jquery.js
+// @require scripts/lib/underscore.js
 // @require scripts/lib/fuzzy-min.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
 // @require scripts/util.js
-// @require scripts/livechange.js
 // @require scripts/html/keeper/tagbox.js
 // @require scripts/html/keeper/tag-suggestion.js
 // @require scripts/html/keeper/tag-new.js
@@ -14,7 +14,7 @@
 
 /**
  * ---------------
- *     Tag Box    
+ *     Tag Box
  * ---------------
  *
  * Tag box is an UI component that lets you conveniently tag your keep
@@ -42,6 +42,11 @@ this.tagbox = (function ($, win) {
 			tagbox.updateSuggestion();
 			tagbox.updateScroll();
 		}
+	});
+
+	api.onEnd.push(function () {
+		win.tagbox.destroy();
+		win.tagbox = null;
 	});
 
 	return {
@@ -110,34 +115,27 @@ this.tagbox = (function ($, win) {
 		 */
 		initTagBox: (function () {
 
-			var KEY_ESC = 27;
-
-			function onKeydown(e) {
-				if (e.which === KEY_ESC) {
-					log('tagbox:document.esc');
-					this.hide();
-					e.stopPropagation();
-					e.stopImmediatePropagation();
-					e.preventDefault();
-				}
-			}
-
 			function onClick(e) {
-				if (!$.contains(this.$tagbox[0], e.target)) {
-					log('tagbox:clickout', e.target);
+				if (!this.contains(e.target)) {
+					log('tagbox:clickout');
+					e.tagboxClosed = true;
+					/*
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          */
 					this.hide();
 				}
 			}
 
 			function addDocListeners() {
-				if (this.$tagbox) {
-					var $doc = $(document),
-						onDocKeydown = this.onDocKeydown = onKeydown.bind(this),
-						onDocClick = this.onDocClick = onClick.bind(this);
+				if (this.active) {
+					var $doc = $(document);
+					this.prevEscHandler = $doc.data('esc') || null;
+					$doc.data('esc', this.handleEsc.bind(this));
 
-					this.$doc = $doc;
-					$doc.on('keydown', onDocKeydown);
-					$doc.on('click', onDocClick);
+					var onDocClick = this.onDocClick = onClick.bind(this);
+					document.addEventListener('click', onDocClick, true);
 				}
 			}
 
@@ -146,7 +144,7 @@ this.tagbox = (function ($, win) {
 				//var $tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
 				this.$tagbox = $tagbox;
 
-        $tagbox.addClass('animated fadeInUp');
+				$tagbox.addClass('animated fadeInUp');
 
 				win.setTimeout(addDocListeners.bind(this), 50);
 
@@ -192,17 +190,22 @@ this.tagbox = (function ($, win) {
 				KEY_ESC = 27,
 				KEY_TAB = 9;
 
-			function onLiveChange(e) {
-				var text = e.value;
-				text = text.trim();
-
-				this.$inputbox.toggleClass('empty', !text);
-
-				this.suggest(text);
+			function onInput(e) {
+				var text = e.target.value.trim();
+				if (text !== this.text) {
+					this.text = text;
+					this.$inputbox.toggleClass('empty', !text);
+					this.suggest(text);
+				}
 			}
 
 			function onKeydown(e) {
 				var preventDefault = false;
+				if (e.metaKey || e.ctrlKey || e.shiftKey) {
+					// not handling any special keys
+					return;
+				}
+
 				switch (e.which) {
 				case KEY_UP:
 					this.navigate('up');
@@ -213,30 +216,16 @@ this.tagbox = (function ($, win) {
 					preventDefault = true;
 					break;
 				case KEY_ENTER:
-					this.select();
-					this.setInputValue();
-					preventDefault = true;
-					break;
-				case KEY_ESC:
-					log('tagbox:input.esc', this.currentSuggestion);
-					if (this.currentSuggestion) {
-						this.navigateTo(null);
-						e.stopPropagation();
-						e.stopImmediatePropagation();
-					}
-					else {
-						this.hide();
-						e.stopPropagation();
-						e.stopImmediatePropagation();
-					}
-					preventDefault = true;
-					break;
 				case KEY_TAB:
 					this.select();
 					this.setInputValue();
 					preventDefault = true;
 					break;
+				case KEY_ESC:
+					this.handleEsc(e);
+					return;
 				}
+
 				if (preventDefault) {
 					e.preventDefault();
 				}
@@ -246,14 +235,23 @@ this.tagbox = (function ($, win) {
 				var $input = this.$input;
 				$input.on('focus', onFocus);
 				$input.on('blur', onBlur);
-				$input.livechange({
-					on: onLiveChange,
-					context: this,
-					init: true
-				});
+				$input.on('input', _.debounce(onInput.bind(this), 1)).triggerHandler('input');
 				$input.on('keydown', onKeydown.bind(this));
 			};
 		})(),
+
+		handleEsc: function (e) {
+			log('handle esc');
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			if (this.currentSuggestion) {
+				this.navigateTo(null, 'esc');
+			}
+			else {
+				this.hide();
+			}
+		},
 
 		/**
 		 * Add a close event listener to close button.
@@ -307,8 +305,8 @@ this.tagbox = (function ($, win) {
 		 */
 		initTags: function () {
 			log('initTags: get all tags');
-			Q.all([this.requestTags(), this.requestTagsByUrl()])
-				.spread(this.onFetchTags.bind(this))
+			this.requestTags()
+				.then(this.onFetchTags.bind(this))
 				.then(this.updateSuggestHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.updateSuggestion.bind(this))
@@ -319,7 +317,7 @@ this.tagbox = (function ($, win) {
 				this.hide();
 				throw err;
 			}.bind(this))
-				.fail(this.alertError.bind(this));
+				.fail(this.logError.bind(this));
 		},
 
 		initScroll: function () {
@@ -341,8 +339,10 @@ this.tagbox = (function ($, win) {
 
 		updateScroll: function () {
 			log('updateScroll');
-			this.$tagListWrapper.data('antiscroll').refresh();
-			this.$suggestWrapper.data('antiscroll').refresh();
+			if (this.active) {
+				this.$tagListWrapper.data('antiscroll').refresh();
+				this.$suggestWrapper.data('antiscroll').refresh();
+			}
 		},
 
 		/**
@@ -351,7 +351,7 @@ this.tagbox = (function ($, win) {
 		 */
 		destroy: function () {
 			log('tagbox:destroy');
-			if (this.$tagbox) {
+			if (this.active) {
 				this.active = false;
 				log('tagbox:destroy-inner');
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
@@ -364,15 +364,15 @@ this.tagbox = (function ($, win) {
 					}
 				}, this);
 
-				var $doc = this.$doc;
-				if ($doc) {
-					$doc.off('keydown', this.onDocKeydown);
-					$doc.off('click', this.onDocClick);
+				$(document).data('esc', this.prevEscHandler);
+				this.prevEscHandler = null;
+
+				var onDocClick = this.onDocClick;
+				if (onDocClick) {
+					document.removeEventListener('click', onDocClick, true);
+					this.onDocClick = null;
 				}
 
-				this.$doc = null;
-				this.onDocKeydown = null;
-				this.onDocClick = null;
 				this.$slider = null;
 				this.tags = [];
 				this.tagsAdded = {};
@@ -546,8 +546,12 @@ this.tagbox = (function ($, win) {
 		setInputValue: function (val) {
 			var $input = this.$input || null;
 			if ($input) {
-				$input.val(val || '');
+				if (!val) {
+					val = '';
+				}
+				$input.val(val);
 				$input.focus();
+				this.suggest(val);
 			}
 			return $input;
 		},
@@ -560,6 +564,18 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
+		 * Returns whether a tagbox contains the given element.
+		 *
+		 * @param {HTMLElement} el - an html element
+		 *
+		 * @return {boolean} Whether a tagbox contains the given element
+		 */
+		contains: function (el) {
+			var $tagbox = this.$tagbox;
+			return $tagbox != null && $tagbox[0].contains(el);
+		},
+
+		/**
 		 * Adds class from the root element.
 		 *
 		 * @param {string} A Class name to add.
@@ -568,7 +584,7 @@ this.tagbox = (function ($, win) {
 		 */
 		addClass: function () {
 			var $tagbox = this.$tagbox;
-			return $tagbox.addClass.apply($tagbox, arguments);
+			return $tagbox && $tagbox.addClass.apply($tagbox, arguments);
 		},
 
 		/**
@@ -580,7 +596,7 @@ this.tagbox = (function ($, win) {
 		 */
 		removeClass: function () {
 			var $tagbox = this.$tagbox;
-			return $tagbox.removeClass.apply($tagbox, arguments);
+			return $tagbox && $tagbox.removeClass.apply($tagbox, arguments);
 		},
 
 		/**
@@ -592,7 +608,8 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the root element
 		 */
 		toggleClass: function (classname, add) {
-			return this.$tagbox.toggleClass(classname, add ? true : false);
+			var $tagbox = this.$tagbox;
+			return $tagbox && $tagbox.toggleClass(classname, add ? true : false);
 		},
 
 		/**
@@ -613,6 +630,10 @@ this.tagbox = (function ($, win) {
 		 * @param {string} text - An input string to match against
 		 */
 		suggest: function (text) {
+			if (!this.active) {
+				return;
+			}
+
 			log('tagbox.suggest', text);
 			var tags = this.tags;
 			tags = this.filterOutAddedTags(tags);
@@ -629,18 +650,20 @@ this.tagbox = (function ($, win) {
 			this.updateSuggestedClass();
 			this.updateScroll();
 
-			this.navigateTo('first');
+			this.navigateTo('first', 'suggest');
 		},
 
 		/**
 		 * Updates suggestion according to the current states (tags + input).
 		 */
 		updateTagList: function () {
-			var tags = this.getAddedTags(),
-				html = tags.map(this.renderTagHtml, this).join('');
-			this.$tagList.html(html);
+			if (this.active) {
+				var tags = this.getAddedTags(),
+					html = tags.map(this.renderTagHtml, this).join('');
+				this.$tagList.html(html);
 
-			this.toggleClass('tagged', tags.length);
+				this.toggleClass('tagged', tags.length);
+			}
 		},
 
 		/**
@@ -707,7 +730,7 @@ this.tagbox = (function ($, win) {
 			log('createTag: create a tag', name);
 			return this.requestCreateAndAddTagByName(name)
 				.then(this.onCreateResponse.bind(this))
-				.fail(this.alertError.bind(this))
+				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, name));
 		},
 
@@ -737,7 +760,7 @@ this.tagbox = (function ($, win) {
 			log('addTagById: request to server. tagId=' + tagId);
 			return this.requestAddTagById(tagId)
 				.then(this.onAddResponse.bind(this, tagId))
-				.fail(this.alertError.bind(this))
+				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 		},
 
@@ -766,7 +789,7 @@ this.tagbox = (function ($, win) {
 			log('removeTagById: request to server. tagId=' + tagId);
 			return this.requestRemoveTagById(tagId)
 				.then(this.onRemoveResponse.bind(this, tagId))
-				.fail(this.alertError.bind(this))
+				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 		},
 
@@ -918,37 +941,12 @@ this.tagbox = (function ($, win) {
 		//
 
 		/**
-		 * Makes a request to the server to get all tags for the user.
-		 * Returns a promise object.
-		 * 
+		 * Retrieves all of the user's tags and a list of the ones applied to this page.
+		 *
 		 * @return {Object} A deferred promise object
 		 */
 		requestTags: function () {
-      log('get_tags');
 			return this.request('get_tags', null, 'Could not load tags.');
-		},
-
-		/**
-		 * Makes a request to the server to get all tags associated with the current page for the user.
-		 * Returns a promise object.
-		 * 
-		 * @return {Object} A deferred promise object
-		 */
-		requestTagsByUrl: function () {
-      log('get_tags_by_url');
-			return this.request('get_tags_by_url', null, 'Could not load tags for the page.');
-		},
-
-		/**
-		 * Makes a request to the server to create a tag for the user.
-		 * Returns a promise object.
-		 *
-		 * @param {string} name - A tag name
-		 * 
-		 * @return {Object} A deferred promise object
-		 */
-		requestCreateTagByName: function (name) {
-			return this.request('create_tag', name, 'Could not create tag, "' + name + '"');
 		},
 
 		/**
@@ -1031,10 +1029,10 @@ this.tagbox = (function ($, win) {
 		 *     "name":"hello"
 		 *   }]
 		 */
-		onFetchTags: function (tags, addedTags) {
-			log('onFetchTags', tags, addedTags);
-			this.setTags(tags);
-			this.rebuildTagsAdded(addedTags);
+		onFetchTags: function (tags) {
+			log('onFetchTags', tags);
+			this.setTags(tags.all);
+			this.rebuildTagsAdded(tags.page);
 			return arguments;
 		},
 
@@ -1064,8 +1062,10 @@ this.tagbox = (function ($, win) {
 		},
 
 		updateSuggestHeight: function () {
-			var height = util.minMax(32 * this.getTagCount(), 164, 265);
-			this.$suggest.height(height);
+			if (this.active) {
+				var height = util.minMax(32 * this.getTagCount(), 164, 265);
+				this.$suggest.height(height);
+			}
 		},
 
 		/**
@@ -1103,7 +1103,7 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * A listener for server response from adding a tag to a keep.
-		 * 
+		 *
 		 * ADD
 		 *   Request Payload: {
 		 *     url: "my.keep.com"
@@ -1127,7 +1127,7 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * A listener for server response from removing a tag from a keep.
-		 * 
+		 *
 		 * REMOVE
 		 *   Request Payload: {
 		 *     url: "my.keep.com"
@@ -1145,7 +1145,7 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * A listener for server response from removing a tag from a keep.
-		 * 
+		 *
 		 * REMOVE
 		 *   Request Payload: {
 		 *     url: "my.keep.com"
@@ -1203,13 +1203,15 @@ this.tagbox = (function ($, win) {
 			default:
 				return;
 			}
+			this.ignoreMouseover = true;
 			return this.navigateTo($next, dir);
 		},
 
-		navigateTo: function ($suggestion) {
+		navigateTo: function ($suggestion, src) {
 			if ($suggestion === 'first' || $suggestion === 'last') {
 				$suggestion = this.$suggest.children(':' + $suggestion);
 			}
+
 			if (!($suggestion && $suggestion.length)) {
 				$suggestion = null;
 			}
@@ -1223,7 +1225,10 @@ this.tagbox = (function ($, win) {
 
 			if ($suggestion) {
 				$suggestion.addClass('focus');
-				this.scrolledIntoViewLazy($suggestion[0], 10);
+
+				if (src !== 'mouseover') {
+					this.scrolledIntoViewLazy($suggestion[0], 10);
+				}
 			}
 		},
 
@@ -1254,6 +1259,14 @@ this.tagbox = (function ($, win) {
 		 */
 		select: function ($suggestion) {
 			if (!($suggestion || ($suggestion = this.currentSuggestion))) {
+				var name = this.getInputValue();
+				if (name) {
+					var index = this.indexOfTagByName(name);
+					if (index === -1) {
+						return this.createTag(name);
+					}
+					return this.addTagById(this.tags[index].id);
+				}
 				return null;
 			}
 
@@ -1355,6 +1368,11 @@ this.tagbox = (function ($, win) {
 		 * @param {Object} event - A mouseover event object
 		 */
 		onMouseoverSuggestion: function (e) {
+			if (this.ignoreMouseover) {
+				this.ignoreMouseover = false;
+				return;
+			}
+
 			var $target = $(e.target),
 				$suggestion = $target.closest('.kifi-tagbox-suggestion');
 			if (!$suggestion.length) {
@@ -1363,7 +1381,7 @@ this.tagbox = (function ($, win) {
 					return;
 				}
 			}
-			this.navigateTo($suggestion);
+			this.navigateTo($suggestion, 'mouseover');
 		},
 
 		/**
@@ -1384,7 +1402,7 @@ this.tagbox = (function ($, win) {
 		clearTags: function () {
 			return this.requestClearAll()
 				.then(this.onClearTagsResponse.bind(this))
-				.fail(this.alertError.bind(this));
+				.fail(this.logError.bind(this));
 		},
 
 		//
@@ -1392,7 +1410,7 @@ this.tagbox = (function ($, win) {
 		//
 
 		/**
-		 * Whether a tag bax is active and visible
+		 * Whether a tag box is active and visible
 		 *
 		 * @property {boolean}
 		 */
@@ -1417,7 +1435,7 @@ this.tagbox = (function ($, win) {
 		 * It toggles (shows/hides) a tag box.
 		 */
 		toggle: function ($slider) {
-			if (this.$tagbox) {
+			if (this.active) {
 				this.hide();
 			}
 			else {
@@ -1430,23 +1448,13 @@ this.tagbox = (function ($, win) {
 		//
 
 		/**
-		 * Alerts user for an error.
+		 * Logs error.
 		 *
 		 * @param {Error} err - An error object
 		 */
-		alertError: function (err) {
+		logError: function (err) {
 			log('Error: ' + err.message);
 			log(err.stack);
-			this.alert('Error: ' + err.message);
-		},
-
-		/**
-		 * Alerts user for a message.
-		 *
-		 * @param {string} msg - A message to display
-		 */
-		alert: function (msg) {
-			win.alert(msg);
 		}
 	};
 

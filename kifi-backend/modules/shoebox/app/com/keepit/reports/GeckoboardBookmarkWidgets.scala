@@ -4,7 +4,7 @@ import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.geckoboard._
 import akka.util.Timeout
 import com.keepit.model.{BookmarkRepo, BookmarkSource}
-import com.keepit.model.ExperimentTypes.DONT_SHOW_IN_ANALYTICS_STR
+import com.keepit.model.ExperimentType.DONT_SHOW_IN_ANALYTICS_STR
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}

@@ -30,6 +30,8 @@ class ExtPageController @Inject() (
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo,
   bookmarkRepo: BookmarkRepo,
+  keepToCollectionRepo: KeepToCollectionRepo,
+  collectionRepo: CollectionRepo,
   domainClassifier: DomainClassifier,
   basicUserRepo: BasicUserRepo,
   historyTracker: SliderHistoryTracker,
@@ -39,6 +41,7 @@ class ExtPageController @Inject() (
   case class KeeperInfo(
     normalized: String,
     kept: Option[String],
+    tags: Seq[SendableTag],
     position: Option[JsObject],
     neverOnSite: Boolean,
     sensitive: Boolean,
@@ -50,6 +53,7 @@ class ExtPageController @Inject() (
     implicit val writesKeeperInfo = (
       (__ \ 'normalized).write[String] and
       (__ \ 'kept).writeNullable[String] and
+      (__ \ 'tags).writeNullable[Seq[SendableTag]].contramap[Seq[SendableTag]](Some(_).filter(_.nonEmpty)) and
       (__ \ 'position).writeNullable[JsObject] and
       (__ \ 'neverOnSite).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
       (__ \ 'sensitive).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
@@ -63,7 +67,7 @@ class ExtPageController @Inject() (
     val userId = request.userId
     val url = (request.body \ "url").as[String]
 
-    val (nUriStr, nUri, domain, bookmark, position, neverOnSite, host) = db.readOnly { implicit session =>
+    val (nUriStr, nUri, domain, bookmark, tags, position, neverOnSite, host) = db.readOnly { implicit session =>
       val (nUriStr, nUri) = normalizedURIRepo.getByUriOrPrenormalize(url) match {
         case Left(nUri) => (nUri.url, Some(nUri))
         case Right(pUri) => (pUri, None)
@@ -71,16 +75,22 @@ class ExtPageController @Inject() (
       val bookmark: Option[Bookmark] = nUri.flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, userId)
       }
+      val tags: Seq[Collection] = bookmark.map { bm =>
+        keepToCollectionRepo.getCollectionsForBookmark(bm.id.get).map { collId =>
+          collectionRepo.get(collId)
+        }
+      }.getOrElse(Seq())
+
       val host: Option[String] = URI.parse(nUriStr).get.host.map(_.name)
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
         (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
          userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW))
       }.getOrElse((None, false))
-      (nUriStr, nUri, domain, bookmark, position, neverOnSite, host)
+      (nUriStr, nUri, domain, bookmark, tags, position, neverOnSite, host)
     }
 
-    val sensitive: Boolean = !request.experiments.contains(ExperimentTypes.NOT_SENSITIVE) &&
+    val sensitive: Boolean = !request.experiments.contains(ExperimentType.NOT_SENSITIVE) &&
       (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
 
     val shown = nUri.map { uri => historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false
@@ -94,7 +104,7 @@ class ExtPageController @Inject() (
     } getOrElse (Nil, 0)
 
     Ok(Json.toJson(KeeperInfo(
-      nUriStr, bookmark.map { b => if (b.isPrivate) "private" else "public" },
+      nUriStr, bookmark.map { b => if (b.isPrivate) "private" else "public" }, tags.map(SendableTag.from),
       position, neverOnSite, sensitive, shown, keepers, keeps)))
   }
 

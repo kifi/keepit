@@ -366,7 +366,7 @@ class FakeShoeboxServiceClientImpl(
     Future.successful(experimentWithId)
   }
 
-  def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = {
+  def getUserExperiments(userId: Id[User]): Future[Seq[ExperimentType]] = {
     val states = allUserExperiments.getOrElse(userId, Set.empty).filter(_.state == UserExperimentStates.ACTIVE).map(_.experimentType).toSeq
     Future.successful(states)
   }

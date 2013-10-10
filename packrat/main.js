@@ -29,10 +29,12 @@ var friends = [];
 var friendsById = {};
 var ruleSet = {};
 var urlPatterns = [];
+/*
 var tags = [];
 var tagsById = [];
 var tagsFetched = null;
 var tagsListeners = [];
+*/
 
 function clearDataCache() {
   log("[clearDataCache]")();
@@ -47,8 +49,10 @@ function clearDataCache() {
   friendsById = {};
   ruleSet = {};
   urlPatterns = [];
+  /*
   tags = [];
   tagsById = {};
+  */
 }
 
 function PageData() {
@@ -392,42 +396,33 @@ function emitTabsByUrl(url, name, data, options) {
   });
 }
 
-var makeRequest = (function() {
-  function createSuccessCallback(tab, name, data, callback) {
-    return function(response) {
-      log("[" + name + "] response:", response)();
-      var result = {
-        success: true,
-        response: response,
-        data: data
-      };
-      emitTabsByUrl(tab.nUri, name, result);
-      if (callback) {
-        callback(result);
-      }
-    };
-  }
 
-  function createErrorCallback(tab, name, data, callback) {
-    return function(response) {
-      log("[" + name + "] error:", response)();
-      var result = {
-        success: false,
-        response: response,
-        data: data
-      };
-      api.tabs.emit(tab, name, result);
-      if (callback) {
-        callback(result);
-      }
+function makeRequest(tab, name, method, url, data, callback) {
+  log("[" + name + "]", data)();
+  ajax(method, url, data, function(response) {
+    log("[" + name + "] response:", response)();
+    var result = {
+      success: true,
+      response: response,
+      data: data
     };
-  }
-
-  return function (tab, name, method, url, data, callback) {
-    log("[" + name + "]", data)();
-    return ajax(method, url, data, createSuccessCallback(tab, name, data, callback), createErrorCallback(tab, name, data, callback));
-  };
-})();
+    emitTabsByUrl(tab.nUri, name, result);
+    if (callback) {
+      callback(result);
+    }
+  }, function(response) {
+    log("[" + name + "] error:", response)();
+    var result = {
+      success: false,
+      response: response,
+      data: data
+    };
+    api.tabs.emit(tab, name, result);
+    if (callback) {
+      callback(result);
+    }
+  });
+}
 
 // ===== Handling messages from content scripts or other extension pages
 
@@ -694,7 +689,7 @@ api.port.on({
     socket.send(["get_networks", friendId], respond);
   },
   open_deep_link: function(link, _, tab) {
-    if (tab.nUri === link.nUri) {
+    if (link.inThisTab || tab.nUri === link.nUri) {
       awaitDeepLink(link, tab.id);
     } else {
       var tabs = tabsByUrl[link.nUri];
@@ -735,125 +730,43 @@ api.port.on({
   await_deep_link: function(link, _, tab) {
     awaitDeepLink(link, tab.id);
   },
-
-  get_tags: function(_, respond) {
-    log("[get_tags] fetched=" + tagsFetched)();
-    if (tagsFetched) {
-      respond({
-        success: true,
-        response: tags
-      });
-    }
-    else if (respond) {
-      tagsListeners.push(respond);
-    }
+  get_tags: function(_, respond, tab) {
+    // TODO: return all tags from local cache
+    ajax('GET', '/tags', function(tags) {
+      log('[get_tags] response:', tags)();
+      var d = pageData[tab.nUri];
+      if (d) {
+        respond({
+          success: true,
+          response: {all: tags, page: d.tags}
+        });
+      }
+    }, function(xhr) {
+      log('[get_tags] error:', xhr)();
+      respond({status: xhr.status});
+    });
   },
-
-  /**
-   *
-   * GET_TAGS_BY_URL
-   *   Request URL: /tagsByUrl
-   *   Request Method: POST
-   *   Request Payload: {"url":"www.kifi.com"}
-   *   Response: [{
-   *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
-   *     "name":"hello"
-   *   }]
-   */
-  get_tags_by_url: function(_, callback, tab) {
-    makeRequest(tab, "get_tags_by_url", "POST", "/tagsByUrl", {
-      url: tab.url
-    }, callback);
-  },
-
-  /**
-   * Makes a request to the server to create a tag for a user.
-   *
-   * CREATE
-   *   Request URL: /site/collections/create
-   *   Request Method: POST
-   *   Request Payload: {"name":"hello"}
-   *   Response: {
-   *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
-   *     "name":"hello"
-   *   }
-   */
-  create_tag: function(name, callback, tab) {
-    makeRequest(tab, "create_tag", "POST", "/site/collections/create", {
-      name: name
-    }, callback);
-  },
-
-  /**
-   * Makes a request to the server to create/add a tag to a keep.
-   * 
-   * ADD
-   *   Request URL: /tags/add
-   *   Request Method: POST
-   *   Request Payload: {
-   *     name: 'my tag name',
-   *     url: "my.keep.com"
-   *   }
-   *   Response: {}
-   */
-  create_and_add_tag: function(name, callback, tab) {
+  create_and_add_tag: function(name, respond, tab) {
     makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
       name: name,
       url: tab.url
-    }, callback);
+    }, respond);
   },
-
-  /**
-   * Makes a request to the server to add a tag to a keep.
-   * 
-   * ADD
-   *   Request URL: /tags/:id/addToKeep
-   *   Request Method: POST
-   *   Request Payload: {
-   *     url: "my.keep.com"
-   *   }
-   *   Response: {}
-   */
-  add_tag: function(tagId, callback, tab) {
+  add_tag: function(tagId, respond, tab) {
     makeRequest(tab, "add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
       url: tab.url
-    }, callback);
+    }, respond);
   },
-
-  /**
-   * Makes a request to the server to remove a tag from a keep.
-   * 
-   * REMOVE
-   *   Request URL: /tags/:id/removeFromKeep
-   *   Request Method: POST
-   *   Request Payload: {
-   *     url: "my.keep.com"
-   *   }
-   *   Response: {}
-   */
-  remove_tag: function(tagId, callback, tab) {
+  remove_tag: function(tagId, respond, tab) {
     makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
       url: tab.url
-    }, callback);
+    }, respond);
   },
-
-  /**
-   * Makes a request to the server to clear all tags from a keep.
-   * 
-   * REMOVE
-   *   Request URL: /tags/clear
-   *   Request Method: POST
-   *   Request Payload: {
-   *     url: "my.keep.com"
-   *   }
-   *   Response: {}
-   */
-  clear_tags: function(tagId, callback, tab) {
+  clear_tags: function(tagId, respond, tab) {
     makeRequest(tab, "clear_tags", "POST", "/tags/clear", {
       url: tab.url
-    }, callback);
+    }, respond);
   },
-
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
     //reportError(data.message, data.url, data.lineNo);
@@ -1250,6 +1163,7 @@ function gotPageDetailsFor(url, tab, resp) {
   var d = pageData[nUri] || new PageData;
 
   d.kept = resp.kept;
+  d.tags = resp.tags || [];
   d.position = resp.position;
   d.neverOnSite = resp.neverOnSite;
   d.sensitive = resp.sensitive;
@@ -1560,17 +1474,8 @@ function getFriends() {
   });
 }
 
-/**
- *
- * GET_TAGS
- *   Request URL: /tags
- *   Request Method: GET
- *   Response: [{
- *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
- *     "name":"hello"
- *   }]
- */
 
+/*
 function getTags() {
   ajax("GET", "/tags", function(tagList) {
     log("[getTags]", tagList)();
@@ -1587,6 +1492,7 @@ function getTags() {
     tagsListeners.length = 0;
   });
 }
+*/
 
 function getPrefs() {
   ajax("GET", "/ext/prefs", function(o) {
@@ -1613,7 +1519,7 @@ var session, socket, onLoadingTemp;
 function connectSync() {
   getRules();
   getFriends();
-  getTags();
+  //getTags();
   getPrefs();
 }
 
@@ -1718,7 +1624,7 @@ function clearSession() {
 
 function deauthenticate() {
   log("[deauthenticate]")();
-  endSession();
+  clearSession();
   api.popup.open({
     name: "kifi-deauthenticate",
     url: webBaseUri() + "/logout#_=_",

@@ -162,8 +162,8 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI](profile)
   }
 
-  implicit object ExperimentTypeStateTypeMapper extends BaseTypeMapper[State[ExperimentType]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[ExperimentType](profile)
+  implicit object ExperimentTypeTypeMapper extends BaseTypeMapper[ExperimentType] {
+    def apply(profile: BasicProfile) = new ExperimentTypeMapperDelegate(profile)
   }
 
   implicit object CommentPermissionTypeStateTypeMapper extends BaseTypeMapper[State[CommentPermission]] {
@@ -640,9 +640,18 @@ class UserNotificationDetailsMapperDelegate(profile: BasicProfile) extends Strin
 }
 
 //************************************
+//       ExperimentType -> String
+//************************************
+class ExperimentTypeMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[ExperimentType](profile) {
+  def zero = ExperimentType("")
+  def sourceToDest(value: ExperimentType): String = value.value
+  def safeDestToSource(str: String): ExperimentType = ExperimentType(str)
+}
+
+//************************************
 //       Normalization -> String
 //************************************
-class NormalizationMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[Normalization](profile) {
+class NormalizationMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[Normalization](profile) {
   def zero = Normalization("")
   def sourceToDest(value: Normalization): String = value.scheme
   def safeDestToSource(str: String): Normalization = Normalization(str)
@@ -651,7 +660,7 @@ class NormalizationMapperDelegate[T](profile: BasicProfile) extends StringMapper
 //************************************
 //       Restriction -> String
 //************************************
-class RestrictionMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[Restriction](profile) {
+class RestrictionMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[Restriction](profile) {
   def zero = Restriction("")
   def sourceToDest(value: Restriction): String = value.context
   def safeDestToSource(str: String): Restriction = Restriction(str)

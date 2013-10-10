@@ -282,7 +282,7 @@
   text-shadow: initial;
 }
 .kifi-root.kifi-root ::-moz-selection {
-  background: initial;
-  color: initial;
+  background-color: -moz-html-CellHighlight;
+  color: -moz-html-CellHighlightText;
   text-shadow: initial;
 }
