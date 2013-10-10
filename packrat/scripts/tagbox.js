@@ -117,7 +117,7 @@ this.tagbox = (function ($, win) {
 
 			function onClick(e) {
 				if (!this.contains(e.target)) {
-					log('tagbox:clickout', e, e.target);
+					log('tagbox:clickout');
 					e.tagboxClosed = true;
 					/*
           e.preventDefault();
@@ -364,8 +364,7 @@ this.tagbox = (function ($, win) {
 					}
 				}, this);
 
-				var $doc = $(document);
-				$doc.data('esc', this.prevEscHandler);
+				$(document).data('esc', this.prevEscHandler);
 				this.prevEscHandler = null;
 
 				var onDocClick = this.onDocClick;
