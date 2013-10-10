@@ -38,7 +38,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) {  // esc
       var escHandler = $(document).data('esc');
       if (escHandler) {
-        escHandler();
+        escHandler(e);
       } else if ($pane) {
         hidePane();
       } else if ($slider) {
@@ -220,6 +220,10 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       }).on("click", ".kifi-slider2-kept-lock", function (e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
       }).on("click", ".kifi-slider2-kept-tag", function(e) {
+        if (e.originalEvent.tagboxClosed) {
+          log('[tagbox:closed] ignore click event')();
+          return;
+        }
         api.require("scripts/tagbox.js", function() {
           log('require:tagbox')();
           tagbox.toggle($slider);
