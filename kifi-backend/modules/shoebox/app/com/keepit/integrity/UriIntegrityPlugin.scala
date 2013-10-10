@@ -79,11 +79,10 @@ class UriIntegrityActor @Inject()(
     }
   }
   
-  private def handleScrapeInfo(newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
-    scrapeInfoRepo.getByUri(newUriId) match {
-      case Some(info) if (info.state == ScrapeInfoStates.INACTIVE) => scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
-      case None => scrapeInfoRepo.save(ScrapeInfo(uriId = newUriId))
-      case _ =>
+  private def handleScrapeInfo(oldUri: NormalizedURI, newUri: NormalizedURI)(implicit session: RWSession) = {
+    val oldInfo = scrapeInfoRepo.getByUri(oldUri.id.get)
+    if (oldInfo.isDefined && oldInfo.get.state == ScrapeInfoStates.ACTIVE){
+      uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
     }
   }
   
@@ -124,10 +123,10 @@ class UriIntegrityActor @Inject()(
       log.info(s"migrating url ${url.id} to new uri: ${newUriId}")
       
       urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MIGRATED)))
-      val newUri = uriRepo.get(newUriId)
+      val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
       if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None))
       
-      handleScrapeInfo(newUriId)
+      handleScrapeInfo(oldUri, newUri)
       val oldUserBms = bookmarkRepo.getByUrlId(url.id.get).groupBy(_.userId)
       handleBookmarks(oldUserBms, newUriId)
 
