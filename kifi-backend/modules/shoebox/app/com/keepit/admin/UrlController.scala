@@ -130,6 +130,7 @@ class UrlController @Inject() (
     val batchUrls = batch[URL](urls, batchSize = 50)     // avoid long DB write lock.
     
     batchUrls.map { urls =>
+      log.info(s"begin a new batch of renormalization. lastId from zookeeper: ${centralConfig(RenormalizationCheckKey)}")
       db.readWrite { implicit s =>
         urls.foreach { url =>
           needRenormalization(url) match {
