@@ -28,10 +28,8 @@ form.kifi-compose.kifi-scrollable-below {
 .kifi-compose:not(.kifi-empty) .kifi-compose-draft {
   min-height: 40px;
 }
-.kifi-compose.kifi-empty .kifi-compose-draft::before {
+.kifi-compose.kifi-empty .kifi-compose-draft::after {
   content: attr(data-placeholder);
-  position: absolute;
-  font: inherit;
   color: #a9a9a9;
 }
 .kifi-compose-draft a[href] {
