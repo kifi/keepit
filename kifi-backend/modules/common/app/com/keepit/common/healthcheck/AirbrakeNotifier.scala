@@ -79,6 +79,7 @@ class AirbrakeSender @Inject() (
     log.info(s"announcing deployment to airbrake: $payload")
     httpClient.
       withTimeout(60000).
+      withHeaders("Content-type" -> "application/x-www-form-urlencoded").
       postTextFuture("http://api.airbrake.io/deploys.txt", payload)
   }
 
