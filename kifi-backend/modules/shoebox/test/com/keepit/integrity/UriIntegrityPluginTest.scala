@@ -65,6 +65,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
           urlRepo.getByNormUri(uris(3).id.get).size === 0
 
           scrapeInfoRepo.getByUri(uris(0).id.get).head.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.count === 2
 
           bmRepo.getByUrlId(urls(0).id.get).head.uriId === uris(0).id.get
 
@@ -77,11 +78,14 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         // check redirection
         db.readOnly{ implicit s =>
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
-          uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).size === 1
-          uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).head.id === uris(1).id
+
           urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
           urlRepo.getByNormUri(uris(0).id.get) === Nil
+          
+          scrapeInfoRepo.count === 3
           scrapeInfoRepo.getByUri(uris(0).id.get).head.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUri(uris(1).id.get).head.state === ScrapeInfoStates.ACTIVE
+
 
           bmRepo.getByUrlId(urls(0).id.get).head.uriId === uris(1).id.get
           bmRepo.getByUrlId(urls(1).id.get).head.uriId === uris(2).id.get
@@ -98,9 +102,11 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
         db.readOnly{ implicit s =>
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
-          uriRepo.getByState(NormalizedURIStates.SCRAPE_WANTED, -1).size === 2
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url
+          
+          scrapeInfoRepo.count === 4
+          scrapeInfoRepo.getByUri(uris(3).id.get).head.state === ScrapeInfoStates.ACTIVE
 
           bmRepo.getByUrlId(urls(1).id.get).head.uriId === uris(2).id.get
           bmRepo.getByUrlId(urls(2).id.get).head.uriId === uris(3).id.get
