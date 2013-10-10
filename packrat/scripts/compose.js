@@ -9,29 +9,19 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
 
   $d.focus(function() {
     var r, sel = window.getSelection();
-    if ($f.hasClass("kifi-empty")) {  // webkit workaround (can ditch when Chrome 27/28 ? goes stable)
-      this.textContent = "\u200b";  // zero-width space
-      r = document.createRange();
-      r.selectNodeContents(this);
-      r.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(r);
-    } else if (defaultText && $d.text() == defaultText) {
+    if (defaultText && $d.text() === defaultText) {
       // select default text for easy replacement
       r = document.createRange();
       r.selectNodeContents(this);
       sel.removeAllRanges();
       sel.addRange(r);
       $(this).data("preventNextMouseUp", true); // to avoid clearing selection
-    } else if (r = $d.data("sel")) {
+    } else if ((r = $d.data("sel"))) {
       // restore previous selection
       sel.removeAllRanges();
       sel.addRange(r);
     }
   }).blur(function() {
-    // wkb.ug/112854 crbug.com/222546
-    $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
-
     if (!convertDraftToText($d.html())) {
       if (defaultText && $t.tokenInput("get").length) {
         $f.removeClass("kifi-empty");
@@ -43,8 +33,6 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
     }
   }).mousedown(function() {
     $d.removeData("preventNextMouseUp");
-  }).click(function() {
-    this.focus();  // needed in Firefox for clicks on ::before placeholder text
   }).mouseup(function(e) {
     $d.data("sel", window.getSelection().getRangeAt(0));
 
@@ -52,11 +40,26 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       $d.removeData("preventNextMouseUp");
       e.preventDefault();
     }
+  }).on('mousedown mouseup click', function() {
+    var sel = window.getSelection(), r = sel.getRangeAt(0);
+    if (r.startContainer === this.parentNode) {  // related to bugzil.la/904846
+      var r2 = document.createRange();
+      r2.selectNodeContents(this);
+      if (r.collapsed) {
+        r2.collapse(true);
+      }
+      sel.removeAllRanges();
+      sel.addRange(r2);
+    }
   }).keyup(function() {
     $d.data("sel", window.getSelection().getRangeAt(0));
   }).on("input", function() {
     updateMaxHeight();
-    $f[0].classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
+    var empty = this.firstElementChild === this.lastElementChild && !this.textContent;
+    if (empty) {
+      $d.empty();
+    }
+    $f.toggleClass("kifi-empty", empty);
   }).on("transitionend", function() {
     updateMaxHeight();
   }).on("paste", function(e) {
@@ -123,7 +126,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
   }
 
   $f.keydown(function(e) {
-    if (e.which == 13 && !e.shiftKey && !e.altKey && !enterToSend == (e.metaKey || e.ctrlKey)) {
+    if (e.which === 13 && !e.shiftKey && !e.altKey && !enterToSend === (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       $f.submit();
     }
@@ -195,7 +198,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
 
       if (pad) {
         var sib;
-        if ((sib = $a[0].previousSibling) && (sib.nodeType != 3 || !/[\s\u200b]$/.test(sib.nodeValue))) {
+        if ((sib = $a[0].previousSibling) && (sib.nodeType != 3 || !/\s$/.test(sib.nodeValue))) {
           $a.before(" ");
         }
         if ((sib = $a[0].nextSibling) && (sib.nodeType != 3 || /^\S/.test(sib.nodeValue))) {
