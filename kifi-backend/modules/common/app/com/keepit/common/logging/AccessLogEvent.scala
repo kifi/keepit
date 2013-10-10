@@ -2,6 +2,7 @@ package com.keepit.common.logging
 
 import play.api.Logger
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.healthcheck._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time.Clock
