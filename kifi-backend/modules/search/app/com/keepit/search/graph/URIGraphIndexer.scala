@@ -11,8 +11,7 @@ import org.apache.lucene.util.Version
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.Healthcheck.INTERNAL
 import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
-import com.keepit.common.net.Host
-import com.keepit.common.net.URI
+import com.keepit.common.net._
 import com.keepit.model._
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
@@ -193,6 +192,19 @@ class URIGraphIndexer(
       doc
     }
 
+    private def urlToIndexableString(url: String): Option[String] = {
+      URI.parse(url).toOption.map{ u =>
+        val host = u.host match {
+          case Some(Host(domain @ _*)) => domain.mkString(" ")
+          case _ => ""
+        }
+        val path = u.path.map{ p =>
+          URIParserUtil.pathReservedChars.foldLeft(URIParserUtil.decodePercentEncode(p)){ (s, c) => s.replace(c.toString, " ") }
+        }
+        host + " " + path
+      }
+    }
+
     private def buildURIListField(field: String, uriListBytes: Array[Byte]) = {
       buildBinaryDocValuesField(field, uriListBytes)
     }
@@ -207,13 +219,15 @@ class URIGraphIndexer(
       publicBookmarks.foreach{ b =>
         val text = b.title.getOrElse("")
         val lang = LangDetector.detect(text, preferedLang)
-        titles += ((lineNo, text, lang))
+        val urlText = urlToIndexableString(b.url).getOrElse("") // piggybacking uri text on title
+        titles += ((lineNo, text + " " + urlText, lang))
         lineNo += 1
       }
       privateBookmarks.foreach{ b =>
         val text = b.title.getOrElse("")
         val lang = LangDetector.detect(text, preferedLang)
-        titles += ((lineNo, text, lang))
+        val urlText = urlToIndexableString(b.url).getOrElse("") // piggybacking uri text on title
+        titles += ((lineNo, text + " " + urlText, lang))
         lineNo += 1
       }
       titles

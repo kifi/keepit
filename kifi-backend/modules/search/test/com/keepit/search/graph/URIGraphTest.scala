@@ -358,6 +358,43 @@ class URIGraphTest extends Specification with GraphTestHelper {
       }
     }
 
+    "search personal bookmark url keyowrd" in {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+        val (users, uris) = initData
+        val store = setupArticleStore(uris)
+        val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
+        saveBookmarksByEdges(edges)
+
+        val graph = mkURIGraph()
+        graph.update() === 1
+
+        addConnections(Map(users(0).id.get -> Set()))
+
+        val searcher = graph.getURIGraphSearcher(users(0).id.get)
+
+        def mkQuery(word: String) = new TermQuery(new Term("title", word))
+
+        var qry = mkQuery("com")
+        searcher.search(qry).keySet === Set(1L, 2L, 4L, 5L)
+
+
+        qry = mkQuery("keepit")
+        searcher.search(qry).keySet === Set(1L, 2L, 3L)
+
+        qry = mkQuery("org")
+        searcher.search(qry).keySet === Set(3L, 6L)
+
+        qry = mkQuery("findit")
+        searcher.search(qry).keySet === Set(4L, 5L, 6L)
+
+        qry = mkQuery("article1")
+        searcher.search(qry).keySet === Set(1L)
+
+        qry = mkQuery("article2")
+        searcher.search(qry).keySet === Set(2L)
+      }
+    }
+
     "retrieve bookmark records from bookmark store" in {
        running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
