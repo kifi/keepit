@@ -87,7 +87,7 @@ this.tagbox = (function ($, win) {
 		 */
 		construct: function () {
 			log('tagbox:construct');
-			if (!this.$tagbox && this.getTimeSinceDestroyed() > 150) {
+			if (!this.$tagbox) {
 				this.init();
 			}
 		},
@@ -115,21 +115,10 @@ this.tagbox = (function ($, win) {
 		 */
 		initTagBox: (function () {
 
-			var KEY_ESC = 27;
-
-			function onKeydown(e) {
-				if (e.which === KEY_ESC) {
-					log('tagbox:document.esc');
-					this.hide();
-					e.stopPropagation();
-					e.stopImmediatePropagation();
-					e.preventDefault();
-				}
-			}
-
 			function onClick(e) {
 				if (!this.contains(e.target)) {
-					log('tagbox:clickout', e.target);
+					log('tagbox:clickout', e, e.target);
+					e.tagboxClosed = true;
 					/*
           e.preventDefault();
           e.stopPropagation();
@@ -141,10 +130,11 @@ this.tagbox = (function ($, win) {
 
 			function addDocListeners() {
 				if (this.active) {
-					var onDocKeydown = this.onDocKeydown = onKeydown.bind(this),
-						onDocClick = this.onDocClick = onClick.bind(this);
+					var $doc = $(document);
+					this.prevEscHandler = $doc.data('esc') || null;
+					$doc.data('esc', this.handleEsc.bind(this));
 
-					$(document).on('keydown', onDocKeydown);
+					var onDocClick = this.onDocClick = onClick.bind(this);
 					document.addEventListener('click', onDocClick, true);
 				}
 			}
@@ -211,6 +201,11 @@ this.tagbox = (function ($, win) {
 
 			function onKeydown(e) {
 				var preventDefault = false;
+				if (e.metaKey || e.ctrlKey || e.shiftKey) {
+					// not handling any special keys
+					return;
+				}
+
 				switch (e.which) {
 				case KEY_UP:
 					this.navigate('up');
@@ -221,30 +216,16 @@ this.tagbox = (function ($, win) {
 					preventDefault = true;
 					break;
 				case KEY_ENTER:
-					this.select();
-					this.setInputValue();
-					preventDefault = true;
-					break;
-				case KEY_ESC:
-					log('tagbox:input.esc', this.currentSuggestion);
-					if (this.currentSuggestion) {
-						this.navigateTo(null, 'esc');
-						e.stopPropagation();
-						e.stopImmediatePropagation();
-					}
-					else {
-						this.hide();
-						e.stopPropagation();
-						e.stopImmediatePropagation();
-					}
-					preventDefault = true;
-					break;
 				case KEY_TAB:
 					this.select();
 					this.setInputValue();
 					preventDefault = true;
 					break;
+				case KEY_ESC:
+					this.handleEsc(e);
+					return;
 				}
+
 				if (preventDefault) {
 					e.preventDefault();
 				}
@@ -258,6 +239,19 @@ this.tagbox = (function ($, win) {
 				$input.on('keydown', onKeydown.bind(this));
 			};
 		})(),
+
+		handleEsc: function (e) {
+			log('handle esc');
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			if (this.currentSuggestion) {
+				this.navigateTo(null, 'esc');
+			}
+			else {
+				this.hide();
+			}
+		},
 
 		/**
 		 * Add a close event listener to close button.
@@ -351,10 +345,6 @@ this.tagbox = (function ($, win) {
 			}
 		},
 
-		getTimeSinceDestroyed: function () {
-			return Date.now() - (this.destroyedAt || 0);
-		},
-
 		/**
 		 * Destroys a tag box.
 		 * It removes all event listeners and caches to elements.
@@ -363,7 +353,6 @@ this.tagbox = (function ($, win) {
 			log('tagbox:destroy');
 			if (this.active) {
 				this.active = false;
-				this.destroyedAt = Date.now();
 				log('tagbox:destroy-inner');
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
 
@@ -375,11 +364,9 @@ this.tagbox = (function ($, win) {
 					}
 				}, this);
 
-				var onDocKeydown = this.onDocKeydown;
-				if (onDocKeydown) {
-					$(document).off('keydown', this.onDocKeydown);
-					this.onDocKeydown = null;
-				}
+				var $doc = $(document);
+				$doc.data('esc', this.prevEscHandler);
+				this.prevEscHandler = null;
 
 				var onDocClick = this.onDocClick;
 				if (onDocClick) {
@@ -560,8 +547,12 @@ this.tagbox = (function ($, win) {
 		setInputValue: function (val) {
 			var $input = this.$input || null;
 			if ($input) {
-				$input.val(val || '');
+				if (!val) {
+					val = '';
+				}
+				$input.val(val);
 				$input.focus();
+				this.suggest(val);
 			}
 			return $input;
 		},
@@ -956,7 +947,6 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestTags: function () {
-			log('get_tags');
 			return this.request('get_tags', null, 'Could not load tags.');
 		},
 
@@ -1270,6 +1260,14 @@ this.tagbox = (function ($, win) {
 		 */
 		select: function ($suggestion) {
 			if (!($suggestion || ($suggestion = this.currentSuggestion))) {
+				var name = this.getInputValue();
+				if (name) {
+					var index = this.indexOfTagByName(name);
+					if (index === -1) {
+						return this.createTag(name);
+					}
+					return this.addTagById(this.tags[index].id);
+				}
 				return null;
 			}
 
