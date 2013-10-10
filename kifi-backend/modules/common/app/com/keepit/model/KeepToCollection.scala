@@ -3,7 +3,8 @@ package com.keepit.model
 import org.joda.time.DateTime
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
+import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.serializer.TraversableFormat
 
@@ -26,7 +27,7 @@ case class CollectionsForBookmarkKey(bookmarkId: Id[Bookmark]) extends Key[Seq[I
   def toKey(): String = bookmarkId.toString
 }
 
-class CollectionsForBookmarkCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[CollectionsForBookmarkKey, Seq[Id[Collection]]](innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(Id.format[Collection]))
+class CollectionsForBookmarkCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[CollectionsForBookmarkKey, Seq[Id[Collection]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(Id.format[Collection]))
 
 object KeepToCollectionStates extends States[KeepToCollection]

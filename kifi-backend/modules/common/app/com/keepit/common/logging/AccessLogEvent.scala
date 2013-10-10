@@ -40,7 +40,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
   //using null for internal api to make the usage of the call much more friendly without having Some(foo) instead of just foo's
   def done(remoteTime: Long = NoLongValue,
           statusCode: Int = NoIntValue,
-          success: Option[Boolean] = None,//can't get away without option here
+          result: String = null,
           remoteHost: String = null,
           targetHost: String = null,
           remoteService: String = null,
@@ -48,6 +48,9 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
           query: String = null,
           trackingId: String = null,
           method: String = null,
+          body: String = null,
+          key: String = null,
+          space: String = null,
           url: String = null) = {
     val now = clock.now()
     AccessLogEvent(
@@ -56,7 +59,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       eventType = eventType,
       remoteTime = longOption(remoteTime),
       statusCode = intOption(statusCode),
-      success = success,
+      result = Option(result),
       remoteHost = Option(remoteHost),
       targetHost = Option(targetHost),
       remoteService = Option(remoteService),
@@ -64,6 +67,9 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       query = Option(query),
       trackingId = Option(trackingId),
       method = Option(method),
+      body = Option(body),
+      key = Option(key),
+      space = Option(space),
       url = Option(url))
   }
 }
@@ -74,7 +80,7 @@ case class AccessLogEvent(
   eventType: AccessLogEventType,
   remoteTime: Option[Long],
   statusCode: Option[Int],
-  success: Option[Boolean],
+  result: Option[String],
   remoteHost: Option[String],
   targetHost: Option[String],
   remoteService: Option[String],
@@ -82,6 +88,9 @@ case class AccessLogEvent(
   query: Option[String],
   trackingId: Option[String],
   method: Option[String],
+  body: Option[String],
+  key: Option[String],
+  space: Option[String],
   url: Option[String])
 
 @Singleton
@@ -105,17 +114,20 @@ class AccessLog @Inject() (clock: Clock) {
       Some(s"type:${e.eventType.name}") ::
       Some(s"duration:${e.duration}") ::
       e.method.map("method:" + _) ::
+      e.trackingId.map("trackingId:" + _) ::
+      e.key.map("key:" + _) ::
+      e.space.map("space:" + _) ::
       e.remoteTime.map("remoteTime:" + _) ::
       e.remoteTime.map(t => "waitTime:" + (e.duration - t)) ::
       e.statusCode.map("statusCode:" + _) ::
-      e.success.map("success:" + _) ::
+      e.result.map("result:" + _) ::
       e.remoteHost.map("remoteHost:" + _) ::
       e.targetHost.map("targetHost:" + _) ::
       e.remoteService.map("remoteService:" + _) ::
       e.remoteServiceId.map("remoteServiceId:" + _) ::
       e.query.map("query:" + _) ::
-      e.trackingId.map("trackingId:" + _) ::
       e.url.map("url:" + _) ::
+      e.body.map("body:" + _) ::
       Nil
     line.flatten.mkString("\t")
   }

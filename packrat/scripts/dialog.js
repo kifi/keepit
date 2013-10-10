@@ -1,3 +1,4 @@
+// @require styles/insulate.css
 // @require styles/dialog.css
 // @require scripts/lib/jquery.js
 // @require scripts/lib/mustache.js

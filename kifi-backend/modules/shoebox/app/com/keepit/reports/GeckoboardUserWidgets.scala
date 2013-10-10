@@ -4,13 +4,16 @@ import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.geckoboard._
 import akka.util.Timeout
 import com.keepit.model.{BookmarkRepo, BookmarkSource}
-import com.keepit.model.ExperimentTypes.DONT_SHOW_IN_ANALYTICS_STR
+import com.keepit.model.ExperimentType.DONT_SHOW_IN_ANALYTICS_STR
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.time._
+import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.logging.AccessLog
+
 import com.keepit.inject._
 import play.api.Plugin
 import play.api.Play.current
@@ -28,8 +31,8 @@ case class UserRetentionKey(day: LocalDate, period: Period) extends Key[Int] {
   def toKey(): String = day.toString + "_" + period.toString
 }
 
-class UserRetentionCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends PrimitiveCacheImpl[UserRetentionKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class UserRetentionCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[UserRetentionKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object UserQueries {
   val activeUsers = StaticQuery.query[(LocalDate, LocalDate, LocalDate, LocalDate), (Int, Option[Int])](

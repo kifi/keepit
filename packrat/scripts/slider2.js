@@ -1,3 +1,4 @@
+// @require styles/insulate.css
 // @require styles/keeper/tile.css
 // @require styles/keeper/slider2.css
 // @require styles/friend_card.css
@@ -50,6 +51,14 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     }
   }
 
+  document.addEventListener('click', onClick, true);
+  function onClick(e) {
+    var target = e.target;
+    if ($slider && !($pane || $slider[0].contains(target) || isInsideTagbox(target))) {
+      hideSlider('clickout');
+    }
+  }
+
   api.onEnd.push(function () {
     log('[slider2:onEnd]')();
     $pane && $pane.remove();
@@ -57,6 +66,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     $(tile).remove();
     $('html').removeClass('kifi-with-pane kifi-pane-parent');
     document.removeEventListener('keydown', onKeyDown, true);
+    document.removeEventListener('click', onClick, true);
   });
 
   function createSlider(callback, locator) {
@@ -278,12 +288,23 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     });
   }
 
+  function isTagboxActive() {
+    var tagbox = window.tagbox;
+    return tagbox != null && tagbox.active;
+  }
+
+  function isInsideTagbox(el) {
+    var tagbox = window.tagbox;
+    return tagbox != null && tagbox.contains(el);
+  }
+
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
-    if (window.tagbox && tagbox.active) {
+    log("[hideSlider]", trigger)();
+    if (trigger !== 'clickout' && isTagboxActive()) {
+      log("[hideSlider] tagbox is active. cancel hide")();
       return;
     }
-    log("[hideSlider]", trigger)();
     idleTimer.kill();
     $slider.addClass("kifi-hiding")
     .off("transitionend")
@@ -305,9 +326,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         $slider.remove(), $slider = null;
       }
     });
-    if (window.tagbox) {
-      tagbox.hide();
-    }
     logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
   }
 

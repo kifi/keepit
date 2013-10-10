@@ -1,6 +1,8 @@
 package com.keepit.search
 
 import com.keepit.common.cache.{JsonCacheImpl, Key, FortyTwoCachePlugin}
+import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.Id
 import com.keepit.common.db.{Model, State, States}
 import com.keepit.common.time._
@@ -62,8 +64,8 @@ sealed trait ActiveExperimentsKey extends Key[Seq[SearchConfigExperiment]] {
 
 object ActiveExperimentsKey extends ActiveExperimentsKey
 
-class ActiveExperimentsCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[ActiveExperimentsKey, Seq[SearchConfigExperiment]](innermostPluginSettings, innerToOuterPluginSettings:_*) {
+class ActiveExperimentsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[ActiveExperimentsKey, Seq[SearchConfigExperiment]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*) {
     def getOrElseUpdate(value: => Seq[SearchConfigExperiment]): Seq[SearchConfigExperiment] = getOrElse(ActiveExperimentsKey)(value)
     def remove(): Unit = remove(ActiveExperimentsKey)
 }

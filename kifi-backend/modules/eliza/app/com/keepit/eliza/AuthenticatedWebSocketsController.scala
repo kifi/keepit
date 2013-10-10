@@ -2,7 +2,7 @@ package com.keepit.eliza
 
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.db.{ExternalId, Id, State}
-import com.keepit.model.{User, SocialUserInfo, ExperimentType, ExperimentTypes, NormalizedURI}
+import com.keepit.model.{User, SocialUserInfo, ExperimentType}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{SocialNetworkType, SocialId}
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -32,9 +32,9 @@ import securesocial.core.{Authenticator, UserService, SecureSocial}
 
 import org.joda.time.DateTime
 
-case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]], userAgent: String)
+case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
-case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User], experiments: Set[State[ExperimentType]])
+case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User], experiments: Set[ExperimentType])
 
 
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
@@ -125,14 +125,14 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         val experimentsFuture = shoebox.getUserExperiments(userId).map(_.toSet)
         experimentsFuture.flatMap{ experiments =>
           impersonatedUserIdOpt match {
-            case Some(impExtUserId) if experiments.contains(ExperimentTypes.ADMIN) =>
+            case Some(impExtUserId) if experiments.contains(ExperimentType.ADMIN) =>
               val impUserIdFuture = shoebox.getUserOpt(impExtUserId).map(_.get.id.get)
               impUserIdFuture.flatMap{ impUserId =>
                 shoebox.getSocialUserInfosByUserId(impUserId).map{ impSocUserInfo =>
                   StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId), request.headers.get("User-Agent").getOrElse("NA"))
                 }
               }
-            case None if experiments.contains(ExperimentTypes.ADMIN) =>
+            case None if experiments.contains(ExperimentType.ADMIN) =>
               Promise.successful(StreamSession(userId, socialUser, experiments, Some(userId), request.headers.get("User-Agent").getOrElse("NA"))).future
             case _ =>
               Promise.successful(StreamSession(userId, socialUser, experiments, None, request.headers.get("User-Agent").getOrElse("NA"))).future

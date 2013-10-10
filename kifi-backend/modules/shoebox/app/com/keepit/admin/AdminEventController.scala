@@ -105,7 +105,7 @@ class AdminEventController @Inject() (
   }
 
   private def getIncludedUsers(): Seq[User] = {
-    val excludedExperiments = Seq(ExperimentTypes.BLOCK, ExperimentTypes.FAKE, ExperimentTypes.INACTIVE)
+    val excludedExperiments = Seq(ExperimentType.BLOCK, ExperimentType.FAKE, ExperimentType.INACTIVE)
     db.readOnly { implicit s =>
       userRepo.all()
         .filter(_.state == UserStates.ACTIVE)

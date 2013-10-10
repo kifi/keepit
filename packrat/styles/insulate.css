@@ -13,17 +13,17 @@
   -moz-font-feature-settings: initial;
   -moz-font-language-override: initial;
   -moz-force-broken-image-icon: initial;
-  -moz-hyphens: inherit;
-  -moz-image-region: inherit;
+  -moz-hyphens: initial;
+  -moz-image-region: initial;
   -moz-orient: initial;
   -moz-outline-radius: initial;
   -moz-stack-sizing: initial;
-  -moz-tab-size: inherit;
-  -moz-text-align-last: inherit;
-  -moz-text-size-adjust: inherit;
+  -moz-tab-size: initial;
+  -moz-text-align-last: initial;
+  -moz-text-size-adjust: initial;
   -moz-user-focus: initial;
-  -moz-user-input: inherit;
-  -moz-user-modify: inherit;
+  -moz-user-input: initial;
+  -moz-user-modify: initial;
   -moz-user-select: initial;
   -moz-window-shadow: initial;
   -webkit-animation: initial;
@@ -65,10 +65,10 @@
   -webkit-print-color-adjust: initial;
   -webkit-rtl-ordering: initial;
   -webkit-tap-highlight-color: initial;
-  -webkit-text-combine: inherit;
+  -webkit-text-combine: initial;
   -webkit-text-emphasis: initial;
   -webkit-text-fill-color: initial;
-  -webkit-text-orientation: inherit;
+  -webkit-text-orientation: initial;
   -webkit-text-security: initial;
   -webkit-text-stroke: initial;
   -webkit-transform-origin: initial;
@@ -76,9 +76,9 @@
   -webkit-transform: initial;
   -webkit-transition: initial;
   -webkit-user-drag: initial;
-  -webkit-user-modify: inherit;
+  -webkit-user-modify: initial;
   -webkit-user-select: initial;
-  -webkit-writing-mode: inherit;
+  -webkit-writing-mode: initial;
   align-content: initial;
   align-items: initial;
   align-self: initial;
@@ -88,29 +88,29 @@
   background: initial;
   baseline-shift: initial;
   border: initial;
-  border-collapse: inherit;
+  border-collapse: initial;
   border-image: initial;
   border-radius: initial;
-  border-spacing: inherit;
+  border-spacing: initial;
   box-shadow: initial;
   box-sizing: initial;
   buffered-rendering: initial;
-  caption-side: inherit;
+  caption-side: initial;
   clear: initial;
   clip: initial;
   clip-path: initial;
   clip-rule: initial;
-  color: inherit;
+  color: initial;
   color-interpolation: initial;
   color-interpolation-filters: initial;
   color-rendering: initial;
   content: initial;
   counter-increment: initial;
   counter-reset: initial;
-  cursor: inherit;
-  direction: inherit;
+  cursor: initial;
+  direction: initial;
   dominant-baseline: initial;
-  empty-cells: inherit;
+  empty-cells: initial;
   fill: initial;
   fill-opacity: initial;
   fill-rule: initial;
@@ -119,9 +119,9 @@
   float: initial;
   flood-color: initial;
   flood-opacity: initial;
-  font: inherit;
-  font-size-adjust: inherit;
-  font-stretch: inherit;
+  font: initial;
+  font-size-adjust: initial;
+  font-stretch: initial;
   glyph-orientation-horizontal: initial;
   glyph-orientation-vertical: initial;
   height: initial;
@@ -129,10 +129,9 @@
   ime-mode: initial;
   justify-content: initial;
   kerning: initial;
-  letter-spacing: inherit;
+  letter-spacing: initial;
   lighting-color: initial;
-  line-height: initial;
-  list-style: inherit;
+  list-style: initial;
   margin: initial;
   marker-end: initial;
   marker-mid: initial;
@@ -146,7 +145,7 @@
   min-width: initial;
   opacity: initial;
   order: initial;
-  orphans: inherit;
+  orphans: initial;
   outline: initial;
   outline-offset: initial;
   overflow: initial;
@@ -159,7 +158,7 @@
   perspective-origin: initial;
   pointer-events: initial;
   position: initial;
-  quotes: inherit;
+  quotes: initial;
   resize: initial;
   shape-rendering: initial;
   speak: initial;
@@ -173,17 +172,17 @@
   stroke-miterlimit: initial;
   stroke-opacity: initial;
   stroke-width: initial;
-  tab-size: inherit;
+  tab-size: initial;
   table-layout: initial;
-  text-align: inherit;
+  text-align: initial;
   text-anchor: initial;
   text-decoration: initial;
-  text-indent: inherit;
-  text-orientation: inherit;
+  text-indent: initial;
+  text-orientation: initial;
   text-overflow: initial;
-  text-rendering: inherit;
-  text-shadow: inherit;
-  text-transform: inherit;
+  text-rendering: initial;
+  text-shadow: initial;
+  text-transform: initial;
   transform: initial;
   transform-origin: initial;
   transform-style: initial;
@@ -192,16 +191,57 @@
   user-select: initial;
   vector-effect: initial;
   vertical-align: initial;
+  visibility: initial;
+  white-space: initial;
+  widows: initial;
+  width: initial;
+  word-break: initial;
+  word-spacing: initial;
+  word-wrap: initial;
+  writing-mode: initial;
+  z-index: initial;
+  zoom: initial;
+}
+.kifi-root.kifi-root.kifi-root * {
+  -moz-hyphens: inherit;
+  -moz-image-region: inherit;
+  -moz-tab-size: inherit;
+  -moz-text-align-last: inherit;
+  -moz-text-size-adjust: inherit;
+  -moz-user-input: inherit;
+  -moz-user-modify: inherit;
+  -webkit-text-combine: inherit;
+  -webkit-text-orientation: inherit;
+  -webkit-user-modify: inherit;
+  -webkit-writing-mode: inherit;
+  border-collapse: inherit;
+  border-spacing: inherit;
+  caption-side: inherit;
+  color: inherit;
+  cursor: inherit;
+  direction: inherit;
+  empty-cells: inherit;
+  font: inherit;
+  font-size-adjust: inherit;
+  font-stretch: inherit;
+  letter-spacing: inherit;
+  list-style: inherit;
+  orphans: inherit;
+  quotes: inherit;
+  tab-size: inherit;
+  text-align: inherit;
+  text-indent: inherit;
+  text-orientation: inherit;
+  text-rendering: inherit;
+  text-shadow: inherit;
+  text-transform: inherit;
   visibility: inherit;
   white-space: inherit;
   widows: inherit;
-  width: initial;
   word-break: inherit;
   word-spacing: inherit;
   word-wrap: inherit;
   writing-mode: inherit;
-  z-index: initial;
-  zoom: initial;
 }
 .kifi-root.kifi-root p,
 .kifi-root.kifi-root ol,
@@ -219,7 +259,7 @@
 .kifi-root.kifi-root button {
   display: inline-block;
 }
-.kifi-root.kifi-root b {
+.kifi-root.kifi-root.kifi-root b {
   font-weight: bold;
 }
 .kifi-root.kifi-root :link,
@@ -242,7 +282,7 @@
   text-shadow: initial;
 }
 .kifi-root.kifi-root ::-moz-selection {
-  background: initial;
-  color: initial;
+  background-color: -moz-html-CellHighlight;
+  color: -moz-html-CellHighlightText;
   text-shadow: initial;
 }

@@ -43,7 +43,7 @@ class GeckoboardUserWidgetsTest extends Specification with ShoeboxApplicationInj
       clock += Days.TWO
       userRepo.save(User(firstName = "Jack", lastName = "Brown"))
 
-      userExperimentRepo.save(UserExperiment(userId = user2.id.get, experimentType = State[ExperimentType]("admin")))
+      userExperimentRepo.save(UserExperiment(userId = user2.id.get, experimentType = ExperimentType("admin")))
       userExperimentRepo.count === 1
 
       uriRepo.count === 0

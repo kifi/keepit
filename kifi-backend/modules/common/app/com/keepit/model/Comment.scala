@@ -5,6 +5,7 @@ import scala.concurrent.duration._
 import org.joda.time.DateTime
 
 import com.keepit.common.cache._
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
 
@@ -62,8 +63,8 @@ case class CommentCountUriIdKey(normUriId: Id[NormalizedURI]) extends Key[Int] {
   val namespace = "comment_by_normuriid"
   def toKey(): String = normUriId.id.toString
 }
-class CommentCountUriIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends PrimitiveCacheImpl[CommentCountUriIdKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class CommentCountUriIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[CommentCountUriIdKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 
 case class CommentKey(commentId: Id[Comment]) extends Key[Comment] {
@@ -72,8 +73,8 @@ case class CommentKey(commentId: Id[Comment]) extends Key[Comment] {
   def toKey(): String = commentId.id.toString
 }
 
-class CommentCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[CommentKey, Comment](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class CommentCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[CommentKey, Comment](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 
 

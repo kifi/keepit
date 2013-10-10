@@ -8,7 +8,7 @@ import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialM
 import com.keepit.social.{SocialId, SocialNetworks}
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.model.ExperimentTypes.ADMIN
+import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.User
 import com.keepit.model.UserExperiment

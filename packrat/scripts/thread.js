@@ -130,7 +130,7 @@ panes.thread = function () {
     }, session.userId)
     .data('text', text);
     $holder.append($m).scrollToBottom();
-    
+
     transmitReply($m, text, threadId);
 
     setTimeout(function() {

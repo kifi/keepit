@@ -64,10 +64,10 @@ class UrlController @Inject() (
     Ok(html.admin.adminDashboard())
   }
 
-  def renormalize(readOnly: Boolean = true, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
+  def renormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
     Akka.future {
       try {
-        doRenormalize(readOnly, domain)
+        doRenormalize(readOnly, clearSeq, domain)
       } catch {
         case ex: Throwable => airbrake.notify(AirbrakeError(ex, Some(ex.getMessage)))
       }
@@ -75,7 +75,7 @@ class UrlController @Inject() (
     Ok("Started!")
   }
   
-  def doRenormalize(readOnly: Boolean = true, domain: Option[String] = None) = {
+  def doRenormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domain: Option[String] = None) = {
         
     def getUrlList() = {
       val urls = db.readOnly { implicit s =>
@@ -85,7 +85,7 @@ class UrlController @Inject() (
         }
       }.sortBy(_.id.get.id)
       
-      val lastId = centralConfig(RenormalizationCheckKey) getOrElse 0L
+      val lastId = if (domain.isDefined) 0L else { centralConfig(RenormalizationCheckKey) getOrElse 0L }
       urls.filter(_.id.get.id > lastId).filter(_.state == URLStates.ACTIVE)
     }
     
@@ -103,6 +103,15 @@ class UrlController @Inject() (
       (0 to (index.size - 2)).map{ i => obs.slice(index(i), index(i+1)) }
     }
     
+    def sendStartEmail(urls: Seq[URL]) = {
+      val title = "Renormalization Begins"
+      val msg = s"domain = ${domain}, scanning ${urls.size} urls. readOnly = ${readOnly}"
+      db.readWrite{ implicit s =>
+        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+        subject = title, htmlBody = msg, category = PostOffice.Categories.ADMIN))
+      }
+    }
+    
     def sendEmail(changes: Vector[(URL, Option[NormalizedURI])], readOnly: Boolean)(implicit session: RWSession) = {
       val batchChanges = batch[(URL, Option[NormalizedURI])](changes, batchSize = 1000)
       batchChanges.zipWithIndex.map{ case (batch, i) =>
@@ -114,8 +123,10 @@ class UrlController @Inject() (
     }
     
     // main code
+    if (clearSeq) centralConfig.update(RenormalizationCheckKey, 0L)
     var changes = Vector.empty[(URL, Option[NormalizedURI])]
     val urls = getUrlList()
+    sendStartEmail(urls)
     val batchUrls = batch[URL](urls, batchSize = 100)     // avoid long DB write lock.
     
     batchUrls.map { urls =>
@@ -124,14 +135,13 @@ class UrlController @Inject() (
           needRenormalization(url) match {
             case (true, newUriOpt) => {
               changes = changes :+ (url, newUriOpt)
-              if (changes.size % 100 == 0) log.info(s"renormalization: ${changes.size} urls scanned.")
               if (!readOnly) newUriOpt.map { uri => renormRepo.save(RenormalizedURL(urlId = url.id.get, oldUriId = url.normalizedUriId, newUriId = uri.id.get)) }
             }
             case _ =>
           }
         }
       }
-      urls.lastOption.map{ url => centralConfig.update(RenormalizationCheckKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
+      if (domain.isEmpty && !readOnly) urls.lastOption.map{ url => centralConfig.update(RenormalizationCheckKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
     }
     
     changes = changes.sortBy(_._1.url)

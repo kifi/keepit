@@ -4,6 +4,8 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent}
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.slick.FortyTwoTypeMappers._
+import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
 import com.keepit.common.time.{currentDateTime, zones, Clock}
 import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
@@ -78,8 +80,8 @@ case class MessagesForThreadIdKey(threadId:Id[MessageThread]) extends Key[Messag
   def toKey():String = threadId.id.toString
 }
 
-class MessagesForThreadIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[MessagesForThreadIdKey, MessagesForThread](innermostPluginSettings, innerToOuterPluginSettings:_*)
+class MessagesForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[MessagesForThreadIdKey, MessagesForThread](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @ImplementedBy(classOf[MessageRepoImpl])
 trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
@@ -158,7 +160,7 @@ class MessageRepoImpl @Inject() (
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit = { //Note: There is potentially a race condition here with updateUriId. Need to investigate.
     updates.foreach{ case (oldId, newId) =>
       (for (row <- table if row.sentOnUriId===oldId) yield row.sentOnUriId).update(newId)
-    } 
+    }
   }
 
 
