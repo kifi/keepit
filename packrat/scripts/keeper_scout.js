@@ -112,10 +112,6 @@ var tile = tile || function() {  // idempotent for Chrome
         keeper("togglePane", "key", "/notices");
         e.preventDefault();
         break;
-      case 65: // a
-
-        e.preventDefault();
-        break;
       }
     }
   }
