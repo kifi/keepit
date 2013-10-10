@@ -86,6 +86,7 @@
 	// Globals
 	"globals": {
     "api": true,
-    "Q": true
+    "Q": true,
+    "_": true
   }
 }
