@@ -35,7 +35,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
 
   document.addEventListener('keydown', onKeyDown, true);
   function onKeyDown(e) {
-    if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) {  // esc
+    if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {  // esc
       var escHandler = $(document).data('esc');
       if (escHandler) {
         escHandler(e);

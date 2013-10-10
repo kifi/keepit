@@ -84,7 +84,7 @@ var tile = tile || function() {  // idempotent for Chrome
     reset: cleanUpDom.bind(null, true)
   });
   function onKeyDown(e) {
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey) {  // ⌘-shift-[key], ctrl-shift-[key]
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey) {  // ⌘-shift-[key], ctrl-shift-[key]
       switch (e.keyCode) {
       case 75: // k
         if (session === undefined) {  // not yet initialized
@@ -110,6 +110,10 @@ var tile = tile || function() {  // idempotent for Chrome
         break;
       case 79: // o
         keeper("togglePane", "key", "/notices");
+        e.preventDefault();
+        break;
+      case 65: // a
+
         e.preventDefault();
         break;
       }

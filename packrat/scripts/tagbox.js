@@ -201,7 +201,7 @@ this.tagbox = (function ($, win) {
 
 			function onKeydown(e) {
 				var preventDefault = false;
-				if (e.metaKey || e.ctrlKey || e.shiftKey) {
+				if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
 					// not handling any special keys
 					return;
 				}
