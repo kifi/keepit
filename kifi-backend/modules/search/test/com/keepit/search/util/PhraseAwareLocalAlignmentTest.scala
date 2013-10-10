@@ -47,7 +47,7 @@ class PhraseAwareLocalAlignmentTest extends Specification {
   }
 
   "PhraseAwareLocalAlignment" should {
-    "emit positions only when included in phrases" in {
+    "emit positions with weight when not included in phrases" in {
       val dummy = new DummyLocalAlignment
       val doc = Seq("b", "a", "b", "c", "d", "e")
 
