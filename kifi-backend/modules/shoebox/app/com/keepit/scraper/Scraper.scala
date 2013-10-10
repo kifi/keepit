@@ -110,7 +110,6 @@ class Scraper @Inject() (
     }
   }
 
-
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
     log.debug(s"scraping $uri")
 
@@ -120,32 +119,47 @@ class Scraper @Inject() (
       if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
       else fetchedArticle match {
         case Scraped(article, signature, redirects) =>
-          // store a scraped article in a store map
-          articleStore += (latestUri.id.get -> article)
+          val updatedUri = processRedirects(latestUri, redirects)
 
-          val scrapedURI = {
+          // check if document is not changed or does not need to be reindexed 
+          if (latestUri.title == Option(article.title) && // title change should always invoke indexing
+              latestUri.restriction == updatedUri.restriction && // restriction change always invoke indexing
+              latestUri.state != NormalizedURIStates.SCRAPE_WANTED &&
+              latestUri.state != NormalizedURIStates.SCRAPE_FAILED &&
+              signature.similarTo(Signature(info.signature)) >= (1.0d - config.changeThreshold * (config.minInterval / info.interval))) {
+
+            // the article does not need to be reindexed
+
+            // update the scrape schedule, uri is not changed
+            scrapeInfoRepo.save(info.withDocumentUnchanged())
+            (latestUri, None)
+
+          } else {
+
+            // the article needs to be reindexed
+
+            // store a scraped article in a store map
+            articleStore += (latestUri.id.get -> article)
+
             // first update the uri state to SCRAPED
-            val toBeSaved = processRedirects(latestUri, redirects).withTitle(article.title).withState(NormalizedURIStates.SCRAPED)
-            val savedUri = normalizedURIRepo.save(toBeSaved)
+            val scrapedURI = normalizedURIRepo.save(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+
             // then update the scrape schedule
             scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-            bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
-              bookmarkRepo.save(bookmark.copy(title = savedUri.title))
+            bookmarkRepo.getByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
+              bookmarkRepo.save(bookmark.copy(title = scrapedURI.title))
             }
-            savedUri
+            log.debug("fetched uri %s => %s".format(scrapedURI, article))
+
+            def shouldUpdateScreenshot(uri: NormalizedURI) = {
+              uri.screenshotUpdatedAt map { update =>
+                Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
+              } getOrElse true
+            }
+            if(shouldUpdateScreenshot(scrapedURI)) s3ScreenshotStore.updatePicture(scrapedURI)
+
+            (scrapedURI, Some(article))
           }
-          log.debug("fetched uri %s => %s".format(scrapedURI, article))
-
-
-          def shouldUpdateScreenshot(uri: NormalizedURI) = {
-            uri.screenshotUpdatedAt map { update =>
-              Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
-            } getOrElse true
-          }
-          if(shouldUpdateScreenshot(scrapedURI))
-            s3ScreenshotStore.updatePicture(scrapedURI)
-
-          (scrapedURI, Some(article))
         case NotScrapable(destinationUrl, redirects) =>
           val unscrapableURI = {
             scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
@@ -182,7 +196,7 @@ class Scraper @Inject() (
           }
           (errorURI, None)
       }
-      }
+    }
   }
 
   def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo): ScraperResult = {
@@ -224,44 +238,32 @@ class Scraper @Inject() (
             val description = getDescription(extractor)
             val keywords = getKeywords(extractor)
             val media = getMediaTypeString(extractor)
-            val signature = Signature(Seq(title, description.getOrElse(""), content))
+            val signature = Signature(Seq(title, description.getOrElse(""), keywords.getOrElse(""), content))
 
-            // now detect the document change
-            val docChanged = {
-              normalizedUri.title != Option(title) || // title change should always invoke indexing
-              signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
+            val contentLang = description match {
+              case Some(desc) => LangDetector.detect(content + " " + desc)
+              case None => LangDetector.detect(content)
             }
+            val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
 
-            // if unchanged, don't trigger indexing. buf if SCRAPE_WANTED or SCRAPE_FAILED, we always change the state and invoke indexing.
-            if (!docChanged &&
-                normalizedUri.state != NormalizedURIStates.SCRAPE_WANTED &&
-                normalizedUri.state != NormalizedURIStates.SCRAPE_FAILED) {
-              NotModified
-            } else {
-              val contentLang = description match {
-                case Some(desc) => LangDetector.detect(content + " " + desc)
-                case None => LangDetector.detect(content)
-              }
-              val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
-              Scraped(Article(
-                  id = normalizedUri.id.get,
-                  title = title,
-                  description = description,
-                  keywords = keywords,
-                  media = media,
-                  content = content,
-                  scrapedAt = currentDateTime,
-                  httpContentType = extractor.getMetadata("Content-Type"),
-                  httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-                  state = NormalizedURIStates.SCRAPED,
-                  message = None,
-                  titleLang = Some(titleLang),
-                  contentLang = Some(contentLang),
-                  destinationUrl = fetchStatus.destinationUrl
-               ),
-               signature,
-               fetchStatus.redirects)
-            }
+            Scraped(Article(
+                id = normalizedUri.id.get,
+                title = title,
+                description = description,
+                keywords = keywords,
+                media = media,
+                content = content,
+                scrapedAt = currentDateTime,
+                httpContentType = extractor.getMetadata("Content-Type"),
+                httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
+                state = NormalizedURIStates.SCRAPED,
+                message = None,
+                titleLang = Some(titleLang),
+                contentLang = Some(contentLang),
+                destinationUrl = fetchStatus.destinationUrl
+              ),
+              signature,
+              fetchStatus.redirects)
           }
         case HttpStatus.SC_NOT_MODIFIED =>
           NotModified

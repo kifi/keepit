@@ -54,14 +54,13 @@ trait HttpClient {
   def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
   def deleteFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
 
-  def longTimeout(): HttpClient
+  def withTimeout(timeout: Int): HttpClient
 
   def withHeaders(hdrs: (String, String)*): HttpClient
 }
 
 case class HttpClientImpl(
-    timeout: Long = 2,
-    timeoutUnit: TimeUnit = TimeUnit.SECONDS,
+    timeout: Int = 1000,
     headers: List[(String, String)] = List(),
     healthcheckPlugin: HealthcheckPlugin,
     airbrake: Provider[AirbrakeNotifier],
@@ -140,9 +139,8 @@ case class HttpClientImpl(
     result
   }
 
-  private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, timeoutUnit))
-
-  private def req(url: String): Request = new Request(WS.url(url), headers, services, accessLog)
+  private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, TimeUnit.MILLISECONDS))
+  private def req(url: String): Request = new Request(WS.url(url).withTimeout(timeout), headers, services, accessLog)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
     val cr = new ClientResponseImpl(request, response)
@@ -152,7 +150,7 @@ case class HttpClientImpl(
     cr
   }
 
-  def longTimeout(): HttpClientImpl = copy(timeout = 2, timeoutUnit = TimeUnit.MINUTES)
+  def withTimeout(timeout: Int): HttpClientImpl = copy(timeout = timeout)
 }
 
 private[net] class Request(val req: WSRequestHolder, headers: List[(String, String)], services: FortyTwoServices, accessLog: AccessLog) extends Logging {
@@ -219,7 +217,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
   private def logResponse(timer: AccessLogTimer, method: String, isSuccess: Boolean, trackingId: String, body: Option[Any], resOpt: Option[Response]) = {
     //todo(eishay): the interesting part is the remote service and node id, to be logged
     val remoteHost = resOpt.map(_.header(CommonHeaders.LocalHost)).flatten.getOrElse("NA")
-    val remoteTime = resOpt.map(_.header(CommonHeaders.ResponseTime)).flatten.map(_.toLong).getOrElse(AccessLogTimer.NoLongValue)
+    val remoteTime = resOpt.map(_.header(CommonHeaders.ResponseTime)).flatten.map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
     val queryString = wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&"
     // waitTime map {t =>
     //   Statsd.timing(s"internalCall.remote.$remoteService.$remoteNodeId", t)
@@ -228,7 +226,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     accessLog.add(timer.done(
         remoteTime = remoteTime,
         result = if(isSuccess) "success" else "fail",
-        query = queryString,
+        query = if(queryString.trim.isEmpty) null else queryString,
         url = wsRequest.url,
         //Its a bit strange, but in this case we rather pass null to be consistent with the api
         //taking only the first 200 chars of the body

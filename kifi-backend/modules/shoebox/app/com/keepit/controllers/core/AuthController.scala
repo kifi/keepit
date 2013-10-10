@@ -7,9 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.model.{EmailAddressRepo, SocialUserInfoRepo, UserCredRepo}
-import com.keepit.social.SocialId
-import com.keepit.social.SocialNetworks
-import com.keepit.social.UserIdentity
+import com.keepit.social.{SocialId, SocialNetworks, UserIdentity}
 
 import play.api.Play._
 import play.api.data.Forms._
@@ -20,7 +18,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
-import securesocial.core.providers.utils.GravatarHelper
+import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
 
 class AuthController @Inject() (
     db: Database,
@@ -77,6 +75,16 @@ class AuthController @Inject() (
   }
 
   private case class RegistrationInfo(email: String, password: String, firstName: String, lastName: String)
+
+  private val passwordForm = Form[String](
+    mapping(
+      "password" -> tuple("1" -> nonEmptyText, "2" -> nonEmptyText)
+        .verifying("Passwords do not match", pw => pw._1 == pw._2).transform(_._1, (a: String) => (a, a))
+        .verifying(Constraints.minLength(7))
+    )
+    (identity)
+    (Some(_))
+  )
 
   private val emailPasswordForm = Form[RegistrationInfo](
     mapping(
@@ -168,6 +176,65 @@ class AuthController @Inject() (
         Ok(views.html.website.verifyEmail(success = true))
       else
         BadRequest(views.html.website.verifyEmail(success = false))
+    }
+  }
+
+  def setNewPassword(code: String) = Action { implicit request =>
+    passwordForm.bindFromRequest.fold(
+      formWithErrors => Redirect(routes.AuthController.setNewPasswordPage(code)).flashing(
+        "error" -> "Passwords must match and be at least 7 characters"
+      ), { password =>
+        db.readWrite { implicit s =>
+          emailRepo.getByCode(code).map { email =>
+            emailRepo.verifyByCode(code, clear = true)
+            for (sui <- socialRepo.getByUser(email.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
+              UserService.save(UserIdentity(
+                userId = sui.userId,
+                socialUser = sui.credentials.get.copy(
+                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password))
+                )
+              ))
+            }
+            Redirect(routes.AuthController.setNewPasswordPage(code)).flashing("success" -> "true")
+          } getOrElse {
+            Redirect(routes.AuthController.setNewPasswordPage(code)).flashing("invalid" -> "true")
+          }
+        }
+      })
+  }
+
+  def setNewPasswordPage(code: String) = Action { implicit request =>
+    db.readWrite { implicit s =>
+      val error = request.flash.get("error")
+      val isValid = !request.flash.get("invalid").isDefined
+      if (!emailRepo.verifyByCode(code) || !isValid || error.isDefined)
+        BadRequest(views.html.website.setPassword(valid = isValid, error = error))
+      else
+        Ok(views.html.website.setPassword(valid = isValid, done = request.flash.get("success").isDefined))
+    }
+  }
+
+  def resetPasswordPage() = Action { implicit request =>
+    Ok(views.html.website.resetPassword(email = request.flash.get("email")))
+  }
+
+  def resetPassword() = Action { implicit request =>
+    db.readWrite { implicit s =>
+      val emailOpt = request.body.asFormUrlEncoded.flatMap(_.get("email")).flatMap(_.headOption)
+      val verifiedEmailOpt = emailOpt.flatMap(emailRepo.getByAddressOpt(_)).map(emailRepo.saveWithVerificationCode)
+      verifiedEmailOpt map { email =>
+        postOffice.sendMail(ElectronicMail(
+          from = EmailAddresses.NOTIFY,
+          to = Seq(new EmailAddressHolder { val address = email.address }),
+          subject = "Reset your password",
+          htmlBody = s"You can set a new password by going to " +
+              s"$url${routes.AuthController.setNewPassword(email.verificationCode.get)}",
+          category = ElectronicMailCategory("reset_password")
+        ))
+        Redirect(routes.AuthController.resetPasswordPage()).flashing("email" -> email.address)
+      } getOrElse {
+        Redirect(routes.AuthController.resetPasswordPage())
+      }
     }
   }
 }

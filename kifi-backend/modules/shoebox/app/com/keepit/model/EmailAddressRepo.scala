@@ -16,8 +16,9 @@ trait EmailAddressRepo extends Repo[EmailAddress] {
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[EmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
-  def verifyByCode(verificationCode: String)(implicit session: RWSession): Boolean
+  def verifyByCode(verificationCode: String, clear: Boolean = false)(implicit session: RWSession): Boolean
   def saveWithVerificationCode(email: EmailAddress)(implicit session: RWSession): EmailAddress
+  def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress]
 }
 
 @Singleton
@@ -45,11 +46,14 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
     (for(f <- table if f.userId === userId && f.state =!= EmailAddressStates.INACTIVE) yield f).list
 
-  def verifyByCode(verificationCode: String)(implicit session: RWSession): Boolean = {
-    val q = for {
-      e <- table if e.verificationCode === verificationCode
-    } yield e.updatedAt ~ e.verifiedAt ~ e.state
-    q.update((clock.now(), clock.now(), EmailAddressStates.VERIFIED)) > 0
+  def verifyByCode(verificationCode: String, clear: Boolean = false)(implicit session: RWSession): Boolean = {
+    val q = table.filter(_.verificationCode === verificationCode)
+    if (clear) q.map(_.verificationCode).update(None)
+    q.map(e => e.verifiedAt ~ e.updatedAt ~ e.state).update((clock.now(), clock.now(), EmailAddressStates.VERIFIED)) > 0
+  }
+
+  def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress] = {
+    (for (e <- table if e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
   }
 
   def saveWithVerificationCode(email: EmailAddress)(implicit session: RWSession): EmailAddress = {

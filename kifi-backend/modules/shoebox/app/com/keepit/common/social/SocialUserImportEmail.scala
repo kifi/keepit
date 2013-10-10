@@ -15,17 +15,18 @@ class SocialUserImportEmail @Inject() (
       emailRepo.getByAddressOpt(emailString, excludeState = None) match {
         case Some(email) =>
           if (email.userId != userId) {
-            if (email.state == EmailAddressStates.INACTIVE) {
-              emailRepo.save(email.copy(userId = userId, state = EmailAddressStates.UNVERIFIED))
-            } else {
+            if (email.state == EmailAddressStates.UNVERIFIED) {
               throw new IllegalStateException(s"email $email is not associated with user $userId")
+            }
+            if (email.state != EmailAddressStates.VERIFIED) {
+              emailRepo.save(email.copy(userId = userId, state = EmailAddressStates.VERIFIED))
             }
           }
           log.info(s"email $email for user $userId already exists")
           email
         case None =>
           log.info(s"creating new email $emailString for user $userId")
-          emailRepo.save(EmailAddress(userId = userId, address = emailString))
+          emailRepo.save(EmailAddress(userId = userId, address = emailString, state = EmailAddressStates.VERIFIED))
       }
     }
   }
