@@ -163,15 +163,13 @@ class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[Inde
     indexReader.getContext.leaves.foreach{ subReaderContext =>
       val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
       val tp = subReader.termPositionsEnum(term)
-      var vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
       while (tp.nextDoc < NO_MORE_DOCS) {
         var freq = tp.freq()
         while (freq > 0) {
           freq -= 1
           tp.nextPosition()
           val payload = tp.getPayload()
-          vector.set(payload.bytes, payload.offset, payload.length)
-          composer.add(vector, 1)
+          composer.add(payload.bytes, payload.offset, payload.length, 1)
         }
       }
     }
