@@ -1413,7 +1413,7 @@ this.tagbox = (function ($, win) {
 		//
 
 		/**
-		 * Whether a tag bax is active and visible
+		 * Whether a tag box is active and visible
 		 *
 		 * @property {boolean}
 		 */
