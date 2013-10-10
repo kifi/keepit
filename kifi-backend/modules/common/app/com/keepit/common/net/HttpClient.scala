@@ -226,7 +226,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     accessLog.add(timer.done(
         remoteTime = remoteTime,
         result = if(isSuccess) "success" else "fail",
-        query = queryString,
+        query = if(queryString.trim.isEmpty) null else queryString,
         url = wsRequest.url,
         //Its a bit strange, but in this case we rather pass null to be consistent with the api
         //taking only the first 200 chars of the body
