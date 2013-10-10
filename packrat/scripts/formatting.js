@@ -12,18 +12,10 @@ function getTextFormatter() {
     }
 
     for (i = 0; i < parts.length; i += 3) {
-      // linkify URLs, from http://regex.info/listing.cgi?ed=3&p=207
-      var bits = parts[i].split(/\b(\(?(?:(https?|ftp):\/\/)?(?:(?:(?:[^\W\s]|\.|-|[:]{1})+)@{1})?(?:(?:www.)?(?:[^\W\s]|\.|-)+[\.][^\W\s]{2,4}|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(?:\d*))?(?:[\/]?[^\s\?]*[\/]{1})*(?:\/?(?:[^\s\n\?\[\]\{\}\#]*(?:(?=\.)){1}|[^\s\n\?\[\]\{\}\.\#]*)?(?:[\.]{1}[^\s\?\#]*)?)?(?:\?{1}(?:[^\s\n\#\[\]]*))?(?:[\#][^\s\n]*)?\)?[^\.\s\n])/);
+      // linkify URLs, use https://www.debuggex.com/ for help
+      var bits = parts[i].split(/(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/);
       for (var j = 1; j < bits.length; j += 3) {
         var escapedUri = Mustache.escape(bits[j]);
-        if (escapedUri.charAt(0) == '(') {
-          bits[j-1] = bits[j-1] + '(';
-          escapedUri = escapedUri.slice(1);
-          if (escapedUri.charAt(escapedUri.length - 1) == ')') {
-            bits[j+2] = ')' + bits[j+2];
-            escapedUri = escapedUri.slice(0,-1);
-          }
-        }
         bits[j] = '<a target=_blank href="' + (bits[j+1] ? ""  : "http://") + escapedUri + '">' + escapedUri + "</a>";
         bits[j+1] = "";
       }
