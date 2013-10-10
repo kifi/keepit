@@ -8,7 +8,7 @@ import java.util.Arrays
 trait LocalAlignment {
   def begin(): Unit
   def end(): Unit
-  def update(id: Int, position: Int): Unit
+  def update(id: Int, position: Int, weight: Float = 1.0f): Unit
   def score: Float
   def maxScore: Float
 }
@@ -61,7 +61,7 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
     lastPos = -1
   }
 
-  def update(termId: Int, curPos: Int): Unit = {
+  def update(termId: Int, curPos: Int, weight: Float = 1.0f): Unit = {
     if (lastPos < curPos) dist = curPos - lastPos
     // update run lengths and local scores
     var prevRun = 0.0f
@@ -73,7 +73,7 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
       prevRun = rl(i) // store the run length of previous round
       rl(i) = runLen
       ls(i) = if (localScore < runLen) runLen else localScore
-      localScoreSum += ls(i)
+      localScoreSum += ls(i) * weight
       i += 1
     }
     lastPos = curPos
@@ -87,7 +87,7 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
 
 import LocalAlignment._
 
-class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float, localAlignment: LocalAlignment) extends LocalAlignment {
+class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float, localAlignment: LocalAlignment, nonPhraseWeight: Float = 0.5f) extends LocalAlignment {
   private[this] val bufSize = phraseMatcher.maxLength
   private[this] var bufferedPos = -1
   private[this] var processedPos = -1
@@ -103,7 +103,8 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
 
   @inline private[this] def processOnePosition(): Unit = {
     processedPos += 1
-    if (matching(processedPos % bufSize)) localAlignment.update(ids(processedPos % bufSize), processedPos)
+    val weight = if (matching(processedPos % bufSize)) 1.0f else nonPhraseWeight
+    localAlignment.update(ids(processedPos % bufSize), processedPos, weight)
   }
 
   def begin(): Unit = {
@@ -114,7 +115,7 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
     localAlignment.begin()
   }
 
-  def update(id: Int, pos: Int): Unit = {
+  def update(id: Int, pos: Int, weight: Float): Unit = { // weight is ignored
     if (pos - bufferedPos > 1) { // found a gap, flush buffer
       flush()
       processedPos = pos - 1
@@ -151,4 +152,3 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
 
   def maxScore = localAlignment.maxScore
 }
-
