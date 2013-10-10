@@ -121,6 +121,7 @@ class Scraper @Inject() (
         case Scraped(article, signature, redirects) =>
           val updatedUri = processRedirects(latestUri, redirects)
 
+          // check if document is not changed or does not need to be reindexed 
           if (latestUri.title == Option(article.title) && // title change should always invoke indexing
               latestUri.restriction == updatedUri.restriction && // restriction change always invoke indexing
               latestUri.state != NormalizedURIStates.SCRAPE_WANTED &&
