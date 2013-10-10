@@ -24,27 +24,25 @@ object Access {
 }
 
 object AccessLogTimer {
-  val NoLongValue: Long = -1L
   val NoIntValue: Int = -1
 }
 
 case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
-  import AccessLogTimer.{NoLongValue, NoIntValue}
+  import AccessLogTimer.NoIntValue
 
-  //since null.asInstanceOf[Long] is forced to be 0L instead of actually null
-  private def longOption(l: Long): Option[Long] = if(l == NoLongValue) None else Some(l)
+  //since null.asInstanceOf[Int] is forced to be 0 instead of actually null
   private def intOption(i: Int): Option[Int] = if(i == NoIntValue) None else Some(i)
 
   val startTime = clock.now()
 
   //using null for internal api to make the usage of the call much more friendly without having Some(foo) instead of just foo's
-  def done(remoteTime: Long = NoLongValue,
+  def done(remoteTime: Int = NoIntValue,
           statusCode: Int = NoIntValue,
           result: String = null,
           remoteHost: String = null,
           targetHost: String = null,
           remoteService: String = null,
-          remoteServiceId: Long = NoLongValue,
+          remoteServiceId: Int = NoIntValue,
           query: String = null,
           trackingId: String = null,
           method: String = null,
@@ -55,15 +53,15 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
     val now = clock.now()
     AccessLogEvent(
       time = now,
-      duration = now.getMillis - startTime.getMillis,
+      duration = (now.getMillis - startTime.getMillis).toInt,
       eventType = eventType,
-      remoteTime = longOption(remoteTime),
+      remoteTime = intOption(remoteTime),
       statusCode = intOption(statusCode),
       result = Option(result),
       remoteHost = Option(remoteHost),
       targetHost = Option(targetHost),
       remoteService = Option(remoteService),
-      remoteServiceId = longOption(remoteServiceId),
+      remoteServiceId = intOption(remoteServiceId),
       query = Option(query),
       trackingId = Option(trackingId),
       method = Option(method),
@@ -76,22 +74,26 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
 
 case class AccessLogEvent(
   time: DateTime,
-  duration: Long,
+  duration: Int,
   eventType: AccessLogEventType,
-  remoteTime: Option[Long],
+  remoteTime: Option[Int],
   statusCode: Option[Int],
   result: Option[String],
   remoteHost: Option[String],
   targetHost: Option[String],
   remoteService: Option[String],
-  remoteServiceId: Option[Long],
+  remoteServiceId: Option[Int],
   query: Option[String],
   trackingId: Option[String],
   method: Option[String],
   body: Option[String],
   key: Option[String],
   space: Option[String],
-  url: Option[String])
+  url: Option[String]) {
+
+  def waitTime: Option[Int] = remoteTime.map(t => duration - t)
+
+}
 
 @Singleton
 class AccessLog @Inject() (clock: Clock) {
