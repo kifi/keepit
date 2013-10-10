@@ -28,7 +28,8 @@ private[store] class ImageDataIntegrityActor @Inject() (
     airbrake: AirbrakeNotifier
   ) extends FortyTwoActor(airbrake) with Logging {
 
-  private val httpClient: HttpClient = client.longTimeout()
+  val TWO_MINUTES = 2 * 60 * 1000
+  private val httpClient: HttpClient = client.withTimeout(TWO_MINUTES)
 
   def receive = {
     case VerifyAllPictures =>

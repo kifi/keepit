@@ -123,7 +123,8 @@ class LinkedInSocialGraph @Inject() (
     } getOrElse sui
   }
 
-  private def getJson(url: String): JsValue = client.longTimeout().get(url, client.ignoreFailure).json
+  val TWO_MINUTES = 2 * 60 * 1000
+  private def getJson(url: String): JsValue = client.withTimeout(TWO_MINUTES).get(url, client.ignoreFailure).json
 
   private def getJson(socialUserInfo: SocialUserInfo): Seq[JsValue] = {
     import LinkedInSocialGraph.{ConnectionsPageSize => PageSize}

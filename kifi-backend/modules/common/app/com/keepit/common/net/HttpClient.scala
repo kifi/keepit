@@ -54,14 +54,13 @@ trait HttpClient {
   def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
   def deleteFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
 
-  def longTimeout(): HttpClient
+  def withTimeout(timeout: Int): HttpClient
 
   def withHeaders(hdrs: (String, String)*): HttpClient
 }
 
 case class HttpClientImpl(
-    timeout: Long = 2,
-    timeoutUnit: TimeUnit = TimeUnit.SECONDS,
+    timeout: Int = 1000,
     headers: List[(String, String)] = List(),
     healthcheckPlugin: HealthcheckPlugin,
     airbrake: Provider[AirbrakeNotifier],
@@ -140,9 +139,8 @@ case class HttpClientImpl(
     result
   }
 
-  private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, timeoutUnit))
-
-  private def req(url: String): Request = new Request(WS.url(url), headers, services, accessLog)
+  private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, TimeUnit.MILLISECONDS))
+  private def req(url: String): Request = new Request(WS.url(url).withTimeout(timeout), headers, services, accessLog)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
     val cr = new ClientResponseImpl(request, response)
@@ -152,7 +150,7 @@ case class HttpClientImpl(
     cr
   }
 
-  def longTimeout(): HttpClientImpl = copy(timeout = 2, timeoutUnit = TimeUnit.MINUTES)
+  def withTimeout(timeout: Int): HttpClientImpl = copy(timeout = 2)
 }
 
 private[net] class Request(val req: WSRequestHolder, headers: List[(String, String)], services: FortyTwoServices, accessLog: AccessLog) extends Logging {
