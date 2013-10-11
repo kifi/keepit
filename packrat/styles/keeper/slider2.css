@@ -261,6 +261,15 @@
 .kifi-private .kifi-slider2-kept-lock:active {
   background-color: #e77e76;
 }
+.kifi-tagged .kifi-slider2-kept-tag {
+  background-color: #8edf58;
+}
+.kifi-tagged .kifi-slider2-kept-tag:hover {
+  background-color: #a3e278;
+}
+.kifi-tagged .kifi-slider2-kept-tag:active {
+  background-color: #76dc32;
+}
 .kifi-slider2-keep-lock::before,
 .kifi-slider2-kept-lock::before,
 .kifi-slider2-kept-tag::before {
@@ -282,7 +291,8 @@
 .kifi-slider2-keep-lock:hover::before,
 .kifi-slider2-kept-lock:hover::before,
 .kifi-private .kifi-slider2-kept-lock::before,
-.kifi-slider2-kept-tag:hover::before {
+.kifi-slider2-kept-tag:hover::before,
+.kifi-tagged .kifi-slider2-kept-tag::before {
   opacity: 1;
 }
 .kifi-slider2-kept-tag {

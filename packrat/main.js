@@ -58,6 +58,31 @@ function clearDataCache() {
 function PageData() {
 }
 
+function indexOfTag(tags, tagId) {
+  for (var i = 0, len = tags.length; i < len; i++) {
+    if (tags[i].id === tagId) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function addTag(tags, tag) {
+  if (indexOfTag(tags, tag.id) === -1) {
+    return tags.push(tag);
+  }
+  return false;
+}
+
+function removeTag(tags, tagId) {
+  var index = indexOfTag(tags, tagId);
+  if (index !== -1) {
+    return tags.splice(index, 1)[0];
+  }
+  return false;
+}
+
+
 function ThreadData() {
 }
 ThreadData.prototype = {
@@ -376,18 +401,11 @@ var socketHandlers = {
   }
 };
 
-function eachTab(fn, that) {
-  return api.tabs.each(fn, that);
-}
 
-function emitAllTabs(name, data) {
-  return eachTab(function(tab) {
-    emitTab(tab, name, data);
+function emitAllTabs(name, data, options) {
+  return api.tabs.each(function(tab) {
+    api.tabs.emit(tab, name, data, options);
   });
-}
-
-function emitTab(tab, name, data, options) {
-  return api.tabs.emit(tab, name, data, options);
 }
 
 function emitTabsByUrl(url, name, data, options) {
@@ -396,8 +414,45 @@ function emitTabsByUrl(url, name, data, options) {
   });
 }
 
+function onAddTagResponse(result) {
+  if (result.success) {
+    var nUri = this.nUri,
+      d = pageData[nUri],
+      tag = result.response;
+    addTag(tags, tag);
+    addTag(d.tags, tag);
+    emitTabsByUrl(nUri, 'add_tag', tag);
+    emitTabsByUrl(nUri, 'tagged', {
+      tagged: true
+    });
+  }
+}
 
-function makeRequest(tab, name, method, url, data, callback) {
+function onRemoveTagResponse(tagId, result) {
+  if (result.success) {
+    var nUri = this.nUri,
+      d = pageData[nUri];
+    removeTag(d.tags, tagId);
+    emitTabsByUrl(nUri, 'remove_tag', {
+      id: tagId
+    });
+    emitTabsByUrl(nUri, 'tagged', {
+      tagged: d.tags.length
+    });
+  }
+}
+
+function onClearTagsResponse(result) {
+  if (result.success) {
+    var nUri = this.nUri;
+    pageData[nUri].tags.length = 0;
+    emitTabsByUrl(nUri, 'tagged', {
+      tagged: false
+    });
+  }
+}
+
+function makeRequest(name, method, url, data, callbacks) {
   log("[" + name + "]", data)();
   ajax(method, url, data, function(response) {
     log("[" + name + "] response:", response)();
@@ -406,9 +461,10 @@ function makeRequest(tab, name, method, url, data, callback) {
       response: response,
       data: data
     };
-    emitTabsByUrl(tab.nUri, name, result);
-    if (callback) {
-      callback(result);
+    if (callbacks) {
+      callbacks.forEach(function(callback) {
+        callback(result);
+      });
     }
   }, function(response) {
     log("[" + name + "] error:", response)();
@@ -417,9 +473,10 @@ function makeRequest(tab, name, method, url, data, callback) {
       response: response,
       data: data
     };
-    api.tabs.emit(tab, name, result);
-    if (callback) {
-      callback(result);
+    if (callbacks) {
+      callbacks.forEach(function(callback) {
+        callback(result);
+      });
     }
   });
 }
@@ -747,25 +804,25 @@ api.port.on({
     });
   },
   create_and_add_tag: function(name, respond, tab) {
-    makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
+    makeRequest("create_and_add_tag", "POST", "/tags/add", {
       name: name,
       url: tab.url
-    }, respond);
+    }, [onAddTagResponse.bind(tab), respond]);
   },
   add_tag: function(tagId, respond, tab) {
-    makeRequest(tab, "add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
+    makeRequest("add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
       url: tab.url
-    }, respond);
+    }, [onAddTagResponse.bind(tab), respond]);
   },
   remove_tag: function(tagId, respond, tab) {
-    makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
+    makeRequest("remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
       url: tab.url
-    }, respond);
+    }, [onRemoveTagResponse.bind(tab, tagId), respond]);
   },
   clear_tags: function(tagId, respond, tab) {
-    makeRequest(tab, "clear_tags", "POST", "/tags/clear", {
+    makeRequest("clear_tags", "POST", "/tags/clear", {
       url: tab.url
-    }, respond);
+    }, [onClearTagsResponse.bind(tab), respond]);
   },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
@@ -1127,7 +1184,8 @@ function kififyWithPageData(tab, d) {
   api.tabs.emit(tab, "init", {  // harmless if sent to same page more than once
     kept: d.kept,
     position: d.position,
-    hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive
+    hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive,
+    tags: d.tags
   }, {queue: 1});
 
   // consider triggering automatic keeper behavior on page to engage user (only once)
