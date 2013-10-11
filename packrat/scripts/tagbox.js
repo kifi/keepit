@@ -1,10 +1,10 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/underscore.js
-// @require scripts/lib/fuzzy-min.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
 // @require scripts/util.js
+// @require scripts/scorefilter.js
 // @require scripts/html/keeper/tagbox.js
 // @require scripts/html/keeper/tag-suggestion.js
 // @require scripts/html/keeper/tag-new.js
@@ -53,7 +53,7 @@ this.tagbox = (function ($, win) {
 		if (index === -1) {
 			tags.push(tag);
 		}
-		else {
+		else if (tag.name) {
 			tags[index].name = tag.name;
 		}
 		return index;
@@ -111,7 +111,7 @@ this.tagbox = (function ($, win) {
       */
 			case 'rename':
 				addTag(pageData.tags, tag);
-				tagbox.updateTagName(tagId, tag.name);
+				tagbox.updateTagName(tag);
 				break;
 			case 'remove':
 				removeTag(pageData.tags, tagId);
@@ -540,7 +540,7 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * Given an input string to match against,
-		 * it (fuzzy) filters and returns a new array of matched tags.
+		 * it (score) filters and returns a new array of matched tags.
 		 *
 		 * @param {string} text - An input string to match against
 		 * @param {Object[]} [tags] - An array of tags to search from
@@ -569,7 +569,7 @@ this.tagbox = (function ($, win) {
 					return [];
 				}
 				if (text) {
-					return win.fuzzy.filter(text, tags, options).map(extractData);
+					return win.scorefilter.filter(text, tags, options).map(extractData);
 				}
 				return tags;
 			};
@@ -953,12 +953,28 @@ this.tagbox = (function ($, win) {
 
 		updateTagName: function (tag) {
 			addTag(this.tags, tag);
-			var $tag = this.getTag$ById(tag.id);
+			this.updateTagName$(tag);
+		},
+
+		updateTagName$: function (tag) {
+			var tagId = tag.id,
+				name = tag.name,
+				$tag = this.getTag$ById(tagId);
 			if ($tag.length) {
-				var name = tag.name;
 				$tag.data('name', name);
 				$tag.find('.kifi-tagbox-tag-name').text(name);
 			}
+			/*
+      // TODO: @joon [10-11-2013 15:59] update suggestion tag
+			else {
+				$tag = this.getSuggestion$ById(tagId);
+				if ($tag.length) {
+					var name = tag.name;
+					$tag.data('name', name);
+					$tag.find('.kifi-tagbox-tag-name').text(name);
+				}
+			}
+        */
 		},
 
 		/**
