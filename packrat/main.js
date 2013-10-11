@@ -63,7 +63,9 @@ function indexOfTag(tags, tagId) {
 }
 
 function addTag(tags, tag) {
-  if (indexOfTag(tags, tag.id) === -1) {
+  var tagId = tag.id;
+  if (indexOfTag(tags, tagId) === -1) {
+    tagsById[tagId] = tag;
     return tags.push(tag);
   }
   return false;
@@ -72,6 +74,7 @@ function addTag(tags, tag) {
 function removeTag(tags, tagId) {
   var index = indexOfTag(tags, tagId);
   if (index !== -1) {
+    delete tagsById[tagId];
     return tags.splice(index, 1)[0];
   }
   return false;
@@ -786,18 +789,23 @@ api.port.on({
     awaitDeepLink(link, tab.id);
   },
   get_tags: function(_, respond, tab) {
-    var d = pageData[tab.nUri];
-    if (d) {
-      respond({
-        success: true,
-        response: {all: tags, page: d.tags}
-      });
+    var d = pageData[tab.nUri],
+      success = d ? true : false,
+      response = null;
+
+    if (success) {
+      response = {all: tags, page: d.tags};
 
       if (tabsTagging.length) {
-        tabsTagging = tabsTagging.filter(not(hasId(tab.id)));
+        tabsTagging = tabsTagging.filter(idIsNot(tab.id));
       }
       tabsTagging.push(tab);
     }
+
+    respond({
+      success: success,
+      response: response
+    });
   },
   create_and_add_tag: function(name, respond, tab) {
     makeRequest("create_and_add_tag", "POST", "/tags/add", {
@@ -827,19 +835,20 @@ api.port.on({
 });
 
 function onTagChangeFromServer(op, tag) {
+  var tagId = tag.id;
   switch (op) {
     case 'create':
     case 'rename':
-      if (tag.id in tagsById) {
-        tagsById[tag.id].name = tag.name;
+      if (tagId in tagsById) {
+        tagsById[tagId].name = tag.name;
       } else {
         tags.push(tag);
-        tagsById[tag.id] = tag;
+        tagsById[tagId] = tag;
       }
       break;
     case 'remove':
-      tags = tags.filter(idIsNot(tag.id));
-      delete tagsById[tag.id];
+      tags = tags.filter(idIsNot(tagId));
+      delete tagsById[tagId];
   }
   tabsTagging.forEach(function(tab) {
     api.tabs.emit(tab, 'tag_change', {op: op, tag: tag});
