@@ -63,21 +63,25 @@ function indexOfTag(tags, tagId) {
 }
 
 function addTag(tags, tag) {
-  var tagId = tag.id;
-  if (indexOfTag(tags, tagId) === -1) {
-    tagsById[tagId] = tag;
-    return tags.push(tag);
+  var tagId = tag.id,
+    old = tagsById[tagId];
+  if (old) {
+    if (tag.name) {
+      old.name = tag.name;
+    }
+    return 0;
   }
-  return false;
+
+  tagsById[tagId] = tag;
+  return tags.push(tag);
 }
 
 function removeTag(tags, tagId) {
-  var index = indexOfTag(tags, tagId);
-  if (index !== -1) {
+  if (tagId in tagsById) {
     delete tagsById[tagId];
-    return tags.splice(index, 1)[0];
+    return tags.splice(indexOfTag(tags, tagId), 1)[0];
   }
-  return false;
+  return null;
 }
 
 
