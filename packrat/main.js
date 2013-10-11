@@ -447,6 +447,7 @@ function onClearTagsResponse(result) {
   if (result.success) {
     var nUri = this.nUri;
     pageData[nUri].tags.length = 0;
+    emitTabsByUrl(nUri, 'clear_tags');
     emitTabsByUrl(nUri, 'tagged', {
       tagged: false
     });

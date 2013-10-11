@@ -48,26 +48,21 @@ this.tagbox = (function ($, win) {
 	}
 
 	function addTag(tags, tag) {
-		var tagId = tag.id;
-		if (indexOfTag(tags, tagId) === -1) {
-			return tags.push(tag);
+		var tagId = tag.id,
+			index = indexOfTag(tags, tagId);
+		if (index === -1) {
+			tags.push(tag);
 		}
-		return false;
+		else {
+			tags[index].name = tag.name;
+		}
+		return index;
 	}
 
 	function removeTag(tags, tagId) {
 		var index = indexOfTag(tags, tagId);
 		if (index !== -1) {
 			return tags.splice(index, 1)[0];
-		}
-		return false;
-	}
-
-	function updateTagName(tags, tagId, name) {
-		var tag = getTagById(tags, tagId);
-		if (tag) {
-			tag.name = name;
-			return tag;
 		}
 		return null;
 	}
@@ -80,6 +75,19 @@ this.tagbox = (function ($, win) {
 			tagbox.updateTagList();
 			tagbox.updateSuggestion();
 			tagbox.updateScroll();
+		},
+		'add_tag': function (tag) {
+			addTag(pageData.tags, tag);
+			win.tagbox.onAddResponse(tag);
+		},
+		'remove_tag': function (tag) {
+			var tagId = tag.id;
+			removeTag(pageData.tags, tagId);
+			win.tagbox.removeTag$ById(tagId);
+		},
+		'clear_tags': function () {
+			pageData.tags.length = 0;
+			win.tagbox.onClearTagsResponse();
 		},
 		'tag_change': function (o) {
 			var tagbox = win.tagbox,
@@ -102,7 +110,7 @@ this.tagbox = (function ($, win) {
         break;
       */
 			case 'rename':
-				updateTagName(pageData.tags, tagId, tag.name);
+				addTag(pageData.tags, tag);
 				tagbox.updateTagName(tagId, tag.name);
 				break;
 			case 'remove':
@@ -701,6 +709,7 @@ this.tagbox = (function ($, win) {
 			}
 
 			log('tagbox.suggest', text);
+
 			var tags = this.tags;
 			tags = this.filterOutAddedTags(tags);
 			tags = this.filterTagsByText(text, tags);
@@ -825,7 +834,7 @@ this.tagbox = (function ($, win) {
 
 			log('addTagById: request to server. tagId=' + tagId);
 			return this.requestAddTagById(tagId)
-				.then(this.onAddResponse.bind(this, tagId))
+				.then(this.onAddResponse.bind(this))
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 		},
@@ -942,14 +951,11 @@ this.tagbox = (function ($, win) {
 			return this.toggleClass('suggested', this.getInputValue() || this.$suggest.children().length);
 		},
 
-		updateTagName: function (tagId, name) {
-			var tag = updateTagName(this.tags, tagId, name);
-			if (tag) {
-				tag.normName = this.normalizeTagNameForSearch(name);
-			}
-
-			var $tag = this.getTag$ById(tagId);
+		updateTagName: function (tag) {
+			addTag(this.tags, tag);
+			var $tag = this.getTag$ById(tag.id);
 			if ($tag.length) {
+				var name = tag.name;
 				$tag.data('name', name);
 				$tag.find('.kifi-tagbox-tag-name').text(name);
 			}
@@ -1177,7 +1183,7 @@ this.tagbox = (function ($, win) {
 			this.tags.push(tag);
 
 			this.removeNewSuggestionByName(tag.name);
-			this.onAddResponse(tag.id, tag);
+			this.onAddResponse(tag);
 
 			return tag;
 		},
@@ -1189,19 +1195,19 @@ this.tagbox = (function ($, win) {
 		 *   Request Payload: {
 		 *     url: "my.keep.com"
 		 *   }
-		 *   Response: {}
+		 *   Response: {
+		 *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+		 *     "name":"hello"
+		 *   }
 		 */
-		onAddResponse: function (tagId, response) {
-			log('onAddResponse', response);
+		onAddResponse: function (tag) {
+			log('onAddResponse', tag);
+
+			var tagId = tag.id;
 
 			this.tagsAdded[tagId] = true;
 
 			this.removeSuggestionById(tagId);
-
-			var tag = this.getTagById(tagId);
-			if (!tag) {
-				throw new Error('Tag not found.');
-			}
 
 			return this.addTag$(tag);
 		},
