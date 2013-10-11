@@ -737,7 +737,7 @@ api.port.on({
       });
 
       if (tabsTagging.length) {
-        tabsTagging = tabsTagging.filter(not(hasId(tab.id)));
+        tabsTagging = tabsTagging.filter(idIsNot(tab.id));
       }
       tabsTagging.push(tab);
     }
