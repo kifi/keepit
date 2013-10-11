@@ -86,7 +86,8 @@ var tile = tile || function() {  // idempotent for Chrome
     reset: cleanUpDom.bind(null, true)
   });
   function onKeyDown(e) {
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey) {  // ⌘-shift-[key], ctrl-shift-[key]
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey) {  // ⌘-shift-[key], ctrl-shift-[key]
+      // intentionally ommited altKey
       switch (e.keyCode) {
       case 75: // k
         if (session === undefined) {  // not yet initialized
