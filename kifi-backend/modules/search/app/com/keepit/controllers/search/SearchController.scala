@@ -135,7 +135,7 @@ class SearchController @Inject()(
       Ok("Should not see that!")
     } catch {
       case e: Throwable =>
-        airbrake.notify(AirbrakeError(request, e))
+        airbrake.notify(AirbrakeError.incoming(request, e))
         Ok(s"handbrake error sent for $e")
     }
   }
