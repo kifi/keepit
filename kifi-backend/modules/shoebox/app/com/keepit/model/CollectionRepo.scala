@@ -7,6 +7,10 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import scala.Some
 import org.joda.time.DateTime
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
+import scala.util.Try
+import play.api.libs.json.Json
+import com.keepit.common.logging.Logging
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] {
@@ -23,9 +27,10 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
 @Singleton
 class CollectionRepoImpl @Inject() (
                                      val userCollectionsCache: UserCollectionsCache,
+                                     val elizaServiceClient: ElizaServiceClient,
                                      val db: DataBaseComponent,
                                      val clock: Clock)
-  extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] {
+  extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with Logging {
 
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
@@ -66,6 +71,15 @@ class CollectionRepoImpl @Inject() (
 
   override def save(model: Collection)(implicit session: RWSession): Collection = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
+    Try {
+      if (model.state == CollectionStates.INACTIVE) {
+        elizaServiceClient.sendToUser(model.userId, Json.arr("remove_tag", SendableTag.from(model)))
+      } else if (model.id == None) {
+        elizaServiceClient.sendToUser(model.userId, Json.arr("create_tag", SendableTag.from(model)))
+      } else {
+        elizaServiceClient.sendToUser(model.userId, Json.arr("rename_tag", SendableTag.from(model)))
+      }
+    }
     super.save(newModel)
   }
 

@@ -217,7 +217,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
   private def logResponse(timer: AccessLogTimer, method: String, isSuccess: Boolean, trackingId: String, body: Option[Any], resOpt: Option[Response]) = {
     //todo(eishay): the interesting part is the remote service and node id, to be logged
     val remoteHost = resOpt.map(_.header(CommonHeaders.LocalHost)).flatten.getOrElse("NA")
-    val remoteTime = resOpt.map(_.header(CommonHeaders.ResponseTime)).flatten.map(_.toLong).getOrElse(AccessLogTimer.NoLongValue)
+    val remoteTime = resOpt.map(_.header(CommonHeaders.ResponseTime)).flatten.map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
     val queryString = wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&"
     // waitTime map {t =>
     //   Statsd.timing(s"internalCall.remote.$remoteService.$remoteNodeId", t)

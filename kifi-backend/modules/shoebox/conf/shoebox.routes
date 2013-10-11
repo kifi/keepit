@@ -3,7 +3,7 @@ GET     /login                      securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
 # Relevant when we support traditional user signups:
-GET     /signup                     @com.keepit.controllers.core.AuthController.signup()
+GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 POST    /signup                     @com.keepit.controllers.core.AuthController.handleSignup()
 
 # OAuth provider entry points (e.g. "facebook")
@@ -14,6 +14,8 @@ GET     /login/:provider            @com.keepit.controllers.core.AuthController.
 POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider)
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
 POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
+GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
+POST    /signup/:provider           @com.keepit.controllers.core.AuthController.signupByPost(provider)
 POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 GET     /resetPassword              @com.keepit.controllers.core.AuthController.resetPasswordPage()

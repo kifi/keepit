@@ -55,7 +55,8 @@ class HomeController @Inject() (db: Database,
       Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
   }, unauthenticatedAction = { implicit request =>
-    Ok(views.html.website.welcome(passwordAuth = Play.isDev, authenticatedAs = request.identityOpt.map(SocialUser(_))))
+    val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
+    Ok(views.html.website.welcome(newSignup = newSignup))
   })
 
   def kifiSiteRedirect(path: String) = Action {
