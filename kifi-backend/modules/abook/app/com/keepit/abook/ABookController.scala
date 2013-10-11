@@ -2,7 +2,7 @@ package com.keepit.abook
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
-import com.keepit.common.controller.{ABookServiceController, ActionAuthenticator}
+import com.keepit.common.controller.{WebsiteController, ABookServiceController, ActionAuthenticator}
 import com.keepit.model._
 import com.keepit.common.db.Id
 import play.api.mvc.Action
@@ -12,6 +12,7 @@ import scala.Some
 import java.io.File
 import scala.collection.mutable
 import scala.io.Source
+import play.mvc.Http.Request
 
 class ABookController @Inject() (
   actionAuthenticator:ActionAuthenticator,
@@ -19,13 +20,14 @@ class ABookController @Inject() (
   s3:ABookRawInfoStore,
   abookInfoRepo:ABookInfoRepo,
   contactInfoRepo:ContactInfoRepo
-) extends ABookServiceController {
+) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
 
   private def toS3Key(userId:Id[User], origin:ABookOriginType) = s"${userId.id}_${origin.name}"
 
   // for testing only
-  def upload(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
+  def upload(origin:ABookOriginType) = AuthenticatedJsonAction(false, parse.json(maxLength = 1024 * 50000)) { request =>
+    val userId = request.userId
     val abookRawInfoRes = Json.fromJson[ABookRawInfo](request.body)
     val abookRawInfo = abookRawInfoRes.getOrElse(throw new Exception(s"Cannot parse ${request.body}"))
 
