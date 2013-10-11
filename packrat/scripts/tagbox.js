@@ -45,14 +45,14 @@ this.tagbox = (function ($, win) {
 		tag_change: function (o) {
 			switch (o.op) {
 			case 'create':
-			  // TODO
-			  break;
+				// TODO
+				break;
 			case 'rename':
-			  // TODO
-			  break;
+				// TODO
+				break;
 			case 'remove':
-			  // TODO
-			  break;
+				// TODO
+				break;
 			}
 		}
 	});
