@@ -134,5 +134,4 @@ class AccessLog @Inject() (clock: Clock) {
       Nil
     line.flatten.mkString("\t")
   }
-
 }

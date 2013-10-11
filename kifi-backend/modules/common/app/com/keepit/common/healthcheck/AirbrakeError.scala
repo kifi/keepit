@@ -31,13 +31,14 @@ object AirbrakeError {
           method = Some(request.method),
           headers = request.headers.toMap)
 
-  def outgoing(request: WSRequestHolder, exception: Throwable = new DefaultAirbrakeException(), message: String = ""): AirbrakeError =
+  def outgoing(request: WSRequestHolder, exception: Throwable = new DefaultAirbrakeException(), message: String = ""): AirbrakeError = {
     new AirbrakeError(
           exception = exception,
           message = if (message.trim.isEmpty) None else Some(message.take(MaxMessageSize)),
           url = Some(request.url.take(MaxMessageSize)),
           params = request.queryString,
           headers = request.headers)
+  }
 
   implicit def error(t: Throwable): AirbrakeError = AirbrakeError(t)
 
