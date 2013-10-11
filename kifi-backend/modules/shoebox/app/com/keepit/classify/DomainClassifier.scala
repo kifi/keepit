@@ -35,6 +35,7 @@ private[classify] class DomainClassificationActor @Inject() (
     extends FortyTwoActor(airbrake) {
 
   private final val KEY = "42go42"
+  private final val THREE_MINUTES = 3 * 60 * 1000
 
   private val servers = Seq("thor.komodia.com", "optimus.komodia.com", "rodimus.komodia.com")
 
@@ -53,7 +54,7 @@ private[classify] class DomainClassificationActor @Inject() (
     val id = encodeHex(md5).toLowerCase
     val encodedUrl = URLEncoder.encode(url, UTF8)
 
-    client.getFuture(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl", client.ignoreFailure).map { resp =>
+    client.withTimeout(THREE_MINUTES).getFuture(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl", client.ignoreFailure).map { resp =>
       (resp.body.split("~", 2).toList match {
         case ("FM" | "FR") :: tagString :: Nil =>
           // response is comma separated, but includes commas inside parentheses
