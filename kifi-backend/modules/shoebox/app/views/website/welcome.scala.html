@@ -1,6 +1,5 @@
 @(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None, msg: Option[String] = None,
-    skipLetMeIn: Boolean = false, passwordAuth: Boolean = false,
-    authenticatedAs: Option[securesocial.core.SocialUser] = None)
+    skipLetMeIn: Boolean = false, newSignup: Boolean = false)
 
 @helper.main(title = "Welcome to Kifi!", hiddenElements = Seq("header"), head = Html(s"""
     <meta property="og:url" content="https://www.kifi.com${id map (com.keepit.controllers.website.routes.InviteController.acceptInvite(_).url) getOrElse com.keepit.controllers.website.routes.HomeController.home()}">
@@ -15,55 +14,50 @@
     @msg.map { m =>
       <p class="error-message">@m</p>
     }.getOrElse {
-      @if(authenticatedAs.isEmpty) {
-        <p>Kifi is still in stealth mode and is open for<br>beta testers upon invitation only</p>
-      }
+      <p>Kifi is still in stealth mode and is open for<br>beta testers upon invitation only</p>
     }
 
-    @authenticatedAs.map { socialUser =>
-      <p class="authenticated-as">
-        Hi @socialUser.firstName!
-        You are currently logged in with @{SocialNetworkType(socialUser.identityId.providerId).displayName}.<br>
-        <a href="@com.keepit.controllers.core.routes.AuthController.signup()">Set up your Kifi account</a> or
-        <a href="@securesocial.controllers.routes.LoginPage.logout()">log out</a>.
-      </p>
-    }.getOrElse {
-      <div class="welcome_btn@if(skipLetMeIn){ clicked}">
-        <div class="letmein">
-          <a href="javascript:" class="big blue btn" id="letmein">
-            @if(id.isDefined && socialUser.isDefined) {
-              It's me, @socialUser.get.fullName.
-            }
-            Let me in!
+    <div class="welcome_btn@if(skipLetMeIn){ clicked}">
+      <div class="letmein">
+        <a href="javascript:" class="big blue btn" id="letmein">
+          @if(id.isDefined && socialUser.isDefined) {
+            It's me, @socialUser.get.fullName.
+          }
+          Let me in!
+        </a>
+      </div>
+      <div class="networks">
+      @for(network <- SocialNetworks.SUPPORTED.sortBy(network => !socialUser.exists(_.networkType == network))) {
+        @if(socialUser.isEmpty || socialUser.get.networkType == network) {
+          <a href="@com.keepit.controllers.core.routes.AuthController.login(network.name)" class="big blue btn">
+            Log in with @network.displayName
           </a>
-        </div>
-        <div class="networks">
-        @for(network <- SocialNetworks.SUPPORTED.sortBy(network => !socialUser.exists(_.networkType == network))) {
-          @if(socialUser.isEmpty || socialUser.get.networkType == network) {
-            <a href="@com.keepit.controllers.core.routes.AuthController.login(network.name)" class="big blue btn">
-              Log in with @network.displayName
-            </a>
-          } else {
-            <br>
-            <a href="@com.keepit.controllers.core.routes.AuthController.login(network.name)" class="btn">
-              I want to log in with @network.displayName instead
+          @if(newSignup) {
+            <a href="@com.keepit.controllers.core.routes.AuthController.signup(network.name)" class="big blue btn">
+              Sign up with @network.displayName
             </a>
           }
+        } else {
+          <br>
+          <a href="@com.keepit.controllers.core.routes.AuthController.login(network.name)" class="btn">
+            I want to log in with @network.displayName instead
+          </a>
         }
-        </div>
-        <div class="powered">Powered by Kifi Konnect</div>
-        @if(passwordAuth) {
-          <a href="javascript:" class="btn" id="userpass-login">Log in with username/password</a>
-          <div class="userpass">
-            <form method="post" action="@com.keepit.controllers.core.routes.AuthController.login("userpass")">
-              <input type="text" placeholder="Email Address" name="username"><br>
-              <input type="password" placeholder="Password" name="password"><br>
-              <input type="submit" value="Log in">
-            </form>
-          </div>
-        }
+      }
       </div>
-    }
+      @if(newSignup) {
+        <a href="javascript:" class="btn" id="userpass-login">Log in with email and password</a><br>
+        <a href="@com.keepit.controllers.core.routes.AuthController.signupPage()"
+          class="btn" id="userpass-login">Sign up with email and password</a>
+        <div class="userpass">
+          <form method="post" action="@com.keepit.controllers.core.routes.AuthController.login("userpass")">
+            <input type="text" placeholder="Email Address" name="username"><br>
+            <input type="password" placeholder="Password" name="password"><br>
+            <input type="submit" value="Log in">
+          </form>
+        </div>
+      }
+    </div>
   </section>
 }
 

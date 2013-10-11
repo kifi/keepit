@@ -141,7 +141,7 @@ case class HttpClientImpl(
   }
 
   private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, TimeUnit.MILLISECONDS))
-  private def req(url: String): Request = new Request(WS.url(url).withTimeout(timeout), headers, services, accessLog)
+  private def req(url: String): Request = new Request(WS.url(url).withTimeout(timeout), headers, services, accessLog, airbrake)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
     val cr = new ClientResponseImpl(request, response)
@@ -154,7 +154,8 @@ case class HttpClientImpl(
   def withTimeout(timeout: Int): HttpClientImpl = copy(timeout = timeout)
 }
 
-private[net] class Request(val req: WSRequestHolder, headers: List[(String, String)], services: FortyTwoServices, accessLog: AccessLog) extends Logging {
+private[net] class Request(val req: WSRequestHolder, headers: List[(String, String)],
+    services: FortyTwoServices, accessLog: AccessLog, airbrake: Provider[AirbrakeNotifier]) extends Logging {
 
   private val trackingId = RandomStringUtils.randomAlphanumeric(5)
   private val headersWithTracking =
@@ -165,7 +166,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.get()
     res.onComplete { resTry =>
-      logResponse(timer, "GET", resTry.isSuccess, trackingId, None, resTry.toOption)
+      logResponse(timer, "GET", resTry.isSuccess, trackingId, None, wsRequest, resTry.toOption)
     }(immediate)
     res
   }
@@ -174,7 +175,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.put(body)
     res.onComplete { resTry =>
-      logResponse(timer, "PUT", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
+      logResponse(timer, "PUT", resTry.isSuccess, trackingId, Some(body), wsRequest, resTry.toOption)
     }(immediate)
     res
   }
@@ -183,7 +184,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
+      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), wsRequest, resTry.toOption)
     }(immediate)
     res
   }
@@ -192,7 +193,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
+      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), wsRequest, resTry.toOption)
     }(immediate)
     res
   }
@@ -201,7 +202,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
+      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), wsRequest, resTry.toOption)
     }(immediate)
     res
   }
@@ -210,12 +211,14 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val timer = accessLog.timer(HTTP_OUT)
     val res = wsRequest.delete()
     res.onComplete { resTry =>
-      logResponse(timer, "DELETE", resTry.isSuccess, trackingId, None, resTry.toOption)
+      logResponse(timer, "DELETE", resTry.isSuccess, trackingId, None, wsRequest, resTry.toOption)
     }(immediate)
     res
   }
 
-  private def logResponse(timer: AccessLogTimer, method: String, isSuccess: Boolean, trackingId: String, body: Option[Any], resOpt: Option[Response]) = {
+  private def logResponse(
+        timer: AccessLogTimer, method: String, isSuccess: Boolean,
+        trackingId: String, body: Option[Any], req: WSRequestHolder, resOpt: Option[Response]) = {
     //todo(eishay): the interesting part is the remote service and node id, to be logged
     val remoteHost = resOpt.map(_.header(CommonHeaders.LocalHost)).flatten.getOrElse("NA")
     val remoteTime = resOpt.map(_.header(CommonHeaders.ResponseTime)).flatten.map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
@@ -224,7 +227,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     //   Statsd.timing(s"internalCall.remote.$remoteService.$remoteNodeId", t)
     //   Statsd.timing(s"internalCall.local.$localService.$localNodeId", t)
     // }
-    accessLog.add(timer.done(
+    val e = accessLog.add(timer.done(
         remoteTime = remoteTime,
         result = if(isSuccess) "success" else "fail",
         query = if(queryString.trim.isEmpty) null else queryString,
@@ -234,6 +237,16 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
         body = body.map(_.toString.take(200)).getOrElse(null),
         trackingId = trackingId,
         statusCode = resOpt.map(_.status).getOrElse(AccessLogTimer.NoIntValue)))
+
+    e.waitTime map {waitTime =>
+      if (waitTime > 50) {//ms
+        airbrake.get.notify(
+          AirbrakeError.outgoing(
+            request = req,
+            message = s"wait time $waitTime for ${accessLog.format(e)}")
+        )
+      }
+    }
   }
 }
 
