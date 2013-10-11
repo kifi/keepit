@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.model.{EmailAddressRepo, SocialUserInfoRepo, UserCredRepo}
-import com.keepit.social.{SocialId, SocialNetworks, UserIdentity}
+import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks, UserIdentity}
 
 import play.api.Play._
 import play.api.data.Forms._
@@ -19,6 +19,14 @@ import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
 import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
+
+sealed abstract class AuthType
+
+object AuthType {
+  case object Login extends AuthType
+  case object Signup extends AuthType
+  case object Link extends AuthType
+}
 
 class AuthController @Inject() (
     db: Database,
@@ -51,10 +59,12 @@ class AuthController @Inject() (
     } getOrElse NotFound(Json.obj("error" -> "user not found"))
   }
 
-  def login(provider: String) = getAuthAction(provider, isLogin = true)
-  def loginByPost(provider: String) = getAuthAction(provider, isLogin = true)
-  def link(provider: String) = getAuthAction(provider, isLogin = false)
-  def linkByPost(provider: String) = getAuthAction(provider, isLogin = false)
+  def login(provider: String) = getAuthAction(provider, AuthType.Login)
+  def loginByPost(provider: String) = getAuthAction(provider, AuthType.Login)
+  def link(provider: String) = getAuthAction(provider, AuthType.Link)
+  def linkByPost(provider: String) = getAuthAction(provider, AuthType.Link)
+  def signup(provider: String) = getAuthAction(provider, AuthType.Signup)
+  def signupByPost(provider: String) = getAuthAction(provider, AuthType.Signup)
 
   private def getSession(res: SimpleResult[_], refererAsOriginalUrl: Boolean = false)
       (implicit request: RequestHeader): Session = {
@@ -66,10 +76,15 @@ class AuthController @Inject() (
     originalUrlOpt map { url => sesh + (SecureSocial.OriginalUrlKey -> url) } getOrElse sesh
   }
 
-  private def getAuthAction(provider: String, isLogin: Boolean): Action[AnyContent] = Action { implicit request =>
+  private def getAuthAction(provider: String, authType: AuthType): Action[AnyContent] = Action { implicit request =>
     ProviderController.authenticate(provider)(request) match {
       case res: SimpleResult[_] =>
-        res.withSession(if (isLogin) getSession(res) - ActionAuthenticator.FORTYTWO_USER_ID else getSession(res, true))
+        res.withSession(authType match {
+          case AuthType.Login => getSession(res, false) - ActionAuthenticator.FORTYTWO_USER_ID
+          case AuthType.Signup => getSession(res, false) - ActionAuthenticator.FORTYTWO_USER_ID +
+            (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)
+          case AuthType.Link => getSession(res, true)
+        })
       case res => res
     }
   }
@@ -101,7 +116,7 @@ class AuthController @Inject() (
     (RegistrationInfo.unapply)
   )
 
-  def signup() = HtmlAction(true)(authenticatedAction = doSignupPage(_), unauthenticatedAction = doSignupPage(_))
+  def signupPage() = HtmlAction(true)(authenticatedAction = doSignupPage(_), unauthenticatedAction = doSignupPage(_))
 
   def handleSignup() = HtmlAction(true)(authenticatedAction = doSignup(_), unauthenticatedAction = doSignup(_))
 
@@ -109,6 +124,7 @@ class AuthController @Inject() (
     val identity = request.identityOpt
     Ok(views.html.website.signup(
       errorMessage = request.flash.get("error"),
+      network = identity.map(id => SocialNetworkType(id.identityId.providerId)),
       firstName = identity.map(_.firstName),
       lastName = identity.map(_.lastName),
       email = identity.flatMap(_.email)))
