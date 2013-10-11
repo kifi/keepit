@@ -125,7 +125,7 @@ class UriIntegrityActor @Inject()(
       
       urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MIGRATED)))
       val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
-      if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None))
+      if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
       
       handleScrapeInfo(oldUri, newUri)
       val oldUserBms = bookmarkRepo.getByUrlId(url.id.get).groupBy(_.userId)
