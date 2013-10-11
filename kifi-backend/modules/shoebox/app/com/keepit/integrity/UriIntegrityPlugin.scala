@@ -80,11 +80,13 @@ class UriIntegrityActor @Inject()(
   }
   
   private def handleScrapeInfo(oldUri: NormalizedURI, newUri: NormalizedURI)(implicit session: RWSession) = {
-    if (newUri.state == NormalizedURIStates.ACTIVE){    // otherwise, we have tried scraping. (we assume this new uri is not inactive or redirected)
-    val oldInfo = scrapeInfoRepo.getByUri(oldUri.id.get)
-    if (oldInfo.isDefined && oldInfo.get.state == ScrapeInfoStates.ACTIVE){
-      uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
-    }}
+    val (oldInfoOpt, newInfoOpt) = (scrapeInfoRepo.getByUri(oldUri.id.get), scrapeInfoRepo.getByUri(newUri.id.get))
+    (oldInfoOpt, newInfoOpt) match {
+      case (Some(oldInfo), None) if (oldInfo.state == ScrapeInfoStates.ACTIVE) => uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
+      case (Some(oldInfo), Some(newInfo)) if ( oldInfo.state == ScrapeInfoStates.ACTIVE && newInfo.state == ScrapeInfoStates.INACTIVE )  =>
+        uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
+      case _ =>
+    }
   }
   
 
