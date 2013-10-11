@@ -26,10 +26,11 @@ extends DefaultExtractor(url, maxContentChars, htmlMapper) {
   def getLinks(): Seq[Link] = linkHandler.getLinks
 
   private lazy val (linkedContent, linkedKeywords): (Seq[String], Seq[Option[String]]) = {
-    val linkedContentWithKeywords = for {
+    val relevantLinks = for {
       link <- getLinks()
       linkUrl <- processLink(link)
-    } yield {
+    } yield linkUrl
+    val linkedContentWithKeywords = relevantLinks.distinct.map { case linkUrl =>
       log.info(s"Scraping additional content from link ${linkUrl} for url ${url}")
       val extractor = new DefaultExtractor(linkUrl, maxContentChars, htmlMapper)
       val proxy = db.readOnly {implicit session => urlPatternRuleRepo.getProxy(linkUrl) }
@@ -39,9 +40,9 @@ extends DefaultExtractor(url, maxContentChars, htmlMapper) {
     linkedContentWithKeywords.unzip
   }
 
-  override def getContent(): String = (super.getContent() +: linkedContent).mkString("\n").take(maxContentChars)
+  override def getContent(): String = (super.getContent() +: linkedContent).mkString(" ● ● ● ").take(maxContentChars)
   override def getKeywords(): Option[String] = {
-    val keywords = (super.getKeywords() +: linkedKeywords).flatten.mkString(" | ")
+    val keywords = (super.getKeywords() +: linkedKeywords).flatten.mkString(" ● ● ● ")
     if (keywords.isEmpty) None else Some(keywords)
   }
 }
