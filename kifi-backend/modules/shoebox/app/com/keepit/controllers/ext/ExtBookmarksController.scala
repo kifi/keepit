@@ -75,9 +75,9 @@ class ExtBookmarksController @Inject() (
   def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     db.readWrite { implicit s =>
-      collectionRepo.getOpt(id).map(_.id.get) map { tagId =>
-        addTagToUrl(request.user, request.experiments, url, tagId)
-        Ok(Json.obj())
+      collectionRepo.getOpt(id) map { tag =>
+        addTagToUrl(request.user, request.experiments, url, tag.id.get)
+        Ok(Json.toJson(SendableTag from tag))
       } getOrElse {
         BadRequest(Json.obj("error" -> "noSuchTag"))
       }
