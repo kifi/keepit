@@ -1095,7 +1095,7 @@ this.tagbox = (function ($, win) {
 			var deferred = Q.defer();
 			api.port.emit(name, data, function (result) {
 				log(name + '.result', result);
-				if (result.success) {
+				if (result && result.success) {
 					deferred.resolve(result.response);
 				}
 				else {
