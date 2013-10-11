@@ -33,6 +33,45 @@ this.tagbox = (function ($, win) {
 		return win.log.apply(win, arguments)();
 	}
 
+	function indexOfTag(tags, tagId) {
+		for (var i = 0, len = tags.length; i < len; i++) {
+			if (tags[i].id === tagId) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	function getTagById(tags, tagId) {
+		var index = indexOfTag(tags, tagId);
+		return index === -1 ? null : tags[index];
+	}
+
+	function addTag(tags, tag) {
+		var tagId = tag.id;
+		if (indexOfTag(tags, tagId) === -1) {
+			return tags.push(tag);
+		}
+		return false;
+	}
+
+	function removeTag(tags, tagId) {
+		var index = indexOfTag(tags, tagId);
+		if (index !== -1) {
+			return tags.splice(index, 1)[0];
+		}
+		return false;
+	}
+
+	function updateTagName(tags, tagId, name) {
+		var tag = getTagById(tags, tagId);
+		if (tag) {
+			tag.name = name;
+			return tag;
+		}
+		return null;
+	}
+
 	// receive
 	api.port.on({
 		tags: function (tags) {
@@ -42,16 +81,37 @@ this.tagbox = (function ($, win) {
 			tagbox.updateSuggestion();
 			tagbox.updateScroll();
 		},
-		tag_change: function (o) {
+		'tag_change': function (o) {
+			var tagbox = win.tagbox,
+				tag = o.tag,
+				tagId = tag && tag.id;
+			log('tagbox', o.op, tag);
 			switch (o.op) {
 			case 'create':
-				// TODO
+				addTag(pageData.tags, tag);
+				addTag(tagbox.tags, tag);
+				tagbox.updateSuggestion();
+				tagbox.updateScroll();
 				break;
+				/*
+      case 'addToKeep':
+        // TODO: @joon [10-11-2013 01:14] 
+        break;
+      case 'removeFromKeep':
+        // TODO: @joon [10-11-2013 01:14] 
+        break;
+      */
 			case 'rename':
-				// TODO
+				updateTagName(pageData.tags, tagId, tag.name);
+				tagbox.updateTagName(tagId, tag.name);
 				break;
 			case 'remove':
-				// TODO
+				removeTag(pageData.tags, tagId);
+				removeTag(tagbox.tags, tagId);
+				tagbox.removeTag$ById(tagId);
+				tagbox.updateTagList();
+				tagbox.updateSuggestion();
+				tagbox.updateScroll();
 				break;
 			}
 		}
@@ -403,13 +463,7 @@ this.tagbox = (function ($, win) {
 		 * @return {number} An index of a tag. -1 if not found.
 		 */
 		indexOfTagById: function (tagId) {
-			var tags = this.tags;
-			if (tagId && tags) {
-				return util.keyOf(tags, function (tag) {
-					return tag.id === tagId;
-				});
-			}
-			return -1;
+			return indexOfTag(this.tags, tagId);
 		},
 
 		/**
@@ -451,8 +505,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A tag item. null if not found.
 		 */
 		getTagById: function (tagId) {
-			var index = this.indexOfTagById(tagId);
-			return index === -1 ? null : this.tags[index];
+			return getTagById(this.tags, tagId);
 		},
 
 		/**
@@ -889,6 +942,19 @@ this.tagbox = (function ($, win) {
 			return this.toggleClass('suggested', this.getInputValue() || this.$suggest.children().length);
 		},
 
+		updateTagName: function (tagId, name) {
+			var tag = updateTagName(this.tags, tagId, name);
+			if (tag) {
+				tag.normName = this.normalizeTagNameForSearch(name);
+			}
+
+			var $tag = this.getTag$ById(tagId);
+			if ($tag.length) {
+				$tag.data('name', name);
+				$tag.find('.kifi-tagbox-tag-name').text(name);
+			}
+		},
+
 		/**
 		 * Finds and removes a tag by its id
 		 *
@@ -897,6 +963,8 @@ this.tagbox = (function ($, win) {
 		 * @return {number} Number of elements removed
 		 */
 		removeTag$ById: function (tagId) {
+			delete this.tagsAdded[tagId];
+
 			var $el = this.getTag$ById(tagId),
 				len = $el.length;
 			if (len) {
@@ -1149,9 +1217,6 @@ this.tagbox = (function ($, win) {
 		 */
 		onRemoveResponse: function (tagId, response) {
 			log('onRemoveResponse', response);
-
-			delete this.tagsAdded[tagId];
-			//this.addSuggestionById(tagId);
 
 			return this.removeTag$ById(tagId);
 		},

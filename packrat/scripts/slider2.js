@@ -75,6 +75,8 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     log('[createSlider] kept: %s counts: %o', kept || 'no', counts)();
 
     var tagEnabled = session.experiments.indexOf('tagging') !== -1;
+    log('tagEnabled', tagEnabled)();
+    log('pageData', pageData.tags.length)();
 
     render('html/keeper/slider2', {
       'bgDir': api.url('images/keeper'),

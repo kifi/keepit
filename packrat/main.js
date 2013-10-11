@@ -851,8 +851,8 @@ function onTagChangeFromServer(op, tag) {
       delete tagsById[tagId];
   }
   tabsTagging.forEach(function(tab) {
-    api.tabs.emit(tab, 'tag_change', {op: op, tag: tag});
-  });
+    api.tabs.emit(tab, 'tag_change', this);
+  }, {op: op, tag: tag});
 }
 
 function removeNotificationPopups(associatedId) {
