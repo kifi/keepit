@@ -14,7 +14,7 @@ object SearchConfig {
     Map[String, String](
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
-      "concatBoost" -> "0.0",
+      "concatBoost" -> "0.8",
       "similarity" -> "default",
       "svWeightMyBookMarks" -> "1",
       "svWeightBrowsingHistory" -> "2",
