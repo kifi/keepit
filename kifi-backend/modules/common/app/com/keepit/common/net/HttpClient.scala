@@ -15,6 +15,7 @@ import play.mvc._
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin}
+import com.keepit.common.concurrent.ExecutionContext.immediate
 import com.keepit.common.controller.CommonHeaders
 import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
@@ -165,7 +166,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val res = wsRequest.get()
     res.onComplete { resTry =>
       logResponse(timer, "GET", resTry.isSuccess, trackingId, None, resTry.toOption)
-    }
+    }(immediate)
     res
   }
 
@@ -174,7 +175,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val res = wsRequest.put(body)
     res.onComplete { resTry =>
       logResponse(timer, "PUT", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
-    }
+    }(immediate)
     res
   }
 
@@ -183,7 +184,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
       logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
-    }
+    }(immediate)
     res
   }
 
@@ -192,7 +193,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
       logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
-    }
+    }(immediate)
     res
   }
 
@@ -201,7 +202,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
       logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
-    }
+    }(immediate)
     res
   }
 
@@ -210,7 +211,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
     val res = wsRequest.delete()
     res.onComplete { resTry =>
       logResponse(timer, "DELETE", resTry.isSuccess, trackingId, None, resTry.toOption)
-    }
+    }(immediate)
     res
   }
 
