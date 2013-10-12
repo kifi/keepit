@@ -63,25 +63,23 @@ function indexOfTag(tags, tagId) {
 }
 
 function addTag(tags, tag) {
-  var tagId = tag.id,
-    old = tagsById[tagId];
-  if (old) {
-    if (tag.name) {
-      old.name = tag.name;
-    }
-    return 0;
+  var index = indexOfTag(tags, tag.id);
+  if (index === -1) {
+    return tags.push(tag);
   }
 
-  tagsById[tagId] = tag;
-  return tags.push(tag);
+  if (tag.name) {
+    tags[index].name = tag.name;
+  }
+  return 0;
 }
 
 function removeTag(tags, tagId) {
-  if (tagId in tagsById) {
-    delete tagsById[tagId];
-    return tags.splice(indexOfTag(tags, tagId), 1)[0];
+  var index = indexOfTag(tags, tagId);
+  if (index === -1) {
+    return null;
   }
-  return null;
+  return tags.splice(index, 1)[0];
 }
 
 
@@ -424,8 +422,11 @@ function onAddTagResponse(result) {
     var nUri = this.nUri,
       d = pageData[nUri],
       tag = result.response;
-    addTag(tags, tag);
+    if (addTag(tags, tag)) {
+        tagsById[tag.id] = tag;
+    }
     addTag(d.tags, tag);
+    log('onAddTagResponse', tag, d.tags)();
     emitTabsByUrl(nUri, 'add_tag', tag);
     emitTabsByUrl(nUri, 'tagged', {
       tagged: true
@@ -438,6 +439,7 @@ function onRemoveTagResponse(tagId, result) {
     var nUri = this.nUri,
       d = pageData[nUri];
     removeTag(d.tags, tagId);
+    log('onRemoveTagResponse', tagId, d.tags)();
     emitTabsByUrl(nUri, 'remove_tag', {
       id: tagId
     });
@@ -451,6 +453,7 @@ function onClearTagsResponse(result) {
   if (result.success) {
     var nUri = this.nUri;
     pageData[nUri].tags.length = 0;
+    log('onClearTagsResponse', pageData[nUri].tags)();
     emitTabsByUrl(nUri, 'clear_tags');
     emitTabsByUrl(nUri, 'tagged', {
       tagged: false
