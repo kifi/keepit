@@ -1036,7 +1036,7 @@ $(function() {
 		hideCollMenu();
 		var $coll = $collMenu.closest(".collection");
 		var collId = $coll.data("id");
-		console.log("Removing collection", collId);
+		console.log("Removing tag", collId);
 		$.postJson(xhrBase + '/collections/' + collId + '/delete', {}, function(data) {
 			delete collections[collId];
 			$coll.slideUp(80, $.fn.remove.bind($coll));
@@ -1049,7 +1049,7 @@ $(function() {
 			var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
 			if ($pageColl.length) $pageColl.css("width", $pageColl[0].offsetWidth);
 			$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
-		}).error(showMessage.bind(null, 'Could not delete collection, please try again later'));
+		}).error(showMessage.bind(null, 'Could not delete tag, please try again later'));
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
 		if (e.which > 1 || !$collMenu.hasClass('showing')) return;
 		hideCollMenu();
@@ -1060,7 +1060,7 @@ $(function() {
 			}
 		});
 		var $name = $coll.find(".view-name"), name = $name.text();
-		var $in = $("<input type=text placeholder='Type new collection name'>").val(name).data("orig", name);
+		var $in = $("<input type=text placeholder='Type new tag name'>").val(name).data("orig", name);
 		$name.empty().append($in);
 		setTimeout(function() {
 			$in[0].setSelectionRange(0, name.length, "backward");
@@ -1078,7 +1078,7 @@ $(function() {
 							$main.find("h1").text(newName);
 						}
 					}).error(function() {
-						showMessage('Could not rename collection, please try again later');
+						showMessage('Could not rename tag, please try again later');
 						$name.text(oldName);
 					});
 				}
@@ -1181,6 +1181,7 @@ $(function() {
 				title = 'Your Keeps';
 				break;
 			case 'collection':
+			case 'tag':
 				title = collections[uri.substr(kind.length + 1)].name;
 				break;
 			case 'find':
@@ -1314,7 +1315,7 @@ $(function() {
 			$.postJson(xhrBase + '/collections/ordering', $(this).find(".collection").map(getDataId).get(), function(data) {
 				console.log(data);
 			}).error(function() {
-				showMessage('Could not reorder the collections, please try again later');
+				showMessage('Could not reorder the tags, please try again later');
 				// TODO: revert the re-order in the DOM
 			});
 		}
@@ -1373,7 +1374,7 @@ $(function() {
 				});
 			} else if (e.type === "blur") {
 				if ($newColl.is(":visible"))
-				// avoid back-to-back hide/show animations if "create collection" clicked again
+				// avoid back-to-back hide/show animations if "create tag" clicked again
 				hideNewCollTimeout = setTimeout(hide.bind(this), 300);
 			} else {
 				e.preventDefault();
@@ -1399,7 +1400,7 @@ $(function() {
 			collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
 			callback(data.id);
 		}).error(function() {
-			showMessage('Could not create collection, please try again later');
+			showMessage('Could not create tag, please try again later');
 			callback();
 		});
 	}
@@ -1425,7 +1426,7 @@ $(function() {
 					}
 				}
 			}).error(function() {
-				showMessage('Could not add to collection, please try again later');
+				showMessage('Could not add to tag, please try again later');
 				if (onError) onError();
 			});
 	}
@@ -1436,7 +1437,7 @@ $(function() {
 				var $titles = obliviate($keeps);
 				hideKeepDetails();
 				showUndo(
-					($keeps.length > 1 ? $keeps.length + ' Keeps' : 'Keep') + ' removed from this collection.',
+					($keeps.length > 1 ? $keeps.length + ' Keeps' : 'Keep') + ' removed from this tag.',
 					undoRemoveFromCollection.bind(null, collId, $keeps, $titles),
 					$.fn.remove.bind($keeps));
 			} else {
@@ -1446,7 +1447,7 @@ $(function() {
 				$pageColl.css("width", $pageColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
 			}
 			$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps -= data.removed);
-		}).error(showMessage.bind(null, 'Could not remove keep' + ($keeps.length > 1 ? 's' : '') + ' from collection, please try again later'));
+		}).error(showMessage.bind(null, 'Could not remove keep' + ($keeps.length > 1 ? 's' : '') + ' from tag, please try again later'));
 	}
 
 	function undoRemoveFromCollection(collId, $keeps, $titles) {
