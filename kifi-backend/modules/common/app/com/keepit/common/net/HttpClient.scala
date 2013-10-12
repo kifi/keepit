@@ -246,7 +246,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
             statusCode = res.status))
 
         e.waitTime map {waitTime =>
-          if (waitTime > 50) {//ms
+          if (waitTime > 100) {//ms
             airbrake.get.notify(
               AirbrakeError.outgoing(
                 request = req,
