@@ -13,7 +13,8 @@ CREATE TABLE abook_info (
 	raw_info_loc varchar(512),
 
 	PRIMARY KEY (id)
-);
+) -- DEFAULT CHARSET=utf8mb4
+;
 
 # --- !Downs
 
