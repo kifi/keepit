@@ -85,7 +85,14 @@
 
 	// Globals
 	"globals": {
+    // Kifi Globals
     "api": true,
+    "session": true,
+    "pageData": true,
+    "log": true,
+    "util": true,
+
+    // 3rd Party Libraries
     "Q": true,
     "_": true
   }

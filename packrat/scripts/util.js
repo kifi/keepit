@@ -184,6 +184,28 @@ var util = this.util = (function () {
 		 */
 		size: function (obj) {
 			return obj == null ? 0 : Object.keys(obj).length;
+		},
+
+		/**
+		 * Returns true if the first string starts with the second string.
+		 *
+		 * @param {string} str - A string to search from
+		 * @param {string} prefix - A prefix string
+		 * @return {boolean} Whether a string starts with the specified prefix
+		 */
+		startsWith: function (str, prefix) {
+			return str.lastIndexOf(prefix, 0) === 0;
+		},
+
+		/**
+		 * Returns true if the first string ends with the second string.
+		 *
+		 * @param {string} str - A string to search from
+		 * @param {string} suffix - A suffix string
+		 * @return {boolean} Whether a string ends with the specified suffix
+		 */
+		endsWith: function (str, suffix) {
+			return str.indexOf(suffix, str.length - suffix.length) !== -1;
 		}
 
 	};
