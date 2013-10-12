@@ -1,10 +1,10 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/underscore.js
-// @require scripts/lib/fuzzy-min.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
 // @require scripts/util.js
+// @require scripts/scorefilter.js
 // @require scripts/html/keeper/tagbox.js
 // @require scripts/html/keeper/tag-suggestion.js
 // @require scripts/html/keeper/tag-new.js
@@ -33,6 +33,40 @@ this.tagbox = (function ($, win) {
 		return win.log.apply(win, arguments)();
 	}
 
+	function indexOfTag(tags, tagId) {
+		for (var i = 0, len = tags.length; i < len; i++) {
+			if (tags[i].id === tagId) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	function getTagById(tags, tagId) {
+		var index = indexOfTag(tags, tagId);
+		return index === -1 ? null : tags[index];
+	}
+
+	function addTag(tags, tag) {
+		var tagId = tag.id,
+			index = indexOfTag(tags, tagId);
+		if (index === -1) {
+			tags.push(tag);
+		}
+		else if (tag.name) {
+			tags[index].name = tag.name;
+		}
+		return index;
+	}
+
+	function removeTag(tags, tagId) {
+		var index = indexOfTag(tags, tagId);
+		if (index !== -1) {
+			return tags.splice(index, 1)[0];
+		}
+		return null;
+	}
+
 	// receive
 	api.port.on({
 		tags: function (tags) {
@@ -42,17 +76,51 @@ this.tagbox = (function ($, win) {
 			tagbox.updateSuggestion();
 			tagbox.updateScroll();
 		},
-		tag_change: function (o) {
+		'add_tag': function (tag) {
+			addTag(win.tags, tag);
+			win.tagbox.onAddResponse(tag);
+		},
+		'remove_tag': function (tag) {
+			var tagId = tag.id;
+			removeTag(win.tags, tagId);
+			win.tagbox.removeTag$ById(tagId);
+		},
+		'clear_tags': function () {
+			win.tags.length = 0;
+			win.tagbox.onClearTagsResponse();
+		},
+		'tag_change': function (o) {
+			var tagbox = win.tagbox,
+				tag = o.tag,
+				tagId = tag && tag.id;
+			log('tagbox', o.op, tag);
 			switch (o.op) {
 			case 'create':
-			  // TODO
-			  break;
+				addTag(win.tags, tag);
+				addTag(tagbox.tags, tag);
+				tagbox.updateSuggestion();
+				tagbox.updateScroll();
+				break;
+				/*
+      case 'addToKeep':
+        // TODO: @joon [10-11-2013 01:14] 
+        break;
+      case 'removeFromKeep':
+        // TODO: @joon [10-11-2013 01:14] 
+        break;
+      */
 			case 'rename':
-			  // TODO
-			  break;
+				addTag(win.tags, tag);
+				tagbox.updateTagName(tag);
+				break;
 			case 'remove':
-			  // TODO
-			  break;
+				removeTag(win.tags, tagId);
+				removeTag(tagbox.tags, tagId);
+				tagbox.removeTag$ById(tagId);
+				tagbox.updateTagList();
+				tagbox.updateSuggestion();
+				tagbox.updateScroll();
+				break;
 			}
 		}
 	});
@@ -214,7 +282,7 @@ this.tagbox = (function ($, win) {
 
 			function onKeydown(e) {
 				var preventDefault = false;
-				if (e.metaKey || e.ctrlKey || e.shiftKey) {
+				if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
 					// not handling any special keys
 					return;
 				}
@@ -403,13 +471,7 @@ this.tagbox = (function ($, win) {
 		 * @return {number} An index of a tag. -1 if not found.
 		 */
 		indexOfTagById: function (tagId) {
-			var tags = this.tags;
-			if (tagId && tags) {
-				return util.keyOf(tags, function (tag) {
-					return tag.id === tagId;
-				});
-			}
-			return -1;
+			return indexOfTag(this.tags, tagId);
 		},
 
 		/**
@@ -451,8 +513,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A tag item. null if not found.
 		 */
 		getTagById: function (tagId) {
-			var index = this.indexOfTagById(tagId);
-			return index === -1 ? null : this.tags[index];
+			return getTagById(this.tags, tagId);
 		},
 
 		/**
@@ -479,7 +540,7 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * Given an input string to match against,
-		 * it (fuzzy) filters and returns a new array of matched tags.
+		 * it (score) filters and returns a new array of matched tags.
 		 *
 		 * @param {string} text - An input string to match against
 		 * @param {Object[]} [tags] - An array of tags to search from
@@ -508,7 +569,7 @@ this.tagbox = (function ($, win) {
 					return [];
 				}
 				if (text) {
-					return win.fuzzy.filter(text, tags, options).map(extractData);
+					return win.scorefilter.filter(text, tags, options).map(extractData);
 				}
 				return tags;
 			};
@@ -648,6 +709,7 @@ this.tagbox = (function ($, win) {
 			}
 
 			log('tagbox.suggest', text);
+
 			var tags = this.tags;
 			tags = this.filterOutAddedTags(tags);
 			tags = this.filterTagsByText(text, tags);
@@ -772,7 +834,7 @@ this.tagbox = (function ($, win) {
 
 			log('addTagById: request to server. tagId=' + tagId);
 			return this.requestAddTagById(tagId)
-				.then(this.onAddResponse.bind(this, tagId))
+				.then(this.onAddResponse.bind(this))
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 		},
@@ -889,6 +951,32 @@ this.tagbox = (function ($, win) {
 			return this.toggleClass('suggested', this.getInputValue() || this.$suggest.children().length);
 		},
 
+		updateTagName: function (tag) {
+			addTag(this.tags, tag);
+			this.updateTagName$(tag);
+		},
+
+		updateTagName$: function (tag) {
+			var tagId = tag.id,
+				name = tag.name,
+				$tag = this.getTag$ById(tagId);
+			if ($tag.length) {
+				$tag.data('name', name);
+				$tag.find('.kifi-tagbox-tag-name').text(name);
+			}
+			/*
+      // TODO: @joon [10-11-2013 15:59] update suggestion tag
+			else {
+				$tag = this.getSuggestion$ById(tagId);
+				if ($tag.length) {
+					var name = tag.name;
+					$tag.data('name', name);
+					$tag.find('.kifi-tagbox-tag-name').text(name);
+				}
+			}
+        */
+		},
+
 		/**
 		 * Finds and removes a tag by its id
 		 *
@@ -897,6 +985,8 @@ this.tagbox = (function ($, win) {
 		 * @return {number} Number of elements removed
 		 */
 		removeTag$ById: function (tagId) {
+			delete this.tagsAdded[tagId];
+
 			var $el = this.getTag$ById(tagId),
 				len = $el.length;
 			if (len) {
@@ -1021,7 +1111,7 @@ this.tagbox = (function ($, win) {
 			var deferred = Q.defer();
 			api.port.emit(name, data, function (result) {
 				log(name + '.result', result);
-				if (result.success) {
+				if (result && result.success) {
 					deferred.resolve(result.response);
 				}
 				else {
@@ -1109,7 +1199,7 @@ this.tagbox = (function ($, win) {
 			this.tags.push(tag);
 
 			this.removeNewSuggestionByName(tag.name);
-			this.onAddResponse(tag.id, tag);
+			this.onAddResponse(tag);
 
 			return tag;
 		},
@@ -1121,19 +1211,19 @@ this.tagbox = (function ($, win) {
 		 *   Request Payload: {
 		 *     url: "my.keep.com"
 		 *   }
-		 *   Response: {}
+		 *   Response: {
+		 *     "id":"dc76ee74-a141-4e96-a65f-e5ca58ddfe04",
+		 *     "name":"hello"
+		 *   }
 		 */
-		onAddResponse: function (tagId, response) {
-			log('onAddResponse', response);
+		onAddResponse: function (tag) {
+			log('onAddResponse', tag);
+
+			var tagId = tag.id;
 
 			this.tagsAdded[tagId] = true;
 
 			this.removeSuggestionById(tagId);
-
-			var tag = this.getTagById(tagId);
-			if (!tag) {
-				throw new Error('Tag not found.');
-			}
 
 			return this.addTag$(tag);
 		},
@@ -1149,9 +1239,6 @@ this.tagbox = (function ($, win) {
 		 */
 		onRemoveResponse: function (tagId, response) {
 			log('onRemoveResponse', response);
-
-			delete this.tagsAdded[tagId];
-			//this.addSuggestionById(tagId);
 
 			return this.removeTag$ById(tagId);
 		},

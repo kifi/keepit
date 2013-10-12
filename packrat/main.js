@@ -53,6 +53,36 @@ function clearDataCache() {
 function PageData() {
 }
 
+function indexOfTag(tags, tagId) {
+  for (var i = 0, len = tags.length; i < len; i++) {
+    if (tags[i].id === tagId) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function addTag(tags, tag) {
+  var index = indexOfTag(tags, tag.id);
+  if (index === -1) {
+    return tags.push(tag);
+  }
+
+  if (tag.name) {
+    tags[index].name = tag.name;
+  }
+  return 0;
+}
+
+function removeTag(tags, tagId) {
+  var index = indexOfTag(tags, tagId);
+  if (index === -1) {
+    return null;
+  }
+  return tags.splice(index, 1)[0];
+}
+
+
 function ThreadData() {
 }
 ThreadData.prototype = {
@@ -374,18 +404,11 @@ var socketHandlers = {
   }
 };
 
-function eachTab(fn, that) {
-  return api.tabs.each(fn, that);
-}
 
-function emitAllTabs(name, data) {
-  return eachTab(function(tab) {
-    emitTab(tab, name, data);
+function emitAllTabs(name, data, options) {
+  return api.tabs.each(function(tab) {
+    api.tabs.emit(tab, name, data, options);
   });
-}
-
-function emitTab(tab, name, data, options) {
-  return api.tabs.emit(tab, name, data, options);
 }
 
 function emitTabsByUrl(url, name, data, options) {
@@ -394,8 +417,51 @@ function emitTabsByUrl(url, name, data, options) {
   });
 }
 
+function onAddTagResponse(result) {
+  if (result.success) {
+    var nUri = this.nUri,
+      d = pageData[nUri],
+      tag = result.response;
+    if (addTag(tags, tag)) {
+        tagsById[tag.id] = tag;
+    }
+    addTag(d.tags, tag);
+    log('onAddTagResponse', tag, d.tags)();
+    emitTabsByUrl(nUri, 'add_tag', tag);
+    emitTabsByUrl(nUri, 'tagged', {
+      tagged: true
+    });
+  }
+}
 
-function makeRequest(tab, name, method, url, data, callback) {
+function onRemoveTagResponse(tagId, result) {
+  if (result.success) {
+    var nUri = this.nUri,
+      d = pageData[nUri];
+    removeTag(d.tags, tagId);
+    log('onRemoveTagResponse', tagId, d.tags)();
+    emitTabsByUrl(nUri, 'remove_tag', {
+      id: tagId
+    });
+    emitTabsByUrl(nUri, 'tagged', {
+      tagged: d.tags.length
+    });
+  }
+}
+
+function onClearTagsResponse(result) {
+  if (result.success) {
+    var nUri = this.nUri;
+    pageData[nUri].tags.length = 0;
+    log('onClearTagsResponse', pageData[nUri].tags)();
+    emitTabsByUrl(nUri, 'clear_tags');
+    emitTabsByUrl(nUri, 'tagged', {
+      tagged: false
+    });
+  }
+}
+
+function makeRequest(name, method, url, data, callbacks) {
   log("[" + name + "]", data)();
   ajax(method, url, data, function(response) {
     log("[" + name + "] response:", response)();
@@ -404,9 +470,10 @@ function makeRequest(tab, name, method, url, data, callback) {
       response: response,
       data: data
     };
-    emitTabsByUrl(tab.nUri, name, result);
-    if (callback) {
-      callback(result);
+    if (callbacks) {
+      callbacks.forEach(function(callback) {
+        callback(result);
+      });
     }
   }, function(response) {
     log("[" + name + "] error:", response)();
@@ -415,9 +482,10 @@ function makeRequest(tab, name, method, url, data, callback) {
       response: response,
       data: data
     };
-    api.tabs.emit(tab, name, result);
-    if (callback) {
-      callback(result);
+    if (callbacks) {
+      callbacks.forEach(function(callback) {
+        callback(result);
+      });
     }
   });
 }
@@ -729,39 +797,44 @@ api.port.on({
     awaitDeepLink(link, tab.id);
   },
   get_tags: function(_, respond, tab) {
-    var d = pageData[tab.nUri];
-    if (d) {
-      respond({
-        success: true,
-        response: {all: tags, page: d.tags}
-      });
+    var d = pageData[tab.nUri],
+      success = d ? true : false,
+      response = null;
+
+    if (success) {
+      response = {all: tags, page: d.tags};
 
       if (tabsTagging.length) {
         tabsTagging = tabsTagging.filter(idIsNot(tab.id));
       }
       tabsTagging.push(tab);
     }
+
+    respond({
+      success: success,
+      response: response
+    });
   },
   create_and_add_tag: function(name, respond, tab) {
-    makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
+    makeRequest("create_and_add_tag", "POST", "/tags/add", {
       name: name,
       url: tab.url
-    }, respond);
+    }, [onAddTagResponse.bind(tab), respond]);
   },
   add_tag: function(tagId, respond, tab) {
-    makeRequest(tab, "add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
+    makeRequest("add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
       url: tab.url
-    }, respond);
+    }, [onAddTagResponse.bind(tab), respond]);
   },
   remove_tag: function(tagId, respond, tab) {
-    makeRequest(tab, "remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
+    makeRequest("remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
       url: tab.url
-    }, respond);
+    }, [onRemoveTagResponse.bind(tab, tagId), respond]);
   },
   clear_tags: function(tagId, respond, tab) {
-    makeRequest(tab, "clear_tags", "POST", "/tags/clear", {
+    makeRequest("clear_tags", "POST", "/tags/clear", {
       url: tab.url
-    }, respond);
+    }, [onClearTagsResponse.bind(tab), respond]);
   },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
@@ -770,23 +843,24 @@ api.port.on({
 });
 
 function onTagChangeFromServer(op, tag) {
+  var tagId = tag.id;
   switch (op) {
     case 'create':
     case 'rename':
-      if (tag.id in tagsById) {
-        tagsById[tag.id].name = tag.name;
+      if (tagId in tagsById) {
+        tagsById[tagId].name = tag.name;
       } else {
         tags.push(tag);
-        tagsById[tag.id] = tag;
+        tagsById[tagId] = tag;
       }
       break;
     case 'remove':
-      tags = tags.filter(idIsNot(tag.id));
-      delete tagsById[tag.id];
+      tags = tags.filter(idIsNot(tagId));
+      delete tagsById[tagId];
   }
   tabsTagging.forEach(function(tab) {
-    api.tabs.emit(tab, 'tag_change', {op: op, tag: tag});
-  });
+    api.tabs.emit(tab, 'tag_change', this);
+  }, {op: op, tag: tag});
 }
 
 function removeNotificationPopups(associatedId) {
@@ -1143,7 +1217,8 @@ function kififyWithPageData(tab, d) {
   api.tabs.emit(tab, "init", {  // harmless if sent to same page more than once
     kept: d.kept,
     position: d.position,
-    hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive
+    hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive,
+    tags: d.tags
   }, {queue: 1});
 
   // consider triggering automatic keeper behavior on page to engage user (only once)
