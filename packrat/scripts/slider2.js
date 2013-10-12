@@ -74,8 +74,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"m":0}');
     log('[createSlider] kept: %s counts: %o', kept || 'no', counts)();
 
-    var tagEnabled = session.experiments.indexOf('tagging') !== -1;
-
     render('html/keeper/slider2', {
       'bgDir': api.url('images/keeper'),
       'isKept': kept,
@@ -84,8 +82,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       'messageCount': counts.m,
       'atNotices': '/notices' === locator,
       'atMessages': /^\/messages/.test(locator),
-      'isTagged': tagEnabled && tags.length,
-      'tagEnabled': tagEnabled
+      'isTagged': tags.length
     }, function (html) {
       // attach event bindings
       $slider = $(html);
