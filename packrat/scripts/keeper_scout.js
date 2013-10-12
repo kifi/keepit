@@ -7,7 +7,7 @@ function logEvent() {  // parameters defined in main.js
 }
 
 var session,
-  pageData = {};
+  tags = [];
 var tile = tile || function() {  // idempotent for Chrome
   'use strict';
   log("[keeper_scout]", location.hostname)();
@@ -28,20 +28,20 @@ var tile = tile || function() {  // idempotent for Chrome
     button_click: keeper.bind(null, "togglePane", "button"),
     auto_show: keeper.bind(null, "show", "auto"),
     init: function(o) {
-      pageData = o;
       var pos = o.position;
       if (pos) {
         tile.style.top = pos.top >= 0 ? pos.top + "px" : "auto";
         tile.style.bottom = pos.bottom >= 0 ? pos.bottom + "px" : "auto";
-        pageData.pos = JSON.stringify(pos);
+        tile.dataset.pos = JSON.stringify(pos);
         positionTile(pos);
       }
       tileCard.classList.add("kifi-0s");
       if (o.kept) {
-        pageData.kept = o.kept;
+        tile.dataset.kept = o.kept;
       } else {
         tile.removeAttribute("data-kept");
       }
+      tags = o.tags || [];
       window.addEventListener("resize", onResize);
       api.require(["styles/insulate.css", "styles/keeper/tile.css"], function() {
         if (!o.hide) {
@@ -53,7 +53,7 @@ var tile = tile || function() {  // idempotent for Chrome
     },
     kept: function(o) {
       if (o.kept) {
-        pageData.kept = o.kept;
+        tile.dataset.kept = o.kept;
       } else {
         tile.removeAttribute("data-kept");
       }
@@ -94,12 +94,12 @@ var tile = tile || function() {  // idempotent for Chrome
           whenSessionKnown.push(onKeyDown.bind(this, e));
         } else if (!session) {
           toggleLoginDialog();
-        } else if (pageData.kept) {
+        } else if (tile && tile.dataset.kept) {
           api.port.emit("unkeep", withUrls({}));
           tile.removeAttribute("data-kept");  // delete .dataset.kept fails in FF 21
         } else {
           api.port.emit("keep", withUrls({title: document.title, how: "public"}));
-          pageData.kept = "public";
+          if (tile) tile.dataset.kept = "public";
         }
         e.preventDefault();
         break;
@@ -127,7 +127,7 @@ var tile = tile || function() {  // idempotent for Chrome
     } else if (tileCount.parentNode) {
       tileCount.remove();
     }
-    pageData.counts = JSON.stringify(counts);
+    tile.dataset.counts = JSON.stringify(counts);
   }
 
   function toggleLoginDialog() {
@@ -176,7 +176,7 @@ var tile = tile || function() {  // idempotent for Chrome
   tile.id = "kifi-tile";
   tile.className = "kifi-root kifi-tile";
   tile.style.display = "none";
-  pageData.t0 = Date.now();
+  tile.dataset.t0 = Date.now();
   tile.innerHTML =
     "<div class=kifi-tile-card>" +
     "<div class=kifi-tile-keep></div>" +
@@ -200,7 +200,7 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function positionTile(pos) { // goal: as close to target position as possible while still in window
-    pos = pos || JSON.parse(pageData.pos || 0);
+    pos = pos || JSON.parse(tile && tile.dataset.pos || 0);
     if (!pos) return;
     var maxPos = window.innerHeight - 54;  // height (42) + margin-top (6) + margin-bottom (6)
     if (pos.bottom >= 0) {

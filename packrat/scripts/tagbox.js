@@ -77,16 +77,16 @@ this.tagbox = (function ($, win) {
 			tagbox.updateScroll();
 		},
 		'add_tag': function (tag) {
-			addTag(pageData.tags, tag);
+			addTag(win.tags, tag);
 			win.tagbox.onAddResponse(tag);
 		},
 		'remove_tag': function (tag) {
 			var tagId = tag.id;
-			removeTag(pageData.tags, tagId);
+			removeTag(win.tags, tagId);
 			win.tagbox.removeTag$ById(tagId);
 		},
 		'clear_tags': function () {
-			pageData.tags.length = 0;
+			win.tags.length = 0;
 			win.tagbox.onClearTagsResponse();
 		},
 		'tag_change': function (o) {
@@ -96,7 +96,7 @@ this.tagbox = (function ($, win) {
 			log('tagbox', o.op, tag);
 			switch (o.op) {
 			case 'create':
-				addTag(pageData.tags, tag);
+				addTag(win.tags, tag);
 				addTag(tagbox.tags, tag);
 				tagbox.updateSuggestion();
 				tagbox.updateScroll();
@@ -110,11 +110,11 @@ this.tagbox = (function ($, win) {
         break;
       */
 			case 'rename':
-				addTag(pageData.tags, tag);
+				addTag(win.tags, tag);
 				tagbox.updateTagName(tag);
 				break;
 			case 'remove':
-				removeTag(pageData.tags, tagId);
+				removeTag(win.tags, tagId);
 				removeTag(tagbox.tags, tagId);
 				tagbox.removeTag$ById(tagId);
 				tagbox.updateTagList();

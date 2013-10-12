@@ -42,7 +42,7 @@ object ABookOrigins {
   val ALL:Seq[ABookOriginType] = Seq(IOS, GMAIL)
 }
 
-case class ABookRawInfo(userId:Id[User], origin:ABookOriginType, contacts:JsArray)
+case class ABookRawInfo(userId:Option[Id[User]], origin:ABookOriginType, contacts:JsArray)
 
 object ABookRawInfo {
   import play.api.libs.functional.syntax._
@@ -50,7 +50,7 @@ object ABookRawInfo {
   import com.keepit.common.db.Id
 
   implicit val format = (
-    (__ \ 'userId).format(Id.format[User]) and
+      (__ \ 'userId).formatNullable(Id.format[User]) and
       (__ \ 'origin).format[String].inmap(ABookOriginType.apply _, unlift(ABookOriginType.unapply)) and
       (__ \ 'contacts).format[JsArray]
     )(ABookRawInfo.apply _, unlift(ABookRawInfo.unapply))
