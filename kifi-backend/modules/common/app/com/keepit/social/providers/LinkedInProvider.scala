@@ -38,13 +38,15 @@ class LinkedInProvider(application: Application)
           val firstName = (me \ FirstName).asOpt[String].getOrElse("")
           val lastName = (me \ LastName).asOpt[String].getOrElse("")
           val fullName = (me \ FormattedName).asOpt[String].getOrElse("")
+          val emailAddress = (me \ EmailAddress).asOpt[String]
           val avatarUrl = (me \ PictureUrl).asOpt[String]
 
           SocialUser(user).copy(
             identityId = IdentityId(userId, id),
             firstName = firstName,
             lastName = lastName,
-            fullName= fullName,
+            email = emailAddress,
+            fullName = fullName,
             avatarUrl = avatarUrl
           )
         }
@@ -59,7 +61,7 @@ class LinkedInProvider(application: Application)
 }
 
 object LinkedInProvider {
-  val Api = "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,formatted-name,picture-url)?format=json&oauth2_access_token="
+  val Api = "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,email-address,formatted-name,picture-url)?format=json&oauth2_access_token="
   val LinkedIn = "linkedin"
   val ErrorCode = "errorCode"
   val Message = "message"
@@ -68,6 +70,7 @@ object LinkedInProvider {
   val Id = "id"
   val FirstName = "firstName"
   val LastName = "lastName"
+  val EmailAddress = "emailAddress"
   val FormattedName = "formattedName"
   val PictureUrl = "pictureUrl"
 }

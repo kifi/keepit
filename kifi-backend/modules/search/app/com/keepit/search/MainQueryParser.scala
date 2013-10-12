@@ -47,6 +47,7 @@ class MainQueryParser(
     super.parse(queryText).map{ query =>
       val numTextQueries = textQueries.size
       if (numTextQueries <= 0) query
+      else if (numTextQueries > ProximityQuery.maxLength) query // too many terms, skip proximity and semantic vector
       else {
         val phrases = if (numTextQueries > 1 && phraseBoost > 0.0f) {
           val p = phraseDetector.detectAll(phTerms)

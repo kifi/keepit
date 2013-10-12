@@ -41,6 +41,19 @@ this.tagbox = (function ($, win) {
 			tagbox.updateTagList();
 			tagbox.updateSuggestion();
 			tagbox.updateScroll();
+		},
+		tag_change: function (o) {
+			switch (o.op) {
+			case 'create':
+			  // TODO
+			  break;
+			case 'rename':
+			  // TODO
+			  break;
+			case 'remove':
+			  // TODO
+			  break;
+			}
 		}
 	});
 

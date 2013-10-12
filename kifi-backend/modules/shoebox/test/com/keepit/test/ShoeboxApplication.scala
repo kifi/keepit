@@ -11,13 +11,14 @@ import java.io.File
 import play.utils.Threads
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.db.TestSlickModule
-import com.keepit.common.healthcheck.FakeHealthcheckModule
+import com.keepit.common.healthcheck.{FakeAirbrakeModule, FakeHealthcheckModule}
 import com.google.inject.util.Modules
 import com.google.inject.Module
 import com.keepit.common.cache.{HashMapMemoryCacheModule, ShoeboxCacheModule}
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.scraper.FakeScraperModule
 import com.keepit.normalizer.TestNormalizationServiceModule
+import com.keepit.eliza.TestElizaServiceClientModule
 
 class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Module])
   extends TestGlobal(defaultModules, overridingModules) {
@@ -33,6 +34,8 @@ class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Modul
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
     Seq(
+      TestElizaServiceClientModule(),
+      FakeAirbrakeModule(),
       FakeClockModule(),
       FakeHealthcheckModule(),
       TestFortyTwoModule(),
@@ -48,6 +51,8 @@ trait ShoeboxApplicationInjector extends ApplicationInjector with DbInjectionHel
 trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
   val mode = Mode.Test
   val module = Modules.combine(
+    TestElizaServiceClientModule(),
+    FakeAirbrakeModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
     TestSlickModule(TestDbInfo.dbInfo),

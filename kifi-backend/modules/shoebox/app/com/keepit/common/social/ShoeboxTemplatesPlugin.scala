@@ -14,8 +14,9 @@ class ShoeboxTemplatesPlugin(app: Application) extends DefaultTemplatesPlugin(ap
   override def getLoginPage[A](
       implicit request: Request[A], form: Form[(String, String)], msg: Option[String]): Html = {
     log.info(s"[getLoginPage] request=$request form=$form")
+    val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
     views.html.website.welcome(msg = msg.map(Messages(_)) orElse request.flash.get("error"),
-      skipLetMeIn = true, passwordAuth = Play.isDev)
+      skipLetMeIn = true, newSignup = newSignup)
   }
 
 }

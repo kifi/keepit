@@ -12,6 +12,7 @@ var hostRe = /^https?:\/\/([^\/]+)/;
 
 var tabsByUrl = {}; // by normalized url
 var tabsByLocator = {};
+var tabsTagging = [];
 var notificationsCallbacks = [];
 var threadDataCallbacks = {}; // by normalized url
 var threadCallbacks = {}; // by thread ID
@@ -29,12 +30,8 @@ var friends = [];
 var friendsById = {};
 var ruleSet = {};
 var urlPatterns = [];
-/*
-var tags = [];
-var tagsById = [];
-var tagsFetched = null;
-var tagsListeners = [];
-*/
+var tags;  // [] means user has none
+var tagsById;
 
 function clearDataCache() {
   log("[clearDataCache]")();
@@ -49,10 +46,8 @@ function clearDataCache() {
   friendsById = {};
   ruleSet = {};
   urlPatterns = [];
-  /*
-  tags = [];
-  tagsById = {};
-  */
+  tags = null;
+  tagsById = null;
 }
 
 function PageData() {
@@ -229,6 +224,9 @@ var socketHandlers = {
       friendsById[f.id] = f;
     }
   },
+  create_tag: onTagChangeFromServer.bind(null, 'create'),
+  rename_tag: onTagChangeFromServer.bind(null, 'rename'),
+  remove_tag: onTagChangeFromServer.bind(null, 'remove'),
   url_patterns: function(patterns) {
     log("[socket:url_patterns]", patterns)();
     urlPatterns = compilePatterns(patterns);
@@ -731,20 +729,18 @@ api.port.on({
     awaitDeepLink(link, tab.id);
   },
   get_tags: function(_, respond, tab) {
-    // TODO: return all tags from local cache
-    ajax('GET', '/tags', function(tags) {
-      log('[get_tags] response:', tags)();
-      var d = pageData[tab.nUri];
-      if (d) {
-        respond({
-          success: true,
-          response: {all: tags, page: d.tags}
-        });
+    var d = pageData[tab.nUri];
+    if (d) {
+      respond({
+        success: true,
+        response: {all: tags, page: d.tags}
+      });
+
+      if (tabsTagging.length) {
+        tabsTagging = tabsTagging.filter(idIsNot(tab.id));
       }
-    }, function(xhr) {
-      log('[get_tags] error:', xhr)();
-      respond({status: xhr.status});
-    });
+      tabsTagging.push(tab);
+    }
   },
   create_and_add_tag: function(name, respond, tab) {
     makeRequest(tab, "create_and_add_tag", "POST", "/tags/add", {
@@ -772,6 +768,26 @@ api.port.on({
     //reportError(data.message, data.url, data.lineNo);
   }
 });
+
+function onTagChangeFromServer(op, tag) {
+  switch (op) {
+    case 'create':
+    case 'rename':
+      if (tag.id in tagsById) {
+        tagsById[tag.id].name = tag.name;
+      } else {
+        tags.push(tag);
+        tagsById[tag.id] = tag;
+      }
+      break;
+    case 'remove':
+      tags = tags.filter(idIsNot(tag.id));
+      delete tagsById[tag.id];
+  }
+  tabsTagging.forEach(function(tab) {
+    api.tabs.emit(tab, 'tag_change', {op: op, tag: tag});
+  });
+}
 
 function removeNotificationPopups(associatedId) {
   emitAllTabs("remove_notification", associatedId);
@@ -1369,6 +1385,9 @@ api.tabs.on.unload.add(function(tab, historyApi) {
       delete tabsByLocator[loc];
     }
   }
+  if (tabsTagging.length) {
+    tabsTagging = tabsTagging.filter(idIsNot(tab.id));
+  }
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
   delete tab.nUri;
@@ -1474,25 +1493,16 @@ function getFriends() {
   });
 }
 
-
-/*
 function getTags() {
-  ajax("GET", "/tags", function(tagList) {
-    log("[getTags]", tagList)();
-    tagsFetched = Date.now();
-    tags = tagList;
-    tagsById = {};
-    for (var i = 0, l = tagList.length, tag; i < l; i++) {
-      var tag = tagList[i];
-      tagsById[tag.id] = tag;
-    }
-    for (i = 0, l = tagsListeners.length; i < l; i++) {
-      tagsListeners[i](tagList);
-    }
-    tagsListeners.length = 0;
+  ajax("GET", "/tags", function(arr) {
+    log("[getTags]", arr)();
+    tags = arr;
+    tagsById = tags.reduce(function(o, tag) {
+      o[tag.id] = tag;
+      return o;
+    }, {});
   });
 }
-*/
 
 function getPrefs() {
   ajax("GET", "/ext/prefs", function(o) {
@@ -1511,7 +1521,6 @@ function getRules() {
   });
 }
 
-
 // ===== Session management
 
 var session, socket, onLoadingTemp;
@@ -1519,7 +1528,7 @@ var session, socket, onLoadingTemp;
 function connectSync() {
   getRules();
   getFriends();
-  //getTags();
+  getTags();
   getPrefs();
 }
 

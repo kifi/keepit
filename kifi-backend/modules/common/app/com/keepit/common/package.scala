@@ -19,10 +19,19 @@ package object common {
     def tap(fun: A => Unit): A = withSideEffect(fun)
   }
 
-  implicit class SpiltCombinator[A, B](val a: A) extends AnyVal {
-    def split(t: A => Boolean)(y: A => B, z: A => B) = {
+  implicit class ForkCombinator[A, B](val a: A) extends AnyVal {
+    def fork(t: A => Boolean)(y: A => B, z: A => B) = {
       if (t(a)) y(a)
       else z(a)
+    }
+  }
+
+  implicit class Recoverable[A](f: => A) {
+    def recover(g: Throwable => A): A = {
+      try { f }
+      catch {
+        case t: Throwable => g(t)
+      }
     }
   }
 }
