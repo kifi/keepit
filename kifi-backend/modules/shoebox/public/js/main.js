@@ -1132,7 +1132,7 @@ $(function() {
 				navigate('');
 				showMyKeeps();
 				break;
-			case 'collection':
+			case 'tag':
 				$.when(promise.collections).done(function() {
 					var collId = parts[1];
 					if (collections[collId]) {
@@ -1140,7 +1140,7 @@ $(function() {
 							showMyKeeps(collId);
 						}
 					} else {
-						showMessage('Sorry, unable to view this collection.');
+						showMessage('Sorry, unable to view this tag.');
 						e.preventDefault();
 					}
 				});
