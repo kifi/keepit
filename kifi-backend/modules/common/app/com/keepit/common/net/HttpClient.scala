@@ -5,6 +5,7 @@ import com.google.inject.Provider
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.{Try, Success, Failure}
 import java.net.ConnectException
 import java.util.concurrent.TimeUnit
 import play.api.libs.concurrent.Execution.Implicits._
