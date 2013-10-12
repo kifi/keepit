@@ -114,7 +114,7 @@ class ShoeboxActionAuthenticator @Inject() (
     if (experiments.contains(ExperimentType.BLOCK) ||
       user.state == UserStates.BLOCKED ||
       user.state == UserStates.INACTIVE ||
-      (!allowPending && user.state == UserStates.PENDING)) {
+      (!allowPending && (user.state == UserStates.PENDING || user.state == UserStates.INCOMPLETE_SIGNUP))) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
       Forbidden(message)
