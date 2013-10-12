@@ -35,7 +35,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
 
   document.addEventListener('keydown', onKeyDown, true);
   function onKeyDown(e) {
-    if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) {  // esc
+    if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {  // esc
       var escHandler = $(document).data('esc');
       if (escHandler) {
         escHandler(e);
@@ -70,9 +70,13 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
   });
 
   function createSlider(callback, locator) {
-    var kept = tile && tile.dataset.kept;
-    var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"m":0}');
+    var kept = pageData.kept;
+    var counts = JSON.parse(pageData.counts || '{"n":0,"m":0}');
     log('[createSlider] kept: %s counts: %o', kept || 'no', counts)();
+
+    var tagEnabled = session.experiments.indexOf('tagging') !== -1;
+    log('tagEnabled', tagEnabled)();
+    log('pageData', pageData.tags.length)();
 
     render('html/keeper/slider2', {
       'bgDir': api.url('images/keeper'),
@@ -82,7 +86,8 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       'messageCount': counts.m,
       'atNotices': '/notices' === locator,
       'atMessages': /^\/messages/.test(locator),
-      'tagEnabled': session.experiments.indexOf('tagging') !== -1
+      'isTagged': tagEnabled && pageData.tags.length,
+      'tagEnabled': tagEnabled
     }, function (html) {
       // attach event bindings
       $slider = $(html);
@@ -276,7 +281,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     createSlider(function () {
       $slider.prependTo(tile);
 
-      logEvent("slider", "sliderShown", withUrls({trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0)}));
+      logEvent("slider", "sliderShown", withUrls({trigger: trigger, onPageMs: String(lastShownAt - pageData.t0)}));
       api.port.emit("keeper_shown");
 
       callback && callback();
@@ -314,7 +319,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     .off("transitionend")
     .on("transitionend", function (e) {
       if (e.target === this && e.originalEvent.propertyName == "opacity") {
-        var css = JSON.parse(tile.dataset.pos || 0);
+        var css = JSON.parse(pageData.pos || 0);
         if (css && !tile.style.top && !tile.style.bottom) {
           var y = css.top >= 0 ? window.innerHeight - css.top - 54 : (css.bottom || 0);
           css.transition = "none";
@@ -353,7 +358,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         $(tile).draggable("destroy");
         data.$dragGlass.remove();
         delete data.$dragGlass;
-        tile.dataset.pos = JSON.stringify(pos);
+        pageData.pos = JSON.stringify(pos);
         $(tile).css($.extend({top: "auto", bottom: "auto"}, pos));
         api.port.emit("set_keeper_pos", {host: location.hostname, pos: pos});
       }
@@ -710,7 +715,14 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
           .text(a[1] || "")
           .css("display", a[1] ? "" : "none");
       });
-    }});
+    },
+    tagged: function (o) {
+      var tagged = pageData.tagged = o.tagged ? true : false;
+      if ($slider) {
+        $slider.find('.kifi-slider2-keep-card').toggleClass('kifi-tagged', tagged);
+      }
+    }
+  });
 
   // the keeper API
   return {

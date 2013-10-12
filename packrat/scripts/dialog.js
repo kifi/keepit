@@ -61,7 +61,7 @@ var kifiDialog = function() {
 
       document.addEventListener("keydown", onKeyDown, true);
       function onKeyDown(e) {
-        if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+        if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
           removeDialog();
           return false;
         }
