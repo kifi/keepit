@@ -62,7 +62,7 @@ trait HttpClient {
 }
 
 case class HttpClientImpl(
-    timeout: Int = 1000,
+    timeout: Int = 10000,
     headers: List[(String, String)] = List(),
     healthcheckPlugin: HealthcheckPlugin,
     airbrake: Provider[AirbrakeNotifier],
