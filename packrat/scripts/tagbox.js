@@ -128,7 +128,7 @@ this.tagbox = (function ($, win) {
 	});
 
 	api.onEnd.push(function () {
-		win.tagbox.destroy();
+		win.tagbox.destroy('api:onEnd');
 		win.tagbox = null;
 	});
 
@@ -167,18 +167,21 @@ this.tagbox = (function ($, win) {
 		 * Renders and initializes a tag box if there is no live tag box available.
 		 *
 		 * @constructor
+		 *
+		 * @param {string} trigger - A triggering user action
 		 */
-		construct: function () {
-			log('construct');
+		construct: function (trigger) {
 			if (!this.$tagbox) {
-				this.init();
+				this.init(trigger);
 			}
 		},
 
 		/**
 		 * Renders and initializes a tag box.
+		 *
+		 * @param {string} trigger - A triggering user action
 		 */
-		init: function () {
+		init: function (trigger) {
 			this.active = true;
 			this.initTagBox();
 			this.initSuggest();
@@ -188,7 +191,10 @@ this.tagbox = (function ($, win) {
 			this.initClearAll();
 			this.initTags();
 			this.initScroll();
-			this.logEvent('init');
+
+			this.logEvent('init', {
+				trigger: trigger
+			});
 		},
 
 		/**
@@ -200,14 +206,13 @@ this.tagbox = (function ($, win) {
 
 			function onClick(e) {
 				if (!this.contains(e.target)) {
-					log('clickout');
 					e.tagboxClosed = true;
 					/*
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
           */
-					this.hide();
+					this.hide(this.getClickInfo(e, 'outside'));
 				}
 			}
 
@@ -300,7 +305,7 @@ this.tagbox = (function ($, win) {
 					break;
 				case KEY_ENTER:
 				case KEY_TAB:
-					this.select();
+					this.select(null, 'key:' + (e.which === KEY_ENTER ? 'enter' : 'tab'));
 					this.setInputValue();
 					preventDefault = true;
 					break;
@@ -324,15 +329,16 @@ this.tagbox = (function ($, win) {
 		})(),
 
 		handleEsc: function (e) {
-			log('esc');
 			e.preventDefault();
 			e.stopPropagation();
 			e.stopImmediatePropagation();
+			log('esc');
+
 			if (this.currentSuggestion) {
 				this.navigateTo(null, 'esc');
 			}
 			else {
-				this.hide();
+				this.hide('key:esc');
 			}
 		},
 
@@ -340,7 +346,9 @@ this.tagbox = (function ($, win) {
 		 * Add a close event listener to close button.
 		 */
 		initCloseIcon: function () {
-			this.$tagbox.on('click', '.kifi-tagbox-close', this.hide.bind(this));
+			this.$tagbox.on('click', '.kifi-tagbox-close', function (e) {
+				this.hide(this.getClickInfo(e, 'X'));
+			}.bind(this));
 		},
 
 		/**
@@ -368,6 +376,12 @@ this.tagbox = (function ($, win) {
 			var $tagList = this.$tagbox.find('.kifi-tagbox-tag-list-inner');
 			this.$tagList = $tagList;
 
+			this.$tagbox.on('click', '.kifi-tagbox-tag-name', function (e) {
+				this.logEvent('navigate', {
+					trigger: this.getClickInfo(e, 'tag')
+				});
+			}.bind(this));
+
 			$tagList.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
 
 			return $tagList;
@@ -377,7 +391,9 @@ this.tagbox = (function ($, win) {
 		 * Add a clear event listener to clear button.
 		 */
 		initClearAll: function () {
-			this.$tagbox.on('click', '.kifi-tagbox-clear', this.clearTags.bind(this));
+			this.$tagbox.on('click', '.kifi-tagbox-clear', function (e) {
+				this.clearTags(this.getClickInfo(e, 'clear'));
+			}.bind(this));
 		},
 
 		/**
@@ -397,7 +413,7 @@ this.tagbox = (function ($, win) {
 				.then(this.focusInput.bind(this))
 				.then(this.updateScroll.bind(this))
 				.fail(function (err) {
-				this.hide();
+				this.hide('error:failed to init');
 				throw err;
 			}.bind(this))
 				.fail(this.logError.bind(this));
@@ -431,6 +447,8 @@ this.tagbox = (function ($, win) {
 		/**
 		 * Destroys a tag box.
 		 * It removes all event listeners and caches to elements.
+		 *
+		 * @param {string} trigger - A triggering user action
 		 */
 		destroy: function (trigger) {
 			if (this.active) {
@@ -460,9 +478,9 @@ this.tagbox = (function ($, win) {
 				this.tagsBeingCreated = {};
 				this.busyTags = {};
 
-        this.logEvent('destroy', {
-          trigger: trigger
-        }, true);
+				this.logEvent('destroy', {
+					trigger: trigger
+				});
 			}
 		},
 
@@ -712,7 +730,7 @@ this.tagbox = (function ($, win) {
 				return;
 			}
 
-			log('suggest', text);
+			//log('suggest', text);
 
 			var tags = this.tags;
 			tags = this.filterOutAddedTags(tags);
@@ -816,7 +834,7 @@ this.tagbox = (function ($, win) {
 				trigger: trigger,
 				name: name,
 				input: this.getInputValue()
-			}, true);
+			});
 
 			return deferred;
 		},
@@ -857,7 +875,7 @@ this.tagbox = (function ($, win) {
 				trigger: trigger,
 				name: $suggestion.text(),
 				input: this.getInputValue()
-			}, true);
+			});
 
 			return deferred;
 		},
@@ -867,10 +885,11 @@ this.tagbox = (function ($, win) {
 		 * It sends a request to server to remove a tag and returns a deferred object.
 		 *
 		 * @param {string} tagId - A tag id
+		 * @param {string} trigger - A triggering user action
 		 *
 		 * @return {Object} A deferred promise object
 		 */
-		removeTagById: function (tagId) {
+		removeTagById: function (tagId, trigger) {
 			var $el = this.getTag$ById(tagId);
 			if (!$el.length) {
 				log('removeTagById', 'tag is not added', tagId);
@@ -884,11 +903,17 @@ this.tagbox = (function ($, win) {
 
 			this.addTagBusy(tagId, $el);
 
-			log('removeTagById', 'request to server', tagId);
-			return this.requestRemoveTagById(tagId)
+			var deferred = this.requestRemoveTagById(tagId)
 				.then(this.onRemoveResponse.bind(this, tagId))
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
+
+			this.logEvent('removeTag', {
+				trigger: trigger,
+				id: tagId
+			});
+
+			return deferred;
 		},
 
 		isTagBusy: function (tagId) {
@@ -1382,16 +1407,20 @@ this.tagbox = (function ($, win) {
 		 * @param {string} trigger - A triggering user action
 		 */
 		select: function ($suggestion, trigger) {
-			if (!($suggestion || ($suggestion = this.currentSuggestion))) {
-				var name = this.getInputValue();
-				if (name) {
-					var index = this.indexOfTagByName(name);
-					if (index === -1) {
-						return this.createTag(name, trigger);
+			if (!$suggestion) {
+				$suggestion = this.currentSuggestion;
+				if (!$suggestion) {
+					var name = this.getInputValue();
+					if (name) {
+						var index = this.indexOfTagByName(name);
+						if (index === -1) {
+							return this.createTag(name, trigger);
+						}
+
+						return this.addTagById(this.tags[index].id, null, trigger);
 					}
-					return this.addTagById(this.tags[index].id, null, trigger);
+					return null;
 				}
-				return null;
 			}
 
 			var data = $suggestion.data(),
@@ -1473,7 +1502,7 @@ this.tagbox = (function ($, win) {
 		 */
 		onClickSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
-			this.addTagById($suggestion.data('id'), $suggestion, 'click');
+			this.addTagById($suggestion.data('id'), $suggestion, this.getClickInfo(e, 'autocomplete'));
 		},
 
 		/**
@@ -1483,7 +1512,7 @@ this.tagbox = (function ($, win) {
 		 */
 		onClickNewSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-new');
-			this.createTag($suggestion.data('name'), 'click');
+			this.createTag($suggestion.data('name'), this.getClickInfo(e, 'new'));
 		},
 
 		/**
@@ -1515,18 +1544,26 @@ this.tagbox = (function ($, win) {
 		 */
 		onClickRemoveTag: function (e) {
 			var tagId = $(e.target).closest('.kifi-tagbox-tag').data('id');
-			this.removeTagById(tagId);
+			this.removeTagById(tagId, this.getClickInfo(e, 'X'));
 		},
 
 		/**
 		 * Clears all added tags from current keep.
 		 *
+		 * @param {string} trigger - A triggering user action
+		 *
 		 * @return {Object} A deferred promise object
 		 */
-		clearTags: function () {
-			return this.requestClearAll()
+		clearTags: function (trigger) {
+			var deferred = this.requestClearAll()
 				.then(this.onClearTagsResponse.bind(this))
 				.fail(this.logError.bind(this));
+
+			this.logEvent('clearTags', {
+				trigger: trigger
+			});
+
+			return deferred;
 		},
 
 		//
@@ -1542,44 +1579,52 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * Shows a tag box.
+		 *
+		 * @param {jQuery} $slider - A slider jQuery object
+		 * @param {string} trigger - A triggering user action
 		 */
-		show: function ($slider) {
+		show: function ($slider, trigger) {
 			this.$slider = $slider;
-			this.construct();
+			this.construct(trigger);
 		},
 
 		/**
 		 * Hides a tag box.
+		 *
+		 * @param {string} trigger - A triggering user action
 		 */
-		hide: function () {
-			this.destroy();
+		hide: function (trigger) {
+			this.destroy(trigger);
 		},
 
 		/**
 		 * It toggles (shows/hides) a tag box.
+		 *
+		 * @param {jQuery} $slider - A slider jQuery object
+		 * @param {string} trigger - A triggering user action
 		 */
-		toggle: function ($slider) {
+		toggle: function ($slider, trigger) {
 			if (this.active) {
-				this.hide();
+				this.hide(trigger);
 			}
 			else {
-				this.show($slider);
+				this.show($slider, trigger);
 			}
 		},
 
-		logEvent: function (name, o, isWithUrl) {
+		//
+		// HELPER FUNCTIONS
+		//
+
+		logEvent: function (name, o, notWithUrl) {
 			if (o) {
-				if (isWithUrl) {
+				if (!notWithUrl) {
 					o = win.withUrl(o);
 				}
 			}
 			log('logEvent', name, o);
 			return win.logEvent('tagbox', name, o || null);
 		},
-
-		//
-		// HELPER FUNCTIONS
-		//
 
 		/**
 		 * Logs error.
@@ -1588,7 +1633,25 @@ this.tagbox = (function ($, win) {
 		 */
 		logError: function (err) {
 			log('Error', err, err.message, err.stack);
-		}
+		},
+
+		getClickInfo: (function () {
+			function normalizeClass(className) {
+				if (className) {
+					className = className.replace(/\s+/g, ' ').trim();
+				}
+				return className ? '.' + className : '';
+			}
+
+			function getTargetInfo(el) {
+				return el ? (el.nodeName || '') + normalizeClass(el.className) : '';
+			}
+
+			return function (e, name) {
+				return 'click:' + name + '@' + getTargetInfo(e && e.target);
+			};
+		})()
+
 	};
 
 })(jQuery, this);
