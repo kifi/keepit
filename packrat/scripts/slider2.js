@@ -224,9 +224,11 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
           log('[tagbox:closed] ignore click event')();
           return;
         }
-        api.require("scripts/tagbox.js", function() {
+        var target = e.target,
+          clickEvent = target ? (target.nodeName || '') + '.' + (target.className || '') : '';
+        api.require('scripts/tagbox.js', function () {
           log('require:tagbox')();
-          tagbox.toggle($slider);
+          tagbox.toggle($slider, 'click:tagIcon@' + clickEvent);
         });
       }).bindHover(".kifi-slider2-x", function (configureHover) {
         this.style.overflow = "visible";
