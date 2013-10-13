@@ -30,7 +30,7 @@ this.tagbox = (function ($, win) {
 	var util = win.util;
 
 	function log(name) {
-		var args = Array.prototype.slice(arguments);
+		var args = Array.prototype.slice.call(arguments);
 		args[0] = '[tagbox.' + name + ']';
 		return win.log.apply(win, args)();
 	}
@@ -1616,13 +1616,13 @@ this.tagbox = (function ($, win) {
 		// HELPER FUNCTIONS
 		//
 
-		logEvent: function (name, o, notWithUrl) {
+		logEvent: function (name, o, notWithUrls) {
 			if (o) {
-				if (!notWithUrl) {
-					o = win.withUrl(o);
+				if (!notWithUrls) {
+					o = win.withUrls(o);
 				}
 			}
-			log('logEvent', name, o);
+			log(name, o);
 			return win.logEvent('tagbox', name, o || null);
 		},
 
@@ -1635,22 +1635,9 @@ this.tagbox = (function ($, win) {
 			log('Error', err, err.message, err.stack);
 		},
 
-		getClickInfo: (function () {
-			function normalizeClass(className) {
-				if (className) {
-					className = className.replace(/\s+/g, ' ').trim();
-				}
-				return className ? '.' + className : '';
-			}
-
-			function getTargetInfo(el) {
-				return el ? (el.nodeName || '') + normalizeClass(el.className) : '';
-			}
-
-			return function (e, name) {
-				return 'click:' + name + '@' + getTargetInfo(e && e.target);
-			};
-		})()
+		getClickInfo: function (e, name) {
+			return 'click:' + name + '@' + util.DOMtoString(e.target);
+		}
 
 	};
 
