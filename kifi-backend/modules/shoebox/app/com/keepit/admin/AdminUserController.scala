@@ -23,6 +23,8 @@ import views.html
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
+import java.math.BigInteger
+import java.security.SecureRandom
 
 case class UserStatistics(
     user: User,
@@ -187,10 +189,10 @@ class AdminUserController @Inject() (
     val contacts:Seq[ContactInfo] = Await.result(abookClient.getContactInfos(userId), 5 seconds)
     val abookInfos:Seq[ABookInfo] = Await.result(abookClient.getABookInfos(userId), 5 seconds)
     val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService()
-    val abookGmailCSVUploadEP = for (s <- abookServiceOpt) yield s"http://${s.instanceInfo.publicIp.ip}:9000/internal/abook/${user.id.get}/uploadGMailCSV"
+    val abookEP = for (s <- abookServiceOpt) yield s"http://${s.instanceInfo.publicIp.ip}:9000/internal/abook/"
 
     Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-      fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, abookGmailCSVUploadEP,
+      fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, abookEP,
       collections, collectionFilter))
   }
 

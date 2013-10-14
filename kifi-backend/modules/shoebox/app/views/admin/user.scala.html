@@ -14,8 +14,7 @@
   contactInfos: Seq[ContactInfo],
   abookEP: Option[String],
   collections: Seq[Collection],
-  collectionFilter: Option[Id[Collection]],
-  stateToken:String
+  collectionFilter: Option[Id[Collection]]
 )
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
