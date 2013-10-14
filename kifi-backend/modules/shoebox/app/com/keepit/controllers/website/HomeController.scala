@@ -58,7 +58,7 @@ class HomeController @Inject() (db: Database,
     }
   }, unauthenticatedAction = { implicit request =>
     val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
-    if (request.identityOpt.isDefined)
+    if (newSignup && request.identityOpt.isDefined)
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     else
       Ok(views.html.website.welcome(newSignup = newSignup))
