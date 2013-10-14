@@ -32,6 +32,15 @@ trait FortyTwoCachePlugin extends Plugin {
   def remove(key: String): Unit
   def set(key: String, value: Any, expiration: Int = 0): Unit
 
+  def bulkGet(keys: Set[String]): Map[String, Any] = {
+    keys.foldLeft(Map.empty[String, Any]){ (m, k) =>
+      get(k) match {
+        case Some(value) => (m + (k -> value))
+        case _ => m
+      }
+    }
+  }
+
   override def enabled = true
   override def toString = "Cache"
 }
@@ -56,6 +65,8 @@ class MemcachedCache @Inject() (
   def set(key: String, value: Any, expiration: Int = 0): Unit = future {
     cache.api.set(key, value, expiration)
   }
+
+  override def bulkGet(keys: Set[String]): Map[String, Any] = cache.bulkGet(keys)
 
   override def onStop() = cache.onStop()
 
