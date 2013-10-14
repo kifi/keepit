@@ -46,14 +46,21 @@
       }
       </div>
       @if(newSignup) {
-        <a href="javascript:" class="btn" id="userpass-login">Log in with email and password</a><br>
-        <a href="@com.keepit.controllers.core.routes.AuthController.signupPage()"
-          class="btn" id="userpass-login">Sign up with email and password</a>
-        <div class="userpass">
+        <a href="javascript:" class="btn" id="userpass_login">Log in with email and password</a><br>
+        <div class="userpass_login">
           <form method="post" action="@com.keepit.controllers.core.routes.AuthController.login("userpass")">
             <input type="text" placeholder="Email Address" name="username"><br>
             <input type="password" placeholder="Password" name="password"><br>
-            <input type="submit" value="Log in">
+            <input type="submit" class="blue btn" value="Log in">
+          </form>
+        </div>
+        <a href="javascript:" class="btn" id="userpass_signup">Sign up with email and password</a>
+        <div class="userpass_signup">
+          <form method="post" action="@com.keepit.controllers.core.routes.AuthController.handleUsernamePasswordSignup()">
+            <input type="text" placeholder="Email Address" name="email"><br>
+            <input type="password" placeholder="Password" name="password.1"><br>
+            <input type="password" placeholder="Confirm Password" name="password.2"><br>
+            <input type="submit" class="blue btn" value="Sign up">
           </form>
         </div>
       }
@@ -66,8 +73,11 @@ $(function() {
   $("#letmein").click(function() {
     $(".welcome_btn").addClass("clicked");
   });
-  $("#userpass-login").click(function() {
-    $(".userpass").addClass("clicked");
+  $("#userpass_login").click(function() {
+    $(".userpass_login").toggleClass("clicked");
+  });
+  $("#userpass_signup").click(function() {
+    $(".userpass_signup").toggleClass("clicked");
   });
 });
 </script>

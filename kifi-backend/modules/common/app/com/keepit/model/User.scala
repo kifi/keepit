@@ -70,5 +70,6 @@ class ExternalUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermos
 object UserStates extends States[User] {
   val PENDING = State[User]("pending")
   val BLOCKED = State[User]("blocked")
+  val INCOMPLETE_SIGNUP = State[User]("incomplete_signup")
 }
 

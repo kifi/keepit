@@ -45,6 +45,10 @@ object ActionAuthenticator {
       case ar: AuthenticatedRequest[_] => Some(ar.userId)
       case _ => None
     }
+    def userOpt: Option[User] = request match {
+      case ar: AuthenticatedRequest[_] => Some(ar.user)
+      case _ => None
+    }
   }
 }
 
