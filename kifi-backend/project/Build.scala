@@ -65,7 +65,8 @@ object ApplicationBuild extends Build {
       ExclusionRule(organization = "javax.jms"),
       ExclusionRule(organization = "com.sun.jdmk"),
       ExclusionRule(organization = "com.sun.jmx"),
-      ExclusionRule(organization = "org.jboss.netty")
+      ExclusionRule(organization = "org.jboss.netty"),
+      ExclusionRule(organization = "com.jolbox")
     ))
 
     val searchDependencies = Seq(
@@ -75,7 +76,8 @@ object ApplicationBuild extends Build {
     )
 
     val sqldbDependencies = Seq(
-      "mysql" % "mysql-connector-java" % "5.1.25"
+      "mysql" % "mysql-connector-java" % "5.1.25",
+      "com.jolbox" % "bonecp" % "0.8.0-rc3"
     )
 
     val shoeboxDependencies = Seq(
