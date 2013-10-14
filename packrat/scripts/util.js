@@ -206,7 +206,32 @@ var util = this.util = (function () {
 		 */
 		endsWith: function (str, suffix) {
 			return str.indexOf(suffix, str.length - suffix.length) !== -1;
-		}
+		},
+
+		/**
+		 * Returns a simple string representation of a DOM node as a combination of a tag name and class names.
+		 * e.g. "TAG_NAME.className1.className2..." for a DOM node.
+		 *
+		 * @param {DOMNode} node - a DOM node
+		 *
+		 * @return {string} a simple string representation of a DOM node
+		 */
+		DOMtoString: (function () {
+			function reduceClassName(res, name) {
+				return res + '.' + name;
+			}
+
+			function normalizeClass(className) {
+				if (className) {
+					className = className.trim().split(/\s+/).reduce(reduceClassName, '');
+				}
+				return className || '';
+			}
+
+			return function (el) {
+				return el ? (el.nodeName || '') + normalizeClass(el.className) : '';
+			};
+		})()
 
 	};
 
