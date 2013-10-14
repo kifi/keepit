@@ -7,7 +7,7 @@ POST     /internal/abook/:origin/upload                         @com.keepit.aboo
 POST     /internal/abook/:userId/:origin/upload                 @com.keepit.abook.ABookController.uploadJson(userId:Id[User], origin:ABookOriginType)
 POST     /internal/abook/:userId/uploadGMailCSV                 @com.keepit.abook.ABookController.uploadGMailCSV(userId:Id[User])
 GET      /internal/abook/:userId/getABookInfos                  @com.keepit.abook.ABookController.getABookInfos(userId:Id[User])
-GET      /internal/abook/:userId/getContactInfos                @com.keepit.abook.ABookController.getContactInfos(userId:Id[User])
+GET      /internal/abook/:userId/getContactInfos                @com.keepit.abook.ABookController.getContactInfos(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.ABookController.getABookRawInfos(userId:Id[User])
 GET      /internal/abook/:userId/:origin/getContactsRawInfo     @com.keepit.abook.ABookController.getContactsRawInfo(userId:Id[User], origin:ABookOriginType)
 
