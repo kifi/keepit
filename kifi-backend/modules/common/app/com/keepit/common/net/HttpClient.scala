@@ -15,7 +15,7 @@ import play.api.libs.ws._
 import play.mvc._
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin, StackTrace}
 import com.keepit.common.concurrent.ExecutionContext.immediate
 import com.keepit.common.controller.CommonHeaders
 import scala.xml._
@@ -165,60 +165,66 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
 
   def get() = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.get()
     res.onComplete { resTry =>
-      logResponse(timer, "GET", resTry, trackingId, None, wsRequest)
+      logResponse(timer, tracer, "GET", resTry, trackingId, None, wsRequest)
     }(immediate)
     res
   }
 
   def put(body: JsValue) = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.put(body)
     res.onComplete { resTry =>
-      logResponse(timer, "PUT", resTry, trackingId, Some(body), wsRequest)
+      logResponse(timer, tracer, "PUT", resTry, trackingId, Some(body), wsRequest)
     }(immediate)
     res
   }
 
   def post(body: String) = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry, trackingId, Some(body), wsRequest)
+      logResponse(timer, tracer, "POST", resTry, trackingId, Some(body), wsRequest)
     }(immediate)
     res
   }
 
   def post(body: JsValue) = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry, trackingId, Some(body), wsRequest)
+      logResponse(timer, tracer, "POST", resTry, trackingId, Some(body), wsRequest)
     }(immediate)
     res
   }
 
   def post(body: NodeSeq) = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry, trackingId, Some(body), wsRequest)
+      logResponse(timer, tracer, "POST", resTry, trackingId, Some(body), wsRequest)
     }(immediate)
     res
   }
 
   def delete() = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.delete()
     res.onComplete { resTry =>
-      logResponse(timer, "DELETE", resTry, trackingId, None, wsRequest)
+      logResponse(timer, tracer, "DELETE", resTry, trackingId, None, wsRequest)
     }(immediate)
     res
   }
 
   private def logResponse(
-        timer: AccessLogTimer, method: String, resTry: Try[Response],
+        timer: AccessLogTimer, tracer: StackTrace, method: String, resTry: Try[Response],
         trackingId: String, body: Option[Any], req: WSRequestHolder): Unit = {
     //todo(eishay): the interesting part is the remote service and node id, to be logged
     val queryString = (wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&").trim match {
@@ -266,7 +272,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
           error = e.toString))
         airbrake.get.notify(
           AirbrakeError.outgoing(
-            exception = e,
+            exception = tracer.withCause(e),
             request = req,
             message = s"error handling $al"
           )
