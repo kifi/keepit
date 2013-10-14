@@ -26,7 +26,13 @@ import com.keepit.common.service.FortyTwoServices
 import play.api.Logger
 
 case class NonOKResponseException(url: String, response: ClientResponse, requestBody: Option[Any] = None)
-    extends Exception(s"Requesting $url ${requestBody.map{b => b.toString}}, got a ${response.status}. Body: ${response.body}")
+    extends Exception(s"Requesting $url ${requestBody.map{b => b.toString}}, got a ${response.status}. Body: ${response.body}"){
+
+  override def toString: String =
+    s"NonOKResponseException[url: $url, Response: $response body:${requestBody.map(b => b.toString).getOrElse("NA")}]"
+
+}
+
 
 trait HttpClient {
 
@@ -289,6 +295,8 @@ trait ClientResponse {
 }
 
 class ClientResponseImpl(val request: Request, val response: Response) extends ClientResponse {
+
+  override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 
   def status: Int = response.status
 
