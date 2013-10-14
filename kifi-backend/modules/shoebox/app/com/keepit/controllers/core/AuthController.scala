@@ -197,8 +197,8 @@ class AuthController @Inject() (
             .map(emailRepo.saveWithVerificationCode)
             .get
         postOffice.sendMail(ElectronicMail(
-          from = EmailAddresses.NOTIFY,
-          to = Seq(new EmailAddressHolder { val address = email }),
+          from = EmailAddresses.NOTIFICATIONS,
+          to = Seq(GenericEmailAddress(email)),
           subject = "Confirm your email address for Kifi",
           htmlBody = s"Please confirm your email address by going to " +
               s"$url${routes.AuthController.verifyEmail(emailWithVerification.verificationCode.get)}",
@@ -328,8 +328,8 @@ class AuthController @Inject() (
       val verifiedEmailOpt = emailOpt.flatMap(emailRepo.getByAddressOpt(_)).map(emailRepo.saveWithVerificationCode)
       verifiedEmailOpt map { email =>
         postOffice.sendMail(ElectronicMail(
-          from = EmailAddresses.NOTIFY,
-          to = Seq(new EmailAddressHolder { val address = email.address }),
+          from = EmailAddresses.NOTIFICATIONS,
+          to = Seq(GenericEmailAddress(email.address)),
           subject = "Reset your password",
           htmlBody = s"You can set a new password by going to " +
               s"$url${routes.AuthController.setNewPassword(email.verificationCode.get)}",
