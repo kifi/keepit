@@ -33,6 +33,10 @@ case class NonOKResponseException(url: String, response: ClientResponse, request
 
 }
 
+case class LongWaitException(url: String, response: Response, waitTime: Int)
+    extends Exception(s"Requesting $url got a ${response.status} with wait time $waitTime"){
+}
+
 
 trait HttpClient {
 
@@ -259,9 +263,11 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
 
         e.waitTime map {waitTime =>
           if (waitTime > 100) {//ms
+            val exception = tracer.withCause(LongWaitException(req.url, res, waitTime))
             airbrake.get.notify(
               AirbrakeError.outgoing(
                 request = req,
+                exception = exception,
                 message = s"wait time $waitTime for ${accessLog.format(e)}")
             )
           }
