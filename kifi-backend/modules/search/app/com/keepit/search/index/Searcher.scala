@@ -1,6 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.search.SemanticVector
+import com.keepit.search.SemanticVector.Sketch
 import com.keepit.search.SemanticVectorComposer
 import com.keepit.search.query.IdSetFilter
 import com.keepit.search.query.QueryUtil._
@@ -67,7 +68,7 @@ class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[Inde
 
   def idf(term: Term) = getSimilarity.asInstanceOf[TFIDFSimilarity]idf(indexReader.docFreq(term), indexReader.maxDoc)
 
-  private[this] var svMap = Map.empty[Term, SemanticVector]
+  private[this] var sketchMap = Map.empty[Term, Sketch]
 
   // search: hits are ordered by score
   def search(query: Query): Seq[Hit] = {
@@ -176,27 +177,31 @@ class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[Inde
     composer
   }
 
-  def getSemanticVector(term: Term) = {
-    svMap.getOrElse(term, {
+  def getSemanticVectorSketch(term: Term): Sketch = {
+    sketchMap.getOrElse(term, {
       val composer = getSemanticVectorComposer(term)
-      val sv = {
-        if (composer.numInputs > 0) composer.getSemanticVector
-        else SemanticVector.vectorize(SemanticVector.getSeed(term.text))
-      }
-      svMap += (term -> sv)
-      sv
+      val sketch = if (composer.numInputs > 0) composer.getQuasiSketch else SemanticVector.getSeed(term.text)
+      sketchMap += (term -> sketch)
+      sketch
     })
   }
 
-  def getSemanticVector(terms: Set[Term]) = {
-    val sketch = terms.foldLeft(SemanticVector.emptySketch){ (sketch, term) =>
-      val composer = getSemanticVectorComposer(term)
-      val termSketch = if (composer.numInputs > 0) composer.getQuasiSketch else SemanticVector.getSeed(term.text)
-      SemanticVector.updateSketch(sketch, termSketch)
+  def getSemanticVectorSketch(terms: Set[Term]): Sketch = {
+    terms.foldLeft(SemanticVector.emptySketch){ (sketch, term) =>
+      SemanticVector.updateSketch(sketch, getSemanticVectorSketch(term))
       sketch
     }
-    SemanticVector.vectorize(sketch)
   }
+
+  def getSemanticVector(term: Term): SemanticVector = SemanticVector.vectorize(getSemanticVectorSketch(term))
+
+  def getSemanticVector(term: Term, contextSketch: Sketch, norm: Float): SemanticVector = {
+    val termSketch = getSemanticVectorSketch(term)
+    SemanticVector.updateSketch(termSketch, contextSketch, norm)
+    SemanticVector.vectorize(termSketch)
+  }
+
+  def getSemanticVector(terms: Set[Term]): SemanticVector = SemanticVector.vectorize(getSemanticVectorSketch(terms))
 
   def getSemanticVectorEnum(context: AtomicReaderContext, primaryTerm: Term, secondaryTerm: Term, acceptDocs: Bits) = {
     val primary = termPositionsEnum(context, primaryTerm, acceptDocs)
