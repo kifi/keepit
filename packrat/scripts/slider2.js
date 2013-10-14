@@ -225,7 +225,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
           return;
         }
 
-        if ($(e.target).closest('.kifi-slider2-keep-tag').length) {
+        if (this.classList.contains('kifi-slider2-keep-tag')) {
           keepPage('public');
         }
 
