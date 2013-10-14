@@ -60,6 +60,7 @@ class HomeController @Inject() (db: Database,
     val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
     if (newSignup && request.identityOpt.isDefined)
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
+        .flashing("error" -> "You have no Kifi account for this user. You can sign up here.")
     else
       Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
   })

@@ -4,9 +4,10 @@
 @helper.main(title = "Sign up for Kifi!", hiddenElements = Seq("header")) {
 <section class="content clearfix text_center welcome">
   <h1>Sign up for Kifi!</h1>
-  @network.map { network =>
+    @errorMessage.map { msg => <p class="error-message">@msg</p> }
+    @network.map { network =>
     <p>
-      You are currently logged in with @network.displayName, but you don't have an account yet.
+      You are currently logged in with @network.displayName.
       <a href="@securesocial.controllers.routes.LoginPage.logout()">Log out.</a>
     </p>
     <p>
@@ -14,7 +15,6 @@
       so you can share with all your @network.displayName connections who use Kifi!
     </p>
   }
-  @errorMessage.map { msg => <p class="error-message">@msg</p> }
   <form action="" method="post">
     <input type="text" name="firstname" value="@firstName" placeholder="First Name"><br>
     <input type="text" name="lastname" value="@lastName" placeholder="Last Name"><br>
