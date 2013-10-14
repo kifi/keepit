@@ -66,6 +66,12 @@ kifi-backend/modules/heimdal/.classpath
 kifi-backend/modules/heimdal/.project
 kifi-backend/modules/heimdal/.settings/*
 kifi-backend/modules/heimdal/.cache
+kifi-backend/modules/abook/.target/*
+kifi-backend/modules/abook/.classpath
+kifi-backend/modules/abook/.project
+kifi-backend/modules/abook/.settings/*
+kifi-backend/modules/abook/.cache
+
 
 # Compiled source #
 ###################
