@@ -7,7 +7,7 @@ import com.keepit.model._
 import com.keepit.common.db.Id
 import play.api.mvc.Action
 import com.keepit.abook.store.{ABookRawInfoStore}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsArray, JsValue, Json}
 import scala.Some
 import java.io.File
 import scala.collection.mutable
@@ -215,10 +215,11 @@ class ABookController @Inject() (
   }
 
   def getContactInfos(userId:Id[User]) = Action { request =>
-    val contactInfos = db.readOnly { implicit session =>
-      contactInfoRepo.getByUserIdIter(userId, 5000) // TODO: handle large sizes
-    }.toSeq // TODO: optimize
-    Ok(Json.toJson(contactInfos))
+    val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
+    db.readOnly { implicit session =>
+      contactInfoRepo.getByUserIdIter(userId, Int.MaxValue).foreach { jsonBuilder += Json.toJson(_) } // TODO: paging
+    }
+    Ok(JsArray(jsonBuilder.result))
   }
 
   def getABookRawInfos(userId:Id[User]) = Action { request =>
