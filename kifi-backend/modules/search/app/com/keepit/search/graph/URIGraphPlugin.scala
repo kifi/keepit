@@ -38,7 +38,7 @@ private[graph] class URIGraphActor @Inject() (
 }
 
 trait URIGraphPlugin extends SchedulingPlugin {
-  def update(): Future[Int]
+  def update()
   def reindex()
   def reindexCollection()
 }
@@ -62,7 +62,9 @@ class URIGraphPluginImpl @Inject() (
     uriGraph.close()
   }
 
-  override def update(): Future[Int] = actor.ref.ask(Update)(1 minutes).mapTo[Int]
+  override def update() {
+    actor.ref ! Update
+  }
 
   override def reindex() {
     uriGraph.reindex()
