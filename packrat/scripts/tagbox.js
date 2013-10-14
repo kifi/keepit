@@ -212,7 +212,7 @@ this.tagbox = (function ($, win) {
           e.stopPropagation();
           e.stopImmediatePropagation();
           */
-					this.hide(this.getClickInfo(e, 'outside'));
+					this.hide(this.getClickInfo('outside'));
 				}
 			}
 
@@ -346,8 +346,8 @@ this.tagbox = (function ($, win) {
 		 * Add a close event listener to close button.
 		 */
 		initCloseIcon: function () {
-			this.$tagbox.on('click', '.kifi-tagbox-close', function (e) {
-				this.hide(this.getClickInfo(e, 'X'));
+			this.$tagbox.on('click', '.kifi-tagbox-close', function () {
+				this.hide(this.getClickInfo('X'));
 			}.bind(this));
 		},
 
@@ -376,9 +376,9 @@ this.tagbox = (function ($, win) {
 			var $tagList = this.$tagbox.find('.kifi-tagbox-tag-list-inner');
 			this.$tagList = $tagList;
 
-			this.$tagbox.on('click', '.kifi-tagbox-tag-name', function (e) {
+			this.$tagbox.on('click', '.kifi-tagbox-tag-name', function () {
 				this.logEvent('navigate', {
-					trigger: this.getClickInfo(e, 'tag')
+					trigger: this.getClickInfo('tag')
 				});
 			}.bind(this));
 
@@ -391,8 +391,8 @@ this.tagbox = (function ($, win) {
 		 * Add a clear event listener to clear button.
 		 */
 		initClearAll: function () {
-			this.$tagbox.on('click', '.kifi-tagbox-clear', function (e) {
-				this.clearTags(this.getClickInfo(e, 'clear'));
+			this.$tagbox.on('click', '.kifi-tagbox-clear', function () {
+				this.clearTags(this.getClickInfo('clear'));
 			}.bind(this));
 		},
 
@@ -536,6 +536,19 @@ this.tagbox = (function ($, win) {
 		 */
 		getTagById: function (tagId) {
 			return getTagById(this.tags, tagId);
+		},
+
+		/**
+		 * Returns a tag name with the given tag id.
+		 * Returns null if not found.
+		 *
+		 * @param {string} tagId - An tag id to search for
+		 *
+		 * @return {string} A tag name. null if not found.
+		 */
+		getTagNameById: function (tagId) {
+			var tag = this.getTagById(tagId);
+			return tag ? tag.name || '' : null;
 		},
 
 		/**
@@ -832,8 +845,7 @@ this.tagbox = (function ($, win) {
 
 			this.logEvent('createTag', {
 				trigger: trigger,
-				name: name,
-				input: this.getInputValue()
+				name: name
 			});
 
 			return deferred;
@@ -873,7 +885,7 @@ this.tagbox = (function ($, win) {
 
 			this.logEvent('addTag', {
 				trigger: trigger,
-				name: $suggestion.text(),
+				name: this.getTagNameById(tagId),
 				input: this.getInputValue()
 			});
 
@@ -1502,7 +1514,7 @@ this.tagbox = (function ($, win) {
 		 */
 		onClickSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
-			this.addTagById($suggestion.data('id'), $suggestion, this.getClickInfo(e, 'autocomplete'));
+			this.addTagById($suggestion.data('id'), $suggestion, this.getClickInfo('autocomplete'));
 		},
 
 		/**
@@ -1512,7 +1524,7 @@ this.tagbox = (function ($, win) {
 		 */
 		onClickNewSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-new');
-			this.createTag($suggestion.data('name'), this.getClickInfo(e, 'new'));
+			this.createTag($suggestion.data('name'), this.getClickInfo('new'));
 		},
 
 		/**
@@ -1544,7 +1556,7 @@ this.tagbox = (function ($, win) {
 		 */
 		onClickRemoveTag: function (e) {
 			var tagId = $(e.target).closest('.kifi-tagbox-tag').data('id');
-			this.removeTagById(tagId, this.getClickInfo(e, 'X'));
+			this.removeTagById(tagId, this.getClickInfo('X'));
 		},
 
 		/**
@@ -1616,14 +1628,21 @@ this.tagbox = (function ($, win) {
 		// HELPER FUNCTIONS
 		//
 
-		logEvent: function (name, o, notWithUrls) {
-			if (o) {
-				if (!notWithUrls) {
-					o = win.withUrls(o);
+		/**
+		 * Logs a tagbox user event to the server.
+		 *
+		 * @param {string} name - A event type name
+		 * @param {Object} obj - A event data
+		 * @param {boolean} withUrls - Whether to include url
+		 */
+		logEvent: function (name, obj, withUrls) {
+			if (obj) {
+				if (!withUrls) {
+					obj = win.withUrls(obj);
 				}
 			}
-			log(name, o);
-			return win.logEvent('tagbox', name, o || null);
+			log(name, obj);
+			win.logEvent('slider', 'tagbox.' + name, obj || null);
 		},
 
 		/**
@@ -1635,8 +1654,20 @@ this.tagbox = (function ($, win) {
 			log('Error', err, err.message, err.stack);
 		},
 
-		getClickInfo: function (e, name) {
-			return 'click:' + name + '@' + util.DOMtoString(e.target);
+		/**
+		 * Returns a trigger string for event logging.
+		 *
+		 * @param {string} name - What is being clicked
+		 * @param {string} target - What element is being clicked
+		 *
+		 * @return {string} A trigger string
+		 */
+		getClickInfo: function (name, target) {
+			var res = 'click:' + name;
+			if (target) {
+				res += '@' + target;
+			}
+			return res;
 		}
 
 	};

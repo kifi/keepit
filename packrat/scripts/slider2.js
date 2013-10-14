@@ -6,7 +6,6 @@
 // @require scripts/lib/jquery-bindhover.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
-// @require scripts/util.js
 
 $.fn.layout = function () {
   'use strict';
@@ -226,10 +225,9 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
           return;
         }
 
-        var clickEvent = util.DOMtoString(e.target);
         api.require('scripts/tagbox.js', function () {
           log('require:tagbox')();
-          tagbox.toggle($slider, 'click:tagIcon@' + clickEvent);
+          tagbox.toggle($slider, 'click:tagIcon');
         });
       }).bindHover(".kifi-slider2-x", function (configureHover) {
         this.style.overflow = "visible";
