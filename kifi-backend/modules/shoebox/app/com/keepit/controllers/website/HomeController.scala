@@ -61,7 +61,7 @@ class HomeController @Inject() (db: Database,
     if (newSignup && request.identityOpt.isDefined)
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     else
-      Ok(views.html.website.welcome(newSignup = newSignup))
+      Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
   })
 
   def kifiSiteRedirect(path: String) = Action {
