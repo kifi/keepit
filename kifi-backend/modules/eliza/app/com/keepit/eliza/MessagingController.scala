@@ -157,7 +157,7 @@ class MessagingController @Inject() (
     Async(SafeFuture {
       val data : JsObject = request.body.asInstanceOf[JsObject]
 
-      val userIds  : Set[Id[User]] =  (data \ "userIds").as[JsArray].value.map(v => Id[User](v.as[Long])).toSet
+      val userIds  : Set[Id[User]] =  (data \ "userIds").as[JsArray].value.map(v => v.asOpt[Long].map(Id[User](_))).flatten.toSet
       val title    : String        =  (data \ "title").as[String]
       val body     : String        =  (data \ "body").as[String]
       val linkText : String        =  (data \ "linkText").as[String]
