@@ -219,10 +219,14 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         if (e.target === this) keepPage("private");
       }).on("click", ".kifi-slider2-kept-lock", function (e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
-      }).on("click", ".kifi-slider2-kept-tag", function(e) {
+      }).on("click", ".kifi-slider2-keep-tag, .kifi-slider2-kept-tag", function(e) {
         if (e.originalEvent.tagboxClosed) {
           log('[tagbox:closed] ignore click event')();
           return;
+        }
+
+        if (this.classList.contains('kifi-slider2-keep-tag')) {
+          keepPage('public');
         }
 
         api.require('scripts/tagbox.js', function () {
