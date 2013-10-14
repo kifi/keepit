@@ -236,7 +236,7 @@ class AuthController @Inject() (
 
     if (isConfirmation) {
       confirmationInfoForm.bindFromRequest.fold(
-        formWithErrors => Redirect(com.keepit.controllers.website.routes.HomeController.home()).flashing(
+        formWithErrors => Redirect(routes.AuthController.signupPage()).flashing(
           "error" -> "Form is invalid"
         ),
         { case ConfirmationInfo(firstName, lastName) =>
@@ -250,7 +250,7 @@ class AuthController @Inject() (
         })
     } else {
       registrationInfoForm.bindFromRequest.fold(
-        formWithErrors => Redirect(com.keepit.controllers.website.routes.HomeController.home()).flashing(
+        formWithErrors => Redirect(routes.AuthController.signupPage()).flashing(
           "error" -> "Form is invalid"
         ),
         { case RegistrationInfo(email, firstName, lastName, password) =>
