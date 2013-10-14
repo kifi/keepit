@@ -65,8 +65,7 @@ object ApplicationBuild extends Build {
       ExclusionRule(organization = "javax.jms"),
       ExclusionRule(organization = "com.sun.jdmk"),
       ExclusionRule(organization = "com.sun.jmx"),
-      ExclusionRule(organization = "org.jboss.netty"),
-      ExclusionRule(organization = "com.jolbox")
+      ExclusionRule(organization = "org.jboss.netty")
     ))
 
     val searchDependencies = Seq(
