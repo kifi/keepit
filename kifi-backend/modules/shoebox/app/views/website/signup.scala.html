@@ -4,8 +4,8 @@
 @helper.main(title = "Sign up for Kifi!", hiddenElements = Seq("header")) {
 <section class="content clearfix text_center welcome">
   <h1>Sign up for Kifi!</h1>
-    @errorMessage.map { msg => <p class="error-message">@msg</p> }
-    @network.map { network =>
+  @errorMessage.map { msg => <p class="error-message">@msg</p> }
+  @network.map { network =>
     <p>
       You are currently logged in with @network.displayName.
       <a href="@securesocial.controllers.routes.LoginPage.logout()">Log out.</a>
