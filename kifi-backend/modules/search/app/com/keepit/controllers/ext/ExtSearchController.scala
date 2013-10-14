@@ -19,12 +19,13 @@ import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.healthcheck.Healthcheck.SEARCH
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ExecutionContext
 import play.api.libs.json.Json
 import com.keepit.common.db.{ExternalId, Id}
 import com.newrelic.api.agent.NewRelic
 import com.newrelic.api.agent.Trace
 import play.modules.statsd.api.Statsd
-import com.keepit.social.BasicUser
 import scala.concurrent.Promise
 
 class ExtSearchController @Inject() (
@@ -51,13 +52,16 @@ class ExtSearchController @Inject() (
              tz: Option[String] = None,
              coll: Option[String] = None) = AuthenticatedJsonAction { request =>
 
-    val t1 = currentDateTime.getMillis()
+    val timing = new SearchTiming
 
     val userId = request.userId
-    log.info(s"""User ${userId} searched ${query.length} characters""")
+    val acceptLangs = request.request.acceptLanguages.map(_.code)
+    val noSearchExperiments = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
     // fetch user data in background
     fetchUserDataInBackground(shoeboxClient, userId)
+
+    log.info(s"""User ${userId} searched ${query.length} characters""")
 
     val searchFilter = filter match {
       case Some("m") =>
@@ -77,68 +81,72 @@ class ExtSearchController @Inject() (
         else SearchFilter.default(context)
     }
 
-    val (config, searchExperimentId) = searchConfigManager.getConfig(userId, query, request.experiments.contains(NO_SEARCH_EXPERIMENTS))
+    val (config, searchExperimentId) = searchConfigManager.getConfig(userId, query, noSearchExperiments)
 
     val lastUUID = lastUUIDStr.flatMap{
       case "" => None
       case str => Some(ExternalId[ArticleSearchResultRef](str))
     }
 
-    val t2 = currentDateTime.getMillis()
+    timing.factory
 
-    val probabilities = getLangsPriorProbabilities(request.request.acceptLanguages.map(_.code))
-    val searcher = timeWithStatsd("search-factory", "extSearch.factory") {
-      mainSearcherFactory(userId, query, probabilities, maxHits, searchFilter, config, lastUUID)
-    }
+    val probabilities = getLangsPriorProbabilities(acceptLangs)
+    val searcher = mainSearcherFactory(userId, query, probabilities, maxHits, searchFilter, config, lastUUID)
 
-    val t3 = currentDateTime.getMillis()
+    timing.search
 
-    val searchRes = timeWithStatsd("search-searching", "extSearch.searching") {
-      val searchRes = if (maxHits > 0) {
-        searcher.search()
-      } else {
-        log.warn("maxHits is zero")
-        val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-        ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue)
-      }
-
-      searchRes
+    val searchRes = if (maxHits > 0) {
+      searcher.search()
+    } else {
+      log.warn("maxHits is zero")
+      val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
+      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue)
     }
 
     val experts = if (filter.isEmpty && config.asBoolean("showExperts")) {
       suggestExperts(searchRes)
     } else { Promise.successful(List.empty[Id[User]]).future }
 
-    val t4 = currentDateTime.getMillis()
+    timing.decoration
 
     val decorator = ResultDecorator(searcher, shoeboxClient, config, monitoredAwait)
     val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, searchExperimentId, experts)
-    reportArticleSearchResult(searchRes)
 
-    val t5 = currentDateTime.getMillis()
-    val total = t5 - t1
+    timing.end
 
-    Statsd.timing("extSearch.postSearchTime", t5 - t4)
-    Statsd.timing("extSearch.total", total)
-    Statsd.increment("extSearch.total")
+    SafeFuture {
+      // stash timing information
+      try {
+        reportArticleSearchResult(searchRes)
+      } catch {
+        case e: Throwable => log.error("Could not persist article search result %s".format(res), e)
+      }
 
-    log.info(s"total search time = $total, pre-search time = ${t2 - t1}, search-factory time = ${t3 - t2}, main-search time = ${t4 - t3}, post-search time = ${t5 - t4}")
-    val searchDetails = searchRes.timeLogs match {
-      case Some(timelog) => "main-search detail: " + timelog.toString
-      case None => "main-search detail: N/A"
-    }
-    log.info(searchDetails)
+      Statsd.timing("extSearch.factory", timing.getFactoryTime)
+      Statsd.timing("extSearch.searching", timing.getSearchTime)
+      Statsd.timing("extSearch.postSearchTime", timing.getDecorationTime)
+      Statsd.timing("extSearch.total", timing.getTotalTime)
+      Statsd.increment("extSearch.total")
 
-    val timeLimit = 1000
-    // search is a little slow after service restart. allow some grace period
-    if (total > timeLimit && t5 - fortyTwoServices.started.getMillis() > 1000*60*8) {
-      val link = "https://admin.kifi.com/admin/search/results/" + searchRes.uuid.id
-      val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, total search time = $total, pre-search time = ${t2 - t1}, search-factory time = ${t3 - t2}, main-search time = ${t4 - t3}, post-search time = ${t5 - t4}." +
-        "\n More details at: \n" + link + "\n" + searchDetails + "\n"
-      healthcheckPlugin.addError(HealthcheckError(
-        error = Some(new SearchTimeExceedsLimit(timeLimit, total)),
-        errorMessage = Some(msg),
-        callType = SEARCH))
+      log.info(timing.toString)
+
+      val searchDetails = searchRes.timeLogs match {
+        case Some(timelog) => "main-search detail: " + timelog.toString
+        case None => "main-search detail: N/A"
+      }
+      log.info(searchDetails)
+
+      val timeLimit = 1000
+      // search is a little slow after service restart. allow some grace period
+      if (timing.getTotalTime > timeLimit && timing.timestamp - fortyTwoServices.started.getMillis() > 1000*60*8) {
+        val link = "https://admin.kifi.com/admin/search/results/" + searchRes.uuid.id
+        val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, ${timing.toString}." +
+            "\n More details at: \n" + link + "\n" + searchDetails + "\n"
+        healthcheckPlugin.addError(HealthcheckError(
+          error = Some(new SearchTimeExceedsLimit(timeLimit, timing.getTotalTime)),
+          errorMessage = Some(msg),
+          callType = SEARCH))
+      }
     }
 
     Ok(Json.toJson(res)).withHeaders("Cache-Control" -> "private, max-age=10")
@@ -159,12 +167,8 @@ class ExtSearchController @Inject() (
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
 
   private def reportArticleSearchResult(res: ArticleSearchResult) {
-    future {
-      shoeboxClient.reportArticleSearchResult(res)
-      articleSearchResultStore += (res.uuid -> res)
-    } onFailure { case e =>
-      log.error("Could not persist article search result %s".format(res), e)
-    }
+    shoeboxClient.reportArticleSearchResult(res)
+    articleSearchResultStore += (res.uuid -> res)
   }
 
   private[ext] def toPersonalSearchResultPacket(decorator: ResultDecorator, userId: Id[User],
@@ -208,6 +212,31 @@ class ExtSearchController @Inject() (
       shoeboxClient.getSearchFriends(userId)
       shoeboxClient.getBrowsingHistoryFilter(userId)
       shoeboxClient.getClickHistoryFilter(userId)
+    }
+  }
+
+  class SearchTiming{
+    val t1 = currentDateTime.getMillis()
+    var t2 = t1
+    var t3 = t1
+    var t4 = t1
+    var t5 = t1
+
+    def factory: Unit = { t2 = currentDateTime.getMillis }
+    def search: Unit = { t3 = currentDateTime.getMillis }
+    def decoration: Unit = { t4 = currentDateTime.getMillis }
+    def end: Unit = { t5 = currentDateTime.getMillis() }
+
+    def timestamp = t1
+
+    def getPreSearchTime = (t2 - t1)
+    def getFactoryTime = (t3 - t2)
+    def getSearchTime = (t4 - t3)
+    def getDecorationTime = (t5 - t4)
+    def getTotalTime: Long = (t5 - t1)
+
+    override def toString = {
+      s"total search time = $getTotalTime, pre-search time = $getPreSearchTime, search-factory time = $getFactoryTime, main-search time = $getSearchTime, post-search time = ${getDecorationTime}"
     }
   }
 }
