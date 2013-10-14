@@ -186,7 +186,7 @@ class AdminUserController @Inject() (
     val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
-    val contacts:Seq[ContactInfo] = Await.result(abookClient.getContactInfos(userId), 5 seconds)
+    val contacts:Seq[ContactInfo] = Await.result(abookClient.getContactInfos(userId, 500), 5 seconds)
     val abookInfos:Seq[ABookInfo] = Await.result(abookClient.getABookInfos(userId), 5 seconds)
     val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService()
     val abookEP = for (s <- abookServiceOpt) yield s"http://${s.instanceInfo.publicIp.ip}:9000/internal/abook/"
