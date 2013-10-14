@@ -214,12 +214,16 @@ class ABookController @Inject() (
     Ok(Json.toJson(stored))
   }
 
-  def getContactInfos(userId:Id[User]) = Action { request =>
+  def getContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
+    val ts = System.currentTimeMillis
     val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
     db.readOnly { implicit session =>
-      contactInfoRepo.getByUserIdIter(userId, Int.MaxValue).foreach { jsonBuilder += Json.toJson(_) } // TODO: paging
+      contactInfoRepo.getByUserIdIter(userId, maxRows).foreach { jsonBuilder += Json.toJson(_) } // TODO: paging or caching
     }
-    Ok(JsArray(jsonBuilder.result))
+    val contacts = jsonBuilder.result
+    val res = JsArray(contacts)
+    log.info(s"[getContactInfos($userId, $maxRows)] # of contacts returned: ${contacts.length} time-lapsed: ${System.currentTimeMillis - ts}")
+    Ok(res)
   }
 
   def getABookRawInfos(userId:Id[User]) = Action { request =>
