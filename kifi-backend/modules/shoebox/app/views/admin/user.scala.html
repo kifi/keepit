@@ -12,9 +12,11 @@
   emails: Seq[EmailAddress],
   abookInfos: Seq[ABookInfo],
   contactInfos: Seq[ContactInfo],
-  abookGMailCSVUploadEP: Option[String],
+  abookEP: Option[String],
   collections: Seq[Collection],
-  collectionFilter: Option[Id[Collection]])
+  collectionFilter: Option[Id[Collection]],
+  stateToken:String
+)
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
     <button class="btn" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>
@@ -147,11 +149,16 @@
         </table>
     </div>
   }
-  @if(abookGMailCSVUploadEP.isDefined) {
+  @if(abookEP.isDefined) {
     <h3>Upload Address book</h3>
     <h4>Gmail Exported (Outlook-styled) CSV -- 42-internal testing only!</h4>
-    <form class="form-inline" action="@abookGMailCSVUploadEP.get" enctype="multipart/form-data" method="POST">
+    <form class="form-inline" action=@{abookEP.get + user.id.get + "/uploadGMailCSV"} enctype="multipart/form-data" method="POST">
         Gmail CSV file to upload: <input type=file name="gmail_csv">
+        <input type=submit value="Upload">
+    </form>
+    <h4>IOS JSON file upload -- 42-internal testing only!</h4>
+    <form class="form-inline" action=@{abookEP.get + user.id.get + "/ios/upload"} enctype="multipart/form-data" method="POST">
+        IOS JSON file to upload: <input type=file name="abook_json">
         <input type=submit value="Upload">
     </form>
   }

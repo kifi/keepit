@@ -12,7 +12,6 @@ import scala.Some
 import java.io.File
 import scala.collection.mutable
 import scala.io.Source
-import play.mvc.Http.Request
 
 class ABookController @Inject() (
   actionAuthenticator:ActionAuthenticator,
@@ -28,8 +27,26 @@ class ABookController @Inject() (
   // for testing only
   def upload(origin:ABookOriginType) = AuthenticatedJsonAction(false, parse.json(maxLength = 1024 * 50000)) { request =>
     val userId = request.userId
-    val abookRawInfoRes = Json.fromJson[ABookRawInfo](request.body)
-    val abookRawInfo = abookRawInfoRes.getOrElse(throw new Exception(s"Cannot parse ${request.body}"))
+    val json = request.body
+    val abookRepoEntry = processUpload(userId, origin, json) // TODO: async
+    Ok(Json.toJson(abookRepoEntry))
+  }
+
+  // for testing only
+  def uploadJson(userId:Id[User], origin:ABookOriginType) = Action(parse.anyContent) { request =>
+    val jsonFilePart = request.body.asMultipartFormData.get.file("abook_json")
+    val jsonFile = File.createTempFile("abook_json", "json")
+    jsonFilePart.getOrElse(throw new IllegalArgumentException("form field ios_json not found")).ref.moveTo(jsonFile, true)
+    val jsonSrc = Source.fromFile(jsonFile)(io.Codec("UTF-8")).getLines.foldLeft("") { (a,c) => a + c }
+    log.info(s"[upload($userId, $origin)] jsonFile=$jsonFile jsonSrc=$jsonSrc")
+    val json = Json.parse(jsonSrc) // for testing
+    val abookInfoRepoEntry = processUpload(userId, origin, json)
+    Ok(Json.toJson(abookInfoRepoEntry))
+  }
+
+  private def processUpload(userId: Id[User], origin: ABookOriginType, json: JsValue): ABookInfo = {
+    val abookRawInfoRes = Json.fromJson[ABookRawInfo](json)
+    val abookRawInfo = abookRawInfoRes.getOrElse(throw new Exception(s"Cannot parse ${json}"))
 
     val s3Key = toS3Key(userId, origin)
     s3 += (s3Key -> abookRawInfo) // TODO: put on queue
@@ -37,56 +54,68 @@ class ABookController @Inject() (
 
     // TODO: cache (if needed)
 
-    val abookRepoEntry = db.readWrite { implicit session =>
-      val abook = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key))
-      val oldVal = abookInfoRepo.findByUserIdAndOriginOpt(userId, abookRawInfo.origin)
-      val entry = oldVal match {
-        case Some(e) => {
-          log.info(s"[upload] old entry for userId=$userId and origin=${abookRawInfo.origin} already exists: $oldVal")
-          e
+    val abookRepoEntry = db.readWrite {
+      implicit session =>
+        val abook = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key))
+        val oldVal = abookInfoRepo.findByUserIdAndOriginOpt(userId, abookRawInfo.origin)
+        val entry = oldVal match {
+          case Some(abookInfoEntry) => {
+            log.info(s"[upload] old entry for userId=$userId and origin=${abookRawInfo.origin} already exists: $oldVal")
+            db.readWrite {
+              implicit session =>
+                val deletedRows = contactInfoRepo.deleteByUserIdAndABookInfo(userId, abookInfoEntry.id.get) // TODO:REVISIT
+                log.info(s"[upload] # of rows deleted=$deletedRows")
+            }
+            abookInfoEntry
+          }
+          case None => {
+            val saved = abookInfoRepo.save(abook)
+            log.info(s"[upload] created new abook entry for $userId and ${abookRawInfo.origin} saved entry=$saved")
+            saved
+          }
         }
-        case None => {
-          val saved = abookInfoRepo.save(abook)
-          log.info(s"[upload] created new abook entry for $userId and ${abookRawInfo.origin} saved entry=$saved")
-          saved
-        }
-      }
-      entry
+        entry
     }
 
     // TODO: delay-batch-insert to contactRepo
     origin match {
       case ABookOrigins.IOS => {
         val contactInfoBuilder = mutable.ArrayBuilder.make[ContactInfo]
-        abookRawInfo.contacts.value.foreach { contact =>
-          val firstName = (contact \ "firstName").as[String]
-          val lastName = (contact \ "lastName").as[String]
-          val emails = (contact \ "emails").as[Seq[String]]
-          emails.foreach { email =>
-            val cInfo = ContactInfo(
-              userId = userId,
-              origin = ABookOrigins.IOS,
-              abookId = abookRepoEntry.id.get,
-              name = Some(s"${firstName} ${lastName}".trim),
-              firstName = Some(firstName),
-              lastName = Some(lastName),
-              email = email)
-            log.info(s"[upload($userId,$origin)] contact=$cInfo")
-            contactInfoBuilder += cInfo
-          }
+        abookRawInfo.contacts.value.foreach {
+          contact =>
+            val firstName = (contact \ "firstName").asOpt[String]
+            val lastName = (contact \ "lastName").asOpt[String]
+            val name = (contact \ "name").asOpt[String].getOrElse((firstName.getOrElse("") + " " + lastName.getOrElse("")).trim)
+            val emails = (contact \ "emails").as[Seq[String]]
+            emails.foreach {
+              email =>
+                val cInfo = ContactInfo(
+                  userId = userId,
+                  origin = ABookOrigins.IOS,
+                  abookId = abookRepoEntry.id.get,
+                  name = Some(name),
+                  firstName = firstName,
+                  lastName = lastName,
+                  email = email)
+                log.info(s"[upload($userId,$origin)] contact=$cInfo")
+                contactInfoBuilder += cInfo
+            }
         }
         val contactInfos = contactInfoBuilder.result
         log.info(s"[upload($userId,$origin) #contacts=${contactInfos.length} contacts=${contactInfos.mkString(File.separator)}")
         if (!contactInfos.isEmpty) {
           // TODO: optimize
-          db.readWrite { implicit session =>
-            contactInfos.foreach { contactInfoRepo.save(_) }
+          db.readWrite {
+            implicit session =>
+              contactInfos.foreach {
+                contactInfoRepo.save(_)
+              }
           }
         }
       }
       case _ => // not (yet) handled
     }
-    Ok(Json.toJson(abookRepoEntry))
+    abookRepoEntry
   }
 
   object GMailCSVFields { // tied to Gmail CSV format
