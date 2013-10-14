@@ -34,11 +34,8 @@ class URIGraphController @Inject()(
   }
 
   def updateURIGraph() = Action { implicit request =>
-    Async {
-      uriGraphPlugin.update().map { cnt =>
-        Ok(JsObject(Seq("users" -> JsNumber(cnt))))
-      }
-    }
+    uriGraphPlugin.update()
+    Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 
   def sharingUserInfo(userId: Id[User]) = Action(parse.json) { implicit request =>
