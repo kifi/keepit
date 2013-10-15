@@ -2,8 +2,10 @@ package com.keepit.search.util
 
 import AhoCorasick.State
 import scala.math._
-
 import java.util.Arrays
+
+import LocalAlignment._
+import com.keepit.common.logging.Logging
 
 trait LocalAlignment {
   def begin(): Unit
@@ -85,9 +87,7 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
   def score: Float = alignmentScore
 }
 
-import LocalAlignment._
-
-class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float, localAlignment: LocalAlignment, nonPhraseWeight: Float = 0.5f) extends LocalAlignment {
+class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float, localAlignment: LocalAlignment, nonPhraseWeight: Float = 0.5f) extends LocalAlignment with Logging {
   private[this] val bufSize = phraseMatcher.maxLength
   private[this] var bufferedPos = -1
   private[this] var processedPos = -1
@@ -132,7 +132,11 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
       var i = curPos - min(bufSize, aMatch.len)
       while (i < curPos) {
         i += 1
-        matching(i % bufSize) = true
+        if (i < 0) {
+          log.error(s"i=$i curPos=$curPos aMatch.len=${aMatch.len}")
+        } else {
+          matching(i % bufSize) = true
+        }
       }
       aMatch match {
         case phraseMatch: PhraseMatch => matchedPhrases += phraseMatch
