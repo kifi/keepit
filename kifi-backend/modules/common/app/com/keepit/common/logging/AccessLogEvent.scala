@@ -11,6 +11,7 @@ import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.future
+import com.keepit.common.concurrent.ExecutionContext
 
 sealed abstract class AccessLogEventType(val name: String)
 
@@ -35,6 +36,11 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
   private def intOption(i: Int): Option[Int] = if(i == NoIntValue) None else Some(i)
 
   val startTime = clock.now()
+
+  def duration: Int = {
+    val now = clock.now()
+    (now.getMillis - startTime.getMillis).toInt
+  }
 
   //using null for internal api to make the usage of the call much more friendly without having Some(foo) instead of just foo's
   def done(remoteTime: Int = NoIntValue,
@@ -108,7 +114,7 @@ class AccessLog @Inject() (clock: Clock) {
   def timer(eventType: AccessLogEventType): AccessLogTimer = AccessLogTimer(eventType, clock)
 
   def add(e: AccessLogEvent): AccessLogEvent = {
-    future {accessLog.info(format(e)) }
+    future { accessLog.info(format(e)) }(ExecutionContext.singleThread)
     e
   }
 
