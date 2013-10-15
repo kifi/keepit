@@ -21,14 +21,14 @@ import com.keepit.common.actor.ActorInstance
 
 @ImplementedBy(classOf[ContactsUpdaterPluginImpl])
 trait ContactsUpdaterPlugin extends Plugin {
-  def processContacts(userId:Id[User], origin:ABookOriginType, abookRepoEntry:ABookInfo, s3Key:String, rawJsonRef:WeakReference[JsValue])
+  def asyncProcessContacts(userId:Id[User], origin:ABookOriginType, abookRepoEntry:ABookInfo, s3Key:String, rawJsonRef:WeakReference[JsValue])
 }
 
 class ContactsUpdaterPluginImpl @Inject() (
   actor:ActorInstance[ContactsUpdater]
 ) extends ContactsUpdaterPlugin with Logging {
 
-  def processContacts(userId: Id[User], origin: ABookOriginType, abookRepoEntry: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue]): Unit = {
+  def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, abookRepoEntry: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue]): Unit = {
     actor.ref ! ProcessABookUpload(userId, origin, abookRepoEntry, s3Key, rawJsonRef)
   }
 
@@ -51,11 +51,11 @@ class ContactsUpdater @Inject() (
           val rawInfoJson = rawJsonRef.get match {
             case Some(js) => js
             case None => {
-              val rawInfo = s3.get(s3Key).getOrElse(throw new IllegalStateException)
+              val rawInfo = s3.get(s3Key).getOrElse(throw new IllegalStateException(s"[upload] s3Key=$s3Key is not set")) // may need to notify user
               Json.toJson(rawInfo)
             }
           }
-          val abookRawInfo = Json.fromJson[ABookRawInfo](rawInfoJson).getOrElse(throw new IllegalArgumentException) // TODO:REVISIT exception in actor
+          val abookRawInfo = Json.fromJson[ABookRawInfo](rawInfoJson).getOrElse(throw new IllegalArgumentException(s"[upload] Cannot parse $rawInfoJson")) // TODO:REVISIT exception in actor
           val contactInfoBuilder = mutable.ArrayBuilder.make[ContactInfo]
           abookRawInfo.contacts.value.foreach {
             contact =>
