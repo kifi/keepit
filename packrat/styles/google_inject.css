@@ -570,65 +570,6 @@ a.kifi-res-friends {
   padding: 0;
   white-space: nowrap;
 }
-.kifi-chatter {
-  float: right;
-  margin-top: 5px;
-  width: 18px;
-  height: 16px;
-  background-position: right 0;
-  position: relative;
-  cursor: pointer;
-}
-.kifi-chatter:hover,
-.kifi-chatter.kifi-hover-showing {
-  background-position: right -16px;
-}
-.kifi-chatter-hover.kifi-showing {
-  visibility: visible;
-  opacity: 1;
-}
-.kifi-chatter-hover {
-  position: absolute;
-  bottom: 21px;
-  left: -35px;
-  width: 70px;
-  height: 29px;
-  padding: 6px 10px;
-  background-color: #6ca4f2;
-  color: #fff;
-  font-size: 11px;
-  cursor: default;
-  z-index: 99;
-  opacity: 0;
-  transition: opacity 60ms ease-in-out, bottom 60ms ease-out;
-}
-.kifi-hover-showing .kifi-chatter-hover {
-  bottom: 24px;
-  opacity: 1;
-}
-.kifi-chatter-hover::after {
-  content: " ";
-  position: absolute;
-  left: 40px;
-  bottom: -5px;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-color: #6ca4f2 transparent;
-  border-width: 5px 4px 0;
-  font-size: 0;
-}
-.kifi-chatter-title {
-  display: block;
-  margin-bottom: 2px;
-}
-.kifi-chatter-hover a {
-  color: #fff !important;
-  text-decoration: none !important;
-}
-.kifi-chatter-hover a:hover {
-  text-decoration: underline !important;
-}
 
 .kifi-res-end {
   min-height: 9px;
