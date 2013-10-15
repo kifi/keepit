@@ -244,6 +244,7 @@ class MessagingController @Inject() (
             notificationPending = true,
             lastMsgFromOther = Some(message.id.get),
             lastNotification = notifJson,
+            notificationUpdatedAt = message.createdAt,
             replyable = false
           ))
 
@@ -678,7 +679,7 @@ class MessagingController @Inject() (
     val message = db.readOnly{ implicit session => messageRepo.get(msgExtId) }
     val thread  = db.readOnly{ implicit session => threadRepo.get(message.thread) } //TODO: This needs to change when we have detached threads
     val nUrl: String = thread.nUrl.getOrElse("")
-    if (message.from.isDefined && message.from.get != userId) {
+    if (message.from.isEmpty || message.from.get != userId) {
       db.readWrite { implicit session =>
         userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message)
       }
