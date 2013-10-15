@@ -1648,13 +1648,14 @@ this.tagbox = (function ($, win) {
 		getData: function ($el, name) {
 			if ($el.length) {
 				var dataset = $el[0].dataset;
-				if (!dataset) {
-					return null;
+				if (dataset) {
+					if (name == null) {
+						return dataset;
+					}
+					if (name in dataset) {
+						return dataset[name];
+					}
 				}
-				if (name == null) {
-					return dataset;
-				}
-				return (name in dataset) ? dataset[name] : null;
 			}
 			return null;
 		},
