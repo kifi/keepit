@@ -459,7 +459,7 @@ this.tagbox = (function ($, win) {
 				this.active = false;
 
 				win.slider2.unshadePane();
-				$(win.tile).css('transform', 'translate(0,0)');
+				$(win.tile).css('transform', '');
 
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
 
