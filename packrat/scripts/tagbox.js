@@ -2,7 +2,6 @@
 // @require scripts/lib/underscore.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/lib/q.min.js
-// @require scripts/lib/pubsub.js
 // @require scripts/render.js
 // @require scripts/util.js
 // @require scripts/scorefilter.js
@@ -196,8 +195,6 @@ this.tagbox = (function ($, win) {
 			this.initClearAll();
 			this.initTags();
 			this.initScroll();
-
-			PubSub.publish('tagbox.init', this);
 
 			this.logEvent('init', {
 				trigger: trigger
@@ -461,7 +458,9 @@ this.tagbox = (function ($, win) {
 			if (this.active) {
 				this.active = false;
 
-				PubSub.publish('tagbox.destroy', this);
+				if (win.$pane) {
+					win.$pane.removeClass('kifi-shaded');
+				}
 
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
 
@@ -728,7 +727,7 @@ this.tagbox = (function ($, win) {
 		 */
 		toggleClass: function (classname, add) {
 			var $tagbox = this.$tagbox;
-			return $tagbox && $tagbox.toggleClass(classname, !!add);
+			return $tagbox && $tagbox.toggleClass(classname, !! add);
 		},
 
 		/**
@@ -739,11 +738,13 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the root element
 		 */
 		toggleLoading: function (loading) {
-			loading = !!loading;
+			loading = !! loading;
 
 			this.toggleClass('loading', loading);
 
-			PubSub.publish('tagbox.loading', loading);
+			if (!loading && win.$pane) {
+				win.$pane.addClass('kifi-shaded');
+			}
 		},
 
 		/**
