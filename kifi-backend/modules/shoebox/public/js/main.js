@@ -1812,7 +1812,7 @@ $(function() {
 
 	function showNotification(messageId) {
 		var msg = messages[messageId];
-		if (msg && $('.notification-container').length == 0) {
+		if (msg) {
 			$('<div>').addClass('notification')
 			  .append($('<span>').addClass('notification-box').text(msg))
 			  .appendTo('.main-head')
