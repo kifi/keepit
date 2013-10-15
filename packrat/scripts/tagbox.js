@@ -728,7 +728,7 @@ this.tagbox = (function ($, win) {
 		 */
 		toggleClass: function (classname, add) {
 			var $tagbox = this.$tagbox;
-			return $tagbox && $tagbox.toggleClass(classname, add ? true : false);
+			return $tagbox && $tagbox.toggleClass(classname, !!add);
 		},
 
 		/**
@@ -739,7 +739,7 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the root element
 		 */
 		toggleLoading: function (loading) {
-			loading = loading ? true : false;
+			loading = !!loading;
 
 			this.toggleClass('loading', loading);
 

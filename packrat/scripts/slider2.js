@@ -271,19 +271,13 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
 
   PubSub.subscribe('tagbox.loading', function (type, loading) {
     if ($pane && !loading) {
-      $pane.addClass('kifi-background', !loading);
-      setTimeout(function () {
-        if ($pane && tagbox) {
-          $pane.find('.kifi-pane-overlay').addClass('kifi-opacity100');
-        }
-      }, 1);
+      $pane.addClass('kifi-shaded');
     }
   });
 
   PubSub.subscribe('tagbox.destroy', function () {
     if ($pane) {
-      $pane.removeClass('kifi-background');
-      $pane.find('.kifi-pane-overlay').removeClass('kifi-opacity100');
+      $pane.removeClass('kifi-shaded');
     }
   });
 
