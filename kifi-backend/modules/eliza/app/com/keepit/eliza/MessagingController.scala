@@ -216,42 +216,50 @@ class MessagingController @Inject() (
       (message, thread)
     }
 
-    userIds.foreach{ userId => SafeFuture{
-      val (notifJson, userThread) = db.readWrite{ implicit session =>
-        val notifJson = Json.obj(
-          "id"       -> message.externalId.id,
-          "time"     -> message.createdAt,
-          "thread"   -> message.threadExtId.id,
-          "unread"   -> true,
-          "category" -> "global",
-          "title"    -> title,
-          "bodyHtml" -> body,
-          "linkText" -> linkText,
-          "url"      -> linkUrl,
-          "isSticky" -> sticky,
-          "image"    -> imageUrl
+    var errors : Set[Throwable] = Set[Throwable]()
+
+    userIds.foreach{ userId =>
+      try{
+        val (notifJson, userThread) = db.readWrite{ implicit session =>
+          val notifJson = Json.obj(
+            "id"       -> message.externalId.id,
+            "time"     -> message.createdAt,
+            "thread"   -> message.threadExtId.id,
+            "unread"   -> true,
+            "category" -> "global",
+            "title"    -> title,
+            "bodyHtml" -> body,
+            "linkText" -> linkText,
+            "url"      -> linkUrl,
+            "isSticky" -> sticky,
+            "image"    -> imageUrl
+          )
+
+          val userThread = userThreadRepo.save(UserThread(
+            id = None,
+            user = userId,
+            thread = thread.id.get,
+            uriId = None,
+            lastSeen = None,
+            notificationPending = true,
+            lastMsgFromOther = Some(message.id.get),
+            lastNotification = notifJson,
+            replyable = false
+          ))
+
+          (notifJson, userThread)
+        }
+
+        notificationRouter.sendToUser(
+          userId,
+          Json.arr("notification", notifJson)
         )
-
-        val userThread = userThreadRepo.save(UserThread(
-          id = None,
-          user = userId,
-          thread = thread.id.get,
-          uriId = None,
-          lastSeen = None,
-          notificationPending = true,
-          lastMsgFromOther = Some(message.id.get),
-          lastNotification = notifJson,
-          replyable = false
-        ))
-
-        (notifJson, userThread)
+      } catch {
+        case e: Throwable => errors = errors + e  
       }
+    }
 
-      notificationRouter.sendToUser(
-        userId,
-        Json.arr("notification", notifJson)
-      )
-    }}
+    if (errors.size>0) throw scala.collection.parallel.CompositeThrowable(errors)
   }
 
   private[eliza] def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
