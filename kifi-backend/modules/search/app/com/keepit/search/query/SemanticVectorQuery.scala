@@ -62,8 +62,9 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   private[this] val (termList, idfSum) = {
     var sum = 0.0f
     val terms = new ArrayBuffer[(Term, Term, SemanticVector, Float)]
+    val contextSketch = searcher.getSemanticVectorSketch(query.terms.toSet)
     query.terms.foreach{ term =>
-      val vector = searcher.getSemanticVector(term)
+      val vector = searcher.getSemanticVector(term, contextSketch, 0.618f)
       val idf = searcher.idf(term)
       sum += idf
       terms += ((term, new Term(query.fallbackField, term.text), vector, idf))

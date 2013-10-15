@@ -8,7 +8,8 @@ import securesocial.core.{Identity, SocialUser}
 case class UserIdentity(
   userId: Option[Id[User]],
   socialUser: SocialUser,
-  allowSignup: Boolean = false) extends Identity {
+  allowSignup: Boolean = false,
+  isComplete: Boolean = true) extends Identity {
   def identityId = socialUser.identityId
   def firstName = socialUser.firstName
   def lastName = socialUser.lastName

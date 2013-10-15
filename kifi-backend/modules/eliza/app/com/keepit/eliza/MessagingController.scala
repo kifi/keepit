@@ -88,7 +88,7 @@ class MessagingController @Inject() (
 
 
   def importThread() = Action { request =>
-    future { shoebox.synchronized { //needed some arbitrary singleton object
+    SafeFuture { shoebox.synchronized { //needed some arbitrary singleton object
       val req = request.body.asJson.get.asInstanceOf[JsObject]
 
       val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
@@ -154,10 +154,10 @@ class MessagingController @Inject() (
   }
 
   def sendGlobalNotification() = Action(parse.json) { request =>
-    Async(future{
+    Async(SafeFuture {
       val data : JsObject = request.body.asInstanceOf[JsObject]
 
-      val userIds  : Set[Id[User]] =  (data \ "userIds").as[JsArray].value.map(v => Id[User](v.as[Long])).toSet
+      val userIds  : Set[Id[User]] =  (data \ "userIds").as[JsArray].value.map(v => v.asOpt[Long].map(Id[User](_))).flatten.toSet
       val title    : String        =  (data \ "title").as[String]
       val body     : String        =  (data \ "body").as[String]
       val linkText : String        =  (data \ "linkText").as[String]

@@ -45,6 +45,10 @@ object ActionAuthenticator {
       case ar: AuthenticatedRequest[_] => Some(ar.userId)
       case _ => None
     }
+    def userOpt: Option[User] = request match {
+      case ar: AuthenticatedRequest[_] => Some(ar.user)
+      case _ => None
+    }
   }
 }
 
@@ -183,7 +187,7 @@ class RemoteActionAuthenticator @Inject() (
       }
     } catch {
       case e: Throwable =>
-        val globalError = airbrake.notify(AirbrakeError(request, e,
+        val globalError = airbrake.notify(AirbrakeError.incoming(request, e,
             s"Error executing with userId $userId, experiments [${experiments.mkString(",")}], installation ${kifiInstallationId.getOrElse("NA")}"))
         log.error(s"error reported [${globalError.id}]", e)
         throw ReportedException(globalError.id, e)

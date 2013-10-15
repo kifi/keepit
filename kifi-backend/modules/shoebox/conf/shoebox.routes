@@ -3,8 +3,9 @@ GET     /login                      securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
 # Relevant when we support traditional user signups:
-GET     /signup                     @com.keepit.controllers.core.AuthController.signup()
+GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 POST    /signup                     @com.keepit.controllers.core.AuthController.handleSignup()
+POST    /signupWithPassword         @com.keepit.controllers.core.AuthController.handleUsernamePasswordSignup()
 
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
@@ -14,6 +15,8 @@ GET     /login/:provider            @com.keepit.controllers.core.AuthController.
 POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider)
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
 POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
+GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
+POST    /signup/:provider           @com.keepit.controllers.core.AuthController.signupByPost(provider)
 POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 GET     /resetPassword              @com.keepit.controllers.core.AuthController.resetPasswordPage()
@@ -71,6 +74,7 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /collection/:id             @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
+GET     /tag/:id                    @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
 GET     /friends                    @com.keepit.controllers.website.HomeController.home
 GET     /friends/invite             @com.keepit.controllers.website.HomeController.home
 POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo

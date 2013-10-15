@@ -5,6 +5,7 @@ import com.google.inject.Provider
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.{Try, Success, Failure}
 import java.net.ConnectException
 import java.util.concurrent.TimeUnit
 import play.api.libs.concurrent.Execution.Implicits._
@@ -14,7 +15,8 @@ import play.api.libs.ws._
 import play.mvc._
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin, StackTrace}
+import com.keepit.common.concurrent.ExecutionContext.immediate
 import com.keepit.common.controller.CommonHeaders
 import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
@@ -24,7 +26,17 @@ import com.keepit.common.service.FortyTwoServices
 import play.api.Logger
 
 case class NonOKResponseException(url: String, response: ClientResponse, requestBody: Option[Any] = None)
-    extends Exception(s"Requesting $url ${requestBody.map{b => b.toString}}, got a ${response.status}. Body: ${response.body}")
+    extends Exception(s"Requesting $url ${requestBody.map{b => b.toString}}, got a ${response.status}. Body: ${response.body}"){
+
+  override def toString: String =
+    s"NonOKResponseException[url: $url, Response: $response body:${requestBody.map(b => b.toString).getOrElse("NA")}]"
+
+}
+
+case class LongWaitException(url: String, response: Response, waitTime: Int)
+    extends Exception(s"Requesting $url got a ${response.status} with wait time $waitTime"){
+}
+
 
 trait HttpClient {
 
@@ -60,7 +72,7 @@ trait HttpClient {
 }
 
 case class HttpClientImpl(
-    timeout: Int = 1000,
+    timeout: Int = 5000,
     headers: List[(String, String)] = List(),
     healthcheckPlugin: HealthcheckPlugin,
     airbrake: Provider[AirbrakeNotifier],
@@ -140,7 +152,7 @@ case class HttpClientImpl(
   }
 
   private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, TimeUnit.MILLISECONDS))
-  private def req(url: String): Request = new Request(WS.url(url).withTimeout(timeout), headers, services, accessLog)
+  private def req(url: String): Request = new Request(WS.url(url).withTimeout(timeout), headers, services, accessLog, airbrake)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
     val cr = new ClientResponseImpl(request, response)
@@ -153,7 +165,8 @@ case class HttpClientImpl(
   def withTimeout(timeout: Int): HttpClientImpl = copy(timeout = timeout)
 }
 
-private[net] class Request(val req: WSRequestHolder, headers: List[(String, String)], services: FortyTwoServices, accessLog: AccessLog) extends Logging {
+private[net] class Request(val req: WSRequestHolder, headers: List[(String, String)],
+    services: FortyTwoServices, accessLog: AccessLog, airbrake: Provider[AirbrakeNotifier]) extends Logging {
 
   private val trackingId = RandomStringUtils.randomAlphanumeric(5)
   private val headersWithTracking =
@@ -162,77 +175,121 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
 
   def get() = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.get()
     res.onComplete { resTry =>
-      logResponse(timer, "GET", resTry.isSuccess, trackingId, None, resTry.toOption)
-    }
+      logResponse(timer, tracer, "GET", resTry, trackingId, None, wsRequest)
+    }(immediate)
     res
   }
 
   def put(body: JsValue) = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.put(body)
     res.onComplete { resTry =>
-      logResponse(timer, "PUT", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
-    }
+      logResponse(timer, tracer, "PUT", resTry, trackingId, Some(body), wsRequest)
+    }(immediate)
     res
   }
 
   def post(body: String) = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
-    }
+      logResponse(timer, tracer, "POST", resTry, trackingId, Some(body), wsRequest)
+    }(immediate)
     res
   }
 
   def post(body: JsValue) = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
-    }
+      logResponse(timer, tracer, "POST", resTry, trackingId, Some(body), wsRequest)
+    }(immediate)
     res
   }
 
   def post(body: NodeSeq) = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.post(body)
     res.onComplete { resTry =>
-      logResponse(timer, "POST", resTry.isSuccess, trackingId, Some(body), resTry.toOption)
-    }
+      logResponse(timer, tracer, "POST", resTry, trackingId, Some(body), wsRequest)
+    }(immediate)
     res
   }
 
   def delete() = {
     val timer = accessLog.timer(HTTP_OUT)
+    val tracer = new StackTrace()
     val res = wsRequest.delete()
     res.onComplete { resTry =>
-      logResponse(timer, "DELETE", resTry.isSuccess, trackingId, None, resTry.toOption)
-    }
+      logResponse(timer, tracer, "DELETE", resTry, trackingId, None, wsRequest)
+    }(immediate)
     res
   }
 
-  private def logResponse(timer: AccessLogTimer, method: String, isSuccess: Boolean, trackingId: String, body: Option[Any], resOpt: Option[Response]) = {
+  private def logResponse(
+        timer: AccessLogTimer, tracer: StackTrace, method: String, resTry: Try[Response],
+        trackingId: String, body: Option[Any], req: WSRequestHolder): Unit = {
     //todo(eishay): the interesting part is the remote service and node id, to be logged
-    val remoteHost = resOpt.map(_.header(CommonHeaders.LocalHost)).flatten.getOrElse("NA")
-    val remoteTime = resOpt.map(_.header(CommonHeaders.ResponseTime)).flatten.map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
-    val queryString = wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&"
+    val queryString = (wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&").trim match {
+      case "" => null
+      case str => str
+    }
     // waitTime map {t =>
     //   Statsd.timing(s"internalCall.remote.$remoteService.$remoteNodeId", t)
     //   Statsd.timing(s"internalCall.local.$localService.$localNodeId", t)
     // }
-    accessLog.add(timer.done(
-        remoteTime = remoteTime,
-        result = if(isSuccess) "success" else "fail",
-        query = if(queryString.trim.isEmpty) null else queryString,
-        url = wsRequest.url,
-        //Its a bit strange, but in this case we rather pass null to be consistent with the api
-        //taking only the first 200 chars of the body
-        body = body.map(_.toString.take(200)).getOrElse(null),
-        trackingId = trackingId,
-        statusCode = resOpt.map(_.status).getOrElse(AccessLogTimer.NoIntValue)))
+    val bodyTrimmed = body.map(_.toString.take(200)).getOrElse(null)
+    resTry match {
+      case Success(res) =>
+        val remoteHost = res.header(CommonHeaders.LocalHost).getOrElse("NA")
+        val remoteTime = res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
+        val e = accessLog.add(timer.done(
+            remoteTime = remoteTime,
+            result = "success",
+            query = queryString,
+            url = wsRequest.url,
+            //Its a bit strange, but in this case we rather pass null to be consistent with the api
+            //taking only the first 200 chars of the body
+            body = bodyTrimmed,
+            trackingId = trackingId,
+            statusCode = res.status))
+
+        e.waitTime map {waitTime =>
+          if (waitTime > 100) {//ms
+            val exception = tracer.withCause(LongWaitException(req.url, res, waitTime))
+            airbrake.get.notify(
+              AirbrakeError.outgoing(
+                request = req,
+                exception = exception,
+                message = s"wait time $waitTime for ${accessLog.format(e)}")
+            )
+          }
+        }
+      case Failure(e) =>
+        val al = accessLog.add(timer.done(
+          result = "fail",
+          query = queryString,
+          url = wsRequest.url,
+          //Its a bit strange, but in this case we rather pass null to be consistent with the api
+          //taking only the first 200 chars of the body
+          body = bodyTrimmed,
+          trackingId = trackingId,
+          error = e.toString))
+        airbrake.get.notify(
+          AirbrakeError.outgoing(
+            exception = tracer.withCause(e),
+            request = req,
+            message = s"${al.error}: error handling url ${al.url}"
+          )
+        )
+    }
   }
 }
 
@@ -244,6 +301,8 @@ trait ClientResponse {
 }
 
 class ClientResponseImpl(val request: Request, val response: Response) extends ClientResponse {
+
+  override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 
   def status: Int = response.status
 

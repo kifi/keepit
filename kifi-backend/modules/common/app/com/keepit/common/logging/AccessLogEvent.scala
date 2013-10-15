@@ -2,6 +2,7 @@ package com.keepit.common.logging
 
 import play.api.Logger
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.healthcheck._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time.Clock
@@ -39,6 +40,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
   def done(remoteTime: Int = NoIntValue,
           statusCode: Int = NoIntValue,
           result: String = null,
+          error: String = null,
           remoteHost: String = null,
           targetHost: String = null,
           remoteService: String = null,
@@ -58,6 +60,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       remoteTime = intOption(remoteTime),
       statusCode = intOption(statusCode),
       result = Option(result),
+      error = Option(error),
       remoteHost = Option(remoteHost),
       targetHost = Option(targetHost),
       remoteService = Option(remoteService),
@@ -79,6 +82,7 @@ case class AccessLogEvent(
   remoteTime: Option[Int],
   statusCode: Option[Int],
   result: Option[String],
+  error: Option[String],
   remoteHost: Option[String],
   targetHost: Option[String],
   remoteService: Option[String],
@@ -130,8 +134,8 @@ class AccessLog @Inject() (clock: Clock) {
       e.query.map("query:" + _) ::
       e.url.map("url:" + _) ::
       e.body.map("body:" + _) ::
+      e.error.map("error:" + _) ::
       Nil
     line.flatten.mkString("\t")
   }
-
 }

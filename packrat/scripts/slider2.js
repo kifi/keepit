@@ -36,7 +36,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
 
   document.addEventListener('keydown', onKeyDown, true);
   function onKeyDown(e) {
-    if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) {  // esc
+    if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {  // esc
       var escHandler = $(document).data('esc');
       if (escHandler) {
         escHandler(e);
@@ -84,7 +84,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       'messageCount': counts.m,
       'atNotices': '/notices' === locator,
       'atMessages': /^\/messages/.test(locator),
-      'tagEnabled': session.experiments.indexOf('tagging') !== -1
+      'isTagged': tags.length
     }, function (html) {
       // attach event bindings
       $slider = $(html);
@@ -212,14 +212,19 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         if (e.target === this) keepPage("private");
       }).on("click", ".kifi-slider2-kept-lock", function (e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
-      }).on("click", ".kifi-slider2-kept-tag", function (e) {
+      }).on("click", ".kifi-slider2-keep-tag, .kifi-slider2-kept-tag", function (e) {
         if (e.originalEvent.tagboxClosed) {
           log('[tagbox:closed] ignore click event')();
           return;
         }
-        api.require("scripts/tagbox.js", function() {
+
+        if (this.classList.contains('kifi-slider2-keep-tag')) {
+          keepPage('public');
+        }
+
+        api.require('scripts/tagbox.js', function () {
           log('require:tagbox')();
-          tagbox.toggle($slider);
+          tagbox.toggle($slider, 'click:tagIcon');
         });
       }).hoverfu('.kifi-slider2-x', function (configureHover) {
         configureHover({
@@ -756,7 +761,13 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
           .text(a[1] || "")
           .css("display", a[1] ? "" : "none");
       });
-    }});
+    },
+    tagged: function (o) {
+      if ($slider) {
+        $slider.find('.kifi-slider2-keep-card').toggleClass('kifi-tagged', o.tagged ? true : false);
+      }
+    }
+  });
 
   // the keeper API
   return {

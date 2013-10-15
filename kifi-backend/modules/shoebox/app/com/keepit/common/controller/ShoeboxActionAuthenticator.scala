@@ -114,7 +114,7 @@ class ShoeboxActionAuthenticator @Inject() (
     if (experiments.contains(ExperimentType.BLOCK) ||
       user.state == UserStates.BLOCKED ||
       user.state == UserStates.INACTIVE ||
-      (!allowPending && user.state == UserStates.PENDING)) {
+      (!allowPending && (user.state == UserStates.PENDING || user.state == UserStates.INCOMPLETE_SIGNUP))) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
       Forbidden(message)
@@ -126,7 +126,7 @@ class ShoeboxActionAuthenticator @Inject() (
         }
       } catch {
         case e: Throwable =>
-        val globalError = airbrake.notify(AirbrakeError(request, e,
+        val globalError = airbrake.notify(AirbrakeError.incoming(request, e,
             s"Error executing with userId $userId, experiments [${experiments.mkString(",")}], installation ${kifiInstallationId.getOrElse("NA")}"))
         log.error(s"error reported [${globalError.id}]", e)
           throw ReportedException(globalError.id, e)

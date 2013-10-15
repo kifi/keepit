@@ -184,7 +184,54 @@ var util = this.util = (function () {
 		 */
 		size: function (obj) {
 			return obj == null ? 0 : Object.keys(obj).length;
-		}
+		},
+
+		/**
+		 * Returns true if the first string starts with the second string.
+		 *
+		 * @param {string} str - A string to search from
+		 * @param {string} prefix - A prefix string
+		 * @return {boolean} Whether a string starts with the specified prefix
+		 */
+		startsWith: function (str, prefix) {
+			return str.lastIndexOf(prefix, 0) === 0;
+		},
+
+		/**
+		 * Returns true if the first string ends with the second string.
+		 *
+		 * @param {string} str - A string to search from
+		 * @param {string} suffix - A suffix string
+		 * @return {boolean} Whether a string ends with the specified suffix
+		 */
+		endsWith: function (str, suffix) {
+			return str.indexOf(suffix, str.length - suffix.length) !== -1;
+		},
+
+		/**
+		 * Returns a simple string representation of a DOM node as a combination of a tag name and class names.
+		 * e.g. "TAG_NAME.className1.className2..." for a DOM node.
+		 *
+		 * @param {DOMNode} node - a DOM node
+		 *
+		 * @return {string} a simple string representation of a DOM node
+		 */
+		DOMtoString: (function () {
+			function reduceClassName(res, name) {
+				return res + '.' + name;
+			}
+
+			function normalizeClass(className) {
+				if (className) {
+					className = className.trim().split(/\s+/).reduce(reduceClassName, '');
+				}
+				return className || '';
+			}
+
+			return function (el) {
+				return el ? (el.nodeName || '') + normalizeClass(el.className) : '';
+			};
+		})()
 
 	};
 

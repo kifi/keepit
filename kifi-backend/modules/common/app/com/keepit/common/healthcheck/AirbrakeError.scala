@@ -7,6 +7,7 @@ import java.net._
 import scala.xml._
 
 import play.api.mvc._
+import play.api.libs.ws.WS.WSRequestHolder
 
 class DefaultAirbrakeException extends Exception
 
@@ -17,26 +18,31 @@ case class AirbrakeError(
     params: Map[String, Seq[String]] = Map(),
     method: Option[String] = None,
     headers: Map[String, Seq[String]] = Map(),
-    id: ExternalId[AirbrakeError] = ExternalId())
+    id: ExternalId[AirbrakeError] = ExternalId()) {
+  override def toString(): String = {
+    s"${super.toString()}\n${exception.getStackTrace mkString "\nat \t"}"
+  }
+}
 
 object AirbrakeError {
   val MaxMessageSize = 10 * 1024 //10KB
-  def apply(request: RequestHeader, exception: Throwable): AirbrakeError =
+  def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String = ""): AirbrakeError =
     new AirbrakeError(
           exception = exception,
+          message = if (message.trim.isEmpty) None else Some(message.take(MaxMessageSize)),
           url = Some(request.uri.take(MaxMessageSize)),
-          params = request.queryString.take(MaxMessageSize),
+          params = request.queryString,
           method = Some(request.method),
           headers = request.headers.toMap)
 
-  def apply(request: RequestHeader, exception: Throwable, message: String): AirbrakeError =
+  def outgoing(request: WSRequestHolder, exception: Throwable = new DefaultAirbrakeException(), message: String = ""): AirbrakeError = {
     new AirbrakeError(
           exception = exception,
-          message = Some(message.take(MaxMessageSize)),
-          url = Some(request.uri.take(MaxMessageSize)),
-          params = request.queryString.take(MaxMessageSize),
-          method = Some(request.method),
-          headers = request.headers.toMap)
+          message = if (message.trim.isEmpty) None else Some(message.take(MaxMessageSize)),
+          url = Some(request.url.take(MaxMessageSize)),
+          params = request.queryString,
+          headers = request.headers)
+  }
 
   implicit def error(t: Throwable): AirbrakeError = AirbrakeError(t)
 

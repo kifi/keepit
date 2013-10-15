@@ -6,7 +6,8 @@ function logEvent() {  // parameters defined in main.js
   api.port.emit("log_event", Array.prototype.slice.call(arguments));
 }
 
-var session;
+var session,
+  tags = [];
 var tile = tile || function() {  // idempotent for Chrome
   'use strict';
   log("[keeper_scout]", location.hostname)();
@@ -40,6 +41,7 @@ var tile = tile || function() {  // idempotent for Chrome
       } else {
         tile.removeAttribute("data-kept");
       }
+      tags = o.tags || [];
       window.addEventListener("resize", onResize);
       api.require(["styles/insulate.css", "styles/keeper/tile.css"], function() {
         if (!o.hide) {
@@ -85,6 +87,7 @@ var tile = tile || function() {  // idempotent for Chrome
   });
   function onKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey) {  // ⌘-shift-[key], ctrl-shift-[key]
+      // intentionally ommited altKey
       switch (e.keyCode) {
       case 75: // k
         if (session === undefined) {  // not yet initialized

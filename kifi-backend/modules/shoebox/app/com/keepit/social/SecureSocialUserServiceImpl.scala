@@ -3,7 +3,7 @@ package com.keepit.social
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{State, ExternalId, Id}
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
@@ -50,14 +50,15 @@ class SecureSocialUserPluginImpl @Inject() (
 
   def save(identity: Identity): SocialUser = reportExceptions {
     db.readWrite { implicit s =>
-      val (userId, socialUser, allowSignup) = getUserIdAndSocialUser(identity)
+      val (userId, socialUser, allowSignup, isComplete) = getUserIdAndSocialUser(identity)
       log.info(s"[save] persisting (social|42) user $socialUser")
       val socialUserInfo = internUser(
         SocialId(socialUser.identityId.userId),
         SocialNetworkType(socialUser.identityId.providerId),
         socialUser,
         userId,
-        allowSignup)
+        allowSignup,
+        isComplete)
       require(socialUserInfo.credentials.isDefined, "social user info's credentials is not defined: %s".format(socialUserInfo))
       if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
         socialGraphPlugin.asyncFetch(socialUserInfo)
@@ -66,23 +67,28 @@ class SecureSocialUserPluginImpl @Inject() (
     }
   }
 
-  private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser, Boolean) = identity match {
-    case UserIdentity(userId, socialUser, allowSignup) => (userId, socialUser, allowSignup)
-    case ident => (None, SocialUser(ident), false)
+  private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser, Boolean, Boolean) = {
+    identity match {
+      case UserIdentity(userId, socialUser, allowSignup, isComplete) => (userId, socialUser, allowSignup, isComplete)
+      case ident => (None, SocialUser(ident), false, true)
+    }
   }
 
-  private def createUser(identity: Identity): User = {
+  private def newUserState: State[User] = if (Play.isDev) UserStates.ACTIVE else UserStates.PENDING
+
+  private def createUser(identity: Identity, isComplete: Boolean): User = {
     log.info(s"Creating new user for ${identity.fullName}")
     User(
       firstName = identity.firstName,
       lastName = identity.lastName,
-      state = if(Play.isDev) UserStates.ACTIVE else UserStates.PENDING
+      state = if (isComplete) newUserState else UserStates.INCOMPLETE_SIGNUP
     )
   }
 
   private def internUser(
       socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
-      userId: Option[Id[User]], allowSignup: Boolean)(implicit session: RWSession): SocialUserInfo = {
+      userId: Option[Id[User]], allowSignup: Boolean, isComplete: Boolean)
+      (implicit session: RWSession): SocialUserInfo = {
     log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId")
 
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
@@ -92,13 +98,21 @@ class SecureSocialUserPluginImpl @Inject() (
     } flatMap userRepo.getOpt
 
     def getOrCreateUser(): Option[User] = existingUserOpt orElse {
-      if (allowSignup) Some(userRepo.save(createUser(socialUser))) else None
+      if (allowSignup) Some(userRepo.save(createUser(socialUser, isComplete))) else None
     }
 
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
         // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
-        if (suiOpt == Some(socialUserInfo)) socialUserInfo else socialUserInfoRepo.save(socialUserInfo)
+        if (suiOpt == Some(socialUserInfo)) {
+          socialUserInfo
+        } else {
+          val user = userRepo.get(socialUserInfo.userId.get)
+          if (user.state == UserStates.INCOMPLETE_SIGNUP && isComplete) {
+            userRepo.save(user.withName(socialUser.firstName, socialUser.lastName).withState(newUserState))
+          }
+          socialUserInfoRepo.save(socialUserInfo)
+        }
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
         val userOpt = getOrCreateUser()
 

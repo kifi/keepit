@@ -56,14 +56,14 @@
 			</a>
 		</h3>
 		<div id="collections">
-			<h2>Collections<a class="collection-create" href="javascript:"></a></h2>
+			<h2>Tags<a class="collection-create" href="javascript:"></a></h2>
 			<div id="collections-list">
 				<div class="antiscroll-inner">
 					<h3 class="collection-new" data-before-template>
-						<a><input placeholder="Type new collection name" disabled></a>
+						<a><input placeholder="Type new tag name" disabled></a>
 					</h3>
 					<h3 class="collection" data-template data-id="{{id}}" style="display:none">
-						<a href="collection/{{id}}">
+						<a href="tag/{{id}}">
 							<div class="nav-count">{{keeps}}</div>
 							<div class="view-name long-text">{{name}}</div>
 						</a>
@@ -101,15 +101,15 @@
 				</span>
 				<span class="subtitle-text" data-template data-has="collId" data-n="{{numShown}}" style="display:none">
 					{% if numShown == 0 %}
-						No Keeps in this collection
+						No Keeps in this tag
 					{% endif %}{% if numShown == 1 %}
-						Showing the only Keep in this collection
+						Showing the only Keep in this tag
 					{% endif %}{% if numShown == 2 %}
-						Showing both Keeps in this collection
+						Showing both Keeps in this tag
 					{% endif %}{% if numShown > 2 && numShown < numTotal %}
-						Showing the {{numShown}} latest Keeps in this collection
+						Showing the {{numShown}} latest Keeps in this tag
 					{% endif %}{% if numShown > 2 && numShown == numTotal %}
-						Showing all {{numShown}} Keeps in this collection
+						Showing all {{numShown}} Keeps in this tag
 					{% endif %}
 				</span>
 				<span class="subtitle-text" data-template data-has="numShown" data-n="{{numShown}}" style="display:none">
@@ -147,7 +147,7 @@
 						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '' | replace '^([^/]*)/$', '$1'}}</div>
 						<div class="keep-colls">
 							<span class="keep-coll" data-template-for="collections" data-id="{{id}}">
-								<a class="keep-coll-a" href="collection/{{id}}">{{name}}</a>
+								<a class="keep-coll-a" href="tag/{{id}}">{{name}}</a>
 							</span>
 						</div>
 						<div class="keep-who">
@@ -438,15 +438,15 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 		</div>
 		{% endif %}
 		<div class="page-colls{% if collections.length %} some{% endif %}">
-			<h2>Collections:</h2>
+			<h2>Tags:</h2>
 			<ul class="page-coll-list">
 				<li class="page-coll" data-template data-id="{{id}}">
-					<a class="page-coll-a long-text" href="collection/{{id}}">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
+					<a class="page-coll-a long-text" href="tag/{{id}}">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
 				</li>
 				<li class="page-coll-new" data-after-template>
 					<a class="page-coll-add" href="javascript:"></a>
 					<span class="page-coll-sizer" style="display:none"></span>
-					<input class="page-coll-input" style="display:none" type="text" placeholder="collection name">
+					<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
 					<ul class="page-coll-opts" style="display:none">
 						<li class="page-coll-opt long-text" data-template data-id="{{id}}">{{name}}</li>
 					</ul>
@@ -487,7 +487,7 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 			Here you can:
 			<ul>
 				<li>Browse and search your keeps
-				<li>Create personal collections of keeps
+				<li>Create personal tags of keeps
 				<li>Invite new friends to Kifi
 				<li>Change settings
 			</ul>
