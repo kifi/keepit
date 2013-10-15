@@ -25,7 +25,6 @@
   font-weight: normal;
   -webkit-font-smoothing: antialiased;
   text-align: left;
-  z-index: 3;
 }
 .kifi-with-pane .kifi-tagbox {
   bottom: 54px;
@@ -162,7 +161,6 @@
   color: black;
   background: transparent;
   outline: 0;
-  z-index: 1;
   font: inherit;
 }
 .kifi-tagbox-input-placeholder {

@@ -443,3 +443,7 @@ div.kifi-pane-empty>img {
   bottom: 54px;
   transition-delay: 0s;
 }
+.kifi-pane .kifi-slider2,
+.kifi-pane .kifi-tagbox {
+  z-index: 3;
+}
