@@ -8,7 +8,6 @@ import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.ElectronicMailCategory
 import com.keepit.common.mail._
 import com.keepit.model._
 import com.keepit.social.SocialId
@@ -21,12 +20,8 @@ import play.api.data._
 import play.api.data.validation.Constraints
 import play.api.http.HeaderNames
 import play.api.libs.json.Json
-import play.api.mvc.SimpleResult
 import play.api.mvc._
 import securesocial.controllers.ProviderController
-import securesocial.core.IdentityId
-import securesocial.core.LoginEvent
-import securesocial.core.OAuth2Info
 import securesocial.core._
 import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
 
@@ -188,7 +183,7 @@ class AuthController @Inject() (
     val identity = request.identityOpt
     request.userOpt match {
       case Some(user) if user.state != UserStates.INCOMPLETE_SIGNUP =>
-        Redirect("/")
+        Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
       case Some(user) =>
         Ok(views.html.website.completeSignup(
           errorMessage = request.flash.get("error"),
