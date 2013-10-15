@@ -244,6 +244,7 @@ class MessagingController @Inject() (
             notificationPending = true,
             lastMsgFromOther = Some(message.id.get),
             lastNotification = notifJson,
+            notificationUpdatedAt = message.createdAt,
             replyable = false
           ))
 
