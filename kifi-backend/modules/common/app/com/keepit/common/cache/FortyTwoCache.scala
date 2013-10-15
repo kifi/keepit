@@ -41,17 +41,29 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
         repo.onError(AirbrakeError(e, Some(s"Failed fetching key $key from $repo")))
         None
     }
+    decodeValue(key, valueOpt, timer)
+  }
+
+  private[this] def decodeValue(key: K, valueOpt: Option[Any], timer: AccessLogTimer): Option[Option[T]] = {
     try {
       val objOpt = valueOpt.map(serializer.reads)
       val namespace = key.namespace
       objOpt match {
         case Some(_) => {
-          val duration = accessLog.add(timer.done(space = s"${repo.toString}.${namespace}", key = key.toString, result = "HIT")).duration
+          val duration = if (repo.logAccess) {
+            accessLog.add(timer.done(space = s"${repo.toString}.${namespace}", key = key.toString, result = "HIT")).duration
+          } else {
+            timer.duration
+          }
           stats.recordHit(repo.toString, repo.logAccess, namespace, key.toString, duration)
           stats.recordHit("Cache", false, namespace, key.toString, duration)
         }
         case None => {
-          val duration = accessLog.add(timer.done(space = s"${repo.toString}.${namespace}", key = key.toString, result = "MISS")).duration
+          val duration = if (repo.logAccess) {
+            accessLog.add(timer.done(space = s"${repo.toString}.${namespace}", key = key.toString, result = "MISS")).duration
+          } else {
+            timer.duration
+          }
           stats.recordMiss(repo.toString, repo.logAccess, namespace, key.toString, duration)
           if (outerCache isEmpty) stats.recordMiss("Cache", false, namespace, key.toString, duration)
         }
@@ -62,6 +74,27 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
         repo.onError(AirbrakeError(e, Some(s"Failed deserializing key $key from $repo, got raw value $valueOpt")))
         repo.remove(key.toString)
         None
+    }
+  }
+
+  protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, Option[T]] = {
+    val timer = accessLog.timer(CACHE)
+    val valueMap = try repo.bulkGet(keys.map{_.toString}) catch {
+      case e: Throwable =>
+        repo.onError(AirbrakeError(e, Some(s"Failed fetching key $keys from $repo")))
+        Map.empty[String, Option[T]]
+    }
+    if (repo.logAccess) {
+      keys.headOption.foreach{ key =>
+        accessLog.add(timer.done(space = s"${repo.toString}.${key.namespace}", key = keys mkString ",", method = "BULK_GET"))
+      }
+    }
+    keys.foldLeft(Map.empty[K, Option[T]]){ (m, key) =>
+      val objOpt = decodeValue(key, valueMap.get(key.toString), timer)
+      objOpt match {
+        case Some(obj) => m + (key -> obj)
+        case None => m
+      }
     }
   }
 
@@ -105,7 +138,11 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       }
       repo.set(keyS, properlyBoxed, ttlInSeconds)
       val namespace = key.namespace
-      val duration = accessLog.add(timer.done(space = s"${repo.toString}.${namespace}", key = key.toString, result = "SET")).duration
+      val duration = if (repo.logAccess) {
+        accessLog.add(timer.done(space = s"${repo.toString}.${namespace}", key = key.toString, result = "SET")).duration
+      } else {
+        timer.duration
+      }
       stats.recordSet(repo.toString, repo.logAccess, namespace, key.toString, duration)
       if (outerCache isEmpty) stats.recordSet("Cache", false, namespace, key.toString, duration)
     } catch {

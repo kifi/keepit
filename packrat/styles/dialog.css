@@ -98,12 +98,14 @@ a.kifi-dialog-cancel:hover { text-decoration: none; }
   transition: all 0.1s ease-out;
 }
 .kifi-dialog-networks > a.kifi-social-button:hover { background: #69c1ff; }
-.kifi-logo {
-  width: 103px;
-  height: 58px;
-  margin: 0 auto;
-  margin-top: 35px;
-  margin-bottom: 25px;
+.kifi-dialog-logo {
+  width: 104px;
+  height: 60px;
+  margin: 35px auto 25px;
+  background-size: auto 60px;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 .kifi-dialog-networks > .kifi-facebook {
   float: left;

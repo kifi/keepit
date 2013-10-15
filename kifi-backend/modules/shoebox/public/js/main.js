@@ -1123,6 +1123,7 @@ $(function() {
 	var baseUriRe = new RegExp('^' + ($('base').attr('href') || ''));
 	$(window).on('statechange anchorchange', function(e) {
 		hideUndo();
+		showNotification(getUriParam('m'));
 		var state = History.getState();
 		var hash = state.hash.replace(baseUriRe, '').replace(/^\.\//, '').replace(/[?#].*/, '');
 		var parts = hash.split('/');
@@ -1800,6 +1801,26 @@ $(function() {
 	$.getJSON(xhrBase + '/user/friends/count', function(data) {
 		updateFriendRequests(data.requests);
 	});
+
+	function getUriParam(name) {
+		return decodeURI((RegExp(name + '=(.+?)(&|$)').exec(location.search) || [,null])[1]);
+	}
+
+	var messages = {
+		'0': 'You already have an account with those credentials, so we signed you in.'
+	};
+
+	function showNotification(messageId) {
+		var msg = messages[messageId];
+		if (msg) {
+			$('<div>').addClass('notification')
+			  .append($('<span>').addClass('notification-box').text(msg))
+			  .appendTo('.main-head')
+			  .show()
+			  .delay(3000)
+			  .fadeOut('slow');
+		}
+	}
 
 	// render initial view
 	$(window).trigger('statechange');

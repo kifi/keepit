@@ -2,15 +2,19 @@ package com.keepit.common.cache
 
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
+import java.util.{Map=>JMap}
 import net.spy.memcached.auth.{PlainCallbackHandler, AuthDescriptor}
 import net.spy.memcached.{CachedData, ConnectionFactoryBuilder, AddrUtil, MemcachedClient}
-import play.api.cache.{CacheAPI, CachePlugin}
-import play.api.{Logger, Play, Application}
-import scala.util.control.Exception._
 import net.spy.memcached.transcoders.{Transcoder, SerializingTranscoder}
 import net.spy.memcached.compat.log.{Level, AbstractLogger}
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import net.spy.memcached.internal.BulkFuture
+import net.spy.memcached.internal.GetFuture
+import play.api.cache.{CacheAPI, CachePlugin}
+import play.api.{Logger, Play, Application}
 import play.api.Play.current
+import scala.util.control.Exception._
+import scala.collection.JavaConverters._
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.logging.Logging
 
 class MemcachedSlf4JLogger(name: String) extends AbstractLogger(name) {
@@ -100,29 +104,14 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
 
     def get(key: String) = {
       logger.debug("Getting the cached for key " + key)
-      val future = client.asyncGet(key, tc)
+      var future: GetFuture[Any] = null
       try {
-        val any = future.get(1, TimeUnit.SECONDS)
-        if (any != null) {
-          logger.debug("any is " + any.getClass)
-        }
-        Option(
-          any match {
-            case x: java.lang.Byte => x.byteValue()
-            case x: java.lang.Short => x.shortValue()
-            case x: java.lang.Integer => x.intValue()
-            case x: java.lang.Long => x.longValue()
-            case x: java.lang.Float => x.floatValue()
-            case x: java.lang.Double => x.doubleValue()
-            case x: java.lang.Character => x.charValue()
-            case x: java.lang.Boolean => x.booleanValue()
-            case x => x
-          }
-        )
+        future = client.asyncGet(key, tc)
+        toOption(future.get(1, TimeUnit.SECONDS))
       } catch {
         case e: Throwable =>
           logger.error("An error has occurred while getting the value from memcached" , e)
-          future.cancel(false)
+          if (future != null) future.cancel(false)
           None
       }
     }
@@ -140,5 +129,41 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
     client.shutdown()
   }
 
+  protected def toOption(any: Any): Option[Any] = {
+    if (any != null) {
+      logger.debug("any is " + any.getClass)
+    }
+    Option(
+      any match {
+        case x: java.lang.Byte => x.byteValue()
+        case x: java.lang.Short => x.shortValue()
+        case x: java.lang.Integer => x.intValue()
+        case x: java.lang.Long => x.longValue()
+        case x: java.lang.Float => x.floatValue()
+        case x: java.lang.Double => x.doubleValue()
+        case x: java.lang.Character => x.charValue()
+        case x: java.lang.Boolean => x.booleanValue()
+        case x => x
+      }
+    )
+  }
 
+  def bulkGet(keys: Set[String]): Map[String, Any] = {
+    logger.debug("Getting the cached for keys " + keys)
+    var future: BulkFuture[JMap[String, Any]] = null
+    try {
+      future = client.asyncGetBulk(keys.asJava, tc)
+      future.getSome(1, TimeUnit.SECONDS).asScala.foldLeft(Map.empty[String, Any]){ (m, kv) =>
+        toOption(kv._2) match {
+          case Some(v) => m + (kv._1 -> v)
+          case _ => m
+        }
+      }
+    } catch {
+      case e: Throwable =>
+        logger.error("An error has occurred while getting some values from memcached" , e)
+        if (future != null) future.cancel(false)
+        Map.empty[String, Any]
+    }
+  }
 }

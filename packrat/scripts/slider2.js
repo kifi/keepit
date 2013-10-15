@@ -519,7 +519,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         api.require("styles/keeper/pane.css", function () {
           render("html/keeper/pane", $.extend(params, {
             site: location.hostname,
-            kifiLogoUrl: api.url("images/kifi_logo.png"),
             session: session
           }), {
             pane: "pane_" + pane
@@ -803,6 +802,16 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     hidePane: function (leaveSlider) {
       if ($pane) {
         hidePane(leaveSlider);
+      }
+    },
+    shadePane: function () {
+      if ($pane) {
+        $pane.addClass('kifi-shaded');
+      }
+    },
+    unshadePane: function () {
+      if ($pane) {
+        $pane.removeClass('kifi-shaded');
       }
     },
     showKeepers: function (keepers, otherKeeps) {

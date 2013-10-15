@@ -50,6 +50,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
+  def bulkGetBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -237,6 +238,18 @@ class ShoeboxServiceClientImpl @Inject() (
         })
       }
     }
+  }
+
+  def bulkGetBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
+    cacheProvider.basicUserCache.bulkGetOrElseFuture(userIds.map{ BasicUserUserIdKey(_) }.toSet){ keys =>
+      val query = keys.map(_.userId.id).mkString(",")
+      call(Shoebox.internal.getBasicUsers(query)).map{ res =>
+        res.json.as[Map[String, BasicUser]].map{ u =>
+          val id = Id[User](u._1.toLong)
+          (BasicUserUserIdKey(id), u._2)
+        }
+      }
+    }.map{ m => m.map{ case (k, v) => (k.userId, v) } }
   }
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)){ key=>

@@ -457,6 +457,9 @@ this.tagbox = (function ($, win) {
 		destroy: function (trigger) {
 			if (this.active) {
 				this.active = false;
+
+				win.slider2.unshadePane();
+
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
 
 				'$input,$inputbox,$suggest,$suggestWrapper,$tagbox,$tagList,$tagListWrapper'.split(',').forEach(function (name) {
@@ -722,7 +725,7 @@ this.tagbox = (function ($, win) {
 		 */
 		toggleClass: function (classname, add) {
 			var $tagbox = this.$tagbox;
-			return $tagbox && $tagbox.toggleClass(classname, add ? true : false);
+			return $tagbox && $tagbox.toggleClass(classname, !! add);
 		},
 
 		/**
@@ -733,7 +736,11 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the root element
 		 */
 		toggleLoading: function (loading) {
-			return this.toggleClass('loading', loading);
+			loading = !! loading;
+
+			this.toggleClass('loading', loading);
+
+			win.slider2.shadePane();
 		},
 
 		/**

@@ -192,7 +192,7 @@ class MessagingController @Inject() (
   }
 
   def createGlobalNotificaiton(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
-    db.readWrite { implicit session =>
+    val (message, thread) = db.readWrite { implicit session =>
       val mtps = MessageThreadParticipants(userIds)
       val thread = threadRepo.save(MessageThread(
         uriId = None,
@@ -213,39 +213,54 @@ class MessagingController @Inject() (
         sentOnUriId = None
       ))
 
-      userIds.foreach{ userId =>
-        val notifJson = Json.obj(
-          "id"       -> message.externalId.id,
-          "time"     -> message.createdAt,
-          "thread"   -> message.threadExtId.id,
-          "unread"   -> true,
-          "category" -> "global",
-          "title"    -> title,
-          "bodyHtml" -> body,
-          "linkText" -> linkText,
-          "url"      -> linkUrl,
-          "isSticky" -> sticky,
-          "image"    -> imageUrl
-        )
+      (message, thread)
+    }
 
-        val userThread = userThreadRepo.save(UserThread(
-          id = None,
-          user = userId,
-          thread = thread.id.get,
-          uriId = None,
-          lastSeen = None,
-          notificationPending = true,
-          lastMsgFromOther = Some(message.id.get),
-          lastNotification = notifJson,
-          replyable = false
-        ))
+    var errors : Set[Throwable] = Set[Throwable]()
+
+    userIds.foreach{ userId =>
+      try{
+        val (notifJson, userThread) = db.readWrite{ implicit session =>
+          val notifJson = Json.obj(
+            "id"       -> message.externalId.id,
+            "time"     -> message.createdAt,
+            "thread"   -> message.threadExtId.id,
+            "unread"   -> true,
+            "category" -> "global",
+            "title"    -> title,
+            "bodyHtml" -> body,
+            "linkText" -> linkText,
+            "url"      -> linkUrl,
+            "isSticky" -> sticky,
+            "image"    -> imageUrl
+          )
+
+          val userThread = userThreadRepo.save(UserThread(
+            id = None,
+            user = userId,
+            thread = thread.id.get,
+            uriId = None,
+            lastSeen = None,
+            notificationPending = true,
+            lastMsgFromOther = Some(message.id.get),
+            lastNotification = notifJson,
+            notificationUpdatedAt = message.createdAt,
+            replyable = false
+          ))
+
+          (notifJson, userThread)
+        }
 
         notificationRouter.sendToUser(
           userId,
           Json.arr("notification", notifJson)
         )
+      } catch {
+        case e: Throwable => errors = errors + e
       }
     }
+
+    if (errors.size>0) throw scala.collection.parallel.CompositeThrowable(errors)
   }
 
   private[eliza] def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
@@ -664,7 +679,7 @@ class MessagingController @Inject() (
     val message = db.readOnly{ implicit session => messageRepo.get(msgExtId) }
     val thread  = db.readOnly{ implicit session => threadRepo.get(message.thread) } //TODO: This needs to change when we have detached threads
     val nUrl: String = thread.nUrl.getOrElse("")
-    if (message.from.isDefined && message.from.get != userId) {
+    if (message.from.isEmpty || message.from.get != userId) {
       db.readWrite { implicit session =>
         userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message)
       }

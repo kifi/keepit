@@ -122,4 +122,48 @@ trait ObjectCache[K <: Key[T], T] {
         valueFutureOption
     }
   }
+
+  //
+  // bulk get API
+  //
+  protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, Option[T]]
+
+  def bulkGet(keys: Set[K]): Map[K, Option[T]] = {
+    var result = bulkGetFromInnerCache(keys)
+    if (keys.size > result.size) {
+      outerCache match {
+        case Some(cache) =>
+          val missing = keys -- result.keySet
+          cache.bulkGet(missing).foreach{ kv =>
+            result += kv
+            setInnerCache(kv._1, kv._2)
+          }
+        case None =>
+      }
+    }
+    result
+  }
+
+  def bulkGetOrElseFuture(keys: Set[K])(orElse: Set[K] => Future[Map[K, T]]): Future[Map[K, T]] = {
+    val found = bulkGetFromInnerCache(keys).foldLeft(Map.empty[K, T]){ (m, kv) =>
+      kv match {
+        case (k, Some(v)) => m + (k -> v)
+        case _ => m
+      }
+    }
+
+    if (keys.size > found.size) {
+      val missing = keys -- found.keySet
+      val valueFuture = outerCache match {
+        case Some(cache) => cache.bulkGetOrElseFuture(missing)(orElse)
+        case None => orElse(missing)
+      }
+      valueFuture.map{ valueMap =>
+        valueMap.foreach{ kv => setInnerCache(kv._1, Some(kv._2)) }
+        found ++ valueMap
+      }
+    } else {
+      Promise.successful(found).future
+    }
+  }
 }
