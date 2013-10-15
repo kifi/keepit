@@ -85,7 +85,7 @@ class ExtSearchController @Inject() (
 
     val lastUUID = lastUUIDStr.flatMap{
       case "" => None
-      case str => Some(ExternalId[ArticleSearchResultRef](str))
+      case str => Some(ExternalId[ArticleSearchResult](str))
     }
 
     timing.factory
@@ -167,7 +167,6 @@ class ExtSearchController @Inject() (
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
 
   private def reportArticleSearchResult(res: ArticleSearchResult) {
-    shoeboxClient.reportArticleSearchResult(res)
     articleSearchResultStore += (res.uuid -> res)
   }
 

@@ -72,8 +72,8 @@ object FortyTwoTypeMappers {
   }
 
   //ExternalIds
-  implicit object ArticleSearchResultRefExternalIdTypeMapper extends BaseTypeMapper[ExternalId[ArticleSearchResultRef]] {
-    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[ArticleSearchResultRef](profile)
+  implicit object ArticleSearchResultExternalIdTypeMapper extends BaseTypeMapper[ExternalId[ArticleSearchResult]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[ArticleSearchResult](profile)
   }
 
   implicit object KifiInstallationExternalIdTypeMapper extends BaseTypeMapper[ExternalId[KifiInstallation]] {

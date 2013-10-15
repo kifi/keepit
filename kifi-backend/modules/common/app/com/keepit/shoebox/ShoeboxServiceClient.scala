@@ -21,7 +21,6 @@ import com.keepit.common.zookeeper._
 import com.keepit.model._
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
-import com.keepit.search.ArticleSearchResultFactory
 import com.keepit.search.SearchConfigExperiment
 import play.api.libs.json._
 import com.keepit.social._
@@ -51,7 +50,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
-  def reportArticleSearchResult(res: ArticleSearchResult): Unit
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -255,10 +253,6 @@ class ShoeboxServiceClientImpl @Inject() (
         r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
       }
     }
-  }
-
-  def reportArticleSearchResult(res: ArticleSearchResult): Unit = {
-    call(Shoebox.internal.reportArticleSearchResult, Json.toJson(ArticleSearchResultFactory(res)))
   }
 
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI] = {

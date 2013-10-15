@@ -48,7 +48,7 @@ class MainSearcher(
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
-    lastUUID: Option[ExternalId[ArticleSearchResultRef]],
+    lastUUID: Option[ExternalId[ArticleSearchResult]],
     articleSearcher: Searcher,
     val uriGraphSearcher: URIGraphSearcherWithUser,
     val collectionSearcher: CollectionSearcherWithUser,
@@ -405,7 +405,7 @@ class MainSearcher(
     timeLogs.total = millisPassed
     Statsd.timing("mainSearch.total", millisPassed)
 
-    val searchResultUuid = ExternalId[ArticleSearchResultRef]()
+    val searchResultUuid = ExternalId[ArticleSearchResult]()
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
 
