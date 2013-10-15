@@ -805,6 +805,16 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         hidePane(leaveSlider);
       }
     },
+    shadePane: function () {
+      if ($pane) {
+        $pane.addClass('kifi-shaded');
+      }
+    },
+    unshadePane: function () {
+      if ($pane) {
+        $pane.removeClass('kifi-shaded');
+      }
+    },
     showKeepers: function (keepers, otherKeeps) {
       if (lastShownAt) return;
       var $tile = $(tile).hoverfu(function (configureHover) {
