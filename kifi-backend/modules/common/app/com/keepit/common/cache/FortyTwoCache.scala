@@ -76,6 +76,9 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
         repo.onError(AirbrakeError(e, Some(s"Failed fetching key $keys from $repo")))
         Map.empty[String, Option[T]]
     }
+    keys.headOption.foreach{ key =>
+      accessLog.add(timer.done(space = s"${repo.toString}.${key.namespace}", key = keys mkString ",", method = "BULK_GET"))
+    }
     keys.foldLeft(Map.empty[K, Option[T]]){ (m, key) =>
       val objOpt = decodeValue(key, valueMap.get(key.toString), timer)
       objOpt match {

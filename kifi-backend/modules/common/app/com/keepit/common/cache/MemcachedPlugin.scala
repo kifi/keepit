@@ -2,16 +2,19 @@ package com.keepit.common.cache
 
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
+import java.util.{Map=>JMap}
 import net.spy.memcached.auth.{PlainCallbackHandler, AuthDescriptor}
 import net.spy.memcached.{CachedData, ConnectionFactoryBuilder, AddrUtil, MemcachedClient}
-import play.api.cache.{CacheAPI, CachePlugin}
-import play.api.{Logger, Play, Application}
-import scala.util.control.Exception._
-import scala.collection.JavaConverters._
 import net.spy.memcached.transcoders.{Transcoder, SerializingTranscoder}
 import net.spy.memcached.compat.log.{Level, AbstractLogger}
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import net.spy.memcached.internal.BulkFuture
+import net.spy.memcached.internal.GetFuture
+import play.api.cache.{CacheAPI, CachePlugin}
+import play.api.{Logger, Play, Application}
 import play.api.Play.current
+import scala.util.control.Exception._
+import scala.collection.JavaConverters._
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.logging.Logging
 
 class MemcachedSlf4JLogger(name: String) extends AbstractLogger(name) {
@@ -101,13 +104,14 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
 
     def get(key: String) = {
       logger.debug("Getting the cached for key " + key)
-      val future = client.asyncGet(key, tc)
+      var future: GetFuture[Any] = null
       try {
+        future = client.asyncGet(key, tc)
         toOption(future.get(1, TimeUnit.SECONDS))
       } catch {
         case e: Throwable =>
           logger.error("An error has occurred while getting the value from memcached" , e)
-          future.cancel(false)
+          if (future != null) future.cancel(false)
           None
       }
     }
@@ -146,8 +150,9 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
 
   def bulkGet(keys: Set[String]): Map[String, Any] = {
     logger.debug("Getting the cached for keys " + keys)
-    val future = client.asyncGetBulk(keys.asJava, tc)
+    var future: BulkFuture[JMap[String, Any]] = null
     try {
+      future = client.asyncGetBulk(keys.asJava, tc)
       future.getSome(1, TimeUnit.SECONDS).asScala.foldLeft(Map.empty[String, Any]){ (m, kv) =>
         toOption(kv._2) match {
           case Some(v) => m + (kv._1 -> v)
@@ -156,9 +161,9 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
       }
     } catch {
       case e: Throwable =>
-      logger.error("An error has occurred while getting some values from memcached" , e)
-      future.cancel(false)
-      Map.empty[String, Any]
+        logger.error("An error has occurred while getting some values from memcached" , e)
+        if (future != null) future.cancel(false)
+        Map.empty[String, Any]
     }
   }
 }
