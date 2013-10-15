@@ -315,7 +315,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       }
     }
     var prefix = /^https?:\/\//;
-    var prefixLen = (url.match(prefix) || [])[0].length || 0;
+    var prefixLen = (url.match(prefix) || [''])[0].length;
     url = url.replace(prefix, '');
     url = url.length > 64 ? url.substr(0, 60) + "..." : url;
     matches = (matches || []).map(function (m) { return [m[0] - prefixLen, m[1]]; });
