@@ -431,7 +431,7 @@ div.kifi-pane-empty>img {
 .kifi-pane-shade {
   position: absolute;
   width: 100%;
-  background: rgba(0,0,0,.8);
+  background: rgba(0,0,0,.3);
   top: 0;
   bottom: 100%;
   opacity: 0;
