@@ -109,10 +109,10 @@ this.tagbox = (function ($, win) {
 				break;
 				/*
       case 'addToKeep':
-        // TODO: @joon [10-11-2013 01:14] 
+        // TODO: @joon [10-11-2013 01:14]
         break;
       case 'removeFromKeep':
-        // TODO: @joon [10-11-2013 01:14] 
+        // TODO: @joon [10-11-2013 01:14]
         break;
       */
 			case 'rename':
