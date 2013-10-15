@@ -13,6 +13,8 @@ import com.keepit.common.db.{Id}
 import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.mail.{ElectronicMail,EmailAddresses,PostOffice}
 import com.keepit.inject.AppScoped
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 
 import com.google.inject.{Inject, ImplementedBy}
 
