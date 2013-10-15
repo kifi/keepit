@@ -495,10 +495,6 @@ function makeRequest(name, method, url, data, callbacks) {
 api.port.on({
   deauthenticate: deauthenticate,
   get_keeps: searchOnServer,
-  get_chatter: function(urls, respond) {
-    log("[get_chatter]")();
-    ajax("eliza", "POST", "/eliza/ext/chatter", urls, respond);
-  },
   get_keepers: function(_, respond, tab) {
     log("[get_keepers]", tab.id)();
     var d = pageData[tab.nUri] || {};
