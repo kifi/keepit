@@ -744,16 +744,14 @@ this.tagbox = (function ($, win) {
 			return $tagbox && $tagbox.toggleClass(classname, !! add);
 		},
 
-		moveTileToBottom: function () {
+		moveTileToBottom: function (res) {
 			var tile = win.tile,
 				$tile = $(tile),
-				pos = $tile.data('pos');
+				dy = window.innerHeight - tile.getBoundingClientRect().bottom;
 
-			if (pos && pos.bottom) {
-				return;
+			if (!dy) {
+				return res;
 			}
-
-			var dy = window.innerHeight - tile.getBoundingClientRect().bottom;
 
 			$tile.css('transform', 'translate(0,' + dy + 'px)');
 
