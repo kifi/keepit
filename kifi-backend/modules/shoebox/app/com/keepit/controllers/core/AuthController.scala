@@ -163,7 +163,7 @@ class AuthController @Inject() (
               Authenticator.create(identity).fold(
                 error => Redirect(home).flashing("error" -> "Email exists; login failed"),
                 authenticator =>
-                  Redirect(home)
+                  Redirect(s"${home.url}?m=0")
                       .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
                       .withCookies(authenticator.toCookie)
               )
