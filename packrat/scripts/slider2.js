@@ -219,7 +219,41 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         if (e.target === this) keepPage("private");
       }).on("click", ".kifi-slider2-kept-lock", function (e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
-      }).on("click", ".kifi-slider2-keep-tag, .kifi-slider2-kept-tag", function(e) {
+      }).bindHover('.kifi-slider2-keep-tag, .kifi-slider2-kept-tag', function (configureHover) {
+        var $card = $(this).closest('.kifi-slider2-keep-card'),
+          kept = !$card.hasClass('kifi-unkept'),
+          tagged = $card.hasClass('kifi-tagged'),
+          title,
+          html;
+
+        if (kept) {
+          if (tagged) {
+            title = 'Manage Tags';
+            html = 'Add/Remove tags to/from this keep.';
+          }
+          else {
+            title = 'Add Tag(s)';
+            html = 'Add tags to this keep.';
+          }
+        }
+        else {
+          title = 'Keep It and Tag It';
+          html = 'Keep and tag this page.';
+        }
+        render('html/keeper/titled_tip', {
+          title: title,
+          html: html
+        }, function (html) {
+          configureHover(html, {
+            mustHoverFor: 700,
+            hideAfter: 4000,
+            click: 'hide',
+            position: function (w) {
+              this.style.left = 8 - w + 'px';
+            }
+          });
+        });
+      }).on('click', '.kifi-slider2-keep-tag, .kifi-slider2-kept-tag', function (e) {
         if (e.originalEvent.tagboxClosed) {
           log('[tagbox:closed] ignore click event')();
           return;
