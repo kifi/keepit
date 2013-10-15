@@ -426,3 +426,18 @@ div.kifi-pane-empty>img {
 .kifi-thread-participants .kifi-thread-participant:last-child::before {
   content: " and "
 }
+.kifi-pane-shade {
+  position: absolute;
+  width: 100%;
+  background: rgba(0,0,0,.8);
+  top: 0;
+  bottom: 100%;
+  opacity: 0;
+  transition: opacity .5s ease, bottom 0s .5s;
+  z-index: 3;
+}
+.kifi-shaded > .kifi-pane-shade {
+  opacity: 1;
+  bottom: 54px;
+  transition-delay: 0s;
+}
