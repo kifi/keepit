@@ -70,10 +70,7 @@ this.tagbox = (function ($, win) {
 	}
 
 	function tagNameToString(name) {
-		if (name == null) {
-			return null;
-		}
-		return '' + name;
+		return name == null ? null : '' + name;
 	}
 
 	// receive
@@ -226,7 +223,7 @@ this.tagbox = (function ($, win) {
 			function addDocListeners() {
 				if (this.active) {
 					var $doc = $(document);
-					this.prevEscHandler = $doc.data('esc') || null;
+					this.prevEscHandler = this.getData($doc, 'esc');
 					$doc.data('esc', this.handleEsc.bind(this));
 
 					var onDocClick = this.onDocClick = onClick.bind(this);
@@ -833,6 +830,8 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		createTag: function (name, trigger) {
+			name = tagNameToString(name);
+
 			if (this.indexOfTagByName(name) !== -1) {
 				log('createTag', 'tag already exists', name);
 				return null;
@@ -1442,13 +1441,13 @@ this.tagbox = (function ($, win) {
 				}
 			}
 
-			var data = $suggestion.data(),
+			var data = this.getData($suggestion),
 				id = data.id;
 			if (id) {
 				return this.addTagById(id, $suggestion, trigger);
 			}
 
-			return this.createTag(tagNameToString(data.name), trigger);
+			return this.createTag(data.name, trigger);
 		},
 
 		//
@@ -1520,8 +1519,9 @@ this.tagbox = (function ($, win) {
 		 * @param {Object} event - A click event object
 		 */
 		onClickSuggestion: function (e) {
-			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion');
-			this.addTagById($suggestion.data('id'), $suggestion, this.getClickInfo('autocomplete'));
+			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion'),
+				tagId = this.getData($suggestion, 'id');
+			this.addTagById(tagId, $suggestion, this.getClickInfo('autocomplete'));
 		},
 
 		/**
@@ -1530,8 +1530,9 @@ this.tagbox = (function ($, win) {
 		 * @param {Object} event - A click event object
 		 */
 		onClickNewSuggestion: function (e) {
-			var $suggestion = $(e.target).closest('.kifi-tagbox-new');
-			this.createTag(tagNameToString($suggestion.data('name')), this.getClickInfo('new'));
+			var $suggestion = $(e.target).closest('.kifi-tagbox-new'),
+				tagName = this.getData($suggestion, 'name');
+			this.createTag(tagName, this.getClickInfo('new'));
 		},
 
 		/**
@@ -1562,7 +1563,8 @@ this.tagbox = (function ($, win) {
 		 * @param {Object} event - A click event object
 		 */
 		onClickRemoveTag: function (e) {
-			var tagId = $(e.target).closest('.kifi-tagbox-tag').data('id');
+			var $tag = $(e.target).closest('.kifi-tagbox-tag'),
+				tagId = this.getData($tag, 'id');
 			this.removeTagById(tagId, this.getClickInfo('X'));
 		},
 
@@ -1634,6 +1636,28 @@ this.tagbox = (function ($, win) {
 		//
 		// HELPER FUNCTIONS
 		//
+
+		/**
+		 * Returns a data from a jQuery element.
+		 *
+		 * @param {jQuery} $el - A jQuery element to get data from
+		 * @param {string} [name] - Data name
+		 *
+		 * @return {*} A data value
+		 */
+		getData: function ($el, name) {
+			if ($el.length) {
+				var dataset = $el[0].dataset;
+				if (!dataset) {
+					return null;
+				}
+				if (name == null) {
+					return dataset;
+				}
+				return (name in dataset) ? dataset[name] : null;
+			}
+			return null;
+		},
 
 		/**
 		 * Logs a tagbox user event to the server.
