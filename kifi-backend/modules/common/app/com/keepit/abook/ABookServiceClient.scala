@@ -22,7 +22,7 @@ trait ABookServiceClient extends ServiceClient {
 
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
-  def getContactInfos(userId:Id[User]):Future[Seq[ContactInfo]]
+  def getContactInfos(userId:Id[User], maxRows:Int):Future[Seq[ContactInfo]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getContactsRawInfo(userId:Id[User], origin:ABookOriginType):Future[Seq[ContactInfo]]
 }
@@ -45,8 +45,8 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def getContactInfos(userId: Id[User]): Future[Seq[ContactInfo]] = {
-    call(ABook.internal.getContactInfos(userId)).map { r =>
+  def getContactInfos(userId: Id[User], maxRows: Int): Future[Seq[ContactInfo]] = {
+    call(ABook.internal.getContactInfos(userId, maxRows)).map { r =>
       Json.fromJson[Seq[ContactInfo]](r.json).get
     }
   }
@@ -74,7 +74,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
 
   def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = ???
 
-  def getContactInfos(userId: Id[User]): Future[Seq[ContactInfo]] = ???
+  def getContactInfos(userId: Id[User], maxRows:Int): Future[Seq[ContactInfo]] = ???
 
   def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
 

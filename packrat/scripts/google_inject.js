@@ -4,7 +4,8 @@
 // @require styles/friend_card.css
 // @require scripts/api.js
 // @require scripts/lib/jquery.js
-// @require scripts/lib/jquery-bindhover.js
+// @require scripts/lib/jquery-ui-position.min.js
+// @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
 // @require scripts/html/search/google.js
@@ -137,7 +138,6 @@ if (searchUrlRe.test(document.URL)) !function() {
       var onShow = function(hits) {
         $status.one("transitionend", hideStatus);
         resp.expanded = true;
-        loadChatter(hits);
         prefetchMore();
       }.bind(null, resp.hits.slice());
       if (expanded) {
@@ -429,7 +429,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     }).on("click", ".kifi-filter-detail-x", function() {
       search(null, $.extend({}, filter, {who: "f"}));
       $(this).closest(".kifi-filter-detail").each(hideFilterDetail);
-    }).bindHover(".kifi-face.kifi-friend", function(configureHover) {
+    }).hoverfu(".kifi-face.kifi-friend", function(configureHover) {
       var $a = $(this);
       var i = $a.closest("li.g").prevAll("li.g").length;
       var j = $a.prevAll(".kifi-friend").length;
@@ -440,7 +440,11 @@ if (searchUrlRe.test(document.URL)) !function() {
         iconsUrl: api.url("images/social_icons.png")
       }, function(html) {
         var $el = $(html);
-        configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+        configureHover($el, {
+          position: {my: "center bottom-12", at: "center top", of: $a, collision: "none"},
+          canLeaveFor: 600,
+          hideAfter: 4000,
+          click: "toggle"});
         api.port.emit("get_networks", friend.id, function(networks) {
           for (nw in networks) {
             $el.find('.kifi-kcard-nw-' + nw)
@@ -449,27 +453,13 @@ if (searchUrlRe.test(document.URL)) !function() {
           }
         });
       });
-    }).bindHover(".kifi-res-friends", function(configureHover) {
+    }).hoverfu(".kifi-res-friends", function(configureHover) {
       var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;
       render("html/search/friends", {friends: response.hits[i].users}, function(html) {
         configureHover(html, {
-          click: "toggle",
-          position: function(w) {
-            this.style.left = ($a[0].offsetWidth - w) / 2 + "px";
-          }});
+          position: {my: "center bottom-8", at: "center top", of: $a, collision: "none"},
+          click: "toggle"});
       });
-    }).bindHover(".kifi-chatter", function(configureHover) {
-      render("html/search/chatter", {
-        numMessages: $(this).data("n"),
-        locator: $(this).data("locator"),
-        pluralize: function() {return pluralLambda}
-      }, function(html) {
-        configureHover(html, {canLeaveFor: 600, click: "toggle"});
-      });
-    }).on("click", ".kifi-chatter-deeplink", function() {
-      var url = $(this).closest("li.g").find("h3.r a")[0].href;
-      api.port.emit("await_deep_link", {url: url, locator: $(this).data("locator")});
-      location.href = url;
     });
   }
 
@@ -487,23 +477,6 @@ if (searchUrlRe.test(document.URL)) !function() {
         mayHaveMore: response.mayHaveMore},
       {google_hit: "google_hit"}));
     log("[appendResults] done")();
-  }
-
-  function loadChatter(hits) {
-    if (!hits.length) return;
-    api.port.emit("get_chatter", hits.map(function(h) {return h.bookmark.url}), function gotChatter(chatter) {
-      log("[gotChatter]", chatter)();
-      var bgImg = "url(" + api.url("images/chatter.png") + ")";
-      for (var url in chatter) {
-        var o = chatter[url];
-        if (o && o.threads) {
-          $res.find(".kifi-who[data-url='" + url + "']").append(
-            $("<span class=kifi-chatter>")
-            .css("background-image", bgImg)
-            .data({n: o.threads, locator: "/messages" + (o.threadId ? "/" + o.threadId : "")}));
-        }
-      }
-    });
   }
 
   function prefetchMore() {
@@ -554,7 +527,6 @@ if (searchUrlRe.test(document.URL)) !function() {
     if (!response.mayHaveMore) {
       $list.find(".kifi-res-more").hide(200);
     }
-    loadChatter(hits);
   }
 
   function processHit(hit) {

@@ -286,7 +286,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
           AirbrakeError.outgoing(
             exception = tracer.withCause(e),
             request = req,
-            message = s"error handling $al"
+            message = s"${al.error}: error handling url ${al.url}"
           )
         )
     }

@@ -49,6 +49,8 @@ class HomeController @Inject() (db: Database,
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
     if (request.user.state == UserStates.PENDING) {
       pendingHome()
+    } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
+      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else {
@@ -56,7 +58,11 @@ class HomeController @Inject() (db: Database,
     }
   }, unauthenticatedAction = { implicit request =>
     val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
-    Ok(views.html.website.welcome(newSignup = newSignup))
+    if (newSignup && request.identityOpt.isDefined)
+      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
+        .flashing("error" -> "You have no Kifi account for this user. You can sign up here.")
+    else
+      Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
   })
 
   def kifiSiteRedirect(path: String) = Action {

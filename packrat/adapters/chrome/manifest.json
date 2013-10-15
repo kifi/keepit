@@ -37,7 +37,8 @@
       "js": [
         "scripts/api.js",
         "scripts/lib/jquery.js",
-        "scripts/lib/jquery-bindhover.js",
+        "scripts/lib/jquery-hoverfu.js",
+        "scripts/lib/jquery-ui-position.min.js",
         "scripts/lib/mustache.js",
         "scripts/render.js",
         "scripts/html/search/google.js",
