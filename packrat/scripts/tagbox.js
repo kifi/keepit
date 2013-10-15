@@ -69,6 +69,13 @@ this.tagbox = (function ($, win) {
 		return null;
 	}
 
+	function tagNameToString(name) {
+		if (name == null) {
+			return null;
+		}
+		return '' + name;
+	}
+
 	// receive
 	api.port.on({
 		tags: function (tags) {
@@ -1441,7 +1448,7 @@ this.tagbox = (function ($, win) {
 				return this.addTagById(id, $suggestion, trigger);
 			}
 
-			return this.createTag(data.name, trigger);
+			return this.createTag(tagNameToString(data.name), trigger);
 		},
 
 		//
@@ -1524,7 +1531,7 @@ this.tagbox = (function ($, win) {
 		 */
 		onClickNewSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-new');
-			this.createTag($suggestion.data('name'), this.getClickInfo('new'));
+			this.createTag(tagNameToString($suggestion.data('name')), this.getClickInfo('new'));
 		},
 
 		/**
