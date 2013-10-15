@@ -12,13 +12,15 @@ import scala.Some
 import java.io.File
 import scala.collection.mutable
 import scala.io.Source
+import scala.ref.WeakReference
 
 class ABookController @Inject() (
   actionAuthenticator:ActionAuthenticator,
   db:Database,
   s3:ABookRawInfoStore,
   abookInfoRepo:ABookInfoRepo,
-  contactInfoRepo:ContactInfoRepo
+  contactInfoRepo:ContactInfoRepo,
+  contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
 
@@ -77,44 +79,45 @@ class ABookController @Inject() (
         entry
     }
 
+    contactsUpdater.processContacts(userId, origin, abookRepoEntry, s3Key, WeakReference(json))
     // TODO: delay-batch-insert to contactRepo
-    origin match {
-      case ABookOrigins.IOS => {
-        val contactInfoBuilder = mutable.ArrayBuilder.make[ContactInfo]
-        abookRawInfo.contacts.value.foreach {
-          contact =>
-            val firstName = (contact \ "firstName").asOpt[String]
-            val lastName = (contact \ "lastName").asOpt[String]
-            val name = (contact \ "name").asOpt[String].getOrElse((firstName.getOrElse("") + " " + lastName.getOrElse("")).trim)
-            val emails = (contact \ "emails").as[Seq[String]]
-            emails.foreach {
-              email =>
-                val cInfo = ContactInfo(
-                  userId = userId,
-                  origin = ABookOrigins.IOS,
-                  abookId = abookRepoEntry.id.get,
-                  name = Some(name),
-                  firstName = firstName,
-                  lastName = lastName,
-                  email = email)
-                log.info(s"[upload($userId,$origin)] contact=$cInfo")
-                contactInfoBuilder += cInfo
-            }
-        }
-        val contactInfos = contactInfoBuilder.result
-        log.info(s"[upload($userId,$origin) #contacts=${contactInfos.length} contacts=${contactInfos.mkString(File.separator)}")
-        if (!contactInfos.isEmpty) {
-          // TODO: optimize
-          db.readWrite {
-            implicit session =>
-              contactInfos.foreach {
-                contactInfoRepo.save(_)
-              }
-          }
-        }
-      }
-      case _ => // not (yet) handled
-    }
+//    origin match {
+//      case ABookOrigins.IOS => {
+//        val contactInfoBuilder = mutable.ArrayBuilder.make[ContactInfo]
+//        abookRawInfo.contacts.value.foreach {
+//          contact =>
+//            val firstName = (contact \ "firstName").asOpt[String]
+//            val lastName = (contact \ "lastName").asOpt[String]
+//            val name = (contact \ "name").asOpt[String].getOrElse((firstName.getOrElse("") + " " + lastName.getOrElse("")).trim)
+//            val emails = (contact \ "emails").as[Seq[String]]
+//            emails.foreach {
+//              email =>
+//                val cInfo = ContactInfo(
+//                  userId = userId,
+//                  origin = ABookOrigins.IOS,
+//                  abookId = abookRepoEntry.id.get,
+//                  name = Some(name),
+//                  firstName = firstName,
+//                  lastName = lastName,
+//                  email = email)
+//                log.info(s"[upload($userId,$origin)] contact=$cInfo")
+//                contactInfoBuilder += cInfo
+//            }
+//        }
+//        val contactInfos = contactInfoBuilder.result
+//        log.info(s"[upload($userId,$origin) #contacts=${contactInfos.length} contacts=${contactInfos.mkString(File.separator)}")
+//        if (!contactInfos.isEmpty) {
+//          // TODO: optimize
+//          db.readWrite {
+//            implicit session =>
+//              contactInfos.foreach {
+//                contactInfoRepo.save(_)
+//              }
+//          }
+//        }
+//      }
+//      case _ => // not (yet) handled
+//    }
     abookRepoEntry
   }
 
