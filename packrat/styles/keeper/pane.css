@@ -72,11 +72,7 @@ a.kifi-pane-head-logo {
   background-repeat: no-repeat;
   position: relative;
 }
-a.kifi-pane-head-logo .kifi-slider2-tip-below {
-  left: -24px;
-  margin-top: 10px;
-}
-.kifi-pane a.kifi-pane-head-feedback[href] {
+.kifi-pane-head-feedback[href] {
   float: right;
   width: 77px;
   height: 20px;
@@ -90,15 +86,11 @@ a.kifi-pane-head-logo .kifi-slider2-tip-below {
   z-index: 1;
   line-height: 12px;
 }
-.kifi-pane a.kifi-pane-head-feedback:hover {
+.kifi-pane-head-feedback:hover {
   background-color: #679ade;
 }
-.kifi-pane a.kifi-pane-head-feedback:active {
+.kifi-pane-head-feedback:active {
   background-color: #5580b8;
-}
-a.kifi-pane-head-feedback .kifi-slider2-tip-below {
-  right: -44px;
-  margin-top: 10px;
 }
 a.kifi-pane-head-settings {
   float: right;
@@ -130,12 +122,7 @@ a.kifi-pane-head-settings:active,
 a.kifi-pane-head-settings.kifi-active {
   background-color: #324559;
 }
-a.kifi-pane-head-settings .kifi-slider2-tip-below {
-  left: auto;
-  right: 0;
-  margin-top: 10px;
-}
-a.kifi-pane-head-settings .kifi-slider2-tip-below::before {
+.kifi-pane-head-settings-tip::before {
   left: auto;
   right: 13px;
 }

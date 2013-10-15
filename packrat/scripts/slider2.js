@@ -3,7 +3,8 @@
 // @require styles/keeper/slider2.css
 // @require styles/friend_card.css
 // @require scripts/lib/jquery.js
-// @require scripts/lib/jquery-bindhover.js
+// @require scripts/lib/jquery-ui-position.min.js
+// @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
 
@@ -64,6 +65,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     $pane && $pane.remove();
     $slider && $slider.remove();
     $(tile).remove();
+    $('.kifi-root').remove();
     $('html').removeClass('kifi-with-pane kifi-pane-parent');
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('click', onClick, true);
@@ -108,7 +110,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
           }
         }
       }).mousedown(function (e) {
-        if (e.which !== 1 || $pane) return;
+        if (e.which !== 1 || $pane || $(e.target).closest('.kifi-slider2-tip').length) return;
         e.preventDefault();  // prevents selection and selection scrolling
         data.dragTimer = setTimeout(startDrag.bind(null, data), 900);
         data.mousedownEvent = e.originalEvent;
@@ -137,21 +139,37 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         }
       }).on('mouseover', '.kifi-slider2-keep-btn>.kifi-slider2-tip,.kifi-slider2-kept-btn>.kifi-slider2-tip', function () {
         this.parentNode.classList.add('kifi-hoverless');
-      }).bindHover('.kifi-slider2-keep-btn,.kifi-slider2-kept-btn', function (configureHover) {
+      }).hoverfu(".kifi-slider2-keep-btn,.kifi-slider2-kept-btn", function (configureHover) {
         var btn = this;
-        api.port.emit('get_keepers', function (o) {
+        api.port.emit("get_keepers", function (o) {
           if (o.keepers.length) {
             render('html/keeper/keepers', {
-              link: true,
+              tipClass: 'kifi-slider2-keepers-tip',
               keepers: pick(o.keepers, 8),
-              captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps)
+              linkKeepers: true,
+              captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps),
+              includeTri: true
             }, function (html) {
-              configureHover($(html).data('keepers', o.keepers), {
+              configureHover(hoverfuFriends($(html), o.keepers), {
                 mustHoverFor: 700,
                 canLeaveFor: 800,
                 hideAfter: 4000,
                 click: 'hide',
-                position: positionIt
+                parent: btn,
+                position: {my: 'center bottom-13', at: 'center top', of: btn, collision: 'fit', using: function (pos, o) {
+                  var dw = o.element.width - o.target.width;
+                  if (dw > 0) {
+                    pos.left = 'auto';
+                    pos.right = 0;
+                    o.element.element.find('.kifi-slider2-tip-tri')
+                      .css({left: 'auto', right: Math.round(.5 * o.target.width)});
+                  } else {
+                    pos.left -= o.target.left;
+                  }
+                  pos.top = 'auto';
+                  pos.bottom = '100%';
+                  o.element.element.css(pos);
+                }}
               });
             });
           } else {
@@ -164,37 +182,14 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
                 mustHoverFor: 700,
                 hideAfter: 4000,
                 click: 'hide',
-                position: positionIt});
+                position: {my: 'center bottom-13', at: 'center top', of: btn, collision: 'none'}});
             });
           }
-          function positionIt(w) {  // centered, or right-aligned if that would go off edge of page
-            if (!$slider) return;
-            var r1 = btn.getBoundingClientRect(), r2 = $slider[0].getBoundingClientRect();
-            this.style.right = Math.max((r1.width - w) / 2, r1.right - r2.right + 6) + 'px';
-          }
-        });
-      }).bindHover(".kifi-slider2-keeper", function (configureHover) {
-        var $a = $(this);
-        var friend = $a.closest(".kifi-slider2-tip").data("keepers").filter(hasId($a.data("id")))[0];
-        if (!friend) return;
-        render("html/friend_card", {
-          name: friend.firstName + " " + friend.lastName,
-          id: friend.id,
-          iconsUrl: api.url("images/social_icons.png")
-        }, function (html) {
-          var $el = $(html);
-          configureHover($el, {mustHoverFor: 100, canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
-          api.port.emit("get_networks", friend.id, function (networks) {
-            for (nw in networks) {
-              $el.find('.kifi-kcard-nw-' + nw)
-                .toggleClass('kifi-on', networks[nw].connected)
-                .attr('href', networks[nw].profileUrl || null);
-            }
-          });
         });
       }).on("mouseout", ".kifi-slider2-keep-btn,.kifi-slider2-kept-btn", function () {
         this.classList.remove("kifi-hoverless");
-      }).bindHover(".kifi-slider2-keep-lock,.kifi-slider2-kept-lock", function (configureHover) {
+      }).hoverfu('.kifi-slider2-keep-lock,.kifi-slider2-kept-lock', function (configureHover) {
+        var $a = $(this);
         var $card = $(this).closest(".kifi-slider2-keep-card");
         var kept = !$card.hasClass("kifi-unkept");
         var publicly = kept && $card.hasClass("kifi-public");
@@ -211,15 +206,13 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
             mustHoverFor: 700,
             hideAfter: 4000,
             click: "hide",
-            position: function (w) {
-              this.style.left = 8 - w / 2 + "px";
-            }});
+            position: {my: "center bottom-13", at: "center top", of: $a, collision: "none"}});
         });
       }).on("click", ".kifi-slider2-keep-lock", function (e) {
         if (e.target === this) keepPage("private");
       }).on("click", ".kifi-slider2-kept-lock", function (e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
-      }).on("click", ".kifi-slider2-keep-tag, .kifi-slider2-kept-tag", function(e) {
+      }).on("click", ".kifi-slider2-keep-tag, .kifi-slider2-kept-tag", function (e) {
         if (e.originalEvent.tagboxClosed) {
           log('[tagbox:closed] ignore click event')();
           return;
@@ -233,26 +226,29 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
           log('require:tagbox')();
           tagbox.toggle($slider, 'click:tagIcon');
         });
-      }).bindHover(".kifi-slider2-x", function (configureHover) {
-        this.style.overflow = "visible";
-        configureHover({mustHoverFor: 700, hideAfter: 2500, click: "hide"});
+      }).hoverfu('.kifi-slider2-x', function (configureHover) {
+        configureHover({
+          mustHoverFor: 700, hideAfter: 2500, click: 'hide',
+          position: {my: 'right bottom-13', at: 'right top', of: this, collision: 'none'}
+        });
       }).on("click", ".kifi-slider2-x", function () {
         if ($pane) {
           hidePane(true);
         }
-      }).bindHover(".kifi-slider2-dock-btn", function (configureHover) {
+      }).hoverfu('.kifi-slider2-dock-btn', function(configureHover) {
+        var $a = $(this);
         var tip = {
-          n: ["Notifications", "View all of your notifications.<br>Any new ones are highlighted."],
+          n: ["Notifications (" + CO_KEY + "+Shift+O)", "View all of your notifications.<br>Any new ones are highlighted."],
           m: ["Private Messages (" + CO_KEY + "+Shift+M)", "Send this page to friends<br>and start a discussion."]
         }[this.dataset.loc.substr(1,1)];
         render("html/keeper/titled_tip", {title: tip[0], html: tip[1]}, function (html) {
+          var px = $a.find('.kifi-count').text() > 0 ? 24 : 13;
           configureHover(html, {
             mustHoverFor: 700,
             hideAfter: 4000,
-            click: "hide",
-            position: function (w) {
-              this.style.left = 21 - w / 2 + "px";
-            }});
+            click: 'hide',
+            position: {my: 'center bottom-' + px, at: 'center top', of: $a, collision: 'none'}
+          });
         });
       }).on("mousedown", ".kifi-slider2-dock-btn", function (e) {
         e.preventDefault();
@@ -318,7 +314,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     $slider.addClass("kifi-hiding")
     .off("transitionend")
     .on("transitionend", function (e) {
-      if (e.target === this && e.originalEvent.propertyName == "opacity") {
+      if (e.target === this && e.originalEvent.propertyName === "opacity") {
         var css = JSON.parse(tile.dataset.pos || 0);
         if (css && !tile.style.top && !tile.style.bottom) {
           var y = css.top >= 0 ? window.innerHeight - css.top - 54 : (css.bottom || 0);
@@ -403,6 +399,42 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     if ($slider) $slider.find(".kifi-slider2-keep-card").removeClass("kifi-unkept kifi-private kifi-public").addClass("kifi-" + (how || "unkept"));
     if ($pane) $pane.find(".kifi-pane-kept").toggleClass("kifi-kept", !!how);
   }
+
+  function hoverfuFriends($tip, keepers) {
+    return $tip.hoverfu('.kifi-slider2-keeper', function (configureHover) {
+      var $pic = $(this);
+      var friend = keepers.filter(hasId($pic.data('id')))[0];
+      render('html/friend_card', {
+        name: friend.firstName + ' ' + friend.lastName,
+        id: friend.id,
+        iconsUrl: api.url('images/social_icons.png'),
+        includeTri: true
+      }, function (html) {
+        var $card = $(html);
+        configureHover($card, {
+          mustHoverFor: 100, canLeaveFor: 600, hideAfter: 4000, click: 'toggle', parent: $pic,
+          position: {my: 'center bottom-13', at: 'center top', of: $pic, collision: 'fit', using: function (pos, o) {
+            var xTC = o.target.left + .5 * o.target.width;
+            var xEC = o.element.left + .5 * o.element.width;
+            if (xTC - xEC >= 1) {
+              var pad = 6;
+              pos.left -= pad;
+              o.element.element.find('.kifi-kcard-tri').css('left', xTC - (o.element.left - pad));
+            }
+            o.element.element.css(pos);
+          }}});
+        api.port.emit('get_networks', friend.id, function (networks) {
+          for (nw in networks) {
+            $card.find('.kifi-kcard-nw-' + nw)
+              .toggleClass('kifi-on', networks[nw].connected)
+              .attr('href', networks[nw].profileUrl || null);
+          }
+        });
+      });
+    });
+  }
+
+  // ===== Pane Stuff
 
   function toPaneName(locator) {
     var name = locator.match(/[a-z]+\/?/)[0];
@@ -515,14 +547,23 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
               }
               $box.data("shown", true).triggerHandler("kifi:shown");
             })
-            .bindHover(".kifi-pane-head-logo", {mustHoverFor: 700, hideAfter: 2500, click: "hide"})
-            .bindHover(".kifi-pane-head-feedback", function (configureHover) {
+            .hoverfu('.kifi-pane-head-logo', function(configureHover) {
+              configureHover({
+                mustHoverFor: 700, hideAfter: 2500, click: 'hide',
+                position: {my: 'center top+10', at: 'center bottom', of: this, collision: 'none'}
+              });
+            })
+            .hoverfu(".kifi-pane-head-feedback", function (configureHover) {
+              var btn = this;
               render("html/keeper/titled_tip", {
                 dir: "below",
                 title: "Give Us Feedback",
                 html: "Tell us your ideas for Kifi<br>or report an issue."
               }, function (html) {
-                configureHover(html, {mustHoverFor: 700, hideAfter: 4000, click: "hide"});
+                configureHover(html, {
+                  mustHoverFor: 700, hideAfter: 4000, click: "hide",
+                  position: {my: 'center top+16', at: 'center bottom', of: btn, collision: 'none'}
+                });
               });
             })
             .on("click", ".kifi-pane-head-feedback", function (e) {
@@ -536,13 +577,18 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
                 "kifi-feedback",
                 "width="+width+",height="+height+",resizable,top="+top+",left="+left);
             })
-            .bindHover(".kifi-pane-head-settings:not(.kifi-active)", function (configureHover) {
+            .hoverfu('.kifi-pane-head-settings:not(.kifi-active)', function (configureHover) {
+              var btn = this;
               render("html/keeper/titled_tip", {
                 dir: "below",
+                cssClass: 'kifi-pane-head-settings-tip',
                 title: "Settings",
                 html: "Customize your Kifi<br>experience."
               }, function (html) {
-                configureHover(html, {mustHoverFor: 700, hideAfter: 3000, click: "hide"});
+                configureHover(html, {
+                  mustHoverFor: 700, hideAfter: 3000, click: "hide",
+                  position: {my: 'right top+10', at: 'right bottom', of: btn, collision: 'none'}
+                });
               });
             })
             .on("mousedown", ".kifi-pane-head-settings", function (e) {
@@ -726,6 +772,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
   // the keeper API
   return {
     show: function (trigger) {  // trigger is for the event log (e.g. "tile", "auto", "scroll")
+      $(tile).hoverfu('destroy');
       if ($slider) {
         log("[show] already showing")();
       } else {
@@ -760,20 +807,26 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     },
     showKeepers: function (keepers, otherKeeps) {
       if (lastShownAt) return;
-      var $tile = $(tile).bindHover(function (configureHover) {
+      var $tile = $(tile).hoverfu(function (configureHover) {
         // TODO: preload friend pictures
         render("html/keeper/keepers", {
+          tipClass: 'kifi-slider2-keepers-promo',
           keepers: pick(keepers, 8),
           captionHtml: formatCountHtml(0, keepers.length, otherKeeps)
         }, function (html) {
-          configureHover(html, {mustHoverFor: 0, canLeaveFor: 1e9, click: "hide"});
+          var $tip = $(html).on("transitionend", function unhoverfu(e) {
+            if (e.target === this && !this.classList.contains('kifi-showing') && e.originalEvent.propertyName === 'opacity') {
+              $tip.off('transitionend', unhoverfu);
+              $tile.hoverfu('destroy');
+            }
+          });
+          var px = $tile.find('.kifi-count').length ? 23 : 16;
+          configureHover($tip, {
+            position: {my: "right bottom-" + px, at: "right top", of: $tile.find('.kifi-tile-card'), collision: "none"},
+            insertBefore: $tile, mustHoverFor: 0, canLeaveFor: 1e9});
         });
-      }).on("transitionend", function unbindHover(e) {
-        if (!$tile.hasClass("kifi-hover-showing") && e.target.classList.contains("kifi-slider2-tip") && e.originalEvent.propertyName == "opacity") {
-          $tile.off("transitionend", unbindHover).bindHover("destroy");
-        }
       });
-      $tile.triggerHandler("mouseover.bindHover");
-      setTimeout($tile.triggerHandler.bind($tile, "mousedown.bindHover"), 3000);
+      $tile.hoverfu('show');
+      setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000);
     }};
 }();
