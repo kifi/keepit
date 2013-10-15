@@ -94,7 +94,6 @@
 
     // 3rd Party Libraries
     "Q": true,
-    "_": true,
-    "PubSub": true
+    "_": true
   }
 }
