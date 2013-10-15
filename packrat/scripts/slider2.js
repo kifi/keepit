@@ -6,6 +6,7 @@
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/mustache.js
+// @require scripts/lib/pubsub.js
 // @require scripts/render.js
 
 $.fn.layout = function () {
@@ -267,6 +268,24 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       callback();
     });
   }
+
+  PubSub.subscribe('tagbox.loading', function (type, loading) {
+    if ($pane && !loading) {
+      $pane.addClass('kifi-background', !loading);
+      setTimeout(function () {
+        if ($pane && tagbox) {
+          $pane.find('.kifi-pane-overlay').addClass('kifi-opacity100');
+        }
+      }, 1);
+    }
+  });
+
+  PubSub.subscribe('tagbox.destroy', function () {
+    if ($pane) {
+      $pane.removeClass('kifi-background');
+      $pane.find('.kifi-pane-overlay').removeClass('kifi-opacity100');
+    }
+  });
 
   function showSlider(trigger, callback) {
     log("[showSlider]", trigger)();

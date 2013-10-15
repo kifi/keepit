@@ -426,3 +426,19 @@ div.kifi-pane-empty>img {
 .kifi-thread-participants .kifi-thread-participant:last-child::before {
   content: " and "
 }
+.kifi-pane-overlay {
+  display: none;
+  position: absolute;
+  bottom: 54px;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,.8);
+  transition: opacity .5s ease;
+  opacity: 0;
+}
+.kifi-pane.kifi-background .kifi-pane-overlay {
+  display: block;
+}
+.kifi-pane.kifi-background .kifi-pane-overlay.kifi-opacity100 {
+  opacity: 1;
+}

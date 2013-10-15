@@ -2,6 +2,7 @@
 // @require scripts/lib/underscore.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/lib/q.min.js
+// @require scripts/lib/pubsub.js
 // @require scripts/render.js
 // @require scripts/util.js
 // @require scripts/scorefilter.js
@@ -195,6 +196,8 @@ this.tagbox = (function ($, win) {
 			this.initClearAll();
 			this.initTags();
 			this.initScroll();
+
+			PubSub.publish('tagbox.init', this);
 
 			this.logEvent('init', {
 				trigger: trigger
@@ -457,6 +460,9 @@ this.tagbox = (function ($, win) {
 		destroy: function (trigger) {
 			if (this.active) {
 				this.active = false;
+
+				PubSub.publish('tagbox.destroy', this);
+
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
 
 				'$input,$inputbox,$suggest,$suggestWrapper,$tagbox,$tagList,$tagListWrapper'.split(',').forEach(function (name) {
@@ -733,7 +739,11 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the root element
 		 */
 		toggleLoading: function (loading) {
-			return this.toggleClass('loading', loading);
+			loading = loading ? true : false;
+
+			this.toggleClass('loading', loading);
+
+			PubSub.publish('tagbox.loading', loading);
 		},
 
 		/**
