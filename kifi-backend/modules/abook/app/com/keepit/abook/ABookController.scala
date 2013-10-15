@@ -70,11 +70,8 @@ class ABookController @Inject() (
         val entry = oldVal match {
           case Some(abookInfoEntry) => {
             log.info(s"[upload] old entry for userId=$userId and origin=${abookRawInfo.origin} already exists: $oldVal")
-            db.readWrite {
-              implicit session =>
-                val deletedRows = contactInfoRepo.deleteByUserIdAndABookInfo(userId, abookInfoEntry.id.get) // TODO:REVISIT
-                log.info(s"[upload] # of rows deleted=$deletedRows")
-            }
+            val deletedRows = contactInfoRepo.deleteByUserIdAndABookInfo(userId, abookInfoEntry.id.get) // TODO:REVISIT
+            log.info(s"[upload] # of rows deleted=$deletedRows")
             abookInfoEntry
           }
           case None => {
