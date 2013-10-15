@@ -91,7 +91,6 @@
     "pageData": true,
     "log": true,
     "util": true,
-    "tile": true,
 
     // 3rd Party Libraries
     "Q": true,
