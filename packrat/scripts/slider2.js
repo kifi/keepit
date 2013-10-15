@@ -519,7 +519,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         api.require("styles/keeper/pane.css", function () {
           render("html/keeper/pane", $.extend(params, {
             site: location.hostname,
-            kifiLogoUrl: api.url("images/kifi_logo.png"),
             session: session
           }), {
             pane: "pane_" + pane
