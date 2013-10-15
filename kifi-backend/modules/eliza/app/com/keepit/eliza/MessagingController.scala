@@ -192,7 +192,7 @@ class MessagingController @Inject() (
   }
 
   def createGlobalNotificaiton(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
-    db.readWrite { implicit session =>
+    val (message, thread) = db.readWrite { implicit session =>
       val mtps = MessageThreadParticipants(userIds)
       val thread = threadRepo.save(MessageThread(
         uriId = None,
@@ -213,7 +213,11 @@ class MessagingController @Inject() (
         sentOnUriId = None
       ))
 
-      userIds.foreach{ userId =>
+      (message, thread)
+    }
+
+    userIds.foreach{ userId => SafeFuture{
+      val (notifJson, userThread) = db.readWrite{ implicit session =>
         val notifJson = Json.obj(
           "id"       -> message.externalId.id,
           "time"     -> message.createdAt,
@@ -240,12 +244,14 @@ class MessagingController @Inject() (
           replyable = false
         ))
 
-        notificationRouter.sendToUser(
-          userId,
-          Json.arr("notification", notifJson)
-        )
+        (notifJson, userThread)
       }
-    }
+
+      notificationRouter.sendToUser(
+        userId,
+        Json.arr("notification", notifJson)
+      )
+    }}
   }
 
   private[eliza] def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
