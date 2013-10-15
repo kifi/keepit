@@ -455,7 +455,7 @@ this.tagbox = (function ($, win) {
 		},
 
 		updateScroll: function () {
-      log('updateScroll');
+			log('updateScroll');
 
 			if (this.active) {
 				this.$tagListWrapper.data('antiscroll').refresh();
@@ -746,8 +746,14 @@ this.tagbox = (function ($, win) {
 
 		moveTileToBottom: function () {
 			var tile = win.tile,
-				dy = window.innerHeight - tile.getBoundingClientRect().bottom,
-				$tile = $(tile);
+				$tile = $(tile),
+				pos = $tile.data('pos');
+
+			if (pos && pos.bottom) {
+				return;
+			}
+
+			var dy = window.innerHeight - tile.getBoundingClientRect().bottom;
 
 			$tile.css('transform', 'translate(0,' + dy + 'px)');
 
