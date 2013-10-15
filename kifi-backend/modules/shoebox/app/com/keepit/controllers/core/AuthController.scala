@@ -148,20 +148,39 @@ class AuthController @Inject() (
   def handleSignup() = HtmlAction(true)(authenticatedAction = doSignup(_), unauthenticatedAction = doSignup(_))
 
   def handleUsernamePasswordSignup() = HtmlAction(true)({ _ => Redirect("/") }, { implicit request =>
+    val home = com.keepit.controllers.website.routes.HomeController.home()
+    val signup = routes.AuthController.signupPage()
+
     emailPasswordForm.bindFromRequest.fold(
-      formWithErrors => Redirect(routes.AuthController.handleSignup()).flashing(
-        "error" -> "Form is invalid"
-      ),
+      formWithErrors => Redirect(home).flashing("error" -> "Form is invalid"),
       { case EmailPassword(email, password) =>
-        val pinfo = Registry.hashers.currentHasher.hash(password)
-        val newIdentity = saveUserIdentity(request.userIdOpt, request.identityOpt, email, pinfo, isComplete = false)
-        Authenticator.create(newIdentity).fold(
-          error => Redirect(routes.AuthController.handleSignup()).flashing("error" -> "Error creating user"),
-          authenticator =>
-            Redirect(routes.AuthController.handleSignup())
-              .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
-              .withCookies(authenticator.toCookie)
-        )
+        val hasher = Registry.hashers.currentHasher
+
+        db.readOnly { implicit s => socialRepo.getOpt(SocialId(email), SocialNetworks.FORTYTWO) }.collect {
+          case sui if sui.credentials.isDefined && sui.userId.isDefined =>
+            val identity = sui.credentials.get
+            if (hasher.matches(identity.passwordInfo.get, password)) {
+              Authenticator.create(identity).fold(
+                error => Redirect(home).flashing("error" -> "Email exists; login failed"),
+                authenticator =>
+                  Redirect(home)
+                      .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
+                      .withCookies(authenticator.toCookie)
+              )
+            } else {
+              Redirect(home).flashing("error" -> "A user with that email exists but the password was invalid")
+            }
+        }.getOrElse {
+          val pinfo = hasher.hash(password)
+          val newIdentity = saveUserIdentity(request.userIdOpt, request.identityOpt, email, pinfo, isComplete = false)
+          Authenticator.create(newIdentity).fold(
+            error => Redirect(signup).flashing("error" -> "Error creating user"),
+            authenticator =>
+              Redirect(signup)
+                .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
+                .withCookies(authenticator.toCookie)
+          )
+        }
       })
   })
 
@@ -197,8 +216,8 @@ class AuthController @Inject() (
             .map(emailRepo.saveWithVerificationCode)
             .get
         postOffice.sendMail(ElectronicMail(
-          from = EmailAddresses.NOTIFY,
-          to = Seq(new EmailAddressHolder { val address = email }),
+          from = EmailAddresses.NOTIFICATIONS,
+          to = Seq(GenericEmailAddress(email)),
           subject = "Confirm your email address for Kifi",
           htmlBody = s"Please confirm your email address by going to " +
               s"$url${routes.AuthController.verifyEmail(emailWithVerification.verificationCode.get)}",
@@ -217,7 +236,7 @@ class AuthController @Inject() (
 
     if (isConfirmation) {
       confirmationInfoForm.bindFromRequest.fold(
-        formWithErrors => Redirect(com.keepit.controllers.website.routes.HomeController.home()).flashing(
+        formWithErrors => Redirect(routes.AuthController.signupPage()).flashing(
           "error" -> "Form is invalid"
         ),
         { case ConfirmationInfo(firstName, lastName) =>
@@ -231,7 +250,7 @@ class AuthController @Inject() (
         })
     } else {
       registrationInfoForm.bindFromRequest.fold(
-        formWithErrors => Redirect(com.keepit.controllers.website.routes.HomeController.home()).flashing(
+        formWithErrors => Redirect(routes.AuthController.signupPage()).flashing(
           "error" -> "Form is invalid"
         ),
         { case RegistrationInfo(email, firstName, lastName, password) =>
@@ -328,8 +347,8 @@ class AuthController @Inject() (
       val verifiedEmailOpt = emailOpt.flatMap(emailRepo.getByAddressOpt(_)).map(emailRepo.saveWithVerificationCode)
       verifiedEmailOpt map { email =>
         postOffice.sendMail(ElectronicMail(
-          from = EmailAddresses.NOTIFY,
-          to = Seq(new EmailAddressHolder { val address = email.address }),
+          from = EmailAddresses.NOTIFICATIONS,
+          to = Seq(GenericEmailAddress(email.address)),
           subject = "Reset your password",
           htmlBody = s"You can set a new password by going to " +
               s"$url${routes.AuthController.setNewPassword(email.verificationCode.get)}",

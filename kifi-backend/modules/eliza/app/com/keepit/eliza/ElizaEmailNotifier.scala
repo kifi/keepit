@@ -8,11 +8,13 @@ import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
-import com.keepit.model.{User}
+import com.keepit.model.{UserStates, User}
 import com.keepit.common.db.{Id}
 import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.mail.{ElectronicMail,EmailAddresses,PostOffice}
 import com.keepit.inject.AppScoped
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 
 import com.google.inject.{Inject, ImplementedBy}
 
@@ -52,6 +54,7 @@ class ElizaEmailNotifierActor @Inject() (
         val thread = db.readOnly { implicit session =>  threadRepo.get(userThread.thread) }
 
         val participantSet : Set[Id[User]] = thread.participants.map(_.all).getOrElse(Set())
+        val userIsActiveFuture = shoebox.getUsers(Seq(userThread.user)).map(_.headOption.map(_.state == UserStates.ACTIVE).getOrElse(false))
         val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 5 seconds)
         val otherParticipants = (participantSet - userThread.user).map(id2BasicUser(_))
 
@@ -84,7 +87,10 @@ class ElizaEmailNotifierActor @Inject() (
             category = PostOffice.Categories.COMMENT
           )
 
-          shoebox.sendMailToUser(userThread.user, email)
+          val userIsActive = Await.result(userIsActiveFuture, 5 seconds)
+          if (userIsActive) {
+            shoebox.sendMailToUser(userThread.user, email)
+          }
 
           db.readWrite{ implicit session => userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther) }
         }

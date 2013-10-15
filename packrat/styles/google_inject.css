@@ -498,14 +498,8 @@ li.token-input-input-token-googly {
   background-repeat: no-repeat;
   position: relative;
 }
-.kifi-face.kifi-friend .kifi-kcard {
-  bottom: 36px;
-  left: -22px;
+.kifi-kcard {
   z-index: 999;
-}
-.kifi-face.kifi-friend .kifi-kcard::before,
-.kifi-face.kifi-friend .kifi-kcard::after {
-  left: 33px;
 }
 .kifi-globe {
   margin-left: 6px;
@@ -536,7 +530,6 @@ a.kifi-res-friends {
 }
 .kifi-res-friends-hover {
   position: absolute;
-  bottom: 20px;
   padding: 4px 8px;
   background-color: #282828;
   color: #fff;
@@ -544,14 +537,20 @@ a.kifi-res-friends {
   cursor: default;
   z-index: 99;
   opacity: 0;
-  transition: opacity 120ms ease-in-out, bottom 120ms ease-out;
+  -webkit-transform: translate(0,3px);
+  transform: translate(0,3px);
+  transition: opacity linear, -webkit-transform ease-in-out;
+  transition: opacity linear, transform ease-in-out;
+  transition-duration: 120ms;
 }
-.kifi-hover-showing .kifi-res-friends-hover {
-  bottom: 22px;
+.kifi-res-friends-hover.kifi-showing {
   opacity: 1;
+  -webkit-transform: none;
+  transform: none;
   transition-duration: 60ms;
 }
-.kifi-res-friends-▾ {
+.kifi-res-friends-hover::after {
+  content: ' ';
   position: absolute;
   left: 50%;
   margin-left: -4px;
@@ -570,61 +569,6 @@ a.kifi-res-friends {
   list-style: none;
   padding: 0;
   white-space: nowrap;
-}
-.kifi-chatter {
-  float: right;
-  margin-top: 5px;
-  width: 18px;
-  height: 16px;
-  background-position: right 0;
-  position: relative;
-  cursor: pointer;
-}
-.kifi-chatter:hover,
-.kifi-chatter.kifi-hover-showing {
-  background-position: right -16px;
-}
-.kifi-chatter-hover {
-  position: absolute;
-  bottom: 21px;
-  left: -35px;
-  width: 70px;
-  height: 29px;
-  padding: 6px 10px;
-  background-color: #6ca4f2;
-  color: #fff;
-  font-size: 11px;
-  cursor: default;
-  z-index: 99;
-  opacity: 0;
-  transition: opacity 60ms ease-in-out, bottom 60ms ease-out;
-}
-.kifi-hover-showing .kifi-chatter-hover {
-  bottom: 24px;
-  opacity: 1;
-}
-.kifi-chatter-hover::after {
-  content: " ";
-  position: absolute;
-  left: 40px;
-  bottom: -5px;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-color: #6ca4f2 transparent;
-  border-width: 5px 4px 0;
-  font-size: 0;
-}
-.kifi-chatter-title {
-  display: block;
-  margin-bottom: 2px;
-}
-.kifi-chatter-hover a {
-  color: #fff !important;
-  text-decoration: none !important;
-}
-.kifi-chatter-hover a:hover {
-  text-decoration: underline !important;
 }
 
 .kifi-res-end {
