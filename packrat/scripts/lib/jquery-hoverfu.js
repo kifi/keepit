@@ -24,10 +24,10 @@
 //    the new one’s trigger element is not a descendant of the hover element at
 //    the top of the stack.
 
-!function($) {
+!function ($, doc) {
   'use strict';
 
-  $.fn.hoverfu = function(m) {
+  $.fn.hoverfu = function (m) {
     if ((m = methods[m])) {
       return m.apply(this, Array.prototype.slice.call(arguments, 1));
     } else {
@@ -36,13 +36,14 @@
   };
 
   var methods = {
-    init: function(selector, create) {
+    init: function (selector, create) {
       if (!create) create = selector, selector = null;
       if (typeof create != "function") create = createFromDataAttr(create);
       return this
       .on("mouseover.hoverfu", selector, $.proxy(onMouseOver, null, create))
       .on("mouseout.hoverfu", selector, onMouseOut)
-      .on("mousedown.hoverfu", selector, function(e) {
+      .on("mousedown.hoverfu", selector, function (e) {
+        if (e.which !== 1) return;
         var data = getData(this);
         if (!data.opts || !data.opts.click || isFadingOut(data)) return;
         if (data.opts.click == "hide") {
@@ -61,7 +62,7 @@
           }
         }
       })
-      .on("hoverfu:show.hoverfu", selector, function() {
+      .on("hoverfu:show.hoverfu", selector, function () {
         var data = getData(this);
         if (data.$h) {
           show.call(this);
@@ -70,11 +71,14 @@
         }
       });
     },
-    show: function() {
+    show: function () {
       return this.trigger("hoverfu:show");
     },
-    destroy: function() {
-      return this.each(function() {
+    hide: function () {
+      return this.each(hide);
+    },
+    destroy: function () {
+      return this.each(function () {
         var data = getData(this) || {};
         clearTimeout(data.show || data.hide);
         data.$h && data.$h.remove();
@@ -96,8 +100,9 @@
       var $h = data.$h = $(hover).data("hoverfu", data);
       data.opts = opts = opts || {};
       if (opts.position) {
-        $h.css({visibility: "hidden", display: "block"}).appendTo("body")
-          .position(opts.position).css({visibility: "", display: ""}).detach();
+        $h.css({visibility: 'hidden', display: 'block'});
+        attach($h, opts);
+        $h.position(opts.position).css({visibility: '', display: ''}).detach();
       }
       if (opts.canLeaveFor) {
         $h.on("mouseover.hoverfu", $.proxy(onMouseOver, null, null))
@@ -111,35 +116,45 @@
       }
     });
   }
+  function attach($h, opts) {
+    if (opts.insertBefore) {
+      $h.insertBefore(opts.insertBefore);
+    } else {
+      $h.appendTo(opts.parent || (doc.body.tagName === 'BODY' ? doc.body : doc.documentElement));
+    }
+  }
   function show() {
     var data = getData(this);
     clearTimeout(data.show);
     delete data.show;
-    if (!data.$h || data.showing || isFadingOut(data)) return;
-    data.$h.appendTo("body").each(function(){this.offsetHeight}).addClass("showing");
+    var $h = data.$h;
+    if (!$h || data.showing || isFadingOut(data)) return;
+    attach($h, data.opts);
+    $h[0].offsetHeight;  // force layout
+    $h.addClass('kifi-showing');
     data.showTime = Date.now();
     data.showing = true;
     if (data.opts.hideAfter) {
       data.hide = setTimeout(hide.bind(this), data.opts.hideAfter);
     }
-    $(document).on('mousewheel.hoverfu', hide.bind(this));
+    $(doc).on('mousewheel.hoverfu', hide.bind(this));
   }
   function hide() {
     var data = getData(this);
     clearTimeout(data.show || data.hide);
     delete data.show, delete data.hide;
-    $(document).off('mousewheel.hoverfu mousemove.hoverfu');
+    $(doc).off('mousewheel.hoverfu mousemove.hoverfu');
     if (data.showing) {
       data.showing = false;
       data.fadeOutStartTime = Date.now();
-      data.$h.removeClass("showing").on("transitionend", function end(e) {
+      data.$h.removeClass("kifi-showing").on("transitionend", function end(e) {
         if (e.target === this && e.originalEvent.propertyName === "opacity") {
           delete data.fadeOutStartTime;
           data.$h.off("transitionend", end).remove();
           delete data.$h;
           if (data.mouseoverTimeStamp > data.mouseoutTimeStamp && this.contains(data.mouseoverEl)) {
             console.log("[hoverfu.hide:transitionend] faking mouseout");
-            data.$a.trigger($.Event("mouseout", {relatedTarget: document}));
+            data.$a.trigger($.Event("mouseout", {relatedTarget: doc, hoverfu: 'fake'}));
           }
         }
       });
@@ -150,6 +165,8 @@
   function onMouseOver(create, e) {  // $a or $h
     if (e.relatedTarget && this.contains(e.relatedTarget)) return;
     var data = getData(this);
+    if (e.originalEvent.hoverfu === data) return;  // e.g. mouseover $h from containing $a propagated up to $a
+    e.originalEvent.hoverfu = data;
     data.mouseoverTimeStamp = e.timeStamp || Date.now();
     data.mouseoverEl = e.target;
     if (!data.$h) {
@@ -157,7 +174,7 @@
     } else if (data.showing) {
       clearTimeout(data.hide), delete data.hide;
       if (data.opts.canLeaveFor) {
-        $(document).off("mousemove.hoverfu");
+        $(doc).off("mousemove.hoverfu");
       }
       if (data.opts.hideAfter && this === data.$a[0]) {
         data.hide = setTimeout(hide.bind(this), data.opts.hideAfter);
@@ -177,7 +194,7 @@
         data.hide = setTimeout(hide.bind(a), data.opts.canLeaveFor);
         data.x = e.clientX;
         data.y = e.clientY;
-        $(document).on("mousemove.hoverfu", onMouseMoveMaybeHide.bind(a, edge, data));
+        $(doc).on("mousemove.hoverfu", onMouseMoveMaybeHide.bind(a, edge, data));
       } else {
         hide.call(a);
       }
@@ -190,7 +207,7 @@
       data.x = e.clientX;
       data.y = e.clientY;
     } else if (data.x !== e.clientX && data.y !== e.clientY) {
-      $(document).off("mousemove.hoverfu");
+      $(doc).off("mousemove.hoverfu");
       hide.call(this);
     }
   }
@@ -227,7 +244,7 @@
   }
 
   function createFromDataAttr(opts) {
-    return function(configureHover) {
+    return function (configureHover) {
       configureHover($("<div>", {"class": this.dataset.tipClass, "html": this.dataset.tipHtml}), opts);
     };
   }
@@ -236,4 +253,4 @@
     var o = $.data(el);
     return o.hoverfu || (o.hoverfu = {$a: $(el)});
   }
-}(jQuery);
+}(jQuery, document);
