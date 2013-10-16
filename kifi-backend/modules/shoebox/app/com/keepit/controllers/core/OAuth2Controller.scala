@@ -16,14 +16,13 @@ import com.keepit.common.db.slick.Database
 import play.api.Play
 import play.api.Play.current
 
-case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, redirectUri:String, clientId:String, clientSecret:String, scope:String)
+case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 
 object OAuth2Providers { // TODO: wire-in (securesocial) config
   val GOOGLE = OAuth2Config(
     provider = "google",
     authUrl = "https://accounts.google.com/o/oauth2/auth",
     accessTokenUrl = "https://accounts.google.com/o/oauth2/token",
-    redirectUri = "https://dev.ezkeep.com/oauth2/callback/google",
     clientId = "572465886361.apps.googleusercontent.com", // "991651710157.apps.googleusercontent.com",
     clientSecret = "heYhp5R2Q0lH26VkrJ1NAMZr", // "vt9BrxsxM6iIG4EQNkm18L-m",
     scope = "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/plus.me https://www.google.com/m8/feeds"
@@ -32,7 +31,6 @@ object OAuth2Providers { // TODO: wire-in (securesocial) config
     provider = "facebook",
     authUrl = "https://www.facebook.com/dialog/oauth",
     accessTokenUrl = "https://graph.facebook.com/oauth/access_token",
-    redirectUri = "https://dev.ezkeep.com/oauth2/callback/facebook",
     clientId = "186718368182474",
     clientSecret = "36e9faa11e215e9b595bf82459288a41",
     scope = "email"
@@ -143,8 +141,7 @@ class OAuth2Controller @Inject() (
         log.info(Json.prettyPrint(abookUpload))
         val call = WS.url(uploadRoute).withHeaders(request.headers.toSimpleMap.iterator.toArray:_*).post(abookUpload) // hack
         val res = Await.result(call.map(r => r.json), 5 seconds)
-        // Ok(res)
-        Ok(jsArrays(0))
+        Ok(res)
       }
       case "facebook" => { // testing only
         val friendsUrl = s"https://graph.facebook.com/me/friends?access_token=$accToken&fields=id,name,first_name,last_name,username,picture,email"
