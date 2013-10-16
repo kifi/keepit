@@ -205,6 +205,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-decoration: none;
+  transition: opacity .4s ease;
 }
 .kifi-tagbox-suggestion * {
   line-height: inherit;
@@ -225,6 +226,7 @@
   background: #a0b1c2;
 }
 .kifi-tagbox-suggestion.busy {
+  opacity: 0;
   background: #cccccc;
   cursor: progress;
 }
@@ -314,6 +316,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  -moz-transition: -moz-transform 0.3s ease;
+  -webkit-transition: -webkit-transform 0.3s ease;
 }
 .kifi-tagbox-tag:hover .kifi-tagbox-tag-name {
   padding: 0 7px;
@@ -322,6 +326,8 @@
   width: 18px;
 }
 .kifi-tagbox-tag.busy {
+  -moz-transform: scale(1, 0);
+  -webkit-transform: scale(1, 0);
   cursor: progress;
 }
 .kifi-tagbox-tag.busy .kifi-tagbox-tag-name,
