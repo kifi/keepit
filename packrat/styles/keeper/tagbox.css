@@ -33,14 +33,6 @@
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
-.kifi-with-pane .kifi-tagbox .kifi-tagbox-suggest,
-.kifi-with-pane .kifi-tagbox .kifi-tagbox-suggest-inner,
-.kifi-with-pane .kifi-tagbox .kifi-tagbox-tagged-wrapper,
-.kifi-with-pane .kifi-tagbox .kifi-tagbox-tagged,
-.kifi-with-pane .kifi-tagbox .kifi-tagbox-empty {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
 .kifi-tagbox.kifi-suggested .kifi-tagbox-suggest {
   display: block;
 }
@@ -372,4 +364,12 @@
 }
 .kifi-tagbox-clear:hover {
   color: #0089d5 !important;
+}
+.kifi-with-pane .kifi-tagbox-suggest,
+.kifi-with-pane .kifi-tagbox-suggest-inner,
+.kifi-with-pane .kifi-tagbox-tagged-wrapper,
+.kifi-with-pane .kifi-tagbox-tagged,
+.kifi-with-pane .kifi-tagbox-empty {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }

@@ -47,11 +47,6 @@
     border-bottom: 0;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
-
-    .kifi-tagbox-suggest, .kifi-tagbox-suggest-inner, .kifi-tagbox-tagged-wrapper, .kifi-tagbox-tagged, .kifi-tagbox-empty {
-      border-bottom-left-radius: 0;
-      border-bottom-right-radius: 0;
-    }
   }
 
   &.kifi-suggested {
@@ -443,5 +438,12 @@ display: block;
 
   &:hover {
     color: @kifi-link !important; // style leak fix
+  }
+}
+
+.kifi-with-pane {
+  .kifi-tagbox-suggest, .kifi-tagbox-suggest-inner, .kifi-tagbox-tagged-wrapper, .kifi-tagbox-tagged, .kifi-tagbox-empty {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
 }
