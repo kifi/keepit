@@ -12,7 +12,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 
 import scala.concurrent.{Future, Promise}
 
-import play.api.libs.json.{JsArray, Json, JsObject}
+import play.api.libs.json.{JsValue, JsArray, Json, JsObject}
 
 import com.google.inject.Inject
 import com.keepit.common.routes.ABook
@@ -20,6 +20,7 @@ import com.keepit.common.routes.ABook
 trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
+  def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
   def getContactInfos(userId:Id[User], maxRows:Int):Future[Seq[ContactInfo]]
@@ -34,6 +35,10 @@ class ABookServiceClientImpl @Inject() (
   val serviceCluster: ServiceCluster
 )
   extends ABookServiceClient with Logging {
+
+  def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {
+    call(ABook.internal.upload(userId, origin), json).map { r => r.json }
+  }
 
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {
     call(ABook.internal.upload(userId, origin), Json.toJson(contacts))
@@ -69,6 +74,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
+
+  def upload(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
 
   def upload(userId: Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {}
 

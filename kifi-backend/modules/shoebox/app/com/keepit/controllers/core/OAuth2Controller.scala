@@ -1,7 +1,7 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
 import com.keepit.common.logging.Logging
 import java.net.URLEncoder
 import play.api.mvc.{Action, Results}
@@ -15,6 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.db.slick.Database
 import play.api.Play
 import play.api.Play.current
+import com.keepit.abook.ABookServiceClient
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 
@@ -40,12 +41,13 @@ object OAuth2Providers { // TODO: wire-in (securesocial) config
 
 class OAuth2Controller @Inject() (
   db: Database,
-  actionAuthenticator:ActionAuthenticator
+  actionAuthenticator:ActionAuthenticator,
+  abookServiceClient:ABookServiceClient
 ) extends WebsiteController(actionAuthenticator) with Logging {
 
   import OAuth2Providers._
   import scala.concurrent.duration._
-  def start(provider:String, stateTokenOpt:Option[String]) = Action { implicit request =>
+  def start(provider:String, stateTokenOpt:Option[String]) = AuthenticatedJsonAction { implicit request =>
     log.info(s"[oauth2.start]\n\trequest.hdrs=${request.headers}\n\trequest.session=${request.session}")
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
     val authUrl = providerConfig.authUrl
@@ -66,7 +68,7 @@ class OAuth2Controller @Inject() (
   }
 
   // redirect/GET
-  def callback(provider:String) = Action { implicit request =>
+  def callback(provider:String) = AuthenticatedJsonAction { implicit request =>
     log.info(s"[oauth2.callback]\n\trequest.hdrs=${request.headers}\n\trequest.session=${request.session}")
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
     val state = request.queryString.get("state").getOrElse(Seq.empty[String]) // see oauth2
@@ -139,8 +141,11 @@ class OAuth2Controller @Inject() (
         val uploadRoute = prefix + ABook.internal.upload(ABookOrigins.GMAIL).url // no absolute url
         val abookUpload = Json.obj("origin" -> "gmail", "contacts" -> jsArrays(0))
         log.info(Json.prettyPrint(abookUpload))
-        val call = WS.url(uploadRoute).withHeaders(request.headers.toSimpleMap.iterator.toArray:_*).post(abookUpload) // hack
-        val res = Await.result(call.map(r => r.json), 5 seconds)
+        import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
+//        val res = for (userId <- request.userIdOpt) yield Await.result(abookServiceClient.upload(userId, ABookOrigins.GMAIL, abookUpload), 5 seconds)
+        val res = Await.result(abookServiceClient.upload(request.userId, ABookOrigins.GMAIL, abookUpload), 5 seconds)
+//        val call = WS.url(uploadRoute).withHeaders(request.headers.toSimpleMap.iterator.toArray:_*).post(abookUpload) // hack
+//        val res = Await.result(call.map(r => r.json), 5 seconds)
         Ok(res)
       }
       case "facebook" => { // testing only
