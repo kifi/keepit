@@ -186,14 +186,15 @@ class AdminUserController @Inject() (
     val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
-    val contacts:Seq[ContactInfo] = Await.result(abookClient.getContactInfos(userId, 500), 5 seconds)
+    val contacts:Seq[ContactInfo] = Await.result(abookClient.getContactInfos(userId, 500), 5 seconds) // TODO: async
     val abookInfos:Seq[ABookInfo] = Await.result(abookClient.getABookInfos(userId), 5 seconds)
     val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService()
     val abookEP = for (s <- abookServiceOpt) yield s"http://${s.instanceInfo.publicIp.ip}:9000/internal/abook/"
+    val state = new BigInteger(130, new SecureRandom()).toString(32)
 
     Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
       fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, abookEP,
-      collections, collectionFilter))
+      collections, collectionFilter, state)).withSession(session + ("stateToken" -> state ))
   }
 
   def allUsersView = usersView(0)

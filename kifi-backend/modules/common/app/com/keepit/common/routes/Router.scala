@@ -149,6 +149,7 @@ object Heimdal extends Service {
 
 object ABook extends Service {
   object internal {
+    def upload(origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${origin.name}/upload")
     def upload(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/upload")
     def getABookInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookInfos")
     def getContactInfos(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getContactInfos", Param("maxRows", maxRows))
