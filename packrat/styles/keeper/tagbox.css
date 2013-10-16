@@ -33,6 +33,9 @@
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
+.kifi-with-pane .kifi-tagbox .kifi-tagbox-suggest,
+.kifi-with-pane .kifi-tagbox .kifi-tagbox-suggest-inner,
+.kifi-with-pane .kifi-tagbox .kifi-tagbox-tagged-wrapper,
 .kifi-with-pane .kifi-tagbox .kifi-tagbox-tagged,
 .kifi-with-pane .kifi-tagbox .kifi-tagbox-empty {
   border-bottom-left-radius: 0;
@@ -54,8 +57,13 @@
 .kifi-tagbox.tagged .kifi-tagbox-empty {
   display: none;
 }
-.kifi-tagbox.tagged .kifi-tagbox-tagged {
-  display: block;
+.kifi-tagbox.tagged .kifi-tagbox-tagged-wrapper {
+  height: 180px;
+}
+.kifi-tagbox.tagged .kifi-tagbox-suggest,
+.kifi-tagbox.tagged .kifi-tagbox-suggest-inner {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 .kifi-tagbox .kifi-tagbox-loading {
   display: none;
@@ -71,6 +79,8 @@
 .kifi-tagbox.loading .kifi-tagbox-loading {
   display: block;
 }
+.kifi-tagbox-suggest,
+.kifi-tagbox-suggest-inner,
 .kifi-tagbox-tagged,
 .kifi-tagbox-empty {
   border-bottom-left-radius: 6px;
@@ -263,8 +273,13 @@
   display: block;
   font-size: 16px;
 }
+.kifi-tagbox-tagged-wrapper {
+  position: relative;
+  height: 0;
+  overflow: hidden;
+  transition: height .4s ease;
+}
 .kifi-tagbox-tagged {
-  display: none;
   position: relative;
   color: #b8c5d1;
   background: white;
