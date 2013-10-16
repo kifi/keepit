@@ -45,53 +45,48 @@ class ContactsUpdater @Inject() (
   def receive() = {
     case ProcessABookUpload(userId, origin, abookRepoEntry, s3Key, rawJsonRef) => {
       log.info(s"[upload($userId, $origin, $abookRepoEntry, $s3Key): Begin processing ...")
-      origin match {
-        case ABookOrigins.IOS => {
-          val ts = System.currentTimeMillis
-          val rawInfoJson = rawJsonRef.get match {
-            case Some(js) => js
-            case None => {
-              val rawInfo = s3.get(s3Key).getOrElse(throw new IllegalStateException(s"[upload] s3Key=$s3Key is not set")) // may need to notify user
-              Json.toJson(rawInfo)
-            }
-          }
-          val abookRawInfo = Json.fromJson[ABookRawInfo](rawInfoJson).getOrElse(throw new IllegalArgumentException(s"[upload] Cannot parse $rawInfoJson")) // TODO:REVISIT exception in actor
-          val contactInfoBuilder = mutable.ArrayBuilder.make[ContactInfo]
-          abookRawInfo.contacts.value.foreach {
-            contact =>
-              val firstName = (contact \ "firstName").asOpt[String]
-              val lastName = (contact \ "lastName").asOpt[String]
-              val name = (contact \ "name").asOpt[String].getOrElse((firstName.getOrElse("") + " " + lastName.getOrElse("")).trim)
-              val emails = (contact \ "emails").as[Seq[String]]
-              emails.foreach {
-                email =>
-                  val cInfo = ContactInfo(
-                    userId = userId,
-                    origin = ABookOrigins.IOS,
-                    abookId = abookRepoEntry.id.get,
-                    name = Some(name),
-                    firstName = firstName,
-                    lastName = lastName,
-                    email = email)
-                  log.info(s"[upload($userId,$origin)] contact=$cInfo")
-                  contactInfoBuilder += cInfo
-              }
-          }
-          val contactInfos = contactInfoBuilder.result
-          log.info(s"[upload($userId,$origin) #contacts=${contactInfos.length} contacts=${contactInfos.mkString(File.separator)}")
-          if (!contactInfos.isEmpty) {
-            // TODO: optimize/batch
-            db.readWrite {
-              implicit session =>
-                contactInfos.foreach {
-                  contactInfoRepo.save(_)
-                }
-            }
-          }
-          log.info(s"[upload($userId,$origin)] time-lapsed: ${System.currentTimeMillis - ts}")
+      val ts = System.currentTimeMillis
+      val rawInfoJson = rawJsonRef.get match {
+        case Some(js) => js
+        case None => {
+          val rawInfo = s3.get(s3Key).getOrElse(throw new IllegalStateException(s"[upload] s3Key=$s3Key is not set")) // may need to notify user
+          Json.toJson(rawInfo)
         }
-        case _ => // not (yet) handled
       }
+      val abookRawInfo = Json.fromJson[ABookRawInfo](rawInfoJson).getOrElse(throw new IllegalArgumentException(s"[upload] Cannot parse $rawInfoJson")) // TODO:REVISIT exception in actor
+      val contactInfoBuilder = mutable.ArrayBuilder.make[ContactInfo]
+      abookRawInfo.contacts.value.foreach {
+        contact =>
+          val firstName = (contact \ "firstName").asOpt[String]
+          val lastName = (contact \ "lastName").asOpt[String]
+          val name = (contact \ "name").asOpt[String].getOrElse((firstName.getOrElse("") + " " + lastName.getOrElse("")).trim)
+          val emails = (contact \ "emails").as[Seq[String]]
+          emails.foreach {
+            email =>
+              val cInfo = ContactInfo(
+                userId = userId,
+                origin = origin,
+                abookId = abookRepoEntry.id.get,
+                name = Some(name),
+                firstName = firstName,
+                lastName = lastName,
+                email = email)
+              log.info(s"[upload($userId,$origin)] contact=$cInfo")
+              contactInfoBuilder += cInfo
+          }
+      }
+      val contactInfos = contactInfoBuilder.result
+      log.info(s"[upload($userId,$origin) #contacts=${contactInfos.length} contacts=${contactInfos.mkString(File.separator)}")
+      if (!contactInfos.isEmpty) {
+        // TODO: optimize/batch
+        db.readWrite {
+          implicit session =>
+            contactInfos.foreach {
+              contactInfoRepo.save(_)
+            }
+        }
+      }
+      log.info(s"[upload($userId,$origin)] time-lapsed: ${System.currentTimeMillis - ts}")
     }
   }
 
