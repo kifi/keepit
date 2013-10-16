@@ -93,18 +93,32 @@ class SecureSocialUserPluginImpl @Inject() (
 
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
     val existingUserOpt = userId orElse {
-      // TODO: better way of dealing with emails that already exist; for now just link accounts
-      socialUser.email flatMap (emailRepo.getByAddressOpt(_)) map (_.userId)
+      // Automatically connect accounts with existing emails
+      socialUser.email flatMap (emailRepo.getByAddressOpt(_)) collect {
+        case e if e.state == EmailAddressStates.VERIFIED => e.userId
+      }
     } flatMap userRepo.getOpt
 
     def getOrCreateUser(): Option[User] = existingUserOpt orElse {
       if (allowSignup) Some(userRepo.save(createUser(socialUser, isComplete))) else None
     }
 
+    def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser): Unit = {
+      for (email <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
+        val emailAddress = emailRepo.getByAddressOpt(address = email) match {
+          case Some(e) if e.state == EmailAddressStates.VERIFIED => e
+          case Some(e) => emailRepo.save(e.withState(EmailAddressStates.VERIFIED))
+          case None => emailRepo.save(
+            EmailAddress(userId = userId, address = email, state = EmailAddressStates.VERIFIED))
+        }
+        log.info(s"[save] Saved email is $emailAddress")
+      }
+    }
+
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
         // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
-        if (suiOpt == Some(socialUserInfo)) {
+        val sui = if (suiOpt == Some(socialUserInfo)) {
           socialUserInfo
         } else {
           val user = userRepo.get(socialUserInfo.userId.get)
@@ -113,6 +127,8 @@ class SecureSocialUserPluginImpl @Inject() (
           }
           socialUserInfoRepo.save(socialUserInfo)
         }
+        saveVerifiedEmail(sui.userId.get, sui.credentials.get)
+        sui
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
         val userOpt = getOrCreateUser()
 
@@ -127,7 +143,10 @@ class SecureSocialUserPluginImpl @Inject() (
         }
 
         val sui = socialUserInfoRepo.save(userOpt map socialUserInfo.withUser getOrElse socialUserInfo)
-        for (user <- userOpt if existingUserOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
+        for (user <- userOpt) {
+          if (existingUserOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
+          saveVerifiedEmail(sui.userId.get, sui.credentials.get)
+        }
         sui
       case None =>
         val userOpt = getOrCreateUser()
