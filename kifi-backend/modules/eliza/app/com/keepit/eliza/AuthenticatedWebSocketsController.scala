@@ -156,10 +156,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         val tStart = currentDateTime
         //Analytics
         SafeFuture {
-          val contextBuilder = new UserEventContextBuilder()
-          contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-          contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
-          contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
+          val contextBuilder = UserEventContextBuilder(request)
           streamSession.experiments.foreach{ experiment =>
             contextBuilder += ("experiment", experiment.toString)
           }
@@ -177,10 +174,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           onDisconnect(socketInfo)
           //Analytics
           SafeFuture {
-            val contextBuilder = new UserEventContextBuilder()
-            contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-            contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
-            contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
+            val contextBuilder = UserEventContextBuilder(request)
             streamSession.experiments.foreach{ experiment =>
               contextBuilder += ("experiment", experiment.toString)
             }

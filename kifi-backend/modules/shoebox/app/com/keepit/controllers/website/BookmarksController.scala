@@ -137,15 +137,9 @@ class BookmarksController @Inject() (
 
       //Analytics
       SafeFuture{ keeps.foreach { bookmark =>
-        val contextBuilder = new UserEventContextBuilder()
+        val contextBuilder = UserEventContextBuilder(request)
 
         contextBuilder += ("isPrivate", bookmark.isPrivate)
-        request.experiments.foreach{ experiment =>
-          contextBuilder += ("experiment", experiment.toString)
-        }
-        contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-        contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
-        contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
         contextBuilder += ("url", bookmark.url)
         contextBuilder += ("source", "SITE")
         contextBuilder += ("hasTitle", bookmark.title.isDefined)

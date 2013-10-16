@@ -5,6 +5,10 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 
 import play.api.libs.json.{Json, Format, JsResult, JsError, JsSuccess, JsObject, JsValue, JsArray, JsNumber, JsString}
+import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.common.db.ExternalId
+import com.keepit.model.KifiInstallation
+import play.api.mvc.RequestHeader
 
 
 case class UserEventType(name: String)
@@ -72,6 +76,26 @@ class UserEventContextBuilder {
 
   def build : UserEventContext = {
     UserEventContext(Map(data.toSeq:_*))
+  }
+}
+
+object UserEventContextBuilder {
+  def apply(request: RequestHeader): UserEventContextBuilder = {
+    val contextBuilder = new UserEventContextBuilder()
+    contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+    contextBuilder += ("userAgent", request.headers.get("User-Agent").getOrElse(""))
+    contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
+
+    request match {
+      case authRequest: AuthenticatedRequest[JsValue] =>
+        val o = authRequest.body
+        (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extVersion", version) }
+        authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
+        authRequest.experiments.foreach { experiment => contextBuilder += ("experiment", experiment.toString) }
+      case _ =>
+    }
+
+    contextBuilder
   }
 }
 
