@@ -331,7 +331,7 @@ class MessagingController @Inject() (
       val locator = "/messages/" + thread.externalId
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
 
-      db.readWrite{ implicit session =>
+      db.readWrite(attempts=2){ implicit session =>
         userThreadRepo.setNotification(user, thread.id.get, message, notifJson)
       }
 
@@ -562,17 +562,17 @@ class MessagingController @Inject() (
 
 
   def setNotificationRead(userId: Id[User], threadId: Id[MessageThread]): Unit = {
-    db.readWrite{implicit session => userThreadRepo.clearNotification(userId, Some(threadId))}
+    db.readWrite(attempts=2){implicit session => userThreadRepo.clearNotification(userId, Some(threadId))}
   }
 
 
   def setAllNotificationsRead(userId: Id[User]): Unit = {
     log.info(s"Setting all Notifications as read for user $userId.")
-    db.readWrite{implicit session => userThreadRepo.clearNotification(userId)}
+    db.readWrite(attempts=2){implicit session => userThreadRepo.clearNotification(userId)}
   }
 
   def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[Message]) : DateTime = {
-    val lastTime = db.readWrite{ implicit session =>
+    val lastTime = db.readWrite(attempts=2){ implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.clearNotificationsBefore(user, message.createdAt)
       message.createdAt
@@ -599,7 +599,7 @@ class MessagingController @Inject() (
   }
 
   def setNotificationLastSeen(userId: Id[User], timestamp: DateTime) : Unit = {
-    db.readWrite{ implicit session =>
+    db.readWrite(attempts=2){ implicit session =>
       userThreadRepo.setNotificationLastSeen(userId, timestamp)
     }
   }
@@ -680,7 +680,7 @@ class MessagingController @Inject() (
     val thread  = db.readOnly{ implicit session => threadRepo.get(message.thread) } //TODO: This needs to change when we have detached threads
     val nUrl: String = thread.nUrl.getOrElse("")
     if (message.from.isEmpty || message.from.get != userId) {
-      db.readWrite { implicit session =>
+      db.readWrite(attempts=2) { implicit session =>
         userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message)
       }
     }
