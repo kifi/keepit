@@ -340,6 +340,10 @@
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAQAAAAngNWGAAAApElEQVR4AY3PwQnCQBCF4bdTiIfFkzZiISnFTsQ6vAtCDqYAVxDBCkT0eTCPxSeG/XPK8DHDwmPmgd6T20R8lbHDDL+9ookBEX/ZA3ucUaO+zBNrhXOCwbUGzlQ3zkPzsKPqpkfgik+2TW3GjQveddpZpSt2vOg38YglGgoktNSDmYWeV5jBSSpGgJNUTNCpM0GnzgSdOnNoVMygUWMGRQcOzog3KSW3ax2koYIAAAAASUVORK5CYII=);
   background-size: auto 10px;
 }
+.kifi-slider2-tag-tip::before {
+  left: auto;
+  right: 7px;
+}
 .kifi-slider2-keepers-intro {
   font-size: 14px;
   line-height: normal;
