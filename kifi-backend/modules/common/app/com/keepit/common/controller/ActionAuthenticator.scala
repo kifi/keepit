@@ -2,9 +2,9 @@ package com.keepit.common.controller
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
@@ -14,7 +14,6 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{SocialNetworkType, SocialId}
-
 import play.api.i18n.Messages
 import play.api.libs.json.JsNumber
 import play.api.mvc._
@@ -111,7 +110,7 @@ class RemoteActionAuthenticator @Inject() (
   monitoredAwait: MonitoredAwait)
     extends ActionAuthenticator with SecureSocial with Logging {
 
-  import play.api.libs.concurrent.Execution.Implicits.defaultContext
+  implicit private[this] val executionContext = ExecutionContext.immediate
 
   private def getExperiments(userId: Id[User]): Future[Seq[ExperimentType]] = shoeboxClient.getUserExperiments(userId)
 
@@ -179,9 +178,9 @@ class RemoteActionAuthenticator @Inject() (
   private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
       experiments: Set[ExperimentType], kifiInstallationId: Option[ExternalId[KifiInstallation]],
       newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
-    val user = shoeboxClient.getUsers(Seq(userId)).map(_.head)
+    val user = shoeboxClient.getUser(userId)
     try {
-      action(AuthenticatedRequest[T](identity, userId, monitoredAwait.result(user, 3 seconds, s"getting user $userId"), request, experiments, kifiInstallationId, adminUserId)) match {
+      action(AuthenticatedRequest[T](identity, userId, monitoredAwait.result(user, 3 seconds, s"getting user $userId").get, request, experiments, kifiInstallationId, adminUserId)) match {
         case r: PlainResult => r.withSession(newSession)
         case any: Result => any
       }
