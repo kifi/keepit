@@ -19,6 +19,7 @@ import play.api.libs.json._
 import com.google.inject.{Inject, Singleton, Provider}
 
 import org.apache.zookeeper.CreateMode._
+import com.keepit.common.akka.SlowRunningExecutionContext
 
 trait ServiceDiscovery {
   def serviceCluster(serviceType: ServiceType): ServiceCluster
@@ -44,6 +45,7 @@ class ServiceDiscoveryImpl @Inject() (
   extends ServiceDiscovery with Logging {
 
   private var myInstance: Option[ServiceInstance] = None
+  private var selfCheckIsRunning: Boolean = false
 
   def thisInstance = myInstance
 
@@ -148,11 +150,20 @@ class ServiceDiscoveryImpl @Inject() (
 
   def myVersion: ServiceVersion = services.currentVersion
 
-  def startSelfCheck(): Unit = future {
-    log.info("Running self check")
-    services.currentService.selfCheck().onComplete{
-      case Success(passed) => if (passed) { Thread.sleep(20000); changeStatus(ServiceStatus.UP) } else changeStatus(ServiceStatus.SELFCHECK_FAIL)
-      case Failure(e) => changeStatus(ServiceStatus.SELFCHECK_FAIL)
+  def startSelfCheck(): Unit = synchronized {
+    if (!selfCheckIsRunning) {
+      selfCheckIsRunning = true
+      future {
+        log.info("Running self check")
+        services.currentService.selfCheck().onComplete{
+          case Success(passed) =>
+            if (passed) { changeStatus(ServiceStatus.UP) } else changeStatus(ServiceStatus.SELFCHECK_FAIL)
+            selfCheckIsRunning = false
+          case Failure(e) =>
+            changeStatus(ServiceStatus.SELFCHECK_FAIL)
+            selfCheckIsRunning = false
+        }
+      }
     }
   }
 
