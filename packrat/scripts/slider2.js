@@ -223,33 +223,20 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         var $card = $(this).closest('.kifi-slider2-keep-card'),
           kept = !$card.hasClass('kifi-unkept'),
           tagged = $card.hasClass('kifi-tagged'),
-          title,
-          html;
+          title = 'Tag (' + CO_KEY + '+Shift+A)',
+          html = 'Add or edit tags about this keep<br>to improve your search and browse.';
 
-        if (kept) {
-          if (tagged) {
-            title = 'Manage Tags';
-            html = 'Add/Remove tags to/from this keep.';
-          }
-          else {
-            title = 'Add Tag(s)';
-            html = 'Add tags to this keep.';
-          }
-        }
-        else {
-          title = 'Keep It and Tag It';
-          html = 'Keep and tag this page.';
-        }
         render('html/keeper/titled_tip', {
           title: title,
           html: html
         }, function (html) {
           configureHover(html, {
             mustHoverFor: 700,
-            hideAfter: 4000,
+            hideAfter: 40000,
             click: 'hide',
             position: function (w) {
-              this.style.left = 8 - w + 'px';
+              // width of a tag icon - width of a tooltip
+              this.style.left = ($pane ? 32 : 0) + 20 - w + 'px';
             }
           });
         });
