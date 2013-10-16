@@ -47,14 +47,9 @@
     border-bottom: 0;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
-
-    .kifi-tagbox-suggest, .kifi-tagbox-suggest-inner, .kifi-tagbox-tagged-wrapper, .kifi-tagbox-tagged, .kifi-tagbox-empty {
-      border-bottom-left-radius: 0;
-      border-bottom-right-radius: 0;
-    }
   }
 
-  &.suggested {
+  &.kifi-suggested {
     .kifi-tagbox-suggest {
       display: block;
     }
@@ -68,12 +63,12 @@
       display: none;
     }
 
-    &.tagged .kifi-tagbox-empty {
+    &.kifi-tagged .kifi-tagbox-empty {
       display: none;
     }
   }
 
-  &.tagged {
+  &.kifi-tagged {
     .kifi-tagbox-empty {
       display: none;
     }
@@ -92,7 +87,7 @@
     display: none;
   }
 
-  &.loading {
+  &.kifi-loading {
     display: none;
 
     .kifi-tagbox-empty, .kifi-tagbox-tagged, .kifi-tagbox-suggest {
@@ -162,11 +157,11 @@ display: block;
     }
   }
 
-  &.focus .kifi-tagbox-input-placeholder {
+  &.kifi-focus .kifi-tagbox-input-placeholder {
     color: lighten(@kifi-bluegray, 10%);
   }
 
-  &.empty .kifi-tagbox-input-placeholder {
+  &.kifi-empty .kifi-tagbox-input-placeholder {
     display: block;
   }
 }
@@ -257,7 +252,7 @@ display: block;
     line-height: inherit; // style leak fix
   }
 
-  &.focus {
+  &.kifi-focus {
     background: @kifi-bluegray;
     color: white !important; // style leak fix
     cursor: pointer;
@@ -271,7 +266,7 @@ display: block;
     background: @kifi-bluegray-a;
   }
 
-  &.busy {
+  &.kifi-busy {
     opacity: 0;
 
     background: @kifi-gray-c;
@@ -303,7 +298,7 @@ display: block;
   color: @kifi-gray-8 !important; // style leak fix
   text-decoration: none;
 
-  &.focus {
+  &.kifi-focus {
     background: darken(@kifi-lightblue-d, 10%);
     color: white !important; // style leak fix
   }
@@ -313,7 +308,7 @@ display: block;
     color: white !important; // style leak fix
   }
 
-  &.busy {
+  &.kifi-busy {
     background: @kifi-gray-c;
     cursor: progress;
   }
@@ -389,7 +384,7 @@ display: block;
     }
   }
 
-  &.busy {
+  &.kifi-busy {
     -moz-transform: scale(1, 0);
     -webkit-transform: scale(1, 0);
     cursor: progress;
@@ -443,5 +438,12 @@ display: block;
 
   &:hover {
     color: @kifi-link !important; // style leak fix
+  }
+}
+
+.kifi-with-pane {
+  .kifi-tagbox-suggest, .kifi-tagbox-suggest-inner, .kifi-tagbox-tagged-wrapper, .kifi-tagbox-tagged, .kifi-tagbox-empty {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
 }
