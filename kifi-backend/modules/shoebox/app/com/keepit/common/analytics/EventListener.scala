@@ -12,7 +12,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef }
+import com.keepit.search.{ArticleSearchResult, SearchServiceClient}
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.ClickHistoryTracker
 import play.api.libs.json.JsObject
@@ -32,7 +32,7 @@ abstract class EventListener(
     url: String,
     normUrl: Option[NormalizedURI],
     rank: Int,
-    queryUUID: Option[ExternalId[ArticleSearchResultRef]])
+    queryUUID: Option[ExternalId[ArticleSearchResult]])
 
   def searchParser(externalUser: ExternalId[User], json: JsObject, eventName: String)(implicit s: RSession) = {
     val query = (json \ "query").asOpt[String].getOrElse("")
@@ -40,7 +40,7 @@ abstract class EventListener(
     val user = userRepo.get(externalUser)
     val normUrl = normalizedURIRepo.getByUri(url)
     val rank = getRank(json, eventName)
-    val queryUUID = ExternalId.asOpt[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse(""))
+    val queryUUID = ExternalId.asOpt[ArticleSearchResult]((json \ "queryUUID").asOpt[String].getOrElse(""))
     (user, SearchMeta(query, url, normUrl, rank, queryUUID))
   }
 

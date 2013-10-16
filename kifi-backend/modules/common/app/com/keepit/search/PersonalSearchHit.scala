@@ -18,7 +18,7 @@ case class PersonalSearchHit(
 
 case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float, isNew: Boolean)
 case class PersonalSearchResultPacket(
-  uuid: ExternalId[ArticleSearchResultRef],
+  uuid: ExternalId[ArticleSearchResult],
   query: String,
   hits: Seq[PersonalSearchResult],
   mayHaveMoreHits: Boolean,

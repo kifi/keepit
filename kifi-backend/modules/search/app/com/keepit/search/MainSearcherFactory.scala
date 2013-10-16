@@ -47,7 +47,7 @@ class MainSearcherFactory @Inject() (
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
-    lastUUID: Option[ExternalId[ArticleSearchResultRef]]
+    lastUUID: Option[ExternalId[ArticleSearchResult]]
   ) = {
     val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"), config.asBoolean("useS3FlowerFilter"))
     val uriGraphSearcher = getURIGraphSearcher(userId)

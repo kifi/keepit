@@ -256,7 +256,7 @@ class MessagingController @Inject() (
           Json.arr("notification", notifJson)
         )
       } catch {
-        case e: Throwable => errors = errors + e  
+        case e: Throwable => errors = errors + e
       }
     }
 
