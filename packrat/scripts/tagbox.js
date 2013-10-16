@@ -236,8 +236,6 @@ this.tagbox = (function ($, win) {
 				//var $tagbox = $(this.renderTagBoxHtml()).appendTo($('body'));
 				this.$tagbox = $tagbox;
 
-				$tagbox.addClass('animated sexyBounceIn');
-
 				win.setTimeout(addDocListeners.bind(this), 50);
 
 				return $tagbox;
