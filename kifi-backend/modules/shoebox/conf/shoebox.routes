@@ -17,6 +17,7 @@ GET     /link/:provider             @com.keepit.controllers.core.AuthController.
 POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
 POST    /signup/:provider           @com.keepit.controllers.core.AuthController.signupByPost(provider)
+POST    /loginAndLink/:provider     @com.keepit.controllers.core.AuthController.passwordLoginAndLink(provider)
 POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 GET     /resetPassword              @com.keepit.controllers.core.AuthController.resetPasswordPage()
