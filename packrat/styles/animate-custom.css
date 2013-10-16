@@ -1,4 +1,4 @@
-.animated{-webkit-animation-fill-mode:both;-moz-animation-fill-mode:both;-ms-animation-fill-mode:both;-o-animation-fill-mode:both;animation-fill-mode:both;-webkit-animation-duration:.5s;-moz-animation-duration:.5s;-ms-animation-duration:.5s;-o-animation-duration:.5s;animation-duration:.5s;}.animated.hinge{-webkit-animation-duration:.5s;-moz-animation-duration:.5s;-ms-animation-duration:.5s;-o-animation-duration:.5s;animation-duration:.5s;}@-webkit-keyframes flipInX {
+.animated{-webkit-animation-fill-mode:both;-moz-animation-fill-mode:both;-ms-animation-fill-mode:both;-o-animation-fill-mode:both;animation-fill-mode:both;-webkit-animation-duration:.3s;-moz-animation-duration:.5s;-ms-animation-duration:.5s;-o-animation-duration:.5s;animation-duration:.3s;}.animated.hinge{-webkit-animation-duration:.5s;-moz-animation-duration:.5s;-ms-animation-duration:.5s;-o-animation-duration:.5s;animation-duration:.5s;}@-webkit-keyframes flipInX {
     0% {
         -webkit-transform: perspective(400px) rotateX(90deg);
         opacity: 0;
@@ -1055,4 +1055,87 @@
 	-moz-animation-name: slideOutRight;
 	-o-animation-name: slideOutRight;
 	animation-name: slideOutRight;
+}
+
+@-webkit-keyframes sexyBounceIn {
+  0% {
+    opacity: 0;
+    -webkit-transform: translateY(150px) translateX(130px) scale(.1);
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  85% {
+    -webkit-transform: translateY(-5px) translateX(-5px) scale(1.03);
+  }
+
+  100% {
+    -webkit-transform: scale(1) translateX(0) translateY(0);
+  }
+}
+
+@-moz-keyframes sexyBounceIn {
+  0% {
+    opacity: 0;
+    -moz-transform: translateY(150px) translateX(130px) scale(.1);
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  85% {
+    -moz-transform: translateY(-5px) translateX(-5px) scale(1.03);
+  }
+
+  100% {
+    -moz-transform: scale(1) translateX(0) translateY(0);
+  }
+}
+
+@-o-keyframes sexyBounceIn {
+  0% {
+    opacity: 0;
+    -o-transform: translateY(150px) translateX(130px) scale(.1);
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  85% {
+    -o-transform: translateY(-5px) translateX(-5px) scale(1.03);
+  }
+
+  100% {
+    -o-transform: scale(1) translateX(0) translateY(0);
+  }
+}
+
+@keyframes sexyBounceIn {
+  0% {
+    opacity: 0;
+    transform: translateY(150px) translateX(130px) scale(.1);
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  85% {
+    transform: translateY(-5px) translateX(-5px) scale(1.03);
+  }
+
+  100% {
+    transform: scale(1) translateX(0) translateY(0);
+  }
+}
+
+.animated.sexyBounceIn {
+  -webkit-animation-name: sexyBounceIn;
+  -moz-animation-name: sexyBounceIn;
+  -o-animation-name: sexyBounceIn;
+  animation-name: sexyBounceIn;
 }
