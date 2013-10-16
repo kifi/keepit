@@ -11,10 +11,10 @@ import scala.collection.immutable
 import play.api.libs.json.{Json, JsObject, JsArray}
 import com.keepit.common.routes.ABook
 import com.keepit.model.ABookOrigins
-import java.math.BigInteger
-import java.security.SecureRandom
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.db.slick.Database
+import play.api.Play
+import play.api.Play.current
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, redirectUri:String, clientId:String, clientSecret:String, scope:String)
 
@@ -52,17 +52,18 @@ class OAuth2Controller @Inject() (
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
     val authUrl = providerConfig.authUrl
     val stateToken:String = stateTokenOpt.getOrElse(request.session.get("stateToken").getOrElse(throw new IllegalStateException("stateToken not set")))
+    val redirectUri = routes.OAuth2Controller.callback(provider).absoluteURL(Play.isProd)
     val params = Map(
       "response_type" -> "code",
       "client_id" -> providerConfig.clientId,
-      "redirect_uri" -> providerConfig.redirectUri,
+      "redirect_uri" -> redirectUri,
       "scope" -> providerConfig.scope,
       "state" -> stateToken,
       "access_type" -> "offline",
       "login_hint" -> "email address"
     )
     val url = authUrl + params.foldLeft("?"){(a,c) => a + c._1 + "=" + URLEncoder.encode(c._2, "UTF-8") + "&"}
-    log.info(s"[oauth2start] url=$url")
+    log.info(s"[oauth2start($provider, $stateToken)] REDIRECT to: $url with params: $params")
     Results.Redirect(authUrl, params.map(kv => (kv._1, Seq(kv._2))))
   }
 
@@ -81,14 +82,16 @@ class OAuth2Controller @Inject() (
     val code = request.queryString.get("code").getOrElse(Seq(""))(0)
     log.info(s"code=$code")
 
+    val redirectUri = routes.OAuth2Controller.callback(provider).absoluteURL(Play.isProd)
     val params = Map(
       "code" -> code,
       "client_id" -> providerConfig.clientId,
       "client_secret" -> providerConfig.clientSecret,
-      "redirect_uri" -> providerConfig.redirectUri,
+      "redirect_uri" -> redirectUri,
       "grant_type" -> "authorization_code"
     )
     val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
+    log.info(s"[oauth2.callback($provider)] POST to: ${providerConfig.accessTokenUrl} with params: $params")
 
     val accToken = Await.result(call.map { resp =>
       log.info(s"[oauth2.callback] body=${resp.body}")
@@ -134,8 +137,8 @@ class OAuth2Controller @Inject() (
         }
 
         // hack: go ahead and add to contacts
-        val host = if (request.host.contains("dev.ezkeep")) "http://" + request.host + ":9000" else "https://" + request.host
-        val uploadRoute = host + ABook.internal.upload(ABookOrigins.GMAIL).url
+        val prefix = if (Play.isDev) "http://" + request.host else "https://" + request.host
+        val uploadRoute = prefix + ABook.internal.upload(ABookOrigins.GMAIL).url // no absolute url
         val abookUpload = Json.obj("origin" -> "gmail", "contacts" -> jsArrays(0))
         log.info(Json.prettyPrint(abookUpload))
         val call = WS.url(uploadRoute).withHeaders(request.headers.toSimpleMap.iterator.toArray:_*).post(abookUpload) // hack
