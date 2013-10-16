@@ -269,11 +269,11 @@ this.tagbox = (function ($, win) {
 		 */
 		addInputEvents: (function () {
 			function onFocus() {
-				$(this).closest('.kifi-tagbox-input-box').addClass('focus');
+				$(this).closest('.kifi-tagbox-input-box').addClass('kifi-focus');
 			}
 
 			function onBlur() {
-				$(this).closest('.kifi-tagbox-input-box').removeClass('focus');
+				$(this).closest('.kifi-tagbox-input-box').removeClass('kifi-focus');
 			}
 
 			var KEY_UP = 38,
@@ -286,7 +286,7 @@ this.tagbox = (function ($, win) {
 				var text = e.target.value.trim();
 				if (text !== this.text) {
 					this.text = text;
-					this.$inputbox.toggleClass('empty', !text);
+					this.$inputbox.toggleClass('kifi-empty', !text);
 					this.suggest(text);
 				}
 			}
@@ -768,12 +768,12 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Removes 'loading' class of the root element.
+		 * Removes 'kifi-loading' class of the root element.
 		 *
 		 * @return {jQuery} A jQuery object for the root element
 		 */
 		setLoaded: function () {
-			this.removeClass('loading');
+			this.removeClass('kifi-loading');
 			win.slider2.shadePane();
 		},
 
@@ -817,7 +817,7 @@ this.tagbox = (function ($, win) {
 					html = tags.map(this.renderTagHtml, this).join('');
 				this.$tagList.html(html);
 
-				this.toggleClass('tagged', tags.length);
+				this.toggleClass('kifi-tagged', tags.length);
 			}
 		},
 
@@ -981,7 +981,7 @@ this.tagbox = (function ($, win) {
 
 		addTagBusy: function (tagId, $el) {
 			this.busyTags[tagId] = $el;
-			$el.addClass('busy');
+			$el.addClass('kifi-busy');
 		},
 
 		removeTagBusy: function (tagId) {
@@ -990,7 +990,7 @@ this.tagbox = (function ($, win) {
 
 			delete busyTags[tagId];
 
-			$el.removeClass('busy');
+			$el.removeClass('kifi-busy');
 		},
 
 		/**
@@ -1037,7 +1037,7 @@ this.tagbox = (function ($, win) {
 			var $tag = this.getTag$ById(tag.id);
 			if (!$tag.length) {
 				var html = this.renderTagHtml(tag);
-				this.addClass('tagged');
+				this.addClass('kifi-tagged');
 				$tag = $(html).appendTo(this.$tagList);
 				this.updateScroll();
 			}
@@ -1048,14 +1048,14 @@ this.tagbox = (function ($, win) {
 		 * Updates (add/remove) 'tagged' class of the tagbox.
 		 */
 		updateTaggedClass: function () {
-			return this.toggleClass('tagged', this.$tagList.children().length);
+			return this.toggleClass('kifi-tagged', this.$tagList.children().length);
 		},
 
 		/**
-		 * Updates (add/remove) 'suggested' class of the tagbox.
+		 * Updates (add/remove) 'kifi-suggested' class of the tagbox.
 		 */
 		updateSuggestedClass: function () {
-			return this.toggleClass('suggested', this.getInputValue() || this.$suggest.children().length);
+			return this.toggleClass('kifi-suggested', this.getInputValue() || this.$suggest.children().length);
 		},
 
 		updateTagName: function (tag) {
@@ -1109,7 +1109,7 @@ this.tagbox = (function ($, win) {
 					}
 					else {
 						$suggest.append(html);
-						this.addClass('suggested');
+						this.addClass('kifi-suggested');
 					}
 				}
 				this.updateTaggedClass();
@@ -1137,10 +1137,10 @@ this.tagbox = (function ($, win) {
 					}
 					else {
 						$suggest.append(html);
-						this.addClass('suggested');
+						this.addClass('kifi-suggested');
 					}
 				}
-				this.removeClass('tagged');
+				this.removeClass('kifi-tagged');
 				this.updateScroll();
 			}
 			return len;
@@ -1427,11 +1427,11 @@ this.tagbox = (function ($, win) {
 			this.currentSuggestion = $suggestion;
 
 			if ($prev) {
-				$prev.removeClass('focus');
+				$prev.removeClass('kifi-focus');
 			}
 
 			if ($suggestion) {
-				$suggestion.addClass('focus');
+				$suggestion.addClass('kifi-focus');
 
 				if (src !== 'mouseover') {
 					this.scrolledIntoViewLazy($suggestion[0], 10);
