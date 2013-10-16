@@ -361,12 +361,16 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for suggestion list
 		 */
 		initSuggest: function () {
+			log('initSuggest.start');
+
 			var $suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner');
 			this.$suggest = $suggest;
 
 			$suggest.on('click', '.kifi-tagbox-suggestion', this.onClickSuggestion.bind(this));
 			$suggest.on('click', '.kifi-tagbox-new', this.onClickNewSuggestion.bind(this));
 			$suggest.on('mouseover', this.onMouseoverSuggestion.bind(this));
+
+			log('initSuggest.end');
 
 			return $suggest;
 		},
@@ -377,6 +381,8 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for tag list
 		 */
 		initTagList: function () {
+			log('initTagList.start');
+
 			var $tagList = this.$tagbox.find('.kifi-tagbox-tag-list-inner');
 			this.$tagList = $tagList;
 
@@ -387,6 +393,8 @@ this.tagbox = (function ($, win) {
 			}.bind(this));
 
 			$tagList.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
+
+			log('initTagList.end');
 
 			return $tagList;
 		},
@@ -407,13 +415,14 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		initTags: function () {
-			log('initTags');
+			log('initTags.start');
 			this.requestTags()
 				.then(this.onFetchTags.bind(this))
 				.then(this.updateSuggestHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.updateSuggestion.bind(this))
-				.then(this.toggleLoading.bind(this, false))
+				.then(this.moveTileToBottom.bind(this))
+				.then(this.setLoaded.bind(this, false))
 				.then(this.focusInput.bind(this))
 				.then(this.updateScroll.bind(this))
 				.fail(function (err) {
@@ -421,9 +430,12 @@ this.tagbox = (function ($, win) {
 				throw err;
 			}.bind(this))
 				.fail(this.logError.bind(this));
+			log('initTags.end');
 		},
 
 		initScroll: function () {
+			log('initScroll.start');
+
 			var $suggestWrapper = this.$tagbox.find('.kifi-tagbox-suggest');
 			this.$suggestWrapper = $suggestWrapper;
 			$suggestWrapper.antiscroll({
@@ -438,10 +450,13 @@ this.tagbox = (function ($, win) {
 
 			var winResizeListener = this.winResizeListener = this.updateScroll.bind(this);
 			$(win).on('resize.kifi-tagbox-suggest', winResizeListener);
+
+			log('initScroll.end');
 		},
 
 		updateScroll: function () {
 			log('updateScroll');
+
 			if (this.active) {
 				this.$tagListWrapper.data('antiscroll').refresh();
 				this.$suggestWrapper.data('antiscroll').refresh();
@@ -459,6 +474,7 @@ this.tagbox = (function ($, win) {
 				this.active = false;
 
 				win.slider2.unshadePane();
+				$(win.tile).css('transform', '');
 
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
 
@@ -728,18 +744,36 @@ this.tagbox = (function ($, win) {
 			return $tagbox && $tagbox.toggleClass(classname, !! add);
 		},
 
+		moveTileToBottom: function (res) {
+			var tile = win.tile,
+				$tile = $(tile),
+				dy = window.innerHeight - tile.getBoundingClientRect().bottom;
+
+			if (!dy) {
+				return res;
+			}
+
+			$tile.css('transform', 'translate(0,' + dy + 'px)');
+
+			var deferred = Q.defer();
+
+			$tile.on('transitionend', function onTransitionend(e) {
+				if (e.target === this) {
+					$tile.off('transitionend', onTransitionend);
+					deferred.resolve();
+				}
+			});
+
+			return deferred.promise;
+		},
+
 		/**
-		 * Toggles a 'loading' class of the root element.
-		 *
-		 * @param {boolean} Whether to add or remove
+		 * Removes 'loading' class of the root element.
 		 *
 		 * @return {jQuery} A jQuery object for the root element
 		 */
-		toggleLoading: function (loading) {
-			loading = !! loading;
-
-			this.toggleClass('loading', loading);
-
+		setLoaded: function () {
+			this.removeClass('loading');
 			win.slider2.shadePane();
 		},
 
