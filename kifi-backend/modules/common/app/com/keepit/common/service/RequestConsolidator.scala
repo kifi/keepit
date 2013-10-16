@@ -2,11 +2,13 @@ package com.keepit.common.service
 
 import com.keepit.common.logging.Logging
 import scala.collection.concurrent.{TrieMap=>ConcurrentMap}
+import scala.concurrent._
 import scala.concurrent.duration._
-import scala.concurrent.Future
-import scala.concurrent.Promise
 import java.lang.ref.WeakReference
 import java.lang.ref.ReferenceQueue
+import java.util.concurrent.atomic.AtomicReference
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.akka.SafeFuture
 
 class RequestConsolidator[K, T](ttl: Duration) extends Logging {
 
@@ -17,11 +19,26 @@ class RequestConsolidator[K, T](ttl: Duration) extends Logging {
   private[this] val referenceQueue = new ReferenceQueue[Future[T]]
   private[this] val futureRefMap = new ConcurrentMap[K, FutureRef[T]]
 
+  private[this] val cleanerRef = new AtomicReference[Future[Unit]](null)
+
   private def clean() {
     var ref = referenceQueue.poll().asInstanceOf[FutureRef[T]]
-    while (ref != null) {
-      futureRefMap.remove(ref.key, ref)
-      ref = referenceQueue.poll().asInstanceOf[FutureRef[T]]
+    if (ref != null) {
+      val cleaner = cleanerRef.get
+      if (cleaner == null || cleaner.isCompleted) {
+        val promise = Promise[Unit]
+        if (cleanerRef.compareAndSet(cleaner, promise.future)) {
+          promise completeWith SafeFuture {
+            val now = System.currentTimeMillis
+            var cnt = 0
+            while (ref != null) {
+              if (futureRefMap.remove(ref.key, ref)) cnt += 1
+              ref = referenceQueue.poll().asInstanceOf[FutureRef[T]]
+            }
+            log.info(s"$cnt entries cleaned in ${System.currentTimeMillis - now}ms")
+          }
+        }
+      }
     }
   }
 
