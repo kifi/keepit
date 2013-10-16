@@ -8,7 +8,7 @@ POST    /eliza/messages/:parentId         @com.keepit.eliza.ExtMessagingControll
 
 POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterController.getChatter
 
-GET     /eliza/ext/ws                     @com.keepit.eliza.ExtMessagingController.websocket()
+GET     /eliza/ext/ws                     @com.keepit.eliza.ExtMessagingController.websocket(version: Option[String])
 POST    /eliza/ext/chatter                @com.keepit.eliza.ExtMessagingController.getChatter()
 POST    /eliza/devices/:deviceType        @com.keepit.eliza.ExtDevicesController.registerDevice(deviceType:String)
 

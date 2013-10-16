@@ -34,7 +34,7 @@ import org.joda.time.DateTime
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
-case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User], experiments: Set[ExperimentType])
+case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User], experiments: Set[ExperimentType], extVersion: Option[String])
 
 
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
@@ -143,11 +143,11 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   }
 
 
-  def websocket() = WebSocket.async[JsArray] { implicit request =>
+  def websocket(versionOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
     authenticate(request) match {
       case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
         implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
-        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments)
+        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt)
         val handlers = websocketHandlers(socketInfo)
         val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
 
@@ -163,6 +163,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           streamSession.experiments.foreach{ experiment =>
             contextBuilder += ("experiment", experiment.toString)
           }
+          versionOpt.foreach{ version => contextBuilder += ("extVersion", version) }
           heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_connect"), tStart))
         }
 
@@ -184,6 +185,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
             streamSession.experiments.foreach{ experiment =>
               contextBuilder += ("experiment", experiment.toString)
             }
+            versionOpt.foreach{ version => contextBuilder += ("extVersion", version) }
             heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_disconnect"), tStart))
           }
         }
