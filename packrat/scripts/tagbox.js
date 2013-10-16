@@ -1045,7 +1045,7 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Updates (add/remove) 'tagged' class of the tagbox.
+		 * Updates (add/remove) 'kifi-tagged' class of the tagbox.
 		 */
 		updateTaggedClass: function () {
 			return this.toggleClass('kifi-tagged', this.$tagList.children().length);
