@@ -202,8 +202,8 @@ class FakeShoeboxServiceClientImpl(
     Future.successful(userOpt)
   }
 
-  def getUser(id: Id[User]): Future[User] = {
-    val user = allUsers(id)
+  def getUser(id: Id[User]): Future[Option[User]] = {
+    val user = Option(allUsers(id))
     Future.successful(user)
   }
 
