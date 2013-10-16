@@ -8,7 +8,7 @@ import com.keepit.common.time._
 case class ArticleHit(uriId: Id[NormalizedURI], score: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[Id[User]], bookmarkCount: Int)
 
 case class ArticleSearchResult(
-  last: Option[ExternalId[ArticleSearchResultRef]], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
+  last: Option[ExternalId[ArticleSearchResult]], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
   query: String,
   hits: Seq[ArticleHit],
   myTotal: Int,
@@ -18,7 +18,7 @@ case class ArticleSearchResult(
   filter: Set[Long],
   millisPassed: Int,
   pageNumber: Int,
-  uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
+  uuid: ExternalId[ArticleSearchResult] = ExternalId(),
   time: DateTime = currentDateTime,
   svVariance: Float = -1.0f,			// semantic vector variance
   svExistenceVar: Float = -1.0f,

@@ -20,7 +20,6 @@ import com.keepit.model.URL
 import com.keepit.model.BrowsingHistory
 import com.keepit.model.CommentRecipient
 import com.keepit.model.UserExperiment
-import com.keepit.search.ArticleSearchResult
 import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
 import com.keepit.model.ClickHistory
@@ -269,8 +268,6 @@ class FakeShoeboxServiceClientImpl(
   def getBrowsingHistoryFilter(userId: Id[User]) = {
     Future.successful(browsingHistoryTracker.getMultiHashFilter(userId).getFilter)
   }
-
-  def reportArticleSearchResult(res: ArticleSearchResult): Unit = {}
 
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
     val users = userIds.map(allUsers(_))

@@ -8,7 +8,6 @@ import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
-import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckError
@@ -21,8 +20,6 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer.NormalizationCandidate
-import com.keepit.search.ArticleSearchResultRef
-import com.keepit.search.ArticleSearchResultRefRepo
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.shoebox.BrowsingHistoryTracker
@@ -65,7 +62,6 @@ class ShoeboxController @Inject() (
   collectionRepo: CollectionRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
-  articleSearchResultRefRepo: ArticleSearchResultRefRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
@@ -257,14 +253,6 @@ class ShoeboxController @Inject() (
         .map { friendId => JsNumber(friendId.id) }
     }
     Ok(JsArray(ids))
-  }
-
-  def reportArticleSearchResult = Action(parse.json) { request =>
-    val ref = Json.fromJson[ArticleSearchResultRef](request.body).get
-    db.readWrite { implicit s =>
-      articleSearchResultRefRepo.save(ref)
-    }
-    Ok
   }
 
   def getActiveExperiments = Action { request =>

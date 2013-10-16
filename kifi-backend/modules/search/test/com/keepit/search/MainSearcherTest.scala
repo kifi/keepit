@@ -343,7 +343,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
         val graphSearcher = mainSearcher.uriGraphSearcher
         val reachableUris = users.foldLeft(Set.empty[Long])((s, u) => s ++ graphSearcher.getUserToUriEdgeSet(u.id.get, publicOnly = true).destIdLongSet)
 
-        var uuid : Option[ExternalId[ArticleSearchResultRef]] = None
+        var uuid : Option[ExternalId[ArticleSearchResult]] = None
         var cnt = 0
         while (cnt < reachableUris.size && uriSeen.size < reachableUris.size) {
           cnt += 1

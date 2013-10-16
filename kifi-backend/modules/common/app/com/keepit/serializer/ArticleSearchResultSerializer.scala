@@ -1,15 +1,11 @@
 package com.keepit.serializer
 
-import com.keepit.common.db.{Id, ExternalId, State}
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.time._
-import com.keepit.model.NormalizedURI
-import securesocial.core._
-import securesocial.core.AuthenticationMethod._
 import play.api.libs.json._
 import com.keepit.search.ArticleSearchResult
 import com.keepit.search.ArticleHit
 import com.keepit.model.User
-import com.keepit.search.ArticleSearchResultRef
 import org.joda.time.DateTime
 import com.keepit.search.Lang
 
@@ -58,7 +54,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
   }
 
   def reads(json: JsValue): JsResult[ArticleSearchResult] = JsSuccess(ArticleSearchResult(
-      last = (json \ "last").asOpt[String] map (j => ExternalId[ArticleSearchResultRef](j)),
+      last = (json \ "last").asOpt[String] map (j => ExternalId[ArticleSearchResult](j)),
       query = (json \ "query").as[String],
       lang = (json \ "lang").asOpt[String].map(lang => Lang(lang)).getOrElse(Lang("en")),
       hits = readHits((json \ "hits").asInstanceOf[JsArray]),
@@ -67,7 +63,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       mayHaveMoreHits = (json \ "mayHaveMoreHits").as[Boolean],
       scorings = (json \ "scorings").asInstanceOf[JsArray].value map (s => ScoringSerializer.scoringSerializer.reads(s).get),
       filter = (json \ "filter").asOpt[Seq[Long]].map(_.toSet).getOrElse(Set.empty[Long]),
-      uuid = ExternalId[ArticleSearchResultRef]((json \ "uuid").as[String]),
+      uuid = ExternalId[ArticleSearchResult]((json \ "uuid").as[String]),
       time = (json \ "time").as[DateTime],
       millisPassed = (json \ "millisPassed").as[Int],
       pageNumber = (json \ "pageNumber").as[Int],

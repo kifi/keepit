@@ -18,7 +18,6 @@ class AdminSearchController @Inject() (
     db: Database,
     userRepo: UserRepo,
     articleSearchResultStore: ArticleSearchResultStore,
-    articleSearchResultRefRepo: ArticleSearchResultRefRepo,
     uriRepo: NormalizedURIRepo,
     searchClient: SearchServiceClient
   ) extends AdminController(actionAuthenticator) {
@@ -29,11 +28,9 @@ class AdminSearchController @Inject() (
     }
   }
 
-  def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = AdminHtmlAction { implicit request =>
-    val ref = db.readWrite { implicit s =>
-      articleSearchResultRefRepo.get(id)
-    }
-    val result = articleSearchResultStore.get(ref.externalId).get
+  def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminHtmlAction { implicit request =>
+
+    val result = articleSearchResultStore.get(id).get
     val metas: Seq[ArticleSearchResultHitMeta] = db.readOnly { implicit s =>
       result.hits.zip(result.scorings) map { tuple =>
         val hit = tuple._1
