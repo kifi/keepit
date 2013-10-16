@@ -52,7 +52,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
 
 
-  private def asyncIteratee(streamSession: StreamSession)(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
+  private def asyncIteratee(streamSession: StreamSession, extVersionOpt: Option[String])(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
+    val extVersion = extVersionOpt.getOrElse("N/A")
     import play.api.libs.iteratee._
     def step(i: Input[JsArray]): Iteratee[JsArray, Unit] = i match {
       case Input.EOF => Done(Unit, Input.EOF)
@@ -68,7 +69,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 method = Some("ws"), 
                 path = e.value.headOption.map(_.toString), 
                 callType = Healthcheck.INTERNAL,
-                errorMessage = Some(s"Error on ws call ${e.toString} for user ${streamSession.userId.id} using ${streamSession.userAgent}")
+                errorMessage = Some(s"Error on ws call ${e.toString} for user ${streamSession.userId.id} using ${extVersion} on ${streamSession.userAgent}")
               )
             )
           } 
@@ -190,7 +191,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           }
         }
 
-        val iteratee = asyncIteratee(streamSession) { jsArr =>
+        val iteratee = asyncIteratee(streamSession, versionOpt) { jsArr =>
           Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
             atomic { implicit txn =>
               socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
