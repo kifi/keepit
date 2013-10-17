@@ -16,6 +16,7 @@ import com.keepit.common.db.slick.Database
 import play.api.Play
 import play.api.Play.current
 import com.keepit.abook.ABookServiceClient
+import scala.xml.PrettyPrinter
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 
@@ -124,8 +125,13 @@ class OAuth2Controller @Inject() (
 //        val userInfo = Await.result(WS.url(userInfoUrl).get, 5 seconds).json
 //        log.info(s"[contacts] userInfo=${Json.prettyPrint(userInfo)}")
 
-        val contactsUrl = s"https://www.google.com/m8/feeds/contacts/default/full?access_token=$accToken" // TODO: alt=json
+        val contactsUrl = s"https://www.google.com/m8/feeds/contacts/default/full?access_token=$accToken&max-results=${Int.MaxValue}" // TODO: alt=json
         val contacts = Await.result(WS.url(contactsUrl).get, 5 seconds).xml
+        log.info(s"[g-contacts] $contacts")
+        val prettyPrint = new PrettyPrinter(300, 2)
+        val sb = new StringBuilder
+        prettyPrint.format(contacts, sb)
+        log.info(s"[g-contacts] ${sb.toString}")
         val jsArrays: immutable.Seq[JsArray] = (contacts \\ "feed").map { feed =>
           val entries: Seq[JsObject] = (feed \\ "entry").map { entry =>
             val title = (entry \\ "title").text
