@@ -1,12 +1,10 @@
 package com.keepit.heimdal
 
-import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.{User, KifiVersion}
 import com.keepit.search._
 import com.google.inject.{Singleton, Inject}
 import com.keepit.common.db.{ExternalId, Id}
 import play.api.mvc.AnyContent
-import org.joda.time.DateTime
 import com.keepit.common.controller.AuthenticatedRequest
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
