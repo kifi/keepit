@@ -6,10 +6,7 @@ import org.joda.time.DateTime
 
 import play.api.libs.json.{Json, Format, JsResult, JsError, JsSuccess, JsObject, JsValue, JsArray, JsNumber, JsString}
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.common.db.ExternalId
-import com.keepit.model.KifiInstallation
 import play.api.mvc.RequestHeader
-
 
 case class UserEventType(name: String)
 
@@ -87,11 +84,16 @@ object UserEventContextBuilder {
     contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
 
     request match {
+      case authRequest: AuthenticatedRequest[_] =>
+        authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
+        authRequest.experiments.foreach { experiment => contextBuilder += ("experiment", experiment.toString) }
+      case _ =>
+    }
+
+    request match {
       case authRequest: AuthenticatedRequest[JsValue] =>
         val o = authRequest.body
         (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extVersion", version) }
-        authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
-        authRequest.experiments.foreach { experiment => contextBuilder += ("experiment", experiment.toString) }
       case _ =>
     }
 

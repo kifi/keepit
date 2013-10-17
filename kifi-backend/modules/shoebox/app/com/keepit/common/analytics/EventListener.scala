@@ -12,72 +12,17 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.search.{ArticleSearchResult, SearchServiceClient}
+import com.keepit.search.{SearchConfigExperiment, ArticleSearchResultStore, ArticleSearchResult, SearchServiceClient}
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.ClickHistoryTracker
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsArray, JsObject}
 import scala.util.Success
 import com.keepit.normalizer.{NormalizationCandidate}
 import com.keepit.common.net.{Host, URI}
+import com.keepit.heimdal.{UserEventType, UserEvent, HeimdalServiceClient, UserEventContextBuilder}
 
-abstract class EventListener(
-    userRepo: UserRepo,
-    normalizedURIRepo: NormalizedURIRepo)
-  extends Logging {
-
+abstract class EventListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends Logging {
   def onEvent: PartialFunction[Event, Unit]
-
-  case class SearchMeta(
-    query: String,
-    url: String,
-    normUrl: Option[NormalizedURI],
-    rank: Int,
-    queryUUID: Option[ExternalId[ArticleSearchResult]])
-
-  def searchParser(externalUser: ExternalId[User], json: JsObject, eventName: String)(implicit s: RSession) = {
-    val query = (json \ "query").asOpt[String].getOrElse("")
-    val url: String = getDestinationURL(json, eventName).getOrElse("")
-    val user = userRepo.get(externalUser)
-    val normUrl = normalizedURIRepo.getByUri(url)
-    val rank = getRank(json, eventName)
-    val queryUUID = ExternalId.asOpt[ArticleSearchResult]((json \ "queryUUID").asOpt[String].getOrElse(""))
-    (user, SearchMeta(query, url, normUrl, rank, queryUUID))
-  }
-
-  private def getRank(json: JsObject, eventName: String): Int = {
-    eventName match {
-      case SearchEventName.kifiResultClicked => (json \ "whichResult").asOpt[Int].getOrElse(0)
-      case _ => 0
-    }
-  }
-
-  private def getDestinationURL(json: JsObject, eventName: String): Option[String] = {
-    val urlOpt = (json \ "url").asOpt[String]
-    eventName match {
-      case SearchEventName.googleResultClicked => urlOpt.flatMap { url => getDestinationFromGoogleURL(url) }
-      case _ => urlOpt
-    }
-  }
-
-  private def getDestinationFromGoogleURL(url: String): Option[String] = {
-    val urlOpt = url match {
-      case URI(_, _, Some(Host("com", "youtube", _*)), _, _, _, _) => Some(url)
-      case URI(_, _, Some(Host("org", "wikipedia", _*)), _, _, _, _) => Some(url)
-      case URI(_, _, Some(host), _, Some("/url"), Some(query), _) if host.domain.contains("google") =>
-        query.params.find(_.name == "url").flatMap { _.decodedValue }
-      case _ =>
-        None
-    }
-    if (!urlOpt.isDefined) log.error(s"failed to extract the destination URL from: ${url}")
-    urlOpt
-  }
-}
-
-object SearchEventName {
-  val kifiResultClicked = "kifiResultClicked"
-  val googleResultClicked = "googleResultClicked"
-
-  val validEventNames = Set(kifiResultClicked, googleResultClicked)
 }
 
 @Singleton
@@ -113,18 +58,27 @@ class ResultClickedListener @Inject() (
   db: Database,
   bookmarkRepo: BookmarkRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
-  clickHistoryTracker: ClickHistoryTracker)
-  extends EventListener(userRepo, normalizedURIRepo) {
-
-  import SearchEventName._
+  clickHistoryTracker: ClickHistoryTracker,
+  articleSearchResultStore: ArticleSearchResultStore,
+  heimdal: HeimdalServiceClient) extends EventListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
-    case Event(_, UserEventMetadata(EventFamilies.SEARCH, eventName, externalUser, _, experiments, metaData, _), _, _) if validEventNames.contains(eventName) =>
+    case Event(_, UserEventMetadata(EventFamilies.SEARCH, eventName, externalUser, _, experiments, metaData, _), createdAt, _) if ResultSource.isDefinedAt(eventName) =>
       val (user, meta, bookmark) = db.readOnly { implicit s =>
         val (user, meta) = searchParser(externalUser, metaData, eventName)
         val bookmark = meta.normUrl.map(n => bookmarkRepo.getByUriAndUser(n.id.get, user.id.get)).flatten
         (user, meta, bookmark)
       }
+      val obfuscatedSearchSession = meta.queryUUID.map(articleSearchResultStore.getSearchSession).map(ArticleSearchResult.obfuscate(_, user.id.get))
+
+      val contextBuilder = new UserEventContextBuilder()
+      contextBuilder += ("searchSession", obfuscatedSearchSession.getOrElse(""))
+      contextBuilder += ("resultClicked", ResultSource(eventName))
+      contextBuilder += ("resultPosition", meta.rank)
+      contextBuilder += ("kifiResultsCount", meta.kifiResultsCount)
+      meta.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
+      heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, UserEventType("search_result_clicked"), createdAt))
+
       meta.normUrl.filter { n =>
         // exclude an uri not kept by any user. uri is not kept if either active or inactive.
         (n.state != NormalizedURIStates.ACTIVE && n.state != NormalizedURIStates.INACTIVE)
@@ -152,6 +106,68 @@ class ResultClickedListener @Inject() (
           }
         }
       }
+  }
+
+  object ResultSource extends PartialFunction[String, String] {
+    val kifiResultClicked = "kifiResultClicked"
+    val googleResultClicked = "googleResultClicked"
+    val validEvents = Set(kifiResultClicked, googleResultClicked)
+
+    def isDefinedAt(eventName: String): Boolean = validEvents.contains(eventName)
+    def apply(eventName: String): String = eventName match {
+      case this.kifiResultClicked => "KiFi"
+      case this.googleResultClicked => "Google"
+    }
+  }
+
+  case class SearchMeta(
+    query: String,
+    url: String,
+    normUrl: Option[NormalizedURI],
+    rank: Int,
+    kifiResultsCount: Int,
+    queryUUID: Option[ExternalId[ArticleSearchResult]],
+    searchExperiment: Option[Id[SearchConfigExperiment]]
+  )
+
+  def searchParser(externalUser: ExternalId[User], json: JsObject, eventName: String)(implicit s: RSession) = {
+    val query = (json \ "query").asOpt[String].getOrElse("")
+    val url: String = getDestinationURL(json, eventName).getOrElse("")
+    val user = userRepo.get(externalUser)
+    val normUrl = normalizedURIRepo.getByUri(url)
+    val rank = getRank(json, eventName)
+    val kifiResultsCount = (json \ "kifiResultsCount").as[Int]
+    val queryUUID = ExternalId.asOpt[ArticleSearchResult]((json \ "queryUUID").asOpt[String].getOrElse(""))
+    val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
+    (user, SearchMeta(query, url, normUrl, rank, kifiResultsCount, queryUUID, searchExperiment))
+  }
+
+  private def getRank(json: JsObject, eventName: String): Int = {
+    eventName match {
+      case ResultSource.kifiResultClicked => (json \ "whichResult").asOpt[Int].getOrElse(0)
+      case _ => 0
+    }
+  }
+
+  private def getDestinationURL(json: JsObject, eventName: String): Option[String] = {
+    val urlOpt = (json \ "url").asOpt[String]
+    eventName match {
+      case ResultSource.googleResultClicked => urlOpt.flatMap { url => getDestinationFromGoogleURL(url) }
+      case _ => urlOpt
+    }
+  }
+
+  private def getDestinationFromGoogleURL(url: String): Option[String] = {
+    val urlOpt = url match {
+      case URI(_, _, Some(Host("com", "youtube", _*)), _, _, _, _) => Some(url)
+      case URI(_, _, Some(Host("org", "wikipedia", _*)), _, _, _, _) => Some(url)
+      case URI(_, _, Some(host), _, Some("/url"), Some(query), _) if host.domain.contains("google") =>
+        query.params.find(_.name == "url").flatMap { _.decodedValue }
+      case _ =>
+        None
+    }
+    if (!urlOpt.isDefined) log.error(s"failed to extract the destination URL from: ${url}")
+    urlOpt
   }
 }
 
@@ -207,13 +223,29 @@ class SearchUnloadListenerImpl @Inject() (
   persistEventProvider: Provider[EventPersister],
   store: MongoEventStore,
   searchClient: SearchServiceClient,
+  articleSearchResultStore: ArticleSearchResultStore,
+  heimdal: HeimdalServiceClient,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
   extends SearchUnloadListener(userRepo, normalizedURIRepo) with Logging {
 
   def onEvent: PartialFunction[Event, Unit] = {
-    case Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", extUserId, _, _, metaData, _), _, _) => {
-      // do nothing for now
+    case Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", extUserId, _, _, metaData, _), createdAt, _) => {
+      val userId = db.readOnly { implicit session => userRepo.get(extUserId).id.get }
+      val queryUUID = ExternalId.asOpt[ArticleSearchResult]((metaData \ "queryUUID").asOpt[String].getOrElse(""))
+      val kifiResultsCount = (metaData \ "kifiShownURIs").as[JsArray].value.length
+      val kifiResultsClicked = (metaData \ "kifiResultsClicked").as[Int]
+      val googleResultsClicked = (metaData \ "googleResultsClicked").as[Int]
+      val searchExperiment = (metaData \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
+      val obfuscatedSearchSession = queryUUID.map(articleSearchResultStore.getSearchSession).map(ArticleSearchResult.obfuscate(_, userId))
+
+      val contextBuilder = new UserEventContextBuilder()
+      contextBuilder += ("searchSession", obfuscatedSearchSession.getOrElse(""))
+      searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
+      contextBuilder += ("kifiResultsCount", kifiResultsCount)
+      contextBuilder += ("kifiResultsClicked", kifiResultsClicked)
+      contextBuilder += ("googleResultsClicked", googleResultsClicked)
+      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("search_ended"), createdAt))
     }
   }
 }

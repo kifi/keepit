@@ -4,6 +4,8 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.model.{User, NormalizedURI}
 import org.joda.time.DateTime
 import com.keepit.common.time._
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 case class ArticleHit(uriId: Id[NormalizedURI], score: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[Id[User]], bookmarkCount: Int)
 
@@ -72,5 +74,15 @@ case class SearchTimeLogs(
   override def toString() = {
     s"search time summary: total = $total, approx sum of: socialGraphInfo = $socialGraphInfo, getClickBoost = $getClickBoost, queryParsing = $queryParsing, " +
       s"personalizedSearcher = $personalizedSearcher, search = $search, processHits = $processHits"
+  }
+}
+
+object ArticleSearchResult {
+  def obfuscate(searchSession: ExternalId[ArticleSearchResult], userId: Id[User]): String = {
+    val algorithm = "HmacSHA256"
+    val mac = Mac.getInstance(algorithm)
+    val key = new SecretKeySpec(searchSession.id.getBytes, algorithm)
+    mac.init(key)
+    mac.doFinal(userId.toString.getBytes()).toString
   }
 }

@@ -6,7 +6,7 @@ import scala.concurrent.future
 import scala.concurrent.Future
 import scala.util.Try
 import com.google.inject.Inject
-import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{AuthenticatedRequest, SearchServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
@@ -27,6 +27,8 @@ import com.newrelic.api.agent.NewRelic
 import com.newrelic.api.agent.Trace
 import play.modules.statsd.api.Statsd
 import scala.concurrent.Promise
+import com.keepit.heimdal.{UserEventType, UserEvent, UserEventContextBuilder, HeimdalServiceClient}
+import play.api.mvc.AnyContent
 
 class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -35,22 +37,25 @@ class ExtSearchController @Inject() (
   articleSearchResultStore: ArticleSearchResultStore,
   healthcheckPlugin: HealthcheckPlugin,
   shoeboxClient: ShoeboxServiceClient,
+  heimdalClient: HeimdalServiceClient,
   monitoredAwait: MonitoredAwait)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
-    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging{
+    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
   @Trace
-  def search(query: String,
-             filter: Option[String],
-             maxHits: Int,
-             lastUUIDStr: Option[String],
-             context: Option[String],
-             kifiVersion: Option[KifiVersion] = None,
-             start: Option[String] = None,
-             end: Option[String] = None,
-             tz: Option[String] = None,
-             coll: Option[String] = None) = AuthenticatedJsonAction { request =>
+  def search(
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    source: String,
+    kifiVersion: Option[KifiVersion] = None,
+    start: Option[String] = None,
+    end: Option[String] = None,
+    tz: Option[String] = None,
+    coll: Option[String] = None) = AuthenticatedJsonAction { request =>
 
     val timing = new SearchTiming
 
@@ -83,10 +88,7 @@ class ExtSearchController @Inject() (
 
     val (config, searchExperimentId) = searchConfigManager.getConfig(userId, query, noSearchExperiments)
 
-    val lastUUID = lastUUIDStr.flatMap{
-      case "" => None
-      case str => Some(ExternalId[ArticleSearchResult](str))
-    }
+    val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
 
     timing.factory
 
@@ -117,9 +119,9 @@ class ExtSearchController @Inject() (
     SafeFuture {
       // stash timing information
       try {
-        reportArticleSearchResult(searchRes)
+        reportSearch(request,kifiVersion, maxHits, searchFilter, searchExperimentId, searchRes)
       } catch {
-        case e: Throwable => log.error("Could not persist article search result %s".format(res), e)
+        case e: Throwable => log.error("Could not report search %s".format(res), e)
       }
 
       Statsd.timing("extSearch.factory", timing.getFactoryTime)
@@ -166,16 +168,14 @@ class ExtSearchController @Inject() (
 
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
 
-  private def reportArticleSearchResult(res: ArticleSearchResult) {
-    articleSearchResultStore += (res.uuid -> res)
-  }
-
-  private[ext] def toPersonalSearchResultPacket(decorator: ResultDecorator, userId: Id[User],
-      res: ArticleSearchResult,
-      config: SearchConfig,
-      isDefaultFilter: Boolean,
-      searchExperimentId: Option[Id[SearchConfigExperiment]],
-      expertsFuture: Future[Seq[Id[User]]]): PersonalSearchResultPacket = {
+  private[ext] def toPersonalSearchResultPacket(
+    decorator: ResultDecorator,
+    userId: Id[User],
+    res: ArticleSearchResult,
+    config: SearchConfig,
+    isDefaultFilter: Boolean,
+    searchExperimentId: Option[Id[SearchConfigExperiment]],
+    expertsFuture: Future[Seq[Id[User]]]): PersonalSearchResultPacket = {
 
     val decoratedResult = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
@@ -212,6 +212,43 @@ class ExtSearchController @Inject() (
       shoeboxClient.getBrowsingHistoryFilter(userId)
       shoeboxClient.getClickHistoryFilter(userId)
     }
+  }
+
+  private def reportSearch(
+    request: AuthenticatedRequest[AnyContent],
+    kifiVersion: Option[KifiVersion],
+    maxHits: Int,
+    searchFilter: SearchFilter,
+    searchExperiment: Option[Id[SearchConfigExperiment]],
+    res: ArticleSearchResult
+    ) {
+    articleSearchResultStore += (res.uuid -> res)
+    val obfuscatedSearchSession = ArticleSearchResult.obfuscate(articleSearchResultStore.getSearchSession(res), request.userId)
+    val contextBuilder = UserEventContextBuilder(request)
+    kifiVersion.foreach { version => contextBuilder += ("kifiVersion", version.toString) }
+    contextBuilder += ("queryCharacters", res.query.length)
+    contextBuilder += ("queryWords", res.query.split("""\b""").length)
+    contextBuilder += ("searchSession", obfuscatedSearchSession)
+    contextBuilder += ("maxHits", maxHits)
+    contextBuilder += ("lang", res.lang.lang)
+
+    contextBuilder += ("defaultFilter", searchFilter.isDefault)
+    contextBuilder += ("customFilter", searchFilter.isCustom)
+    contextBuilder += ("includeMine", searchFilter.includeMine)
+    contextBuilder += ("includeShared", searchFilter.includeShared)
+    contextBuilder += ("includeFriends", searchFilter.includeFriends)
+    contextBuilder += ("includeOthers", searchFilter.includeOthers)
+    contextBuilder += ("filterByTimeRange", searchFilter.timeRange.isDefined)
+    contextBuilder += ("filterByCollections", searchFilter.collections.isDefined)
+
+    searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
+    contextBuilder += ("myTotal", res.myTotal)
+    contextBuilder += ("friendsTotal", res.friendsTotal)
+    contextBuilder += ("mayHaveMoreHits", res.mayHaveMoreHits)
+    contextBuilder += ("pageNumber", res.pageNumber)
+
+    heimdalClient.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("search_performed"), res.time))
+
   }
 
   class SearchTiming{
