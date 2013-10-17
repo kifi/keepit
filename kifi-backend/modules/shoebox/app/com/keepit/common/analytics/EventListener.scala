@@ -1,7 +1,7 @@
 package com.keepit.common.analytics
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.google.inject.{ Inject, Singleton, Provider }
+import com.google.inject.{ Inject, Singleton}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db._
@@ -9,17 +9,16 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.search.{SearchConfigExperiment, ArticleSearchResultStore, ArticleSearchResult, SearchServiceClient}
+import com.keepit.search._
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.ClickHistoryTracker
-import play.api.libs.json.{JsArray, JsObject}
-import scala.util.Success
-import com.keepit.normalizer.{NormalizationCandidate}
+import com.keepit.normalizer.NormalizationCandidate
 import com.keepit.common.net.{Host, URI}
-import com.keepit.heimdal.{UserEventType, UserEvent, HeimdalServiceClient, UserEventContextBuilder}
+import play.api.libs.json.JsArray
+import scala.util.Success
+import play.api.libs.json.JsObject
+import org.joda.time.DateTime
 
 abstract class EventListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends Logging {
   def onEvent: PartialFunction[Event, Unit]
@@ -58,47 +57,29 @@ class ResultClickedListener @Inject() (
   db: Database,
   bookmarkRepo: BookmarkRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
-  clickHistoryTracker: ClickHistoryTracker,
-  articleSearchResultStore: ArticleSearchResultStore,
-  heimdal: HeimdalServiceClient) extends EventListener(userRepo, normalizedURIRepo) {
+  clickHistoryTracker: ClickHistoryTracker)
+  extends EventListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SEARCH, eventName, externalUser, _, experiments, metaData, _), createdAt, _) if ResultSource.isDefinedAt(eventName) =>
-      val (user, meta, bookmark) = db.readOnly { implicit s =>
-        val (user, meta) = searchParser(externalUser, metaData, eventName)
-        val bookmark = meta.normUrl.map(n => bookmarkRepo.getByUriAndUser(n.id.get, user.id.get)).flatten
-        (user, meta, bookmark)
-      }
-      val obfuscatedSearchSession = meta.queryUUID.map(articleSearchResultStore.getSearchSession).map(ArticleSearchResult.obfuscate(_, user.id.get))
-
-      val contextBuilder = new UserEventContextBuilder()
-      contextBuilder += ("searchSession", obfuscatedSearchSession.getOrElse(""))
-      contextBuilder += ("resultClicked", ResultSource(eventName))
-      contextBuilder += ("resultPosition", meta.rank)
-      contextBuilder += ("kifiResultsCount", meta.kifiResultsCount)
-      meta.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-      heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, UserEventType("search_result_clicked"), createdAt))
-
-      meta.normUrl.filter { n =>
-        // exclude an uri not kept by any user. uri is not kept if either active or inactive.
-        (n.state != NormalizedURIStates.ACTIVE && n.state != NormalizedURIStates.INACTIVE)
-      }.foreach { n =>
-        searchServiceClient.logResultClicked(user.id.get, meta.query, n.id.get, meta.rank, !bookmark.isEmpty)
-        clickHistoryTracker.add(user.id.get, n.id.get)
+      val resultClicked = db.readOnly { implicit s => parseResultClicked(externalUser, metaData, eventName, createdAt) }
+      searchServiceClient.logResultClicked(resultClicked)
+      resultClicked.keptUri.foreach { uriId =>
+        clickHistoryTracker.add(resultClicked.userId, uriId)
 
         // if bookmark is kept by this user
-        if (bookmark.isDefined && user.id.isDefined){
+        if (resultClicked.isUserKeep) {
           db.readWrite{ implicit s =>
-            userBookmarkClicksRepo.increaseCounts(bookmark.get.userId, bookmark.get.uriId, isSelf = true)
+            userBookmarkClicksRepo.increaseCounts(resultClicked.userId, uriId, isSelf = true)
           }
         }
         // if kept by others, others get credit
-        if (!bookmark.isDefined){
-          searchServiceClient.sharingUserInfo(user.id.get, n.id.get).onComplete{
+        else {
+          searchServiceClient.sharingUserInfo(resultClicked.userId, uriId).onComplete{
             case Success(sharingUserInfo) => {
               sharingUserInfo.sharingUserIds.foreach{ userId =>
                 db.readWrite{ implicit s =>
-                  userBookmarkClicksRepo.increaseCounts(userId, n.id.get, isSelf = false)
+                  userBookmarkClicksRepo.increaseCounts(userId, uriId, isSelf = false)
                 }
               }
             }
@@ -115,31 +96,24 @@ class ResultClickedListener @Inject() (
 
     def isDefinedAt(eventName: String): Boolean = validEvents.contains(eventName)
     def apply(eventName: String): String = eventName match {
-      case this.kifiResultClicked => "KiFi"
+      case this.kifiResultClicked => "Kifi"
       case this.googleResultClicked => "Google"
     }
   }
 
-  case class SearchMeta(
-    query: String,
-    url: String,
-    normUrl: Option[NormalizedURI],
-    rank: Int,
-    kifiResultsCount: Int,
-    queryUUID: Option[ExternalId[ArticleSearchResult]],
-    searchExperiment: Option[Id[SearchConfigExperiment]]
-  )
+  def parseResultClicked(externalUser: ExternalId[User], json: JsObject, eventName: String, createdAt: DateTime)(implicit s: RSession) = {
 
-  def searchParser(externalUser: ExternalId[User], json: JsObject, eventName: String)(implicit s: RSession) = {
     val query = (json \ "query").asOpt[String].getOrElse("")
     val url: String = getDestinationURL(json, eventName).getOrElse("")
     val user = userRepo.get(externalUser)
-    val normUrl = normalizedURIRepo.getByUri(url)
     val rank = getRank(json, eventName)
     val kifiResultsCount = (json \ "kifiResultsCount").as[Int]
     val queryUUID = ExternalId.asOpt[ArticleSearchResult]((json \ "queryUUID").asOpt[String].getOrElse(""))
     val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
-    (user, SearchMeta(query, url, normUrl, rank, kifiResultsCount, queryUUID, searchExperiment))
+    val normUrl = normalizedURIRepo.getByUri(url)
+    val isUserKeep = normUrl.exists(n => bookmarkRepo.getByUriAndUser(n.id.get, user.id.get).isDefined)
+    val keptUri = normUrl.map(_.id.get).filter(id => isUserKeep || bookmarkRepo.latestBookmark(id).isDefined)
+    ResultClicked(user.id.get, searchExperiment, queryUUID, query, kifiResultsCount, ResultSource(eventName), rank, keptUri, isUserKeep, createdAt)
   }
 
   private def getRank(json: JsObject, eventName: String): Int = {
@@ -220,13 +194,7 @@ class SearchUnloadListenerImpl @Inject() (
   db: Database,
   userRepo: UserRepo,
   normalizedURIRepo: NormalizedURIRepo,
-  persistEventProvider: Provider[EventPersister],
-  store: MongoEventStore,
-  searchClient: SearchServiceClient,
-  articleSearchResultStore: ArticleSearchResultStore,
-  heimdal: HeimdalServiceClient,
-  implicit private val clock: Clock,
-  implicit private val fortyTwoServices: FortyTwoServices)
+  searchClient: SearchServiceClient)
   extends SearchUnloadListener(userRepo, normalizedURIRepo) with Logging {
 
   def onEvent: PartialFunction[Event, Unit] = {
@@ -237,15 +205,8 @@ class SearchUnloadListenerImpl @Inject() (
       val kifiResultsClicked = (metaData \ "kifiResultsClicked").as[Int]
       val googleResultsClicked = (metaData \ "googleResultsClicked").as[Int]
       val searchExperiment = (metaData \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
-      val obfuscatedSearchSession = queryUUID.map(articleSearchResultStore.getSearchSession).map(ArticleSearchResult.obfuscate(_, userId))
-
-      val contextBuilder = new UserEventContextBuilder()
-      contextBuilder += ("searchSession", obfuscatedSearchSession.getOrElse(""))
-      searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-      contextBuilder += ("kifiResultsCount", kifiResultsCount)
-      contextBuilder += ("kifiResultsClicked", kifiResultsClicked)
-      contextBuilder += ("googleResultsClicked", googleResultsClicked)
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("search_ended"), createdAt))
+      val searchEnded = SearchEnded(userId, searchExperiment, queryUUID, kifiResultsCount, kifiResultsClicked, googleResultsClicked, createdAt)
+      searchClient.logSearchEnded(searchEnded)
     }
   }
 }

@@ -87,13 +87,10 @@ object UserEventContextBuilder {
       case authRequest: AuthenticatedRequest[_] =>
         authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
         authRequest.experiments.foreach { experiment => contextBuilder += ("experiment", experiment.toString) }
-      case _ =>
-    }
-
-    request match {
-      case authRequest: AuthenticatedRequest[JsValue] =>
-        val o = authRequest.body
-        (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extVersion", version) }
+        authRequest.body match {
+          case json: JsValue => (json \"extVersion").asOpt[String].foreach { version => contextBuilder += ("extVersion", version) }
+          case _ =>
+        }
       case _ =>
     }
 

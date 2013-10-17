@@ -7,7 +7,6 @@ import scala.concurrent.Future
 import scala.util.Try
 import com.google.inject.Inject
 import com.keepit.common.controller.{AuthenticatedRequest, SearchServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
@@ -23,12 +22,11 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import play.api.libs.json.Json
 import com.keepit.common.db.{ExternalId, Id}
-import com.newrelic.api.agent.NewRelic
 import com.newrelic.api.agent.Trace
 import play.modules.statsd.api.Statsd
 import scala.concurrent.Promise
-import com.keepit.heimdal.{UserEventType, UserEvent, UserEventContextBuilder, HeimdalServiceClient}
 import play.api.mvc.AnyContent
+import com.keepit.heimdal.SearchAnalytics
 
 class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -37,7 +35,7 @@ class ExtSearchController @Inject() (
   articleSearchResultStore: ArticleSearchResultStore,
   healthcheckPlugin: HealthcheckPlugin,
   shoeboxClient: ShoeboxServiceClient,
-  heimdalClient: HeimdalServiceClient,
+  searchAnalytics: SearchAnalytics,
   monitoredAwait: MonitoredAwait)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
@@ -50,7 +48,6 @@ class ExtSearchController @Inject() (
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
-    source: String,
     kifiVersion: Option[KifiVersion] = None,
     start: Option[String] = None,
     end: Option[String] = None,
@@ -220,35 +217,10 @@ class ExtSearchController @Inject() (
     maxHits: Int,
     searchFilter: SearchFilter,
     searchExperiment: Option[Id[SearchConfigExperiment]],
-    res: ArticleSearchResult
-    ) {
+    res: ArticleSearchResult) {
+
     articleSearchResultStore += (res.uuid -> res)
-    val obfuscatedSearchSession = ArticleSearchResult.obfuscate(articleSearchResultStore.getSearchSession(res), request.userId)
-    val contextBuilder = UserEventContextBuilder(request)
-    kifiVersion.foreach { version => contextBuilder += ("kifiVersion", version.toString) }
-    contextBuilder += ("queryCharacters", res.query.length)
-    contextBuilder += ("queryWords", res.query.split("""\b""").length)
-    contextBuilder += ("searchSession", obfuscatedSearchSession)
-    contextBuilder += ("maxHits", maxHits)
-    contextBuilder += ("lang", res.lang.lang)
-
-    contextBuilder += ("defaultFilter", searchFilter.isDefault)
-    contextBuilder += ("customFilter", searchFilter.isCustom)
-    contextBuilder += ("includeMine", searchFilter.includeMine)
-    contextBuilder += ("includeShared", searchFilter.includeShared)
-    contextBuilder += ("includeFriends", searchFilter.includeFriends)
-    contextBuilder += ("includeOthers", searchFilter.includeOthers)
-    contextBuilder += ("filterByTimeRange", searchFilter.timeRange.isDefined)
-    contextBuilder += ("filterByCollections", searchFilter.collections.isDefined)
-
-    searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-    contextBuilder += ("myTotal", res.myTotal)
-    contextBuilder += ("friendsTotal", res.friendsTotal)
-    contextBuilder += ("mayHaveMoreHits", res.mayHaveMoreHits)
-    contextBuilder += ("pageNumber", res.pageNumber)
-
-    heimdalClient.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("search_performed"), res.time))
-
+    searchAnalytics.searchPerformed(request, kifiVersion, maxHits, searchFilter, searchExperiment, res)
   }
 
   class SearchTiming{
