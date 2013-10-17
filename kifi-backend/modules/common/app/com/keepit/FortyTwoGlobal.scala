@@ -5,7 +5,7 @@ import java.io.File
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, HealthcheckError, AirbrakeError}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, HealthcheckError, AirbrakeError, BenchmarkRunner}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
@@ -50,15 +50,19 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     log.info(s"Amazon up! $amazonInstanceInfo")
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     serviceDiscovery.register()
-    serviceDiscovery.startSelfCheck()
-    serviceDiscovery.forceUpdate()
 
     injector.instance[AppScope].onStart(app)
-    if (app.mode != Mode.Test && app.mode != Mode.Dev) {
+
+    val prod = app.mode != Mode.Test && app.mode != Mode.Dev
+    if (prod) {
+      injector.instance[HealthcheckPlugin].warmUp(injector.instance[BenchmarkRunner])
+    }
+    serviceDiscovery.startSelfCheck()
+    serviceDiscovery.forceUpdate()
+    if (prod) {
       Statsd.increment("deploys", 42)
       injector.instance[AirbrakeNotifier].reportDeployment()
       injector.instance[HealthcheckPlugin].reportStart()
-      injector.instance[HealthcheckPlugin].warmUp()
     }
   }
 
