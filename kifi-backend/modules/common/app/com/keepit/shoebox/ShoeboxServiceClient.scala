@@ -50,7 +50,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
-  def bulkGetBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -232,32 +231,6 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
-    var cached = Map.empty[Id[User], BasicUser]
-    val needed = new ArrayBuffer[Id[User]]
-    userIds.foreach{ userId =>
-      cacheProvider.basicUserCache.get(BasicUserUserIdKey(userId)) match {
-        case Some(bu) => cached += (userId -> bu)
-        case None => needed += userId
-      }
-    }
-
-    if (needed.isEmpty) {
-      Promise.successful(cached).future
-    } else {
-      val query = needed.map(_.id).mkString(",")
-      call(Shoebox.internal.getBasicUsers(query)).map { res =>
-        val retrievedUsers = res.json.as[Map[String, BasicUser]]
-        cached ++ (retrievedUsers.map{ u =>
-          val id = Id[User](u._1.toLong)
-          val bu = u._2
-          cacheProvider.basicUserCache.set(BasicUserUserIdKey(id), Some(bu))
-          (id -> bu)
-        })
-      }
-    }
-  }
-
-  def bulkGetBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
     cacheProvider.basicUserCache.bulkGetOrElseFuture(userIds.map{ BasicUserUserIdKey(_) }.toSet){ keys =>
       val query = keys.map(_.userId.id).mkString(",")
       call(Shoebox.internal.getBasicUsers(query)).map{ res =>
