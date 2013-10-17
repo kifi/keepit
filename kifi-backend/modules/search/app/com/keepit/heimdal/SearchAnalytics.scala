@@ -31,12 +31,12 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
     searchExperiment: Option[Id[SearchConfigExperiment]],
     articleSearchResult: ArticleSearchResult) = {
 
-    val obfuscatedSearchSession = obfuscate(articleSearchResultStore.getSearchSession(articleSearchResult), request.userId)
+    val obfuscatedSearchId = obfuscate(articleSearchResultStore.getSearchId(articleSearchResult), request.userId)
     val contextBuilder = UserEventContextBuilder(request)
     kifiVersion.foreach { version => contextBuilder += ("kifiVersion", version.toString) }
     contextBuilder += ("queryCharacters", articleSearchResult.query.length)
     contextBuilder += ("queryWords", articleSearchResult.query.split("""\b""").length)
-    contextBuilder += ("searchSession", obfuscatedSearchSession)
+    contextBuilder += ("searchId", obfuscatedSearchId)
     contextBuilder += ("maxHits", maxHits)
     contextBuilder += ("lang", articleSearchResult.lang.lang)
 
@@ -60,9 +60,9 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
 
   def searchResultClicked(resultClicked: ResultClicked) = {
 
-    val obfuscatedSearchSession = resultClicked.queryUUID.map(articleSearchResultStore.getSearchSession).map(obfuscate(_, resultClicked.userId))
+    val obfuscatedSearchId = resultClicked.queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, resultClicked.userId))
     val contextBuilder = new UserEventContextBuilder()
-    contextBuilder += ("searchSession", obfuscatedSearchSession.getOrElse(""))
+    contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
     contextBuilder += ("resultSource", resultClicked.toString)
     contextBuilder += ("resultPosition", resultClicked.resultPosition)
     contextBuilder += ("kifiResultsCount", resultClicked.kifiResultsCount)
@@ -72,9 +72,9 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
 
   def searchEnded(searchEnded: SearchEnded) = {
 
-    val obfuscatedSearchSession = searchEnded.queryUUID.map(articleSearchResultStore.getSearchSession).map(obfuscate(_, searchEnded.userId))
+    val obfuscatedSearchId = searchEnded.queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, searchEnded.userId))
     val contextBuilder = new UserEventContextBuilder()
-    contextBuilder += ("searchSession", obfuscatedSearchSession.getOrElse(""))
+    contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
     searchEnded.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
     contextBuilder += ("kifiResultsCount", searchEnded.kifiResultsCount)
     contextBuilder += ("kifiResultsClicked", searchEnded.kifiResultsClicked)
@@ -83,10 +83,10 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
   }
 
 
-  private def obfuscate(searchSession: ExternalId[ArticleSearchResult], userId: Id[User]): String = {
+  private def obfuscate(searchId: ExternalId[ArticleSearchResult], userId: Id[User]): String = {
     val algorithm = "HmacSHA256"
     val mac = Mac.getInstance(algorithm)
-    val key = new SecretKeySpec(searchSession.id.getBytes, algorithm)
+    val key = new SecretKeySpec(searchId.id.getBytes, algorithm)
     mac.init(key)
     mac.doFinal(userId.toString.getBytes()).toString
   }

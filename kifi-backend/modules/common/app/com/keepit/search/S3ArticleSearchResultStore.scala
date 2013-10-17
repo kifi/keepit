@@ -8,11 +8,11 @@ import com.keepit.common.db.ExternalId
 
 
 trait ArticleSearchResultStore extends ObjectStore[ExternalId[ArticleSearchResult], ArticleSearchResult] {
-  def getSearchSession(articleSearchResult: ArticleSearchResult): ExternalId[ArticleSearchResult] =
-    articleSearchResult.last.map(getSearchSession) getOrElse articleSearchResult.uuid
+  def getSearchId(articleSearchResult: ArticleSearchResult): ExternalId[ArticleSearchResult] =
+    articleSearchResult.last.map(getSearchId) getOrElse articleSearchResult.uuid
 
-  def getSearchSession(uuid: ExternalId[ArticleSearchResult]): ExternalId[ArticleSearchResult] =
-    get(uuid).map(article => getSearchSession(article)) getOrElse uuid
+  def getSearchId(uuid: ExternalId[ArticleSearchResult]): ExternalId[ArticleSearchResult] =
+    get(uuid).map(article => getSearchId(article)) getOrElse uuid
 }
 
 class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[ArticleSearchResult] = new ArticleSearchResultSerializer())
