@@ -52,6 +52,11 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
 
   @Singleton
   @Provides
+  def userIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
+
+  @Singleton
+  @Provides
   def userSessionExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserSessionExternalIdCache(stats, accessLog, (outerRepo, 24 hours))
 
