@@ -262,7 +262,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
             statusCode = res.status))
 
         e.waitTime map {waitTime =>
-          if (waitTime > 100) {//ms
+          if (waitTime > 200) {//ms
             val exception = tracer.withCause(LongWaitException(req.url, res, waitTime))
             airbrake.get.notify(
               AirbrakeError.outgoing(
