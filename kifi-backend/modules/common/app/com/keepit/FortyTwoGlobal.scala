@@ -5,7 +5,7 @@ import java.io.File
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, HealthcheckError, AirbrakeError}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, HealthcheckError, AirbrakeError, BenchmarkRunner}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
@@ -13,6 +13,9 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
 import com.typesafe.config.ConfigFactory
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.duration._
+import akka.actor.ActorSystem
 import play.api._
 import play.api.mvc.Results._
 import play.api.mvc._
@@ -50,15 +53,22 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     log.info(s"Amazon up! $amazonInstanceInfo")
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     serviceDiscovery.register()
-    serviceDiscovery.startSelfCheck()
-    serviceDiscovery.forceUpdate()
 
     injector.instance[AppScope].onStart(app)
-    if (app.mode != Mode.Test && app.mode != Mode.Dev) {
-      Statsd.increment("deploys", 42)
-      injector.instance[AirbrakeNotifier].reportDeployment()
-      injector.instance[HealthcheckPlugin].reportStart()
-      injector.instance[HealthcheckPlugin].warmUp()
+
+    val prod = app.mode != Mode.Test && app.mode != Mode.Dev
+    if (prod) {
+      injector.instance[HealthcheckPlugin].warmUp(injector.instance[BenchmarkRunner])
+    }
+    serviceDiscovery.forceUpdate()
+    //Trying to run the self check after onStart is returned and Netty opened the ports
+    injector.instance[ActorSystem].scheduler.scheduleOnce(5 seconds) {
+      serviceDiscovery.startSelfCheck()
+      if (prod) {
+        Statsd.increment("deploys", 42)
+        injector.instance[AirbrakeNotifier].reportDeployment()
+        injector.instance[HealthcheckPlugin].reportStart()
+      }
     }
   }
 
