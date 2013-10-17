@@ -1,11 +1,9 @@
 package com.keepit.shoebox
 
 import scala.collection.mutable.ArrayBuffer
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
-
 import com.google.inject.Inject
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
@@ -42,11 +40,13 @@ import play.api.libs.json.JsObject
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
+import com.keepit.common.concurrent.ExecutionContext
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]]
+  def getUser(userId: Id[User]): Future[Option[User]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
@@ -116,7 +116,11 @@ class ShoeboxServiceClientImpl @Inject() (
   cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient with Logging{
 
+  // ExecutionContext
+  implicit private[this] val executionContext = ExecutionContext.immediate
+
   // request consolidation
+  private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 10 seconds)
   private[this] val consolidateSearchFriendsReq = new RequestConsolidator[SearchFriendsKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
@@ -188,6 +192,12 @@ class ShoeboxServiceClientImpl @Inject() (
       "email" -> Json.toJson(email)
     )
     call(Shoebox.internal.sendMailToUser(), payload).map(r => r.body.toBoolean)
+  }
+
+  def getUser(userId: Id[User]): Future[Option[User]] = consolidateGetUserReq(userId){ key =>
+    call(Shoebox.internal.getUsers(key.toString)).map { r =>
+      Json.fromJson[Seq[User]](r.json).get.headOption
+    }
   }
 
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
