@@ -5,13 +5,16 @@ import java.io.File
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, HealthcheckError, AirbrakeError}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, HealthcheckError, AirbrakeError, BenchmarkRunner}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
 import com.typesafe.config.ConfigFactory
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 import play.api._
 import play.api.mvc.Results._
@@ -50,7 +53,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     log.info(s"Amazon up! $amazonInstanceInfo")
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     serviceDiscovery.register()
-    serviceDiscovery.startSelfCheck()
     serviceDiscovery.forceUpdate()
 
     injector.instance[AppScope].onStart(app)
@@ -58,8 +60,13 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       Statsd.increment("deploys", 42)
       injector.instance[AirbrakeNotifier].reportDeployment()
       injector.instance[HealthcheckPlugin].reportStart()
-      injector.instance[HealthcheckPlugin].warmUp()
+      injector.instance[HealthcheckPlugin].warmUp(injector.instance[BenchmarkRunner])
     }
+    val selfCheckPassed: Boolean = Await.result(serviceDiscovery.startSelfCheck(), Duration.Inf)
+    if (!selfCheckPassed) {
+      log.error("STARTUP SELF CHECK FAILED!")
+    }
+    serviceDiscovery.forceUpdate()
   }
 
   // Get a file within the .fortytwo folder in the user's home directory
