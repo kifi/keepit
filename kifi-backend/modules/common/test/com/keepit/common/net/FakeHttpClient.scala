@@ -34,6 +34,7 @@ class FakeHttpClient(
   }
 
   override def withTimeout(timeout: Int): HttpClient = this
+  override def withSilentFail(): HttpClient = this
 
   override def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { post(url, body) }
   override def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { postXml(url, body) }

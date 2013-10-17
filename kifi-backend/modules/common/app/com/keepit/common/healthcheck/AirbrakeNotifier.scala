@@ -78,6 +78,7 @@ class AirbrakeSender @Inject() (
   def sendDeployment(payload: String): Unit = {
     log.info(s"announcing deployment to airbrake: $payload")
     httpClient.
+      withSilentFail().
       withTimeout(60000).
       withHeaders("Content-type" -> "application/x-www-form-urlencoded").
       postTextFuture("http://api.airbrake.io/deploys.txt", payload)

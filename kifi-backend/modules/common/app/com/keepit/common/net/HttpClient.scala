@@ -37,7 +37,6 @@ case class LongWaitException(url: String, response: Response, waitTime: Int)
     extends Exception(s"Requesting $url got a ${response.status} with wait time $waitTime"){
 }
 
-
 trait HttpClient {
 
   val defaultOnFailure: String => PartialFunction[Throwable, Unit]
@@ -69,6 +68,8 @@ trait HttpClient {
   def withTimeout(timeout: Int): HttpClient
 
   def withHeaders(hdrs: (String, String)*): HttpClient
+
+  def withSilentFail(): HttpClient
 }
 
 case class HttpClientImpl(
@@ -77,7 +78,8 @@ case class HttpClientImpl(
     healthcheckPlugin: HealthcheckPlugin,
     airbrake: Provider[AirbrakeNotifier],
     services: FortyTwoServices,
-    accessLog: AccessLog) extends HttpClient {
+    accessLog: AccessLog,
+    silentFail: Boolean = false) extends HttpClient with Logging {
 
   private val validResponseClass = 2
 
@@ -88,27 +90,32 @@ case class HttpClientImpl(
           val ex = new ConnectException(s"${cause.getMessage}. Requesting $url.").initCause(cause)
           airbrake.get.notify(ex)
         }
-      case ex: Exception =>
+      case ex: Throwable =>
         airbrake.get.notify(ex)
     }
   }
 
   def withHeaders(hdrs: (String, String)*): HttpClient = this.copy(headers = headers ++ hdrs)
 
-  def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(getFuture(url, onFailure))
+  private def wrap(response: Future[Response]): Future[ClientResponse] =
+    response map { r => res(request, r) }(immediate) tap {
+      _.onFailure(onFailure(url) orElse defaultOnFailure(url))
+    }
 
-  def getFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
+  def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse =
+    await(getFuture(url, onFailure))
+
+  def getFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] =
+    wrap(req(url).get())
+
+  def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse =
+    await(postFuture(url, body, onFailure))
+
+  def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] =
+    wrap(req(url).post(body))
+  {
     val request = req(url)
-    val result = request.get() map { r => res(request, r) }
-    result.onFailure(onFailure(url) orElse defaultOnFailure(url))
-    result
-  }
-
-  def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(postFuture(url, body, onFailure))
-
-  def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
-    val request = req(url)
-    val result = request.post(body) map { r => res(request, r, Some(body)) }
+    val result = request.post(body) map { r => res(request, r, Some(body)) }(immediate)
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -117,7 +124,7 @@ case class HttpClientImpl(
 
   def postTextFuture(url: String, body: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.post(body) map { r => res(request, r, Some(body)) }
+    val result = request.post(body) map { r => res(request, r, Some(body)) }(immediate)
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -126,7 +133,7 @@ case class HttpClientImpl(
 
   def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.post(body) map { r => res(request, r, Some(body)) }
+    val result = request.post(body) map { r => res(request, r, Some(body)) }(immediate)
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -136,7 +143,7 @@ case class HttpClientImpl(
 
   def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.put(body) map { r => res(request, r, Some(body)) }
+    val result = request.put(body) map { r => res(request, r, Some(body)) }(immediate)
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -146,7 +153,7 @@ case class HttpClientImpl(
 
   def deleteFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val result = request.delete() map { r => res(request, r) }
+    val result = request.delete() map { r => res(request, r) }(immediate)
     result.onFailure(onFailure(url) orElse defaultOnFailure(url))
     result
   }
@@ -155,14 +162,18 @@ case class HttpClientImpl(
   private def req(url: String): Request = new Request(WS.url(url).withTimeout(timeout), headers, services, accessLog, airbrake)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
-    val cr = new ClientResponseImpl(request, response)
+    val clientResponse = new ClientResponseImpl(request, response)
     if (response.status / 100 != validResponseClass) {
-      throw new NonOKResponseException(request.req.url, cr, requestBody)
+      val exception = new NonOKResponseException(request.req.url, clientResponse, requestBody)
+      if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
+      else throw exception
     }
-    cr
+    clientResponse
   }
 
-  def withTimeout(timeout: Int): HttpClientImpl = copy(timeout = timeout)
+  def withTimeout(timeout: Int): HttpClient = copy(timeout = timeout)
+
+  def withSilentFail(): HttpClient = copy(silentFail = true)
 }
 
 private[net] class Request(val req: WSRequestHolder, headers: List[(String, String)],
@@ -262,7 +273,7 @@ private[net] class Request(val req: WSRequestHolder, headers: List[(String, Stri
             statusCode = res.status))
 
         e.waitTime map {waitTime =>
-          if (waitTime > 100) {//ms
+          if (waitTime > 200) {//ms
             val exception = tracer.withCause(LongWaitException(req.url, res, waitTime))
             airbrake.get.notify(
               AirbrakeError.outgoing(
