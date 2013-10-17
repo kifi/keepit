@@ -188,6 +188,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       logEvent("search", "searchUnload", {
         "query": response.query,
         "queryUUID": response.uuid,
+        "experimentId": response.experimentId,
         "kifiResultsClicked": clicks.kifi.length,
         "googleResultsClicked": clicks.google.length,
         "kifiShownURIs": response.expanded ? response.hits.map(function(hit) {return hit.bookmark.url}) : [],
