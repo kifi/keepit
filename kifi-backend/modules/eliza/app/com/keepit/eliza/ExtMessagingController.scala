@@ -200,53 +200,11 @@ class ExtMessagingController @Inject() (
       messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
         log.info(s"[get_thread] got messages: $msgs")
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads
-        val _msgs = msgs.map { m =>
-          if (m.user.isEmpty) {
-            val modifiedMessage = m.auxData match {
-              case Some(auxData) =>
-                val addParticipantsFuture = (auxData \ "add_participants").asOpt[JsObject].flatMap { ap =>
-                  ap.keys.headOption map { adderKey =>
-                    val addedUsers = (ap \ adderKey).as[JsArray].value.map(id => Id[User](id.as[Long]))
-                    val adderUserId = Id[User](adderKey.toLong)
-                    shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
-                      val adderUser = basicUsers(adderUserId)
-                      val addedBasicUsers = addedUsers.map(u => basicUsers(u))
-                      val addedUsersString = addedBasicUsers.map(s => s"${s.firstName} ${s.lastName}") match {
-                        case first :: Nil => first
-                        case first :: second :: Nil => first + " and " + second
-                        case many => many.take(many.length - 1).mkString(",") + ", and " + many.last
-                      }
-
-                      val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString"
-                      (friendlyMessage, "add_participants" -> Json.arr(basicUsers(adderUserId), addedBasicUsers))
-                    }
-                  }
-                }
-
-                // add muting here, same structure as addParticipantsFuture
-
-                val auxModifierFuture = addParticipantsFuture orElse /* muting future */ None
-                if (auxModifierFuture.isDefined) {
-                  auxModifierFuture.get.map { case (text, aux) =>
-                    val newAuxData = JsObject(Seq(aux))
-                    m.copy(auxData = Some(newAuxData), text = text)
-                  }
-                } else {
-                  Promise.successful(m).future
-                }
-              case None =>
-                Promise.successful(m).future
-            }
-            modifiedMessage.map { mm =>
-              mm.copy(user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg")))
-            }
-          } else {
-            Promise.successful(m).future
-          }
+        val msgsWithModifiedAuxData = msgs.map { m =>
+          messagingController.modifyMessageWithAuxData(m)
         }
-        Future.sequence(_msgs).map { finallyready =>
-          socket.channel.push(
-            Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> finallyready.reverse)))
+        Future.sequence(msgsWithModifiedAuxData).map { completeMsgs =>
+          socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> completeMsgs.reverse)))
         }
       }
     },
@@ -259,9 +217,7 @@ class ExtMessagingController @Inject() (
       val users = extUserIds.map { case s =>
         ExternalId[User](s.asInstanceOf[JsString].value)
       }
-      messagingController.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users) map { participants =>
-
-      }
+      messagingController.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users)
     },
     "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
       val messageId = ExternalId[Message](notifId)

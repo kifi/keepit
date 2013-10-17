@@ -584,19 +584,67 @@ class MessagingController @Inject() (
 
       shoebox.getBasicUsers(thread.participants.get.participants.keys.toSeq) map { basicUsers =>
         val participants = basicUsers.values.toSeq
-        val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg")), participants)
-        thread.participants.map(_.all.par.foreach { userId =>
-          notificationRouter.sendToUser(
-            userId,
-            Json.arr("message", thread.externalId.id, mwbu)
-          )
-          notificationRouter.sendToUser(
-            userId,
-            Json.arr("thread_participants", thread.externalId.id, participants)
-          )
-        })
+        val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
+        modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
+          thread.participants.map(_.all.par.foreach { userId =>
+            notificationRouter.sendToUser(
+              userId,
+              Json.arr("message", thread.externalId.id, augmentedMessage)
+            )
+            notificationRouter.sendToUser(
+              userId,
+              Json.arr("thread_participants", thread.externalId.id, participants)
+            )
+          })
+        }
       }
 
+    }
+  }
+
+  def modifyMessageWithAuxData(m: MessageWithBasicUser): Future[MessageWithBasicUser] = {
+
+    if (m.user.isEmpty) {
+      val modifiedMessage = m.auxData match {
+        case Some(auxData) =>
+          val addParticipantsFuture = (auxData \ "add_participants").asOpt[JsObject].flatMap { ap =>
+            ap.keys.headOption map { adderKey =>
+              val addedUsers = (ap \ adderKey).as[JsArray].value.map(id => Id[User](id.as[Long]))
+              val adderUserId = Id[User](adderKey.toLong)
+              shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
+                val adderUser = basicUsers(adderUserId)
+                val addedBasicUsers = addedUsers.map(u => basicUsers(u))
+                val addedUsersString = addedBasicUsers.map(s => s"${s.firstName} ${s.lastName}") match {
+                  case first :: Nil => first
+                  case first :: second :: Nil => first + " and " + second
+                  case many => many.take(many.length - 1).mkString(",") + ", and " + many.last
+                }
+
+                val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString"
+                (friendlyMessage, "add_participants" -> Json.arr(basicUsers(adderUserId), addedBasicUsers))
+              }
+            }
+          }
+
+          // add muting here, same structure as addParticipantsFuture
+
+          val auxModifierFuture = addParticipantsFuture orElse /* muting future */ None
+          if (auxModifierFuture.isDefined) {
+            auxModifierFuture.get.map { case (text, aux) =>
+              val newAuxData = JsObject(Seq(aux))
+              m.copy(auxData = Some(newAuxData), text = text)
+            }
+          } else {
+            Promise.successful(m).future
+          }
+        case None =>
+          Promise.successful(m).future
+      }
+      modifiedMessage.map { mm =>
+        mm.copy(user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg")))
+      }
+    } else {
+      Promise.successful(m).future
     }
   }
 
