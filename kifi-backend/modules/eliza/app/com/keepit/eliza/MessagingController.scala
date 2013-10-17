@@ -18,7 +18,7 @@ import com.google.inject.Inject
 
 import org.joda.time.DateTime
 
-import play.api.libs.json.{JsValue, JsNull, Json, JsObject, JsArray}
+import play.api.libs.json._
 import play.modules.statsd.api.Statsd
 
 import java.nio.{ByteBuffer, CharBuffer}
@@ -26,6 +26,9 @@ import java.nio.charset.Charset
 import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
 import com.keepit.realtime.{PushNotification, UrbanAirship}
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsObject
+import com.keepit.realtime.PushNotification
 
 
 //For migration only
@@ -564,41 +567,88 @@ class MessagingController @Inject() (
   }
 
   def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipants: Seq[ExternalId[User]]) = {
-    shoebox.getUserIdsByExternalIds(newParticipants) flatMap { newParticipantsUserIds =>
+    shoebox.getUserIdsByExternalIds(newParticipants) map { newParticipantsUserIds =>
 
-      val (message, thread) = db.readWrite { implicit session =>
+      val messageThreadOpt = db.readWrite { implicit session =>
         val oldThread = threadRepo.get(threadExtId)
-        val thread = threadRepo.save(oldThread.withParticipants(clock.now, newParticipantsUserIds: _*))
+        val actuallyNewParticipantUserIds = newParticipantsUserIds.filterNot(oldThread.containsUser)
 
-        val message = messageRepo.save(Message(
-          from = None,
-          thread = thread.id.get,
-          threadExtId = thread.externalId,
-          messageText = "",
-          auxData = Some(Json.obj("add_participants" -> Json.obj(adderUserId.id.toString -> newParticipantsUserIds.map(_.id)))),
-          sentOnUrl = None,
-          sentOnUriId = None
-        ))
-        (message, thread)
-      }
+        if (!oldThread.participants.exists(_.contains(adderUserId)) || actuallyNewParticipantUserIds.isEmpty) {
+          None
+        } else {
+          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewParticipantUserIds: _*))
 
-      shoebox.getBasicUsers(thread.participants.get.participants.keys.toSeq) map { basicUsers =>
-        val participants = basicUsers.values.toSeq
-        val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
-        modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
-          thread.participants.map(_.all.par.foreach { userId =>
-            notificationRouter.sendToUser(
-              userId,
-              Json.arr("message", thread.externalId.id, augmentedMessage)
-            )
-            notificationRouter.sendToUser(
-              userId,
-              Json.arr("thread_participants", thread.externalId.id, participants)
-            )
-          })
+          val message = messageRepo.save(Message(
+            from = None,
+            thread = thread.id.get,
+            threadExtId = thread.externalId,
+            messageText = "",
+            auxData = Some(Json.arr("add_participants", adderUserId.id.toString, actuallyNewParticipantUserIds.map(_.id))),
+            sentOnUrl = None,
+            sentOnUriId = None
+          ))
+          Some((actuallyNewParticipantUserIds, message, thread))
         }
       }
 
+      messageThreadOpt.exists { case (newParticipants, message, thread) =>
+        shoebox.getBasicUsers(thread.participants.get.participants.keys.toSeq) map { basicUsers =>
+
+          val adderName = basicUsers.get(adderUserId).map(n => n.firstName + " " + n.lastName).get
+
+          val adderUserName = basicUsers(adderUserId).firstName + " " + basicUsers(adderUserId).lastName
+          val theTitle: String = thread.pageTitle.getOrElse("New conversation")
+          val notificationJson = Json.obj(
+            "id"           -> message.externalId.id,
+            "time"         -> message.createdAt,
+            "thread"       -> thread.externalId.id,
+            "text"         -> s"$adderUserName added you to a conversation.",
+            "url"          -> thread.nUrl,
+            "title"        -> theTitle,
+            "author"       -> basicUsers(adderUserId),
+            "participants" -> basicUsers.values.toSeq,
+            "locator"      -> ("/messages/" + thread.externalId),
+            "unread"       -> true,
+            "category"     -> "message"
+          )
+          db.readWrite { implicit session =>
+            newParticipants.map { pUserId =>
+              userThreadRepo.save(UserThread(
+                id = None,
+                user = pUserId,
+                thread = thread.id.get,
+                uriId = thread.uriId,
+                lastSeen = None,
+                notificationPending = true,
+                lastMsgFromOther = Some(message.id.get),
+                lastNotification = notificationJson,
+                notificationUpdatedAt = message.createdAt,
+                replyable = false
+              ))
+              notificationRouter.sendToUser(
+                pUserId,
+                Json.arr("notification", notificationJson)
+              )
+            }
+          }
+
+          val participants = basicUsers.values.toSeq
+          val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
+          modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
+            thread.participants.map(_.all.par.foreach { userId =>
+              notificationRouter.sendToUser(
+                userId,
+                Json.arr("message", thread.externalId.id, augmentedMessage)
+              )
+              notificationRouter.sendToUser(
+                userId,
+                Json.arr("thread_participants", thread.externalId.id, participants)
+              )
+            })
+          }
+        }
+        true
+      }
     }
   }
 
@@ -607,10 +657,11 @@ class MessagingController @Inject() (
     if (m.user.isEmpty) {
       val modifiedMessage = m.auxData match {
         case Some(auxData) =>
-          val addParticipantsFuture = (auxData \ "add_participants").asOpt[JsObject].flatMap { ap =>
-            ap.keys.headOption map { adderKey =>
-              val addedUsers = (ap \ adderKey).as[JsArray].value.map(id => Id[User](id.as[Long]))
-              val adderUserId = Id[User](adderKey.toLong)
+          val auxModifiedFuture = auxData.value match {
+            case JsString("add_participants") +: JsString(jsAdderUserId) +: JsArray(jsAddedUsers) +: _ =>
+              val addedUsers = jsAddedUsers.map(id => Id[User](id.as[Long]))
+              val adderUserId = Id[User](jsAdderUserId.toLong)
+              val basicUsers = m.participants
               shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
                 val adderUser = basicUsers(adderUserId)
                 val addedBasicUsers = addedUsers.map(u => basicUsers(u))
@@ -620,29 +671,19 @@ class MessagingController @Inject() (
                   case many => many.take(many.length - 1).mkString(",") + ", and " + many.last
                 }
 
-                val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString"
-                (friendlyMessage, "add_participants" -> Json.arr(basicUsers(adderUserId), addedBasicUsers))
+                val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString to the conversation."
+                (friendlyMessage, Json.arr("add_participants", basicUsers(adderUserId), addedBasicUsers))
               }
-            }
+            case s =>
+              Promise.successful(("", Json.arr())).future
           }
-
-          // add muting here, same structure as addParticipantsFuture
-
-          val auxModifierFuture = addParticipantsFuture orElse /* muting future */ None
-          if (auxModifierFuture.isDefined) {
-            auxModifierFuture.get.map { case (text, aux) =>
-              val newAuxData = JsObject(Seq(aux))
-              m.copy(auxData = Some(newAuxData), text = text)
-            }
-          } else {
-            Promise.successful(m).future
+          auxModifiedFuture.map { case (text, aux) =>
+            m.copy(auxData = Some(aux), text = text, user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg")))
           }
         case None =>
           Promise.successful(m).future
       }
-      modifiedMessage.map { mm =>
-        mm.copy(user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg")))
-      }
+      modifiedMessage
     } else {
       Promise.successful(m).future
     }
