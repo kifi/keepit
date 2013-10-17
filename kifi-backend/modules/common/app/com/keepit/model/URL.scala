@@ -22,6 +22,8 @@ object URLHistory {
     (__ \ 'id).format(Id.format[NormalizedURI]) and
     (__ \ 'cause).format[String].inmap(URLHistoryCause.apply, unlift(URLHistoryCause.unapply))
   )(URLHistory.apply _, unlift(URLHistory.unapply))
+  
+  val LENGTH_LIMIT = 3    // only last 3 history records to prevent DB column overflow
 }
 
 case class URL (
@@ -37,7 +39,8 @@ case class URL (
   def withId(id: Id[URL]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(normalizedUriId = normUriId)
-  def withHistory(historyItem: URLHistory): URL = copy(history = historyItem +: history)
+  def withHistory(historyItem: URLHistory): URL = copy(history = (historyItem +: history).take(URLHistory.LENGTH_LIMIT))
+  
   def withState(state: State[URL]) = copy(state = state)
 }
 
