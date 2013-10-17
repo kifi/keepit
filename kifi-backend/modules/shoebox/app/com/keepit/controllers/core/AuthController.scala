@@ -8,7 +8,6 @@ import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.ElectronicMailCategory
 import com.keepit.common.mail._
 import com.keepit.model._
 import com.keepit.social.SocialId
@@ -21,12 +20,8 @@ import play.api.data._
 import play.api.data.validation.Constraints
 import play.api.http.HeaderNames
 import play.api.libs.json.Json
-import play.api.mvc.SimpleResult
 import play.api.mvc._
 import securesocial.controllers.ProviderController
-import securesocial.core.IdentityId
-import securesocial.core.LoginEvent
-import securesocial.core.OAuth2Info
 import securesocial.core._
 import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
 
@@ -36,6 +31,11 @@ object AuthType {
   case object Login extends AuthType
   case object Signup extends AuthType
   case object Link extends AuthType
+  case object LoginAndLink extends AuthType
+}
+
+object AuthController {
+  val LinkWithKey = "linkWith"
 }
 
 class AuthController @Inject() (
@@ -76,24 +76,28 @@ class AuthController @Inject() (
   def signup(provider: String) = getAuthAction(provider, AuthType.Signup)
   def signupByPost(provider: String) = getAuthAction(provider, AuthType.Signup)
 
-  private def getSession(res: SimpleResult[_], refererAsOriginalUrl: Boolean = false)
+  // log in with username/password and link the account with a provider
+  def passwordLoginAndLink(provider: String) = getAuthAction(provider, AuthType.LoginAndLink)
+
+  private def getSession(res: SimpleResult[_], originalUrl: Option[String] = None)
       (implicit request: RequestHeader): Session = {
     val sesh = Session.decodeFromCookie(
       res.header.headers.get(SET_COOKIE).flatMap(Cookies.decode(_).find(_.name == Session.COOKIE_NAME)))
-    val originalUrlOpt = sesh.get(SecureSocial.OriginalUrlKey) orElse {
-      if (refererAsOriginalUrl) request.headers.get(HeaderNames.REFERER) else None
-    }
+    val originalUrlOpt = sesh.get(SecureSocial.OriginalUrlKey) orElse originalUrl
     originalUrlOpt map { url => sesh + (SecureSocial.OriginalUrlKey -> url) } getOrElse sesh
   }
 
   private def getAuthAction(provider: String, authType: AuthType): Action[AnyContent] = Action { implicit request =>
-    ProviderController.authenticate(provider)(request) match {
+    val actualProvider = if (authType == AuthType.LoginAndLink) SocialNetworks.FORTYTWO.authProvider else provider
+    ProviderController.authenticate(actualProvider)(request) match {
       case res: SimpleResult[_] =>
         res.withSession(authType match {
-          case AuthType.Login => getSession(res, false) - ActionAuthenticator.FORTYTWO_USER_ID
-          case AuthType.Signup => getSession(res, false) - ActionAuthenticator.FORTYTWO_USER_ID +
+          case AuthType.Login => getSession(res) - ActionAuthenticator.FORTYTWO_USER_ID
+          case AuthType.Signup => getSession(res) - ActionAuthenticator.FORTYTWO_USER_ID +
             (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)
-          case AuthType.Link => getSession(res, true)
+          case AuthType.Link => getSession(res, request.headers.get(HeaderNames.REFERER))
+          case AuthType.LoginAndLink => getSession(res, None) - ActionAuthenticator.FORTYTWO_USER_ID -
+            SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> provider)
         })
       case res => res
     }
@@ -185,21 +189,28 @@ class AuthController @Inject() (
   })
 
   private def doSignupPage(implicit request: Request[_]): Result = {
-    val identity = request.identityOpt
-    request.userOpt match {
-      case Some(user) if user.state != UserStates.INCOMPLETE_SIGNUP =>
-        Redirect("/")
-      case Some(user) =>
+    def hasEmail(identity: Identity): Boolean = db.readOnly { implicit s =>
+      identity.email.flatMap(emailRepo.getByAddressOpt(_)).isDefined
+    }
+
+    (request.userOpt, request.identityOpt) match {
+      case (Some(user), _) if user.state != UserStates.INCOMPLETE_SIGNUP =>
+        Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
+      case (Some(user), identityOpt) =>
         Ok(views.html.website.completeSignup(
           errorMessage = request.flash.get("error"),
-          email = identity.flatMap(_.email)))
-      case None =>
+          email = identityOpt.flatMap(_.email)))
+      case (None, Some(identity)) if hasEmail(identity) =>
+        val error = request.flash.get("error").map { _ => "Login failed" }
+        Ok(views.html.website.emailExists(
+          identity.email.get, SocialNetworkType(identity.identityId.providerId), error))
+      case (None, identityOpt) =>
         Ok(views.html.website.signup(
           errorMessage = request.flash.get("error"),
-          network = identity.map(id => SocialNetworkType(id.identityId.providerId)),
-          firstName = identity.map(_.firstName),
-          lastName = identity.map(_.lastName),
-          email = identity.flatMap(_.email)))
+          network = identityOpt.map(id => SocialNetworkType(id.identityId.providerId)),
+          firstName = identityOpt.map(_.firstName),
+          lastName = identityOpt.map(_.lastName),
+          email = identityOpt.flatMap(_.email)))
     }
   }
 
@@ -269,7 +280,7 @@ class AuthController @Inject() (
     val newIdentity = UserIdentity(
       userId = userIdOpt,
       socialUser = SocialUser(
-        identityId = IdentityId(email, "userpass"),
+        identityId = IdentityId(email, SocialNetworks.FORTYTWO.authProvider),
         firstName = if (isComplete || firstName.nonEmpty) firstName else email,
         lastName = lastName,
         fullName = s"$firstName $lastName",

@@ -33,44 +33,46 @@
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
-.kifi-with-pane .kifi-tagbox .kifi-tagbox-tagged,
-.kifi-with-pane .kifi-tagbox .kifi-tagbox-empty {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-.kifi-tagbox.suggested .kifi-tagbox-suggest {
+.kifi-tagbox.kifi-suggested .kifi-tagbox-suggest {
   display: block;
 }
-.kifi-tagbox.suggested .kifi-tagbox-empty {
+.kifi-tagbox.kifi-suggested .kifi-tagbox-empty {
   color: #b8c5d1;
   background: white;
 }
-.kifi-tagbox.suggested .kifi-tagbox-empty {
+.kifi-tagbox.kifi-suggested .kifi-tagbox-empty {
   display: none;
 }
-.kifi-tagbox.suggested.tagged .kifi-tagbox-empty {
+.kifi-tagbox.kifi-suggested.kifi-tagged .kifi-tagbox-empty {
   display: none;
 }
-.kifi-tagbox.tagged .kifi-tagbox-empty {
+.kifi-tagbox.kifi-tagged .kifi-tagbox-empty {
   display: none;
 }
-.kifi-tagbox.tagged .kifi-tagbox-tagged {
-  display: block;
+.kifi-tagbox.kifi-tagged .kifi-tagbox-tagged-wrapper {
+  height: 180px;
+}
+.kifi-tagbox.kifi-tagged .kifi-tagbox-suggest,
+.kifi-tagbox.kifi-tagged .kifi-tagbox-suggest-inner {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 .kifi-tagbox .kifi-tagbox-loading {
   display: none;
 }
-.kifi-tagbox.loading {
+.kifi-tagbox.kifi-loading {
   display: none;
 }
-.kifi-tagbox.loading .kifi-tagbox-empty,
-.kifi-tagbox.loading .kifi-tagbox-tagged,
-.kifi-tagbox.loading .kifi-tagbox-suggest {
+.kifi-tagbox.kifi-loading .kifi-tagbox-empty,
+.kifi-tagbox.kifi-loading .kifi-tagbox-tagged,
+.kifi-tagbox.kifi-loading .kifi-tagbox-suggest {
   display: none;
 }
-.kifi-tagbox.loading .kifi-tagbox-loading {
+.kifi-tagbox.kifi-loading .kifi-tagbox-loading {
   display: block;
 }
+.kifi-tagbox-suggest,
+.kifi-tagbox-suggest-inner,
 .kifi-tagbox-tagged,
 .kifi-tagbox-empty {
   border-bottom-left-radius: 6px;
@@ -125,10 +127,10 @@
   /* 'cellpadding' equivalent */
 
 }
-.kifi-tagbox-input-box.focus .kifi-tagbox-input-placeholder {
+.kifi-tagbox-input-box.kifi-focus .kifi-tagbox-input-placeholder {
   color: #d7dee5;
 }
-.kifi-tagbox-input-box.empty .kifi-tagbox-input-placeholder {
+.kifi-tagbox-input-box.kifi-empty .kifi-tagbox-input-placeholder {
   display: block;
 }
 .kifi-tagbox-tag-icon {
@@ -139,7 +141,7 @@
   margin-right: 10px;
   background-repeat: no-repeat;
   background-size: auto 16px;
-  background-position-y: 8px;
+  background-position: 0 8px;
 }
 .kifi-tagbox-input-icon {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NLW4CURSG4SEhrYBQUNSUpBuATYBjAxhSgekaCL6CLgPRHVRNgsDzpwkhNEHUgEN0Tt+bUDO5d86dtrgrHved80bvs6WvZ+ywwZPvnc+ogFdIygsKfw3c4g3iMMHNbwM1TCGKGNW8gQbWEE8rPPgGWviA5LRHUwu0cXIcD/B4McDesjui7Qr0cbYcbVFHlHKPrWV/Rj8dGCKBWPQQOfQcNwmGP4ERJEMtI3Cn3I7M6FMZlTMCZeX2aEai6GYEutq9T2CNkuV5CSu/gG6ODooXHSwg+QK6L0PZaAFdCIRACIRACFgChysGDiYwvmJgbAIVxEgg/yRBjMo3wq1HgvDn6n8AAAAASUVORK5CYII=);
@@ -161,7 +163,6 @@
   color: black;
   background: transparent;
   outline: 0;
-  z-index: 1;
   font: inherit;
 }
 .kifi-tagbox-input-placeholder {
@@ -174,6 +175,7 @@
 }
 .kifi-tagbox-suggest {
   position: relative;
+  overflow: hidden;
 }
 .kifi-tagbox-suggest-inner {
   position: relative;
@@ -196,6 +198,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-decoration: none;
+  transition: opacity .4s ease;
 }
 .kifi-tagbox-suggestion * {
   line-height: inherit;
@@ -204,18 +207,19 @@
   color: inherit;
   line-height: inherit;
 }
-.kifi-tagbox-suggestion.focus {
-  background: #b8c5d1;
+.kifi-tagbox-suggestion.kifi-focus {
+  background: #6fa6ef;
   color: white !important;
   cursor: pointer;
 }
-.kifi-tagbox-suggestion.focus .kifi-tagbox-suggestion-icon {
+.kifi-tagbox-suggestion.kifi-focus .kifi-tagbox-suggestion-icon {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAQAAACiV3CzAAAA60lEQVR4Ae3LMU4CQRiG4W83RAt0lVBoo4kX0CtYwCFoiAWNZyD0Nt4CCy6xiTfQQG2IwYLERrShmVeKnezM7KBuYcfzVX/+vIrhlldeuEHViXAJ91h3JL8F+0xwPbD3U9DikVDO8bbgnBkxU85iwRVvbLPgMgw6rJz3gIvNBiywPui4QZ811pwTVOyUOdaavg2GGEo95KxHyTBEYoSv5QVH+EYJ72rLdagvlQ70KdcqVVu+6+hlZSI0o4mKNZkSEFVPdGls1uWZigQUYySlimgoLlXdx/8Hu2AXLFXHMtVYdYxFRo7hLww52TeyrdzuJXPukQAAAABJRU5ErkJggg==);
 }
 .kifi-tagbox-suggestion:active {
-  background: #a0b1c2;
+  background: #418aea;
 }
-.kifi-tagbox-suggestion.busy {
+.kifi-tagbox-suggestion.kifi-busy {
+  opacity: 0;
   background: #cccccc;
   cursor: progress;
 }
@@ -242,15 +246,15 @@
   color: #858585 !important;
   text-decoration: none;
 }
-.kifi-tagbox-new.focus {
-  background: #a7c8f3;
+.kifi-tagbox-new.kifi-focus {
+  background: #6fa6ef;
   color: white !important;
 }
 .kifi-tagbox-new:active {
-  background: #7aaced;
+  background: #418aea;
   color: white !important;
 }
-.kifi-tagbox-new.busy {
+.kifi-tagbox-new.kifi-busy {
   background: #cccccc;
   cursor: progress;
 }
@@ -264,8 +268,13 @@
   display: block;
   font-size: 16px;
 }
+.kifi-tagbox-tagged-wrapper {
+  position: relative;
+  height: 0;
+  overflow: hidden;
+  transition: height .4s ease;
+}
 .kifi-tagbox-tagged {
-  display: none;
   position: relative;
   color: #b8c5d1;
   background: white;
@@ -281,6 +290,7 @@
 }
 .kifi-tagbox-tag-list {
   position: relative;
+  overflow: hidden;
 }
 .kifi-tagbox-tag-list-inner {
   position: relative;
@@ -300,6 +310,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  -moz-transition: -moz-transform 0.3s ease;
+  -webkit-transition: -webkit-transform 0.3s ease;
 }
 .kifi-tagbox-tag:hover .kifi-tagbox-tag-name {
   padding: 0 7px;
@@ -307,11 +319,13 @@
 .kifi-tagbox-tag:hover .kifi-tagbox-tag-remove {
   width: 18px;
 }
-.kifi-tagbox-tag.busy {
+.kifi-tagbox-tag.kifi-busy {
+  -moz-transform: scale(1, 0);
+  -webkit-transform: scale(1, 0);
   cursor: progress;
 }
-.kifi-tagbox-tag.busy .kifi-tagbox-tag-name,
-.kifi-tagbox-tag.busy .kifi-tagbox-tag-remove {
+.kifi-tagbox-tag.kifi-busy .kifi-tagbox-tag-name,
+.kifi-tagbox-tag.kifi-busy .kifi-tagbox-tag-remove {
   background: #cccccc;
 }
 .kifi-tagbox-tag-name,
@@ -352,4 +366,12 @@
 }
 .kifi-tagbox-clear:hover {
   color: #0089d5 !important;
+}
+.kifi-with-pane .kifi-tagbox-suggest,
+.kifi-with-pane .kifi-tagbox-suggest-inner,
+.kifi-with-pane .kifi-tagbox-tagged-wrapper,
+.kifi-with-pane .kifi-tagbox-tagged,
+.kifi-with-pane .kifi-tagbox-empty {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }

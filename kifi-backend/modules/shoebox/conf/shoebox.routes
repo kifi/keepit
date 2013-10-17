@@ -2,6 +2,11 @@
 GET     /login                      securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
+GET     /importContacts             @com.keepit.controllers.core.OAuth2Controller.importContacts(provider:Option[String])
+GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controller.start(provider:String, stateToken:Option[String])
+GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
+POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.accessTokenCallback(provider:String)
+
 # Relevant when we support traditional user signups:
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 POST    /signup                     @com.keepit.controllers.core.AuthController.handleSignup()
@@ -17,6 +22,7 @@ GET     /link/:provider             @com.keepit.controllers.core.AuthController.
 POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
 POST    /signup/:provider           @com.keepit.controllers.core.AuthController.signupByPost(provider)
+POST    /loginAndLink/:provider     @com.keepit.controllers.core.AuthController.passwordLoginAndLink(provider)
 POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 GET     /resetPassword              @com.keepit.controllers.core.AuthController.resetPasswordPage()
@@ -263,7 +269,7 @@ GET     /admin/searchExperiments/kvg/:id   @com.keepit.controllers.admin.AdminSe
 GET     /admin/searchExperiments/kifiHadResults/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiHadResults(id: Id[SearchConfigExperiment])
 
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
-GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
+GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
 
 GET     /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.getRules
 POST    /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.saveRules
@@ -364,7 +370,6 @@ GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.shoebox.ShoeboxController.getExperiments
 GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.shoebox.ShoeboxController.getExperiment(id: Id[SearchConfigExperiment])
 POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.shoebox.ShoeboxController.saveExperiment
-POST    /internal/shoebox/database/reportArticleSearchResult  @com.keepit.controllers.shoebox.ShoeboxController.reportArticleSearchResult
 GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
 GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.shoebox.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])

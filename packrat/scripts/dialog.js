@@ -13,7 +13,7 @@ var kifiDialog = function() {
   return {toggleLoginDialog: toggleLoginDialog};
   function toggleLoginDialog() {
     render("html/login_dialog", {
-      logo: api.url("images/kifi_logo_medium.png")
+      logo: api.url("images/kifi_logo.2x.png")
     }, function(html) {
       if ($('.kifi-message-dialog-wrapper').length) {
         removeDialog();

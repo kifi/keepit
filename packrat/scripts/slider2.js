@@ -212,6 +212,21 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         if (e.target === this) keepPage("private");
       }).on("click", ".kifi-slider2-kept-lock", function (e) {
         if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
+      }).hoverfu('.kifi-slider2-keep-tag,.kifi-slider2-kept-tag', function (configureHover) {
+        var btn = this;
+        var kept = this.classList.contains('kifi-slider2-kept-tag');
+        render('html/keeper/titled_tip', {
+          cssClass: 'kifi-slider2-tag-tip',
+          title: 'Tags', //'Tags (' + CO_KEY + '+Shift+A)', TODO: key binding
+          html: 'You can tag a keep to<br>make it easier to find.'
+        }, function (html) {
+          configureHover(html, {
+            mustHoverFor: 700,
+            hideAfter: 4000,
+            click: 'hide',
+            position: {my: 'right bottom-13', at: 'right top', of: btn, collision: 'none'}
+          });
+        });
       }).on("click", ".kifi-slider2-keep-tag, .kifi-slider2-kept-tag", function (e) {
         if (e.originalEvent.tagboxClosed) {
           log('[tagbox:closed] ignore click event')();
@@ -519,7 +534,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         api.require("styles/keeper/pane.css", function () {
           render("html/keeper/pane", $.extend(params, {
             site: location.hostname,
-            kifiLogoUrl: api.url("images/kifi_logo.png"),
             session: session
           }), {
             pane: "pane_" + pane
@@ -803,6 +817,16 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     hidePane: function (leaveSlider) {
       if ($pane) {
         hidePane(leaveSlider);
+      }
+    },
+    shadePane: function () {
+      if ($pane) {
+        $pane.addClass('kifi-shaded');
+      }
+    },
+    unshadePane: function () {
+      if ($pane) {
+        $pane.removeClass('kifi-shaded');
       }
     },
     showKeepers: function (keepers, otherKeeps) {

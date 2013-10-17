@@ -15,6 +15,7 @@ import scala.io.Source
 import scala.ref.WeakReference
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.http.MimeTypes
 
 class ABookController @Inject() (
   actionAuthenticator:ActionAuthenticator,
@@ -43,12 +44,22 @@ class ABookController @Inject() (
 
   // for testing only
   def uploadJson(userId:Id[User], origin:ABookOriginType) = Action(parse.anyContent) { request =>
-    val jsonFilePart = request.body.asMultipartFormData.get.file("abook_json")
-    val jsonFile = File.createTempFile("abook_json", "json")
-    jsonFilePart.getOrElse(throw new IllegalArgumentException("form field ios_json not found")).ref.moveTo(jsonFile, true)
-    val jsonSrc = Source.fromFile(jsonFile)(io.Codec("UTF-8")).getLines.foldLeft("") { (a,c) => a + c }
-    log.info(s"[upload($userId, $origin)] jsonFile=$jsonFile jsonSrc=$jsonSrc")
-    val json = Json.parse(jsonSrc) // for testing
+    val json = request.contentType match {
+      case Some(MimeTypes.FORM) => {
+        val jsonFilePart = request.body.asMultipartFormData.get.file("abook_json")
+        val jsonFile = File.createTempFile("abook_json", "json")
+        jsonFilePart.getOrElse(throw new IllegalArgumentException("form field ios_json not found")).ref.moveTo(jsonFile, true)
+        val jsonSrc = Source.fromFile(jsonFile)(io.Codec("UTF-8")).getLines.foldLeft("") { (a,c) => a + c }
+        log.info(s"[upload($userId, $origin)] jsonFile=$jsonFile jsonSrc=$jsonSrc")
+        val json = Json.parse(jsonSrc) // for testing
+        json
+      }
+      case Some(MimeTypes.JSON) => {
+        request.body.asJson.getOrElse(throw new IllegalStateException(s"Cannot parse as JSON: ${request.body}"))
+      }
+      case _ => throw new IllegalStateException(s"[uploadJson] Cannot handle content-type=${request.contentType} for ${request}")
+    }
+    log.info(s"[uploadJson] json=${Json.prettyPrint(json)}")
     val abookInfoRepoEntry = processUpload(userId, origin, json)
     Ok(Json.toJson(abookInfoRepoEntry))
   }
@@ -70,11 +81,8 @@ class ABookController @Inject() (
         val entry = oldVal match {
           case Some(abookInfoEntry) => {
             log.info(s"[upload] old entry for userId=$userId and origin=${abookRawInfo.origin} already exists: $oldVal")
-            db.readWrite {
-              implicit session =>
-                val deletedRows = contactInfoRepo.deleteByUserIdAndABookInfo(userId, abookInfoEntry.id.get) // TODO:REVISIT
-                log.info(s"[upload] # of rows deleted=$deletedRows")
-            }
+            val deletedRows = contactInfoRepo.deleteByUserIdAndABookInfo(userId, abookInfoEntry.id.get) // TODO:REVISIT
+            log.info(s"[upload] # of rows deleted=$deletedRows")
             abookInfoEntry
           }
           case None => {

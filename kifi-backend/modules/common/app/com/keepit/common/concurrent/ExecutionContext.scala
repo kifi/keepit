@@ -1,6 +1,7 @@
 package com.keepit.common.concurrent
 
 import com.keepit.common.logging.Logging
+import java.util.concurrent.Executors
 
 object ExecutionContext extends Logging {
   val immediate = new scala.concurrent.ExecutionContext {
@@ -14,4 +15,6 @@ object ExecutionContext extends Logging {
     override def reportFailure(t: Throwable): Unit = { log.error("retry failure", t) }
     override def prepare(): scala.concurrent.ExecutionContext = this
   }
+
+  val singleThread: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
 }
