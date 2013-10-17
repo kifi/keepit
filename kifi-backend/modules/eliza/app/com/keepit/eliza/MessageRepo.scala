@@ -27,6 +27,7 @@ case class Message(
     thread: Id[MessageThread],
     threadExtId: ExternalId[MessageThread],
     messageText: String,
+    auxData: Option[JsObject] = None,
     sentOnUrl: Option[String],
     sentOnUriId: Option[Id[NormalizedURI]]
   )
@@ -46,6 +47,7 @@ object Message {
       (__ \ 'thread).format(Id.format[MessageThread]) and
       (__ \ 'threadExtId).format(ExternalId.format[MessageThread]) and
       (__ \ 'messageText).format[String] and
+      (__ \ 'auxData).formatNullable[JsObject] and
       (__ \ 'sentOnUrl).formatNullable[String] and
       (__ \ 'sentOnUriId).formatNullable(Id.format[NormalizedURI])
     )(Message.apply, unlift(Message.unapply))
@@ -76,6 +78,7 @@ object MessagesForThread {
 }
 
 case class MessagesForThreadIdKey(threadId:Id[MessageThread]) extends Key[MessagesForThread] {
+  override val version = 2
   val namespace = "messages_for_thread_id"
   def toKey():String = threadId.id.toString
 }
@@ -111,9 +114,10 @@ class MessageRepoImpl @Inject() (
     def thread = column[Id[MessageThread]]("thread_id", O.NotNull)
     def threadExtId = column[ExternalId[MessageThread]]("thread_ext_id", O.NotNull)
     def messageText = column[String]("message_text", O.NotNull)
+    def auxData = column[JsObject]("aux_data", O.Nullable)
     def sentOnUrl = column[String]("sent_on_url", O.Nullable)
     def sentOnUriId = column[Id[NormalizedURI]]("sent_on_uri_id", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ from.? ~ thread ~ threadExtId ~ messageText ~ sentOnUrl.? ~ sentOnUriId.? <> (Message.apply _, Message.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ from.? ~ thread ~ threadExtId ~ messageText ~ auxData.? ~ sentOnUrl.? ~ sentOnUriId.? <> (Message.apply _, Message.unapply _)
   }
 
   override def invalidateCache(message:Message)(implicit session:RSession):Message = {

@@ -10,6 +10,7 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.{HealthcheckPlugin}
 import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.db.Id
 
 import scala.util.{Success, Failure}
 
@@ -17,13 +18,15 @@ import scala.util.{Success, Failure}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.iteratee.Concurrent
-import play.api.libs.json.{Json, JsValue, JsArray, JsString, JsNumber, JsNull, JsObject}
+import play.api.libs.json._
 import play.modules.statsd.api.Statsd
 
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
+import com.keepit.social.BasicUser
+import scala.concurrent.{Future, Promise}
 
 
 class ExtMessagingController @Inject() (
@@ -63,7 +66,7 @@ class ExtMessagingController @Inject() (
 
 
 
-      messageThreadFut map { messages => // object instantiated earlier to give Future head start
+      messageThreadFut map { case (thread, messages) => // object instantiated earlier to give Future head start
 
         //Analytics
         SafeFuture {
@@ -194,17 +197,71 @@ class ExtMessagingController @Inject() (
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
-      messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { msgs =>
+      messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
         log.info(s"[get_thread] got messages: $msgs")
-        val url = msgs.headOption.map(_.nUrl).getOrElse("")  // needs to change when we have detached threads
-        socket.channel.push(
-          Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse)))
+        val url = thread.url.getOrElse("")  // needs to change when we have detached threads
+        val _msgs = msgs.map { m =>
+          if (m.user.isEmpty) {
+            val modifiedMessage = m.auxData match {
+              case Some(auxData) =>
+                val addParticipantsFuture = (auxData \ "add_participants").asOpt[JsObject].flatMap { ap =>
+                  ap.keys.headOption map { adderKey =>
+                    val addedUsers = (ap \ adderKey).as[JsArray].value.map(id => Id[User](id.as[Long]))
+                    val adderUserId = Id[User](adderKey.toLong)
+                    shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
+                      val adderUser = basicUsers(adderUserId)
+                      val addedBasicUsers = addedUsers.map(u => basicUsers(u))
+                      val addedUsersString = addedBasicUsers.map(s => s"${s.firstName} ${s.lastName}") match {
+                        case first :: Nil => first
+                        case first :: second :: Nil => first + " and " + second
+                        case many => many.take(many.length - 1).mkString(",") + ", and " + many.last
+                      }
+
+                      val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString"
+                      (friendlyMessage, "add_participants" -> Json.arr(basicUsers(adderUserId), addedBasicUsers))
+                    }
+                  }
+                }
+
+                // add muting here, same structure as addParticipantsFuture
+
+                val auxModifierFuture = addParticipantsFuture orElse /* muting future */ None
+                if (auxModifierFuture.isDefined) {
+                  auxModifierFuture.get.map { case (text, aux) =>
+                    val newAuxData = JsObject(Seq(aux))
+                    m.copy(auxData = Some(newAuxData), text = text)
+                  }
+                } else {
+                  Promise.successful(m).future
+                }
+              case None =>
+                Promise.successful(m).future
+            }
+            modifiedMessage.map { mm =>
+              mm.copy(user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg")))
+            }
+          } else {
+            Promise.successful(m).future
+          }
+        }
+        Future.sequence(_msgs).map { finallyready =>
+          socket.channel.push(
+            Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> finallyready.reverse)))
+        }
       }
     },
     "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
       log.info(s"[get_thread_info] user ${socket.userId} requesting thread extId $threadId")
       val info = messagingController.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
       socket.channel.push(Json.arr(requestId.toLong, info))
+    },
+    "add_participants_to_thread" -> { case JsString(threadId) +: JsArray(extUserIds) +: _ =>
+      val users = extUserIds.map { case s =>
+        ExternalId[User](s.asInstanceOf[JsString].value)
+      }
+      messagingController.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users) map { participants =>
+
+      }
     },
     "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
       val messageId = ExternalId[Message](notifId)

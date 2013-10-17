@@ -1,6 +1,6 @@
 var xhrDomain = 'https://api.kifi.com';
 var wwwDomain = 'https://www.kifi.com';
-//xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
+xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 var xhrBaseSearch = xhrDomain.replace('api', 'search') + '/search';

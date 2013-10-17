@@ -16,6 +16,7 @@ case class MessageWithBasicUser(
   id: ExternalId[Message],
   createdAt: DateTime,
   text: String,
+  auxData: Option[JsObject],
   url: String,
   nUrl: String,
   user: Option[BasicUser],
@@ -27,6 +28,7 @@ object MessageWithBasicUser {
     (__ \ 'id ).format(ExternalId.format[Message]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'text).format[String] and
+    (__ \ 'auxData).formatNullable[JsObject] and
     (__ \ 'url).format[String] and
     (__ \ 'nUrl).format[String] and
     (__ \ 'user).formatNullable[BasicUser] and

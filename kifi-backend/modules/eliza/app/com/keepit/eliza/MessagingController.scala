@@ -63,7 +63,7 @@ class MessagingController @Inject() (
 
   //migration code
   private def recoverNotification(userId: Id[User], thread: MessageThread, messages: Seq[Message], id2BasicUser: Map[Id[User], BasicUser])(implicit session: RWSession) : Unit = {
-    messages.filter(_.from.map(_!=userId).getOrElse(true)).headOption.foreach{ lastMsgFromOther =>
+    messages.collectFirst { case m if m.from.isDefined && m.from.get != userId => m }.map { lastMsgFromOther =>
       val locator = "/messages/" + thread.externalId
 
       val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
@@ -71,6 +71,7 @@ class MessagingController @Inject() (
         lastMsgFromOther.externalId,
         lastMsgFromOther.createdAt,
         lastMsgFromOther.messageText,
+        None,
         lastMsgFromOther.sentOnUrl.getOrElse(""),
         thread.nUrl.getOrElse(""),
         lastMsgFromOther.from.map(id2BasicUser(_)),
@@ -278,22 +279,22 @@ class MessagingController @Inject() (
     }}.toMap
 
     threads.map{ thread =>
-      val lastMessage = messagesByThread(thread.id.get).head
+      val lastMessage = messagesByThread(thread.id.get).collectFirst { case m if m.from.isDefined => m }.get
 
       val messageTimes = messagesByThread(thread.id.get).take(10).map{ message =>
         (message.externalId, message.createdAt)
       }.toMap
 
       ElizaThreadInfo(
-        externalId=thread.externalId,
-        participants=thread.participants.map(_.all).getOrElse(Set()).map(userId2BasicUser(_)).toSeq,
-        digest= lastMessage.messageText,
-        lastAuthor=userId2BasicUser(lastMessage.from.get).externalId,
-        messageCount=messagesByThread(thread.id.get).length,
-        messageTimes=messageTimes,
-        createdAt=thread.createdAt,
-        lastCommentedAt=lastMessage.createdAt,
-        lastMessageRead=userThreads(thread.id.get).lastSeen,
+        externalId = thread.externalId,
+        participants = thread.participants.map(_.all).getOrElse(Set()).map(userId2BasicUser(_)).toSeq,
+        digest = lastMessage.messageText,
+        lastAuthor = userId2BasicUser(lastMessage.from.get).externalId,
+        messageCount = messagesByThread(thread.id.get).length,
+        messageTimes = messageTimes,
+        createdAt = thread.createdAt,
+        lastCommentedAt = lastMessage.createdAt,
+        lastMessageRead = userThreads(thread.id.get).lastSeen,
         nUrl = thread.nUrl,
         url = requestUrl)
     }
@@ -460,6 +461,7 @@ class MessagingController @Inject() (
       message.externalId,
       message.createdAt,
       message.messageText,
+      None,
       message.sentOnUrl.getOrElse(""),
       thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
       message.from.map(id2BasicUser(_)),
@@ -473,7 +475,7 @@ class MessagingController @Inject() (
       )
     })
 
-    thread.allUsersExcept(from).foreach { userId =>
+    thread.allParticipantsExcept(from).foreach { userId =>
       sendNotificationForMessage(userId, message, thread, messageWithBasicUser)
     }
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
@@ -521,28 +523,29 @@ class MessagingController @Inject() (
     shoebox.getBasicUsers(participants.participants.keySet.toSeq)
 
 
-  def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[Seq[MessageWithBasicUser]] = {
+  def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $participantSet")
     shoebox.getBasicUsers(participantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread, pageOpt)
       log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: $messages")
-      messages.map { message =>
+      (thread, messages.map { message =>
         MessageWithBasicUser(
           id           = message.externalId,
           createdAt    = message.createdAt,
           text         = message.messageText,
+          auxData      = message.auxData,
           url          = message.sentOnUrl.getOrElse(""),
           nUrl         = thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
           user         = message.from.map(id2BasicUser(_)),
           participants = participantSet.toSeq.map(id2BasicUser(_))
         )
-      }
+      })
     }
 
   }
 
-  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[Seq[MessageWithBasicUser]] = {
+  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     val thread = db.readOnly(threadRepo.get(threadExtId)(_))
     getThreadMessagesWithBasicUser(thread, pageOpt)
   }
@@ -557,6 +560,43 @@ class MessagingController @Inject() (
     db.readOnly { implicit session =>
       val threadIds = userThreadRepo.getThreads(user)
       threadIds.map(threadRepo.get(_))
+    }
+  }
+
+  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipants: Seq[ExternalId[User]]) = {
+    shoebox.getUserIdsByExternalIds(newParticipants) flatMap { newParticipantsUserIds =>
+
+      val (message, thread) = db.readWrite { implicit session =>
+        val oldThread = threadRepo.get(threadExtId)
+        val thread = threadRepo.save(oldThread.withParticipants(clock.now, newParticipantsUserIds: _*))
+
+        val message = messageRepo.save(Message(
+          from = None,
+          thread = thread.id.get,
+          threadExtId = thread.externalId,
+          messageText = "",
+          auxData = Some(Json.obj("add_participants" -> Json.obj(adderUserId.id.toString -> newParticipantsUserIds.map(_.id)))),
+          sentOnUrl = None,
+          sentOnUriId = None
+        ))
+        (message, thread)
+      }
+
+      shoebox.getBasicUsers(thread.participants.get.participants.keys.toSeq) map { basicUsers =>
+        val participants = basicUsers.values.toSeq
+        val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg")), participants)
+        thread.participants.map(_.all.par.foreach { userId =>
+          notificationRouter.sendToUser(
+            userId,
+            Json.arr("message", thread.externalId.id, mwbu)
+          )
+          notificationRouter.sendToUser(
+            userId,
+            Json.arr("thread_participants", thread.externalId.id, participants)
+          )
+        })
+      }
+
     }
   }
 
