@@ -1,32 +1,24 @@
-@bgColor: #eff2f7;
-@borderColor: #e1e8e9;
-@fgColor: #b8c5d1;
-
 .kifi-message-header {
   position: relative;
   font-size: 15px;
   line-height: 29px;
-  color: @fgColor;
-  background: @bgColor;
+  color: #b8c5d1;
+  background: #eff2f7;
   width: 300px;
-
-  ul {
-    margin: 0;
-  }
 }
-
+.kifi-message-header ul {
+  margin: 0;
+}
 .kifi-message-header-bar {
   position: relative;
-  border-bottom: 1px solid @borderColor;
+  border-bottom: 1px solid #e1e8e9;
   height: 29px;
 }
-
 .kifi-message-header-buttons {
   position: relative;
   float: right;
   height: 29px;
 }
-
 .kifi-message-header-option-button {
   position: relative;
   float: right;
@@ -35,8 +27,7 @@
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAQAAAADQ4RFAAAA0klEQVR4AXXUMW7DMBBE0alE5zhRrm0gMSxLvkfoKyhKYV/hB4ttSITzp34ViVXEOwdXTsiPwicHM0IiyJPoblmQlegZTMxJGuYJycQO0DNLsh9xpm9LZglcxMQyZoZsFOGZIUgkuw2YIYEcq9QRaVGwFVtLAhnmSYc8S+KQKHz/I7UhBtUBmgwy75KtPfOk79YyT/DMkwcPx4T/Y4WNviWZJ0KcxswTGXZlEl94kuxO31nshni252HxJPfWsBcfItjLk4YlmZFIdnBJ4hkLv0HQHxvW+Tv3j7AoAAAAAElFTkSuQmCC);
   background-repeat: no-repeat;
 }
-
 .kifi-message-header-content {
   position: relative;
-  border-bottom: 1px solid @borderColor;
+  border-bottom: 1px solid #e1e8e9;
 }

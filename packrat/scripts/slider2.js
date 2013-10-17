@@ -7,6 +7,7 @@
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
+// @require scripts/message_header.js
 
 $.fn.layout = function () {
   'use strict';
@@ -70,6 +71,10 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('click', onClick, true);
   });
+        api.require('scripts/message_header.js', function () {
+          log('require:message_header')();
+          messageHeader.construct();
+        });
 
   function createSlider(callback, locator) {
     var kept = tile && tile.dataset.kept;
