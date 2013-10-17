@@ -243,10 +243,12 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)){ key=>
-    cacheProvider.searchFriendsCache.getOrElseFuture(key) {
-      call(Shoebox.internal.getSearchFriends(userId)).map {r =>
-        r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
-      }
+    cacheProvider.searchFriendsCache.get(key) match {
+      case Some(friends) => Promise.successful(friends.map(Id[User]).toSet).future
+      case _ =>
+        call(Shoebox.internal.getSearchFriends(userId)).map {r =>
+          r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
+        }
     }
   }
 
