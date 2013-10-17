@@ -80,7 +80,6 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
     heimdal.trackEvent(UserEvent(searchEnded.userId.id, contextBuilder.build, UserEventType("search_ended"), searchEnded.time))
   }
 
-
   private def obfuscate(searchId: ExternalId[ArticleSearchResult], userId: Id[User]): String = {
     val algorithm = "HmacSHA256"
     val mac = Mac.getInstance(algorithm)
@@ -88,5 +87,4 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
     mac.init(key)
     mac.doFinal(userId.toString.getBytes()).toString
   }
-
 }
