@@ -125,7 +125,7 @@ class OAuth2Controller @Inject() (
 //        val userInfo = Await.result(WS.url(userInfoUrl).get, 5 seconds).json
 //        log.info(s"[contacts] userInfo=${Json.prettyPrint(userInfo)}")
 
-        val contactsUrl = s"https://www.google.com/m8/feeds/contacts/default/full?access_token=$accToken&max-results=${Int.MaxValue}" // TODO: alt=json
+        val contactsUrl = s"https://www.google.com/m8/feeds/contacts/default/full?access_token=$accToken&max-results=${Int.MaxValue}" // TODO: alt=json; paging
         val contacts = Await.result(WS.url(contactsUrl).get, 5 seconds).xml
         log.info(s"[g-contacts] $contacts")
         val prettyPrint = new PrettyPrinter(300, 2)
@@ -136,7 +136,7 @@ class OAuth2Controller @Inject() (
           val entries: Seq[JsObject] = (feed \\ "entry").map { entry =>
             val title = (entry \\ "title").text
             val emails = (entry \\ "email").map(_ \\ "@address")
-            log.info(s"[contacts] title=$title email=$emails")
+            log.info(s"[g-contacts] title=$title email=$emails")
             Json.obj("name" -> title, "emails" -> Json.toJson(emails.seq.map(_.toString)))
           }
           JsArray(entries)
@@ -145,8 +145,8 @@ class OAuth2Controller @Inject() (
         // hack: go ahead and add to contacts
         val abookUpload = Json.obj("origin" -> "gmail", "contacts" -> jsArrays(0))
         log.info(Json.prettyPrint(abookUpload))
-        val res = Await.result(abookServiceClient.upload(request.userId, ABookOrigins.GMAIL, abookUpload), 5 seconds)
-        log.info(s"[contacts] abook uploaded: ${Json.prettyPrint(res)}")
+        val res = Await.result(abookServiceClient.uploadDirect(request.userId, ABookOrigins.GMAIL, abookUpload), 5 seconds)
+        log.info(s"[g-contacts] abook uploaded: ${Json.prettyPrint(res)}")
         Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId))
       }
       case "facebook" => { // testing only

@@ -163,11 +163,6 @@
     IOS JSON file to upload: <input type=file name="abook_json">
     <input type=submit value="Upload">
     </form>
-    <b>Gmail Exported (Outlook-styled) CSV</b>
-    <form class="form-inline" action=@{abookEP.get + user.id.get + "/uploadGMailCSV"} enctype="multipart/form-data" method="POST">
-        Gmail CSV file to upload: <input type=file name="gmail_csv">
-        <input type=submit value="Upload">
-    </form>
   }
   <h2>User kept @totalBookmarks Bookmarks</h2>
   <h3>Showing @bookmarks.size Bookmarks of total @totalBookmarks</h3>
