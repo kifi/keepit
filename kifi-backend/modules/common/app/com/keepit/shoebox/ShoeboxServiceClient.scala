@@ -101,6 +101,7 @@ case class ShoeboxCacheProvider @Inject() (
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
     userExperimentCache: UserExperimentCache,
     externalUserIdCache: ExternalUserIdCache,
+    userIdCache: UserIdCache,
     socialUserNetworkCache: SocialUserInfoNetworkCache,
     socialUserCache: SocialUserInfoUserCache,
     userSessionExternalIdCache: UserSessionExternalIdCache,
@@ -120,7 +121,7 @@ class ShoeboxServiceClientImpl @Inject() (
   implicit private[this] val executionContext = ExecutionContext.immediate
 
   // request consolidation
-  private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 10 seconds)
+  private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 30 seconds)
   private[this] val consolidateSearchFriendsReq = new RequestConsolidator[SearchFriendsKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
@@ -195,8 +196,14 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUser(userId: Id[User]): Future[Option[User]] = consolidateGetUserReq(userId){ key =>
-    call(Shoebox.internal.getUsers(key.toString)).map { r =>
-      Json.fromJson[Seq[User]](r.json).get.headOption
+    val user = cacheProvider.userIdCache.get(UserIdKey(key))
+    if (user.isDefined) {
+      Promise.successful(user).future
+    }
+    else {
+      call(Shoebox.internal.getUsers(key.toString)).map { r =>
+        Json.fromJson[Seq[User]](r.json).get.headOption
+      }
     }
   }
 
