@@ -13,6 +13,9 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
 import com.typesafe.config.ConfigFactory
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.duration._
+import akka.actor.ActorSystem
 import play.api._
 import play.api.mvc.Results._
 import play.api.mvc._
@@ -57,12 +60,15 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     if (prod) {
       injector.instance[HealthcheckPlugin].warmUp(injector.instance[BenchmarkRunner])
     }
-    serviceDiscovery.startSelfCheck()
     serviceDiscovery.forceUpdate()
-    if (prod) {
-      Statsd.increment("deploys", 42)
-      injector.instance[AirbrakeNotifier].reportDeployment()
-      injector.instance[HealthcheckPlugin].reportStart()
+    //Trying to run the self check after onStart is returned and Netty opened the ports
+    injector.instance[ActorSystem].scheduler.scheduleOnce(5 seconds) {
+      serviceDiscovery.startSelfCheck()
+      if (prod) {
+        Statsd.increment("deploys", 42)
+        injector.instance[AirbrakeNotifier].reportDeployment()
+        injector.instance[HealthcheckPlugin].reportStart()
+      }
     }
   }
 
