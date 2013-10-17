@@ -266,11 +266,11 @@ class ExtMessagingController @Inject() (
       messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
     },
     "log_event" -> { case JsObject(pairs) +: _ =>
-      implicit val experimentFormat = State.format[ExperimentType]
-      val eventJson = JsObject(pairs).deepMerge(
-        Json.obj("experiments" -> socket.experiments)
-      )
-      shoebox.logEvent(socket.userId, eventJson)
+      // implicit val experimentFormat = State.format[ExperimentType]
+      // val eventJson = JsObject(pairs).deepMerge(
+      //   Json.obj("experiments" -> socket.experiments)
+      // )
+      // shoebox.logEvent(socket.userId, eventJson)
     }
   )
 }
