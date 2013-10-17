@@ -207,9 +207,8 @@ class ExtSearchController @Inject() (
   private[this] def fetchUserDataInBackground(shoeboxClient: ShoeboxServiceClient, userId: Id[User]): Unit = {
     future {
       // following request must have request consolidation enabled, otherwise no use.
-      shoeboxClient.getFriends(userId)
+      // have a head start on every other requests that search will make
       shoeboxClient.getSearchFriends(userId)
-      shoeboxClient.getBrowsingHistoryFilter(userId)
       shoeboxClient.getClickHistoryFilter(userId)
     }
   }

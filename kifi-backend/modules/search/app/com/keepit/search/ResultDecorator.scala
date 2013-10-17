@@ -28,7 +28,7 @@ object ResultDecorator extends Logging {
   private[this] val emptyMatches = Seq.empty[(Int, Int)]
 
   def apply(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, searchConfig: SearchConfig, monitoredAwait: MonitoredAwait): ResultDecorator = {
-    new ResultDecoratorImpl(searcher, shoeboxClient, monitoredAwait, searchConfig.asBoolean("bulkget"))
+    new ResultDecoratorImpl(searcher, shoeboxClient, monitoredAwait)
   }
 
   def highlight(text: String, analyzer: Analyzer, field: String, terms: Option[Set[String]]): Seq[(Int, Int)] = {
@@ -100,14 +100,14 @@ object ResultDecorator extends Logging {
   }
 }
 
-class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait, bulkget: Boolean) extends ResultDecorator {
+class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends ResultDecorator {
 
   override def decorate(resultSet: ArticleSearchResult): DecoratedResult = {
     val collectionSearcher = searcher.collectionSearcher
     val myCollectionEdgeSet = collectionSearcher.myCollectionEdgeSet
     val hits = resultSet.hits
     val users = hits.map(_.users).flatten.distinct
-    val usersFuture = if (bulkget) shoeboxClient.bulkGetBasicUsers(users) else shoeboxClient.getBasicUsers(users)
+    val usersFuture = shoeboxClient.getBasicUsers(users)
 
     val field = "title_stemmed"
     val analyzer = DefaultAnalyzer.forIndexingWithStemmer(searcher.getLang)
