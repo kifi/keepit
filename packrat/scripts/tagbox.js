@@ -4,6 +4,7 @@
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
 // @require scripts/util.js
+// @require scripts/kifi_util.js
 // @require scripts/scorefilter.js
 // @require scripts/html/keeper/tagbox.js
 // @require scripts/html/keeper/tag-suggestion.js
@@ -27,7 +28,10 @@
 this.tagbox = (function ($, win) {
 	'use strict';
 
-	var util = win.util;
+	var util = win.util,
+		kifiUtil = win.kifiUtil,
+		Q = win.Q,
+		_ = win._;
 
 	function log(name) {
 		var args = Array.prototype.slice.call(arguments);
@@ -1154,7 +1158,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestTags: function () {
-			return this.request('get_tags', null, 'Could not load tags.');
+			return kifiUtil.request('get_tags', null, 'Could not load tags.');
 		},
 
 		/**
@@ -1166,7 +1170,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestAddTagById: function (tagId) {
-			return this.request('add_tag', tagId, 'Could not add tag, "' + tagId + '"');
+			return kifiUtil.request('add_tag', tagId, 'Could not add tag, "' + tagId + '"');
 		},
 
 		/**
@@ -1178,7 +1182,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestCreateAndAddTagByName: function (name) {
-			return this.request('create_and_add_tag', name, 'Could not add tag, "' + name + '"');
+			return kifiUtil.request('create_and_add_tag', name, 'Could not add tag, "' + name + '"');
 		},
 
 		/**
@@ -1190,7 +1194,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestRemoveTagById: function (tagId) {
-			return this.request('remove_tag', tagId, 'Could not remove tag, "' + tagId + '"');
+			return kifiUtil.request('remove_tag', tagId, 'Could not remove tag, "' + tagId + '"');
 		},
 
 		/**
@@ -1200,30 +1204,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		requestClearAll: function () {
-			return this.request('clear_tags', null, 'Could not clear tags');
-		},
-
-		/**
-		 * Makes a request to the server and returns a deferred promise object.
-		 *
-		 * @param {string} name - A request name
-		 * @param {*} data - A request payload
-		 * @param {string} errorMsg - An error message
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		request: function (name, data, errorMsg) {
-			var deferred = Q.defer();
-			api.port.emit(name, data, function (result) {
-				log(name + '.result', result);
-				if (result && result.success) {
-					deferred.resolve(result.response);
-				}
-				else {
-					deferred.reject(new Error(errorMsg));
-				}
-			});
-			return deferred.promise;
+			return kifiUtil.request('clear_tags', null, 'Could not clear tags');
 		},
 
 		//

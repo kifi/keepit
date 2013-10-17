@@ -1,13 +1,8 @@
 // @require scripts/lib/jquery.js
-// @require scripts/lib/underscore.js
-// @require scripts/lib/antiscroll.min.js
-// @require scripts/lib/q.min.js
 // @require scripts/render.js
-// @require scripts/util.js
-// @require scripts/scorefilter.js
+// @require scripts/message_participants.js
 // @require scripts/html/keeper/message_header.js
 // @require styles/keeper/message_header.css
-// @require styles/animate-custom.css
 
 /**
  * ---------------------
@@ -24,10 +19,6 @@
 var messageHeader = this.messageHeader = (function ($, win) {
 	'use strict';
 
-	var util = win.util,
-		Q = win.Q,
-		_ = win._;
-
 	// receive
 	api.port.on({
 		friends: function (friends) {}
@@ -41,11 +32,13 @@ var messageHeader = this.messageHeader = (function ($, win) {
 	return {
 
 		/**
-		 * Whether a tag box is initialized
+		 * Whether this is initialized
 		 *
 		 * @property {boolean}
 		 */
 		initialized: false,
+
+		plugins: [win.messageParticipants /*, win.messageMute*/ ],
 
 		/**
 		 * A constructor of Message Header
@@ -58,6 +51,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		 */
 		construct: function (trigger) {
 			if (!this.initialized) {
+				this.constructPlugins();
 				this.init(trigger);
 			}
 		},
@@ -83,91 +77,16 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the container
 		 */
 		initMessageHeader: (function () {
-
-			function onClick(e) {
-				if (!this.contains(e.target)) {
-					e.uiClosed = true;
-					/*
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          */
-					this.hide(this.getClickInfo('outside'));
-				}
-			}
-
-			function addDocListeners() {
-				if (this.initialized) {
-					var $doc = $(document);
-					this.prevEscHandler = this.getData($doc, 'esc');
-					$doc.data('esc', this.handleEsc.bind(this));
-
-					var onDocClick = this.onDocClick = onClick.bind(this);
-					document.addEventListener('click', onDocClick, true);
-				}
-			}
-
 			return function () {
-				var $el = $(this.renderContainer()).insertBefore($('body'));
+				var $el = $(this.render()).insertBefore($('body'));
 				this.$el = $el;
-
-				win.setTimeout(addDocListeners.bind(this), 50);
 
 				return $el;
 			};
 		})(),
 
-		handleEsc: function (e) {
-			e.preventDefault();
-			e.stopPropagation();
-			e.stopImmediatePropagation();
-			log('esc');
-
-			if (this.currentSuggestion) {
-				this.navigateTo(null, 'esc');
-			}
-			else {
-				this.hide('key:esc');
-			}
-		},
-
-		initPlugins: function () {},
-
 		/**
-		 * Finds, initializes, and caches a suggestion box.
-		 *
-		 * @return {jQuery} A jQuery object for suggestion list
-		 */
-		initSuggest: function () {
-			log('initSuggest.start');
-
-			var $suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner');
-			this.$suggest = $suggest;
-
-			$suggest.on('click', '.kifi-tagbox-suggestion', this.onClickSuggestion.bind(this));
-			$suggest.on('click', '.kifi-tagbox-new', this.onClickNewSuggestion.bind(this));
-			$suggest.on('mouseover', this.onMouseoverSuggestion.bind(this));
-
-			log('initSuggest.end');
-
-			return $suggest;
-		},
-
-		/**
-		 * Add a clear event listener to clear button.
-		 */
-		initOptionButton: function () {
-			this.$tagbox.on('click', '.kifi-message-header-option-button', this.onClickOptions.bind(this));
-		},
-
-		onClickOptions: function () {
-			this.toggleOptions(this.getClickInfo('clear'));
-		},
-
-		toggleOptions: function () {},
-
-		/**
-		 * Destroys a tag box.
+		 * Destroys a message header.
 		 * It removes all event listeners and caches to elements.
 		 *
 		 * @param {string} trigger - A triggering user action
@@ -175,13 +94,11 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		destroy: function (trigger) {
 			if (this.initialized) {
 				this.initialized = false;
+				this.destroyPlugins();
 
-				win.slider2.unshadePane();
 				$(win.tile).css('transform', '');
 
-				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
-
-				'$input,$inputbox,$suggest,$suggestWrapper,$tagbox,$tagList,$tagListWrapper'.split(',').forEach(function (name) {
+				'$el'.split(',').forEach(function (name) {
 					var $el = this[name];
 					if ($el) {
 						$el.remove();
@@ -189,20 +106,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
 					}
 				}, this);
 
-				$(document).data('esc', this.prevEscHandler);
-				this.prevEscHandler = null;
-
-				var onDocClick = this.onDocClick;
-				if (onDocClick) {
-					document.removeEventListener('click', onDocClick, true);
-					this.onDocClick = null;
-				}
-
-				this.$slider = null;
-				this.tags = [];
-				this.tagsAdded = {};
-				this.tagsBeingCreated = {};
-				this.busyTags = {};
+				this.status = {};
 
 				this.logEvent('destroy', {
 					trigger: trigger
@@ -222,111 +126,68 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			return $el != null && $el[0].contains(el);
 		},
 
-		/**
-		 * Adds class from the root element.
-		 *
-		 * @param {string} A Class name to add.
-		 *
-		 * @return {jQuery} A jQuery object for the root element
-		 */
-		addClass: function () {
-			var $tagbox = this.$tagbox;
-			return $tagbox && $tagbox.addClass.apply($tagbox, arguments);
+		status: {},
+
+		setStatus: function (name, isSet) {
+			isSet = Boolean(isSet);
+			this.$el.toggleClass('kifi-' + name, isSet);
+			this.status[name] = isSet;
 		},
 
-		/**
-		 * Removes class from the root element.
-		 *
-		 * @param {string} A Class name to remove.
-		 *
-		 * @return {jQuery} A jQuery object for the root element
-		 */
-		removeClass: function () {
-			var $tagbox = this.$tagbox;
-			return $tagbox && $tagbox.removeClass.apply($tagbox, arguments);
-		},
-
-		/**
-		 * Toggles (Add/Remove) a class of the root element.
-		 *
-		 * @param {string} A Class name to toggle.
-		 * @param {boolean} Whether to add or remove
-		 *
-		 * @return {jQuery} A jQuery object for the root element
-		 */
-		toggleClass: function (classname, add) {
-			var $tagbox = this.$tagbox;
-			return $tagbox && $tagbox.toggleClass(classname, !! add);
-		},
-
-		moveTileToBottom: function (res) {
-			var tile = win.tile,
-				$tile = $(tile),
-				dy = window.innerHeight - tile.getBoundingClientRect().bottom;
-
-			if (!dy) {
-				return res;
+		renderStatusClasses: function (status) {
+			if (!status) {
+				status = this.status;
 			}
-
-			$tile.css('transform', 'translate(0,' + dy + 'px)');
-
-			var deferred = Q.defer();
-
-			$tile.on('transitionend', function onTransitionend(e) {
-				if (e.target === this) {
-					$tile.off('transitionend', onTransitionend);
-					deferred.resolve();
+			return Object.keys(status).reduce(function (list, name) {
+				if (status[name]) {
+					list.push('kifi-' + name);
 				}
+				return list;
+			}, []).join(' ');
+		},
+
+		/**
+		 * Renders and returns a html.
+		 *
+		 * @return {string} A rendered html
+		 */
+		render: function () {
+			return win.render('html/keeper/message_header', {
+				status: this.renderStatusClasses(),
+				buttons: this.renderPlugins('button'),
+				options: this.renderPlugins('option'),
+				content: this.renderPlugins('content')
 			});
-
-			return deferred.promise;
 		},
 
-		/**
-		 * Makes a request to the server and returns a deferred promise object.
-		 *
-		 * @param {string} name - A request name
-		 * @param {*} data - A request payload
-		 * @param {string} errorMsg - An error message
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		request: function (name, data, errorMsg) {
-			var deferred = Q.defer();
-			api.port.emit(name, data, function (result) {
-				log(name + '.result', result);
-				if (result && result.success) {
-					deferred.resolve(result.response);
-				}
-				else {
-					deferred.reject(new Error(errorMsg));
-				}
+		constructPlugins: function () {
+			this.plugins.forEach(function (plugin) {
+				plugin.parent = this;
+				plugin.construct();
+			}, this);
+		},
+
+		renderPlugins: function (compName) {
+			return this.plugins.map(function (plugin) {
+				var html = plugin.render(compName);
+				return html == null ? '' : html;
+			}).join('');
+		},
+
+		initPlugins: function () {
+			return this.plugins.map(function (plugin) {
+				plugin.init();
 			});
-			return deferred.promise;
+		},
+
+		destroyPlugins: function () {
+			this.plugins.forEach(function (plugin) {
+				return plugin.destroy();
+			}, this);
 		},
 
 		/**
-		 * Renders and returns a tag box html.
-		 *
-		 * @return {string} tag box html
-		 */
-		renderContainer: function () {
-			return win.render('html/keeper/message_header');
-		},
-
-		/**
-		 * Renders and returns a tag suggestion html for a given tag item.
-		 *
-		 * @param {Object} tag - A tag item
-		 *
-		 * @return {string} tag suggestion html
-		 */
-		renderTagSuggestionHtml: function (tag) {
-			return win.render('html/keeper/tag-suggestion', tag);
-		},
-
-		/**
-		 * Logs a tagbox user event to the server.
+		 * Logs a user event to the server.
 		 *
 		 * @param {string} name - A event type name
 		 * @param {Object} obj - A event data
@@ -338,8 +199,8 @@ var messageHeader = this.messageHeader = (function ($, win) {
 					obj = win.withUrls(obj);
 				}
 			}
-			log(name, obj);
-			win.logEvent('slider', 'tagbox.' + name, obj || null);
+			log(name, obj)();
+			win.logEvent('slider', 'message_header.' + name, obj || null);
 		},
 
 		/**
@@ -348,23 +209,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		 * @param {Error} err - An error object
 		 */
 		logError: function (err) {
-			log('Error', err, err.message, err.stack);
-		},
-
-		/**
-		 * Returns a trigger string for event logging.
-		 *
-		 * @param {string} name - What is being clicked
-		 * @param {string} target - What element is being clicked
-		 *
-		 * @return {string} A trigger string
-		 */
-		getClickInfo: function (name, target) {
-			var res = 'click:' + name;
-			if (target) {
-				res += '@' + target;
-			}
-			return res;
+			log('Error', err, err.message, err.stack)();
 		}
 
 	};
