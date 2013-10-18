@@ -16,12 +16,15 @@ import org.joda.time.DateTime
 
 class SliderHistoryBinarySerializer extends BinaryFormat[SliderHistory] with Logging {
 
-  def writes(history: SliderHistory): Array[Byte] = {
+  protected def writes(history: SliderHistory): Array[Byte] = {
     val json = historyJsonWrites(history).toString.getBytes(UTF8)
     val filter = history.filter
 
     assume(filter.size == history.tableSize, "Filter is not tableSize: %s != %s".format(filter.size, history.tableSize))
-    val byteStream = new ByteArrayOutputStream(json.size + filter.size + 8)
+    val byteStream = new ByteArrayOutputStream(json.size + filter.size + 8 + 1)
+
+    byteStream.write(1) // we have something
+
     val outStream = new DataOutputStream(byteStream)
 
     outStream.writeInt(json.size)
@@ -33,7 +36,7 @@ class SliderHistoryBinarySerializer extends BinaryFormat[SliderHistory] with Log
     byteStream.toByteArray
   }
 
-  def historyJsonWrites(history: SliderHistory): JsObject =
+  private[this] def historyJsonWrites(history: SliderHistory): JsObject =
     JsObject(List(
       "id"  -> history.id.map(u => JsNumber(u.id)).getOrElse(JsNull),
       "createdAt" -> Json.toJson(history.createdAt),
@@ -47,8 +50,8 @@ class SliderHistoryBinarySerializer extends BinaryFormat[SliderHistory] with Log
     )
     )
 
-  def reads(bytes: Array[Byte]): SliderHistory = {
-    val inStream = new DataInputStream(new ByteArrayInputStream(bytes))
+  protected def reads(bytes: Array[Byte], offset: Int, length: Int): SliderHistory = {
+    val inStream = new DataInputStream(new ByteArrayInputStream(bytes, offset, length))
     val jsonSize = inStream.readInt()
     val filterSize = inStream.readInt()
 
@@ -69,7 +72,7 @@ class SliderHistoryBinarySerializer extends BinaryFormat[SliderHistory] with Log
     historyNoFilter.copy(filter = filterBytes)
   }
 
-  def historyJsonReads(json: JsValue): SliderHistory =
+  private[this] def historyJsonReads(json: JsValue): SliderHistory =
     SliderHistory(
       id = (json \ "id").asOpt[Long].map(Id[SliderHistory](_)),
       createdAt = (json \ "createdAt").as[DateTime],

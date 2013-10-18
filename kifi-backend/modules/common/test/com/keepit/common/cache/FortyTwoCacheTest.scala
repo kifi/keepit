@@ -28,8 +28,8 @@ case class TestBinaryCacheKey(id: String) extends Key[Array[Byte]] {
 }
 
 object DummyBinarySerializer extends BinaryFormat[Array[Byte]] {
-  def writes(x: Array[Byte]) = x
-  def reads(x: Array[Byte]) = x
+  protected def writes(x: Array[Byte]) = x
+  protected def reads(x: Array[Byte], offset: Int, length: Int) = x
 }
 
 class TestBinaryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)

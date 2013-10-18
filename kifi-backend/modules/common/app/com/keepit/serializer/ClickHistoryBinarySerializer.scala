@@ -15,12 +15,15 @@ import org.joda.time.DateTime
 
 class ClickHistoryBinarySerializer extends BinaryFormat[ClickHistory] with Logging {
 
-  def writes(history: ClickHistory): Array[Byte] = {
+  protected def writes(history: ClickHistory): Array[Byte] = {
     val json = historyJsonWrites(history).toString.getBytes(UTF8)
     val filter = history.filter
 
     assume(filter.size == history.tableSize, "Filter is not tableSize: %s != %s".format(filter.size, history.tableSize))
-    val byteStream = new ByteArrayOutputStream(json.size + filter.size + 8)
+    val byteStream = new ByteArrayOutputStream(json.size + filter.size + 8 + 1)
+
+    byteStream.write(1) // we have something
+
     val outStream = new DataOutputStream(byteStream)
 
     outStream.writeInt(json.size)
@@ -32,7 +35,7 @@ class ClickHistoryBinarySerializer extends BinaryFormat[ClickHistory] with Loggi
     byteStream.toByteArray
   }
 
-  def historyJsonWrites(history: ClickHistory): JsObject =
+  private[this] def historyJsonWrites(history: ClickHistory): JsObject =
     JsObject(List(
       "id"  -> history.id.map(u => JsNumber(u.id)).getOrElse(JsNull),
       "createdAt" -> Json.toJson(history.createdAt),
@@ -44,10 +47,10 @@ class ClickHistoryBinarySerializer extends BinaryFormat[ClickHistory] with Loggi
       "minHits" -> JsNumber(history.minHits),
       "updatesCount"  -> JsNumber(history.updatesCount)
     )
-    )
+  )
 
-  def reads(bytes: Array[Byte]): ClickHistory = {
-    val inStream = new DataInputStream(new ByteArrayInputStream(bytes))
+  protected def reads(bytes: Array[Byte], offset: Int, length: Int): ClickHistory = {
+    val inStream = new DataInputStream(new ByteArrayInputStream(bytes, offset, length))
     val jsonSize = inStream.readInt()
     val filterSize = inStream.readInt()
 
@@ -68,7 +71,7 @@ class ClickHistoryBinarySerializer extends BinaryFormat[ClickHistory] with Loggi
     historyNoFilter.copy(filter = filterBytes)
   }
 
-  def historyJsonReads(json: JsValue): ClickHistory =
+  private[this] def historyJsonReads(json: JsValue): ClickHistory =
     ClickHistory(
       id = (json \ "id").asOpt[Long].map(Id[ClickHistory](_)),
       createdAt = (json \ "createdAt").as[DateTime],
