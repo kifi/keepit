@@ -27,9 +27,9 @@ class BrowsingHistorySerializerTest extends Specification {
       )
 
       val serializer = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer
-      val serializedHistory = serializer.writes(browsingHistory)
+      val serializedHistory = serializer.writes(Some(browsingHistory))
 
-      val deserializedHistory = serializer.reads(serializedHistory)
+      val deserializedHistory = serializer.reads(serializedHistory).get
 
       deserializedHistory.filter.deep === filter.deep
       deserializedHistory.copy(filter = filter) === browsingHistory
@@ -48,8 +48,8 @@ class BrowsingHistorySerializerTest extends Specification {
         updatesCount = 42
       )
       val serializer = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer
-      val serializedHistory = serializer.writes(browsingHistory)
-      serializer.reads(serializedHistory) must throwA[AssertionError]
+      val serializedHistory = serializer.writes(Some(browsingHistory))
+      serializer.reads(serializedHistory).get must throwA[AssertionError]
     }
     "Fail appropriately" in {
 
@@ -65,7 +65,7 @@ class BrowsingHistorySerializerTest extends Specification {
         updatesCount = 42
       )
       val serializer = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer
-      serializer.writes(browsingHistory) must throwA[AssertionError]
+      serializer.writes(Some(browsingHistory)) must throwA[AssertionError]
     }
   }
 
