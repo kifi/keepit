@@ -7,6 +7,7 @@ import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.common.{SearchBrowsingHistoryModule, SearchClickHistoryModule}
+import com.keepit.heimdal.ProdHeimdalServiceClientModule
 
 abstract class SearchModule(
 
@@ -23,6 +24,7 @@ abstract class SearchModule(
   val searchServiceClientModule = ProdSearchServiceClientModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
+  val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
 
   val secureSocialModule = RemoteSecureSocialModule()
 

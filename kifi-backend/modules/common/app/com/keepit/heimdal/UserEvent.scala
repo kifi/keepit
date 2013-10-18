@@ -5,7 +5,11 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 
 import play.api.libs.json.{Json, Format, JsResult, JsError, JsSuccess, JsObject, JsValue, JsArray, JsNumber, JsString}
-
+import com.keepit.common.controller.AuthenticatedRequest
+import play.api.mvc.RequestHeader
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 case class UserEventType(name: String)
 
@@ -75,6 +79,36 @@ class UserEventContextBuilder {
   }
 }
 
+@Singleton
+class UserEventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) {
+  def apply(request: Option[RequestHeader] = None): UserEventContextBuilder = {
+    val contextBuilder = new UserEventContextBuilder()
+    contextBuilder += ("serviceVersion", serviceDiscovery.myVersion.value)
+    serviceDiscovery.thisInstance.map { instance =>
+      contextBuilder += ("serviceInstance", instance.instanceInfo.instanceId.id)
+      contextBuilder += ("serviceZone", instance.instanceInfo.availabilityZone)
+    }
+
+    request.map { req =>
+      contextBuilder += ("remoteAddress", req.headers.get("X-Forwarded-For").getOrElse(req.remoteAddress))
+      contextBuilder += ("userAgent", req.headers.get("User-Agent").getOrElse(""))
+      contextBuilder += ("requestScheme", req.headers.get("X-Scheme").getOrElse(""))
+
+      req match {
+        case authRequest: AuthenticatedRequest[_] =>
+          authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
+          authRequest.experiments.foreach { experiment => contextBuilder += ("experiment", experiment.toString) }
+          authRequest.body match {
+            case json: JsValue => (json \"extVersion").asOpt[String].foreach { version => contextBuilder += ("extVersion", version) }
+            case _ =>
+          }
+        case _ =>
+      }
+    }
+
+    contextBuilder
+  }
+}
 
 case class UserEvent(
   userId: Long,
@@ -82,7 +116,6 @@ case class UserEvent(
   eventType: UserEventType,
   time: DateTime = currentDateTime
 )
-
 
 object UserEvent {
   implicit val format = Json.format[UserEvent]
