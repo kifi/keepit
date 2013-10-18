@@ -335,19 +335,17 @@ footer {
   display: table;
   border-collapse: collapse;
   width: 100%;
-  margin: 36px 0 30px;
+  margin: 36px 0 60px;
 }
 .form-l,
 .form-r {
   display: table-cell;
   width: 50%;
+  text-align: left;
+  padding-bottom: 10px;
 }
 .form-l {
   border-right: 5px solid #e5e5e5;
-  text-align: left;
-}
-.form-r {
-  text-align: right;
 }
 .form-sides h3 {
   margin: 0 0 24px;
@@ -365,8 +363,20 @@ footer {
 .form-network.facebook {
   background: #597ab1;
 }
+.form-network.facebook:hover {
+  background: #6a87b9;
+}
+.form-network.facebook:active {
+  background: #506e9f;
+}
 .form-network.linkedin {
   background: #2786c5;
+}
+.form-network.linkedin:hover {
+  background: #3d92cb;
+}
+.form-network.linkedin:active {
+  background: #2379b1;
 }
 .form-network-icon {
   display: table-cell;
@@ -410,17 +420,25 @@ footer {
   width: 80%;
   margin: 16px 10%;
   height: 40px;
-  border: 2px solid #e5e5e5;
+  border: 0;
   padding: 0 4%;
 }
 .form-submit {
-  margin-right: 10%;
-  background: #92c152;
+  display: block;
+  margin: 0 50% 0 10%;
   border: 0;
+  background: #92c152;
   color: #fff;
   height: 36px;
-  padding: 0 7%;
+  line-height: 36px;
+  text-align: center;
   font-weight: 300;
+}
+.form-submit:hover {
+  background: #9dc763;
+}
+.form-submit:active {
+  background: #83ae4a;
 }
 .form-terms {
   font-weight: 300;
