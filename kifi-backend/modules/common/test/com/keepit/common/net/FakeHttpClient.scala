@@ -2,6 +2,7 @@ package com.keepit.common.net
 
 import scala.concurrent._
 import scala.xml._
+import play.api.libs.ws._
 
 import play.api.libs.json._
 
@@ -55,6 +56,7 @@ class FakeHttpPostClient(requestToResponse: Option[PartialFunction[String, FakeC
 }
 
 case class FakeClientResponse(expectedResponse: String, override val status: Int = 200) extends ClientResponse {
+  def res: Response = ???
   def body: String = expectedResponse
   def json: JsValue = Json.parse(expectedResponse)
   def xml: NodeSeq = XML.loadString(expectedResponse)

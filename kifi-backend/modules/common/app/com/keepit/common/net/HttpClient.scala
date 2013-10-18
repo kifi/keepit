@@ -158,14 +158,17 @@ case class HttpClientImpl(
       Future[ClientResponse] = reqRes match { case (request, responseFuture) =>
     responseFuture.map(r => res(request, r))(immediate) tap { f =>
       f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (immediate)
-      f.onSuccess { case response: Response => logSuccess(request, response) } (immediate)
+      f.onSuccess {
+        case response: ClientResponse => logSuccess(request, response)
+        case unknown => airbrake.get.notify(AirbrakeError(message = Some(s"Unknown object in http client onSuccess: $unknown on $request")))
+      } (immediate)
     }
   }
 
-  private def logSuccess(request: Request, res: Response): Unit = {
+  private def logSuccess(request: Request, res: ClientResponse): Unit = {
     //todo(eishay): the interesting part is the remote service and node id, to be logged
-    val remoteHost = res.header(CommonHeaders.LocalHost).getOrElse("NA")
-    val remoteTime = res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
+    val remoteHost = res.res.header(CommonHeaders.LocalHost).getOrElse("NA")
+    val remoteTime = res.res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
         result = "success",
@@ -174,11 +177,11 @@ case class HttpClientImpl(
         //Its a bit strange, but in this case we rather pass null to be consistent with the api
         //taking only the first 200 chars of the body
         trackingId = request.trackingId,
-        statusCode = res.status))
+        statusCode = res.res.status))
 
     e.waitTime map {waitTime =>
       if (waitTime > 200) {//ms
-        val exception = request.tracer.withCause(LongWaitException(request.url, res, waitTime))
+        val exception = request.tracer.withCause(LongWaitException(request.url, res.res, waitTime))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
@@ -220,36 +223,37 @@ class Request(val req: WSRequestHolder, headers: List[(String, String)], service
 }
 
 trait ClientResponse {
+  def res: Response
   def body: String
   def json: JsValue
   def xml: NodeSeq
   def status: Int
 }
 
-class ClientResponseImpl(val request: Request, val response: Response) extends ClientResponse {
+class ClientResponseImpl(val request: Request, val res: Response) extends ClientResponse {
 
   override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 
-  def status: Int = response.status
+  def status: Int = res.status
 
-  def body: String = response.body
+  def body: String = res.body
 
   def json: JsValue = {
     try {
-      response.json
+      res.json
     } catch {
       case e: Throwable =>
-        println("bad response: %s".format(response.body.toString()))
+        println("bad res: %s".format(res.body.toString()))
         throw e
     }
   }
 
   def xml: NodeSeq = {
     try {
-      response.xml
+      res.xml
     } catch {
       case e: Throwable =>
-        println("bad response: %s".format(response.body.toString()))
+        println("bad res: %s".format(res.body.toString()))
         throw e
     }
   }
