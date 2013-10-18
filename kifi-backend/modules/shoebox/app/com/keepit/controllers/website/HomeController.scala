@@ -9,6 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.controllers.core.AuthController
 import com.keepit.model._
 import com.keepit.social.{SocialNetworkType, SocialGraphPlugin}
 
@@ -17,7 +18,6 @@ import play.api.Play.current
 import play.api._
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
-import securesocial.core.SocialUser
 
 class HomeController @Inject() (db: Database,
   userRepo: UserRepo,
@@ -47,7 +47,11 @@ class HomeController @Inject() (db: Database,
   }
 
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
-    if (request.user.state == UserStates.PENDING) {
+    val linkWith = request.session.get(AuthController.LinkWithKey)
+    if (linkWith.isDefined) {
+      Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
+        .withSession(session - AuthController.LinkWithKey)
+    } else if (request.user.state == UserStates.PENDING) {
       pendingHome()
     } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())

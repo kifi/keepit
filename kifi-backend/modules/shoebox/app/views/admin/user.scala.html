@@ -14,7 +14,8 @@
   contactInfos: Seq[ContactInfo],
   abookEP: Option[String],
   collections: Seq[Collection],
-  collectionFilter: Option[Id[Collection]]
+  collectionFilter: Option[Id[Collection]],
+  stateToken: String
 )
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
@@ -138,7 +139,7 @@
     </table>
   }
   @if(contactInfos.size > 0) {
-    <h3>Contacts</h3>
+    <h3>Contacts (up to 500)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
             <tr><th>ContactId</th><th>Origin</th><th>ABookId</th><th>Name</th><th>Email</th></tr>
@@ -148,17 +149,19 @@
         </table>
     </div>
   }
+  <h3>Import Contacts</h3>
+  <h4>Direct Import from Gmail</h4>
+  <div>
+      <form class="form-inline" action="@com.keepit.controllers.core.routes.OAuth2Controller.importContacts(None)" method="GET">
+          <input type=submit value="Import"> contacts from your GMail account
+      </form>
+  </div>
   @if(abookEP.isDefined) {
-    <h3>Upload Address book</h3>
-    <h4>Gmail Exported (Outlook-styled) CSV -- 42-internal testing only!</h4>
-    <form class="form-inline" action=@{abookEP.get + user.id.get + "/uploadGMailCSV"} enctype="multipart/form-data" method="POST">
-        Gmail CSV file to upload: <input type=file name="gmail_csv">
-        <input type=submit value="Upload">
-    </form>
-    <h4>IOS JSON file upload -- 42-internal testing only!</h4>
+    <b>File-based uploads -- 42-internal testing only!</b>
+    <b>IOS JSON file upload (UTF-8)</b>
     <form class="form-inline" action=@{abookEP.get + user.id.get + "/ios/upload"} enctype="multipart/form-data" method="POST">
-        IOS JSON file to upload: <input type=file name="abook_json">
-        <input type=submit value="Upload">
+    IOS JSON file to upload: <input type=file name="abook_json">
+    <input type=submit value="Upload">
     </form>
   }
   <h2>User kept @totalBookmarks Bookmarks</h2>

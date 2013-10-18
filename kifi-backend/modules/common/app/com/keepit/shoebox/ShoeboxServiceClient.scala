@@ -1,11 +1,9 @@
 package com.keepit.shoebox
 
 import scala.collection.mutable.ArrayBuffer
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
-
 import com.google.inject.Inject
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
@@ -42,15 +40,16 @@ import play.api.libs.json.JsObject
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
+import com.keepit.common.concurrent.ExecutionContext
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]]
+  def getUser(userId: Id[User]): Future[Option[User]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
-  def bulkGetBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -101,6 +100,7 @@ case class ShoeboxCacheProvider @Inject() (
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
     userExperimentCache: UserExperimentCache,
     externalUserIdCache: ExternalUserIdCache,
+    userIdCache: UserIdCache,
     socialUserNetworkCache: SocialUserInfoNetworkCache,
     socialUserCache: SocialUserInfoUserCache,
     userSessionExternalIdCache: UserSessionExternalIdCache,
@@ -116,7 +116,11 @@ class ShoeboxServiceClientImpl @Inject() (
   cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient with Logging{
 
+  // ExecutionContext
+  implicit private[this] val executionContext = ExecutionContext.immediate
+
   // request consolidation
+  private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 30 seconds)
   private[this] val consolidateSearchFriendsReq = new RequestConsolidator[SearchFriendsKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
@@ -190,6 +194,18 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.sendMailToUser(), payload).map(r => r.body.toBoolean)
   }
 
+  def getUser(userId: Id[User]): Future[Option[User]] = consolidateGetUserReq(userId){ key =>
+    val user = cacheProvider.userIdCache.get(UserIdKey(key))
+    if (user.isDefined) {
+      Promise.successful(user).future
+    }
+    else {
+      call(Shoebox.internal.getUsers(key.toString)).map { r =>
+        Json.fromJson[Seq[User]](r.json).get.headOption
+      }
+    }
+  }
+
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
     val query = userIds.mkString(",")
     call(Shoebox.internal.getUsers(query)).map { r =>
@@ -215,32 +231,6 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
-    var cached = Map.empty[Id[User], BasicUser]
-    val needed = new ArrayBuffer[Id[User]]
-    userIds.foreach{ userId =>
-      cacheProvider.basicUserCache.get(BasicUserUserIdKey(userId)) match {
-        case Some(bu) => cached += (userId -> bu)
-        case None => needed += userId
-      }
-    }
-
-    if (needed.isEmpty) {
-      Promise.successful(cached).future
-    } else {
-      val query = needed.map(_.id).mkString(",")
-      call(Shoebox.internal.getBasicUsers(query)).map { res =>
-        val retrievedUsers = res.json.as[Map[String, BasicUser]]
-        cached ++ (retrievedUsers.map{ u =>
-          val id = Id[User](u._1.toLong)
-          val bu = u._2
-          cacheProvider.basicUserCache.set(BasicUserUserIdKey(id), Some(bu))
-          (id -> bu)
-        })
-      }
-    }
-  }
-
-  def bulkGetBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
     cacheProvider.basicUserCache.bulkGetOrElseFuture(userIds.map{ BasicUserUserIdKey(_) }.toSet){ keys =>
       val query = keys.map(_.userId.id).mkString(",")
       call(Shoebox.internal.getBasicUsers(query)).map{ res =>

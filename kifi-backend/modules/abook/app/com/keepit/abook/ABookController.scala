@@ -15,6 +15,7 @@ import scala.io.Source
 import scala.ref.WeakReference
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.http.MimeTypes
 
 class ABookController @Inject() (
   actionAuthenticator:ActionAuthenticator,
@@ -28,7 +29,7 @@ class ABookController @Inject() (
 
   private def toS3Key(userId:Id[User], origin:ABookOriginType) = s"${userId.id}_${origin.name}"
 
-  // for testing only
+  // authenticated upload (used by ios/mobile)
   def upload(origin:ABookOriginType) = AuthenticatedJsonAction(false, parse.json(maxLength = 1024 * 50000)) { request =>
     val userId = request.userId
     val json = request.body
@@ -41,14 +42,23 @@ class ABookController @Inject() (
     async
   }
 
-  // for testing only
-  def uploadJson(userId:Id[User], origin:ABookOriginType) = Action(parse.anyContent) { request =>
-    val jsonFilePart = request.body.asMultipartFormData.get.file("abook_json")
+  // upload JSON file via form (for testing only)
+  def uploadJson(userId:Id[User], origin:ABookOriginType) = Action(parse.multipartFormData) { request =>
+    val jsonFilePart = request.body.file("abook_json")
     val jsonFile = File.createTempFile("abook_json", "json")
     jsonFilePart.getOrElse(throw new IllegalArgumentException("form field ios_json not found")).ref.moveTo(jsonFile, true)
     val jsonSrc = Source.fromFile(jsonFile)(io.Codec("UTF-8")).getLines.foldLeft("") { (a,c) => a + c }
     log.info(s"[upload($userId, $origin)] jsonFile=$jsonFile jsonSrc=$jsonSrc")
     val json = Json.parse(jsonSrc) // for testing
+    log.info(s"[uploadJson] json=${Json.prettyPrint(json)}")
+    val abookInfoRepoEntry = processUpload(userId, origin, json)
+    Ok(Json.toJson(abookInfoRepoEntry))
+  }
+
+  // direct JSON-upload (used by gmail import)
+  def uploadJsonDirect(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
+    val json = request.body
+    log.info(s"[uploadJsonDirect] json=${Json.prettyPrint(json)}")
     val abookInfoRepoEntry = processUpload(userId, origin, json)
     Ok(Json.toJson(abookInfoRepoEntry))
   }

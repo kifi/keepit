@@ -102,7 +102,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
     </error>
 
   private def noticeEntities(error: AirbrakeError) =
-    (Some(noticeError(ErrorWithStack(error.exception), error.message)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers, error.id)} :: Nil).flatten
+    (Some(noticeError(ErrorWithStack(error.exception), error.trimmedMessage)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers, error.id)} :: Nil).flatten
 
   //http://airbrake.io/airbrake_2_3.xsd
   private[healthcheck] def format(error: AirbrakeError) =
