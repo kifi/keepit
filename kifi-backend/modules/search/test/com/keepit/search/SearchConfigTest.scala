@@ -17,7 +17,7 @@ class SearchConfigTest extends Specification with TestInjector {
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager =
           new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
-        val Seq(andrew, greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Connor"), User(firstName = "Greg", lastName = "Metvin"))
+        val Seq(andrew, greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner"), User(firstName = "Greg", lastName = "Metvin"))
 
         val (c1, _) = searchConfigManager.getConfig(andrew.id.get, "fortytwo")
         val (c2, _) = searchConfigManager.getConfig(greg.id.get, "fortytwo")
@@ -30,7 +30,7 @@ class SearchConfigTest extends Specification with TestInjector {
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
-        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Connor"))
+        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner"))
 
         val v1 = await(fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(
           config = SearchConfig(
@@ -65,7 +65,7 @@ class SearchConfigTest extends Specification with TestInjector {
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
-        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Connor"))
+        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner"))
 
         fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(
           config = SearchConfig(
