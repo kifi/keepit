@@ -11,9 +11,10 @@ import com.keepit.common.service.FortyTwoServices
 import com.google.inject.Injector
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.search.{SearchServiceClient, TestSearchServiceClientModule}
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.eliza.TestElizaServiceClientModule
+import com.keepit.common.db.slick.Database
 
 class EventListenerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -32,28 +33,6 @@ class EventListenerTest extends Specification with ShoeboxApplicationInjector {
         source = BookmarkSource("HOVER_KEEP")
       ))
       (normUrl.id.get, url, user, bookmark)
-    }
-  }
-
-  "EventHelper" should {
-    "parse search events" in {
-      running(new ShoeboxApplication(eventListenerTestModules:_*)) {
-        val (normUrlId, url, user, bookmark) = setup()
-        val listener = new EventListener(inject[UserRepo], inject[NormalizedURIRepo]) {
-          val schedulingProperties = inject[SchedulingProperties]
-          def onEvent: PartialFunction[Event,Unit] = { case _ => }
-        }
-        val (user2, result) = db.readWrite {implicit s =>
-          listener.searchParser(user.externalId,
-            JsObject(Seq("url" -> JsString("http://google.com/"), "query" -> JsString("potatoes"))),
-            "kifiResultClicked"
-          )
-        }
-
-        user2.id === user.id
-        result.url === "http://google.com/"
-        result.query === "potatoes"
-      }
     }
   }
 
