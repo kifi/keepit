@@ -125,8 +125,8 @@ class OAuth2Controller @Inject() (
 //        val userInfo = Await.result(WS.url(userInfoUrl).get, 5 seconds).json
 //        log.info(s"[contacts] userInfo=${Json.prettyPrint(userInfo)}")
 
-        val contactsUrl = s"https://www.google.com/m8/feeds/contacts/default/full?access_token=$accToken&max-results=${Int.MaxValue}" // TODO: alt=json; paging
-        val contacts = Await.result(WS.url(contactsUrl).get, 5 seconds).xml
+        val contactsUrl = s"https://www.google.com/m8/feeds/contacts/default/full?access_token=$accToken&max-results=${Int.MaxValue}" // TODO: paging (alt=json doesn't work)
+        val contacts = Await.result(WS.url(contactsUrl).get, 10 seconds).xml
         log.info(s"[g-contacts] $contacts")
         val prettyPrint = new PrettyPrinter(300, 2)
         val sb = new StringBuilder
