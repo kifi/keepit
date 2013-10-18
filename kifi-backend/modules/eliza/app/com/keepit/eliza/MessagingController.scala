@@ -18,7 +18,7 @@ import com.google.inject.Inject
 
 import org.joda.time.DateTime
 
-import play.api.libs.json._
+import play.api.libs.json.{JsValue, JsString, JsArray, Json}
 import play.modules.statsd.api.Statsd
 
 import java.nio.{ByteBuffer, CharBuffer}
