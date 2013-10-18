@@ -1,13 +1,19 @@
-<div class="kifi-message-participants{{#isGroup}} kifi-group-conversation{{/isGroup}}">
+<div class="kifi-message-participants{{#isGroup}} kifi-group-conversation{{/isGroup}}{{#isOverflowed}} kifi-overflow{{/isOverflowed}}">
   <div class="kifi-message-participants-1">
     <div class="kifi-message-participants-title">A conversation with</div>
     <div class="kifi-message-recipient-name">{{{recipientName}}}</div>
   </div>
-  <div class="kifi-message-participants-n{{#isOverflowed}} kifi-overflow{{/isOverflowed}}">
+  <div class="kifi-message-participants-n">
     <div class="kifi-message-participants-title">A conversation with <span class="kifi-participant-count">{{participantCount}}</span> people</div>
     <div class="kifi-message-participants-avatar-container">
       <ul class="kifi-message-participants-avatars">{{{avatars}}}</ul>
       <a class="kifi-message-participants-avatars-expand" href="javascript:void(0)">&middot;&middot;&middot;</a>
+    </div>
+    <div class="kifi-message-participant-list-root">
+      <div class="kifi-message-participant-list-wrapper">
+        <ul class="kifi-message-participant-list">{{{participants}}}</ul>
+        <a class="kifi-message-participant-list-close" href="javascript:void(0)">Close</a>
+      </div>
     </div>
   </div>
 </div>

@@ -38,6 +38,12 @@
   font-size: 0;
   line-height: 0;
   white-space: nowrap;
+  opacity: 1;
+  transition: opacity 0.2s linear;
+}
+.kifi-message-participants.kifi-expanded .kifi-message-participants-avatar-container {
+  position: absolute;
+  opacity: 0;
 }
 .kifi-message-participants-avatars {
   display: inline-block;
@@ -45,8 +51,6 @@
   list-style: none;
   font-size: 0;
   line-height: 0;
-  padding: 0;
-  margin: 0;
 }
 .kifi-message-participant-avatar {
   display: inline-block;
@@ -64,7 +68,7 @@
   border-radius: 2px;
 }
 .kifi-message-participants-avatars-expand {
-  display: inline-block;
+  display: none;
   font-size: 20px;
   font-weight: 500;
   line-height: 13px;
@@ -76,4 +80,60 @@
   border-radius: 2px;
   color: #eff2f7;
   background: #b8c5d1;
+}
+.kifi-message-participants.kifi-overflow .kifi-message-participants-avatars-expand {
+  display: inline-block;
+}
+.kifi-message-participant-list-root {
+  position: relative;
+  height: 0;
+  transition: height 0.4s ease;
+  overflow: hidden;
+}
+.kifi-message-participant-list-wrapper {
+  position: absolute;
+  width: 100%;
+  bottom: 0;
+}
+.kifi-message-participant-list {
+  display: block;
+  line-height: 0;
+  list-style: none;
+}
+.kifi-message-participant-item {
+  position: relative;
+  line-height: 29px;
+  padding: 3px 0;
+  white-space: nowrap;
+}
+.kifi-message-participant-item img {
+  width: 29px;
+  height: 29px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  margin-right: 8px;
+  float: left;
+  vertical-align: middle;
+}
+.kifi-message-participant-list-close {
+  display: block;
+  color: #eff2f7;
+  background: #b8c5d1;
+  border-radius: 2px;
+  padding: 4px 0;
+  margin-top: 6px;
+  font-weight: 400;
+  text-align: center;
+  text-decoration: none;
+}
+.kifi-message-add-participant {
+  display: block;
+  width: 29px;
+  height: 14px;
+  border: 8px solid transparent;
+  background-repeat: no-repeat;
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAQAAAADQ4RFAAAA0klEQVR4AXXUMW7DMBBE0alE5zhRrm0gMSxLvkfoKyhKYV/hB4ttSITzp34ViVXEOwdXTsiPwicHM0IiyJPoblmQlegZTMxJGuYJycQO0DNLsh9xpm9LZglcxMQyZoZsFOGZIUgkuw2YIYEcq9QRaVGwFVtLAhnmSYc8S+KQKHz/I7UhBtUBmgwy75KtPfOk79YyT/DMkwcPx4T/Y4WNviWZJ0KcxswTGXZlEl94kuxO31nshni252HxJPfWsBcfItjLk4YlmZFIdnBJ4hkLv0HQHxvW+Tv3j7AoAAAAAElFTkSuQmCC);
+  background-size: auto 14px;
+  vertical-align: middle;
 }

@@ -33,6 +33,44 @@ var util = this.util = (function () {
 			return vals;
 		},
 
+		remove: function (arr, val) {
+			var i = arr.indexOf(arr, val);
+			if (i !== -1) {
+				arr.splice(i, 1);
+				return true;
+			}
+			return false;
+		},
+
+		addUnique: function (arr, list) {
+			for (var i = 0, len = list.length, val; i < len; i++) {
+				val = list[i];
+				if (arr.indexOf(val) === -1) {
+					arr.push(val);
+				}
+			}
+
+			return arr;
+		},
+
+		removeList: function (arr, list) {
+			var indices = [];
+			for (var i = 0, len = list.length, index; i < len; i++) {
+				index = arr.indexOf(list[i]);
+				if (index !== -1) {
+					indices.push(index);
+				}
+			}
+
+			indices.sort();
+
+			for (i = indices.length - 1; i >= 0; i--) {
+				arr.splice(indices[i], 1);
+			}
+
+			return arr;
+		},
+
 		/**
 		 * Iterates over an array or an object and calls the callback function for each element.
 		 *

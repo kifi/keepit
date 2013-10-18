@@ -3,6 +3,7 @@
 // @require scripts/kifi_util.js
 // @require scripts/html/keeper/message_participants.js
 // @require scripts/html/keeper/message_participant.js
+// @require scripts/html/keeper/message_avatar.js
 // @require styles/keeper/message_participants.css
 
 /**
@@ -151,11 +152,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 *
 		 * @param {string} trigger - A triggering user action
 		 */
-		construct: function (trigger) {
-			if (!this.initialized) {
-				this.init(trigger);
-			}
-		},
+		construct: function (trigger) {},
 
 		/**
 		 * Renders and initializes a Message Header.
@@ -165,8 +162,12 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		init: function (trigger) {
 			this.initialized = true;
 
+			/*
 			this.requestParticipants()
 				.then(this.onResponseParticipants.bind(this));
+        */
+
+			this.initEvents();
 
 			this.logEvent('init', {
 				trigger: trigger
@@ -180,6 +181,12 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 */
 		requestParticipants: function () {
 			return kifiUtil.request('participants', win.$slider && win.$slider.getThreadId(), 'Could not load participants.');
+		},
+
+		initEvents: function () {
+			var $el = this.get$();
+			$el.on('click', '.kifi-message-participants-avatars-expand', this.expandParticipants.bind(this));
+			$el.on('click', '.kifi-message-participant-list-close', this.collapseParticipants.bind(this));
 		},
 
 		/**
@@ -221,21 +228,24 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			return user.firstName + ' ' + user.lastName;
 		},
 
+		getView: function () {
+			return {
+				isGroup: this.isGroup(),
+				recipientName: this.getFullName(this.getRecipient()),
+				isOverflowed: this.isOverflowed(),
+				participantCount: this.participants.length,
+				avatars: this.renderAvatars(),
+				participants: this.renderParticipants()
+			};
+		},
+
 		/**
 		 * Renders and returns a tag box html.
 		 *
 		 * @return {string} tag box html
 		 */
 		renderContent: function () {
-			var isGroup = this.isGroup();
-			log('renderContent', this.participants, this.renderAvatars())();
-			return win.render('html/keeper/message_participants', {
-				isGroup: isGroup,
-				recipientName: this.getFullName(this.getRecipient()),
-				isOverflowed: this.isOverflowed(),
-				participantCount: this.participants.length,
-				avatars: this.renderAvatars()
-			});
+			return win.render('html/keeper/message_participants', this.getView());
 		},
 
 		renderButton: function () {
@@ -252,7 +262,82 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		renderAvatar: function (user) {
+			return win.render('html/keeper/message_avatar', user);
+		},
+
+		renderParticipants: function () {
+			return this.participants.map(this.renderParticipant).join('');
+		},
+
+		renderParticipant: function (user) {
 			return win.render('html/keeper/message_participant', user);
+		},
+
+		get$: function (sel) {
+			return this.parent.find(sel || '.kifi-message-participants');
+		},
+
+		get$container: function () {
+			return this.get$('.kifi-message-participants');
+		},
+
+		expandParticipants: function () {
+			var $wrapper = this.get$('.kifi-message-participant-list-root'),
+				list = $wrapper.children()[0];
+			this.get$container().addClass('kifi-expanded');
+			$wrapper.height(list.offsetHeight);
+		},
+
+		collapseParticipants: function () {
+			this.get$container().removeClass('kifi-expanded');
+			this.get$('.kifi-message-participant-list-root').height(0);
+		},
+
+		toggleParticipants: function () {
+			var $wrapper = this.get$('.kifi-message-participant-list-root'),
+				expanded = this.get$container().hasClass('kifi-expanded');
+			log('toggleParticipants', $wrapper, expanded)();
+			if (expanded) {
+				this.collapseParticipants();
+			}
+			else {
+				this.expandParticipants();
+			}
+		},
+
+		indexOfUser: (function () {
+			function hasSameId(u) {
+				return u.id === this.id;
+			}
+
+			return function (user) {
+				util.keyOf(this.participants, hasSameId, user);
+			};
+		})(),
+
+		addParticipant: function () {
+			util.addUnique(this.participants, arguments);
+			this.updateView();
+		},
+
+		removeParticipant: function () {
+			util.removeList(this.participants, arguments);
+			this.updateView();
+		},
+
+		updateView: function () {
+			var view = this.getView(),
+				$el = this.get$();
+			$el.toggleClass('kifi-group-conversation', view.isGroup);
+			$el.toggleClass('kifi-overflow', view.isOverflowed);
+			$el.find('.kifi-message-recipient-name').text(view.recipientName);
+			$el.find('.kifi-participant-count').text(view.participantCount);
+			$el.find('.kifi-message-participants-avatars').html(view.avatars);
+			$el.find('.kifi-message-participant-list').html(view.participants);
+		},
+
+		updateCount: function (count) {
+			return this.get$('.kifi-participant-count').text(count);
 		},
 
 		/**

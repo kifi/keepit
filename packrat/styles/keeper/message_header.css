@@ -9,6 +9,7 @@
 }
 .kifi-message-header ul {
   margin: 0;
+  padding: 0;
 }
 .kifi-message-header-bar {
   position: relative;
