@@ -22,7 +22,8 @@ import com.keepit.model.User
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
 
-  def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean): Unit
+  def logResultClicked(resultClicked: ResultClicked): Unit
+  def logSearchEnded(searchEnded: SearchEnded): Unit
 
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
@@ -68,9 +69,14 @@ class SearchServiceClientImpl(
     val airbrakeNotifier: AirbrakeNotifier)
   extends SearchServiceClient() {
 
-  def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Unit = {
-    val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))
+  def logResultClicked(resultClicked: ResultClicked): Unit = {
+    val json = Json.toJson(resultClicked)
     call(Search.internal.logResultClicked(), json)
+  }
+
+  def logSearchEnded(searchEnded: SearchEnded): Unit = {
+    val json = Json.toJson(searchEnded)
+    call(Search.internal.logSearchEnded(), json)
   }
 
   def updateURIGraph(): Unit = {

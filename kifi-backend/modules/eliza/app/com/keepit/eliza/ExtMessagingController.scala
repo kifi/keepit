@@ -8,7 +8,7 @@ import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.{HealthcheckPlugin}
-import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
+import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 
 import scala.util.{Success, Failure}
@@ -38,7 +38,8 @@ class ExtMessagingController @Inject() (
     protected val actorSystem: ActorSystem,
     protected val clock: Clock,
     protected val healthcheckPlugin: HealthcheckPlugin,
-    protected val heimdal: HeimdalServiceClient
+    protected val heimdal: HeimdalServiceClient,
+    protected val userEventContextBuilder: UserEventContextBuilderFactory
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
@@ -47,11 +48,10 @@ class ExtMessagingController @Inject() (
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val tStart = currentDateTime
     val o = request.body
-    val (title, text, recipients, version) = (
+    val (title, text, recipients) = (
       (o \ "title").asOpt[String],
       (o \ "text").as[String].trim,
-      (o \ "recipients").as[Seq[String]],
-      (o \ "extVersion").asOpt[String])
+      (o \ "recipients").as[Seq[String]])
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).flatMap { recipientSet =>
@@ -67,20 +67,13 @@ class ExtMessagingController @Inject() (
 
         //Analytics
         SafeFuture {
-          val contextBuilder = new UserEventContextBuilder()
-          contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-          contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
-          contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
-          recipientSet.foreach{ recipient =>
+          val contextBuilder = userEventContextBuilder(Some(request))
+          recipientSet.foreach { recipient =>
             contextBuilder += ("recipient", recipient.id)
-          }
-          request.experiments.foreach{ experiment =>
-            contextBuilder += ("experiment", experiment.toString)
           }
           contextBuilder += ("threadId", thread.id.get.id)
           contextBuilder += ("url", thread.url.getOrElse(""))
           contextBuilder += ("isActuallyNew", messages.length<=1)
-          contextBuilder += ("extVersion", version.getOrElse(""))
 
           thread.uriId.map{ uriId =>
             shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
@@ -110,22 +103,14 @@ class ExtMessagingController @Inject() (
     val tStart = currentDateTime
     val o = request.body
     val text = (o \ "text").as[String].trim
-    val version = (o \ "extVersion").asOpt[String]
-
     val (thread, message) = messagingController.sendMessage(request.user.id.get, threadExtId, text, None)
 
     //Analytics
     SafeFuture {
-      val contextBuilder = new UserEventContextBuilder()
-      contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-      contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
-      contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
-      request.experiments.foreach{ experiment =>
-        contextBuilder += ("experiment", experiment.toString)
-      }
+      val contextBuilder = userEventContextBuilder(Some(request))
+
       contextBuilder += ("threadId", message.thread.id)
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
-      contextBuilder += ("extVersion", version.getOrElse(""))
       thread.participants.foreach{_.allExcept(request.userId).foreach{ recipient =>
         contextBuilder += ("recipient", recipient.id)
       }}

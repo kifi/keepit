@@ -13,12 +13,15 @@ import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.akka.SafeFuture
-import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
+import com.keepit.heimdal._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.store.S3ScreenshotStore
 import play.api.mvc.Action
 import com.keepit.social.BasicUser
+import scala.Some
+import com.keepit.model.KeepToCollection
+import play.api.libs.json.JsObject
 
 private case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
@@ -71,7 +74,8 @@ class BookmarksController @Inject() (
     uriRepo: NormalizedURIRepo,
     actionAuthenticator: ActionAuthenticator,
     s3ScreenshotStore: S3ScreenshotStore,
-    heimdal: HeimdalServiceClient
+    heimdal: HeimdalServiceClient,
+    userEventContextBuilder: UserEventContextBuilderFactory
   )
   extends WebsiteController(actionAuthenticator) {
 
@@ -137,15 +141,9 @@ class BookmarksController @Inject() (
 
       //Analytics
       SafeFuture{ keeps.foreach { bookmark =>
-        val contextBuilder = new UserEventContextBuilder()
+        val contextBuilder = userEventContextBuilder(Some(request))
 
         contextBuilder += ("isPrivate", bookmark.isPrivate)
-        request.experiments.foreach{ experiment =>
-          contextBuilder += ("experiment", experiment.toString)
-        }
-        contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-        contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
-        contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
         contextBuilder += ("url", bookmark.url)
         contextBuilder += ("source", "SITE")
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
