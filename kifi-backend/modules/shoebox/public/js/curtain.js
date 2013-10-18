@@ -1,4 +1,5 @@
 !function () {
+  var $title = $('.page-title');
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
   var openedTimer, closedTimer;
@@ -6,6 +7,7 @@
   $('.curtain-action').click(function (e) {
     if (e.which !== 1) return;
     var $form = $('.' + $(this).data('form')).css('display', 'block');
+    $title.text($form.data('title'));
     $form.find('input').first().focus();
     openCurtains();
   });
