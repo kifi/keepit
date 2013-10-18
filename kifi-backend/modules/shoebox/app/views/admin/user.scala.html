@@ -139,7 +139,7 @@
     </table>
   }
   @if(contactInfos.size > 0) {
-    <h3>Contacts</h3>
+    <h3>Contacts (up to 500)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
             <tr><th>ContactId</th><th>Origin</th><th>ABookId</th><th>Name</th><th>Email</th></tr>
@@ -162,11 +162,6 @@
     <form class="form-inline" action=@{abookEP.get + user.id.get + "/ios/upload"} enctype="multipart/form-data" method="POST">
     IOS JSON file to upload: <input type=file name="abook_json">
     <input type=submit value="Upload">
-    </form>
-    <b>Gmail Exported (Outlook-styled) CSV</b>
-    <form class="form-inline" action=@{abookEP.get + user.id.get + "/uploadGMailCSV"} enctype="multipart/form-data" method="POST">
-        Gmail CSV file to upload: <input type=file name="gmail_csv">
-        <input type=submit value="Upload">
     </form>
   }
   <h2>User kept @totalBookmarks Bookmarks</h2>

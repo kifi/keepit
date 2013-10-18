@@ -296,7 +296,6 @@ class FakeShoeboxServiceClientImpl(
     }.toMap
     Future.successful(basicUsers)
   }
-  def bulkGetBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = getBasicUsers(userIds)
 
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
