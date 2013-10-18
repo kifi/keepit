@@ -90,8 +90,19 @@ case class MessageThread(
   def withId(id: Id[MessageThread]): MessageThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime)
 
+  def withParticipants(when: DateTime, userIds: Id[User]*) = {
+    val newUsers = userIds.map(_ -> when).toMap
+    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.participants ++ newUsers))
+    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.hash))
+  }
+
+  def withoutParticipant(userId: Id[User]) = {
+    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.participants - (userId)))
+    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.hash))
+  }
+
   def containsUser(user: Id[User]) : Boolean = participants.map(_.contains(user)).getOrElse(false)
-  def allUsersExcept(user: Id[User]) : Set[Id[User]] = participants.map(_.allExcept(user)).getOrElse(Set[Id[User]]())
+  def allParticipantsExcept(user: Id[User]) : Set[Id[User]] = participants.map(_.allExcept(user)).getOrElse(Set[Id[User]]())
 }
 
 
