@@ -115,6 +115,8 @@ class ExtSearchController @Inject() (
 
     SafeFuture {
       // stash timing information
+      searcher.timing()
+
       try {
         reportSearch(request,kifiVersion, maxHits, searchFilter, searchExperimentId, searchRes)
       } catch {
