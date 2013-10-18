@@ -16,6 +16,7 @@ import com.keepit.common.db.slick.Database
 import play.api.Play
 import play.api.Play.current
 import com.keepit.abook.ABookServiceClient
+import scala.xml.PrettyPrinter
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 
@@ -26,7 +27,7 @@ object OAuth2Providers { // TODO: wire-in (securesocial) config
     accessTokenUrl = "https://accounts.google.com/o/oauth2/token",
     clientId = "572465886361.apps.googleusercontent.com", // "991651710157.apps.googleusercontent.com",
     clientSecret = "heYhp5R2Q0lH26VkrJ1NAMZr", // "vt9BrxsxM6iIG4EQNkm18L-m",
-    scope = "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/plus.me https://www.google.com/m8/feeds"
+    scope = "https://www.googleapis.com/auth/userinfo.email https://www.google.com/m8/feeds"// "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/plus.me"
   )
   val FACEBOOK = OAuth2Config(
     provider = "facebook",
@@ -124,29 +125,29 @@ class OAuth2Controller @Inject() (
 //        val userInfo = Await.result(WS.url(userInfoUrl).get, 5 seconds).json
 //        log.info(s"[contacts] userInfo=${Json.prettyPrint(userInfo)}")
 
-        val contactsUrl = s"https://www.google.com/m8/feeds/contacts/default/full?access_token=$accToken" // TODO: alt=json
-        val contacts = Await.result(WS.url(contactsUrl).get, 5 seconds).xml
+        val contactsUrl = s"https://www.google.com/m8/feeds/contacts/default/full?access_token=$accToken&max-results=${Int.MaxValue}" // TODO: paging (alt=json doesn't work)
+        val contacts = Await.result(WS.url(contactsUrl).get, 10 seconds).xml
+        log.info(s"[g-contacts] $contacts")
+        val prettyPrint = new PrettyPrinter(300, 2)
+        val sb = new StringBuilder
+        prettyPrint.format(contacts, sb)
+        log.info(s"[g-contacts] ${sb.toString}")
         val jsArrays: immutable.Seq[JsArray] = (contacts \\ "feed").map { feed =>
           val entries: Seq[JsObject] = (feed \\ "entry").map { entry =>
             val title = (entry \\ "title").text
             val emails = (entry \\ "email").map(_ \\ "@address")
-            log.info(s"[contacts] title=$title email=$emails")
+            log.info(s"[g-contacts] title=$title email=$emails")
             Json.obj("name" -> title, "emails" -> Json.toJson(emails.seq.map(_.toString)))
           }
           JsArray(entries)
         }
 
         // hack: go ahead and add to contacts
-        val prefix = if (Play.isDev) "http://" + request.host else "https://" + request.host
-        val uploadRoute = prefix + ABook.internal.upload(ABookOrigins.GMAIL).url // no absolute url
         val abookUpload = Json.obj("origin" -> "gmail", "contacts" -> jsArrays(0))
         log.info(Json.prettyPrint(abookUpload))
-        import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
-//        val res = for (userId <- request.userIdOpt) yield Await.result(abookServiceClient.upload(userId, ABookOrigins.GMAIL, abookUpload), 5 seconds)
-        val res = Await.result(abookServiceClient.upload(request.userId, ABookOrigins.GMAIL, abookUpload), 5 seconds)
-//        val call = WS.url(uploadRoute).withHeaders(request.headers.toSimpleMap.iterator.toArray:_*).post(abookUpload) // hack
-//        val res = Await.result(call.map(r => r.json), 5 seconds)
-        Ok(res)
+        val res = Await.result(abookServiceClient.uploadDirect(request.userId, ABookOrigins.GMAIL, abookUpload), 5 seconds)
+        log.info(s"[g-contacts] abook uploaded: ${Json.prettyPrint(res)}")
+        Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId))
       }
       case "facebook" => { // testing only
         val friendsUrl = s"https://graph.facebook.com/me/friends?access_token=$accToken&fields=id,name,first_name,last_name,username,picture,email"

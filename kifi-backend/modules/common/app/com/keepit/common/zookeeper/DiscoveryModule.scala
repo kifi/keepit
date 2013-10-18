@@ -15,7 +15,9 @@ import com.keepit.common.KestrelCombinator
 import com.keepit.common.amazon.AmazonInstanceId
 
 import play.api.Play.current
+
 import scala.Some
+import scala.concurrent.{Future, Promise}
 
 trait DiscoveryModule extends ScalaModule
 
@@ -102,7 +104,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def register(doKeepAlive: Boolean) = thisInstance.get
       def isLeader() = true
       def changeStatus(newStatus: ServiceStatus): Unit = {}
-      def startSelfCheck(): Unit = {}
+      def startSelfCheck(): Future[Boolean] = Promise[Boolean].success(true).future
       def forceUpdate(): Unit = {}
       def myStatus: Option[ServiceStatus] = Some(ServiceStatus.UP)
       def myVersion: ServiceVersion = services.currentVersion

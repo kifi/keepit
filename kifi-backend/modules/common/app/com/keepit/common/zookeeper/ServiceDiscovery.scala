@@ -27,7 +27,7 @@ trait ServiceDiscovery {
   def unRegister(): Unit = {}
   def isLeader(): Boolean
   def myClusterSize: Int = 0
-  def startSelfCheck(): Unit
+  def startSelfCheck(): Future[Boolean]
   def changeStatus(newStatus: ServiceStatus): Unit
   def forceUpdate(): Unit
   def myStatus: Option[ServiceStatus]
@@ -46,6 +46,7 @@ class ServiceDiscoveryImpl @Inject() (
 
   private var myInstance: Option[ServiceInstance] = None
   private var selfCheckIsRunning: Boolean = false
+  private var selfCheckFutureOpt: Option[Future[Boolean]] = None
 
   def thisInstance = myInstance
 
@@ -150,21 +151,31 @@ class ServiceDiscoveryImpl @Inject() (
 
   def myVersion: ServiceVersion = services.currentVersion
 
-  def startSelfCheck(): Unit = synchronized {
+  def startSelfCheck(): Future[Boolean] = synchronized {
     if (!selfCheckIsRunning) {
       selfCheckIsRunning = true
-      future {
-        log.info("Running self check")
-        services.currentService.selfCheck().onComplete{
+      log.info("Running self check")
+      val selfCheckPromise = Promise[Boolean]
+      val selfCheckFuture = services.currentService.selfCheck()
+      selfCheckFuture.onComplete{
           case Success(passed) =>
-            if (passed) { changeStatus(ServiceStatus.UP) } else changeStatus(ServiceStatus.SELFCHECK_FAIL)
+            val result = if (passed) { 
+              changeStatus(ServiceStatus.UP)
+              selfCheckPromise.success(true) 
+            } else { 
+              changeStatus(ServiceStatus.SELFCHECK_FAIL)
+              selfCheckPromise.success(false)
+            }
             selfCheckIsRunning = false
           case Failure(e) =>
             changeStatus(ServiceStatus.SELFCHECK_FAIL)
             selfCheckIsRunning = false
+            selfCheckPromise.success(false)
         }
-      }
-    }
+      selfCheckFutureOpt = Some(selfCheckPromise.future)
+    } 
+    selfCheckFutureOpt.get //this option must be defined when we are in this case
+    
   }
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]

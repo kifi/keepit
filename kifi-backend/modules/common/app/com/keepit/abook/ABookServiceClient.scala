@@ -21,6 +21,7 @@ trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
+  def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
   def getContactInfos(userId:Id[User], maxRows:Int):Future[Seq[ContactInfo]]
@@ -38,6 +39,10 @@ class ABookServiceClientImpl @Inject() (
 
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {
     call(ABook.internal.upload(userId, origin), json).map { r => r.json }
+  }
+
+  def uploadDirect(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = {
+    call(ABook.internal.uploadDirect(userId, origin), json).map { r => r.json }
   }
 
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {
@@ -76,6 +81,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def upload(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
+
+  def uploadDirect(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
 
   def upload(userId: Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {}
 

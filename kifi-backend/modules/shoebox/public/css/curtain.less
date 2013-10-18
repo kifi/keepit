@@ -1,0 +1,380 @@
+@import "lesshat";
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+}
+html {
+  font: 16px/140% Arial,sans-serif;
+}
+html.mac {
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+body {
+  position: relative;
+  min-height: 540px;
+  background-color: #f3f3f3;
+}
+a:link,
+a:visited {
+  text-decoration: none;
+}
+
+.curtain-h1 {
+  position: absolute;
+  text-indent: -9999px;
+}
+.curtain-logo-l,
+.curtain-logo-r {
+  position: absolute;
+  z-index: 11;
+  top: 70px;
+  width: 50%;
+  height: 144px;
+  text-align: center;
+  .transition(clip .42s ease-out);
+}
+.curtain-logo-l {
+  left: 0;
+}
+.curtain-logo-r {
+  right: 0;
+}
+.curtain-logo-l:before,
+.curtain-logo-r:before {
+  content: ' ';
+  font-size: 0;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: url(../img/out/login.png) no-repeat;
+}
+.curtain-logo-l:before {
+  right: 0;
+  width: 126px;
+  background-position: -2px -2px;
+}
+.curtain-logo-r:before {
+  left: 0;
+  width: 125px;
+  background-position: -128px -2px;
+}
+.curtain-welcome {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+.curtain-welcome-l,
+.curtain-welcome-r {
+  position: absolute;
+  top: 224px;
+  width: 50%;
+  z-index: 11;
+  font-size: 32px;
+  line-height: 32px;
+  color: #fff;
+  font-weight: 300;
+  white-space: nowrap;
+  .box-sizing(border-box);
+  .transition(opacity .42s, transform .42s ease-out);
+}
+.curtain-welcome-l {
+  left: 0;
+  padding-right: 5px;
+  text-align: right;
+}
+.curtain-welcome-r {
+  right: 0;
+  padding-left: 5px;
+}
+.curtains-drawn .curtain-welcome-l {
+  .translate(-180%,0);
+  opacity: 0;
+}
+.curtains-drawn .curtain-welcome-r {
+  .translate(180%,0);
+  opacity: 0;
+}
+.curtain-l,
+.curtain-r {
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  .transition(transform .42s ease-out);
+}
+.curtain-l {
+  left: 0;
+  background-color: #9fc062;
+}
+.curtain-r {
+  right: 0;
+  background-color: #85a4ea;
+
+}
+.curtains-drawn>.curtain-l {
+  .translate(-67%,0);
+}
+.curtains-drawn>.curtain-r {
+  .translate(67%,0);
+}
+.curtain-action {
+  position: absolute;
+  top: 360px;
+  padding: 32px 0 38px;
+  width: 284px;
+  text-align: center;
+  -webkit-font-smoothing: antialiased;
+  color: #fff;
+  font-size: 18px;
+  .transition(opacity .42s);
+}
+.curtain-action.signup {
+  right: 8%;
+}
+.curtain-action.login {
+  left: 8%;
+}
+.curtain-action:hover {
+  background-color: rgba(0,0,0,.16);
+}
+.curtain-action,
+.curtain-action:active,
+.curtains-drawn .curtain-action:hover {
+  background-color: rgba(0,0,0,.08);
+}
+.curtains-drawn .curtain-action {
+  opacity: 0;
+}
+.curtain-a-title {
+  font-size: 32px;
+  line-height: 42px;
+  font-weight: 300;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.curtain-back {
+  position: absolute;
+  top: 62px;
+  left: 36px;
+  width: 64px;
+  z-index: 10;
+  font-size: 24px;
+  line-height: 32px;
+  text-align: center;
+  visibility: hidden;
+  opacity: 0;
+  .translate(-110px,0);
+  .transition(visibility 0s .42s, opacity .42s, transform .42s ease-out);
+}
+.curtains-drawn>.curtain-back {
+  visibility: visible;
+  opacity: 1;
+  .transform(none);
+  .transition-delay(0);
+}
+.curtain-back:before {
+  content: ' ';
+  display: inline-block;
+  height: 42px;
+  width: 42px;
+  background: url(../img/out/login.png) -2px -328px;
+  position: relative;
+  left: 2px;
+}
+.curtain-back:hover {
+  color: #fff;
+}
+.curtain-back,
+.curtain-back:active {
+  color: rgba(255,255,255,.8);
+}
+.curtain-back:hover:before {
+  opacity: .8;
+}
+.curtain-back:before,
+.curtain-back:active:before {
+  opacity: .6;
+}
+
+footer {
+  position: absolute;
+  top: 56px;
+  right: 38px;
+  z-index: 10;
+  text-align: right;
+  font-size: 14px;
+  line-height: 18px;
+  color: rgba(255,255,255,.8);
+}
+.us-on {
+  display: inline-block;
+  height: 32px;
+  width: 32px;
+  margin-left: 5px;
+  background: url(../img/out/login.png);
+  opacity: .5;
+}
+.us-on:hover {
+  opacity: 1;
+}
+.us-on.facebook {
+  background-position: -36px -292px;
+}
+.us-on.linkedin {
+  background-position: -2px -292px;
+}
+.us-on.twitter {
+  background-position: -70px -292px;
+}
+.copyright {
+  line-height: 30px;
+  border-bottom: 1px solid rgba(255,255,255,.5);
+  margin-bottom: 5px;
+}
+.contact-us {
+  color: inherit;
+}
+.contact-us:hover {
+  color: #fff;
+}
+
+/* forms */
+.signup-form,
+.login-form {
+  display: none;
+  text-align: center;
+  margin: 0 16.5%;
+}
+.signup-form>h2,
+.login-form>h2 {
+  color: #aaa;
+  font-size: 38px;
+  line-height: 44px;
+  font-weight: 300;
+  margin: 4px 0;
+  .transform(translate(0,-70%));
+  opacity: 0;
+  .transition(opacity 0 .42s, transform 0 .42s);
+}
+.curtains-drawn>.signup-form>h2,
+.curtains-drawn>.login-form>h2 {
+  .transform(none);
+  opacity: 1;
+  .transition(opacity .24s .18s linear, transform .42s ease-in-out);
+}
+.kifi-logo {
+  width: 251px;
+  height: 144px;
+  margin: 0 auto;
+  padding-top: 70px;
+  background: url(../img/out/login.png) -2px -148px content-box;
+}
+.form-sides {
+  display: table;
+  border-collapse: collapse;
+  width: 100%;
+  margin: 36px 0 30px;
+}
+.form-l,
+.form-r {
+  display: table-cell;
+  width: 50%;
+}
+.form-l {
+  border-right: 5px solid #e5e5e5;
+  text-align: left;
+}
+.form-r {
+  text-align: right;
+}
+.form-sides h3 {
+  margin: 0 0 24px;
+  text-align: center;
+  font-weight: 300;
+  font-size: 20px;
+  line-height: 24px;
+  color: #5a5a5a;
+}
+.form-network {
+  display: table;
+  width: 80%;
+  margin: 16px 10% 0;
+}
+.form-network.facebook {
+  background: #597ab1;
+}
+.form-network.linkedin {
+  background: #2786c5;
+}
+.form-network-icon {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: right;
+  .box-sizing(border-box);
+  width: 30%;
+  padding: 0 8%;
+}
+.form-network-icon:before {
+  content: ' ';
+  display: inline-block;
+  font-size: 0;
+  height: 32px;
+  width: 32px;
+  background-image: url(../img/out/login.png);
+}
+.facebook>.form-network-icon:before {
+  background-position: -187px -294px;
+}
+.linkedin>.form-network-icon:before {
+  background-position: -221px -294px;
+}
+.form-network-text {
+  display: table-cell;
+  height: 66px;
+  vertical-align: middle;
+  text-align: left;
+  color: #fff;
+  font-weight: 300;
+  padding-right: 16px;
+}
+.form-email-addr,
+.form-password {
+  display: block;
+  .box-sizing(border-box);
+  width: 80%;
+  margin: 16px 10%;
+  height: 40px;
+  border: 2px solid #e5e5e5;
+  padding: 0 4%;
+}
+.form-submit {
+  margin-right: 10%;
+  background: #92c152;
+  border: 0;
+  color: #fff;
+  height: 36px;
+  padding: 0 7%;
+  font-weight: 300;
+}
+.form-terms {
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 18px;
+  color: #515151;
+}
+
+/* retina image overrides */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .curtain-logo-l:before,
+  .curtain-logo-r:before,
+  .curtain-back:before,
+  .us-on,
+  .kifi-logo,
+  .form-network-icon:before {
+    background-image: url(../img/out/login.2x.png);
+    background-size: 255px auto;
+  }
+}
