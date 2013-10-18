@@ -4,7 +4,6 @@ import scala.concurrent.duration._
 
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
-import com.keepit.reports.UserRetentionCache
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
 import com.keepit.classify.DomainCache
@@ -92,11 +91,6 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Provides
   def userIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserIdCache(stats, accessLog, (outerRepo, 24 hours))
-
-  @Singleton
-  @Provides
-  def userRetentionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UserRetentionCache(stats, accessLog, (outerRepo, 24 hours))
 
   @Singleton
   @Provides

@@ -171,7 +171,7 @@ trait HealthcheckPlugin extends Plugin {
   def reportStop(): ElectronicMail
   def reportErrors(): Unit
   var isWarm = false
-  def warmUp() {isWarm = true}
+  def warmUp(benchmarkRunner: BenchmarkRunner): Unit = {isWarm = true}
 }
 
 class HealthcheckPluginImpl @Inject() (
@@ -224,5 +224,14 @@ class HealthcheckPluginImpl @Inject() (
     email
   }
 
-  override def warmUp() = scheduleTaskOnce(actor.system, 3 minutes, "Healthcheck: consider service warm") {super.warmUp()}
+  override def warmUp(benchmarkRunner: BenchmarkRunner) : Unit = {
+    log.info("going to sleep for one minute to make sure all plugins are ready to go")
+    log.info(s"benchmark 1: ${benchmarkRunner.runBenchmark()}")
+    Thread.sleep(30 * 1000)//30 sec
+    log.info(s"benchmark 2: ${benchmarkRunner.runBenchmark()}")
+    Thread.sleep(30 * 1000)//30 sec
+    log.info(s"benchmark 3: ${benchmarkRunner.runBenchmark()}")
+    log.info("ok, i'm warmed up and ready to roll!")
+    super.warmUp(benchmarkRunner)
+  }
 }

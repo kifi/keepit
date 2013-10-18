@@ -19,6 +19,8 @@ case class AirbrakeError(
     method: Option[String] = None,
     headers: Map[String, Seq[String]] = Map(),
     id: ExternalId[AirbrakeError] = ExternalId()) {
+
+  val trimmedMessage = message.map(_.toString.take(AirbrakeError.MaxMessageSize))
   override def toString(): String = {
     s"${super.toString()}\n${exception.getStackTrace mkString "\nat \t"}"
   }
