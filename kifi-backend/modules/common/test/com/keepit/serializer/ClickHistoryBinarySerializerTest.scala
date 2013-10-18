@@ -25,11 +25,11 @@ class ClickHistorySerializerTest extends Specification {
         minHits = 1,
         updatesCount = 42
       )
-      
-      val serializer = ClickHistoryBinarySerializer.clickHistoryBinarySerializer
-      val serializedHistory = serializer.writes(clickHistory)
 
-      val deserializedHistory = serializer.reads(serializedHistory)
+      val serializer = ClickHistoryBinarySerializer.clickHistoryBinarySerializer
+      val serializedHistory = serializer.writes(Some(clickHistory))
+
+      val deserializedHistory = serializer.reads(serializedHistory).get
 
       deserializedHistory.filter.deep === filter.deep
       deserializedHistory.copy(filter = filter) === clickHistory
@@ -48,8 +48,8 @@ class ClickHistorySerializerTest extends Specification {
         updatesCount = 42
       )
       val serializer = ClickHistoryBinarySerializer.clickHistoryBinarySerializer
-      val serializedHistory = serializer.writes(clickHistory)
-      serializer.reads(serializedHistory) must throwA[AssertionError]
+      val serializedHistory = serializer.writes(Some(clickHistory))
+      serializer.reads(serializedHistory).get must throwA[AssertionError]
     }
     "Fail appropriately" in {
 
@@ -65,7 +65,7 @@ class ClickHistorySerializerTest extends Specification {
         updatesCount = 42
       )
       val serializer = ClickHistoryBinarySerializer.clickHistoryBinarySerializer
-      serializer.writes(clickHistory) must throwA[AssertionError]
+      serializer.writes(Some(clickHistory)) must throwA[AssertionError]
     }
   }
 

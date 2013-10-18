@@ -17,6 +17,9 @@ package object common {
   implicit class KestrelCombinator[A](val a: A) extends AnyVal {
     def withSideEffect(fun: A => Unit): A = { fun(a); a }
     def tap(fun: A => Unit): A = withSideEffect(fun)
+
+    def withComputation[B](fun: A => B): (A, B) = { val b = fun(a); (a, b) }
+    def tapWith[B](fun: A => B): (A, B) = withComputation(fun)
   }
 
   implicit class ForkCombinator[A, B](val a: A) extends AnyVal {

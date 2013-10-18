@@ -16,12 +16,15 @@ import org.joda.time.DateTime
 
 class BrowsingHistoryBinarySerializer extends BinaryFormat[BrowsingHistory] with Logging {
 
-  def writes(history: BrowsingHistory): Array[Byte] = {
+  protected def writes(history: BrowsingHistory): Array[Byte] = {
     val json = historyJsonWrites(history).toString.getBytes(UTF8)
     val filter = history.filter
 
     assume(filter.size == history.tableSize, "Filter is not tableSize: %s != %s".format(filter.size, history.tableSize))
-    val byteStream = new ByteArrayOutputStream(json.size + filter.size + 8)
+    val byteStream = new ByteArrayOutputStream(json.size + filter.size + 8 + 1)
+
+    byteStream.write(1) // we have something
+
     val outStream = new DataOutputStream(byteStream)
 
     outStream.writeInt(json.size)
@@ -33,7 +36,7 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat[BrowsingHistory] with
     byteStream.toByteArray
   }
 
-  def historyJsonWrites(history: BrowsingHistory): JsObject =
+  private[this] def historyJsonWrites(history: BrowsingHistory): JsObject =
     JsObject(List(
       "id"  -> history.id.map(u => JsNumber(u.id)).getOrElse(JsNull),
       "createdAt" -> Json.toJson(history.createdAt),
@@ -47,8 +50,8 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat[BrowsingHistory] with
     )
     )
 
-  def reads(bytes: Array[Byte]): BrowsingHistory = {
-    val inStream = new DataInputStream(new ByteArrayInputStream(bytes))
+  protected def reads(bytes: Array[Byte], offset: Int, length: Int): BrowsingHistory = {
+    val inStream = new DataInputStream(new ByteArrayInputStream(bytes, offset, length))
     val jsonSize = inStream.readInt()
     val filterSize = inStream.readInt()
 
@@ -69,7 +72,7 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat[BrowsingHistory] with
     historyNoFilter.copy(filter = filterBytes)
   }
 
-  def historyJsonReads(json: JsValue): BrowsingHistory =
+  private[this] def historyJsonReads(json: JsValue): BrowsingHistory =
     BrowsingHistory(
       id = (json \ "id").asOpt[Long].map(Id[BrowsingHistory](_)),
       createdAt = (json \ "createdAt").as[DateTime],

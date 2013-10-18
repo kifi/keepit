@@ -1621,7 +1621,7 @@ function startSession(callback, retryMs) {
 
     session = data;
     session.prefs = {}; // to come via socket
-    socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
+    socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws?version=" + api.version, socketHandlers, function onConnect() {
       for (var uri in pageThreadData) {
         pageThreadData[uri].stale = true;
       }

@@ -96,6 +96,7 @@ object Shoebox extends Service {
 object Search extends Service {
   object internal {
     def logResultClicked() = ServiceRoute(POST, "/internal/search/events/resultClicked")
+    def logSearchEnded() = ServiceRoute(POST, "/internal/search/events/searchEnded")
     def commentIndexInfo() = ServiceRoute(GET, "/internal/search/comment/info")
     def commentReindex() = ServiceRoute(GET, "/internal/search/comment/reindex")
     def commentDumpLuceneDocument(id: Id[Comment]) = ServiceRoute(POST, "/internal/search/comment/dumpDoc", Param("id", id))

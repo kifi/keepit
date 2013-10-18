@@ -46,11 +46,15 @@ case class PlayCacheKey(key: String) extends Key[Any] {
 }
 
 private object PlayBinaryFormat extends BinaryFormat[Any] {
-  def reads(obj: Array[Byte]): Any = {
-    new ObjectInputStream(new ByteArrayInputStream(obj)).readObject()
+
+  protected def reads(obj: Array[Byte], offset: Int, length: Int): Any = {
+    new ObjectInputStream(new ByteArrayInputStream(obj, offset, length)).readObject()
   }
-  def writes(value: Any): Array[Byte] = {
+  protected def writes(value: Any): Array[Byte] = {
     val out = new ByteArrayOutputStream()
+
+    out.write(1) // we have something
+
     new ObjectOutputStream(out).writeObject(value)
     out.toByteArray
   }

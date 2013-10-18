@@ -8,8 +8,9 @@ import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.{HealthcheckPlugin}
-import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
+import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.db.Id
 
 import scala.util.{Success, Failure}
 
@@ -17,13 +18,15 @@ import scala.util.{Success, Failure}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.iteratee.Concurrent
-import play.api.libs.json.{Json, JsValue, JsArray, JsString, JsNumber, JsNull, JsObject}
+import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
 import play.modules.statsd.api.Statsd
 
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
+import com.keepit.social.BasicUser
+import scala.concurrent.{Future, Promise}
 
 
 class ExtMessagingController @Inject() (
@@ -38,7 +41,8 @@ class ExtMessagingController @Inject() (
     protected val actorSystem: ActorSystem,
     protected val clock: Clock,
     protected val healthcheckPlugin: HealthcheckPlugin,
-    protected val heimdal: HeimdalServiceClient
+    protected val heimdal: HeimdalServiceClient,
+    protected val userEventContextBuilder: UserEventContextBuilderFactory
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
@@ -47,11 +51,10 @@ class ExtMessagingController @Inject() (
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val tStart = currentDateTime
     val o = request.body
-    val (title, text, recipients, version) = (
+    val (title, text, recipients) = (
       (o \ "title").asOpt[String],
       (o \ "text").as[String].trim,
-      (o \ "recipients").as[Seq[String]],
-      (o \ "extVersion").asOpt[String])
+      (o \ "recipients").as[Seq[String]])
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).flatMap { recipientSet =>
@@ -63,24 +66,17 @@ class ExtMessagingController @Inject() (
 
 
 
-      messageThreadFut map { messages => // object instantiated earlier to give Future head start
+      messageThreadFut map { case (thread, messages) => // object instantiated earlier to give Future head start
 
         //Analytics
         SafeFuture {
-          val contextBuilder = new UserEventContextBuilder()
-          contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-          contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
-          contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
-          recipientSet.foreach{ recipient =>
+          val contextBuilder = userEventContextBuilder(Some(request))
+          recipientSet.foreach { recipient =>
             contextBuilder += ("recipient", recipient.id)
-          }
-          request.experiments.foreach{ experiment =>
-            contextBuilder += ("experiment", experiment.toString)
           }
           contextBuilder += ("threadId", thread.id.get.id)
           contextBuilder += ("url", thread.url.getOrElse(""))
           contextBuilder += ("isActuallyNew", messages.length<=1)
-          contextBuilder += ("extVersion", version.getOrElse(""))
 
           thread.uriId.map{ uriId =>
             shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
@@ -110,22 +106,14 @@ class ExtMessagingController @Inject() (
     val tStart = currentDateTime
     val o = request.body
     val text = (o \ "text").as[String].trim
-    val version = (o \ "extVersion").asOpt[String]
-
     val (thread, message) = messagingController.sendMessage(request.user.id.get, threadExtId, text, None)
 
     //Analytics
     SafeFuture {
-      val contextBuilder = new UserEventContextBuilder()
-      contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-      contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
-      contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
-      request.experiments.foreach{ experiment =>
-        contextBuilder += ("experiment", experiment.toString)
-      }
+      val contextBuilder = userEventContextBuilder(Some(request))
+
       contextBuilder += ("threadId", message.thread.id)
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
-      contextBuilder += ("extVersion", version.getOrElse(""))
       thread.participants.foreach{_.allExcept(request.userId).foreach{ recipient =>
         contextBuilder += ("recipient", recipient.id)
       }}
@@ -194,17 +182,27 @@ class ExtMessagingController @Inject() (
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
-      messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { msgs =>
+      messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
         log.info(s"[get_thread] got messages: $msgs")
-        val url = msgs.headOption.map(_.nUrl).getOrElse("")  // needs to change when we have detached threads
-        socket.channel.push(
-          Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse)))
+        val url = thread.url.getOrElse("")  // needs to change when we have detached threads
+        val msgsWithModifiedAuxData = msgs.map { m =>
+          messagingController.modifyMessageWithAuxData(m)
+        }
+        Future.sequence(msgsWithModifiedAuxData).map { completeMsgs =>
+          socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> completeMsgs.reverse)))
+        }
       }
     },
     "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
       log.info(s"[get_thread_info] user ${socket.userId} requesting thread extId $threadId")
       val info = messagingController.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
       socket.channel.push(Json.arr(requestId.toLong, info))
+    },
+    "add_participants_to_thread" -> { case JsString(threadId) +: JsArray(extUserIds) +: _ =>
+      val users = extUserIds.map { case s =>
+        ExternalId[User](s.asInstanceOf[JsString].value)
+      }
+      messagingController.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users)
     },
     "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
       val messageId = ExternalId[Message](notifId)
@@ -253,14 +251,8 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr("thread_infos", threadInfos))
     },
     "get_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-      // remove after clients are off 2.6.6 and on 2.6.7+
-      if (url == null || url == "null") {
-        // Ignore for now to stop exceptions. Leaks some memory on client, but it's a bad request.
-      } else {
-        val (nUriStr, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
-        socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriStr))
-      }
-      case _ => // for cases when url is JsNull
+      val (nUriStr, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
+      socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriStr))
     },
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
       messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
