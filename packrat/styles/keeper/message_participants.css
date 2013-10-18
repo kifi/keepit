@@ -1,13 +1,14 @@
 .kifi-message-participants {
   position: relative;
-  padding: 9px 12px;
-  color: #67829c;
-  background: #eff2f7;
+  padding: 3px 7px;
+  color: #111111;
+  background: #ecf0f1;
   border-bottom: 1px solid #e1e8e9;
 }
 .kifi-message-participants-1 {
   position: relative;
   text-align: center;
+  padding: 3px 0;
 }
 .kifi-group-conversation .kifi-message-participants-1 {
   display: none;
@@ -21,15 +22,20 @@
 }
 .kifi-message-participants-title {
   font-size: 13px;
-  font-weight: 300;
   margin-bottom: 6px;
 }
 .kifi-message-participants-1 .kifi-message-participants-title {
+  font-weight: 200;
   margin-bottom: 2px;
+  color: #67829c;
+}
+.kifi-message-participants-n .kifi-message-participants-title {
+  font-weight: 500;
+  color: #111111;
 }
 .kifi-participant-count {
   font-size: 1.1em;
-  font-weight: 400;
+  color: #67829c;
 }
 .kifi-message-recipient-name {
   color: #000000;
@@ -39,7 +45,7 @@
   line-height: 0;
   white-space: nowrap;
   opacity: 1;
-  transition: opacity 0.2s linear;
+  transition: opacity 0.15s linear;
 }
 .kifi-message-participants.kifi-expanded .kifi-message-participants-avatar-container {
   position: absolute;
@@ -78,8 +84,15 @@
   padding-top: 0;
   vertical-align: bottom;
   border-radius: 2px;
-  color: #eff2f7;
+  color: #ecf0f1;
   background: #b8c5d1;
+}
+.kifi-message-participants-avatars-expand:hover,
+.kifi-message-participants-avatars-expand:focus {
+  background: #a9b8c7;
+}
+.kifi-message-participants-avatars-expand:active {
+  background: #8a9fb3;
 }
 .kifi-message-participants.kifi-overflow .kifi-message-participants-avatars-expand {
   display: inline-block;
@@ -87,7 +100,7 @@
 .kifi-message-participant-list-root {
   position: relative;
   height: 0;
-  transition: height 0.4s ease;
+  transition: height 0.3s ease;
   overflow: hidden;
 }
 .kifi-message-participant-list-wrapper {
@@ -102,30 +115,41 @@
 }
 .kifi-message-participant-item {
   position: relative;
-  line-height: 29px;
-  padding: 3px 0;
+  line-height: 35px;
+  margin-bottom: 3px;
   white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
 }
 .kifi-message-participant-item img {
-  width: 29px;
-  height: 29px;
+  width: 35px;
+  height: 35px;
   border: 0;
+  border-radius: 2px;
   padding: 0;
   margin: 0;
-  margin-right: 8px;
+  margin-right: 10px;
   float: left;
   vertical-align: middle;
 }
-.kifi-message-participant-list-close {
+.kifi-message-participant-list-hide {
   display: block;
-  color: #eff2f7;
-  background: #b8c5d1;
+  color: #ecf0f1;
+  background: #67829c;
   border-radius: 2px;
-  padding: 4px 0;
-  margin-top: 6px;
+  padding: 9px 0;
+  margin-top: 3px;
+  font-size: 12px;
   font-weight: 400;
   text-align: center;
   text-decoration: none;
+}
+.kifi-message-participant-list-hide:hover,
+.kifi-message-participant-list-hide:focus {
+  background: #5c758d;
+}
+.kifi-message-participant-list-hide:active {
+  background: #485c6f;
 }
 .kifi-message-add-participant {
   display: block;
@@ -136,4 +160,76 @@
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAQAAAADQ4RFAAAA0klEQVR4AXXUMW7DMBBE0alE5zhRrm0gMSxLvkfoKyhKYV/hB4ttSITzp34ViVXEOwdXTsiPwicHM0IiyJPoblmQlegZTMxJGuYJycQO0DNLsh9xpm9LZglcxMQyZoZsFOGZIUgkuw2YIYEcq9QRaVGwFVtLAhnmSYc8S+KQKHz/I7UhBtUBmgwy75KtPfOk79YyT/DMkwcPx4T/Y4WNviWZJ0KcxswTGXZlEl94kuxO31nshni252HxJPfWsBcfItjLk4YlmZFIdnBJ4hkLv0HQHxvW+Tv3j7AoAAAAAElFTkSuQmCC);
   background-size: auto 14px;
   vertical-align: middle;
+}
+.kifi-message-add-participant.kifi-active {
+  background: #b8c5d1;
+}
+.kifi-message-participant-dialog {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 9px 12px;
+  box-sizing: border-box;
+  color: white;
+  background: #b8c5d1;
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.kifi-message-participant-dialog .kifi-ti-list {
+  padding: 3px !important;
+  padding-top: 6px !important;
+  border: 0 !important;
+  border-radius: 0;
+}
+.kifi-message-participant-dialog .kifi-ti-token {
+  font-size: 13px;
+  font-weight: 200;
+  letter-spacing: .5px;
+  line-height: 16px;
+}
+.kifi-message-participant-dialog input {
+  font-family: 'helvetica neue';
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: .5px;
+  line-height: 16px;
+  border: 0;
+  padding: 0;
+}
+.kifi-message-participants.kifi-dialog-opened .kifi-message-participant-dialog {
+  display: block;
+  opacity: 1;
+}
+.kifi-message-participant-dialog-title {
+  font-weight: 100;
+  letter-spacing: .5px;
+  margin-bottom: 6px;
+}
+.kifi-message-participant-dialog-button {
+  float: right;
+  font-size: 13px;
+  font-weight: 100;
+  letter-spacing: .5px;
+  padding: 7px 16px;
+  border-radius: 2px;
+  margin-top: 8px;
+  color: white;
+  background: #67829c;
+  text-decoration: none;
+}
+.kifi-message-participant-dialog-button:hover,
+.kifi-message-participant-dialog-button:focus {
+  background: #5c758d;
+}
+.kifi-message-participant-dialog-button:active {
+  background: #4e6378;
+}
+.kifi-clear {
+  clear: both;
+}
+.kifi-root kifi-ti-dropdown {
+  border: 1px solid #67829c;
+  border-bottom-width: 2px;
 }
