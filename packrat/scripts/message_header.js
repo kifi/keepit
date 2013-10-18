@@ -77,18 +77,18 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the container
 		 */
 		initMessageHeader: function () {
-      log('asetnuha')();
-      log('asetnuha')();
-      log('asetnuha')();
-      log('asetnuha')();
-      log('asetnuha')();
-      log('asetnuha')();
+			log('asetnuha')();
+			log('asetnuha')();
+			log('asetnuha')();
+			log('asetnuha')();
+			log('asetnuha')();
+			log('asetnuha')();
 			var $el = $(this.render()).insertBefore($(document.body));
 			this.$el = $el;
-      log($el)();
-      log($el)();
-      log($el)();
-      log($el)();
+			log($el)();
+			log($el)();
+			log($el)();
+			log($el)();
 			return $el;
 		},
 
@@ -135,10 +135,12 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		find: function (sel) {
 			var $el = this.$el;
-      log($el)();
-      log($el)();
-      log($el)();
 			return $el ? $el.find(sel) : null;
+		},
+
+		on: function () {
+			var $el = this.$el;
+			return $el && $el.on.apply($el, arguments);
 		},
 
 		status: {},

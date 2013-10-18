@@ -1,5 +1,6 @@
 // @require scripts/lib/jquery.js
 // @require scripts/render.js
+// @require scripts/util.js
 // @require scripts/kifi_util.js
 // @require scripts/html/keeper/message_participants.js
 // @require scripts/html/keeper/message_participant.js
@@ -26,13 +27,16 @@
 var messageParticipants = this.messageParticipants = (function ($, win) {
 	'use strict';
 
-	var kifiUtil = win.kifiUtil,
+	var util = win.util,
+		kifiUtil = win.kifiUtil,
 		OVERFLOW_LENGTH = 9;
 
 	// receive
+	/*
 	api.port.on({
 		friends: function (friends) {}
 	});
+  */
 
 	api.onEnd.push(function () {
 		messageParticipants.destroy('api:onEnd');
@@ -199,7 +203,10 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			var $el = this.get$();
 			$el.on('click', '.kifi-message-participants-avatars-expand', this.toggleParticipants.bind(this));
 			$el.on('click', '.kifi-message-participant-list-hide', this.toggleParticipants.bind(this));
-			this.getParent$().on('click', '.kifi-message-add-participant', this.toggleAddDialog.bind(this));
+
+			var $parent = this.getParent$();
+			$parent.on('click', '.kifi-message-add-participant', this.toggleAddDialog.bind(this));
+			$parent.on('click', '.kifi-message-participant-dialog-button', this.addParticipantTokens.bind(this));
 		},
 
 		/**
@@ -224,9 +231,13 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 * for searching and adding people to the conversation.
 		 */
 		initInput: function () {
-			var $t = this.get$('.kifi-message-participant-dialog-input').tokenInput({}, {
+			var $input = this.$input = this.get$('.kifi-message-participant-dialog-input').tokenInput({}, {
+				// The delay, in milliseconds, between the user finishing typing and the search being performed. default: 300
 				searchDelay: 0,
+
+				// The minimum number of characters the user must enter before a search is performed.
 				minChars: 1,
+
 				placeholder: 'Type a name...',
 				hintText: '',
 				noResultsText: '',
@@ -256,30 +267,27 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 				resultsFormatter: function (f) {
 					return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/0.jpg)">' +
 						Mustache.escape(f.name) + '</li>';
-				}
-				/*,
-				onAdd: function () {
-					if (defaultText && !$d.text()) {
-						$f.removeClass('kifi-empty');
-						$d.text(defaultText);
-					}
 				},
+				onAdd: function () {
+					this.getAddDialog().addClass('kifi-non-empty');
+				}.bind(this),
 				onDelete: function () {
-					if (defaultText && !$t.tokenInput('get').length && $d.text() === defaultText) {
-						$d.empty();
-						$f.addClass('kifi-empty');
+					if (!$input.tokenInput('get').length) {
+						this.getAddDialog().removeClass('kifi-non-empty');
 					}
-				}
-        */
+				}.bind(this)
 			});
+
 			api.port.emit('get_friends', function (friends) {
 				friends.forEach(function (f) {
 					f.name = f.firstName + ' ' + f.lastName;
 				});
-				$t.data('settings').local_data = friends;
-				$t.data('friends', friends);
+				$input.data('settings').local_data = friends;
+				$input.data('friends', friends);
 			});
 		},
+
+		// socket.send(["add_participants_to_thread","e45841fb-b7de-498f-97af-9f1ab17ef9a9",["df7ba036-700c-4f5d-84d1-313b5bf312b6"]])
 
 		/**
 		 * A listener for adding
@@ -463,12 +471,27 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			$wrapper.height(list.offsetHeight);
 		},
 
+		updateParticipantsHeight: function () {
+			if (this.isExpanded()) {
+				this.expandParticipants();
+			}
+		},
+
 		/**
 		 * Collapses the participant list.
 		 */
 		collapseParticipants: function () {
 			this.get$().removeClass('kifi-expanded');
 			this.get$('.kifi-message-participant-list-root').height(0);
+		},
+
+		toggleParticipants: function () {
+			if (this.isExpanded()) {
+				this.collapseParticipants();
+			}
+			else {
+				this.expandParticipants();
+			}
 		},
 
 		/**
@@ -490,13 +513,16 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			return this.hasClass('kifi-dialog-opened');
 		},
 
-		toggleParticipants: function () {
-			if (this.isExpanded()) {
-				this.collapseParticipants();
-			}
-			else {
-				this.expandParticipants();
-			}
+		getAddDialog: function () {
+			return this.get$('.kifi-message-participant-dialog');
+		},
+
+		addParticipantTokens: function () {
+			var $input = this.$input,
+				users = $input.tokenInput('get');
+			this.addParticipant.apply(this, users);
+			$input.tokenInput('clear');
+			this.toggleAddDialog();
 		},
 
 		toggleAddDialog: function () {
@@ -519,7 +545,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		})(),
 
 		addParticipant: function () {
-			util.addUnique(this.participants, arguments);
+			util.prependUnique(this.participants, arguments);
 			this.updateView();
 		},
 
@@ -537,6 +563,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			$el.find('.kifi-participant-count').text(view.participantCount);
 			$el.find('.kifi-message-participants-avatars').html(view.avatars);
 			$el.find('.kifi-message-participant-list').html(view.participants);
+			this.updateParticipantsHeight();
 		},
 
 		updateCount: function (count) {
@@ -554,6 +581,16 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 				this.initialized = false;
 				this.parent = null;
 				this.participants = [];
+
+				if (this.$input) {
+					this.$input.remove();
+					this.$input = null;
+				}
+
+				if (this.$el) {
+					this.$el.remove();
+					this.$el = null;
+				}
 
 				this.logEvent('destroy', {
 					trigger: trigger

@@ -198,7 +198,7 @@
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAQAAAADQ4RFAAAA0klEQVR4AXXUMW7DMBBE0alE5zhRrm0gMSxLvkfoKyhKYV/hB4ttSITzp34ViVXEOwdXTsiPwicHM0IiyJPoblmQlegZTMxJGuYJycQO0DNLsh9xpm9LZglcxMQyZoZsFOGZIUgkuw2YIYEcq9QRaVGwFVtLAhnmSYc8S+KQKHz/I7UhBtUBmgwy75KtPfOk79YyT/DMkwcPx4T/Y4WNviWZJ0KcxswTGXZlEl94kuxO31nshni252HxJPfWsBcfItjLk4YlmZFIdnBJ4hkLv0HQHxvW+Tv3j7AoAAAAAElFTkSuQmCC);
   background-size: auto 14px;
   vertical-align: middle;
-  transition: background .2s ease;
+  //transition: background @duration ease;
 
   &.kifi-active {
     background: @dotBgColor;
@@ -215,8 +215,8 @@
   box-sizing: border-box;
   color: white;
   background: @dotBgColor;
-  opacity: 0;
-  transition: opacity .2s ease;
+  //opacity: 0;
+  //transition: opacity @duration ease;
 
   .kifi-ti-list {
     padding: 3px !important;
@@ -244,7 +244,7 @@
 
   .kifi-message-participants.kifi-dialog-opened & {
     display: block;
-    opacity: 1;
+    //opacity: 1;
   }
 }
 

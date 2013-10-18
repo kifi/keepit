@@ -33,6 +33,15 @@ var util = this.util = (function () {
 			return vals;
 		},
 
+		/**
+		 * Removes a value from an array if exists.
+		 * Returns true if removed, false otherwise.
+		 *
+		 * @param {Array} Array to remove from
+		 * @param {Array} A value to remove
+		 *
+		 * @return {boolean} Whether the value was found and removed
+		 */
 		remove: function (arr, val) {
 			var i = arr.indexOf(arr, val);
 			if (i !== -1) {
@@ -42,6 +51,35 @@ var util = this.util = (function () {
 			return false;
 		},
 
+		/**
+		 * Returns a new array of values of the second array
+		 * that are not present in the first array.
+		 *
+		 * @param {Array} first array
+		 * @param {Array} second array
+		 *
+		 * @return {Array} new array
+		 */
+		getNewValues: (function () {
+			function uniqueFilter(val) {
+				return this.indexOf(val) === -1;
+			}
+
+			return function (arr, list) {
+				return list.filter(uniqueFilter, arr);
+			};
+		})(),
+
+		/**
+		 * Adds values from the second array to the first array
+		 * that are not present in the first array.
+		 * It mutates the first array and returns the first array.
+		 *
+		 * @param {Array} An array to add to
+		 * @param {Array} An array of values to add
+		 *
+		 * @return {Array} the first array
+		 */
 		addUnique: function (arr, list) {
 			for (var i = 0, len = list.length, val; i < len; i++) {
 				val = list[i];
@@ -49,7 +87,26 @@ var util = this.util = (function () {
 					arr.push(val);
 				}
 			}
+			return arr;
+		},
 
+		/**
+		 * Prepends values from the second array to the first array
+		 * that are not present in the first array.
+		 * It mutates the first array and returns the first array.
+		 *
+		 * @param {Array} An array to prepend to
+		 * @param {Array} An array of values to prepend
+		 *
+		 * @return {Array} the first array
+		 */
+		prependUnique: function (arr, list) {
+			for (var i = 0, len = list.length, val; i < len; i++) {
+				val = list[i];
+				if (arr.indexOf(val) === -1) {
+					arr.unshift(val);
+				}
+			}
 			return arr;
 		},
 
