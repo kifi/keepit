@@ -160,13 +160,14 @@
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAQAAAADQ4RFAAAA0klEQVR4AXXUMW7DMBBE0alE5zhRrm0gMSxLvkfoKyhKYV/hB4ttSITzp34ViVXEOwdXTsiPwicHM0IiyJPoblmQlegZTMxJGuYJycQO0DNLsh9xpm9LZglcxMQyZoZsFOGZIUgkuw2YIYEcq9QRaVGwFVtLAhnmSYc8S+KQKHz/I7UhBtUBmgwy75KtPfOk79YyT/DMkwcPx4T/Y4WNviWZJ0KcxswTGXZlEl94kuxO31nshni252HxJPfWsBcfItjLk4YlmZFIdnBJ4hkLv0HQHxvW+Tv3j7AoAAAAAElFTkSuQmCC);
   background-size: auto 14px;
   vertical-align: middle;
+  transition: background .2s ease;
 }
 .kifi-message-add-participant.kifi-active {
   background: #b8c5d1;
 }
 .kifi-message-participant-dialog {
-  display: none;
   position: absolute;
+  display: none;
   top: 0;
   left: 0;
   width: 100%;
@@ -175,7 +176,7 @@
   color: white;
   background: #b8c5d1;
   opacity: 0;
-  transition: opacity .25s ease;
+  transition: opacity .2s ease;
 }
 .kifi-message-participant-dialog .kifi-ti-list {
   padding: 3px !important;
@@ -190,7 +191,7 @@
   line-height: 16px;
 }
 .kifi-message-participant-dialog input {
-  font-family: 'helvetica neue';
+  font-family: 'Helvetica Neue';
   font-size: 14px;
   font-weight: 300;
   letter-spacing: .5px;
