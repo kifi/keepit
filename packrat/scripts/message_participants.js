@@ -180,6 +180,10 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 				.then(this.onResponseParticipants.bind(this));
         */
 
+			if (win.slider2) {
+				win.slider2.shadePane();
+			}
+
 			this.initEvents();
 			this.initScroll();
 			this.initInput();
@@ -615,6 +619,10 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 				this.initialized = false;
 				this.parent = null;
 				this.participants = [];
+
+				if (win.slider2) {
+					win.slider2.unshadePane();
+				}
 
 				['$input', '$list', '$el'].forEach(function (name) {
 					var $el = this[name];
