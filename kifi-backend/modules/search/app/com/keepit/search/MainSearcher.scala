@@ -160,7 +160,6 @@ class MainSearcher(
   }
 
   timeLogs.socialGraphInfo = currentDateTime.getMillis() - currentTime
-  Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
 
   private def findSharingUsers(id: Long): UserToUserEdgeSet = {
     uriGraphSearcher.intersect(relevantFriendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
@@ -199,7 +198,6 @@ class MainSearcher(
     parsedQuery = parser.parse(queryString)
 
     timeLogs.queryParsing = currentDateTime.getMillis() - tParse
-    Statsd.timing("mainSearch.queryParsing", timeLogs.queryParsing)
 
     val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
@@ -210,13 +208,11 @@ class MainSearcher(
       val tClickBoosts = currentDateTime.getMillis()
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
       timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
-      Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
 
       val tPersonalSearcher = currentDateTime.getMillis()
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
-      Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
       hotDocs.set(personalizedSearcher.browsingFilter, clickBoosts)
 
       val tLucene = currentDateTime.getMillis()
@@ -245,7 +241,6 @@ class MainSearcher(
         namedQueryContext.reset()
       }
       timeLogs.search = currentDateTime.getMillis() - tLucene
-      Statsd.timing("mainSearch.LuceneSearch", timeLogs.search)
       personalizedSearcher
     }
     (myHits, friendsHits, othersHits, personalizedSearcher)
@@ -256,14 +251,6 @@ class MainSearcher(
     val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
 
     val tProcessHits = currentDateTime.getMillis()
-
-    articleSearcher.indexWarmer.foreach{ warmer =>
-      parsedQuery.foreach{ query =>
-        future{
-          warmer.addTerms(QueryUtil.getTerms(query))
-        }
-      }
-    }
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
@@ -400,17 +387,14 @@ class MainSearcher(
     }
 
     timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
-    Statsd.timing("mainSearch.processHits", timeLogs.processHits)
-    val millisPassed = currentDateTime.getMillis() - now.getMillis()
-    timeLogs.total = millisPassed
-    Statsd.timing("mainSearch.total", millisPassed)
+    timeLogs.total = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResult]()
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
-        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
+        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
         (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show,
         timeLogs = Some(timeLogs.toSearchTimeLogs),
         lang = lang)
@@ -468,6 +452,22 @@ class MainSearcher(
 
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
   def getBookmarkId(uriId: Id[NormalizedURI]): Long = myUriEdgeAccessor.getBookmarkId(uriId.id)
+
+  def timing() {
+    Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
+    Statsd.timing("mainSearch.queryParsing", timeLogs.queryParsing)
+    Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
+    Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
+    Statsd.timing("mainSearch.LuceneSearch", timeLogs.search)
+    Statsd.timing("mainSearch.processHits", timeLogs.processHits)
+    Statsd.timing("mainSearch.total", timeLogs.total)
+
+    articleSearcher.indexWarmer.foreach{ warmer =>
+      parsedQuery.foreach{ query =>
+          warmer.addTerms(QueryUtil.getTerms(query))
+      }
+    }
+  }
 }
 
 class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
