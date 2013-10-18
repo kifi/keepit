@@ -192,6 +192,9 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			return kifiUtil.request('participants', win.$slider && win.$slider.getThreadId(), 'Could not load participants.');
 		},
 
+		/**
+		 * Initializes event listeners.
+		 */
 		initEvents: function () {
 			var $el = this.get$();
 			$el.on('click', '.kifi-message-participants-avatars-expand', this.toggleParticipants.bind(this));
@@ -199,22 +202,29 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			this.getParent$().on('click', '.kifi-message-add-participant', this.toggleAddDialog.bind(this));
 		},
 
-		get$Input: function () {
-			return this.get$('.kifi-message-participant-dialog-input');
-		},
-
+		/**
+		 * Returns a jQuery wrapper object for dialog input
+		 * after tokenInput construction.
+		 */
 		get$TokenInput: function () {
 			return this.get$('.kifi-ti-token-input input');
 		},
 
+		/**
+		 * Focuses dialog input for adding new people to the conversation.
+		 */
 		focusInput: function () {
 			setTimeout(function () {
 				this.get$TokenInput().focus();
 			}.bind(this));
 		},
 
+		/**
+		 * Constructs and initializes a tokenInput with autocomplete feature
+		 * for searching and adding people to the conversation.
+		 */
 		initInput: function () {
-			var $t = this.get$Input().tokenInput({}, {
+			var $t = this.get$('.kifi-message-participant-dialog-input').tokenInput({}, {
 				searchDelay: 0,
 				minChars: 1,
 				placeholder: 'Type a name...',
@@ -272,6 +282,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		/**
+		 * A listener for adding
 		 * 
 		 * participants: [{
 		 *   firstName: "Jenny"
@@ -284,6 +295,13 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			//this.participants = participants;
 		},
 
+		/**
+		 * Renders a UI component given the component name.
+		 *
+		 * @param {string} name - UI component name
+		 *
+		 * @return {string} A rendered html
+		 */
 		render: function (name) {
 			switch (name) {
 			case 'button':
@@ -294,22 +312,58 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			}
 		},
 
+		/**
+		 * Returns a boolean value representing whether
+		 * the conversation is a group conversation.
+		 *
+		 * true - group conversation
+		 * false - 1:1 conversation
+		 *
+		 * @return {boolean} Whether the conversation is a group conversation
+		 */
 		isGroup: function () {
 			return this.participants.length > 1;
 		},
 
+		/**
+		 * Returns a boolean value representing whether
+		 * the conversation has more number of people than the threshold.
+		 *
+		 * true - n > threshold
+		 * false - n <= threshold
+		 *
+		 * @return {boolean} Whether the conversation has more number of people than the threshold
+		 */
 		isOverflowed: function () {
 			return this.participants.length > OVERFLOW_LENGTH;
 		},
 
+		/**
+		 * Returns a recipient (the first participant) of the 1:1 conversation.
+		 *
+		 * @return {Object} a recipient of the 1:1 conversation
+		 */
 		getRecipient: function () {
 			return this.participants[0];
 		},
 
+		/**
+		 * Given the user object,
+		 * returns the full name of the user.
+		 *
+		 * @param {Object} user - A user object
+		 *
+		 * @return {string} Full name of the user
+		 */
 		getFullName: function (user) {
 			return user.firstName + ' ' + user.lastName;
 		},
 
+		/**
+		 * Returns the current state object excluding UI states.
+		 *
+		 * @return {Object} A state object
+		 */
 		getView: function () {
 			return {
 				isGroup: this.isGroup(),
@@ -322,18 +376,28 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		/**
-		 * Renders and returns a tag box html.
+		 * Renders and returns html for participants container.
 		 *
-		 * @return {string} tag box html
+		 * @return {string} participants html
 		 */
 		renderContent: function () {
 			return win.render('html/keeper/message_participants', this.getView());
 		},
 
+		/**
+		 * Renders and returns a 'Add Participants' button.
+		 *
+		 * @return {string} Add participant icon html
+		 */
 		renderButton: function () {
 			return win.render('html/keeper/message_participant_icon', this.getView());
 		},
 
+		/**
+		 * Renders and returns html for a list of avatars.
+		 *
+		 * @return {string} html for a list of avatars
+		 */
 		renderAvatars: function () {
 			var participants = this.participants;
 			if (this.isOverflowed()) {
@@ -342,26 +406,56 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			return participants.map(this.renderAvatar).join('');
 		},
 
+		/**
+		 * Renders and returns html for a single avatar.
+		 *
+		 * @return {string} html for a single avatar
+		 */
 		renderAvatar: function (user) {
 			return win.render('html/keeper/message_avatar', user);
 		},
 
+		/**
+		 * Renders and returns html for a participant list.
+		 *
+		 * @return {string} html for a participant list
+		 */
 		renderParticipants: function () {
 			return this.participants.map(this.renderParticipant).join('');
 		},
 
+		/**
+		 * Renders and returns html for a participant list item.
+		 *
+		 * @return {string} html for a participant list item
+		 */
 		renderParticipant: function (user) {
 			return win.render('html/keeper/message_participant', user);
 		},
 
-		get$: function (sel) {
-			return this.parent.find(sel || '.kifi-message-participants');
+		/**
+		 * Finds and returns a jQuery wrapper object for the given selector.
+		 *
+		 * @param {string} [selector] a optional selector
+		 *
+		 * @return {jQuery} A jQuery wrapper object
+		 */
+		get$: function (selector) {
+			return this.parent.find(selector || '.kifi-message-participants');
 		},
 
+		/**
+		 * Returns a jQuery wrapper object for the parent module.
+		 *
+		 * @return {jQuery} A jQuery wrapper object
+		 */
 		getParent$: function () {
 			return this.parent.$el;
 		},
 
+		/**
+		 * Expands the participant list.
+		 */
 		expandParticipants: function () {
 			var $wrapper = this.get$('.kifi-message-participant-list-root'),
 				list = $wrapper.children()[0];
@@ -369,11 +463,17 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			$wrapper.height(list.offsetHeight);
 		},
 
+		/**
+		 * Collapses the participant list.
+		 */
 		collapseParticipants: function () {
 			this.get$().removeClass('kifi-expanded');
 			this.get$('.kifi-message-participant-list-root').height(0);
 		},
 
+		/**
+		 * Add/Remove classname(s) to/from the container
+		 */
 		toggleClass: function (name, val) {
 			return this.get$().toggleClass(name, !! val);
 		},
