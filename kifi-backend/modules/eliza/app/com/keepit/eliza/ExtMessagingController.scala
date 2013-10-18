@@ -254,6 +254,12 @@ class ExtMessagingController @Inject() (
       val (nUriStr, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
       socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriStr))
     },
+    "mute_thread" -> { case JsString(jsThreadId) +: _ =>
+      messagingController.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+    },
+    "unmute_thread" -> { case JsString(jsThreadId) +: _ =>
+      messagingController.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+    },
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
       messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
     },
