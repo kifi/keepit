@@ -35,7 +35,7 @@ class GeckoboardPublisherTest extends Specification with TestInjector {
       }
 
       val client = new FakeHttpClient() {
-        override def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = {
+        override def post(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): ClientResponse = {
           url === "https://push.geckoboard.com/v1/send/37507-12ed349c-eee7-4564-b8b5-754d9ed0aeeb"
           body.toString === """{"api_key":"68783556cbbbd939dc667b4ea449d12c","data":{"item":[{"text":"","value":10},{"text":"","value":15}]}}"""
           FakeClientResponse("""{"success":true}""")

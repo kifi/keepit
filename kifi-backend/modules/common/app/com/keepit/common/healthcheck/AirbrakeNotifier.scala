@@ -17,8 +17,6 @@ import java.io._
 import java.net._
 import scala.xml._
 
-import play.api.mvc._
-
 case class AirbrakeErrorNotice(error: AirbrakeError, selfError: Boolean = false)
 object AirbrakeDeploymentNotice
 
@@ -65,7 +63,7 @@ class AirbrakeSender @Inject() (
 
   var firstErrorReported = false
 
-  val defaultOnFailure: String => PartialFunction[Throwable, Unit] = { url =>
+  val defaultOnFailure: Request => PartialFunction[Throwable, Unit] = { url =>
     {
       case ex: Exception => if (!firstErrorReported) {
         firstErrorReported = true
@@ -78,10 +76,9 @@ class AirbrakeSender @Inject() (
   def sendDeployment(payload: String): Unit = {
     log.info(s"announcing deployment to airbrake: $payload")
     httpClient.
-      withSilentFail().
       withTimeout(60000).
       withHeaders("Content-type" -> "application/x-www-form-urlencoded").
-      postTextFuture("http://api.airbrake.io/deploys.txt", payload)
+      postTextFuture("http://api.airbrake.io/deploys.txt", payload, httpClient.ignoreFailure)
   }
 
   def sendError(xml: NodeSeq): Unit = httpClient.

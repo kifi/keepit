@@ -30,7 +30,6 @@ case class NonOKResponseException(url: String, response: ClientResponse, request
 
   override def toString: String =
     s"NonOKResponseException[url: $url, Response: $response body:${requestBody.map(b => b.toString).getOrElse("NA")}]"
-
 }
 
 case class LongWaitException(url: String, response: Response, waitTime: Int)
@@ -39,37 +38,37 @@ case class LongWaitException(url: String, response: Response, waitTime: Int)
 
 trait HttpClient {
 
-  val defaultOnFailure: String => PartialFunction[Throwable, Unit]
+  type OnFailure = Request => PartialFunction[Throwable, Unit]
 
-  val ignoreFailure: String => PartialFunction[Throwable, Unit] = {
-    s: String => {
+  val defaultOnFailure: OnFailure
+
+  val ignoreFailure: OnFailure = {
+    s: Request => {
       case ex: Throwable =>
     }
   }
 
-  def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
-  def getFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
+  def get(url: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse
+  def getFuture(url: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
 
-  def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
-  def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
+  def post(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): ClientResponse
+  def postFuture(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
 
-  def postText(url: String, body: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
-  def postTextFuture(url: String, body: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
+  def postText(url: String, body: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse
+  def postTextFuture(url: String, body: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
 
-  def postXml(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
-  def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
+  def postXml(url: String, body: NodeSeq, onFailure: => OnFailure = defaultOnFailure): ClientResponse
+  def postXmlFuture(url: String, body: NodeSeq, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
 
-  def put(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
-  def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
+  def put(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): ClientResponse
+  def putFuture(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
 
-  def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
-  def deleteFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
+  def delete(url: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse
+  def deleteFuture(url: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
 
   def withTimeout(timeout: Int): HttpClient
 
   def withHeaders(hdrs: (String, String)*): HttpClient
-
-  def withSilentFail(): HttpClient
 }
 
 case class HttpClientImpl(
@@ -83,83 +82,65 @@ case class HttpClientImpl(
 
   private val validResponseClass = 2
 
-  override val defaultOnFailure: String => PartialFunction[Throwable, Unit] = { url =>
+  override val defaultOnFailure: OnFailure = { req =>
     {
-      case cause: ConnectException =>
-        if (healthcheckPlugin.isWarm) {
-          val ex = new ConnectException(s"${cause.getMessage}. Requesting $url.").initCause(cause)
-          airbrake.get.notify(ex)
-        }
-      case ex: Throwable =>
-        airbrake.get.notify(ex)
+      case e: Throwable =>
+        val al = accessLog.add(req.timer.done(
+          result = "fail",
+          query = req.queryString,
+          url = req.url,
+          //Its a bit strange, but in this case we rather pass null to be consistent with the api
+          //taking only the first 200 chars of the body
+          trackingId = req.trackingId,
+          error = e.toString))
+        airbrake.get.notify(
+          AirbrakeError.outgoing(
+            exception = req.tracer.withCause(e),
+            request = req.req,
+            message = s"${al.error}: error handling url ${al.url}"
+          )
+        )
     }
   }
 
   def withHeaders(hdrs: (String, String)*): HttpClient = this.copy(headers = headers ++ hdrs)
 
-  private def wrap(response: Future[Response]): Future[ClientResponse] =
-    response map { r => res(request, r) }(immediate) tap {
-      _.onFailure(onFailure(url) orElse defaultOnFailure(url))
-    }
-
-  def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse =
+  def get(url: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse =
     await(getFuture(url, onFailure))
 
-  def getFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] =
-    wrap(req(url).get())
+  def getFuture(url: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+    report(req(url) tapWith {_.get()}, onFailure)
 
-  def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse =
+  def post(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): ClientResponse =
     await(postFuture(url, body, onFailure))
 
-  def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] =
-    wrap(req(url).post(body))
-  {
-    val request = req(url)
-    val result = request.post(body) map { r => res(request, r, Some(body)) }(immediate)
-    result.onFailure(onFailure(url) orElse defaultOnFailure(url))
-    result
-  }
+  def postFuture(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+    report(req(url) tapWith {_.post(body)}, onFailure)
 
-  def postText(url: String, body: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(postTextFuture(url, body, onFailure))
+  def postText(url: String, body: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse = await(postTextFuture(url, body, onFailure))
 
-  def postTextFuture(url: String, body: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
-    val request = req(url)
-    val result = request.post(body) map { r => res(request, r, Some(body)) }(immediate)
-    result.onFailure(onFailure(url) orElse defaultOnFailure(url))
-    result
-  }
+  def postTextFuture(url: String, body: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+    report(req(url) tapWith {_.post(body)}, onFailure)
 
-  def postXml(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(postXmlFuture(url, body, onFailure))
+  def postXml(url: String, body: NodeSeq, onFailure: => OnFailure = defaultOnFailure): ClientResponse = await(postXmlFuture(url, body, onFailure))
 
-  def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
-    val request = req(url)
-    val result = request.post(body) map { r => res(request, r, Some(body)) }(immediate)
-    result.onFailure(onFailure(url) orElse defaultOnFailure(url))
-    result
-  }
+  def postXmlFuture(url: String, body: NodeSeq, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+    report(req(url) tapWith {_.post(body)}, onFailure)
 
-  def put(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse =
+  def put(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): ClientResponse =
     await(putFuture(url, body, onFailure))
 
-  def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
-    val request = req(url)
-    val result = request.put(body) map { r => res(request, r, Some(body)) }(immediate)
-    result.onFailure(onFailure(url) orElse defaultOnFailure(url))
-    result
-  }
+  def putFuture(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+    report(req(url) tapWith {_.put(body)}, onFailure)
 
-  def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse =
+  def delete(url: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse =
     await(deleteFuture(url, onFailure))
 
-  def deleteFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
-    val request = req(url)
-    val result = request.delete() map { r => res(request, r) }(immediate)
-    result.onFailure(onFailure(url) orElse defaultOnFailure(url))
-    result
-  }
+  def deleteFuture(url: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+    report(req(url) tapWith {_.delete()}, onFailure)
 
   private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, TimeUnit.MILLISECONDS))
-  private def req(url: String): Request = new Request(WS.url(url).withTimeout(timeout), headers, services, accessLog, airbrake)
+  private def req(url: String): Request = new Request(WS.url(url).withTimeout(timeout), headers, services, accessLog)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
     val clientResponse = new ClientResponseImpl(request, response)
@@ -173,135 +154,69 @@ case class HttpClientImpl(
 
   def withTimeout(timeout: Int): HttpClient = copy(timeout = timeout)
 
-  def withSilentFail(): HttpClient = copy(silentFail = true)
+  private def report(reqRes: (Request, Future[Response]), onFailure: => OnFailure = defaultOnFailure):
+      Future[ClientResponse] = reqRes match { case (request, responseFuture) =>
+    responseFuture.map(r => res(request, r))(immediate) tap { f =>
+      f.onFailure(onFailure(request) orElse defaultOnFailure(request)) (immediate)
+      f.onSuccess { case response: Response => logSuccess(request, response) } (immediate)
+    }
+  }
+
+  private def logSuccess(request: Request, res: Response): Unit = {
+    //todo(eishay): the interesting part is the remote service and node id, to be logged
+    val remoteHost = res.header(CommonHeaders.LocalHost).getOrElse("NA")
+    val remoteTime = res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
+    val e = accessLog.add(request.timer.done(
+        remoteTime = remoteTime,
+        result = "success",
+        query = request.queryString,
+        url = request.url,
+        //Its a bit strange, but in this case we rather pass null to be consistent with the api
+        //taking only the first 200 chars of the body
+        trackingId = request.trackingId,
+        statusCode = res.status))
+
+    e.waitTime map {waitTime =>
+      if (waitTime > 200) {//ms
+        val exception = request.tracer.withCause(LongWaitException(request.url, res, waitTime))
+        airbrake.get.notify(
+          AirbrakeError.outgoing(
+            request = request.req,
+            exception = exception,
+            message = s"wait time $waitTime for ${accessLog.format(e)}")
+        )
+      }
+    }
+  }
 }
 
-private[net] class Request(val req: WSRequestHolder, headers: List[(String, String)],
-    services: FortyTwoServices, accessLog: AccessLog, airbrake: Provider[AirbrakeNotifier]) extends Logging {
+//This request class is not reusable for more then one call
+class Request(val req: WSRequestHolder, headers: List[(String, String)], services: FortyTwoServices, accessLog: AccessLog) extends Logging {
 
-  private val trackingId = RandomStringUtils.randomAlphanumeric(5)
+  val trackingId = RandomStringUtils.randomAlphanumeric(5)
   private val headersWithTracking =
     (CommonHeaders.TrackingId, trackingId) :: (CommonHeaders.LocalService, services.currentService.toString) :: headers
   private val wsRequest = req.withHeaders(headersWithTracking: _*)
+  lazy val queryString = (wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&").trim match {
+    case "" => null
+    case str => str
+  }
+  lazy val url = wsRequest.url
 
-  def get() = {
-    val timer = accessLog.timer(HTTP_OUT)
-    val tracer = new StackTrace()
-    val res = wsRequest.get()
-    res.onComplete { resTry =>
-      logResponse(timer, tracer, "GET", resTry, trackingId, None, wsRequest)
-    }(immediate)
-    res
+  var timer: AccessLogTimer = _
+  var tracer: StackTrace = _
+
+  private def record() = {
+    timer = accessLog.timer(HTTP_OUT)
+    tracer = new StackTrace()
   }
 
-  def put(body: JsValue) = {
-    val timer = accessLog.timer(HTTP_OUT)
-    val tracer = new StackTrace()
-    val res = wsRequest.put(body)
-    res.onComplete { resTry =>
-      logResponse(timer, tracer, "PUT", resTry, trackingId, Some(body), wsRequest)
-    }(immediate)
-    res
-  }
-
-  def post(body: String) = {
-    val timer = accessLog.timer(HTTP_OUT)
-    val tracer = new StackTrace()
-    val res = wsRequest.post(body)
-    res.onComplete { resTry =>
-      logResponse(timer, tracer, "POST", resTry, trackingId, Some(body), wsRequest)
-    }(immediate)
-    res
-  }
-
-  def post(body: JsValue) = {
-    val timer = accessLog.timer(HTTP_OUT)
-    val tracer = new StackTrace()
-    val res = wsRequest.post(body)
-    res.onComplete { resTry =>
-      logResponse(timer, tracer, "POST", resTry, trackingId, Some(body), wsRequest)
-    }(immediate)
-    res
-  }
-
-  def post(body: NodeSeq) = {
-    val timer = accessLog.timer(HTTP_OUT)
-    val tracer = new StackTrace()
-    val res = wsRequest.post(body)
-    res.onComplete { resTry =>
-      logResponse(timer, tracer, "POST", resTry, trackingId, Some(body), wsRequest)
-    }(immediate)
-    res
-  }
-
-  def delete() = {
-    val timer = accessLog.timer(HTTP_OUT)
-    val tracer = new StackTrace()
-    val res = wsRequest.delete()
-    res.onComplete { resTry =>
-      logResponse(timer, tracer, "DELETE", resTry, trackingId, None, wsRequest)
-    }(immediate)
-    res
-  }
-
-  private def logResponse(
-        timer: AccessLogTimer, tracer: StackTrace, method: String, resTry: Try[Response],
-        trackingId: String, body: Option[Any], req: WSRequestHolder): Unit = {
-    //todo(eishay): the interesting part is the remote service and node id, to be logged
-    val queryString = (wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&").trim match {
-      case "" => null
-      case str => str
-    }
-    // waitTime map {t =>
-    //   Statsd.timing(s"internalCall.remote.$remoteService.$remoteNodeId", t)
-    //   Statsd.timing(s"internalCall.local.$localService.$localNodeId", t)
-    // }
-    val bodyTrimmed = body.map(_.toString.take(200)).getOrElse(null)
-    resTry match {
-      case Success(res) =>
-        val remoteHost = res.header(CommonHeaders.LocalHost).getOrElse("NA")
-        val remoteTime = res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
-        val e = accessLog.add(timer.done(
-            remoteTime = remoteTime,
-            result = "success",
-            query = queryString,
-            url = wsRequest.url,
-            //Its a bit strange, but in this case we rather pass null to be consistent with the api
-            //taking only the first 200 chars of the body
-            body = bodyTrimmed,
-            trackingId = trackingId,
-            statusCode = res.status))
-
-        e.waitTime map {waitTime =>
-          if (waitTime > 200) {//ms
-            val exception = tracer.withCause(LongWaitException(req.url, res, waitTime))
-            airbrake.get.notify(
-              AirbrakeError.outgoing(
-                request = req,
-                exception = exception,
-                message = s"wait time $waitTime for ${accessLog.format(e)}")
-            )
-          }
-        }
-      case Failure(e) =>
-        val al = accessLog.add(timer.done(
-          result = "fail",
-          query = queryString,
-          url = wsRequest.url,
-          //Its a bit strange, but in this case we rather pass null to be consistent with the api
-          //taking only the first 200 chars of the body
-          body = bodyTrimmed,
-          trackingId = trackingId,
-          error = e.toString))
-        airbrake.get.notify(
-          AirbrakeError.outgoing(
-            exception = tracer.withCause(e),
-            request = req,
-            message = s"${al.error}: error handling url ${al.url}"
-          )
-        )
-    }
-  }
+  def get() =               {record(); wsRequest.get()}
+  def put(body: JsValue) =  {record(); wsRequest.put(body)}
+  def post(body: String) =  {record(); wsRequest.post(body)}
+  def post(body: JsValue) = {record(); wsRequest.post(body)}
+  def post(body: NodeSeq) = {record(); wsRequest.post(body)}
+  def delete() =            {record(); wsRequest.delete()}
 }
 
 trait ClientResponse {
