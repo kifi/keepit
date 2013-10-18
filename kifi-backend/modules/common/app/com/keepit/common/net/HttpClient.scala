@@ -38,33 +38,33 @@ case class LongWaitException(url: String, response: Response, waitTime: Int)
 
 trait HttpClient {
 
-  type OnFailure = Request => PartialFunction[Throwable, Unit]
+  type FailureHandler = Request => PartialFunction[Throwable, Unit]
 
-  val defaultOnFailure: OnFailure
+  val defaultFailureHandler: FailureHandler
 
-  val ignoreFailure: OnFailure = {
+  val ignoreFailure: FailureHandler = {
     s: Request => {
       case ex: Throwable =>
     }
   }
 
-  def get(url: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse
-  def getFuture(url: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
+  def get(url: String, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse
+  def getFuture(url: String, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse]
 
-  def post(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): ClientResponse
-  def postFuture(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
+  def post(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse
+  def postFuture(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse]
 
-  def postText(url: String, body: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse
-  def postTextFuture(url: String, body: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
+  def postText(url: String, body: String, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse
+  def postTextFuture(url: String, body: String, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse]
 
-  def postXml(url: String, body: NodeSeq, onFailure: => OnFailure = defaultOnFailure): ClientResponse
-  def postXmlFuture(url: String, body: NodeSeq, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
+  def postXml(url: String, body: NodeSeq, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse
+  def postXmlFuture(url: String, body: NodeSeq, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse]
 
-  def put(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): ClientResponse
-  def putFuture(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
+  def put(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse
+  def putFuture(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse]
 
-  def delete(url: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse
-  def deleteFuture(url: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse]
+  def delete(url: String, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse
+  def deleteFuture(url: String, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse]
 
   def withTimeout(timeout: Int): HttpClient
 
@@ -82,7 +82,7 @@ case class HttpClientImpl(
 
   private val validResponseClass = 2
 
-  override val defaultOnFailure: OnFailure = { req =>
+  override val defaultFailureHandler: FailureHandler = { req =>
     {
       case e: Throwable =>
         val al = accessLog.add(req.timer.done(
@@ -105,38 +105,38 @@ case class HttpClientImpl(
 
   def withHeaders(hdrs: (String, String)*): HttpClient = this.copy(headers = headers ++ hdrs)
 
-  def get(url: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse =
+  def get(url: String, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse =
     await(getFuture(url, onFailure))
 
-  def getFuture(url: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+  def getFuture(url: String, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
     report(req(url) tapWith {_.get()}, onFailure)
 
-  def post(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): ClientResponse =
+  def post(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse =
     await(postFuture(url, body, onFailure))
 
-  def postFuture(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+  def postFuture(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
     report(req(url) tapWith {_.post(body)}, onFailure)
 
-  def postText(url: String, body: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse = await(postTextFuture(url, body, onFailure))
+  def postText(url: String, body: String, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = await(postTextFuture(url, body, onFailure))
 
-  def postTextFuture(url: String, body: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+  def postTextFuture(url: String, body: String, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
     report(req(url) tapWith {_.post(body)}, onFailure)
 
-  def postXml(url: String, body: NodeSeq, onFailure: => OnFailure = defaultOnFailure): ClientResponse = await(postXmlFuture(url, body, onFailure))
+  def postXml(url: String, body: NodeSeq, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = await(postXmlFuture(url, body, onFailure))
 
-  def postXmlFuture(url: String, body: NodeSeq, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+  def postXmlFuture(url: String, body: NodeSeq, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
     report(req(url) tapWith {_.post(body)}, onFailure)
 
-  def put(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): ClientResponse =
+  def put(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse =
     await(putFuture(url, body, onFailure))
 
-  def putFuture(url: String, body: JsValue, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+  def putFuture(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
     report(req(url) tapWith {_.put(body)}, onFailure)
 
-  def delete(url: String, onFailure: => OnFailure = defaultOnFailure): ClientResponse =
+  def delete(url: String, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse =
     await(deleteFuture(url, onFailure))
 
-  def deleteFuture(url: String, onFailure: => OnFailure = defaultOnFailure): Future[ClientResponse] =
+  def deleteFuture(url: String, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
     report(req(url) tapWith {_.delete()}, onFailure)
 
   private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, TimeUnit.MILLISECONDS))
@@ -154,10 +154,10 @@ case class HttpClientImpl(
 
   def withTimeout(timeout: Int): HttpClient = copy(timeout = timeout)
 
-  private def report(reqRes: (Request, Future[Response]), onFailure: => OnFailure = defaultOnFailure):
+  private def report(reqRes: (Request, Future[Response]), onFailure: => FailureHandler = defaultFailureHandler):
       Future[ClientResponse] = reqRes match { case (request, responseFuture) =>
     responseFuture.map(r => res(request, r))(immediate) tap { f =>
-      f.onFailure(onFailure(request) orElse defaultOnFailure(request)) (immediate)
+      f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (immediate)
       f.onSuccess { case response: Response => logSuccess(request, response) } (immediate)
     }
   }

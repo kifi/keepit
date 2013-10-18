@@ -63,7 +63,7 @@ class AirbrakeSender @Inject() (
 
   var firstErrorReported = false
 
-  val defaultOnFailure: Request => PartialFunction[Throwable, Unit] = { url =>
+  val defaultFailureHandler: Request => PartialFunction[Throwable, Unit] = { url =>
     {
       case ex: Exception => if (!firstErrorReported) {
         firstErrorReported = true
@@ -84,7 +84,7 @@ class AirbrakeSender @Inject() (
   def sendError(xml: NodeSeq): Unit = httpClient.
     withTimeout(60000).
     withHeaders("Content-type" -> "text/xml").
-    postXmlFuture("http://airbrakeapp.com/notifier_api/v2/notices", xml, defaultOnFailure) map { res =>
+    postXmlFuture("http://airbrakeapp.com/notifier_api/v2/notices", xml, defaultFailureHandler) map { res =>
       val xmlRes = res.xml
       val id = (xmlRes \ "id").head.text
       val url = (xmlRes \ "url").head.text
