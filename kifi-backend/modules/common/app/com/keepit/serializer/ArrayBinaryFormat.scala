@@ -2,9 +2,9 @@ package com.keepit.serializer
 
 import java.nio.ByteBuffer
 
-object ArrayBinarySerializer {
+object ArrayBinaryFormat {
 
-  val intArraySerializer = new BinaryFormat[Array[Int]] {
+  val intArrayFormat = new BinaryFormat[Array[Int]] {
     protected def reads(data: Array[Byte], offset: Int, length: Int): Array[Int] = {
       val intBuffer = ByteBuffer.wrap(data, offset, length).asIntBuffer
       val outArray = new Array[Int]((data.length - 1)/4)
@@ -13,13 +13,14 @@ object ArrayBinarySerializer {
     }
 
     protected def writes(value: Array[Int]): Array[Byte] = {
-      val byteBuffer = ByteBuffer.allocate(value.length*4)
+      val byteBuffer = ByteBuffer.allocate(1+ value.length*4)
+      byteBuffer.put(1.toByte) // we have something
       byteBuffer.asIntBuffer.put(value)
       byteBuffer.array
     }
   }
 
-  val longArraySerializer = new BinaryFormat[Array[Long]] {
+  val longArrayFormat = new BinaryFormat[Array[Long]] {
     protected def reads(data: Array[Byte], offset: Int, length: Int): Array[Long] = {
       val longBuffer = ByteBuffer.wrap(data, offset, length).asLongBuffer
       val outArray = new Array[Long]((data.length - 1)/8)
@@ -28,7 +29,8 @@ object ArrayBinarySerializer {
     }
 
     protected def writes(value: Array[Long]): Array[Byte] = {
-      val byteBuffer = ByteBuffer.allocate(value.length*8)
+      val byteBuffer = ByteBuffer.allocate(1 + value.length*8)
+      byteBuffer.put(1.toByte) // we have something
       byteBuffer.asLongBuffer.put(value)
       byteBuffer.array
     }

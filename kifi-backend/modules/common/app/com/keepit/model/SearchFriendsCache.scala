@@ -5,7 +5,7 @@ import scala.concurrent.duration.Duration
 import com.keepit.common.cache.{BinaryCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.Id
-import com.keepit.serializer.ArrayBinarySerializer
+import com.keepit.serializer.ArrayBinaryFormat
 
 case class SearchFriendsKey(userId: Id[User]) extends Key[Array[Long]] {
   val namespace = "search_friends"
@@ -14,4 +14,4 @@ case class SearchFriendsKey(userId: Id[User]) extends Key[Array[Long]] {
 }
 
 class SearchFriendsCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[SearchFriendsKey, Array[Long]](stats, accessLog, inner, outer:_*)(ArrayBinarySerializer.longArraySerializer)
+  extends BinaryCacheImpl[SearchFriendsKey, Array[Long]](stats, accessLog, inner, outer:_*)(ArrayBinaryFormat.longArrayFormat)
