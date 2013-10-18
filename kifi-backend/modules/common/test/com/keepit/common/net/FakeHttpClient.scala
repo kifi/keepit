@@ -9,15 +9,15 @@ class FakeHttpClient(
     requestToResponse: Option[PartialFunction[String, FakeClientResponse]] = None
   ) extends HttpClient {
 
-  override val defaultOnFailure = ignoreFailure
+  override val defaultFailureHandler = ignoreFailure
 
-  override def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = assertUrl(url)
-  override def put(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a GET client")
-  override def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a GET client")
-  override def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a GET client")
-  override def postXml(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a POST client")
-  override def postText(url: String,body: String,onFailure: => String => PartialFunction[Throwable,Unit]): com.keepit.common.net.ClientResponse = ???
-  override def postTextFuture(url: String,body: String,onFailure: => String => PartialFunction[Throwable,Unit]): scala.concurrent.Future[com.keepit.common.net.ClientResponse] = ???
+  override def get(url: String, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = assertUrl(url)
+  override def put(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = throw new Exception("this is a GET client")
+  override def delete(url: String, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = throw new Exception("this is a GET client")
+  override def post(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = throw new Exception("this is a GET client")
+  override def postXml(url: String, body: NodeSeq, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = throw new Exception("this is a POST client")
+  override def postText(url: String,body: String, onFailure: => FailureHandler): com.keepit.common.net.ClientResponse = ???
+  override def postTextFuture(url: String,body: String, onFailure: => FailureHandler): scala.concurrent.Future[com.keepit.common.net.ClientResponse] = ???
 
   def posting(payload: String): FakeHttpPostClient = new FakeHttpPostClient(requestToResponse, {body =>
     if(payload != body.toString()) throw new Exception("expected %s doesn't match payload %s".format(payload, body))
@@ -35,23 +35,23 @@ class FakeHttpClient(
 
   override def withTimeout(timeout: Int): HttpClient = this
 
-  override def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { post(url, body) }
-  override def postXmlFuture(url: String, body: NodeSeq, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { postXml(url, body) }
-  override def getFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { get(url) }
-  override def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { put(url, body) }
-  override def deleteFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { delete(url) }
+  override def postFuture(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = Future.successful { post(url, body) }
+  override def postXmlFuture(url: String, body: NodeSeq, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = Future.successful { postXml(url, body) }
+  override def getFuture(url: String, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = Future.successful { get(url) }
+  override def putFuture(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = Future.successful { put(url, body) }
+  override def deleteFuture(url: String, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = Future.successful { delete(url) }
   override def withHeaders(hdrs: (String, String)*): HttpClient = throw new Exception("not supported")
 }
 
 class FakeHttpPostClient(requestToResponse: Option[PartialFunction[String, FakeClientResponse]],
   assertion: String => Unit) extends FakeHttpClient(requestToResponse) {
-  override def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = {
+  override def post(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = {
     assertion(body.toString())
     assertUrl(url)
   }
-  override def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a POST client")
-  override def put(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a POST client")
-  override def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a POST client")
+  override def get(url: String, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = throw new Exception("this is a POST client")
+  override def put(url: String, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = throw new Exception("this is a POST client")
+  override def delete(url: String, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = throw new Exception("this is a POST client")
 }
 
 case class FakeClientResponse(expectedResponse: String, override val status: Int = 200) extends ClientResponse {

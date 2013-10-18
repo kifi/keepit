@@ -62,20 +62,20 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case Input.EOF => Done(Unit, Input.EOF)
       case Input.Empty => Cont[JsArray, Unit](i => step(i))
       case Input.El(e) =>
-        Akka.future { 
+        Akka.future {
           try {
             f(e)
           } catch {
             case ex: Throwable => healthcheckPlugin.addError(
               HealthcheckError(
-                error = Some(ex), 
-                method = Some("ws"), 
-                path = e.value.headOption.map(_.toString), 
+                error = Some(ex),
+                method = Some("ws"),
+                path = e.value.headOption.map(_.toString),
                 callType = Healthcheck.INTERNAL,
                 errorMessage = Some(s"Error on ws call ${e.toString} for user ${streamSession.userId.id} using ${extVersion} on ${streamSession.userAgent}")
               )
             )
-          } 
+          }
         }
         Cont[JsArray, Unit](i => step(i))
     }
@@ -200,7 +200,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 Some(c)
               }
             }
-            
+
 
             log.info("WS request for: " + jsArr)
             Statsd.increment(s"websocket.handler.${jsArr.value(0)}")

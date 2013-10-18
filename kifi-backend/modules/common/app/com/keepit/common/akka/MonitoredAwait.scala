@@ -9,7 +9,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, Healthche
 
 class MonitoredAwait @Inject() (airbrake: AirbrakeNotifier, healthcheckPlugin: HealthcheckPlugin) {
 
-  def result[T](awaitable: Awaitable[T], atMost: Duration, errorMessage: String, valueOnFailure: T): T = {
+  def result[T](awaitable: Awaitable[T], atMost: Duration, errorMessage: String, valueFailureHandler: T): T = {
     val caller = Thread.currentThread().getStackTrace()(2)
     val tag = s"Await: ${caller.getClassName()}.${caller.getMethodName()}:${caller.getLineNumber()}"
 
@@ -19,7 +19,7 @@ class MonitoredAwait @Inject() (airbrake: AirbrakeNotifier, healthcheckPlugin: H
     } catch {
       case ex: Throwable =>
         airbrake.notify(AirbrakeError(ex, Some(s"[$errorMessage]: ${ex.getMessage}")))
-        valueOnFailure
+        valueFailureHandler
     } finally {
       sw.stop()
       sw.logTime()
