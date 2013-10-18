@@ -8,6 +8,7 @@ import play.api.mvc.AnyContent
 import com.keepit.common.controller.AuthenticatedRequest
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import org.apache.commons.codec.binary.Base64
 
 @Singleton
 class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultStore, userEventContextBuilder: UserEventContextBuilderFactory, heimdal: HeimdalServiceClient) {
@@ -85,6 +86,6 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
     val mac = Mac.getInstance(algorithm)
     val key = new SecretKeySpec(searchId.id.getBytes, algorithm)
     mac.init(key)
-    mac.doFinal(userId.toString.getBytes()).toString
+    Base64.encodeBase64String(mac.doFinal(userId.toString.getBytes()))
   }
 }
