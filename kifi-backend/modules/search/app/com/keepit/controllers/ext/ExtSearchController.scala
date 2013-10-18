@@ -61,7 +61,7 @@ class ExtSearchController @Inject() (
     val noSearchExperiments = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
     // fetch user data in background
-    fetchUserDataInBackground(shoeboxClient, userId)
+    val prefetcher = fetchUserDataInBackground(shoeboxClient, userId)
 
     log.info(s"""User ${userId} searched ${query.length} characters""")
 
@@ -201,12 +201,21 @@ class ExtSearchController @Inject() (
     }
   }
 
-  private[this] def fetchUserDataInBackground(shoeboxClient: ShoeboxServiceClient, userId: Id[User]): Unit = {
+  private[this] def fetchUserDataInBackground(shoeboxClient: ShoeboxServiceClient, userId: Id[User]): Prefetcher = new Prefetcher(shoeboxClient, userId)
+
+  private class Prefetcher(shoeboxClient: ShoeboxServiceClient, userId: Id[User]) {
+    var futures: Seq[Future[Any]] = null // pin futures in a jvm heap
     future {
       // following request must have request consolidation enabled, otherwise no use.
-      // have a head start on every other requests that search will make
-      shoeboxClient.getSearchFriends(userId)
-      shoeboxClient.getClickHistoryFilter(userId)
+      // have a head start on every other requests that search will make in order, then submit skipped requests backwards
+      futures = Seq(
+        // skip every other
+        shoeboxClient.getSearchFriends(userId),
+        shoeboxClient.getClickHistoryFilter(userId),
+        // then, backwards
+        shoeboxClient.getBrowsingHistoryFilter(userId),
+        shoeboxClient.getFriends(userId)
+      )
     }
   }
 
