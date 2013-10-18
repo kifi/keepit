@@ -1,28 +1,27 @@
 package com.keepit.eliza
 
 import com.keepit.common.controller.ElizaServiceController
-import com.keepit.common.db.{ExternalId, Id, State}
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.model.{User, SocialUserInfo, ExperimentType}
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.social.SocialNetworkType
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
-import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError, Healthcheck}
-import com.keepit.heimdal.{UserEvent, UserEventContextBuilder, UserEventType, HeimdalServiceClient}
+import com.keepit.common.healthcheck.{HealthcheckPlugin, Healthcheck}
+import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 
 import scala.concurrent.stm.{Ref, atomic}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.{Future, Promise, future}
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
 import scala.util.Random
-import scala.collection.concurrent.TrieMap
 
 import play.api.libs.concurrent.Akka
 import play.api.mvc.{WebSocket,RequestHeader}
 import play.api.libs.iteratee.{Enumerator,Iteratee, Concurrent}
 import play.api.mvc.WebSocket.FrameFormatter
-import play.api.libs.json.{Json, JsArray, JsValue}
+import play.api.libs.json.{Json, JsValue}
 import play.api.Play.current
 import play.modules.statsd.api.Statsd
 
@@ -31,6 +30,9 @@ import akka.actor.{Cancellable, ActorSystem}
 import securesocial.core.{Authenticator, UserService, SecureSocial}
 
 import org.joda.time.DateTime
+import play.api.libs.json.JsArray
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.social.SocialId
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
@@ -45,6 +47,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val clock: Clock
   protected val healthcheckPlugin: HealthcheckPlugin
   protected val heimdal: HeimdalServiceClient
+  protected val userEventContextBuilder: UserEventContextBuilderFactory
 
   protected def onConnect(socket: SocketInfo) : Unit
   protected def onDisconnect(socket: SocketInfo) : Unit
@@ -156,7 +159,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         val tStart = currentDateTime
         //Analytics
         SafeFuture {
-          val contextBuilder = UserEventContextBuilder(request)
+          val contextBuilder = userEventContextBuilder(Some(request))
           streamSession.experiments.foreach{ experiment =>
             contextBuilder += ("experiment", experiment.toString)
           }
@@ -174,7 +177,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           onDisconnect(socketInfo)
           //Analytics
           SafeFuture {
-            val contextBuilder = UserEventContextBuilder(request)
+            val contextBuilder = userEventContextBuilder(Some(request))
             streamSession.experiments.foreach{ experiment =>
               contextBuilder += ("experiment", experiment.toString)
             }

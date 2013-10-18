@@ -10,7 +10,7 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 @Singleton
-class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultStore, heimdal: HeimdalServiceClient) {
+class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultStore, userEventContextBuilder: UserEventContextBuilderFactory, heimdal: HeimdalServiceClient) {
 
   case class SearchEngine(name: String) {
     override def toString = name
@@ -30,7 +30,7 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
     articleSearchResult: ArticleSearchResult) = {
 
     val obfuscatedSearchId = obfuscate(articleSearchResultStore.getSearchId(articleSearchResult), request.userId)
-    val contextBuilder = UserEventContextBuilder(request)
+    val contextBuilder = userEventContextBuilder(Some(request))
     kifiVersion.foreach { version => contextBuilder += ("kifiVersion", version.toString) }
     contextBuilder += ("queryCharacters", articleSearchResult.query.length)
     contextBuilder += ("queryWords", articleSearchResult.query.split("""\b""").length)
@@ -59,7 +59,7 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
   def searchResultClicked(resultClicked: ResultClicked) = {
 
     val obfuscatedSearchId = resultClicked.queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, resultClicked.userId))
-    val contextBuilder = new UserEventContextBuilder()
+    val contextBuilder = userEventContextBuilder()
     contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
     contextBuilder += ("resultSource", resultClicked.toString)
     contextBuilder += ("resultPosition", resultClicked.resultPosition)
@@ -71,7 +71,7 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
   def searchEnded(searchEnded: SearchEnded) = {
 
     val obfuscatedSearchId = searchEnded.queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, searchEnded.userId))
-    val contextBuilder = new UserEventContextBuilder()
+    val contextBuilder = userEventContextBuilder()
     contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
     searchEnded.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
     contextBuilder += ("kifiResultsCount", searchEnded.kifiResultsCount)

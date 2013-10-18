@@ -8,7 +8,7 @@ import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.{HealthcheckPlugin}
-import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
+import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 
 import scala.util.{Success, Failure}
@@ -38,7 +38,8 @@ class ExtMessagingController @Inject() (
     protected val actorSystem: ActorSystem,
     protected val clock: Clock,
     protected val healthcheckPlugin: HealthcheckPlugin,
-    protected val heimdal: HeimdalServiceClient
+    protected val heimdal: HeimdalServiceClient,
+    protected val userEventContextBuilder: UserEventContextBuilderFactory
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
@@ -66,7 +67,7 @@ class ExtMessagingController @Inject() (
 
         //Analytics
         SafeFuture {
-          val contextBuilder = UserEventContextBuilder(request)
+          val contextBuilder = userEventContextBuilder(Some(request))
           recipientSet.foreach { recipient =>
             contextBuilder += ("recipient", recipient.id)
           }
@@ -106,7 +107,7 @@ class ExtMessagingController @Inject() (
 
     //Analytics
     SafeFuture {
-      val contextBuilder = UserEventContextBuilder(request)
+      val contextBuilder = userEventContextBuilder(Some(request))
 
       contextBuilder += ("threadId", message.thread.id)
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
