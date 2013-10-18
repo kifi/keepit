@@ -1,15 +1,15 @@
-!function() {
+!function () {
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
   var openedTimer, closedTimer;
 
-  $('.curtain-action').click(function(e) {
+  $('.curtain-action').click(function (e) {
     if (e.which !== 1) return;
     var $form = $('.' + $(this).data('form')).css('display', 'block');
     $form.find('input').first().focus();
     openCurtains();
   });
-  $('.curtain-back').click(function(e) {
+  $('.curtain-back').click(function (e) {
     if (e.which !== 1) return;
     closeCurtains($.fn.hide.bind($('form')));
   });
@@ -39,4 +39,13 @@
     $('body').removeClass('curtains-drawn');
     closedTimer = setTimeout(callback, 500);
   }
+
+  $('.form-network.facebook').click(function (e) {
+    if (e.which !== 1) return;
+    location = 'https://www.facebook.com';
+  });
+  $('.form-network.linkedin').click(function (e) {
+    if (e.which !== 1) return;
+    location = 'https://www.linkedin.com';
+  });
 }();

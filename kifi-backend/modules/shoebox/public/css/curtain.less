@@ -276,19 +276,17 @@ footer {
   display: table;
   border-collapse: collapse;
   width: 100%;
-  margin: 36px 0 30px;
+  margin: 36px 0 60px;
 }
 .form-l,
 .form-r {
   display: table-cell;
   width: 50%;
+  text-align: left;
+  padding-bottom: 10px;
 }
 .form-l {
   border-right: 5px solid #e5e5e5;
-  text-align: left;
-}
-.form-r {
-  text-align: right;
 }
 .form-sides h3 {
   margin: 0 0 24px;
@@ -303,11 +301,25 @@ footer {
   width: 80%;
   margin: 16px 10% 0;
 }
+@facebook-color: #597ab1;
+@linkedin-color: #2786c5;
 .form-network.facebook {
-  background: #597ab1;
+  background: @facebook-color;
+}
+.form-network.facebook:hover {
+  background: tint(@facebook-color, 10%);
+}
+.form-network.facebook:active {
+  background: shade(@facebook-color, 10%);
 }
 .form-network.linkedin {
-  background: #2786c5;
+  background: @linkedin-color;
+}
+.form-network.linkedin:hover {
+  background: tint(@linkedin-color, 10%);
+}
+.form-network.linkedin:active {
+  background: shade(@linkedin-color, 10%);
 }
 .form-network-icon {
   display: table-cell;
@@ -347,17 +359,26 @@ footer {
   width: 80%;
   margin: 16px 10%;
   height: 40px;
-  border: 2px solid #e5e5e5;
+  border: 0;
   padding: 0 4%;
 }
+@primary-button-color: #92c152;
 .form-submit {
-  margin-right: 10%;
-  background: #92c152;
+  display: block;
+  margin: 0 50% 0 10%;
   border: 0;
+  background: @primary-button-color;
   color: #fff;
   height: 36px;
-  padding: 0 7%;
+  line-height: 36px;
+  text-align: center;
   font-weight: 300;
+}
+.form-submit:hover {
+  background: tint(@primary-button-color, 10%);
+}
+.form-submit:active {
+  background: shade(@primary-button-color, 10%);
 }
 .form-terms {
   font-weight: 300;
