@@ -6,13 +6,13 @@ import play.api.Application
 import play.api.mvc.Request
 import play.api.mvc.Results.Redirect
 import play.api.mvc.{PlainResult, Result}
-import securesocial.core.providers.UsernamePasswordProvider
+import securesocial.core.providers.{UsernamePasswordProvider => UPP}
 import securesocial.core.{Registry, UserService, IdentityId, SocialUser}
 
 class UsernamePasswordProvider(application: Application)
-  extends securesocial.core.providers.UsernamePasswordProvider(application) with UserIdentityProvider {
+  extends UPP(application) with UserIdentityProvider {
   override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
-    UsernamePasswordProvider.loginForm.bindFromRequest().fold(
+    UPP.loginForm.bindFromRequest().fold(
       errors => Left(error()),
       credentials => {
         val result = for {
