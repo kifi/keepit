@@ -205,7 +205,6 @@
 }
 
 .kifi-message-participant-dialog {
-  display: none;
   position: absolute;
   top: 0;
   left: 0;
@@ -215,7 +214,8 @@
   color: white;
   background: @dotBgColor;
   opacity: 0;
-  transition: opacity .25s ease;
+  transform: translateY(-100%);
+  transition: all .5s ease;
 
   .kifi-ti-list {
     padding: 3px !important;
@@ -242,8 +242,8 @@
   }
 
   .kifi-message-participants.kifi-dialog-opened & {
-    display: block;
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
