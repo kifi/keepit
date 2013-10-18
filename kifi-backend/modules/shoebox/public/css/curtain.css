@@ -18,10 +18,43 @@ a:link,
 a:visited {
   text-decoration: none;
 }
-.curtain-h1 {
+/* curtains */
+.curtain-l,
+.curtain-r {
   position: absolute;
-  text-indent: -9999px;
+  z-index: 10;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  -webkit-transition: -webkit-transform 0.42s ease-out;
+  -moz-transition: -moz-transform 0.42s ease-out;
+  -o-transition: -o-transform 0.42s ease-out;
+  -ms-transition: -ms-transform 0.42s ease-out;
+  transition: transform 0.42s ease-out;
 }
+.curtain-l {
+  left: 0;
+  background-color: #9fc062;
+}
+.curtain-r {
+  right: 0;
+  background-color: #85a4ea;
+}
+.curtains-drawn > .curtain-l {
+  -webkit-transform: translate(-67%, 0);
+  -moz-transform: translate(-67%, 0);
+  -o-transform: translate(-67%, 0);
+  -ms-transform: translate(-67%, 0);
+  transform: translate(-67%, 0);
+}
+.curtains-drawn > .curtain-r {
+  -webkit-transform: translate(67%, 0);
+  -moz-transform: translate(67%, 0);
+  -o-transform: translate(67%, 0);
+  -ms-transform: translate(67%, 0);
+  transform: translate(67%, 0);
+}
+/* stuff on curtains */
 .curtain-logo-l,
 .curtain-logo-r {
   position: absolute;
@@ -111,41 +144,6 @@ a:visited {
   transform: translate(180%, 0);
   opacity: 0;
 }
-.curtain-l,
-.curtain-r {
-  position: absolute;
-  z-index: 10;
-  top: 0;
-  height: 100%;
-  width: 50%;
-  -webkit-transition: -webkit-transform 0.42s ease-out;
-  -moz-transition: -moz-transform 0.42s ease-out;
-  -o-transition: -o-transform 0.42s ease-out;
-  -ms-transition: -ms-transform 0.42s ease-out;
-  transition: transform 0.42s ease-out;
-}
-.curtain-l {
-  left: 0;
-  background-color: #9fc062;
-}
-.curtain-r {
-  right: 0;
-  background-color: #85a4ea;
-}
-.curtains-drawn > .curtain-l {
-  -webkit-transform: translate(-67%, 0);
-  -moz-transform: translate(-67%, 0);
-  -o-transform: translate(-67%, 0);
-  -ms-transform: translate(-67%, 0);
-  transform: translate(-67%, 0);
-}
-.curtains-drawn > .curtain-r {
-  -webkit-transform: translate(67%, 0);
-  -moz-transform: translate(67%, 0);
-  -o-transform: translate(67%, 0);
-  -ms-transform: translate(67%, 0);
-  transform: translate(67%, 0);
-}
 .curtain-action {
   position: absolute;
   top: 360px;
@@ -185,6 +183,7 @@ a:visited {
   text-transform: uppercase;
   margin-bottom: 5px;
 }
+/* back button */
 .curtain-back {
   position: absolute;
   top: 62px;
@@ -243,6 +242,7 @@ a:visited {
 .curtain-back:active:before {
   opacity: .6;
 }
+/* right-side footer */
 footer {
   position: absolute;
   top: 56px;
@@ -284,6 +284,47 @@ footer {
 .contact-us:hover {
   color: #fff;
 }
+/* main page */
+.main-logo {
+  width: 251px;
+  height: 144px;
+  margin: 0 auto;
+  padding-top: 70px;
+  background: url(../img/out/login.png) -2px -148px content-box;
+  text-indent: -9999px;
+}
+.page-title {
+  margin: 4px 0;
+  text-align: center;
+  line-height: 44px;
+  font-size: 38px;
+  font-weight: 300;
+  color: #aaa;
+  opacity: 0;
+  -webkit-transform: translate(0, -70%);
+  -moz-transform: translate(0, -70%);
+  -o-transform: translate(0, -70%);
+  -ms-transform: translate(0, -70%);
+  transform: translate(0, -70%);
+  -webkit-transition: opacity 0 0.42s, -webkit-transform 0 0.42s;
+  -moz-transition: opacity 0 0.42s, -moz-transform 0 0.42s;
+  -o-transition: opacity 0 0.42s, -o-transform 0 0.42s;
+  -ms-transition: opacity 0 0.42s, -ms-transform 0 0.42s;
+  transition: opacity 0 0.42s, transform 0 0.42s;
+}
+.curtains-drawn > .page-title {
+  -webkit-transform: none;
+  -moz-transform: none;
+  -o-transform: none;
+  -ms-transform: none;
+  transform: none;
+  opacity: 1;
+  -webkit-transition: opacity 0.252s 0.168s linear, -webkit-transform 0.42s ease-in-out;
+  -moz-transition: opacity 0.252s 0.168s linear, -moz-transform 0.42s ease-in-out;
+  -o-transition: opacity 0.252s 0.168s linear, -o-transform 0.42s ease-in-out;
+  -ms-transition: opacity 0.252s 0.168s linear, -ms-transform 0.42s ease-in-out;
+  transition: opacity 0.252s 0.168s linear, transform 0.42s ease-in-out;
+}
 /* forms */
 .signup-form,
 .login-form {
@@ -291,63 +332,21 @@ footer {
   text-align: center;
   margin: 0 16.5%;
 }
-.signup-form > h2,
-.login-form > h2 {
-  color: #aaa;
-  font-size: 38px;
-  line-height: 44px;
-  font-weight: 300;
-  margin: 4px 0;
-  -webkit-transform: translate(0, -70%);
-  -moz-transform: translate(0, -70%);
-  -o-transform: translate(0, -70%);
-  -ms-transform: translate(0, -70%);
-  transform: translate(0, -70%);
-  opacity: 0;
-  -webkit-transition: opacity 0 0.42s, -webkit-transform 0 0.42s;
-  -moz-transition: opacity 0 0.42s, -moz-transform 0 0.42s;
-  -o-transition: opacity 0 0.42s, -o-transform 0 0.42s;
-  -ms-transition: opacity 0 0.42s, -ms-transform 0 0.42s;
-  transition: opacity 0 0.42s, transform 0 0.42s;
-}
-.curtains-drawn > .signup-form > h2,
-.curtains-drawn > .login-form > h2 {
-  -webkit-transform: none;
-  -moz-transform: none;
-  -o-transform: none;
-  -ms-transform: none;
-  transform: none;
-  opacity: 1;
-  -webkit-transition: opacity 0.24s 0.18s linear, -webkit-transform 0.42s ease-in-out;
-  -moz-transition: opacity 0.24s 0.18s linear, -moz-transform 0.42s ease-in-out;
-  -o-transition: opacity 0.24s 0.18s linear, -o-transform 0.42s ease-in-out;
-  -ms-transition: opacity 0.24s 0.18s linear, -ms-transform 0.42s ease-in-out;
-  transition: opacity 0.24s 0.18s linear, transform 0.42s ease-in-out;
-}
-.kifi-logo {
-  width: 251px;
-  height: 144px;
-  margin: 0 auto;
-  padding-top: 70px;
-  background: url(../img/out/login.png) -2px -148px content-box;
-}
 .form-sides {
   display: table;
   border-collapse: collapse;
   width: 100%;
-  margin: 36px 0 30px;
+  margin: 36px 0 60px;
 }
 .form-l,
 .form-r {
   display: table-cell;
   width: 50%;
+  text-align: left;
+  padding-bottom: 10px;
 }
 .form-l {
   border-right: 5px solid #e5e5e5;
-  text-align: left;
-}
-.form-r {
-  text-align: right;
 }
 .form-sides h3 {
   margin: 0 0 24px;
@@ -365,8 +364,20 @@ footer {
 .form-network.facebook {
   background: #597ab1;
 }
+.form-network.facebook:hover {
+  background: #6a87b9;
+}
+.form-network.facebook:active {
+  background: #506e9f;
+}
 .form-network.linkedin {
   background: #2786c5;
+}
+.form-network.linkedin:hover {
+  background: #3d92cb;
+}
+.form-network.linkedin:active {
+  background: #2379b1;
 }
 .form-network-icon {
   display: table-cell;
@@ -410,17 +421,25 @@ footer {
   width: 80%;
   margin: 16px 10%;
   height: 40px;
-  border: 2px solid #e5e5e5;
+  border: 0;
   padding: 0 4%;
 }
 .form-submit {
-  margin-right: 10%;
-  background: #92c152;
+  display: block;
+  margin: 0 50% 0 10%;
   border: 0;
+  background: #92c152;
   color: #fff;
   height: 36px;
-  padding: 0 7%;
+  line-height: 36px;
+  text-align: center;
   font-weight: 300;
+}
+.form-submit:hover {
+  background: #9dc763;
+}
+.form-submit:active {
+  background: #83ae4a;
 }
 .form-terms {
   font-weight: 300;
@@ -434,7 +453,7 @@ footer {
   .curtain-logo-r:before,
   .curtain-back:before,
   .us-on,
-  .kifi-logo,
+  .main-logo,
   .form-network-icon:before {
     background-image: url(../img/out/login.2x.png);
     background-size: 255px auto;
