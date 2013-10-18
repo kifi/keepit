@@ -1,8 +1,8 @@
 .kifi-message-participants {
   position: relative;
-  padding: 3px 7px;
+  padding: 3px 0px;
   color: #111111;
-  background: #ecf0f1;
+  background: #eff2f7;
   border-bottom: 1px solid #e1e8e9;
 }
 .kifi-message-participants-1 {
@@ -32,10 +32,35 @@
 .kifi-message-participants-n .kifi-message-participants-title {
   font-weight: 500;
   color: #111111;
+  padding: 0 7px;
 }
 .kifi-participant-count {
   font-size: 1.1em;
   color: #67829c;
+}
+.kifi-participant-count.kifi-highlight {
+  -webkit-animation-name: kifi-highlight-count;
+  -moz-animation-name: kifi-highlight-count;
+  animation-name: kifi-highlight-count;
+  -webkit-animation-duration: 5s;
+  -moz-animation-duration: 5s;
+  animation-duration: 5s;
+}
+@-webkit-keyframes kifi-highlight-count {
+  0% {
+    color: #6fa6ef;
+  }
+  100% {
+    color: #67829c;
+  }
+}
+@keyframes kifi-highlight-count {
+  0% {
+    color: #6fa6ef;
+  }
+  100% {
+    color: #67829c;
+  }
 }
 .kifi-message-recipient-name {
   color: #000000;
@@ -44,6 +69,7 @@
   font-size: 0;
   line-height: 0;
   white-space: nowrap;
+  padding: 0 7px;
   opacity: 1;
   transition: opacity 0.15s linear;
 }
@@ -73,6 +99,30 @@
   height: 100%;
   border-radius: 2px;
 }
+.kifi-message-participant-avatar.kifi-highlight {
+  -webkit-animation-name: kifi-highlight-shadow;
+  -moz-animation-name: kifi-highlight-shadow;
+  animation-name: kifi-highlight-shadow;
+  -webkit-animation-duration: 10s;
+  -moz-animation-duration: 10s;
+  animation-duration: 10s;
+}
+@-webkit-keyframes kifi-highlight-shadow {
+  0% {
+    box-shadow: 0 0 3px 2px #6fa6ef;
+  }
+  100% {
+    box-shadow: 0 0 3px 2px transparent;
+  }
+}
+@keyframes kifi-highlight-shadow {
+  0% {
+    box-shadow: 0 0 3px 2px #6fa6ef;
+  }
+  100% {
+    box-shadow: 0 0 3px 2px transparent;
+  }
+}
 .kifi-message-participants-avatars-expand {
   display: none;
   font-size: 20px;
@@ -84,7 +134,7 @@
   padding-top: 0;
   vertical-align: bottom;
   border-radius: 2px;
-  color: #ecf0f1;
+  color: #eff2f7;
   background: #b8c5d1;
 }
 .kifi-message-participants-avatars-expand:hover,
@@ -109,14 +159,21 @@
   bottom: 0;
 }
 .kifi-message-participant-list {
-  display: block;
+  position: relative;
+}
+.kifi-message-participant-list-inner {
+  position: relative;
+  max-height: 333px;
   line-height: 0;
   list-style: none;
+  overflow: scroll;
+  overflow-x: hidden;
+  overflow-y: scroll;
 }
 .kifi-message-participant-item {
   position: relative;
   line-height: 35px;
-  margin-bottom: 3px;
+  padding: 2px 7px;
   white-space: nowrap;
   font-size: 12px;
   font-weight: 500;
@@ -132,13 +189,38 @@
   float: left;
   vertical-align: middle;
 }
+.kifi-message-participant-item.kifi-highlight {
+  -webkit-animation-name: kifi-highlight-backround;
+  -moz-animation-name: kifi-highlight-backround;
+  animation-name: kifi-highlight-backround;
+  -webkit-animation-duration: 10s;
+  -moz-animation-duration: 10s;
+  animation-duration: 10s;
+}
+@-webkit-keyframes kifi-highlight-backround {
+  0% {
+    background: #b4d1f7;
+  }
+  100% {
+    background: transparent;
+  }
+}
+@keyframes kifi-highlight-backround {
+  0% {
+    background: #6fa6ef;
+  }
+  100% {
+    background: transparent;
+  }
+}
 .kifi-message-participant-list-hide {
   display: block;
-  color: #ecf0f1;
+  color: #eff2f7;
   background: #67829c;
   border-radius: 2px;
   padding: 9px 0;
-  margin-top: 3px;
+  margin: 0 7px;
+  margin-top: 2px;
   font-size: 12px;
   font-weight: 400;
   text-align: center;

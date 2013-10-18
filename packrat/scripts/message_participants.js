@@ -2,6 +2,7 @@
 // @require scripts/render.js
 // @require scripts/util.js
 // @require scripts/kifi_util.js
+// @require scripts/lib/antiscroll.min.js
 // @require scripts/html/keeper/message_participants.js
 // @require scripts/html/keeper/message_participant.js
 // @require scripts/html/keeper/message_participant_icon.js
@@ -180,6 +181,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
         */
 
 			this.initEvents();
+			this.initScroll();
 			this.initInput();
 
 			this.logEvent('init', {
@@ -194,6 +196,17 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 */
 		requestParticipants: function () {
 			return kifiUtil.request('participants', win.$slider && win.$slider.getThreadId(), 'Could not load participants.');
+		},
+
+		/**
+		 * Initializes event listeners.
+		 */
+		initScroll: function () {
+			var $list = this.get$('.kifi-message-participant-list');
+			this.$list = $list;
+			$list.antiscroll({
+				x: false
+			});
 		},
 
 		/**
@@ -545,13 +558,34 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		})(),
 
 		addParticipant: function () {
-			util.prependUnique(this.participants, arguments);
-			this.updateView();
+			var count = util.prependUnique(this.participants, arguments);
+			if (count) {
+				this.updateView();
+				this.highlightFirstNParticipants(count);
+				this.highlightCount();
+			}
 		},
 
 		removeParticipant: function () {
 			util.removeList(this.participants, arguments);
 			this.updateView();
+		},
+
+		highlightCount: function () {
+			this.get$('.kifi-participant-count').addClass('kifi-highlight');
+			setTimeout(function () {
+				var $el = this.get$('.kifi-participant-count');
+				if ($el) {
+					$el.removeClass('kifi-highlight');
+				}
+			}.bind(this), 5000);
+		},
+
+		highlightFirstNParticipants: function (count) {
+			if (count) {
+				this.get$('.kifi-message-participant-item').slice(0, count).addClass('kifi-highlight');
+				this.get$('.kifi-message-participant-avatar').slice(0, count).addClass('kifi-highlight');
+			}
 		},
 
 		updateView: function () {
@@ -562,7 +596,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			$el.find('.kifi-message-recipient-name').text(view.recipientName);
 			$el.find('.kifi-participant-count').text(view.participantCount);
 			$el.find('.kifi-message-participants-avatars').html(view.avatars);
-			$el.find('.kifi-message-participant-list').html(view.participants);
+			$el.find('.kifi-message-participant-list-inner').html(view.participants);
 			this.updateParticipantsHeight();
 		},
 
@@ -582,15 +616,13 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 				this.parent = null;
 				this.participants = [];
 
-				if (this.$input) {
-					this.$input.remove();
-					this.$input = null;
-				}
-
-				if (this.$el) {
-					this.$el.remove();
-					this.$el = null;
-				}
+				['$input', '$list', '$el'].forEach(function (name) {
+					var $el = this[name];
+					if ($el) {
+						$el.remove();
+						this[name] = null;
+					}
+				}, this);
 
 				this.logEvent('destroy', {
 					trigger: trigger

@@ -73,43 +73,54 @@ var util = this.util = (function () {
 		/**
 		 * Adds values from the second array to the first array
 		 * that are not present in the first array.
-		 * It mutates the first array and returns the first array.
+		 * It mutates the first array and returns the number of values added.
 		 *
 		 * @param {Array} An array to add to
 		 * @param {Array} An array of values to add
 		 *
-		 * @return {Array} the first array
+		 * @return {number} how many were added
 		 */
 		addUnique: function (arr, list) {
+			var prevLen = arr.length;
 			for (var i = 0, len = list.length, val; i < len; i++) {
 				val = list[i];
 				if (arr.indexOf(val) === -1) {
 					arr.push(val);
 				}
 			}
-			return arr;
+			return arr.length - prevLen;
 		},
 
 		/**
 		 * Prepends values from the second array to the first array
 		 * that are not present in the first array.
-		 * It mutates the first array and returns the first array.
+		 * It mutates the first array and returns the number of values added.
 		 *
 		 * @param {Array} An array to prepend to
 		 * @param {Array} An array of values to prepend
 		 *
-		 * @return {Array} the first array
+		 * @return {number} how many were added
 		 */
 		prependUnique: function (arr, list) {
+			var prevLen = arr.length;
 			for (var i = 0, len = list.length, val; i < len; i++) {
 				val = list[i];
 				if (arr.indexOf(val) === -1) {
 					arr.unshift(val);
 				}
 			}
-			return arr;
+			return arr.length - prevLen;
 		},
 
+		/**
+		 * Removes the second array values from the first array.
+		 * It mutates the first array and returns an array of values removed.
+		 *
+		 * @param {Array} An array to remove from
+		 * @param {Array} An array of values to remove
+		 *
+		 * @return {Array} An array of values removed
+		 */
 		removeList: function (arr, list) {
 			var indices = [];
 			for (var i = 0, len = list.length, index; i < len; i++) {
@@ -119,13 +130,18 @@ var util = this.util = (function () {
 				}
 			}
 
-			indices.sort();
+			var removedList = [];
+			if (indices.length) {
+				indices.sort();
 
-			for (i = indices.length - 1; i >= 0; i--) {
-				arr.splice(indices[i], 1);
+				var removed;
+				for (i = indices.length - 1; i >= 0; i--) {
+					removed = arr.splice(indices[i], 1)[0];
+					removedList.push(removed);
+				}
 			}
 
-			return arr;
+			return removedList;
 		},
 
 		/**
