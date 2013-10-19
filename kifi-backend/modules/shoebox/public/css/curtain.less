@@ -13,7 +13,7 @@ html.mac {
 }
 body {
   position: relative;
-  min-height: 540px;
+  min-height: 640px;
   background-color: #f3f3f3;
 }
 a:link,
@@ -42,10 +42,10 @@ a:visited {
 
 }
 .curtains-drawn>.curtain-l {
-  .translate(-67%,  0);
+  .translate3d(-67%);
 }
 .curtains-drawn>.curtain-r {
-  .translate(67%, 0);
+  .translate3d(67%);
 }
 
 /* stuff on curtains */
@@ -57,13 +57,18 @@ a:visited {
   width: 50%;
   height: 144px;
   text-align: center;
-  .transition(clip @curtain-time ease-out);
+  .transition(clip @curtain-time ease-out, visibility @curtain-time);
 }
 .curtain-logo-l {
   left: 0;
 }
 .curtain-logo-r {
   right: 0;
+}
+.curtains-drawn>.curtain-logo-l,
+.curtains-drawn>.curtain-logo-r {
+  visibility: hidden;
+  .transition(clip @curtain-time ease-out, visibility 0s @curtain-time);
 }
 .curtain-logo-l:before,
 .curtain-logo-r:before {
@@ -101,7 +106,7 @@ a:visited {
   font-weight: 300;
   white-space: nowrap;
   .box-sizing(border-box);
-  .transition(opacity @curtain-time, transform @curtain-time ease-out);
+  .transition(opacity @curtain-time, visibility @curtain-time, transform @curtain-time ease-out);
 }
 .curtain-welcome-l {
   left: 0;
@@ -112,13 +117,17 @@ a:visited {
   right: 0;
   padding-left: 5px;
 }
-.curtains-drawn .curtain-welcome-l {
-  .translate(-180%, 0);
+.curtains-drawn .curtain-welcome-l,
+.curtains-drawn .curtain-welcome-r {
+  .transition(opacity @curtain-time, visibility 0s @curtain-time, transform @curtain-time ease-out);
   opacity: 0;
+  visibility: hidden;
+}
+.curtains-drawn .curtain-welcome-l {
+  .translate3d(-180%);
 }
 .curtains-drawn .curtain-welcome-r {
-  .translate(180%, 0);
-  opacity: 0;
+  .translate3d(180%);
 }
 .curtain-action {
   position: absolute;
@@ -129,7 +138,7 @@ a:visited {
   -webkit-font-smoothing: antialiased;
   color: #fff;
   font-size: 18px;
-  .transition(opacity @curtain-time);
+  .transition(opacity @curtain-time, visibility @curtain-time);
 }
 .curtain-action.signup {
   right: 8%;
@@ -146,7 +155,9 @@ a:visited {
   background-color: rgba(0, 0, 0, .08);
 }
 .curtains-drawn .curtain-action {
+  .transition(opacity @curtain-time, visibility 0s @curtain-time);
   opacity: 0;
+  visibility: hidden;
 }
 .curtain-a-title {
   font-size: 32px;
@@ -168,7 +179,7 @@ a:visited {
   text-align: center;
   visibility: hidden;
   opacity: 0;
-  .translate(-110px, 0);
+  .translate3d(-110px);
   .transition(visibility 0s @curtain-time, opacity @curtain-time, transform @curtain-time ease-out);
 }
 .curtains-drawn>.curtain-back {
@@ -261,7 +272,7 @@ footer {
   font-weight: 300;
   color: #aaa;
   opacity: 0;
-  .transform(translate(0, -70%));
+  .translate3d(0, -70%);
   .transition(opacity 0 @curtain-time, transform 0 @curtain-time);
 }
 .curtains-drawn>.page-title {
@@ -279,19 +290,24 @@ footer {
 }
 .form-sides {
   display: table;
-  border-collapse: collapse;
+  margin: 36px auto 60px;
   width: 100%;
-  margin: 36px 0 60px;
+  max-width: 800px;
 }
 .form-l,
 .form-r {
   display: table-cell;
   width: 50%;
   text-align: left;
-  padding-bottom: 10px;
+  border: 0px solid #e5e5e5;
+  padding: 0 0 10px;
+  .box-sizing(border-box);
 }
 .form-l {
-  border-right: 5px solid #e5e5e5;
+  border-right-width: 3px;
+}
+.form-r {
+  border-left-width: 3px;
 }
 .form-sides h3 {
   margin: 0 0 24px;
@@ -371,7 +387,9 @@ footer {
 .form-submit {
   display: block;
   margin: 0 50% 0 10%;
+  width: 40%;
   border: 0;
+  padding: 0;
   background: @primary-button-color;
   color: #fff;
   height: 36px;
@@ -390,6 +408,53 @@ footer {
   font-size: 14px;
   line-height: 18px;
   color: #515151;
+}
+
+/* finalize new account */
+.finalize {
+  position: absolute;
+  visibility: hidden;
+  left: 0;
+  right: 0;
+}
+.finalizing .finalize {
+  visibility: visible;
+}
+
+/* finalize transition */
+@finalize-time: .24s;
+.page-title.obsolete {
+  position: absolute;
+  width: 100%;
+  .transition(opacity (.6 * @finalize-time) linear, visibility 0s @finalize-time, transform @finalize-time ease-in-out);
+}
+.obsolete+.page-title {
+  opacity: 0;
+  .translate3d(0, 70%);
+  .transition(opacity (.8 * @finalize-time) (.2 * @finalize-time) linear, transform @finalize-time ease-in-out);
+}
+.finalizing>.page-title.obsolete {
+  opacity: 0;
+  visibility: hidden;
+  .translate3d(0, -70%);
+}
+.finalizing>.obsolete+.page-title {
+  opacity: 1;
+  .transform(none);
+}
+.form-l,
+.form-r {
+  .transition(opacity @finalize-time linear, visibility 0s @finalize-time, transform @finalize-time ease-in);
+}
+.finalizing .form-l {
+  opacity: 0;
+  visibility: hidden;
+  .translate3d(-100%);
+}
+.finalizing .form-r {
+  opacity: 0;
+  visibility: hidden;
+  .translate3d(100%);
 }
 
 /* retina image overrides */

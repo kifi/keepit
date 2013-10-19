@@ -36,14 +36,29 @@
 <div class="curtain-logo-r"></div>
 <h2 class="curtain-welcome">
   <span class="curtain-welcome-l">Welcome to our</span>
-  <span class="curtain-welcome-r">private beta<span>
+  <span class="curtain-welcome-r">private beta</span>
 </h2>
 <a class="curtain-back" href="javascript:">Back</a>
 
 <h1 class="main-logo">kifi</h1>
 <h2 class="page-title"></h2>
 
-<form class="signup-form" data-title="Sign Up">
+<form class="signup-form" data-title="Sign Up" data-title2="Finalize Your Account">
+  <div class="finalize">
+    <div class="finalize-email-addr"></div>
+    <div class="finalize-name">
+      <input class="form-first-name" type="text" name="first-name" placeholder="First name">
+      <input class="form-last-name" type="text" name="last-name" placeholder="Last name">
+    </div>
+    <div class="finalize-pic">
+      <!--img src=""-->
+      <div class="photo-label">Your photo</div>
+      <a class="photo-facebook" href="javascript:"></a>
+      <a class="photo-linkedin" href="javascript:"></a>
+      <a class="photo-upload" href="javascript:">Upload</a>
+    </div>
+  </div>
+
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>
@@ -58,11 +73,12 @@
     </div>
     <div class="form-r">
       <h3>Use your email address</h3>
-      <input class="form-email-addr" type="email" placeholder="Your email address">
-      <input class="form-password" type="password" placeholder="Your new password">
-      <a class="form-submit" href="javascript:">Sign up</a>
+      <input class="form-email-addr" type="email" name="signup-email" placeholder="Your email address">
+      <input class="form-password" type="password" name="signup-password" placeholder="Your new password">
+      <button class="form-submit">Sign up</button>
     </div>
   </div>
+
   <p class="form-terms">
     By signing up, you agree to Kifi’s <a target="_blank" href="">Terms of Service</a>.
   </p>
@@ -83,15 +99,11 @@
     </div>
     <div class="form-r">
       <h3>Use your email address</h3>
-      <input class="form-email-addr" type="email" placeholder="Your email address">
-      <input class="form-password" type="password" placeholder="Choose a password">
-      <a class="form-submit" href="javascript:">Log in</a>
+      <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address">
+      <input class="form-password" type="password" name="login-password" placeholder="Choose a password">
+      <button class="form-submit">Log in</button>
     </div>
   </div>
-</form>
-
-<form class="finalize-form">
-
 </form>
 
 <footer>
