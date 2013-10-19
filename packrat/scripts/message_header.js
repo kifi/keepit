@@ -40,6 +40,12 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		plugins: [win.messageParticipants /*, win.messageMute*/ ],
 
+		status: null,
+
+		$pane: null,
+
+		participants: null,
+
 		/**
 		 * A constructor of Message Header
 		 *
@@ -63,6 +69,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		 */
 		init: function (trigger) {
 			this.initialized = true;
+			this.status = {};
 			this.initMessageHeader();
 			this.initPlugins();
 
@@ -77,18 +84,8 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		 * @return {jQuery} A jQuery object for the container
 		 */
 		initMessageHeader: function () {
-			log('asetnuha')();
-			log('asetnuha')();
-			log('asetnuha')();
-			log('asetnuha')();
-			log('asetnuha')();
-			log('asetnuha')();
-			var $el = $(this.render()).insertBefore($(document.body));
+			var $el = $(this.render()).appendTo(this.$pane.find('.kifi-thread-who'));
 			this.$el = $el;
-			log($el)();
-			log($el)();
-			log($el)();
-			log($el)();
 			return $el;
 		},
 
@@ -113,7 +110,9 @@ var messageHeader = this.messageHeader = (function ($, win) {
 					}
 				}, this);
 
-				this.status = {};
+				this.status = null;
+				this.$pane = null;
+				this.participants = null;
 
 				this.logEvent('destroy', {
 					trigger: trigger
@@ -142,8 +141,6 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			var $el = this.$el;
 			return $el && $el.on.apply($el, arguments);
 		},
-
-		status: {},
 
 		setStatus: function (name, isSet) {
 			isSet = Boolean(isSet);

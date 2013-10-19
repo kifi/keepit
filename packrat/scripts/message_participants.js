@@ -175,14 +175,12 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		init: function (trigger) {
 			this.initialized = true;
 
+			this.participants = this.parent.participants;
+
 			/*
 			this.requestParticipants()
 				.then(this.onResponseParticipants.bind(this));
         */
-
-			if (win.slider2) {
-				win.slider2.shadePane();
-			}
 
 			this.initEvents();
 			this.initScroll();
@@ -484,14 +482,14 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		expandParticipants: function () {
 			var $wrapper = this.get$('.kifi-message-participant-list-root'),
 				list = $wrapper.children()[0];
-			this.get$().addClass('kifi-expanded');
-			$wrapper.height(list.offsetHeight);
-		},
 
-		updateParticipantsHeight: function () {
-			if (this.isExpanded()) {
-				this.expandParticipants();
+			if (win.slider2) {
+				win.slider2.shadePane();
 			}
+
+			this.get$().addClass('kifi-expanded');
+
+			$wrapper.height(list.offsetHeight);
 		},
 
 		/**
@@ -500,6 +498,16 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		collapseParticipants: function () {
 			this.get$().removeClass('kifi-expanded');
 			this.get$('.kifi-message-participant-list-root').height(0);
+
+			if (win.slider2) {
+				win.slider2.unshadePane();
+			}
+		},
+
+		updateParticipantsHeight: function () {
+			if (this.isExpanded()) {
+				this.expandParticipants();
+			}
 		},
 
 		toggleParticipants: function () {
@@ -618,7 +626,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			if (this.initialized) {
 				this.initialized = false;
 				this.parent = null;
-				this.participants = [];
+				this.participants = null;
 
 				if (win.slider2) {
 					win.slider2.unshadePane();

@@ -71,10 +71,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('click', onClick, true);
   });
-        api.require('scripts/message_header.js', function () {
-          log('require:message_header')();
-          messageHeader.construct();
-        });
 
   function createSlider(callback, locator) {
     var kept = tile && tile.dataset.kept;
@@ -477,6 +473,12 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       }
       function respond(p) {
         cb({participants: p, numParticipants: p.length > 1 ? p.length : null});
+        api.require('scripts/message_header.js', function () {
+          log('require:message_header')();
+          messageHeader.$pane = $pane;
+          messageHeader.participants = participants;
+          messageHeader.construct();
+        });
       }
     }};
 
