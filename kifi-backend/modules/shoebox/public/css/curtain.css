@@ -533,9 +533,9 @@ footer {
 .form-photo {
   width: 100px;
   height: 100px;
-  background: #fff;
   float: left;
   margin-right: 10px;
+  background: #cccccc url(../img/out/ghost.100.png);
 }
 .form-photo-controls {
   overflow: hidden;
@@ -547,37 +547,65 @@ footer {
   line-height: 30px;
   font-size: 14px;
   font-weight: 300;
-  padding-left: 20px;
+  padding-left: 40px;
   white-space: nowrap;
   margin-bottom: 5px;
+  position: relative;
 }
 .form-photo-a.facebook {
-  background: #597ab1;
+  background-color: #597ab1;
 }
 .form-photo-a.facebook:hover {
-  background: #6a87b9;
+  background-color: #6a87b9;
 }
 .form-photo-a.facebook:active {
-  background: #506e9f;
+  background-color: #506e9f;
 }
 .form-photo-a.linkedin {
-  background: #2786c5;
+  background-color: #2786c5;
 }
 .form-photo-a.linkedin:hover {
-  background: #3d92cb;
+  background-color: #3d92cb;
 }
 .form-photo-a.linkedin:active {
-  background: #2379b1;
+  background-color: #2379b1;
 }
 .form-photo-a.upload {
-  background: #888888;
+  background-color: #888888;
   margin-bottom: 0;
+  cursor: pointer;
 }
 .form-photo-a.upload:hover {
-  background: #949494;
+  background-color: #949494;
 }
 .form-photo-a.upload:active {
-  background: #7a7a7a;
+  background-color: #7a7a7a;
+}
+.form-photo-a:before {
+  content: ' ';
+  font-size: 0;
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  height: 16px;
+  width: 16px;
+  background: url(../img/out/login.png);
+}
+.form-photo-a.facebook:before {
+  background-position: -201px -328px;
+}
+.form-photo-a.linkedin:before {
+  background-position: -219px -328px;
+}
+.form-photo-a.upload:before {
+  background-position: -237px -328px;
+}
+.form-photo-file {
+  position: absolute;
+  height: 0;
+  width: 0;
+  overflow: hidden;
+  visibility: hidden;
 }
 .form-submit-final {
   margin: 20px auto;
@@ -712,8 +740,13 @@ footer {
   .curtain-back:before,
   .us-on,
   .main-logo,
-  .form-network-icon:before {
+  .form-network-icon:before,
+  .form-photo-a:before {
     background-image: url(../img/out/login.2x.png);
     background-size: 255px auto;
+  }
+  .form-photo {
+    background-image: url(../img/out/ghost.200.png);
+    background-size: 100px auto;
   }
 }
