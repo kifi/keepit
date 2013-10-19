@@ -27,7 +27,7 @@ $.postJson = function(uri, data) {
       .filter('.' + $(this).data('form'))
       .css('display', 'block');
     $('.page-title').text($form.data('title'));
-    $form.find('input').first().focus();
+    $form.find('.form-email-addr').focus();
     openCurtains();
   });
   $('.curtain-back').click(function (e) {
@@ -38,19 +38,31 @@ $.postJson = function(uri, data) {
   $('.signup-form').submit(function (e) {
     e.preventDefault();
     var $form = $(this);
-    var emailAddr = $form.find('.form-email-addr').val();
-    var password = $form.find('.form-password').val();
-    // $.postJson('/some/sign/up/path', {
-    //   e: emailAddr,
-    //   p: password
-    // }).done(function () {
-    //
-    // }).fail(function () {
-    //
-    // });
-    $('.finalize-email-addr').text(emailAddr);
-    transitionTitle($form.data('title2'));
-    $('body').addClass('finalizing');
+    var $body = $('body');
+    if (!$body.hasClass('finalizing')) {
+      var emailAddr = $form.find('.form-email-addr').val();
+      var password = $form.find('.form-password').val();
+      // TODO: validation
+      // $.postJson('/some/sign/up/path', {
+      //   e: emailAddr,
+      //   p: password
+      // }).done(function () {
+      //
+      // }).fail(function () {
+      //
+      // });
+      $('.finalize-email-addr').text(emailAddr);
+      transitionTitle($form.data('title2'));
+      $('body').addClass('finalizing');
+      setTimeout(function () {
+        $form.find('.form-first-name').focus();
+      }, 200);
+    } else {
+      var first = $form.find('.form-first-name').val();
+      var last = $form.find('.form-last-name').val();
+      // TODO: validation
+      // TODO: form submission using FormData or falling back to hidden iframe
+    }
   });
   $('.login-form').submit(function (e) {
     e.preventDefault();
