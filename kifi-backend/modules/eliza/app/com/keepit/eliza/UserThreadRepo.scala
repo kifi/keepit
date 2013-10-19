@@ -61,6 +61,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime]
 
+  def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Int
+
   def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] 
 
   def getPendingNotificationCount(userId: Id[User])(implicit session: RSession): Int
@@ -190,6 +192,10 @@ class UserThreadRepoImpl @Inject() (
     } getOrElse {
       (for (row <- table if row.user===userId) yield row.notificationLastSeen).update(timestamp)
     }
+  }
+
+  def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession) = {
+    (for (row <- table if row.id === userThreadId) yield row.muted).update(muted)
   }
 
   def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime] = {
