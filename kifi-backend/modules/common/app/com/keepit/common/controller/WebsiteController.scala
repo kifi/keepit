@@ -27,6 +27,9 @@ class WebsiteController(actionAuthenticator: ActionAuthenticator) extends Contro
     }
   }
 
+  def JsonToJsonAction(allowPending: Boolean)(authenticatedAction: AuthenticatedRequest[JsValue] => Result, unauthenticatedAction: Request[JsValue] => Result): Action[JsValue] =
+    actionAuthenticator.authenticatedAction(true, allowPending, parse.tolerantJson, authenticatedAction, unauthenticatedAction)
+
   def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
     actionAuthenticator.authenticatedAction(false, false, parse.anyContent, action)
 
