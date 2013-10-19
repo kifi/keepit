@@ -91,7 +91,7 @@ class AuthController @Inject() (
     originalUrlOpt map { url => sesh + (SecureSocial.OriginalUrlKey -> url) } getOrElse sesh
   }
 
-  private def getAuthAction(provider: String, authType: AuthType, format: String = "json"): Action[AnyContent] = Action { request =>
+  private def getAuthAction(provider: String, authType: AuthType, format: String = "html"): Action[AnyContent] = Action { request =>
     val augmentedRequest = augmentRequestWithTag(request, "format" -> format)
 
     val actualProvider = if (authType == AuthType.LoginAndLink) SocialNetworks.FORTYTWO.authProvider else provider
