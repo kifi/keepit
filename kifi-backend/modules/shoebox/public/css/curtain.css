@@ -11,7 +11,7 @@ html.mac {
 }
 body {
   position: relative;
-  min-height: 540px;
+  min-height: 640px;
   background-color: #f3f3f3;
 }
 a:link,
@@ -41,18 +41,18 @@ a:visited {
   background-color: #85a4ea;
 }
 .curtains-drawn > .curtain-l {
-  -webkit-transform: translate(-67%, 0);
-  -moz-transform: translate(-67%, 0);
-  -o-transform: translate(-67%, 0);
-  -ms-transform: translate(-67%, 0);
-  transform: translate(-67%, 0);
+  -webkit-transform: translate3d(-67%, 0, 0);
+  -moz-transform: translate3d(-67%, 0, 0);
+  -o-transform: translate3d(-67%, 0, 0);
+  -ms-transform: translate3d(-67%, 0, 0);
+  transform: translate3d(-67%, 0, 0);
 }
 .curtains-drawn > .curtain-r {
-  -webkit-transform: translate(67%, 0);
-  -moz-transform: translate(67%, 0);
-  -o-transform: translate(67%, 0);
-  -ms-transform: translate(67%, 0);
-  transform: translate(67%, 0);
+  -webkit-transform: translate3d(67%, 0, 0);
+  -moz-transform: translate3d(67%, 0, 0);
+  -o-transform: translate3d(67%, 0, 0);
+  -ms-transform: translate3d(67%, 0, 0);
+  transform: translate3d(67%, 0, 0);
 }
 /* stuff on curtains */
 .curtain-logo-l,
@@ -63,17 +63,26 @@ a:visited {
   width: 50%;
   height: 144px;
   text-align: center;
-  -webkit-transition: clip 0.42s ease-out;
-  -moz-transition: clip 0.42s ease-out;
-  -o-transition: clip 0.42s ease-out;
-  -ms-transition: clip 0.42s ease-out;
-  transition: clip 0.42s ease-out;
+  -webkit-transition: clip 0.42s ease-out, visibility 0.42s;
+  -moz-transition: clip 0.42s ease-out, visibility 0.42s;
+  -o-transition: clip 0.42s ease-out, visibility 0.42s;
+  -ms-transition: clip 0.42s ease-out, visibility 0.42s;
+  transition: clip 0.42s ease-out, visibility 0.42s;
 }
 .curtain-logo-l {
   left: 0;
 }
 .curtain-logo-r {
   right: 0;
+}
+.curtains-drawn > .curtain-logo-l,
+.curtains-drawn > .curtain-logo-r {
+  visibility: hidden;
+  -webkit-transition: clip 0.42s ease-out, visibility 0s 0.42s;
+  -moz-transition: clip 0.42s ease-out, visibility 0s 0.42s;
+  -o-transition: clip 0.42s ease-out, visibility 0s 0.42s;
+  -ms-transition: clip 0.42s ease-out, visibility 0s 0.42s;
+  transition: clip 0.42s ease-out, visibility 0s 0.42s;
 }
 .curtain-logo-l:before,
 .curtain-logo-r:before {
@@ -113,11 +122,11 @@ a:visited {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  -webkit-transition: opacity 0.42s, -webkit-transform 0.42s ease-out;
-  -moz-transition: opacity 0.42s, -moz-transform 0.42s ease-out;
-  -o-transition: opacity 0.42s, -o-transform 0.42s ease-out;
-  -ms-transition: opacity 0.42s, -ms-transform 0.42s ease-out;
-  transition: opacity 0.42s, transform 0.42s ease-out;
+  -webkit-transition: opacity 0.42s, visibility 0.42s, -webkit-transform 0.42s ease-out;
+  -moz-transition: opacity 0.42s, visibility 0.42s, -moz-transform 0.42s ease-out;
+  -o-transition: opacity 0.42s, visibility 0.42s, -o-transform 0.42s ease-out;
+  -ms-transition: opacity 0.42s, visibility 0.42s, -ms-transform 0.42s ease-out;
+  transition: opacity 0.42s, visibility 0.42s, transform 0.42s ease-out;
 }
 .curtain-welcome-l {
   left: 0;
@@ -128,21 +137,29 @@ a:visited {
   right: 0;
   padding-left: 5px;
 }
-.curtains-drawn .curtain-welcome-l {
-  -webkit-transform: translate(-180%, 0);
-  -moz-transform: translate(-180%, 0);
-  -o-transform: translate(-180%, 0);
-  -ms-transform: translate(-180%, 0);
-  transform: translate(-180%, 0);
+.curtains-drawn .curtain-welcome-l,
+.curtains-drawn .curtain-welcome-r {
+  -webkit-transition: opacity 0.42s, visibility 0s 0.42s, -webkit-transform 0.42s ease-out;
+  -moz-transition: opacity 0.42s, visibility 0s 0.42s, -moz-transform 0.42s ease-out;
+  -o-transition: opacity 0.42s, visibility 0s 0.42s, -o-transform 0.42s ease-out;
+  -ms-transition: opacity 0.42s, visibility 0s 0.42s, -ms-transform 0.42s ease-out;
+  transition: opacity 0.42s, visibility 0s 0.42s, transform 0.42s ease-out;
   opacity: 0;
+  visibility: hidden;
+}
+.curtains-drawn .curtain-welcome-l {
+  -webkit-transform: translate3d(-180%, 0, 0);
+  -moz-transform: translate3d(-180%, 0, 0);
+  -o-transform: translate3d(-180%, 0, 0);
+  -ms-transform: translate3d(-180%, 0, 0);
+  transform: translate3d(-180%, 0, 0);
 }
 .curtains-drawn .curtain-welcome-r {
-  -webkit-transform: translate(180%, 0);
-  -moz-transform: translate(180%, 0);
-  -o-transform: translate(180%, 0);
-  -ms-transform: translate(180%, 0);
-  transform: translate(180%, 0);
-  opacity: 0;
+  -webkit-transform: translate3d(180%, 0, 0);
+  -moz-transform: translate3d(180%, 0, 0);
+  -o-transform: translate3d(180%, 0, 0);
+  -ms-transform: translate3d(180%, 0, 0);
+  transform: translate3d(180%, 0, 0);
 }
 .curtain-action {
   position: absolute;
@@ -153,11 +170,11 @@ a:visited {
   -webkit-font-smoothing: antialiased;
   color: #fff;
   font-size: 18px;
-  -webkit-transition: opacity 0.42s;
-  -moz-transition: opacity 0.42s;
-  -o-transition: opacity 0.42s;
-  -ms-transition: opacity 0.42s;
-  transition: opacity 0.42s;
+  -webkit-transition: opacity 0.42s, visibility 0.42s;
+  -moz-transition: opacity 0.42s, visibility 0.42s;
+  -o-transition: opacity 0.42s, visibility 0.42s;
+  -ms-transition: opacity 0.42s, visibility 0.42s;
+  transition: opacity 0.42s, visibility 0.42s;
 }
 .curtain-action.signup {
   right: 8%;
@@ -174,7 +191,13 @@ a:visited {
   background-color: rgba(0, 0, 0, 0.08);
 }
 .curtains-drawn .curtain-action {
+  -webkit-transition: opacity 0.42s, visibility 0s 0.42s;
+  -moz-transition: opacity 0.42s, visibility 0s 0.42s;
+  -o-transition: opacity 0.42s, visibility 0s 0.42s;
+  -ms-transition: opacity 0.42s, visibility 0s 0.42s;
+  transition: opacity 0.42s, visibility 0s 0.42s;
   opacity: 0;
+  visibility: hidden;
 }
 .curtain-a-title {
   font-size: 32px;
@@ -195,11 +218,11 @@ a:visited {
   text-align: center;
   visibility: hidden;
   opacity: 0;
-  -webkit-transform: translate(-110px, 0);
-  -moz-transform: translate(-110px, 0);
-  -o-transform: translate(-110px, 0);
-  -ms-transform: translate(-110px, 0);
-  transform: translate(-110px, 0);
+  -webkit-transform: translate3d(-110px, 0, 0);
+  -moz-transform: translate3d(-110px, 0, 0);
+  -o-transform: translate3d(-110px, 0, 0);
+  -ms-transform: translate3d(-110px, 0, 0);
+  transform: translate3d(-110px, 0, 0);
   -webkit-transition: visibility 0s 0.42s, opacity 0.42s, -webkit-transform 0.42s ease-out;
   -moz-transition: visibility 0s 0.42s, opacity 0.42s, -moz-transform 0.42s ease-out;
   -o-transition: visibility 0s 0.42s, opacity 0.42s, -o-transform 0.42s ease-out;
@@ -301,11 +324,11 @@ footer {
   font-weight: 300;
   color: #aaa;
   opacity: 0;
-  -webkit-transform: translate(0, -70%);
-  -moz-transform: translate(0, -70%);
-  -o-transform: translate(0, -70%);
-  -ms-transform: translate(0, -70%);
-  transform: translate(0, -70%);
+  -webkit-transform: translate3d(0, -70%, 0);
+  -moz-transform: translate3d(0, -70%, 0);
+  -o-transform: translate3d(0, -70%, 0);
+  -ms-transform: translate3d(0, -70%, 0);
+  transform: translate3d(0, -70%, 0);
   -webkit-transition: opacity 0 0.42s, -webkit-transform 0 0.42s;
   -moz-transition: opacity 0 0.42s, -moz-transform 0 0.42s;
   -o-transition: opacity 0 0.42s, -o-transform 0 0.42s;
@@ -334,19 +357,26 @@ footer {
 }
 .form-sides {
   display: table;
-  border-collapse: collapse;
+  margin: 36px auto 60px;
   width: 100%;
-  margin: 36px 0 60px;
+  max-width: 800px;
 }
 .form-l,
 .form-r {
   display: table-cell;
   width: 50%;
   text-align: left;
-  padding-bottom: 10px;
+  border: 0px solid #e5e5e5;
+  padding: 0 0 10px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
 }
 .form-l {
-  border-right: 5px solid #e5e5e5;
+  border-right-width: 3px;
+}
+.form-r {
+  border-left-width: 3px;
 }
 .form-sides h3 {
   margin: 0 0 24px;
@@ -427,7 +457,9 @@ footer {
 .form-submit {
   display: block;
   margin: 0 50% 0 10%;
+  width: 40%;
   border: 0;
+  padding: 0;
   background: #92c152;
   color: #fff;
   height: 36px;
@@ -446,6 +478,82 @@ footer {
   font-size: 14px;
   line-height: 18px;
   color: #515151;
+}
+/* finalize new account */
+.finalize {
+  position: absolute;
+  visibility: hidden;
+  left: 0;
+  right: 0;
+}
+.finalizing .finalize {
+  visibility: visible;
+}
+/* finalize transition */
+.page-title.obsolete {
+  position: absolute;
+  width: 100%;
+  -webkit-transition: opacity 0.144s linear, visibility 0s 0.24s, -webkit-transform 0.24s ease-in-out;
+  -moz-transition: opacity 0.144s linear, visibility 0s 0.24s, -moz-transform 0.24s ease-in-out;
+  -o-transition: opacity 0.144s linear, visibility 0s 0.24s, -o-transform 0.24s ease-in-out;
+  -ms-transition: opacity 0.144s linear, visibility 0s 0.24s, -ms-transform 0.24s ease-in-out;
+  transition: opacity 0.144s linear, visibility 0s 0.24s, transform 0.24s ease-in-out;
+}
+.obsolete + .page-title {
+  opacity: 0;
+  -webkit-transform: translate3d(0, 70%, 0);
+  -moz-transform: translate3d(0, 70%, 0);
+  -o-transform: translate3d(0, 70%, 0);
+  -ms-transform: translate3d(0, 70%, 0);
+  transform: translate3d(0, 70%, 0);
+  -webkit-transition: opacity 0.192s 0.048s linear, -webkit-transform 0.24s ease-in-out;
+  -moz-transition: opacity 0.192s 0.048s linear, -moz-transform 0.24s ease-in-out;
+  -o-transition: opacity 0.192s 0.048s linear, -o-transform 0.24s ease-in-out;
+  -ms-transition: opacity 0.192s 0.048s linear, -ms-transform 0.24s ease-in-out;
+  transition: opacity 0.192s 0.048s linear, transform 0.24s ease-in-out;
+}
+.finalizing > .page-title.obsolete {
+  opacity: 0;
+  visibility: hidden;
+  -webkit-transform: translate3d(0, -70%, 0);
+  -moz-transform: translate3d(0, -70%, 0);
+  -o-transform: translate3d(0, -70%, 0);
+  -ms-transform: translate3d(0, -70%, 0);
+  transform: translate3d(0, -70%, 0);
+}
+.finalizing > .obsolete + .page-title {
+  opacity: 1;
+  -webkit-transform: none;
+  -moz-transform: none;
+  -o-transform: none;
+  -ms-transform: none;
+  transform: none;
+}
+.form-l,
+.form-r {
+  -webkit-transition: opacity 0.24s linear, visibility 0s 0.24s, -webkit-transform 0.24s ease-in;
+  -moz-transition: opacity 0.24s linear, visibility 0s 0.24s, -moz-transform 0.24s ease-in;
+  -o-transition: opacity 0.24s linear, visibility 0s 0.24s, -o-transform 0.24s ease-in;
+  -ms-transition: opacity 0.24s linear, visibility 0s 0.24s, -ms-transform 0.24s ease-in;
+  transition: opacity 0.24s linear, visibility 0s 0.24s, transform 0.24s ease-in;
+}
+.finalizing .form-l {
+  opacity: 0;
+  visibility: hidden;
+  -webkit-transform: translate3d(-100%, 0, 0);
+  -moz-transform: translate3d(-100%, 0, 0);
+  -o-transform: translate3d(-100%, 0, 0);
+  -ms-transform: translate3d(-100%, 0, 0);
+  transform: translate3d(-100%, 0, 0);
+}
+.finalizing .form-r {
+  opacity: 0;
+  visibility: hidden;
+  -webkit-transform: translate3d(100%, 0, 0);
+  -moz-transform: translate3d(100%, 0, 0);
+  -o-transform: translate3d(100%, 0, 0);
+  -ms-transform: translate3d(100%, 0, 0);
+  transform: translate3d(100%, 0, 0);
 }
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
