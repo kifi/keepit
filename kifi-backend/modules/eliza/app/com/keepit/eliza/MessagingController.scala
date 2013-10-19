@@ -811,7 +811,7 @@ class MessagingController @Inject() (
       thread.id.exists { threadId =>
         val userThread = userThreadRepo.getUserThread(userId, threadId)
         if (userThread.muted != mute) {
-          userThreadRepo.save(userThreadRepo.getUserThread(userId, threadId).copy(muted = mute))
+          userThreadRepo.setMuteState(userThread.id.get, mute)
           true
         } else {
           false
