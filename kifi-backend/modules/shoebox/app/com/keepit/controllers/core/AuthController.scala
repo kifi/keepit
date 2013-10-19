@@ -171,36 +171,37 @@ class AuthController @Inject() (
 
     val home = com.keepit.controllers.website.routes.HomeController.home()
     emailPasswordForm.bindFromRequest.fold(
-    formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.headOption.map(f => f.message))),
-    { case EmailPassword(email, password) =>
-      val hasher = Registry.hashers.currentHasher
+      formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.headOption.map(f => f.message))),
+      { case EmailPassword(email, password) =>
+        val hasher = Registry.hashers.currentHasher
 
-      db.readOnly { implicit s => socialRepo.getOpt(SocialId(email), SocialNetworks.FORTYTWO) }.collect {
-        case sui if sui.credentials.isDefined && sui.userId.isDefined =>
-          val identity = sui.credentials.get
-          if (hasher.matches(identity.passwordInfo.get, password)) {
-            Authenticator.create(identity).fold(
-              error => Forbidden(Json.obj("error" -> Seq("user_exists_failed_auth"))),
-              authenticator =>
-                Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> false))
-                  .withNewSession
-                  .withCookies(authenticator.toCookie)
-            )
-          } else {
-            Forbidden(Json.obj("error" -> Seq("user_exists_failed_auth")))
-          }
-      }.getOrElse {
-        val pinfo = hasher.hash(password)
-        val newIdentity = saveUserIdentity(None, request.identityOpt, email, pinfo, isComplete = false)
-        Authenticator.create(newIdentity).fold(
-          error => Forbidden(Json.obj("error" -> Seq("couldnt_create_user"))),
-          authenticator =>
-            Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> true))
-              .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
-              .withCookies(authenticator.toCookie)
-        )
+        db.readOnly { implicit s => socialRepo.getOpt(SocialId(email), SocialNetworks.FORTYTWO) }.collect {
+          case sui if sui.credentials.isDefined && sui.userId.isDefined =>
+            val identity = sui.credentials.get
+            if (hasher.matches(identity.passwordInfo.get, password)) {
+              Authenticator.create(identity).fold(
+                error => Forbidden(Json.obj("error" -> "user_exists_failed_auth")),
+                authenticator =>
+                  Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> false))
+                    .withNewSession
+                    .withCookies(authenticator.toCookie)
+              )
+            } else {
+              Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
+            }
+        }.getOrElse {
+          val pInfo = hasher.hash(password)
+          val newIdentity = saveUserIdentity(None, request.identityOpt, email, pInfo, isComplete = false)
+          Authenticator.create(newIdentity).fold(
+            error => Forbidden(Json.obj("error" -> "couldnt_create_user")),
+            authenticator =>
+              Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> true))
+                .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
+                .withCookies(authenticator.toCookie)
+          )
+        }
       }
-    })
+    )
   }
 
   // Greg's first user/pass signup handler
@@ -213,7 +214,9 @@ class AuthController @Inject() (
       { case EmailPassword(email, password) =>
         val hasher = Registry.hashers.currentHasher
 
-        db.readOnly { implicit s => socialRepo.getOpt(SocialId(email), SocialNetworks.FORTYTWO) }.collect {
+        db.readOnly { implicit s =>
+          socialRepo.getOpt(SocialId(email), SocialNetworks.FORTYTWO)
+        }.collect {
           case sui if sui.credentials.isDefined && sui.userId.isDefined =>
             val identity = sui.credentials.get
             if (hasher.matches(identity.passwordInfo.get, password)) {
