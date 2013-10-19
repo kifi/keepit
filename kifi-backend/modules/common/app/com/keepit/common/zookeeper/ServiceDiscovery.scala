@@ -48,7 +48,7 @@ class ServiceDiscoveryImpl @Inject() (
   private var selfCheckIsRunning: Boolean = false
   private var selfCheckFutureOpt: Option[Future[Boolean]] = None
 
-  def thisInstance = myInstance
+  def thisInstance: Option[ServiceInstance] = myInstance
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
@@ -159,10 +159,10 @@ class ServiceDiscoveryImpl @Inject() (
       val selfCheckFuture = services.currentService.selfCheck()
       selfCheckFuture.onComplete{
           case Success(passed) =>
-            val result = if (passed) { 
+            val result = if (passed) {
               changeStatus(ServiceStatus.UP)
-              selfCheckPromise.success(true) 
-            } else { 
+              selfCheckPromise.success(true)
+            } else {
               changeStatus(ServiceStatus.SELFCHECK_FAIL)
               selfCheckPromise.success(false)
             }
@@ -173,9 +173,9 @@ class ServiceDiscoveryImpl @Inject() (
             selfCheckPromise.success(false)
         }
       selfCheckFutureOpt = Some(selfCheckPromise.future)
-    } 
+    }
     selfCheckFutureOpt.get //this option must be defined when we are in this case
-    
+
   }
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
