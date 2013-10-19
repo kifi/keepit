@@ -166,6 +166,9 @@ class ExtMessagingController @Inject() (
     notificationRouter.unregisterUserSocket(socket)
   }
 
+  //TEMPORARY STOP GAP
+  val sideEffectingEvents = Set[String]("kifiResultClicked", "googleResultClicked", "usefulPage", "searchUnload", "sliderShown")
+
   protected def websocketHandlers(socket: SocketInfo) = Map[String, Seq[JsValue] => Unit](
     "ping" -> { _ =>
       log.info(s"Received ping from user ${socket.userId} on socket ${socket.id}")
@@ -268,7 +271,10 @@ class ExtMessagingController @Inject() (
       val eventJson = JsObject(pairs).deepMerge(
         Json.obj("experiments" -> socket.experiments)
       )
-      shoebox.logEvent(socket.userId, eventJson)
+      //TEMPORARY STOP GAP
+      val eventName = (eventJson \ "eventName").as[String]
+      if (sideEffectingEvents.contains(eventName)) shoebox.logEvent(socket.userId, eventJson)
+      //else discard!
     }
   )
 }
