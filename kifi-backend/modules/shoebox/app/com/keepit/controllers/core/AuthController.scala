@@ -20,7 +20,7 @@ import play.api.data.Forms._
 import play.api.data._
 import play.api.data.validation.Constraints
 import play.api.http.HeaderNames
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
@@ -77,8 +77,8 @@ class AuthController @Inject() (
   def link(provider: String) = getAuthAction(provider, AuthType.Link)
   def linkByPost(provider: String) = getAuthAction(provider, AuthType.Link)
 
-  def signup(provider: String) = getAuthAction(provider, AuthType.Signup)
-  def signupByPost(provider: String) = getAuthAction(provider, AuthType.Signup)
+  def signup(provider: String) = getAuthAction(provider, AuthType.Signup, "html")
+  def signupByPost(provider: String) = getAuthAction(provider, AuthType.Signup, "html")
 
   // log in with username/password and link the account with a provider
   def passwordLoginAndLink(provider: String) = getAuthAction(provider, AuthType.LoginAndLink)
@@ -151,9 +151,7 @@ class AuthController @Inject() (
   private val emailPasswordForm = Form[EmailPassword](
     mapping(
       "email" -> email,
-      "password" -> tuple("1" -> nonEmptyText, "2" -> nonEmptyText)
-          .verifying("Passwords do not match", pw => pw._1 == pw._2).transform(_._1, (a: String) => (a, a))
-          .verifying(Constraints.minLength(7))
+      "password" -> text.verifying("password_too_short", pw => pw.length >= 7)
     )
     (EmailPassword.apply)
     (EmailPassword.unapply)
@@ -163,6 +161,49 @@ class AuthController @Inject() (
 
   def handleSignup() = HtmlAction(true)(authenticatedAction = doSignup(_), unauthenticatedAction = doSignup(_))
 
+  // Initial user/pass signup JSON action
+  def userPasswordSignup() = JsonToJsonAction(true)(
+    authenticatedAction = userPasswordSignupAction(_),
+    unauthenticatedAction = userPasswordSignupAction(_)
+  )
+
+  private def userPasswordSignupAction(implicit request: Request[JsValue]) = {
+
+    val home = com.keepit.controllers.website.routes.HomeController.home()
+    emailPasswordForm.bindFromRequest.fold(
+    formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.headOption.map(f => f.message))),
+    { case EmailPassword(email, password) =>
+      val hasher = Registry.hashers.currentHasher
+
+      db.readOnly { implicit s => socialRepo.getOpt(SocialId(email), SocialNetworks.FORTYTWO) }.collect {
+        case sui if sui.credentials.isDefined && sui.userId.isDefined =>
+          val identity = sui.credentials.get
+          if (hasher.matches(identity.passwordInfo.get, password)) {
+            Authenticator.create(identity).fold(
+              error => Forbidden(Json.obj("error" -> Seq("user_exists_failed_auth"))),
+              authenticator =>
+                Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> false))
+                  .withNewSession
+                  .withCookies(authenticator.toCookie)
+            )
+          } else {
+            Forbidden(Json.obj("error" -> Seq("user_exists_failed_auth")))
+          }
+      }.getOrElse {
+        val pinfo = hasher.hash(password)
+        val newIdentity = saveUserIdentity(None, request.identityOpt, email, pinfo, isComplete = false)
+        Authenticator.create(newIdentity).fold(
+          error => Forbidden(Json.obj("error" -> Seq("couldnt_create_user"))),
+          authenticator =>
+            Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> true))
+              .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
+              .withCookies(authenticator.toCookie)
+        )
+      }
+    })
+  }
+
+  // Greg's first user/pass signup handler
   def handleUsernamePasswordSignup() = HtmlAction(true)({ _ => Redirect("/") }, { implicit request =>
     val home = com.keepit.controllers.website.routes.HomeController.home()
     val signup = routes.AuthController.signupPage()
@@ -200,6 +241,7 @@ class AuthController @Inject() (
       })
   })
 
+  // Greg's 2nd stage signup page
   private def doSignupPage(implicit request: Request[_]): Result = {
     def hasEmail(identity: Identity): Boolean = db.readOnly { implicit s =>
       identity.email.flatMap(emailRepo.getByAddressOpt(_)).isDefined
@@ -228,6 +270,7 @@ class AuthController @Inject() (
 
   private val url = current.configuration.getString("application.baseUrl").get
 
+  // Greg's 2nd signup action
   private def doSignup(implicit request: Request[AnyContent]): Result = {
     val isConfirmation = request.body.asFormUrlEncoded.exists(_.get("confirm").isDefined)
 

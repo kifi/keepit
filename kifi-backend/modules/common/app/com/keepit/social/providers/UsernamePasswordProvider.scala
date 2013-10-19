@@ -8,6 +8,7 @@ import play.api.mvc.Results.Redirect
 import securesocial.core.providers.{UsernamePasswordProvider => UPP}
 import securesocial.core.{Registry, UserService, IdentityId, SocialUser}
 import play.api.libs.json.Json
+import play.api.http.ContentTypes
 
 class UsernamePasswordProvider(application: Application)
   extends UPP(application) with UserIdentityProvider {
@@ -31,7 +32,7 @@ class UsernamePasswordProvider(application: Application)
   private def error[A](request: Request[A], errorCode: String, errorString: String): PlainResult = {
     request.tags.get("format") match {
       case Some("json") =>
-        Results.Forbidden(Json.obj("error" -> errorCode)).as("application/json")
+        Results.Forbidden(Json.obj("error" -> errorCode)).as(ContentTypes.JSON)
       case _ => Redirect("/").flashing("error" -> errorString)
     }
   }
