@@ -13,6 +13,7 @@ import com.keepit.model._
 import com.keepit.social.SocialId
 import com.keepit.social.UserIdentity
 import com.keepit.social.{SocialNetworkType, SocialNetworks}
+import com.keepit.common.KestrelCombinator
 
 import play.api.Play._
 import play.api.data.Forms._
@@ -69,10 +70,13 @@ class AuthController @Inject() (
     } getOrElse NotFound(Json.obj("error" -> "user not found"))
   }
 
-  def login(provider: String) = getAuthAction(provider, AuthType.Login)
-  def loginByPost(provider: String) = getAuthAction(provider, AuthType.Login)
+  def login(provider: String, format: String) = getAuthAction(provider, AuthType.Login, format)
+  def loginByPost(provider: String, format: String) = getAuthAction(provider, AuthType.Login, format)
+  def loginWithUserPass(format: String) = getAuthAction("userpass", AuthType.Login, format)
+
   def link(provider: String) = getAuthAction(provider, AuthType.Link)
   def linkByPost(provider: String) = getAuthAction(provider, AuthType.Link)
+
   def signup(provider: String) = getAuthAction(provider, AuthType.Signup)
   def signupByPost(provider: String) = getAuthAction(provider, AuthType.Signup)
 
@@ -87,19 +91,27 @@ class AuthController @Inject() (
     originalUrlOpt map { url => sesh + (SecureSocial.OriginalUrlKey -> url) } getOrElse sesh
   }
 
-  private def getAuthAction(provider: String, authType: AuthType): Action[AnyContent] = Action { implicit request =>
+  private def getAuthAction(provider: String, authType: AuthType, format: String = "json"): Action[AnyContent] = Action { request =>
+    val augmentedRequest = augmentRequestWithTag(request, "format" -> format)
+
     val actualProvider = if (authType == AuthType.LoginAndLink) SocialNetworks.FORTYTWO.authProvider else provider
-    ProviderController.authenticate(actualProvider)(request) match {
+    ProviderController.authenticate(actualProvider)(augmentedRequest) match {
       case res: SimpleResult[_] =>
         res.withSession(authType match {
-          case AuthType.Login => getSession(res) - ActionAuthenticator.FORTYTWO_USER_ID
-          case AuthType.Signup => getSession(res) - ActionAuthenticator.FORTYTWO_USER_ID +
+          case AuthType.Login => getSession(res)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID
+          case AuthType.Signup => getSession(res)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID +
             (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)
-          case AuthType.Link => getSession(res, request.headers.get(HeaderNames.REFERER))
-          case AuthType.LoginAndLink => getSession(res, None) - ActionAuthenticator.FORTYTWO_USER_ID -
+          case AuthType.Link => getSession(res, augmentedRequest.headers.get(HeaderNames.REFERER))(augmentedRequest)
+          case AuthType.LoginAndLink => getSession(res, None)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID -
             SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> provider)
         })
       case res => res
+    }
+  }
+
+  private def augmentRequestWithTag[T](request: Request[T], additionalTags: (String, String)*): Request[T] = {
+    new WrappedRequest[T](request) {
+      override def tags = request.tags ++ additionalTags.toMap
     }
   }
 
