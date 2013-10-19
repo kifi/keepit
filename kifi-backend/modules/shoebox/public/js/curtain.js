@@ -97,6 +97,18 @@ $.postJson = function(uri, data) {
     }
   });
 
+  $('.form-photo-a').click(function (e) {
+    if (e.which !== 1) return;
+    var $a = $(this);
+    if ($a.hasClass('facebook')) {
+      window.open('https://www.facebook.com', 'photo', 'width=720,height=400,dialog=yes,menubar=no,resizable=yes,scrollbars=yes,status=yes');
+    } else if ($a.hasClass('linkedin')) {
+      window.open('https://www.linkedin.com', 'photo', 'width=720,height=400,dialog=yes,menubar=no,resizable=yes,scrollbars=yes,status=yes');
+    } else {
+      // TODO: upload
+    }
+  });
+
   function openCurtains() {
     var logoL = $logoL[0], wL = logoL.offsetWidth;
     var logoR = $logoR[0], wR = logoR.offsetWidth;
