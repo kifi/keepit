@@ -195,4 +195,40 @@ class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestri
   }
 }
 
+class GroupedUniqueFieldCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction, groupField: EventGrouping, fieldToCount: String, breakDown : Boolean = false) extends SimpleMetricDefinition {
+  val sanitizedFieldName = fieldToCount.replace(".", "_")
+  def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): (Seq[PipelineOperator], Stream[BSONDocument] => Seq[BSONDocument]) = {
+    val timeWindowSelector = Match(BSONDocument(
+      "time" -> BSONDocument(
+        "$gte" -> BSONDateTime(startTime.getMillis),
+        "$lt"  -> BSONDateTime(startTime.getMillis + timeWindowSize.toMillis)
+      )
+    ))
+    val eventSelector = eventsToConsider match {
+      case SpecificEventSet(events) =>
+        Match(BSONDocument(
+          "event_type" -> BSONDocument(
+            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
+          )
+        ))
+      case AllEvents =>Match(BSONDocument())
+    }
+    val contextSelector = Match(contextRestriction.toBSONMatchDocument)
+
+    val grouping = GroupField(groupField.fieldName)(sanitizedFieldName -> AddToSet("$" + fieldToCount))
+
+    var pipeline: Seq[PipelineOperator] = Seq(timeWindowSelector, eventSelector, contextSelector)
+
+    if (breakDown) pipeline = pipeline :+ Unwind(groupField.fieldName)
+
+    pipeline = pipeline ++ Seq(grouping, Unwind(sanitizedFieldName), GroupField("_id")("count" -> SumValue(1), sanitizedFieldName -> AddToSet("$" + fieldToCount)))
+
+    pipeline = pipeline :+ Sort(Seq(Descending("count")))
+
+    val postprocess = (x: Stream[BSONDocument]) => x.toSeq
+    
+    (pipeline, postprocess)    
+  }
+}
+
 
