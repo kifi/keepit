@@ -98,10 +98,6 @@ class UserEventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscove
         case authRequest: AuthenticatedRequest[_] =>
           authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
           authRequest.experiments.foreach { experiment => contextBuilder += ("experiment", experiment.toString) }
-          authRequest.body match {
-            case json: JsValue => (json \"extVersion").asOpt[String].foreach { version => contextBuilder += ("extVersion", version) }
-            case _ =>
-          }
         case _ =>
       }
     }

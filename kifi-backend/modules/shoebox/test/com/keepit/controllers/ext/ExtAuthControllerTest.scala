@@ -82,7 +82,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
         }
         val json2 = Json.parse(contentAsString(result2))
         json2 === json1
-        kifiInstallation1 === kifiInstallation2
+        kifiInstallation1.id === kifiInstallation2.id
       }
     }
   }

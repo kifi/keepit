@@ -166,6 +166,9 @@ class ExtMessagingController @Inject() (
     notificationRouter.unregisterUserSocket(socket)
   }
 
+  //TEMPORARY STOP GAP
+  val sideEffectingEvents = Set[String]("kifiResultClicked", "googleResultClicked", "usefulPage", "searchUnload", "sliderShown")
+
   protected def websocketHandlers(socket: SocketInfo) = Map[String, Seq[JsValue] => Unit](
     "ping" -> { _ =>
       log.info(s"Received ping from user ${socket.userId} on socket ${socket.id}")
@@ -254,15 +257,24 @@ class ExtMessagingController @Inject() (
       val (nUriStr, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
       socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriStr))
     },
+    "mute_thread" -> { case JsString(jsThreadId) +: _ =>
+      messagingController.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+    },
+    "unmute_thread" -> { case JsString(jsThreadId) +: _ =>
+      messagingController.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+    },
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
       messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
     },
     "log_event" -> { case JsObject(pairs) +: _ =>
-      // implicit val experimentFormat = State.format[ExperimentType]
-      // val eventJson = JsObject(pairs).deepMerge(
-      //   Json.obj("experiments" -> socket.experiments)
-      // )
-      // shoebox.logEvent(socket.userId, eventJson)
+      implicit val experimentFormat = State.format[ExperimentType]
+      val eventJson = JsObject(pairs).deepMerge(
+        Json.obj("experiments" -> socket.experiments)
+      )
+      //TEMPORARY STOP GAP
+      val eventName = (eventJson \ "eventName").as[String]
+      if (sideEffectingEvents.contains(eventName)) shoebox.logEvent(socket.userId, eventJson)
+      //else discard!
     }
   )
 }
