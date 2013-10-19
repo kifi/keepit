@@ -1,5 +1,6 @@
 package com.keepit.common.healthcheck
 
+import com.keepit.common.zookeeper.ServiceDiscovery
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.Provides
 import com.keepit.inject.AppScoped
@@ -17,9 +18,9 @@ case class ProdAirbrakeModule() extends AirbrakeModule {
   def configure() {}
 
   @Provides
-  def formatter(playMode: Mode, service: FortyTwoServices): AirbrakeFormatter = {
+  def formatter(playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery): AirbrakeFormatter = {
     val apiKey = Play.current.configuration.getString("airbrake.key").get
-    new AirbrakeFormatter(apiKey, playMode, service)
+    new AirbrakeFormatter(apiKey, playMode, service, serviceDiscovery)
   }
 
   @Provides
@@ -33,8 +34,8 @@ case class DevAirbrakeModule() extends AirbrakeModule {
   def configure() {}
 
   @Provides
-  def formatter(playMode: Mode, service: FortyTwoServices): AirbrakeFormatter = {
-    new AirbrakeFormatter("fakeApiKey", playMode, service)
+  def formatter(playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery): AirbrakeFormatter = {
+    new AirbrakeFormatter("fakeApiKey", playMode, service, serviceDiscovery)
   }
 
   @Provides
