@@ -57,7 +57,7 @@ class ExtAuthController @Inject() (
         case Some(install) if install.version != version || install.userAgent != userAgent || !install.isActive =>
           installationRepo.save(install.withUserAgent(userAgent).withVersion(version).withState(KifiInstallationStates.ACTIVE))
         case Some(install) =>
-          install
+          installationRepo.save(install)
       }
       val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
