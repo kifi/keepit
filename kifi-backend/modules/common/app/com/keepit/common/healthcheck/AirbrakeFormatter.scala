@@ -98,7 +98,8 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
       <class>{ error.rootCause.error.getClass.getName }</class>
       <message>{
         val instance = serviceDiscovery.thisInstance
-        s"[${instance.map(_.id.id).getOrElse("NA")}]${message.getOrElse("")} ${error.rootCause.error.toString()}".trim
+        val leader = serviceDiscovery.isLeader()
+        s"[${instance.map(_.id.id).getOrElse("NA")}${if(leader) "L" else "_"}]${message.getOrElse("")} ${error.rootCause.error.toString()}".trim
         }</message>
       <backtrace>
         { formatStacktrace(error) ++ formatCauseStacktrace(error.cause) }
