@@ -178,12 +178,12 @@ case class HttpClientImpl(
   }
 
   private def logSuccess(request: Request, res: ClientResponse): Unit = {
-    //todo(eishay): the interesting part is the remote service and node id, to be logged
-    val remoteHost = res.res.header(CommonHeaders.LocalHost).getOrElse("NA")
-    val remoteTime = res.res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
+    val remoteLeader: Boolean = res.res.header(CommonHeaders.IsLeader).map(_ == "Y").getOrElse(false)
+    val remoteTime: Int = res.res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
+        remoteLeader = remoteLeader.toString,
         result = "success",
         query = request.queryString,
         remoteService = remoteInstance.map(_.remoteService.serviceType).getOrElse(null),
@@ -199,7 +199,7 @@ case class HttpClientImpl(
           AirbrakeError.outgoing(
             request = request.req,
             exception = exception,
-            message = s"[${remoteServiceString(request)}] wait time $waitTime for ${request.httpUri.url}")
+            message = s"[${remoteServiceString(request)}${if(remoteLeader) "L" else "_"}] wait time $waitTime for ${request.httpUri.url}")
         )
       }
     }
@@ -215,7 +215,7 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
 
   val trackingId = RandomStringUtils.randomAlphanumeric(5)
   private val headersWithTracking =
-    (CommonHeaders.TrackingId, trackingId) :: (CommonHeaders.LocalService, services.currentService.toString) :: headers
+    (CommonHeaders.TrackingId, trackingId) :: headers
   private val wsRequest = req.withHeaders(headersWithTracking: _*)
   lazy val queryString = (wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&").trim match {
     case "" => null

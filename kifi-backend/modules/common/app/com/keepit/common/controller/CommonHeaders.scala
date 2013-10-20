@@ -3,6 +3,6 @@ package com.keepit.common.controller
 object CommonHeaders {
   val TrackingId = "ti"
   val ResponseTime = "rt"
-  val LocalHost = "lh"
-  val LocalService = "sr"
+  val LocalServiceId = "si"
+  val IsLeader = "ld"
 }
