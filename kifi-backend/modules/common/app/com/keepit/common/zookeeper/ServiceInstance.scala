@@ -12,7 +12,9 @@ import play.api.libs.json._
 
 import com.google.inject.{Inject, Singleton}
 
-case class ServiceInstanceId(id: Long) extends AnyVal
+case class ServiceInstanceId(id: Long) extends AnyVal {
+  override def toString(): String = id.toString
+}
 
 //thisInstance means the representation of the current running instance
 case class ServiceInstance(node: Node, var remoteService: RemoteService, thisInstance: Boolean) extends Logging {
