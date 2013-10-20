@@ -12,7 +12,7 @@ import play.api.libs.json._
 
 import com.google.inject.{Inject, Singleton}
 
-case class ServiceInstanceId(id: Long) extends AnyVal {
+case class ServiceInstanceId(id: Long) {
   override def toString(): String = id.toString
 }
 
