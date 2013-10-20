@@ -180,7 +180,7 @@ class AuthController @Inject() (
             val identity = sui.credentials.get
             if (hasher.matches(identity.passwordInfo.get, password)) {
               Authenticator.create(identity).fold(
-                error => Forbidden(Json.obj("error" -> "user_exists_failed_auth")),
+                error => Status(500)("0"),
                 authenticator =>
                   Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> false))
                     .withNewSession
@@ -193,7 +193,7 @@ class AuthController @Inject() (
           val pInfo = hasher.hash(password)
           val newIdentity = saveUserIdentity(None, request.identityOpt, email, pInfo, isComplete = false)
           Authenticator.create(newIdentity).fold(
-            error => Forbidden(Json.obj("error" -> "couldnt_create_user")),
+            error => Status(500)("0"),
             authenticator =>
               Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> true))
                 .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
