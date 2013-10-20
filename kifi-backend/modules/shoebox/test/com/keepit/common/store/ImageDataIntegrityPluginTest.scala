@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.FakeHealthcheck
-import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse}
+import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse, DirectUrl}
 import com.keepit.inject._
 import com.keepit.model.User
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
@@ -35,13 +35,13 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
         TestShoeboxSecureSocialModule(),
         FakeSocialGraphModule(),
         FakeHttpClientModule(Map(
-        "http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg" ->
+        DirectUrl("http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg") ->
           FakeClientResponse("image", 200),
-        "http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg" ->
+        DirectUrl("http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg") ->
           FakeClientResponse("image", 404),
-        "http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg" ->
+        DirectUrl("http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg") ->
           FakeClientResponse("image", 400),
-        "http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg" ->
+        DirectUrl("http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg") ->
           FakeClientResponse("image", 404)
       )))){
         db.readWrite { implicit s =>

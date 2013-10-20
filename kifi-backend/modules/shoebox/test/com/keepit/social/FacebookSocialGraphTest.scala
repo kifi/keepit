@@ -5,7 +5,7 @@ import java.io.File
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
-import com.keepit.common.net.FakeHttpClient
+import com.keepit.common.net.{FakeHttpClient, DirectUrl}
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.SocialUserInfoRepo
 import com.keepit.model.User
@@ -40,7 +40,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
 
     "fetch from facebook" in {
       withDb() { implicit injector =>
-        val expectedUrl = "https://graph.facebook.com/eishay?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture,friends.fields(name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture)"
+        val expectedUrl = DirectUrl("https://graph.facebook.com/eishay?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture,friends.fields(name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture)")
         val json = io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_super_min.json")).mkString
         val httpClient = new FakeHttpClient(Some(Map(expectedUrl -> json)))
 

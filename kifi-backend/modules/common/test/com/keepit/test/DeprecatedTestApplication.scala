@@ -7,7 +7,7 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.healthcheck._
-import com.keepit.common.net.FakeClientResponse
+import com.keepit.common.net.{FakeClientResponse, HttpUri}
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
 import com.keepit.inject._
@@ -30,7 +30,7 @@ class DeprecatedTestApplication(_global: FortyTwoGlobal, useDb: Boolean = false,
 
   lazy val devStoreModule = new DevStoreModule(new ProdStoreModule { def configure {} }) { def configure {} }
 
-  def withFakeHttpClient(requestToResponse: PartialFunction[String, FakeClientResponse] = FakeClientResponse.emptyFakeHttpClient) = overrideWith(FakeHttpClientModule(requestToResponse))
+  def withFakeHttpClient(requestToResponse: PartialFunction[HttpUri, FakeClientResponse] = FakeClientResponse.emptyFakeHttpClient) = overrideWith(FakeHttpClientModule(requestToResponse))
   def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
   def withTestActorSystem(system: ActorSystem) = overrideWith(TestActorSystemModule(Some(system)))
   def withFakeCache() = overrideWith(TestCacheModule())
