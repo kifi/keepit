@@ -104,11 +104,12 @@ case class HttpClientImpl(
           remoteServiceId = remoteInstance.map(_.id).getOrElse(null),
           trackingId = req.trackingId,
           error = e.toString))
+        val fullException = req.tracer.withCause(e)
         airbrake.get.notify(
           AirbrakeError.outgoing(
-            exception = req.tracer.withCause(e),
+            exception = fullException,
             request = req.req,
-            message = s"[${remoteServiceString(req)}]${al.error}: error handling url ${al.url}"
+            message = s"[${remoteServiceString(req)}]${e.toString} calling ${req.url} after ${al.duration}ms"
           )
         )
     }
