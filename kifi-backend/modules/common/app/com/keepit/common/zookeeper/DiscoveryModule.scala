@@ -9,7 +9,7 @@ import akka.actor.Scheduler
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{HttpClient,DirectUrl}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.amazon.AmazonInstanceId
@@ -31,16 +31,16 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
     val metadataUrl: String = "http://169.254.169.254/latest/meta-data/"
 
     val instance = AmazonInstanceInfo(
-      instanceId = AmazonInstanceId(httpClient.get(metadataUrl + "instance-id").body),
-      localHostname = httpClient.get(metadataUrl + "local-hostname").body,
-      publicHostname = httpClient.get(metadataUrl + "public-hostname").body,
-      localIp = IpAddress(httpClient.get(metadataUrl + "local-ipv4").body),
-      publicIp = IpAddress(httpClient.get(metadataUrl + "public-ipv4").body),
-      instanceType = httpClient.get(metadataUrl + "instance-type").body,
-      availabilityZone = httpClient.get(metadataUrl + "placement/availability-zone").body,
-      securityGroups = httpClient.get(metadataUrl + "security-groups").body,
-      amiId = httpClient.get(metadataUrl + "ami-id").body,
-      amiLaunchIndex = httpClient.get(metadataUrl + "ami-launch-index").body
+      instanceId = AmazonInstanceId(httpClient.get(DirectUrl(metadataUrl + "instance-id")).body),
+      localHostname = httpClient.get(DirectUrl(metadataUrl + "local-hostname")).body,
+      publicHostname = httpClient.get(DirectUrl(metadataUrl + "public-hostname")).body,
+      localIp = IpAddress(httpClient.get(DirectUrl(metadataUrl + "local-ipv4")).body),
+      publicIp = IpAddress(httpClient.get(DirectUrl(metadataUrl + "public-ipv4")).body),
+      instanceType = httpClient.get(DirectUrl(metadataUrl + "instance-type")).body,
+      availabilityZone = httpClient.get(DirectUrl(metadataUrl + "placement/availability-zone")).body,
+      securityGroups = httpClient.get(DirectUrl(metadataUrl + "security-groups")).body,
+      amiId = httpClient.get(DirectUrl(metadataUrl + "ami-id")).body,
+      amiLaunchIndex = httpClient.get(DirectUrl(metadataUrl + "ami-launch-index")).body
     )
     log.info(s"my amazon instance is ${instance.toString}")
     instance

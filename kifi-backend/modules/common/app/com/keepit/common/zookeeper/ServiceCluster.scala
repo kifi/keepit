@@ -94,7 +94,7 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
   private def findLeader(newInstances: TrieMap[Node, ServiceInstance]) = newInstances.isEmpty match {
     case true => None
     case false =>
-      val minId = (newInstances.values map {v => v.id}).min
+      val minId = ServiceInstanceId((newInstances.values map {v => v.id.id}).min)
       val leader = newInstances.values.filter(_.id == minId).head
       log.info(s"leader is $leader")
       Some(leader)

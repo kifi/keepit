@@ -3,30 +3,37 @@ package com.keepit.social.providers
 import com.keepit.social.UserIdentityProvider
 
 import play.api.Application
-import play.api.mvc.Request
+import play.api.mvc.{Results, Request, PlainResult, Result}
 import play.api.mvc.Results.Redirect
-import play.api.mvc.{PlainResult, Result}
 import securesocial.core.providers.{UsernamePasswordProvider => UPP}
 import securesocial.core.{Registry, UserService, IdentityId, SocialUser}
+import play.api.libs.json.Json
+import play.api.http.ContentTypes
 
 class UsernamePasswordProvider(application: Application)
   extends UPP(application) with UserIdentityProvider {
   override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
     UPP.loginForm.bindFromRequest().fold(
-      errors => Left(error()),
+      errors => Left(error(request, "bad_form", "Invalid email or password")),
       credentials => {
-        val result = for {
-          user <- UserService.find(IdentityId(credentials._1, id))
-          pinfo <- user.passwordInfo
-          hasher <- Registry.hashers.get(pinfo.hasher) if hasher.matches(pinfo, credentials._2)
-        } yield Right(SocialUser(user))
-        result getOrElse Left(error())
+        UserService.find(IdentityId(credentials._1, id)) match {
+          case Some(identity) =>
+            val result = for {
+              pinfo <- identity.passwordInfo
+              hasher <- Registry.hashers.get(pinfo.hasher) if hasher.matches(pinfo, credentials._2)
+            } yield Right(SocialUser(identity))
+            result getOrElse Left(error(request, "bad_password", "Wrong password."))
+          case None => Left(error(request, "no_user_exists", "No user with that email address exists."))
+        }
       }
     )
   }
 
-  private def error[A](): PlainResult = {
-    Redirect("/").flashing("error" ->
-        "Invalid email and password. Try with different credentials, or create an account if you don't have one yet.")
+  private def error[A](request: Request[A], errorCode: String, errorString: String): PlainResult = {
+    request.tags.get("format") match {
+      case Some("json") =>
+        Results.Forbidden(Json.obj("error" -> errorCode)).as(ContentTypes.JSON)
+      case _ => Redirect("/").flashing("error" -> errorString)
+    }
   }
 }

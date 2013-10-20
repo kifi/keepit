@@ -1,14 +1,16 @@
-$.postJson = function(uri, data) {
-  return $.ajax({
-    url: uri,
-    type: 'POST',
-    dataType: 'json',
-    data: JSON.stringify(data),
-    contentType: 'application/json'
-  });
-};
 
 !function () {
+  'use strict';
+  $.postJson = function(uri, data) {
+    return $.ajax({
+      url: uri,
+      type: 'POST',
+      dataType: 'json',
+      data: JSON.stringify(data),
+      contentType: 'application/json'
+    });
+  };
+
   $.fn.layout = function() {
     return this.each(forceLayout);
   };
@@ -18,6 +20,7 @@ $.postJson = function(uri, data) {
 }();
 
 !function () {
+  'use strict';
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
 
@@ -27,7 +30,7 @@ $.postJson = function(uri, data) {
       .filter('.' + $(this).data('form'))
       .css('display', 'block');
     $('.page-title').text($form.data('title'));
-    $form.find('input').first().focus();
+    $form.find('.form-email-addr').focus();
     openCurtains();
   });
   $('.curtain-back').click(function (e) {
@@ -38,19 +41,32 @@ $.postJson = function(uri, data) {
   $('.signup-form').submit(function (e) {
     e.preventDefault();
     var $form = $(this);
-    var emailAddr = $form.find('.form-email-addr').val();
-    var password = $form.find('.form-password').val();
-    // $.postJson('/some/sign/up/path', {
-    //   e: emailAddr,
-    //   p: password
-    // }).done(function () {
-    //
-    // }).fail(function () {
-    //
-    // });
-    $('.finalize-email-addr').text(emailAddr);
-    transitionTitle($form.data('title2'));
-    $('body').addClass('finalizing');
+    var $body = $('body');
+    if (!$body.hasClass('finalizing')) {
+      var emailAddr = $form.find('.form-email-addr').val();
+      var password = $form.find('.form-password').val();
+      // TODO: validation
+      // $.postJson('/some/sign/up/path', {
+      //   e: emailAddr,
+      //   p: password
+      // }).done(function () {
+      //
+      // }).fail(function () {
+      //
+      // });
+      $('.finalize-email-addr').text(emailAddr);
+      transitionTitle($form.data('title2'));
+      $('body').addClass('finalizing');
+      setTimeout(function () {
+        $form.find('.form-first-name').focus();
+      }, 200);
+    } else {
+      var first = $form.find('.form-first-name').val();
+      var last = $form.find('.form-last-name').val();
+      // TODO: validation
+      // TODO: allow photo upload to complete if in progress
+      window.location = '/';
+    }
   });
   $('.login-form').submit(function (e) {
     e.preventDefault();
@@ -59,7 +75,7 @@ $.postJson = function(uri, data) {
     //   e: $form.find('.form-email-addr').val(),
     //   p: $form.find('.form-password').val()
     // }).done(function () {
-         location = '/';
+         window.location = '/';
     // }).fail(function () {
     //   TODO: highlight incorrect email address or password or show connection or generic error message
     // });
@@ -72,16 +88,39 @@ $.postJson = function(uri, data) {
     var network = ['facebook', 'linkedin'].filter($.fn.hasClass.bind($a))[0];
     if ($form.hasClass('signup-form')) {
       if (network === 'facebook') {
-        location = 'https://www.facebook.com';
+        window.location = 'https://www.facebook.com';
       } else if (network === 'linkedin') {
-        location = 'https://www.linkedin.com';
+        window.location = 'https://www.linkedin.com';
       }
     } else if ($form.hasClass('login-form')) {
       if (network === 'facebook') {
-        location = 'https://www.facebook.com';
+        window.location = 'https://www.facebook.com';
       } else if (network === 'linkedin') {
-        location = 'https://www.linkedin.com';
+        window.location = 'https://www.linkedin.com';
       }
+    }
+  });
+
+  $('.form-photo-a').click(function (e) {
+    if (e.which !== 1) return;
+    var $a = $(this);
+    if ($a.hasClass('facebook')) {
+      window.open('https://www.facebook.com', 'photo', 'width=720,height=400,dialog=yes,menubar=no,resizable=yes,scrollbars=yes,status=yes');
+    } else if ($a.hasClass('linkedin')) {
+      window.open('https://www.linkedin.com', 'photo', 'width=720,height=400,dialog=yes,menubar=no,resizable=yes,scrollbars=yes,status=yes');
+    }
+  });
+  $('.form-photo-file').change(function (e) {
+    if (this.files) {
+      var f = this.files[0];
+      if (f && ~f.type.search(/^image\//)) {
+        $('.form-photo').css({'background-image': 'url(' + URL.createObjectURL(f) + ')', 'background-size': 'cover'});
+        uploadPhoto(f);
+      } else {
+        $('.form-photo').css({'background-image': '', 'background-size': ''});
+      }
+    } else {
+      // TODO: upload preview to iframe
     }
   });
 
@@ -111,5 +150,29 @@ $.postJson = function(uri, data) {
     $('.page-title.obsolete').remove();
     var $title = $('.page-title');
     $title.after($title.clone().text(text)).addClass('obsolete').layout();
+  }
+
+  function uploadPhoto(file) {
+    var xhr = new XMLHttpRequest();
+    if (xhr.upload) {
+      var updateProgress = setPhotoProgress.bind($('.form-photo-progress')[0]);
+      xhr.upload.addEventListener('progress', function (e) {
+        if (e.lengthComputable) {
+          updateProgress(e.loaded / e.total);
+        }
+      });
+      xhr.upload.addEventListener('load', updateProgress.bind(null, 1));
+      updateProgress(0);
+    }
+    xhr.open('POST', 'https://www.kifi.com/testing/upload', true);
+    xhr.send(file);
+  }
+  function setPhotoProgress(frac) {
+    if (frac < 1) {
+      var pct = Math.round(frac * 100);
+      this.style.borderWidth = '0 ' + (100 - pct) + 'px 0 ' + pct + 'px';
+    } else {
+      this.style.borderWidth = '';
+    }
   }
 }();

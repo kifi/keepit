@@ -46,17 +46,22 @@
 <form class="signup-form" data-title="Sign Up" data-title2="Finalize Your Account">
   <div class="finalize">
     <div class="finalize-email-addr"></div>
-    <div class="finalize-name">
+    <div class="form-name">
       <input class="form-first-name" type="text" name="first-name" placeholder="First name">
       <input class="form-last-name" type="text" name="last-name" placeholder="Last name">
     </div>
-    <div class="finalize-pic">
-      <!--img src=""-->
-      <div class="photo-label">Your photo</div>
-      <a class="photo-facebook" href="javascript:"></a>
-      <a class="photo-linkedin" href="javascript:"></a>
-      <a class="photo-upload" href="javascript:">Upload</a>
+    <div class="form-pic">
+      <div class="form-photo"><div class="form-photo-progress"></div></div>
+      <div class="form-photo-controls">
+        <a class="form-photo-a facebook" href="javascript:">Use Facebook photo</a>
+        <a class="form-photo-a linkedin" href="javascript:">Use LinkedIn photo</a>
+        <label class="form-photo-a upload">
+          Upload a photo
+          <input class="form-photo-file" type="file">
+        </label>
+      </div>
     </div>
+    <button class="form-submit form-submit-final">Done</button>
   </div>
 
   <div class="form-sides">

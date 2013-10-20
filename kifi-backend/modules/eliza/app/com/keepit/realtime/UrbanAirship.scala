@@ -11,7 +11,7 @@ import com.google.inject.{Inject, ImplementedBy}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.net.{NonOKResponseException, HttpClient}
+import com.keepit.common.net.{NonOKResponseException, HttpClient, DirectUrl}
 import com.keepit.common.time._
 import com.keepit.model.User
 
@@ -147,7 +147,7 @@ class UrbanAirshipImpl @Inject()(
   def updateDeviceState(device: Device): Future[Device] = {
     log.info(s"Checking state of device: ${device.token}")
     if (device.updatedAt plus UrbanAirship.RecheckPeriod isBefore clock.now()) {
-      authenticatedClient.getFuture(s"${config.baseUrl}/api/device_tokens/${device.token}", url => {
+      authenticatedClient.getFuture(DirectUrl(s"${config.baseUrl}/api/device_tokens/${device.token}"), url => {
         case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
       }) map { r =>
         val active = (r.json \ "active").as[Boolean]
@@ -170,7 +170,7 @@ class UrbanAirshipImpl @Inject()(
     log.info(s"Sending notification to device: ${device.token}")
     device.deviceType match {
       case DeviceType.IOS =>
-        authenticatedClient.postFuture(s"${config.baseUrl}/api/push", Json.obj(
+        authenticatedClient.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), Json.obj(
           "device_tokens" -> Seq(device.token),
           "aps" -> Json.obj(
             "badge" -> notification.unvisitedCount,
@@ -190,4 +190,4 @@ class FakeUrbanAirshipImpl extends UrbanAirship {
   def notifyUser(userId: Id[User], notification: PushNotification): Unit = {}
   def sendNotification(device: Device, notification: PushNotification): Unit = {}
   def updateDeviceState(device: Device): Future[Device] = Promise.successful(device).future
-} 
+}

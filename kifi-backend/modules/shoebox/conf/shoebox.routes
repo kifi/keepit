@@ -1,4 +1,6 @@
 
+GET     /curtain                    @com.keepit.controllers.website.HomeController.curtainHome()
+
 GET     /login                      securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
@@ -12,21 +14,36 @@ GET     /signup                     @com.keepit.controllers.core.AuthController.
 POST    /signup                     @com.keepit.controllers.core.AuthController.handleSignup()
 POST    /signupWithPassword         @com.keepit.controllers.core.AuthController.handleUsernamePasswordSignup()
 
+POST    /auth/signup                @com.keepit.controllers.core.AuthController.userPasswordSignup()
+
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
 POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
+
 # custom auth routes which set some session state
-GET     /login/:provider            @com.keepit.controllers.core.AuthController.login(provider)
-POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider)
+
+# Standalone login page
+GET     /login/:provider            @com.keepit.controllers.core.AuthController.login(provider, format: String ?= "html")
+POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider, format: String ?= "html")
+POST    /login                      @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
+POST    /auth/login                  @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
+
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
 POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
+
+# Initial signup using provider pages
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
 POST    /signup/:provider           @com.keepit.controllers.core.AuthController.signupByPost(provider)
+
 POST    /loginAndLink/:provider     @com.keepit.controllers.core.AuthController.passwordLoginAndLink(provider)
+
 POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
+
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
+
 GET     /resetPassword              @com.keepit.controllers.core.AuthController.resetPasswordPage()
 POST    /resetPassword              @com.keepit.controllers.core.AuthController.resetPassword()
+
 GET     /setPassword/:code          @com.keepit.controllers.core.AuthController.setNewPasswordPage(code: String)
 POST    /setPassword/:code          @com.keepit.controllers.core.AuthController.setNewPassword(code: String)
 

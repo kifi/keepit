@@ -7,7 +7,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{NonOKResponseException, HttpClient}
+import com.keepit.common.net.{NonOKResponseException, HttpClient, DirectUrl}
 import com.keepit.model.{SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
 import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
 
@@ -30,6 +30,7 @@ class FacebookSocialGraph @Inject() (
     socialRepo: SocialUserInfoRepo
   ) extends SocialGraph with Logging {
 
+  val TWO_MINUTES = 2 * 60 * 1000
   val networkType = SocialNetworks.FACEBOOK
 
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
@@ -94,7 +95,7 @@ class FacebookSocialGraph @Inject() (
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
     val accessToken = getAccessToken(socialUserInfo)
     val url = s"https://graph.facebook.com/${socialUserInfo.socialId}/permissions?access_token=$accessToken"
-    httpClient.deleteFuture(url).map(_ => ())
+    httpClient.withTimeout(TWO_MINUTES).deleteFuture(DirectUrl(url)).map(_ => ())
   }
 
   def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue) = {
@@ -117,8 +118,7 @@ class FacebookSocialGraph @Inject() (
 
   private[social] def nextPageUrl(json: JsValue): Option[String] = (json \ "friends" \ "paging" \ "next").asOpt[String]
 
-  val TWO_MINUTES = 2 * 60 * 1000
-  private def get(url: String): JsValue = httpClient.withTimeout(TWO_MINUTES).get(url, httpClient.ignoreFailure).json
+  private def get(url: String): JsValue = httpClient.withTimeout(TWO_MINUTES).get(DirectUrl(url), httpClient.ignoreFailure).json
 
   private def url(id: SocialId, accessToken: String) = "https://graph.facebook.com/%s?access_token=%s&fields=%s,friends.fields(%s)".format(
       id.id, accessToken, FacebookSocialGraph.FULL_PROFILE, FacebookSocialGraph.FULL_PROFILE)

@@ -57,12 +57,12 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
     }
     "fetch if necessary" in {
       running(new ShoeboxApplication(domainClassifierTestModules :+ FakeHttpClientModule {
-        case s if s.contains("yahoo.com") => "FR~Search engines"
-        case s if s.contains("zdnet.com") => "FM~Technology and computers,News and magazines"
-        case s if s.contains("schwab.com") => "FM~Business and services,Finance (Banks, Real estate, Insurance)"
-        case s if s.contains("hover.com") => "FM~Business and services,Web hosting"
-        case s if s.contains("42go.com") || s.contains("addepar.com") => "FM~Technology and computers"
-        case s if s.contains("playboy.com") || s.contains("porn.com") => "FM~Porn"
+        case s if s.url.contains("yahoo.com") => "FR~Search engines"
+        case s if s.url.contains("zdnet.com") => "FM~Technology and computers,News and magazines"
+        case s if s.url.contains("schwab.com") => "FM~Business and services,Finance (Banks, Real estate, Insurance)"
+        case s if s.url.contains("hover.com") => "FM~Business and services,Web hosting"
+        case s if s.url.contains("42go.com") || s.url.contains("addepar.com") => "FM~Technology and computers"
+        case s if s.url.contains("playboy.com") || s.url.contains("porn.com") => "FM~Porn"
       }:_*)) {
         val classifier = inject[DomainClassifierImpl]
         val domainRepo = inject[DomainRepo]

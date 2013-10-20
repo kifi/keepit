@@ -1,5 +1,6 @@
 package com.keepit.common.healthcheck
 
+import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.db.ExternalId
 import com.google.inject.Inject
 import com.google.inject.ImplementedBy
@@ -33,7 +34,7 @@ object ErrorWithStack {
       error.getStackTrace.filter(e => e != null && e.getFileName != null && !e.getFileName.contains("Airbrake")))
 }
 
-class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices) {
+class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery) {
 
   val deploymentMessage: String = {
     val repo = "https://github.com/FortyTwoEng/keepit"
@@ -95,7 +96,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
   def noticeError(error: ErrorWithStack, message: Option[String]) =
     <error>
       <class>{ error.rootCause.error.getClass.getName }</class>
-      <message>{ ( message.getOrElse("") + " " + error.rootCause.error.toString()).trim }</message>
+      <message>{ s"[${serviceDiscovery.thisInstance.map(_.id.id).getOrElse("NA")}]${message.getOrElse("")} ${error.rootCause.error.toString()}".trim }</message>
       <backtrace>
         { formatStacktrace(error) ++ formatCauseStacktrace(error.cause) }
       </backtrace>

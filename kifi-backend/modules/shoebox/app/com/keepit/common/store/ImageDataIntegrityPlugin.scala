@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{NonOKResponseException, ClientResponse, HttpClient}
+import com.keepit.common.net.{NonOKResponseException, ClientResponse, HttpClient, DirectUrl}
 import com.keepit.common.plugin._
 import com.keepit.model.{UserStates, UserRepo, User}
 import akka.actor.ActorSystem
@@ -79,7 +79,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
     }
   }
   private def get(url: String): ClientResponse = try {
-    httpClient.get(url, httpClient.ignoreFailure)
+    httpClient.get(DirectUrl(url), httpClient.ignoreFailure)
   } catch {
     case NonOKResponseException(_, response, _) => response
   }
