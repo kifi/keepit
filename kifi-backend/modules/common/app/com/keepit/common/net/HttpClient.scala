@@ -95,19 +95,20 @@ case class HttpClientImpl(
   override val defaultFailureHandler: FailureHandler = { req =>
     {
       case e: Throwable =>
+        val remoteInstance = req.httpUri.serviceInstanceOpt
         val al = accessLog.add(req.timer.done(
           result = "fail",
           query = req.queryString,
           url = req.url,
-          //Its a bit strange, but in this case we rather pass null to be consistent with the api
-          //taking only the first 200 chars of the body
+          remoteService = remoteInstance.map(_.remoteService.serviceType).getOrElse(null),
+          remoteServiceId = remoteInstance.map(_.id).getOrElse(null),
           trackingId = req.trackingId,
           error = e.toString))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             exception = req.tracer.withCause(e),
             request = req.req,
-            message = s"${al.error}: error handling url ${al.url}"
+            message = s"[${remoteServiceString(req)}]${al.error}: error handling url ${al.url}"
           )
         )
     }
@@ -179,13 +180,14 @@ case class HttpClientImpl(
     //todo(eishay): the interesting part is the remote service and node id, to be logged
     val remoteHost = res.res.header(CommonHeaders.LocalHost).getOrElse("NA")
     val remoteTime = res.res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
+    val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
         result = "success",
         query = request.queryString,
+        remoteService = remoteInstance.map(_.remoteService.serviceType).getOrElse(null),
+        remoteServiceId = remoteInstance.map(_.id).getOrElse(null),
         url = request.url,
-        //Its a bit strange, but in this case we rather pass null to be consistent with the api
-        //taking only the first 200 chars of the body
         trackingId = request.trackingId,
         statusCode = res.res.status))
 
@@ -196,11 +198,15 @@ case class HttpClientImpl(
           AirbrakeError.outgoing(
             request = request.req,
             exception = exception,
-            message = s"wait time $waitTime for ${accessLog.format(e)}")
+            message = s"[${remoteServiceString(request)}] wait time $waitTime for ${request.httpUri.url}")
         )
       }
     }
   }
+
+  private def remoteServiceString(request: Request) =
+    s"${request.httpUri.serviceInstanceOpt.map{i => i.remoteService.serviceType.name + i.id}.getOrElse("NA")}"
+
 }
 
 //This request class is not reusable for more then one call

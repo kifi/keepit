@@ -113,14 +113,14 @@
   $('.form-photo-file').change(function (e) {
     if (this.files) {
       var f = this.files[0];
-      if (f && ~f.type.search(/^image\//)) {
+      if (f && ~f.type.search(/^image\/(?:jpeg|png|gif)$/)) {
         $('.form-photo').css({'background-image': 'url(' + URL.createObjectURL(f) + ')', 'background-size': 'cover'});
-        uploadPhoto(f);
+        uploadPhotoXhr2(f);
       } else {
         $('.form-photo').css({'background-image': '', 'background-size': ''});
       }
     } else {
-      // TODO: upload preview to iframe
+      uploadPhotoIframe(this.form);
     }
   });
 
@@ -152,27 +152,50 @@
     $title.after($title.clone().text(text)).addClass('obsolete').layout();
   }
 
-  function uploadPhoto(file) {
+  function uploadPhotoXhr2(file) {
     var xhr = new XMLHttpRequest();
     if (xhr.upload) {
-      var updateProgress = setPhotoProgress.bind($('.form-photo-progress')[0]);
       xhr.upload.addEventListener('progress', function (e) {
         if (e.lengthComputable) {
-          updateProgress(e.loaded / e.total);
+          setPhotoProgress(e.loaded / e.total);
         }
       });
-      xhr.upload.addEventListener('load', updateProgress.bind(null, 1));
-      updateProgress(0);
+      xhr.upload.addEventListener('load', setPhotoProgress.bind(null, 1));
+      setPhotoProgress(0);
     }
     xhr.open('POST', 'https://www.kifi.com/testing/upload', true);
     xhr.send(file);
   }
+  function uploadPhotoIframe(form) {
+    $('.form-photo').css('background-image', 'none');
+    $('iframe[name=upload]').remove();  // TODO: cleaner cancellation of any in-progress upload?
+    $('<iframe name=upload>').hide().appendTo('body').load(function() {
+      clearTimeout(fakePhotoProgressTimer);
+      setPhotoProgress(1);
+      var $iframe = $(this), o;
+      try {
+        o = $.parseJSON($iframe.contents().find('body').text());
+      } catch (err) {
+        console.error('[uploadPhotoIframe]', err);
+      }
+      $('.form-photo').css('background-image', o ? 'url(' + o.url + ')' : '');
+      $(form).removeAttr('method target action');
+    });
+    form.method = 'POST';
+    form.target = 'upload';
+    form.action = 'https://www.kifi.com/testing/upload';
+    form.submit();
+    clearTimeout(fakePhotoProgressTimer);
+    fakePhotoProgress(0, 100);
+  }
+  var fakePhotoProgressTimer;
+  function fakePhotoProgress(frac, ms) {
+    setPhotoProgress(frac);
+    fakePhotoProgressTimer = setTimeout(fakePhotoProgress.bind(null, 1 - (1 - frac) * .9, ms * 1.1), ms);
+  }
+  var progressBar = $('.form-photo-progress')[0];
   function setPhotoProgress(frac) {
-    if (frac < 1) {
-      var pct = Math.round(frac * 100);
-      this.style.borderWidth = '0 ' + (100 - pct) + 'px 0 ' + pct + 'px';
-    } else {
-      this.style.borderWidth = '';
-    }
+    var pct = Math.round(frac * 100);
+    progressBar.style.borderWidth = frac < 1 ? '0 ' + (100 - pct) + 'px 0 ' + pct + 'px' : '';
   }
 }();
