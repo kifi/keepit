@@ -1,5 +1,4 @@
-
-!function () {
+(function () {
   'use strict';
   $.postJson = function (uri, data) {
     return $.ajax({
@@ -17,9 +16,9 @@
   function forceLayout() {
     this.clientHeight;
   }
-}();
+}());
 
-!function () {
+(function () {
   'use strict';
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
@@ -178,14 +177,18 @@
   function isImage(file) {
     return file.type.search(/^image\/(?:jpeg|png|gif)$/) === 0;
   }
+  var URL = window.URL || window.webkitURL;
   function uploadPhotoXhr2(files) {
     var file = Array.prototype.filter.call(files, isImage)[0];
     if (!file) {
       $photo.css({'background-image': '', 'background-size': ''});
       return;
     }
-    $photo.css({'background-image': 'url(' + URL.createObjectURL(file) + ')', 'background-size': 'cover'});
-
+    if (URL) {
+      $photo.css({'background-image': 'url(' + URL.createObjectURL(file) + ')', 'background-size': 'cover'});
+    } else {  // TODO: URL alternative for Safari 5
+      $photo.css({'background-image': '', 'background-size': ''});
+    }
     var xhr = new XMLHttpRequest();
     if (xhr.upload) {
       xhr.upload.addEventListener('progress', function (e) {
@@ -207,9 +210,8 @@
       setPhotoProgress(1);
       var $iframe = $(this), o;
       try {
-        o = $.parseJSON($iframe.contents().find('body').text());
+        o = JSON.parse($iframe.contents().find('body').text());
       } catch (err) {
-        console.error('[uploadPhotoIframe]', err);
       }
       $photo.css('background-image', o ? 'url(' + o.url + ')' : '');
       $(form).removeAttr('method target action');
@@ -231,4 +233,4 @@
     var pct = Math.round(frac * 100);
     progressBar.style.borderWidth = frac < 1 ? '0 ' + (100 - pct) + 'px 0 ' + pct + 'px' : '';
   }
-}();
+}());
