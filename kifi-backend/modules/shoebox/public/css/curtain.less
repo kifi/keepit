@@ -41,6 +41,9 @@ input[type=password] {
   line-height: 130%;
 }
 
+@kifi-green: #9fc062;
+@kifi-blue: #85a4ea;
+
 /* curtains */
 @curtain-time: .42s;
 .curtain-l,
@@ -54,11 +57,11 @@ input[type=password] {
 }
 .curtain-l {
   left: 0;
-  background-color: #9fc062;
+  background-color: @kifi-green;
 }
 .curtain-r {
   right: 0;
-  background-color: #85a4ea;
+  background-color: @kifi-blue;
 }
 .curtains-drawn>.curtain-l {
   .translate(-67%);
@@ -465,6 +468,17 @@ footer {
   float: left;
   margin-right: 10px;
   background: #ccc url(../img/out/ghost.100.png);
+  position: relative;
+}
+.form-photo-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 5px;
+  border-style: solid;
+  border-color: transparent @kifi-blue transparent @kifi-green;
+  border-width: 0;
 }
 .form-photo-controls {
   overflow: hidden;
