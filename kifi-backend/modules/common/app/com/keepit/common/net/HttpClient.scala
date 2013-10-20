@@ -205,7 +205,7 @@ case class HttpClientImpl(
   }
 
   private def remoteServiceString(request: Request) =
-    s"${request.httpUri.serviceInstanceOpt.map{i => i.remoteService.serviceType.name + i.id}.getOrElse("NA")}"
+    s"${request.httpUri.serviceInstanceOpt.map{i => i.remoteService.serviceType.shortName + i.id}.getOrElse("NA")}"
 
 }
 
