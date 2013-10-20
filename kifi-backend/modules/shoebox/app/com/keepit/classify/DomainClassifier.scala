@@ -14,8 +14,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.HttpClient
-import com.keepit.common.net.NonOKResponseException
+import com.keepit.common.net.{HttpClient, NonOKResponseException, DirectUrl}
 import com.keepit.common.strings._
 
 import akka.pattern.{ask, pipe}
@@ -54,7 +53,7 @@ private[classify] class DomainClassificationActor @Inject() (
     val id = encodeHex(md5).toLowerCase
     val encodedUrl = URLEncoder.encode(url, UTF8)
 
-    client.withTimeout(THREE_MINUTES).getFuture(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl", client.ignoreFailure).map { resp =>
+    client.withTimeout(THREE_MINUTES).getFuture(DirectUrl(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl"), client.ignoreFailure).map { resp =>
       (resp.body.split("~", 2).toList match {
         case ("FM" | "FR") :: tagString :: Nil =>
           // response is comma separated, but includes commas inside parentheses
