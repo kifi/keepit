@@ -4,9 +4,9 @@ import play.api.Logger
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.healthcheck._
 import com.keepit.common.time._
-import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.service.{FortyTwoServices, ServiceType}
 import com.keepit.common.time.Clock
-import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstanceId}
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -49,8 +49,8 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
           error: String = null,
           remoteHost: String = null,
           targetHost: String = null,
-          remoteService: String = null,
-          remoteServiceId: Int = NoIntValue,
+          remoteService: ServiceType = null,
+          remoteServiceId: ServiceInstanceId = null,
           query: String = null,
           trackingId: String = null,
           method: String = null,
@@ -70,7 +70,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       remoteHost = Option(remoteHost),
       targetHost = Option(targetHost),
       remoteService = Option(remoteService),
-      remoteServiceId = intOption(remoteServiceId),
+      remoteServiceId = Option(remoteServiceId),
       query = Option(query),
       trackingId = Option(trackingId),
       method = Option(method),
@@ -91,8 +91,8 @@ case class AccessLogEvent(
   error: Option[String],
   remoteHost: Option[String],
   targetHost: Option[String],
-  remoteService: Option[String],
-  remoteServiceId: Option[Int],
+  remoteService: Option[ServiceType],
+  remoteServiceId: Option[ServiceInstanceId],
   query: Option[String],
   trackingId: Option[String],
   method: Option[String],
