@@ -25,8 +25,9 @@ import java.util.{Set => JSet}
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
+import com.keepit.common.logging.Logging
 
-object ProximityQuery {
+object ProximityQuery extends Logging {
 
   val maxLength = 64  // we use first 64 terms (enough?)
   val gapPenalty = 0.05f
@@ -34,15 +35,17 @@ object ProximityQuery {
   def apply(terms: Seq[Seq[Term]], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f) = new ProximityQuery(terms, phrases, phraseBoost)
 
   def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]) = {
-    val notInPhrase = termIds.clone
+    phrases.foreach{ case (pos, len) => if (pos - len < 0) log.error(s"bad phrase pos=$pos len=$len") }
+
+    val posNotInPhrase = (0 until termIds.length).toArray
     phrases.foreach{ case (pos, len) =>
-      if (pos + len <= notInPhrase.length) {
-        (pos until (pos + len)).foreach{ idx => notInPhrase(idx) = -1 }
+      if (pos + len <= posNotInPhrase.length) {
+        (pos until (pos + len)).foreach{ idx => posNotInPhrase(idx) = -1 }
       }
     }
 
-    (notInPhrase.filter{ _ >= 0 }.map{ id => (Seq(id), TermMatch(1).asInstanceOf[Match]) } ++
-      phrases.map{ case (pos, len) => (termIds.slice(pos, pos + len).toSeq, (if (len == 1) TermMatch(1) else PhraseMatch(pos, len)).asInstanceOf[Match]) })
+    (posNotInPhrase.filter{ _ >= 0 }.map{ pos => (Seq(termIds(pos)), TermMatch(pos).asInstanceOf[Match]) } ++
+      phrases.map{ case (pos, len) => (termIds.slice(pos, pos + len).toSeq, (if (len == 1) TermMatch(pos) else PhraseMatch(pos, len)).asInstanceOf[Match]) })
   }
 }
 
