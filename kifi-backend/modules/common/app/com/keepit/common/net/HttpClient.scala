@@ -192,11 +192,12 @@ case class HttpClientImpl(
     e.waitTime map {waitTime =>
       if (waitTime > 200) {//ms
         val exception = request.tracer.withCause(LongWaitException(request.httpUri, res.res, waitTime))
+        val remoteService = s"${request.httpUri.serviceInstanceOpt.map{i => i.remoteService.serviceType.name + i.id}.getOrElse("NA")}"
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
             exception = exception,
-            message = s"wait time $waitTime for ${accessLog.format(e)}")
+            message = s"[$remoteService] wait time $waitTime for ${request.httpUri.url}")
         )
       }
     }
