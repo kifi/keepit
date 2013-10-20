@@ -171,7 +171,7 @@ class AuthController @Inject() (
 
     val home = com.keepit.controllers.website.routes.HomeController.home()
     emailPasswordForm.bindFromRequest.fold(
-      formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.headOption.map(f => f.message))),
+      formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
       { case EmailPassword(email, password) =>
         val hasher = Registry.hashers.currentHasher
 
