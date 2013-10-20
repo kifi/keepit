@@ -69,7 +69,7 @@ class AirbrakeTest extends Specification with TestInjector {
         validate(xml)
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.NullPointerException</class>
-        (xml \ "error" \ "message").head === <message>[0] java.lang.NullPointerException</message>
+        (xml \ "error" \ "message").head === <message>[0L] java.lang.NullPointerException</message>
         (xml \ "error" \ "backtrace" \ "line").size === 188
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
         (xml \ "server-environment" \ "app-version").head.text === "0.0.0"
@@ -89,7 +89,7 @@ class AirbrakeTest extends Specification with TestInjector {
         validate(xml)
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
-        (xml \ "error" \ "message").head === <message>[0] java.lang.IllegalArgumentException: hi there</message>
+        (xml \ "error" \ "message").head === <message>[0L] java.lang.IllegalArgumentException: hi there</message>
         (xml \ "error" \ "backtrace" \ "line").size === 62
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
         (xml \ "request" \ "url").head === <url>http://www.kifi.com/hi</url>
