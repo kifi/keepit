@@ -1,7 +1,7 @@
 
 !function () {
   'use strict';
-  $.postJson = function(uri, data) {
+  $.postJson = function (uri, data) {
     return $.ajax({
       url: uri,
       type: 'POST',
@@ -11,7 +11,7 @@
     });
   };
 
-  $.fn.layout = function() {
+  $.fn.layout = function () {
     return this.each(forceLayout);
   };
   function forceLayout() {
@@ -101,6 +101,7 @@
     }
   });
 
+  var $photo = $('.form-photo');
   $('.form-photo-a').click(function (e) {
     if (e.which !== 1) return;
     var $a = $(this);
@@ -112,16 +113,38 @@
   });
   $('.form-photo-file').change(function (e) {
     if (this.files) {
-      var f = this.files[0];
-      if (f && ~f.type.search(/^image\/(?:jpeg|png|gif)$/)) {
-        $('.form-photo').css({'background-image': 'url(' + URL.createObjectURL(f) + ')', 'background-size': 'cover'});
-        uploadPhotoXhr2(f);
-      } else {
-        $('.form-photo').css({'background-image': '', 'background-size': ''});
-      }
+      uploadPhotoXhr2(this.files);
     } else {
       uploadPhotoIframe(this.form);
     }
+  });
+  $(document).on('dragenter', 'body.finalizing', function (e) {
+    if (~Array.prototype.indexOf.call(e.originalEvent.dataTransfer.types, 'Files')) {
+      if ($drop.css('display') !== 'block') {
+        $drop.css('display', 'block');
+        $(document).off('mousemove.drag').on('mousemove.drag', function (e) {
+          if (!e.relatedTarget) {  // out of window
+            $drop.css('display', '');
+            $(document).off('mousemove.drag');
+          }
+        });
+      }
+    }
+  }).on('drop', 'body.finalizing', function (e) {
+    e.preventDefault();
+    $(document).off('mousemove.drag');
+    $drop.css('display', '');
+    if (e.target === $drop[0]) {
+      uploadPhotoXhr2(e.originalEvent.dataTransfer.files);
+    }
+  });
+  var $drop = $('.form-photo-drop').on('dragenter', function (e) {
+    $drop.addClass('over');
+    return false;
+  }).on('dragover', function (e) {
+    return false;
+  }).on('dragleave', function (e) {
+    $drop.removeClass('over');
   });
 
   function openCurtains() {
@@ -152,7 +175,17 @@
     $title.after($title.clone().text(text)).addClass('obsolete').layout();
   }
 
-  function uploadPhotoXhr2(file) {
+  function isImage(file) {
+    return file.type.search(/^image\/(?:jpeg|png|gif)$/) === 0;
+  }
+  function uploadPhotoXhr2(files) {
+    var file = Array.prototype.filter.call(files, isImage)[0];
+    if (!file) {
+      $photo.css({'background-image': '', 'background-size': ''});
+      return;
+    }
+    $photo.css({'background-image': 'url(' + URL.createObjectURL(file) + ')', 'background-size': 'cover'});
+
     var xhr = new XMLHttpRequest();
     if (xhr.upload) {
       xhr.upload.addEventListener('progress', function (e) {
@@ -167,9 +200,9 @@
     xhr.send(file);
   }
   function uploadPhotoIframe(form) {
-    $('.form-photo').css('background-image', 'none');
+    $photo.css('background-image', 'none');
     $('iframe[name=upload]').remove();  // TODO: cleaner cancellation of any in-progress upload?
-    $('<iframe name=upload>').hide().appendTo('body').load(function() {
+    $('<iframe name=upload>').hide().appendTo('body').load(function () {
       clearTimeout(fakePhotoProgressTimer);
       setPhotoProgress(1);
       var $iframe = $(this), o;
@@ -178,7 +211,7 @@
       } catch (err) {
         console.error('[uploadPhotoIframe]', err);
       }
-      $('.form-photo').css('background-image', o ? 'url(' + o.url + ')' : '');
+      $photo.css('background-image', o ? 'url(' + o.url + ')' : '');
       $(form).removeAttr('method target action');
     });
     form.method = 'POST';
