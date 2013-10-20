@@ -36,6 +36,27 @@
     if (e.which !== 1) return;
     closeCurtains();
   });
+  function openCurtains() {
+    var logoL = $logoL[0], wL = logoL.offsetWidth;
+    var logoR = $logoR[0], wR = logoR.offsetWidth;
+    logoL.style.clip = 'rect(auto ' + wL + 'px auto auto)';
+    logoR.style.clip = 'rect(auto auto auto 0)';
+    logoL.offsetWidth, logoR.offsetWidth; // force layout
+    logoL.style.clip = 'rect(auto ' + Math.round(wL * .33) + 'px auto auto)';
+    logoR.style.clip = 'rect(auto auto auto ' + Math.round(wR * .67) + 'px)';
+    $('body').addClass('curtains-drawn');
+  }
+  function closeCurtains() {
+    $logoL.add($logoR).css({display: 'block', clip: ''});
+    var logoL = $logoL[0], wL = logoL.offsetWidth;
+    var logoR = $logoR[0], wR = logoR.offsetWidth;
+    logoL.style.clip = 'rect(auto ' + Math.round(wL * .33) + 'px auto auto)';
+    logoR.style.clip = 'rect(auto auto auto ' + Math.round(wR * .67) + 'px)';
+    logoL.offsetWidth, logoR.offsetWidth; // force layout
+    logoL.style.clip = 'rect(auto ' + wL + 'px auto auto)';
+    logoR.style.clip = 'rect(auto auto auto 0)';
+    $('body').removeClass('curtains-drawn');
+  }
 
   $('.signup-form').submit(function (e) {
     e.preventDefault();
@@ -67,6 +88,12 @@
       window.location = '/';
     }
   });
+  function transitionTitle(text) {
+    $('.page-title.obsolete').remove();
+    var $title = $('.page-title');
+    $title.after($title.clone().text(text)).addClass('obsolete').layout();
+  }
+
   $('.login-form').submit(function (e) {
     e.preventDefault();
     // authenticate via XHR (users on browsers w/o XHR support have no reason to log in)
@@ -117,78 +144,44 @@
       uploadPhotoIframe(this.form);
     }
   });
-  $(document).on('dragenter', 'body.finalizing', function (e) {
+  $(document).on('dragenter dragover drop', 'body.finalizing', function (e) {
     if (~Array.prototype.indexOf.call(e.originalEvent.dataTransfer.types, 'Files')) {
-      if ($drop.css('display') !== 'block') {
+      if (e.type === 'dragenter') {
         $drop.css('display', 'block');
-        $(document).off('mousemove.drag').on('mousemove.drag', function (e) {
-          if (!e.relatedTarget) {  // out of window
-            $drop.css('display', '');
-            $(document).off('mousemove.drag');
-          }
-        });
+        $(document).on('mousemove.drag', removeDropTarget);
+      } else if (e.type === 'drop') {
+        removeDropTarget();
+        uploadPhotoXhr2(e.originalEvent.dataTransfer.files);
       }
+      return false;
     }
-  }).on('drop', 'body.finalizing', function (e) {
-    e.preventDefault();
-    $(document).off('mousemove.drag');
+  });
+  var $drop = $('.form-photo-drop').on('dragenter dragleave', function (e) {
+    $drop.toggleClass('over', e.type === 'dragenter');
+  });
+  function removeDropTarget() {
     $drop.css('display', '');
-    if (e.target === $drop[0]) {
-      uploadPhotoXhr2(e.originalEvent.dataTransfer.files);
-    }
-  });
-  var $drop = $('.form-photo-drop').on('dragenter', function (e) {
-    $drop.addClass('over');
-    return false;
-  }).on('dragover', function (e) {
-    return false;
-  }).on('dragleave', function (e) {
-    $drop.removeClass('over');
-  });
-
-  function openCurtains() {
-    var logoL = $logoL[0], wL = logoL.offsetWidth;
-    var logoR = $logoR[0], wR = logoR.offsetWidth;
-    logoL.style.clip = 'rect(auto ' + wL + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto 0)';
-    logoL.offsetWidth, logoR.offsetWidth; // force layout
-    logoL.style.clip = 'rect(auto ' + Math.round(wL * .33) + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto ' + Math.round(wR * .67) + 'px)';
-    $('body').addClass('curtains-drawn');
-  }
-  function closeCurtains() {
-    $logoL.add($logoR).css({display: 'block', clip: ''});
-    var logoL = $logoL[0], wL = logoL.offsetWidth;
-    var logoR = $logoR[0], wR = logoR.offsetWidth;
-    logoL.style.clip = 'rect(auto ' + Math.round(wL * .33) + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto ' + Math.round(wR * .67) + 'px)';
-    logoL.offsetWidth, logoR.offsetWidth; // force layout
-    logoL.style.clip = 'rect(auto ' + wL + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto 0)';
-    $('body').removeClass('curtains-drawn');
-  }
-
-  function transitionTitle(text) {
-    $('.page-title.obsolete').remove();
-    var $title = $('.page-title');
-    $title.after($title.clone().text(text)).addClass('obsolete').layout();
+    $(document).off('mousemove.drag');
   }
 
   function isImage(file) {
     return file.type.search(/^image\/(?:jpeg|png|gif)$/) === 0;
   }
+
   var URL = window.URL || window.webkitURL;
   function uploadPhotoXhr2(files) {
     var file = Array.prototype.filter.call(files, isImage)[0];
-    if (!file) {
-      $photo.css({'background-image': '', 'background-size': ''});
-      return;
-    }
+    if (!file) return;
+
     if (URL) {
-      $photo.css({'background-image': 'url(' + URL.createObjectURL(file) + ')', 'background-size': 'cover'});
+      var url = $photo.data('url');
+      if (url) URL.revokeObjectURL(url);
+      url = URL.createObjectURL(file);
+      $photo.css({'background-image': 'url(' + url + ')', 'background-size': 'cover'}).data('url', url);
     } else {  // TODO: URL alternative for Safari 5
       $photo.css({'background-image': '', 'background-size': ''});
     }
+
     var xhr = new XMLHttpRequest();
     if (xhr.upload) {
       xhr.upload.addEventListener('progress', function (e) {
@@ -202,6 +195,7 @@
     xhr.open('POST', 'https://www.kifi.com/testing/upload', true);
     xhr.send(file);
   }
+
   function uploadPhotoIframe(form) {
     $photo.css('background-image', 'none');
     $('iframe[name=upload]').remove();  // TODO: cleaner cancellation of any in-progress upload?
@@ -223,11 +217,13 @@
     clearTimeout(fakePhotoProgressTimer);
     fakePhotoProgress(0, 100);
   }
+
   var fakePhotoProgressTimer;
   function fakePhotoProgress(frac, ms) {
     setPhotoProgress(frac);
     fakePhotoProgressTimer = setTimeout(fakePhotoProgress.bind(null, 1 - (1 - frac) * .9, ms * 1.1), ms);
   }
+
   var progressBar = $('.form-photo-progress')[0];
   function setPhotoProgress(frac) {
     var pct = Math.round(frac * 100);
