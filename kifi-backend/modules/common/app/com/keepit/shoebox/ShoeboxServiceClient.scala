@@ -85,6 +85,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
+  def getSearchFriendArray(userId: Id[User]): Future[Array[Long]]
+  def getFriendArray(userId: Id[User]): Future[Array[Long]]
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
   def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
@@ -121,8 +123,8 @@ class ShoeboxServiceClientImpl @Inject() (
 
   // request consolidation
   private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 30 seconds)
-  private[this] val consolidateSearchFriendsReq = new RequestConsolidator[SearchFriendsKey, Set[Id[User]]](ttl = 3 seconds)
-  private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
+  private[this] val consolidateSearchFriendsReq = new RequestConsolidator[SearchFriendsKey, Array[Long]](ttl = 3 seconds)
+  private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Array[Long]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[BrowsingHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
@@ -242,22 +244,30 @@ class ShoeboxServiceClientImpl @Inject() (
     }.map{ m => m.map{ case (k, v) => (k.userId, v) } }
   }
 
-  def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)){ key=>
+  def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = {
+    getSearchFriendArray(userId: Id[User]).map{ ids => ids.map(Id[User](_)).toSet }
+  }
+
+  def getFriends(userId: Id[User]): Future[Set[Id[User]]] = {
+    getFriendArray(userId: Id[User]).map{ ids => ids.map(Id[User](_)).toSet }
+  }
+
+  def getSearchFriendArray(userId: Id[User]): Future[Array[Long]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)){ key=>
     cacheProvider.searchFriendsCache.get(key) match {
-      case Some(friends) => Promise.successful(friends.map(Id[User]).toSet).future
+      case Some(friends) => Promise.successful(friends).future
       case _ =>
         call(Shoebox.internal.getSearchFriends(userId)).map {r =>
-          r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
+          r.json.as[JsArray].value.map(_.as[Long]).toArray
         }
     }
   }
 
-  def getFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateUserConnectionsReq(UserConnectionIdKey(userId)){ key=>
+  def getFriendArray(userId: Id[User]): Future[Array[Long]] = consolidateUserConnectionsReq(UserConnectionIdKey(userId)){ key=>
     cacheProvider.userConnectionsCache.get(key) match {
-      case Some(friends) => Promise.successful(friends.map(Id[User]).toSet).future
+      case Some(friends) => Promise.successful(friends).future
       case _ =>
         call(Shoebox.internal.getConnectedUsers(userId)).map {r =>
-          r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
+          r.json.as[JsArray].value.map(_.as[Long]).toArray
         }
     }
   }
