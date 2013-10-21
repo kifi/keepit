@@ -20,6 +20,7 @@
 
 (function () {
   'use strict';
+  var baseUri = 'https://www.kifi.com';
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
 
@@ -122,6 +123,7 @@
     }
   }
 
+  var signupPromise;
   $('.signup-form').submit(function (e) {
     e.preventDefault();
     $('.form-error').remove();
@@ -130,15 +132,12 @@
       var email = validateEmailAddress($form.find('.form-email-addr'));
       var password = email && validateNewPassword($form.find('.form-password'));
       if (email && password) {
-        // TODO: validation
-        // $.postJson('/some/sign/up/path', {
-        //   e: email,
-        //   p: password
-        // }).done(function () {
-        //
-        // }).fail(function () {
-        //
-        // });
+        signupPromise = $.postJson(baseUri + '/auth/sign-up', {
+          email: email,
+          password: password
+        }).fail(function (xhr) {
+          if (console) console.error('[signup:1:fail]', xhr);
+        }).promise();
         $('.finalize-email-addr').text(email);
         transitionTitle($form.data('title2'));
         $('body').addClass('finalizing');
@@ -150,8 +149,15 @@
       var first = validateName($form.find('.form-first-name'));
       var last = first && validateName($form.find('.form-last-name'));
       if (first && last) {
-        // TODO: allow photo upload to complete if in progress
-        window.location = '/';
+        var namePromise = $.postJson(baseUri + '/site/user/me', {
+          firstName: first,
+          lastName: last
+        }).fail(function (xhr) {
+          if (console) console.error('[signup:2:fail]', xhr);
+        });
+        $.when(signupPromise, photoPromise, namePromise).done(function() {
+          window.location = '/';
+        });
       }
     }
   });
@@ -211,10 +217,7 @@
     $(document).off('mousemove.drag');
   }
 
-  function isImage(file) {
-    return file.type.search(/^image\/(?:jpeg|png|gif)$/) === 0;
-  }
-
+  var photoXhr2;
   var URL = window.URL || window.webkitURL;
   function uploadPhotoXhr2(files) {
     var file = Array.prototype.filter.call(files, isImage)[0];
@@ -229,27 +232,50 @@
       $photo.css({'background-image': '', 'background-size': ''});
     }
 
-    var xhr = new XMLHttpRequest();
-    if (xhr.upload) {
-      xhr.upload.addEventListener('progress', function (e) {
-        if (e.lengthComputable) {
-          setPhotoProgress(e.loaded / e.total);
-        }
-      });
-      xhr.upload.addEventListener('load', setPhotoProgress.bind(null, 1));
-      setPhotoProgress(0);
+    if (photoXhr2) {
+      photoXhr2.abort();
     }
-    xhr.open('POST', 'https://www.kifi.com/testing/upload', true);
+
+    var xhr = photoXhr2 = new XMLHttpRequest();
+    var deferred = createPhotoUploadDeferred();
+    xhr.upload.addEventListener('progress', function (e) {
+      if (e.lengthComputable) {
+        deferred.notify(e.loaded / e.total);
+      }
+    });
+    xhr.upload.addEventListener('loadend', function() {
+      if (photoXhr2 === xhr) {
+        photoXhr2 = null;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        deferred.resolve();
+      } else {
+        deferred.reject();
+      }
+    });
+    xhr.open('POST', baseUri + '/testing/upload', true);
     xhr.send(file);
   }
+  function isImage(file) {
+    return file.type.search(/^image\/(?:jpeg|png|gif)$/) === 0;
+  }
 
+  var iframeDeferred;
   function uploadPhotoIframe(form) {
     $photo.css('background-image', 'none');
-    $('iframe[name=upload]').remove();  // TODO: cleaner cancellation of any in-progress upload?
-    $('<iframe name=upload>').hide().appendTo('body').load(function () {
-      clearTimeout(fakePhotoProgressTimer);
-      setPhotoProgress(1);
-      var $iframe = $(this), o;
+
+    if (iframeDeferred) {
+      iframeDeferred.reject();  // clean up previous in-progress upload
+    }
+    var deferred = iframeDeferred = createPhotoUploadDeferred()
+      .always(function() {
+        clearTimeout(fakeProgressTimer);
+        iframeDeferred = null;
+        $iframe.remove();
+      });
+    var $iframe = $('<iframe name=upload>').hide().appendTo('body').load(function () {
+      deferred.resolve();
+      var o;
       try {
         o = JSON.parse($iframe.contents().find('body').text());
       } catch (err) {
@@ -259,21 +285,31 @@
     });
     form.method = 'POST';
     form.target = 'upload';
-    form.action = 'https://www.kifi.com/testing/upload';
+    form.action = baseUri + '/testing/upload';
     form.submit();
-    clearTimeout(fakePhotoProgressTimer);
-    fakePhotoProgress(0, 100);
+
+    var fakeProgressTimer;
+    fakeProgress(0, 100);
+    function fakeProgress(frac, ms) {
+      deferred.notify(frac);
+      fakeProgressTimer = setTimeout(fakeProgress.bind(null, 1 - (1 - frac) * .9, ms * 1.1), ms);
+    }
   }
 
-  var fakePhotoProgressTimer;
-  function fakePhotoProgress(frac, ms) {
-    setPhotoProgress(frac);
-    fakePhotoProgressTimer = setTimeout(fakePhotoProgress.bind(null, 1 - (1 - frac) * .9, ms * 1.1), ms);
+  var photoPromise;
+  function createPhotoUploadDeferred() {
+    var deferred = $.Deferred();
+    photoPromise = deferred.promise();
+    return deferred
+      .progress(updateUploadProgressBar)
+      .done(updateUploadProgressBar.bind(null, 1))
+      .always(function() {
+        photoPromise = null;
+      });
   }
-
-  var progressBar = $('.form-photo-progress')[0];
-  function setPhotoProgress(frac) {
+  var uploadProgressBar = $('.form-photo-progress')[0];
+  function updateUploadProgressBar(frac) {
     var pct = Math.round(frac * 100);
-    progressBar.style.borderWidth = frac < 1 ? '0 ' + (100 - pct) + 'px 0 ' + pct + 'px' : '';
+    uploadProgressBar.style.borderWidth = frac < 1 ? '0 ' + (100 - pct) + 'px 0 ' + pct + 'px' : '';
   }
 }());
