@@ -18,7 +18,7 @@ class MonitoredAwait @Inject() (airbrake: AirbrakeNotifier, healthcheckPlugin: H
       Await.result(awaitable, atMost)
     } catch {
       case ex: Throwable =>
-        airbrake.notify(AirbrakeError(ex, Some(s"[$errorMessage]: ${ex.getMessage}")))
+        airbrake.notify(AirbrakeError(ex, Some(s"[$errorMessage]")))
         valueFailureHandler
     } finally {
       sw.stop()
@@ -36,7 +36,7 @@ class MonitoredAwait @Inject() (airbrake: AirbrakeNotifier, healthcheckPlugin: H
     } catch {
       case ex: Throwable =>
         if (healthcheckPlugin.isWarm)
-          airbrake.notify(AirbrakeError(ex, Some(s"[$errorMessage]: ${ex.getMessage}")))
+          airbrake.notify(AirbrakeError(ex, Some(s"[$errorMessage]")))
         throw ex
     } finally {
       sw.stop()

@@ -21,7 +21,7 @@ class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit ex
             Logger(getClass).error(s"[SafeFuture] Failure of future [${name.getOrElse("")}]", cause)
             val fortyTwoInjector = current.global.asInstanceOf[FortyTwoGlobal].injector
             fortyTwoInjector.getInstance(classOf[AirbrakeNotifier]).notify(
-              AirbrakeError(cause, Some(s"SafeFuture[${name.getOrElse("")}]: ${cause.getMessage}"))
+              AirbrakeError(cause, Some(s"SafeFuture[${name.getOrElse("")}]"))
             )
           } catch {
             case _: Throwable => // tried our best.
