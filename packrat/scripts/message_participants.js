@@ -555,12 +555,24 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			this.toggleAddDialog();
 		},
 
+		showAddDialog: function () {
+			this.get$('.kifi-message-add-participant').toggleClass('kifi-active', true);
+			this.toggleClass('kifi-dialog-opened', true);
+			this.focusInput();
+			this.parent.hideOptions();
+		},
+
+		hideAddDialog: function () {
+			this.get$('.kifi-message-add-participant').toggleClass('kifi-active', false);
+			this.toggleClass('kifi-dialog-opened', false);
+		},
+
 		toggleAddDialog: function () {
-			var active = !this.isDialogOpened();
-			this.get$('.kifi-message-add-participant').toggleClass('kifi-active', active);
-			this.toggleClass('kifi-dialog-opened', active);
-			if (active) {
-				this.focusInput();
+			if (this.isDialogOpened()) {
+				this.hideAddDialog();
+			}
+			else {
+				this.showAddDialog();
 			}
 		},
 

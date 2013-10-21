@@ -1,16 +1,19 @@
 .kifi-message-mute-option {
   position: relative;
-  padding: 12px 12px 12px 60px;
   color: white;
+}
+.kifi-message-mute-option-mute,
+.kifi-message-mute-option-unmute {
+  padding: 12px 12px 12px 60px;
   cursor: pointer;
 }
-.kifi-message-mute-option .kifi-message-mute-option-unmute {
+.kifi-message-mute-option-unmute {
   display: none;
 }
-.kifi-message-mute-option.kifi-muted .kifi-message-mute-option-mute {
+.kifi-message-header.kifi-muted  .kifi-message-mute-option-mute {
   display: none;
 }
-.kifi-message-mute-option.kifi-muted .kifi-message-mute-option-unmute {
+.kifi-message-header.kifi-muted  .kifi-message-mute-option-unmute {
   display: block;
 }
 .kifi-message-mute-option-icon {
@@ -37,6 +40,7 @@
   margin-top: 4px;
 }
 .kifi-message-header-muted {
+  display: none;
   font-size: 12px;
   font-weight: 300;
   line-height: 23px;
@@ -45,6 +49,9 @@
   background: #f0c330;
   color: white;
   overflow: hidden;
+}
+.kifi-message-header.kifi-muted .kifi-message-header-muted {
+  display: block;
 }
 .kifi-message-header-muted-icon {
   display: inline-block;

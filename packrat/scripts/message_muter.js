@@ -1,7 +1,5 @@
 // @require scripts/lib/jquery.js
 // @require scripts/render.js
-// @require scripts/util.js
-// @require scripts/kifi_util.js
 // @require scripts/html/keeper/message_mute_option.js
 // @require scripts/html/keeper/message_muted.js
 // @require styles/keeper/message_mute.css
@@ -20,9 +18,6 @@
 
 var messageMuter = this.messageMuter = (function ($, win) {
 	'use strict';
-
-	var util = win.util,
-		kifiUtil = win.kifiUtil;
 
 	api.port.on({
 		muted: function (muted) {
@@ -54,13 +49,6 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		parent: null,
 
 		/**
-		 * Whether the conversation is muted or not.
-		 * 
-		 * @property {boolean}
-		 */
-		muted: true,
-
-		/**
 		 * A constructor of Message Muter
 		 *
 		 * @constructor
@@ -77,8 +65,6 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		init: function (trigger) {
 			this.initialized = true;
 
-			this.muted = this.parent.muted;
-
 			this.initEvents();
 
 			this.logEvent('init', {
@@ -90,10 +76,9 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		 * Initializes event listeners.
 		 */
 		initEvents: function () {
-			var $el = this.get$();
-			$el.on('click', '.kifi-message-header-unmute-button', this.unmute.bind(this));
-
 			var $parent = this.getParent$();
+			$parent.on('click', '.kifi-message-header-unmute-button', this.unmute.bind(this));
+
 			$parent.on('click', '.kifi-message-mute-option-mute', this.mute.bind(this));
 			$parent.on('click', '.kifi-message-mute-option-unmute', this.unmute.bind(this));
 		},
@@ -115,9 +100,37 @@ var messageMuter = this.messageMuter = (function ($, win) {
 			}
 		},
 
-		mute: function () {},
+		/**
+		 * Whether the conversation is muted or not.
+		 * 
+		 * @return {boolean} Whether the conversation is muted or not
+		 */
+		isMuted: function () {
+			return Boolean(this.parent.getStatus('muted'));
+		},
 
-		unmute: function () {},
+		mute: function () {
+			if (!this.isMuted()) {
+				this.parent.setStatus('muted', true);
+				return true;
+			}
+			return false;
+		},
+
+		unmute: function () {
+			if (this.isMuted()) {
+				this.parent.setStatus('muted', false);
+				return true;
+			}
+			return false;
+		},
+
+		setMuted: function (muted) {
+			if (muted) {
+				return this.unmute();
+			}
+			return this.mute();
+		},
 
 		/**
 		 * Returns the current state object excluding UI states.
@@ -126,7 +139,7 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		 */
 		getView: function () {
 			return {
-				muted: this.muted
+				muted: this.isMuted()
 			};
 		},
 
@@ -149,40 +162,12 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		},
 
 		/**
-		 * Finds and returns a jQuery wrapper object for the given selector.
-		 *
-		 * @param {string} [selector] a optional selector
-		 *
-		 * @return {jQuery} A jQuery wrapper object
-		 */
-		get$: function (selector) {
-			return this.parent.find(selector || '.kifi-message-mute');
-		},
-
-		/**
 		 * Returns a jQuery wrapper object for the parent module.
 		 *
 		 * @return {jQuery} A jQuery wrapper object
 		 */
 		getParent$: function () {
 			return this.parent.$el;
-		},
-
-		/**
-		 * Add/Remove classname(s) to/from the container
-		 */
-		toggleClass: function (name, val) {
-			return this.get$().toggleClass(name, !! val);
-		},
-
-		hasClass: function (name) {
-			return this.get$().hasClass(name);
-		},
-
-		updateView: function () {
-			var view = this.getView(),
-				$el = this.get$();
-			$el.toggleClass('kifi-group-conversation', view.muted);
 		},
 
 		/**
@@ -195,7 +180,6 @@ var messageMuter = this.messageMuter = (function ($, win) {
 			if (this.initialized) {
 				this.initialized = false;
 				this.parent = null;
-				this.muted = false;
 
 				if (win.slider2) {
 					win.slider2.unshadePane();

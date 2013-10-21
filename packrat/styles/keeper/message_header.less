@@ -40,11 +40,26 @@
   width: 40px;
   height: @barHeight;
   border-left: 1px solid @borderColor;
-  background-image: url(@dropdownDark2x);
-  background-repeat: no-repeat;
-  background-size: auto 6px;
-  background-position: 50%;
-  vertical-align: middle;
+
+  span {
+    position: relative;
+    display: block;
+    width: 11px;
+    height: 6px;
+    top: (29px - 6px) / 2;
+    left: (40px - 11px) / 2;
+    background-image: url(@dropdownDark2x);
+    background-repeat: no-repeat;
+    background-size: auto 6px;
+    background-position: 50%;
+    vertical-align: middle;
+
+    .kifi-message-header.kifi-option-expanded & {
+      background-image: url(@dropdownGray2x);
+      -webkit-transform: rotateX(180deg);
+      transform: rotateX(180deg);
+    }
+  }
 
   &:hover {
     background-color: darken(@bgColor, 5%);
@@ -52,8 +67,6 @@
 
   .kifi-message-header.kifi-option-expanded & {
     background-color: @optionBgColor;
-    background-image: url(@dropdownGray2x);
-    transform: rotateZ(180deg);
   }
 }
 

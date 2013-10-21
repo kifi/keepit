@@ -98,8 +98,22 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			this.on('click', '.kifi-message-header-option-button', this.toggleOptions.bind(this));
 		},
 
+		showOptions: function () {
+			this.setStatus('option-expanded', true);
+			win.messageParticipants.hideAddDialog();
+		},
+
+		hideOptions: function () {
+			this.setStatus('option-expanded', false);
+		},
+
 		toggleOptions: function () {
-			this.setStatus('option-expanded', !this.getStatus('option-expanded'));
+			if (this.getStatus('option-expanded')) {
+				this.hideOptions();
+			}
+			else {
+				this.showOptions();
+			}
 		},
 
 		/**
