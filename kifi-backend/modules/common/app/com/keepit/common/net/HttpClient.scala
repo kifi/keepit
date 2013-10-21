@@ -27,14 +27,11 @@ import com.keepit.common.service.FortyTwoServices
 import play.api.Logger
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
-    extends Exception(s"Requesting $url ${requestBody.map{b => b.toString}}, got a ${response.status}. Body: ${response.body}"){
-
-  override def toString: String =
-    s"NonOKResponseException[url: $url, Response: $response body:${requestBody.map(b => b.toString).getOrElse("NA")}]"
+    extends Exception(s"$url->[${requestBody.map(_.toString.take(50)).getOrElse("")}] status:${response.status} res: [${response.body.toString.take(50)}]"){
 }
 
 case class LongWaitException(url: HttpUri, response: Response, waitTime: Int)
-    extends Exception(s"Requesting $url got a ${response.status} with wait time $waitTime"){
+    extends Exception(s"$url status:${response.status} wait-time:${waitTime}ms"){
 }
 
 trait HttpUri {
