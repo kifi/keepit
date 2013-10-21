@@ -17,7 +17,7 @@ import reactivemongo.bson.{BSONDocument, BSONArray, BSONString, BSONDouble}
 import com.google.inject.Inject
 
 
-case class MetricDescriptor(name: String, start: DateTime, window: Int, step: Int, description: String, events: Seq[String], groupBy: String, breakDown: Boolean, mode: String, filter: String, lastUpdate: DateTime)
+case class MetricDescriptor(name: String, start: DateTime, window: Int, step: Int, description: String, events: Seq[String], groupBy: String, breakDown: Boolean, mode: String, filter: String, lastUpdate: DateTime, uniqueField: String)
 
 object MetricDescriptor {
   implicit val format = Json.format[MetricDescriptor]

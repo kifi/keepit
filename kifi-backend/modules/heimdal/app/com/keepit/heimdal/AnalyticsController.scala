@@ -88,7 +88,7 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     else {
       assert(window>0)
       val startDT = DateTime.parse(start)
-      metricManager.createMetric(MetricDescriptor(name, startDT, window, step, description, if (events=="all") Seq() else events.split(","), groupBy, breakDown.toBoolean, mode, filter, startDT))
+      metricManager.createMetric(MetricDescriptor(name, startDT, window, step, description, if (events=="all") Seq() else events.split(","), groupBy, breakDown.toBoolean, mode, filter, startDT, ""))
       Ok("New metric created")
     }
   }
