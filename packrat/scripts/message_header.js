@@ -157,8 +157,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
 				this.hideOptions();
 			}
 			else if (this.prevEscHandler) {
-				var target = e.target;
-				this.prevEscHandler.call(target, target);
+				this.prevEscHandler.call(e.target, e);
 			}
 		},
 

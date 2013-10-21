@@ -602,7 +602,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		toggleAddDialog: function (e) {
-			if (e.addDialogClosed) {
+			if (e && e.addDialogClosed) {
 				return true;
 			}
 			if (this.isDialogOpened()) {
@@ -678,12 +678,12 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			}
 			else if (this.isDialogOpened()) {
 				handled = true;
-				this.hideOptions();
+				this.hideAddDialog();
 			}
 			else if (this.prevEscHandler) {
-				var target = e.target;
-				this.prevEscHandler.call(target, target);
+				this.prevEscHandler.call(e.target, e);
 			}
+
 			if (handled) {
 				e.preventDefault();
 				e.stopPropagation();
@@ -705,6 +705,15 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 				if (win.slider2) {
 					win.slider2.unshadePane();
+				}
+
+				$(document).data('esc', this.prevEscHandler);
+				this.prevEscHandler = null;
+
+				var onDocClick = this.onDocClick;
+				if (onDocClick) {
+					document.removeEventListener('click', onDocClick, true);
+					this.onDocClick = null;
 				}
 
 				['$input', '$list', '$el'].forEach(function (name) {
