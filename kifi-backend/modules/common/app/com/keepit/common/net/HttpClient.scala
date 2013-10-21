@@ -109,7 +109,7 @@ case class HttpClientImpl(
           AirbrakeError.outgoing(
             exception = fullException,
             request = req.req,
-            message = s"[${remoteServiceString(req)}]${e.toString} calling ${req.url} after ${al.duration}ms"
+            message = s"[${remoteServiceString(req)}] calling ${req.url} after ${al.duration}ms"
           )
         )
     }
@@ -172,7 +172,8 @@ case class HttpClientImpl(
       f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (immediate)
       f.onSuccess {
         case response: ClientResponse => logSuccess(request, response)
-        case unknown => airbrake.get.notify(AirbrakeError(message = Some(s"Unknown object in http client onSuccess: $unknown on $request")))
+        case unknown => airbrake.get.notify(AirbrakeError(
+          message = Some(s"Unknown object in http client onSuccess: $unknown on $request")))
       } (immediate)
     }
   }

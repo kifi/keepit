@@ -69,14 +69,14 @@ class UrlController @Inject() (
       try {
         doRenormalize(readOnly, clearSeq, domain)
       } catch {
-        case ex: Throwable => airbrake.notify(AirbrakeError(ex, Some(ex.getMessage)))
+        case ex: Throwable => airbrake.notify(AirbrakeError(ex))
       }
     }
     Ok("Started!")
   }
-  
+
   def doRenormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domain: Option[String] = None) = {
-        
+
     def getUrlList() = {
       val urls = db.readOnly { implicit s =>
         domain match {
@@ -84,11 +84,11 @@ class UrlController @Inject() (
           case None => urlRepo.all
         }
       }.sortBy(_.id.get.id)
-      
+
       val lastId = if (domain.isDefined) 0L else { centralConfig(RenormalizationCheckKey) getOrElse 0L }
       urls.filter(_.id.get.id > lastId).filter(_.state == URLStates.ACTIVE)
     }
-    
+
     def needRenormalization(url: URL)(implicit session: RWSession): (Boolean, Option[NormalizedURI]) = {
       uriRepo.getByUri(url.url) match {
         case None => if (!readOnly) (true, Some(uriRepo.internByUri(url.url))) else (true, None)
@@ -96,13 +96,13 @@ class UrlController @Inject() (
         case _ => (false, None)
       }
     }
-    
+
     def batch[T](obs: Seq[T], batchSize: Int): Seq[Seq[T]] = {
       val total = obs.size
       val index = ((0 to total/batchSize).map(_*batchSize) :+ total).distinct
       (0 to (index.size - 2)).map{ i => obs.slice(index(i), index(i+1)) }
     }
-    
+
     def sendStartEmail(urls: Seq[URL]) = {
       val title = "Renormalization Begins"
       val msg = s"domain = ${domain}, scanning ${urls.size} urls. readOnly = ${readOnly}"
@@ -111,7 +111,7 @@ class UrlController @Inject() (
         subject = title, htmlBody = msg, category = PostOffice.Categories.ADMIN))
       }
     }
-    
+
     def sendEmail(changes: Vector[(URL, Option[NormalizedURI])], readOnly: Boolean)(implicit session: RWSession) = {
       val batchChanges = batch[(URL, Option[NormalizedURI])](changes, batchSize = 1000)
       batchChanges.zipWithIndex.map{ case (batch, i) =>
@@ -121,14 +121,14 @@ class UrlController @Inject() (
         subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.ADMIN))
       }
     }
-    
+
     // main code
     if (clearSeq) centralConfig.update(RenormalizationCheckKey, 0L)
     var changes = Vector.empty[(URL, Option[NormalizedURI])]
     val urls = getUrlList()
     sendStartEmail(urls)
     val batchUrls = batch[URL](urls, batchSize = 50)     // avoid long DB write lock.
-    
+
     batchUrls.map { urls =>
       log.info(s"begin a new batch of renormalization. lastId from zookeeper: ${centralConfig(RenormalizationCheckKey)}")
       db.readWrite { implicit s =>
@@ -144,7 +144,7 @@ class UrlController @Inject() (
       }
       if (domain.isEmpty && !readOnly) urls.lastOption.map{ url => centralConfig.update(RenormalizationCheckKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
     }
-    
+
     changes = changes.sortBy(_._1.url)
     db.readWrite{ implicit s =>
       sendEmail(changes, readOnly)
@@ -200,7 +200,7 @@ class UrlController @Inject() (
     dupeDetect.asyncProcessDocuments()
     Redirect(routes.UrlController.documentIntegrity())
   }
-  
+
   def normalizationView(page: Int = 0) = AdminHtmlAction{ request =>
     implicit val playRequest = request.request
     val PAGE_SIZE = 50
@@ -215,18 +215,18 @@ class UrlController @Inject() (
     val pageCount = (appliedCount*1.0 / PAGE_SIZE).ceil.toInt
     Ok(html.admin.normalization(applied, page, appliedCount, pendingCount, pageCount, PAGE_SIZE))
   }
-  
+
   def batchURIMigration = AdminHtmlAction{ request =>
     implicit val playRequest = request.request
     monitoredAwait.result(uriIntegrityPlugin.batchURIMigration(), 1 minute, "Manual merge failed.")
     Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0))
   }
-  
+
   def batchURLMigration = AdminHtmlAction{ request =>
     uriIntegrityPlugin.batchURLMigration(500)
     Ok("Ok. Start migration of upto 500 urls")
   }
-  
+
   def renormalizationView(page: Int = 0) = AdminHtmlAction{ request =>
     val PAGE_SIZE = 200
     val (renorms, totalCount) = db.readOnly{ implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount())}

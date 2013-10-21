@@ -78,7 +78,7 @@ class UriIntegrityActor @Inject()(
       }
     }
   }
-  
+
   private def handleScrapeInfo(oldUri: NormalizedURI, newUri: NormalizedURI)(implicit session: RWSession) = {
     val (oldInfoOpt, newInfoOpt) = (scrapeInfoRepo.getByUri(oldUri.id.get), scrapeInfoRepo.getByUri(newUri.id.get))
     (oldInfoOpt, newInfoOpt) match {
@@ -88,7 +88,7 @@ class UriIntegrityActor @Inject()(
       case _ =>
     }
   }
-  
+
 
   /**
    * Any reference to the old uri should be redirected to the new one.
@@ -124,11 +124,11 @@ class UriIntegrityActor @Inject()(
    */
   private def handleURLMigration(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
       log.info(s"migrating url ${url.id} to new uri: ${newUriId}")
-      
+
       urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MIGRATED)))
       val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
       if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
-      
+
       handleScrapeInfo(oldUri, newUri)
       val oldUserBms = bookmarkRepo.getByUrlId(url.id.get).groupBy(_.userId)
       handleBookmarks(oldUserBms, newUriId)
@@ -151,7 +151,7 @@ class UriIntegrityActor @Inject()(
           handleURIMigration(change)
         } catch {
           case e: Exception => {
-            airbrake.notify(AirbrakeError(e, Some(e.getMessage)))
+            airbrake.notify(AirbrakeError(e))
             changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
           }
         }
@@ -166,11 +166,11 @@ class UriIntegrityActor @Inject()(
     val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse 0L
     db.readOnly{ implicit s => changedUriRepo.getChangesSince(SequenceNumber(lowSeq), fetchSize, state = ChangedURIStates.ACTIVE)}
   }
-  
+
   private def batchURLMigration(batchSize: Int) = {
     val toMigrate = getOverDueURLMigrations(batchSize)
     log.info(s"${toMigrate.size} urls need renormalization")
-    
+
     db.readWrite{ implicit s =>
       toMigrate.foreach{ renormURL =>
         try {
@@ -179,7 +179,7 @@ class UriIntegrityActor @Inject()(
           renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.APPLIED))
         } catch {
           case e: Exception =>
-            airbrake.notify(AirbrakeError(e, Some(e.getMessage)))
+            airbrake.notify(AirbrakeError(e))
             renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.INACTIVE))
         }
       }
@@ -187,12 +187,12 @@ class UriIntegrityActor @Inject()(
     toMigrate.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URLMigrationSeqNumKey, x.seq.value)}
     log.info(s"${toMigrate.size} urls renormalized.")
   }
-  
+
   private def getOverDueURLMigrations(fetchSize: Int = -1) = {
     val lowSeq = centralConfig(URLMigrationSeqNumKey) getOrElse 0L
     db.readOnly{ implicit s => renormRepo.getChangesSince(SequenceNumber(lowSeq), fetchSize, state = RenormalizedURLStates.ACTIVE)}
   }
-  
+
 
   def receive = {
     case BatchURIMigration(batchSize) => Future.successful(batchURIMigration(batchSize)) pipeTo sender
