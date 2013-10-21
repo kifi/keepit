@@ -58,7 +58,7 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		 * 
 		 * @property {boolean}
 		 */
-		muted: false,
+		muted: true,
 
 		/**
 		 * A constructor of Message Muter
