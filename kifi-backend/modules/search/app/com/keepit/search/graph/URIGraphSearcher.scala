@@ -60,8 +60,8 @@ class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends Base
 class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait)
   extends URIGraphSearcher(searcher, storeSearcher) {
 
-  private[this] val friendIdsFuture = shoeboxClient.getFriends(myUserId)
-  private[this] val searchFriendIdsFuture = shoeboxClient.getSearchFriends(myUserId)
+  private[this] val friendIdsFuture = shoeboxClient.getFriendArray(myUserId)
+  private[this] val searchFriendIdsFuture = shoeboxClient.getSearchFriendArray(myUserId)
 
   private[this] lazy val myInfo: UserInfo = {
     val docid = reader.getIdMapper.getDocId(myUserId.id)
@@ -147,6 +147,14 @@ object UserToUserEdgeSet{
   def apply(sourceId: Id[User], destIds: Set[Id[User]]): UserToUserEdgeSet = {
     new UserToUserEdgeSet(sourceId) with IdSetEdgeSet[User, User] {
       override def destIdSet: Set[Id[User]] = destIds
+    }
+  }
+
+  def apply(sourceId: Id[User], destIds: Array[Long]): UserToUserEdgeSet = {
+    val set = LongArraySet.from(destIds)
+
+    new UserToUserEdgeSet(sourceId) with LongSetEdgeSet[User, User] {
+      override protected val longArraySet = set
     }
   }
 
