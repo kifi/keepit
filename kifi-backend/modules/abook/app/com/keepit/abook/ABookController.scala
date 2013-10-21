@@ -7,15 +7,17 @@ import com.keepit.model._
 import com.keepit.common.db.Id
 import play.api.mvc.{AsyncResult, Action}
 import com.keepit.abook.store.{ABookRawInfoStore}
-import play.api.libs.json.{JsArray, JsValue, Json}
+import play.api.libs.json.{JsObject, JsArray, JsValue, Json}
 import scala.Some
 import java.io.File
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.io.Source
 import scala.ref.WeakReference
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.http.MimeTypes
+import play.api.libs.ws.{WS, Response}
+import scala.xml.PrettyPrinter
+import scala.concurrent.duration._
 
 class ABookController @Inject() (
   actionAuthenticator:ActionAuthenticator,
@@ -26,6 +28,50 @@ class ABookController @Inject() (
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
+  def importContacts(userId:Id[User], provider:String, accessToken:String) = Action { request =>
+    provider match {
+      case "google" => {
+        val userInfoUrl = s"https://www.googleapis.com/oauth2/v2/userinfo?access_token=$accessToken"
+        val userInfoResp = Await.result(WS.url(userInfoUrl).get, 5 seconds).body
+        log.info(s"[g-contacts] userInfoResp=${userInfoResp}")
+
+        val contactsUrl = s"https://www.google.com/m8/feeds/contacts/default/full?access_token=${accessToken}&max-results=${Int.MaxValue}" // TODO: paging (alt=json doesn't work)
+        val contactsResp: Response = Await.result(WS.url(contactsUrl).get, 10 seconds)
+        if (contactsResp.status == OK) {
+          val contacts = contactsResp.xml // TODO: optimize; hand-off
+          log.info(s"[g-contacts] $contacts")
+          val prettyPrint = new PrettyPrinter(300, 2)
+          val sb = new StringBuilder
+          prettyPrint.format(contacts, sb) // TODO: REMOVEME
+          log.info(s"[g-contacts] ${sb.toString}")
+          val jsArrays: immutable.Seq[JsArray] = (contacts \\ "feed").map { feed =>
+            val gId = (feed \ "id").text
+            log.info(s"[g-contacts] id=$gId")
+            val entries: Seq[JsObject] = (feed \ "entry").map { entry =>
+              val title = (entry \ "title").text
+              val emails = (entry \ "email").map(_ \ "@address")
+              log.info(s"[g-contacts] title=$title email=$emails")
+              Json.obj("name" -> title, "emails" -> Json.toJson(emails.seq.map(_.toString)))
+            }
+            JsArray(entries)
+          }
+
+          val abookUpload = Json.obj("origin" -> "gmail", "contacts" -> jsArrays(0))
+          log.info(Json.prettyPrint(abookUpload))
+          val abookInfo = processUpload(userId, ABookOrigins.GMAIL, abookUpload)
+          Ok(Json.toJson(abookInfo))
+        } else {
+          BadRequest(s"Failed to retrieve gmail contacts. Contacts API response: ${contactsResp}")
+        }
+      }
+      case "facebook" => { // testing only
+      val friendsUrl = s"https://graph.facebook.com/me/friends?access_token=${accessToken}&fields=id,name,first_name,last_name,username,picture,email"
+        val friends = Await.result(WS.url(friendsUrl).get, 5 seconds).json
+        log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
+        Ok(friends)
+      }
+    }
+  }
 
   private def toS3Key(userId:Id[User], origin:ABookOriginType) = s"${userId.id}_${origin.name}"
 

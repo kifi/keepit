@@ -7,7 +7,6 @@ import com.keepit.common.db.State
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
-import play.api.libs.json.JsArray
 
 
 trait Service
@@ -149,6 +148,7 @@ object Heimdal extends Service {
 
 object ABook extends Service {
   object internal {
+    def importContacts(userId:Id[User], provider:String, accessToken:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/importContacts", Param("provider", provider), Param("accessToken", accessToken))
     def upload(origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${origin.name}/upload")
     def upload(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/upload")
     def uploadDirect(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/uploadDirect")

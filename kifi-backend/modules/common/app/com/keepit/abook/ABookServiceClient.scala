@@ -20,6 +20,7 @@ import com.keepit.common.routes.ABook
 trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
+  def importContacts(userId:Id[User], provider:String, accessToken:String):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit
@@ -36,6 +37,10 @@ class ABookServiceClientImpl @Inject() (
   val serviceCluster: ServiceCluster
 )
   extends ABookServiceClient with Logging {
+
+  def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = {
+    call(ABook.internal.importContacts(userId, provider, accessToken)).map { r => r.json }
+  }
 
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {
     call(ABook.internal.upload(userId, origin), json).map { r => r.json }
@@ -79,6 +84,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
+
+  def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = ???
 
   def upload(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
 
