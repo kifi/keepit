@@ -96,7 +96,11 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
   def noticeError(error: ErrorWithStack, message: Option[String]) =
     <error>
       <class>{ error.rootCause.error.getClass.getName }</class>
-      <message>{ s"[${serviceDiscovery.thisInstance.map(_.id.id).getOrElse("NA")}]${message.getOrElse("")} ${error.rootCause.error.toString()}".trim }</message>
+      <message>{
+        val instance = serviceDiscovery.thisInstance
+        val leader = serviceDiscovery.isLeader()
+        s"[${instance.map(_.id.id).getOrElse("NA")}${if(leader) "L" else "_"}]${message.getOrElse("")} ${error.rootCause.error.toString()}".trim
+        }</message>
       <backtrace>
         { formatStacktrace(error) ++ formatCauseStacktrace(error.cause) }
       </backtrace>

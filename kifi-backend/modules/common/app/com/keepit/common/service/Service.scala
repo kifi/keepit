@@ -16,18 +16,18 @@ case class ServiceVersion(val value: String) {
   override def toString(): String = value
 }
 
-sealed abstract class ServiceType(val name: String) {
+sealed abstract class ServiceType(val name: String, val shortName: String) {
   def selfCheck() : Future[Boolean] = promise[Boolean].success(true).future
 }
 
 object ServiceType {
-  case object SHOEBOX extends ServiceType("SHOEBOX")
-  case object SEARCH extends ServiceType("SEARCH")
-  case object ELIZA extends ServiceType("ELIZA")
-  case object HEIMDAL extends ServiceType("HEIMDAL")
-  case object ABOOK extends ServiceType("ABOOK")
-  case object DEV_MODE extends ServiceType("DEV_MODE")
-  case object TEST_MODE extends ServiceType("TEST_MODE")
+  case object SHOEBOX extends ServiceType("SHOEBOX", "SB")
+  case object SEARCH extends ServiceType("SEARCH", "SR")
+  case object ELIZA extends ServiceType("ELIZA", "EZ")
+  case object HEIMDAL extends ServiceType("HEIMDAL", "HD")
+  case object ABOOK extends ServiceType("ABOOK", "AB")
+  case object DEV_MODE extends ServiceType("DEV_MODE", "DM")
+  case object TEST_MODE extends ServiceType("TEST_MODE", "TM")
 
   def fromString(str: String) = str match {
     case SHOEBOX.name => SHOEBOX

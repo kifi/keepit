@@ -50,6 +50,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
           remoteHost: String = null,
           targetHost: String = null,
           remoteService: ServiceType = null,
+          remoteLeader: String = null,
           remoteServiceId: ServiceInstanceId = null,
           query: String = null,
           trackingId: String = null,
@@ -69,6 +70,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       error = Option(error),
       remoteHost = Option(remoteHost),
       targetHost = Option(targetHost),
+      remoteLeader = Option(remoteLeader),
       remoteService = Option(remoteService),
       remoteServiceId = Option(remoteServiceId),
       query = Option(query),
@@ -92,6 +94,7 @@ case class AccessLogEvent(
   remoteHost: Option[String],
   targetHost: Option[String],
   remoteService: Option[ServiceType],
+  remoteLeader: Option[String],
   remoteServiceId: Option[ServiceInstanceId],
   query: Option[String],
   trackingId: Option[String],
@@ -137,6 +140,7 @@ class AccessLog @Inject() (clock: Clock) {
       e.targetHost.map("targetHost:" + _) ::
       e.remoteService.map("remoteService:" + _) ::
       e.remoteServiceId.map("remoteServiceId:" + _) ::
+      e.remoteLeader.map("remoteLeader:" + _) ::
       e.query.map("query:" + _) ::
       e.url.map("url:" + _) ::
       e.body.map("body:" + _) ::

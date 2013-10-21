@@ -104,11 +104,12 @@ case class HttpClientImpl(
           remoteServiceId = remoteInstance.map(_.id).getOrElse(null),
           trackingId = req.trackingId,
           error = e.toString))
+        val fullException = req.tracer.withCause(e)
         airbrake.get.notify(
           AirbrakeError.outgoing(
-            exception = req.tracer.withCause(e),
+            exception = fullException,
             request = req.req,
-            message = s"[${remoteServiceString(req)}]${al.error}: error handling url ${al.url}"
+            message = s"[${remoteServiceString(req)}]${e.toString} calling ${req.url} after ${al.duration}ms"
           )
         )
     }
@@ -177,12 +178,12 @@ case class HttpClientImpl(
   }
 
   private def logSuccess(request: Request, res: ClientResponse): Unit = {
-    //todo(eishay): the interesting part is the remote service and node id, to be logged
-    val remoteHost = res.res.header(CommonHeaders.LocalHost).getOrElse("NA")
-    val remoteTime = res.res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
+    val remoteLeader: Boolean = res.res.header(CommonHeaders.IsLeader).map(_ == "Y").getOrElse(false)
+    val remoteTime: Int = res.res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
+        remoteLeader = remoteLeader.toString,
         result = "success",
         query = request.queryString,
         remoteService = remoteInstance.map(_.remoteService.serviceType).getOrElse(null),
@@ -192,20 +193,20 @@ case class HttpClientImpl(
         statusCode = res.res.status))
 
     e.waitTime map {waitTime =>
-      if (waitTime > 200) {//ms
+      if (waitTime > 100) {//ms
         val exception = request.tracer.withCause(LongWaitException(request.httpUri, res.res, waitTime))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
             exception = exception,
-            message = s"[${remoteServiceString(request)}] wait time $waitTime for ${request.httpUri.url}")
+            message = s"[${remoteServiceString(request)}${if(remoteLeader) "L" else "_"}] wait time $waitTime for ${request.httpUri.url}")
         )
       }
     }
   }
 
   private def remoteServiceString(request: Request) =
-    s"${request.httpUri.serviceInstanceOpt.map{i => i.remoteService.serviceType.name + i.id}.getOrElse("NA")}"
+    s"${request.httpUri.serviceInstanceOpt.map{i => i.remoteService.serviceType.shortName + i.id}.getOrElse("NA")}"
 
 }
 
@@ -214,7 +215,7 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
 
   val trackingId = RandomStringUtils.randomAlphanumeric(5)
   private val headersWithTracking =
-    (CommonHeaders.TrackingId, trackingId) :: (CommonHeaders.LocalService, services.currentService.toString) :: headers
+    (CommonHeaders.TrackingId, trackingId) :: headers
   private val wsRequest = req.withHeaders(headersWithTracking: _*)
   lazy val queryString = (wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&").trim match {
     case "" => null
