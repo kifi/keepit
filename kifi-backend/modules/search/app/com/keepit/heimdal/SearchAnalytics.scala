@@ -9,7 +9,7 @@ import com.keepit.common.controller.AuthenticatedRequest
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 
 @Singleton
 class SearchAnalytics @Inject() (
