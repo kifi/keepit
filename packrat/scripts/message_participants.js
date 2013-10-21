@@ -163,6 +163,10 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
       }
 		],
 
+		prevEscHandler: null,
+
+		onDocClick: null,
+
 		/**
 		 * A constructor of Message Participants
 		 *
@@ -219,15 +223,42 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		/**
 		 * Initializes event listeners.
 		 */
-		initEvents: function () {
-			var $el = this.get$();
-			$el.on('click', '.kifi-message-participants-avatars-expand', this.toggleParticipants.bind(this));
-			$el.on('click', '.kifi-message-participant-list-hide', this.toggleParticipants.bind(this));
+		initEvents: (function () {
+			function onClick(e) {
+				var $target = $(e.target);
+				if (this.isExpanded() && !$target.closest('.kifi-message-participants').length) {
+					e.participantsClosed = true;
+					this.collapseParticipants();
+				}
+				else if (this.isDialogOpened() && !$target.closest('.kifi-message-participant-dialog').length) {
+					e.addDialogClosed = true;
+					this.hideAddDialog();
+				}
+			}
 
-			var $parent = this.getParent$();
-			$parent.on('click', '.kifi-message-add-participant', this.toggleAddDialog.bind(this));
-			$parent.on('click', '.kifi-message-participant-dialog-button', this.addParticipantTokens.bind(this));
-		},
+			function addDocListeners() {
+				if (this.initialized) {
+					var $doc = $(document);
+					this.prevEscHandler = $doc.data('esc');
+					$doc.data('esc', this.handleEsc.bind(this));
+
+					var onDocClick = this.onDocClick = onClick.bind(this);
+					document.addEventListener('click', onDocClick, true);
+				}
+			}
+
+			return function () {
+				var $el = this.get$();
+				$el.on('click', '.kifi-message-participants-avatars-expand', this.toggleParticipants.bind(this));
+				$el.on('click', '.kifi-message-participant-list-hide', this.toggleParticipants.bind(this));
+
+				var $parent = this.getParent$();
+				$parent.on('click', '.kifi-message-add-participant', this.toggleAddDialog.bind(this));
+				$parent.on('click', '.kifi-message-participant-dialog-button', this.addParticipantTokens.bind(this));
+
+				win.setTimeout(addDocListeners.bind(this));
+			};
+		})(),
 
 		/**
 		 * Returns a jQuery wrapper object for dialog input
@@ -515,7 +546,10 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			}
 		},
 
-		toggleParticipants: function () {
+		toggleParticipants: function (e) {
+			if (e && e.participantsClosed) {
+				return;
+			}
 			if (this.isExpanded()) {
 				this.collapseParticipants();
 			}
@@ -567,7 +601,10 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			this.toggleClass('kifi-dialog-opened', false);
 		},
 
-		toggleAddDialog: function () {
+		toggleAddDialog: function (e) {
+			if (e.addDialogClosed) {
+				return true;
+			}
 			if (this.isDialogOpened()) {
 				this.hideAddDialog();
 			}
@@ -631,6 +668,27 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 		updateCount: function (count) {
 			return this.get$('.kifi-participant-count').text(count);
+		},
+
+		handleEsc: function (e) {
+			var handled = false;
+			if (this.isExpanded()) {
+				handled = true;
+				this.collapseParticipants();
+			}
+			else if (this.isDialogOpened()) {
+				handled = true;
+				this.hideOptions();
+			}
+			else if (this.prevEscHandler) {
+				var target = e.target;
+				this.prevEscHandler.call(target, target);
+			}
+			if (handled) {
+				e.preventDefault();
+				e.stopPropagation();
+				e.stopImmediatePropagation();
+			}
 		},
 
 		/**

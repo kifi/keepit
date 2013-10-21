@@ -61,12 +61,20 @@
     }
   }
 
-  &:hover {
+  &:hover, &:focus {
     background-color: darken(@bgColor, 5%);
   }
 
   .kifi-message-header.kifi-option-expanded & {
     background-color: @optionBgColor;
+
+    &:hover, &:focus {
+      background-color: darken(@optionBgColor, 10%);
+    }
+
+    &:active {
+      background-color: darken(@optionBgColor, 20%);
+    }
   }
 }
 

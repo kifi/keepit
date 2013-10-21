@@ -227,7 +227,7 @@ this.tagbox = (function ($, win) {
 			function addDocListeners() {
 				if (this.active) {
 					var $doc = $(document);
-					this.prevEscHandler = this.getData($doc, 'esc');
+					this.prevEscHandler = $doc.data('esc');
 					$doc.data('esc', this.handleEsc.bind(this));
 
 					var onDocClick = this.onDocClick = onClick.bind(this);

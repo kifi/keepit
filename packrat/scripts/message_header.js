@@ -47,6 +47,10 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		participants: null,
 
+		prevEscHandler: null,
+
+		onDocClick: null,
+
 		/**
 		 * A constructor of Message Header
 		 *
@@ -94,8 +98,34 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		/**
 		 * Initializes event listeners.
 		 */
-		initEvents: function () {
-			this.on('click', '.kifi-message-header-option-button', this.toggleOptions.bind(this));
+		initEvents: (function () {
+			function onClick(e) {
+				if (this.isOptionExpanded() && !$(e.target).closest('.kifi-message-header-options').length) {
+					e.optionsClosed = true;
+					this.hideOptions();
+				}
+			}
+
+			function addDocListeners() {
+				if (this.initialized) {
+					var $doc = $(document);
+					this.prevEscHandler = $doc.data('esc');
+					$doc.data('esc', this.handleEsc.bind(this));
+
+					var onDocClick = this.onDocClick = onClick.bind(this);
+					document.addEventListener('click', onDocClick, true);
+				}
+			}
+
+			return function () {
+				this.on('click', '.kifi-message-header-option-button', this.toggleOptions.bind(this));
+
+				win.setTimeout(addDocListeners.bind(this));
+			};
+		})(),
+
+		isOptionExpanded: function () {
+			return Boolean(this.getStatus('option-expanded'));
 		},
 
 		showOptions: function () {
@@ -107,12 +137,28 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			this.setStatus('option-expanded', false);
 		},
 
-		toggleOptions: function () {
-			if (this.getStatus('option-expanded')) {
+		toggleOptions: function (e) {
+			if (e && e.optionsClosed) {
+				return;
+			}
+			if (this.isOptionExpanded()) {
 				this.hideOptions();
 			}
 			else {
 				this.showOptions();
+			}
+		},
+
+		handleEsc: function (e) {
+			if (this.isOptionExpanded()) {
+				e.preventDefault();
+				e.stopPropagation();
+				e.stopImmediatePropagation();
+				this.hideOptions();
+			}
+			else if (this.prevEscHandler) {
+				var target = e.target;
+				this.prevEscHandler.call(target, target);
 			}
 		},
 
@@ -128,6 +174,15 @@ var messageHeader = this.messageHeader = (function ($, win) {
 				this.destroyPlugins();
 
 				$(win.tile).css('transform', '');
+
+				$(document).data('esc', this.prevEscHandler);
+				this.prevEscHandler = null;
+
+				var onDocClick = this.onDocClick;
+				if (onDocClick) {
+					document.removeEventListener('click', onDocClick, true);
+					this.onDocClick = null;
+				}
 
 				'$el'.split(',').forEach(function (name) {
 					var $el = this[name];

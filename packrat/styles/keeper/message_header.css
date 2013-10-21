@@ -47,11 +47,19 @@
   -webkit-transform: rotateX(180deg);
   transform: rotateX(180deg);
 }
-.kifi-message-header-option-button:hover {
+.kifi-message-header-option-button:hover,
+.kifi-message-header-option-button:focus {
   background-color: #dee4ef;
 }
 .kifi-message-header.kifi-option-expanded .kifi-message-header-option-button {
   background-color: #b8c5d1;
+}
+.kifi-message-header.kifi-option-expanded .kifi-message-header-option-button:hover,
+.kifi-message-header.kifi-option-expanded .kifi-message-header-option-button:focus {
+  background-color: #99acbd;
+}
+.kifi-message-header.kifi-option-expanded .kifi-message-header-option-button:active {
+  background-color: #7a92a9;
 }
 .kifi-message-header-options {
   position: absolute;
