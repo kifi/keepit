@@ -73,6 +73,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			this.status = {};
 			this.initMessageHeader();
 			this.initPlugins();
+			this.initEvents();
 
 			this.logEvent('init', {
 				trigger: trigger
@@ -88,6 +89,17 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			var $el = $(this.render()).appendTo(this.$pane.find('.kifi-thread-who'));
 			this.$el = $el;
 			return $el;
+		},
+
+		/**
+		 * Initializes event listeners.
+		 */
+		initEvents: function () {
+			this.on('click', '.kifi-message-header-option-button', this.toggleOptions.bind(this));
+		},
+
+		toggleOptions: function () {
+			this.setStatus('option-expanded', !this.getStatus('option-expanded'));
 		},
 
 		/**
@@ -147,6 +159,10 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			isSet = Boolean(isSet);
 			this.$el.toggleClass('kifi-' + name, isSet);
 			this.status[name] = isSet;
+		},
+
+		getStatus: function (name) {
+			return Boolean(this.status[name]);
 		},
 
 		renderStatusClasses: function (status) {
