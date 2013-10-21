@@ -3,11 +3,14 @@ package com.keepit.search
 import java.io.File
 import com.keepit.common.db.Id
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.User
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 object SearchConfig {
   private[search] val defaultParams =
@@ -79,14 +82,26 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
 
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
+  private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Unit](ttl = 30 seconds)
   @volatile private[this] var _activeExperiments: Seq[SearchConfigExperiment] = Seq()
+  @volatile private[this] var _activeExperimentsExpiration: Long = 0L
 
   val defaultConfig = SearchConfig.defaultConfig
 
   def activeExperiments: Seq[SearchConfigExperiment] = {
-    val ret = monitoredAwait.result(shoeboxClient.getActiveExperiments, 5 milliseconds, "getting experiments", _activeExperiments)
-    _activeExperiments = ret
-    ret
+    if (_activeExperimentsExpiration < System.currentTimeMillis) {
+      consolidateGetExperimentsReq("active"){ k => SafeFuture { syncActiveExperiments } }
+    }
+    _activeExperiments
+  }
+
+  def syncActiveExperiments: Unit = {
+    try {
+      _activeExperiments = monitoredAwait.result(shoeboxClient.getActiveExperiments, 5 seconds, "getting experiments")
+      _activeExperimentsExpiration = System.currentTimeMillis + (1000 * 60 * 5) // ttl 5 minutes
+    } catch {
+      case t: Throwable => _activeExperimentsExpiration = System.currentTimeMillis + (1000 * 30) // backoff 30 seconds
+    }
   }
 
   private var userConfig = Map.empty[Long, SearchConfig]

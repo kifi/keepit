@@ -58,34 +58,101 @@
     $('body').removeClass('curtains-drawn');
   }
 
+  $('.form-network').click(function (e) {
+    if (e.which !== 1) return;
+    var $a = $(this);
+    var $form = $a.closest('form');
+    var network = ['facebook', 'linkedin'].filter($.fn.hasClass.bind($a))[0];
+    if ($form.hasClass('signup-form')) {
+      if (network === 'facebook') {
+        window.location = 'https://www.facebook.com';
+      } else if (network === 'linkedin') {
+        window.location = 'https://www.linkedin.com';
+      }
+    } else if ($form.hasClass('login-form')) {
+      if (network === 'facebook') {
+        window.location = 'https://www.facebook.com';
+      } else if (network === 'linkedin') {
+        window.location = 'https://www.linkedin.com';
+      }
+    }
+  });
+
+  var emailAddrRe = /^[a-zA-Z0-9.!#$%&’*+\/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+  function showFormError($in, msg, opts) {
+    var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
+      .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
+      .css('visibility', '')
+      .delay(opts && opts.ms || 1000).fadeOut(300, removeError);
+    $in.blur().focus().select().on('input blur', removeError);  // blur closes browser autocomplete suggestion list
+    function removeError() {
+      $err.remove();
+      $in.off('input blur', removeError);
+    }
+  }
+  function validateEmailAddress($in) {
+    var s = $.trim($in.val());
+    if (!s) {
+      showFormError($in, 'Please enter your email address');
+    } else if (!emailAddrRe.test(s)) {
+      showFormError($in, 'Invalid email address');
+    } else {
+      return s;
+    }
+  }
+  function validateNewPassword($in) {
+    var s = $in.val();
+    if (!s) {
+      showFormError($in, 'Please choose a password<br>for your account', {ms: 1500});
+    } else if (s.length < 7) {
+      showFormError($in, 'Password must be<br>at least 7 characters', {ms: 1500});
+    } else {
+      return s;
+    }
+  }
+  function validateName($in) {
+    var s = $.trim($in.val());
+    if (!s) {
+      showFormError($in,
+        '<div class=form-error-title>Name is required</div>' +
+        '<div class=form-error-explanation>We need your name so that<br>your friends will be able to<br>communicate with you</div>',
+        {ms: 3000});
+    } else {
+      return s;
+    }
+  }
+
   $('.signup-form').submit(function (e) {
     e.preventDefault();
+    $('.form-error').remove();
     var $form = $(this);
-    var $body = $('body');
-    if (!$body.hasClass('finalizing')) {
-      var emailAddr = $form.find('.form-email-addr').val();
-      var password = $form.find('.form-password').val();
-      // TODO: validation
-      // $.postJson('/some/sign/up/path', {
-      //   e: emailAddr,
-      //   p: password
-      // }).done(function () {
-      //
-      // }).fail(function () {
-      //
-      // });
-      $('.finalize-email-addr').text(emailAddr);
-      transitionTitle($form.data('title2'));
-      $('body').addClass('finalizing');
-      setTimeout(function () {
-        $form.find('.form-first-name').focus();
-      }, 200);
+    if (!$('body').hasClass('finalizing')) {
+      var email = validateEmailAddress($form.find('.form-email-addr'));
+      var password = email && validateNewPassword($form.find('.form-password'));
+      if (email && password) {
+        // TODO: validation
+        // $.postJson('/some/sign/up/path', {
+        //   e: email,
+        //   p: password
+        // }).done(function () {
+        //
+        // }).fail(function () {
+        //
+        // });
+        $('.finalize-email-addr').text(email);
+        transitionTitle($form.data('title2'));
+        $('body').addClass('finalizing');
+        setTimeout(function () {
+          $form.find('.form-first-name').focus();
+        }, 200);
+      }
     } else {
-      var first = $form.find('.form-first-name').val();
-      var last = $form.find('.form-last-name').val();
-      // TODO: validation
-      // TODO: allow photo upload to complete if in progress
-      window.location = '/';
+      var first = validateName($form.find('.form-first-name'));
+      var last = first && validateName($form.find('.form-last-name'));
+      if (first && last) {
+        // TODO: allow photo upload to complete if in progress
+        window.location = '/';
+      }
     }
   });
   function transitionTitle(text) {
@@ -105,26 +172,6 @@
     // }).fail(function () {
     //   TODO: highlight incorrect email address or password or show connection or generic error message
     // });
-  });
-
-  $('.form-network').click(function (e) {
-    if (e.which !== 1) return;
-    var $a = $(this);
-    var $form = $a.closest('form');
-    var network = ['facebook', 'linkedin'].filter($.fn.hasClass.bind($a))[0];
-    if ($form.hasClass('signup-form')) {
-      if (network === 'facebook') {
-        window.location = 'https://www.facebook.com';
-      } else if (network === 'linkedin') {
-        window.location = 'https://www.linkedin.com';
-      }
-    } else if ($form.hasClass('login-form')) {
-      if (network === 'facebook') {
-        window.location = 'https://www.facebook.com';
-      } else if (network === 'linkedin') {
-        window.location = 'https://www.linkedin.com';
-      }
-    }
   });
 
   var $photo = $('.form-photo');

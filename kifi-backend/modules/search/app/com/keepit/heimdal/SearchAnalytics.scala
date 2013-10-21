@@ -9,9 +9,14 @@ import com.keepit.common.controller.AuthenticatedRequest
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 
 @Singleton
-class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultStore, userEventContextBuilder: UserEventContextBuilderFactory, heimdal: HeimdalServiceClient) {
+class SearchAnalytics @Inject() (
+  articleSearchResultStore: ArticleSearchResultStore,
+  userEventContextBuilder: UserEventContextBuilderFactory,
+  heimdal: HeimdalServiceClient,
+  airbrake: AirbrakeNotifier) {
 
   case class SearchEngine(name: String) {
     override def toString = name
@@ -19,7 +24,10 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
   object Google extends SearchEngine("Google")
   object Kifi extends SearchEngine("Kifi")
   object SearchEngine {
-    def get(name: String): Option[SearchEngine] = Seq(Kifi, Google).find(_.name.toLowerCase == name.toLowerCase)
+    def get(name: String): SearchEngine = Seq(Kifi, Google).find(_.name.toLowerCase == name.toLowerCase) getOrElse {
+      airbrake.notify(AirbrakeError(message = Some(s"Unknown Search Engine: ${name}")))
+      SearchEngine(name)
+    }
   }
 
   def searchPerformed(
