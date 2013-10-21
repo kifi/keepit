@@ -227,12 +227,12 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			function onClick(e) {
 				var $target = $(e.target);
 				if (this.isExpanded() && !$target.closest('.kifi-message-participants').length) {
-					e.participantsClosed = true;
 					this.collapseParticipants();
+					e.participantsClosed = true;
 				}
 				else if (this.isDialogOpened() && !$target.closest('.kifi-message-participant-dialog').length) {
-					e.addDialogClosed = true;
 					this.hideAddDialog();
+					e.addDialogClosed = true;
 				}
 			}
 
@@ -547,7 +547,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		toggleParticipants: function (e) {
-			if (e && e.participantsClosed) {
+			if (e && e.originalEvent && e.originalEvent.participantsClosed) {
 				return;
 			}
 			if (this.isExpanded()) {
@@ -602,8 +602,8 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		toggleAddDialog: function (e) {
-			if (e && e.addDialogClosed) {
-				return true;
+			if (e && e.originalEvent && e.originalEvent.addDialogClosed) {
+				return;
 			}
 			if (this.isDialogOpened()) {
 				this.hideAddDialog();

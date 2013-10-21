@@ -101,8 +101,8 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		initEvents: (function () {
 			function onClick(e) {
 				if (this.isOptionExpanded() && !$(e.target).closest('.kifi-message-header-options').length) {
-					e.optionsClosed = true;
 					this.hideOptions();
+					e.optionsClosed = true;
 				}
 			}
 
@@ -138,7 +138,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		},
 
 		toggleOptions: function (e) {
-			if (e && e.optionsClosed) {
+			if (e && e.originalEvent && e.originalEvent.optionsClosed) {
 				return;
 			}
 			if (this.isOptionExpanded()) {
