@@ -79,15 +79,16 @@
   });
 
   var emailAddrRe = /^[a-zA-Z0-9.!#$%&’*+\/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
-  function showFormError($el, msg, opts) {
-    $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
-      .position({my: 'left top', at: 'left bottom+10', of: $el, collision: 'fit none'})
+  function showFormError($in, msg, opts) {
+    var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
+      .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
       .css('visibility', '')
-      .delay(opts && opts.ms || 1000).fadeOut(300, remove);
-    $el.blur().focus().select();  // blur closes browser autocomplete suggestion list
-  }
-  function remove() {
-    $(this).remove();
+      .delay(opts && opts.ms || 1000).fadeOut(300, removeError);
+    $in.blur().focus().select().on('input blur', removeError);  // blur closes browser autocomplete suggestion list
+    function removeError() {
+      $err.remove();
+      $in.off('input blur', removeError);
+    }
   }
   function validateEmailAddress($in) {
     var s = $.trim($in.val());
