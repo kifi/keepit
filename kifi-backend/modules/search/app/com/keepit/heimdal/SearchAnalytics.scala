@@ -43,7 +43,7 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
     contextBuilder += ("searchId", obfuscatedSearchId)
     contextBuilder += ("pageNumber", articleSearchResult.pageNumber)
     contextBuilder += ("maxHits", maxHits)
-    contextBuilder += ("hits", articleSearchResult.hits.length)
+    contextBuilder += ("kifiResults", articleSearchResult.hits.length)
     contextBuilder += ("myHits", articleSearchResult.myTotal)
     contextBuilder += ("friendsHits", articleSearchResult.friendsTotal)
     contextBuilder += ("mayHaveMoreHits", articleSearchResult.mayHaveMoreHits)
@@ -68,7 +68,7 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
     contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
     contextBuilder += ("resultSource", SearchEngine.get(resultClicked.resultSource).toString)
     contextBuilder += ("resultPosition", resultClicked.resultPosition)
-    contextBuilder += ("kifiResultsCount", resultClicked.kifiResultsCount)
+    contextBuilder += ("kifiResults", resultClicked.kifiResults)
     resultClicked.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
     heimdal.trackEvent(UserEvent(resultClicked.userId.id, contextBuilder.build, UserEventType("search_result_clicked"), resultClicked.time))
   }
@@ -79,7 +79,7 @@ class SearchAnalytics @Inject() (articleSearchResultStore: ArticleSearchResultSt
     val contextBuilder = userEventContextBuilder()
     contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
     searchEnded.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-    contextBuilder += ("kifiResultsCount", searchEnded.kifiResultsCount)
+    contextBuilder += ("kifiResults", searchEnded.kifiResults)
     contextBuilder += ("kifiResultsClicked", searchEnded.kifiResultsClicked)
     contextBuilder += ("googleResultsClicked", searchEnded.googleResultsClicked)
     heimdal.trackEvent(UserEvent(searchEnded.userId.id, contextBuilder.build, UserEventType("search_ended"), searchEnded.time))
