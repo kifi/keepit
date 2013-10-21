@@ -1,0 +1,39 @@
+.kifi-message-mute-option {
+  color: #333333;
+  padding: 12px 12px 12px 50px;
+
+  .kifi-message-mute-option-unmute {
+    display: none;
+  }
+
+  &.kifi-muted {
+    .kifi-message-mute-option-mute {
+      display: none;
+    }
+
+    .kifi-message-mute-option-unmute {
+      display: block;
+    }
+  }
+}
+
+.kifi-message-mute-option-icon {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 40px;
+  height: 40px;
+  background-image: url();
+  background-position: 0 0;
+  background-size: auto 40px;
+}
+
+.kifi-message-mute-option-title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.kifi-message-mute-option-description {
+  font-size: 12px;
+  font-weight: 200;
+}

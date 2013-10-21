@@ -1,6 +1,7 @@
 // @require scripts/lib/jquery.js
 // @require scripts/render.js
 // @require scripts/message_participants.js
+// @require scripts/message_muter.js
 // @require scripts/html/keeper/message_header.js
 // @require styles/keeper/message_header.css
 
@@ -38,7 +39,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		 */
 		initialized: false,
 
-		plugins: [win.messageParticipants /*, win.messageMute*/ ],
+		plugins: [win.messageParticipants, win.messageMuter],
 
 		status: null,
 

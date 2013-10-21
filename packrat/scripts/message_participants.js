@@ -32,12 +32,19 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		kifiUtil = win.kifiUtil,
 		OVERFLOW_LENGTH = 9;
 
-	// receive
-	/*
 	api.port.on({
-		friends: function (friends) {}
+		participants: function (participants) {
+			if (messageParticipants.initialized) {
+				messageParticipants.participants = participants;
+				messageParticipants.updateView();
+			}
+		},
+		'add_participants': function (users) {
+			if (messageParticipants.initialized) {
+				messageParticipants.addParticipant.apply(messageParticipants, users);
+			}
+		}
 	});
-  */
 
 	api.onEnd.push(function () {
 		messageParticipants.destroy('api:onEnd');
@@ -47,7 +54,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 	return {
 
 		/**
-		 * Whether this is initialized
+		 * Whether this component is initialized
 		 *
 		 * @property {boolean}
 		 */
@@ -157,9 +164,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		],
 
 		/**
-		 * A constructor of Message Header
-		 *
-		 * Renders and initializes a message header box if not already.
+		 * A constructor of Message Participants
 		 *
 		 * @constructor
 		 *
@@ -168,7 +173,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		construct: function (trigger) {},
 
 		/**
-		 * Renders and initializes a Message Header.
+		 * Initializes a Message Participants.
 		 *
 		 * @param {string} trigger - A triggering user action
 		 */
