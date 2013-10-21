@@ -27,14 +27,11 @@ import com.keepit.common.service.FortyTwoServices
 import play.api.Logger
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
-    extends Exception(s"Requesting $url ${requestBody.map{b => b.toString}}, got a ${response.status}. Body: ${response.body}"){
-
-  override def toString: String =
-    s"NonOKResponseException[url: $url, Response: $response body:${requestBody.map(b => b.toString).getOrElse("NA")}]"
+    extends Exception(s"$url->[${requestBody.map(_.toString.take(50)).getOrElse("")}] status:${response.status} res: [${response.body.toString.take(50)}]"){
 }
 
 case class LongWaitException(url: HttpUri, response: Response, waitTime: Int)
-    extends Exception(s"Requesting $url got a ${response.status} with wait time $waitTime"){
+    extends Exception(s"$url status:${response.status} wait-time:${waitTime}ms"){
 }
 
 trait HttpUri {
@@ -109,7 +106,7 @@ case class HttpClientImpl(
           AirbrakeError.outgoing(
             exception = fullException,
             request = req.req,
-            message = s"[${remoteServiceString(req)}]${e.toString} calling ${req.url} after ${al.duration}ms"
+            message = s"[${remoteServiceString(req)}] calling ${req.url} after ${al.duration}ms"
           )
         )
     }
@@ -172,7 +169,8 @@ case class HttpClientImpl(
       f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (immediate)
       f.onSuccess {
         case response: ClientResponse => logSuccess(request, response)
-        case unknown => airbrake.get.notify(AirbrakeError(message = Some(s"Unknown object in http client onSuccess: $unknown on $request")))
+        case unknown => airbrake.get.notify(AirbrakeError(
+          message = Some(s"Unknown object in http client onSuccess: $unknown on $request")))
       } (immediate)
     }
   }
