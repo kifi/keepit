@@ -125,7 +125,6 @@ class ShoeboxServiceClientImpl @Inject() (
   private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[BrowsingHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
-  private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
     cacheProvider.userExternalIdCache.getOrElseFutureOpt(UserExternalIdKey(id)) {
@@ -331,7 +330,7 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = consolidateGetExperimentsReq("active") { t =>
+  def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
     cacheProvider.activeSearchConfigExperimentsCache.getOrElseFuture(ActiveExperimentsKey) {
       call(Shoebox.internal.getActiveExperiments).map { r =>
         Json.fromJson[Seq[SearchConfigExperiment]](r.json).get
