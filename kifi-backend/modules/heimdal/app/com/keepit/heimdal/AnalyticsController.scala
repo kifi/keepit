@@ -184,5 +184,77 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     }
   }
 
+  //SEARCH EXPERIMENTS ENDPOINT SKELETON
+  def createMetricForSeachExperiment(experiment: String, experimentStart: String) = Action { request =>
+    val exStart = DateTime.parse(experimentStart)
+    
+    val searches_with_kifi_result = MetricDescriptor( //And yes, I know a bunch if the fields here need type safeing
+      name        = "se_" + experiment + "_unique_searches_with_kifi_result", //identifier for the metric. This needs to be unique
+      start       = exStart, //we start computing the metrics from this time point
+      window      = 24, //every time the metric is computed we aggregate over the last 24 h
+      step        = 24, //and we compute every 24 hours
+      description = "Automated metric for search experiments. Not meant for immediate human consumption.",
+      events      = Seq[String]("search_performed"), //which events are we looking at here
+      groupBy     = "_", //Don't group by anything
+      breakDown   = false, //Can only be true when there is a grouping
+      mode        = "count_unique", //Count unique values in the uniqueField argument
+      filter      = "withkifiresults",
+      lastUpdate  = exStart, //this is a new metric
+      uniqueField = "context.searchId" 
+    )
+
+    val total_searches = MetricDescriptor(
+      name        = "se_" + experiment + "_total_unique_searches",  
+      start       = exStart,
+      window      = 24,
+      step        = 24,
+      description = "Automated metric for search experiments. Not meant for immediate human consumption.",
+      events      = Seq[String]("search_performed"),
+      groupBy     = "_",
+      breakDown   = false,
+      mode        = "count_unique", 
+      filter      = "none",
+      lastUpdate  = exStart,
+      uniqueField = "context.searchId" 
+    )
+
+    val kifi_results_clicked = MetricDescriptor(
+      name        = "se_" + experiment + "_unique_searches_with_kifi_result",  
+      start       = exStart, 
+      window      = 24,
+      step        = 24,
+      description = "Automated metric for search experiments. Not meant for immediate human consumption.",
+      events      = Seq[String]("search_result_clicked"),
+      groupBy     = "_",
+      breakDown   = false,
+      mode        = "count", 
+      filter      = "kifiresultclicked",
+      lastUpdate  = exStart,
+      uniqueField = "" 
+    )
+
+    val total_results_clicked_with_kifi_result = MetricDescriptor(
+      name        = "se_" + experiment + "_unique_searches_with_kifi_result",  
+      start       = exStart, 
+      window      = 24,
+      step        = 24,
+      description = "Automated metric for search experiments. Not meant for immediate human consumption.",
+      events      = Seq[String]("search_result_clicked"),
+      groupBy     = "_",
+      breakDown   = false,
+      mode        = "count", 
+      filter      = "withkifiresults",
+      lastUpdate  = exStart,
+      uniqueField = "" 
+    )
+
+    metricManager.createMetric(searches_with_kifi_result)
+    metricManager.createMetric(total_searches)
+    metricManager.createMetric(kifi_results_clicked)
+    metricManager.createMetric(total_results_clicked_with_kifi_result)
+
+    Ok("")
+  } 
+
 
 }
