@@ -32,6 +32,9 @@ object S3UserPictureConfig {
 @ImplementedBy(classOf[S3ImageStoreImpl])
 trait S3ImageStore {
   def config: S3ImageConfig
+
+  val defaultImage = "http://s.c.lnkd.licdn.com/scds/common/u/images/themes/katy/ghosts/person/ghost_person_200x200_v1.png"
+
   def getPictureUrl(width: Int, user: User): Future[String]
   def getPictureUrl(width: Option[Int], user: User, picVersion: String): Future[String]
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String): Future[Seq[(String, Try[PutObjectResult])]]
@@ -114,7 +117,7 @@ class S3ImageStoreImpl @Inject() (
   private def avatarUrlFromSocialNetwork(sui: SocialUserInfo, size: String): String = {
     val numericSize = (if (size == "original") None else Try(size.toInt).toOption) getOrElse 1000
     sui.getPictureUrl(numericSize, numericSize).getOrElse(
-      "http://s.c.lnkd.licdn.com/scds/common/u/images/themes/katy/ghosts/person/ghost_person_200x200_v1.png")
+      defaultImage)
   }
 
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[(String, Try[PutObjectResult])]] =

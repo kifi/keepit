@@ -30,7 +30,7 @@ class UserPictureController @Inject() (
           imageStore.getPictureUrl(optSize, user, trimmedName) map (Redirect(_))
         }
     } getOrElse {
-      NotFound("Cannot find user!")
+      Redirect(imageStore.defaultImage)
     }
   }
 
@@ -46,7 +46,7 @@ class UserPictureController @Inject() (
           }
         }
     } getOrElse {
-      NotFound("Cannot find user!")
+      Redirect(imageStore.defaultImage)
     }
   }
 
