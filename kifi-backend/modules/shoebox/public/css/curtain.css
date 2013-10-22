@@ -532,6 +532,10 @@ footer {
 .finalize-email-addr {
   display: none;
 }
+.finalize-static>.finalize-email-addr {
+  display: block;
+  margin: 28px 0 20px;
+}
 .form-creds,
 .form-name,
 .form-pic {
