@@ -96,7 +96,11 @@ class S3ImageStoreImpl @Inject() (
               if (!upToDate) {
                 suiRepo.getByUser(user.id.get).filter(_.networkType.name == pic.origin.name).map { sui =>
                   // For now, *replace* social images. Soon: detect if it has changed, and create new.
-                  uploadPictureFromSocialNetwork(sui, user.externalId, pictureName)
+                  if (user.pictureName.isEmpty) {
+                    uploadPictureFromSocialNetwork(sui, user.externalId)
+                  } else {
+                    uploadPictureFromSocialNetwork(sui, user.externalId, pictureName)
+                  }
                 }
               }
             }

@@ -13,7 +13,8 @@ CREATE TABLE user_picture (
     state varchar(20) NOT NULL,
 
     KEY (user_id, name),
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    CONSTRAINT user_picture_f_user_id FOREIGN KEY (user_id) REFERENCES user(id)
 );
 
 alter TABLE user
