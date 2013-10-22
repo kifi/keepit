@@ -336,7 +336,7 @@ class MessagingController @Inject() (
   private def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = {
     SafeFuture {
       val locator = "/messages/" + thread.externalId
-      
+
       val muted = db.readOnly { implicit session =>
         userThreadRepo.getUserThread(userId, thread.id.get).muted
       }

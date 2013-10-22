@@ -88,7 +88,8 @@ object ApplicationBuild extends Build {
 
     val heimdalDependencies = Seq(
       "org.reactivemongo" %% "reactivemongo" % "0.9",
-      "org.reactivemongo" %% "play2-reactivemongo" % "0.9"
+      "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
+      "com.maxmind.geoip2" % "geoip2" % "0.5.0" 
     ) map (_.excludeAll(
       ExclusionRule(organization = "org.slf4j"),
       ExclusionRule(organization = "ch.qos.logback")

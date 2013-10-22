@@ -361,6 +361,39 @@ footer {
   -ms-transition: opacity 0.252s 0.168s linear, -ms-transform 0.42s ease-in-out;
   transition: opacity 0.252s 0.168s linear, transform 0.42s ease-in-out;
 }
+/* form errors */
+.form-error {
+  position: absolute;
+  padding: 10px 18px;
+  background-color: #ef6f6e;
+  color: #fff;
+  line-height: 16px;
+  font-size: 14px;
+  font-weight: 300;
+  text-align: left;
+}
+.form-error:before {
+  content: ' ';
+  position: absolute;
+  top: -8px;
+  width: 0;
+  left: 50%;
+  margin-left: -10px;
+  border-style: solid;
+  border-width: 0 10px 8px;
+  border-color: transparent transparent #ef6f6e;
+  font-size: 0;
+}
+.form-error-title {
+  display: block;
+  font-weight: 500;
+}
+.form-error-explanation {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: normal;
+  line-height: 14px;
+}
 /* forms */
 .signup-form,
 .login-form {
@@ -368,6 +401,9 @@ footer {
   text-align: center;
   margin: 0 16.5%;
   position: relative;
+}
+.signup-form.finalize-static {
+  display: block;
 }
 .form-sides {
   display: table;
@@ -381,7 +417,7 @@ footer {
   width: 50%;
   text-align: left;
   border: 0px solid #e5e5e5;
-  padding: 0 0 10px;
+  padding: 0 5% 10px;
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
@@ -402,8 +438,8 @@ footer {
 }
 .form-network {
   display: table;
-  width: 80%;
-  margin: 16px 10% 0;
+  width: 100%;
+  margin-top: 16px;
 }
 .form-network.facebook {
   background: #597ab1;
@@ -459,14 +495,11 @@ footer {
 .form-email-addr,
 .form-password {
   display: block;
-  width: 80%;
-  margin-left: 10%;
-  margin-right: 10%;
+  width: 100%;
 }
 .form-submit {
   display: block;
-  margin: 0 50% 0 10%;
-  width: 40%;
+  width: 50%;
   border: 0;
   padding: 0;
   background: #92c152;
@@ -499,9 +532,18 @@ footer {
 .finalize-email-addr {
   display: none;
 }
-.form-name {
+.finalize-static>.finalize-email-addr {
+  display: block;
+  margin: 28px 0 20px;
+}
+.form-creds,
+.form-name,
+.form-pic {
   margin: 0 auto;
   max-width: 320px;
+}
+.form-creds {
+  margin: 32px auto 16px;
 }
 .form-name:after {
   content: ' ';
@@ -521,7 +563,6 @@ footer {
 }
 .form-pic {
   margin: 32px auto;
-  max-width: 320px;
   text-align: left;
   position: relative;
 }
@@ -636,13 +677,13 @@ footer {
   display: none;
 }
 .form-photo-drop.over {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.93);
   color: #555;
   border-color: #bbb;
 }
 .form-submit-final {
-  margin: 20px auto;
-  width: 25%;
+  margin: 20px auto 40px;
+  width: 200px;
   background: #84a2ec;
 }
 .form-submit-final:hover {

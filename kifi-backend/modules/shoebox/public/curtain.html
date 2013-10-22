@@ -43,12 +43,12 @@
 <h1 class="main-logo">kifi</h1>
 <h2 class="page-title"></h2>
 
-<form class="signup-form" data-title="Sign Up" data-title2="Finalize Your Account">
+<form class="signup-form" data-title="Sign Up" data-title2="Finalize Your Account" novalidate>
   <div class="finalize">
     <div class="finalize-email-addr"></div>
     <div class="form-name">
-      <input class="form-first-name" type="text" name="first-name" placeholder="First name">
-      <input class="form-last-name" type="text" name="last-name" placeholder="Last name">
+      <input class="form-first-name" type="text" name="first-name" placeholder="First name" required>
+      <input class="form-last-name" type="text" name="last-name" placeholder="Last name" required>
     </div>
     <div class="form-pic">
       <div class="form-photo"><div class="form-photo-progress"></div></div>
@@ -90,7 +90,7 @@
   </p>
 </form>
 
-<form class="login-form" data-title="Log In">
+<form class="login-form" data-title="Log In" novalidate>
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>
@@ -105,8 +105,8 @@
     </div>
     <div class="form-r">
       <h3>Use your email address</h3>
-      <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address">
-      <input class="form-password" type="password" name="login-password" placeholder="Choose a password">
+      <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address" required>
+      <input class="form-password" type="password" name="login-password" placeholder="Your password" required>
       <button class="form-submit">Log in</button>
     </div>
   </div>
@@ -122,4 +122,5 @@
 
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 <script>this.$||document.write('<script src=assets/js/jquery.min.js><\/script>')</script>
+<script src="assets/js/jquery-ui-position.min.js"></script>
 <script src="assets/js/curtain.js"></script>

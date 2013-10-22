@@ -303,6 +303,41 @@ footer {
   .transition(opacity (.6 * @curtain-time) (.4 * @curtain-time) linear, transform @curtain-time ease-in-out);
 }
 
+/* form errors */
+@form-error-color: #ef6f6e;
+.form-error {
+  position: absolute;
+  padding: 10px 18px;
+  background-color: @form-error-color;
+  color: #fff;
+  line-height: 16px;
+  font-size: 14px;
+  font-weight: 300;
+  text-align: left;
+}
+.form-error:before {
+  content: ' ';
+  position: absolute;
+  top: -8px;
+  width: 0;
+  left: 50%;
+  margin-left: -10px;
+  border-style: solid;
+  border-width: 0 10px 8px;
+  border-color: transparent transparent @form-error-color;
+  font-size: 0;
+}
+.form-error-title {
+  display: block;
+  font-weight: 500;
+}
+.form-error-explanation {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: normal;
+  line-height: 14px;
+}
+
 /* forms */
 .signup-form,
 .login-form {
@@ -310,6 +345,9 @@ footer {
   text-align: center;
   margin: 0 16.5%;
   position: relative;
+}
+.signup-form.finalize-static {
+  display: block;
 }
 .form-sides {
   display: table;
@@ -323,7 +361,7 @@ footer {
   width: 50%;
   text-align: left;
   border: 0px solid #e5e5e5;
-  padding: 0 0 10px;
+  padding: 0 5% 10px;
   .box-sizing(border-box);
 }
 .form-l {
@@ -342,8 +380,8 @@ footer {
 }
 .form-network {
   display: table;
-  width: 80%;
-  margin: 16px 10% 0;
+  width: 100%;
+  margin-top: 16px;
 }
 @facebook-color: #597ab1;
 @linkedin-color: #2786c5;
@@ -399,15 +437,12 @@ footer {
 .form-email-addr,
 .form-password {
   display: block;
-  width: 80%;
-  margin-left: 10%;
-  margin-right: 10%;
+  width: 100%;
 }
 @primary-button-color: #92c152;
 .form-submit {
   display: block;
-  margin: 0 50% 0 10%;
-  width: 40%;
+  width: 50%;
   border: 0;
   padding: 0;
   background: @primary-button-color;
@@ -441,9 +476,16 @@ footer {
 .finalize-email-addr {
   display: none;
 }
-.form-name {
+.form-creds,
+.form-name,
+.form-pic {
   margin: 0 auto;
   max-width: 320px;
+}
+.form-creds {
+  margin: 32px auto 16px;
+}
+.form-name {
   .clearfix;
 }
 .form-name>input {
@@ -458,7 +500,6 @@ footer {
 }
 .form-pic {
   margin: 32px auto;
-  max-width: 320px;
   text-align: left;
   position: relative;
   .clearfix;
@@ -575,8 +616,8 @@ footer {
 }
 @final-button-color: #84a2ec;
 .form-submit-final {
-  margin: 20px auto;
-  width: 25%;
+  margin: 20px auto 40px;
+  width: 200px;
   background: @final-button-color;
 }
 .form-submit-final:hover {

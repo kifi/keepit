@@ -7,16 +7,14 @@ import java.net.URLEncoder
 import play.api.mvc.{Action, Results}
 import play.api.libs.ws.WS
 import scala.concurrent.Await
-import scala.collection.immutable
-import play.api.libs.json.{Json, JsObject, JsArray}
-import com.keepit.common.routes.ABook
-import com.keepit.model.ABookOrigins
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.db.slick.Database
 import play.api.Play
 import play.api.Play.current
 import com.keepit.abook.ABookServiceClient
-import scala.xml.PrettyPrinter
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import scala.concurrent.duration._
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 
@@ -40,6 +38,40 @@ object OAuth2Providers { // TODO: wire-in (securesocial) config
   val SUPPORTED = Map("google" -> GOOGLE, "facebook" -> FACEBOOK)
 }
 
+case class OAuth2AccessTokenRequest(
+  clientId:String,
+  responseType:String, // code for server
+  scope:String,
+  redirectUri:String,
+  state:Option[String] = None,
+  prompt:Option[String] = None,
+  accessType:Option[String] = None, // online or offline
+  approvalPrompt:Option[String] = None, // force or auto
+  loginHint:Option[String] = None // email address or sub
+)
+
+case class OAuth2AccessTokenResponse(
+  accessToken:String,
+  expiresIn:Int = -1,
+  refreshToken:Option[String] = None,
+  tokenType:Option[String] = None,
+  idToken:Option[String] = None
+)
+
+object OAuth2AccessTokenResponse {
+
+  val EMPTY = OAuth2AccessTokenResponse("")
+
+  implicit val format = (
+      (__ \ 'access_token).format[String] and
+      (__ \ 'expires_in).format[Int] and
+      (__ \ 'refresh_token).formatNullable[String] and
+      (__ \ 'token_type).formatNullable[String] and
+      (__ \ 'id_token).formatNullable[String]
+  )(OAuth2AccessTokenResponse.apply, unlift(OAuth2AccessTokenResponse.unapply))
+
+}
+
 class OAuth2Controller @Inject() (
   db: Database,
   actionAuthenticator:ActionAuthenticator,
@@ -47,7 +79,6 @@ class OAuth2Controller @Inject() (
 ) extends WebsiteController(actionAuthenticator) with Logging {
 
   import OAuth2Providers._
-  import scala.concurrent.duration._
   def start(provider:String, stateTokenOpt:Option[String]) = AuthenticatedJsonAction { implicit request =>
     log.info(s"[oauth2.start]\n\trequest.hdrs=${request.headers}\n\trequest.session=${request.session}")
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
@@ -94,63 +125,36 @@ class OAuth2Controller @Inject() (
     val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
     log.info(s"[oauth2.callback($provider)] POST to: ${providerConfig.accessTokenUrl} with params: $params")
 
-    val accToken = Await.result(call.map { resp =>
+    val tokenResp = Await.result(call.map { resp =>
       log.info(s"[oauth2.callback] body=${resp.body}")
       provider match {
         case "google" => {
           val json = resp.json
-          log.info(s"[oauth2.callback] $resp json=$json")
-          val accessToken = (json \ "access_token").as[String]
-          val refreshToken = (json \ "refresh_token").asOpt[String]
-          val expiresIn = (json \ "expires_in").asOpt[String]
-          val tokenType = (json \ "token_type").as[String]
-          log.info(s"[oauth2.callback] accessToken=$accessToken, refreshToken=$refreshToken tokenType=$tokenType expiresIn=$expiresIn")
-          accessToken
+          log.info(s"[oauth2.callback] $resp json=${Json.prettyPrint(json)}")
+          val tokenResp = json.as[OAuth2AccessTokenResponse]
+          log.info(s"[oauth2.callback] tokenResp=$tokenResp")
+          tokenResp
         }
-        case "facebook" => { // non-std?
+        case "facebook" => {
           val splitted = resp.body.split("=")
           log.info(s"[oauth2.callback] splitted=${splitted.mkString}")
           if (splitted.length > 1)
-            splitted(1)
+            OAuth2AccessTokenResponse(splitted(1))
           else
-            "NO_TOKEN"
+            OAuth2AccessTokenResponse.EMPTY
         }
       }
     }, 5 seconds)
 
-    // TODO: factor out
     provider match {
       case "google" => {
-//        val userInfoUrl = s"https://www.googleapis.com/oauth2/v1/userinfo?access_token=$accToken" // testing only
-//        val userInfo = Await.result(WS.url(userInfoUrl).get, 5 seconds).json
-//        log.info(s"[contacts] userInfo=${Json.prettyPrint(userInfo)}")
-
-        val contactsUrl = s"https://www.google.com/m8/feeds/contacts/default/full?access_token=$accToken&max-results=${Int.MaxValue}" // TODO: paging (alt=json doesn't work)
-        val contacts = Await.result(WS.url(contactsUrl).get, 10 seconds).xml
-        log.info(s"[g-contacts] $contacts")
-        val prettyPrint = new PrettyPrinter(300, 2)
-        val sb = new StringBuilder
-        prettyPrint.format(contacts, sb)
-        log.info(s"[g-contacts] ${sb.toString}")
-        val jsArrays: immutable.Seq[JsArray] = (contacts \\ "feed").map { feed =>
-          val entries: Seq[JsObject] = (feed \\ "entry").map { entry =>
-            val title = (entry \\ "title").text
-            val emails = (entry \\ "email").map(_ \\ "@address")
-            log.info(s"[g-contacts] title=$title email=$emails")
-            Json.obj("name" -> title, "emails" -> Json.toJson(emails.seq.map(_.toString)))
-          }
-          JsArray(entries)
-        }
-
-        // hack: go ahead and add to contacts
-        val abookUpload = Json.obj("origin" -> "gmail", "contacts" -> jsArrays(0))
-        log.info(Json.prettyPrint(abookUpload))
-        val res = Await.result(abookServiceClient.uploadDirect(request.userId, ABookOrigins.GMAIL, abookUpload), 5 seconds)
+//        val resF = abookServiceClient.importContacts(request.userId, provider, tokenResp.accessToken)
+        val res = Await.result(abookServiceClient.importContacts(request.userId, provider, tokenResp.accessToken), 10 seconds)
         log.info(s"[g-contacts] abook uploaded: ${Json.prettyPrint(res)}")
         Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId))
       }
-      case "facebook" => { // testing only
-        val friendsUrl = s"https://graph.facebook.com/me/friends?access_token=$accToken&fields=id,name,first_name,last_name,username,picture,email"
+      case _ => { // testing only
+      val friendsUrl = s"https://graph.facebook.com/me/friends?access_token=${tokenResp.accessToken}&fields=id,name,first_name,last_name,username,picture,email"
         val friends = Await.result(WS.url(friendsUrl).get, 5 seconds).json
         log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
         Ok(friends)

@@ -20,6 +20,7 @@
 
 (function () {
   'use strict';
+  var baseUri = 'https://www.kifi.com';
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
 
@@ -58,55 +59,6 @@
     $('body').removeClass('curtains-drawn');
   }
 
-  $('.signup-form').submit(function (e) {
-    e.preventDefault();
-    var $form = $(this);
-    var $body = $('body');
-    if (!$body.hasClass('finalizing')) {
-      var emailAddr = $form.find('.form-email-addr').val();
-      var password = $form.find('.form-password').val();
-      // TODO: validation
-      // $.postJson('/some/sign/up/path', {
-      //   e: emailAddr,
-      //   p: password
-      // }).done(function () {
-      //
-      // }).fail(function () {
-      //
-      // });
-      $('.finalize-email-addr').text(emailAddr);
-      transitionTitle($form.data('title2'));
-      $('body').addClass('finalizing');
-      setTimeout(function () {
-        $form.find('.form-first-name').focus();
-      }, 200);
-    } else {
-      var first = $form.find('.form-first-name').val();
-      var last = $form.find('.form-last-name').val();
-      // TODO: validation
-      // TODO: allow photo upload to complete if in progress
-      window.location = '/';
-    }
-  });
-  function transitionTitle(text) {
-    $('.page-title.obsolete').remove();
-    var $title = $('.page-title');
-    $title.after($title.clone().text(text)).addClass('obsolete').layout();
-  }
-
-  $('.login-form').submit(function (e) {
-    e.preventDefault();
-    // authenticate via XHR (users on browsers w/o XHR support have no reason to log in)
-    // $.postJson('/some/log/in/path', {
-    //   e: $form.find('.form-email-addr').val(),
-    //   p: $form.find('.form-password').val()
-    // }).done(function () {
-         window.location = '/';
-    // }).fail(function () {
-    //   TODO: highlight incorrect email address or password or show connection or generic error message
-    // });
-  });
-
   $('.form-network').click(function (e) {
     if (e.which !== 1) return;
     var $a = $(this);
@@ -124,6 +76,134 @@
       } else if (network === 'linkedin') {
         window.location = 'https://www.linkedin.com';
       }
+    }
+  });
+
+  var emailAddrRe = /^[a-zA-Z0-9.!#$%&’*+\/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+  function showFormError($in, msg, opts) {
+    var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
+      .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
+      .css('visibility', '')
+      .delay(opts && opts.ms || 1000).fadeOut(300, removeError);
+    $in.blur();  // closes browser autocomplete suggestion list
+    $in.focus().select().on('input blur', removeError);
+    function removeError() {
+      $err.remove();
+      $in.off('input blur', removeError);
+    }
+  }
+  function validateEmailAddress($in) {
+    var s = $.trim($in.val());
+    if (!s) {
+      showFormError($in, 'Please enter your email address');
+    } else if (!emailAddrRe.test(s)) {
+      showFormError($in, 'Invalid email address');
+    } else {
+      return s;
+    }
+  }
+  function validateNewPassword($in) {
+    var s = $in.val();
+    if (!s) {
+      showFormError($in, 'Please choose a password<br>for your account', {ms: 1500});
+    } else if (s.length < 7) {
+      showFormError($in, 'Password must be<br>at least 7 characters', {ms: 1500});
+    } else {
+      return s;
+    }
+  }
+  function validatePassword($in) {
+    var s = $in.val();
+    if (!s) {
+      showFormError($in, 'Please enter your password');
+    } else if (s.length < 7) {
+      showFormError($in, 'Incorrect password', {ms: 1500});
+    } else {
+      return s;
+    }
+  }
+  function validateName($in) {
+    var s = $.trim($in.val());
+    if (!s) {
+      showFormError($in,
+        '<div class=form-error-title>Name is required</div>' +
+        '<div class=form-error-explanation>We need your name so that<br>your friends will be able to<br>communicate with you</div>',
+        {ms: 3000});
+    } else {
+      return s;
+    }
+  }
+
+  var signupPromise;
+  $('.signup-form').submit(function (e) {
+    e.preventDefault();
+    $('.form-error').remove();
+    var $form = $(this);
+    if (!$('body').hasClass('finalizing')) {
+      var email = validateEmailAddress($form.find('.form-email-addr'));
+      var password = email && validateNewPassword($form.find('.form-password'));
+      if (email && password) {
+        signupPromise = $.postJson(baseUri + '/auth/sign-up', {
+          email: email,
+          password: password
+        }).fail(function (xhr) {
+          if (console) console.error('[signup:1:fail]', xhr);
+        }).promise();
+        $('.finalize-email-addr').text(email);
+        transitionTitle($form.data('title2'));
+        $('body').addClass('finalizing');
+        setTimeout(function () {
+          $form.find('.form-first-name').focus();
+        }, 200);
+      }
+    } else {
+      var first = validateName($form.find('.form-first-name'));
+      var last = first && validateName($form.find('.form-last-name'));
+      if (first && last) {
+        var namePromise = $.postJson(baseUri + '/site/user/me', {
+          firstName: first,
+          lastName: last
+        }).fail(function (xhr) {
+          if (console) console.error('[signup:2:fail]', xhr);
+        });
+        $.when(signupPromise, photoPromise, namePromise).done(function() {
+          window.location = '/';
+        });
+      }
+    }
+  });
+  function transitionTitle(text) {
+    $('.page-title.obsolete').remove();
+    var $title = $('.page-title');
+    $title.after($title.clone().text(text)).addClass('obsolete').layout();
+  }
+
+  $('.login-form').submit(function (e) {
+    e.preventDefault();
+    $('.form-error').remove();
+    var $form = $(this);
+    var $email = $form.find('.form-email-addr');
+    var $password = $form.find('.form-password');
+    var email = validateEmailAddress($email);
+    var password = email && validatePassword($password);
+    if (email && password) {
+      $.postJson(baseUri + '/auth/log-in', {
+        username: email,
+        password: password
+      }).done(function () {
+        window.location = '/';
+      }).fail(function (xhr) {
+        if (xhr.status === 403) {
+          var o = xhr.responseJson;
+          if (o && o.error === 'no_such_user') {
+            showFormError($email, 'There is no account associated<br>with this email address', {ms: 2000});
+          } else {
+            showFormError($password, 'Incorrect password');
+          }
+        } else {
+          // TODO: offline? 500?
+        }
+      });
     }
   });
 
@@ -164,10 +244,7 @@
     $(document).off('mousemove.drag');
   }
 
-  function isImage(file) {
-    return file.type.search(/^image\/(?:jpeg|png|gif)$/) === 0;
-  }
-
+  var photoXhr2;
   var URL = window.URL || window.webkitURL;
   function uploadPhotoXhr2(files) {
     var file = Array.prototype.filter.call(files, isImage)[0];
@@ -182,27 +259,51 @@
       $photo.css({'background-image': '', 'background-size': ''});
     }
 
-    var xhr = new XMLHttpRequest();
-    if (xhr.upload) {
-      xhr.upload.addEventListener('progress', function (e) {
-        if (e.lengthComputable) {
-          setPhotoProgress(e.loaded / e.total);
-        }
-      });
-      xhr.upload.addEventListener('load', setPhotoProgress.bind(null, 1));
-      setPhotoProgress(0);
+    if (photoXhr2) {
+      photoXhr2.abort();
     }
-    xhr.open('POST', 'https://www.kifi.com/testing/upload', true);
+
+    var xhr = photoXhr2 = new XMLHttpRequest();
+    var deferred = createPhotoUploadDeferred();
+    xhr.upload.addEventListener('progress', function (e) {
+      if (e.lengthComputable) {
+        deferred.notify(e.loaded / e.total);
+      }
+    });
+    xhr.upload.addEventListener('load', function() {
+      deferred.resolve();
+    });
+    xhr.upload.addEventListener('loadend', function() {
+      if (photoXhr2 === xhr) {
+        photoXhr2 = null;
+      }
+      if (!deferred.isResolved()) {
+        deferred.reject();
+      }
+    });
+    xhr.open('POST', baseUri + '/testing/upload', true);
     xhr.send(file);
   }
+  function isImage(file) {
+    return file.type.search(/^image\/(?:jpeg|png|gif)$/) === 0;
+  }
 
+  var iframeDeferred;
   function uploadPhotoIframe(form) {
     $photo.css('background-image', 'none');
-    $('iframe[name=upload]').remove();  // TODO: cleaner cancellation of any in-progress upload?
-    $('<iframe name=upload>').hide().appendTo('body').load(function () {
-      clearTimeout(fakePhotoProgressTimer);
-      setPhotoProgress(1);
-      var $iframe = $(this), o;
+
+    if (iframeDeferred) {
+      iframeDeferred.reject();  // clean up previous in-progress upload
+    }
+    var deferred = iframeDeferred = createPhotoUploadDeferred()
+      .always(function() {
+        clearTimeout(fakeProgressTimer);
+        iframeDeferred = null;
+        $iframe.remove();
+      });
+    var $iframe = $('<iframe name=upload>').hide().appendTo('body').load(function () {
+      deferred.resolve();
+      var o;
       try {
         o = JSON.parse($iframe.contents().find('body').text());
       } catch (err) {
@@ -212,21 +313,31 @@
     });
     form.method = 'POST';
     form.target = 'upload';
-    form.action = 'https://www.kifi.com/testing/upload';
+    form.action = baseUri + '/testing/upload';
     form.submit();
-    clearTimeout(fakePhotoProgressTimer);
-    fakePhotoProgress(0, 100);
+
+    var fakeProgressTimer;
+    fakeProgress(0, 100);
+    function fakeProgress(frac, ms) {
+      deferred.notify(frac);
+      fakeProgressTimer = setTimeout(fakeProgress.bind(null, 1 - (1 - frac) * .9, ms * 1.1), ms);
+    }
   }
 
-  var fakePhotoProgressTimer;
-  function fakePhotoProgress(frac, ms) {
-    setPhotoProgress(frac);
-    fakePhotoProgressTimer = setTimeout(fakePhotoProgress.bind(null, 1 - (1 - frac) * .9, ms * 1.1), ms);
+  var photoPromise;
+  function createPhotoUploadDeferred() {
+    var deferred = $.Deferred();
+    photoPromise = deferred.promise();
+    return deferred
+      .progress(updateUploadProgressBar)
+      .done(updateUploadProgressBar.bind(null, 1))
+      .always(function() {
+        photoPromise = null;
+      });
   }
-
-  var progressBar = $('.form-photo-progress')[0];
-  function setPhotoProgress(frac) {
+  var uploadProgressBar = $('.form-photo-progress')[0];
+  function updateUploadProgressBar(frac) {
     var pct = Math.round(frac * 100);
-    progressBar.style.borderWidth = frac < 1 ? '0 ' + (100 - pct) + 'px 0 ' + pct + 'px' : '';
+    uploadProgressBar.style.borderWidth = frac < 1 ? '0 ' + (100 - pct) + 'px 0 ' + pct + 'px' : '';
   }
 }());
