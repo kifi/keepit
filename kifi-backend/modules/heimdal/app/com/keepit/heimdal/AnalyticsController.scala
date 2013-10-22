@@ -93,6 +93,7 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     }
   }
 
+
   def updateMetrics() = Action { request =>
     metricManager.updateAllMetrics()
     Ok("Update has been triggered. Please be patient. Calling this repeatedly in rapid succession will only make it take longer. If you think it didn't work, wait at least 30 seconds.")
@@ -137,8 +138,31 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
 
     if (as=="json") Ok(json)
     else Ok(html.storedMetricChart(json.toString, errors))
-
   } 
+
+  def getMetricData(name: String) = Action { request => //see comment in getMetric
+    val infoOptions : Option[MetricDescriptor] = Await.result(metricManager.getMetricInfo(name), 10 seconds)
+    val json : JsObject = infoOptions.map{ desc =>
+      val data = Await.result(metricManager.getMetric(name), 10 seconds)
+      if (data.isEmpty){
+        Json.obj(
+          "header" -> ("No Data for Metric: " + name),
+          "data" -> Json.arr()
+        )
+      } else {
+        Json.obj(
+          "header" -> s"[$name] ${desc.description}",
+          "data" -> Json.toJson(data)
+        )
+      }
+    } getOrElse {
+      Json.obj(
+        "header" -> ("Unknown Metric: " + name),
+        "data" -> Json.arr()
+      )
+    }
+    Ok(json)
+  }
 
   def adhocMetric(from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, as: String) = Action{ request =>
     if (request.queryString.get("help").nonEmpty) Ok(adhocHelp)
