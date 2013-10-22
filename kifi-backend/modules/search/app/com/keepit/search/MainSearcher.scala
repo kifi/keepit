@@ -198,6 +198,8 @@ class MainSearcher(
     parsedQuery = parser.parse(queryString)
 
     timeLogs.queryParsing = currentDateTime.getMillis() - tParse
+    timeLogs.phraseDetection = parser.phraseDetectionTime
+    timeLogs.nlpPhraseDetection = parser.nlpPhraseDetectionTime
 
     val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
@@ -456,6 +458,8 @@ class MainSearcher(
   def timing() {
     Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
     Statsd.timing("mainSearch.queryParsing", timeLogs.queryParsing)
+    Statsd.timing("mainSearch.phraseDetection", timeLogs.phraseDetection)
+    Statsd.timing("mainSearch.nlpPhraseDetection", timeLogs.nlpPhraseDetection)
     Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
     Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
     Statsd.timing("mainSearch.LuceneSearch", timeLogs.search)
@@ -563,6 +567,8 @@ case class MutableSearchTimeLogs(
     var socialGraphInfo: Long = 0,
     var getClickBoost: Long = 0,
     var queryParsing: Long = 0,
+    var phraseDetection: Long = 0,
+    var nlpPhraseDetection: Long = 0,
     var personalizedSearcher: Long = 0,
     var search: Long = 0,
     var processHits: Long = 0,
