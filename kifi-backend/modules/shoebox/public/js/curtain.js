@@ -111,6 +111,16 @@
       return s;
     }
   }
+  function validatePassword($in) {
+    var s = $in.val();
+    if (!s) {
+      showFormError($in, 'Please enter your password');
+    } else if (s.length < 7) {
+      showFormError($in, 'Incorrect password', {ms: 1500});
+    } else {
+      return s;
+    }
+  }
   function validateName($in) {
     var s = $.trim($in.val());
     if (!s) {
@@ -169,15 +179,31 @@
 
   $('.login-form').submit(function (e) {
     e.preventDefault();
-    // authenticate via XHR (users on browsers w/o XHR support have no reason to log in)
-    // $.postJson('/some/log/in/path', {
-    //   e: $form.find('.form-email-addr').val(),
-    //   p: $form.find('.form-password').val()
-    // }).done(function () {
-         window.location = '/';
-    // }).fail(function () {
-    //   TODO: highlight incorrect email address or password or show connection or generic error message
-    // });
+    $('.form-error').remove();
+    var $form = $(this);
+    var $email = $form.find('.form-email-addr');
+    var $password = $form.find('.form-password');
+    var email = validateEmailAddress($email);
+    var password = email && validatePassword($password);
+    if (email && password) {
+      $.postJson(baseUri + '/auth/log-in', {
+        username: email,
+        password: password
+      }).done(function () {
+        window.location = '/';
+      }).fail(function (xhr) {
+        if (xhr.status === 403) {
+          var o = xhr.responseJson;
+          if (o && o.error === 'no_such_user') {
+            showFormError($email, 'There is no account associated<br>with this email address', {ms: 2000});
+          } else {
+            showFormError($password, 'Incorrect password');
+          }
+        } else {
+          // TODO: offline? 500?
+        }
+      });
+    }
   });
 
   var $photo = $('.form-photo');
