@@ -13,6 +13,7 @@ import play.api.libs.json._
 import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
+import com.keepit.common.strings._
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
@@ -27,16 +28,17 @@ import com.keepit.common.service.FortyTwoServices
 import play.api.Logger
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
-    extends Exception(s"$url->[${requestBody.map(_.toString.take(50)).getOrElse("")}] status:${response.status} res: [${response.body.toString.take(50)}]"){
+    extends Exception(s"${url.summary}->[${requestBody.map(_.toString.abbreviate(30)).getOrElse("")}] status:${response.status} res [${response.body.toString.abbreviate(30)}]"){
 }
 
 case class LongWaitException(url: HttpUri, response: Response, waitTime: Int)
-    extends Exception(s"$url status:${response.status} wait-time:${waitTime}ms"){
+    extends Exception(s"${url.summary} status:${response.status} wait-time:${waitTime}ms"){
 }
 
 trait HttpUri {
   val serviceInstanceOpt: Option[ServiceInstance] = None
   def url: String
+  def summary: String = url.abbreviate(50)
   override def equals(obj: Any) = obj.asInstanceOf[HttpUri].url == url
   override def toString(): String = s"$url for service $serviceInstanceOpt"
 }

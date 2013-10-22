@@ -9,7 +9,10 @@ import com.keepit.common.net.{ClientResponse, HttpClient, HttpUri}
 import com.keepit.common.routes._
 import com.keepit.common.zookeeper.{ServiceCluster, ServiceInstance}
 import com.keepit.common.KestrelCombinator
+import com.keepit.common.strings._
+
 import java.net.ConnectException
+
 import play.api.libs.json.{JsNull, JsValue}
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -23,7 +26,8 @@ object ServiceClient {
 class ServiceUri(serviceInstance: ServiceInstance, protocol: String, port: Int, path: String)
     extends HttpUri {
   override val serviceInstanceOpt = Some(serviceInstance)
-  lazy val url = s"${protocol}://${serviceInstance.instanceInfo.localHostname}:${port}${path}"
+  lazy val url: String = s"${protocol}://${serviceInstance.instanceInfo.localHostname}:${port}${path}"
+  override def summary: String = path.abbreviate(50)
 }
 
 trait ServiceClient extends Logging {
