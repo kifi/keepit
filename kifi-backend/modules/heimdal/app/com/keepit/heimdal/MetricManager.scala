@@ -3,6 +3,7 @@ package com.keepit.heimdal
 import org.joda.time.DateTime
 
 import com.keepit.common.time._
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 import play.api.libs.json.{JsObject, JsNull, JsArray, Json}
 import play.modules.reactivemongo.json.ImplicitBSONHandlers._
@@ -23,7 +24,12 @@ object MetricDescriptor {
   implicit val format = Json.format[MetricDescriptor]
 }
 
-class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metricDescriptorRepo: MetricDescriptorRepo, metricRepoFactory: MetricRepoFactory){
+class MetricManager @Inject() (
+    userEventLoggingRepo: UserEventLoggingRepo, 
+    metricDescriptorRepo: MetricDescriptorRepo, 
+    metricRepoFactory: MetricRepoFactory,
+    serviceDiscovery: ServiceDiscovery
+  ){
 
   val definedRestrictions = Map[String, ContextRestriction](
     "none" -> NoContextRestriction,
@@ -99,9 +105,11 @@ class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metri
   }
 
   def updateAllMetrics(): Unit = synchronized {
-    val descriptorsFuture : Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
-    descriptorsFuture.map{ descriptors =>
-      descriptors.foreach(updateMetricFully(_))
+    if (serviceDiscovery.isLeader()) {
+      val descriptorsFuture : Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
+      descriptorsFuture.map{ descriptors =>
+        descriptors.foreach(updateMetricFully(_))
+      }
     }
   }
 

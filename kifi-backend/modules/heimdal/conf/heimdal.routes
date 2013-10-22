@@ -13,11 +13,13 @@ GET   /internal/heimdal/rawEvents         @com.keepit.heimdal.controllers.Analyt
 
 GET   /internal/heimdal/createMetric      @com.keepit.heimdal.controllers.AnalyticsController.createMetric(name: String ?= "default", start: String ?= "2013-10-1", window: Int ?= 24, step: Int ?=24, description: String ?= "No Description Given.", events: String ?= "all", groupBy: String ?="_", breakDown: String ?="false", mode: String ?= "count", filter: String ?= "none")
 
-GET  /internal/heimdal/updateMetrics      @com.keepit.heimdal.controllers.AnalyticsController.updateMetrics()
+GET  /internal/heimdal/updateMetrics                 @com.keepit.heimdal.controllers.AnalyticsController.updateMetrics()
 
 GET  /internal/heimdal/getAvailableMetrics @com.keepit.heimdal.controllers.AnalyticsController.getAvailableMetrics()
 
 GET  /internal/heimdal/getMetric           @com.keepit.heimdal.controllers.AnalyticsController.getMetric(name: String ?= "all", as: String ?="line")
+
+GET  /internal/heimdal/getMetricData       @com.keepit.heimdal.controllers.AnalyticsController.getMetricData(name: String)
 
 ->  / common.Routes
 
