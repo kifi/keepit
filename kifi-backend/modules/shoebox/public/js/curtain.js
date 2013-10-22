@@ -269,13 +269,14 @@
         deferred.notify(e.loaded / e.total);
       }
     });
+    xhr.upload.addEventListener('load', function() {
+      deferred.resolve();
+    });
     xhr.upload.addEventListener('loadend', function() {
       if (photoXhr2 === xhr) {
         photoXhr2 = null;
       }
-      if (xhr.status >= 200 && xhr.status < 300) {
-        deferred.resolve();
-      } else {
+      if (!deferred.isResolved()) {
         deferred.reject();
       }
     });
