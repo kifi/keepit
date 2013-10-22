@@ -70,3 +70,32 @@ function convertDraftToText(html) {
     });
   return $('<div>').html(html).text().trim();
 }
+
+function auxDataFormatter() {
+  var auxData = this.auxData;
+  switch (auxData[0]) {
+    case 'add_participants':
+      return addParticipantsFormatter(auxData[1], auxData[2]);
+  }
+  return '';
+}
+
+function nameFormatter(user) {
+  return Mustache.escape(user.firstName + ' ' + user.lastName);
+}
+
+function namesFormatter(users) {
+  switch (users.length) {
+  case 0:
+    return '';
+  case 1:
+    return nameFormatter(users[0]);
+  default:
+    var lastIndex = users.length - 1;
+    return users.slice(0, lastIndex).map(nameFormatter).join(', ') + ' and ' + nameFormatter(users[lastIndex]);
+  }
+}
+
+function addParticipantsFormatter(actor, addedUsers) {
+  return nameFormatter(actor) + ' added ' + namesFormatter(addedUsers) + ' to the conversation.';
+}
