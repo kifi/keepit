@@ -486,6 +486,9 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     log("[showPane]", locator, back ? "back" : "")();
     if (locator !== (paneHistory && paneHistory[0])) {
       var pane = toPaneName(locator);
+      if (messageHeader) {
+        messageHeader.destroy();
+      }
       (createPaneParams[pane] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
         params.redirected = redirected;
         showPane2(locator, back, pane, params);

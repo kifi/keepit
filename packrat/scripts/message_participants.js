@@ -263,9 +263,6 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 */
 		setParticipants: function (participants) {
 			var parent = this.parent;
-			log('setParticipants', participants)();
-			log('setParticipants', participants)();
-			log('setParticipants', participants)();
 			if (parent && parent.initialized) {
 				parent.participants = participants;
 				this.updateView();

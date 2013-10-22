@@ -226,6 +226,31 @@ logEvent.catchUp = function() {
   }
 }
 
+function forEachThreadWithThreadId(threadId, fn, that) {
+  Object.keys(pageThreadData).forEach(function (nUrl) {
+    var threadData = this[nUrl],
+      threads = threadData.threads;
+    if (threads) {
+      threads.forEach(function (thread) {
+        if (thread.id === threadId) {
+          fn.call(that, thread, threadId, threads);
+        }
+      });
+    }
+  }, pageThreadData);
+}
+
+function forEachTabWithThreadId(threadId, fn, that) {
+  forEachThreadWithThreadId(threadId, function (thread) {
+    var tabs = tabsByUrl[thread.nUrl];
+    if (tabs) {
+      for (var i = 0, len = tabs.length, tab; i < len; i++) {
+        fn.call(this, tabs[i], thread, threadId, tabs);
+      }
+    }
+  }, that);
+}
+
 // ===== WebSocket handlers
 
 var socketHandlers = {
@@ -257,6 +282,20 @@ var socketHandlers = {
   create_tag: onTagChangeFromServer.bind(null, 'create'),
   rename_tag: onTagChangeFromServer.bind(null, 'rename'),
   remove_tag: onTagChangeFromServer.bind(null, 'remove'),
+  thread_participants: function(threadId, participants) {
+    log("[socket:thread_participants]", threadId, participants)();
+    forEachTabWithThreadId(threadId, function (tab, thread) {
+      thread.participants = participants;
+      api.tabs.emit(tab, 'participants', participants);
+    });
+  },
+  thread_muted: function(threadId, muted) {
+    log("[socket:thread_muted]", threadId, muted)();
+    forEachTabWithThreadId(threadId, function (tab, thread) {
+      thread.muted = muted;
+      api.tabs.emit(tab, 'muted', muted);
+    });
+  },
   url_patterns: function(patterns) {
     log("[socket:url_patterns]", patterns)();
     urlPatterns = compilePatterns(patterns);
