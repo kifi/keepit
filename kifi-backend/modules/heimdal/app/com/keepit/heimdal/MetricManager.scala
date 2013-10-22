@@ -3,6 +3,7 @@ package com.keepit.heimdal
 import org.joda.time.DateTime
 
 import com.keepit.common.time._
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 import play.api.libs.json.{JsObject, JsNull, JsArray, Json}
 import play.modules.reactivemongo.json.ImplicitBSONHandlers._
@@ -17,17 +18,24 @@ import reactivemongo.bson.{BSONDocument, BSONArray, BSONString, BSONDouble}
 import com.google.inject.Inject
 
 
-case class MetricDescriptor(name: String, start: DateTime, window: Int, step: Int, description: String, events: Seq[String], groupBy: String, breakDown: Boolean, mode: String, filter: String, lastUpdate: DateTime)
+case class MetricDescriptor(name: String, start: DateTime, window: Int, step: Int, description: String, events: Seq[String], groupBy: String, breakDown: Boolean, mode: String, filter: String, lastUpdate: DateTime, uniqueField: String)
 
 object MetricDescriptor {
   implicit val format = Json.format[MetricDescriptor]
 }
 
-class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metricDescriptorRepo: MetricDescriptorRepo, metricRepoFactory: MetricRepoFactory){
+class MetricManager @Inject() (
+    userEventLoggingRepo: UserEventLoggingRepo, 
+    metricDescriptorRepo: MetricDescriptorRepo, 
+    metricRepoFactory: MetricRepoFactory,
+    serviceDiscovery: ServiceDiscovery
+  ){
 
   val definedRestrictions = Map[String, ContextRestriction](
     "none" -> NoContextRestriction,
-    "noadmins" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("admin")))
+    "noadmins" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("admin"))),
+    "withkifiresults" -> AnyContextRestriction("context.kifiResults", GreaterThan(ContextDoubleData(0))),
+    "kifiresultclicked" -> AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi")))
   )
 
   def computeAdHocMteric(startTime: DateTime, endTime: DateTime, definition: MetricDefinition): Future[JsArray]  = {
@@ -65,11 +73,15 @@ class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metri
     val tEnd = desc.lastUpdate.plusHours(desc.step)
     val eventsToConsider = if (desc.events.isEmpty) AllEvents else SpecificEventSet(desc.events.toSet.map( (s: String) => UserEventType(s)) )
     val contextRestriction = definedRestrictions(desc.filter)
-    val definition = if(desc.mode=="users") {
-      new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), if (desc.groupBy.startsWith("context")) desc.breakDown else false) 
-    } else {
-      new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), if (desc.groupBy.startsWith("context")) desc.breakDown else false) 
+
+    val definition = desc.mode match {
+      case "users" => new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), if (desc.groupBy.startsWith("context")) desc.breakDown else false)
+      case "count_unique" => new GroupedUniqueFieldCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), desc.uniqueField, if (desc.groupBy.startsWith("context")) desc.breakDown else false)
+      case "count" => new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), if (desc.groupBy.startsWith("context")) desc.breakDown else false)
+      // case _ => new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), if (desc.groupBy.startsWith("context")) desc.breakDown else false)
     }
+
+
     val (pipeline, postprocess) = definition.aggregationForTimeWindow(tStart, Duration(tEnd.getMillis - tStart.getMillis,"ms"))
     val data: Seq[BSONDocument] = Await.result(userEventLoggingRepo.performAggregation(pipeline).map(postprocess(_)), 5 minutes)
     val metricData = MetricData(tEnd, data)
@@ -93,9 +105,11 @@ class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metri
   }
 
   def updateAllMetrics(): Unit = synchronized {
-    val descriptorsFuture : Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
-    descriptorsFuture.map{ descriptors =>
-      descriptors.foreach(updateMetricFully(_))
+    if (serviceDiscovery.isLeader()) {
+      val descriptorsFuture : Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
+      descriptorsFuture.map{ descriptors =>
+        descriptors.foreach(updateMetricFully(_))
+      }
     }
   }
 

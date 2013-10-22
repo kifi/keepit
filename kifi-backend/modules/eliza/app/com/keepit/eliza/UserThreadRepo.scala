@@ -51,7 +51,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def clearNotificationsBefore(user: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit
 
-  def setNotification(user: Id[User], thread: Id[MessageThread], message: Message, notifJson: JsValue)(implicit session: RWSession) : Unit
+  def setNotification(user: Id[User], thread: Id[MessageThread], message: Message, notifJson: JsValue, pending: Boolean)(implicit session: RWSession) : Unit
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit
 
@@ -60,6 +60,8 @@ trait UserThreadRepo extends Repo[UserThread] {
   def setNotificationLastSeen(userId: Id[User], timestamp: DateTime, threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit
 
   def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime]
+
+  def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Int
 
   def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] 
 
@@ -163,10 +165,10 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.user===userId && row.notificationUpdatedAt<=timeCutoff) yield row.notificationPending).update(false)
   }
 
-  def setNotification(userId: Id[User], threadId: Id[MessageThread], message: Message, notifJson: JsValue)(implicit session: RWSession) : Unit = {
+  def setNotification(userId: Id[User], threadId: Id[MessageThread], message: Message, notifJson: JsValue, pending: Boolean)(implicit session: RWSession) : Unit = {
     Query(table).filter(row => (row.user===userId && row.thread===threadId) && (row.lastMsgFromOther.isNull || row.lastMsgFromOther < message.id.get))
       .map(row => row.lastNotification ~ row.lastMsgFromOther ~ row.notificationPending ~ row.notificationUpdatedAt ~ row.notificationEmailed)
-      .update((notifJson, message.id.get, true, message.createdAt, false))
+      .update((notifJson, message.id.get, pending, message.createdAt, false))
 
     Query(table).filter(row => (row.user===userId && row.thread===threadId) && row.lastMsgFromOther === message.id.get)
       .map(row => row.lastNotification ~ row.notificationEmailed)
@@ -190,6 +192,10 @@ class UserThreadRepoImpl @Inject() (
     } getOrElse {
       (for (row <- table if row.user===userId) yield row.notificationLastSeen).update(timestamp)
     }
+  }
+
+  def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession) = {
+    (for (row <- table if row.id === userThreadId) yield row.muted).update(muted)
   }
 
   def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime] = {

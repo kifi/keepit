@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.Id
-import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse}
+import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse, HttpUri}
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search.Lang
@@ -26,11 +26,11 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
     Phrase(phrase="gaz parfait", lang=Lang("fr"), source="physique statistique")
   )
 
-  val fakeShoeboxResponse: PartialFunction[String, FakeClientResponse] = {
-    case s if s.contains("/internal/shoebox/database/getConnectedUsers") && s.contains("1965") => "[1933,1935,1927,1921]"
-    case s if s.contains("/internal/shoebox/database/searchFriends") && s.contains("1965") => "[1933,1935,1927,1921]"
-    case s if s.contains("/internal/shoebox/database/getUsers") && s.contains("1965%2C1933") => Json.stringify(Json.toJson(users))
-    case s if s.contains("/internal/shoebox/database/getPhrasesByPage") && s.contains("page=0&size=2") => Json.stringify(Json.toJson(phrases))
+  val fakeShoeboxResponse: PartialFunction[HttpUri, FakeClientResponse] = {
+    case s if s.url.contains("/internal/shoebox/database/getConnectedUsers") && s.url.contains("1965") => "[1933,1935,1927,1921]"
+    case s if s.url.contains("/internal/shoebox/database/searchFriends") && s.url.contains("1965") => "[1933,1935,1927,1921]"
+    case s if s.url.contains("/internal/shoebox/database/getUsers") && s.url.contains("1965%2C1933") => Json.stringify(Json.toJson(users))
+    case s if s.url.contains("/internal/shoebox/database/getPhrasesByPage") && s.url.contains("page=0&size=2") => Json.stringify(Json.toJson(phrases))
   }
 
   "ShoeboxServiceClient" should {

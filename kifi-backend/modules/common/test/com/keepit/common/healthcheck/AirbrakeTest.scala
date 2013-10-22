@@ -1,5 +1,6 @@
 package com.keepit.common.healthcheck
 
+import com.keepit.common.zookeeper._
 import com.keepit.test._
 import com.keepit.inject.TestFortyTwoModule
 import com.keepit.common.net._
@@ -30,14 +31,14 @@ class AirbrakeTest extends Specification with TestInjector {
   "AirbrakeTest" should {
 
     "deployment payload" in {
-      withInjector(TestFortyTwoModule()) { implicit injector =>
+      withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         formatter.deploymentMessage === "api_key=fakeApiKey&deploy[rails_env]=test&deploy[scm_repository]=https://github.com/FortyTwoEng/keepit&deploy[scm_revision]=0.0.0"
       }
     }
 
     "format stack trace with x2 cause" in {
-      withInjector(TestFortyTwoModule()) { implicit injector =>
+      withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = new IllegalArgumentException("hi there", new Exception("middle thing" , new IllegalStateException("its me")))
         val xml = formatter.noticeError(ErrorWithStack(error), None)
@@ -49,7 +50,7 @@ class AirbrakeTest extends Specification with TestInjector {
     }
 
     "format stack trace with x1 cause" in {
-      withInjector(TestFortyTwoModule()) { implicit injector =>
+      withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = new IllegalArgumentException("hi there", new IllegalStateException("its me"))
         val xml = formatter.noticeError(ErrorWithStack(error), None)
@@ -68,7 +69,7 @@ class AirbrakeTest extends Specification with TestInjector {
         validate(xml)
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.NullPointerException</class>
-        (xml \ "error" \ "message").head === <message>java.lang.NullPointerException</message>
+        (xml \ "error" \ "message").head === <message>[0L] java.lang.NullPointerException</message>
         (xml \ "error" \ "backtrace" \ "line").size === 188
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
         (xml \ "server-environment" \ "app-version").head.text === "0.0.0"
@@ -77,7 +78,7 @@ class AirbrakeTest extends Specification with TestInjector {
     }
 
     "format with url and no params" in {
-      withInjector(TestFortyTwoModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withInjector(TestFortyTwoModule(), FakeDiscoveryModule(), StandaloneTestActorSystemModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = AirbrakeError(
             exception = new IllegalArgumentException("hi there"),
@@ -88,7 +89,7 @@ class AirbrakeTest extends Specification with TestInjector {
         validate(xml)
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
-        (xml \ "error" \ "message").head === <message>java.lang.IllegalArgumentException: hi there</message>
+        (xml \ "error" \ "message").head === <message>[0L] java.lang.IllegalArgumentException: hi there</message>
         (xml \ "error" \ "backtrace" \ "line").size === 62
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
         (xml \ "request" \ "url").head === <url>http://www.kifi.com/hi</url>

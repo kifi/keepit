@@ -6,8 +6,7 @@ import scala.concurrent.future
 import scala.concurrent.Future
 import scala.util.Try
 import com.google.inject.Inject
-import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.performance._
+import com.keepit.common.controller.{AuthenticatedRequest, SearchServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
@@ -23,10 +22,11 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import play.api.libs.json.Json
 import com.keepit.common.db.{ExternalId, Id}
-import com.newrelic.api.agent.NewRelic
 import com.newrelic.api.agent.Trace
 import play.modules.statsd.api.Statsd
 import scala.concurrent.Promise
+import play.api.mvc.AnyContent
+import com.keepit.heimdal.SearchAnalytics
 
 class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -35,22 +35,24 @@ class ExtSearchController @Inject() (
   articleSearchResultStore: ArticleSearchResultStore,
   healthcheckPlugin: HealthcheckPlugin,
   shoeboxClient: ShoeboxServiceClient,
+  searchAnalytics: SearchAnalytics,
   monitoredAwait: MonitoredAwait)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
-    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging{
+    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
   @Trace
-  def search(query: String,
-             filter: Option[String],
-             maxHits: Int,
-             lastUUIDStr: Option[String],
-             context: Option[String],
-             kifiVersion: Option[KifiVersion] = None,
-             start: Option[String] = None,
-             end: Option[String] = None,
-             tz: Option[String] = None,
-             coll: Option[String] = None) = AuthenticatedJsonAction { request =>
+  def search(
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    kifiVersion: Option[KifiVersion] = None,
+    start: Option[String] = None,
+    end: Option[String] = None,
+    tz: Option[String] = None,
+    coll: Option[String] = None) = AuthenticatedJsonAction { request =>
 
     val timing = new SearchTiming
 
@@ -59,7 +61,7 @@ class ExtSearchController @Inject() (
     val noSearchExperiments = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
     // fetch user data in background
-    fetchUserDataInBackground(shoeboxClient, userId)
+    val prefetcher = fetchUserDataInBackground(shoeboxClient, userId)
 
     log.info(s"""User ${userId} searched ${query.length} characters""")
 
@@ -83,10 +85,7 @@ class ExtSearchController @Inject() (
 
     val (config, searchExperimentId) = searchConfigManager.getConfig(userId, query, noSearchExperiments)
 
-    val lastUUID = lastUUIDStr.flatMap{
-      case "" => None
-      case str => Some(ExternalId[ArticleSearchResult](str))
-    }
+    val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
 
     timing.factory
 
@@ -116,10 +115,12 @@ class ExtSearchController @Inject() (
 
     SafeFuture {
       // stash timing information
+      searcher.timing()
+
       try {
-        reportArticleSearchResult(searchRes)
+        reportSearch(request,kifiVersion, maxHits, searchFilter, searchExperimentId, searchRes)
       } catch {
-        case e: Throwable => log.error("Could not persist article search result %s".format(res), e)
+        case e: Throwable => log.error("Could not report search %s".format(res), e)
       }
 
       Statsd.timing("extSearch.factory", timing.getFactoryTime)
@@ -166,16 +167,14 @@ class ExtSearchController @Inject() (
 
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
 
-  private def reportArticleSearchResult(res: ArticleSearchResult) {
-    articleSearchResultStore += (res.uuid -> res)
-  }
-
-  private[ext] def toPersonalSearchResultPacket(decorator: ResultDecorator, userId: Id[User],
-      res: ArticleSearchResult,
-      config: SearchConfig,
-      isDefaultFilter: Boolean,
-      searchExperimentId: Option[Id[SearchConfigExperiment]],
-      expertsFuture: Future[Seq[Id[User]]]): PersonalSearchResultPacket = {
+  private[ext] def toPersonalSearchResultPacket(
+    decorator: ResultDecorator,
+    userId: Id[User],
+    res: ArticleSearchResult,
+    config: SearchConfig,
+    isDefaultFilter: Boolean,
+    searchExperimentId: Option[Id[SearchConfigExperiment]],
+    expertsFuture: Future[Seq[Id[User]]]): PersonalSearchResultPacket = {
 
     val decoratedResult = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
@@ -204,13 +203,34 @@ class ExtSearchController @Inject() (
     }
   }
 
-  private[this] def fetchUserDataInBackground(shoeboxClient: ShoeboxServiceClient, userId: Id[User]): Unit = {
+  private[this] def fetchUserDataInBackground(shoeboxClient: ShoeboxServiceClient, userId: Id[User]): Prefetcher = new Prefetcher(shoeboxClient, userId)
+
+  private class Prefetcher(shoeboxClient: ShoeboxServiceClient, userId: Id[User]) {
+    var futures: Seq[Future[Any]] = null // pin futures in a jvm heap
     future {
       // following request must have request consolidation enabled, otherwise no use.
-      // have a head start on every other requests that search will make
-      shoeboxClient.getSearchFriends(userId)
-      shoeboxClient.getClickHistoryFilter(userId)
+      // have a head start on every other requests that search will make in order, then submit skipped requests backwards
+      futures = Seq(
+        // skip every other
+        shoeboxClient.getSearchFriends(userId),
+        shoeboxClient.getClickHistoryFilter(userId),
+        // then, backwards
+        shoeboxClient.getBrowsingHistoryFilter(userId),
+        shoeboxClient.getFriends(userId)
+      )
     }
+  }
+
+  private def reportSearch(
+    request: AuthenticatedRequest[AnyContent],
+    kifiVersion: Option[KifiVersion],
+    maxHits: Int,
+    searchFilter: SearchFilter,
+    searchExperiment: Option[Id[SearchConfigExperiment]],
+    res: ArticleSearchResult) {
+
+    articleSearchResultStore += (res.uuid -> res)
+    searchAnalytics.searchPerformed(request, kifiVersion, maxHits, searchFilter, searchExperiment, res)
   }
 
   class SearchTiming{

@@ -12,15 +12,21 @@ import play.api.libs.json._
 
 import com.google.inject.{Inject, Singleton}
 
+case class ServiceInstanceId(id: Long) {
+  override def toString(): String = id.toString
+}
+
 //thisInstance means the representation of the current running instance
 case class ServiceInstance(node: Node, var remoteService: RemoteService, thisInstance: Boolean) extends Logging {
 
-  lazy val id: Long = node.name.substring(node.name.lastIndexOf('_') + 1).toLong
+  lazy val id: ServiceInstanceId = ServiceInstanceId(node.name.substring(node.name.lastIndexOf('_') + 1).toLong)
 
   def instanceInfo : AmazonInstanceInfo = remoteService.amazonInstanceInfo
 
-  def isAvailable : Boolean = isHealthy || remoteService.status==ServiceStatus.SICK || remoteService.status==ServiceStatus.SELFCHECK_FAIL
+  def isAvailable : Boolean = isHealthy ||
+                              remoteService.status == ServiceStatus.SICK ||
+                              remoteService.status == ServiceStatus.SELFCHECK_FAIL
 
-  def isHealthy : Boolean = remoteService.status==ServiceStatus.UP
+  def isHealthy : Boolean = remoteService.status == ServiceStatus.UP
 
 }

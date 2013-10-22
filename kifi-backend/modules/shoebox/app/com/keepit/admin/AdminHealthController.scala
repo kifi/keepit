@@ -72,4 +72,9 @@ class AdminHealthController @Inject() (
         Ok(s"handbrake error sent for $e")
     }
   }
+
+  def reportDeployment() = Action { implicit request =>
+    airbrake.reportDeployment()
+    Ok("deployment reported to airbrake")
+  }
 }

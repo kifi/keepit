@@ -271,6 +271,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new JsArrayMapperDelegate(profile)
   }
 
+  implicit object JsObjectTypeMapper extends BaseTypeMapper[JsObject] {
+    def apply(profile: BasicProfile) = new JsObjectMapperDelegate(profile)
+  }
+
   implicit object JsValueTypeMapper extends BaseTypeMapper[JsValue] {
     def apply(profile: BasicProfile) = new JsValueMapperDelegate(profile)
   }
@@ -415,6 +419,15 @@ class JsArrayMapperDelegate[T](profile: BasicProfile) extends StringMapperDelega
   def zero = JsArray()
   def sourceToDest(value: JsArray): String = Json.stringify(value)
   def safeDestToSource(str: String): JsArray = Json.parse(str).as[JsArray]
+}
+
+//************************************
+//       JsObject -> String
+//************************************
+class JsObjectMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[JsObject](profile) {
+  def zero = JsObject(Nil)
+  def sourceToDest(value: JsObject): String = Json.stringify(value)
+  def safeDestToSource(str: String): JsObject = Json.parse(str).as[JsObject]
 }
 
 //************************************

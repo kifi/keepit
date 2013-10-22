@@ -20,13 +20,6 @@
   <link rel="shortcut icon" type="image/png" href="assets/images/kifi-favi-50.png">
 </head>
 
-<h1 class="curtain-h1">kifi</h1>
-<div class="curtain-logo-l"></div>
-<div class="curtain-logo-r"></div>
-<h2 class="curtain-welcome">
-  <span class="curtain-welcome-l">Welcome to our</span>
-  <span class="curtain-welcome-r">private beta<span>
-</h2>
 <div class="curtain-l">
   <a class="curtain-action signup" data-form="signup-form" href="javascript:">
     <div class="curtain-a-title">Sign up</div>
@@ -39,11 +32,39 @@
     I have an account
   </a>
 </div>
+<div class="curtain-logo-l"></div>
+<div class="curtain-logo-r"></div>
+<h2 class="curtain-welcome">
+  <span class="curtain-welcome-l">Welcome to our</span>
+  <span class="curtain-welcome-r">private beta</span>
+</h2>
 <a class="curtain-back" href="javascript:">Back</a>
 
-<form class="signup-form">
-  <div class="kifi-logo"></div>
-  <h2>Sign Up</h2>
+<h1 class="main-logo">kifi</h1>
+<h2 class="page-title"></h2>
+
+<form class="signup-form" data-title="Sign Up" data-title2="Finalize Your Account" novalidate>
+  <div class="finalize">
+    <div class="finalize-email-addr"></div>
+    <div class="form-name">
+      <input class="form-first-name" type="text" name="first-name" placeholder="First name" required>
+      <input class="form-last-name" type="text" name="last-name" placeholder="Last name" required>
+    </div>
+    <div class="form-pic">
+      <div class="form-photo"><div class="form-photo-progress"></div></div>
+      <div class="form-photo-controls">
+        <a class="form-photo-a facebook" href="javascript:">Use Facebook photo</a>
+        <a class="form-photo-a linkedin" href="javascript:">Use LinkedIn photo</a>
+        <label class="form-photo-a upload">
+          Upload a photo
+          <input class="form-photo-file" type="file" name="photo">
+        </label>
+      </div>
+      <div class="form-photo-drop">Drop picture here</div>
+    </div>
+    <button class="form-submit form-submit-final">Done</button>
+  </div>
+
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>
@@ -58,19 +79,18 @@
     </div>
     <div class="form-r">
       <h3>Use your email address</h3>
-      <input class="form-email-addr" type="email" placeholder="Your email address">
-      <input class="form-password" type="password" placeholder="Choose a password">
+      <input class="form-email-addr" type="email" name="signup-email" placeholder="Your email address">
+      <input class="form-password" type="password" name="signup-password" placeholder="Your new password">
       <button class="form-submit">Sign up</button>
     </div>
   </div>
+
   <p class="form-terms">
     By signing up, you agree to Kifi’s <a target="_blank" href="">Terms of Service</a>.
   </p>
 </form>
 
-<form class="login-form">
-  <div class="kifi-logo"></div>
-  <h2>Log In</h2>
+<form class="login-form" data-title="Log In" novalidate>
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>
@@ -85,8 +105,8 @@
     </div>
     <div class="form-r">
       <h3>Use your email address</h3>
-      <input class="form-email-addr" type="email" placeholder="Your email address">
-      <input class="form-password" type="password" placeholder="Choose a password">
+      <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address" required>
+      <input class="form-password" type="password" name="login-password" placeholder="Your password" required>
       <button class="form-submit">Log in</button>
     </div>
   </div>
@@ -94,7 +114,7 @@
 
 <footer>
   <a target="_blank" class="us-on linkedin" href="https://www.facebook.com/pages/FortyTwo-Inc/296283190485254"></a>
-  <a target="_blank" class="us-on facebook" href="http://www.linkedin.com/company/2759913"></a>
+  <a target="_blank" class="us-on facebook" href="https://www.linkedin.com/company/2759913"></a>
   <a target="_blank" class="us-on twitter" href="https://twitter.com/42eng"></a>
   <div class="copyright">&copy; FortyTwo Inc 2013</div>
   <a class="contact-us" href="mailto:towel@42go.com">Contact us</a>
@@ -102,4 +122,5 @@
 
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 <script>this.$||document.write('<script src=assets/js/jquery.min.js><\/script>')</script>
+<script src="assets/js/jquery-ui-position.min.js"></script>
 <script src="assets/js/curtain.js"></script>

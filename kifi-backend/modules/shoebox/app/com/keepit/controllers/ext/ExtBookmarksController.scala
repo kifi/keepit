@@ -10,13 +10,16 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.time._
 import com.keepit.controllers.core.BookmarkInterner
-import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
+import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.shoebox.BrowsingHistoryTracker
 
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
+import scala.Some
+import play.api.libs.json.JsNumber
+import com.keepit.model.KeepToCollection
 
 private case class SendableBookmark(
   id: ExternalId[Bookmark],
@@ -47,7 +50,8 @@ class ExtBookmarksController @Inject() (
   searchClient: SearchServiceClient,
   browsingHistoryTracker: BrowsingHistoryTracker,
   healthcheck: HealthcheckPlugin,
-  heimdal: HeimdalServiceClient)
+  heimdal: HeimdalServiceClient,
+  userEventContextBuilder: UserEventContextBuilderFactory)
     extends BrowserExtensionController(actionAuthenticator) {
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
@@ -185,15 +189,9 @@ class ExtBookmarksController @Inject() (
 
           //Analytics
           SafeFuture{ bookmarks.foreach { bookmark =>
-            val contextBuilder = new UserEventContextBuilder()
+            val contextBuilder = userEventContextBuilder(Some(request))
 
             contextBuilder += ("isPrivate", bookmark.isPrivate)
-            request.experiments.foreach{ experiment =>
-              contextBuilder += ("experiment", experiment.toString)
-            }
-            contextBuilder += ("remoteAddress", request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-            contextBuilder += ("userAgent",request.headers.get("User-Agent").getOrElse(""))
-            contextBuilder += ("requestScheme", request.headers.get("X-Scheme").getOrElse(""))
             contextBuilder += ("url", bookmark.url)
             contextBuilder += ("source", bookmarkSource.getOrElse("UNKNOWN"))
             contextBuilder += ("hasTitle", bookmark.title.isDefined)

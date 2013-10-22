@@ -3,7 +3,7 @@ package com.keepit.common.social
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
-import com.keepit.common.net.{FakeClientResponse, FakeHttpClientModule}
+import com.keepit.common.net.{FakeClientResponse, FakeHttpClientModule, HttpUri}
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.SocialUserInfoRepo
 import com.keepit.model.User
@@ -26,9 +26,9 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
     url.startsWith(s"https://api.linkedin.com/v1/people/rFOBMp35vZ:$ProfileFieldSelector?format=json")
   }
 
-  private val fakeLinkedInResponse: PartialFunction[String, FakeClientResponse] = {
-    case url if urlIsConnections(url) => connectionsJson
-    case url if urlIsProfile(url) => profileJson
+  private val fakeLinkedInResponse: PartialFunction[HttpUri, FakeClientResponse] = {
+    case url if urlIsConnections(url.url) => connectionsJson
+    case url if urlIsProfile(url.url) => profileJson
   }
 
   "LinkedInSocialGraph" should {

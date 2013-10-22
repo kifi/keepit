@@ -41,22 +41,20 @@ object Healthcheck {
     val offset = if (currentDateTime.getDayOfWeek == 1 && currentDateTime.getHourOfDay < 9) -1 else 0
     val weekNumber = currentDateTime.getWeekOfWeekyear + offset
     val selflessEngineers = Map(
-      33 -> STEPHEN,
-      34 -> ANDREW, // 2013/08/19
-      35 -> LÉO, // was Greg
-      36 -> GREG, // was Léo
-      37 -> EISHAY,
-      38 -> STEPHEN,
-      39 -> ANDREW,
-      40 -> GREG,
       41 -> LÉO,
       42 -> EISHAY,
-      43 -> STEPHEN,
-      44 -> ANDREW,
-      45 -> GREG,
-      46 -> LÉO,
-      47 -> EISHAY,
-      48 -> STEPHEN
+      43 -> RAY,
+      44 -> STEPHEN,
+      45 -> ANDREW,
+      47 -> LÉO,
+      48 -> EISHAY,
+      49 -> RAY,
+      50 -> STEPHEN,
+      51 -> ANDREW,
+      52 -> LÉO,
+      1  -> EISHAY,
+      2  -> RAY,
+      3  -> STEPHEN
     )
     selflessEngineers.getOrElse(weekNumber, ANDREW) // punishment if I don't keep this updated
   }

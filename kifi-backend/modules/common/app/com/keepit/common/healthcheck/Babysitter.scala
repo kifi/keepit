@@ -31,7 +31,7 @@ class BabysitterImpl @Inject() (
     val pointer = new AtomicReference[ExternalId[AirbrakeError]]()
     val babysitter = scheduler.scheduleOnce(timeout.errorTimeout) {
       log.error(e.getStackTrace() mkString "\n  ")
-      val error = airbrake.notify(AirbrakeError(e, Some(e.getMessage())))
+      val error = airbrake.notify(AirbrakeError(e))
       pointer.set(error.id)
     }
     val result = try {

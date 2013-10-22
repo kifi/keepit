@@ -2,6 +2,8 @@
 #INTERNAL ROUTES/ABook
 ##########################################
 
+GET     /internal/abook/:userId/importContacts                 @com.keepit.abook.ABookController.importContacts(userId:Id[User], provider:String, accessToken:String)
+
 POST     /internal/abook/:origin/upload                         @com.keepit.abook.ABookController.upload(origin:ABookOriginType)
 
 POST     /internal/abook/:userId/:origin/upload                 @com.keepit.abook.ABookController.uploadJson(userId:Id[User], origin:ABookOriginType)

@@ -1,10 +1,23 @@
 package com.keepit.serializer
 
 import play.api.libs.json._
+import java.io.ByteArrayOutputStream
 
 trait BinaryFormat[T] {
-  def writes(value: T): Array[Byte]
-  def reads(obj: Array[Byte]): T
+  def writes(value: Option[T]): Array[Byte] = {
+    value match{
+      case Some(obj) => writes(obj)
+      case None => Array[Byte](0)
+    }
+  }
+  def reads(bytes: Array[Byte]): Option[T] = {
+    if (bytes(0)==1.toByte) Some(reads(bytes, 1, bytes.length - 1))
+    else if (bytes(0)==0.toByte) None
+    else Some(reads(bytes, 0, bytes.length))
+  }
+
+  protected def writes(value: T): Array[Byte]
+  protected def reads(obj: Array[Byte], offset: Int, length: Int): T
 }
 
 object BinaryFormat {
@@ -33,7 +46,7 @@ object Serializer {
         "data" -> Json.toJson[T](obj)(formatter),
         "has_data" -> JsBoolean(true)
       )
-      case None => Json.obj("has_data" -> JsBoolean(false)) 
+      case None => Json.obj("has_data" -> JsBoolean(false))
     })
     def reads(obj: Any) = {
       val rawJs = Json.parse(obj.asInstanceOf[String])
@@ -51,7 +64,7 @@ object Serializer {
       case Some(obj) => (true, obj)
       case None => (false, null)
     }
-    def reads(obj: Any) = 
+    def reads(obj: Any) =
       try {
         obj.asInstanceOf[(Boolean, P)] match {
           case (true, x) => Some(x)
@@ -64,15 +77,10 @@ object Serializer {
   }
 
   def apply[T](binaryFormatter: BinaryFormat[T]): Serializer[T] = new Serializer[T] {
-    def writes(value: Option[T]) = value match{
-      case Some(obj) => 1.toByte +: binaryFormatter.writes(obj)
-      case None => Array[Byte](0)
-    }
+    def writes(value: Option[T]) = binaryFormatter.writes(value)
     def reads(obj: Any) = {
       val rawData = obj.asInstanceOf[Array[Byte]]
-      if (rawData(0)==1.toByte) Some(binaryFormatter.reads(rawData.tail))
-      else if (rawData(0)==0.toByte) None
-      else Some(binaryFormatter.reads(rawData))
+      binaryFormatter.reads(rawData)
     }
   }
 
@@ -85,7 +93,7 @@ object Serializer {
       val rawString =  obj.asInstanceOf[String]
       if (rawString.length==0) Some(rawString)
       else {
-        if (rawString(0)=='$') Some(rawString.tail) 
+        if (rawString(0)=='$') Some(rawString.tail)
         else if (rawString(0)=='#') None
         else Some(rawString)
       }

@@ -17,7 +17,7 @@ class SearchConfigTest extends Specification with TestInjector {
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager =
           new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
-        val Seq(andrew, greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Connor"), User(firstName = "Greg", lastName = "Metvin"))
+        val Seq(andrew, greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner"), User(firstName = "Greg", lastName = "Metvin"))
 
         val (c1, _) = searchConfigManager.getConfig(andrew.id.get, "fortytwo")
         val (c2, _) = searchConfigManager.getConfig(greg.id.get, "fortytwo")
@@ -30,7 +30,7 @@ class SearchConfigTest extends Specification with TestInjector {
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
-        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Connor"))
+        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner"))
 
         val v1 = await(fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(
           config = SearchConfig(
@@ -47,6 +47,7 @@ class SearchConfigTest extends Specification with TestInjector {
           ), weight = 0.5, state = SearchConfigExperimentStates.ACTIVE
         )))
 
+        searchConfigManager.syncActiveExperiments
         val (c1, e1) = searchConfigManager.getConfig(andrew.id.get, "andrew conner")
         val (c2, e2) = searchConfigManager.getConfig(andrew.id.get, "Andrew  Conner")
         c1 === c2
@@ -65,7 +66,7 @@ class SearchConfigTest extends Specification with TestInjector {
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
-        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Connor"))
+        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner"))
 
         fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(
           config = SearchConfig(
@@ -82,6 +83,7 @@ class SearchConfigTest extends Specification with TestInjector {
         ), weight = 1000, state = SearchConfigExperimentStates.ACTIVE
         ))
 
+        searchConfigManager.syncActiveExperiments
         val (c1, _) = searchConfigManager.getConfig(andrew.id.get, "andrew conner")
         val (c2, _) = searchConfigManager.getConfig(andrew.id.get, "software engineer")
         val (c3, _) = searchConfigManager.getConfig(andrew.id.get, "fortytwo inc")
@@ -105,12 +107,14 @@ class SearchConfigTest extends Specification with TestInjector {
         ), weight = 1, state = SearchConfigExperimentStates.ACTIVE
         )))
 
+        searchConfigManager.syncActiveExperiments
         val (c1, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
         c1.asInt("percentMatch") === 700
         c1.asDouble("phraseBoost") === 500.0
 
         fakeShoeboxServiceClient.saveExperiment(ex.withState(SearchConfigExperimentStates.INACTIVE))
 
+        searchConfigManager.syncActiveExperiments
         val (c2, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
         c2.asInt("percentMatch") !== 700
         c2.asDouble("phraseBoost") !== 500.0
@@ -129,6 +133,7 @@ class SearchConfigTest extends Specification with TestInjector {
         ), weight = 1, state = SearchConfigExperimentStates.ACTIVE
         ))
 
+        searchConfigManager.syncActiveExperiments
         val (c1, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
         c1.asInt("percentMatch") === 9000
         c1.asDouble("phraseBoost") === 10000.0

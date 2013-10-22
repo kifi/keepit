@@ -1,16 +1,17 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstance, ServiceCluster}
+import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstance, ServiceCluster, ServiceInstanceId}
 import com.keepit.common.service.{ServiceType, ServiceStatus, ServiceVersion}
 import com.keepit.common.amazon.{AmazonInstanceInfo}
 import com.keepit.common.routes.Common
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{HttpClient, DirectUrl}
 import com.google.inject.Inject
 import views.html
 import java.net.InetAddress
 
-case class ClusterMemberInfo(serviceType: ServiceType, zkid: Long, isLeader: Boolean, instanceInfo: AmazonInstanceInfo, localHostName:String, state: ServiceStatus, capabilities: List[String], version: ServiceVersion, name: String)
+case class ClusterMemberInfo(serviceType: ServiceType, zkid: ServiceInstanceId, isLeader: Boolean, instanceInfo: AmazonInstanceInfo,
+        localHostName:String, state: ServiceStatus, capabilities: List[String], version: ServiceVersion, name: String)
 
 class AdminClusterController @Inject() (
     actionAuthenticator: ActionAuthenticator,
@@ -33,14 +34,14 @@ class AdminClusterController @Inject() (
     )
 
     def clustersView = AdminHtmlAction { implicit request =>
-        
+
         var clustersInfo : Seq[ClusterMemberInfo] = serviceTypes.flatMap{ serviceType =>
             val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
             serviceCluster.allMembers.map { serviceInstance =>
                 var isLeader = serviceCluster.leader.map(_==serviceInstance).getOrElse(false)
                 var testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email")
                 val versionResp : String = try {
-                    httpClient.get("http://" + serviceInstance.instanceInfo.localHostname + ":9000" + Common.internal.version().url, httpClient.ignoreFailure).body
+                    httpClient.get(DirectUrl("http://" + serviceInstance.instanceInfo.localHostname + ":9000" + Common.internal.version().url), httpClient.ignoreFailure).body
                 } catch {
                     case _ => "NA"
                 }

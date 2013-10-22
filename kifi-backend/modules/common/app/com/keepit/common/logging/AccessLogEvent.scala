@@ -4,9 +4,9 @@ import play.api.Logger
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.healthcheck._
 import com.keepit.common.time._
-import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.service.{FortyTwoServices, ServiceType}
 import com.keepit.common.time.Clock
-import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstanceId}
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -49,8 +49,9 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
           error: String = null,
           remoteHost: String = null,
           targetHost: String = null,
-          remoteService: String = null,
-          remoteServiceId: Int = NoIntValue,
+          remoteService: ServiceType = null,
+          remoteLeader: String = null,
+          remoteServiceId: ServiceInstanceId = null,
           query: String = null,
           trackingId: String = null,
           method: String = null,
@@ -69,8 +70,9 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       error = Option(error),
       remoteHost = Option(remoteHost),
       targetHost = Option(targetHost),
+      remoteLeader = Option(remoteLeader),
       remoteService = Option(remoteService),
-      remoteServiceId = intOption(remoteServiceId),
+      remoteServiceId = Option(remoteServiceId),
       query = Option(query),
       trackingId = Option(trackingId),
       method = Option(method),
@@ -91,8 +93,9 @@ case class AccessLogEvent(
   error: Option[String],
   remoteHost: Option[String],
   targetHost: Option[String],
-  remoteService: Option[String],
-  remoteServiceId: Option[Int],
+  remoteService: Option[ServiceType],
+  remoteLeader: Option[String],
+  remoteServiceId: Option[ServiceInstanceId],
   query: Option[String],
   trackingId: Option[String],
   method: Option[String],
@@ -137,6 +140,7 @@ class AccessLog @Inject() (clock: Clock) {
       e.targetHost.map("targetHost:" + _) ::
       e.remoteService.map("remoteService:" + _) ::
       e.remoteServiceId.map("remoteServiceId:" + _) ::
+      e.remoteLeader.map("remoteLeader:" + _) ::
       e.query.map("query:" + _) ::
       e.url.map("url:" + _) ::
       e.body.map("body:" + _) ::

@@ -31,14 +31,8 @@ case class ProdAnalyticsModule() extends AnalyticsModule {
     db: Database,
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
-    persistEventProvider: Provider[EventPersister],
-    store: MongoEventStore,
-    searchClient: SearchServiceClient,
-    clock: Clock,
-    fortyTwoServices: FortyTwoServices
-  ): SearchUnloadListener = {
-    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store,
-      searchClient, clock, fortyTwoServices)
+    searchClient: SearchServiceClient): SearchUnloadListener = {
+    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, searchClient)
   }
 }
 
@@ -60,15 +54,10 @@ case class DevAnalyticsModule() extends AnalyticsModule {
     db: Database,
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
-    persistEventProvider: Provider[EventPersister],
-    store: MongoEventStore,
-    searchClient: SearchServiceClient,
-    clock: Clock,
-    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
+    searchClient: SearchServiceClient): SearchUnloadListener = {
     current.configuration.getBoolean("event-listener.searchUnload").getOrElse(false) match {
-      case true =>  new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
+      case true =>  new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, searchClient)
       case false => new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo)
     }
   }
 }
-

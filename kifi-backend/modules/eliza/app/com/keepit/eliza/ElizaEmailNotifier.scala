@@ -59,9 +59,9 @@ class ElizaEmailNotifierActor @Inject() (
         val otherParticipants = (participantSet - userThread.user).map(id2BasicUser(_))
 
         val unseenMessages =  db.readOnly { implicit session => userThread.lastSeen.map{ lastSeen =>
-          messageRepo.getAfter(thread.id.get, lastSeen)
+          messageRepo.getAfter(thread.id.get, lastSeen).filter(_.from.isDefined)
         } getOrElse {
-          messageRepo.get(thread.id.get, 0, None)
+          messageRepo.get(thread.id.get, 0, None).filter(_.from.isDefined)
         }}.map{ message =>
           val user = id2BasicUser(message.from.get)
           (user.firstName + " " + user.lastName, user.externalId.id, MessageLookHereRemover(message.messageText))

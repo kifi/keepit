@@ -41,14 +41,15 @@ class ServiceDiscoveryImpl @Inject() (
     services: FortyTwoServices,
     amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
     scheduler: Scheduler,
-    servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: Nil)
+    servicesToListenOn: Seq[ServiceType] =
+        ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: Nil)
   extends ServiceDiscovery with Logging {
 
   private var myInstance: Option[ServiceInstance] = None
   private var selfCheckIsRunning: Boolean = false
   private var selfCheckFutureOpt: Option[Future[Boolean]] = None
 
-  def thisInstance = myInstance
+  def thisInstance: Option[ServiceInstance] = myInstance
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
@@ -60,12 +61,12 @@ class ServiceDiscoveryImpl @Inject() (
     clustersToInit
   }
 
+  private val myCluster = clusters(services.currentService)
+
   def serviceCluster(serviceType: ServiceType): ServiceCluster = clusters(serviceType)
 
   def isLeader: Boolean = {
-    val myCluster = clusters(services.currentService)
-    val registered = stillRegistered()
-    if (!registered) {
+    if (!stillRegistered()) {
       log.warn(s"service did not register itself yet!")
       return false
     }
@@ -75,7 +76,7 @@ class ServiceDiscoveryImpl @Inject() (
         return true
       case Some(instance)  =>
         require(myCluster.size > 1)
-        log.info(s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance")
+        log.debug(s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance")
         return false
       case None =>
         require(myCluster.size == 0)
@@ -87,10 +88,10 @@ class ServiceDiscoveryImpl @Inject() (
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
-  override def myClusterSize: Int = clusters.get(services.currentService) map {c => c.size} getOrElse 0
+  override def myClusterSize: Int = myCluster.size
 
   private def stillRegistered(): Boolean = myInstance forall {instance =>
-    clusters(services.currentService).instanceForNode(instance.node).isDefined
+    myCluster.instanceForNode(instance.node).isDefined
   }
 
   private def keepAlive() : Unit = {
@@ -126,7 +127,6 @@ class ServiceDiscoveryImpl @Inject() (
   def register(doKeepAlive: Boolean = true): ServiceInstance = {
     val myServiceType: ServiceType = services.currentService
     log.info(s"registered clusters: $clusters, my service is $myServiceType")
-    val myCluster = clusters(myServiceType)
     val instanceInfo = amazonInstanceInfoProvider.get
     val thisRemoteService = RemoteService(instanceInfo, ServiceStatus.STARTING, myServiceType)
     val myNode = zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
@@ -159,10 +159,10 @@ class ServiceDiscoveryImpl @Inject() (
       val selfCheckFuture = services.currentService.selfCheck()
       selfCheckFuture.onComplete{
           case Success(passed) =>
-            val result = if (passed) { 
+            val result = if (passed) {
               changeStatus(ServiceStatus.UP)
-              selfCheckPromise.success(true) 
-            } else { 
+              selfCheckPromise.success(true)
+            } else {
               changeStatus(ServiceStatus.SELFCHECK_FAIL)
               selfCheckPromise.success(false)
             }
@@ -173,9 +173,8 @@ class ServiceDiscoveryImpl @Inject() (
             selfCheckPromise.success(false)
         }
       selfCheckFutureOpt = Some(selfCheckPromise.future)
-    } 
+    }
     selfCheckFutureOpt.get //this option must be defined when we are in this case
-    
   }
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]

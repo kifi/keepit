@@ -1,4 +1,6 @@
 
+GET     /curtain                    @com.keepit.controllers.website.HomeController.curtainHome()
+
 GET     /login                      securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
@@ -12,21 +14,36 @@ GET     /signup                     @com.keepit.controllers.core.AuthController.
 POST    /signup                     @com.keepit.controllers.core.AuthController.handleSignup()
 POST    /signupWithPassword         @com.keepit.controllers.core.AuthController.handleUsernamePasswordSignup()
 
+POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
+
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
 POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
+
 # custom auth routes which set some session state
-GET     /login/:provider            @com.keepit.controllers.core.AuthController.login(provider)
-POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider)
+
+# Standalone login page
+GET     /login/:provider            @com.keepit.controllers.core.AuthController.login(provider, format: String ?= "html")
+POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider, format: String ?= "html")
+POST    /login                      @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
+POST    /auth/log-in                @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
+
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
 POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
+
+# Initial signup using provider pages
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
 POST    /signup/:provider           @com.keepit.controllers.core.AuthController.signupByPost(provider)
+
 POST    /loginAndLink/:provider     @com.keepit.controllers.core.AuthController.passwordLoginAndLink(provider)
+
 POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
+
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
+
 GET     /resetPassword              @com.keepit.controllers.core.AuthController.resetPasswordPage()
 POST    /resetPassword              @com.keepit.controllers.core.AuthController.resetPassword()
+
 GET     /setPassword/:code          @com.keepit.controllers.core.AuthController.setNewPasswordPage(code: String)
 POST    /setPassword/:code          @com.keepit.controllers.core.AuthController.setNewPassword(code: String)
 
@@ -171,6 +188,8 @@ GET     /admin/events/activityData  @com.keepit.controllers.admin.AdminEventCont
 
 GET     /admin/realtime/event       @com.keepit.controllers.admin.AdminEventController.eventViewer
 GET     /admin/realtime/event/stream      @com.keepit.controllers.admin.AdminEventController.eventStream
+
+GET     /admin/analytics            @com.keepit.controllers.admin.AdminAnalyticsController.index()
 
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])
@@ -323,10 +342,11 @@ GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClust
 GET     /admin/server               @com.keepit.controllers.admin.AdminHealthController.serviceView()
 GET     /admin/benchmark            @com.keepit.controllers.admin.AdminBenchmarkController.benchmarks()
 GET     /admin/healthcheck/error    @com.keepit.controllers.admin.AdminHealthController.causeError()
-GET     /admin/healthcheck/causeHandbrakeError    @com.keepit.controllers.admin.AdminHealthController.causeHandbrakeError(param: String)
-GET     /admin/healthcheck/emailErrors    @com.keepit.controllers.admin.AdminHealthController.reportErrors()
-GET     /admin/healthcheck/errors   @com.keepit.controllers.admin.AdminHealthController.getErrors()
-GET     /admin/healthcheck/resetErrorCount    @com.keepit.controllers.admin.AdminHealthController.resetErrorCount()
+GET     /admin/healthcheck/reportDeployment    @com.keepit.controllers.admin.AdminHealthController.reportDeployment()
+GET     /admin/healthcheck/causeHandbrakeError @com.keepit.controllers.admin.AdminHealthController.causeHandbrakeError(param: String)
+GET     /admin/healthcheck/emailErrors         @com.keepit.controllers.admin.AdminHealthController.reportErrors()
+GET     /admin/healthcheck/errors              @com.keepit.controllers.admin.AdminHealthController.getErrors()
+GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.AdminHealthController.resetErrorCount()
 
 ##########################################
 #INTERNAL ROUTES/Shoebox
@@ -336,16 +356,16 @@ GET     /internal/version                             @com.keepit.controllers.we
 
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
-POST    /internal/shoebox/database/getNormalizedURIByURL       @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIByURL()
-POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize       @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedUriByUrlOrPrenormalize()
-POST    /internal/shoebox/database/internNormalizedURI       @com.keepit.controllers.shoebox.ShoeboxController.internNormalizedURI()
-GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
-GET     /internal/shoebox/database/userIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
-GET     /internal/shoebox/database/getBasicUsers      @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers(ids: String)
-GET     /internal/shoebox/database/collectionIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
-GET     /internal/shoebox/database/getUserOpt         @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
-GET     /internal/shoebox/database/getUserExperiments           @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])
-GET     /internal/shoebox/database/getNormalizedUriUpdates    @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedUriUpdates(lowSeq: Long, highSeq: Long)
+POST    /internal/shoebox/database/getNormalizedURIByURL               @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIByURL()
+POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedUriByUrlOrPrenormalize()
+POST    /internal/shoebox/database/internNormalizedURI                 @com.keepit.controllers.shoebox.ShoeboxController.internNormalizedURI()
+GET     /internal/shoebox/database/getUsers                            @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
+GET     /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
+GET     /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers(ids: String)
+GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
+GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
+GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])
+GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedUriUpdates(lowSeq: Long, highSeq: Long)
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])
 GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getBrowsingHistoryFilter(userId: Id[User])

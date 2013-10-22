@@ -69,6 +69,10 @@ class HomeController @Inject() (db: Database,
       Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
   })
 
+  def curtainHome = Action {
+    Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/curtain.html").get)) as HTML
+  }
+
   def kifiSiteRedirect(path: String) = Action {
     MovedPermanently(s"/$path")
   }

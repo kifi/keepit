@@ -102,7 +102,7 @@ class AdminUserController @Inject() (
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
-    val cInfoF = abookClient.getContactInfos(userId, Int.MaxValue)
+    val cInfoF = abookClient.getContactInfos(userId, 40000000)
     val (user, socialUserInfos, sentElectronicMails) = db.readOnly { implicit s =>
       val user = userRepo.get(userId)
       val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
