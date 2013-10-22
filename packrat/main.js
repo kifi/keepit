@@ -812,25 +812,33 @@ api.port.on({
     });
   },
   create_and_add_tag: function(name, respond, tab) {
-    makeRequest("create_and_add_tag", "POST", "/tags/add", {
+    makeRequest('create_and_add_tag', 'POST', '/tags/add', {
       name: name,
       url: tab.url
     }, [onAddTagResponse.bind(tab), respond]);
   },
   add_tag: function(tagId, respond, tab) {
-    makeRequest("add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
+    makeRequest('add_tag', 'POST', '/tags/' + tagId + '/addToKeep', {
       url: tab.url
     }, [onAddTagResponse.bind(tab), respond]);
   },
   remove_tag: function(tagId, respond, tab) {
-    makeRequest("remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
+    makeRequest('remove_tag', 'POST', '/tags/' + tagId + '/removeFromKeep', {
       url: tab.url
     }, [onRemoveTagResponse.bind(tab, tagId), respond]);
   },
   clear_tags: function(tagId, respond, tab) {
-    makeRequest("clear_tags", "POST", "/tags/clear", {
+    makeRequest('clear_tags', 'POST', '/tags/clear', {
       url: tab.url
     }, [onClearTagsResponse.bind(tab), respond]);
+  },
+  add_participants: function(data, respond, tab) {
+    var threadId = data.threadId,
+      userIds = data.userIds;
+    log('add_participants_to_thread', threadId, userIds)();
+    log('add_participants_to_thread', threadId, userIds)();
+    log('add_participants_to_thread', threadId, userIds)();
+    socket.send(['add_participants_to_thread', threadId, userIds]);
   },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information

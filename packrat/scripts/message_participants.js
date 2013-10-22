@@ -103,13 +103,17 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			});
 		},
 
+		getThreadId: function () {
+			return this.parent.getThreadId();
+		},
+
 		/**
 		 * Request a list of all of participants.
 		 *
 		 * @return {Object} A deferred promise object
 		 */
 		requestParticipants: function () {
-			var id = this.parent.getThreadId();
+			var id = this.getThreadId();
 			if (id) {
 				return kifiUtil.request('participants', id, 'Could not load participants.');
 			}
@@ -505,6 +509,22 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			this.addParticipant.apply(this, users);
 			$input.tokenInput('clear');
 			this.toggleAddDialog();
+      this.sendAddParticipants(users);
+		},
+
+		sendAddParticipants: function (users) {
+      log('add_participants', {
+				threadId: this.getThreadId(),
+				userIds: util.pluck(users, 'id')
+			})();
+      log('add_participants', {
+				threadId: this.getThreadId(),
+				userIds: util.pluck(users, 'id')
+			})();
+			return kifiUtil.request('add_participants', {
+				threadId: this.getThreadId(),
+				userIds: util.pluck(users, 'id')
+			}, 'Could not add participants.');
 		},
 
 		showAddDialog: function () {

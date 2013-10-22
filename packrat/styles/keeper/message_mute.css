@@ -46,7 +46,7 @@
   line-height: 23px;
   padding: 8px;
   padding-left: 22px;
-  background: #f0c330;
+  background: #f6cd94;
   color: white;
   overflow: hidden;
 }
@@ -69,16 +69,16 @@
   padding: 4px 11px;
   line-height: 15px;
   color: white;
-  background: #cca628;
+  background: #f0ad4d;
   text-decoration: none;
   border-radius: 2px;
 }
 .kifi-message-header-unmute-button:hover,
 .kifi-message-header-unmute-button:focus {
   color: white;
-  background: #b79524;
+  background: #eea235;
 }
 .kifi-message-header-unmute-button:active {
   color: white;
-  background: #a18320;
+  background: #ec971e;
 }
