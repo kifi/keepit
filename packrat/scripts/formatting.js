@@ -90,9 +90,11 @@ function namesFormatter(users) {
     return '';
   case 1:
     return nameFormatter(users[0]);
+  case 2:
+    return nameFormatter(users[0]) + ' and ' + nameFormatter(users[1]);
   default:
     var lastIndex = users.length - 1;
-    return users.slice(0, lastIndex).map(nameFormatter).join(', ') + ' and ' + nameFormatter(users[lastIndex]);
+    return users.slice(0, lastIndex).map(nameFormatter).join(', ') + ', and ' + nameFormatter(users[lastIndex]);
   }
 }
 
