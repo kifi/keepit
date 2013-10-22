@@ -130,18 +130,31 @@ var util = this.util = (function () {
 				}
 			}
 
-			var removedList = [];
-			if (indices.length) {
-				indices.sort();
+			return util.removeIndices(arr, indices, true);
+		},
 
-				var removed;
-				for (i = indices.length - 1; i >= 0; i--) {
-					removed = arr.splice(indices[i], 1)[0];
-					removedList.push(removed);
+		removeIndices: function (arr, indices, sorted) {
+			var removedList = [];
+			if (indices && indices.length) {
+				if (!sorted) {
+					indices.sort();
+				}
+
+				for (var i = indices.length - 1; i >= 0; i--) {
+					removedList.push(arr.splice(indices[i], 1)[0]);
 				}
 			}
-
 			return removedList;
+		},
+
+		indicesOf: function (arr, fn, that) {
+			var indices = [];
+			for (var i = 0, len = arr.length; i < len; i++) {
+				if ((i in arr) && fn.call(that, arr[i], i, arr)) {
+					indices.push(i);
+				}
+			}
+			return indices;
 		},
 
 		/**

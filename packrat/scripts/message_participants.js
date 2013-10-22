@@ -540,18 +540,29 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			}
 		},
 
-		indexOfUser: (function () {
-			function hasSameId(u) {
-				return u.id === this.id;
-			}
+		indexOfUser: function (user) {
+			return this.indexOfUserId(user && user.id);
+		},
 
-			return function (user) {
-				util.keyOf(this.getParticipants(), hasSameId, user);
-			};
-		})(),
+		indexOfUserId: function (userId) {
+			return userId ? util.keyOf(this.getParticipants(), function (user) {
+				return user.id === userId;
+			}) : -1;
+		},
 
 		addParticipant: function () {
-			var count = util.prependUnique(this.getParticipants(), arguments);
+			var participants = this.getParticipants(),
+				count = 0;
+
+			for (var i = 0, len = arguments.length, user, userId; i < len; i++) {
+				user = arguments[i];
+				userId = user && user.id;
+				if (userId && this.indexOfUser(user) === -1) {
+					participants.unshift(user);
+					count++;
+				}
+			}
+
 			if (count) {
 				this.updateView();
 				this.highlightFirstNParticipants(count);
@@ -560,8 +571,21 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		removeParticipant: function () {
-			util.removeList(this.getParticipants(), arguments);
-			this.updateView();
+			var indices = [];
+			for (var i = 0, len = arguments.length, user, index; i < len; i++) {
+				user = arguments[i];
+				if (user) {
+					index = this.indexOfUser(user);
+					if (index !== -1) {
+						indices.push(index);
+					}
+				}
+			}
+
+			var removed = util.removeIndices(this.getParticipants(), indices);
+			if (removed.length) {
+				this.updateView();
+			}
 		},
 
 		highlightCount: function () {
