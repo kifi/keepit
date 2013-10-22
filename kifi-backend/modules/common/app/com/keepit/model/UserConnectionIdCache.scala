@@ -8,7 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.serializer.ArrayBinaryFormat
 
 case class UserConnectionIdKey(userId: Id[User]) extends Key[Array[Long]] {
-  override val version = 3
+  override val version = 4
   val namespace = "user_connections"
   def toKey(): String = userId.id.toString
 }

@@ -21,11 +21,29 @@ class UserPictureController @Inject() (
   imageStore: S3ImageStore)
   extends WebsiteController(actionAuthenticator) {
 
+  def getPic(size: String, id: ExternalId[User], picName: String) = Action { request =>
+    val trimmedName = if (picName.endsWith(".jpg")) picName.dropRight(4) else picName
+    db.readOnly { implicit s => userRepo.getOpt(id) } collect {
+      case user if Set(UserStates.ACTIVE, UserStates.PENDING, UserStates.INCOMPLETE_SIGNUP) contains user.state =>
+        Async {
+          val optSize = if (size == "original") None else Try(size.toInt).toOption
+          imageStore.getPictureUrl(optSize, user, trimmedName) map (Redirect(_))
+        }
+    } getOrElse {
+      NotFound("Cannot find user!")
+    }
+  }
+
   def get(size: Int, id: ExternalId[User]) = Action { request =>
     db.readOnly { implicit s => userRepo.getOpt(id) } collect {
-      case user if Set(UserStates.ACTIVE, UserStates.PENDING) contains user.state =>
+      case user if Set(UserStates.ACTIVE, UserStates.PENDING, UserStates.INCOMPLETE_SIGNUP) contains user.state =>
         Async {
-          imageStore.getPictureUrl(size, user) map (Redirect(_))
+          val optSize = Some(size)
+          user.pictureName.map { pictureName =>
+            imageStore.getPictureUrl(optSize, user, pictureName) map (Redirect(_))
+          } getOrElse {
+            imageStore.getPictureUrl(optSize, user, "0.jpg") map (Redirect(_))
+          }
         }
     } getOrElse {
       NotFound("Cannot find user!")
@@ -38,7 +56,7 @@ class UserPictureController @Inject() (
         user <- db.readOnly { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
       } yield {
         val socialUser = db.readOnly { implicit s => suiRepo.getByUser(user.id.get) }.head
-        imageStore.updatePicture(socialUser, user.externalId).map(_ => socialUser.socialId)
+        imageStore.uploadPictureFromSocialNetwork(socialUser, user.externalId).map(_ => socialUser.socialId)
       }).map { results =>
         Ok(results.mkString(","))
       }
