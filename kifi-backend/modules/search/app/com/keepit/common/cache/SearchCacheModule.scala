@@ -42,8 +42,8 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
 
   @Singleton
   @Provides
-  def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserInfoNetworkCache(stats, accessLog, (outerRepo, 30 days))
+  def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SocialUserInfoNetworkCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
