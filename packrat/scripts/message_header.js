@@ -21,9 +21,11 @@ var messageHeader = this.messageHeader = (function ($, win) {
 	'use strict';
 
 	// receive
+	/*
 	api.port.on({
 		friends: function (friends) {}
 	});
+  */
 
 	api.onEnd.push(function () {
 		messageHeader.destroy('api:onEnd');
@@ -135,6 +137,10 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		hideOptions: function () {
 			this.setStatus('option-expanded', false);
+		},
+
+		getThreadId: function () {
+			return win.slider2 && win.slider2.getThreadId() || null;
 		},
 
 		toggleOptions: function (e) {

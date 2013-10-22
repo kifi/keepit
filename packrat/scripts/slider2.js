@@ -841,7 +841,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     },
     getThreadId: function () {
       var locator = this.getLocator();
-      return locator && locator.split('/')[1];
+      return locator && locator.split('/')[2];
     },
     showKeepers: function (keepers, otherKeeps) {
       if (lastShownAt) return;
