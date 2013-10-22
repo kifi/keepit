@@ -85,7 +85,8 @@
       .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
       .css('visibility', '')
       .delay(opts && opts.ms || 1000).fadeOut(300, removeError);
-    $in.blur().focus().select().on('input blur', removeError);  // blur closes browser autocomplete suggestion list
+    $in.blur();  // closes browser autocomplete suggestion list
+    $in.focus().select().on('input blur', removeError);
     function removeError() {
       $err.remove();
       $in.off('input blur', removeError);

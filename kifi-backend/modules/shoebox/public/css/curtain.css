@@ -402,6 +402,9 @@ footer {
   margin: 0 16.5%;
   position: relative;
 }
+.signup-form.finalize-static {
+  display: block;
+}
 .form-sides {
   display: table;
   margin: 36px auto 60px;
@@ -414,7 +417,7 @@ footer {
   width: 50%;
   text-align: left;
   border: 0px solid #e5e5e5;
-  padding: 0 0 10px;
+  padding: 0 5% 10px;
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
@@ -435,8 +438,8 @@ footer {
 }
 .form-network {
   display: table;
-  width: 80%;
-  margin: 16px 10% 0;
+  width: 100%;
+  margin-top: 16px;
 }
 .form-network.facebook {
   background: #597ab1;
@@ -492,14 +495,11 @@ footer {
 .form-email-addr,
 .form-password {
   display: block;
-  width: 80%;
-  margin-left: 10%;
-  margin-right: 10%;
+  width: 100%;
 }
 .form-submit {
   display: block;
-  margin: 0 50% 0 10%;
-  width: 40%;
+  width: 50%;
   border: 0;
   padding: 0;
   background: #92c152;
@@ -532,9 +532,14 @@ footer {
 .finalize-email-addr {
   display: none;
 }
-.form-name {
+.form-creds,
+.form-name,
+.form-pic {
   margin: 0 auto;
   max-width: 320px;
+}
+.form-creds {
+  margin: 32px auto 16px;
 }
 .form-name:after {
   content: ' ';
@@ -554,7 +559,6 @@ footer {
 }
 .form-pic {
   margin: 32px auto;
-  max-width: 320px;
   text-align: left;
   position: relative;
 }
@@ -674,8 +678,8 @@ footer {
   border-color: #bbb;
 }
 .form-submit-final {
-  margin: 20px auto;
-  width: 25%;
+  margin: 20px auto 40px;
+  width: 200px;
   background: #84a2ec;
 }
 .form-submit-final:hover {
