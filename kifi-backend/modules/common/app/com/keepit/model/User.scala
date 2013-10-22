@@ -19,7 +19,9 @@ case class User(
   externalId: ExternalId[User] = ExternalId(),
   firstName: String,
   lastName: String,
-  state: State[User] = UserStates.ACTIVE
+  state: State[User] = UserStates.ACTIVE,
+  pictureName: Option[String] = None,
+  userPictureId: Option[Id[UserPicture]] = None
 ) extends ModelWithExternalId[User] {
   def withId(id: Id[User]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -29,6 +31,7 @@ case class User(
 }
 
 object User {
+  implicit val userPicIdFormat = Id.format[UserPicture]
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[User]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
@@ -36,12 +39,14 @@ object User {
     (__ \ 'externalId).format(ExternalId.format[User]) and
     (__ \ 'firstName).format[String] and
     (__ \ 'lastName).format[String] and
-    (__ \ 'state).format(State.format[User])
+    (__ \ 'state).format(State.format[User]) and
+    (__ \ 'pictureName).formatNullable[String] and
+    (__ \ 'userPictureId).formatNullable[Id[UserPicture]]
   )(User.apply, unlift(User.unapply))
 }
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
-  override val version = 3
+  override val version = 4
   val namespace = "user_by_external_id"
   def toKey(): String = externalId.id
 }
@@ -50,7 +55,7 @@ class UserExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[UserExternalIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class UserIdKey(id: Id[User]) extends Key[User] {
-  override val version = 3
+  override val version = 4
   val namespace = "user_by_id"
   def toKey(): String = id.id.toString
 }
@@ -59,7 +64,7 @@ class UserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginS
   extends JsonCacheImpl[UserIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
-  override val version = 3
+  override val version = 4
   val namespace = "user_id_by_external_id"
   def toKey(): String = id.id.toString
 }
