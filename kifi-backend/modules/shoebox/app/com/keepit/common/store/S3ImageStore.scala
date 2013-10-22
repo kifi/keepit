@@ -27,28 +27,27 @@ import scala.util.Success
 object S3UserPictureConfig {
   val ImageSizes = Seq(100, 200)
   val OriginalImageSize = "original"
+  val defaultImage = "http://s.c.lnkd.licdn.com/scds/common/u/images/themes/katy/ghosts/person/ghost_person_200x200_v1.png"
 }
 
 @ImplementedBy(classOf[S3ImageStoreImpl])
 trait S3ImageStore {
   def config: S3ImageConfig
 
-  val defaultImage = "http://s.c.lnkd.licdn.com/scds/common/u/images/themes/katy/ghosts/person/ghost_person_200x200_v1.png"
-
   def getPictureUrl(width: Int, user: User): Future[String]
-  def getPictureUrl(width: Option[Int], user: User, picVersion: String): Future[String]
+  def getPictureUrl(width: Option[Int], user: User, picName: String): Future[String]
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String): Future[Seq[(String, Try[PutObjectResult])]]
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[(String, Try[PutObjectResult])]]
 
 
-  def avatarUrlByExternalId(w: Option[Int], userId: ExternalId[User], picVersion: String, protocolDefault: Option[String] = None): String = {
+  def avatarUrlByExternalId(w: Option[Int], userId: ExternalId[User], picName: String, protocolDefault: Option[String] = None): String = {
     val size = S3UserPictureConfig.ImageSizes.find(size => w.exists(size >= _)).map(_.toString).getOrElse(S3UserPictureConfig.OriginalImageSize)
-    val uri = URI.parse(s"${config.cdnBase}/${keyByExternalId(size, userId, picVersion)}").get
+    val uri = URI.parse(s"${config.cdnBase}/${keyByExternalId(size, userId, picName)}").get
     URI(uri.scheme orElse protocolDefault, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString
   }
 
-  def keyByExternalId(size: String, userId: ExternalId[User], picVersion: String): String =
-    s"users/$userId/pics/$size/$picVersion.jpg"
+  def keyByExternalId(size: String, userId: ExternalId[User], picName: String): String =
+    s"users/$userId/pics/$size/$picName.jpg"
 }
 
 @Singleton
@@ -117,11 +116,11 @@ class S3ImageStoreImpl @Inject() (
   private def avatarUrlFromSocialNetwork(sui: SocialUserInfo, size: String): String = {
     val numericSize = (if (size == "original") None else Try(size.toInt).toOption) getOrElse 1000
     sui.getPictureUrl(numericSize, numericSize).getOrElse(
-      defaultImage)
+      S3UserPictureConfig.defaultImage)
   }
 
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[(String, Try[PutObjectResult])]] =
-    uploadPictureFromSocialNetwork(sui, externalId, userPictureRepo.generateNewFilename)
+    uploadPictureFromSocialNetwork(sui, externalId, UserPicture.generateNewFilename)
 
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String): Future[Seq[(String, Try[PutObjectResult])]] = {
     if (config.isLocal) {

@@ -73,7 +73,7 @@ POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportCo
 
 # This should match the output format of S3ImageConfig#keyByExternalId
 GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
-GET     /users/:id/pics/:size/:picVersion @com.keepit.controllers.assets.UserPictureController.getPic(size: String, id: ExternalId[User], picVersion: String)
+GET     /users/:id/pics/:size/:name @com.keepit.controllers.assets.UserPictureController.getPic(size: String, id: ExternalId[User], name: String)
 
 POST    /users/pics/update      @com.keepit.controllers.assets.UserPictureController.update()
 

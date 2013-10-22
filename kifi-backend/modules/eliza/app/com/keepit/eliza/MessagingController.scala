@@ -673,7 +673,7 @@ class MessagingController @Inject() (
                 val addedUsersString = addedBasicUsers.map(s => s"${s.firstName} ${s.lastName}") match {
                   case first :: Nil => first
                   case first :: second :: Nil => first + " and " + second
-                  case many => many.take(many.length - 1).mkString(",") + ", and " + many.last
+                  case many => many.take(many.length - 1).mkString(", ") + ", and " + many.last
                 }
 
                 val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString to the conversation."
