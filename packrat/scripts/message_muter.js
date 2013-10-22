@@ -70,6 +70,9 @@ var messageMuter = this.messageMuter = (function ($, win) {
 
 			this.initEvents();
 
+			this.requestIsMuted()
+				.then(this.updateMuted.bind(this));
+
 			this.logEvent('init', {
 				trigger: trigger
 			});
@@ -145,6 +148,10 @@ var messageMuter = this.messageMuter = (function ($, win) {
 
 		getThreadId: function () {
 			return this.parent.getThreadId();
+		},
+
+		requestIsMuted: function () {
+			return kifiUtil.request('is_muted', this.getThreadId(), 'Could get is_muted');
 		},
 
 		sendMuted: function (muted) {

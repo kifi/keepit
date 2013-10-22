@@ -876,6 +876,14 @@ api.port.on({
       userIds = data.userIds;
     socket.send(['add_participants_to_thread', threadId, userIds]);
   },
+  is_muted: function(threadId, respond, tab) {
+    var td = pageThreadData[tab.nUri],
+      th = td && td.getThread(threadId);
+    respond({
+      success: Boolean(th),
+      response: Boolean(th && th.muted)
+    });
+  },
   mute_thread: function(threadId, respond, tab) {
     socket.send(['mute_thread', threadId]);
   },
