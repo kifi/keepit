@@ -35,7 +35,16 @@ class MetricManager @Inject() (
     "none" -> NoContextRestriction,
     "noadmins" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("admin"))),
     "withkifiresults" -> AnyContextRestriction("context.kifiResults", GreaterThan(ContextDoubleData(0))),
-    "kifiresultclicked" -> AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi")))
+    "kifiresultclicked" -> AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi"))),
+    "nofakes" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))), //Is this correct?
+    "publickeepsonly_nofakes" -> AndContextRestriction(
+      AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))),
+      AnyContextRestriction("context.isPrivate", EqualTo(ContextDoubleData(0)))
+    ),
+    "privatekeepsonly_nofakes" -> AndContextRestriction(
+      AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))),
+      AnyContextRestriction("context.isPrivate", EqualTo(ContextDoubleData(1)))
+    )
   )
 
   def computeAdHocMteric(startTime: DateTime, endTime: DateTime, definition: MetricDefinition): Future[JsArray]  = {

@@ -19,21 +19,41 @@ class AdminAnalyticsController @Inject() (
   )
   extends AdminController(actionAuthenticator) {
 
-    val mainMetricsToShow = Seq[String](
+    val userMetrics = Seq[String](
       "alive_weekly",
-      "keepers_weekly",
-      "public_private_keeps_weekly",
-      "weekly_total_messagers",
-      "weekly_total_message_starters"
+      "active_weekly"
+    )
+
+    val keepMetrics = Seq[String](
+      "keeps_weekly",
+      "private_keeps_weekly",
+      "public_keeps_weekly"
+    )
+
+    val messageMetrics = Seq[String](
+      "messagers_weekly",
+      "message_breakdown_weekly"
     )
 
   def index() = AdminHtmlAction { request =>
     heimdal.updateMetrics()
-    val dataFuture = Future.sequence(mainMetricsToShow.map{ metricName =>
+    val userMetricsFuture = Future.sequence(userMetrics.map{ metricName =>
       heimdal.getMetricData(metricName)
     })
+    val keepMetricsFuture = Future.sequence(keepMetrics.map{ metricName =>
+      heimdal.getMetricData(metricName)
+    })
+    val messageMetricsFuture = Future.sequence(messageMetrics.map{ metricName =>
+      heimdal.getMetricData(metricName)
+    })
+    val dataFuture = Future.sequence(Seq(userMetricsFuture, keepMetricsFuture, messageMetricsFuture))
     Async(dataFuture.map{ data =>
-      Ok(html.admin.analyticsDashboardView(Json.stringify(Json.toJson(data))))
+      val jsonData = data.map{ sectionData =>
+        Json.stringify(Json.toJson(sectionData))
+      } 
+      Ok(html.admin.analyticsDashboardView(    
+        jsonData(0), jsonData(1), jsonData(2)
+      ))
     })
   }
 
