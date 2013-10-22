@@ -157,8 +157,10 @@ class AuthController @Inject() (
     (EmailPassword.unapply)
   )
 
+  // Signup with name, email, password AND complete/finalize account
   def signupPage() = HtmlAction(true)(authenticatedAction = doSignupPage(_), unauthenticatedAction = doSignupPage(_))
 
+  // Action for above (signup with name, email, password) AND confirm
   def handleSignup() = HtmlAction(true)(authenticatedAction = doSignup(_), unauthenticatedAction = doSignup(_))
 
   // Initial user/pass signup JSON action
@@ -167,6 +169,7 @@ class AuthController @Inject() (
     unauthenticatedAction = userPasswordSignupAction(_)
   )
 
+  // User/Pass signup json route (new)
   private def userPasswordSignupAction(implicit request: Request[JsValue]) = {
 
     val home = com.keepit.controllers.website.routes.HomeController.home()
@@ -202,6 +205,53 @@ class AuthController @Inject() (
         }
       }
     )
+  }
+
+  private val userPassFinalizeForm = Form[ConfirmationInfo](
+    mapping("first-name" -> nonEmptyText, "last-name" -> nonEmptyText)(ConfirmationInfo.apply)(ConfirmationInfo.unapply)
+  )
+
+  def userPassFinalizeAccountAction(implicit request: Request[AnyContent]): Result = {
+
+    def finishSignup(newIdentity: Identity): Result = {
+      db.readWrite { implicit s =>
+        val email = newIdentity.email.get
+        val emailWithVerification =
+          emailRepo.getByAddressOpt(email)
+            .map(emailRepo.saveWithVerificationCode)
+            .get
+        postOffice.sendMail(ElectronicMail(
+          from = EmailAddresses.NOTIFICATIONS,
+          to = Seq(GenericEmailAddress(email)),
+          subject = "Confirm your email address for Kifi",
+          htmlBody = s"Please confirm your email address by going to " +
+            s"$url${routes.AuthController.verifyEmail(emailWithVerification.verificationCode.get)}",
+          category = ElectronicMailCategory("email_confirmation")
+        ))
+      }
+      Authenticator.create(newIdentity).fold(
+        error => Redirect(routes.AuthController.handleSignup()).flashing(
+          "error" -> "Error creating user"
+        ),
+        authenticator => Redirect("/")
+          .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
+          .withCookies(authenticator.toCookie)
+      )
+    }
+
+    userPassFinalizeForm.bindFromRequest.fold(
+    formWithErrors => Redirect(routes.AuthController.signupPage()).flashing(
+      "error" -> "Form is invalid"
+    ),
+    { case ConfirmationInfo(firstName, lastName) =>
+      val identity = request.identityOpt.get
+      val pinfo = identity.passwordInfo.get
+      val email = identity.email.get
+      val newIdentity = saveUserIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = pinfo,
+        firstName = firstName, lastName = lastName, isComplete = true)
+
+      finishSignup(newIdentity)
+    })
   }
 
   // Greg's first user/pass signup handler

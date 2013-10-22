@@ -78,7 +78,7 @@ class EventWriter @Inject() (
       event match {
         case Event(_,UserEventMetadata(eventFamily, eventName, externalUser, _, experiments, metaData, _), createdAt, _) =>
           val user = db.readOnly { implicit session => userRepo.get(externalUser) }
-          val avatarUrl = imageStore.getPictureUrl(150, user).value.flatMap(_.toOption)
+          val avatarUrl = imageStore.getPictureUrl(Some(150), user, "0.jpg").value.flatMap(_.toOption)
           Some(WrappedUserEvent(event, user, avatarUrl, eventName, eventFamily, createdAt))
         case _ => None
       }

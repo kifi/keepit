@@ -144,7 +144,8 @@ class SecureSocialUserPluginImpl @Inject() (
 
         val sui = socialUserInfoRepo.save(userOpt map socialUserInfo.withUser getOrElse socialUserInfo)
         for (user <- userOpt) {
-          if (existingUserOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
+
+          if (socialUserInfo.networkType != SocialNetworks.FORTYTWO) imageStore.uploadPictureFromSocialNetwork(sui, user.externalId)
           saveVerifiedEmail(sui.userId.get, sui.credentials.get)
         }
         sui
@@ -174,8 +175,9 @@ class SecureSocialUserPluginImpl @Inject() (
             log.info(s"[save(userpass)] Saved email is $emailAddress")
             val savedCred = userCredRepo.save(cred)
             log.info(s"[save(userpass)] Persisted $cred into userCredRepo as $savedCred")
+          } else {
+            imageStore.uploadPictureFromSocialNetwork(sui, user.externalId)
           }
-          if (existingUserOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
         }
         sui
     }

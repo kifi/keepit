@@ -29,18 +29,20 @@ class UserRepoImpl @Inject() (
     val externalIdCache: UserExternalIdCache,
     val idCache: UserIdCache,
     basicUserCache: BasicUserUserIdCache,
-    commentWithBasicUserCache: CommentWithBasicUserCache,
     userIndexProvider: Provider[UserIndex])
   extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
+  import FortyTwoTypeMappers.UserPictureIdTypeMapper
 
   override val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User.apply _, User.unapply _)
+    def pictureName = column[String]("picture_name", O.Nullable)
+    def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state ~ pictureName.? ~ userPictureId.? <> (User.apply _, User.unapply _)
   }
 
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User] =
