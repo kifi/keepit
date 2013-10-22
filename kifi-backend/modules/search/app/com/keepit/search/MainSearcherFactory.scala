@@ -7,16 +7,12 @@ import com.keepit.search.index.ArticleIndexer
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.common.time._
 import com.keepit.model._
-import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
+import com.google.inject.{Inject, Singleton}
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.shoebox.ClickHistoryTracker
-import com.keepit.shoebox.BrowsingHistoryTracker
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent._
@@ -28,8 +24,7 @@ class MainSearcherFactory @Inject() (
     uriGraph: URIGraph,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
-    browsingHistoryBuilder: BrowsingHistoryBuilder,
-    clickHistoryBuilder: ClickHistoryBuilder,
+    userHistoryTracker: UserHistoryTracker,
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait,
@@ -53,8 +48,7 @@ class MainSearcherFactory @Inject() (
     val uriGraphSearcher = getURIGraphSearcher(userId)
     val collectionSearcher = getCollectionSearcher(userId)
     val articleSearcher = articleIndexer.getSearcher
-    val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
-    val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
+    val (browsingHistoryFuture, clickHistoryFuture) = userHistoryTracker.getUserHistory(userId)
 
     new MainSearcher(
         userId,

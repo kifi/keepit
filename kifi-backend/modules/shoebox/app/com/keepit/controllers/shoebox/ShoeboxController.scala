@@ -22,8 +22,6 @@ import com.keepit.model._
 import com.keepit.normalizer.NormalizationCandidate
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
-import com.keepit.shoebox.BrowsingHistoryTracker
-import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.common.akka.SafeFuture
 
 import scala.concurrent.future
@@ -48,10 +46,8 @@ class ShoeboxController @Inject() (
   userRepo: UserRepo,
   bookmarkRepo: BookmarkRepo,
   browsingHistoryRepo: BrowsingHistoryRepo,
-  browsingHistoryTracker: BrowsingHistoryTracker,
   commentRecipientRepo: CommentRecipientRepo,
   clickingHistoryRepo: ClickHistoryRepo,
-  clickHistoryTracker: ClickHistoryTracker,
   normUriRepo: NormalizedURIRepo,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
   userExperimentRepo: UserExperimentRepo,
@@ -163,24 +159,6 @@ class ShoeboxController @Inject() (
       normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
     }
     Ok(Json.toJson(uriId))
-  }
-
-  def getBrowsingHistoryFilter(userId: Id[User]) = Action {
-    Ok(browsingHistoryTracker.getMultiHashFilter(userId).getFilter)
-  }
-
-  def addBrowsingHistory(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    browsingHistoryTracker.add(userId, uriId)
-    Ok
-  }
-
-  def getClickHistoryFilter(userId: Id[User]) = Action {
-     Ok(clickHistoryTracker.getMultiHashFilter(userId).getFilter)
-  }
-
-  def addClickHistory(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    clickHistoryTracker.add(userId, uriId)
-    Ok
   }
 
   def getBookmarks(userId: Id[User]) = Action { request =>
