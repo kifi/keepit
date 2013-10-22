@@ -835,10 +835,13 @@ api.port.on({
   add_participants: function(data, respond, tab) {
     var threadId = data.threadId,
       userIds = data.userIds;
-    log('add_participants_to_thread', threadId, userIds)();
-    log('add_participants_to_thread', threadId, userIds)();
-    log('add_participants_to_thread', threadId, userIds)();
     socket.send(['add_participants_to_thread', threadId, userIds]);
+  },
+  mute_thread: function(threadId, respond, tab) {
+    socket.send(['mute_thread', threadId]);
+  },
+  unmute_thread: function(threadId, respond, tab) {
+    socket.send(['unmute_thread', threadId]);
   },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information

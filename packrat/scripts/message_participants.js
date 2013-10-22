@@ -509,18 +509,10 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			this.addParticipant.apply(this, users);
 			$input.tokenInput('clear');
 			this.toggleAddDialog();
-      this.sendAddParticipants(users);
+			this.sendAddParticipants(users);
 		},
 
 		sendAddParticipants: function (users) {
-      log('add_participants', {
-				threadId: this.getThreadId(),
-				userIds: util.pluck(users, 'id')
-			})();
-      log('add_participants', {
-				threadId: this.getThreadId(),
-				userIds: util.pluck(users, 'id')
-			})();
 			return kifiUtil.request('add_participants', {
 				threadId: this.getThreadId(),
 				userIds: util.pluck(users, 'id')

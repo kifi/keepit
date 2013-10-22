@@ -1,5 +1,6 @@
 // @require scripts/lib/jquery.js
 // @require scripts/render.js
+// @require scripts/kifi_util.js
 // @require scripts/html/keeper/message_mute_option.js
 // @require scripts/html/keeper/message_muted.js
 // @require styles/keeper/message_mute.css
@@ -19,10 +20,12 @@
 var messageMuter = this.messageMuter = (function ($, win) {
 	'use strict';
 
+	var kifiUtil = win.kifiUtil;
+
 	api.port.on({
 		muted: function (muted) {
 			if (messageMuter.initialized) {
-				messageMuter.setMuted(muted);
+				messageMuter.updateMuted(muted);
 			}
 		}
 	});
@@ -111,7 +114,9 @@ var messageMuter = this.messageMuter = (function ($, win) {
 
 		mute: function () {
 			if (!this.isMuted()) {
-				this.parent.setStatus('muted', true);
+				this.updateMuted(true);
+				this.sendMuted(true);
+				this.parent.hideOptions();
 				return true;
 			}
 			return false;
@@ -119,7 +124,9 @@ var messageMuter = this.messageMuter = (function ($, win) {
 
 		unmute: function () {
 			if (this.isMuted()) {
-				this.parent.setStatus('muted', false);
+				this.updateMuted(false);
+				this.sendMuted(false);
+				this.parent.hideOptions();
 				return true;
 			}
 			return false;
@@ -130,6 +137,22 @@ var messageMuter = this.messageMuter = (function ($, win) {
 				return this.unmute();
 			}
 			return this.mute();
+		},
+
+		updateMuted: function (muted) {
+			this.parent.setStatus('muted', muted);
+		},
+
+		getThreadId: function () {
+			return this.parent.getThreadId();
+		},
+
+		sendMuted: function (muted) {
+			var threadId = this.getThreadId();
+			if (muted) {
+				return kifiUtil.request('mute_thread', threadId, 'Could not mute');
+			}
+			return kifiUtil.request('unmute_thread', threadId, 'Could not unmute');
 		},
 
 		/**
