@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+<!--
+   __  Made with_love by: _
+  / _|         | |       | |
+ | |_ ___  _ __| |_ _   _| |___      _____
+ |  _/ _ \| '__| __| | | | __\ \ /\ / / _ \
+ | || (_) | |  | |_| |_| | |_ \ V  V / (_) |
+ |_| \___/|_|   \__|\__, |\__| \_/\_/ \___/
+   We're hiring      __/ |    Join us:
+   great engineers! |___/     42go.com
+-->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>kifi.com</title>
+  <meta name="viewport" content="width=device-width">
+  <script>if (/^Mac/.test(navigator.platform)) document.documentElement.className = 'mac'</script>
+  <link rel="stylesheet" href="assets/css/normalize.css">
+  <link rel="stylesheet" href="assets/css/curtain.css">
+  <link rel="shortcut icon" type="image/png" href="assets/images/kifi-favi-50.png">
+</head>
+
+<div class="curtain-l"></div>
+<div class="curtain-r"></div>
+
+<h1 class="main-logo">kifi</h1>
+<h2 class="page-title">Finalize your account</h2>
+
+<form class="signup-form finalize-static" data-title="Sign Up" data-title2="Finalize Your Account" novalidate>
+  <div class="form-creds">
+    <input class="form-email-addr" type="email" name="signup-email" value="jaredjacobs@gmail.com" placeholder="Your email address">
+    <input class="form-password" type="password" name="signup-password" placeholder="Your new password">
+  </div>
+  <div class="form-name">
+    <input class="form-first-name" type="text" name="first-name" value="Jared" placeholder="First name" required>
+    <input class="form-last-name" type="text" name="last-name" value="Jacobs" placeholder="Last name" required>
+  </div>
+  <div class="form-pic">
+    <div class="form-photo"><div class="form-photo-progress"></div></div>
+    <div class="form-photo-controls">
+      <a class="form-photo-a facebook" href="javascript:">Use Facebook photo</a>
+      <a class="form-photo-a linkedin" href="javascript:">Use LinkedIn photo</a>
+      <label class="form-photo-a upload">
+        Upload a photo
+        <input class="form-photo-file" type="file" name="photo">
+      </label>
+    </div>
+    <div class="form-photo-drop">Drop picture here</div>
+  </div>
+  <button class="form-submit form-submit-final">Done</button>
+  <p class="form-terms">
+    By signing up, you agree to Kifi’s <a target="_blank" href="">Terms of Service</a>.
+  </p>
+</form>
+
+<footer>
+  <a target="_blank" class="us-on linkedin" href="https://www.facebook.com/pages/FortyTwo-Inc/296283190485254"></a>
+  <a target="_blank" class="us-on facebook" href="https://www.linkedin.com/company/2759913"></a>
+  <a target="_blank" class="us-on twitter" href="https://twitter.com/42eng"></a>
+  <div class="copyright">&copy; FortyTwo Inc 2013</div>
+  <a class="contact-us" href="mailto:towel@42go.com">Contact us</a>
+</footer>
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script>this.$||document.write('<script src=assets/js/jquery.min.js><\/script>')</script>
+<script src="assets/js/jquery-ui-position.min.js"></script>
+<script src="assets/js/curtain.js"></script>
+<script async defer>
+$('body').addClass('curtains-drawn');
+setTimeout(function() {
+  $('.form-email-addr').focus().select();
+}, 100);
+</script>
