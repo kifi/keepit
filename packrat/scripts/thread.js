@@ -47,6 +47,7 @@ panes.thread = function () {
     });
     $(render('html/keeper/messages', {
       formatMessage: getTextFormatter,
+      formatAuxData: auxDataFormatter,
       formatLocalDate: getLocalDateFormatter,
       messages: messages,
       draftPlaceholder: 'Type a message…',
@@ -144,6 +145,7 @@ panes.thread = function () {
 
   function renderMessage(m, userId) {
     m.formatMessage = getTextFormatter;
+    m.formatAuxData = auxDataFormatter;
     m.formatLocalDate = getLocalDateFormatter;
     m.isLoggedInUser = m.user.id === userId;
     return $(render('html/keeper/message', m))
