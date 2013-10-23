@@ -53,6 +53,11 @@ trait QueryExpansion extends QueryParser {
       }
     }
 
+    def isNumericTermQuery(query: Query): Boolean = query match {
+      case q: TermQuery => q.getTerm.text.forall(Character.isDigit)
+      case _ => false
+    }
+
     val textQuery = new TextQuery
     textQueries += textQuery
 
@@ -62,6 +67,7 @@ trait QueryExpansion extends QueryParser {
       textQuery.add(copyFieldQuery(query, "c"))
       textQuery.add(copyFieldQuery(query, "title"))
       addSiteQuery(textQuery, queryText, query)
+      if (isNumericTermQuery(query) && textQuery.getBoost() >= 1.0f) textQuery.setBoost(0.5f)
     }
 
     getStemmedFieldQuery("ts", queryText).foreach{ query =>
