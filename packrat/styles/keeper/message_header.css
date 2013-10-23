@@ -81,3 +81,6 @@
 .kifi-message-header-content {
   position: relative;
 }
+.kifi-thread-who.kifi-scrollable-above.kifi-can-scroll {
+  box-shadow: none;
+}
