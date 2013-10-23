@@ -117,7 +117,7 @@ class AuthController @Inject() (
   }
 
   private case class RegistrationInfo(email: String, password: String, firstName: String, lastName: String)
-  private case class ConfirmationInfo(firstName: String, lastName: String)
+  private case class ConfirmationInfo(firstName: String, lastName: String, picToken: Option[String])
   private case class EmailPassword(email: String, password: String)
 
   private val passwordForm = Form[String](
@@ -143,10 +143,6 @@ class AuthController @Inject() (
     )
     (RegistrationInfo.apply)
     (RegistrationInfo.unapply)
-  )
-
-  private val confirmationInfoForm = Form[ConfirmationInfo](
-    mapping("firstname" -> nonEmptyText, "lastname" -> nonEmptyText)(ConfirmationInfo.apply)(ConfirmationInfo.unapply)
   )
 
   private val emailPasswordForm = Form[EmailPassword](
@@ -212,11 +208,13 @@ class AuthController @Inject() (
     )
   }
 
-  private val userPassFinalizeForm = Form[ConfirmationInfo](
-    mapping("first-name" -> nonEmptyText, "last-name" -> nonEmptyText)(ConfirmationInfo.apply)(ConfirmationInfo.unapply)
-  )
 
-  def userPassFinalizeAccountAction(implicit request: Request[AnyContent]): Result = {
+  // user/email finalize action
+  def userPassFinalizeAccountAction() = JsonToJsonAction(true)(authenticatedAction = doUserPassFinalizeAccountAction(_), unauthenticatedAction = doUserPassFinalizeAccountAction(_))
+  private val userPassFinalizeAccountForm = Form[ConfirmationInfo](
+    mapping("firstName" -> nonEmptyText, "lastName" -> nonEmptyText, "picToken" -> optional(text))(ConfirmationInfo.apply)(ConfirmationInfo.unapply)
+  )
+  def doUserPassFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
 
     def finishSignup(newIdentity: Identity): Result = {
       db.readWrite { implicit s =>
@@ -235,20 +233,16 @@ class AuthController @Inject() (
         ))
       }
       Authenticator.create(newIdentity).fold(
-        error => Redirect(routes.AuthController.handleSignup()).flashing(
-          "error" -> "Error creating user"
-        ),
-        authenticator => Redirect("/")
+        error => Status(500)("0"),
+        authenticator => Ok
           .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
           .withCookies(authenticator.toCookie)
       )
     }
 
-    userPassFinalizeForm.bindFromRequest.fold(
-    formWithErrors => Redirect(routes.AuthController.signupPage()).flashing(
-      "error" -> "Form is invalid"
-    ),
-    { case ConfirmationInfo(firstName, lastName) =>
+    userPassFinalizeAccountForm.bindFromRequest.fold(
+    formWithErrors => Forbidden(Json.obj("error" -> "user_exists_failed_auth")),
+    { case ConfirmationInfo(firstName, lastName, picToken) =>
       val identity = request.identityOpt.get
       val pinfo = identity.passwordInfo.get
       val email = identity.email.get
@@ -258,6 +252,8 @@ class AuthController @Inject() (
       finishSignup(newIdentity)
     })
   }
+
+
 
   // Greg's first user/pass signup handler
   def handleUsernamePasswordSignup() = HtmlAction(true)({ _ => Redirect("/") }, { implicit request =>
@@ -359,11 +355,11 @@ class AuthController @Inject() (
     }
 
     if (isConfirmation) {
-      confirmationInfoForm.bindFromRequest.fold(
+      userPassFinalizeAccountForm.bindFromRequest.fold(
         formWithErrors => Redirect(routes.AuthController.signupPage()).flashing(
           "error" -> "Form is invalid"
         ),
-        { case ConfirmationInfo(firstName, lastName) =>
+        { case ConfirmationInfo(firstName, lastName, picToken) =>
           val identity = request.identityOpt.get
           val pinfo = identity.passwordInfo.get
           val email = identity.email.get
