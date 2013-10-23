@@ -15,7 +15,6 @@ import com.keepit.integrity.DataIntegrityModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.common.social.ProdSocialGraphModule
-import com.keepit.common.healthcheck.AirbrakeModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.abook.ProdABookServiceClientModule
 
@@ -45,8 +44,6 @@ abstract class ShoeboxModule(
   val userIndexModule = UserIndexModule()
   val geckoboardModule = GeckoboardModule()
   val dataIntegrityModule = DataIntegrityModule()
-  val clickHistoryModule = ShoeboxClickHistoryModule()
-  val browsingHistoryModule = ShoeboxBrowsingHistoryModule()
 
   val mailerModule = PlayMailerModule()
 }

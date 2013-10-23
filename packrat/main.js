@@ -226,6 +226,31 @@ logEvent.catchUp = function() {
   }
 }
 
+function forEachThreadWithThreadId(threadId, fn, that) {
+  Object.keys(pageThreadData).forEach(function (nUrl) {
+    var threadData = this[nUrl],
+      threads = threadData.threads;
+    if (threads) {
+      threads.forEach(function (thread) {
+        if (thread.id === threadId) {
+          fn.call(that, thread, threadId, threads);
+        }
+      });
+    }
+  }, pageThreadData);
+}
+
+function forEachTabWithThreadId(threadId, fn, that) {
+  forEachThreadWithThreadId(threadId, function (thread) {
+    var tabs = tabsByUrl[thread.nUrl];
+    if (tabs) {
+      for (var i = 0, len = tabs.length, tab; i < len; i++) {
+        fn.call(this, tabs[i], thread, threadId, tabs);
+      }
+    }
+  }, that);
+}
+
 // ===== WebSocket handlers
 
 var socketHandlers = {
@@ -257,6 +282,21 @@ var socketHandlers = {
   create_tag: onTagChangeFromServer.bind(null, 'create'),
   rename_tag: onTagChangeFromServer.bind(null, 'rename'),
   remove_tag: onTagChangeFromServer.bind(null, 'remove'),
+  thread_participants: function(threadId, participants) {
+    log("[socket:thread_participants]", threadId, participants)();
+    participants = participants.filter(idIsNot(session.userId));
+    forEachTabWithThreadId(threadId, function (tab, thread) {
+      thread.participants = participants;
+      api.tabs.emit(tab, 'participants', participants);
+    });
+  },
+  thread_muted: function(threadId, muted) {
+    log("[socket:thread_muted]", threadId, muted)();
+    forEachTabWithThreadId(threadId, function (tab, thread) {
+      thread.muted = muted;
+      api.tabs.emit(tab, 'muted', muted);
+    });
+  },
   url_patterns: function(patterns) {
     log("[socket:url_patterns]", patterns)();
     urlPatterns = compilePatterns(patterns);
@@ -812,25 +852,44 @@ api.port.on({
     });
   },
   create_and_add_tag: function(name, respond, tab) {
-    makeRequest("create_and_add_tag", "POST", "/tags/add", {
+    makeRequest('create_and_add_tag', 'POST', '/tags/add', {
       name: name,
       url: tab.url
     }, [onAddTagResponse.bind(tab), respond]);
   },
   add_tag: function(tagId, respond, tab) {
-    makeRequest("add_tag", "POST", "/tags/" + tagId + "/addToKeep", {
+    makeRequest('add_tag', 'POST', '/tags/' + tagId + '/addToKeep', {
       url: tab.url
     }, [onAddTagResponse.bind(tab), respond]);
   },
   remove_tag: function(tagId, respond, tab) {
-    makeRequest("remove_tag", "POST", "/tags/" + tagId + "/removeFromKeep", {
+    makeRequest('remove_tag', 'POST', '/tags/' + tagId + '/removeFromKeep', {
       url: tab.url
     }, [onRemoveTagResponse.bind(tab, tagId), respond]);
   },
   clear_tags: function(tagId, respond, tab) {
-    makeRequest("clear_tags", "POST", "/tags/clear", {
+    makeRequest('clear_tags', 'POST', '/tags/clear', {
       url: tab.url
     }, [onClearTagsResponse.bind(tab), respond]);
+  },
+  add_participants: function(data, respond, tab) {
+    var threadId = data.threadId,
+      userIds = data.userIds;
+    socket.send(['add_participants_to_thread', threadId, userIds]);
+  },
+  is_muted: function(threadId, respond, tab) {
+    var td = pageThreadData[tab.nUri],
+      th = td && td.getThread(threadId);
+    respond({
+      success: Boolean(th),
+      response: Boolean(th && th.muted)
+    });
+  },
+  mute_thread: function(threadId, respond, tab) {
+    socket.send(['mute_thread', threadId]);
+  },
+  unmute_thread: function(threadId, respond, tab) {
+    socket.send(['unmute_thread', threadId]);
   },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information

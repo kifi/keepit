@@ -1,24 +1,20 @@
 package com.keepit.search.query
 
-import com.keepit.model.BrowsingHistory
-import com.keepit.search.ResultClickBoosts
+import com.keepit.search.{BrowsedURI, MultiHashFilter, ResultClickBoosts}
 import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.index.IdMapper
-import com.keepit.search.MultiHashFilter
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.DocIdSet
 import org.apache.lucene.search.DocIdSetIterator
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.Filter
 import org.apache.lucene.util.Bits
-import scala.collection.mutable.ArrayBuffer
 
 class HotDocSetFilter extends Filter {
-  private[this] var browsingFilter: MultiHashFilter[BrowsingHistory] = null
+  private[this] var browsingFilter: MultiHashFilter[BrowsedURI] = null
   private[this] var boosts: ResultClickBoosts = null
 
-  def set(browsingHistoryFilter: MultiHashFilter[BrowsingHistory], clickBoosts: ResultClickBoosts): Unit = {
+  def set(browsingHistoryFilter: MultiHashFilter[BrowsedURI], clickBoosts: ResultClickBoosts): Unit = {
     browsingFilter = browsingHistoryFilter
     boosts = clickBoosts
   }
@@ -38,7 +34,7 @@ class HotDocSetFilter extends Filter {
   }
 }
 
-class HotDocSet(browsingFilter: MultiHashFilter[BrowsingHistory], clickBoosts: ResultClickBoosts, mapper: IdMapper) extends Bits {
+class HotDocSet(browsingFilter: MultiHashFilter[BrowsedURI], clickBoosts: ResultClickBoosts, mapper: IdMapper) extends Bits {
   override def get(doc: Int): Boolean = {
     val id = mapper.getId(doc)
     (browsingFilter.mayContain(id, 2) || clickBoosts(id) > 1.0f)

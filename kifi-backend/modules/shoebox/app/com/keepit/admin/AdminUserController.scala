@@ -47,7 +47,6 @@ class AdminUserController @Inject() (
     socialConnectionRepo: SocialConnectionRepo,
     userConnectionRepo: UserConnectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,
-    browsingHistoryRepo: BrowsingHistoryRepo,
     emailRepo: EmailAddressRepo,
     userExperimentRepo: UserExperimentRepo,
     socialGraphPlugin: SocialGraphPlugin,
@@ -164,9 +163,6 @@ class AdminUserController @Inject() (
       val emails = emailRepo.getByUser(user.id.get)
       (user, (bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
     }
-    val historyUpdateCount = db.readOnly { implicit session =>
-      browsingHistoryRepo.getByUserId(userId).map(_.updatesCount).getOrElse(0)
-    }
 
     val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
 
@@ -200,7 +196,7 @@ class AdminUserController @Inject() (
     val state = new BigInteger(130, new SecureRandom()).toString(32)
 
     Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-      fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, abookEP,
+      fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, abookEP,
       collections, collectionFilter, state)).withSession(session + ("stateToken" -> state ))
   }
 

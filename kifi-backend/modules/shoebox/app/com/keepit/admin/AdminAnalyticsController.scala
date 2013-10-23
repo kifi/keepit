@@ -13,7 +13,7 @@ import scala.concurrent.Future
 import com.google.inject.Inject
 
 
-case class MetricAuxInfo(helpText: String, legend: Map[String,String])
+case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int]())
 
 class AdminAnalyticsController @Inject() (
     actionAuthenticator: ActionAuthenticator,
@@ -30,9 +30,22 @@ class AdminAnalyticsController @Inject() (
     "keeps_weekly" -> MetricAuxInfo("nothing yet", Map(
       "0" -> "public",
       "1" -> "private"
+    ), Map(
+      "public" -> 31450,
+      "private" -> 22407,
+      "total" -> 53857
     )),
-    "private_keeps_weekly" -> MetricAuxInfo("nothing yet", Map()),
-    "public_keeps_weekly" -> MetricAuxInfo("nothing yet", Map())
+    "private_keeps_weekly" -> MetricAuxInfo("nothing yet", Map(), Map(
+      "INIT_LOAD" -> 20461,
+      "HOVER_KEEP" -> 1804,
+      "SITE" -> 33,
+      "total" -> 22407
+    )),
+    "public_keeps_weekly" -> MetricAuxInfo("nothing yet", Map(), Map(
+      "HOVER_KEEP" -> 23967,
+      "SITE" -> 467,
+      "total" -> 31450
+    ))
   )
 
   val messageMetrics = Map[String, MetricAuxInfo](
@@ -43,7 +56,8 @@ class AdminAnalyticsController @Inject() (
   private def augmentMetricData(metricData: JsObject, auxInfo: MetricAuxInfo): JsObject = {
     metricData.deepMerge{Json.obj(
         "help" -> auxInfo.helpText,
-        "legend" -> JsObject(auxInfo.legend.mapValues(Json.toJson(_)).toSeq)
+        "legend" -> JsObject(auxInfo.legend.mapValues(Json.toJson(_)).toSeq),
+        "shift" -> JsObject(auxInfo.shift.mapValues(Json.toJson(_)).toSeq)
     )}
   }
 

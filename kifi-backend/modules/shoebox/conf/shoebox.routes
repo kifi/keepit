@@ -15,6 +15,7 @@ POST    /signup                     @com.keepit.controllers.core.AuthController.
 POST    /signupWithPassword         @com.keepit.controllers.core.AuthController.handleUsernamePasswordSignup()
 
 POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
+POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
 
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
@@ -371,8 +372,6 @@ GET     /internal/shoebox/database/getUserExperiments                  @com.keep
 GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedUriUpdates(lowSeq: Long, highSeq: Long)
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])
-GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getBrowsingHistoryFilter(userId: Id[User])
-GET     /internal/shoebox/tracker/clickHistory        @com.keepit.controllers.shoebox.ShoeboxController.getClickHistoryFilter(userId: Id[User])
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Id[User])
 GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.shoebox.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])

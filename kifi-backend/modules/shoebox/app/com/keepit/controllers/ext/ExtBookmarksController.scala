@@ -13,7 +13,6 @@ import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.shoebox.BrowsingHistoryTracker
 
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -48,7 +47,6 @@ class ExtBookmarksController @Inject() (
   collectionRepo: CollectionRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   searchClient: SearchServiceClient,
-  browsingHistoryTracker: BrowsingHistoryTracker,
   healthcheck: HealthcheckPlugin,
   heimdal: HeimdalServiceClient,
   userEventContextBuilder: UserEventContextBuilderFactory)
@@ -184,7 +182,7 @@ class ExtBookmarksController @Inject() (
           val experiments = request.experiments
           val user = db.readOnly { implicit s => userRepo.get(userId) }
           val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
-          browsingHistoryTracker.add(userId, bookmarks.map(_.uriId))
+          searchClient.logBrowsed(userId, bookmarks.map(_.uriId): _*)
           searchClient.updateURIGraph()
 
           //Analytics
