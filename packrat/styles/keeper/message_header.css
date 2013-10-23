@@ -1,7 +1,6 @@
 .kifi-message-header {
   position: relative;
   font-size: 15px;
-  font-family: 'Helvetica Neue', Arial, san-serif;
   line-height: normal;
   color: #b8c5d1;
   background: #eff2f7;
@@ -49,17 +48,17 @@
 }
 .kifi-message-header-option-button:hover,
 .kifi-message-header-option-button:focus {
-  background-color: #dee4ef;
+  background-color: #d7dade;
 }
 .kifi-message-header.kifi-option-expanded .kifi-message-header-option-button {
   background-color: #b8c5d1;
 }
 .kifi-message-header.kifi-option-expanded .kifi-message-header-option-button:hover,
 .kifi-message-header.kifi-option-expanded .kifi-message-header-option-button:focus {
-  background-color: #99acbd;
+  background-color: #a6b1bc;
 }
 .kifi-message-header.kifi-option-expanded .kifi-message-header-option-button:active {
-  background-color: #7a92a9;
+  background-color: #939ea7;
 }
 .kifi-message-header-options {
   position: absolute;
@@ -73,10 +72,10 @@
 }
 .kifi-message-header-option:hover,
 .kifi-message-header-option:focus {
-  background: #99acbd;
+  background: #a6b1bc;
 }
 .kifi-message-header-option:active {
-  background: #7a92a9;
+  background: #939ea7;
 }
 .kifi-message-header-content {
   position: relative;

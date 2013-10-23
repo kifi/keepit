@@ -17,20 +17,14 @@ import com.keepit.social.{SocialNetworkType, BasicUser}
 import com.keepit.common.mail.{ElectronicMail}
 import com.keepit.model.ExperimentType
 import com.keepit.model.URL
-import com.keepit.model.BrowsingHistory
 import com.keepit.model.CommentRecipient
 import com.keepit.model.UserExperiment
 import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
-import com.keepit.model.ClickHistory
 import play.api.libs.json.JsObject
 
 // code below should be sync with code in ShoeboxController
-class FakeShoeboxServiceClientImpl(
-    clickHistoryTracker: ClickHistoryTracker,
-    browsingHistoryTracker: BrowsingHistoryTracker,
-    val airbrakeNotifier: AirbrakeNotifier
-  ) extends ShoeboxServiceClient {
+class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
@@ -261,14 +255,6 @@ class FakeShoeboxServiceClientImpl(
     //EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
   }
 
-  def getClickHistoryFilter(userId: Id[User]) = {
-    Future.successful(clickHistoryTracker.getMultiHashFilter(userId).getFilter)
-  }
-
-  def getBrowsingHistoryFilter(userId: Id[User]) = {
-    Future.successful(browsingHistoryTracker.getMultiHashFilter(userId).getFilter)
-  }
-
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
     val users = userIds.map(allUsers(_))
     Future.successful(users)
@@ -381,62 +367,3 @@ class FakeShoeboxServiceClientImpl(
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}
 
 }
-
-class FakeClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends ClickHistoryTracker with Logging {
-  val allUserClickHistories = MutableMap[Id[User], ClickHistory]()
-
-  def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
-    val filter = getMultiHashFilter(userId)
-    filter.put(uriId.id)
-
-    val userClickHistory = allUserClickHistories.get(userId) match {
-      case Some(ch) =>
-        ch.withFilter(filter.getFilter)
-      case None =>
-        ClickHistory(userId = userId, tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
-    }
-    allUserClickHistories(userId) = userClickHistory
-    userClickHistory
-  }
-
-  def getMultiHashFilter(userId: Id[User]): MultiHashFilter[ClickHistory] = {
-    allUserClickHistories.get(userId) match {
-      case Some(clickHistory) =>
-        new MultiHashFilter[ClickHistory](clickHistory.tableSize, clickHistory.filter, clickHistory.numHashFuncs, clickHistory.minHits)
-      case None =>
-        val filter = MultiHashFilter[ClickHistory](tableSize, numHashFuncs, minHits)
-        filter
-    }
-  }
-}
-
-class FakeBrowsingHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends BrowsingHistoryTracker with Logging {
-  val allUserBrowsingHistories = MutableMap[Id[User], BrowsingHistory]()
-
-  def add(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]) = {
-    val filter = getMultiHashFilter(userId)
-    uriIds.foreach{ uriId => filter.put(uriId.id)}
-
-    val userBrowsingHistory = allUserBrowsingHistories.get(userId) match {
-        case Some(bh) =>
-          bh.withFilter(filter.getFilter)
-        case None =>
-          BrowsingHistory(userId = userId, tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
-
-    }
-    allUserBrowsingHistories(userId) = userBrowsingHistory
-    userBrowsingHistory
-  }
-
-  def getMultiHashFilter(userId: Id[User]): MultiHashFilter[BrowsingHistory] = {
-    allUserBrowsingHistories.get(userId) match {
-      case Some(browsingHistory) =>
-        new MultiHashFilter[BrowsingHistory](browsingHistory.tableSize, browsingHistory.filter, browsingHistory.numHashFuncs, browsingHistory.minHits)
-      case None =>
-        val filter = MultiHashFilter[BrowsingHistory](tableSize, numHashFuncs, minHits)
-        filter
-    }
-  }
-}
-
-

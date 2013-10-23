@@ -6,7 +6,6 @@ import com.keepit.common.store.StoreModule
 import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
-import com.keepit.common.{SearchBrowsingHistoryModule, SearchClickHistoryModule}
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
 
 abstract class SearchModule(
@@ -17,7 +16,7 @@ abstract class SearchModule(
 
   // Search Functional Modules
   val indexModule: IndexModule,
-  val resultFeedbackModule: ResultFeedbackModule
+  val trackingModule: TrackingModule
 
 ) extends ConfigurationModule with CommonServiceModule {
   // Service clients
@@ -29,6 +28,4 @@ abstract class SearchModule(
   val secureSocialModule = RemoteSecureSocialModule()
 
   val searchConfigModule = SearchConfigModule()
-  val clickHistoryModule = SearchClickHistoryModule()
-  val browsingHistoryModule = SearchBrowsingHistoryModule()
 }

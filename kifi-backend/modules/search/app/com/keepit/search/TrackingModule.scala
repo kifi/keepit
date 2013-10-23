@@ -6,9 +6,27 @@ import play.api.Play._
 import scala.Some
 import java.io.File
 
-trait ResultFeedbackModule extends ScalaModule
+trait TrackingModule extends ScalaModule {
+  @Provides @Singleton
+  def browsingHistoryBuilder: BrowsingHistoryBuilder = {
+    val conf = current.configuration.getConfig("browsing-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+    BrowsingHistoryBuilder(filterSize, numHashFuncs, minHits)
+  }
 
-case class ProdResultFeedbackModule() extends ResultFeedbackModule {
+  @Provides @Singleton
+  def clickHistoryBuilder: ClickHistoryBuilder = {
+    val conf = current.configuration.getConfig("click-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+    ClickHistoryBuilder(filterSize, numHashFuncs, minHits)
+  }
+}
+
+case class ProdTrackingModule() extends TrackingModule {
 
   def configure() {}
 
@@ -30,10 +48,9 @@ case class ProdResultFeedbackModule() extends ResultFeedbackModule {
     val buffer = new FileResultClickTrackerBuffer(file, 0x1000000)
     new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery)(Some(s3buffer)))
   }
-
 }
 
-case class DevResultFeedbackModule() extends ResultFeedbackModule {
+case class DevTrackingModule() extends TrackingModule {
 
   def configure() {}
 
@@ -46,7 +63,7 @@ case class DevResultFeedbackModule() extends ResultFeedbackModule {
       case None =>
         val buffer = new InMemoryResultClickTrackerBuffer(1000)
         new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, 1)(Some(s3buffer)))
-      case Some(_) => ProdResultFeedbackModule().resultClickTracker(s3buffer)
+      case Some(_) => ProdTrackingModule().resultClickTracker(s3buffer)
     }
   }
 }

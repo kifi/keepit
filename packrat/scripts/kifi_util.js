@@ -6,9 +6,6 @@
  * ---------------
  *
  * Contains utility functions for Kifi APIs
- *
- * @author Joon Ho Cho <joon@42go.com>
- * @date 10-17-2013
  */
 
 this.kifiUtil = (function () {
@@ -16,7 +13,7 @@ this.kifiUtil = (function () {
 
 	return {
 		/**
-		 * Makes a request to the server and returns a deferred promise object.
+		 * Makes a request to the background page and returns a deferred promise object.
 		 *
 		 * @param {string} name - A request name
 		 * @param {*} data - A request payload

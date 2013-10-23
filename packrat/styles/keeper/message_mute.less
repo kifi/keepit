@@ -32,13 +32,6 @@
   position: absolute;
   top: 12px;
   left: 16px;
-  width: 24px;
-  height: 23px;
-  background-repeat: no-repeat;
-  background-image: url(@muteIcon);
-  background-size: auto 23px;
-  background-position: 50%;
-  vertical-align: middle;
 }
 
 .kifi-message-mute-option-title {
@@ -72,9 +65,13 @@
 
 .kifi-message-header-muted-icon {
   display: inline-block;
+  margin-right: 5px;
+}
+
+.kifi-message-mute-option-icon,
+.kifi-message-header-muted-icon {
   width: 24px;
   height: 23px;
-  margin-right: 5px;
   background-repeat: no-repeat;
   background-image: url(@muteIcon);
   background-size: auto 23px;
@@ -93,11 +90,11 @@
 
   &:hover, &:focus {
     color: white;
-    background: darken(@buttonColor, 5%);
+    background: shade(@buttonColor, 10%);
   }
 
   &:active {
     color: white;
-    background: darken(@buttonColor, 10%);
+    background: shade(@buttonColor, 20%);
   }
 }

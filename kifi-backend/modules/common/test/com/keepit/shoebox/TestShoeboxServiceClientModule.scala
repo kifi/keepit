@@ -26,20 +26,6 @@ case class FakeShoeboxServiceModule() extends ShoeboxServiceClientModule {
 
   @Singleton
   @Provides
-  def fakeShoeboxServiceClient(
-      clickHistoryTracker: ClickHistoryTracker,
-      browsingHistoryTracker: BrowsingHistoryTracker,
-      airbrakeNotifier: AirbrakeNotifier): ShoeboxServiceClient =
-    new FakeShoeboxServiceClientImpl(clickHistoryTracker, browsingHistoryTracker, airbrakeNotifier)
-
-  @Provides
-  @Singleton
-  def fakeBrowsingHistoryTracker: BrowsingHistoryTracker =
-    new FakeBrowsingHistoryTrackerImpl(3067, 2, 1)
-
-  @Provides
-  @Singleton
-  def fakeClickHistoryTracker: ClickHistoryTracker =
-    new FakeClickHistoryTrackerImpl(307, 2, 1)
-
+  def fakeShoeboxServiceClient(airbrakeNotifier: AirbrakeNotifier): ShoeboxServiceClient =
+    new FakeShoeboxServiceClientImpl(airbrakeNotifier)
 }

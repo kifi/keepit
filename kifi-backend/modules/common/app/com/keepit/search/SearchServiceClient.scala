@@ -24,6 +24,7 @@ trait SearchServiceClient extends ServiceClient {
 
   def logResultClicked(resultClicked: ResultClicked): Unit
   def logSearchEnded(searchEnded: SearchEnded): Unit
+  def logBrowsed(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit
 
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
@@ -77,6 +78,11 @@ class SearchServiceClientImpl(
   def logSearchEnded(searchEnded: SearchEnded): Unit = {
     val json = Json.toJson(searchEnded)
     call(Search.internal.logSearchEnded(), json)
+  }
+
+  def logBrowsed(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = {
+    val json = JsArray(uriIds.map(Id.format[NormalizedURI].writes))
+    call(Search.internal.logBrowsed(userId), json)
   }
 
   def updateURIGraph(): Unit = {
