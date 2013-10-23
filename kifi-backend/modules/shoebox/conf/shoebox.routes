@@ -11,11 +11,10 @@ POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controlle
 
 # Relevant when we support traditional user signups:
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
-POST    /signup                     @com.keepit.controllers.core.AuthController.handleSignup()
-POST    /signupWithPassword         @com.keepit.controllers.core.AuthController.handleUsernamePasswordSignup()
 
 POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
 POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
+POST    /auth/social-finalize       @com.keepit.controllers.core.AuthController.socialFinalizeAccountAction()
 
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
