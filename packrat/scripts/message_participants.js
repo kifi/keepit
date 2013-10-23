@@ -612,6 +612,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			$el.find('.kifi-message-participants-avatars').html(view.avatars);
 			$el.find('.kifi-message-participant-list-inner').html(view.participants);
 			this.updateParticipantsHeight();
+			this.$list.data('antiscroll').refresh();
 		},
 
 		updateCount: function (count) {
