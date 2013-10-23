@@ -124,7 +124,7 @@
   }
 }
 .kifi-message-participants-avatars-expand {
-  display: none;
+  display: inline-block;
   font-size: 20px;
   font-weight: 500;
   line-height: 13px;
@@ -136,6 +136,12 @@
   border-radius: 2px;
   color: white;
   background: #b8c5d1;
+  /*
+  .kifi-message-participants.kifi-overflow & {
+    display: inline-block;
+  }
+  */
+
 }
 .kifi-message-participants-avatars-expand:hover,
 .kifi-message-participants-avatars-expand:focus {
@@ -145,9 +151,6 @@
 .kifi-message-participants-avatars-expand:active {
   color: white;
   background: #8a9fb3;
-}
-.kifi-message-participants.kifi-overflow .kifi-message-participants-avatars-expand {
-  display: inline-block;
 }
 .kifi-message-participant-list-root {
   position: relative;
