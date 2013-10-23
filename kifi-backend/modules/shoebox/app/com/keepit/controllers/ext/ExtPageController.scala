@@ -11,7 +11,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.normalizer.NormalizationService
+import com.keepit.normalizer.{NormalizationCandidate, NormalizationService}
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 
@@ -34,7 +34,7 @@ class ExtPageController @Inject() (
   collectionRepo: CollectionRepo,
   domainClassifier: DomainClassifier,
   basicUserRepo: BasicUserRepo,
-  historyTracker: SliderHistoryTracker,
+  sliderHistoryTracker: SliderHistoryTracker,
   searchClient: SearchServiceClient)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
@@ -93,7 +93,7 @@ class ExtPageController @Inject() (
     val sensitive: Boolean = !request.experiments.contains(ExperimentType.NOT_SENSITIVE) &&
       (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
 
-    val shown = nUri.map { uri => historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false
+    val shown = nUri.map { uri => sliderHistoryTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false
 
     val (keepers, keeps) = nUri map { uri =>
       val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
@@ -108,4 +108,15 @@ class ExtPageController @Inject() (
       position, neverOnSite, sensitive, shown, keepers, keeps)))
   }
 
+  def recordSliderShown() = AuthenticatedJsonToJsonAction { request =>
+    val userId = request.userId
+    val json = request.body
+    (json \ "url").asOpt[String].map { url =>
+      db.readWrite(attempts = 3) { implicit session =>
+        val uri = normalizedURIRepo.internByUri(url, NormalizationCandidate(json): _*)
+        sliderHistoryTracker.add(userId, uri.id.get)
+      }
+    }
+    Ok()
+  }
 }

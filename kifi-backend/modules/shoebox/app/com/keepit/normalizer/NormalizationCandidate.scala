@@ -1,7 +1,7 @@
 package com.keepit.normalizer
 
 import com.keepit.model.Normalization
-import play.api.libs.json.JsObject
+import play.api.libs.json.JsValue
 
 sealed trait NormalizationCandidate {
   val url: String
@@ -21,7 +21,7 @@ object NormalizationCandidate {
 
   val acceptedSubmissions = Seq(Normalization.CANONICAL, Normalization.OPENGRAPH)
 
-  def apply(json: JsObject): Seq[UntrustedCandidate] = {
+  def apply(json: JsValue): Seq[UntrustedCandidate] = {
     for {
       normalization <- acceptedSubmissions
       url <- (json \ normalization.scheme).asOpt[String]

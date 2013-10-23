@@ -161,27 +161,6 @@ class UsefulPageListener @Inject() (
   }
 }
 
-@Singleton
-class SliderShownListener @Inject() (
-  userRepo: UserRepo,
-  normalizedURIRepo: NormalizedURIRepo,
-  db: Database,
-  sliderHistoryTracker: SliderHistoryTracker)
-  extends EventListener(userRepo, normalizedURIRepo) {
-
-  def onEvent: PartialFunction[Event, Unit] = {
-    case Event(_, UserEventMetadata(EventFamilies.SLIDER, "sliderShown", externalUser, _, experiments, metaData, _), _, _) =>
-      val (user, normUri) = db.readWrite(attempts = 3) { implicit s =>
-        val user = userRepo.get(externalUser)
-        val normUri = (metaData \ "url").asOpt[String].map { url =>
-          normalizedURIRepo.internByUri(url, NormalizationCandidate(metaData): _*)
-        }
-        (user, normUri)
-      }
-      normUri.foreach(n => sliderHistoryTracker.add(user.id.get, n.id.get))
-  }
-}
-
 abstract class SearchUnloadListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo)
   extends EventListener(userRepo, normalizedURIRepo)
 

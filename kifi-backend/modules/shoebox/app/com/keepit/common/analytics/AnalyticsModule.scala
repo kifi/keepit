@@ -20,7 +20,6 @@ case class ProdAnalyticsModule() extends AnalyticsModule {
     val listenerBinder = ScalaMultibinder.newSetBinder[EventListener](binder)
     listenerBinder.addBinding.to[ResultClickedListener]
     listenerBinder.addBinding.to[UsefulPageListener]
-    listenerBinder.addBinding.to[SliderShownListener]
     listenerBinder.addBinding.to[SearchUnloadListener]
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
   }
@@ -43,7 +42,6 @@ case class DevAnalyticsModule() extends AnalyticsModule {
     val listenerBinder = ScalaMultibinder.newSetBinder[EventListener](binder)
     listenerBinder.addBinding.to[ResultClickedListener]
     listenerBinder.addBinding.to[UsefulPageListener]
-    listenerBinder.addBinding.to[SliderShownListener]
     listenerBinder.addBinding.to[SearchUnloadListener]
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
   }
