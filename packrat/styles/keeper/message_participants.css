@@ -160,16 +160,13 @@
 }
 .kifi-message-participant-list {
   position: relative;
-  overflow: hidden;
 }
 .kifi-message-participant-list-inner {
   position: relative;
-  display: block;
   min-width: 100%;
   max-height: 333px;
   line-height: 0;
   list-style: none;
-  padding: 0;
   overflow-x: hidden;
   overflow-y: scroll;
 }
