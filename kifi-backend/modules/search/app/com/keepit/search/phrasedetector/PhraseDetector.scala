@@ -21,6 +21,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.collection.mutable.{ListBuffer}
+import scala.math._
 
 object PhraseDetector {
   val fieldName = "p"
@@ -47,20 +48,25 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     indexer.getSearcher.indexReader.leaves.foreach{ subReaderContext =>
       val numTerms = pterms.size
       var index = 0
+      var prevWord: Word = null
       while (index < numTerms) {
         val tp = subReaderContext.reader.termPositionsEnum(pterms(index))
         if (tp == null) { // found a gap here
-          findPhrases(pq, index - 1, f)// pq will be cleared after execution
+          findPhrases(pq, f) // pq will be cleared after execution
+          prevWord = null
         } else {
-          pq.insertWithOverflow(new Word(index, tp))
+          val w = new Word(index, tp, prevWord)
+          if (prevWord != null) prevWord.nextWord = w
+          pq.insertWithOverflow(w)
+          prevWord = w
         }
         index += 1
       }
-      findPhrases(pq, index - 1, f)
+      findPhrases(pq, f)
     }
   }
 
-  private def findPhrases(pq: PQ, maxIndex: Int, onMatch: (Int, Int)=>Unit): Unit = {
+  private def findPhrases(pq: PQ, onMatch: (Int, Int)=>Unit): Unit = {
     var effectiveCount = pq.size - 1
 
     if (effectiveCount > 0) {
@@ -74,9 +80,9 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
       while (effectiveCount > 0) {
         val doc = top.doc
         val phraseStart = top.index
-        if (phraseStart < maxIndex) { // the term at the maxIndex won't start a phrase
+        if (top.nextWord != null && top.nextWord.doc == doc) { // the next term should be at the same doc
           var wordOffset = 0
-          while (top.doc == doc && top.checkPosition(phraseStart, wordOffset, onMatch)) {
+          while (top.checkPosition(phraseStart, wordOffset, onMatch)) {
             wordOffset += 1
             if (top.nextDoc() == NO_MORE_DOCS) effectiveCount -= 1
             top = pq.updateTop()
@@ -91,12 +97,15 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     pq.clear()
   }
 
-  private class Word(val index: Int, tp: DocsAndPositionsEnum) {
+  private class Word(val index: Int, tp: DocsAndPositionsEnum, val prevWord: Word) {
+
+    var nextWord: Word = null
 
     var doc = -1
 
     def nextDoc() = {
-      doc = tp.nextDoc()
+      val next = min(if (prevWord == null) NO_MORE_DOCS else prevWord.doc, if (nextWord == null) NO_MORE_DOCS else nextWord.doc)
+      doc = if (doc + 1 < next) tp.advance(next) else tp.nextDoc()
       doc
     }
 
@@ -108,13 +117,16 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
           var pos = data >> 1
           if (pos > wordOffset) return false
           if (pos == wordOffset) {
-            if ((data & 1) == 1) onMatch(phraseStart, wordOffset+1) // one phrase matched
-            return true
+            if ((data & 1) == 1) {
+              onMatch(phraseStart, wordOffset+1) // one phrase matched
+              return false // no need to continue
+            }
+            return (nextWord != null && nextWord.doc == doc) // position matched, continue if the next word is at the same doc
           }
           freq -= 1
         }
       }
-      false
+      false // position didn't match, no need to continue
     }
   }
 

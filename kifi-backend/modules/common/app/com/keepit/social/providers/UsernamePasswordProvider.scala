@@ -22,8 +22,8 @@ class UsernamePasswordProvider(application: Application)
               pinfo <- identity.passwordInfo
               hasher <- Registry.hashers.get(pinfo.hasher) if hasher.matches(pinfo, credentials._2)
             } yield Right(SocialUser(identity))
-            result getOrElse Left(error(request, "bad_password", "Wrong password."))
-          case None => Left(error(request, "no_user_exists", "No user with that email address exists."))
+            result getOrElse Left(error(request, "wrong_password", "Wrong password."))
+          case None => Left(error(request, "no_such_user", "No user with that email address exists."))
         }
       }
     )

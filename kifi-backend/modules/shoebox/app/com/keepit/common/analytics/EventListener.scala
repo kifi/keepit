@@ -11,8 +11,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.shoebox.BrowsingHistoryTracker
-import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.normalizer.NormalizationCandidate
 import com.keepit.common.net.{Host, URI}
 import play.api.libs.json.JsArray
@@ -56,8 +54,7 @@ class ResultClickedListener @Inject() (
   searchServiceClient: SearchServiceClient,
   db: Database,
   bookmarkRepo: BookmarkRepo,
-  userBookmarkClicksRepo: UserBookmarkClicksRepo,
-  clickHistoryTracker: ClickHistoryTracker)
+  userBookmarkClicksRepo: UserBookmarkClicksRepo)
   extends EventListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
@@ -65,7 +62,6 @@ class ResultClickedListener @Inject() (
       val resultClicked = db.readOnly { implicit s => parseResultClicked(externalUser, metaData, eventName, createdAt) }
       searchServiceClient.logResultClicked(resultClicked)
       resultClicked.keptUri.foreach { uriId =>
-        clickHistoryTracker.add(resultClicked.userId, uriId)
 
         // if bookmark is kept by this user
         if (resultClicked.isUserKeep) {
@@ -150,7 +146,7 @@ class UsefulPageListener @Inject() (
   userRepo: UserRepo,
   normalizedURIRepo: NormalizedURIRepo,
   db: Database,
-  browsingHistoryTracker: BrowsingHistoryTracker)
+  searchClient: SearchServiceClient)
   extends EventListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
@@ -161,7 +157,7 @@ class UsefulPageListener @Inject() (
         val normUrl = normalizedURIRepo.getByUri(url)
         (user, url, normUrl)
       }
-      normUrl.foreach(n => browsingHistoryTracker.add(user.id.get, n.id.get))
+      normUrl.foreach(n => searchClient.logBrowsed(user.id.get, n.id.get))
   }
 }
 

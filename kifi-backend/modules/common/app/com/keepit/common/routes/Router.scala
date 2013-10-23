@@ -7,7 +7,6 @@ import com.keepit.common.db.State
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
-import play.api.libs.json.JsArray
 
 
 trait Service
@@ -97,6 +96,7 @@ object Search extends Service {
   object internal {
     def logResultClicked() = ServiceRoute(POST, "/internal/search/events/resultClicked")
     def logSearchEnded() = ServiceRoute(POST, "/internal/search/events/searchEnded")
+    def logBrowsed(id: Id[User]) = ServiceRoute(POST, s"/internal/events/browsed/${id.id}")
     def commentIndexInfo() = ServiceRoute(GET, "/internal/search/comment/info")
     def commentReindex() = ServiceRoute(GET, "/internal/search/comment/reindex")
     def commentDumpLuceneDocument(id: Id[Comment]) = ServiceRoute(POST, "/internal/search/comment/dumpDoc", Param("id", id))
@@ -144,11 +144,14 @@ object Eliza extends Service {
 object Heimdal extends Service {
   object internal {
     def trackEvent() = ServiceRoute(POST, "/internal/heimdal/trackEvent")
+    def getMetricData(name: String) = ServiceRoute(GET, s"/internal/heimdal/getMetricData?name=${name}")
+    def updateMetrics() = ServiceRoute(GET, "/internal/heimdal/updateMetrics")
   }
 }
 
 object ABook extends Service {
   object internal {
+    def importContacts(userId:Id[User], provider:String, accessToken:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/importContacts", Param("provider", provider), Param("accessToken", accessToken))
     def upload(origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${origin.name}/upload")
     def upload(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/upload")
     def uploadDirect(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/uploadDirect")

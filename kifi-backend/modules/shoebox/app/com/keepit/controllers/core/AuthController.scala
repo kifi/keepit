@@ -25,6 +25,8 @@ import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
 import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
+import play.api.libs.iteratee.Enumerator
+import play.api.Play
 
 sealed abstract class AuthType
 
@@ -45,6 +47,7 @@ class AuthController @Inject() (
     socialRepo: SocialUserInfoRepo,
     actionAuthenticator: ActionAuthenticator,
     emailRepo: EmailAddressRepo,
+    userRepo: UserRepo,
     postOffice: LocalPostOffice
   ) extends WebsiteController(actionAuthenticator) with Logging {
 
@@ -116,7 +119,7 @@ class AuthController @Inject() (
   }
 
   private case class RegistrationInfo(email: String, password: String, firstName: String, lastName: String)
-  private case class ConfirmationInfo(firstName: String, lastName: String)
+  private case class ConfirmationInfo(firstName: String, lastName: String, picToken: Option[String])
   private case class EmailPassword(email: String, password: String)
 
   private val passwordForm = Form[String](
@@ -144,73 +147,25 @@ class AuthController @Inject() (
     (RegistrationInfo.unapply)
   )
 
-  private val confirmationInfoForm = Form[ConfirmationInfo](
-    mapping("firstname" -> nonEmptyText, "lastname" -> nonEmptyText)(ConfirmationInfo.apply)(ConfirmationInfo.unapply)
-  )
+  // Finalize account
+  def signupPage() = HtmlAction(true)(authenticatedAction = doFinalizePage(_), unauthenticatedAction = doFinalizePage(_))
 
-  private val emailPasswordForm = Form[EmailPassword](
-    mapping(
-      "email" -> email,
-      "password" -> text.verifying("password_too_short", pw => pw.length >= 7)
-    )
-    (EmailPassword.apply)
-    (EmailPassword.unapply)
-  )
-
-  def signupPage() = HtmlAction(true)(authenticatedAction = doSignupPage(_), unauthenticatedAction = doSignupPage(_))
-
-  def handleSignup() = HtmlAction(true)(authenticatedAction = doSignup(_), unauthenticatedAction = doSignup(_))
 
   // Initial user/pass signup JSON action
   def userPasswordSignup() = JsonToJsonAction(true)(
     authenticatedAction = userPasswordSignupAction(_),
     unauthenticatedAction = userPasswordSignupAction(_)
   )
-
+  private val emailPasswordForm = Form[EmailPassword](
+    mapping(
+      "email" -> email,
+      "password" -> text.verifying("password_too_short", pw => pw.length >= 7)
+    )(EmailPassword.apply)(EmailPassword.unapply)
+  )
   private def userPasswordSignupAction(implicit request: Request[JsValue]) = {
-
     val home = com.keepit.controllers.website.routes.HomeController.home()
     emailPasswordForm.bindFromRequest.fold(
       formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
-      { case EmailPassword(email, password) =>
-        val hasher = Registry.hashers.currentHasher
-
-        db.readOnly { implicit s => socialRepo.getOpt(SocialId(email), SocialNetworks.FORTYTWO) }.collect {
-          case sui if sui.credentials.isDefined && sui.userId.isDefined =>
-            val identity = sui.credentials.get
-            if (hasher.matches(identity.passwordInfo.get, password)) {
-              Authenticator.create(identity).fold(
-                error => Status(500)("0"),
-                authenticator =>
-                  Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> false))
-                    .withNewSession
-                    .withCookies(authenticator.toCookie)
-              )
-            } else {
-              Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
-            }
-        }.getOrElse {
-          val pInfo = hasher.hash(password)
-          val newIdentity = saveUserIdentity(None, request.identityOpt, email, pInfo, isComplete = false)
-          Authenticator.create(newIdentity).fold(
-            error => Status(500)("0"),
-            authenticator =>
-              Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> true))
-                .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
-                .withCookies(authenticator.toCookie)
-          )
-        }
-      }
-    )
-  }
-
-  // Greg's first user/pass signup handler
-  def handleUsernamePasswordSignup() = HtmlAction(true)({ _ => Redirect("/") }, { implicit request =>
-    val home = com.keepit.controllers.website.routes.HomeController.home()
-    val signup = routes.AuthController.signupPage()
-
-    emailPasswordForm.bindFromRequest.fold(
-      formWithErrors => Redirect(home).flashing("error" -> "Form is invalid"),
       { case EmailPassword(email, password) =>
         val hasher = Registry.hashers.currentHasher
 
@@ -221,63 +176,123 @@ class AuthController @Inject() (
             val identity = sui.credentials.get
             if (hasher.matches(identity.passwordInfo.get, password)) {
               Authenticator.create(identity).fold(
-                error => Redirect(home).flashing("error" -> "Email exists; login failed"),
-                authenticator =>
-                  Redirect(s"${home.url}?m=0")
-                      .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
-                      .withCookies(authenticator.toCookie)
+                error => Status(500)("0"),
+                authenticator => {
+                  val needsToFinalize = db.readOnly { implicit session =>
+                    userRepo.get(sui.userId.get).state == UserStates.INCOMPLETE_SIGNUP
+                  }
+                  Ok(Json.obj("success"-> true, "email" -> email, "new_account" -> false, "needsToFinalize" -> needsToFinalize))
+                    .withNewSession
+                    .withCookies(authenticator.toCookie)
+                }
               )
             } else {
-              Redirect(home).flashing("error" -> "A user with that email exists but the password was invalid")
+              Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
             }
         }.getOrElse {
-          val pinfo = hasher.hash(password)
-          val newIdentity = saveUserIdentity(request.userIdOpt, request.identityOpt, email, pinfo, isComplete = false)
+          val pInfo = hasher.hash(password)
+          val newIdentity = saveUserPasswordIdentity(None, request.identityOpt, email, pInfo, isComplete = false)
           Authenticator.create(newIdentity).fold(
-            error => Redirect(signup).flashing("error" -> "Error creating user"),
+            error => Status(500)("0"),
             authenticator =>
-              Redirect(signup)
+              Ok(Json.obj("success"-> true, "email" -> email, "new_account" -> true))
                 .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
                 .withCookies(authenticator.toCookie)
           )
         }
-      })
-  })
+      }
+    )
+  }
 
-  // Greg's 2nd stage signup page
-  private def doSignupPage(implicit request: Request[_]): Result = {
+
+  private def doFinalizePage(implicit request: Request[_]): Result = {
     def hasEmail(identity: Identity): Boolean = db.readOnly { implicit s =>
       identity.email.flatMap(emailRepo.getByAddressOpt(_)).isDefined
     }
 
     (request.userOpt, request.identityOpt) match {
       case (Some(user), _) if user.state != UserStates.INCOMPLETE_SIGNUP =>
+        // Complete user, they don't need to be here!
         Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
-      case (Some(user), identityOpt) =>
-        Ok(views.html.website.completeSignup(
-          errorMessage = request.flash.get("error"),
-          email = identityOpt.flatMap(_.email)))
+      case (Some(user), Some(identity)) =>
+        // User exists, is incomplete
+        Ok(views.html.signup.finalizeEmail(
+          email = identity.email.getOrElse(""),
+          picturePath = identity.avatarUrl.getOrElse("")
+        ))
+      case (Some(user), None) =>
+        // User but no identity. Huh?
+        // TODO(andrew): Figure this one out
+        Ok("user, no identity")
       case (None, Some(identity)) if hasEmail(identity) =>
+        // No user exists, has identity and identity has an email in our records
+        // Bad login? Trying to discover when this state can happen, will get back to this.
         val error = request.flash.get("error").map { _ => "Login failed" }
-        Ok(views.html.website.emailExists(
-          identity.email.get, SocialNetworkType(identity.identityId.providerId), error))
-      case (None, identityOpt) =>
-        Ok(views.html.website.signup(
-          errorMessage = request.flash.get("error"),
-          network = identityOpt.map(id => SocialNetworkType(id.identityId.providerId)),
-          firstName = identityOpt.map(_.firstName),
-          lastName = identityOpt.map(_.lastName),
-          email = identityOpt.flatMap(_.email)))
+        Ok("No user, identity, has email")
+      case (None, Some(identity)) =>
+        // No user exists, so is social
+        Ok(views.html.signup.finalizeSocial(
+          firstName = identity.firstName,
+          lastName = identity.lastName,
+          email = identity.email.getOrElse(""),
+          picturePath = identity.avatarUrl.getOrElse("")
+        ))
+      case (None, None) =>
+        // TODO(andrew): Forward user to initial signup page
+        Ok("You should sign up!")
     }
   }
 
-  private val url = current.configuration.getString("application.baseUrl").get
+  // user/email finalize action (new)
+  def userPassFinalizeAccountAction() = JsonToJsonAction(true)(authenticatedAction = doUserPassFinalizeAccountAction(_), unauthenticatedAction = doUserPassFinalizeAccountAction(_))
+  private val userPassFinalizeAccountForm = Form[ConfirmationInfo](
+    mapping("firstName" -> nonEmptyText, "lastName" -> nonEmptyText, "picToken" -> optional(text))(ConfirmationInfo.apply)(ConfirmationInfo.unapply)
+  )
+  def doUserPassFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
+    userPassFinalizeAccountForm.bindFromRequest.fold(
+    formWithErrors => Forbidden(Json.obj("error" -> "user_exists_failed_auth")),
+    { case ConfirmationInfo(firstName, lastName, picToken) =>
+      val identity = request.identityOpt.get
+      val pinfo = identity.passwordInfo.get
+      val email = identity.email.get
+      val newIdentity = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = pinfo,
+        firstName = firstName, lastName = lastName, isComplete = true)
 
-  // Greg's 2nd signup action
-  private def doSignup(implicit request: Request[AnyContent]): Result = {
-    val isConfirmation = request.body.asFormUrlEncoded.exists(_.get("confirm").isDefined)
+      finishSignup(newIdentity, true)
+    })
+  }
 
-    def finishSignup(newIdentity: Identity): Result = {
+  // social finalize action (new)
+  def socialFinalizeAccountAction() = JsonToJsonAction(true)(authenticatedAction = doSocialFinalizeAccountAction(_), unauthenticatedAction = doSocialFinalizeAccountAction(_))
+  private val socialFinalizeAccountForm = Form[RegistrationInfo](
+    mapping(
+      "email" -> email.verifying("email_exists_for_other_user", email => db.readOnly { implicit s =>
+        userCredRepo.findByEmailOpt(email).isEmpty
+      }),
+      "firstName" -> nonEmptyText,
+      "lastName" -> nonEmptyText,
+      "password" -> text.verifying("password_too_short", pw => pw.length >= 7)
+    )
+      (RegistrationInfo.apply)
+      (RegistrationInfo.unapply)
+  )
+  def doSocialFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
+    socialFinalizeAccountForm.bindFromRequest.fold(
+    formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
+    {
+      case RegistrationInfo(email, firstName, lastName, password) =>
+        request.identityOpt
+        val pinfo = Registry.hashers.currentHasher.hash(password)
+        val newIdentity = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt,
+          email = email, passwordInfo = pinfo, firstName = firstName, lastName = lastName, isComplete = true)
+
+        val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == email.trim)
+        finishSignup(newIdentity, emailConfirmedBySocialNetwork)
+    })
+  }
+
+  private def finishSignup(newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
+    if (!emailConfirmedAlready) {
       db.readWrite { implicit s =>
         val email = newIdentity.email.get
         val emailWithVerification =
@@ -289,50 +304,28 @@ class AuthController @Inject() (
           to = Seq(GenericEmailAddress(email)),
           subject = "Confirm your email address for Kifi",
           htmlBody = s"Please confirm your email address by going to " +
-              s"$url${routes.AuthController.verifyEmail(emailWithVerification.verificationCode.get)}",
+            s"$url${routes.AuthController.verifyEmail(emailWithVerification.verificationCode.get)}",
           category = ElectronicMailCategory("email_confirmation")
         ))
       }
-      Authenticator.create(newIdentity).fold(
-        error => Redirect(routes.AuthController.handleSignup()).flashing(
-          "error" -> "Error creating user"
-        ),
-        authenticator => Redirect("/")
-            .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
-            .withCookies(authenticator.toCookie)
-      )
     }
 
-    if (isConfirmation) {
-      confirmationInfoForm.bindFromRequest.fold(
-        formWithErrors => Redirect(routes.AuthController.signupPage()).flashing(
-          "error" -> "Form is invalid"
-        ),
-        { case ConfirmationInfo(firstName, lastName) =>
-          val identity = request.identityOpt.get
-          val pinfo = identity.passwordInfo.get
-          val email = identity.email.get
-          val newIdentity = saveUserIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = pinfo,
-            firstName = firstName, lastName = lastName, isComplete = true)
-
-          finishSignup(newIdentity)
-        })
-    } else {
-      registrationInfoForm.bindFromRequest.fold(
-        formWithErrors => Redirect(routes.AuthController.signupPage()).flashing(
-          "error" -> "Form is invalid"
-        ),
-        { case RegistrationInfo(email, firstName, lastName, password) =>
-          val pinfo = Registry.hashers.currentHasher.hash(password)
-          val newIdentity = saveUserIdentity(request.userIdOpt, request.identityOpt,
-            email = email, passwordInfo = pinfo, firstName = firstName, lastName = lastName, isComplete = true)
-
-          finishSignup(newIdentity)
-        })
-    }
+    Authenticator.create(newIdentity).fold(
+      error => Status(500)("0"),
+      authenticator => Ok
+        .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
+        .withCookies(authenticator.toCookie)
+    )
   }
 
-  private def saveUserIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
+  def OkStreamFile(filename: String) =
+    Ok.stream(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
+
+
+  private val url = current.configuration.getString("application.baseUrl").get
+
+
+  private def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
       email: String, passwordInfo: PasswordInfo,
       firstName: String = "", lastName: String = "", isComplete: Boolean = true): UserIdentity = {
     val newIdentity = UserIdentity(

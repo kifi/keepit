@@ -33,13 +33,13 @@ object BasicUser {
       externalId = user.externalId,
       firstName = user.firstName,
       lastName = user.lastName,
-      pictureName = "0.jpg" // TODO: when we have multiple picture IDs make sure we change this
+      pictureName = user.pictureName.map(_+ ".jpg").getOrElse("0.jpg") // need support for default image
     )
   }
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
-  override val version = 3
+  override val version = 5
   val namespace = "basic_user_userid"
   def toKey(): String = userId.id.toString
 }

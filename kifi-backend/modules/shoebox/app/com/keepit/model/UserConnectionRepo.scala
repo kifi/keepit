@@ -76,9 +76,13 @@ class UserConnectionRepoImpl @Inject() (
     (for (c <- table if c.user1 === u1 && c.user2 === u2 || c.user2 === u1 && c.user1 === u2) yield c).firstOption
 
   def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
-    userConnCache.getOrElse(UserConnectionIdKey(id)){
-      ((for (c <- table if c.user1 === id && c.state === UserConnectionStates.ACTIVE) yield c.user2) union
-        (for (c <- table if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield c.user1)).list.toSet
+    userConnCache.get(UserConnectionIdKey(id)) match {
+      case Some(conns) => conns.map{ Id[User](_) }.toSet
+      case _ =>
+        val conns = ((for (c <- table if c.user1 === id && c.state === UserConnectionStates.ACTIVE) yield c.user2) union
+                      (for (c <- table if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield c.user1)).list.toSet
+        userConnCache.set(UserConnectionIdKey(id), conns.map(_.id).toArray)
+        conns
     }
   }
 

@@ -7,13 +7,18 @@ function dispatch() {
   this.forEach(function(f) {f.apply(null, args)});
 }
 
-function markInjected(inj, o) {
-  for each (let arr in o) {
-    for each (let path in arr) {
-      inj[path] = true;
-    }
+function merge(o1, o2) {
+  for (let k in o2) {
+    o1[k] = o2[k];
   }
-  return inj;
+  return o1;
+}
+
+function mergeArr(o, arr) {
+  for (let k of arr) {
+    o[k] = true;
+  }
+  return o;
 }
 
 // TODO: load some of these APIs on demand instead of up front
@@ -32,7 +37,7 @@ const httpRe = /^https?:/;
 const pages = {}, tabsById = {};
 function createPage(tab) {
   if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
-  exports.log('[createPage]', tab.id, tab.url);
+  log('[createPage]', tab.id, tab.url);
   var page = pages[tab.id] = {id: tab.id, url: tab.url};
   workerNs(page).workers = [];
   return page;
@@ -45,7 +50,7 @@ exports.icon = {
   set: function(page, path) {
     if (page === pages[page.id]) {
       page.icon = path;
-      exports.log("[api.icon.set]", page.id, path);
+      log("[api.icon.set]", page.id, path);
       var tab = tabsById[page.id], win = tab.window;
       if (tab === win.tabs.activeTab) {
         icon.show(win, url(path));
@@ -82,6 +87,9 @@ exports.log = function() {
   }
   return console.log.apply.bind(console.log, console, args);
 };
+function log() {
+  exports.log.apply(null, arguments)();
+}
 exports.log.error = function(exception, context) {
   console.error((context ? "[" + context + "] " : "") + exception);
   console.error(exception.stack);
@@ -133,14 +141,14 @@ exports.popup = {
     //     height: options.height || undefined}});
     // var { Cc, Ci } = require('chrome')
     // var ww = Cc["@mozilla.org/embedcomp/window-watcher;1"].getService(Ci.nsIWindowWatcher);
-    // exports.log("=========== OPENED:", typeof ww.getChromeForWindow(win));
+    // log("=========== OPENED:", typeof ww.getChromeForWindow(win));
     // timers.setTimeout(function() {
     //   win.close();
     // }, 50000);
 
     // ww.registerNotification({
     //   observe: function(aSubject, aTopic, aData) {
-    //     exports.log("============== OBSERVED!", aSubject, aTopic, aData);
+    //     log("============== OBSERVED!", aSubject, aTopic, aData);
     //   }});
 
     // WORKS! win.getInterface(Ci.nsIWebNavigation);
@@ -220,7 +228,7 @@ exports.socket = {
         socketPage.port.emit("socket_send", socketId, arr);
       },
       close: function() {
-        exports.log("[api.socket.close]", socketId);
+        log("[api.socket.close]", socketId);
         delete sockets[socketId];
         socketPage.port.emit("close_socket", socketId);
         if (!sockets.some(function(h) {return h})) {
@@ -229,7 +237,7 @@ exports.socket = {
         }
         this.send = this.close = exports.noop;
       }};
-    exports.log("[api.socket.open]", socketId, url);
+    log("[api.socket.open]", socketId, url);
     sockets.push({socket: socket, handlers: handlers, onConnect: onConnect, onDisconnect: onDisconnect});
     if (socketPage) {
       socketPage.port.emit("open_socket", socketId, url);
@@ -259,7 +267,7 @@ function onSocketConnect(socketId) {
       exports.log.error(e, "onSocketConnect:" + socketId);
     }
   } else {
-    exports.log("[onSocketConnect] Ignoring, no socket", socketId);
+    log("[onSocketConnect] Ignoring, no socket", socketId);
   }
 }
 function onSocketDisconnect(socketId, why) {
@@ -271,7 +279,7 @@ function onSocketDisconnect(socketId, why) {
       exports.log.error(e, "onSocketDisconnect:" + socketId + ": " + why);
     }
   } else {
-    exports.log("[onSocketDisconnect] Ignoring, no socket", socketId);
+    log("[onSocketDisconnect] Ignoring, no socket", socketId);
   }
 }
 function onSocketMessage(socketId, data) {
@@ -285,7 +293,7 @@ function onSocketMessage(socketId, data) {
           delete socketCallbacks[id];
           callback.apply(null, msg);
         } else {
-          exports.log("[api.socket.receive] Ignoring, no callback", id, msg);
+          log("[api.socket.receive] Ignoring, no callback", id, msg);
         }
       } else {
         var socket = sockets[socketId];
@@ -294,14 +302,14 @@ function onSocketMessage(socketId, data) {
           if (handler) {
             handler.apply(null, msg);
           } else {
-            exports.log("[api.socket.receive] Ignoring, no handler", id, msg);
+            log("[api.socket.receive] Ignoring, no handler", id, msg);
           }
         } else {
-          exports.log("[api.socket.receive] Ignoring, no socket", socketId, id, msg);
+          log("[api.socket.receive] Ignoring, no socket", socketId, id, msg);
         }
       }
     } else {
-      exports.log("[api.socket.receive] Ignoring, not array", msg);
+      log("[api.socket.receive] Ignoring, not array", msg);
     }
   } catch (e) {
     exports.log.error(e, "api.socket.receive:" + socketId + ":" + data);
@@ -319,13 +327,13 @@ exports.tabs = {
     }
   },
   select: function(tabId) {
-    exports.log("[api.tabs.select]", tabId);
+    log("[api.tabs.select]", tabId);
     var tab = tabsById[tabId];
     tab.activate();
     tab.window.activate();
   },
   open: function(url, callback) {
-    exports.log("[api.tabs.open]", url);
+    log("[api.tabs.open]", url);
     tabs.open({
       url: url,
       onOpen: function(tab) {
@@ -353,7 +361,7 @@ exports.tabs = {
           worker.port.emit(type, data);
           if (!emitted) {
             emitted = true;
-            exports.log("[api.tabs.emit]", tab.id, "type:", type, "data:", data, "url:", tab.url);
+            log("[api.tabs.emit]", tab.id, "type:", type, "data:", data, "url:", tab.url);
           }
         }
       }
@@ -374,7 +382,7 @@ exports.tabs = {
           page.toEmit = [[type, data]];
         }
       } else {
-        exports.log("[api.tabs.emit]", tab.id, "type:", type, "neither emitted nor queued for:", tab.url);
+        log("[api.tabs.emit]", tab.id, "type:", type, "neither emitted nor queued for:", tab.url);
       }
     }
   },
@@ -406,18 +414,18 @@ exports.version = self.version;
 
 tabs
 .on("open", function(tab) {
-  exports.log("[tabs.open]", tab.id, tab.url);
+  log("[tabs.open]", tab.id, tab.url);
   tabsById[tab.id] = tab;
 })
 .on("close", function(tab) {
-  exports.log("[tabs.close]", tab.id, tab.url);
+  log("[tabs.close]", tab.id, tab.url);
   onPageHide(tab.id);
   delete tabsById[tab.id];
 })
 .on("activate", function(tab) {
   var page = pages[tab.id];
   if (!page || !page.active) {
-    exports.log("[tabs.activate]", tab.id, tab.url);
+    log("[tabs.activate]", tab.id, tab.url);
     if (!/^about:/.test(tab.url)) {
       if (page) {
         if (page.icon) {
@@ -435,7 +443,7 @@ tabs
   }
 })
 .on("deactivate", function(tab) {  // note: can fire after "close"
-  exports.log("[tabs.deactivate]", tab.id, tab.url);
+  log("[tabs.deactivate]", tab.id, tab.url);
   if (tab.window === windows.activeWindow) {
     var page = pages[tab.id];
     if (page && httpRe.test(page.url)) {
@@ -444,16 +452,16 @@ tabs
   }
 })
 .on("ready", function(tab) {
-  exports.log("[tabs.ready]", tab.id, tab.url);
+  log("[tabs.ready]", tab.id, tab.url);
 });
 
 windows
 .on("open", function(win) {
-  exports.log("[windows.open]", win.title);
+  log("[windows.open]", win.title);
   win.removeIcon = icon.addToWindow(win, onIconClick);
 })
 .on("close", function(win) {
-  exports.log("[windows.close]", win.title);
+  log("[windows.close]", win.title);
   removeFromWindow(win);
 })
 .on("activate", function(win) {
@@ -471,11 +479,11 @@ windows
 
 for each (let win in windows) {
   if (!win.removeIcon) {
-    exports.log("[windows] adding icon to window:", win.title);
+    log("[windows] adding icon to window:", win.title);
     win.removeIcon = icon.addToWindow(win, onIconClick);
   }
   for each (let tab in win.tabs) {
-    exports.log("[windows]", tab.id, tab.url);
+    log("[windows]", tab.id, tab.url);
     tabsById[tab.id] = tab;
     pages[tab.id] || createPage(tab);
   }
@@ -489,7 +497,7 @@ const plusRe = /\+/g;
 
 require('./location').onChange(function(tabId, newPage) {
   const tab = tabsById[tabId];
-  exports.log('[location:change]', tabId, 'newPage:', newPage, tab.url);
+  log('[location:change]', tabId, 'newPage:', newPage, tab.url);
   if (newPage) {
     onPageHide(tab.id);
 
@@ -536,7 +544,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
   const {PageMod} = require("sdk/page-mod");
   require("./meta").contentScripts.forEach(function(arr) {
     const path = arr[0], urlRe = arr[1], o = deps(path);
-    exports.log("defining PageMod:", path, "deps:", o);
+    log("defining PageMod:", path, "deps:", o);
     PageMod({
       include: urlRe,
       contentStyleFile: o.styles.map(url),
@@ -546,28 +554,29 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
         const tab = worker.tab, page = pages[tab.id];
-        exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
-        const injected = markInjected({}, o);
+        log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
+        page.injectedCss = mergeArr({}, o.styles);
+        const injectedJs = mergeArr({}, o.scripts);
         const workers = workerNs(page).workers;
         workers.push(worker);
         worker.on("pageshow", function() {  // pageshow/pagehide discussion at bugzil.la/766088#c2
           if (pages[tab.id] !== page) {  // bfcache used
-            exports.log("[api:pageshow] tab:", tab.id, "updating:", pages[tab.id], "->", page);
+            log("[api:pageshow] tab:", tab.id, "updating:", pages[tab.id], "->", page);
             pages[tab.id] = page;
           } else if (page.url !== tab.url) {  // shouldn’t happen
-            exports.log("[api:pageshow] tab:", tab.id, "updating:", page.url, "->", tab.url);
+            log("[api:pageshow] tab:", tab.id, "updating:", page.url, "->", tab.url);
             page.url = tab.url;
           } else {
-            exports.log("[api:pageshow] tab:", tab.id, "url:", tab.url);
+            log("[api:pageshow] tab:", tab.id, "url:", tab.url);
           }
           emitQueuedMessages(page, worker);
         }).on("pagehide", function() {
-          exports.log("[pagehide] tab:", tab.id);
+          log("[pagehide] tab:", tab.id);
           onPageHide(tab.id);
         });
         Object.keys(portHandlers).forEach(function(type) {
           worker.port.on(type, function(data, callbackId) {
-            exports.log("[worker.port.on] message:", type, "data:", data, "callbackId:", callbackId);
+            log("[worker.port.on] message:", type, "data:", data, "callbackId:", callbackId);
             portHandlers[type](data, function(response) {
                 worker.port.emit("api:respond", callbackId, response);
               }, page);
@@ -575,16 +584,17 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
         });
         worker.handling = {};
         worker.port.on("api:handling", function(types) {
-          exports.log("[api:handling]", types);
+          log("[api:handling]", types);
           for each (let type in types) {
             worker.handling[type] = true;
           }
           emitQueuedMessages(page, worker);
         });
         worker.port.on("api:require", function(paths, callbackId) {
-          var o = deps(paths, injected);
-          exports.log("[api:require] tab:", tab.id, o);
-          markInjected(injected, o);
+          var o = deps(paths, merge(merge({}, page.injectedCss), injectedJs));
+          log("[api:require] tab:", tab.id, o);
+          mergeArr(page.injectedCss, o.styles);
+          mergeArr(injectedJs, o.scripts);
           worker.port.emit("api:inject", o.styles.map(load), o.scripts.map(load), callbackId);
         });
       }});
@@ -596,7 +606,7 @@ function emitQueuedMessages(page, worker) {
     for (var i = 0; i < page.toEmit.length;) {
       var m = page.toEmit[i];
       if (worker.handling[m[0]]) {
-        exports.log("[emitQueuedMessages]", page.id, m[0], m[1] != null ? m[1] : "");
+        log("[emitQueuedMessages]", page.id, m[0], m[1] != null ? m[1] : "");
         worker.port.emit.apply(worker.port, m);
         page.toEmit.splice(i, 1);
       } else {

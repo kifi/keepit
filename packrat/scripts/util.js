@@ -4,9 +4,6 @@
  * ---------------
  *
  * Contains utility functions
- *
- * @author Joon Ho Cho <joon@42go.com>
- * @date 10-07-2013
  */
 
 var util = this.util = (function () {
@@ -31,6 +28,130 @@ var util = this.util = (function () {
 				vals.push(obj[keys[i]]);
 			}
 			return vals;
+		},
+
+		/**
+		 * Removes a value from an array if exists.
+		 * Returns true if removed, false otherwise.
+		 *
+		 * @param {Array} Array to remove from
+		 * @param {Array} A value to remove
+		 *
+		 * @return {boolean} Whether the value was found and removed
+		 */
+		remove: function (arr, val) {
+			var i = arr.indexOf(arr, val);
+			if (i !== -1) {
+				arr.splice(i, 1);
+				return true;
+			}
+			return false;
+		},
+
+		/**
+		 * Returns a new array of values of the second array
+		 * that are not present in the first array.
+		 *
+		 * @param {Array} first array
+		 * @param {Array} second array
+		 *
+		 * @return {Array} new array
+		 */
+		getNewValues: (function () {
+			function uniqueFilter(val) {
+				return this.indexOf(val) === -1;
+			}
+
+			return function (arr, list) {
+				return list.filter(uniqueFilter, arr);
+			};
+		})(),
+
+		/**
+		 * Adds values from the second array to the first array
+		 * that are not present in the first array.
+		 * It mutates the first array and returns the number of values added.
+		 *
+		 * @param {Array} An array to add to
+		 * @param {Array} An array of values to add
+		 *
+		 * @return {number} how many were added
+		 */
+		addUnique: function (arr, list) {
+			var prevLen = arr.length;
+			for (var i = 0, len = list.length, val; i < len; i++) {
+				val = list[i];
+				if (arr.indexOf(val) === -1) {
+					arr.push(val);
+				}
+			}
+			return arr.length - prevLen;
+		},
+
+		/**
+		 * Prepends values from the second array to the first array
+		 * that are not present in the first array.
+		 * It mutates the first array and returns the number of values added.
+		 *
+		 * @param {Array} An array to prepend to
+		 * @param {Array} An array of values to prepend
+		 *
+		 * @return {number} how many were added
+		 */
+		prependUnique: function (arr, list) {
+			var prevLen = arr.length;
+			for (var i = 0, len = list.length, val; i < len; i++) {
+				val = list[i];
+				if (arr.indexOf(val) === -1) {
+					arr.unshift(val);
+				}
+			}
+			return arr.length - prevLen;
+		},
+
+		/**
+		 * Removes the second array values from the first array.
+		 * It mutates the first array and returns an array of values removed.
+		 *
+		 * @param {Array} An array to remove from
+		 * @param {Array} An array of values to remove
+		 *
+		 * @return {Array} An array of values removed
+		 */
+		removeList: function (arr, list) {
+			var indices = [];
+			for (var i = 0, len = list.length, index; i < len; i++) {
+				index = arr.indexOf(list[i]);
+				if (index !== -1) {
+					indices.push(index);
+				}
+			}
+
+			return util.removeIndices(arr, indices, true);
+		},
+
+		removeIndices: function (arr, indices, sorted) {
+			var removedList = [];
+			if (indices && indices.length) {
+				if (!sorted) {
+					indices.sort();
+				}
+
+				for (var i = indices.length - 1; i >= 0; i--) {
+					removedList.push(arr.splice(indices[i], 1)[0]);
+				}
+			}
+			return removedList;
+		},
+
+		indicesOf: function (arr, fn, that) {
+			var indices = [];
+			for (var i = 0, len = arr.length; i < len; i++) {
+				if ((i in arr) && fn.call(that, arr[i], i, arr)) {
+					indices.push(i);
+				}
+			}
+			return indices;
 		},
 
 		/**

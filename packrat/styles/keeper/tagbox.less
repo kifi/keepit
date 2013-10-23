@@ -37,7 +37,6 @@
   border: 5px solid @kifi-darkbluegray;
   border-radius: 9px;
   background: @kifi-darkbluegray;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
   font-weight: normal;
   -webkit-font-smoothing: antialiased;
   text-align: left;
@@ -159,7 +158,7 @@ display: block;
   }
 
   &.kifi-focus .kifi-tagbox-input-placeholder {
-    color: lighten(@kifi-bluegray, 10%);
+    color: tint(@kifi-bluegray, 10%);
   }
 
   &.kifi-empty .kifi-tagbox-input-placeholder {
@@ -225,7 +224,6 @@ display: block;
   min-height: 164px;
   max-height: 265px;
   padding: 0;
-  overflow: scroll;
   overflow-x: hidden;
   overflow-y: scroll;
   font-size: 14px;
@@ -262,7 +260,7 @@ display: block;
   }
 
   &:active {
-    background: darken(@kifi-highlight, 10%);
+    background: shade(@kifi-highlight, 10%);
   }
 
   &.kifi-busy {
@@ -303,7 +301,7 @@ display: block;
   }
 
   &:active {
-    background: darken(@kifi-highlight, 10%);
+    background: shade(@kifi-highlight, 10%);
     color: white !important; // style leak fix
   }
 

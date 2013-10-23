@@ -479,6 +479,9 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     log("[showPane]", locator, back ? "back" : "")();
     if (locator !== (paneHistory && paneHistory[0])) {
       var pane = toPaneName(locator);
+      if (window.messageHeader) {
+        window.messageHeader.destroy();
+      }
       (createPaneParams[pane] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
         params.redirected = redirected;
         showPane2(locator, back, pane, params);
@@ -801,6 +804,9 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         }
       }
     },
+    getPane: function() {
+      return $pane || null;
+    },
     showPane: function (trigger, locator, redirected) {
       log("[showPane]", trigger, locator)();
       showPane(locator, false, null, redirected);
@@ -828,6 +834,13 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       if ($pane) {
         $pane.removeClass('kifi-shaded');
       }
+    },
+    getLocator: function () {
+      return $pane && $pane[0].dataset.locator || null;
+    },
+    getThreadId: function () {
+      var locator = this.getLocator();
+      return locator && locator.split('/')[2];
     },
     showKeepers: function (keepers, otherKeeps) {
       if (lastShownAt) return;

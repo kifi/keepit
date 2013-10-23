@@ -48,8 +48,8 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Singleton
   @Provides
-  def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserInfoNetworkCache(stats, accessLog, (outerRepo, 30 days))
+  def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SocialUserInfoNetworkCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -73,18 +73,8 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Singleton
   @Provides
-  def userExperimentCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UserExperimentCache(stats, accessLog, (outerRepo, 7 days))
-
-  @Singleton
-  @Provides
-  def browsingHistoryUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new BrowsingHistoryUserIdCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
-
-  @Singleton
-  @Provides
-  def clickHistoryUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ClickHistoryUserIdCache(stats, accessLog, (innerRepo, 50 milliseconds), (outerRepo, 7 days))
+  def userExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserExperimentCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides

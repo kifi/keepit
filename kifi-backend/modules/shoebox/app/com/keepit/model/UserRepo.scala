@@ -1,7 +1,6 @@
 package com.keepit.model
 
 import scala.concurrent._
-
 import com.google.inject.{Inject, Singleton, ImplementedBy, Provider}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
@@ -10,8 +9,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.shoebox.usersearch._
 import com.keepit.social._
-
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.db.SequenceNumber
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
@@ -29,18 +28,29 @@ class UserRepoImpl @Inject() (
     val externalIdCache: UserExternalIdCache,
     val idCache: UserIdCache,
     basicUserCache: BasicUserUserIdCache,
-    commentWithBasicUserCache: CommentWithBasicUserCache,
     userIndexProvider: Provider[UserIndex])
   extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
+  import FortyTwoTypeMappers._
+  
+  private val sequence = db.getSequence("user_sequence")
+
 
   override val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User.apply _, User.unapply _)
+    def pictureName = column[String]("picture_name", O.Nullable)
+    def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
+    def seq = column[SequenceNumber]("seq", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state ~ pictureName.? ~ userPictureId.? ~ seq <> (User.apply _, User.unapply _)
+  }
+  
+  override def save(user: User)(implicit session: RWSession): User = {
+    val toSave = user.copy(seq = sequence.incrementAndGet())
+    super.save(toSave)
   }
 
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User] =
