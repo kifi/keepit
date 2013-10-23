@@ -7,13 +7,18 @@ function dispatch() {
   this.forEach(function(f) {f.apply(null, args)});
 }
 
-function markInjected(inj, o) {
-  for each (let arr in o) {
-    for each (let path in arr) {
-      inj[path] = true;
-    }
+function merge(o1, o2) {
+  for (let k in o2) {
+    o1[k] = o2[k];
   }
-  return inj;
+  return o1;
+}
+
+function mergeArr(o, arr) {
+  for (let k of arr) {
+    o[k] = true;
+  }
+  return o;
 }
 
 // TODO: load some of these APIs on demand instead of up front
@@ -550,7 +555,8 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       onAttach: function(worker) {
         const tab = worker.tab, page = pages[tab.id];
         log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
-        const injected = markInjected({}, o);
+        page.injectedCss = mergeArr({}, o.styles);
+        const injectedJs = mergeArr({}, o.scripts);
         const workers = workerNs(page).workers;
         workers.push(worker);
         worker.on("pageshow", function() {  // pageshow/pagehide discussion at bugzil.la/766088#c2
@@ -585,9 +591,10 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
           emitQueuedMessages(page, worker);
         });
         worker.port.on("api:require", function(paths, callbackId) {
-          var o = deps(paths, injected);
+          var o = deps(paths, merge(merge({}, page.injectedCss), injectedJs));
           log("[api:require] tab:", tab.id, o);
-          markInjected(injected, o);
+          mergeArr(page.injectedCss, o.styles);
+          mergeArr(injectedJs, o.scripts);
           worker.port.emit("api:inject", o.styles.map(load), o.scripts.map(load), callbackId);
         });
       }});
