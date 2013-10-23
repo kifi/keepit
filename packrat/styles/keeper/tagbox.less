@@ -159,7 +159,7 @@ display: block;
   }
 
   &.kifi-focus .kifi-tagbox-input-placeholder {
-    color: lighten(@kifi-bluegray, 10%);
+    color: tint(@kifi-bluegray, 10%);
   }
 
   &.kifi-empty .kifi-tagbox-input-placeholder {
@@ -262,7 +262,7 @@ display: block;
   }
 
   &:active {
-    background: darken(@kifi-highlight, 10%);
+    background: shade(@kifi-highlight, 10%);
   }
 
   &.kifi-busy {
@@ -303,7 +303,7 @@ display: block;
   }
 
   &:active {
-    background: darken(@kifi-highlight, 10%);
+    background: shade(@kifi-highlight, 10%);
     color: white !important; // style leak fix
   }
 

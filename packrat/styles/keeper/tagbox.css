@@ -128,7 +128,7 @@
 
 }
 .kifi-tagbox-input-box.kifi-focus .kifi-tagbox-input-placeholder {
-  color: #d7dee5;
+  color: #bfcbd6;
 }
 .kifi-tagbox-input-box.kifi-empty .kifi-tagbox-input-placeholder {
   display: block;
@@ -216,7 +216,7 @@
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAQAAACiV3CzAAAA60lEQVR4Ae3LMU4CQRiG4W83RAt0lVBoo4kX0CtYwCFoiAWNZyD0Nt4CCy6xiTfQQG2IwYLERrShmVeKnezM7KBuYcfzVX/+vIrhlldeuEHViXAJ91h3JL8F+0xwPbD3U9DikVDO8bbgnBkxU85iwRVvbLPgMgw6rJz3gIvNBiywPui4QZ811pwTVOyUOdaavg2GGEo95KxHyTBEYoSv5QVH+EYJ72rLdagvlQ70KdcqVVu+6+hlZSI0o4mKNZkSEFVPdGls1uWZigQUYySlimgoLlXdx/8Hu2AXLFXHMtVYdYxFRo7hLww52TeyrdzuJXPukQAAAABJRU5ErkJggg==);
 }
 .kifi-tagbox-suggestion:active {
-  background: #418aea;
+  background: #6495d7;
 }
 .kifi-tagbox-suggestion.kifi-busy {
   opacity: 0;
@@ -251,7 +251,7 @@
   color: white !important;
 }
 .kifi-tagbox-new:active {
-  background: #418aea;
+  background: #6495d7;
   color: white !important;
 }
 .kifi-tagbox-new.kifi-busy {

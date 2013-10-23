@@ -177,12 +177,12 @@
 
   &:hover, &:focus {
     color: white;
-    background: darken(@dotBgColor, 5%);
+    background: shade(@dotBgColor, 10%);
   }
 
   &:active {
     color: white;
-    background: darken(@dotBgColor, 15%);
+    background: shade(@dotBgColor, 20%);
   }
 
 /*
@@ -252,7 +252,7 @@
 
 @-webkit-keyframes kifi-highlight-backround {
 	0% {
-    background: lighten(@highlightColor, 15%);
+    background: tint(@highlightColor, 15%);
 	}
 	100% {
     background: transparent;
@@ -283,12 +283,12 @@
 
   &:hover, &:focus {
     color: white;
-    background: darken(@buttonBgColor, 5%);
+    background: shade(@buttonBgColor, 10%);
   }
 
   &:active {
     color: white;
-    background: darken(@buttonBgColor, 15%);
+    background: shade(@buttonBgColor, 20%);
   }
 }
 
@@ -305,7 +305,7 @@
   //transition: background @duration ease;
 
   &:hover {
-    background-color: darken(@bgColor, 5%);
+    background-color: shade(@bgColor, 10%);
   }
 
   &.kifi-active {
@@ -377,12 +377,12 @@
 
   &:hover, &:focus {
     color: white;
-    background: darken(@buttonBgColor, 5%);
+    background: shade(@buttonBgColor, 10%);
   }
 
   &:active {
     color: white;
-    background: darken(@buttonBgColor, 12%);
+    background: shade(@buttonBgColor, 20%);
   }
 }
 

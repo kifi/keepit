@@ -76,9 +76,9 @@
 .kifi-message-header-unmute-button:hover,
 .kifi-message-header-unmute-button:focus {
   color: white;
-  background: #eea235;
+  background: #d89c45;
 }
 .kifi-message-header-unmute-button:active {
   color: white;
-  background: #ec971e;
+  background: #c08a3e;
 }

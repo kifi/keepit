@@ -9,7 +9,6 @@
 .kifi-message-header {
   position: relative;
   font-size: 15px;
-  font-family: 'Helvetica Neue', Arial, san-serif;
   line-height: normal;
   color: @fgColor;
   background: @bgColor;
@@ -62,18 +61,18 @@
   }
 
   &:hover, &:focus {
-    background-color: darken(@bgColor, 5%);
+    background-color: shade(@bgColor, 10%);
   }
 
   .kifi-message-header.kifi-option-expanded & {
     background-color: @optionBgColor;
 
     &:hover, &:focus {
-      background-color: darken(@optionBgColor, 10%);
+      background-color: shade(@optionBgColor, 10%);
     }
 
     &:active {
-      background-color: darken(@optionBgColor, 20%);
+      background-color: shade(@optionBgColor, 20%);
     }
   }
 }
@@ -92,11 +91,11 @@
 
 .kifi-message-header-option {
   &:hover, &:focus {
-    background: darken(@optionBgColor, 10%);
+    background: shade(@optionBgColor, 10%);
   }
 
   &:active {
-    background: darken(@optionBgColor, 20%);
+    background: shade(@optionBgColor, 20%);
   }
 }
 
