@@ -52,30 +52,25 @@ trait QueryExpansion extends QueryParser {
         baseQuery.add(q)
       }
     }
-    
-    def lowerBoostForNumberTermQuery(query: Query): Query = {
-      query match {
-        case q: TermQuery => if (q.getTerm.text.forall(Character.isDigit)) {
-          val q2 = query.clone(); q2.setBoost(0.5f); q2
-        } else q
-        case _ => query
-      }
+
+    def isNumericTermQuery(query: Query): Boolean = query match {
+      case q: TermQuery => if (q.getTerm.text.forall(Character.isDigit)) true else false
+      case _ => false
     }
 
     val textQuery = new TextQuery
     textQueries += textQuery
 
-    super.getFieldQuery("t", queryText, quoted).foreach{ q =>
-      val query = lowerBoostForNumberTermQuery(q)
+    super.getFieldQuery("t", queryText, quoted).foreach{ query =>
       textQuery.terms = extractTerms(query)
       textQuery.add(query)
       textQuery.add(copyFieldQuery(query, "c"))
       textQuery.add(copyFieldQuery(query, "title"))
       addSiteQuery(textQuery, queryText, query)
+      if (isNumericTermQuery(query) && textQuery.getBoost() >= 1.0f) textQuery.setBoost(0.5f)
     }
 
-    getStemmedFieldQuery("ts", queryText).foreach{ q =>
-      val query = lowerBoostForNumberTermQuery(q)
+    getStemmedFieldQuery("ts", queryText).foreach{ query =>
       textQuery.stems = extractTerms(query)
       if(!quoted) {
         textQuery.add(query)
