@@ -12,9 +12,6 @@
  *
  * Message Header is an UI component that is a hub for plugins
  * related to current message context.
- *
- * @author Joon Ho Cho <joon@42go.com>
- * @date 10-16-2013
  */
 
 var messageHeader = this.messageHeader = (function ($, win) {

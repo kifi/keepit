@@ -21,9 +21,7 @@ trait BinaryFormat[T] {
 }
 
 object BinaryFormat {
-  implicit val clickHistoryBinaryFormat = ClickHistoryBinarySerializer.clickHistoryBinarySerializer
   implicit val sliderHistoryBinaryFormat = SliderHistoryBinarySerializer.sliderHistoryBinarySerializer
-  implicit val browsingHistoryBinaryFormat = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer
 }
 
 object TraversableFormat {

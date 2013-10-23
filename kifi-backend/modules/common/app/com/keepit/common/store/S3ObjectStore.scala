@@ -24,6 +24,7 @@ import play.api.Logger
 import java.io.InputStream
 import java.io.ByteArrayInputStream
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.serializer.BinaryFormat
 
 case class S3Bucket(name: String)
 
@@ -172,7 +173,11 @@ trait S3BlobStore[A,B] extends S3ObjectStore[A,B] {
 
 }
 
-
+trait BlobFormat[B] {
+  val format: BinaryFormat[B]
+  protected def encodeValue(value: B) : Array[Byte] = format.writes(Some(value))
+  protected def decodeValue(data: Array[Byte]) : B = format.reads(data).get
+}
 
 trait S3Module extends ScalaModule
 

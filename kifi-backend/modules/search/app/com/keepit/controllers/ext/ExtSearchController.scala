@@ -213,9 +213,7 @@ class ExtSearchController @Inject() (
       futures = Seq(
         // skip every other
         shoeboxClient.getSearchFriends(userId),
-        shoeboxClient.getClickHistoryFilter(userId),
         // then, backwards
-        shoeboxClient.getBrowsingHistoryFilter(userId),
         shoeboxClient.getFriends(userId)
       )
     }

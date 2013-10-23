@@ -14,6 +14,7 @@ import scala.concurrent.{Future, future, Await}
 
 
 import reactivemongo.bson.{BSONDocument, BSONArray, BSONString, BSONDouble}
+import reactivemongo.api.indexes.{Index, IndexType}
 
 import com.google.inject.Inject
 
@@ -97,6 +98,11 @@ class MetricManager @Inject() (
     val data: Seq[BSONDocument] = Await.result(userEventLoggingRepo.performAggregation(pipeline).map(postprocess(_)), 5 minutes)
     val metricData = MetricData(tEnd, data)
     val repo = metricRepoFactory(desc.name)
+    repo.collection.indexesManager.ensure(Index(
+      key      = Seq(("time", IndexType.Ascending)),
+      unique   = true,
+      dropDups = true
+    ))
     repo.insert(metricData)
     val newDesc = desc.copy(lastUpdate=tEnd)
     metricDescriptorRepo.upsert(desc)
@@ -120,9 +126,9 @@ class MetricManager @Inject() (
       updateInProgress = true
       val descriptorsFuture : Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
       descriptorsFuture.map{ descriptors =>
-        descriptors.foreach(updateMetricFully(_))
+        synchronized { descriptors.foreach(updateMetricFully(_)) }
+        updateInProgress = false
       }
-      updateInProgress = false
     }
   }
 

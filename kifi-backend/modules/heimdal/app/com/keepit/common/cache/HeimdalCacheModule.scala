@@ -67,16 +67,6 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def browsingHistoryUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new BrowsingHistoryUserIdCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
-
-  @Singleton
-  @Provides
-  def clickHistoryUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ClickHistoryUserIdCache(stats, accessLog, (innerRepo, 50 milliseconds), (outerRepo, 7 days))
-
-  @Singleton
-  @Provides
   def userConnectionIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserConnectionIdCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
 
