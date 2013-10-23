@@ -87,8 +87,6 @@ trait ShoeboxServiceClient extends ServiceClient {
 case class ShoeboxCacheProvider @Inject() (
     userExternalIdCache: UserExternalIdCache,
     uriIdCache: NormalizedURICache,
-    clickHistoryCache: ClickHistoryUserIdCache,
-    browsingHistoryCache: BrowsingHistoryUserIdCache,
     bookmarkUriUserCache: BookmarkUriUserCache,
     basicUserCache: BasicUserUserIdCache,
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
