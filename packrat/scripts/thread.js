@@ -11,6 +11,7 @@
 // @require scripts/snapshot.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/prevent_ancestor_scroll.js
+// @require scripts/message_header.js
 
 panes.thread = function () {
   'use strict';
@@ -30,6 +31,15 @@ panes.thread = function () {
       api.port.emit('thread', {id: threadId, respond: true}, function (th) {
         api.port.emit('session', function (session) {
           renderThread($container, th.id, th.messages, session);
+          api.port.emit('participants', th.id, function (participants) {
+            var messageHeader = window.messageHeader,
+              $pane = window.slider2.getPane();
+            messageHeader.$pane = $pane;
+            messageHeader.participants = participants;
+            messageHeader.construct();
+            var $box = $pane.find('.kifi-pane-box');
+            $box.find('.kifi-pane-tall').css('margin-top', $box.find('.kifi-thread-who').outerHeight());
+          });
           api.port.on(handlers);
         });
       });

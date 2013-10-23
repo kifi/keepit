@@ -18,9 +18,6 @@
  *
  * Message Participants is an UI component that manages
  * participants of the current message conversation.
- *
- * @author Joon Ho Cho <joon@42go.com>
- * @date 10-17-2013
  */
 
 /*global cdnBase, Mustache */
@@ -615,6 +612,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			$el.find('.kifi-message-participants-avatars').html(view.avatars);
 			$el.find('.kifi-message-participant-list-inner').html(view.participants);
 			this.updateParticipantsHeight();
+			this.$list.data('antiscroll').refresh();
 		},
 
 		updateCount: function (count) {
