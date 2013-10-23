@@ -31,6 +31,8 @@ class MetricManager @Inject() (
     serviceDiscovery: ServiceDiscovery
   ){
 
+  var updateInProgress: Boolean = false
+
   val definedRestrictions = Map[String, ContextRestriction](
     "none" -> NoContextRestriction,
     "noadmins" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("admin"))),
@@ -114,11 +116,13 @@ class MetricManager @Inject() (
   }
 
   def updateAllMetrics(): Unit = synchronized {
-    if (serviceDiscovery.isLeader()) {
+    if (serviceDiscovery.isLeader() && !updateInProgress) {
+      updateInProgress = true
       val descriptorsFuture : Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
       descriptorsFuture.map{ descriptors =>
         descriptors.foreach(updateMetricFully(_))
       }
+      updateInProgress = false
     }
   }
 

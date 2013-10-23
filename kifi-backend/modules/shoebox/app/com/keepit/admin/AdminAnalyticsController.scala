@@ -4,7 +4,7 @@ import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.heimdal.HeimdalServiceClient
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, JsObject}
 
 import views.html
 
@@ -13,40 +13,54 @@ import scala.concurrent.Future
 import com.google.inject.Inject
 
 
+case class MetricAuxInfo(helpText: String, legend: Map[String,String])
+
 class AdminAnalyticsController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     heimdal: HeimdalServiceClient
   )
   extends AdminController(actionAuthenticator) {
 
-    val userMetrics = Seq[String](
-      "alive_weekly",
-      "active_weekly"
-    )
+  val userMetrics = Map[String, MetricAuxInfo](
+    "alive_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Users")),
+    "active_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"))
+  )
 
-    val keepMetrics = Seq[String](
-      "keeps_weekly",
-      "private_keeps_weekly",
-      "public_keeps_weekly"
-    )
+  val keepMetrics = Map[String, MetricAuxInfo](
+    "keeps_weekly" -> MetricAuxInfo("nothing yet", Map(
+      "0" -> "public",
+      "1" -> "private"
+    )),
+    "private_keeps_weekly" -> MetricAuxInfo("nothing yet", Map()),
+    "public_keeps_weekly" -> MetricAuxInfo("nothing yet", Map())
+  )
 
-    val messageMetrics = Seq[String](
-      "messagers_weekly",
-      "message_breakdown_weekly"
-    )
+  val messageMetrics = Map[String, MetricAuxInfo](
+    "messagers_weekly" -> MetricAuxInfo("nothing yet", Map()),
+    "message_breakdown_weekly" -> MetricAuxInfo("nothing yet", Map())
+  )
+
+  private def augmentMetricData(metricData: JsObject, auxInfo: MetricAuxInfo): JsObject = {
+    metricData.deepMerge{Json.obj(
+        "help" -> auxInfo.helpText,
+        "legend" -> JsObject(auxInfo.legend.mapValues(Json.toJson(_)).toSeq)
+    )}
+  }
 
   def index() = AdminHtmlAction { request =>
     heimdal.updateMetrics()
-    val userMetricsFuture = Future.sequence(userMetrics.map{ metricName =>
-      heimdal.getMetricData(metricName)
+    val userMetricsFuture = Future.sequence(userMetrics.toSeq.map{ case (metricName, auxInfo) =>
+      heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
     })
-    val keepMetricsFuture = Future.sequence(keepMetrics.map{ metricName =>
-      heimdal.getMetricData(metricName)
+    val keepMetricsFuture = Future.sequence(keepMetrics.toSeq.map{ case (metricName, auxInfo) =>
+      heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
     })
-    val messageMetricsFuture = Future.sequence(messageMetrics.map{ metricName =>
-      heimdal.getMetricData(metricName)
+    val messageMetricsFuture = Future.sequence(messageMetrics.toSeq.map{ case (metricName, auxInfo) =>
+      heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
     })
     val dataFuture = Future.sequence(Seq(userMetricsFuture, keepMetricsFuture, messageMetricsFuture))
+
+
     Async(dataFuture.map{ data =>
       val jsonData = data.map{ sectionData =>
         Json.stringify(Json.toJson(sectionData))

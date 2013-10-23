@@ -7,7 +7,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.store.S3ImageStore
+import com.keepit.common.store.{S3UserPictureConfig, S3ImageStore}
 import com.keepit.model._
 import scala.concurrent.Future
 
@@ -30,7 +30,7 @@ class UserPictureController @Inject() (
           imageStore.getPictureUrl(optSize, user, trimmedName) map (Redirect(_))
         }
     } getOrElse {
-      Redirect(imageStore.defaultImage)
+      Redirect(S3UserPictureConfig.defaultImage)
     }
   }
 
@@ -46,7 +46,7 @@ class UserPictureController @Inject() (
           }
         }
     } getOrElse {
-      Redirect(imageStore.defaultImage)
+      Redirect(S3UserPictureConfig.defaultImage)
     }
   }
 

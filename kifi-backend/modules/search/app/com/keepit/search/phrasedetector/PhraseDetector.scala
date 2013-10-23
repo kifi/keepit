@@ -21,6 +21,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.collection.mutable.{ListBuffer}
+import scala.math._
 
 object PhraseDetector {
   val fieldName = "p"
@@ -54,7 +55,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
           findPhrases(pq, f) // pq will be cleared after execution
           prevWord = null
         } else {
-          val w = new Word(index, tp)
+          val w = new Word(index, tp, prevWord)
           if (prevWord != null) prevWord.nextWord = w
           pq.insertWithOverflow(w)
           prevWord = w
@@ -96,13 +97,15 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     pq.clear()
   }
 
-  private class Word(val index: Int, tp: DocsAndPositionsEnum) {
+  private class Word(val index: Int, tp: DocsAndPositionsEnum, val prevWord: Word) {
 
     var nextWord: Word = null
+
     var doc = -1
 
     def nextDoc() = {
-      doc = tp.nextDoc()
+      val next = min(if (prevWord == null) NO_MORE_DOCS else prevWord.doc, if (nextWord == null) NO_MORE_DOCS else nextWord.doc)
+      doc = if (doc + 1 < next) tp.advance(next) else tp.nextDoc()
       doc
     }
 

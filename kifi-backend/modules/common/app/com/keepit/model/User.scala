@@ -20,7 +20,7 @@ case class User(
   firstName: String,
   lastName: String,
   state: State[User] = UserStates.ACTIVE,
-  pictureName: Option[String] = None,
+  pictureName: Option[String] = None, // denormalized UserPicture.name
   userPictureId: Option[Id[UserPicture]] = None
 ) extends ModelWithExternalId[User] {
   def withId(id: Id[User]) = this.copy(id = Some(id))
