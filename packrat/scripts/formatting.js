@@ -123,19 +123,19 @@ function addParticipantsFormatter(actor, addedUsers) {
   var str;
   if (isSessionUser(actor)) {
     // session user added
-    str = namesFormatter(addedUsers) + ' ' + (addedUsers.length > 1 ? 'were' : 'was') + ' successfully added';
+    str = 'You added ' + namesFormatter(addedUsers) + '.';
   }
   else if (addedUsers.some(isSessionUser)) {
     // session user was added
     addedUsers = addedUsers.slice();
     bringSessionUserToFront(addedUsers);
-    str = namesFormatter(addedUsers) + ' were added by ' + nameFormatter(actor);
+    str = namesFormatter(addedUsers) + ' were added by ' + nameFormatter(actor) + '.';
   }
   else {
-    str = nameFormatter(actor) + ' added ' + namesFormatter(addedUsers);
+    str = nameFormatter(actor) + ' added ' + namesFormatter(addedUsers) + '.';
   }
-  //return str;
-  return str + ' to the conversation.';
+  return str;
+  //return str + ' to the conversation.';
 }
 
 function isSessionUser(user) {
