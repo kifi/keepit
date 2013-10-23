@@ -24,7 +24,8 @@ class MainSearcherFactory @Inject() (
     uriGraph: URIGraph,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
-    userHistoryTracker: UserHistoryTracker,
+    browsingHistoryTracker: BrowsingHistoryTracker,
+    clickHistoryTracker: ClickHistoryTracker,
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait,
@@ -34,6 +35,8 @@ class MainSearcherFactory @Inject() (
 
   private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[Id[User], URIGraphSearcherWithUser](3 seconds)
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[Id[User], CollectionSearcherWithUser](3 seconds)
+  private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[BrowsedURI]](3 seconds)
+  private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](3 seconds)
 
   def apply(
     userId: Id[User],
@@ -48,7 +51,8 @@ class MainSearcherFactory @Inject() (
     val uriGraphSearcher = getURIGraphSearcher(userId)
     val collectionSearcher = getCollectionSearcher(userId)
     val articleSearcher = articleIndexer.getSearcher
-    val (browsingHistoryFuture, clickHistoryFuture) = userHistoryTracker.getUserHistory(userId)
+    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
+    val clickHistoryFuture = getClickHistoryFuture(userId)
 
     new MainSearcher(
         userId,
@@ -90,6 +94,14 @@ class MainSearcherFactory @Inject() (
 
   def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = {
     Await.result(getCollectionSearcherFuture(userId), 5 seconds)
+  }
+
+  private[this] def getBrowsingHistoryFuture(userId: Id[User]) = consolidateBrowsingHistoryReq(userId){ userId =>
+    Future.successful(browsingHistoryTracker.getMultiHashFilter(userId))
+  }
+
+  private[this] def getClickHistoryFuture(userId: Id[User]) = consolidateClickHistoryReq(userId){ userId =>
+    Future.successful(clickHistoryTracker.getMultiHashFilter(userId))
   }
 
   private[this] def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float, useS3FlowerFilter: Boolean) = {

@@ -74,12 +74,12 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Singleton
   @Provides
   def browsingHistoryUserIdCache(format: BrowsingHistoryBuilder, stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new BrowsingHistoryUserIdCache(format, stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 30 days))
+    new BrowsingHistoryUserIdCache(format, stats, accessLog, (outerRepo, 30 days))
 
   @Singleton
   @Provides
   def clickHistoryUserIdCache(format: ClickHistoryBuilder, stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ClickHistoryUserIdCache(format, stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 30 days))
+    new ClickHistoryUserIdCache(format, stats, accessLog, (outerRepo, 30 days))
 
   @Singleton
   @Provides
