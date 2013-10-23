@@ -32,7 +32,6 @@ panes.thread = function () {
         api.port.emit('session', function (session) {
           renderThread($container, th.id, th.messages, session);
           api.port.emit('participants', th.id, function (participants) {
-            log('hello', participants)();
             var messageHeader = window.messageHeader,
               $pane = window.slider2.getPane();
             messageHeader.$pane = $pane;
