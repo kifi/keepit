@@ -21,7 +21,8 @@ case class User(
   lastName: String,
   state: State[User] = UserStates.ACTIVE,
   pictureName: Option[String] = None, // denormalized UserPicture.name
-  userPictureId: Option[Id[UserPicture]] = None
+  userPictureId: Option[Id[UserPicture]] = None,
+  seq: SequenceNumber = SequenceNumber.ZERO
 ) extends ModelWithExternalId[User] {
   def withId(id: Id[User]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -41,7 +42,8 @@ object User {
     (__ \ 'lastName).format[String] and
     (__ \ 'state).format(State.format[User]) and
     (__ \ 'pictureName).formatNullable[String] and
-    (__ \ 'userPictureId).formatNullable[Id[UserPicture]]
+    (__ \ 'userPictureId).formatNullable[Id[UserPicture]] and
+    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
   )(User.apply, unlift(User.unapply))
 }
 
@@ -55,7 +57,7 @@ class UserExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[UserExternalIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class UserIdKey(id: Id[User]) extends Key[User] {
-  override val version = 4
+  override val version = 5
   val namespace = "user_by_id"
   def toKey(): String = id.id.toString
 }

@@ -359,4 +359,11 @@ class AdminUserController @Inject() (
 
     Redirect(routes.AdminUserController.notification())
   }
+  
+  def initUserSeq() = AdminHtmlAction { implicit request =>
+    db.readWrite{ implicit s =>
+      userRepo.all.sortBy(_.id.get.id).foreach{ u => userRepo.save(u) }
+    }
+    Ok("OK. Assigning user sequence numbers")
+  }
 }
