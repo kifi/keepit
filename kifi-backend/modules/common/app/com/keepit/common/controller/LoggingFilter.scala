@@ -23,13 +23,17 @@ class LoggingFilter() extends EssentialFilter {
     def apply(rh: RequestHeader) = {
       val timer = accessLog.timer(HTTP_IN)
       def logTime(result: PlainResult): Result = {
-        val trackingId = rh.headers.get(CommonHeaders.TrackingId).getOrElse("NA")
+        val trackingId = rh.headers.get(CommonHeaders.TrackingId).getOrElse(null)
+        val remoteServiceId = rh.headers.get(CommonHeaders.LocalServiceId).getOrElse(null)
+        val remoteIsLeader = rh.headers.get(CommonHeaders.IsLeader).getOrElse(null)
+        val remoteServiceType = rh.headers.get(CommonHeaders.LocalServiceType).getOrElse(null)
         val event = accessLog.add(timer.done(
           trackingId = trackingId,
+          remoteLeader = remoteIsLeader,
+          remoteServiceId = remoteServiceId,
+          remoteServiceType = remoteServiceType,
           method = rh.method,
           url = rh.uri,
-          remoteHost = rh.remoteAddress,
-          targetHost = rh.host,
           statusCode = result.header.status
         ))
         result.withHeaders(
