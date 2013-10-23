@@ -478,6 +478,8 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
           messageHeader.$pane = $pane;
           messageHeader.participants = participants;
           messageHeader.construct();
+          var $box = $pane.find(".kifi-pane-box");
+          $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
         });
       }
     }};
