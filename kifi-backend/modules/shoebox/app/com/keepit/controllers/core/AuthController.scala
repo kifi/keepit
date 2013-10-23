@@ -45,6 +45,7 @@ class AuthController @Inject() (
     socialRepo: SocialUserInfoRepo,
     actionAuthenticator: ActionAuthenticator,
     emailRepo: EmailAddressRepo,
+    userRepo: UserRepo,
     postOffice: LocalPostOffice
   ) extends WebsiteController(actionAuthenticator) with Logging {
 
@@ -184,10 +185,14 @@ class AuthController @Inject() (
             if (hasher.matches(identity.passwordInfo.get, password)) {
               Authenticator.create(identity).fold(
                 error => Status(500)("0"),
-                authenticator =>
-                  Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> false))
+                authenticator => {
+                  val needsToFinalize = db.readOnly { implicit session =>
+                    userRepo.get(sui.userId.get).state == UserStates.INCOMPLETE_SIGNUP
+                  }
+                  Ok(Json.obj("success"->"true", "email" -> email, "new_account" -> false, "needsToFinalize" -> needsToFinalize))
                     .withNewSession
                     .withCookies(authenticator.toCookie)
+                }
               )
             } else {
               Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
