@@ -21,7 +21,6 @@ import org.apache.lucene.util.PriorityQueue
 import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.parser.SpellCorrector
-import com.keepit.common.analytics.{EventFamilies, Events}
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import play.api.libs.json._
@@ -31,8 +30,6 @@ import org.joda.time.DateTime
 import com.keepit.search.query.LuceneExplanationExtractor
 import com.keepit.search.query.LuceneScoreNames
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.shoebox.ClickHistoryTracker
-import com.keepit.shoebox.BrowsingHistoryTracker
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
@@ -53,8 +50,8 @@ class MainSearcher(
     parserFactory: MainQueryParserFactory,
     socialGraphInfoFuture: Future[SocialGraphInfo],
     clickBoostsFuture: Future[ResultClickBoosts],
-    browsingHistoryFuture: Future[MultiHashFilter[BrowsingHistory]],
-    clickHistoryFuture: Future[MultiHashFilter[ClickHistory]],
+    browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
+    clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait)

@@ -6,7 +6,6 @@
   socialConnections: Seq[SocialUserInfo],
   fortyTwoConnections: Seq[User],
   kifiInstallations: Seq[KifiInstallation],
-  historyUpdateCount: Int,
   bookmarkSearch: Option[String],
   allowedInvites: Int,
   emails: Seq[EmailAddress],
@@ -95,10 +94,6 @@
         </form></td>
       </tr>
       }
-      <tr>
-        <th>Useful page update count</th>
-        <td>@historyUpdateCount</td>
-      </tr>
     </table>
     <p>
       <a href="@com.keepit.controllers.admin.routes.AdminUserController.moreUserInfoView(user.id.get)">More User Info</a>

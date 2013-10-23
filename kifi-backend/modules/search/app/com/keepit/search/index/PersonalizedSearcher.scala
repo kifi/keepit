@@ -3,39 +3,21 @@ package com.keepit.search.index
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
-import com.keepit.search.SemanticVectorComposer
-import com.keepit.search.SemanticVector
-import com.keepit.search.MultiHashFilter
-import com.keepit.search.query.IdSetFilter
-import com.keepit.search.query.QueryUtil._
-import org.apache.lucene.index.IndexReader
+import com.keepit.search._
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.SegmentReader
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.Scorer
-import org.apache.lucene.util.PriorityQueue
-import scala.collection.mutable.ArrayBuffer
-import com.keepit.shoebox.BrowsingHistoryTracker
-import com.keepit.shoebox.ClickHistoryTracker
 import scala.concurrent.duration._
-import scala.concurrent.Await
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.BrowsingHistoryBuilder
-import com.keepit.search.ClickHistoryBuilder
 import scala.concurrent.Future
-import com.keepit.model.BrowsingHistory
-import com.keepit.model.ClickHistory
 import com.keepit.common.akka.MonitoredAwait
-import scala.collection.mutable.{Set=>MutableSet}
 
 object PersonalizedSearcher {
   private val scale = 100
   def apply(userId: Id[User],
             indexReader: WrappedIndexReader,
             myUris: Set[Long],
-            browsingHistoryFuture: Future[MultiHashFilter[BrowsingHistory]],
-            clickHistoryFuture: Future[MultiHashFilter[ClickHistory]],
+            browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
+            clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
             svWeightMyBookMarks: Int,
             svWeightBrowsingHistory: Int,
             svWeightClickHistory: Int,
@@ -43,10 +25,10 @@ object PersonalizedSearcher {
             monitoredAwait: MonitoredAwait) = {
 
     val browsingHistoryFilter = monitoredAwait.result(browsingHistoryFuture, 40 millisecond,
-      s"getting browsing history for user $userId", MultiHashFilter.emptyFilter[BrowsingHistory])
+      s"getting browsing history for user $userId", MultiHashFilter.emptyFilter[BrowsedURI])
 
     val clickHistoryFilter = monitoredAwait.result(clickHistoryFuture, 5 seconds,
-      s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickHistory])
+      s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
 
     new PersonalizedSearcher(
       indexReader, myUris,
@@ -61,7 +43,7 @@ object PersonalizedSearcher {
 }
 
 class PersonalizedSearcher(override val indexReader: WrappedIndexReader, myUris: Set[Long],
-                           val browsingFilter: MultiHashFilter[BrowsingHistory], val clickFilter: MultiHashFilter[ClickHistory],
+                           val browsingFilter: MultiHashFilter[BrowsedURI], val clickFilter: MultiHashFilter[ClickedURI],
                            scaledWeightMyBookMarks: Int, scaledWeightBrowsingHistory: Int, scaledWeightClickHistory: Int)
 extends Searcher(indexReader) with Logging {
   import PersonalizedSearcher._
