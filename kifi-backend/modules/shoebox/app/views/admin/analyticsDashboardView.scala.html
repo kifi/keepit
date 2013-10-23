@@ -2,10 +2,12 @@
 
 @admin("Analytics Overview"){
   <h2>Users</h2>
-  @analyticsView(userData, "user")
+  @analyticsView(userData, "user", "simple")
+  @analyticsView(userData, "user_max", "max")
   <h2>Keeping</h2>
-  @analyticsView(keepData, "keep")
+  @analyticsView(keepData, "keep", "simple")
+  @analyticsView(keepData, "keep_sum", "sum", 7)
   <h2>Messaging</h2>
-  @analyticsView(messageData, "message")
+  @analyticsView(messageData, "message", "simple")
 
 }

@@ -1,4 +1,4 @@
-@(data: String, name: String, mode: String = "simple")
+@(data: String, name: String, mode: String="simple", resolution: Int=1)
 <div id="chart_container_@name"></div>
 
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.2.1/lodash.min.js"></script>
@@ -33,7 +33,7 @@
   }
 
   var rawData = @Html(data);
-  chartData["@name"] = rawData;
+  chartData["@name"] = @Html(data);
   var keys = {}
   _.forEach(rawData, function(datum){
     var val = datum.data;
@@ -51,7 +51,7 @@
       keys[desc].push("total"); 
     };
     var chartParent = $("#chart_container_@name");
-    chartParent.append($('<div>', {id: desc, style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
+    chartParent.append($('<div>', {id: "@name" + desc, style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
   });
 
 
@@ -68,6 +68,7 @@
     _.forEach(rawData, function(datum){
       var val = datum.data;
       var desc = datum.header;
+      var shift = datum.shift;
       var data = new google.visualization.DataTable();
       data.addColumn("datetime")
       keys[desc].forEach(function(key){
@@ -81,20 +82,40 @@
           data.addColumn('number', key);
         }
       });
+      var key_max = {};
+      var key_sum = {};
       val.forEach(function(datum){
         var row = [];
         row.push(new Date(datum.time));
+        //console.log("Processing " + new Date(datum.time) + " with @mode" + " for " + desc)
         keys[desc].forEach(function(key){
-          row.push(datum.data[key] || 0)
+          var current_value = datum.data[key] || 0;
+          key_max[key] = (key_max[key] || 0)>current_value?(key_max[key] || 0):current_value;
+          key_sum[key] = (key_sum[key] || 0) + current_value;
+          if ("@mode"==="max") {
+            row.push(key_max[key]);
+          } else if ("@mode"==="sum") {
+            row.push(Math.round(key_sum[key]/@resolution) + (shift[key + ''] || 0));
+            // console.log("@mode On:" + new Date(datum.time) + " Pushing " + Math.round(key_sum[key]/@resolution));
+          } else {
+            row.push(current_value);
+          };
         });
         data.addRow(row);
       });
 
+      var suffix = "";
+      if ("@mode"==="max") {
+        suffix = " (PEAK SO FAR)";
+      } else if ("@mode"==="sum") {
+        suffix = " (CUMMULATIVE)";
+      }
+
       var options = {
-        'title': desc
+        'title': desc + suffix
       };
 
-      var chart = new google.visualization.LineChart(document.getElementById(desc));
+      var chart = new google.visualization.LineChart(document.getElementById("@name" + desc));
       chart.draw(data, options);
     });
 
