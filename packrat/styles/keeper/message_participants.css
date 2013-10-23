@@ -166,13 +166,14 @@
 }
 .kifi-message-participant-list {
   position: relative;
+  overflow: hidden;
 }
 .kifi-message-participant-list-inner {
   position: relative;
   max-height: 333px;
   line-height: 0;
   list-style: none;
-  overflow: scroll;
+  padding: 0;
   overflow-x: hidden;
   overflow-y: scroll;
 }
@@ -267,6 +268,7 @@
   width: 100%;
   padding: 9px 12px;
   box-sizing: border-box;
+  -moz-box-sizing: border-box;
   color: white;
   background: #b8c5d1;
 }
