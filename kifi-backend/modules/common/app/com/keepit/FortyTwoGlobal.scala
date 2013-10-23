@@ -100,7 +100,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     serviceDiscovery.changeStatus(ServiceStatus.SICK)
     val errorId = ex match {
       case reported: ReportedException => reported.id
-      case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex))
+      case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex)).id
     }
     ex.printStackTrace()
     serviceDiscovery.startSelfCheck()
