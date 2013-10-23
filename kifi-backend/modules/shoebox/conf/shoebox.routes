@@ -88,7 +88,6 @@ POST    /ext/pref/enterToSend            @com.keepit.controllers.ext.ExtPreferen
 GET     /ext/user/friends                @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/user/networks               @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
-POST    /ext/sliderShown            @com.keepit.controllers.ext.ExtPageController.recordSliderShown()
 
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
