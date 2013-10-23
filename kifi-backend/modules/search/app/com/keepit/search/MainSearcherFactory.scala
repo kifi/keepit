@@ -88,9 +88,21 @@ class MainSearcherFactory @Inject() (
     }
   }
 
-  def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser = uriGraph.getURIGraphSearcher(userId)
+  private[this] def getURIGraphSearcherFuture(userId: Id[User]) = consolidateURIGraphSearcherReq(userId){ userId =>
+    Promise[URIGraphSearcherWithUser].success(uriGraph.getURIGraphSearcher(userId)).future
+  }
 
-  def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = uriGraph.getCollectionSearcher(userId)
+  def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser = {
+    Await.result(getURIGraphSearcherFuture(userId), 5 seconds)
+  }
+
+  private[this] def getCollectionSearcherFuture(userId: Id[User]) = consolidateCollectionSearcherReq(userId){ userId =>
+    Promise[CollectionSearcherWithUser].success(uriGraph.getCollectionSearcher(userId)).future
+  }
+
+  def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = {
+    Await.result(getCollectionSearcherFuture(userId), 5 seconds)
+  }
 
   private[this] def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float, useS3FlowerFilter: Boolean) = {
     future {
