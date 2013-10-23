@@ -81,23 +81,74 @@ function auxDataFormatter() {
 }
 
 function nameFormatter(user) {
-  return Mustache.escape(user.firstName + ' ' + user.lastName);
+  var str;
+  if (isSessionUser(user)) {
+    str = 'You';
+  }
+  else {
+    str = user.firstName + ' ' + user.lastName;
+  }
+  return str;
 }
+
+function boldify(str) {
+  return '<b>' + str + '</b>';
+}
+
+/**
+    3.1. The added user sees: "You were added by Effi Fuks-Leichtag"
+    3.2. The inviting user sees: "Joon Ho Cho was successfully added"
+    3.3. everyone else see: "Joon Ho Cho was added by Effi Fuks-Leichtag"
+    3.4. If several users were added at the same time by the same user it will look like:
+           3.4.1. The added user sees: "You, Danny Bluemenfeld and Jared Jacobs were added by Effi Fuks-Leichtag"
+           3.4.2. The inviting user sees:  "Joon Ho Cho, Danny Bluemenfeld and Jared Jacobs were successfully added"
+           3.4.3. everyone else see: "Joon Ho Cho, Danny Bluemenfeld and Jared Jacobs were added by Effi Fuks-Leichtag"
+ */
 
 function namesFormatter(users) {
   switch (users.length) {
   case 0:
     return '';
   case 1:
-    return nameFormatter(users[0]);
+    return boldify(nameFormatter(users[0]));
   case 2:
-    return nameFormatter(users[0]) + ' and ' + nameFormatter(users[1]);
+    return boldify(nameFormatter(users[0])) + ' and ' + boldify(nameFormatter(users[1]));
   default:
     var lastIndex = users.length - 1;
-    return users.slice(0, lastIndex).map(nameFormatter).join(', ') + ', and ' + nameFormatter(users[lastIndex]);
+    return users.slice(0, lastIndex).map(nameFormatter).map(boldify).join(', ') + ', and ' + boldify(nameFormatter(users[lastIndex]));
   }
 }
 
 function addParticipantsFormatter(actor, addedUsers) {
-  return nameFormatter(actor) + ' added ' + namesFormatter(addedUsers) + ' to the conversation.';
+  var str;
+  if (isSessionUser(actor)) {
+    // session user added
+    str = namesFormatter(addedUsers) + ' ' + (addedUsers.length > 1 ? 'were' : 'was') + ' successfully added';
+  }
+  else if (addedUsers.some(isSessionUser)) {
+    // session user was added
+    addedUsers = addedUsers.slice();
+    bringSessionUserToFront(addedUsers);
+    str = namesFormatter(addedUsers) + ' were added by ' + nameFormatter(actor);
+  }
+  else {
+    str = nameFormatter(actor) + ' added ' + namesFormatter(addedUsers);
+  }
+  //return str;
+  return str + ' to the conversation.';
+}
+
+function isSessionUser(user) {
+  return Boolean(user && user.id === session.userId);
+}
+
+function bringSessionUserToFront(users) {
+  for (var i = 0, len = users.length, user; i < len; i++) {
+    user = users[i];
+    if (isSessionUser(user)) {
+      users.splice(i, 1);
+      users.unshift(user);
+      break;
+    }
+  }
 }
