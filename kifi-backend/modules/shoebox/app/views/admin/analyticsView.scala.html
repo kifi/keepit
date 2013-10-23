@@ -1,0 +1,126 @@
+@(data: String, name: String, mode: String="simple", resolution: Int=1)
+<div id="chart_container_@name"></div>
+
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.2.1/lodash.min.js"></script>
+<!-- <script type="text/javascript" src="http://code.jquery.com/jquery-2.0.3.min.js"></script> -->
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+
+<script type="text/javascript">
+  (function(){
+  window.chartData = window.chartData || {}
+  google.load('visualization', '1.0', {'packages':['corechart']});
+
+  function discoverKeys(rawData, legend){
+    var keys = {}
+    rawData.forEach(function(datum){
+      datum.data.forEach(function(kv){
+        var new_key = legend['' + kv._id] || kv._id;
+        keys[new_key] = true;
+      });
+    });
+    return _.keys(keys);
+  };
+
+  function objectify(rawData, legend){
+    rawData.forEach(function(datum){
+      var newData = {};
+      datum.data.forEach(function(kv){
+        var new_key = legend['' + kv._id] || kv._id;
+        newData[new_key] = kv.count;
+      });
+      datum.data = newData; 
+    });
+  }
+
+  var rawData = @Html(data);
+  chartData["@name"] = @Html(data);
+  var keys = {}
+  _.forEach(rawData, function(datum){
+    var val = datum.data;
+    var desc = datum.header;
+    keys[desc] = discoverKeys(val, datum.legend);
+    objectify(val, datum.legend);
+    if (keys[desc].length>1){
+      _.forEach(val, function(frame){
+        var total = 0;
+        _.forEach(frame.data, function(subtotal){
+          total += subtotal;
+        });
+        frame.data.total=total;
+      });
+      keys[desc].push("total"); 
+    };
+    var chartParent = $("#chart_container_@name");
+    chartParent.append($('<div>', {id: "@name" + desc, style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
+  });
+
+
+  google.setOnLoadCallback(drawAndRedraw);
+
+  function drawAndRedraw(){
+    drawChart();
+    window.onresize = function(){
+      drawChart();
+    }
+  }
+
+  function drawChart(){
+    _.forEach(rawData, function(datum){
+      var val = datum.data;
+      var desc = datum.header;
+      var shift = datum.shift;
+      var data = new google.visualization.DataTable();
+      data.addColumn("datetime")
+      keys[desc].forEach(function(key){
+        if (key==="null"){
+          if (keys[desc].length===1){
+            data.addColumn('number', "Count");
+          } else {
+            data.addColumn('number', "[Group Field Missing]");
+          }
+        } else {
+          data.addColumn('number', key);
+        }
+      });
+      var key_max = {};
+      var key_sum = {};
+      val.forEach(function(datum){
+        var row = [];
+        row.push(new Date(datum.time));
+        //console.log("Processing " + new Date(datum.time) + " with @mode" + " for " + desc)
+        keys[desc].forEach(function(key){
+          var current_value = datum.data[key] || 0;
+          key_max[key] = (key_max[key] || 0)>current_value?(key_max[key] || 0):current_value;
+          key_sum[key] = (key_sum[key] || 0) + current_value;
+          if ("@mode"==="max") {
+            row.push(key_max[key]);
+          } else if ("@mode"==="sum") {
+            row.push(Math.round(key_sum[key]/@resolution) + (shift[key + ''] || 0));
+            // console.log("@mode On:" + new Date(datum.time) + " Pushing " + Math.round(key_sum[key]/@resolution));
+          } else {
+            row.push(current_value);
+          };
+        });
+        data.addRow(row);
+      });
+
+      var suffix = "";
+      if ("@mode"==="max") {
+        suffix = " (PEAK SO FAR)";
+      } else if ("@mode"==="sum") {
+        suffix = " (CUMMULATIVE)";
+      }
+
+      var options = {
+        'title': desc + suffix
+      };
+
+      var chart = new google.visualization.LineChart(document.getElementById("@name" + desc));
+      chart.draw(data, options);
+    });
+
+  };
+  })();
+
+  
+</script>

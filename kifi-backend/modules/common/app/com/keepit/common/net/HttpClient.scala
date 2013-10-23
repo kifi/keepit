@@ -13,30 +13,34 @@ import play.api.libs.json._
 import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
+import com.keepit.common.strings._
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin, StackTrace}
 import com.keepit.common.concurrent.ExecutionContext.immediate
 import com.keepit.common.controller.CommonHeaders
+import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
 import play.modules.statsd.api.Statsd
-import com.keepit.common.service.FortyTwoServices
 
 import play.api.Logger
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
-    extends Exception(s"$url->[${requestBody.map(_.toString.take(50)).getOrElse("")}] status:${response.status} res: [${response.body.toString.take(50)}]"){
+    extends Exception(s"${url.summary}->[${requestBody.map(_.toString.abbreviate(30)).getOrElse("")}] status:${response.status} res [${response.body.toString.abbreviate(30)}]"){
+  override def toString(): String = s"Bad Http Status: $getMessage"
 }
 
 case class LongWaitException(url: HttpUri, response: Response, waitTime: Int)
-    extends Exception(s"$url status:${response.status} wait-time:${waitTime}ms"){
+    extends Exception(s"${url.summary} status:${response.status} wait-time:${waitTime}ms"){
+  override def toString(): String = s"Long Wait: $getMessage"
 }
 
 trait HttpUri {
   val serviceInstanceOpt: Option[ServiceInstance] = None
   def url: String
+  def summary: String = url.abbreviate(50)
   override def equals(obj: Any) = obj.asInstanceOf[HttpUri].url == url
   override def toString(): String = s"$url for service $serviceInstanceOpt"
 }
@@ -83,8 +87,8 @@ case class HttpClientImpl(
     headers: List[(String, String)] = List(),
     healthcheckPlugin: HealthcheckPlugin,
     airbrake: Provider[AirbrakeNotifier],
-    services: FortyTwoServices,
     accessLog: AccessLog,
+    serviceDiscovery: ServiceDiscovery,
     silentFail: Boolean = false) extends HttpClient with Logging {
 
   private val validResponseClass = 2
@@ -97,8 +101,8 @@ case class HttpClientImpl(
           result = "fail",
           query = req.queryString,
           url = req.url,
-          remoteService = remoteInstance.map(_.remoteService.serviceType).getOrElse(null),
-          remoteServiceId = remoteInstance.map(_.id).getOrElse(null),
+          remoteServiceType = remoteInstance.map(_.remoteService.serviceType.shortName).getOrElse(null),
+          remoteServiceId = remoteInstance.map(_.id.id.toString).getOrElse(null),
           trackingId = req.trackingId,
           error = e.toString))
         val fullException = req.tracer.withCause(e)
@@ -149,7 +153,7 @@ case class HttpClientImpl(
     report(req(url) tapWith {_.delete()}, onFailure)
 
   private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, TimeUnit.MILLISECONDS))
-  private def req(url: HttpUri): Request = new Request(WS.url(url.url).withTimeout(timeout), url, headers, services, accessLog)
+  private def req(url: HttpUri): Request = new Request(WS.url(url.url).withTimeout(timeout), url, headers, accessLog, serviceDiscovery)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
     val clientResponse = new ClientResponseImpl(request, response)
@@ -176,7 +180,7 @@ case class HttpClientImpl(
   }
 
   private def logSuccess(request: Request, res: ClientResponse): Unit = {
-    val remoteLeader: Boolean = res.res.header(CommonHeaders.IsLeader).map(_ == "Y").getOrElse(false)
+    val remoteLeader = res.res.header(CommonHeaders.IsLeader).getOrElse(null)
     val remoteTime: Int = res.res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
@@ -184,8 +188,8 @@ case class HttpClientImpl(
         remoteLeader = remoteLeader.toString,
         result = "success",
         query = request.queryString,
-        remoteService = remoteInstance.map(_.remoteService.serviceType).getOrElse(null),
-        remoteServiceId = remoteInstance.map(_.id).getOrElse(null),
+        remoteServiceType = remoteInstance.map(_.remoteService.serviceType.shortName).getOrElse(null),
+        remoteServiceId = remoteInstance.map(_.id.id.toString).getOrElse(null),
         url = request.url,
         trackingId = request.trackingId,
         statusCode = res.res.status))
@@ -196,8 +200,8 @@ case class HttpClientImpl(
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
-            exception = exception,
-            message = s"[${remoteServiceString(request)}${if(remoteLeader) "L" else "_"}] wait time $waitTime for ${request.httpUri.url}")
+            exception = exception
+          )
         )
       }
     }
@@ -205,15 +209,18 @@ case class HttpClientImpl(
 
   private def remoteServiceString(request: Request) =
     s"${request.httpUri.serviceInstanceOpt.map{i => i.remoteService.serviceType.shortName + i.id}.getOrElse("NA")}"
-
 }
 
 //This request class is not reusable for more then one call
-class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(String, String)], services: FortyTwoServices, accessLog: AccessLog) extends Logging {
+class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(String, String)], accessLog: AccessLog, serviceDiscovery: ServiceDiscovery) extends Logging {
 
   val trackingId = RandomStringUtils.randomAlphanumeric(5)
+  val instance = serviceDiscovery.thisInstance
   private val headersWithTracking =
-    (CommonHeaders.TrackingId, trackingId) :: headers
+    (CommonHeaders.TrackingId, trackingId) ::
+    (CommonHeaders.LocalServiceType, instance.map(_.remoteService.serviceType.shortName).getOrElse("NotAnnounced")) ::
+    (CommonHeaders.LocalServiceId, instance.map(_.id.id.toString).getOrElse("NotAnnounced")) ::
+    headers
   private val wsRequest = req.withHeaders(headersWithTracking: _*)
   lazy val queryString = (wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&").trim match {
     case "" => null

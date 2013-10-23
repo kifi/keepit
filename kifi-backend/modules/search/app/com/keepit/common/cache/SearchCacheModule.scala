@@ -43,8 +43,8 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
 
   @Singleton
   @Provides
-  def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserInfoNetworkCache(stats, accessLog, (outerRepo, 30 days))
+  def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SocialUserInfoNetworkCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -68,8 +68,8 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
 
   @Singleton
   @Provides
-  def userExperimentCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UserExperimentCache(stats, accessLog, (outerRepo, 7 days))
+  def userExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserExperimentCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides
@@ -84,7 +84,7 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Singleton
   @Provides
   def activeExperimentsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ActiveExperimentsCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
+    new ActiveExperimentsCache(stats, accessLog, (outerRepo, 7 days))
 
   @Singleton
   @Provides

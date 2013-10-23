@@ -4,7 +4,7 @@ import play.api.Logger
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.healthcheck._
 import com.keepit.common.time._
-import com.keepit.common.service.{FortyTwoServices, ServiceType}
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time.Clock
 import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstanceId}
 import org.joda.time.format.DateTimeFormat
@@ -47,11 +47,10 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
           statusCode: Int = NoIntValue,
           result: String = null,
           error: String = null,
-          remoteHost: String = null,
-          targetHost: String = null,
-          remoteService: ServiceType = null,
+          remoteServiceType: String = null,
           remoteLeader: String = null,
-          remoteServiceId: ServiceInstanceId = null,
+          remoteServiceId: String = null,
+          remoteIsLeader: String = null,
           query: String = null,
           trackingId: String = null,
           method: String = null,
@@ -68,10 +67,8 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       statusCode = intOption(statusCode),
       result = Option(result),
       error = Option(error),
-      remoteHost = Option(remoteHost),
-      targetHost = Option(targetHost),
       remoteLeader = Option(remoteLeader),
-      remoteService = Option(remoteService),
+      remoteServiceType = Option(remoteServiceType),
       remoteServiceId = Option(remoteServiceId),
       query = Option(query),
       trackingId = Option(trackingId),
@@ -91,11 +88,9 @@ case class AccessLogEvent(
   statusCode: Option[Int],
   result: Option[String],
   error: Option[String],
-  remoteHost: Option[String],
-  targetHost: Option[String],
-  remoteService: Option[ServiceType],
+  remoteServiceType: Option[String],
   remoteLeader: Option[String],
-  remoteServiceId: Option[ServiceInstanceId],
+  remoteServiceId: Option[String],
   query: Option[String],
   trackingId: Option[String],
   method: Option[String],
@@ -136,9 +131,7 @@ class AccessLog @Inject() (clock: Clock) {
       e.remoteTime.map(t => "waitTime:" + (e.duration - t)) ::
       e.statusCode.map("statusCode:" + _) ::
       e.result.map("result:" + _) ::
-      e.remoteHost.map("remoteHost:" + _) ::
-      e.targetHost.map("targetHost:" + _) ::
-      e.remoteService.map("remoteService:" + _) ::
+      e.remoteServiceType.map("remoteServiceType:" + _) ::
       e.remoteServiceId.map("remoteServiceId:" + _) ::
       e.remoteLeader.map("remoteLeader:" + _) ::
       e.query.map("query:" + _) ::

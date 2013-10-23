@@ -3,6 +3,7 @@ package com.keepit.heimdal
 import org.joda.time.DateTime
 
 import com.keepit.common.time._
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 import play.api.libs.json.{JsObject, JsNull, JsArray, Json}
 import play.modules.reactivemongo.json.ImplicitBSONHandlers._
@@ -23,13 +24,29 @@ object MetricDescriptor {
   implicit val format = Json.format[MetricDescriptor]
 }
 
-class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metricDescriptorRepo: MetricDescriptorRepo, metricRepoFactory: MetricRepoFactory){
+class MetricManager @Inject() (
+    userEventLoggingRepo: UserEventLoggingRepo, 
+    metricDescriptorRepo: MetricDescriptorRepo, 
+    metricRepoFactory: MetricRepoFactory,
+    serviceDiscovery: ServiceDiscovery
+  ){
+
+  var updateInProgress: Boolean = false
 
   val definedRestrictions = Map[String, ContextRestriction](
     "none" -> NoContextRestriction,
     "noadmins" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("admin"))),
     "withkifiresults" -> AnyContextRestriction("context.kifiResults", GreaterThan(ContextDoubleData(0))),
-    "kifiresultclicked" -> AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi")))
+    "kifiresultclicked" -> AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi"))),
+    "nofakes" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))), //Is this correct?
+    "publickeepsonly_nofakes" -> AndContextRestriction(
+      AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))),
+      AnyContextRestriction("context.isPrivate", EqualTo(ContextDoubleData(0)))
+    ),
+    "privatekeepsonly_nofakes" -> AndContextRestriction(
+      AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))),
+      AnyContextRestriction("context.isPrivate", EqualTo(ContextDoubleData(1)))
+    )
   )
 
   def computeAdHocMteric(startTime: DateTime, endTime: DateTime, definition: MetricDefinition): Future[JsArray]  = {
@@ -99,9 +116,13 @@ class MetricManager @Inject() (userEventLoggingRepo: UserEventLoggingRepo, metri
   }
 
   def updateAllMetrics(): Unit = synchronized {
-    val descriptorsFuture : Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
-    descriptorsFuture.map{ descriptors =>
-      descriptors.foreach(updateMetricFully(_))
+    if (serviceDiscovery.isLeader() && !updateInProgress) {
+      updateInProgress = true
+      val descriptorsFuture : Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
+      descriptorsFuture.map{ descriptors =>
+        descriptors.foreach(updateMetricFully(_))
+      }
+      updateInProgress = false
     }
   }
 

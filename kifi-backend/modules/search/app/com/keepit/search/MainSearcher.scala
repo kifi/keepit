@@ -47,9 +47,8 @@ class MainSearcher(
     config: SearchConfig,
     lastUUID: Option[ExternalId[ArticleSearchResult]],
     articleSearcher: Searcher,
-    val uriGraphSearcher: URIGraphSearcherWithUser,
-    val collectionSearcher: CollectionSearcherWithUser,
     parserFactory: MainQueryParserFactory,
+    socialGraphInfoFuture: Future[SocialGraphInfo],
     clickBoostsFuture: Future[ResultClickBoosts],
     browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
@@ -72,101 +71,46 @@ class MainSearcher(
   private[this] val isInitialSearch = idFilter.isEmpty
 
   // get config params
-  val newContentDiscoveryThreshold = config.asFloat("newContentDiscoveryThreshold")
-  val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
-  val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
-  val percentMatch = config.asFloat("percentMatch")
-  val percentMatchForHotDocs = config.asFloat("percentMatchForHotDocs")
-  val recencyBoost = config.asFloat("recencyBoost")
-  val newContentBoost = config.asFloat("newContentBoost")
-  val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
-  val proximityBoost = config.asFloat("proximityBoost")
-  val semanticBoost = config.asFloat("semanticBoost")
-  val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
-  val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
-  val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-  val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
-  val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
-  val svWeightClickHistory = config.asInt("svWeightClickHistory")
-  val similarity = Similarity(config.asString("similarity"))
-  val phraseBoost = config.asFloat("phraseBoost")
-  val siteBoost = config.asFloat("siteBoost")
-  val concatBoost = config.asFloat("concatBoost")
-  val minMyBookmarks = config.asInt("minMyBookmarks")
-  val myBookmarkBoost = config.asFloat("myBookmarkBoost")
+  private[this] val newContentDiscoveryThreshold = config.asFloat("newContentDiscoveryThreshold")
+  private[this] val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
+  private[this] val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
+  private[this] val percentMatch = config.asFloat("percentMatch")
+  private[this] val percentMatchForHotDocs = config.asFloat("percentMatchForHotDocs")
+  private[this] val recencyBoost = config.asFloat("recencyBoost")
+  private[this] val newContentBoost = config.asFloat("newContentBoost")
+  private[this] val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
+  private[this] val proximityBoost = config.asFloat("proximityBoost")
+  private[this] val semanticBoost = config.asFloat("semanticBoost")
+  private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
+  private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+  private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
+  private[this] val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
+  private[this] val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
+  private[this] val svWeightClickHistory = config.asInt("svWeightClickHistory")
+  private[this] val similarity = Similarity(config.asString("similarity"))
+  private[this] val phraseBoost = config.asFloat("phraseBoost")
+  private[this] val siteBoost = config.asFloat("siteBoost")
+  private[this] val concatBoost = config.asFloat("concatBoost")
+  private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
+  private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
 
-  // initialize user's social graph info
-  private[this] val myUriEdges = uriGraphSearcher.myUriEdgeSet
-  private[this] val myUriEdgeAccessor = myUriEdges.accessor
-  private[this] val myUris =
-    filter.timeRange match {
-      case Some(timeRange) =>
-        filter.collections match {
-          case Some(collections) =>
-            collections.foldLeft(Set.empty[Long]){ (s, collId) =>
-              s ++ collectionSearcher.getCollectionToUriEdgeSet(collId).filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
-            }
-          case _ => myUriEdges.filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
-        }
-      // no time range
-      case _ =>
-        filter.collections match {
-          case Some(collections) =>
-            collections.foldLeft(Set.empty[Long]){ (s, collId) =>
-              s ++ collectionSearcher.getCollectionToUriEdgeSet(collId).destIdLongSet
-            }
-          case _ => myUriEdges.destIdLongSet
-        }
-    }
+  // social graph info
+  private[this] lazy val socialGraphInfo = monitoredAwait.result(socialGraphInfoFuture, 5 seconds, s"getting SocialGraphInfo for user Id $userId")
+  lazy val uriGraphSearcher = socialGraphInfo.uriGraphSearcher
+  lazy val collectionSearcher = socialGraphInfo.collectionSearcher
 
-  private[this] val friendEdgeSet = uriGraphSearcher.searchFriendEdgeSet
-  private[this] val friendsUriEdgeSets = uriGraphSearcher.friendsUriEdgeSets
-  private[this] val friendsUriEdgeAccessors = friendsUriEdgeSets.mapValues{ _.accessor }
-  private[this] val (filteredFriendEdgeSet, relevantFriendEdgeSet) = {
-    if (filter.isCustom) {
-      val fullFriendEdgeSet = uriGraphSearcher.friendEdgeSet
-      val filtered = uriGraphSearcher.getUserToUserEdgeSet(userId, filter.filterFriends(fullFriendEdgeSet.destIdSet)) // a custom filter can have non-search friends
-      val unioned = uriGraphSearcher.getUserToUserEdgeSet(userId, filtered.destIdSet ++ friendEdgeSet.destIdSet)
-      (filtered, unioned)
-    } else {
-      (friendEdgeSet, friendEdgeSet)
-    }
-  }
-  private[this] val friendUris = if (filter.includeFriends) {
-    filter.timeRange match {
-      case Some(timeRange) =>
-        filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
-          s ++ friendsUriEdgeSets(f.id).filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
-        }
-      case _ =>
-        filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
-          s ++ friendsUriEdgeSets(f.id).destIdLongSet
-        }
-    }
-  } else {
-    Set.empty[Long]
+  @inline private[this] def findSharingUsers(id: Long, friendEdgeSet: UserToUserEdgeSet ): UserToUserEdgeSet = {
+    uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
   }
 
-  private[this] val friendlyUris = {
-    if (filter.includeMine) friendUris ++ myUris
-    else if (filter.includeShared) friendUris
-    else friendUris -- myUris // friends only
-  }
-
-  timeLogs.socialGraphInfo = currentDateTime.getMillis() - currentTime
-
-  private def findSharingUsers(id: Long): UserToUserEdgeSet = {
-    uriGraphSearcher.intersect(relevantFriendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
-  }
-
-  private def sharingScore(sharingUsers: UserToUserEdgeSet): Float = {
+  @inline private[this] def sharingScore(sharingUsers: UserToUserEdgeSet): Float = {
     if (filter.isCustom) filter.filterFriends(sharingUsers.destIdSet).size.toFloat else sharingUsers.size.toFloat
   }
 
-  private def sharingScore(sharingUsers: UserToUserEdgeSet, normalizedFriendStats: FriendStats): Float = {
+  @inline private[this] def sharingScore(sharingUsers: UserToUserEdgeSet, normalizedFriendStats: FriendStats): Float = {
     val users = if (filter.isCustom) filter.filterFriends(sharingUsers.destIdSet) else sharingUsers.destIdSet
     users.foldLeft(sharingUsers.size.toFloat){ (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
@@ -174,7 +118,8 @@ class MainSearcher(
   def getPersonalizedSearcher(query: Query) = {
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
-    PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
+
+    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 
   def searchText(maxTextHitsPerCategory: Int) = {
@@ -195,9 +140,14 @@ class MainSearcher(
     parsedQuery = parser.parse(queryString)
 
     timeLogs.queryParsing = currentDateTime.getMillis() - tParse
+    timeLogs.phraseDetection = parser.phraseDetectionTime
+    timeLogs.nlpPhraseDetection = parser.nlpPhraseDetectionTime
 
     val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
+
+      val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
+      val friendlyUris = socialGraphInfo.friendlyUris
 
       val namedQueryContext = parser.namedQueryContext
       val semanticVectorScoreAccessor = namedQueryContext.getScoreAccessor("semantic vector")
@@ -249,6 +199,10 @@ class MainSearcher(
 
     val tProcessHits = currentDateTime.getMillis()
 
+    val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
+    val friendsUriEdgeAccessors = socialGraphInfo.friendsUriEdgeAccessors
+    val relevantFriendEdgeSet = socialGraphInfo.relevantFriendEdgeSet
+
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
     val othersTotal = othersHits.totalHits
@@ -270,7 +224,8 @@ class MainSearcher(
 
     if (myHits.size > 0) {
       myHits.toRankedIterator.forall{ case (h, rank) =>
-        val sharingUsers = findSharingUsers(h.id)
+
+        val sharingUsers = findSharingUsers(h.id, relevantFriendEdgeSet)
 
         if (numCollectStats > 0 && sharingUsers.size > 0) {
           val createdAt = myUriEdgeAccessor.getCreatedAt(h.id)
@@ -309,7 +264,7 @@ class MainSearcher(
       val normalizedFriendStats = friendStats.normalize
       var newContentScore = newContentDiscoveryThreshold
       friendsHits.toRankedIterator.forall{ case (h, rank) =>
-        val sharingUsers = findSharingUsers(h.id)
+        val sharingUsers = findSharingUsers(h.id, relevantFriendEdgeSet)
 
         var recencyScoreVal = 0.0f
         if (numCollectStats > 0) {
@@ -384,6 +339,7 @@ class MainSearcher(
     }
 
     timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
+    timeLogs.socialGraphInfo = socialGraphInfo.socialGraphInfoTime
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResult]()
@@ -397,7 +353,7 @@ class MainSearcher(
         lang = lang)
   }
 
-  private def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher, svVar: Float) = {
+  private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher, svVar: Float) = {
     val semanticScoreThreshold = (1.0f - semanticBoost) + semanticBoost * 0.2f
     def classify(hit: MutableArticleHit) = {
       (hit.clickBoost) > 1.1f ||
@@ -408,17 +364,15 @@ class MainSearcher(
     hitList.take(3).exists(classify(_))
   }
 
-  private def getPublicBookmarkCount(id: Long) = {
-    uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
-  }
+  @inline private[this] def getPublicBookmarkCount(id: Long) = uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
 
-  def createQueue(sz: Int) = new ArticleHitQueue(sz)
+  @inline private[this] def createQueue(sz: Int) = new ArticleHitQueue(sz)
 
-  private def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
+  @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
 
-  private def bookmarkScore(bookmarkCount: Float) = (1.0f - (1.0f/(1.0f + bookmarkCount)))
+  @inline private[this] def bookmarkScore(bookmarkCount: Float) = (1.0f - (1.0f/(1.0f + bookmarkCount)))
 
-  private def recencyScore(createdAt: Long): Float = {
+  @inline private[this] def recencyScore(createdAt: Long): Float = {
     val t = max(currentTime - createdAt, 0).toFloat / halfDecayMillis
     val t2 = t * t
     (1.0f/(1.0f + t2))
@@ -448,11 +402,13 @@ class MainSearcher(
   }
 
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
-  def getBookmarkId(uriId: Id[NormalizedURI]): Long = myUriEdgeAccessor.getBookmarkId(uriId.id)
+  def getBookmarkId(uriId: Id[NormalizedURI]): Long = socialGraphInfo.myUriEdgeAccessor.getBookmarkId(uriId.id)
 
   def timing() {
     Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
     Statsd.timing("mainSearch.queryParsing", timeLogs.queryParsing)
+    Statsd.timing("mainSearch.phraseDetection", timeLogs.phraseDetection)
+    Statsd.timing("mainSearch.nlpPhraseDetection", timeLogs.nlpPhraseDetection)
     Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
     Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
     Statsd.timing("mainSearch.LuceneSearch", timeLogs.search)
@@ -560,6 +516,8 @@ case class MutableSearchTimeLogs(
     var socialGraphInfo: Long = 0,
     var getClickBoost: Long = 0,
     var queryParsing: Long = 0,
+    var phraseDetection: Long = 0,
+    var nlpPhraseDetection: Long = 0,
     var personalizedSearcher: Long = 0,
     var search: Long = 0,
     var processHits: Long = 0,

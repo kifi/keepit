@@ -89,8 +89,12 @@ object FortyTwoTypeMappers {
   }
 
   //Ids
-  implicit object ABookInfoTypeMapper extends BaseTypeMapper[Id[ABookInfo]] {
+  implicit object ABookInfoIdTypeMapper extends BaseTypeMapper[Id[ABookInfo]] {
     def apply(profile:BasicProfile) = new IdMapperDelegate[ABookInfo](profile)
+  }
+
+  implicit object UserPictureIdTypeMapper extends BaseTypeMapper[Id[UserPicture]] {
+    def apply(profile:BasicProfile) = new IdMapperDelegate[UserPicture](profile)
   }
 
   implicit object CommentIdTypeMapper extends BaseTypeMapper[Id[Comment]] {
@@ -306,6 +310,11 @@ object FortyTwoTypeMappers {
   implicit object UserNotificationDetailsTypeMapper extends BaseTypeMapper[UserNotificationDetails] {
     def apply(profile: BasicProfile) = new UserNotificationDetailsMapperDelegate(profile)
   }
+
+  implicit object UserPictureSourceIdTypeMapper extends BaseTypeMapper[UserPictureSource] {
+    def apply(profile:BasicProfile) = new UserPictureSourceMapperDelegate(profile)
+  }
+
 }
 
 //************************************
@@ -650,6 +659,15 @@ class UserNotificationDetailsMapperDelegate(profile: BasicProfile) extends Strin
   def zero = UserNotificationDetails(Json.obj())
   def sourceToDest(value: UserNotificationDetails) = Json.stringify(value.payload)
   def safeDestToSource(str: String) = UserNotificationDetails(Json.parse(str).asInstanceOf[JsObject])
+}
+
+//************************************
+//       UserPictureSourceMapperDelegate -> String
+//************************************
+class UserPictureSourceMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[UserPictureSource](profile) {
+  def zero = UserPictureSource("")
+  def sourceToDest(value: UserPictureSource) = value.name
+  def safeDestToSource(str: String) = UserPictureSource(str)
 }
 
 //************************************

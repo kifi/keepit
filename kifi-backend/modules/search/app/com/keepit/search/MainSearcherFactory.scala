@@ -17,6 +17,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent._
 import scala.concurrent.duration._
+import com.keepit.common.akka.SafeFuture
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -48,11 +49,11 @@ class MainSearcherFactory @Inject() (
     lastUUID: Option[ExternalId[ArticleSearchResult]]
   ) = {
     val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"), config.asBoolean("useS3FlowerFilter"))
-    val uriGraphSearcher = getURIGraphSearcher(userId)
-    val collectionSearcher = getCollectionSearcher(userId)
     val articleSearcher = articleIndexer.getSearcher
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
+
+    val socialGraphInfoFuture = getSocialGraphInfoFuture(userId, filter)
 
     new MainSearcher(
         userId,
@@ -63,9 +64,8 @@ class MainSearcherFactory @Inject() (
         config,
         lastUUID,
         articleSearcher,
-        uriGraphSearcher,
-        collectionSearcher,
         parserFactory,
+        socialGraphInfoFuture,
         clickBoostsFuture,
         browsingHistoryFuture,
         clickHistoryFuture,
@@ -78,6 +78,12 @@ class MainSearcherFactory @Inject() (
   def clear(): Unit = {
     consolidateURIGraphSearcherReq.clear()
     consolidateCollectionSearcherReq.clear()
+  }
+
+  def getSocialGraphInfoFuture(userId: Id[User], filter: SearchFilter): Future[SocialGraphInfo] = {
+    SafeFuture {
+      new SocialGraphInfo(userId, getURIGraphSearcher(userId), getCollectionSearcher(userId), filter: SearchFilter)
+    }
   }
 
   private[this] def getURIGraphSearcherFuture(userId: Id[User]) = consolidateURIGraphSearcherReq(userId){ userId =>
