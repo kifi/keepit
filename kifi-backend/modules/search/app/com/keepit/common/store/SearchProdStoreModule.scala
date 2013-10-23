@@ -10,15 +10,15 @@ case class SearchProdStoreModule() extends ProdStoreModule {
   def configure {}
 
   @Provides @Singleton
-  def browsingHistoryStore(amazonS3Client: AmazonS3, builder: BrowsingHistoryBuilder): BrowsingHistoryStore = {
+  def browsingHistoryStore(amazonS3Client: AmazonS3, cache: BrowsingHistoryUserIdCache, builder: BrowsingHistoryBuilder): BrowsingHistoryStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.browsingHistory.bucket").get)
-    new S3BrowsingHistoryStoreImpl(bucketName, amazonS3Client, builder)
+    new S3BrowsingHistoryStoreImpl(bucketName, amazonS3Client, cache, builder)
   }
 
   @Provides @Singleton
-  def clickHistoryStore(amazonS3Client: AmazonS3, builder: ClickHistoryBuilder): ClickHistoryStore = {
+  def clickHistoryStore(amazonS3Client: AmazonS3, cache: ClickHistoryUserIdCache, builder: ClickHistoryBuilder): ClickHistoryStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.clickHistory.bucket").get)
-    new S3ClickHistoryStoreImpl(bucketName, amazonS3Client, builder)
+    new S3ClickHistoryStoreImpl(bucketName, amazonS3Client, cache, builder)
   }
 }
 
@@ -26,16 +26,16 @@ case class SearchDevStoreModule() extends DevStoreModule(SearchProdStoreModule()
   def configure() {}
 
   @Provides @Singleton
-  def browsingHistoryStore(amazonS3Client: AmazonS3, builder: BrowsingHistoryBuilder): BrowsingHistoryStore = {
+  def browsingHistoryStore(amazonS3Client: AmazonS3, cache: BrowsingHistoryUserIdCache, builder: BrowsingHistoryBuilder): BrowsingHistoryStore = {
     whenConfigured("amazon.s3.browsingHistory.bucket")(
-      prodStoreModule.browsingHistoryStore(amazonS3Client, builder)
+      prodStoreModule.browsingHistoryStore(amazonS3Client, cache, builder)
     ).getOrElse(new InMemoryBrowsingHistoryStoreImpl())
   }
 
   @Provides @Singleton
-  def clickHistoryStore(amazonS3Client: AmazonS3, builder: ClickHistoryBuilder): ClickHistoryStore = {
+  def clickHistoryStore(amazonS3Client: AmazonS3, cache: ClickHistoryUserIdCache, builder: ClickHistoryBuilder): ClickHistoryStore = {
     whenConfigured("amazon.s3.clickHistory.bucket")(
-      prodStoreModule.clickHistoryStore(amazonS3Client, builder)
+      prodStoreModule.clickHistoryStore(amazonS3Client, cache, builder)
     ).getOrElse(new InMemoryClickHistoryStoreImpl())
   }
 }
