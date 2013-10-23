@@ -86,7 +86,7 @@ function nameFormatter(user) {
     str = 'You';
   }
   else {
-    str = user.firstName + ' ' + user.lastName;
+    str = Mustache.escape(user.firstName + ' ' + user.lastName);
   }
   return str;
 }
