@@ -136,12 +136,6 @@
   border-radius: 2px;
   color: white;
   background: #b8c5d1;
-  /*
-  .kifi-message-participants.kifi-overflow & {
-    display: inline-block;
-  }
-  */
-
 }
 .kifi-message-participants-avatars-expand:hover,
 .kifi-message-participants-avatars-expand:focus {
