@@ -54,7 +54,7 @@ trait QueryExpansion extends QueryParser {
     }
 
     def isNumericTermQuery(query: Query): Boolean = query match {
-      case q: TermQuery => if (q.getTerm.text.forall(Character.isDigit)) true else false
+      case q: TermQuery => q.getTerm.text.forall(Character.isDigit)
       case _ => false
     }
 
