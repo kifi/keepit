@@ -4,7 +4,7 @@ import org.joda.time.DateTime
 
 import scala.concurrent.duration.Duration
 
-import reactivemongo.bson.{BSONValue, BSONDouble, BSONString, BSONDocument, BSONArray, BSONDateTime}
+import reactivemongo.bson.{BSONValue, BSONDouble, BSONString, BSONDocument, BSONArray, BSONDateTime, BSONLong}
 import reactivemongo.core.commands.{PipelineOperator, Match, GroupField, SumValue, Unwind, Project, Sort, Descending, AddToSet}
 
 
@@ -111,12 +111,18 @@ object DerivedGrouping {
 }
 
 
-
 sealed trait MetricDefinition {
   def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): (Seq[PipelineOperator], Stream[BSONDocument] => Seq[BSONDocument])
 }
 
-sealed trait SimpleMetricDefinition extends MetricDefinition
+sealed trait SimpleMetricDefinition extends MetricDefinition {
+  val fakeUsers: Seq[Long] = Seq[Long](6,32,60,90,93,125,127,128,217,249,259,262,265,279,286,342,346,395,396,421,422,424,428,429,435,436,475,478,494,495,545,550)
+  def preFilter: PipelineOperator = Match(BSONDocument(
+    "user_id" -> BSONDocument(
+      "$nin" -> BSONArray(fakeUsers.map(BSONLong(_)))
+    )
+  ))
+}
 
 class GroupedEventCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction, groupField: EventGrouping, breakDown: Boolean = false, keySort : Boolean = false) extends SimpleMetricDefinition {
   def aggregationForTimeWindow(startTime: DateTime, timeWindowSize: Duration): (Seq[PipelineOperator], Stream[BSONDocument] => Seq[BSONDocument]) = {
@@ -139,7 +145,7 @@ class GroupedEventCountMetricDefinition(eventsToConsider: EventSet, contextRestr
 
     val grouping = GroupField(groupField.fieldName)("count" -> SumValue(1))
 
-    var pipeline: Seq[PipelineOperator] = Seq(timeWindowSelector, eventSelector, contextSelector)
+    var pipeline: Seq[PipelineOperator] = Seq(timeWindowSelector, preFilter, eventSelector, contextSelector)
 
     if (breakDown || keySort ) pipeline = pipeline :+ Unwind(groupField.fieldName)
 
@@ -180,7 +186,7 @@ class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestri
 
     val grouping = GroupField(groupField.fieldName)("users" -> AddToSet("$user_id"))
 
-    var pipeline: Seq[PipelineOperator] = Seq(timeWindowSelector, eventSelector, contextSelector)
+    var pipeline: Seq[PipelineOperator] = Seq(timeWindowSelector, preFilter, eventSelector, contextSelector)
 
     if (breakDown || keySort ) pipeline = pipeline :+ Unwind(groupField.fieldName)
 
@@ -217,7 +223,7 @@ class GroupedUniqueFieldCountMetricDefinition(eventsToConsider: EventSet, contex
 
     val grouping = GroupField(groupField.fieldName)(sanitizedFieldName -> AddToSet("$" + fieldToCount))
 
-    var pipeline: Seq[PipelineOperator] = Seq(timeWindowSelector, eventSelector, contextSelector)
+    var pipeline: Seq[PipelineOperator] = Seq(timeWindowSelector, preFilter, eventSelector, contextSelector)
 
     if (breakDown) pipeline = pipeline :+ Unwind(groupField.fieldName)
 
