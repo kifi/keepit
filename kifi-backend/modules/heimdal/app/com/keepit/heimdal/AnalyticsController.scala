@@ -17,6 +17,7 @@ import com.keepit.heimdal.{
   MetricDescriptor
 }
 import com.keepit.common.time._
+import com.keepit.common.akka.SafeFuture
 
 import org.joda.time.DateTime
 
@@ -122,7 +123,7 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
 
     infoOptions.foreach{
       case (Some(desc), name) => {
-        val data = Await.result(metricManager.getMetric(name), 5 second)
+        val data = Await.result(metricManager.getMetric(name), 20 second)
         if (data.isEmpty){
           errors = errors + "No Data for Metric: " + name + "\n"
         } else {
@@ -141,27 +142,29 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
   } 
 
   def getMetricData(name: String) = Action { request => //see comment in getMetric
-    val infoOptions : Option[MetricDescriptor] = Await.result(metricManager.getMetricInfo(name), 10 seconds)
-    val json : JsObject = infoOptions.map{ desc =>
-      val data = Await.result(metricManager.getMetric(name), 10 seconds)
-      if (data.isEmpty){
+    Async(SafeFuture{
+      val infoOptions : Option[MetricDescriptor] = Await.result(metricManager.getMetricInfo(name), 20 seconds)
+      val json : JsObject = infoOptions.map{ desc =>
+        val data = Await.result(metricManager.getMetric(name), 20 seconds)
+        if (data.isEmpty){
+          Json.obj(
+            "header" -> ("No Data for Metric: " + name),
+            "data" -> Json.arr()
+          )
+        } else {
+          Json.obj(
+            "header" -> s"[$name] ${desc.description}",
+            "data" -> Json.toJson(data)
+          )
+        }
+      } getOrElse {
         Json.obj(
-          "header" -> ("No Data for Metric: " + name),
+          "header" -> ("Unknown Metric: " + name),
           "data" -> Json.arr()
         )
-      } else {
-        Json.obj(
-          "header" -> s"[$name] ${desc.description}",
-          "data" -> Json.toJson(data)
-        )
       }
-    } getOrElse {
-      Json.obj(
-        "header" -> ("Unknown Metric: " + name),
-        "data" -> Json.arr()
-      )
-    }
-    Ok(json)
+      Ok(json)
+    })
   }
 
   def adhocMetric(from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, as: String) = Action{ request =>

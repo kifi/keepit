@@ -409,6 +409,12 @@ div.kifi-pane-empty>img {
   position: relative;
   z-index: 1;
 }
+.kifi-thread-who {
+  background: transparent;
+  padding: 0;
+  position: relative;
+  z-index: 4;
+}
 .kifi-thread-participants {
   margin-top: 3px;
 }

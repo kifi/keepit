@@ -6,6 +6,7 @@ import com.keepit.model.{User, SocialUserInfo, NormalizedURI}
 import scala.concurrent._
 import com.amazonaws.services.s3.model.PutObjectResult
 import com.keepit.common.db.ExternalId
+import scala.util.Try
 
 case class ShoeboxFakeStoreModule() extends FakeStoreModule {
 
@@ -28,8 +29,12 @@ case class FakeS3ScreenshotStore() extends S3ScreenshotStore {
 }
 
 case class FakeS3ImageStore(val config: S3ImageConfig) extends S3ImageStore {
-  def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]) =
-    promise[Seq[PutObjectResult]]().success(Seq()).future
+  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String): Future[Seq[(String, Try[PutObjectResult])]] =
+    promise[Seq[(String,Try[PutObjectResult])]]().success(Seq()).future
+  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[(String, Try[PutObjectResult])]] =
+    promise[Seq[(String,Try[PutObjectResult])]]().success(Seq()).future
   def getPictureUrl(w: Int, user: User) =
     promise[String]().success(s"http://cloudfront/${user.id.get}_${w}x${w}").future
+  def getPictureUrl(width: Option[Int], user: User, picVersion: String): Future[String] =
+    promise[String]().success(s"http://cloudfront/${user.id.get}_${width.getOrElse(100)}x${width.getOrElse(100)}_$picVersion").future
 }

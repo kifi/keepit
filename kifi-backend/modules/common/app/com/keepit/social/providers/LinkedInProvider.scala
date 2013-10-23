@@ -61,7 +61,7 @@ class LinkedInProvider(application: Application)
 }
 
 object LinkedInProvider {
-  val Api = "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,email-address,formatted-name,picture-url)?format=json&oauth2_access_token="
+  val Api = "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,email-address,formatted-name,picture-url::(original))?format=json&oauth2_access_token="
   val LinkedIn = "linkedin"
   val ErrorCode = "errorCode"
   val Message = "message"

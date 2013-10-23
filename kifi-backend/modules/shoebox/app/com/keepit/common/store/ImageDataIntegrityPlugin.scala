@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{NonOKResponseException, ClientResponse, HttpClient, DirectUrl}
 import com.keepit.common.plugin._
-import com.keepit.model.{UserStates, UserRepo, User}
+import com.keepit.model.{UserPictureRepo, UserStates, UserRepo, User}
 import akka.actor.ActorSystem
 import play.api.Plugin
 import play.api.http.Status.OK
@@ -24,6 +24,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
     userRepo: UserRepo,
     store: S3ImageStore,
     client: HttpClient,
+    userPictureRepo: UserPictureRepo,
     healthcheckPlugin: HealthcheckPlugin,
     airbrake: AirbrakeNotifier
   ) extends FortyTwoActor(airbrake) with Logging {
@@ -40,7 +41,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
         for (user <- db.readOnly { implicit s =>
           userRepo.allExcluding(UserStates.BLOCKED, UserStates.INACTIVE)
         }) yield {
-          for (((url, response), cloudfrontInfo) <- findPictures(user.externalId)) {
+          for (((url, response), cloudfrontInfo) <- findPictures(user)) {
             if (response.status != OK) {
               log.warn(s"S3 request for avatar at $url returned ${response.status}")
               healthcheckPlugin.addError(HealthcheckError(
@@ -66,11 +67,19 @@ private[store] class ImageDataIntegrityActor @Inject() (
   }
 
   private type ImageResponseInfo = ((String, ClientResponse), Option[(String, ClientResponse)])
-  private def findPictures(id: ExternalId[User]): Seq[ImageResponseInfo] = {
-    val urls: Seq[(String, String)] = S3UserPictureConfig.ImageSizes map { size =>
-      (s"http://s3.amazonaws.com/${store.config.bucketName}/users/$id/pics/$size/0.jpg",
-          store.avatarUrlByExternalId(size, id, Some("http")))
+  private def findPictures(user: User): Seq[ImageResponseInfo] = {
+    val urls: Seq[(String, String)] =  {
+      S3UserPictureConfig.ImageSizes.map { size =>
+        val pics = db.readOnly { implicit session =>
+          userPictureRepo.getByUser(user.id.get)
+        }
+        pics.map { pic =>
+          (s"http://s3.amazonaws.com/${store.config.bucketName}/users/${user.externalId}/pics/$size/${pic.name}.jpg",
+            store.avatarUrlByExternalId(Some(size), user.externalId, pic.name, Some("http")))
+        }
+      }.flatten
     }
+
      for ((s3url, cfUrl) <- urls) yield {
       get(s3url) match {
         case resp if resp.status == OK => (s3url -> resp, Some(cfUrl -> get(cfUrl)))

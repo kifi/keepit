@@ -1,45 +1,58 @@
-@(data: String)
-<div id="chart_container"></div>
+@(data: String, name: String, mode: String = "simple")
+<div id="chart_container_@name"></div>
 
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.2.1/lodash.min.js"></script>
 <!-- <script type="text/javascript" src="http://code.jquery.com/jquery-2.0.3.min.js"></script> -->
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 
 <script type="text/javascript">
+  (function(){
+  window.chartData = window.chartData || {}
   google.load('visualization', '1.0', {'packages':['corechart']});
 
-  function discoverKeys(rawData){
+  function discoverKeys(rawData, legend){
     var keys = {}
     rawData.forEach(function(datum){
       datum.data.forEach(function(kv){
-        keys[kv._id] = true;
+        var new_key = legend['' + kv._id] || kv._id;
+        keys[new_key] = true;
       });
     });
     return _.keys(keys);
   };
 
-  function objectify(rawData){
+  function objectify(rawData, legend){
     rawData.forEach(function(datum){
       var newData = {};
       datum.data.forEach(function(kv){
-        newData[kv._id] = kv.count;
+        var new_key = legend['' + kv._id] || kv._id;
+        newData[new_key] = kv.count;
       });
       datum.data = newData; 
     });
   }
 
   var rawData = @Html(data);
+  chartData["@name"] = rawData;
   var keys = {}
   _.forEach(rawData, function(datum){
     var val = datum.data;
     var desc = datum.header;
-    keys[desc] = discoverKeys(val);
-    objectify(val); 
-    var chartParent = $("#chart_container")
-    chartParent.append($('<div>', {id: desc, style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}))
+    keys[desc] = discoverKeys(val, datum.legend);
+    objectify(val, datum.legend);
+    if (keys[desc].length>1){
+      _.forEach(val, function(frame){
+        var total = 0;
+        _.forEach(frame.data, function(subtotal){
+          total += subtotal;
+        });
+        frame.data.total=total;
+      });
+      keys[desc].push("total"); 
+    };
+    var chartParent = $("#chart_container_@name");
+    chartParent.append($('<div>', {id: desc, style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
   });
-
-
 
 
   google.setOnLoadCallback(drawAndRedraw);
@@ -86,6 +99,7 @@
     });
 
   };
+  })();
 
   
 </script>

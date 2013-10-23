@@ -7,6 +7,7 @@
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
+// @require scripts/message_header.js
 
 $.fn.layout = function () {
   'use strict';
@@ -472,6 +473,13 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       }
       function respond(p) {
         cb({participants: p, numParticipants: p.length > 1 ? p.length : null});
+        api.require('scripts/message_header.js', function () {
+          messageHeader.$pane = $pane;
+          messageHeader.participants = p;
+          messageHeader.construct();
+          var $box = $pane.find(".kifi-pane-box");
+          $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
+        });
       }
     }};
 
@@ -479,6 +487,9 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     log("[showPane]", locator, back ? "back" : "")();
     if (locator !== (paneHistory && paneHistory[0])) {
       var pane = toPaneName(locator);
+      if (messageHeader) {
+        messageHeader.destroy();
+      }
       (createPaneParams[pane] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
         params.redirected = redirected;
         showPane2(locator, back, pane, params);
@@ -828,6 +839,13 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       if ($pane) {
         $pane.removeClass('kifi-shaded');
       }
+    },
+    getLocator: function () {
+      return $pane && $pane[0].dataset.locator || null;
+    },
+    getThreadId: function () {
+      var locator = this.getLocator();
+      return locator && locator.split('/')[2];
     },
     showKeepers: function (keepers, otherKeeps) {
       if (lastShownAt) return;

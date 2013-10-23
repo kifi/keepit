@@ -31,11 +31,22 @@ class MetricManager @Inject() (
     serviceDiscovery: ServiceDiscovery
   ){
 
+  var updateInProgress: Boolean = false
+
   val definedRestrictions = Map[String, ContextRestriction](
     "none" -> NoContextRestriction,
     "noadmins" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("admin"))),
     "withkifiresults" -> AnyContextRestriction("context.kifiResults", GreaterThan(ContextDoubleData(0))),
-    "kifiresultclicked" -> AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi")))
+    "kifiresultclicked" -> AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi"))),
+    "nofakes" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))), //Is this correct?
+    "publickeepsonly_nofakes" -> AndContextRestriction(
+      AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))),
+      AnyContextRestriction("context.isPrivate", EqualTo(ContextDoubleData(0)))
+    ),
+    "privatekeepsonly_nofakes" -> AndContextRestriction(
+      AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))),
+      AnyContextRestriction("context.isPrivate", EqualTo(ContextDoubleData(1)))
+    )
   )
 
   def computeAdHocMteric(startTime: DateTime, endTime: DateTime, definition: MetricDefinition): Future[JsArray]  = {
@@ -105,11 +116,13 @@ class MetricManager @Inject() (
   }
 
   def updateAllMetrics(): Unit = synchronized {
-    if (serviceDiscovery.isLeader()) {
+    if (serviceDiscovery.isLeader() && !updateInProgress) {
+      updateInProgress = true
       val descriptorsFuture : Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
       descriptorsFuture.map{ descriptors =>
         descriptors.foreach(updateMetricFully(_))
       }
+      updateInProgress = false
     }
   }
 

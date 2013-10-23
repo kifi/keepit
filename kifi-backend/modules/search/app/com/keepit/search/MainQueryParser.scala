@@ -40,6 +40,8 @@ class MainQueryParser(
 ) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
 
   val namedQueryContext = new NamedQueryContext
+  var phraseDetectionTime: Long = 0L
+  var nlpPhraseDetectionTime: Long = 0L
 
   private def namedQuery(name: String, query: Query) = new NamedQuery(name, query, namedQueryContext)
 
@@ -50,8 +52,16 @@ class MainQueryParser(
       else if (numTextQueries > ProximityQuery.maxLength) query // too many terms, skip proximity and semantic vector
       else {
         val phrases = if (numTextQueries > 1 && phraseBoost > 0.0f) {
+          val tPhraseDetection = System.currentTimeMillis
           val p = phraseDetector.detectAll(phTerms)
-          if (p.size > 0) p else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
+          phraseDetectionTime = System.currentTimeMillis - tPhraseDetection
+
+          if (p.size > 0) p else {
+            val tNlpPhraseDetection = System.currentTimeMillis
+            val nlpPhrases = NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
+            nlpPhraseDetectionTime = System.currentTimeMillis - tNlpPhraseDetection
+            nlpPhrases
+          }
         } else {
           Set.empty[(Int, Int)]
         }
