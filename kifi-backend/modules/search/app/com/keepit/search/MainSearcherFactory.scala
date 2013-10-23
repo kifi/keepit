@@ -21,6 +21,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent._
 import scala.concurrent.duration._
+import com.keepit.common.akka.SafeFuture
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -50,11 +51,11 @@ class MainSearcherFactory @Inject() (
     lastUUID: Option[ExternalId[ArticleSearchResult]]
   ) = {
     val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"), config.asBoolean("useS3FlowerFilter"))
-    val uriGraphSearcher = getURIGraphSearcher(userId)
-    val collectionSearcher = getCollectionSearcher(userId)
     val articleSearcher = articleIndexer.getSearcher
     val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
     val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
+
+    val socialGraphInfoFuture = getSocialGraphInfoFuture(userId, filter)
 
     new MainSearcher(
         userId,
@@ -65,9 +66,8 @@ class MainSearcherFactory @Inject() (
         config,
         lastUUID,
         articleSearcher,
-        uriGraphSearcher,
-        collectionSearcher,
         parserFactory,
+        socialGraphInfoFuture,
         clickBoostsFuture,
         browsingHistoryFuture,
         clickHistoryFuture,
@@ -82,21 +82,15 @@ class MainSearcherFactory @Inject() (
     consolidateCollectionSearcherReq.clear()
   }
 
-  private[this] def getURIGraphSearcherFuture(userId: Id[User]) = consolidateURIGraphSearcherReq(userId){ userId =>
-    Promise[URIGraphSearcherWithUser].success(uriGraph.getURIGraphSearcher(userId)).future
+  def getSocialGraphInfoFuture(userId: Id[User], filter: SearchFilter): Future[SocialGraphInfo] = {
+    SafeFuture {
+      new SocialGraphInfo(userId, getURIGraphSearcher(userId), getCollectionSearcher(userId), filter: SearchFilter)
+    }
   }
 
-  def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser = {
-    Await.result(getURIGraphSearcherFuture(userId), 5 seconds)
-  }
+  def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser = uriGraph.getURIGraphSearcher(userId)
 
-  private[this] def getCollectionSearcherFuture(userId: Id[User]) = consolidateCollectionSearcherReq(userId){ userId =>
-    Promise[CollectionSearcherWithUser].success(uriGraph.getCollectionSearcher(userId)).future
-  }
-
-  def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = {
-    Await.result(getCollectionSearcherFuture(userId), 5 seconds)
-  }
+  def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = uriGraph.getCollectionSearcher(userId)
 
   private[this] def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float, useS3FlowerFilter: Boolean) = {
     future {
