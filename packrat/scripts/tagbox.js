@@ -285,6 +285,9 @@ this.tagbox = (function ($, win) {
 				KEY_TAB = 9;
 
 			function onInput(e) {
+				if (!this.active) {
+					return;
+				}
 				var text = e.target.value.trim();
 				if (text !== this.text) {
 					this.text = text;

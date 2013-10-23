@@ -284,6 +284,7 @@ var socketHandlers = {
   remove_tag: onTagChangeFromServer.bind(null, 'remove'),
   thread_participants: function(threadId, participants) {
     log("[socket:thread_participants]", threadId, participants)();
+    participants = participants.filter(idIsNot(session.userId));
     forEachTabWithThreadId(threadId, function (tab, thread) {
       thread.participants = participants;
       api.tabs.emit(tab, 'participants', participants);
