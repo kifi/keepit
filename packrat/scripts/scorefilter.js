@@ -7,10 +7,6 @@
  *
  * Filters an array by search input.
  * Sorts the result by relevance score.
- *
- * @author Andrew Conner <andrew@42go.com>
- * @author Joon Ho Cho <joon@42go.com>
- * @date 10-11-2013
  */
 
 this.scorefilter = (function () {

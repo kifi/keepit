@@ -18,9 +18,6 @@
  *
  * Message Participants is an UI component that manages
  * participants of the current message conversation.
- *
- * @author Joon Ho Cho <joon@42go.com>
- * @date 10-17-2013
  */
 
 /*global cdnBase, Mustache */

@@ -12,9 +12,6 @@
  *
  * Message Muter is an UI component that helps
  * a user to mute or unmute the current conversation.
- *
- * @author Joon Ho Cho <joon@42go.com>
- * @date 10-17-2013
  */
 
 var messageMuter = this.messageMuter = (function ($, win) {

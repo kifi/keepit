@@ -6,9 +6,6 @@
  * ---------------
  *
  * Contains utility functions for Kifi APIs
- *
- * @author Joon Ho Cho <joon@42go.com>
- * @date 10-17-2013
  */
 
 this.kifiUtil = (function () {

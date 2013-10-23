@@ -20,9 +20,6 @@
  *
  * Tag box is an UI component that lets you conveniently tag your keep
  * into existing and/or new tag(s).
- *
- * @author Joon Ho Cho <joon@42go.com>
- * @date 10-02-2013
  */
 
 this.tagbox = (function ($, win) {

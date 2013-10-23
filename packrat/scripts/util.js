@@ -4,9 +4,6 @@
  * ---------------
  *
  * Contains utility functions
- *
- * @author Joon Ho Cho <joon@42go.com>
- * @date 10-07-2013
  */
 
 var util = this.util = (function () {
