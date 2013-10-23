@@ -13,7 +13,7 @@ this.kifiUtil = (function () {
 
 	return {
 		/**
-		 * Makes a request to the server and returns a deferred promise object.
+		 * Makes a request to the background page and returns a deferred promise object.
 		 *
 		 * @param {string} name - A request name
 		 * @param {*} data - A request payload

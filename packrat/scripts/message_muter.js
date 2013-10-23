@@ -132,13 +132,6 @@ var messageMuter = this.messageMuter = (function ($, win) {
 			return false;
 		},
 
-		setMuted: function (muted) {
-			if (muted) {
-				return this.unmute();
-			}
-			return this.mute();
-		},
-
 		updateMuted: function (muted) {
 			this.parent.setStatus('muted', muted);
 		},

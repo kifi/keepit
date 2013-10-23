@@ -143,7 +143,7 @@ function isSessionUser(user) {
 }
 
 function bringSessionUserToFront(users) {
-  for (var i = 0, len = users.length, user; i < len; i++) {
+  for (var i = 1, len = users.length, user; i < len; i++) {
     user = users[i];
     if (isSessionUser(user)) {
       users.splice(i, 1);
