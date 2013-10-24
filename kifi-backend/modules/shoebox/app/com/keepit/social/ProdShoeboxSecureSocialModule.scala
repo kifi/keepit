@@ -8,6 +8,8 @@ import com.keepit.model._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.controller.{ShoeboxActionAuthenticator, ActionAuthenticator}
+import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilderFactory}
+
 
 trait ShoeboxSecureSocialModule extends SecureSocialModule {
 
@@ -37,9 +39,11 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     imageStore: S3ImageStore,
     healthcheckPlugin: HealthcheckPlugin,
     emailRepo: EmailAddressRepo,
-    socialGraphPlugin: SocialGraphPlugin
+    socialGraphPlugin: SocialGraphPlugin,
+    userEventContextBuilder: UserEventContextBuilderFactory,
+    heimdal: HeimdalServiceClient
   ): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
-    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, healthcheckPlugin, emailRepo, socialGraphPlugin
+    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, healthcheckPlugin, emailRepo, socialGraphPlugin, userEventContextBuilder, heimdal
   )
 }
 

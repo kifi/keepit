@@ -15,6 +15,7 @@ import play.api.test.Helpers.running
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.heimdal.TestHeimdalServiceClientModule
 
 class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
@@ -34,6 +35,7 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
         TestActorSystemModule(Some(system)),
         TestShoeboxSecureSocialModule(),
         FakeSocialGraphModule(),
+        TestHeimdalServiceClientModule(),
         FakeHttpClientModule(Map(
         DirectUrl("http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg") ->
           FakeClientResponse("image", 200),

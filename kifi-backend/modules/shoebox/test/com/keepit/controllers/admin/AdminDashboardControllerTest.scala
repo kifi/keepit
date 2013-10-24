@@ -13,6 +13,7 @@ import com.keepit.model.SocialUserInfo
 import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.test._
+import com.keepit.heimdal.TestHeimdalServiceClientModule
 
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
@@ -26,7 +27,7 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {
-      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), FakeHttpClientModule(), ShoeboxFakeStoreModule(), FakeSocialGraphModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), FakeHttpClientModule(), ShoeboxFakeStoreModule(), FakeSocialGraphModule(), FakeAirbrakeModule(), TestHeimdalServiceClientModule())) {
 
         val now = new DateTime(2020, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         inject[FakeClock].setTimeFunction(() => now.getMillis)

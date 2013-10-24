@@ -10,6 +10,10 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.store.S3ImageStore
 import com.keepit.inject.AppScoped
 import com.keepit.model._
+import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilderFactory, UserEvent, UserEventType}
+import com.keepit.common.akka.SafeFuture
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.Play.current
 import play.api.{Application, Play}
@@ -25,7 +29,9 @@ class SecureSocialUserPluginImpl @Inject() (
   imageStore: S3ImageStore,
   healthcheckPlugin: HealthcheckPlugin,
   emailRepo: EmailAddressRepo,
-  socialGraphPlugin: SocialGraphPlugin)
+  socialGraphPlugin: SocialGraphPlugin,
+  userEventContextBuilder: UserEventContextBuilderFactory,
+  heimdal: HeimdalServiceClient)
   extends UserService with SecureSocialUserPlugin with Logging {
 
   private def reportExceptions[T](f: => T): T =
@@ -100,7 +106,16 @@ class SecureSocialUserPluginImpl @Inject() (
     } flatMap userRepo.getOpt
 
     def getOrCreateUser(): Option[User] = existingUserOpt orElse {
-      if (allowSignup) Some(userRepo.save(createUser(socialUser, isComplete))) else None
+      if (allowSignup) {
+        val userOpt = Some(userRepo.save(
+          createUser(socialUser, isComplete)
+        ))
+        SafeFuture{
+          val contextBuilder = userEventContextBuilder()
+          heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, UserEventType("signup")))
+        }
+        userOpt 
+      } else None
     }
 
     def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser): Unit = {
