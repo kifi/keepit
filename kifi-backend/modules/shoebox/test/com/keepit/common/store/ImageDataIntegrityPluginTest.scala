@@ -3,7 +3,6 @@ package com.keepit.common.store
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.FakeHealthcheck
 import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse, DirectUrl}
 import com.keepit.inject._
 import com.keepit.model.{UserPictureSources, UserPicture, User}
@@ -14,7 +13,7 @@ import akka.testkit.TestKit
 import play.api.test.Helpers.running
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
-import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.healthcheck.{FakeAirbrakeModule, FakeAirbrakeNotifier}
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 
 class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
@@ -54,17 +53,20 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
 
         inject[ImageDataIntegrityPlugin].verifyAll()
 
-        val errors = inject[FakeHealthcheck].errors()
-        errors.exists { _.errorMessage.get contains
+        val errors = inject[FakeAirbrakeNotifier].errors
+        println("--------------------------")
+        println(errors mkString "\n")
+        println("--------------------------")
+        errors.exists { _.message.get contains
           "http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg"
         } === false
-        errors.exists { _.errorMessage.get contains
+        errors.exists { _.message.get contains
           "http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg"
         } === true
-        errors.exists { _.errorMessage.get contains
+        errors.exists { _.message.get contains
           "http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg"
         } === true
-        errors.exists { _.errorMessage.get contains
+        errors.exists { _.message.get contains
           "http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg"
         } === false
       }
