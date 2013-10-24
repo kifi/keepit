@@ -192,8 +192,8 @@ class UserController @Inject() (
         userData.description foreach { userValueRepo.setValue(request.userId, "user_description", _) }
         if (userData.firstName.isDefined || userData.lastName.isDefined) {
           val user = userRepo.get(request.userId)
-          val cleanFirst = stripBadChars(userData.firstName getOrElse user.firstName)
-          val cleanLast = stripBadChars(userData.lastName getOrElse user.lastName)
+          val cleanFirst = User.stripBadChars(userData.firstName getOrElse user.firstName)
+          val cleanLast = User.stripBadChars(userData.lastName getOrElse user.lastName)
           userRepo.save(user.copy(
             firstName = cleanFirst,
             lastName = cleanLast

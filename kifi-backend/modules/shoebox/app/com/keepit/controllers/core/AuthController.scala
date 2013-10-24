@@ -217,9 +217,9 @@ class AuthController @Inject() (
       case (None, Some(identity)) =>
         // No user exists, so is social
         Ok(views.html.signup.finalizeSocial(
-          firstName = xml.Utility.escape(identity.firstName),
-          lastName = xml.Utility.escape(identity.lastName),
-          email = xml.Utility.escape(identity.email.getOrElse("")),
+          firstName = User.stripBadChars(identity.firstName),
+          lastName = User.stripBadChars(identity.lastName),
+          email = identity.email.getOrElse(""),
           picturePath = identity.avatarUrl.getOrElse("")
         ))
       case (None, None) =>
@@ -309,9 +309,6 @@ class AuthController @Inject() (
 
   private val url = current.configuration.getString("application.baseUrl").get
 
-  @inline private def stripBadChars(str: String) =
-    str.filterNot("<>" contains _)
-
   private def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
       email: String, passwordInfo: PasswordInfo,
       firstName: String = "", lastName: String = "", isComplete: Boolean = true): UserIdentity = {
@@ -319,9 +316,9 @@ class AuthController @Inject() (
       userId = userIdOpt,
       socialUser = SocialUser(
         identityId = IdentityId(email, SocialNetworks.FORTYTWO.authProvider),
-        firstName = stripBadChars(if (isComplete || firstName.nonEmpty) firstName else email),
-        lastName = stripBadChars(lastName),
-        fullName = stripBadChars(s"$firstName $lastName"),
+        firstName = User.stripBadChars(if (isComplete || firstName.nonEmpty) firstName else email),
+        lastName = User.stripBadChars(lastName),
+        fullName = User.stripBadChars(s"$firstName $lastName"),
         email = Some(email),
         avatarUrl = GravatarHelper.avatarFor(email),
         authMethod = AuthenticationMethod.UserPassword,
