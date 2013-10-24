@@ -404,15 +404,11 @@ div.kifi-pane-empty>img {
   color: #777;
 }
 .kifi-thread-who {
-  background-color: #ecf0f1;
-  padding: 10px 12px;
+  padding: 0;
   position: relative;
   z-index: 1;
 }
-.kifi-thread-who {
-  background: transparent;
-  padding: 0;
-  position: relative;
+.kifi-thread-who.kifi-active {
   z-index: 4;
 }
 .kifi-thread-participants {

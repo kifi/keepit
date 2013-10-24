@@ -136,6 +136,20 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			this.setStatus('option-expanded', false);
 		},
 
+		shadePane: function () {
+			if (win.slider2) {
+				this.$el.closest('.kifi-thread-who').addClass('kifi-active');
+				win.slider2.shadePane();
+			}
+		},
+
+		unshadePane: function () {
+			if (win.slider2) {
+				this.$el.closest('.kifi-thread-who').removeClass('kifi-active');
+				win.slider2.unshadePane();
+			}
+		},
+
 		getThreadId: function () {
 			return win.slider2 && win.slider2.getThreadId() || null;
 		},
@@ -173,6 +187,9 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		destroy: function (trigger) {
 			if (this.initialized) {
 				this.initialized = false;
+
+				this.unshadePane();
+
 				this.destroyPlugins();
 
 				$(win.tile).css('transform', '');
