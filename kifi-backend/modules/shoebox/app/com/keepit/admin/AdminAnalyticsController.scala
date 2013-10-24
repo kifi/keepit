@@ -21,6 +21,10 @@ class AdminAnalyticsController @Inject() (
   )
   extends AdminController(actionAuthenticator) {
 
+  val installMetrics = Map[String, MetricAuxInfo](
+    "new_installs_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"), Map("Users" -> 402))
+  )
+
   val userMetrics = Map[String, MetricAuxInfo](
     "alive_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Users")),
     "active_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"))
@@ -63,6 +67,9 @@ class AdminAnalyticsController @Inject() (
 
   def index() = AdminHtmlAction { request =>
     heimdal.updateMetrics()
+    val installMetricsFuture = Future.sequence(installMetrics.toSeq.map{ case (metricName, auxInfo) =>
+      heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
+    })
     val userMetricsFuture = Future.sequence(userMetrics.toSeq.map{ case (metricName, auxInfo) =>
       heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
     })
@@ -72,7 +79,7 @@ class AdminAnalyticsController @Inject() (
     val messageMetricsFuture = Future.sequence(messageMetrics.toSeq.map{ case (metricName, auxInfo) =>
       heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
     })
-    val dataFuture = Future.sequence(Seq(userMetricsFuture, keepMetricsFuture, messageMetricsFuture))
+    val dataFuture = Future.sequence(Seq(installMetricsFuture, userMetricsFuture, keepMetricsFuture, messageMetricsFuture))
 
 
     Async(dataFuture.map{ data =>
@@ -80,7 +87,7 @@ class AdminAnalyticsController @Inject() (
         Json.stringify(Json.toJson(sectionData))
       } 
       Ok(html.admin.analyticsDashboardView(    
-        jsonData(0), jsonData(1), jsonData(2)
+        jsonData(0), jsonData(1), jsonData(2), jsonData(3)
       ))
     })
   }
