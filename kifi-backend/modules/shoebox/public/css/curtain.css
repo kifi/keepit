@@ -11,7 +11,6 @@ html.mac {
 }
 body {
   position: relative;
-  min-height: 640px;
   background-color: #f3f3f3;
 }
 a:link,
@@ -34,7 +33,7 @@ input[type=password] {
 /* curtains */
 .curtain-l,
 .curtain-r {
-  position: absolute;
+  position: fixed;
   z-index: 10;
   top: 0;
   height: 100%;
@@ -176,7 +175,8 @@ input[type=password] {
 }
 .curtain-action {
   position: absolute;
-  top: 360px;
+  top: 20%;
+  margin-top: 220px;
   padding: 32px 0 38px;
   width: 284px;
   text-align: center;
@@ -189,10 +189,10 @@ input[type=password] {
   -ms-transition: opacity 0.42s, visibility 0.42s;
   transition: opacity 0.42s, visibility 0.42s;
 }
-.curtain-action.signup {
+.curtain-signup {
   right: 8%;
 }
-.curtain-action.login {
+.curtain-login {
   left: 8%;
 }
 .curtain-action:hover {
@@ -395,15 +395,12 @@ footer {
   line-height: 14px;
 }
 /* forms */
-.signup-form,
-.login-form {
+.signup,
+.login {
   display: none;
   text-align: center;
   margin: 0 16.5%;
   position: relative;
-}
-.signup-form.finalize-static {
-  display: block;
 }
 .form-sides {
   display: table;
@@ -515,26 +512,25 @@ footer {
 .form-submit:active {
   background: #83ae4a;
 }
-.form-terms {
+.terms {
   font-weight: 300;
   font-size: 14px;
   line-height: 18px;
   color: #515151;
 }
 /* finalize new account */
-.finalize {
+.signup-2 {
+  text-align: center;
+}
+.signup > .signup-2 {
+  visibility: hidden;
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  text-align: center;
-  visibility: hidden;
 }
-.finalize-email-addr {
-  display: none;
-}
-.finalize-static>.finalize-email-addr {
-  display: block;
-  margin: 28px 0 20px;
+.static-email-addr {
+  margin: 24px 0 20px;
 }
 .form-creds,
 .form-name,
@@ -624,9 +620,9 @@ footer {
   background-color: #2379b1;
 }
 .form-photo-a.upload {
-  background-color: #888888;
   margin-bottom: 0;
   cursor: pointer;
+  background-color: #888888;
 }
 .form-photo-a.upload:hover {
   background-color: #949494;
@@ -681,15 +677,15 @@ footer {
   color: #555;
   border-color: #bbb;
 }
-.form-submit-final {
+.signup-2 > .form-submit {
   margin: 20px auto 40px;
   width: 200px;
   background: #84a2ec;
 }
-.form-submit-final:hover {
+.signup-2 > .form-submit:hover {
   background: #90abee;
 }
-.form-submit-final:active {
+.signup-2 > .form-submit:active {
   background: #7792d4;
 }
 /* finalize transition */
@@ -772,7 +768,7 @@ footer {
   -ms-transform: translate(100%, 0);
   transform: translate(100%, 0);
 }
-.finalize {
+.signup > .signup-2 {
   visibility: hidden;
   opacity: 0;
   -webkit-transform: translate(0, 60px);
@@ -786,7 +782,7 @@ footer {
   -ms-transition: opacity 0.24s linear, -ms-transform 0.24s ease-out;
   transition: opacity 0.24s linear, transform 0.24s ease-out;
 }
-.finalizing .finalize {
+.finalizing .signup-2 {
   visibility: visible;
   opacity: 1;
   -webkit-transform: none;
@@ -795,7 +791,7 @@ footer {
   -ms-transform: none;
   transform: none;
 }
-.finalizing .form-terms {
+.finalizing .terms {
   -webkit-transform: translate(0, 20px);
   -moz-transform: translate(0, 20px);
   -o-transform: translate(0, 20px);

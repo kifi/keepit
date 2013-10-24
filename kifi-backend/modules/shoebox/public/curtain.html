@@ -21,13 +21,13 @@
 </head>
 
 <div class="curtain-l">
-  <a class="curtain-action signup" data-form="signup-form" href="javascript:">
+  <a class="curtain-action curtain-signup" href="javascript:">
     <div class="curtain-a-title">Sign up</div>
     Let me in
   </a>
 </div>
 <div class="curtain-r">
-  <a class="curtain-action login" data-form="login-form" href="javascript:">
+  <a class="curtain-action curtain-login" href="javascript:">
     <div class="curtain-a-title">Log in</div>
     I have an account
   </a>
@@ -43,9 +43,30 @@
 <h1 class="main-logo">kifi</h1>
 <h2 class="page-title"></h2>
 
-<form class="signup-form" data-title="Sign Up" data-title2="Finalize Your Account" novalidate>
-  <div class="finalize">
-    <div class="finalize-email-addr"></div>
+<div class="signup">
+  <form class="signup-1" data-title="Sign Up" novalidate>
+    <div class="form-sides">
+      <div class="form-l">
+        <h3>Use a social network</h3>
+        <a class="form-network facebook" href="javascript:">
+          <span class="form-network-icon"></span>
+          <span class="form-network-text">Sign up using Facebook</span>
+        </a>
+        <a class="form-network linkedin" href="javascript:">
+          <span class="form-network-icon"></span>
+          <span class="form-network-text">Sign up using LinkedIn</span>
+        </a>
+      </div>
+      <div class="form-r">
+        <h3>Use your email address</h3>
+        <input class="form-email-addr" type="email" name="signup-email" placeholder="Your email address">
+        <input class="form-password" type="password" name="signup-password" placeholder="Your new password">
+        <button class="form-submit">Sign up</button>
+      </div>
+    </div>
+  </form>
+
+  <form class="signup-2 signup-2-email" data-title="Finalize Your Account" novalidate>
     <div class="form-name">
       <input class="form-first-name" type="text" name="first-name" placeholder="First name" required>
       <input class="form-last-name" type="text" name="last-name" placeholder="Last name" required>
@@ -62,35 +83,15 @@
       </div>
       <div class="form-photo-drop">Drop picture here</div>
     </div>
-    <button class="form-submit form-submit-final">Done</button>
-  </div>
+    <button class="form-submit">Done</button>
+  </form>
 
-  <div class="form-sides">
-    <div class="form-l">
-      <h3>Use a social network</h3>
-      <a class="form-network facebook" href="javascript:">
-        <span class="form-network-icon"></span>
-        <span class="form-network-text">Sign up using Facebook</span>
-      </a>
-      <a class="form-network linkedin" href="javascript:">
-        <span class="form-network-icon"></span>
-        <span class="form-network-text">Sign up using LinkedIn</span>
-      </a>
-    </div>
-    <div class="form-r">
-      <h3>Use your email address</h3>
-      <input class="form-email-addr" type="email" name="signup-email" placeholder="Your email address">
-      <input class="form-password" type="password" name="signup-password" placeholder="Your new password">
-      <button class="form-submit">Sign up</button>
-    </div>
-  </div>
-
-  <p class="form-terms">
+  <p class="terms">
     By signing up, you agree to Kifi’s <a target="_blank" href="">Terms of Service</a>.
   </p>
-</form>
+</div>
 
-<form class="login-form" data-title="Log In" novalidate>
+<form class="login" data-title="Log In" novalidate>
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>
