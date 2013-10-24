@@ -183,9 +183,6 @@ class UserController @Inject() (
       firstName: Option[String] = None, lastName: Option[String] = None)
   private implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 
-  @inline private def stripBadChars(str: String) =
-    str.filterNot("<>" contains _)
-
   def updateCurrentUser() = AuthenticatedJsonToJsonAction(true) { implicit request =>
     request.body.asOpt[UpdatableUserInfo] map { userData =>
       db.readWrite { implicit session =>
