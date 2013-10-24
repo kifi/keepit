@@ -66,7 +66,7 @@ class ExtAuthController @Inject() (
       }
       val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
-      (user, installation, sliderRuleGroup, urlPatterns, firstTime)
+      (user, installation, sliderRuleGroup, urlPatterns, firstTime, isUpgrade)
     }
 
     if (isUpgrade){
