@@ -3,7 +3,7 @@ package com.keepit.social
 import com.keepit.inject.AppScoped
 import com.google.inject.{Provides, Singleton, Inject}
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.akka.MonitoredAwait
 import play.api.Application
 import securesocial.core._
@@ -12,7 +12,6 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import scala.Some
 import securesocial.core.IdentityId
-import com.keepit.common.healthcheck.HealthcheckError
 import securesocial.core.providers.Token
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -22,15 +21,14 @@ import securesocial.controllers.{TemplatesPlugin, DefaultTemplatesPlugin}
 @AppScoped
 class RemoteSecureSocialAuthenticatorPlugin @Inject()(
      shoeboxClient: ShoeboxServiceClient,
-     healthcheckPlugin: HealthcheckPlugin,
+     airbrake: AirbrakeNotifier,
      monitoredAwait: MonitoredAwait,
      app: Application
   ) extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin {
 
   private def reportExceptions[T](f: => T): Either[Error, T] =
     try Right(f) catch { case ex: Throwable =>
-      healthcheckPlugin.addError(
-        HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
+      airbrake.notify(AirbrakeError(ex))
       Left(new Error(ex))
     }
 
@@ -62,15 +60,14 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject()(
 
 @Singleton
 class RemoteSecureSocialUserPlugin @Inject() (
-     healthcheckPlugin: HealthcheckPlugin,
+     airbrake: AirbrakeNotifier,
      shoeboxClient: ShoeboxServiceClient,
      monitoredAwait: MonitoredAwait
   ) extends UserService with SecureSocialUserPlugin with Logging {
 
   private def reportExceptions[T](f: => T): T =
     try f catch { case ex: Throwable =>
-      healthcheckPlugin.addError(
-        HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
+      airbrake.notify(AirbrakeError(ex))
       throw ex
     }
 
@@ -114,21 +111,21 @@ case class RemoteSecureSocialModule() extends SecureSocialModule {
   @Provides
   def secureSocialAuthenticatorPlugin(
     shoeboxClient: ShoeboxServiceClient,
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     monitoredAwait: MonitoredAwait,
     app: play.api.Application
   ): SecureSocialAuthenticatorPlugin = {
-    new RemoteSecureSocialAuthenticatorPlugin(shoeboxClient, healthcheckPlugin, monitoredAwait, app)
+    new RemoteSecureSocialAuthenticatorPlugin(shoeboxClient, airbrake, monitoredAwait, app)
   }
 
   @Singleton
   @Provides
   def secureSocialUserPlugin(
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient,
     monitoredAwait: MonitoredAwait
   ): SecureSocialUserPlugin = {
-    new RemoteSecureSocialUserPlugin(healthcheckPlugin, shoeboxClient, monitoredAwait)
+    new RemoteSecureSocialUserPlugin(airbrake, shoeboxClient, monitoredAwait)
   }
 
   @Singleton
