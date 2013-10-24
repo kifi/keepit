@@ -2,7 +2,7 @@ package com.keepit.search.graph
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db._
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
@@ -113,12 +113,12 @@ trait GraphTestHelper extends ApplicationInjector {
   }
 
   def mkURIGraphIndexer(uriGraphDir: RAMDirectory = new RAMDirectory): URIGraphIndexer = {
-    val bookmarkStore = new BookmarkStore(new RAMDirectory, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
-    new URIGraphIndexer(uriGraphDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), bookmarkStore, inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
+    val bookmarkStore = new BookmarkStore(new RAMDirectory, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    new URIGraphIndexer(uriGraphDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkCollectionIndexer(collectionDir: RAMDirectory = new RAMDirectory): CollectionIndexer = {
-    new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
+    new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkURIGraph(graphDir: RAMDirectory = new RAMDirectory, collectionDir: RAMDirectory = new RAMDirectory): URIGraphImpl = {

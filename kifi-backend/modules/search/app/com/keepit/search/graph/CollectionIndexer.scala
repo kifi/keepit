@@ -8,8 +8,7 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.Version
 import com.keepit.common.db._
-import com.keepit.common.healthcheck.Healthcheck.INTERNAL
-import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.strings._
 import com.keepit.model._
 import com.keepit.model.CollectionStates._
@@ -47,7 +46,7 @@ object CollectionIndexer {
 class CollectionIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Collection](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
 
@@ -60,7 +59,7 @@ class CollectionIndexer(
 
   override def onFailure(indexable: Indexable[Collection], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
-    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    airbrake.notify(AirbrakeError(message = Some(msg)))
     super.onFailure(indexable, e)
   }
 

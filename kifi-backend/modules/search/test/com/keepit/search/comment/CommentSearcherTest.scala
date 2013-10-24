@@ -4,7 +4,7 @@ import com.keepit.search.index.{Searcher, WrappedIndexReader, WrappedSubReader}
 import com.keepit.model._
 import com.keepit.model.CommentStates._
 import com.keepit.common.db._
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.graph.GraphTestHelper
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -29,10 +29,10 @@ class CommentSearcherTest extends Specification with GraphTestHelper {
   import CommentFields._
 
   def mkCommentStore(commentStoreDir: RAMDirectory = new RAMDirectory): CommentStore = {
-    new CommentStore(commentStoreDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
+    new CommentStore(commentStoreDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
   def mkCommentIndexer(commentDir: RAMDirectory = new RAMDirectory, commentStore: CommentStore = mkCommentStore()): CommentIndexer = {
-    new CommentIndexer(commentDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), commentStore, inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
+    new CommentIndexer(commentDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), commentStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   // TODO: re-enable after moving to eliza
