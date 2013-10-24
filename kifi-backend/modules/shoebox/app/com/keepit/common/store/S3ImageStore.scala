@@ -11,7 +11,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{HealthcheckPlugin, Healthcheck}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.time.parseStandardTime
@@ -21,7 +21,6 @@ import com.keepit.social.SocialNetworks
 import com.keepit.common.net.URI
 import scala.util.Failure
 import scala.Some
-import com.keepit.common.healthcheck.HealthcheckError
 import scala.util.Success
 
 object S3UserPictureConfig {
@@ -58,7 +57,7 @@ class S3ImageStoreImpl @Inject() (
     s3Client: AmazonS3,
     suiRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     clock: Clock,
     userPictureRepo: UserPictureRepo,
     val config: S3ImageConfig
@@ -160,10 +159,9 @@ class S3ImageStoreImpl @Inject() (
             }
           }
         case Failure(e) =>
-          healthcheckPlugin.addError(HealthcheckError(
-            error = Some(e),
-            callType = Healthcheck.INTERNAL,
-            errorMessage = Some("Failed to upload picture to S3")
+          airbrake.notify(AirbrakeError(
+            exception = e,
+            message = Some(s"Failed to upload picture $pictureName - $externalId of $sui to S3")
           ))
       }
       future
