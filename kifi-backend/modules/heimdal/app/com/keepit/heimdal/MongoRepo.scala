@@ -23,10 +23,10 @@ trait MongoRepo[T] {
   def toBSON(obj: T): BSONDocument
   def fromBSON(bson: BSONDocument) : T
 
-  protected def safeInsert(doc: BSONDocument) = {
+  protected def safeInsert(doc: BSONDocument, dropDups: Boolean = false) = {
     val insertionFuture = new SafeFuture(collection.insert(doc))
     insertionFuture.map{ lastError =>
-      if (lastError.ok==false) {
+      if (lastError.ok==false && (!dropDups || (lastError.code.isDefined && lastError.code.get!=11000))) {
         airbrake.notify(AirbrakeError(
           exception = lastError.fillInStackTrace,
           message = Some(s"Error inserting $doc into MongoDB")
@@ -36,9 +36,9 @@ trait MongoRepo[T] {
     }
   }
 
-  def insert(obj: T) : Unit = {
+  def insert(obj: T, dropDups: Boolean = false) : Unit = {
     val bson = toBSON(obj)
-    safeInsert(bson)
+    safeInsert(bson, dropDups)
   }
 
   def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
@@ -59,7 +59,7 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
   val bufferSize = new AtomicLong(0)
   val hasWarned = new AtomicBoolean(false)
 
-  override def insert(obj: T) : Unit = {
+  override def insert(obj: T, dropDups: Boolean = false) : Unit = {
     if (bufferSize.get>=maxBufferSize) {
       airbrake.notify(AirbrakeError(message = Some(s"Mongo Insert Buffer Full! (${bufferSize.get})")))
       throw MongoInsertBufferFullException()
@@ -71,7 +71,7 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
     Statsd.gauge(s"monogInsertBuffer.${collection.name}", inflight)
     safeInsert(toBSON(obj)).map{ lastError =>
       bufferSize.decrementAndGet()
-      if (lastError.ok==false) insert(obj)
+      if (lastError.ok==false && (!dropDups || (lastError.code.isDefined && lastError.code.get!=11000))) insert(obj)
     }
 
   }

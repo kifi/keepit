@@ -103,7 +103,7 @@ class MetricManager @Inject() (
       unique   = true,
       dropDups = true
     ))
-    repo.insert(metricData)
+    repo.insert(metricData, dropDups=true)
     val newDesc = desc.copy(lastUpdate=tEnd)
     metricDescriptorRepo.upsert(desc)
     newDesc
