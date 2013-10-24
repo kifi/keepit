@@ -1,7 +1,6 @@
 package com.keepit.heimdal
 
-
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import org.joda.time.DateTime
 
@@ -10,8 +9,6 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.core.commands.PipelineOperator
 
 import scala.concurrent.{Promise, Future}
-
-
 
 trait UserEventLoggingRepo extends BufferedMongoRepo[UserEvent] {
   val warnBufferSize = 500
@@ -45,9 +42,9 @@ trait UserEventLoggingRepo extends BufferedMongoRepo[UserEvent] {
 
 }
 
-class ProdUserEventLoggingRepo(val collection: BSONCollection, protected val healthcheckPlugin: HealthcheckPlugin) extends UserEventLoggingRepo
+class ProdUserEventLoggingRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends UserEventLoggingRepo
 
-class DevUserEventLoggingRepo(val collection: BSONCollection, protected val healthcheckPlugin: HealthcheckPlugin) extends UserEventLoggingRepo {
+class DevUserEventLoggingRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends UserEventLoggingRepo {
   override def insert(obj: UserEvent) : Unit = {}
   override def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
     Promise.successful(

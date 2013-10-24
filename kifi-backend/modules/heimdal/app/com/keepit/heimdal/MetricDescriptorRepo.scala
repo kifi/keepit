@@ -1,6 +1,6 @@
 package com.keepit.heimdal
 
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import reactivemongo.core.commands.PipelineOperator
 import reactivemongo.api.collections.default.BSONCollection
@@ -11,9 +11,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.joda.time.DateTime
 
 import scala.concurrent.{Future, Promise}
-
-
-
 
 trait MetricDescriptorRepo extends MongoRepo[MetricDescriptor] {
 
@@ -36,8 +33,7 @@ trait MetricDescriptorRepo extends MongoRepo[MetricDescriptor] {
   }
 }
 
-
-class ProdMetricDescriptorRepo(val collection: BSONCollection, protected val healthcheckPlugin: HealthcheckPlugin) extends MetricDescriptorRepo {
+class ProdMetricDescriptorRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends MetricDescriptorRepo {
   def upsert(obj: MetricDescriptor) : Unit = {
     collection.uncheckedUpdate(
       BSONDocument("name" -> obj.name),
@@ -48,7 +44,7 @@ class ProdMetricDescriptorRepo(val collection: BSONCollection, protected val hea
   }
 }
 
-class DevMetricDescriptorRepo(val collection: BSONCollection, protected val healthcheckPlugin: HealthcheckPlugin) extends MetricDescriptorRepo {
+class DevMetricDescriptorRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends MetricDescriptorRepo {
   def upsert(obj: MetricDescriptor) : Unit = {}
   override def insert(obj: MetricDescriptor) : Unit = {}
   override def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {

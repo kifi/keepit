@@ -1,6 +1,6 @@
 package com.keepit.heimdal
 
-import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError, Healthcheck}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.akka.SafeFuture
 
 
@@ -17,7 +17,7 @@ import play.modules.statsd.api.Statsd
 case class MongoInsertBufferFullException() extends java.lang.Throwable
 
 trait MongoRepo[T] {
-  protected val healthcheckPlugin: HealthcheckPlugin
+  protected val airbrake: AirbrakeNotifier
 
   val collection: BSONCollection
   def toBSON(obj: T): BSONDocument
@@ -27,12 +27,9 @@ trait MongoRepo[T] {
     val insertionFuture = new SafeFuture(collection.insert(doc))
     insertionFuture.map{ lastError =>
       if (lastError.ok==false) {
-        healthcheckPlugin.addError(HealthcheckError(
-          error = Some(lastError.fillInStackTrace), 
-          method = Some("mongo"), 
-          path = None, 
-          callType = Healthcheck.INTERNAL,
-          errorMessage = Some(s"Error inserting into MongoDB (${lastError.errMsg})")
+        airbrake.notify(AirbrakeError(
+          exception = lastError.fillInStackTrace,
+          message = Some(s"Error inserting $doc into MongoDB")
         ))
       }
       lastError
@@ -47,7 +44,7 @@ trait MongoRepo[T] {
   def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
     val collectionName = collection.name
     val db = collection.db
-    db.command(Aggregate(collectionName,command)) 
+    db.command(Aggregate(collectionName,command))
   }
 
   def all: Future[Seq[T]] = collection.find(BSONDocument()).cursor.toList.map{ docs =>
@@ -64,37 +61,25 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
 
   override def insert(obj: T) : Unit = {
     if (bufferSize.get>=maxBufferSize) {
-      healthcheckPlugin.addError(HealthcheckError(
-        error = None, 
-        method = Some("mongo"), 
-        path = None, 
-        callType = Healthcheck.INTERNAL,
-        errorMessage = Some(s"Mongo Insert Buffer Full! (${bufferSize.get})")
-      ))
+      airbrake.notify(AirbrakeError(message = Some(s"Mongo Insert Buffer Full! (${bufferSize.get})")))
       throw MongoInsertBufferFullException()
     } else if (bufferSize.get>=warnBufferSize && hasWarned.getAndSet(true)==false) {
-      healthcheckPlugin.addError(HealthcheckError(
-        error = None, 
-        method = Some("mongo"), 
-        path = None, 
-        callType = Healthcheck.INTERNAL,
-        errorMessage = Some(s"Mongo Insert almost Buffer Full. (${bufferSize.get})")
-      ))
+      airbrake.notify(AirbrakeError(message = Some(s"Mongo Insert almost Buffer Full. (${bufferSize.get})")))
     } else if (bufferSize.get < warnBufferSize) hasWarned.set(false)
 
     val inflight = bufferSize.incrementAndGet()
     Statsd.gauge(s"monogInsertBuffer.${collection.name}", inflight)
     safeInsert(toBSON(obj)).map{ lastError =>
-      bufferSize.decrementAndGet() 
+      bufferSize.decrementAndGet()
       if (lastError.ok==false) insert(obj)
     }
-  
+
   }
 
 }
 
 
- 
+
 
 
 

@@ -14,7 +14,7 @@ import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search._
 import com.keepit.serializer.PersonalSearchResultPacketSerializer.resSerializer
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.healthcheck.Healthcheck.SEARCH
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
@@ -33,7 +33,7 @@ class ExtSearchController @Inject() (
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient,
   searchAnalytics: SearchAnalytics,
   monitoredAwait: MonitoredAwait)
@@ -143,10 +143,7 @@ class ExtSearchController @Inject() (
         val link = "https://admin.kifi.com/admin/search/results/" + searchRes.uuid.id
         val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, ${timing.toString}." +
             "\n More details at: \n" + link + "\n" + searchDetails + "\n"
-        healthcheckPlugin.addError(HealthcheckError(
-          error = Some(new SearchTimeExceedsLimit(timeLimit, timing.getTotalTime)),
-          errorMessage = Some(msg),
-          callType = SEARCH))
+        airbrake.notify(AirbrakeError(message = Some(msg)))
       }
     }
 
