@@ -22,6 +22,7 @@ class AdminAnalyticsController @Inject() (
   extends AdminController(actionAuthenticator) {
 
   val installMetrics = Map[String, MetricAuxInfo](
+    "invites_sent_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Number Sent"), Map("Number Sent" -> 462)),
     "new_installs_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"), Map("Users" -> 402))
   )
 
