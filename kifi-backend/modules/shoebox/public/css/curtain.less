@@ -22,7 +22,6 @@ html.mac {
 }
 body {
   position: relative;
-  min-height: 640px;
   background-color: #f3f3f3;
 }
 a:link,
@@ -48,7 +47,7 @@ input[type=password] {
 @curtain-time: .42s;
 .curtain-l,
 .curtain-r {
-  position: absolute;
+  position: fixed;
   z-index: 10;
   top: 0;
   height: 100%;
@@ -153,7 +152,8 @@ input[type=password] {
 }
 .curtain-action {
   position: absolute;
-  top: 360px;
+  top: 20%;
+  margin-top: 220px;
   padding: 32px 0 38px;
   width: 284px;
   text-align: center;
@@ -162,10 +162,10 @@ input[type=password] {
   font-size: 18px;
   .transition(opacity @curtain-time, visibility @curtain-time);
 }
-.curtain-action.signup {
+.curtain-signup {
   right: 8%;
 }
-.curtain-action.login {
+.curtain-login {
   left: 8%;
 }
 .curtain-action:hover {
@@ -339,15 +339,12 @@ footer {
 }
 
 /* forms */
-.signup-form,
-.login-form {
+.signup,
+.login {
   display: none;
   text-align: center;
   margin: 0 16.5%;
   position: relative;
-}
-.signup-form.finalize-static {
-  display: block;
 }
 .form-sides {
   display: table;
@@ -458,7 +455,7 @@ footer {
 .form-submit:active {
   background: shade(@primary-button-color, 10%);
 }
-.form-terms {
+.terms {
   font-weight: 300;
   font-size: 14px;
   line-height: 18px;
@@ -466,15 +463,18 @@ footer {
 }
 
 /* finalize new account */
-.finalize {
+.signup-2 {
+  text-align: center;
+}
+.signup>.signup-2 {
+  visibility: hidden;
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  text-align: center;
-  visibility: hidden;
 }
-.finalize-email-addr {
-  display: none;
+.static-email-addr {
+  margin: 24px 0 20px;
 }
 .form-creds,
 .form-name,
@@ -539,33 +539,33 @@ footer {
 }
 .form-photo-a.facebook {
   background-color: @facebook-color;
-}
-.form-photo-a.facebook:hover {
-  background-color: tint(@facebook-color, 10%);
-}
-.form-photo-a.facebook:active {
-  background-color: shade(@facebook-color, 10%);
+  &:hover {
+    background-color: tint(@facebook-color, 10%);
+  }
+  &:active {
+    background-color: shade(@facebook-color, 10%);
+  }
 }
 .form-photo-a.linkedin {
   background-color: @linkedin-color;
-}
-.form-photo-a.linkedin:hover {
-  background-color: tint(@linkedin-color, 10%);
-}
-.form-photo-a.linkedin:active {
-  background-color: shade(@linkedin-color, 10%);
+  &:hover {
+    background-color: tint(@linkedin-color, 10%);
+  }
+  &:active {
+    background-color: shade(@linkedin-color, 10%);
+  }
 }
 @upload-color: #888;
 .form-photo-a.upload {
-  background-color: @upload-color;
   margin-bottom: 0;
   cursor: pointer;
-}
-.form-photo-a.upload:hover {
-  background-color: tint(@upload-color, 10%);
-}
-.form-photo-a.upload:active {
-  background-color: shade(@upload-color, 10%);
+  background-color: @upload-color;
+  &:hover {
+    background-color: tint(@upload-color, 10%);
+  }
+  &:active {
+    background-color: shade(@upload-color, 10%);
+  }
 }
 .form-photo-a:before {
   content: ' ';
@@ -615,16 +615,16 @@ footer {
   border-color: #bbb;
 }
 @final-button-color: #84a2ec;
-.form-submit-final {
+.signup-2>.form-submit {
   margin: 20px auto 40px;
   width: 200px;
   background: @final-button-color;
-}
-.form-submit-final:hover {
-  background: tint(@final-button-color, 10%);
-}
-.form-submit-final:active {
-  background: shade(@final-button-color, 10%);
+  &:hover {
+    background: tint(@final-button-color, 10%);
+  }
+  &:active {
+    background: shade(@final-button-color, 10%);
+  }
 }
 
 /* finalize transition */
@@ -668,18 +668,18 @@ footer {
   visibility: hidden;
   .translate(100%);
 }
-.finalize {
+.signup>.signup-2 {
   visibility: hidden;
   opacity: 0;
   .translate(0, 60px);
   .transition(opacity @finalize-time linear, transform @finalize-time ease-out);
 }
-.finalizing .finalize {
+.finalizing .signup-2 {
   visibility: visible;
   opacity: 1;
   .transform(none);
 }
-.finalizing .form-terms {
+.finalizing .terms {
   .translate(0, 20px);
   .transition(transform @finalize-time ease-out);
 }

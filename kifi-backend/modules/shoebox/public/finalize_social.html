@@ -24,9 +24,9 @@
 <div class="curtain-r"></div>
 
 <h1 class="main-logo">kifi</h1>
-<h2 class="page-title">Finalize your account</h2>
+<h2 class="page-title">Finalize Your Account</h2>
 
-<form class="signup-form finalize-static" novalidate>
+<form class="signup-2 signup-2-social" novalidate>
   <div class="form-creds">
     <input class="form-email-addr" type="email" name="signup-email" value="jaredjacobs@gmail.com" placeholder="Your email address">
     <input class="form-password" type="password" name="signup-password" placeholder="Your new password">
@@ -47,8 +47,8 @@
     </div>
     <div class="form-photo-drop">Drop picture here</div>
   </div>
-  <button class="form-submit form-submit-final">Done</button>
-  <p class="form-terms">
+  <button class="form-submit">Done</button>
+  <p class="terms">
     By signing up, you agree to Kifi’s <a target="_blank" href="">Terms of Service</a>.
   </p>
 </form>
@@ -66,7 +66,7 @@
 <script src="assets/js/jquery-ui-position.min.js"></script>
 <script src="assets/js/curtain.js"></script>
 <script async defer>
-$('body').addClass('curtains-drawn');
+$('body').addClass('curtains-drawn droppable');
 setTimeout(function() {
   $('input').first().focus().select();
 }, 100);

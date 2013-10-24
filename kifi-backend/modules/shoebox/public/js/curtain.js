@@ -26,9 +26,10 @@
 
   $('.curtain-action').click(function (e) {
     if (e.which !== 1) return;
-    var $form = $('form').hide()
-      .filter('.' + $(this).data('form'))
-      .css('display', 'block');
+    var isLogin = $(this).hasClass('curtain-login');
+    var $signup = $('.signup').css('display', isLogin ? 'none' : 'block');
+    var $login = $('.login').css('display', !isLogin ? 'none' : 'block');
+    var $form = isLogin ? $login : $('.signup-1');
     $('.page-title').text($form.data('title'));
     $form.find('.form-email-addr').focus();
     openCurtains();
@@ -79,7 +80,7 @@
     }
   });
 
-  var emailAddrRe = /^[a-zA-Z0-9.!#$%&’*+\/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+  var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   function showFormError($in, msg, opts) {
     var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
       .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
@@ -107,7 +108,7 @@
     if (!s) {
       showFormError($in, 'Please choose a password<br>for your account', {ms: 1500});
     } else if (s.length < 7) {
-      showFormError($in, 'Password must be<br>at least 7 characters', {ms: 1500});
+      showFormError($in, 'Password must be at least 7 characters', {ms: 1500});
     } else {
       return s;
     }
@@ -134,52 +135,95 @@
     }
   }
 
-  var signupPromise;
-  $('.signup-form').submit(function (e) {
-    e.preventDefault();
+  var signup1Promise;
+  $('.signup-1').submit(function (e) {
+    if (signup1Promise && signup1Promise.state() === 'pending') {
+      return false;
+    }
     $('.form-error').remove();
     var $form = $(this);
-    if (!$('body').hasClass('finalizing')) {
-      var email = validateEmailAddress($form.find('.form-email-addr'));
-      var password = email && validateNewPassword($form.find('.form-password'));
-      if (email && password) {
-        signupPromise = $.postJson(baseUri + '/auth/sign-up', {
-          email: email,
-          password: password
-        }).fail(function (xhr) {
-          if (console) console.error('[signup:1:fail]', xhr);
-        }).promise();
-        $('.finalize-email-addr').text(email);
-        transitionTitle($form.data('title2'));
-        $('body').addClass('finalizing');
-        setTimeout(function () {
-          $form.find('.form-first-name').focus();
-        }, 200);
-      }
-    } else {
-      var first = validateName($form.find('.form-first-name'));
-      var last = first && validateName($form.find('.form-last-name'));
-      if (first && last) {
-        var namePromise = $.postJson(baseUri + '/site/user/me', {
-          firstName: first,
-          lastName: last
-        }).fail(function (xhr) {
-          if (console) console.error('[signup:2:fail]', xhr);
-        });
-        $.when(signupPromise, photoPromise, namePromise).done(function() {
-          window.location = '/';
-        });
-      }
+    var email = validateEmailAddress($form.find('.form-email-addr'));
+    var password = email && validateNewPassword($form.find('.form-password'));
+    if (email && password) {
+      signup1Promise = $.postJson(baseUri + '/auth/sign-up', {
+        email: email,
+        password: password
+      }).done(function(data) {
+        if (data.needsToFinalize) {
+          transitionTitle($('.signup-2').data('title'));
+          $('body').addClass('finalizing droppable');
+          setTimeout(function () {
+            $('.form-first-name').focus();
+          }, 200);
+        } else {
+          navigateToApp();
+        }
+      }).fail(function (xhr) {
+        signup1Promise = null;
+      });
     }
+    return false;
   });
   function transitionTitle(text) {
     $('.page-title.obsolete').remove();
     var $title = $('.page-title');
     $title.after($title.clone().text(text)).addClass('obsolete').layout();
   }
+  function navigateToApp() {
+    window.location = '/';
+  }
 
-  $('.login-form').submit(function (e) {
-    e.preventDefault();
+  var signup2Promise;
+  $('.signup-2-email').submit(function (e) {
+    if (signup2Promise && signup2Promise.state() === 'pending') {
+      return false;
+    }
+    $('.form-error').remove();
+    var $form = $(this);
+    var first = validateName($form.find('.form-first-name'));
+    var last = first && validateName($form.find('.form-last-name'));
+    if (first && last) {
+      signup2Promise = $.postJson(baseUri + '/auth/email-finalize', {
+        firstName: first,
+        lastName: last
+        // picToken: TODO
+      }).fail(function (xhr) {
+        signup2Promise = null;
+      });
+      $.when(signup2Promise, photoPromise).done(navigateToApp);
+    }
+    return false;
+  });
+  $('.signup-2-social').submit(function (e) {
+    if (signup2Promise && signup2Promise.state() === 'pending') {
+      return false;
+    }
+    $('.form-error').remove();
+    var $form = $(this);
+    var email = validateEmailAddress($form.find('.form-email-addr'));
+    var password = email && validateNewPassword($form.find('.form-password'));
+    var first = email && password && validateName($form.find('.form-first-name'));
+    var last = email && password && first && validateName($form.find('.form-last-name'));
+    if (email && password && first && last) {
+      signup2Promise = $.postJson(baseUri + '/auth/social-finalize', {
+        email: email,
+        password: password,
+        firstName: first,
+        lastName: last
+        // picToken: TODO
+      }).fail(function (xhr) {
+        signup2Promise = null;
+      });
+      $.when(signup2Promise, photoPromise).done(navigateToApp);
+    }
+    return false;
+  });
+
+  var loginPromise;
+  $('.login').submit(function (e) {
+    if (loginPromise && loginPromise === 'pending') {
+      return false;
+    }
     $('.form-error').remove();
     var $form = $(this);
     var $email = $form.find('.form-email-addr');
@@ -187,12 +231,13 @@
     var email = validateEmailAddress($email);
     var password = email && validatePassword($password);
     if (email && password) {
-      $.postJson(baseUri + '/auth/log-in', {
+      loginPromise = $.postJson(baseUri + '/auth/log-in', {
         username: email,
         password: password
-      }).done(function () {
-        window.location = '/';
-      }).fail(function (xhr) {
+      })
+      .done(navigateToApp)
+      .fail(function (xhr) {
+        loginPromise = null;
         if (xhr.status === 403) {
           var o = xhr.responseJson;
           if (o && o.error === 'no_such_user') {
@@ -205,6 +250,7 @@
         }
       });
     }
+    return false;
   });
 
   var $photo = $('.form-photo');
@@ -224,7 +270,7 @@
       uploadPhotoIframe(this.form);
     }
   });
-  $(document).on('dragenter dragover drop', 'body.finalizing', function (e) {
+  $(document).on('dragenter dragover drop', '.droppable', function (e) {
     if (~Array.prototype.indexOf.call(e.originalEvent.dataTransfer.types, 'Files')) {
       if (e.type === 'dragenter') {
         $drop.css('display', 'block');
