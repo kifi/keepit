@@ -202,7 +202,7 @@ class AuthController @Inject() (
       case (Some(user), Some(identity)) =>
         // User exists, is incomplete
         Ok(views.html.signup.finalizeEmail(
-          email = identity.email.getOrElse(""),
+          emailAddress = identity.email.getOrElse(""),
           picturePath = identity.avatarUrl.getOrElse("")
         ))
       case (Some(user), None) =>
@@ -219,7 +219,7 @@ class AuthController @Inject() (
         Ok(views.html.signup.finalizeSocial(
           firstName = User.sanitizeName(identity.firstName),
           lastName = User.sanitizeName(identity.lastName),
-          email = identity.email.getOrElse(""),
+          emailAddress = identity.email.getOrElse(""),
           picturePath = identity.avatarUrl.getOrElse("")
         ))
       case (None, None) =>

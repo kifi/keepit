@@ -34,7 +34,7 @@ trait MongoRepo[T] {
 
   protected def safeInsert(doc: BSONDocument, dropDups: Boolean = false) = {
     val insertionFuture = collection.insert(doc) //Non safe future on purpose! (-Stephen)
-    insertionFuture.onFailure{ 
+    insertionFuture.onFailure{
       case lastError : LastError => handleError(doc, lastError, dropDups)
       case ex: Throwable => airbrake.notify(AirbrakeError(
         exception = ex,

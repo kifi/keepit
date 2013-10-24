@@ -20,7 +20,7 @@
 
 (function () {
   'use strict';
-  var baseUri = 'https://www.kifi.com';
+  var baseUri = '';
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
 
