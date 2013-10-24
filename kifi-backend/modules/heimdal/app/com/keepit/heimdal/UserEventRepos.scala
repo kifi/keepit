@@ -45,7 +45,7 @@ trait UserEventLoggingRepo extends BufferedMongoRepo[UserEvent] {
 class ProdUserEventLoggingRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends UserEventLoggingRepo
 
 class DevUserEventLoggingRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends UserEventLoggingRepo {
-  override def insert(obj: UserEvent) : Unit = {}
+  override def insert(obj: UserEvent, dropDups: Boolean = false) : Unit = {}
   override def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
     Promise.successful(
       Stream(BSONDocument("command" -> BSONArray(command.map(_.makePipe))))

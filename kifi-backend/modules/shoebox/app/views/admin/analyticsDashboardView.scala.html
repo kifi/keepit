@@ -1,7 +1,8 @@
-@(userData: String, keepData: String, messageData: String)
+@(installData: String, userData: String, keepData: String, messageData: String)
 
 @admin("Analytics Overview"){
   <h2>Users</h2>
+  @analyticsView(installData, "install", "sum")
   @analyticsView(userData, "user", "simple")
   @analyticsView(userData, "user_max", "max")
   <h2>Keeping</h2>

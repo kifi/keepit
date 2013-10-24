@@ -39,6 +39,9 @@
     var val = datum.data;
     var desc = datum.header;
     keys[desc] = discoverKeys(val, datum.legend);
+    if (keys[desc].length===0){
+      keys[desc].push(datum.legend['null'] || 'null');
+    }
     objectify(val, datum.legend);
     if (keys[desc].length>1){
       _.forEach(val, function(frame){
