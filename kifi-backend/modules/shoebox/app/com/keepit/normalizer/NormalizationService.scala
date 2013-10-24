@@ -5,8 +5,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.model._
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
-import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.integrity.{URIMigration, UriIntegrityPlugin}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
@@ -29,7 +28,7 @@ class NormalizationServiceImpl @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   uriIntegrityPlugin: UriIntegrityPlugin,
   priorKnowledge: PriorKnowledge,
-  healthcheckPlugin: HealthcheckPlugin) extends NormalizationService with Logging {
+  airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
   def normalize(uriString: String)(implicit session: RSession): String = normalizedURIRepo.getByUri(uriString).map(_.url).getOrElse(prenormalize(uriString))
   def prenormalize(uriString: String)(implicit session: RSession): String = {
@@ -53,8 +52,9 @@ class NormalizationServiceImpl @Inject() (
       newReferenceOption <- processUpdate(current, relevantCandidates: _*)
       newReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(current, newReferenceOption)
     } yield newReferenceOptionAfterAdditionalUpdates.map(_.id.get)
-  } tap(_.onFailure { case e => healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Normalization update failed: ${e.getMessage}"))) })
-
+  } tap(_.onFailure {
+    case e => airbrake.notify(AirbrakeError(exception = e, message = Some(s"Normalization update failed")))
+  })
 
   private def processUpdate(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]] = {
 

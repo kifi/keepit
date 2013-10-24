@@ -9,7 +9,6 @@ import scala.util.DynamicVariable
 import com.google.inject.{Singleton, ImplementedBy, Inject, Provider}
 
 import com.keepit.common.db.DatabaseDialect
-import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
@@ -55,7 +54,6 @@ object Database {
 class Database @Inject() (
     val db: DataBaseComponent,
     val dbExecutionContext: DbExecutionContext,
-    val healthcheckPlugin: Provider[HealthcheckPlugin],
     val sessionProvider: SlickSessionProvider,
     val playMode: Mode
   ) extends Logging {
@@ -71,8 +69,6 @@ class Database @Inject() (
     if (DatabaseSessionLock.inSession.value) {
       val message = "already in a DB session!"
       //log.warn("Already in a DB session!", new InSessionException(message)) // todo(Andrew): re-enable
-      //healthcheckPlugin.get.addError(HealthcheckError(Some(new InSessionException(message)), None, None, Healthcheck.INTERNAL, Some(message)))
-
       //throw new InSessionException("already in a DB session!")
     }
     DatabaseSessionLock.inSession.withValue(true) { f }

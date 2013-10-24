@@ -4,8 +4,7 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{State, ExternalId, Id}
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.store.S3ImageStore
 import com.keepit.inject.AppScoped
@@ -27,7 +26,7 @@ class SecureSocialUserPluginImpl @Inject() (
   userRepo: UserRepo,
   userCredRepo: UserCredRepo,
   imageStore: S3ImageStore,
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   emailRepo: EmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
   userEventContextBuilder: UserEventContextBuilderFactory,
@@ -36,8 +35,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def reportExceptions[T](f: => T): T =
     try f catch { case ex: Throwable =>
-      healthcheckPlugin.addError(
-        HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
+      airbrake.notify(AirbrakeError(ex))
       throw ex
     }
 
@@ -114,7 +112,7 @@ class SecureSocialUserPluginImpl @Inject() (
           val contextBuilder = userEventContextBuilder()
           heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, UserEventType("signup")))
         }
-        userOpt 
+        userOpt
       } else None
     }
 
@@ -242,14 +240,13 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   app: Application)
   extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin with Logging  {
 
   private def reportExceptions[T](f: => T): Either[Error, T] =
     try Right(f) catch { case ex: Throwable =>
-      healthcheckPlugin.addError(
-        HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
+      airbrake.notify(AirbrakeError(ex))
       Left(new Error(ex))
     }
 

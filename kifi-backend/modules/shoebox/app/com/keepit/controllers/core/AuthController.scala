@@ -132,21 +132,6 @@ class AuthController @Inject() (
     (Some(_))
   )
 
-  private val registrationInfoForm = Form[RegistrationInfo](
-    mapping(
-      "email" -> email.verifying("Email is invalid", email => db.readOnly { implicit s =>
-        userCredRepo.findByEmailOpt(email).isEmpty
-      }),
-      "firstname" -> nonEmptyText,
-      "lastname" -> nonEmptyText,
-      "password" -> tuple("1" -> nonEmptyText, "2" -> nonEmptyText)
-        .verifying("Passwords do not match", pw => pw._1 == pw._2).transform(_._1, (a: String) => (a, a))
-        .verifying(Constraints.minLength(7))
-    )
-    (RegistrationInfo.apply)
-    (RegistrationInfo.unapply)
-  )
-
   // Finalize account
   def signupPage() = HtmlAction(true)(authenticatedAction = doFinalizePage(_), unauthenticatedAction = doFinalizePage(_))
 
@@ -232,8 +217,8 @@ class AuthController @Inject() (
       case (None, Some(identity)) =>
         // No user exists, so is social
         Ok(views.html.signup.finalizeSocial(
-          firstName = identity.firstName,
-          lastName = identity.lastName,
+          firstName = User.sanitizeName(identity.firstName),
+          lastName = User.sanitizeName(identity.lastName),
           email = identity.email.getOrElse(""),
           picturePath = identity.avatarUrl.getOrElse("")
         ))
@@ -324,7 +309,6 @@ class AuthController @Inject() (
 
   private val url = current.configuration.getString("application.baseUrl").get
 
-
   private def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
       email: String, passwordInfo: PasswordInfo,
       firstName: String = "", lastName: String = "", isComplete: Boolean = true): UserIdentity = {
@@ -332,9 +316,9 @@ class AuthController @Inject() (
       userId = userIdOpt,
       socialUser = SocialUser(
         identityId = IdentityId(email, SocialNetworks.FORTYTWO.authProvider),
-        firstName = if (isComplete || firstName.nonEmpty) firstName else email,
-        lastName = lastName,
-        fullName = s"$firstName $lastName",
+        firstName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email),
+        lastName = User.sanitizeName(lastName),
+        fullName = User.sanitizeName(s"$firstName $lastName"),
         email = Some(email),
         avatarUrl = GravatarHelper.avatarFor(email),
         authMethod = AuthenticationMethod.UserPassword,

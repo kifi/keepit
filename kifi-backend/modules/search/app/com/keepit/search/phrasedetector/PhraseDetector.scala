@@ -49,12 +49,14 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
       var index = 0
       var prevWord: Word = null
       while (index < numTerms) {
-        val tp = subReaderContext.reader.termPositionsEnum(pterms(index))
+        val t = pterms(index)
+        val tp = subReaderContext.reader.termPositionsEnum(t)
         if (tp == null) { // found a gap here
           findPhrases(pq, f) // pq will be cleared after execution
           prevWord = null
         } else {
-          val w = new Word(index, tp, prevWord)
+          val freq = subReaderContext.reader.docFreq(t)
+          val w = new Word(index, freq, tp, prevWord)
           if (prevWord != null) prevWord.nextWord = w
           pq.insertWithOverflow(w)
           prevWord = w
@@ -78,13 +80,13 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
 
       while (effectiveCount > 0) {
         val doc = top.doc
-        val phraseStart = top.index
-        if (top.nextWord != null && top.nextWord.doc == doc) { // the next term should be at the same doc
+        var word = findStart(top)
+        if (word != null) {
+          val phraseStart = word.index
           var wordOffset = 0
-          while (top.checkPosition(phraseStart, wordOffset, onMatch)) {
+          while (word != null && word.doc == doc && word.checkPosition(phraseStart, wordOffset, onMatch)) {
             wordOffset += 1
-            if (top.nextDoc() == NO_MORE_DOCS) effectiveCount -= 1
-            top = pq.updateTop()
+            word = word.nextWord
           }
         }
         while (top.doc == doc) {
@@ -96,7 +98,18 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     pq.clear()
   }
 
-  private class Word(val index: Int, tp: DocsAndPositionsEnum, val prevWord: Word) {
+  @inline private[this] def findStart(w: Word): Word = {
+    val doc = w.doc
+    var start = w
+    var wordCnt = 1
+    while (start.prevWord != null && start.prevWord.doc == doc) {
+      wordCnt += 1
+      start = start.prevWord
+    }
+    if (wordCnt > 1 || (start.nextWord != null && start.nextWord.doc == doc) )start else null // need at least two words
+  }
+
+  private class Word(val index: Int, val freq: Int, tp: DocsAndPositionsEnum, val prevWord: Word) {
 
     var nextWord: Word = null
 
@@ -113,7 +126,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
         var freq = tp.freq()
         while (freq > 0) {
           var data = tp.nextPosition()
-          var pos = data >> 1
+          val pos = data >> 1
           if (pos > wordOffset) return false
           if (pos == wordOffset) {
             if ((data & 1) == 1) {
@@ -130,7 +143,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
   }
 
   private class PQ(sz: Int) extends PriorityQueue[Word](sz) {
-    override def lessThan(a: Word, b: Word) = (a.doc < b.doc || (a.doc == b.doc && a.index < b.index))
+    override def lessThan(a: Word, b: Word) = (a.doc < b.doc || (a.doc == b.doc && a.freq < b.freq)) // infrequent word first
   }
 }
 
