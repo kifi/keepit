@@ -7,7 +7,7 @@ import com.keepit.model.{User, NormalizedURI}
 import com.keepit.search._
 import play.api.libs.json._
 import play.api.mvc.Action
-import com.keepit.heimdal.SearchAnalytics
+import com.keepit.heimdal.{Kifi, SearchAnalytics}
 import com.keepit.search.BrowsedURI
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
@@ -21,7 +21,10 @@ class SearchEventController @Inject() (clickHistoryTracker: ClickHistoryTracker,
       clickHistoryTracker.add(resultClicked.userId, ClickedURI(uriId))
       resultClickedTracker.add(resultClicked.userId, resultClicked.query, uriId, resultClicked.resultPosition, resultClicked.isUserKeep)
     }
-    searchAnalytics.searchResultClicked(resultClicked)
+    searchAnalytics.getSearchEngine(resultClicked.resultSource) match {
+      case Kifi => searchAnalytics.kifiResultClicked(resultClicked)
+      case _ => searchAnalytics.searchResultClicked(resultClicked)
+    }
     Ok(JsObject(Seq("stored" -> JsString("ok"))))
   }
 

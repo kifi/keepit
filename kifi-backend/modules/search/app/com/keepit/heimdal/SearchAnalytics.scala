@@ -11,24 +11,18 @@ import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 
+case class SearchEngine(name: String) {
+  override def toString = name
+}
+object Google extends SearchEngine("Google")
+object Kifi extends SearchEngine("Kifi")
+
 @Singleton
 class SearchAnalytics @Inject() (
   articleSearchResultStore: ArticleSearchResultStore,
   userEventContextBuilder: UserEventContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   airbrake: AirbrakeNotifier) {
-
-  case class SearchEngine(name: String) {
-    override def toString = name
-  }
-  object Google extends SearchEngine("Google")
-  object Kifi extends SearchEngine("Kifi")
-  object SearchEngine {
-    def get(name: String): SearchEngine = Seq(Kifi, Google).find(_.name.toLowerCase == name.toLowerCase) getOrElse {
-      airbrake.notify(AirbrakeError(message = Some(s"Unknown Search Engine: ${name}")))
-      SearchEngine(name)
-    }
-  }
 
   def searchPerformed(
     request: AuthenticatedRequest[AnyContent],
@@ -81,6 +75,16 @@ class SearchAnalytics @Inject() (
     heimdal.trackEvent(UserEvent(resultClicked.userId.id, contextBuilder.build, UserEventType("search_result_clicked"), resultClicked.time))
   }
 
+  def kifiResultClicked(resultClicked: ResultClicked) {
+      val obfuscatedSearchId = resultClicked.queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, resultClicked.userId))
+      val contextBuilder = userEventContextBuilder()
+      contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
+      contextBuilder += ("resultPosition", resultClicked.resultPosition)
+      contextBuilder += ("kifiResults", resultClicked.kifiResults)
+      resultClicked.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
+      heimdal.trackEvent(UserEvent(resultClicked.userId.id, contextBuilder.build, UserEventType("kifi_result_clicked"), resultClicked.time))
+    }
+
   def searchEnded(searchEnded: SearchEnded) = {
 
     val obfuscatedSearchId = searchEnded.queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, searchEnded.userId))
@@ -100,4 +104,9 @@ class SearchAnalytics @Inject() (
     mac.init(key)
     Base64.encodeBase64String(mac.doFinal(userId.toString.getBytes()))
   }
+
+    def getSearchEngine(name: String): SearchEngine = Seq(Kifi, Google).find(_.name.toLowerCase == name.toLowerCase) getOrElse {
+      airbrake.notify(AirbrakeError(message = Some(s"Unknown Search Engine: ${name}")))
+      SearchEngine(name)
+    }
 }
