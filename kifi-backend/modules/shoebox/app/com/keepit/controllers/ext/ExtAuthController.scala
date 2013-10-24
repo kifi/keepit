@@ -8,7 +8,10 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.net._
 import com.keepit.model._
+import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilderFactory, UserEvent, UserEventType}
+import com.keepit.common.akka.SafeFuture
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
 class ExtAuthController @Inject() (
@@ -19,7 +22,9 @@ class ExtAuthController @Inject() (
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
-  kifiInstallationCookie: KifiInstallationCookie)
+  kifiInstallationCookie: KifiInstallationCookie,
+  userEventContextBuilder: UserEventContextBuilderFactory,
+  heimdal: HeimdalServiceClient)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def start = AuthenticatedJsonToJsonAction { implicit request =>
@@ -47,21 +52,30 @@ class ExtAuthController @Inject() (
        })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
-    val (user, installation, sliderRuleGroup, urlPatterns) = db.readWrite{implicit s =>
+    val (user, installation, sliderRuleGroup, urlPatterns, firstTime, isUpgrade) = db.readWrite{implicit s =>
       val user: User = userRepo.get(userId)
-      val installation: KifiInstallation = installationIdOpt flatMap { id =>
+      val (installation, firstTime, isUpgrade): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
       } match {
         case None =>
-          installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version))
+          (installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version)), true, true)
         case Some(install) if install.version != version || install.userAgent != userAgent || !install.isActive =>
-          installationRepo.save(install.withUserAgent(userAgent).withVersion(version).withState(KifiInstallationStates.ACTIVE))
+          (installationRepo.save(install.withUserAgent(userAgent).withVersion(version).withState(KifiInstallationStates.ACTIVE)), false, true)
         case Some(install) =>
-          installationRepo.save(install)
+          (installationRepo.save(install), false, false)
       }
       val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
-      (user, installation, sliderRuleGroup, urlPatterns)
+      (user, installation, sliderRuleGroup, urlPatterns, firstTime, isUpgrade)
+    }
+
+    if (isUpgrade){
+      SafeFuture{
+        val contextBuilder = userEventContextBuilder(Some(request))
+        contextBuilder += ("extVersion", installation.version.toString)
+        contextBuilder += ("firstTime", firstTime)
+        heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("extension_install")))
+      }
     }
 
     Ok(Json.obj(

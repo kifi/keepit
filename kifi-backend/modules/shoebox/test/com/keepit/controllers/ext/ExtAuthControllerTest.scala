@@ -8,6 +8,7 @@ import play.api.test.FakeRequest
 import com.keepit.social.{SocialId, SocialNetworks}
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
+import com.keepit.heimdal.TestHeimdalServiceClientModule
 
 import securesocial.core._
 
@@ -29,7 +30,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
 
   "ExtAuthController" should {
     "start" in {
-      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule())) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule(), TestHeimdalServiceClientModule())) {
         val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)
