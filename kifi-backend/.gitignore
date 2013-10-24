@@ -7,3 +7,4 @@ tmp
 dist
 modules/eliza/.classpath
 *~
+*.sublime-workspace
