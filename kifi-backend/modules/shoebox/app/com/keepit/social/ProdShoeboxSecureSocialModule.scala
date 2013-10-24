@@ -5,7 +5,7 @@ import securesocial.controllers.TemplatesPlugin
 import com.keepit.common.social.{ShoeboxTemplatesPlugin}
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.controller.{ShoeboxActionAuthenticator, ActionAuthenticator}
 import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilderFactory}
@@ -25,9 +25,8 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     db: Database,
     suiRepo: SocialUserInfoRepo,
     usRepo: UserSessionRepo,
-    healthPlugin: HealthcheckPlugin,
-    app: play.api.Application
-  ): SecureSocialAuthenticatorPlugin = new SecureSocialAuthenticatorPluginImpl(db, suiRepo, usRepo, healthPlugin, app)
+    airbrake: AirbrakeNotifier,
+    app: play.api.Application): SecureSocialAuthenticatorPlugin = new SecureSocialAuthenticatorPluginImpl(db, suiRepo, usRepo, airbrake, app)
 
   @Singleton
   @Provides
@@ -37,13 +36,13 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     userRepo: UserRepo,
     userCredRepo: UserCredRepo,
     imageStore: S3ImageStore,
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     emailRepo: EmailAddressRepo,
     socialGraphPlugin: SocialGraphPlugin,
     userEventContextBuilder: UserEventContextBuilderFactory,
     heimdal: HeimdalServiceClient
   ): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
-    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, healthcheckPlugin, emailRepo, socialGraphPlugin, userEventContextBuilder, heimdal
+    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userEventContextBuilder, heimdal
   )
 }
 
