@@ -9,8 +9,7 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.Version
 import com.keepit.common.db._
-import com.keepit.common.healthcheck.Healthcheck.INTERNAL
-import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net._
 import com.keepit.model._
 import com.keepit.search.Lang
@@ -53,7 +52,7 @@ class URIGraphIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
     val bookmarkStore: BookmarkStore,
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
@@ -67,7 +66,7 @@ class URIGraphIndexer(
 
   override def onFailure(indexable: Indexable[User], e: Throwable) {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
-    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    airbrake.notify(AirbrakeError(message = Some(msg)))
     super.onFailure(indexable, e)
   }
 

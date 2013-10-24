@@ -1,8 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.common.db._
-import com.keepit.common.healthcheck.Healthcheck.INTERNAL
-import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.model._
@@ -30,7 +29,7 @@ class ArticleIndexer @Inject() (
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
     articleStore: ArticleStore,
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
@@ -40,7 +39,7 @@ class ArticleIndexer @Inject() (
   val fetchSize = 10000
 
   override def onFailure(indexable: Indexable[NormalizedURI], e: Throwable) {
-    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(e.toString), callType = INTERNAL))
+    airbrake.notify(AirbrakeError(e))
     super.onFailure(indexable, e)
   }
 

@@ -6,8 +6,7 @@ import akka.util.Timeout
 import com.google.inject.Inject
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.SequenceNumber
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorInstance
@@ -19,7 +18,6 @@ import scala.concurrent.duration._
 case object Update
 
 private[comment] class CommentIndexerActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
     airbrake: AirbrakeNotifier,
     commentIndexer: CommentIndexer)
   extends FortyTwoActor(airbrake) with Logging {
@@ -29,8 +27,7 @@ private[comment] class CommentIndexerActor @Inject() (
         sender ! commentIndexer.update()
       } catch {
         case e: Exception =>
-          healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
-              errorMessage = Some("Error updating comment index")))
+          airbrake.notify(AirbrakeError(exception = e, message = Some("Error updating comment index")))
           sender ! -1
       }
     case m => throw new UnsupportedActorMessage(m)

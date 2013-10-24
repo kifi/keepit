@@ -1,8 +1,7 @@
 package com.keepit.search.phrasedetector
 
 import com.keepit.common.db.{Id,SequenceNumber}
-import com.keepit.common.healthcheck.Healthcheck.INTERNAL
-import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.model.Phrase
 import com.keepit.search.index.Indexer
@@ -143,7 +142,7 @@ abstract class PhraseIndexer(indexDirectory: Directory, indexWriterConfig: Index
 class PhraseIndexerImpl(
   indexDirectory: Directory,
   indexWriterConfig: IndexWriterConfig,
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {
 
   final val BATCH_SIZE = 200000
@@ -190,7 +189,7 @@ class PhraseIndexerImpl(
 
   override def onFailure(indexable: Indexable[Phrase], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
-    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    airbrake.notify(AirbrakeError(message = Some(msg)))
     super.onFailure(indexable, e)
   }
 

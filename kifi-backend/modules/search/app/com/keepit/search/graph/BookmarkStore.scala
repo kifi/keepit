@@ -1,8 +1,7 @@
 package com.keepit.search.graph
 
 import com.keepit.common.db._
-import com.keepit.common.healthcheck.Healthcheck.INTERNAL
-import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.model._
 import com.keepit.model.BookmarkStates._
 import com.keepit.search.Lang
@@ -35,7 +34,7 @@ object BookmarkStore {
 class BookmarkStore @Inject() (
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Bookmark](indexDirectory, indexWriterConfig) {
 
@@ -45,7 +44,7 @@ class BookmarkStore @Inject() (
 
   override def onFailure(indexable: Indexable[Bookmark], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
-    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    airbrake.notify(AirbrakeError(message = Some(msg)))
     super.onFailure(indexable, e)
   }
 

@@ -1,8 +1,7 @@
 package com.keepit.search.comment
 
 import com.keepit.common.db._
-import com.keepit.common.healthcheck.Healthcheck.INTERNAL
-import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.model._
@@ -68,7 +67,7 @@ class CommentIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
     val commentStore: CommentStore,
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Comment](indexDirectory, indexWriterConfig, CommentFields.decoders) {
 
@@ -81,8 +80,8 @@ class CommentIndexer(
   def getSearchers: (Searcher, Searcher) = searchers
 
   override def onFailure(indexable: Indexable[Comment], e: Throwable): Unit = {
-    val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
-    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    val msg = s"failed to build document for id=${indexable.id}"
+    airbrake.notify(AirbrakeError(exception = e, message = Some(msg)))
     super.onFailure(indexable, e)
   }
 
