@@ -27,7 +27,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 	var util = win.util,
 		kifiUtil = win.kifiUtil,
-		OVERFLOW_LENGTH = 9;
+		OVERFLOW_LENGTH = 8;
 
 	api.port.on({
 		participants: function (participants) {
@@ -376,7 +376,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		renderAvatars: function () {
 			var participants = this.getParticipants();
 			if (this.isOverflowed()) {
-				participants = participants.slice(0, OVERFLOW_LENGTH - 1);
+				participants = participants.slice(0, OVERFLOW_LENGTH);
 			}
 			return participants.map(this.renderAvatar).join('');
 		},
