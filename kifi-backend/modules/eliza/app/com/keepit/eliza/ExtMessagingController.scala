@@ -7,7 +7,7 @@ import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
-import com.keepit.common.healthcheck.{HealthcheckPlugin}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
@@ -40,7 +40,7 @@ class ExtMessagingController @Inject() (
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
     protected val clock: Clock,
-    protected val healthcheckPlugin: HealthcheckPlugin,
+    protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
     protected val userEventContextBuilder: UserEventContextBuilderFactory
   )

@@ -7,7 +7,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworkType
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
-import com.keepit.common.healthcheck.{HealthcheckPlugin, Healthcheck}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 
@@ -31,7 +31,6 @@ import securesocial.core.{Authenticator, UserService, SecureSocial}
 
 import org.joda.time.DateTime
 import play.api.libs.json.JsArray
-import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.social.SocialId
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
@@ -45,7 +44,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val impersonateCookie: ImpersonateCookie
   protected val actorSystem: ActorSystem
   protected val clock: Clock
-  protected val healthcheckPlugin: HealthcheckPlugin
+  protected val airbrake: AirbrakeNotifier
   protected val heimdal: HeimdalServiceClient
   protected val userEventContextBuilder: UserEventContextBuilderFactory
 
@@ -66,13 +65,12 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           try {
             f(e)
           } catch {
-            case ex: Throwable => healthcheckPlugin.addError(
-              HealthcheckError(
-                error = Some(ex),
+            case ex: Throwable => airbrake.notify(
+              AirbrakeError(
+                exception = ex,
                 method = Some("ws"),
-                path = e.value.headOption.map(_.toString),
-                callType = Healthcheck.INTERNAL,
-                errorMessage = Some(s"Error on ws call ${e.toString} for user ${streamSession.userId.id} using ${extVersion} on ${streamSession.userAgent}")
+                url = e.value.headOption.map(_.toString),
+                message = Some(s"[WS] user ${streamSession.userId.id} using ${extVersion} on ${streamSession.userAgent}")
               )
             )
           }
