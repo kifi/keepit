@@ -32,6 +32,7 @@ class FakeAirbrakeNotifier @Inject() (
       clock: Clock)
     extends AirbrakeNotifier {
   var errors: List[AirbrakeError] = List()
+  def errorCount(): Int = errors.size
   def reportDeployment(): Unit = {}
   def notify(error: AirbrakeError): AirbrakeError = {
     errors = error :: errors
