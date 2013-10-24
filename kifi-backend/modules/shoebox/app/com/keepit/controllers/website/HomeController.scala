@@ -70,7 +70,7 @@ class HomeController @Inject() (db: Database,
   })
 
   def curtainHome = Action {
-    Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/curtain.html").get)) as HTML
+    Ok(views.html.signup.auth())
   }
 
   def kifiSiteRedirect(path: String) = Action {
