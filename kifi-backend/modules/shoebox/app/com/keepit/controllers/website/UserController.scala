@@ -192,8 +192,8 @@ class UserController @Inject() (
           val cleanFirst = xml.Utility.escape(userData.firstName getOrElse user.firstName)
           val cleanLast = xml.Utility.escape(userData.lastName getOrElse user.lastName)
           userRepo.save(user.copy(
-            firstName = userData.firstName getOrElse user.firstName,
-            lastName = userData.lastName getOrElse user.lastName
+            firstName = cleanFirst,
+            lastName = cleanLast
           ))
         }
         for (emails <- userData.emails) {
