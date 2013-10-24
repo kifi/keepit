@@ -35,9 +35,9 @@ trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
-  def articleSearchResultStore(amazonS3Client: AmazonS3): ArticleSearchResultStore = {
+  def articleSearchResultStore(amazonS3Client: AmazonS3, searchIdCache: SearchIdCache): ArticleSearchResultStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.articleSearch.bucket").get)
-    new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client)
+    new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client, searchIdCache)
   }
 
   @Singleton
@@ -100,9 +100,9 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
 
   @Singleton
   @Provides
-  def articleSearchResultStore(amazonS3ClientProvider: Provider[AmazonS3]): ArticleSearchResultStore =
+  def articleSearchResultStore(amazonS3ClientProvider: Provider[AmazonS3], searchIdCache: SearchIdCache): ArticleSearchResultStore =
     whenConfigured("amazon.s3.articleSearch.bucket")(
-      prodStoreModule.articleSearchResultStore(amazonS3ClientProvider.get)
+      prodStoreModule.articleSearchResultStore(amazonS3ClientProvider.get, searchIdCache)
     ).getOrElse(new InMemoryArticleSearchResultStoreImpl())
 
   @Singleton

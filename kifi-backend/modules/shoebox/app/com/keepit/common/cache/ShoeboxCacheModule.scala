@@ -4,7 +4,7 @@ import scala.concurrent.duration._
 
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
-import com.keepit.search.ActiveExperimentsCache
+import com.keepit.search.{SearchIdCache, ActiveExperimentsCache}
 import com.keepit.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
 import com.keepit.classify.DomainCache
 import com.keepit.common.logging.AccessLog
@@ -177,4 +177,8 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   def domainCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new DomainCache(stats, accessLog, (innerRepo, 1 second), (outerRepo, 7 days))
 
+  @Singleton
+  @Provides
+  def searchIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SearchIdCache(stats, accessLog, (outerRepo, 1 hour))
 }
