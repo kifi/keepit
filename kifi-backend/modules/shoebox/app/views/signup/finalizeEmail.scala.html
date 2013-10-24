@@ -1,7 +1,6 @@
 @(emailAddress: String, picturePath: String)
 
-@helper.page("kifi.com • Finalize Your Account", content = Html("""
-
+@content = {
 <div class="curtain-l"></div>
 <div class="curtain-r"></div>
 
@@ -33,14 +32,14 @@
     By signing up, you agree to Kifi’s <a target="_blank" href="">Terms of Service</a>.
   </p>
 </form>
+}
 
-"""), postScript = Html("""
-
+@postScript = {
 <script async defer>
 $('body').addClass('curtains-drawn');
 setTimeout(function() {
   $('input').first().focus().select();
 }, 100);
 </script>
-
-"""))
+}
+@helper.page("kifi.com • Finalize Your Account", content, postScript)
