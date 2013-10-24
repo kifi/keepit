@@ -3,9 +3,7 @@ package com.keepit.common.mail
 import com.keepit.common.logging.Logging
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.inject._
 import com.keepit.common.strings._
 
@@ -24,7 +22,10 @@ import play.api.Play.current
 import play.api.http.ContentTypes
 
 @Singleton
-class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo, healthcheck: HealthcheckPlugin)
+class SendgridMailProvider @Inject() (
+    db: Database,
+    mailRepo: ElectronicMailRepo,
+    airbrake: AirbrakeNotifier)
   extends MailProvider with Logging {
 
   private class SMTPAuthenticator extends Authenticator {
@@ -182,11 +183,10 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
 
   private def mailError(mail: ElectronicMail, message: String, transport: Transport): ElectronicMail = {
     nullifyTransport(transport)
-    val error = healthcheck.addError(HealthcheckError(callType = Healthcheck.EMAIL,
-      errorMessage = Some("Can't send email from %s to %s: %s. Error message: %s".format(mail.from, mail.to, mail.subject, message))))
-    log.error(error.errorMessage.toString)
+    val error = airbrake.notify(AirbrakeError(
+      message = Some(s"Can't send email from ${mail.from} to ${mail.to}: ${mail.subject}. Error message: $message")))
     db.readWrite { implicit s =>
-      mailRepo.save(mail.errorSending("Error: %s".format(error)))
+      mailRepo.save(mail.errorSending(s"Error: $error"))
     }
   }
 }
