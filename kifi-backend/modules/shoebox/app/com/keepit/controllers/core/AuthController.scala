@@ -132,21 +132,6 @@ class AuthController @Inject() (
     (Some(_))
   )
 
-  private val registrationInfoForm = Form[RegistrationInfo](
-    mapping(
-      "email" -> email.verifying("Email is invalid", email => db.readOnly { implicit s =>
-        userCredRepo.findByEmailOpt(email).isEmpty
-      }),
-      "firstname" -> nonEmptyText,
-      "lastname" -> nonEmptyText,
-      "password" -> tuple("1" -> nonEmptyText, "2" -> nonEmptyText)
-        .verifying("Passwords do not match", pw => pw._1 == pw._2).transform(_._1, (a: String) => (a, a))
-        .verifying(Constraints.minLength(7))
-    )
-    (RegistrationInfo.apply)
-    (RegistrationInfo.unapply)
-  )
-
   // Finalize account
   def signupPage() = HtmlAction(true)(authenticatedAction = doFinalizePage(_), unauthenticatedAction = doFinalizePage(_))
 
@@ -324,6 +309,8 @@ class AuthController @Inject() (
 
   private val url = current.configuration.getString("application.baseUrl").get
 
+  @inline private def stripBadChars(str: String) =
+    str.filterNot("<>" contains _)
 
   private def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
       email: String, passwordInfo: PasswordInfo,
@@ -332,10 +319,10 @@ class AuthController @Inject() (
       userId = userIdOpt,
       socialUser = SocialUser(
         identityId = IdentityId(email, SocialNetworks.FORTYTWO.authProvider),
-        firstName = xml.Utility.escape(if (isComplete || firstName.nonEmpty) firstName else email),
-        lastName = xml.Utility.escape(lastName),
-        fullName = xml.Utility.escape(s"$firstName $lastName"),
-        email = Some(xml.Utility.escape(email)),
+        firstName = stripBadChars(if (isComplete || firstName.nonEmpty) firstName else email),
+        lastName = stripBadChars(lastName),
+        fullName = stripBadChars(s"$firstName $lastName"),
+        email = Some(email),
         avatarUrl = GravatarHelper.avatarFor(email),
         authMethod = AuthenticationMethod.UserPassword,
         passwordInfo = Some(passwordInfo)

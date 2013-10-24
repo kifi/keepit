@@ -183,14 +183,17 @@ class UserController @Inject() (
       firstName: Option[String] = None, lastName: Option[String] = None)
   private implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 
+  @inline private def stripBadChars(str: String) =
+    str.filterNot("<>" contains _)
+
   def updateCurrentUser() = AuthenticatedJsonToJsonAction(true) { implicit request =>
     request.body.asOpt[UpdatableUserInfo] map { userData =>
       db.readWrite { implicit session =>
         userData.description foreach { userValueRepo.setValue(request.userId, "user_description", _) }
         if (userData.firstName.isDefined || userData.lastName.isDefined) {
           val user = userRepo.get(request.userId)
-          val cleanFirst = xml.Utility.escape(userData.firstName getOrElse user.firstName)
-          val cleanLast = xml.Utility.escape(userData.lastName getOrElse user.lastName)
+          val cleanFirst = stripBadChars(userData.firstName getOrElse user.firstName)
+          val cleanLast = stripBadChars(userData.lastName getOrElse user.lastName)
           userRepo.save(user.copy(
             firstName = cleanFirst,
             lastName = cleanLast
