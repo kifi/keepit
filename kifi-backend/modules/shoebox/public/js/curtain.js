@@ -63,20 +63,12 @@
   $('.form-network').click(function (e) {
     if (e.which !== 1) return;
     var $a = $(this);
-    var $form = $a.closest('form');
     var network = ['facebook', 'linkedin'].filter($.fn.hasClass.bind($a))[0];
-    if ($form.hasClass('signup-form')) {
-      if (network === 'facebook') {
-        window.location = 'https://www.facebook.com';
-      } else if (network === 'linkedin') {
-        window.location = 'https://www.linkedin.com';
-      }
-    } else if ($form.hasClass('login-form')) {
-      if (network === 'facebook') {
-        window.location = 'https://www.facebook.com';
-      } else if (network === 'linkedin') {
-        window.location = 'https://www.linkedin.com';
-      }
+    var $form = $a.closest('form');
+    if ($form.hasClass('signup-1')) {
+      window.location = baseUri + '/signup/' + network;
+    } else if ($form.hasClass('login')) {
+      window.location = baseUri + '/login/' + network;
     }
   });
 
