@@ -181,7 +181,7 @@ class AuthController @Inject() (
             error => Status(500)("0"),
             authenticator =>
               Ok(Json.obj("success"-> true, "email" -> email, "new_account" -> true))
-                .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
+                .withNewSession
                 .withCookies(authenticator.toCookie)
           )
         }
@@ -298,7 +298,7 @@ class AuthController @Inject() (
     Authenticator.create(newIdentity).fold(
       error => Status(500)("0"),
       authenticator => Ok
-        .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
+        .withNewSession
         .withCookies(authenticator.toCookie)
     )
   }
