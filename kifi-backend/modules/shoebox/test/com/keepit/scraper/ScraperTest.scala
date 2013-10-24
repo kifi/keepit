@@ -4,7 +4,7 @@ import com.google.inject.{Provider, Injector}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.search.ArticleStore
 import com.keepit.test.ShoeboxTestInjector
@@ -363,7 +363,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
 
   def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher)(implicit injector: Injector) = {
     new Scraper(inject[Database], mockHttpFetcher, articleStore, mockExtractorFactory, config,
-      inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin],
+      inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[AirbrakeNotifier],
       inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore, inject[Provider[NormalizationService]]) {
 
     }

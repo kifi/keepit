@@ -8,7 +8,7 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck._
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 
 import play.api.libs.json._
 
@@ -26,7 +26,7 @@ class BookmarkInterner @Inject() (
   bookmarkRepo: BookmarkRepo,
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
@@ -75,8 +75,9 @@ class BookmarkInterner @Inject() (
   } catch {
     case e: Exception =>
       //note that at this point we continue on. we don't want to mess the upload of entire user bookmarks because of one bad bookmark.
-      healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.API,
-        Some(s"Exception while loading one of the bookmarks of user $user: ${e.getMessage} from json: $json source: $source")))
+      airbrake.notify(AirbrakeError(
+        exception = e,
+        message = Some(s"Exception while loading one of the bookmarks of user $user: ${e.getMessage} from json: $json source: $source")))
       None
   }
 }

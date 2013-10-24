@@ -9,9 +9,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.LocalPostOffice
@@ -51,7 +49,7 @@ class ShoeboxController @Inject() (
   userExperimentRepo: UserExperimentRepo,
   EventPersister: EventPersister,
   postOffice: LocalPostOffice,
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   phraseRepo: PhraseRepo,
   collectionRepo: CollectionRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
@@ -99,7 +97,7 @@ class ShoeboxController @Inject() (
         Ok("true")
       case None =>
         val e = new Exception("Unable to parse email")
-        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some("Unable to parse: " + request.body.toString)))
+        airbrake.notify(AirbrakeError(exception = e, message = Some(s"Unable to parse: ${request.body.toString}")))
         Ok("false")
     }
   }
