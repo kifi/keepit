@@ -3,7 +3,7 @@ package com.keepit.heimdal
 import reactivemongo.api.MongoDriver
 import reactivemongo.core.actors.Authenticate
 
-import com.keepit.common.healthcheck.{HealthcheckPlugin}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import net.codingwell.scalaguice.ScalaModule
 
@@ -23,7 +23,7 @@ case class ProdMongoModule() extends MongoModule {
 
   @Singleton
   @Provides
-  def userEventLoggingRepo(healthcheckPlugin: HealthcheckPlugin): UserEventLoggingRepo = {
+  def userEventLoggingRepo(airbrake: AirbrakeNotifier): UserEventLoggingRepo = {
     val nodeA = current.configuration.getString("mongodb.heimdal.nodeA").get
     val nodeB = current.configuration.getString("mongodb.heimdal.nodeB").get
     val username = current.configuration.getString("mongodb.heimdal.username").get
@@ -33,12 +33,12 @@ case class ProdMongoModule() extends MongoModule {
     val connection = driver.connection(List(nodeA), List(auth), 2, Some("UserEventLoggingMongoActorSystem"))
     val db = connection("heimdal")
     val collection = db("user_events")
-    new ProdUserEventLoggingRepo(collection, healthcheckPlugin)
+    new ProdUserEventLoggingRepo(collection, airbrake)
   }
 
   @Singleton
   @Provides
-  def metricDescriptorRepo(healthcheckPlugin: HealthcheckPlugin): MetricDescriptorRepo = {
+  def metricDescriptorRepo(airbrake: AirbrakeNotifier): MetricDescriptorRepo = {
     val nodeA = current.configuration.getString("mongodb.heimdal.nodeA").get
     val nodeB = current.configuration.getString("mongodb.heimdal.nodeB").get
     val username = current.configuration.getString("mongodb.heimdal.username").get
@@ -48,12 +48,12 @@ case class ProdMongoModule() extends MongoModule {
     val connection = driver.connection(List(nodeA), List(auth), 2, Some("MetricDescriptorsMongoActorSystem"))
     val db = connection("heimdal")
     val collection = db("metric_descriptors")
-    new ProdMetricDescriptorRepo(collection, healthcheckPlugin)
+    new ProdMetricDescriptorRepo(collection, airbrake)
   }
 
   @Singleton
   @Provides
-  def metricRepoFactory(healthcheckPlugin: HealthcheckPlugin): MetricRepoFactory = {
+  def metricRepoFactory(airbrake: AirbrakeNotifier): MetricRepoFactory = {
     val nodeA = current.configuration.getString("mongodb.heimdal.nodeA").get
     val nodeB = current.configuration.getString("mongodb.heimdal.nodeB").get
     val username = current.configuration.getString("mongodb.heimdal.username").get
@@ -62,7 +62,7 @@ case class ProdMongoModule() extends MongoModule {
     val driver = new MongoDriver
     val connection = driver.connection(List(nodeA), List(auth), 5, Some("MetricDescriptorsMongoActorSystem"))
     val db = connection("heimdal")
-    new ProdMetricRepoFactory(db, healthcheckPlugin)
+    new ProdMetricRepoFactory(db, airbrake)
   }
 
 }
@@ -73,14 +73,14 @@ case class DevMongoModule() extends MongoModule {
 
   @Singleton
   @Provides
-  def userEventLoggingRepo(healthcheckPlugin: HealthcheckPlugin): UserEventLoggingRepo = {
-    new DevUserEventLoggingRepo(null, healthcheckPlugin)
+  def userEventLoggingRepo(airbrake: AirbrakeNotifier): UserEventLoggingRepo = {
+    new DevUserEventLoggingRepo(null, airbrake)
   }
 
   @Singleton
   @Provides
-  def metricDescriptorRepo(healthcheckPlugin: HealthcheckPlugin): MetricDescriptorRepo = {
-    new DevMetricDescriptorRepo(null, healthcheckPlugin)
+  def metricDescriptorRepo(airbrake: AirbrakeNotifier): MetricDescriptorRepo = {
+    new DevMetricDescriptorRepo(null, airbrake)
   }
 
   @Singleton

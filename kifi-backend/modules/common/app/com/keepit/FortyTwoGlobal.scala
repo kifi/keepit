@@ -29,7 +29,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     injector.getInstance(clazz)
   } catch {
     case e: Throwable =>
-      injector.instance[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API))
+      injector.instance[AirbrakeNotifier].notify(AirbrakeError(e))
       throw e
   }
 
