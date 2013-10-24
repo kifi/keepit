@@ -2,6 +2,8 @@ package com.keepit.common.net
 
 import org.specs2.mutable.Specification
 import com.keepit.common.service.ServiceUri
+import com.keepit.common.zookeeper._
+import com.keepit.common.service._
 
 class NonOKResponseExceptionTest extends Specification {
   "NonOKResponseException" should {
@@ -20,15 +22,17 @@ class NonOKResponseExceptionTest extends Specification {
                StringUtils.abbreviate("abcdefg", 8) = "abcdefg"
                StringUtils.abbreviate("abcdefg", 4) = "a..."
                StringUtils.abbreviate("abcdefg", 3) = IllegalArgumentException"""))
-      exception.getMessage() === "http://commons.apache.org/proper/commons-lang/j...->[Specifically: If str is les...] status:200 res [Abbreviates a String using ...]"
+      exception.getMessage() === "[] Bad Http Status on http://commons.apache.org/p... body:[Specifically: If str is les...] status:200 res [Abbreviates a String using ...]"
     }
 
     "have short message with ServiceUri" in {
+      val remoteService1 = RemoteService(null, ServiceStatus.UP, ServiceType.TEST_MODE)
+      val instance = ServiceInstance(Node("/node_00000001"), remoteService1, false)
       val exception = NonOKResponseException(
-        new ServiceUri(null, null, -1, "/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean"),
+        new ServiceUri(instance, null, -1, "/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean"),
         FakeClientResponse("short response"),
         Some("short body"))
-      exception.getMessage() === "/this/is/the/path/and/it/may/be/very/very/long/...->[short body] status:200 res [short response]"
+      exception.getMessage() === "[TM1] Bad Http Status on /this/is/the/path/and/it/may/be/very/very/long/... body:[short body] status:200 res [short response]"
     }
   }
 }
