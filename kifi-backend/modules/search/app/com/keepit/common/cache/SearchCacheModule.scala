@@ -105,4 +105,9 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides
   def normalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new NormalizedURIUrlHashCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def searchIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SearchIdCache(stats, accessLog, (innerRepo, 5 seconds), (outerRepo, 1 hour))
 }
