@@ -98,7 +98,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   override def onError(request: RequestHeader, ex: Throwable): Result = {
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     serviceDiscovery.changeStatus(ServiceStatus.SICK)
-    val errorId = ex match {
+    val errorId: ExternalId[_] = ex match {
       case reported: ReportedException => reported.id
       case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex)).id
     }

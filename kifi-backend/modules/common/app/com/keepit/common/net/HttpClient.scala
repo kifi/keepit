@@ -28,19 +28,20 @@ import play.modules.statsd.api.Statsd
 import play.api.Logger
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
-    extends Exception(s"${url.summary}->[${requestBody.map(_.toString.abbreviate(30)).getOrElse("")}] status:${response.status} res [${response.body.toString.abbreviate(30)}]"){
-  override def toString(): String = s"Bad Http Status: $getMessage"
+    extends Exception(s"[${url.service}] Bad Http Status on ${url.summary} body:[${requestBody.map(_.toString.abbreviate(30)).getOrElse("")}] status:${response.status} res [${response.body.toString.abbreviate(30)}]"){
+  override def toString(): String = getMessage
 }
 
 case class LongWaitException(url: HttpUri, response: Response, waitTime: Int)
-    extends Exception(s"${url.summary} status:${response.status} wait-time:${waitTime}ms"){
-  override def toString(): String = s"Long Wait: $getMessage"
+    extends Exception(s"[${url.service}] Long Wait Error on ${url.summary} status:${response.status} wait-time:${waitTime}ms"){
+  override def toString(): String = getMessage
 }
 
 trait HttpUri {
   val serviceInstanceOpt: Option[ServiceInstance] = None
   def url: String
-  def summary: String = url.abbreviate(50)
+  def service: String = ""
+  def summary: String = url.abbreviate(30)
   override def equals(obj: Any) = obj.asInstanceOf[HttpUri].url == url
   override def toString(): String = s"$url for service $serviceInstanceOpt"
 }
