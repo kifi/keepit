@@ -7,8 +7,7 @@ import com.google.inject.Inject
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.SequenceNumber
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.inject._
@@ -20,7 +19,6 @@ import scala.concurrent.duration._
 case object Index
 
 private[index] class ArticleIndexerActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
     airbrake: AirbrakeNotifier,
     articleIndexer: ArticleIndexer)
   extends FortyTwoActor(airbrake) with Logging {
@@ -34,7 +32,7 @@ private[index] class ArticleIndexerActor @Inject() (
         sender ! articlesIndexed
       } catch {
         case e: Exception =>
-          healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH, errorMessage = Some("Error indexing articles")))
+          airbrake.notify(AirbrakeError(exception = e, message = Some("Error indexing articles")))
           sender ! -1
       }
     case m => throw new UnsupportedActorMessage(m)

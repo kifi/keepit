@@ -11,7 +11,7 @@ import com.google.inject.Inject
 
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.Id
-import com.keepit.common.healthcheck._
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.inject._
@@ -32,7 +32,6 @@ case class Persist(event: Event, queueTime: DateTime)
 case class PersistMany(events: Seq[Event], queueTime: DateTime)
 
 private[analytics] class PersistEventActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
     airbrake: AirbrakeNotifier,
     eventHelper: EventHelper,
     eventRepo: EventRepo)
@@ -44,16 +43,16 @@ private[analytics] class PersistEventActor @Inject() (
       val diff = Seconds.secondsBetween(queueTime, currentDateTime).getSeconds
       if(diff > 120) {
         val ex = new Exception("Event log is backing up. Event was queued %s seconds ago".format(diff))
-        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        airbrake.notify(AirbrakeError(ex))
         // To keep the event log from backing too far up, ignore very old events.
         // If we get this, use parallel actors.
       }
       else {
         try { eventRepo.persistToS3(event) } catch { case ex: Throwable =>
-          healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+          airbrake.notify(AirbrakeError(ex))
         }
         try { eventRepo.persistToMongo(event) } catch { case ex: Throwable =>
-          healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+          airbrake.notify(AirbrakeError(ex))
         }
       }
     case PersistMany(events, queueTime) =>

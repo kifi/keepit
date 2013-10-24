@@ -6,8 +6,7 @@ import akka.util.Timeout
 import com.google.inject.Inject
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.SequenceNumber
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorInstance
@@ -20,7 +19,6 @@ case object Update
 
 private[graph] class URIGraphActor @Inject() (
     airbrake: AirbrakeNotifier,
-    healthcheckPlugin: HealthcheckPlugin,
     uriGraph: URIGraph)
   extends FortyTwoActor(airbrake) with Logging {
 
@@ -29,8 +27,8 @@ private[graph] class URIGraphActor @Inject() (
         sender ! uriGraph.update()
       } catch {
         case e: Exception =>
-          healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
-              errorMessage = Some("Error updating uri graph")))
+          airbrake.notify(AirbrakeError(exception = e,
+              message = Some("Error updating uri graph")))
           sender ! -1
       }
     case m => throw new UnsupportedActorMessage(m)

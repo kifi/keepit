@@ -6,8 +6,7 @@ import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError, Healthcheck}
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import play.api.Plugin
@@ -40,7 +39,6 @@ private[mail] class MailSenderActor @Inject() (
     db: Database,
     mailRepo: ElectronicMailRepo,
     airbrake: AirbrakeNotifier,
-    healthcheckPlugin: HealthcheckPlugin,
     mailProvider: MailProvider)
   extends FortyTwoActor(airbrake) with Logging {
 
@@ -52,7 +50,7 @@ private[mail] class MailSenderActor @Inject() (
               Some(mailRepo.get(email))
             } catch {
               case ex: Throwable =>
-                healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(s"[MailSenderActor]: ${ex.getMessage}")))
+                airbrake.notify(AirbrakeError(ex))
                 None
             }
         }
