@@ -8,7 +8,7 @@
 }
 .kifi-message-sent {
   margin: 0 9px;
-  padding: 7px 10px 7px 0;
+  padding: 11px 10px 11px 0;
   position: relative;
 }
 .kifi-message-sent:first-child {
@@ -30,8 +30,8 @@
 }
 .kifi-message-sent>time {
   position: absolute;
-  right: 0;
-  top: 7px;
+  right: 10px;
+  top: 11px;
   line-height: 11px;
   font-size: 11px;
   padding: 0 3px;
@@ -54,7 +54,7 @@ img.kifi-message-pic.kifi-self {
   border-radius: 20px;
 }
 .kifi-message-body {
-  margin-left: 40px;
+  margin-left: 45px;
   word-wrap: break-word;
 }
 .kifi-message-name {
@@ -86,20 +86,19 @@ img.kifi-message-pic.kifi-self {
   padding: 0;
 }
 .kifi-message-aux {
-  color: #777;
-  background: rgba(0, 0, 0, .06);
-  border-top: 1px solid #fafafa;
-  border-bottom: 1px solid #fafafa;
-  border-radius: 1px;
-  margin-top: 2px;
-  margin-bottom: 2px;
+  text-align: center;
+  color: #b8c5d0;
+  border-top: 1px solid #b8c5d0;
+  border-bottom: 1px solid #b8c5d0;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 .kifi-message-aux>time {
-  top: 0;
+  top: -6px;
 }
 .kifi-message-aux + .kifi-message-sent {
   border-top: 0;
 }
 .kifi-aux-message {
-  padding: 7px 10px 7px 40px;
+  padding: 13px;
 }
