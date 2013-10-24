@@ -4,13 +4,13 @@ import scala.util.DynamicVariable
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.typesafe.plugin.MailerAPI
 
 class PlayMailerAPI @Inject()(
     db: Database,
     postOffice: LocalPostOffice,
-    healthcheck: HealthcheckPlugin
+    airbrake: AirbrakeNotifier
     ) extends MailerAPI {
   private val mail = new DynamicVariable(ElectronicMail(
     from = EmailAddresses.NOTIFICATIONS,
@@ -20,14 +20,12 @@ class PlayMailerAPI @Inject()(
 
   private def reportErrors[A](block: => A): A = try block catch {
     case e: Throwable =>
-      healthcheck.addError(HealthcheckError(callType = Healthcheck.INTERNAL, error = Some(e)))
+      airbrake.notify(AirbrakeError(e))
       throw e
   }
 
   private def notImplemented: MailerAPI = {
-    healthcheck.addError(HealthcheckError(
-      callType = Healthcheck.INTERNAL,
-      error = Some(new NotImplementedError("This method of the Mailer API is not supported"))))
+    airbrake.notify(AirbrakeError(message = Some("This method of the Mailer API is not supported")))
     this
   }
 
