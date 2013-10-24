@@ -45,6 +45,9 @@ object User {
     (__ \ 'userPictureId).formatNullable[Id[UserPicture]] and
     (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
   )(User.apply, unlift(User.unapply))
+
+  val brackets = "[<>]".r
+  def stripBadChars(str: String) = brackets.replaceAllIn(str, "")
 }
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
