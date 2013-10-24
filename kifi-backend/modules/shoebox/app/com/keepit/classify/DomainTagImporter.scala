@@ -23,8 +23,7 @@ import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail, LocalPostOffice, PostOffice}
 import com.keepit.common.time._
@@ -67,7 +66,6 @@ private[classify] class DomainTagImportActor @Inject() (
   EventPersister: EventPersister,
   settings: DomainTagImportSettings,
   postOffice: LocalPostOffice,
-  healthcheckPlugin: HealthcheckPlugin,
   airbrake: AirbrakeNotifier,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends FortyTwoActor(airbrake) with Logging {
@@ -179,7 +177,7 @@ private[classify] class DomainTagImportActor @Inject() (
 
   private def failWithException(eventName: String, e: Exception) {
     log.error(s"fail on event $eventName", e)
-    healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage)))
+    airbrake.notify(AirbrakeError(exception = e, message = Some(s"on event $eventName")))
     EventPersister.persist(Events.serverEvent(
       EventFamilies.EXCEPTION,
       eventName,
