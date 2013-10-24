@@ -103,11 +103,11 @@ class MainSearcherFactory @Inject() (
   }
 
   private[this] def getBrowsingHistoryFuture(userId: Id[User]) = consolidateBrowsingHistoryReq(userId){ userId =>
-    Future.successful(browsingHistoryTracker.getMultiHashFilter(userId))
+    SafeFuture(browsingHistoryTracker.getMultiHashFilter(userId))
   }
 
   private[this] def getClickHistoryFuture(userId: Id[User]) = consolidateClickHistoryReq(userId){ userId =>
-    Future.successful(clickHistoryTracker.getMultiHashFilter(userId))
+    SafeFuture(clickHistoryTracker.getMultiHashFilter(userId))
   }
 
   private[this] def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float, useS3FlowerFilter: Boolean) = {
