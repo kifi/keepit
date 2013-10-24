@@ -232,9 +232,9 @@ class AuthController @Inject() (
       case (None, Some(identity)) =>
         // No user exists, so is social
         Ok(views.html.signup.finalizeSocial(
-          firstName = identity.firstName,
-          lastName = identity.lastName,
-          email = identity.email.getOrElse(""),
+          firstName = xml.Utility.escape(identity.firstName),
+          lastName = xml.Utility.escape(identity.lastName),
+          email = xml.Utility.escape(identity.email.getOrElse("")),
           picturePath = identity.avatarUrl.getOrElse("")
         ))
       case (None, None) =>
@@ -332,10 +332,10 @@ class AuthController @Inject() (
       userId = userIdOpt,
       socialUser = SocialUser(
         identityId = IdentityId(email, SocialNetworks.FORTYTWO.authProvider),
-        firstName = if (isComplete || firstName.nonEmpty) firstName else email,
-        lastName = lastName,
-        fullName = s"$firstName $lastName",
-        email = Some(email),
+        firstName = xml.Utility.escape(if (isComplete || firstName.nonEmpty) firstName else email),
+        lastName = xml.Utility.escape(lastName),
+        fullName = xml.Utility.escape(s"$firstName $lastName"),
+        email = Some(xml.Utility.escape(email)),
         avatarUrl = GravatarHelper.avatarFor(email),
         authMethod = AuthenticationMethod.UserPassword,
         passwordInfo = Some(passwordInfo)

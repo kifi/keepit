@@ -189,6 +189,8 @@ class UserController @Inject() (
         userData.description foreach { userValueRepo.setValue(request.userId, "user_description", _) }
         if (userData.firstName.isDefined || userData.lastName.isDefined) {
           val user = userRepo.get(request.userId)
+          val cleanFirst = xml.Utility.escape(userData.firstName getOrElse user.firstName)
+          val cleanLast = xml.Utility.escape(userData.lastName getOrElse user.lastName)
           userRepo.save(user.copy(
             firstName = userData.firstName getOrElse user.firstName,
             lastName = userData.lastName getOrElse user.lastName
