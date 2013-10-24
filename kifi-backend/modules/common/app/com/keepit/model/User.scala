@@ -47,7 +47,7 @@ object User {
   )(User.apply, unlift(User.unapply))
 
   val brackets = "[<>]".r
-  def stripBadChars(str: String) = brackets.replaceAllIn(str, "")
+  def sanitizeName(str: String) = brackets.replaceAllIn(str, "")
 }
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
