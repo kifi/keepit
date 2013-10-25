@@ -13,7 +13,7 @@ import scala.concurrent.Future
 import com.google.inject.Inject
 
 
-case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int]())
+case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int](), totalable : Boolean = true)
 
 class AdminAnalyticsController @Inject() (
     actionAuthenticator: ActionAuthenticator,
@@ -61,16 +61,25 @@ class AdminAnalyticsController @Inject() (
   )
 
   val messageMetrics = Map[String, MetricAuxInfo](
-    "messagers_daily" -> MetricAuxInfo("nothing yet", Map()),
-    "messagers_weekly" -> MetricAuxInfo("nothing yet", Map()),
+    "messagers_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"), totalable=false),
+    "messagers_weekly" -> MetricAuxInfo("nothing yet", Map(), totalable=false),
     "message_breakdown_weekly" -> MetricAuxInfo("nothing yet", Map())
+  )
+
+  val searchMetrics = Map[String, MetricAuxInfo](
+    "kifi_result_clickers_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users")),
+    "results_clicked_daily" -> MetricAuxInfo("nothing yet", Map(
+      "kifi_result_clicked" -> "Kifi Clicks",
+      "search_result_clicked" -> "Other Clicks"
+    ))
   )
 
   private def augmentMetricData(metricData: JsObject, auxInfo: MetricAuxInfo): JsObject = {
     metricData.deepMerge{Json.obj(
         "help" -> auxInfo.helpText,
         "legend" -> JsObject(auxInfo.legend.mapValues(Json.toJson(_)).toSeq),
-        "shift" -> JsObject(auxInfo.shift.mapValues(Json.toJson(_)).toSeq)
+        "shift" -> JsObject(auxInfo.shift.mapValues(Json.toJson(_)).toSeq),
+        "totalable" -> auxInfo.totalable
     )}
   }
 
@@ -91,7 +100,10 @@ class AdminAnalyticsController @Inject() (
     val messageMetricsFuture = Future.sequence(messageMetrics.toSeq.map{ case (metricName, auxInfo) =>
       heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
     })
-    val dataFuture = Future.sequence(Seq(installMetricsFuture, userMetricsFuture, keepActivityMetricsFuture, keepMetricsFuture, messageMetricsFuture))
+    val searchMetricsFuture = Future.sequence(searchMetrics.toSeq.map{ case (metricName, auxInfo) =>
+      heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
+    })
+    val dataFuture = Future.sequence(Seq(installMetricsFuture, userMetricsFuture, keepActivityMetricsFuture, keepMetricsFuture, messageMetricsFuture, searchMetricsFuture))
 
 
     Async(dataFuture.map{ data =>
@@ -99,7 +111,7 @@ class AdminAnalyticsController @Inject() (
         Json.stringify(Json.toJson(sectionData))
       } 
       Ok(html.admin.analyticsDashboardView(    
-        jsonData(0), jsonData(1), jsonData(2), jsonData(3), jsonData(4)
+        jsonData(0), jsonData(1), jsonData(2), jsonData(3), jsonData(4), jsonData(5)
       ))
     })
   }
