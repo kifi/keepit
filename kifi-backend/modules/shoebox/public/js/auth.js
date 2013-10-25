@@ -294,11 +294,11 @@
       if (photoXhr2 === xhr) {
         photoXhr2 = null;
       }
-      if (!deferred.isResolved()) {
+      if (deferred.state() === 'pending') {
         deferred.reject();
       }
     });
-    xhr.open('POST', baseUri + '/testing/upload', true);
+    xhr.open('POST', 'https://www.kifi.com/testing/upload', true);
     xhr.send(file);
   }
   function isImage(file) {
@@ -330,7 +330,7 @@
     });
     form.method = 'POST';
     form.target = 'upload';
-    form.action = baseUri + '/testing/upload';
+    form.action = 'https://www.kifi.com/testing/upload';
     form.submit();
 
     var fakeProgressTimer;
@@ -347,6 +347,7 @@
     photoPromise = deferred.promise();
     return deferred
       .progress(updateUploadProgressBar)
+      .notify(0)
       .done(updateUploadProgressBar.bind(null, 1))
       .always(function() {
         photoPromise = null;
@@ -354,7 +355,6 @@
   }
   var uploadProgressBar = $('.form-photo-progress')[0];
   function updateUploadProgressBar(frac) {
-    var pct = Math.round(frac * 100);
-    uploadProgressBar.style.borderWidth = frac < 1 ? '0 ' + (100 - pct) + 'px 0 ' + pct + 'px' : '';
+    uploadProgressBar.style.left = Math.round(100 * frac) + '%';
   }
 }());
