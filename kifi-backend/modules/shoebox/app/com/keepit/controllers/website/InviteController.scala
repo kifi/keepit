@@ -15,7 +15,10 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.social.{SocialGraphPlugin, SocialNetworks, SocialNetworkType, SocialId}
+import com.keepit.common.akka.SafeFuture
+import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilderFactory, UserEvent, UserEventType}
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Play.current
 import play.api._
 import play.api.mvc._
@@ -34,7 +37,9 @@ class InviteController @Inject() (db: Database,
   linkedIn: LinkedInSocialGraph,
   socialGraphPlugin: SocialGraphPlugin,
   actionAuthenticator: ActionAuthenticator,
-  httpClient: HttpClient)
+  httpClient: HttpClient,
+  userEventContextBuilder: UserEventContextBuilderFactory,
+  heimdal: HeimdalServiceClient)
     extends WebsiteController(actionAuthenticator) {
 
   private def createBasicUserInvitation(socialUser: SocialUserInfo, state: State[Invitation]): BasicUserInvitation = {
@@ -174,6 +179,11 @@ class InviteController @Inject() (db: Database,
         case Some(invite) =>
           if (errorCode.isEmpty) {
             invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE))
+            SafeFuture{
+              val contextBuilder = userEventContextBuilder()
+              contextBuilder += ("invitee", invite.recipientSocialUserId.id)
+              heimdal.trackEvent(UserEvent(invite.senderUserId.map(_.id).getOrElse(-1), contextBuilder.build, UserEventType("invite_sent")))
+            }
           }
           CloseWindow()
         case None =>

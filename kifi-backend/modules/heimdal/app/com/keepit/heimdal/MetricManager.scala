@@ -47,7 +47,8 @@ class MetricManager @Inject() (
     "privatekeepsonly_nofakes" -> AndContextRestriction(
       AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))),
       AnyContextRestriction("context.isPrivate", EqualTo(ContextDoubleData(1)))
-    )
+    ),
+    "newinstallsonly" -> AnyContextRestriction("context.firstTime", EqualTo(ContextDoubleData(1)))
   )
 
   def computeAdHocMteric(startTime: DateTime, endTime: DateTime, definition: MetricDefinition): Future[JsArray]  = {
@@ -103,7 +104,7 @@ class MetricManager @Inject() (
       unique   = true,
       dropDups = true
     ))
-    repo.insert(metricData)
+    repo.insert(metricData, dropDups=true)
     val newDesc = desc.copy(lastUpdate=tEnd)
     metricDescriptorRepo.upsert(desc)
     newDesc
