@@ -15,6 +15,8 @@ import com.google.inject.Inject
 
 case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int](), totalable : Boolean = true)
 
+case class MetricWithAuxInfo(data: JsObject, auxInfo: MetricAuxInfo)
+
 class AdminAnalyticsController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     heimdal: HeimdalServiceClient
@@ -22,13 +24,13 @@ class AdminAnalyticsController @Inject() (
   extends AdminController(actionAuthenticator) {
 
   val installMetrics = Map[String, MetricAuxInfo](
-    "invites_sent_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Number Sent"), Map("Number Sent" -> 462)),
-    "new_installs_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"), Map("Users" -> 362))
+    "invites_sent_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Invites Sent"), Map("Invites Sent" -> 462)),
+    "new_installs_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users Installed"), Map("Users Installed" -> 362))
   )
 
   val userMetrics = Map[String, MetricAuxInfo](
-    "alive_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Users")),
-    "active_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"))
+    "alive_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Connected Users")),
+    "active_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Active Users"))
   )
 
   val keepActivityMetrics = Map[String, MetricAuxInfo](
