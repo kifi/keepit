@@ -73,7 +73,7 @@ input[type=password] {
   position: absolute;
   top: 70px;
   height: 144px;
-  background: url(../img/out/login.png) no-repeat;
+  background: url(../img/out/auth.png) no-repeat;
   -webkit-transition: opacity 0.21s ease-out;
   -moz-transition: opacity 0.21s ease-out;
   -o-transition: opacity 0.21s ease-out;
@@ -260,7 +260,7 @@ input[type=password] {
   height: 42px;
   width: 42px;
   margin: 0 auto;
-  background: url(../img/out/login.png) -2px -328px;
+  background: url(../img/out/auth.png) -2px -328px;
   position: relative;
   left: 2px;
 }
@@ -294,20 +294,20 @@ footer {
   height: 32px;
   width: 32px;
   margin-left: 5px;
-  background: url(../img/out/login.png);
+  background: url(../img/out/auth.png);
   opacity: .5;
 }
 .us-on:hover {
   opacity: 1;
 }
 .us-on.facebook {
-  background-position: -36px -292px;
+  background-position: -36px -294px;
 }
 .us-on.linkedin {
-  background-position: -2px -292px;
+  background-position: -2px -294px;
 }
 .us-on.twitter {
-  background-position: -70px -292px;
+  background-position: -70px -294px;
 }
 .copyright {
   line-height: 30px;
@@ -326,7 +326,7 @@ footer {
   height: 144px;
   margin: 0 auto;
   padding-top: 70px;
-  background: url(../img/out/login.png) -2px -148px content-box;
+  background: url(../img/out/auth.png) -2px -148px content-box;
   text-indent: -9999px;
   position: relative;
   left: -10px;
@@ -475,7 +475,7 @@ footer {
   font-size: 0;
   height: 32px;
   width: 32px;
-  background-image: url(../img/out/login.png);
+  background-image: url(../img/out/auth.png);
 }
 .facebook > .form-network-icon:before {
   background-position: -187px -294px;
@@ -640,7 +640,7 @@ footer {
   left: 10px;
   height: 16px;
   width: 16px;
-  background: url(../img/out/login.png);
+  background: url(../img/out/auth.png);
 }
 .form-photo-a.facebook:before {
   background-position: -201px -328px;
@@ -814,7 +814,7 @@ footer {
   .main-logo,
   .form-network-icon:before,
   .form-photo-a:before {
-    background-image: url(../img/out/login.2x.png);
+    background-image: url(../img/out/auth.2x.png);
     background-size: 255px auto;
   }
   .form-photo {
