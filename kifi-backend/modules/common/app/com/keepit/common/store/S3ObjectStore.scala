@@ -26,6 +26,7 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.serializer.BinaryFormat
 import java.util.zip.{GZIPOutputStream, GZIPInputStream}
 import java.nio.file.Files
+import com.keepit.common.akka.SafeFuture
 
 case class S3Bucket(name: String)
 
@@ -210,13 +211,18 @@ trait S3FileStore[A] extends S3ObjectStore[A, File] {
 
   private class CompressedInputStream(inputStream: InputStream) extends InputStream {
     val toPipe = new PipedOutputStream()
-    val gzipOutputStream = new GZIPOutputStream(toPipe)
     val fromPipe = new PipedInputStream(toPipe)
-
-    def read(): Int = {
-      gzipOutputStream.write(inputStream.read())
-      fromPipe.read()
+    val gzipOutputStream = new GZIPOutputStream(toPipe)
+    val buffer = new Array[Byte](1024)
+    var len: Int
+    SafeFuture {
+      do {
+        len = inputStream.read(buffer)
+        gzipOutputStream.write(buffer, 0, len)
+      } while (len != -1)
     }
+
+    def read(): Int = fromPipe.read()
   }
 }
 
