@@ -1,4 +1,4 @@
-@(data: String, name: String, mode: String="simple", resolution: Int=1)
+@(data: String, name: String, mode: String="simple", resolution: Int=1, display: String="seperate", masterTitle : String = "[merged]")
 <div id="chart_container_@name"></div>
 
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.2.1/lodash.min.js"></script>
@@ -53,10 +53,15 @@
       });
       keys[desc].push("total"); 
     };
-    var chartParent = $("#chart_container_@name");
-    chartParent.append($('<div>', {id: "@name" + desc, style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
+    if ("@display" != "merged"){
+      var chartParent = $("#chart_container_@name");
+      chartParent.append($('<div>', {id: "@name" + desc, style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
+    };
   });
-
+  if ("@display"==="merged"){
+    var chartParent = $("#chart_container_@name");
+    chartParent.append($('<div>', {id: "chart_@name", style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
+  }
 
   google.setOnLoadCallback(drawAndRedraw);
 
@@ -68,60 +73,97 @@
   }
 
   function drawChart(){
-    _.forEach(rawData, function(datum){
-      var val = datum.data;
-      var desc = datum.header;
-      var shift = datum.shift;
-      var data = new google.visualization.DataTable();
-      data.addColumn("datetime")
-      keys[desc].forEach(function(key){
-        if (key==="null"){
-          if (keys[desc].length===1){
-            data.addColumn('number', "Count");
-          } else {
-            data.addColumn('number', "[Group Field Missing]");
-          }
-        } else {
-          data.addColumn('number', key);
-        }
-      });
+    var data;
+    if ("@display"==="merged") {
+      data = new google.visualization.DataTable();
+      data.addColumn("datetime");
+      //add columns to data table
       var key_max = {};
       var key_sum = {};
-      val.forEach(function(datum){
+      _.forEach(rawData, function(datum){
+        key_max[datum.header] = {};
+        key_sum[datum.header] = {};
+        keys[datum.header].forEach(function(key){
+          data.addColumn('number', key);
+        });
+      });
+      if (rawData.length===0){return;}
+      var numFrames = rawData[0].data.length;
+      for(var i=0; i<numFrames; i++){
         var row = [];
-        row.push(new Date(datum.time));
-        //console.log("Processing " + new Date(datum.time) + " with @mode" + " for " + desc)
-        keys[desc].forEach(function(key){
-          var current_value = datum.data[key] || 0;
-          key_max[key] = (key_max[key] || 0)>current_value?(key_max[key] || 0):current_value;
-          key_sum[key] = (key_sum[key] || 0) + current_value;
-          if ("@mode"==="max") {
-            row.push(key_max[key]);
-          } else if ("@mode"==="sum") {
-            row.push(Math.round(key_sum[key]/@resolution) + (shift[key + ''] || 0));
-            // console.log("@mode On:" + new Date(datum.time) + " Pushing " + Math.round(key_sum[key]/@resolution));
-          } else {
-            row.push(current_value);
-          };
+        row.push(new Date(rawData[0].data[i].time));
+        _.forEach(rawData, function(datum){
+          keys[datum.header].forEach(function(key){
+            var current_frame = datum.data[i];
+            var current_value = (current_frame.data[key] || 0);
+
+            key_max[datum.header][key] = (key_max[datum.header][key] || 0)>current_value?(key_max[datum.header][key] || 0):current_value;
+            key_sum[datum.header][key] = (key_sum[datum.header][key] || 0) + current_value;
+            if ("@mode"==="max") {
+              row.push(key_max[datum.header][key]);
+            } else if ("@mode"==="sum") {
+              row.push(Math.round(key_sum[datum.header][key]/@resolution) + (datum.shift[key + ''] || 0));
+            } else {
+              row.push(current_value);
+            };
+          });
         });
         data.addRow(row);
-      });
-
-      var suffix = "";
-      if ("@mode"==="max") {
-        suffix = " (PEAK SO FAR)";
-      } else if ("@mode"==="sum") {
-        suffix = " (CUMMULATIVE)";
-      }
-
-      var options = {
-        'title': desc + suffix
       };
 
-      var chart = new google.visualization.LineChart(document.getElementById("@name" + desc));
-      chart.draw(data, options);
-    });
+      var chart = new google.visualization.LineChart(document.getElementById("chart_@name"));
+      chart.draw(data, {'title': "@masterTitle"});
+    } else {
+      _.forEach(rawData, function(datum){
+        var val = datum.data;
+        var desc = datum.header;
+        var shift = datum.shift;
+        var data = new google.visualization.DataTable();
+        data.addColumn("datetime")
+        keys[desc].forEach(function(key){
+          if (key==="null"){
+            if (keys[desc].length===1){
+              data.addColumn('number', "Count");
+            } else {
+              data.addColumn('number', "[Group Field Missing]");
+            }
+          } else {
+            data.addColumn('number', key);
+          }
+        });
+        var key_max = {};
+        var key_sum = {};
+        val.forEach(function(datum){
+          var row = [];
+          row.push(new Date(datum.time));
+          //console.log("Processing " + new Date(datum.time) + " with @mode" + " for " + desc)
+          keys[desc].forEach(function(key){
+            var current_value = datum.data[key] || 0;
+            key_max[key] = (key_max[key] || 0)>current_value?(key_max[key] || 0):current_value;
+            key_sum[key] = (key_sum[key] || 0) + current_value;
+            if ("@mode"==="max") {
+              row.push(key_max[key]);
+            } else if ("@mode"==="sum") {
+              row.push(Math.round(key_sum[key]/@resolution) + (shift[key + ''] || 0));
+              // console.log("@mode On:" + new Date(datum.time) + " Pushing " + Math.round(key_sum[key]/@resolution));
+            } else {
+              row.push(current_value);
+            };
+          });
+          data.addRow(row);
+        });
 
+        var suffix = "";
+        if ("@mode"==="max") {
+          suffix = " (PEAK SO FAR)";
+        } else if ("@mode"==="sum") {
+          suffix = " (CUMMULATIVE)";
+        }
+
+        var chart = new google.visualization.LineChart(document.getElementById("@name" + desc));
+        chart.draw(data, {'title': desc + suffix});
+      });
+    }
   };
   })();
 
