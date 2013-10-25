@@ -201,26 +201,28 @@ input[type=password] {
 }
 /* back button */
 .curtain-back {
-  position: absolute;
-  top: 62px;
-  left: 36px;
-  width: 64px;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 16.5%;
   z-index: 10;
+  padding-top: 56px;
   font-size: 24px;
   line-height: 32px;
   text-align: center;
   visibility: hidden;
   opacity: 0;
-  -webkit-transform: translate(-110px, 0);
-  -moz-transform: translate(-110px, 0);
-  -o-transform: translate(-110px, 0);
-  -ms-transform: translate(-110px, 0);
-  transform: translate(-110px, 0);
-  -webkit-transition: visibility 0s 0.42s, opacity 0.42s linear, -webkit-transform 0.42s ease-out;
-  -moz-transition: visibility 0s 0.42s, opacity 0.42s linear, -moz-transform 0.42s ease-out;
-  -o-transition: visibility 0s 0.42s, opacity 0.42s linear, -o-transform 0.42s ease-out;
-  -ms-transition: visibility 0s 0.42s, opacity 0.42s linear, -ms-transform 0.42s ease-out;
-  transition: visibility 0s 0.42s, opacity 0.42s linear, transform 0.42s ease-out;
+  -webkit-transform: translate(-100%, 0);
+  -moz-transform: translate(-100%, 0);
+  -o-transform: translate(-100%, 0);
+  -ms-transform: translate(-100%, 0);
+  transform: translate(-100%, 0);
+  -webkit-transition: visibility 0s 0.42s, opacity 0.42s ease-in, -webkit-transform 0.42s ease-out;
+  -moz-transition: visibility 0s 0.42s, opacity 0.42s ease-in, -moz-transform 0.42s ease-out;
+  -o-transition: visibility 0s 0.42s, opacity 0.42s ease-in, -o-transform 0.42s ease-out;
+  -ms-transition: visibility 0s 0.42s, opacity 0.42s ease-in, -ms-transform 0.42s ease-out;
+  transition: visibility 0s 0.42s, opacity 0.42s ease-in, transform 0.42s ease-out;
 }
 .curtains-drawn > .curtain-back {
   visibility: visible;
@@ -237,9 +239,10 @@ input[type=password] {
 }
 .curtain-back:before {
   content: ' ';
-  display: inline-block;
+  display: block;
   height: 42px;
   width: 42px;
+  margin: 0 auto;
   background: url(../img/out/login.png) -2px -328px;
   position: relative;
   left: 2px;
@@ -309,7 +312,7 @@ footer {
   background: url(../img/out/login.png) -2px -148px content-box;
   text-indent: -9999px;
   position: relative;
-  left: -12px;
+  left: -10px;
 }
 .page-title {
   margin: 4px 0;
