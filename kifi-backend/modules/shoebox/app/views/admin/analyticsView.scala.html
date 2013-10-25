@@ -43,7 +43,7 @@
       keys[desc].push(datum.legend['null'] || 'null');
     }
     objectify(val, datum.legend);
-    if (keys[desc].length>1){
+    if (keys[desc].length>1 && datum.totalable){
       _.forEach(val, function(frame){
         var total = 0;
         _.forEach(frame.data, function(subtotal){
