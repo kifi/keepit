@@ -819,6 +819,6 @@ footer {
   }
   .form-photo {
     background-image: url(../img/out/ghost.200.png);
-    background-size: 100px auto;
+    background-size: cover;
   }
 }
