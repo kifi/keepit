@@ -120,7 +120,7 @@
         email: email,
         password: password
       }).done(function(data) {
-        if (data.needsToFinalize) {
+        if (!data.finalized) {
           transitionTitle($('.signup-2').data('title'));
           $('body').addClass('finalizing droppable');
           setTimeout(function () {
