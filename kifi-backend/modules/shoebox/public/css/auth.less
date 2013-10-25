@@ -38,6 +38,7 @@ input[type=password] {
   border: 0;
   padding: 0 1em;
   line-height: 130%;
+  -webkit-font-smoothing: antialiased;
 }
 
 @kifi-green: #9fc062;
@@ -73,42 +74,24 @@ input[type=password] {
 .curtain-logo-l,
 .curtain-logo-r {
   position: absolute;
-  z-index: 10;
   top: 70px;
-  width: 50%;
   height: 144px;
-  text-align: center;
-  .transition(clip @curtain-time ease-out, visibility @curtain-time);
+  background: url(../img/out/login.png) no-repeat;
+  .transition(opacity (@curtain-time / 2) ease-out);
 }
 .curtain-logo-l {
-  left: 0;
-}
-.curtain-logo-r {
   right: 0;
-}
-.curtains-drawn>.curtain-logo-l,
-.curtains-drawn>.curtain-logo-r {
-  visibility: hidden;
-  .transition(clip @curtain-time ease-out, visibility 0s @curtain-time);
-}
-.curtain-logo-l:before,
-.curtain-logo-r:before {
-  content: ' ';
-  font-size: 0;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: url(../img/out/login.png) no-repeat;
-}
-.curtain-logo-l:before {
-  right: 0;
-  width: 126px;
+  width: 144px;
   background-position: -2px -2px;
 }
-.curtain-logo-r:before {
+.curtain-logo-r {
   left: 0;
-  width: 125px;
-  background-position: -128px -2px;
+  width: 107px;
+  background-position: -146px -2px;
+}
+.curtains-drawn .curtain-logo-l,
+.curtains-drawn .curtain-logo-r {
+  opacity: 0;
 }
 .curtain-welcome {
   position: absolute;
@@ -125,6 +108,7 @@ input[type=password] {
   line-height: 32px;
   color: #fff;
   font-weight: 300;
+  -webkit-font-smoothing: antialiased;
   white-space: nowrap;
   .box-sizing(border-box);
   .transition(opacity @curtain-time, visibility @curtain-time, transform @curtain-time ease-out);
@@ -285,6 +269,8 @@ footer {
   padding-top: 70px;
   background: url(../img/out/login.png) -2px -148px content-box;
   text-indent: -9999px;
+  position: relative;
+  left: -10px;
 }
 .page-title {
   margin: 4px 0;
@@ -292,6 +278,7 @@ footer {
   line-height: 44px;
   font-size: 38px;
   font-weight: 300;
+  -webkit-font-smoothing: antialiased;
   color: #aaa;
   opacity: 0;
   .translate(0, -70%);
@@ -429,6 +416,7 @@ footer {
   text-align: left;
   color: #fff;
   font-weight: 300;
+  -webkit-font-smoothing: antialiased;
   padding-right: 16px;
 }
 .form-email-addr,
@@ -447,7 +435,7 @@ footer {
   height: 40px;
   line-height: 40px;
   text-align: center;
-  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
 }
 .form-submit:hover {
   background: tint(@primary-button-color, 10%);

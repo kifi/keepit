@@ -24,41 +24,20 @@
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
 
-  $('.curtain-action').click(function (e) {
-    if (e.which !== 1) return;
+  $('.curtain-action').on('mousedown click', function (e) {
+    if (e.which !== 1 || $('body').hasClass('curtains-drawn')) return;
     var isLogin = $(this).hasClass('curtain-login');
     var $signup = $('.signup').css('display', isLogin ? 'none' : 'block');
     var $login = $('.login').css('display', !isLogin ? 'none' : 'block');
     var $form = isLogin ? $login : $('.signup-1');
     $('.page-title').text($form.data('title'));
     $form.find('.form-email-addr').focus();
-    openCurtains();
-  });
-  $('.curtain-back').click(function (e) {
-    if (e.which !== 1) return;
-    closeCurtains();
-  });
-  function openCurtains() {
-    var logoL = $logoL[0], wL = logoL.offsetWidth;
-    var logoR = $logoR[0], wR = logoR.offsetWidth;
-    logoL.style.clip = 'rect(auto ' + wL + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto 0)';
-    logoL.offsetWidth, logoR.offsetWidth; // force layout
-    logoL.style.clip = 'rect(auto ' + Math.round(wL * .33) + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto ' + Math.round(wR * .67) + 'px)';
     $('body').addClass('curtains-drawn');
-  }
-  function closeCurtains() {
-    $logoL.add($logoR).css({display: 'block', clip: ''});
-    var logoL = $logoL[0], wL = logoL.offsetWidth;
-    var logoR = $logoR[0], wR = logoR.offsetWidth;
-    logoL.style.clip = 'rect(auto ' + Math.round(wL * .33) + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto ' + Math.round(wR * .67) + 'px)';
-    logoL.offsetWidth, logoR.offsetWidth; // force layout
-    logoL.style.clip = 'rect(auto ' + wL + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto 0)';
+  });
+  $('.curtain-back').on('mousedown click', function (e) {
+    if (e.which !== 1) return;
     $('body').removeClass('curtains-drawn');
-  }
+  });
 
   $('.form-network').click(function (e) {
     if (e.which !== 1) return;
