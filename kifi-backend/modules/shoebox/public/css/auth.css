@@ -163,11 +163,6 @@ input[type=password] {
   -webkit-font-smoothing: antialiased;
   color: #fff;
   font-size: 18px;
-  -webkit-transition: opacity 0.42s, visibility 0.42s;
-  -moz-transition: opacity 0.42s, visibility 0.42s;
-  -o-transition: opacity 0.42s, visibility 0.42s;
-  -ms-transition: opacity 0.42s, visibility 0.42s;
-  transition: opacity 0.42s, visibility 0.42s;
 }
 .curtain-signup {
   right: 8%;
@@ -183,7 +178,36 @@ input[type=password] {
 .curtains-drawn .curtain-action:hover {
   background-color: rgba(0, 0, 0, 0.08);
 }
-.curtains-drawn .curtain-action {
+.curtain-a-title {
+  font-size: 32px;
+  line-height: 42px;
+  font-weight: 300;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.curtain-note {
+  position: absolute;
+  top: 20%;
+  margin-top: 340px;
+  padding: 32px 0 38px;
+  width: 284px;
+  right: 8%;
+  color: #fff;
+  font-size: 14px;
+  line-height: 17px;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+}
+.curtain-action,
+.curtain-note {
+  -webkit-transition: opacity 0.42s, visibility 0.42s;
+  -moz-transition: opacity 0.42s, visibility 0.42s;
+  -o-transition: opacity 0.42s, visibility 0.42s;
+  -ms-transition: opacity 0.42s, visibility 0.42s;
+  transition: opacity 0.42s, visibility 0.42s;
+}
+.curtains-drawn .curtain-action,
+.curtains-drawn .curtain-note {
   -webkit-transition: opacity 0.42s, visibility 0s 0.42s;
   -moz-transition: opacity 0.42s, visibility 0s 0.42s;
   -o-transition: opacity 0.42s, visibility 0s 0.42s;
@@ -191,13 +215,6 @@ input[type=password] {
   transition: opacity 0.42s, visibility 0s 0.42s;
   opacity: 0;
   visibility: hidden;
-}
-.curtain-a-title {
-  font-size: 32px;
-  line-height: 42px;
-  font-weight: 300;
-  text-transform: uppercase;
-  margin-bottom: 5px;
 }
 /* back button */
 .curtain-back {

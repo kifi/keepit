@@ -144,7 +144,6 @@ input[type=password] {
   -webkit-font-smoothing: antialiased;
   color: #fff;
   font-size: 18px;
-  .transition(opacity @curtain-time, visibility @curtain-time);
 }
 .curtain-signup {
   right: 8%;
@@ -160,17 +159,35 @@ input[type=password] {
 .curtains-drawn .curtain-action:hover {
   background-color: rgba(0, 0, 0, .08);
 }
-.curtains-drawn .curtain-action {
-  .transition(opacity @curtain-time, visibility 0s @curtain-time);
-  opacity: 0;
-  visibility: hidden;
-}
 .curtain-a-title {
   font-size: 32px;
   line-height: 42px;
   font-weight: 300;
   text-transform: uppercase;
   margin-bottom: 5px;
+}
+.curtain-note {
+  position: absolute;
+  top: 20%;
+  margin-top: 340px;
+  padding: 32px 0 38px;
+  width: 284px;
+  right: 8%;
+  color: #fff;
+  font-size: 14px;
+  line-height: 17px;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+}
+.curtain-action,
+.curtain-note {
+  .transition(opacity @curtain-time, visibility @curtain-time);
+}
+.curtains-drawn .curtain-action,
+.curtains-drawn .curtain-note {
+  .transition(opacity @curtain-time, visibility 0s @curtain-time);
+  opacity: 0;
+  visibility: hidden;
 }
 
 /* back button */
