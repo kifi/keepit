@@ -102,3 +102,10 @@ img.kifi-message-pic.kifi-self {
 .kifi-aux-message {
   padding: 13px;
 }
+.kifi-thread-background {
+  position: absolute;
+  top: 40px;
+  bottom: 0;
+  width: 100%;
+  background-color: #fafafa;
+}
