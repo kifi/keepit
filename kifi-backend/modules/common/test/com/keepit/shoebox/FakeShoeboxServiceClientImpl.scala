@@ -282,6 +282,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     }.toMap
     Future.successful(basicUsers)
   }
+  
+  def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = ???
+
 
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
@@ -321,6 +324,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris)
   }
+  
+  def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = ???
 
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = {
     val bookmark = allUserBookmarks(userId).map(allBookmarks(_)).find(_.uriId == uriId)

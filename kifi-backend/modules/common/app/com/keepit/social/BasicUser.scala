@@ -36,6 +36,9 @@ object BasicUser {
       pictureName = user.pictureName.map(_+ ".jpg").getOrElse("0.jpg") // need support for default image
     )
   }
+  
+  def toByteArray(basicUser: BasicUser): Array[Byte] = null
+  def fromByteArray(bytes: Array[Byte]): BasicUser = null
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
