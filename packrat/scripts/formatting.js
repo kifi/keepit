@@ -1,50 +1,70 @@
-function getTextFormatter() {
- 'use strict';
-  return function(text, render) {
-    // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
-    text = render(text);
+var getTextFormatter = (function () {
+  'use strict';
+  // use https://www.debuggex.com/ for regex help
+  var kifiSelMarkdownLinkRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/;
+  var escapedRightParenRe = /\\\)/g;
+  var escapedRightBracketRe = /\\\]/g;
+  var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;
+  var imageUrlRe = /^[^?#]*\.(?:gif|jpg|jpeg|png)$/i;
+  var lineBreaksRe = /\n(?:[ \t\r]*\n)*/g;
+  return function() {
+    return function(text, render) {
+      // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
+      text = render(text);
 
-    // linkify look-here links (from markdown)
-    var parts = text.split(/\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/);
-    for (var i = 1; i < parts.length; i += 3) {
-      parts[i] = "<a href='x-kifi-sel:" + parts[i+1].replace(/\\\)/g, ")") + "'>" + Mustache.escape(parts[i].replace(/\\\]/g, "]")) + "</a>";
-      parts[i+1] = "";
-    }
-
-    for (i = 0; i < parts.length; i += 3) {
-      // linkify URLs, use https://www.debuggex.com/ for help
-      var bits = parts[i].split(/(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/);
-      for (var j = 1; j < bits.length; j += 3) {
-        var escapedUri = Mustache.escape(bits[j]);
-        bits[j] = '<a target=_blank href="' + (bits[j+1] ? ""  : "http://") + escapedUri + '">' + escapedUri + "</a>";
-        bits[j+1] = "";
+      // linkify look-here links (from markdown)
+      var parts = text.split(kifiSelMarkdownLinkRe);
+      for (var i = 1; i < parts.length; i += 3) {
+        parts[i] = '<a href="x-kifi-sel:' + parts[i+1].replace(escapedRightParenRe, ')') + '">' +
+          Mustache.escape(parts[i].replace(escapedRightBracketRe, ']')) +
+          '</a>';
+        parts[i+1] = '';
       }
-      for (j = 0; j < bits.length; j += 3) {
-        bits[j] = Mustache.escape(bits[j]);
+
+      for (i = 0; i < parts.length; i += 3) {
+        // linkify URLs
+        var bits = parts[i].split(uriRe);
+        for (var j = 1; j < bits.length; j += 3) {
+          var uri = bits[j];
+          var scheme = bits[j+1];
+          var escapedUri = Mustache.escape(uri);
+          var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
+          bits[j] = '<a target=_blank href="' + escapedUrl + '">' +
+            (imageUrlRe.test(uri) ? '<img class=kifi-image-in-message src="' + escapedUrl + '">' : escapedUri) +
+            '</a>';
+          bits[j+1] = '';
+        }
+        for (j = 0; j < bits.length; j += 3) {
+          bits[j] = Mustache.escape(bits[j]);
+        }
+        parts[i] = bits.join('');
       }
-      parts[i] = bits.join("");
-    }
 
-    return "<p>" + parts.join("").replace(/\n(?:[ \t\r]*\n)*/g, "</p><p>") + "</p>";
-  }
-}
+      return '<p>' + parts.join('').replace(lineBreaksRe, '</p><p>') + '</p>';
+    };
+  };
+}());
 
-function getSnippetFormatter() {
- 'use strict';
-  return function(text, render) {
-    // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
-    text = render(text);
+var getSnippetFormatter = (function () {
+  'use strict';
+  var kifiSelMarkdownLinkRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)/;
+  var escapedRightBracketRe = /\\\]/g;
+  return function () {
+    return function(text, render) {
+      // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
+      text = render(text);
 
-    // plain-textify look-here links (from markdown)
-    var parts = text.split(/\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)/);
-    for (var i = 1; i < parts.length; i += 2) {
-      parts[i] = parts[i].replace(/\\\]/g, "]");
-    }
+      // plain-textify look-here links (from markdown)
+      var parts = text.split(kifiSelMarkdownLinkRe);
+      for (var i = 1; i < parts.length; i += 2) {
+        parts[i] = parts[i].replace(escapedRightBracketRe, ']');
+      }
 
-    var escaped = Mustache.escape(parts.join(""));
-    return escaped.length > 200 ? escaped.substring(0, 190) + "…" : escaped;
-  }
-}
+      var escaped = Mustache.escape(parts.join(''));
+      return escaped.length > 200 ? escaped.substring(0, 190) + '…' : escaped;
+    };
+  };
+}());
 
 function getLocalDateFormatter() {
  'use strict';
