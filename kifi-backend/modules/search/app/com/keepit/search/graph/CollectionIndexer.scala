@@ -31,10 +31,12 @@ object CollectionFields {
   val uriField = "coll_uri"
   val uriListField = "coll_list"
   val externalIdField = "col_ext"
+  val nameField = "coll_name"
 
   def decoders() = Map(
     uriListField -> DocUtil.URIListDecoder,
-    externalIdField -> DocUtil.binaryDocValFieldDecoder(fromByteArray)
+    externalIdField -> DocUtil.binaryDocValFieldDecoder(fromByteArray),
+    nameField -> DocUtil.binaryDocValFieldDecoder(fromByteArray)
   )
 }
 
@@ -136,6 +138,9 @@ class CollectionIndexer(
 
       val externalId = buildBinaryDocValuesField(externalIdField, collection.externalId.id)
       doc.add(externalId)
+
+      val name = buildBinaryDocValuesField(nameField, collection.name)
+      doc.add(name)
 
       doc
     }

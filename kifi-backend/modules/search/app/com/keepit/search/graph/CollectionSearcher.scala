@@ -38,6 +38,12 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
   def getExternalId(id: Long): ExternalId[Collection] = {
     ExternalId[Collection](searcher.getDecodedDocValue[String](externalIdField, id)(fromByteArray).get)
   }
+
+  def getName(id: Id[Collection]): String = getName(id.id)
+
+  def getName(id: Long): String = {
+    searcher.getDecodedDocValue[String](nameField, id)(fromByteArray).get
+  }
 }
 
 class CollectionSearcherWithUser(searcher: Searcher, userId: Id[User]) extends CollectionSearcher(searcher) {
