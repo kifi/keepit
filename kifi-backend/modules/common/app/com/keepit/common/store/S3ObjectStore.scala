@@ -21,10 +21,11 @@ import play.api.Play
 import play.api.Play.current
 import play.api.Logger
 
-import java.io.InputStream
-import java.io.ByteArrayInputStream
+import java.io._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.serializer.BinaryFormat
+import java.util.zip.{GZIPOutputStream, GZIPInputStream}
+import java.nio.file.Files
 
 case class S3Bucket(name: String)
 
@@ -177,6 +178,46 @@ trait BlobFormat[B] {
   val format: BinaryFormat[B]
   protected def encodeValue(value: B) : Array[Byte] = format.writes(Some(value))
   protected def decodeValue(data: Array[Byte]) : B = format.reads(data).get
+}
+
+trait S3FileStore[A] extends S3ObjectStore[A, File] {
+
+  val inbox: File
+  if (!inbox.exists()) inbox.mkdirs()
+  require(inbox.isDirectory, s"$inbox is not a directory.")
+
+  protected def packValue(value: File) = {
+    val metadata = new ObjectMetadata()
+    metadata.setContentType(Files.probeContentType(value.toPath))
+    metadata.setContentLength(value.length())
+    metadata.addUserMetadata("name", value.getName)
+
+    val fileStream = new FileInputStream(value)
+    val compressedStream = new CompressedInputStream(fileStream)
+
+    (compressedStream, metadata)
+  }
+
+  protected def unpackValue(s3obj: S3Object) = {
+    val metadata = s3obj.getObjectMetadata
+    val name = metadata.getUserMetadata.get("name")
+    val file = new File(inbox, name)
+    val uncompressedStream = new GZIPInputStream(s3obj.getObjectContent)
+    Files.copy(uncompressedStream, file.toPath)
+    uncompressedStream.close()
+    file
+  }
+
+  private class CompressedInputStream(inputStream: InputStream) extends InputStream {
+    val toPipe = new PipedOutputStream()
+    val gzipOutputStream = new GZIPOutputStream(toPipe)
+    val fromPipe = new PipedInputStream(toPipe)
+
+    def read(): Int = {
+      gzipOutputStream.write(inputStream.read())
+      fromPipe.read()
+    }
+  }
 }
 
 trait S3Module extends ScalaModule
