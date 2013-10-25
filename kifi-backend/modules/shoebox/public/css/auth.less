@@ -175,18 +175,20 @@ input[type=password] {
 
 /* back button */
 .curtain-back {
-  position: absolute;
-  top: 62px;
-  left: 36px;
-  width: 64px;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 16.5%;
   z-index: 10;
+  padding-top: 56px;
   font-size: 24px;
   line-height: 32px;
   text-align: center;
   visibility: hidden;
   opacity: 0;
-  .translate(-110px);
-  .transition(visibility 0s @curtain-time, opacity @curtain-time linear, transform @curtain-time ease-out);
+  .translate(-100%);
+  .transition(visibility 0s @curtain-time, opacity @curtain-time ease-in, transform @curtain-time ease-out);
 }
 .curtains-drawn>.curtain-back {
   visibility: visible;
@@ -196,9 +198,10 @@ input[type=password] {
 }
 .curtain-back:before {
   content: ' ';
-  display: inline-block;
+  display: block;
   height: 42px;
   width: 42px;
+  margin: 0 auto;
   background: url(../img/out/login.png) -2px -328px;
   position: relative;
   left: 2px;
