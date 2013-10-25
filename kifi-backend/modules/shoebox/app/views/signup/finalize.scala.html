@@ -1,4 +1,4 @@
-@(network: String, emailAddress: String, firstName: String = "", lastName: String = "", picturePath: String)
+@(network: String, emailAddress: String, firstName: String = "", lastName: String = "", picturePath: String, triedToLoginWithNoAccount: Boolean)
 
 @content = {
 <div class="curtain-l"></div>
@@ -8,6 +8,10 @@
 <h2 class="page-title">Finalize Your Account</h2>
 
 <!-- @picturePath -->
+@if(triedToLoginWithNoAccount) {
+  <!-- You tried to login. You have no account. Silly! -->
+}
+
 
 <form class="signup-2 @if(network == "fortytwo") {signup-2-email} else {signup-2-social}" novalidate>
   @if(network == "fortytwo") {

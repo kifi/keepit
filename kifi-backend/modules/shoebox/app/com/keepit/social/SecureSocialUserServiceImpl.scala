@@ -312,7 +312,8 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
         log.info(s"[find] sessionRepo.get($externalId)=$sess")
         sess
       } collect {
-        case s if s.isValid => authenticatorFromSession(s)
+        case s if s.isValid =>
+          authenticatorFromSession(s)
       }
     }
     log.info(s"[find] id=$id res=$res")

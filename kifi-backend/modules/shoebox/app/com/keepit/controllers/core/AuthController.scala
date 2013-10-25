@@ -204,7 +204,8 @@ class AuthController @Inject() (
         Ok(views.html.signup.finalize(
           network = SocialNetworks.FORTYTWO.name,
           emailAddress = identity.email.getOrElse(""),
-          picturePath = identity.avatarUrl.getOrElse("")
+          picturePath = identity.avatarUrl.getOrElse(""),
+          triedToLoginWithNoAccount = false
         ))
       case (Some(user), None) =>
         // User but no identity. Huh?
@@ -217,12 +218,14 @@ class AuthController @Inject() (
         Ok("No user, identity, has email")
       case (None, Some(identity)) =>
         // No user exists, so is social
+        val triedToLoginWithNoAccount = request.flash.get("signin_error").exists(_ == "no_account")
         Ok(views.html.signup.finalize(
           network = SocialNetworkType(identity.identityId.providerId).name,
           firstName = User.sanitizeName(identity.firstName),
           lastName = User.sanitizeName(identity.lastName),
           emailAddress = identity.email.getOrElse(""),
-          picturePath = identity.avatarUrl.getOrElse("")
+          picturePath = identity.avatarUrl.getOrElse(""),
+          triedToLoginWithNoAccount = triedToLoginWithNoAccount
         ))
       case (None, None) =>
         // TODO(andrew): Forward user to initial signup page
