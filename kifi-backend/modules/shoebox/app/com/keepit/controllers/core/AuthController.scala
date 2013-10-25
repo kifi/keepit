@@ -163,10 +163,10 @@ class AuthController @Inject() (
               Authenticator.create(identity).fold(
                 error => Status(500)("0"),
                 authenticator => {
-                  val needsToFinalize = db.readOnly { implicit session =>
-                    userRepo.get(sui.userId.get).state == UserStates.INCOMPLETE_SIGNUP
+                  val finalized = db.readOnly { implicit session =>
+                    userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
                   }
-                  Ok(Json.obj("success"-> true, "email" -> email, "new_account" -> false, "needsToFinalize" -> needsToFinalize))
+                  Ok(Json.obj("success"-> true, "email" -> email, "new_account" -> false, "finalized" -> finalized))
                     .withNewSession
                     .withCookies(authenticator.toCookie)
                 }

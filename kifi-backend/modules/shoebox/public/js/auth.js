@@ -24,41 +24,20 @@
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
 
-  $('.curtain-action').click(function (e) {
-    if (e.which !== 1) return;
+  $('.curtain-action').on('mousedown click', function (e) {
+    if (e.which !== 1 || $('body').hasClass('curtains-drawn')) return;
     var isLogin = $(this).hasClass('curtain-login');
     var $signup = $('.signup').css('display', isLogin ? 'none' : 'block');
     var $login = $('.login').css('display', !isLogin ? 'none' : 'block');
     var $form = isLogin ? $login : $('.signup-1');
     $('.page-title').text($form.data('title'));
     $form.find('.form-email-addr').focus();
-    openCurtains();
-  });
-  $('.curtain-back').click(function (e) {
-    if (e.which !== 1) return;
-    closeCurtains();
-  });
-  function openCurtains() {
-    var logoL = $logoL[0], wL = logoL.offsetWidth;
-    var logoR = $logoR[0], wR = logoR.offsetWidth;
-    logoL.style.clip = 'rect(auto ' + wL + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto 0)';
-    logoL.offsetWidth, logoR.offsetWidth; // force layout
-    logoL.style.clip = 'rect(auto ' + Math.round(wL * .33) + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto ' + Math.round(wR * .67) + 'px)';
     $('body').addClass('curtains-drawn');
-  }
-  function closeCurtains() {
-    $logoL.add($logoR).css({display: 'block', clip: ''});
-    var logoL = $logoL[0], wL = logoL.offsetWidth;
-    var logoR = $logoR[0], wR = logoR.offsetWidth;
-    logoL.style.clip = 'rect(auto ' + Math.round(wL * .33) + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto ' + Math.round(wR * .67) + 'px)';
-    logoL.offsetWidth, logoR.offsetWidth; // force layout
-    logoL.style.clip = 'rect(auto ' + wL + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto 0)';
+  });
+  $('.curtain-back').on('mousedown click', function (e) {
+    if (e.which !== 1) return;
     $('body').removeClass('curtains-drawn');
-  }
+  });
 
   $('.form-network').click(function (e) {
     if (e.which !== 1) return;
@@ -141,7 +120,7 @@
         email: email,
         password: password
       }).done(function(data) {
-        if (data.needsToFinalize) {
+        if (!data.finalized) {
           transitionTitle($('.signup-2').data('title'));
           $('body').addClass('finalizing droppable');
           setTimeout(function () {
@@ -292,9 +271,9 @@
       var url = $photo.data('url');
       if (url) URL.revokeObjectURL(url);
       url = URL.createObjectURL(file);
-      $photo.css({'background-image': 'url(' + url + ')', 'background-size': 'cover'}).data('url', url);
+      $photo.css('background-image', 'url(' + url + ')').data('url', url);
     } else {  // TODO: URL alternative for Safari 5
-      $photo.css({'background-image': '', 'background-size': ''});
+      $photo.css('background-image', '');
     }
 
     if (photoXhr2) {
@@ -315,11 +294,11 @@
       if (photoXhr2 === xhr) {
         photoXhr2 = null;
       }
-      if (!deferred.isResolved()) {
+      if (deferred.state() === 'pending') {
         deferred.reject();
       }
     });
-    xhr.open('POST', baseUri + '/testing/upload', true);
+    xhr.open('POST', 'https://www.kifi.com/testing/upload', true);
     xhr.send(file);
   }
   function isImage(file) {
@@ -351,7 +330,7 @@
     });
     form.method = 'POST';
     form.target = 'upload';
-    form.action = baseUri + '/testing/upload';
+    form.action = 'https://www.kifi.com/testing/upload';
     form.submit();
 
     var fakeProgressTimer;
@@ -368,6 +347,7 @@
     photoPromise = deferred.promise();
     return deferred
       .progress(updateUploadProgressBar)
+      .notify(0)
       .done(updateUploadProgressBar.bind(null, 1))
       .always(function() {
         photoPromise = null;
@@ -375,7 +355,6 @@
   }
   var uploadProgressBar = $('.form-photo-progress')[0];
   function updateUploadProgressBar(frac) {
-    var pct = Math.round(frac * 100);
-    uploadProgressBar.style.borderWidth = frac < 1 ? '0 ' + (100 - pct) + 'px 0 ' + pct + 'px' : '';
+    uploadProgressBar.style.left = Math.round(100 * frac) + '%';
   }
 }());

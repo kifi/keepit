@@ -125,40 +125,50 @@ class OAuth2Controller @Inject() (
     val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
     log.info(s"[oauth2.callback($provider)] POST to: ${providerConfig.accessTokenUrl} with params: $params")
 
-    val tokenResp = Await.result(call.map { resp =>
+    val tokenRespOpt = Await.result(call.map { resp =>
       log.info(s"[oauth2.callback] body=${resp.body}")
       provider match {
         case "google" => {
-          val json = resp.json
-          log.info(s"[oauth2.callback] $resp json=${Json.prettyPrint(json)}")
-          val tokenResp = json.as[OAuth2AccessTokenResponse]
-          log.info(s"[oauth2.callback] tokenResp=$tokenResp")
-          tokenResp
+          if (resp.status == OK) {
+            val json = resp.json
+            log.info(s"[oauth2.callback] $resp json=${Json.prettyPrint(json)}")
+            val tokenResp = json.as[OAuth2AccessTokenResponse]
+            log.info(s"[oauth2.callback] tokenResp=$tokenResp")
+            Some(tokenResp)
+          } else {
+            log.warn(s"OAuth2 failure from $provider: $resp") // TODO: retry
+            None
+          }
         }
         case "facebook" => {
           val splitted = resp.body.split("=")
           log.info(s"[oauth2.callback] splitted=${splitted.mkString}")
           if (splitted.length > 1)
-            OAuth2AccessTokenResponse(splitted(1))
+            Some(OAuth2AccessTokenResponse(splitted(1)))
           else
-            OAuth2AccessTokenResponse.EMPTY
+            None
         }
       }
     }, 5 seconds)
 
-    provider match {
-      case "google" => {
-//        val resF = abookServiceClient.importContacts(request.userId, provider, tokenResp.accessToken)
-        val res = Await.result(abookServiceClient.importContacts(request.userId, provider, tokenResp.accessToken), 10 seconds)
-        log.info(s"[g-contacts] abook uploaded: ${Json.prettyPrint(res)}")
-        Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId))
+    tokenRespOpt match {
+      case Some(tokenResp) => {
+        provider match {
+          case "google" => {
+            val res = Await.result(abookServiceClient.importContacts(request.userId, provider, tokenResp.accessToken), 5 seconds) // TODO: state-directed
+            log.info(s"[google] abook import $res")
+            Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // TODO: REMOVEME
+          }
+          case "facebook" => { // testing only
+            val friendsUrl = s"https://graph.facebook.com/me/friends?access_token=${tokenResp.accessToken}&fields=id,name,first_name,last_name,username,picture,email"
+            val friends = Await.result(WS.url(friendsUrl).get, 5 seconds).json
+            log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
+            Ok(friends)
+          }
+          case _ => Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // homepage?
+        }
       }
-      case _ => { // testing only
-      val friendsUrl = s"https://graph.facebook.com/me/friends?access_token=${tokenResp.accessToken}&fields=id,name,first_name,last_name,username,picture,email"
-        val friends = Await.result(WS.url(friendsUrl).get, 5 seconds).json
-        log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
-        Ok(friends)
-      }
+      case None => Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId))
     }
   }
 
