@@ -16,7 +16,11 @@ function getTextFormatter() {
       var bits = parts[i].split(/(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/);
       for (var j = 1; j < bits.length; j += 3) {
         var escapedUri = Mustache.escape(bits[j]);
-        bits[j] = '<a target=_blank href="' + (bits[j+1] ? ""  : "http://") + escapedUri + '">' + escapedUri + "</a>";
+        var imageRegex = /^([^?#])*(\.(jpg|gif|jpeg|png))$/i; //Not very good, but fairly ysafe
+        var isImage = imageRegex.test(bits[j]);
+        var imageTag = '<a class="kifi-previewable-link" target="_blank" href="' + (bits[j+1] ? ""  : "http://") + escapedUri + '">' + '<img style="max-width: 100%;" src="' + (bits[j+1] ? ""  : "http://") + escapedUri + '">' + "</a>";
+        var linkTag = '<a class="kifi-previewable-link" target="_blank" href="' + (bits[j+1] ? ""  : "http://") + escapedUri + '">' + escapedUri + "</a>";
+        bits[j] = isImage ? imageTag : linkTag;
         bits[j+1] = "";
       }
       for (j = 0; j < bits.length; j += 3) {
