@@ -70,6 +70,9 @@ img.kifi-message-pic.kifi-self {
 .kifi-message-body>p>a[href] {
   text-decoration: underline;
 }
+.kifi-image-in-message {
+  max-width: 100%;
+}
 .kifi-message-sent::after {
   content: " ";
   display: block;
