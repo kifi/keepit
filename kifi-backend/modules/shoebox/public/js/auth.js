@@ -271,9 +271,9 @@
       var url = $photo.data('url');
       if (url) URL.revokeObjectURL(url);
       url = URL.createObjectURL(file);
-      $photo.css({'background-image': 'url(' + url + ')', 'background-size': 'cover'}).data('url', url);
+      $photo.css('background-image', 'url(' + url + ')').data('url', url);
     } else {  // TODO: URL alternative for Safari 5
-      $photo.css({'background-image': '', 'background-size': ''});
+      $photo.css('background-image', '');
     }
 
     if (photoXhr2) {

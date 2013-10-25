@@ -7,7 +7,6 @@
 <h1 class="main-logo">kifi</h1>
 <h2 class="page-title">Finalize Your Account</h2>
 
-<!-- @picturePath -->
 @if(triedToLoginWithNoAccount) {
   <!-- You tried to login. You have no account. Silly! -->
 }
@@ -27,7 +26,7 @@
     <input class="form-last-name" type="text" name="last-name" value="@lastName" placeholder="Last name" required>
   </div>
   <div class="form-pic">
-    <div class="form-photo"><div class="form-photo-progress"></div></div>
+    <div class="form-photo"@if(picturePath != ""){ style="background-image:url(@picturePath)"}><div class="form-photo-progress"></div></div>
     <div class="form-photo-controls">
       <a class="form-photo-a facebook" href="javascript:">Use Facebook photo</a>
       <a class="form-photo-a linkedin" href="javascript:">Use LinkedIn photo</a>
