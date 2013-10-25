@@ -23,12 +23,19 @@ class AdminAnalyticsController @Inject() (
 
   val installMetrics = Map[String, MetricAuxInfo](
     "invites_sent_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Number Sent"), Map("Number Sent" -> 462)),
-    "new_installs_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"), Map("Users" -> 402))
+    "new_installs_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"), Map("Users" -> 362))
   )
 
   val userMetrics = Map[String, MetricAuxInfo](
     "alive_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Users")),
     "active_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"))
+  )
+
+  val keepActivityMetrics = Map[String, MetricAuxInfo](
+    "keeps_daily" -> MetricAuxInfo("nothing yet", Map(
+      "0" -> "public",
+      "1" -> "private"
+    ))
   )
 
   val keepMetrics = Map[String, MetricAuxInfo](
@@ -54,6 +61,7 @@ class AdminAnalyticsController @Inject() (
   )
 
   val messageMetrics = Map[String, MetricAuxInfo](
+    "messagers_daily" -> MetricAuxInfo("nothing yet", Map()),
     "messagers_weekly" -> MetricAuxInfo("nothing yet", Map()),
     "message_breakdown_weekly" -> MetricAuxInfo("nothing yet", Map())
   )
@@ -74,13 +82,16 @@ class AdminAnalyticsController @Inject() (
     val userMetricsFuture = Future.sequence(userMetrics.toSeq.map{ case (metricName, auxInfo) =>
       heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
     })
+    val keepActivityMetricsFuture = Future.sequence(keepActivityMetrics.toSeq.map{ case (metricName, auxInfo) =>
+      heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
+    })
     val keepMetricsFuture = Future.sequence(keepMetrics.toSeq.map{ case (metricName, auxInfo) =>
       heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
     })
     val messageMetricsFuture = Future.sequence(messageMetrics.toSeq.map{ case (metricName, auxInfo) =>
       heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
     })
-    val dataFuture = Future.sequence(Seq(installMetricsFuture, userMetricsFuture, keepMetricsFuture, messageMetricsFuture))
+    val dataFuture = Future.sequence(Seq(installMetricsFuture, userMetricsFuture, keepActivityMetricsFuture, keepMetricsFuture, messageMetricsFuture))
 
 
     Async(dataFuture.map{ data =>
@@ -88,7 +99,7 @@ class AdminAnalyticsController @Inject() (
         Json.stringify(Json.toJson(sectionData))
       } 
       Ok(html.admin.analyticsDashboardView(    
-        jsonData(0), jsonData(1), jsonData(2), jsonData(3)
+        jsonData(0), jsonData(1), jsonData(2), jsonData(3), jsonData(4)
       ))
     })
   }
