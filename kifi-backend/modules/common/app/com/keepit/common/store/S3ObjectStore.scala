@@ -184,6 +184,7 @@ trait BlobFormat[B] {
 trait S3FileStore[A] extends S3ObjectStore[A, File] {
 
   val inbox: File
+  val useCompression: Boolean
   if (!inbox.exists()) inbox.mkdirs()
   require(inbox.isDirectory, s"$inbox is not a directory.")
 
@@ -194,18 +195,19 @@ trait S3FileStore[A] extends S3ObjectStore[A, File] {
     metadata.addUserMetadata("name", value.getName)
 
     val fileStream = new FileInputStream(value)
-    val compressedStream = new CompressedInputStream(fileStream)
+    val inputStream = if (useCompression) new CompressedInputStream(fileStream) else fileStream
 
-    (compressedStream, metadata)
+    (inputStream, metadata)
   }
 
   protected def unpackValue(s3obj: S3Object) = {
     val metadata = s3obj.getObjectMetadata
     val name = metadata.getUserMetadata.get("name")
     val file = new File(inbox, name)
-    val uncompressedStream = new GZIPInputStream(s3obj.getObjectContent)
-    Files.copy(uncompressedStream, file.toPath)
-    uncompressedStream.close()
+    val contentStream = s3obj.getObjectContent
+    val inputStream = if (useCompression) new GZIPInputStream(contentStream) else contentStream
+    Files.copy(inputStream, file.toPath)
+    inputStream.close()
     file
   }
 
@@ -213,9 +215,9 @@ trait S3FileStore[A] extends S3ObjectStore[A, File] {
     val toPipe = new PipedOutputStream()
     val fromPipe = new PipedInputStream(toPipe)
     val gzipOutputStream = new GZIPOutputStream(toPipe)
-    val buffer = new Array[Byte](1024)
-    var len: Int
     SafeFuture {
+      val buffer = new Array[Byte](1024)
+      var len = 0
       do {
         len = inputStream.read(buffer)
         gzipOutputStream.write(buffer, 0, len)
