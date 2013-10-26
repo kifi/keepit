@@ -1,4 +1,4 @@
-@(network: String, emailAddress: String, firstName: String = "", lastName: String = "", picturePath: String, triedToLoginWithNoAccount: Boolean)
+@(network: String, emailAddress: String, firstName: String = "", lastName: String = "", picturePath: String)
 
 @content = {
 <div class="curtain-l"></div>
@@ -6,11 +6,6 @@
 
 <h1 class="main-logo">kifi</h1>
 <h2 class="page-title">Finalize Your Account</h2>
-
-@if(triedToLoginWithNoAccount) {
-  <!-- You tried to login. You have no account. Silly! -->
-}
-
 
 <form class="signup-2 @if(network == "fortytwo") {signup-2-email} else {signup-2-social}" novalidate>
   @if(network == "fortytwo") {
@@ -44,8 +39,10 @@
 </form>
 }
 
-@postScript = {
-<script async defer>
+@scripts = {
+<script src="assets/js/jquery-ui-position.min.js"></script>
+<script src="assets/js/auth.js"></script>
+<script>
 $('body').addClass('curtains-drawn');
 setTimeout(function() {
   $('input').first().focus().select();
@@ -53,4 +50,4 @@ setTimeout(function() {
 </script>
 }
 
-@helper.page("kifi.com • Finalize Your Account", content, postScript)
+@helper.page(title = "kifi.com • Finalize Your Account", content = content, scripts = scripts)

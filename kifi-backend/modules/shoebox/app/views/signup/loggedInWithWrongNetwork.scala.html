@@ -1,0 +1,61 @@
+@(network: com.keepit.social.SocialNetworkType)
+
+@styles = {
+<style>
+.curtains-drawn {
+  text-align: center;
+}
+.curtains-drawn>p {
+  margin: 32px 0 48px;
+  line-height: 30px;
+}
+.button-sign-up,
+.button-sign-in {
+  padding: 20px;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+.button-sign-up {
+  background: #92c152;
+}
+.button-sign-up:hover {
+  background: #9dc763;
+}
+.button-sign-up:active {
+  background: #83ae4a;
+}
+.button-sign-in {
+  background: #84a2ec;
+}
+.button-sign-in:hover {
+  background: #90abee;
+}
+.button-sign-in:active {
+  background: #7792d4;
+}
+</style>
+}
+
+@content = {
+<div class="curtain-l"></div>
+<div class="curtain-r"></div>
+
+<h1 class="main-logo">kifi</h1>
+<h2 class="page-title">Account Not Found</h2>
+
+<p>
+  Hmmm... We’ve never seen this @network.displayName account before.<br>
+  Have you signed up with us before?
+</p>
+
+<a class="button-sign-up" href="@com.keepit.controllers.core.routes.AuthController.signupPage">I’m new here, sign me up!</a>
+<a class="button-sign-in" href="@com.keepit.controllers.core.routes.AuthController.signinPage">I already have a Kifi account</a>
+}
+
+@scripts = {
+<script>
+$('');
+</script>
+}
+
+@helper.page(styles = styles, bodyClass = "curtains-drawn", content = content, scripts = scripts)
