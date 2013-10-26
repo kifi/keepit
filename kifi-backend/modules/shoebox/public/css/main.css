@@ -63,7 +63,7 @@ body[data-view=profile] .my-pic::before { transition: none; animation-name: edit
 .my-friends>a>.view-name::before {width: 20px; margin-right: 8px; background-position: -62px 8px}
 .my-friends.active>a>.view-name::before {background-position: -42px 8px}
 #collections>h2 {margin-top: 15px; padding-bottom: 2px; border-bottom: 1px solid #dbdee3; position: relative}
-#collections>h2::before {content: " "; display: inline-block; height: 15px; width: 18px; margin: 0 8px 0 1px; background: url(../img/nav-icons.png) right bottom; background-size: auto 21px}
+#collections>h2::before {content: " "; display: inline-block; height: 21px; width: 17px; margin: 0 8px 0 1px; background: url(../img/nav-icons.png) right; background-size: auto 21px; vertical-align: text-bottom}
 #collections h3 {line-height: 39px}
 a.collection-create {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.collection-create:hover {background-color: #a0b1c2}
