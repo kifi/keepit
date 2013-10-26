@@ -73,7 +73,12 @@ class AdminAnalyticsController @Inject() (
     "results_clicked_daily" -> MetricAuxInfo("nothing yet", Map(
       "kifi_result_clicked" -> "Kifi Clicks",
       "search_result_clicked" -> "Other Clicks"
-    ))
+    )),
+    "total_searches_daily" -> MetricAuxInfo("nothing yet", Map(
+      "search_performed" -> "Total Searches",
+      "kifi_result_clicked" -> "Kifi Clicks",
+      "search_result_clicked" -> "Other Clicks"
+    ), totalable=false)
   )
 
   private def augmentMetricData(metricData: JsObject, auxInfo: MetricAuxInfo): JsObject = {
