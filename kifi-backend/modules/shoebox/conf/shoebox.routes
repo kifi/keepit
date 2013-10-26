@@ -23,6 +23,7 @@ POST    /authenticate/:provider     securesocial.controllers.ProviderController.
 # custom auth routes which set some session state
 
 # Standalone login page
+GET     /login/post                 @com.keepit.controllers.core.AuthController.postLogin()
 GET     /login/:provider            @com.keepit.controllers.core.AuthController.login(provider, format: String ?= "html")
 POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider, format: String ?= "html")
 POST    /login                      @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
@@ -265,7 +266,7 @@ POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthContr
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
-GET    /admin/users/initSeq          @com.keepit.controllers.admin.AdminUserController.initUserSeq()          
+GET    /admin/users/initSeq          @com.keepit.controllers.admin.AdminUserController.initUserSeq()
 
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])

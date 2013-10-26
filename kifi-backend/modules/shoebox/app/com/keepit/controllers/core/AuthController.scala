@@ -4,7 +4,7 @@ import scala.Some
 
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
-import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.{AuthenticatedRequest, WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -48,7 +48,8 @@ class AuthController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     emailRepo: EmailAddressRepo,
     userRepo: UserRepo,
-    postOffice: LocalPostOffice
+    postOffice: LocalPostOffice,
+    userValueRepo: UserValueRepo
   ) extends WebsiteController(actionAuthenticator) with Logging {
 
   // Note: some of the below code is taken from ProviderController in SecureSocial
@@ -76,6 +77,33 @@ class AuthController @Inject() (
   def login(provider: String, format: String) = getAuthAction(provider, AuthType.Login, format)
   def loginByPost(provider: String, format: String) = getAuthAction(provider, AuthType.Login, format)
   def loginWithUserPass(format: String) = getAuthAction("userpass", AuthType.Login, format)
+  def postLogin() = HtmlAction(true)(authenticatedAction = { implicit request =>
+    val linkWith = request.session.get(AuthController.LinkWithKey)
+    if (request.user.state == UserStates.PENDING) {
+      // User is pending!
+      Redirect("/")
+    } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
+      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
+    } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
+      Redirect(com.keepit.controllers.website.routes.HomeController.install())
+    } else {
+      Redirect(session.get(SecureSocial.OriginalUrlKey).getOrElse("/"))
+    }
+  }, unauthenticatedAction = { implicit request =>
+    val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
+    if (newSignup && request.identityOpt.isDefined) {
+
+      // TODO(andrew): Handle special case. User tried to log in (not sign up) with social network, email exists in system but social user doesn't.
+      //
+
+      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
+        .flashing("signin_error" -> "no_account")
+    }
+    else{
+      Redirect("/") // error??
+      //      Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
+    }
+  })
 
   def link(provider: String) = getAuthAction(provider, AuthType.Link)
   def linkByPost(provider: String) = getAuthAction(provider, AuthType.Link)
@@ -85,6 +113,15 @@ class AuthController @Inject() (
 
   // log in with username/password and link the account with a provider
   def passwordLoginAndLink(provider: String) = getAuthAction(provider, AuthType.LoginAndLink)
+
+  // --
+  // Utility methods
+  // --
+
+  private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
+    db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
+  }
+
 
   private def getSession(res: SimpleResult[_], originalUrl: Option[String] = None)
       (implicit request: RequestHeader): Session = {
@@ -96,7 +133,6 @@ class AuthController @Inject() (
 
   private def getAuthAction(provider: String, authType: AuthType, format: String = "html"): Action[AnyContent] = Action { request =>
     val augmentedRequest = augmentRequestWithTag(request, "format" -> format)
-
     val actualProvider = if (authType == AuthType.LoginAndLink) SocialNetworks.FORTYTWO.authProvider else provider
     ProviderController.authenticate(actualProvider)(augmentedRequest) match {
       case res: SimpleResult[_] =>
@@ -213,7 +249,7 @@ class AuthController @Inject() (
         Ok("user, no identity")
       case (None, Some(identity)) if hasEmail(identity) =>
         // No user exists, has identity and identity has an email in our records
-        // Bad login? Trying to discover when this state can happen, will get back to this.
+        // Happens when user tries to sign up, but account exists with email address which belongs to current user
         val error = request.flash.get("error").map { _ => "Login failed" }
         Ok("No user, identity, has email")
       case (None, Some(identity)) =>
@@ -410,5 +446,13 @@ class AuthController @Inject() (
         Redirect(routes.AuthController.resetPasswordPage())
       }
     }
+  }
+
+  //def sdf() = actionAuthenticator.authenticatedAction(true, allowPending, parse.tolerantJson, authenticatedAction, unauthenticatedAction)
+  def uploadBinaryPicture() = JsonAction(true, parse.temporaryFile)(authenticatedAction = doUploadBinaryPicture(_), unauthenticatedAction = doUploadBinaryPicture(_))
+  def doUploadBinaryPicture(implicit request: Request[play.api.libs.Files.TemporaryFile]): Result = {
+    request.body
+
+    Ok
   }
 }
