@@ -2,8 +2,8 @@
 
 @admin("Analytics Overview"){
   <h2>Users</h2>
-  @analyticsView(installData, "install", "sum")
-  @analyticsView(userData, "user", "simple")
+  @analyticsView(installData, "install", "sum", 1, "merged", "Total Invites sent vs. total unique users with the extension installed")
+  @analyticsView(userData, "user", "simple", 1, "merged", "Connected unique users vs. active (message,keep,kifi search result click) unique users by week")
   <h2>Keeping</h2>
   @analyticsView(keepActivityData, "keep_activity", "simple")
   @analyticsView(keepData, "keep", "simple")
@@ -12,5 +12,4 @@
   @analyticsView(messageData, "message", "simple")
   <h2>Search</h2>
   @analyticsView(searchData, "simple")
-
 }
