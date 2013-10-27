@@ -157,7 +157,7 @@ class UsefulPageListener @Inject() (
         val normUrl = normalizedURIRepo.getByUri(url)
         (user, url, normUrl)
       }
-      normUrl.foreach(n => searchClient.logBrowsed(user.id.get, n.id.get))
+      normUrl.foreach(n => searchClient.logBrowsingHistory(user.id.get, n.id.get))
   }
 }
 

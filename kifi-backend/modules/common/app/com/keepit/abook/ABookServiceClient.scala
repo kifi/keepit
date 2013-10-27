@@ -2,7 +2,7 @@ package com.keepit.abook
 
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.model.{ABookInfo => ABookInfo, ABookRawInfo, ABookOriginType, ContactInfo, User}
+import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
@@ -25,6 +25,7 @@ trait ABookServiceClient extends ServiceClient {
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
+  def getContacts(userId:Id[User], maxRows:Int):Future[Seq[Contact]]
   def getContactInfos(userId:Id[User], maxRows:Int):Future[Seq[ContactInfo]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getContactsRawInfo(userId:Id[User], origin:ABookOriginType):Future[Seq[ContactInfo]]
@@ -57,6 +58,12 @@ class ABookServiceClientImpl @Inject() (
   def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = {
     call(ABook.internal.getABookInfos(userId)).map { r =>
       Json.fromJson[Seq[ABookInfo]](r.json).get
+    }
+  }
+
+  def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = {
+    call(ABook.internal.getContacts(userId, maxRows)).map { r =>
+      Json.fromJson[Seq[Contact]](r.json).get
     }
   }
 
@@ -94,6 +101,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   def upload(userId: Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {}
 
   def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = ???
+
+  def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = ???
 
   def getContactInfos(userId: Id[User], maxRows:Int): Future[Seq[ContactInfo]] = ???
 

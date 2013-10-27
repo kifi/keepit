@@ -60,6 +60,7 @@ var notifier = function() {
           showForMs: o.showForMs || 60000,
           clickAction: function(e) {
             api.port.emit("set_global_read", {noticeId: o.id});
+            var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
             if (o.url && o.url !== document.URL) {
               if (inThisTab) {
                 window.location = o.url;
