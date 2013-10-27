@@ -57,7 +57,7 @@ class UserIndexer(
     try {
       val info = getUsersInfo(fetchSize)
       var cnt = successCount
-      addUsersInfoToIndex(info, commitBatchSize)
+      indexDocuments(info.toIterator.map{x => buildIndexable(x.user, x.basicUser, x.emails)}, commitBatchSize)
       successCount - cnt
     } catch {
       case e: Throwable =>
@@ -81,14 +81,10 @@ class UserIndexer(
       emails <- emailsFuture
     } yield {
       assert(userIds.size == basicUsers.size && userIds.size == emails.size)
-      (0 to userIds.size).map{i => UserInfo(users(i), basicUsers.get(userIds(i)).get, emails.get(userIds(i)).get)}
+      (0 until userIds.size).map{i => UserInfo(users(i), basicUsers.get(userIds(i)).get, emails.get(userIds(i)).get)}
     }
     
     Await.result(infoFuture, 180 seconds)
-  }
-  
-  def addUsersInfoToIndex(info: Seq[UserInfo], commitBatchSize: Int) = {
-    indexDocuments(info.toIterator.map{x => buildIndexable(x.user, x.basicUser, x.emails)}, commitBatchSize)
   }
   
   def buildIndexable(user: User, basicUser: BasicUser, emails: Seq[String]): UserIndexable = {
@@ -118,7 +114,7 @@ class UserIndexer(
       val userNameField = buildTextField(FULLNAME_FIELD, user.firstName + " " + user.lastName, analyzer)
       doc.add(userNameField)
       
-      val emailField = buildIteratorField[String](EMAILS_FIELD, emails.toIterator)(x => x)
+      val emailField = buildIteratorField[String](EMAILS_FIELD, emails.map{_.toLowerCase}.toIterator)(x => x)
       doc.add(emailField)
       
       val basicUserField = buildBinaryDocValuesField(BASIC_USER_FIELD, BasicUser.toByteArray(basicUser))

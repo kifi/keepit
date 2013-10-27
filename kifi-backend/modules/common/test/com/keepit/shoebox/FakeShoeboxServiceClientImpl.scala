@@ -53,8 +53,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   private val commentIdCounter = new AtomicInteger(0)
   private def nextCommentId() = { Id[Comment](commentIdCounter.incrementAndGet()) }
+  
+  private val emailIdCounter = new AtomicInteger(0)
+  private def nextEmailId = Id[EmailAddress](emailIdCounter.incrementAndGet())
 
   // Fake sequence counters
+  
+  private val userSeqCounter = new AtomicInteger(0)
+  private def nextUserSeqNum() = SequenceNumber(userSeqCounter.incrementAndGet())
 
   private val uriSeqCounter = new AtomicInteger(0)
   private def nextUriSeqNum() = { SequenceNumber(uriSeqCounter.incrementAndGet()) }
@@ -83,13 +89,15 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allSearchExperiments = MutableMap[Id[SearchConfigExperiment], SearchConfigExperiment]()
   val allComments = MutableMap[Id[Comment], Comment]()
   val allCommentRecipients = MutableMap[Id[Comment], Set[CommentRecipient]]()
+  val allEmails = MutableMap[Id[EmailAddress], EmailAddress]()
+  val allUserEmails = MutableMap[Id[User], Seq[EmailAddress]]()
 
   // Fake data initialization methods
 
   def saveUsers(users: User*): Seq[User] = {
     users.map {user =>
       val id = user.id.getOrElse(nextUserId())
-      val updatedUser = user.withId(id)
+      val updatedUser = user.withId(id).copy(seq = nextUserSeqNum)
       allUsers(id) = updatedUser
       allUserExternalIds(updatedUser.externalId) = updatedUser
       updatedUser
@@ -188,6 +196,15 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     allCommentRecipients(id) = commentRecipients
     updatedComment
   }
+  
+  def saveEmails(emails: EmailAddress*) = {
+    emails.map{ email =>
+      val id = email.id.getOrElse(nextEmailId)
+      val emailWithId = email.copy(id = Some(id))
+      allEmails(id) = emailWithId
+      allUserEmails(emailWithId.userId) = allUserEmails.getOrElse(emailWithId.userId, Nil) :+ emailWithId
+    }
+  }
 
   // ShoeboxServiceClient methods
 
@@ -283,7 +300,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(basicUsers)
   }
   
-  def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = ???
+  def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
+    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address}}.toMap
+    Future.successful(m)
+  }
 
 
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
@@ -325,7 +345,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(fewerUris)
   }
   
-  def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = ???
+  def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = {
+    val users = allUsers.values.filter(_.seq.value > seqNum).toSeq.sortBy(_.seq.value).take(fetchSize)
+    Future.successful(users)
+  }
 
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = {
     val bookmark = allUserBookmarks(userId).map(allBookmarks(_)).find(_.uriId == uriId)
