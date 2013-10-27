@@ -44,6 +44,7 @@ case class SocialUserInfo(
     case SocialNetworks.FACEBOOK => Some(s"http://facebook.com/$socialId")
     case _ => None
   })
+  override def toString(): String = s"SocialUserInfo[Id=$id,User=$userId,Name=$fullName,network=$networkType]"
 }
 
 object SocialUserInfo {
