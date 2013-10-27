@@ -160,7 +160,7 @@ class MessagingController @Inject() (
   }
 
   def sendGlobalNotification() = Action(parse.json) { request =>
-    Async(SafeFuture {
+    SafeFuture {
       val data : JsObject = request.body.asInstanceOf[JsObject]
 
       val userIds  : Set[Id[User]] =  (data \ "userIds").as[JsArray].value.map(v => v.asOpt[Long].map(Id[User](_))).flatten.toSet
@@ -173,8 +173,8 @@ class MessagingController @Inject() (
 
       createGlobalNotificaiton(userIds, title, body, linkText, linkUrl, imageUrl, sticky)
 
-      Ok("")
-    })
+    }
+    Status(202)
   }
 
   def verifyAllNotifications() = Action { request => //Use with caution, very expensive!
