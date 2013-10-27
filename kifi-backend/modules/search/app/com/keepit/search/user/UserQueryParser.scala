@@ -15,9 +15,8 @@ import java.io.StringReader
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 
 class UserQueryParser(
-  analyzer: Analyzer,
-  stemmingAnalyzer: Analyzer
-) extends QueryParser(analyzer, stemmingAnalyzer) {
+  analyzer: Analyzer
+) extends QueryParser(analyzer, analyzer) {
   
   override val fields: Set[String] = Set.empty[String]
   
@@ -49,15 +48,14 @@ class UserQueryParser(
     ts.reset()
 
     val termAttr = ts.getAttribute(classOf[CharTermAttribute])
-
-    val booleanQuery = new BooleanQuery
+    val bq = new BooleanQuery
 
     while (ts.incrementToken) {
-      val termQuery = new PrefixQuery(new Term(UserIndexer.FULLNAME_FIELD, new String(termAttr.buffer(), 0, termAttr.length())))
-      booleanQuery.add(termQuery, Occur.MUST)
+      val tq = new PrefixQuery(new Term(UserIndexer.FULLNAME_FIELD, new String(termAttr.buffer(), 0, termAttr.length())))
+      bq.add(tq, Occur.MUST)
     }
 
-    if (booleanQuery.clauses.size > 0) Some(booleanQuery) else None
+    if (bq.clauses.size > 0) Some(bq) else None
   }
   
   override protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query] = ???

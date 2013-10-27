@@ -12,9 +12,12 @@ import play.api.test.Helpers._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
+import org.apache.lucene.search.TermQuery
+import org.apache.lucene.index.Term
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.google.inject.{Inject}
 import collection.JavaConversions._
+
 
 class UserIndexerTest extends Specification with ApplicationInjector {
   private def setup(implicit client: FakeShoeboxServiceClientImpl) = {
@@ -52,16 +55,15 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     running(new DeprecatedSearchApplication().withShoeboxServiceModule){
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
-      client.allUsers.values.foreach{ u => println(u)}
       val indexer = mkUserIndexer()
       indexer.run(100, 100)
       val searcher = indexer.getSearcher
       val analyzer = DefaultAnalyzer.defaultAnalyzer
-      val parser = new UserQueryParser(analyzer, analyzer)
+      val parser = new UserQueryParser(analyzer)
       var query = parser.parse("wood")
-      searcher.search(query.get).seq.size == 1
+      searcher.search(query.get).seq.size === 1
       query = parser.parse("woody      all")
-      searcher.search(query.get).seq.size == 1
+      searcher.search(query.get).seq.size === 1
 
       query = parser.parse("firstNa")
       searcher.search(query.get).seq.size === 4
@@ -73,14 +75,30 @@ class UserIndexerTest extends Specification with ApplicationInjector {
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
       val indexer = mkUserIndexer()
-      indexer.run(100, 100)
+      indexer.run()
       val searcher = indexer.getSearcher
       val analyzer = DefaultAnalyzer.defaultAnalyzer
-      val parser = new UserQueryParser(analyzer, analyzer)
+      val parser = new UserQueryParser(analyzer)
       val query = parser.parse("woody.allen@gmail.com")
       searcher.search(query.get).seq.size === 1
+      searcher.search(query.get).seq.head.id === 5
       val query2 = parser.parse("user1@42go.com")
       searcher.search(query2.get).seq.size === 1
+    }
+    
+    "store and retreive correct info" in {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule){
+        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        setup(client)
+        val indexer = mkUserIndexer()
+        indexer.run()
+        indexer.numDocs === 5
+        val searcher = indexer.getSearcher
+       
+        val doc = searcher.search(new TermQuery(new Term("_ID", 1.toString))).seq.head
+        doc.id === 1
+        searcher.doc(1).getField("_ID") === null      // why?
+      }
     }
   }
   

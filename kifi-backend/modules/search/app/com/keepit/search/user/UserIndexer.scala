@@ -51,6 +51,8 @@ class UserIndexer(
   val commitBatchSize = 500
   val fetchSize = 5000
   
+  def run(): Int = run(commitBatchSize, fetchSize)
+  
   def run(commitBatchSize: Int, fetchSize: Int): Int = {
     resetSequenceNumberIfReindex()
     
