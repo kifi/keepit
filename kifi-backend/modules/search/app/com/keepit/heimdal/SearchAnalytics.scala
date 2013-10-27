@@ -77,7 +77,7 @@ class SearchAnalytics @Inject() (
 
     val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, userId))
     val contextBuilder = userEventContextBuilder()
-    contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
+    obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
     contextBuilder += ("resultSource", resultSource.toString)
     contextBuilder += ("resultPosition", resultPosition)
     contextBuilder += ("kifiResults", kifiResults)
@@ -101,7 +101,7 @@ class SearchAnalytics @Inject() (
 
     val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, userId))
     val contextBuilder = userEventContextBuilder()
-    contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
+    obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
     contextBuilder += ("resultPosition", resultPosition)
     bookmarkCount.foreach { count => contextBuilder += ("bookmarkCount", count) }
     usersShown.foreach { count => contextBuilder += ("usersShown", count) }
@@ -125,7 +125,7 @@ class SearchAnalytics @Inject() (
 
     val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, userId))
     val contextBuilder = userEventContextBuilder()
-    contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
+    obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
     contextBuilder += ("kifiResults", kifiResults)
     contextBuilder += ("kifiResultsClicked", kifiResultsClicked)
