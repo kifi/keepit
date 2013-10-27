@@ -29,18 +29,18 @@ class SearchEventController @Inject() (
       case Kifi => searchAnalytics.kifiResultClicked(userId, queryUUID, searchExperiment, resultPosition, None, None, resultClicked.isUserKeep, None, kifiResults, None, time)
       case theOtherGuys => searchAnalytics.searchResultClicked(userId, queryUUID, searchExperiment, theOtherGuys, resultPosition, kifiResults, None, time)
     }
-    Ok()
+    Ok
   }
 
   def logSearchEnded = Action(parse.json) { request =>
     val searchEnded = Json.fromJson[SearchEnded](request.body).get
     searchAnalytics.searchEnded(searchEnded.userId, searchEnded.queryUUID, searchEnded.searchExperiment, searchEnded.kifiResults, searchEnded.kifiResultsClicked, searchEnded.googleResultsClicked, None, searchEnded.time)
-    Ok()
+    Ok
   }
 
   def logBrowsingHistory(userId: Id[User]) = Action(parse.json) { request =>
     val browsedUris = request.body.as[JsArray].value.map(Id.format[NormalizedURI].reads)
     browsedUris.foreach(uriIdJs => browsingHistoryTracker.add(userId, BrowsedURI(uriIdJs.get)))
-    Ok()
+    Ok
   }
 }
