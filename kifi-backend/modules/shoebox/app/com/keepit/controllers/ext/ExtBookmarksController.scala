@@ -182,7 +182,7 @@ class ExtBookmarksController @Inject() (
           val experiments = request.experiments
           val user = db.readOnly { implicit s => userRepo.get(userId) }
           val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
-          searchClient.logBrowsingHistory(userId, bookmarks.map(_.uriId): _*)
+          searchClient.updateBrowsingHistory(userId, bookmarks.map(_.uriId): _*)
           searchClient.updateURIGraph()
 
           //Analytics
