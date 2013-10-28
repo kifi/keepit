@@ -30,27 +30,36 @@
       });
       datum.data = newData; 
     });
-  }
+  };
+
+  function addTotal(rawData){
+    _.forEach(rawData.data, function(frame){
+      var total = 0;
+      _.forEach(frame.data, function(subtotal){
+        total += subtotal;
+      });
+      frame.data.total=total;
+    });
+  };
 
   var rawData = @Html(data);
-  chartData["@name"] = @Html(data);
+  chartData["@name"] = rawData;
+
+  //extract all keys
   var keys = {}
+  _.forEach(rawData, function(metric){
+    keys[metric.header] = discoverKeys(metric.data, metric.legend);
+    if (keys[metric.header].length===0){ 
+      keys[metric.header].push(datum.legend['null'] || 'null'); 
+    };
+  });
+
   _.forEach(rawData, function(datum){
     var val = datum.data;
     var desc = datum.header;
-    keys[desc] = discoverKeys(val, datum.legend);
-    if (keys[desc].length===0){
-      keys[desc].push(datum.legend['null'] || 'null');
-    }
     objectify(val, datum.legend);
     if (keys[desc].length>1 && datum.totalable){
-      _.forEach(val, function(frame){
-        var total = 0;
-        _.forEach(frame.data, function(subtotal){
-          total += subtotal;
-        });
-        frame.data.total=total;
-      });
+      addTotal(datum);
       keys[desc].push("total"); 
     };
     if ("@display" != "merged"){
@@ -58,10 +67,11 @@
       chartParent.append($('<div>', {id: "@name" + desc, style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
     };
   });
+
   if ("@display"==="merged"){
     var chartParent = $("#chart_container_@name");
     chartParent.append($('<div>', {id: "chart_@name", style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
-  }
+  };
 
   google.setOnLoadCallback(drawAndRedraw);
 
