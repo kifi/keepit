@@ -9,7 +9,7 @@ import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.{PutObjectResult, ObjectMetadata}
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
@@ -25,6 +25,8 @@ import scala.util.Success
 import java.io.{ByteArrayOutputStream, ByteArrayInputStream, File}
 import javax.imageio.ImageIO
 import org.apache.commons.lang3.RandomStringUtils
+import java.awt.image.BufferedImage
+import com.keepit.common.KestrelCombinator
 
 object S3UserPictureConfig {
   val ImageSizes = Seq(100, 200)
@@ -45,8 +47,8 @@ trait S3ImageStore {
   // Returns (token, urlOfTempImage)
   def uploadTemporaryPicture(file: File): Try[(String, String)]
 
-  // Returns Success(urlOfUserPicture) or Failure(ex)
-  def copyTempFileToUserPic(userExtId: ExternalId[User], token: String): Try[String]
+  // Returns Some(urlOfUserPicture) or None
+  def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String): Option[String]
 
   def avatarUrlByExternalId(w: Option[Int], userId: ExternalId[User], picName: String, protocolDefault: Option[String] = None): String = {
     val size = S3UserPictureConfig.ImageSizes.find(size => w.exists(size >= _)).map(_.toString).getOrElse(S3UserPictureConfig.OriginalImageSize)
@@ -153,23 +155,7 @@ class S3ImageStoreImpl @Inject() (
       })
       future onComplete {
         case Success(_) =>
-          db.readWrite { implicit s =>
-            val user = userRepo.get(sui.userId.get)
-            if (user.userPictureId.isEmpty || user.pictureName.isEmpty || user.pictureName.get != pictureName) {
-              val userPicture = userPictureRepo.save(UserPicture(userId = sui.userId.get, name = pictureName, origin = UserPictureSource(sui.networkType.name)))
-
-              user.userPictureId match {
-                case Some(prevId) => // User has a picture set
-                  val prevPic = userPictureRepo.get(prevId)
-                  if (prevPic.origin.name == sui.networkType.name) { // User currently is using this social network's picture
-                    userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id))
-                    userPictureRepo.save(userPictureRepo.get(prevId).withState(UserPictureStates.INACTIVE))
-                  }
-                case None => // User has no picture set
-                  userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id))
-              }
-            }
-          }
+          updateUserPictureRecord(sui.userId.get, pictureName, UserPictureSource(sui.networkType.name))
         case Failure(e) =>
           airbrake.notify(AirbrakeError(
             exception = e,
@@ -180,8 +166,27 @@ class S3ImageStoreImpl @Inject() (
     }
   }
 
-  def uploadTemporaryPicture(file: File): Try[(String, String)] = {
-    Try {
+  private def updateUserPictureRecord(userId: Id[User], pictureName: String, source: UserPictureSource) = {
+    db.readWrite { implicit s =>
+      val user = userRepo.get(userId)
+      if (user.userPictureId.isEmpty || user.pictureName.isEmpty || user.pictureName.get != pictureName) {
+        val userPicture = userPictureRepo.save(UserPicture(userId = userId, name = pictureName, origin = source))
+
+        user.userPictureId match {
+          case Some(prevId) => // User has a picture set
+            val prevPic = userPictureRepo.get(prevId)
+            if (prevPic.origin.name == source.name) { // User currently is using this social network's picture
+              userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id))
+              userPictureRepo.save(userPictureRepo.get(prevId).withState(UserPictureStates.INACTIVE))
+            }
+          case None => // User has no picture set
+            userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id))
+        }
+      }
+    }
+  }
+
+  def uploadTemporaryPicture(file: File): Try[(String, String)] = Try {
       val bufImage = ImageIO.read(file)
 
       val os = new ByteArrayOutputStream()
@@ -190,44 +195,65 @@ class S3ImageStoreImpl @Inject() (
 
       val om = new ObjectMetadata()
       om.setContentType("image/jpeg")
+      om.setContentLength(os.size())
       val token = RandomStringUtils.randomAlphanumeric(10)
       val path = tempPath(token)
-      val s3obj = s3Client.putObject(config.bucketName, s"$path.jpg", is, om)
+      val s3obj = s3Client.putObject(config.bucketName, s"$path", is, om)
 
       is.close()
       os.close()
-      (token, s"${config.cdnBase}/$path.jpg")
-    }
+      (token, s"${config.cdnBase}/$path")
   }
 
-  def copyTempFileToUserPic(userExtId: ExternalId[User], token: String): Try[String] = {
-    def getAndResizeImage(token: String) = Try {
+  def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String): Option[String] = {
+    def getImage(token: String) = Try {
       val obj = s3Client.getObject(config.bucketName, tempPath(token))
-      val bufImage = ImageIO.read(obj.getObjectContent)
-      S3UserPictureConfig.sizes.map { size =>
-        val resized = ImageUtils.resizeImage(bufImage, size)
-        (size, resized._2, resized._1)
-      }
+      ImageIO.read(obj.getObjectContent)
     }
-    def uploadImage(filename: String, imageSize: ImageSize, is: ByteArrayInputStream, contentLength: Int) = Try {
+    def uploadUserImage(filename: String, imageSizeName: String, is: ByteArrayInputStream, contentLength: Int) = Try {
       val om = new ObjectMetadata()
       om.setContentType("image/jpeg")
-      val key = keyByExternalId(imageSize.width.toString, userExtId, filename)
+      om.setContentLength(contentLength)
+
+      val key = keyByExternalId(imageSizeName, userExtId, filename)
       s3Client.putObject(config.bucketName, key, is, om)
       key
     }
-
-    val newFilename = UserPicture.generateNewFilename + ".jpg"
-    getAndResizeImage(token).map { fetchResult =>
-      fetchResult.map { case (imageSize, is, contentLength) =>
-        uploadImage(newFilename, imageSize, is, contentLength)
-      }.foldLeft(Failure[String](new Exception("No images")).asInstanceOf[Try[String]]) { case (res, elem) =>
-        if (res.isSuccess && elem.isFailure) elem
-        else res
+    def resizeAndUpload(newFilename: String, bufferedImage: BufferedImage) = {
+      S3UserPictureConfig.sizes.map { size =>
+        Try(ImageUtils.resizeImage(bufferedImage, size)).map { case (contentLength, is) =>
+          uploadUserImage(newFilename, size.width.toString, is, contentLength)
+        }.flatten match {
+          case Success(res) => Some(res)
+          case Failure(ex) =>
+            airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to resize/upload ${size.width} picture $newFilename from S3")))
+            None
+        }
       }
-    }.flatten.map { success =>
-      avatarUrlByExternalId(Some(S3UserPictureConfig.ImageSizes.last), userExtId, newFilename)
     }
 
+    val newFilename = UserPicture.generateNewFilename
+    val uploadOriginalResult = getImage(token) match {
+      case Success(bufferedImage) =>
+        val (origContentLength, origInputStream) = ImageUtils.bufferedImageToInputStream(bufferedImage)
+        uploadUserImage(newFilename, "original", origInputStream, origContentLength) match {
+          case Success(res) =>
+            val resizedImageResults = resizeAndUpload(newFilename, bufferedImage)
+            resizedImageResults.find(_.isDefined).map { hadASuccess =>
+              updateUserPictureRecord(userId, newFilename, UserPictureSources.USER_UPLOAD)
+              hadASuccess
+            }.flatten
+          case Failure(ex) =>
+            airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to upload original picture $newFilename ($origContentLength) from S3")))
+            None
+        }
+      case Failure(ex) =>
+        airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to fetch picture $newFilename from S3")))
+        None
+    }
+
+    uploadOriginalResult.map { success =>
+      avatarUrlByExternalId(Some(S3UserPictureConfig.ImageSizes.last), userExtId, newFilename)
+    }
   }
 }

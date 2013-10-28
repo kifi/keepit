@@ -15,4 +15,9 @@ object ImageUtils {
 
     (os.size(), new ByteArrayInputStream(os.toByteArray()))
   }
+  def bufferedImageToInputStream(image: BufferedImage) = {
+    val os = new ByteArrayOutputStream()
+    ImageIO.write(image, "jpeg", os)
+    (os.size(), new ByteArrayInputStream(os.toByteArray()))
+  }
 }
