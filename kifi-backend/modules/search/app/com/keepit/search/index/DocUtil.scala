@@ -1,7 +1,9 @@
 package com.keepit.search.index
 
 import com.keepit.common.time._
+import com.keepit.search.graph.CollectionIdList
 import com.keepit.search.graph.URIList
+import com.keepit.search.graph.Util
 import com.keepit.search.line.LineField
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
@@ -76,13 +78,29 @@ object DocUtil {
       def toString(ids: Array[Long], timestamps: Array[Long]) = {
         ids.zip(timestamps).map{ case (id, timestamp) =>
           seqno += 1
-          "#%d: %d [%s]".format(seqno, id, new DateTime(URIList.unitToMillis(timestamp), DEFAULT_DATE_TIME_ZONE).toStandardTimeString)
+          "#%d: %d [%s]".format(seqno, id, new DateTime(Util.unitToMillis(timestamp), DEFAULT_DATE_TIME_ZONE).toStandardTimeString)
         }.mkString(", ")
       }
       val binaryValue = indexableField.binaryValue
       val uriList = URIList(binaryValue.bytes, binaryValue.offset, binaryValue.length)
       val printable = toString(uriList.ids, uriList.createdAt)
       "version=%d [%s]".format(uriList.version, printable)
+    }
+  }
+
+  object CollectionIdListDecoder extends FieldDecoder {
+    override def apply(indexableField: IndexableField): String = {
+      var seqno = -1
+      def toString(ids: Array[Long]) = {
+        ids.map{ id =>
+          seqno += 1
+          "#%d: %d".format(seqno, id)
+        }.mkString(", ")
+      }
+      val binaryValue = indexableField.binaryValue
+      val idList = CollectionIdList(binaryValue.bytes, binaryValue.offset, binaryValue.length)
+      val printable = toString(idList.ids)
+      "version=%d [%s]".format(idList.version, printable)
     }
   }
 

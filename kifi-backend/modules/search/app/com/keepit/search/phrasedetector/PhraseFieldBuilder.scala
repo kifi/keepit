@@ -17,13 +17,13 @@ import org.apache.lucene.util.Version
 trait PhraseFieldBuilder {
   def buildPhraseField(fieldName: String, text: String, lang: Lang) = {
     val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
-    new Field(fieldName, new PhraseTokenStream(fieldName, text, analyzer), Indexable.textFieldTypeNoNorm)
+    new Field(fieldName, new PhraseTokenStream(fieldName, text, analyzer, removeSingleTerms = true), Indexable.textFieldTypeNoNorm)
   }
 }
 
 // encodes position and the phrase end flag into posIncr. (lucene's payload is too expensive)
 // (pos >> 1) gives the real position, (pos & 0x1) == 1 means the phrase end
-class PhraseTokenStream(field: String, text: String, analyzer: Analyzer) extends TokenStream {
+class PhraseTokenStream(field: String, text: String, analyzer: Analyzer, removeSingleTerms: Boolean) extends TokenStream {
   private[this] val termAttr = addAttribute(classOf[CharTermAttribute])
   private[this] val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
 
@@ -49,7 +49,7 @@ class PhraseTokenStream(field: String, text: String, analyzer: Analyzer) extends
       termAttr.append(baseTermAttr)
 
       more = baseTokenStream.incrementToken()
-      if (cnt == 1 && !more) {
+      if (cnt == 1 && !more && removeSingleTerms) {
         // this is not a phrase since this is the first token (cnt == 1) and there is no more token
         // don't bother emitting a single token
         false

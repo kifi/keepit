@@ -168,7 +168,7 @@ object UserToUriEdgeSet {
       override protected val longArraySet = set
       override protected def createdAtByIndex(idx:Int): Long = {
         val datetime = uriList.createdAt(idx)
-        URIList.unitToMillis(datetime)
+        Util.unitToMillis(datetime)
       }
       override protected def isPublicByIndex(idx: Int): Boolean = isPublicEdgeSet
     }
@@ -188,7 +188,7 @@ object UserToUriEdgeSet {
         override protected val longArraySet = set
         override protected def createdAtByIndex(idx:Int): Long = {
           val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
-          URIList.unitToMillis(datetime)
+          Util.unitToMillis(datetime)
         }
         override protected def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
       }
@@ -207,7 +207,7 @@ object UserToUriEdgeSet {
       override protected val longArraySet = set
       override protected def createdAtByIndex(idx:Int): Long = {
         val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
-        URIList.unitToMillis(datetime)
+        Util.unitToMillis(datetime)
       }
       override protected def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
       override protected def bookmarkIdByIndex(idx: Int): Long = bookmarkIds(idx)
