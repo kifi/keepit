@@ -8,7 +8,7 @@ GET     /search/comment             @com.keepit.controllers.ext.ExtCommentSearch
 # INTERNAL ROUTES/Search
 POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()
 POST    /internal/search/events/searchEnded @com.keepit.controllers.search.SearchEventController.logSearchEnded()
-POST    /internal/search/events/browsed/:userId @com.keepit.controllers.search.SearchEventController.logBrowsingHistory(userId: Id[User])
+POST    /internal/search/events/browsed/:userId @com.keepit.controllers.search.SearchEventController.updateBrowsingHistory(userId: Id[User])
 
 GET     /internal/search/comment/info         @com.keepit.controllers.search.CommentIndexerController.indexInfo()
 GET     /internal/search/comment/reindex      @com.keepit.controllers.search.CommentIndexerController.reindex()
