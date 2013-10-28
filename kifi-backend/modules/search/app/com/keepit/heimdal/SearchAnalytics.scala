@@ -79,7 +79,7 @@ class SearchAnalytics @Inject() (
     val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, userId))
     val contextBuilder = userEventContextBuilder()
     obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
-    contextBuilder += ("resultSource", resultSource.toString)
+    contextBuilder += ("searchEngine", resultSource.toString)
     contextBuilder += ("resultPosition", resultPosition)
     contextBuilder += ("kifiResults", kifiResults)
     kifiCollapsed.foreach { collapsed => contextBuilder += ("kifiCollapsed", collapsed) }
