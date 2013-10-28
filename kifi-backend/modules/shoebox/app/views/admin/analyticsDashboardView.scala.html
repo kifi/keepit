@@ -1,15 +1,15 @@
-@(installData: String, userData: String, keepActivityData: String, keepData: String, messageData: String, searchData: String)
+@(data: Map[String, String])
 
 @admin("Analytics Overview"){
   <h2>Users</h2>
-  @analyticsView(installData, "install", "sum", 1, "merged", "Total Invites sent vs. total unique users with the extension installed")
-  @analyticsView(userData, "user", "simple", 1, "merged", "Connected unique users vs. active (message,keep,kifi search result click) unique users by week")
+  @analyticsView(data("installMetrics"), "install", "sum", 1, "merged", "Total Invites sent vs. total unique users with the extension installed")
+  @analyticsView(data("userMetrics"), "user", "simple", 1, "merged", "Connected unique users vs. active (message,keep,kifi search result click) unique users by week")
   <h2>Keeping</h2>
-  @analyticsView(keepActivityData, "keep_activity", "simple")
-  @analyticsView(keepData, "keep", "simple")
-  @analyticsView(keepData, "keep_sum", "sum", 7)
+  @analyticsView(data("keepActivityMetrics"), "keep_activity", "simple")
+  @analyticsView(data("keepMetrics"), "keep", "simple")
+  @analyticsView(data("keepMetrics"), "keep_sum", "sum", 7)
   <h2>Messaging</h2>
-  @analyticsView(messageData, "message", "simple")
+  @analyticsView(data("messageMetrics"), "message", "simple")
   <h2>Search</h2>
-  @analyticsView(searchData, "simple")
+  @analyticsView(data("searchMetrics"), "simple")
 }
