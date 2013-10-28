@@ -15,10 +15,7 @@ import com.google.inject.Inject
 import com.google.inject.Singleton
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.ErrorMessage.toErrorMessage
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time.Clock
@@ -55,20 +52,20 @@ class S3ScreenshotStoreImpl @Inject() (
     db: Database,
     s3Client: AmazonS3,
     normUriRepo: NormalizedURIRepo,
-    healthcheckPlugin: HealthcheckPlugin,
+    airbrake: AirbrakeNotifier,
     clock: Clock,
     val config: S3ImageConfig
   ) extends S3ScreenshotStore with Logging {
-  
+
   val screenshotConfig = ScreenshotConfig("c", Seq(ScreenshotSize(1000, 560), ScreenshotSize(500, 280), ScreenshotSize(250, 140)))
   val linkedSize = ScreenshotSize(500, 280) // which size to link to, by default; todo: user configurable
-  
+
   val code = "abf9cd2751"
-    
+
   def screenshotUrl(url: String): String = screenshotUrl(screenshotConfig.imageCode, code, url)
   def screenshotUrl(sizeName: String, code: String, url: String): String =
     s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=60&refresh=1"
-  
+
   def urlByExternalId(extNormalizedURIId: ExternalId[NormalizedURI], protocolDefault: Option[String] = None): String = {
     val uri = URI.parse(s"${config.cdnBase}/${keyByExternalId(extNormalizedURIId, linkedSize)}").get
     URI(uri.scheme orElse protocolDefault, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString
@@ -76,7 +73,7 @@ class S3ScreenshotStoreImpl @Inject() (
 
   def keyByExternalId(extNormId: ExternalId[NormalizedURI], size: ScreenshotSize): String =
     s"screenshot/$extNormId/${size.width}x${size.height}.jpg"
-  
+
   def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): Option[String] =
     normalizedUriOpt.flatMap(getScreenshotUrl)
 
@@ -93,7 +90,7 @@ class S3ScreenshotStoreImpl @Inject() (
       }
     }
   }
-  
+
   private def resizeImage(rawImage: BufferedImage, size: ScreenshotSize) = {
     val resized = Try { Scalr.resize(rawImage, Math.max(size.height, size.width)) }
     val os = new ByteArrayOutputStream()
@@ -115,29 +112,29 @@ class S3ScreenshotStoreImpl @Inject() (
             Statsd.increment(s"screenshot.fetch.fails")
             None
           case _ =>
-            
+
             val originalStream = response.getAHCResponse.getResponseBodyAsStream
             val rawImageTry = Try { ImageIO.read(originalStream) }
-            
+
             val resizedImages = screenshotConfig.targetSizes.map { size =>
               for {
                 rawImage <- rawImageTry
                 resized <- Try { resizeImage(rawImage, size) }
               } yield (resized._1, resized._2, size)
             }
-            
+
             val storedObjects = resizedImages map { case resizeAttempt =>
               resizeAttempt match {
                 case Success((contentLength, imageStream, size)) =>
                   Statsd.increment(s"screenshot.fetch.successes")
-                  
+
                   val om = new ObjectMetadata()
                   om.setContentType("image/jpeg")
                   om.setContentLength(contentLength)
                   val key = keyByExternalId(externalId, size)
                   val s3obj = s3Client.putObject(config.bucketName, key, imageStream, om)
                   log.info(s"Uploading screenshot of $url to S3 key $key")
-                  
+
                   imageStream.close
                   Some(s3obj)
                 case Failure(ex) =>
@@ -147,18 +144,17 @@ class S3ScreenshotStoreImpl @Inject() (
                       // This happens when the image stream is null, coming from javax.imageio.ImageIO
                       log.warn(s"null image for $url. Will retry later.")
                     case _ =>
-                      healthcheckPlugin.addError(HealthcheckError(
-                        error = Some(ex),
-                        callType = Healthcheck.INTERNAL,
-                        errorMessage = Some(s"Problem resizing screenshot image from $url. ")
+                      airbrake.notify(AirbrakeError(
+                        exception = ex,
+                        message = Some(s"Problem resizing screenshot image from $url")
                       ))
                   }
                   None
               }
             }
-            
+
             originalStream.close()
-            
+
             Some(storedObjects)
         }
       }
@@ -173,10 +169,9 @@ class S3ScreenshotStoreImpl @Inject() (
             }
           }
         case Failure(e) =>
-          healthcheckPlugin.addError(HealthcheckError(
-            error = Some(e),
-            callType = Healthcheck.INTERNAL,
-            errorMessage = Some(s"Failed to upload url screenshot ($url) to S3")
+          airbrake.notify(AirbrakeError(
+            exception = e,
+            message = Some(s"Failed to upload url screenshot ($url) to S3")
           ))
       }
       future

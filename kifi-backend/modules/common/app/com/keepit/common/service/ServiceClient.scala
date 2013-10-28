@@ -58,7 +58,7 @@ trait ServiceClient extends Logging {
       case ex: Throwable =>
         airbrakeNotifier.notify(AirbrakeError(
           exception = ex,
-          message = Some(s"can't call service with body: $body and params: call.params"),
+          message = Some(s"can't call service with body: ${body.toString.abbreviate(30)} and params: ${call.params}"),
           method = Some(call.method.toString),
           url = Some(call.path)))
     }

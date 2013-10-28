@@ -46,7 +46,7 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
             e.printStackTrace
             if (!firstErrorReported) {
               firstErrorReported = true
-              val he = healthcheck.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage)))
+              val he = healthcheck.addError(AirbrakeError(e, message = Some("Fail to send airbrake message")))
               log.error(s"can't deal with error: $he")
             }
           }
@@ -67,7 +67,7 @@ class AirbrakeSender @Inject() (
     {
       case ex: Exception => if (!firstErrorReported) {
         firstErrorReported = true
-        val he = healthcheck.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        val he = healthcheck.addError(AirbrakeError(ex, message = Some("Fail to send airbrake message")))
         log.error(s"can't deal with error: $he")
       }
     }

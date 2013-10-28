@@ -1,0 +1,36 @@
+@(title: String = "kifi.com", styles: Html = Html(""), bodyClass: String = "", content: Html = Html(""), scripts: Html = Html(""))
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+<!--
+   __  Made with_love by: _
+  / _|         | |       | |
+ | |_ ___  _ __| |_ _   _| |___      _____
+ |  _/ _ \| '__| __| | | | __\ \ /\ / / _ \
+ | || (_) | |  | |_| |_| | |_ \ V  V / (_) |
+ |_| \___/|_|   \__|\__, |\__| \_/\_/ \___/
+   We're hiring      __/ |    Join us:
+   great engineers! |___/     42go.com
+-->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>@title</title>
+  <meta name="viewport" content="width=device-width">
+  <script>if (/^Mac/.test(navigator.platform)) document.documentElement.className = 'mac'</script>
+  <link rel="stylesheet" href="assets/css/normalize.css">
+  <link rel="stylesheet" href="assets/css/auth.css">
+  <link rel="shortcut icon" type="image/png" href="assets/images/kifi-favi-50.png">
+  @styles
+</head>
+<body@if(bodyClass != ""){ class="@bodyClass"}>
+@content
+<footer>
+  <a target="_blank" class="us-on linkedin" href="https://www.facebook.com/pages/FortyTwo-Inc/296283190485254"></a>
+  <a target="_blank" class="us-on facebook" href="https://www.linkedin.com/company/2759913"></a>
+  <a target="_blank" class="us-on twitter" href="https://twitter.com/42eng"></a>
+  <div class="copyright">&copy; FortyTwo Inc 2013</div>
+  <a class="contact-us" href="mailto:towel@@42go.com">Contact us</a>
+</footer>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script>this.$||document.write('<script src=assets/js/jquery.min.js><\/script>')</script>
+@scripts
+</body>

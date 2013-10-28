@@ -9,6 +9,7 @@ import com.keepit.common.akka.AlertingActor
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
+import com.keepit.common.strings._
 
 import play.api.Mode._
 
@@ -23,7 +24,7 @@ import play.api.mvc._
 import AirbrakeError.MaxMessageSize
 
 case class ErrorWithStack(error: Throwable, stack: Seq[StackTraceElement]) {
-  override def toString(): String = error.toString.take(MaxMessageSize)
+  override def toString(): String = error.toString.abbreviate(MaxMessageSize)
   val cause: Option[ErrorWithStack] = Option(error.getCause).map(e => ErrorWithStack(e))
   val rootCause: ErrorWithStack = cause.map(c => c.rootCause).getOrElse(this)
 }
@@ -99,7 +100,11 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
       <message>{
         val instance = serviceDiscovery.thisInstance
         val leader = serviceDiscovery.isLeader()
-        s"[${instance.map(_.id.id).getOrElse("NA")}${if(leader) "L" else "_"}]${message.getOrElse("")} ${error.rootCause.error.toString()}".trim
+        val errorString = error.rootCause.error match {
+          case _: DefaultAirbrakeException => ""
+          case e: Throwable => e.toString()
+        }
+        s"[${instance.map(_.id.id).getOrElse("NA")}${if(leader) "L" else "_"}]${message.getOrElse("")} ${errorString}".trim
         }</message>
       <backtrace>
         { formatStacktrace(error) ++ formatCauseStacktrace(error.cause) }

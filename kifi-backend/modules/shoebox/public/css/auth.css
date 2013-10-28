@@ -11,7 +11,6 @@ html.mac {
 }
 body {
   position: relative;
-  min-height: 640px;
   background-color: #f3f3f3;
 }
 a:link,
@@ -30,11 +29,12 @@ input[type=password] {
   border: 0;
   padding: 0 1em;
   line-height: 130%;
+  -webkit-font-smoothing: antialiased;
 }
 /* curtains */
 .curtain-l,
 .curtain-r {
-  position: absolute;
+  position: fixed;
   z-index: 10;
   top: 0;
   height: 100%;
@@ -71,50 +71,28 @@ input[type=password] {
 .curtain-logo-l,
 .curtain-logo-r {
   position: absolute;
-  z-index: 10;
   top: 70px;
-  width: 50%;
   height: 144px;
-  text-align: center;
-  -webkit-transition: clip 0.42s ease-out, visibility 0.42s;
-  -moz-transition: clip 0.42s ease-out, visibility 0.42s;
-  -o-transition: clip 0.42s ease-out, visibility 0.42s;
-  -ms-transition: clip 0.42s ease-out, visibility 0.42s;
-  transition: clip 0.42s ease-out, visibility 0.42s;
+  background: url(../img/out/auth.png) no-repeat;
+  -webkit-transition: opacity 0.21s ease-out;
+  -moz-transition: opacity 0.21s ease-out;
+  -o-transition: opacity 0.21s ease-out;
+  -ms-transition: opacity 0.21s ease-out;
+  transition: opacity 0.21s ease-out;
 }
 .curtain-logo-l {
-  left: 0;
-}
-.curtain-logo-r {
   right: 0;
-}
-.curtains-drawn > .curtain-logo-l,
-.curtains-drawn > .curtain-logo-r {
-  visibility: hidden;
-  -webkit-transition: clip 0.42s ease-out, visibility 0s 0.42s;
-  -moz-transition: clip 0.42s ease-out, visibility 0s 0.42s;
-  -o-transition: clip 0.42s ease-out, visibility 0s 0.42s;
-  -ms-transition: clip 0.42s ease-out, visibility 0s 0.42s;
-  transition: clip 0.42s ease-out, visibility 0s 0.42s;
-}
-.curtain-logo-l:before,
-.curtain-logo-r:before {
-  content: ' ';
-  font-size: 0;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: url(../img/out/login.png) no-repeat;
-}
-.curtain-logo-l:before {
-  right: 0;
-  width: 126px;
+  width: 144px;
   background-position: -2px -2px;
 }
-.curtain-logo-r:before {
+.curtain-logo-r {
   left: 0;
-  width: 125px;
-  background-position: -128px -2px;
+  width: 107px;
+  background-position: -146px -2px;
+}
+.curtains-drawn .curtain-logo-l,
+.curtains-drawn .curtain-logo-r {
+  opacity: 0;
 }
 .curtain-welcome {
   position: absolute;
@@ -131,6 +109,7 @@ input[type=password] {
   line-height: 32px;
   color: #fff;
   font-weight: 300;
+  -webkit-font-smoothing: antialiased;
   white-space: nowrap;
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -176,23 +155,19 @@ input[type=password] {
 }
 .curtain-action {
   position: absolute;
-  top: 360px;
+  top: 20%;
+  margin-top: 220px;
   padding: 32px 0 38px;
   width: 284px;
   text-align: center;
   -webkit-font-smoothing: antialiased;
   color: #fff;
   font-size: 18px;
-  -webkit-transition: opacity 0.42s, visibility 0.42s;
-  -moz-transition: opacity 0.42s, visibility 0.42s;
-  -o-transition: opacity 0.42s, visibility 0.42s;
-  -ms-transition: opacity 0.42s, visibility 0.42s;
-  transition: opacity 0.42s, visibility 0.42s;
 }
-.curtain-action.signup {
+.curtain-signup {
   right: 8%;
 }
-.curtain-action.login {
+.curtain-login {
   left: 8%;
 }
 .curtain-action:hover {
@@ -203,7 +178,36 @@ input[type=password] {
 .curtains-drawn .curtain-action:hover {
   background-color: rgba(0, 0, 0, 0.08);
 }
-.curtains-drawn .curtain-action {
+.curtain-a-title {
+  font-size: 32px;
+  line-height: 42px;
+  font-weight: 300;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.curtain-note {
+  position: absolute;
+  top: 20%;
+  margin-top: 340px;
+  padding: 32px 0 38px;
+  width: 284px;
+  right: 8%;
+  color: #fff;
+  font-size: 14px;
+  line-height: 17px;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+}
+.curtain-action,
+.curtain-note {
+  -webkit-transition: opacity 0.42s, visibility 0.42s;
+  -moz-transition: opacity 0.42s, visibility 0.42s;
+  -o-transition: opacity 0.42s, visibility 0.42s;
+  -ms-transition: opacity 0.42s, visibility 0.42s;
+  transition: opacity 0.42s, visibility 0.42s;
+}
+.curtains-drawn .curtain-action,
+.curtains-drawn .curtain-note {
   -webkit-transition: opacity 0.42s, visibility 0s 0.42s;
   -moz-transition: opacity 0.42s, visibility 0s 0.42s;
   -o-transition: opacity 0.42s, visibility 0s 0.42s;
@@ -212,35 +216,30 @@ input[type=password] {
   opacity: 0;
   visibility: hidden;
 }
-.curtain-a-title {
-  font-size: 32px;
-  line-height: 42px;
-  font-weight: 300;
-  text-transform: uppercase;
-  margin-bottom: 5px;
-}
 /* back button */
 .curtain-back {
-  position: absolute;
-  top: 62px;
-  left: 36px;
-  width: 64px;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 16.5%;
   z-index: 10;
+  padding-top: 56px;
   font-size: 24px;
   line-height: 32px;
   text-align: center;
   visibility: hidden;
   opacity: 0;
-  -webkit-transform: translate(-110px, 0);
-  -moz-transform: translate(-110px, 0);
-  -o-transform: translate(-110px, 0);
-  -ms-transform: translate(-110px, 0);
-  transform: translate(-110px, 0);
-  -webkit-transition: visibility 0s 0.42s, opacity 0.42s linear, -webkit-transform 0.42s ease-out;
-  -moz-transition: visibility 0s 0.42s, opacity 0.42s linear, -moz-transform 0.42s ease-out;
-  -o-transition: visibility 0s 0.42s, opacity 0.42s linear, -o-transform 0.42s ease-out;
-  -ms-transition: visibility 0s 0.42s, opacity 0.42s linear, -ms-transform 0.42s ease-out;
-  transition: visibility 0s 0.42s, opacity 0.42s linear, transform 0.42s ease-out;
+  -webkit-transform: translate(-100%, 0);
+  -moz-transform: translate(-100%, 0);
+  -o-transform: translate(-100%, 0);
+  -ms-transform: translate(-100%, 0);
+  transform: translate(-100%, 0);
+  -webkit-transition: visibility 0s 0.42s, opacity 0.42s ease-in, -webkit-transform 0.42s ease-out;
+  -moz-transition: visibility 0s 0.42s, opacity 0.42s ease-in, -moz-transform 0.42s ease-out;
+  -o-transition: visibility 0s 0.42s, opacity 0.42s ease-in, -o-transform 0.42s ease-out;
+  -ms-transition: visibility 0s 0.42s, opacity 0.42s ease-in, -ms-transform 0.42s ease-out;
+  transition: visibility 0s 0.42s, opacity 0.42s ease-in, transform 0.42s ease-out;
 }
 .curtains-drawn > .curtain-back {
   visibility: visible;
@@ -257,10 +256,11 @@ input[type=password] {
 }
 .curtain-back:before {
   content: ' ';
-  display: inline-block;
+  display: block;
   height: 42px;
   width: 42px;
-  background: url(../img/out/login.png) -2px -328px;
+  margin: 0 auto;
+  background: url(../img/out/auth.png) -2px -328px;
   position: relative;
   left: 2px;
 }
@@ -294,20 +294,20 @@ footer {
   height: 32px;
   width: 32px;
   margin-left: 5px;
-  background: url(../img/out/login.png);
+  background: url(../img/out/auth.png);
   opacity: .5;
 }
 .us-on:hover {
   opacity: 1;
 }
 .us-on.facebook {
-  background-position: -36px -292px;
+  background-position: -36px -294px;
 }
 .us-on.linkedin {
-  background-position: -2px -292px;
+  background-position: -2px -294px;
 }
 .us-on.twitter {
-  background-position: -70px -292px;
+  background-position: -70px -294px;
 }
 .copyright {
   line-height: 30px;
@@ -326,8 +326,10 @@ footer {
   height: 144px;
   margin: 0 auto;
   padding-top: 70px;
-  background: url(../img/out/login.png) -2px -148px content-box;
+  background: url(../img/out/auth.png) -2px -148px content-box;
   text-indent: -9999px;
+  position: relative;
+  left: -10px;
 }
 .page-title {
   margin: 4px 0;
@@ -335,6 +337,7 @@ footer {
   line-height: 44px;
   font-size: 38px;
   font-weight: 300;
+  -webkit-font-smoothing: antialiased;
   color: #aaa;
   opacity: 0;
   -webkit-transform: translate(0, -70%);
@@ -395,15 +398,12 @@ footer {
   line-height: 14px;
 }
 /* forms */
-.signup-form,
-.login-form {
+.signup,
+.login {
   display: none;
   text-align: center;
   margin: 0 16.5%;
   position: relative;
-}
-.signup-form.finalize-static {
-  display: block;
 }
 .form-sides {
   display: table;
@@ -475,7 +475,7 @@ footer {
   font-size: 0;
   height: 32px;
   width: 32px;
-  background-image: url(../img/out/login.png);
+  background-image: url(../img/out/auth.png);
 }
 .facebook > .form-network-icon:before {
   background-position: -187px -294px;
@@ -490,6 +490,7 @@ footer {
   text-align: left;
   color: #fff;
   font-weight: 300;
+  -webkit-font-smoothing: antialiased;
   padding-right: 16px;
 }
 .form-email-addr,
@@ -507,7 +508,7 @@ footer {
   height: 40px;
   line-height: 40px;
   text-align: center;
-  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
 }
 .form-submit:hover {
   background: #9dc763;
@@ -515,26 +516,25 @@ footer {
 .form-submit:active {
   background: #83ae4a;
 }
-.form-terms {
+.terms {
   font-weight: 300;
   font-size: 14px;
   line-height: 18px;
   color: #515151;
 }
 /* finalize new account */
-.finalize {
+.signup-2 {
+  text-align: center;
+}
+.signup > .signup-2 {
+  visibility: hidden;
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  text-align: center;
-  visibility: hidden;
 }
-.finalize-email-addr {
-  display: none;
-}
-.finalize-static>.finalize-email-addr {
-  display: block;
-  margin: 28px 0 20px;
+.static-email-addr {
+  margin: 24px 0 20px;
 }
 .form-creds,
 .form-name,
@@ -582,13 +582,11 @@ footer {
 }
 .form-photo-progress {
   position: absolute;
+  top: 0;
   bottom: 0;
-  left: 0;
-  width: 0;
-  height: 5px;
-  border-style: solid;
-  border-color: transparent #85a4ea transparent #9fc062;
-  border-width: 0;
+  left: 100%;
+  right: 0;
+  background: rgba(255, 255, 255, 0.8);
 }
 .form-photo-controls {
   overflow: hidden;
@@ -624,9 +622,9 @@ footer {
   background-color: #2379b1;
 }
 .form-photo-a.upload {
-  background-color: #888888;
   margin-bottom: 0;
   cursor: pointer;
+  background-color: #888888;
 }
 .form-photo-a.upload:hover {
   background-color: #949494;
@@ -642,7 +640,7 @@ footer {
   left: 10px;
   height: 16px;
   width: 16px;
-  background: url(../img/out/login.png);
+  background: url(../img/out/auth.png);
 }
 .form-photo-a.facebook:before {
   background-position: -201px -328px;
@@ -681,15 +679,15 @@ footer {
   color: #555;
   border-color: #bbb;
 }
-.form-submit-final {
+.signup-2 > .form-submit {
   margin: 20px auto 40px;
   width: 200px;
   background: #84a2ec;
 }
-.form-submit-final:hover {
+.signup-2 > .form-submit:hover {
   background: #90abee;
 }
-.form-submit-final:active {
+.signup-2 > .form-submit:active {
   background: #7792d4;
 }
 /* finalize transition */
@@ -772,7 +770,7 @@ footer {
   -ms-transform: translate(100%, 0);
   transform: translate(100%, 0);
 }
-.finalize {
+.signup > .signup-2 {
   visibility: hidden;
   opacity: 0;
   -webkit-transform: translate(0, 60px);
@@ -786,7 +784,7 @@ footer {
   -ms-transition: opacity 0.24s linear, -ms-transform 0.24s ease-out;
   transition: opacity 0.24s linear, transform 0.24s ease-out;
 }
-.finalizing .finalize {
+.finalizing .signup-2 {
   visibility: visible;
   opacity: 1;
   -webkit-transform: none;
@@ -795,7 +793,7 @@ footer {
   -ms-transform: none;
   transform: none;
 }
-.finalizing .form-terms {
+.finalizing .terms {
   -webkit-transform: translate(0, 20px);
   -moz-transform: translate(0, 20px);
   -o-transform: translate(0, 20px);
@@ -816,11 +814,11 @@ footer {
   .main-logo,
   .form-network-icon:before,
   .form-photo-a:before {
-    background-image: url(../img/out/login.2x.png);
+    background-image: url(../img/out/auth.2x.png);
     background-size: 255px auto;
   }
   .form-photo {
     background-image: url(../img/out/ghost.200.png);
-    background-size: 100px auto;
+    background-size: cover;
   }
 }

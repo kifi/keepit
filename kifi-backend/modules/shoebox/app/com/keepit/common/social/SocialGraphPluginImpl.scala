@@ -80,7 +80,7 @@ private[social] class SocialGraphActor @Inject() (
         db.readWrite { implicit c =>
           socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
         }
-        throw new Exception(s"Problem updating SocialUserInfo: $socialUserInfo", ex)
+        throw new Exception(s"Error updating SocialUserInfo: ${socialUserInfo.id}, ${socialUserInfo.fullName}", ex)
     }
   }
 }

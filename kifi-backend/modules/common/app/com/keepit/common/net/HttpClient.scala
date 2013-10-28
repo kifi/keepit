@@ -111,7 +111,7 @@ case class HttpClientImpl(
           AirbrakeError.outgoing(
             exception = fullException,
             request = req.req,
-            message = s"[${remoteServiceString(req)}] calling ${req.url} after ${al.duration}ms"
+            message = s"[${remoteServiceString(req)}] calling ${req.httpUri.summary} after ${al.duration}ms"
           )
         )
     }
@@ -196,7 +196,7 @@ case class HttpClientImpl(
         statusCode = res.res.status))
 
     e.waitTime map {waitTime =>
-      if (waitTime > 100) {//ms
+      if (waitTime > 1000) {//ms
         val exception = request.tracer.withCause(LongWaitException(request.httpUri, res.res, waitTime))
         airbrake.get.notify(
           AirbrakeError.outgoing(

@@ -132,20 +132,8 @@ class AuthController @Inject() (
     (Some(_))
   )
 
-  private val registrationInfoForm = Form[RegistrationInfo](
-    mapping(
-      "email" -> email.verifying("Email is invalid", email => db.readOnly { implicit s =>
-        userCredRepo.findByEmailOpt(email).isEmpty
-      }),
-      "firstname" -> nonEmptyText,
-      "lastname" -> nonEmptyText,
-      "password" -> tuple("1" -> nonEmptyText, "2" -> nonEmptyText)
-        .verifying("Passwords do not match", pw => pw._1 == pw._2).transform(_._1, (a: String) => (a, a))
-        .verifying(Constraints.minLength(7))
-    )
-    (RegistrationInfo.apply)
-    (RegistrationInfo.unapply)
-  )
+  // TODO: something different if already logged in?
+  def signinPage() = HtmlAction(true)(authenticatedAction = doLoginPage(_), unauthenticatedAction = doLoginPage(_))
 
   // Finalize account
   def signupPage() = HtmlAction(true)(authenticatedAction = doFinalizePage(_), unauthenticatedAction = doFinalizePage(_))
@@ -178,10 +166,10 @@ class AuthController @Inject() (
               Authenticator.create(identity).fold(
                 error => Status(500)("0"),
                 authenticator => {
-                  val needsToFinalize = db.readOnly { implicit session =>
-                    userRepo.get(sui.userId.get).state == UserStates.INCOMPLETE_SIGNUP
+                  val finalized = db.readOnly { implicit session =>
+                    userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
                   }
-                  Ok(Json.obj("success"-> true, "email" -> email, "new_account" -> false, "needsToFinalize" -> needsToFinalize))
+                  Ok(Json.obj("success"-> true, "email" -> email, "new_account" -> false, "finalized" -> finalized))
                     .withNewSession
                     .withCookies(authenticator.toCookie)
                 }
@@ -196,7 +184,7 @@ class AuthController @Inject() (
             error => Status(500)("0"),
             authenticator =>
               Ok(Json.obj("success"-> true, "email" -> email, "new_account" -> true))
-                .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
+                .withNewSession
                 .withCookies(authenticator.toCookie)
           )
         }
@@ -204,6 +192,9 @@ class AuthController @Inject() (
     )
   }
 
+  private def doLoginPage(implicit request: Request[_]): Result = {
+    Ok(views.html.signup.auth("login"))
+  }
 
   private def doFinalizePage(implicit request: Request[_]): Result = {
     def hasEmail(identity: Identity): Boolean = db.readOnly { implicit s =>
@@ -216,8 +207,9 @@ class AuthController @Inject() (
         Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
       case (Some(user), Some(identity)) =>
         // User exists, is incomplete
-        Ok(views.html.signup.finalizeEmail(
-          email = identity.email.getOrElse(""),
+        Ok(views.html.signup.finalize(
+          network = SocialNetworks.FORTYTWO.name,
+          emailAddress = identity.email.getOrElse(""),
           picturePath = identity.avatarUrl.getOrElse("")
         ))
       case (Some(user), None) =>
@@ -229,12 +221,18 @@ class AuthController @Inject() (
         // Bad login? Trying to discover when this state can happen, will get back to this.
         val error = request.flash.get("error").map { _ => "Login failed" }
         Ok("No user, identity, has email")
+      case (None, Some(identity)) if request.flash.get("signin_error").exists(_ == "no_account") =>
+        // No user exists, social login was attempted. Let user choose what to do next.
+        Ok(views.html.signup.loggedInWithWrongNetwork(
+          network = SocialNetworkType(identity.identityId.providerId)
+        ))
       case (None, Some(identity)) =>
-        // No user exists, so is social
-        Ok(views.html.signup.finalizeSocial(
-          firstName = identity.firstName,
-          lastName = identity.lastName,
-          email = identity.email.getOrElse(""),
+        // No user exists, must finalize
+        Ok(views.html.signup.finalize(
+          network = SocialNetworkType(identity.identityId.providerId).name,
+          firstName = User.sanitizeName(identity.firstName),
+          lastName = User.sanitizeName(identity.lastName),
+          emailAddress = identity.email.getOrElse(""),
           picturePath = identity.avatarUrl.getOrElse("")
         ))
       case (None, None) =>
@@ -313,7 +311,7 @@ class AuthController @Inject() (
     Authenticator.create(newIdentity).fold(
       error => Status(500)("0"),
       authenticator => Ok
-        .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId)
+        .withNewSession
         .withCookies(authenticator.toCookie)
     )
   }
@@ -324,7 +322,6 @@ class AuthController @Inject() (
 
   private val url = current.configuration.getString("application.baseUrl").get
 
-
   private def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
       email: String, passwordInfo: PasswordInfo,
       firstName: String = "", lastName: String = "", isComplete: Boolean = true): UserIdentity = {
@@ -332,9 +329,9 @@ class AuthController @Inject() (
       userId = userIdOpt,
       socialUser = SocialUser(
         identityId = IdentityId(email, SocialNetworks.FORTYTWO.authProvider),
-        firstName = if (isComplete || firstName.nonEmpty) firstName else email,
-        lastName = lastName,
-        fullName = s"$firstName $lastName",
+        firstName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email),
+        lastName = User.sanitizeName(lastName),
+        fullName = User.sanitizeName(s"$firstName $lastName"),
         email = Some(email),
         avatarUrl = GravatarHelper.avatarFor(email),
         authMethod = AuthenticationMethod.UserPassword,

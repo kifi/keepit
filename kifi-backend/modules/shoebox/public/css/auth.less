@@ -22,7 +22,6 @@ html.mac {
 }
 body {
   position: relative;
-  min-height: 640px;
   background-color: #f3f3f3;
 }
 a:link,
@@ -39,6 +38,7 @@ input[type=password] {
   border: 0;
   padding: 0 1em;
   line-height: 130%;
+  -webkit-font-smoothing: antialiased;
 }
 
 @kifi-green: #9fc062;
@@ -48,7 +48,7 @@ input[type=password] {
 @curtain-time: .42s;
 .curtain-l,
 .curtain-r {
-  position: absolute;
+  position: fixed;
   z-index: 10;
   top: 0;
   height: 100%;
@@ -74,42 +74,24 @@ input[type=password] {
 .curtain-logo-l,
 .curtain-logo-r {
   position: absolute;
-  z-index: 10;
   top: 70px;
-  width: 50%;
   height: 144px;
-  text-align: center;
-  .transition(clip @curtain-time ease-out, visibility @curtain-time);
+  background: url(../img/out/auth.png) no-repeat;
+  .transition(opacity (@curtain-time / 2) ease-out);
 }
 .curtain-logo-l {
-  left: 0;
-}
-.curtain-logo-r {
   right: 0;
-}
-.curtains-drawn>.curtain-logo-l,
-.curtains-drawn>.curtain-logo-r {
-  visibility: hidden;
-  .transition(clip @curtain-time ease-out, visibility 0s @curtain-time);
-}
-.curtain-logo-l:before,
-.curtain-logo-r:before {
-  content: ' ';
-  font-size: 0;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: url(../img/out/login.png) no-repeat;
-}
-.curtain-logo-l:before {
-  right: 0;
-  width: 126px;
+  width: 144px;
   background-position: -2px -2px;
 }
-.curtain-logo-r:before {
+.curtain-logo-r {
   left: 0;
-  width: 125px;
-  background-position: -128px -2px;
+  width: 107px;
+  background-position: -146px -2px;
+}
+.curtains-drawn .curtain-logo-l,
+.curtains-drawn .curtain-logo-r {
+  opacity: 0;
 }
 .curtain-welcome {
   position: absolute;
@@ -126,6 +108,7 @@ input[type=password] {
   line-height: 32px;
   color: #fff;
   font-weight: 300;
+  -webkit-font-smoothing: antialiased;
   white-space: nowrap;
   .box-sizing(border-box);
   .transition(opacity @curtain-time, visibility @curtain-time, transform @curtain-time ease-out);
@@ -153,19 +136,19 @@ input[type=password] {
 }
 .curtain-action {
   position: absolute;
-  top: 360px;
+  top: 20%;
+  margin-top: 220px;
   padding: 32px 0 38px;
   width: 284px;
   text-align: center;
   -webkit-font-smoothing: antialiased;
   color: #fff;
   font-size: 18px;
-  .transition(opacity @curtain-time, visibility @curtain-time);
 }
-.curtain-action.signup {
+.curtain-signup {
   right: 8%;
 }
-.curtain-action.login {
+.curtain-login {
   left: 8%;
 }
 .curtain-action:hover {
@@ -176,11 +159,6 @@ input[type=password] {
 .curtains-drawn .curtain-action:hover {
   background-color: rgba(0, 0, 0, .08);
 }
-.curtains-drawn .curtain-action {
-  .transition(opacity @curtain-time, visibility 0s @curtain-time);
-  opacity: 0;
-  visibility: hidden;
-}
 .curtain-a-title {
   font-size: 32px;
   line-height: 42px;
@@ -188,21 +166,46 @@ input[type=password] {
   text-transform: uppercase;
   margin-bottom: 5px;
 }
+.curtain-note {
+  position: absolute;
+  top: 20%;
+  margin-top: 340px;
+  padding: 32px 0 38px;
+  width: 284px;
+  right: 8%;
+  color: #fff;
+  font-size: 14px;
+  line-height: 17px;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+}
+.curtain-action,
+.curtain-note {
+  .transition(opacity @curtain-time, visibility @curtain-time);
+}
+.curtains-drawn .curtain-action,
+.curtains-drawn .curtain-note {
+  .transition(opacity @curtain-time, visibility 0s @curtain-time);
+  opacity: 0;
+  visibility: hidden;
+}
 
 /* back button */
 .curtain-back {
-  position: absolute;
-  top: 62px;
-  left: 36px;
-  width: 64px;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 16.5%;
   z-index: 10;
+  padding-top: 56px;
   font-size: 24px;
   line-height: 32px;
   text-align: center;
   visibility: hidden;
   opacity: 0;
-  .translate(-110px);
-  .transition(visibility 0s @curtain-time, opacity @curtain-time linear, transform @curtain-time ease-out);
+  .translate(-100%);
+  .transition(visibility 0s @curtain-time, opacity @curtain-time ease-in, transform @curtain-time ease-out);
 }
 .curtains-drawn>.curtain-back {
   visibility: visible;
@@ -212,10 +215,11 @@ input[type=password] {
 }
 .curtain-back:before {
   content: ' ';
-  display: inline-block;
+  display: block;
   height: 42px;
   width: 42px;
-  background: url(../img/out/login.png) -2px -328px;
+  margin: 0 auto;
+  background: url(../img/out/auth.png) -2px -328px;
   position: relative;
   left: 2px;
 }
@@ -250,20 +254,20 @@ footer {
   height: 32px;
   width: 32px;
   margin-left: 5px;
-  background: url(../img/out/login.png);
+  background: url(../img/out/auth.png);
   opacity: .5;
 }
 .us-on:hover {
   opacity: 1;
 }
 .us-on.facebook {
-  background-position: -36px -292px;
+  background-position: -36px -294px;
 }
 .us-on.linkedin {
-  background-position: -2px -292px;
+  background-position: -2px -294px;
 }
 .us-on.twitter {
-  background-position: -70px -292px;
+  background-position: -70px -294px;
 }
 .copyright {
   line-height: 30px;
@@ -283,8 +287,10 @@ footer {
   height: 144px;
   margin: 0 auto;
   padding-top: 70px;
-  background: url(../img/out/login.png) -2px -148px content-box;
+  background: url(../img/out/auth.png) -2px -148px content-box;
   text-indent: -9999px;
+  position: relative;
+  left: -10px;
 }
 .page-title {
   margin: 4px 0;
@@ -292,6 +298,7 @@ footer {
   line-height: 44px;
   font-size: 38px;
   font-weight: 300;
+  -webkit-font-smoothing: antialiased;
   color: #aaa;
   opacity: 0;
   .translate(0, -70%);
@@ -339,15 +346,12 @@ footer {
 }
 
 /* forms */
-.signup-form,
-.login-form {
+.signup,
+.login {
   display: none;
   text-align: center;
   margin: 0 16.5%;
   position: relative;
-}
-.signup-form.finalize-static {
-  display: block;
 }
 .form-sides {
   display: table;
@@ -417,7 +421,7 @@ footer {
   font-size: 0;
   height: 32px;
   width: 32px;
-  background-image: url(../img/out/login.png);
+  background-image: url(../img/out/auth.png);
 }
 .facebook>.form-network-icon:before {
   background-position: -187px -294px;
@@ -432,6 +436,7 @@ footer {
   text-align: left;
   color: #fff;
   font-weight: 300;
+  -webkit-font-smoothing: antialiased;
   padding-right: 16px;
 }
 .form-email-addr,
@@ -450,7 +455,7 @@ footer {
   height: 40px;
   line-height: 40px;
   text-align: center;
-  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
 }
 .form-submit:hover {
   background: tint(@primary-button-color, 10%);
@@ -458,7 +463,7 @@ footer {
 .form-submit:active {
   background: shade(@primary-button-color, 10%);
 }
-.form-terms {
+.terms {
   font-weight: 300;
   font-size: 14px;
   line-height: 18px;
@@ -466,15 +471,18 @@ footer {
 }
 
 /* finalize new account */
-.finalize {
+.signup-2 {
+  text-align: center;
+}
+.signup>.signup-2 {
+  visibility: hidden;
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  text-align: center;
-  visibility: hidden;
 }
-.finalize-email-addr {
-  display: none;
+.static-email-addr {
+  margin: 24px 0 20px;
 }
 .form-creds,
 .form-name,
@@ -514,13 +522,11 @@ footer {
 }
 .form-photo-progress {
   position: absolute;
+  top: 0;
   bottom: 0;
-  left: 0;
-  width: 0;
-  height: 5px;
-  border-style: solid;
-  border-color: transparent @kifi-blue transparent @kifi-green;
-  border-width: 0;
+  left: 100%;
+  right: 0;
+  background: rgba(255,255,255,.8);
 }
 .form-photo-controls {
   overflow: hidden;
@@ -539,33 +545,33 @@ footer {
 }
 .form-photo-a.facebook {
   background-color: @facebook-color;
-}
-.form-photo-a.facebook:hover {
-  background-color: tint(@facebook-color, 10%);
-}
-.form-photo-a.facebook:active {
-  background-color: shade(@facebook-color, 10%);
+  &:hover {
+    background-color: tint(@facebook-color, 10%);
+  }
+  &:active {
+    background-color: shade(@facebook-color, 10%);
+  }
 }
 .form-photo-a.linkedin {
   background-color: @linkedin-color;
-}
-.form-photo-a.linkedin:hover {
-  background-color: tint(@linkedin-color, 10%);
-}
-.form-photo-a.linkedin:active {
-  background-color: shade(@linkedin-color, 10%);
+  &:hover {
+    background-color: tint(@linkedin-color, 10%);
+  }
+  &:active {
+    background-color: shade(@linkedin-color, 10%);
+  }
 }
 @upload-color: #888;
 .form-photo-a.upload {
-  background-color: @upload-color;
   margin-bottom: 0;
   cursor: pointer;
-}
-.form-photo-a.upload:hover {
-  background-color: tint(@upload-color, 10%);
-}
-.form-photo-a.upload:active {
-  background-color: shade(@upload-color, 10%);
+  background-color: @upload-color;
+  &:hover {
+    background-color: tint(@upload-color, 10%);
+  }
+  &:active {
+    background-color: shade(@upload-color, 10%);
+  }
 }
 .form-photo-a:before {
   content: ' ';
@@ -575,7 +581,7 @@ footer {
   left: 10px;
   height: 16px;
   width: 16px;
-  background: url(../img/out/login.png);
+  background: url(../img/out/auth.png);
 }
 .form-photo-a.facebook:before {
   background-position: -201px -328px;
@@ -615,16 +621,16 @@ footer {
   border-color: #bbb;
 }
 @final-button-color: #84a2ec;
-.form-submit-final {
+.signup-2>.form-submit {
   margin: 20px auto 40px;
   width: 200px;
   background: @final-button-color;
-}
-.form-submit-final:hover {
-  background: tint(@final-button-color, 10%);
-}
-.form-submit-final:active {
-  background: shade(@final-button-color, 10%);
+  &:hover {
+    background: tint(@final-button-color, 10%);
+  }
+  &:active {
+    background: shade(@final-button-color, 10%);
+  }
 }
 
 /* finalize transition */
@@ -668,18 +674,18 @@ footer {
   visibility: hidden;
   .translate(100%);
 }
-.finalize {
+.signup>.signup-2 {
   visibility: hidden;
   opacity: 0;
   .translate(0, 60px);
   .transition(opacity @finalize-time linear, transform @finalize-time ease-out);
 }
-.finalizing .finalize {
+.finalizing .signup-2 {
   visibility: visible;
   opacity: 1;
   .transform(none);
 }
-.finalizing .form-terms {
+.finalizing .terms {
   .translate(0, 20px);
   .transition(transform @finalize-time ease-out);
 }
@@ -693,11 +699,11 @@ footer {
   .main-logo,
   .form-network-icon:before,
   .form-photo-a:before {
-    background-image: url(../img/out/login.2x.png);
+    background-image: url(../img/out/auth.2x.png);
     background-size: 255px auto;
   }
   .form-photo {
     background-image: url(../img/out/ghost.200.png);
-    background-size: 100px auto;
+    background-size: cover;
   }
 }

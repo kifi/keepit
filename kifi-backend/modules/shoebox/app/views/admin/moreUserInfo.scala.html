@@ -3,7 +3,7 @@
   socialUserInfos: Seq[SocialUserInfo],
   sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail],
   abookInfos: Seq[ABookInfo],
-  contactInfos: Seq[ContactInfo]
+  contacts: Seq[Contact]
   )
 
 @admin("User: " + user.firstName + " " + user.lastName) {
@@ -37,13 +37,13 @@
           }
       </table>
     }
-  @if(contactInfos.size > 0) {
-    <h3>Contacts (total = @contactInfos.size)</h3>
+  @if(contacts.size > 0) {
+    <h3>Contacts (total = @contacts.size)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
-            <tr><th>ContactId</th><th>Origin</th><th>ABookId</th><th>Name</th><th>Email</th></tr>
-            @for(contactInfo <- contactInfos) {
-                <tr><td>@contactInfo.id</td><td>@contactInfo.origin</td><td>@contactInfo.abookId</td><td>@contactInfo.name</td><td>@contactInfo.email</td></tr>
+            <tr><th>ContactId</th><th>Origin</th><th>ABookId</th><th>Name</th><th>Email</th><td>Alt Emails</td></tr>
+            @for(contact <- contacts) {
+                <tr><td>@contact.id</td><td>@contact.origin</td><td>@contact.abookId</td><td>@contact.name</td><td>@contact.email</td><td>@contact.altEmails</td></tr>
             }
         </table>
     </div>
