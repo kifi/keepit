@@ -82,8 +82,12 @@ class UserIndexer(
       basicUsers <- basicUsersFuture
       emails <- emailsFuture
     } yield {
-      assert(userIds.size == basicUsers.size && userIds.size == emails.size)
-      (0 until userIds.size).map{i => UserInfo(users(i), basicUsers.get(userIds(i)).get, emails.get(userIds(i)).get)}
+      userIds.zipWithIndex.flatMap{ case (id, idx) =>
+        (basicUsers.get(id), emails.get(id)) match {
+          case (Some(basicUser), Some(emails)) => Some(UserInfo(users(idx), basicUser, emails))
+          case _ => None
+        }
+      }
     }
     
     Await.result(infoFuture, 180 seconds)

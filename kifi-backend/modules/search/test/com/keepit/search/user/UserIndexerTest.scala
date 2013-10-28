@@ -17,6 +17,8 @@ import org.apache.lucene.index.Term
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.google.inject.{Inject}
 import collection.JavaConversions._
+import com.keepit.social.BasicUser
+import org.apache.lucene.util.BytesRef
 
 
 class UserIndexerTest extends Specification with ApplicationInjector {
@@ -43,10 +45,16 @@ class UserIndexerTest extends Specification with ApplicationInjector {
   "UserIndxer" should {
     "persist sequence number" in {
       running(new DeprecatedSearchApplication().withShoeboxServiceModule){
-        setup(inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl])
+        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        setup(client)
         val indexer = mkUserIndexer()
-        val updates = indexer.run(100, 100)
+        val updates = indexer.run()
         indexer.sequenceNumber.value === 5
+        
+        val newUsers = client.saveUsers(User(firstName = "abc", lastName = "xyz"))
+        client.saveEmails(EmailAddress(userId = newUsers(0).id.get, address = "abc@xyz.com"))
+        indexer.run()
+        indexer.sequenceNumber.value === 6
       }
     }
   }
@@ -62,10 +70,13 @@ class UserIndexerTest extends Specification with ApplicationInjector {
       val parser = new UserQueryParser(analyzer)
       var query = parser.parse("wood")
       searcher.search(query.get).seq.size === 1
-      query = parser.parse("woody      all")
+      query = parser.parse("     woody      all    ")
+      searcher.search(query.get).seq.size === 1
+      
+      query = parser.parse("allen")
       searcher.search(query.get).seq.size === 1
 
-      query = parser.parse("firstNa")
+      query = parser.parse("firstNaM")
       searcher.search(query.get).seq.size === 4
     }
   }
@@ -93,11 +104,21 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val indexer = mkUserIndexer()
         indexer.run()
         indexer.numDocs === 5
-        val searcher = indexer.getSearcher
        
-        val doc = searcher.search(new TermQuery(new Term("_ID", 1.toString))).seq.head
-        doc.id === 1
-        searcher.doc(1).getField("_ID") === null      // why?
+        val searcher = new UserSearcher(indexer.getSearcher)
+        val analyzer = DefaultAnalyzer.defaultAnalyzer
+        val parser = new UserQueryParser(analyzer)
+        val query = parser.parse("woody.allen@gmail.com")
+        
+        val hits = searcher.search(query.get, maxHit = 5)
+        hits.size === 1
+        hits(0).firstName === "Woody"
+          
+        val query2 = parser.parse("firstNa")
+        val hits2 = searcher.search(query2.get, 5)
+        hits2.size === 4
+        hits2.map{_.firstName} === (0 to 3).map{ i => s"firstName${i}"}.toArray
+        
       }
     }
   }

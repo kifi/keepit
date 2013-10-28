@@ -18,6 +18,7 @@ import scala.concurrent.Promise
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
+import com.keepit.social.BasicUser
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -44,6 +45,7 @@ trait SearchServiceClient extends ServiceClient {
   def refreshSearcher(): Unit
   def refreshPhrases(): Unit
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
+  def searchUsers(query: String, maxHits: Int): Future[Array[BasicUser]]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
   def buildSpellCorrectorDictionary(): Unit
@@ -152,6 +154,12 @@ class SearchServiceClientImpl(
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]] = {
     call(Search.internal.searchKeeps(userId, query)).map {
       _.json.as[Seq[JsValue]].map(v => Id[NormalizedURI](v.as[Long])).toSet
+    }
+  }
+  
+  def searchUsers(query: String, maxHits: Int): Future[Array[BasicUser]] = {
+    call(Search.internal.searchUsers(query, maxHits)).map{
+      _.json.as[JsArray].value.map{x => Json.fromJson[BasicUser](x).get}.toArray
     }
   }
 
