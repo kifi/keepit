@@ -48,6 +48,7 @@ object CollectionIndexer {
 class CollectionIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
+    collectionNameIndexer: CollectionNameIndexer,
     airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Collection](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
@@ -91,12 +92,15 @@ class CollectionIndexer(
     log.info("updating Collection")
     try {
       val cnt = successCount
-      indexDocuments(collectionsChanged.iterator.map(buildIndexable), commitBatchSize)
+      val changed = collectionsChanged
+      indexDocuments(changed.iterator.map(buildIndexable), commitBatchSize)
+      collectionNameIndexer.update(changed, new CollectionSearcher(getSearcher))
       successCount - cnt
     } catch { case e: Throwable =>
       log.error("error in Collection update", e)
       throw e
     }
+
   }
 
   def buildIndexable(collection: Collection): CollectionIndexable = {

@@ -252,7 +252,7 @@ class URIGraphIndexer(
 
     private def buildBookmarkIdField(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark]): Field = {
       val arr = (publicBookmarks.map(_.id.get.id) ++ privateBookmarks.map(_.id.get.id)).toArray
-      val packedBookmarkIds = URIList.packLongArray(arr)
+      val packedBookmarkIds = Util.packLongArray(arr)
       buildBinaryDocValuesField(URIGraphFields.bookmarkIdField, packedBookmarkIds)
     }
   }

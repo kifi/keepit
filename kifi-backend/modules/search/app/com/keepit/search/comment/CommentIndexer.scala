@@ -5,7 +5,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.model._
-import com.keepit.search.graph.URIList
+import com.keepit.search.graph.Util
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.DocUtil
@@ -192,7 +192,7 @@ class CommentIndexer(
           case _ =>
         }
 
-        val commentIdListBytes = URIList.packLongArray(comments.map(_.id.get.id).toArray)
+        val commentIdListBytes = Util.packLongArray(comments.map(_.id.get.id).toArray)
         val commentIds = buildBinaryDocValuesField(commentIdField, commentIdListBytes)
         doc.add(commentIds)
 

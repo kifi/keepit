@@ -2,6 +2,7 @@ package com.keepit.search
 
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.graph.BookmarkStore
+import com.keepit.search.graph.CollectionNameIndexer
 import index.{FakePhraseIndexer, DefaultAnalyzer, ArticleIndexer}
 import com.keepit.search.phrasedetector._
 import com.keepit.model._
@@ -49,11 +50,13 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     val bookmarkStoreConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val colNameConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     val articleIndexer = new ArticleIndexer(new RAMDirectory, articleConfig, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val bookmarkStore = new BookmarkStore(new RAMDirectory, bookmarkStoreConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val collectionNameIndexer = new CollectionNameIndexer(new RAMDirectory, colNameConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val uriGraph = new URIGraphImpl(
       new URIGraphIndexer(new RAMDirectory, graphConfig, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]),
-      new CollectionIndexer(new RAMDirectory, collectConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]),
+      new CollectionIndexer(new RAMDirectory, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]),
       inject[ShoeboxServiceClient],
       inject[MonitoredAwait])
     implicit val clock = inject[Clock]

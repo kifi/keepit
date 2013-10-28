@@ -42,7 +42,11 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
   def getName(id: Id[Collection]): String = getName(id.id)
 
   def getName(id: Long): String = {
-    searcher.getDecodedDocValue[String](nameField, id)(fromByteArray).get
+    searcher.getDecodedDocValue[String](nameField, id)(fromByteArray).getOrElse("")
+  }
+
+  def getCollections(userId: Id[User]): Seq[(Id[Collection], String)] = {
+    getUserToCollectionEdgeSet(userId).destIdSet.iterator.map{ id => (id, getName(id)) }.toSeq
   }
 }
 
@@ -60,7 +64,7 @@ object CollectionToUriEdgeSet {
       override protected val longArraySet = set
       override protected def createdAtByIndex(idx:Int): Long = {
         val datetime = uriList.createdAt(idx)
-        URIList.unitToMillis(datetime)
+        Util.unitToMillis(datetime)
       }
       override protected def isPublicByIndex(idx: Int): Boolean = false
     }
