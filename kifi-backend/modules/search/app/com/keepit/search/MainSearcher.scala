@@ -119,7 +119,7 @@ class MainSearcher(
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
+    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, collectionSearcher, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 
   def searchText(maxTextHitsPerCategory: Int) = {
