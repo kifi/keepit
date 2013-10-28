@@ -34,7 +34,7 @@
     <appender-ref ref="access" />
   </appender>
 
-  <logger name="com.keepit.access" level="DEBUG">
+  <logger name="com.keepit.access" level="ALL" additivity="false">
     <appender-ref ref="async_access" />
   </logger>
 
