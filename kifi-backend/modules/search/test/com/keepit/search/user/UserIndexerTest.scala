@@ -19,6 +19,7 @@ import com.google.inject.{Inject}
 import collection.JavaConversions._
 import com.keepit.social.BasicUser
 import org.apache.lucene.util.BytesRef
+import com.keepit.shoebox.FakeShoeboxServiceModule
 
 
 class UserIndexerTest extends Specification with ApplicationInjector {
@@ -44,7 +45,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
   
   "UserIndxer" should {
     "persist sequence number" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule){
+      running(new TestApplication(FakeShoeboxServiceModule())){
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
@@ -60,7 +61,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
   }
   
   "search users by name prefix" in {
-    running(new DeprecatedSearchApplication().withShoeboxServiceModule){
+    running(new TestApplication(FakeShoeboxServiceModule())){
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
       val indexer = mkUserIndexer()
@@ -82,7 +83,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
   }
   
   "search user by exact email address" in {
-    running(new DeprecatedSearchApplication().withShoeboxServiceModule){
+    running(new TestApplication(FakeShoeboxServiceModule())){
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
       val indexer = mkUserIndexer()
@@ -98,7 +99,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     }
     
     "store and retreive correct info" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule){
+      running(new TestApplication(FakeShoeboxServiceModule())){
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
