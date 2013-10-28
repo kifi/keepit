@@ -118,7 +118,8 @@ trait GraphTestHelper extends ApplicationInjector {
   }
 
   def mkCollectionIndexer(collectionDir: RAMDirectory = new RAMDirectory): CollectionIndexer = {
-    new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val collectionNameIndexer = new CollectionNameIndexer(new RAMDirectory, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkURIGraph(graphDir: RAMDirectory = new RAMDirectory, collectionDir: RAMDirectory = new RAMDirectory): URIGraphImpl = {

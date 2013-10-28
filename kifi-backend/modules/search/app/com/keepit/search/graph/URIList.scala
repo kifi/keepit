@@ -3,11 +3,9 @@ package com.keepit.search.graph
 import com.keepit.model.Bookmark
 import org.apache.lucene.store.InputStreamDataInput
 import org.apache.lucene.store.OutputStreamDataOutput
-import org.apache.lucene.store.DataInput
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import scala.collection.mutable.ArrayBuffer
-import com.keepit.model.KeepToCollection
 
 trait URIList {
   val version: Int
@@ -109,77 +107,23 @@ object URIList {
       current = b.uriId.id
     }
     // encode createAt
-    sortedBookmarks.foreach{ b => out.writeVLong(b.createdAt.getMillis / TIME_UNIT) }
+    sortedBookmarks.foreach{ b => out.writeVLong(Util.millisToUnit(b.createdAt.getMillis)) }
 
     baos.flush()
     baos.toByteArray()
   }
 
-  val TIME_UNIT = 1000L * 60L // minute
-  val UNIT_PER_HOUR = (1000L * 60L * 60L).toDouble / TIME_UNIT.toDouble
-
-  def unitToMillis(units: Long) = units * TIME_UNIT
-
-  def readList(in: InputStreamDataInput, length: Int): Array[Long] = {
-    readList(in, new Array[Long](length), 0, length)
-  }
-
-  def readList(in: InputStreamDataInput, arr: Array[Long], offset: Int, length: Int): Array[Long] = {
-    var current = 0L;
-    var i = offset
-    val end = offset + length
-    while (i < end) {
-      val id = current + in.readVLong
-      arr(i) = id
-      current = id
-      i += 1
-    }
-    arr
-  }
-
-  def readRawList(in: InputStreamDataInput, length: Int): Array[Long] = {
-    readRawList(in, new Array[Long](length), 0, length)
-  }
-
-  def readRawList(in: InputStreamDataInput, arr: Array[Long], offset: Int, length: Int): Array[Long] = {
-    var i = offset
-    val end = offset + length
-    while (i < end) {
-      arr(i) = in.readVLong
-      i += 1
-    }
-    arr
-  }
-
-  def packLongArray(arr: Array[Long]): Array[Byte] = {
-    val size = arr.length
-    val baos = new ByteArrayOutputStream(size * 4)
-    val out = new OutputStreamDataOutput(baos)
-
-    // no version
-    // list size
-    out.writeVInt(size)
-    // encode list
-    arr.foreach{ v => out.writeVLong(v) }
-    baos.flush()
-    baos.toByteArray()
-  }
-
-  def unpackLongArray(bytes: Array[Byte], offset: Int, length: Int): Array[Long] = {
-    val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
-    readRawList(in, in.readVInt())
-  }
 }
 
 private[graph] trait URIListLazyLoading {
   protected def loadListAfter(after: Any, length: Int, in: InputStreamDataInput) = {
     if (after == null) throw new IllegalStateException("loading error")
-    URIList.readList(in, length)
+    Util.readList(in, length)
   }
 
   protected def loadRawListAfter(after: Any, length: Int, in: InputStreamDataInput) = {
     if (after == null) throw new IllegalStateException("loading error")
-    URIList.readRawList(in, length)
+    Util.readRawList(in, length)
   }
 }
 
@@ -191,7 +135,7 @@ private[graph] class URIListV3(in: InputStreamDataInput) extends URIList with UR
   override def createdAt: Array[Long] = createdAtList
 
   private[this] val listSize = in.readVInt()
-  private[this] lazy val idList: Array[Long] = URIList.readList(in, listSize)
+  private[this] lazy val idList: Array[Long] = Util.readList(in, listSize)
   private[this] lazy val createdAtList: Array[Long] = loadRawListAfter(idList, listSize, in)
 }
 

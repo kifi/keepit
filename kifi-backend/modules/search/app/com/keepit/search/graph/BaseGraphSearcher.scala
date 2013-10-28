@@ -36,7 +36,7 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
         var ref = new BytesRef()
         docValues.get(docid, ref)
         if (ref.length > 0) {
-          return URIList.unpackLongArray(ref.bytes, ref.offset, ref.length)
+          return Util.unpackLongArray(ref.bytes, ref.offset, ref.length)
         } else {
           log.error(s"missing long array data: ${field}")
         }

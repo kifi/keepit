@@ -389,6 +389,7 @@ GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.sh
 GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.shoebox.ShoeboxController.getUserIndexable(seqNum: Long, fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink      @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
+POST    /internal/shoebox/database/clickAttribution   @com.keepit.controllers.shoebox.ShoeboxController.clickAttribution()
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.shoebox.ShoeboxController.getActiveExperiments
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.shoebox.ShoeboxController.getExperiments

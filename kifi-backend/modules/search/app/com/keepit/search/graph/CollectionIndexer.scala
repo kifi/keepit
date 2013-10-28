@@ -18,6 +18,7 @@ import com.keepit.search.index.DocUtil
 import com.keepit.search.index.FieldDecoder
 import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer}
 import com.keepit.search.index.Indexable.IteratorTokenStream
+import com.keepit.search.index.Searcher
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -31,10 +32,12 @@ object CollectionFields {
   val uriField = "coll_uri"
   val uriListField = "coll_list"
   val externalIdField = "col_ext"
+  val nameField = "coll_name"
 
   def decoders() = Map(
     uriListField -> DocUtil.URIListDecoder,
-    externalIdField -> DocUtil.binaryDocValFieldDecoder(fromByteArray)
+    externalIdField -> DocUtil.binaryDocValFieldDecoder(fromByteArray),
+    nameField -> DocUtil.binaryDocValFieldDecoder(fromByteArray)
   )
 }
 
@@ -46,6 +49,7 @@ object CollectionIndexer {
 class CollectionIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
+    collectionNameIndexer: CollectionNameIndexer,
     airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Collection](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
@@ -56,6 +60,9 @@ class CollectionIndexer(
   private[this] val fetchSize = commitBatchSize * 3
 
   private[this] val updateLock = new AnyRef
+  private[this] var searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
+
+  def getSearchers: (Searcher, Searcher) = searchers
 
   override def onFailure(indexable: Indexable[Collection], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
@@ -89,12 +96,17 @@ class CollectionIndexer(
     log.info("updating Collection")
     try {
       val cnt = successCount
-      indexDocuments(collectionsChanged.iterator.map(buildIndexable), commitBatchSize)
+      val changed = collectionsChanged
+      indexDocuments(changed.iterator.map(buildIndexable), commitBatchSize)
+      collectionNameIndexer.update(changed, new CollectionSearcher(getSearcher))
+      // update searchers together to get a consistent view of indexes
+      searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
       successCount - cnt
     } catch { case e: Throwable =>
       log.error("error in Collection update", e)
       throw e
     }
+
   }
 
   def buildIndexable(collection: Collection): CollectionIndexable = {
@@ -136,6 +148,9 @@ class CollectionIndexer(
 
       val externalId = buildBinaryDocValuesField(externalIdField, collection.externalId.id)
       doc.add(externalId)
+
+      val name = buildBinaryDocValuesField(nameField, collection.name)
+      doc.add(name)
 
       doc
     }
