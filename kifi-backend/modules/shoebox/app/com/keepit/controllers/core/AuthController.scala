@@ -1,5 +1,6 @@
 package com.keepit.controllers.core
 
+import _root_.java.io.File
 import scala.Some
 
 import com.google.inject.Inject
@@ -20,13 +21,15 @@ import play.api.data.Forms._
 import play.api.data._
 import play.api.data.validation.Constraints
 import play.api.http.HeaderNames
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsNumber, JsValue, Json}
 import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
 import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
 import play.api.libs.iteratee.Enumerator
 import play.api.Play
+import com.keepit.common.store.S3ImageStore
+import scala.util.{Failure, Success}
 
 sealed abstract class AuthType
 
@@ -49,7 +52,8 @@ class AuthController @Inject() (
     emailRepo: EmailAddressRepo,
     userRepo: UserRepo,
     postOffice: LocalPostOffice,
-    userValueRepo: UserValueRepo
+    userValueRepo: UserValueRepo,
+    s3ImageStore: S3ImageStore
   ) extends WebsiteController(actionAuthenticator) with Logging {
 
   // Note: some of the below code is taken from ProviderController in SecureSocial
@@ -448,11 +452,41 @@ class AuthController @Inject() (
     }
   }
 
-  //def sdf() = actionAuthenticator.authenticatedAction(true, allowPending, parse.tolerantJson, authenticatedAction, unauthenticatedAction)
   def uploadBinaryPicture() = JsonAction(true, parse.temporaryFile)(authenticatedAction = doUploadBinaryPicture(_), unauthenticatedAction = doUploadBinaryPicture(_))
   def doUploadBinaryPicture(implicit request: Request[play.api.libs.Files.TemporaryFile]): Result = {
-    request.body
-
-    Ok
+    request.userOpt.orElse(request.identityOpt) match {
+      case Some(_) =>
+        log.info("111111111111111111111111111111")
+        s3ImageStore.uploadTemporaryPicture(request.body.file) match {
+          case Success((key, url)) =>
+            log.info("222222222222222222222")
+            Ok(Json.obj("key" -> key, "url" -> url))
+          case Failure(ex) =>
+            log.info("3333333333333333333333333")
+            BadRequest(JsNumber(0))
+        }
+      case None => Forbidden(JsNumber(0))
+    }
   }
+
+  def uploadFormEncodedPicture() = JsonAction(true, parse.multipartFormData)(authenticatedAction = doUploadFormEncodedPicture(_), unauthenticatedAction = doUploadFormEncodedPicture(_))
+  def doUploadFormEncodedPicture(implicit request: Request[MultipartFormData[play.api.libs.Files.TemporaryFile]]) = {
+    request.userOpt.orElse(request.identityOpt) match {
+      case Some(_) =>
+        log.info("x111111111111111111111111111111")
+        request.body.file("picture").map { picture =>
+          s3ImageStore.uploadTemporaryPicture(picture.ref.file) match {
+            case Success((key, url)) =>
+              log.info("x222222222222222222222")
+              Ok(Json.obj("key" -> key, "url" -> url))
+            case Failure(ex) =>
+              log.info("x3333333333333333333333333")
+              log.error("what", ex)
+              BadRequest(JsNumber(0))
+          }
+        } getOrElse(BadRequest(JsNumber(0)))
+      case None => Forbidden(JsNumber(0))
+    }
+  }
+
 }

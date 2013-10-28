@@ -22,9 +22,13 @@ import com.keepit.common.net.URI
 import scala.util.Failure
 import scala.Some
 import scala.util.Success
+import java.io.{ByteArrayOutputStream, ByteArrayInputStream, File}
+import javax.imageio.ImageIO
+import org.apache.commons.lang3.RandomStringUtils
 
 object S3UserPictureConfig {
   val ImageSizes = Seq(100, 200)
+  val sizes = ImageSizes.map(s => ImageSize(s, s))
   val OriginalImageSize = "original"
   val defaultImage = "http://s.c.lnkd.licdn.com/scds/common/u/images/themes/katy/ghosts/person/ghost_person_200x200_v1.png"
 }
@@ -38,8 +42,11 @@ trait S3ImageStore {
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String): Future[Seq[(String, Try[PutObjectResult])]]
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[(String, Try[PutObjectResult])]]
 
-  //def uploadTemporaryPicture(file: File)
+  // Returns (token, urlOfTempImage)
+  def uploadTemporaryPicture(file: File): Try[(String, String)]
 
+  // Returns Success(urlOfUserPicture) or Failure(ex)
+  def copyTempFileToUserPic(userExtId: ExternalId[User], token: String): Try[String]
 
   def avatarUrlByExternalId(w: Option[Int], userId: ExternalId[User], picName: String, protocolDefault: Option[String] = None): String = {
     val size = S3UserPictureConfig.ImageSizes.find(size => w.exists(size >= _)).map(_.toString).getOrElse(S3UserPictureConfig.OriginalImageSize)
@@ -49,6 +56,9 @@ trait S3ImageStore {
 
   def keyByExternalId(size: String, userId: ExternalId[User], picName: String): String =
     s"users/$userId/pics/$size/$picName.jpg"
+
+  def tempPath(token: String): String =
+    s"temp/user/pics/$token.jpg"
 }
 
 @Singleton
@@ -168,5 +178,56 @@ class S3ImageStoreImpl @Inject() (
       }
       future
     }
+  }
+
+  def uploadTemporaryPicture(file: File): Try[(String, String)] = {
+    Try {
+      val bufImage = ImageIO.read(file)
+
+      val os = new ByteArrayOutputStream()
+      ImageIO.write(bufImage, "jpeg", os)
+      val is = new ByteArrayInputStream(os.toByteArray())
+
+      val om = new ObjectMetadata()
+      om.setContentType("image/jpeg")
+      val token = RandomStringUtils.randomAlphanumeric(10)
+      val path = tempPath(token)
+      val s3obj = s3Client.putObject(config.bucketName, s"$path.jpg", is, om)
+
+      is.close()
+      os.close()
+      (token, s"${config.cdnBase}/$path.jpg")
+    }
+  }
+
+  def copyTempFileToUserPic(userExtId: ExternalId[User], token: String): Try[String] = {
+    def getAndResizeImage(token: String) = Try {
+      val obj = s3Client.getObject(config.bucketName, tempPath(token))
+      val bufImage = ImageIO.read(obj.getObjectContent)
+      S3UserPictureConfig.sizes.map { size =>
+        val resized = ImageUtils.resizeImage(bufImage, size)
+        (size, resized._2, resized._1)
+      }
+    }
+    def uploadImage(filename: String, imageSize: ImageSize, is: ByteArrayInputStream, contentLength: Int) = Try {
+      val om = new ObjectMetadata()
+      om.setContentType("image/jpeg")
+      val key = keyByExternalId(imageSize.width.toString, userExtId, filename)
+      s3Client.putObject(config.bucketName, key, is, om)
+      key
+    }
+
+    val newFilename = UserPicture.generateNewFilename + ".jpg"
+    getAndResizeImage(token).map { fetchResult =>
+      fetchResult.map { case (imageSize, is, contentLength) =>
+        uploadImage(newFilename, imageSize, is, contentLength)
+      }.foldLeft(Failure[String](new Exception("No images")).asInstanceOf[Try[String]]) { case (res, elem) =>
+        if (res.isSuccess && elem.isFailure) elem
+        else res
+      }
+    }.flatten.map { success =>
+      avatarUrlByExternalId(Some(S3UserPictureConfig.ImageSizes.last), userExtId, newFilename)
+    }
+
   }
 }
