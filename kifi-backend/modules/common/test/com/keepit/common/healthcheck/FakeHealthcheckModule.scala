@@ -22,17 +22,17 @@ class FakeBabysitter extends Babysitter {
 @Singleton
 class FakeHealthcheck extends HealthcheckPlugin {
 
-  val _errors = MutableList[HealthcheckError]()
+  val _errors = MutableList[AirbrakeError]()
 
   def errorCount(): Int = errors.size
 
   def resetErrorCount(): Unit = _errors.clear
 
-  def errors(): List[HealthcheckError] = _errors.toList
+  def errors(): List[AirbrakeError] = _errors.toList
 
   def reportErrors(): Unit = {}
 
-  def addError(error: HealthcheckError): HealthcheckError = {
+  def addError(error: AirbrakeError): AirbrakeError = {
     _errors += error
     error
   }

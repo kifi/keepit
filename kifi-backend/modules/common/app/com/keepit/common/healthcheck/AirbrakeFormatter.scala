@@ -9,6 +9,7 @@ import com.keepit.common.akka.AlertingActor
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
+import com.keepit.common.strings._
 
 import play.api.Mode._
 
@@ -23,7 +24,7 @@ import play.api.mvc._
 import AirbrakeError.MaxMessageSize
 
 case class ErrorWithStack(error: Throwable, stack: Seq[StackTraceElement]) {
-  override def toString(): String = error.toString.take(MaxMessageSize)
+  override def toString(): String = error.toString.abbreviate(MaxMessageSize)
   val cause: Option[ErrorWithStack] = Option(error.getCause).map(e => ErrorWithStack(e))
   val rootCause: ErrorWithStack = cause.map(c => c.rootCause).getOrElse(this)
 }

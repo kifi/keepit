@@ -68,11 +68,20 @@ case class ProdIndexModule() extends IndexModule with Logging {
 
   @Singleton
   @Provides
-  def collectionIndexer(airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
+  def collectionNameIndexer(airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): CollectionNameIndexer = {
+    val dir = getDirectory(current.configuration.getString("index.collectionName.directory"))
+    log.info(s"storing collection index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new CollectionNameIndexer(dir, config, airbrake, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def collectionIndexer(collectionNameIndexer: CollectionNameIndexer, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
     val dir = getDirectory(current.configuration.getString("index.collection.directory"))
     log.info(s"storing collection index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new CollectionIndexer(dir, config, airbrake, shoeboxClient)
+    new CollectionIndexer(dir, config, collectionNameIndexer, airbrake, shoeboxClient)
   }
 
   @Singleton
@@ -168,11 +177,20 @@ case class DevIndexModule() extends IndexModule with Logging {
 
   @Singleton
   @Provides
-  def collectionIndexer(airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
+  def collectionNameIndexer(airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): CollectionNameIndexer = {
+    val dir = getDirectory(current.configuration.getString("index.collectionName.directory"))
+    log.info(s"storing collection index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new CollectionNameIndexer(dir, config, airbrake, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def collectionIndexer(collectionNameIndexer: CollectionNameIndexer, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
     val dir = getDirectory(current.configuration.getString("index.collection.directory"))
     log.info(s"storing collection index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new CollectionIndexer(dir, config, airbrake, shoeboxClient)
+    new CollectionIndexer(dir, config, collectionNameIndexer, airbrake, shoeboxClient)
   }
 
   @Singleton

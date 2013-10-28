@@ -15,7 +15,6 @@ import com.keepit.model._
 import com.keepit.search._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError}
-import com.keepit.common.healthcheck.Healthcheck.SEARCH
 import com.keepit.search.comment.CommentSearcher
 import com.keepit.search.comment.CommentSearchResult
 import com.keepit.search.comment.CommentHit
