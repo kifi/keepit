@@ -132,6 +132,9 @@ class AuthController @Inject() (
     (Some(_))
   )
 
+  // TODO: something different if already logged in?
+  def signinPage() = HtmlAction(true)(authenticatedAction = doLoginPage(_), unauthenticatedAction = doLoginPage(_))
+
   // Finalize account
   def signupPage() = HtmlAction(true)(authenticatedAction = doFinalizePage(_), unauthenticatedAction = doFinalizePage(_))
 
@@ -189,6 +192,9 @@ class AuthController @Inject() (
     )
   }
 
+  private def doLoginPage(implicit request: Request[_]): Result = {
+    Ok(views.html.signup.auth("login"))
+  }
 
   private def doFinalizePage(implicit request: Request[_]): Result = {
     def hasEmail(identity: Identity): Boolean = db.readOnly { implicit s =>
@@ -204,8 +210,7 @@ class AuthController @Inject() (
         Ok(views.html.signup.finalize(
           network = SocialNetworks.FORTYTWO.name,
           emailAddress = identity.email.getOrElse(""),
-          picturePath = identity.avatarUrl.getOrElse(""),
-          triedToLoginWithNoAccount = false
+          picturePath = identity.avatarUrl.getOrElse("")
         ))
       case (Some(user), None) =>
         // User but no identity. Huh?
@@ -216,16 +221,19 @@ class AuthController @Inject() (
         // Bad login? Trying to discover when this state can happen, will get back to this.
         val error = request.flash.get("error").map { _ => "Login failed" }
         Ok("No user, identity, has email")
+      case (None, Some(identity)) if request.flash.get("signin_error").exists(_ == "no_account") =>
+        // No user exists, social login was attempted. Let user choose what to do next.
+        Ok(views.html.signup.loggedInWithWrongNetwork(
+          network = SocialNetworkType(identity.identityId.providerId)
+        ))
       case (None, Some(identity)) =>
-        // No user exists, so is social
-        val triedToLoginWithNoAccount = request.flash.get("signin_error").exists(_ == "no_account")
+        // No user exists, must finalize
         Ok(views.html.signup.finalize(
           network = SocialNetworkType(identity.identityId.providerId).name,
           firstName = User.sanitizeName(identity.firstName),
           lastName = User.sanitizeName(identity.lastName),
           emailAddress = identity.email.getOrElse(""),
-          picturePath = identity.avatarUrl.getOrElse(""),
-          triedToLoginWithNoAccount = triedToLoginWithNoAccount
+          picturePath = identity.avatarUrl.getOrElse("")
         ))
       case (None, None) =>
         // TODO(andrew): Forward user to initial signup page

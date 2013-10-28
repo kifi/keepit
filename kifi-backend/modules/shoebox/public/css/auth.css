@@ -73,7 +73,7 @@ input[type=password] {
   position: absolute;
   top: 70px;
   height: 144px;
-  background: url(../img/out/login.png) no-repeat;
+  background: url(../img/out/auth.png) no-repeat;
   -webkit-transition: opacity 0.21s ease-out;
   -moz-transition: opacity 0.21s ease-out;
   -o-transition: opacity 0.21s ease-out;
@@ -163,11 +163,6 @@ input[type=password] {
   -webkit-font-smoothing: antialiased;
   color: #fff;
   font-size: 18px;
-  -webkit-transition: opacity 0.42s, visibility 0.42s;
-  -moz-transition: opacity 0.42s, visibility 0.42s;
-  -o-transition: opacity 0.42s, visibility 0.42s;
-  -ms-transition: opacity 0.42s, visibility 0.42s;
-  transition: opacity 0.42s, visibility 0.42s;
 }
 .curtain-signup {
   right: 8%;
@@ -183,7 +178,36 @@ input[type=password] {
 .curtains-drawn .curtain-action:hover {
   background-color: rgba(0, 0, 0, 0.08);
 }
-.curtains-drawn .curtain-action {
+.curtain-a-title {
+  font-size: 32px;
+  line-height: 42px;
+  font-weight: 300;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.curtain-note {
+  position: absolute;
+  top: 20%;
+  margin-top: 340px;
+  padding: 32px 0 38px;
+  width: 284px;
+  right: 8%;
+  color: #fff;
+  font-size: 14px;
+  line-height: 17px;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+}
+.curtain-action,
+.curtain-note {
+  -webkit-transition: opacity 0.42s, visibility 0.42s;
+  -moz-transition: opacity 0.42s, visibility 0.42s;
+  -o-transition: opacity 0.42s, visibility 0.42s;
+  -ms-transition: opacity 0.42s, visibility 0.42s;
+  transition: opacity 0.42s, visibility 0.42s;
+}
+.curtains-drawn .curtain-action,
+.curtains-drawn .curtain-note {
   -webkit-transition: opacity 0.42s, visibility 0s 0.42s;
   -moz-transition: opacity 0.42s, visibility 0s 0.42s;
   -o-transition: opacity 0.42s, visibility 0s 0.42s;
@@ -191,13 +215,6 @@ input[type=password] {
   transition: opacity 0.42s, visibility 0s 0.42s;
   opacity: 0;
   visibility: hidden;
-}
-.curtain-a-title {
-  font-size: 32px;
-  line-height: 42px;
-  font-weight: 300;
-  text-transform: uppercase;
-  margin-bottom: 5px;
 }
 /* back button */
 .curtain-back {
@@ -243,7 +260,7 @@ input[type=password] {
   height: 42px;
   width: 42px;
   margin: 0 auto;
-  background: url(../img/out/login.png) -2px -328px;
+  background: url(../img/out/auth.png) -2px -328px;
   position: relative;
   left: 2px;
 }
@@ -277,20 +294,20 @@ footer {
   height: 32px;
   width: 32px;
   margin-left: 5px;
-  background: url(../img/out/login.png);
+  background: url(../img/out/auth.png);
   opacity: .5;
 }
 .us-on:hover {
   opacity: 1;
 }
 .us-on.facebook {
-  background-position: -36px -292px;
+  background-position: -36px -294px;
 }
 .us-on.linkedin {
-  background-position: -2px -292px;
+  background-position: -2px -294px;
 }
 .us-on.twitter {
-  background-position: -70px -292px;
+  background-position: -70px -294px;
 }
 .copyright {
   line-height: 30px;
@@ -309,7 +326,7 @@ footer {
   height: 144px;
   margin: 0 auto;
   padding-top: 70px;
-  background: url(../img/out/login.png) -2px -148px content-box;
+  background: url(../img/out/auth.png) -2px -148px content-box;
   text-indent: -9999px;
   position: relative;
   left: -10px;
@@ -458,7 +475,7 @@ footer {
   font-size: 0;
   height: 32px;
   width: 32px;
-  background-image: url(../img/out/login.png);
+  background-image: url(../img/out/auth.png);
 }
 .facebook > .form-network-icon:before {
   background-position: -187px -294px;
@@ -565,13 +582,11 @@ footer {
 }
 .form-photo-progress {
   position: absolute;
+  top: 0;
   bottom: 0;
-  left: 0;
-  width: 0;
-  height: 5px;
-  border-style: solid;
-  border-color: transparent #85a4ea transparent #9fc062;
-  border-width: 0;
+  left: 100%;
+  right: 0;
+  background: rgba(255, 255, 255, 0.8);
 }
 .form-photo-controls {
   overflow: hidden;
@@ -625,7 +640,7 @@ footer {
   left: 10px;
   height: 16px;
   width: 16px;
-  background: url(../img/out/login.png);
+  background: url(../img/out/auth.png);
 }
 .form-photo-a.facebook:before {
   background-position: -201px -328px;
@@ -799,11 +814,11 @@ footer {
   .main-logo,
   .form-network-icon:before,
   .form-photo-a:before {
-    background-image: url(../img/out/login.2x.png);
+    background-image: url(../img/out/auth.2x.png);
     background-size: 255px auto;
   }
   .form-photo {
     background-image: url(../img/out/ghost.200.png);
-    background-size: 100px auto;
+    background-size: cover;
   }
 }

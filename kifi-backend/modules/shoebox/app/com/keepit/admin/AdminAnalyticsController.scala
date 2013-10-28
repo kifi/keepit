@@ -4,16 +4,19 @@ import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.heimdal.HeimdalServiceClient
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{Json, JsObject, JsArray}
 
 import views.html
 
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
+import scala.util.{Success, Failure}
 
 import com.google.inject.Inject
 
 
-case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int]())
+case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int](), totalable : Boolean = true)
+
+case class MetricWithAuxInfo(data: JsObject, auxInfo: MetricAuxInfo)
 
 class AdminAnalyticsController @Inject() (
     actionAuthenticator: ActionAuthenticator,
@@ -22,13 +25,13 @@ class AdminAnalyticsController @Inject() (
   extends AdminController(actionAuthenticator) {
 
   val installMetrics = Map[String, MetricAuxInfo](
-    "invites_sent_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Number Sent"), Map("Number Sent" -> 462)),
-    "new_installs_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"), Map("Users" -> 362))
+    "invites_sent_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Invites Sent"), Map("Invites Sent" -> 462)),
+    "new_installs_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users Installed"), Map("Users Installed" -> 362))
   )
 
   val userMetrics = Map[String, MetricAuxInfo](
-    "alive_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Users")),
-    "active_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"))
+    "alive_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Connected Users")),
+    "active_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Active Users"))
   )
 
   val keepActivityMetrics = Map[String, MetricAuxInfo](
@@ -61,46 +64,64 @@ class AdminAnalyticsController @Inject() (
   )
 
   val messageMetrics = Map[String, MetricAuxInfo](
-    "messagers_daily" -> MetricAuxInfo("nothing yet", Map()),
-    "messagers_weekly" -> MetricAuxInfo("nothing yet", Map()),
+    "messagers_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"), totalable=false),
+    "messagers_weekly" -> MetricAuxInfo("nothing yet", Map(), totalable=false),
     "message_breakdown_weekly" -> MetricAuxInfo("nothing yet", Map())
+  )
+
+  val searchMetrics = Map[String, MetricAuxInfo](
+    "kifi_result_clickers_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users")),
+    "results_clicked_daily" -> MetricAuxInfo("nothing yet", Map(
+      "kifi_result_clicked" -> "Kifi Clicks",
+      "search_result_clicked" -> "Other Clicks"
+    )),
+    "total_searches_daily" -> MetricAuxInfo("nothing yet", Map(
+      "null" -> "Total Searches"
+    ), totalable=false)
+  )
+
+  val metrics = Map[String, Map[String, MetricAuxInfo]](
+    "installMetrics" -> installMetrics,
+    "userMetrics" -> userMetrics,
+    "keepActivityMetrics" -> keepActivityMetrics,
+    "keepMetrics" -> keepMetrics,
+    "messageMetrics" -> messageMetrics,
+    "searchMetrics" -> searchMetrics
   )
 
   private def augmentMetricData(metricData: JsObject, auxInfo: MetricAuxInfo): JsObject = {
     metricData.deepMerge{Json.obj(
         "help" -> auxInfo.helpText,
         "legend" -> JsObject(auxInfo.legend.mapValues(Json.toJson(_)).toSeq),
-        "shift" -> JsObject(auxInfo.shift.mapValues(Json.toJson(_)).toSeq)
+        "shift" -> JsObject(auxInfo.shift.mapValues(Json.toJson(_)).toSeq),
+        "totalable" -> auxInfo.totalable
     )}
+  }
+
+  private def metricData : Future[Map[String, JsArray]] = {
+    val innerFutures = metrics.mapValues{ groupMap => 
+      Future.sequence(groupMap.toSeq.map{ case (metricName, auxInfo) =>
+        heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
+      })
+    }
+    val keys: Seq[String] = innerFutures.keys.toSeq
+    val valuesFuture: Future[Seq[JsArray]] = Future.sequence(innerFutures.values.toSeq).map{ values =>
+      values.map{ sectionData =>
+        Json.toJson(sectionData).as[JsArray]
+      }
+    }
+    val promise = Promise[Map[String, JsArray]]();
+    valuesFuture.onComplete{
+      case Success(v) => promise.success(keys.zip(v).toMap)
+      case Failure(e) => promise.failure(e)
+    }
+    promise.future
   }
 
   def index() = AdminHtmlAction { request =>
     heimdal.updateMetrics()
-    val installMetricsFuture = Future.sequence(installMetrics.toSeq.map{ case (metricName, auxInfo) =>
-      heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
-    })
-    val userMetricsFuture = Future.sequence(userMetrics.toSeq.map{ case (metricName, auxInfo) =>
-      heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
-    })
-    val keepActivityMetricsFuture = Future.sequence(keepActivityMetrics.toSeq.map{ case (metricName, auxInfo) =>
-      heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
-    })
-    val keepMetricsFuture = Future.sequence(keepMetrics.toSeq.map{ case (metricName, auxInfo) =>
-      heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
-    })
-    val messageMetricsFuture = Future.sequence(messageMetrics.toSeq.map{ case (metricName, auxInfo) =>
-      heimdal.getMetricData(metricName).map{augmentMetricData(_, auxInfo)}
-    })
-    val dataFuture = Future.sequence(Seq(installMetricsFuture, userMetricsFuture, keepActivityMetricsFuture, keepMetricsFuture, messageMetricsFuture))
-
-
-    Async(dataFuture.map{ data =>
-      val jsonData = data.map{ sectionData =>
-        Json.stringify(Json.toJson(sectionData))
-      } 
-      Ok(html.admin.analyticsDashboardView(    
-        jsonData(0), jsonData(1), jsonData(2), jsonData(3), jsonData(4)
-      ))
+    Async(metricData.map{ dataMap =>
+      Ok(html.admin.analyticsDashboardView(dataMap.mapValues(Json.stringify(_))))
     })
   }
 

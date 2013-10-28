@@ -10,6 +10,8 @@ CREATE TABLE abook_info (
 
 	user_id bigint(20) NOT NULL,
 	origin varchar(128) NOT NULL,
+	owner_id varchar(256),
+	owner_email varchar(512),
 	raw_info_loc varchar(512),
 
 	PRIMARY KEY (id)

@@ -9,20 +9,23 @@ import com.keepit.common.controller.AuthenticatedRequest
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import org.joda.time.DateTime
 
 case class SearchEngine(name: String) {
   override def toString = name
 }
-object Google extends SearchEngine("Google")
-object Kifi extends SearchEngine("Kifi")
+
+object SearchEngine {
+  object Google extends SearchEngine("Google")
+  object Kifi extends SearchEngine("Kifi")
+  def get(name: String): SearchEngine = Seq(Kifi, Google).find(_.name.toLowerCase == name.toLowerCase) getOrElse { throw new Exception(s"Unknown search engine: $name") }
+}
 
 @Singleton
 class SearchAnalytics @Inject() (
   articleSearchResultStore: ArticleSearchResultStore,
   userEventContextBuilder: UserEventContextBuilderFactory,
-  heimdal: HeimdalServiceClient,
-  airbrake: AirbrakeNotifier) {
+  heimdal: HeimdalServiceClient) {
 
   def searchPerformed(
     request: AuthenticatedRequest[AnyContent],
@@ -49,7 +52,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("myHits", articleSearchResult.myTotal)
     contextBuilder += ("friendsHits", articleSearchResult.friendsTotal)
     contextBuilder += ("mayHaveMoreHits", articleSearchResult.mayHaveMoreHits)
-    contextBuilder += ("millisPassed", articleSearchResult.millisPassed)
+    contextBuilder += ("processingTime", articleSearchResult.millisPassed)
 
     contextBuilder += ("defaultFilter", searchFilter.isDefault)
     contextBuilder += ("customFilter", searchFilter.isCustom)
@@ -63,38 +66,75 @@ class SearchAnalytics @Inject() (
     heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("search_performed"), articleSearchResult.time))
   }
 
-  def searchResultClicked(resultClicked: ResultClicked) = {
+  def searchResultClicked(
+    userId: Id[User],
+    queryUUID: Option[ExternalId[ArticleSearchResult]],
+    searchExperiment: Option[Id[SearchConfigExperiment]],
+    resultSource: SearchEngine,
+    resultPosition: Int,
+    kifiResults: Int,
+    kifiCollapsed: Option[Boolean],
+    time: DateTime) = {
 
-    val obfuscatedSearchId = resultClicked.queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, resultClicked.userId))
+    val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, userId))
     val contextBuilder = userEventContextBuilder()
-    contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
-    contextBuilder += ("resultSource", getSearchEngine(resultClicked.resultSource).toString)
-    contextBuilder += ("resultPosition", resultClicked.resultPosition)
-    contextBuilder += ("kifiResults", resultClicked.kifiResults)
-    resultClicked.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-    heimdal.trackEvent(UserEvent(resultClicked.userId.id, contextBuilder.build, UserEventType("search_result_clicked"), resultClicked.time))
+    obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
+    contextBuilder += ("searchEngine", resultSource.toString)
+    contextBuilder += ("resultPosition", resultPosition)
+    contextBuilder += ("kifiResults", kifiResults)
+    kifiCollapsed.foreach { collapsed => contextBuilder += ("kifiCollapsed", collapsed) }
+    searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("search_result_clicked"), time))
   }
 
-  def kifiResultClicked(resultClicked: ResultClicked) {
-      val obfuscatedSearchId = resultClicked.queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, resultClicked.userId))
-      val contextBuilder = userEventContextBuilder()
-      contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
-      contextBuilder += ("resultPosition", resultClicked.resultPosition)
-      contextBuilder += ("kifiResults", resultClicked.kifiResults)
-      resultClicked.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-      heimdal.trackEvent(UserEvent(resultClicked.userId.id, contextBuilder.build, UserEventType("kifi_result_clicked"), resultClicked.time))
-    }
+  def kifiResultClicked(
+    userId: Id[User],
+    queryUUID: Option[ExternalId[ArticleSearchResult]],
+    searchExperiment: Option[Id[SearchConfigExperiment]],
+    resultPosition: Int,
+    bookmarkCount: Option[Int],
+    usersShown: Option[Int],
+    isUserKeep: Boolean,
+    isPrivate: Option[Boolean],
+    kifiResults: Int,
+    kifiCollapsed: Option[Boolean],
+    time: DateTime) = {
 
-  def searchEnded(searchEnded: SearchEnded) = {
-
-    val obfuscatedSearchId = searchEnded.queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, searchEnded.userId))
+    val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, userId))
     val contextBuilder = userEventContextBuilder()
-    contextBuilder += ("searchId", obfuscatedSearchId.getOrElse(""))
-    searchEnded.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-    contextBuilder += ("kifiResults", searchEnded.kifiResults)
-    contextBuilder += ("kifiResultsClicked", searchEnded.kifiResultsClicked)
-    contextBuilder += ("googleResultsClicked", searchEnded.googleResultsClicked)
-    heimdal.trackEvent(UserEvent(searchEnded.userId.id, contextBuilder.build, UserEventType("search_ended"), searchEnded.time))
+    obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
+    contextBuilder += ("resultPosition", resultPosition)
+    bookmarkCount.foreach { count => contextBuilder += ("bookmarkCount", count) }
+    usersShown.foreach { count => contextBuilder += ("usersShown", count) }
+    contextBuilder += ("isUserKeep", isUserKeep)
+    isPrivate.foreach { priv => contextBuilder += ("isPrivate", priv) }
+    contextBuilder += ("kifiResults", kifiResults)
+    kifiCollapsed.foreach { collapsed => contextBuilder += ("kifiCollapsed", collapsed) }
+    searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("kifi_result_clicked"), time))
+  }
+
+  def searchEnded(
+    userId: Id[User],
+    queryUUID: Option[ExternalId[ArticleSearchResult]],
+    searchExperiment: Option[Id[SearchConfigExperiment]],
+    kifiResults: Int,
+    kifiResultsClicked: Int,
+    searchEngine: SearchEngine,
+    searchResultsClicked: Int,
+    kifiCollapsed: Option[Boolean],
+    time: DateTime) = {
+
+    val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, userId))
+    val contextBuilder = userEventContextBuilder()
+    obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
+    searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
+    contextBuilder += ("kifiResults", kifiResults)
+    contextBuilder += ("kifiResultsClicked", kifiResultsClicked)
+    contextBuilder += ("searchEngine", searchEngine.toString)
+    contextBuilder += ("searchResultsClicked", searchResultsClicked)
+    kifiCollapsed.foreach { collapsed => contextBuilder += ("kifiCollapsed", collapsed) }
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("search_ended"), time))
   }
 
   private def obfuscate(searchId: ExternalId[ArticleSearchResult], userId: Id[User]): String = {
@@ -104,9 +144,4 @@ class SearchAnalytics @Inject() (
     mac.init(key)
     Base64.encodeBase64String(mac.doFinal(userId.toString.getBytes()))
   }
-
-    def getSearchEngine(name: String): SearchEngine = Seq(Kifi, Google).find(_.name.toLowerCase == name.toLowerCase) getOrElse {
-      airbrake.notify(AirbrakeError(message = Some(s"Unknown Search Engine: ${name}")))
-      SearchEngine(name)
-    }
 }

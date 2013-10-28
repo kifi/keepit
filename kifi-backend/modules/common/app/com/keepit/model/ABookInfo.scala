@@ -42,7 +42,7 @@ object ABookOrigins {
   val ALL:Seq[ABookOriginType] = Seq(IOS, GMAIL)
 }
 
-case class ABookRawInfo(userId:Option[Id[User]], origin:ABookOriginType, contacts:JsArray)
+case class ABookRawInfo(userId:Option[Id[User]], origin:ABookOriginType, ownerId:Option[String] = None, ownerEmail:Option[String] = None, contacts:JsArray) // ios ownerId may not be present
 
 object ABookRawInfo {
   import play.api.libs.functional.syntax._
@@ -52,21 +52,28 @@ object ABookRawInfo {
   implicit val format = (
       (__ \ 'userId).formatNullable(Id.format[User]) and
       (__ \ 'origin).format[String].inmap(ABookOriginType.apply _, unlift(ABookOriginType.unapply)) and
+      (__ \ 'ownerId).formatNullable[String] and
+      (__ \ 'ownerEmail).formatNullable[String] and
       (__ \ 'contacts).format[JsArray]
     )(ABookRawInfo.apply _, unlift(ABookRawInfo.unapply))
 
+  val EMPTY = ABookRawInfo(None, ABookOrigins.IOS, None, None, JsArray())
 }
 
-case class ABookInfo(id: Option[Id[ABookInfo]] = None,
+case class ABookInfo(
+    id: Option[Id[ABookInfo]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[ABookInfo] = ABookStates.ACTIVE,
     userId: Id[User],
     origin: ABookOriginType,
+    ownerId: Option[String] = None, // iOS
+    ownerEmail: Option[String] = None,
     rawInfoLoc: Option[String] = None
   ) extends Model[ABookInfo] {
   def withId(id: Id[ABookInfo]): ABookInfo = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): ABookInfo = this.copy(updatedAt = now)
+  def withOwnerInfo(ownerId: Option[String], ownerEmail: Option[String]): ABookInfo = this.copy(ownerId = ownerId, ownerEmail = ownerEmail)
 }
 
 object ABookStates extends States[ABookInfo]
@@ -83,6 +90,8 @@ object ABookInfo {
       (__ \ 'state).format(State.format[ABookInfo]) and
       (__ \ 'userId).format(Id.format[User]) and
       (__ \ 'origin).format[ABookOriginType] and
+      (__ \ 'ownerId).formatNullable[String] and
+      (__ \ 'ownerEmail).formatNullable[String] and
       (__ \ 'rawInfoLoc).formatNullable[String]
     )(ABookInfo.apply, unlift(ABookInfo.unapply))
 }

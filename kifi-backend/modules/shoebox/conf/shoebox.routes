@@ -11,6 +11,7 @@ POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controlle
 
 # Relevant when we support traditional user signups:
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
+GET     /signin                     @com.keepit.controllers.core.AuthController.signinPage()
 
 POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
 POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
@@ -265,7 +266,7 @@ POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthContr
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
-GET    /admin/users/initSeq          @com.keepit.controllers.admin.AdminUserController.initUserSeq()          
+GET    /admin/users/initSeq          @com.keepit.controllers.admin.AdminUserController.initUserSeq()
 
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
@@ -385,6 +386,7 @@ GET     /internal/shoebox/database/getBookmarksInCollection @com.keepit.controll
 GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsByUser(userId: Id[User])
 GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.shoebox.ShoeboxController.getIndexable(seqNum: Long, fetchSize: Int)
 POST    /internal/shoebox/database/createDeepLink      @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
+POST    /internal/shoebox/database/clickAttribution   @com.keepit.controllers.shoebox.ShoeboxController.clickAttribution()
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.shoebox.ShoeboxController.getActiveExperiments
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.shoebox.ShoeboxController.getExperiments

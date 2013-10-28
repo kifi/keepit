@@ -109,7 +109,7 @@ class UserConnectionCreator @Inject() (
             log.info("connection is already disabled")
             c
           case None =>
-            throw new Exception(s"could not find connection to ${socialUserInfo.id.get} for $friendSocialUserInfoId")
+            throw new Exception(s"trying to disable old connection: not find connection to ${socialUserInfo.id.get} for $friendSocialUserInfoId")
         }
       }
     }

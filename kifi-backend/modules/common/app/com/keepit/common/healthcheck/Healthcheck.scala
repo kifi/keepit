@@ -1,4 +1,4 @@
-package com.keepit.common.healthcheck
+  package com.keepit.common.healthcheck
 
 import scala.collection.mutable.{HashMap => MMap}
 import scala.concurrent.Await
@@ -13,7 +13,6 @@ import com.keepit.common.mail._
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
-
 
 import akka.actor._
 import akka.pattern.ask
@@ -85,41 +84,22 @@ class MailSender @Inject() (sender: HealthcheckMailSender) {
   }
 }
 
-class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHost, sender: MailSender, services: FortyTwoServices) {
-
+class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, sender: MailSender, services: FortyTwoServices) {
   def sendMail() {
-    if (history.lastError.callType == Healthcheck.EXTENSION) return
-    if (history.count == 1) sendAsanaMail()
-    else sendRegularMail()
-  }
-
-  private def sendRegularMail() {
-      val subject = s"[REPEATING ERROR][${services.currentService}] ${history.lastError.subjectName}"
-      val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString, host.host).body
-      sender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-        subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
-  }
-
-  private def sendAsanaMail() {
-      val started = services.started.toStandardTimeString
-      val subject = s"[${services.currentService}] ${history.lastError.subjectName}"
-      sender.sendMail(ElectronicMail(
-        from = Healthcheck.OPS_OF_THE_WEEK,
-        to = EmailAddresses.ASANA_PROD_HEALTH::Healthcheck.OPS_OF_THE_WEEK::Nil,
-        cc = (EmailAddresses.ENG_EMAILS.toSet - EmailAddresses.JARED - EmailAddresses.JOON).toSeq,
-        subject = subject,
-        htmlBody = views.html.email.healthcheckMail(history, started, host.host).body,
-        textBody = Some(views.html.email.healthcheckAsanaMail(history, started, host.host).body),
-        category = PostOffice.Categories.ASANA_HEALTHCHECK))
+    val last = history.lastError
+    val subject = s"[REPEATING ERROR #${history.count}][${services.currentService}] ${last.message.getOrElse("")} ${last.exception}"
+    val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString, host.host).body
+    sender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+      subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
   }
 }
 
-case class HealthcheckErrorHistory(signature: HealthcheckErrorSignature, count: Int, countSinceLastAlert: Int, lastError: HealthcheckError) {
-  def addError(error: HealthcheckError): HealthcheckErrorHistory = {
+case class AirbrakeErrorHistory(signature: AirbrakeErrorSignature, count: Int, countSinceLastAlert: Int, lastError: AirbrakeError) {
+  def addError(error: AirbrakeError): AirbrakeErrorHistory = {
     require(error.signature == signature)
     copy(count = count + 1, countSinceLastAlert = countSinceLastAlert + 1, lastError = error)
   }
-  def reset(): HealthcheckErrorHistory = copy(countSinceLastAlert = 0)
+  def reset(): AirbrakeErrorHistory = copy(countSinceLastAlert = 0)
 }
 
 class HealthcheckActor @Inject() (
@@ -130,7 +110,7 @@ class HealthcheckActor @Inject() (
 
   def alert(reason: Throwable, message: Option[Any]) = self ! error(reason, message)
 
-  private val errors: MMap[HealthcheckErrorSignature, HealthcheckErrorHistory] = new MMap()
+  private val errors: MMap[AirbrakeErrorSignature, AirbrakeErrorHistory] = new MMap()
 
   def receive() = {
     case ReportErrorsAction =>
@@ -139,15 +119,15 @@ class HealthcheckActor @Inject() (
         new SendHealthcheckMail(history, host, emailSender, services).sendMail()
       }
     case GetErrors =>
-      val lastErrors: Seq[HealthcheckError] = errors.values map {history => history.lastError} toSeq;
+      val lastErrors: Seq[AirbrakeError] = errors.values map {history => history.lastError} toSeq;
       sender ! lastErrors
     case ErrorCount => sender ! errors.values.foldLeft(0)(_ + _.count)
     case ResetErrorCount => errors.clear()
-    case error: HealthcheckError =>
+    case error: AirbrakeError =>
       val signature = error.signature
       val history = errors.contains(signature) match {
         case false =>
-          val newHistory = HealthcheckErrorHistory(signature, 1, 0, error)
+          val newHistory = AirbrakeErrorHistory(signature, 1, 0, error)
           new SendHealthcheckMail(newHistory, host, emailSender, services).sendMail()
           newHistory
         case true =>
@@ -162,9 +142,9 @@ class HealthcheckActor @Inject() (
 
 trait HealthcheckPlugin extends Plugin {
   def errorCount(): Int
-  def errors(): Seq[HealthcheckError]
+  def errors(): Seq[AirbrakeError]
   def resetErrorCount(): Unit
-  def addError(error: HealthcheckError): HealthcheckError
+  def addError(error: AirbrakeError): AirbrakeError
   def reportStart(): ElectronicMail
   def reportStop(): ElectronicMail
   def reportErrors(): Unit
@@ -190,13 +170,13 @@ class HealthcheckPluginImpl @Inject() (
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
 
-  def errors(): Seq[HealthcheckError] = Await.result((actor.ref ? GetErrors).mapTo[List[HealthcheckError]], 1 seconds)
+  def errors(): Seq[AirbrakeError] = Await.result((actor.ref ? GetErrors).mapTo[List[AirbrakeError]], 1 seconds)
 
   def resetErrorCount(): Unit = actor.ref ! ResetErrorCount
 
   def reportErrors(): Unit = actor.ref ! ReportErrorsAction
 
-  def addError(error: HealthcheckError): HealthcheckError = {
+  def addError(error: AirbrakeError): AirbrakeError = {
     log.error(s"Healthcheck logged error: ${error}")
     actor.ref ! error
     error

@@ -70,7 +70,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 exception = ex,
                 method = Some("ws"),
                 url = e.value.headOption.map(_.toString),
-                message = Some(s"[WS] user ${streamSession.userId.id} using ${extVersion} on ${streamSession.userAgent}")
+                message = Some(s"[WS] user ${streamSession.userId.id} using version ${extVersion} on ${streamSession.userAgent} making call ${e.toString}")
               )
             )
           }
