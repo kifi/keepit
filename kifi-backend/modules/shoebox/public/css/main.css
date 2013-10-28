@@ -62,13 +62,10 @@ body[data-view=profile] .my-pic::before { transition: none; animation-name: edit
 .my-keeps.active>a>.view-name::before {background-position: 0}
 .my-friends>a>.view-name::before {width: 20px; margin-right: 8px; background-position: -62px 8px}
 .my-friends.active>a>.view-name::before {background-position: -42px 8px}
-#collections>h2 {margin-top: 15px; padding-bottom: 2px; border-bottom: 1px solid #dbdee3; position: relative}
+#collections>h2 {margin-top: 15px; padding-bottom: 2px; position: relative}
 #collections h3 {line-height: 36px}
-a.collection-create {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
-a.collection-create:hover {background-color: #a0b1c2}
-a.collection-create:active {background-color: #8699ab}
 
-.collection-new {display: none; border-bottom: 1px solid #dbdee3; background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
+.collection-new {background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
 .collection-new.submitted {background-color: rgba(255,255,255,0)}
 #collections input {min-width: 160px; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
 #collections-list {overflow: hidden}
