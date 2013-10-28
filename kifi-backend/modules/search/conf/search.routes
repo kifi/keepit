@@ -3,12 +3,14 @@
 ##########################################
 GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
 GET     /search/comment             @com.keepit.controllers.ext.ExtCommentSearchController.search(q: String, maxHits: Int, context: Option[String])
-
+POST    /search/events/resultClicked      @com.keepit.controllers.ext.ExtSearchEventController.resultClicked()
+POST    /search/events/searchEnded      @com.keepit.controllers.ext.ExtSearchEventController.searchEnded()
+POST    /search/events/browsed      @com.keepit.controllers.ext.ExtSearchEventController.updateBrowsingHistory()
 
 # INTERNAL ROUTES/Search
 POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()
 POST    /internal/search/events/searchEnded @com.keepit.controllers.search.SearchEventController.logSearchEnded()
-POST    /internal/search/events/browsed/:userId @com.keepit.controllers.search.SearchEventController.logBrowsingHistory(userId: Id[User])
+POST    /internal/search/events/browsed/:userId @com.keepit.controllers.search.SearchEventController.updateBrowsingHistory(userId: Id[User])
 
 GET     /internal/search/comment/info         @com.keepit.controllers.search.CommentIndexerController.indexInfo()
 GET     /internal/search/comment/reindex      @com.keepit.controllers.search.CommentIndexerController.reindex()

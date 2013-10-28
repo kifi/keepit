@@ -89,6 +89,7 @@ object Shoebox extends Service {
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
     def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq), Param("highSeq", highSeq))
+    def clickAttribution() = ServiceRoute(POST, "/internal/shoebox/database/clickAttribution")
   }
 }
 
@@ -96,7 +97,7 @@ object Search extends Service {
   object internal {
     def logResultClicked() = ServiceRoute(POST, "/internal/search/events/resultClicked")
     def logSearchEnded() = ServiceRoute(POST, "/internal/search/events/searchEnded")
-    def logBrowsingHistory(id: Id[User]) = ServiceRoute(POST, s"/internal/search/events/browsed/${id.id}")
+    def updateBrowsingHistory(id: Id[User]) = ServiceRoute(POST, s"/internal/search/events/browsed/${id.id}")
     def commentIndexInfo() = ServiceRoute(GET, "/internal/search/comment/info")
     def commentReindex() = ServiceRoute(GET, "/internal/search/comment/reindex")
     def commentDumpLuceneDocument(id: Id[Comment]) = ServiceRoute(POST, "/internal/search/comment/dumpDoc", Param("id", id))

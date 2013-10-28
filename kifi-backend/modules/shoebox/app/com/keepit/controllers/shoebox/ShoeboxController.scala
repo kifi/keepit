@@ -58,7 +58,8 @@ class ShoeboxController @Inject() (
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
-  changedUriRepo: ChangedURIRepo)
+  changedUriRepo: ChangedURIRepo,
+  userBookmarkClicksRepo: UserBookmarkClicksRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -313,5 +314,17 @@ class ShoeboxController @Inject() (
       JsObject(List("id" -> JsNumber(id.id), "uri" -> Json.toJson(uri)))
     }
     Ok(JsArray(jsChanges))
+  }
+
+  def clickAttribution() = SafeAsyncAction(parse.json) { request =>
+    val json = request.body
+    val clicker = Id.format[User].reads(json \ "clicker").get
+    val uriId = Id.format[NormalizedURI].reads(json \ "uriId").get
+    val keepers = (json \ "keepers").as[JsArray].value.map(jsString => ExternalId[User](jsString.as[String]))
+    db.readWrite { implicit session =>
+      if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, uriId, true)
+      else keepers.foreach { extId => userBookmarkClicksRepo.increaseCounts(userRepo.get(extId).id.get, uriId, false) }
+    }
+    Ok
   }
 }

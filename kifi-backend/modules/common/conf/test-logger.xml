@@ -10,6 +10,10 @@
       </pattern>
     </encoder>
   </appender>
+
+  <!-- Disable if you want to see the access log in the console -->
+  <logger name="com.keepit.access" level="OFF"/>
+
   <root level="INFO">
     <appender-ref ref="CONSOLE" />
   </root>
