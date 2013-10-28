@@ -1,6 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.common.time._
+import com.keepit.search.graph.CollectionIdList
 import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.line.LineField
@@ -84,6 +85,22 @@ object DocUtil {
       val uriList = URIList(binaryValue.bytes, binaryValue.offset, binaryValue.length)
       val printable = toString(uriList.ids, uriList.createdAt)
       "version=%d [%s]".format(uriList.version, printable)
+    }
+  }
+
+  object CollectionIdListDecoder extends FieldDecoder {
+    override def apply(indexableField: IndexableField): String = {
+      var seqno = -1
+      def toString(ids: Array[Long]) = {
+        ids.map{ id =>
+          seqno += 1
+          "#%d: %d".format(seqno, id)
+        }.mkString(", ")
+      }
+      val binaryValue = indexableField.binaryValue
+      val idList = CollectionIdList(binaryValue.bytes, binaryValue.offset, binaryValue.length)
+      val printable = toString(idList.ids)
+      "version=%d [%s]".format(idList.version, printable)
     }
   }
 

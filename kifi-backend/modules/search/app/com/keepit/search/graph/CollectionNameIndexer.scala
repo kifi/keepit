@@ -25,6 +25,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.keepit.search.phrasedetector.PhraseTokenStream
 
 object CollectionNameFields {
   val nameField = "cn_name"
@@ -34,7 +35,7 @@ object CollectionNameFields {
   def decoders() = Map(
     nameField -> DocUtil.LineFieldDecoder,
     stemmedNameField -> DocUtil.LineFieldDecoder,
-    collectionIdListField -> DocUtil.URIListDecoder
+    collectionIdListField -> DocUtil.CollectionIdListDecoder
   )
 }
 
@@ -98,13 +99,13 @@ class CollectionNameIndexer(
 
       val names = buildLineField(CollectionNameFields.nameField, nameList){ (fieldName, text, lang) =>
         val analyzer = DefaultAnalyzer.forIndexing(lang)
-        analyzer.tokenStream(fieldName, new StringReader(text))
+        new PhraseTokenStream(fieldName, text, analyzer, removeSingleTerms = false)
       }
       doc.add(names)
 
       val stemmedNames = buildLineField(CollectionNameFields.stemmedNameField, nameList){ (fieldName, text, lang) =>
         val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
-        analyzer.tokenStream(fieldName, new StringReader(text))
+        new PhraseTokenStream(fieldName, text, analyzer, removeSingleTerms = false)
       }
       doc.add(stemmedNames)
 

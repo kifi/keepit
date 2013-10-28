@@ -7,9 +7,12 @@ import com.keepit.common.strings._
 import com.keepit.model.{NormalizedURI, User, Collection}
 import com.keepit.search.graph.CollectionFields._
 import com.keepit.search.index.Searcher
+import com.keepit.search.line.LineIndexReader
 import com.keepit.search.util.LongArraySet
+import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.util.BytesRef
 import scala.collection.mutable.ArrayBuffer
 
 
@@ -50,8 +53,40 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
   }
 }
 
-class CollectionSearcherWithUser(searcher: Searcher, userId: Id[User]) extends CollectionSearcher(searcher) {
+class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNameIndexSearcher: Searcher, userId: Id[User]) extends CollectionSearcher(collectionIndexSearcher) {
   lazy val myCollectionEdgeSet: UserToCollectionEdgeSet = getUserToCollectionEdgeSet(userId)
+
+  def detectCollectionNames(terms: IndexedSeq[Term], stemmedTerms: IndexedSeq[Term]): Set[(Int, Int, Long)] = {
+    collectionNameIndexSearcher.findDocIdAndAtomicReaderContext(userId.id) match {
+      case Some((doc, context)) =>
+        val reader = context.reader
+        val collectionIdList: CollectionIdList = {
+          val binaryDocValues = reader.getBinaryDocValues(CollectionNameFields.collectionIdListField)
+          if (binaryDocValues != null) {
+            val bytesRef = new BytesRef
+            binaryDocValues.get(doc, bytesRef)
+            CollectionIdList(bytesRef.bytes, bytesRef.offset, bytesRef.length)
+          } else {
+            null
+          }
+        }
+        if (collectionIdList != null && collectionIdList.size > 0) {
+          detectCollectionNames(terms, CollectionNameFields.nameField, doc, collectionIdList.ids, reader) ++
+          detectCollectionNames(stemmedTerms, CollectionNameFields.stemmedNameField, doc, collectionIdList.ids, reader)
+        } else {
+          Set.empty[(Int, Int, Long)]
+        }
+      case _ =>
+        Set.empty[(Int, Int, Long)]
+    }
+  }
+
+  private[this] def detectCollectionNames(qterms: IndexedSeq[Term], field: String, doc: Int, collectionIdList: Array[Long], reader: AtomicReader): Set[(Int, Int, Long)] = {
+    val terms = qterms.map{ t => new Term(field, t.text()) }
+    val r = LineIndexReader(reader, doc, terms.toSet, collectionIdList.length, None)
+    val detector = new CollectionNameDetector(r, collectionIdList)
+    detector.detectAll(terms)
+  }
 }
 
 abstract class CollectionToUriEdgeSet(override val sourceId: Id[Collection]) extends EdgeSet[Collection, NormalizedURI]
