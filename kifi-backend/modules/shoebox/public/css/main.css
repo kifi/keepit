@@ -45,7 +45,7 @@ body[data-view=profile] .my-pic::before { transition: none; animation-name: edit
 .my-name {height: 28px; line-height: 28px; font-size: 16px}
 .my-name:first-child {padding-top: 80px}
 .my-description {font-size: 12px; color: #818692;}
-.left-col h2 {margin: 4px 0 0; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 0 0 39px}
+.left-col h2 {margin: 4px 0 0; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 400; -webkit-font-smoothing: antialiased; padding: 0 0 0 39px}
 .left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
 .left-col .active {background-color: #e3e6ee}
 .left-col>*>h3:not(.active):hover {background-color: #e9ecf2}
@@ -63,8 +63,7 @@ body[data-view=profile] .my-pic::before { transition: none; animation-name: edit
 .my-friends>a>.view-name::before {width: 20px; margin-right: 8px; background-position: -62px 8px}
 .my-friends.active>a>.view-name::before {background-position: -42px 8px}
 #collections>h2 {margin-top: 15px; padding-bottom: 2px; border-bottom: 1px solid #dbdee3; position: relative}
-#collections>h2::before {content: " "; display: inline-block; height: 21px; width: 17px; margin: 0 8px 0 1px; background: url(../img/nav-icons.png) right; background-size: auto 21px; background-position-y: -1px; vertical-align: text-bottom}
-#collections h3 {line-height: 39px}
+#collections h3 {line-height: 36px}
 a.collection-create {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.collection-create:hover {background-color: #a0b1c2}
 a.collection-create:active {background-color: #8699ab}
@@ -77,18 +76,20 @@ a.collection-create:active {background-color: #8699ab}
 #collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; position: relative}
 #collections-list>.antiscroll-inner>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
 #collections-list>.antiscroll-scrollbar {z-index: 2}
-h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
+h3.collection {position: relative}
 .collection.renaming {background-color: #fff}
 .collection.renaming>a {cursor: text}
 .collection.renaming,
 .collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
 .collection.drop-hover {background-color: #6fa6ef}
 .collection.drop-hover .view-name {color: #fff}
-.collection.drop-hover .nav-count {background-color: #fff; border-color: #fff; color: #628196}
-.collection .nav-count {margin-top: 9px; position: relative; left: -1px}
-.collection:hover .nav-count,
-.collection.with-menu .nav-count,
-.collection.renaming .nav-count {display: none}
+.collection.drop-hover .tag-count {background-color: #fff; border-color: #fff; color: #628196}
+.collection .tag-count {margin-left: 4px; border-radius: 10.5px; background: #e3e6ee; color: #93a7bc; font-size: 12px; line-height: 20px; padding: 2px 12px}
+.collection.active .tag-count {background-color: #eff2f7; color: #93a7bc}
+.collection.with-menu .tag-count,
+.collection.renaming .tag-count {display: none}
+.tag-icon {display:inline-block; width: 17px; height: 17px; background-image: url(../img/tag-icon.png); background-size: auto 17px; vertical-align: middle; margin-right: 5px}
+.collection.active .tag-icon {background-image: url(../img/tag-icon.png)}
 .coll-tri {position: absolute; top: 0; bottom: 0; right: 0; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer}
 .active>.coll-tri {background-color: #b8c5d2}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
@@ -646,7 +647,8 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .query-x::before {background-image: url(../img/search.2x.png)}
   .my-keeps>a>.view-name::before,
   .my-friends>a>.view-name::before,
-  #collections>h2::before {background-image: url(../img/nav-icons.2x.png)}
+  .tag-icon {background-image: url(../img/tag-icon.2x.png)}
+  .collection.active .tag-icon {background-image: url(../img/tag-icon.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}
   .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
