@@ -15,7 +15,6 @@ import com.keepit.search._
 import com.keepit.serializer.PersonalSearchResultPacketSerializer.resSerializer
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.common.healthcheck.Healthcheck.SEARCH
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture

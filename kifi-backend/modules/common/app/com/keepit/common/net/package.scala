@@ -4,7 +4,6 @@ import play.api.http.HeaderNames._
 import play.api.mvc.Request
 import play.api.mvc.RequestHeader
 import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.healthcheck.HealthcheckError
 
 package object net {
 

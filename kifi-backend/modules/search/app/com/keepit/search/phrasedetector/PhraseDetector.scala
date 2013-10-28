@@ -106,7 +106,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
       wordCnt += 1
       start = start.prevWord
     }
-    if (wordCnt > 1 || (start.nextWord != null && start.nextWord.doc == doc) )start else null // need at least two words
+    if (wordCnt > 1 || (start.nextWord != null && start.nextWord.doc == doc)) start else null // need at least two words
   }
 
   private class Word(val index: Int, val freq: Int, tp: DocsAndPositionsEnum, val prevWord: Word) {

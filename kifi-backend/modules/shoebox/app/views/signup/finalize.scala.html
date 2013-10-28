@@ -1,4 +1,4 @@
-@(network: String, emailAddress: String, firstName: String = "", lastName: String = "", picturePath: String, triedToLoginWithNoAccount: Boolean)
+@(network: String, emailAddress: String, firstName: String = "", lastName: String = "", picturePath: String)
 
 @content = {
 <div class="curtain-l"></div>
@@ -6,12 +6,6 @@
 
 <h1 class="main-logo">kifi</h1>
 <h2 class="page-title">Finalize Your Account</h2>
-
-<!-- @picturePath -->
-@if(triedToLoginWithNoAccount) {
-  <!-- You tried to login. You have no account. Silly! -->
-}
-
 
 <form class="signup-2 @if(network == "fortytwo") {signup-2-email} else {signup-2-social}" novalidate>
   @if(network == "fortytwo") {
@@ -27,7 +21,7 @@
     <input class="form-last-name" type="text" name="last-name" value="@lastName" placeholder="Last name" required>
   </div>
   <div class="form-pic">
-    <div class="form-photo"><div class="form-photo-progress"></div></div>
+    <div class="form-photo"@if(picturePath != ""){ style="background-image:url(@picturePath)"}><div class="form-photo-progress"></div></div>
     <div class="form-photo-controls">
       <a class="form-photo-a facebook" href="javascript:">Use Facebook photo</a>
       <a class="form-photo-a linkedin" href="javascript:">Use LinkedIn photo</a>
@@ -45,8 +39,10 @@
 </form>
 }
 
-@postScript = {
-<script async defer>
+@scripts = {
+<script src="assets/js/jquery-ui-position.min.js"></script>
+<script src="assets/js/auth.js"></script>
+<script>
 $('body').addClass('curtains-drawn');
 setTimeout(function() {
   $('input').first().focus().select();
@@ -54,4 +50,4 @@ setTimeout(function() {
 </script>
 }
 
-@helper.page("kifi.com • Finalize Your Account", content, postScript)
+@helper.page(title = "kifi.com • Finalize Your Account", content = content, scripts = scripts)

@@ -10,7 +10,7 @@
   allowedInvites: Int,
   emails: Seq[EmailAddress],
   abookInfos: Seq[ABookInfo],
-  contactInfos: Seq[ContactInfo],
+  contacts: Seq[Contact],
   abookEP: Option[String],
   collections: Seq[Collection],
   collectionFilter: Option[Id[Collection]],
@@ -127,19 +127,19 @@
   @if(abookInfos.size > 0) {
     <h3>Address Book(s)</h3>
     <table class="table table-condensed table-striped">
-        <tr><th>ABookId</th><th>Origin</th><th>State</th><th>RawInfoLoc</th></tr>
+        <tr><th>ABookId</th><th>Origin</th><th>State</th><th>OwnerId</th><th>OwnerEmail</th><th>RawInfoLoc</th></tr>
         @for(abookInfo <- abookInfos) {
-            <tr><td>@abookInfo.id</td><td>@abookInfo.origin</td><td>@abookInfo.state</td><td>@abookInfo.rawInfoLoc</td></tr>
+            <tr><td>@abookInfo.id</td><td>@abookInfo.origin</td><td>@abookInfo.state</td><td>@abookInfo.ownerId</td><td>@abookInfo.ownerEmail</td><td>@abookInfo.rawInfoLoc</td></tr>
         }
     </table>
   }
-  @if(contactInfos.size > 0) {
+  @if(contacts.size > 0) {
     <h3>Contacts (up to 500)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
-            <tr><th>ContactId</th><th>Origin</th><th>ABookId</th><th>Name</th><th>Email</th></tr>
-            @for(contactInfo <- contactInfos) {
-                <tr><td>@contactInfo.id</td><td>@contactInfo.origin</td><td>@contactInfo.abookId</td><td>@contactInfo.name</td><td>@contactInfo.email</td></tr>
+            <tr><th>ContactId</th><th>Origin</th><th>ABookId</th><th>Name</th><th>Email</th><th>Alt Emails</th></tr>
+            @for(contact <- contacts) {
+            <tr><td>@contact.id</td><td>@contact.origin</td><td>@contact.abookId</td><td>@contact.name</td><td>@contact.email</td><td>@contact.altEmails</td></tr>
             }
         </table>
     </div>
