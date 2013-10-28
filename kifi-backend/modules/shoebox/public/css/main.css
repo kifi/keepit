@@ -70,7 +70,7 @@ a.collection-create:active {background-color: #8699ab}
 
 .collection-new {display: none; border-bottom: 1px solid #dbdee3; background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
 .collection-new.submitted {background-color: rgba(255,255,255,0)}
-#collections input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
+#collections input {min-width: 160px; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
 #collections-list {overflow: hidden}
 #collections-list.positioned {position: absolute; bottom: 0; left: 0; right: -1px}
 #collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; position: relative}
@@ -87,8 +87,10 @@ h3.collection {position: relative}
 .collection .tag-count {margin-left: 4px; border-radius: 10.5px; background: #e3e6ee; color: #93a7bc; font-size: 12px; line-height: 20px; padding: 2px 12px}
 .collection.active .tag-count {background-color: #eff2f7; color: #93a7bc}
 .collection.with-menu .tag-count,
+.collection:hover {background-color: #e9ecf2}
+.collection.active {background-color: #e3e6ee}
 .collection.renaming .tag-count {display: none}
-.tag-icon {display:inline-block; width: 17px; height: 17px; background-image: url(../img/tag-icon.png); background-size: auto 17px; vertical-align: middle; margin-right: 5px}
+.tag-icon {display:inline-block; width: 17px; height: 17px; background-image: url(../img/tag-icon.png); background-size: auto 17px; vertical-align: middle; margin-right: 4px}
 .collection.active .tag-icon {background-image: url(../img/tag-icon.png)}
 .coll-tri {position: absolute; top: 0; bottom: 0; right: 0; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer}
 .active>.coll-tri {background-color: #b8c5d2}
