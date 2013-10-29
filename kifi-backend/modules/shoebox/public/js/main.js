@@ -1350,8 +1350,9 @@ $(function() {
 	});
 
 	var $newColl = $colls.find(".collection-new");
-	$newColl.find("input").on("blur keydown", function(e) {
-		if ((e.which === 13 || e.type === "blur") && !$newColl.is(":animated")) { // 13 is Enter
+	$newColl.find("input")
+  .on("keydown", function(e) {
+		if (e.which === 13) { // Enter
 			var name = $.trim(this.value);
 			if (name) {
 				createCollection(name, function(collId) {
@@ -1359,7 +1360,28 @@ $(function() {
 				});
 			}
 		}
-	});
+	}).
+  on('input', function (e) {
+    var tags = Object.keys(collections).map(function(key) {
+      return this[key];
+    }, collections);
+
+    var val = $.trim(this.value || '');
+
+    if (val) {
+      tags = window.scorefilter.filter(this.value, tags, {
+        pre: '<b>',
+        post: '</b>',
+        extract: function (tag) {
+          return tag.name;
+        }
+      }).map(function(res) {
+        return res.original;
+      });
+    }
+
+    collTmpl.render(tags);
+  });
 
 	function createCollection(name, callback) {
 		$newColl.addClass("submitted");
