@@ -49,10 +49,10 @@ class UserIndexerPluginImpl @Inject()(
   override def enabled: Boolean = true
   override def onStart() {
     scheduleTask(actor.system, 30 seconds, 2 minute, actor.ref, Update)
-    log.info("starting CommentIndexerPluginImpl")
+    log.info("starting UserIndexerPluginImpl")
   }
   override def onStop() {
-    log.info("stopping CommentIndexerPluginImpl")
+    log.info("stopping UserIndexerPluginImpl")
     cancelTasks()
     indexer.close()
   }
