@@ -20,66 +20,38 @@
 
 (function () {
   'use strict';
-  var baseUri = 'https://www.kifi.com';
+  var baseUri = '';
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
 
-  $('.curtain-action').click(function (e) {
-    if (e.which !== 1) return;
-    var $form = $('form').hide()
-      .filter('.' + $(this).data('form'))
-      .css('display', 'block');
+  $('.curtain-action').on('mousedown click', function (e) {
+    if (e.which !== 1 || $('body').hasClass('curtains-drawn')) return;
+    var isLogin = $(this).hasClass('curtain-login');
+    var $signup = $('.signup').css('display', isLogin ? 'none' : 'block');
+    var $login = $('.login').css('display', !isLogin ? 'none' : 'block');
+    var $form = isLogin ? $login : $('.signup-1');
     $('.page-title').text($form.data('title'));
     $form.find('.form-email-addr').focus();
-    openCurtains();
-  });
-  $('.curtain-back').click(function (e) {
-    if (e.which !== 1) return;
-    closeCurtains();
-  });
-  function openCurtains() {
-    var logoL = $logoL[0], wL = logoL.offsetWidth;
-    var logoR = $logoR[0], wR = logoR.offsetWidth;
-    logoL.style.clip = 'rect(auto ' + wL + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto 0)';
-    logoL.offsetWidth, logoR.offsetWidth; // force layout
-    logoL.style.clip = 'rect(auto ' + Math.round(wL * .33) + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto ' + Math.round(wR * .67) + 'px)';
     $('body').addClass('curtains-drawn');
-  }
-  function closeCurtains() {
-    $logoL.add($logoR).css({display: 'block', clip: ''});
-    var logoL = $logoL[0], wL = logoL.offsetWidth;
-    var logoR = $logoR[0], wR = logoR.offsetWidth;
-    logoL.style.clip = 'rect(auto ' + Math.round(wL * .33) + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto ' + Math.round(wR * .67) + 'px)';
-    logoL.offsetWidth, logoR.offsetWidth; // force layout
-    logoL.style.clip = 'rect(auto ' + wL + 'px auto auto)';
-    logoR.style.clip = 'rect(auto auto auto 0)';
+  });
+  $('.curtain-back').on('mousedown click', function (e) {
+    if (e.which !== 1) return;
     $('body').removeClass('curtains-drawn');
-  }
+  });
 
   $('.form-network').click(function (e) {
     if (e.which !== 1) return;
     var $a = $(this);
-    var $form = $a.closest('form');
     var network = ['facebook', 'linkedin'].filter($.fn.hasClass.bind($a))[0];
-    if ($form.hasClass('signup-form')) {
-      if (network === 'facebook') {
-        window.location = 'https://www.facebook.com';
-      } else if (network === 'linkedin') {
-        window.location = 'https://www.linkedin.com';
-      }
-    } else if ($form.hasClass('login-form')) {
-      if (network === 'facebook') {
-        window.location = 'https://www.facebook.com';
-      } else if (network === 'linkedin') {
-        window.location = 'https://www.linkedin.com';
-      }
+    var $form = $a.closest('form');
+    if ($form.hasClass('signup-1')) {
+      window.location = baseUri + '/signup/' + network;
+    } else if ($form.hasClass('login')) {
+      window.location = baseUri + '/login/' + network;
     }
   });
 
-  var emailAddrRe = /^[a-zA-Z0-9.!#$%&’*+\/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+  var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   function showFormError($in, msg, opts) {
     var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
       .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
@@ -107,7 +79,7 @@
     if (!s) {
       showFormError($in, 'Please choose a password<br>for your account', {ms: 1500});
     } else if (s.length < 7) {
-      showFormError($in, 'Password must be<br>at least 7 characters', {ms: 1500});
+      showFormError($in, 'Password must be at least 7 characters', {ms: 1500});
     } else {
       return s;
     }
@@ -134,52 +106,95 @@
     }
   }
 
-  var signupPromise;
-  $('.signup-form').submit(function (e) {
-    e.preventDefault();
+  var signup1Promise;
+  $('.signup-1').submit(function (e) {
+    if (signup1Promise && signup1Promise.state() === 'pending') {
+      return false;
+    }
     $('.form-error').remove();
     var $form = $(this);
-    if (!$('body').hasClass('finalizing')) {
-      var email = validateEmailAddress($form.find('.form-email-addr'));
-      var password = email && validateNewPassword($form.find('.form-password'));
-      if (email && password) {
-        signupPromise = $.postJson(baseUri + '/auth/sign-up', {
-          email: email,
-          password: password
-        }).fail(function (xhr) {
-          if (console) console.error('[signup:1:fail]', xhr);
-        }).promise();
-        $('.finalize-email-addr').text(email);
-        transitionTitle($form.data('title2'));
-        $('body').addClass('finalizing');
-        setTimeout(function () {
-          $form.find('.form-first-name').focus();
-        }, 200);
-      }
-    } else {
-      var first = validateName($form.find('.form-first-name'));
-      var last = first && validateName($form.find('.form-last-name'));
-      if (first && last) {
-        var namePromise = $.postJson(baseUri + '/site/user/me', {
-          firstName: first,
-          lastName: last
-        }).fail(function (xhr) {
-          if (console) console.error('[signup:2:fail]', xhr);
-        });
-        $.when(signupPromise, photoPromise, namePromise).done(function() {
-          window.location = '/';
-        });
-      }
+    var email = validateEmailAddress($form.find('.form-email-addr'));
+    var password = email && validateNewPassword($form.find('.form-password'));
+    if (email && password) {
+      signup1Promise = $.postJson(baseUri + '/auth/sign-up', {
+        email: email,
+        password: password
+      }).done(function(data) {
+        if (!data.finalized) {
+          transitionTitle($('.signup-2').data('title'));
+          $('body').addClass('finalizing droppable');
+          setTimeout(function () {
+            $('.form-first-name').focus();
+          }, 200);
+        } else {
+          navigateToApp();
+        }
+      }).fail(function (xhr) {
+        signup1Promise = null;
+      });
     }
+    return false;
   });
   function transitionTitle(text) {
     $('.page-title.obsolete').remove();
     var $title = $('.page-title');
     $title.after($title.clone().text(text)).addClass('obsolete').layout();
   }
+  function navigateToApp() {
+    window.location = '/';
+  }
 
-  $('.login-form').submit(function (e) {
-    e.preventDefault();
+  var signup2Promise;
+  $('.signup-2-email').submit(function (e) {
+    if (signup2Promise && signup2Promise.state() === 'pending') {
+      return false;
+    }
+    $('.form-error').remove();
+    var $form = $(this);
+    var first = validateName($form.find('.form-first-name'));
+    var last = first && validateName($form.find('.form-last-name'));
+    if (first && last) {
+      signup2Promise = $.postJson(baseUri + '/auth/email-finalize', {
+        firstName: first,
+        lastName: last
+        // picToken: TODO
+      }).fail(function (xhr) {
+        signup2Promise = null;
+      });
+      $.when(signup2Promise, photoPromise).done(navigateToApp);
+    }
+    return false;
+  });
+  $('.signup-2-social').submit(function (e) {
+    if (signup2Promise && signup2Promise.state() === 'pending') {
+      return false;
+    }
+    $('.form-error').remove();
+    var $form = $(this);
+    var email = validateEmailAddress($form.find('.form-email-addr'));
+    var password = email && validateNewPassword($form.find('.form-password'));
+    var first = email && password && validateName($form.find('.form-first-name'));
+    var last = email && password && first && validateName($form.find('.form-last-name'));
+    if (email && password && first && last) {
+      signup2Promise = $.postJson(baseUri + '/auth/social-finalize', {
+        email: email,
+        password: password,
+        firstName: first,
+        lastName: last
+        // picToken: TODO
+      }).fail(function (xhr) {
+        signup2Promise = null;
+      });
+      $.when(signup2Promise, photoPromise).done(navigateToApp);
+    }
+    return false;
+  });
+
+  var loginPromise;
+  $('.login').submit(function (e) {
+    if (loginPromise && loginPromise === 'pending') {
+      return false;
+    }
     $('.form-error').remove();
     var $form = $(this);
     var $email = $form.find('.form-email-addr');
@@ -187,12 +202,13 @@
     var email = validateEmailAddress($email);
     var password = email && validatePassword($password);
     if (email && password) {
-      $.postJson(baseUri + '/auth/log-in', {
+      loginPromise = $.postJson(baseUri + '/auth/log-in', {
         username: email,
         password: password
-      }).done(function () {
-        window.location = '/';
-      }).fail(function (xhr) {
+      })
+      .done(navigateToApp)
+      .fail(function (xhr) {
+        loginPromise = null;
         if (xhr.status === 403) {
           var o = xhr.responseJson;
           if (o && o.error === 'no_such_user') {
@@ -205,6 +221,7 @@
         }
       });
     }
+    return false;
   });
 
   var $photo = $('.form-photo');
@@ -224,7 +241,7 @@
       uploadPhotoIframe(this.form);
     }
   });
-  $(document).on('dragenter dragover drop', 'body.finalizing', function (e) {
+  $(document).on('dragenter dragover drop', '.droppable', function (e) {
     if (~Array.prototype.indexOf.call(e.originalEvent.dataTransfer.types, 'Files')) {
       if (e.type === 'dragenter') {
         $drop.css('display', 'block');
@@ -254,9 +271,9 @@
       var url = $photo.data('url');
       if (url) URL.revokeObjectURL(url);
       url = URL.createObjectURL(file);
-      $photo.css({'background-image': 'url(' + url + ')', 'background-size': 'cover'}).data('url', url);
+      $photo.css('background-image', 'url(' + url + ')').data('url', url);
     } else {  // TODO: URL alternative for Safari 5
-      $photo.css({'background-image': '', 'background-size': ''});
+      $photo.css('background-image', '');
     }
 
     if (photoXhr2) {
@@ -277,11 +294,11 @@
       if (photoXhr2 === xhr) {
         photoXhr2 = null;
       }
-      if (!deferred.isResolved()) {
+      if (deferred.state() === 'pending') {
         deferred.reject();
       }
     });
-    xhr.open('POST', baseUri + '/testing/upload', true);
+    xhr.open('POST', 'https://www.kifi.com/testing/upload', true);
     xhr.send(file);
   }
   function isImage(file) {
@@ -313,7 +330,7 @@
     });
     form.method = 'POST';
     form.target = 'upload';
-    form.action = baseUri + '/testing/upload';
+    form.action = 'https://www.kifi.com/testing/upload';
     form.submit();
 
     var fakeProgressTimer;
@@ -330,6 +347,7 @@
     photoPromise = deferred.promise();
     return deferred
       .progress(updateUploadProgressBar)
+      .notify(0)
       .done(updateUploadProgressBar.bind(null, 1))
       .always(function() {
         photoPromise = null;
@@ -337,7 +355,6 @@
   }
   var uploadProgressBar = $('.form-photo-progress')[0];
   function updateUploadProgressBar(frac) {
-    var pct = Math.round(frac * 100);
-    uploadProgressBar.style.borderWidth = frac < 1 ? '0 ' + (100 - pct) + 'px 0 ' + pct + 'px' : '';
+    uploadProgressBar.style.left = Math.round(100 * frac) + '%';
   }
 }());

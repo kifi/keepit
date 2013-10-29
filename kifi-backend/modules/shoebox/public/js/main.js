@@ -1347,52 +1347,18 @@ $(function() {
 			e.preventDefault();
 			$(this).find("input").focus();
 		}
-	})
-	.on("click", ".collection-create", function() {
-		clearTimeout(hideNewCollTimeout), hideNewCollTimeout = null;
-		if (!$newColl.is(":animated")) {
-			if ($newColl.is(":visible")) {
-				$newColl.slideUp(80).find("input").val("").prop("disabled", true);
-			} else {
-				$newColl.slideDown(80, function() {
-					$collList.find(".antiscroll-inner")[0].scrollTop = 0;
-					$newColl.find("input").prop("disabled", false).focus().select();
-				});
-			}
-		}
 	});
 
-	var $newColl = $colls.find(".collection-new"), hideNewCollTimeout;
+	var $newColl = $colls.find(".collection-new");
 	$newColl.find("input").on("blur keydown", function(e) {
 		if ((e.which === 13 || e.type === "blur") && !$newColl.is(":animated")) { // 13 is Enter
 			var name = $.trim(this.value);
 			if (name) {
 				createCollection(name, function(collId) {
 					$newColl.removeClass("submitted");
-					if (collId) {
-						$newColl.hide().find("input").val("").prop("disabled", true);
-					}
 				});
-			} else if (e.type === "blur") {
-				if ($newColl.is(":visible"))
-				// avoid back-to-back hide/show animations if "create tag" clicked again
-				hideNewCollTimeout = setTimeout(hide.bind(this), 300);
-			} else {
-				e.preventDefault();
-				hide.call(this);
 			}
-		} else if (e.which === 27 && !$newColl.is(":animated")) { // 27 is Esc
-			hide.call(this);
 		}
-		function hide() {
-			this.value = "";
-			this.disabled = true;
-			this.blur();
-			$newColl.slideUp(200);
-			clearTimeout(hideNewCollTimeout), hideNewCollTimeout = null;
-		}
-	}).focus(function() {
-		clearTimeout(hideNewCollTimeout), hideNewCollTimeout = null;
 	});
 
 	function createCollection(name, callback) {

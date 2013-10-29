@@ -10,6 +10,7 @@ import com.keepit.common.time._
 @ImplementedBy(classOf[UserPictureRepoImpl])
 trait UserPictureRepo extends Repo[UserPicture] {
   def getByName(id: Id[User], name: String)(implicit session: RSession): Option[UserPicture]
+  def getByOrigin(userId: Id[User], origin: UserPictureSource)(implicit session: RSession): Option[UserPicture]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[UserPicture]
 }
 
@@ -32,6 +33,10 @@ class UserPictureRepoImpl @Inject() (
 
   def getByName(userId: Id[User], name: String)(implicit session: RSession): Option[UserPicture] = {
     (for (up <- table if up.userId === userId && up.name === name) yield up).firstOption
+  }
+
+  def getByOrigin(userId: Id[User], origin: UserPictureSource)(implicit session: RSession): Option[UserPicture] = {
+    (for (up <- table if up.userId === userId && up.origin === origin && up.state === UserPictureStates.ACTIVE) yield up).sortBy(d => d.id desc).firstOption
   }
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[UserPicture] = {

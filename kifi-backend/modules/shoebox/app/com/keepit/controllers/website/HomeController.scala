@@ -62,15 +62,15 @@ class HomeController @Inject() (db: Database,
     }
   }, unauthenticatedAction = { implicit request =>
     val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
-    if (newSignup && request.identityOpt.isDefined)
+    if (newSignup && request.identityOpt.isDefined) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-        .flashing("error" -> "You have no Kifi account for this user. You can sign up here.")
+    }
     else
       Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
   })
 
   def curtainHome = Action {
-    Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/curtain.html").get)) as HTML
+    Ok(views.html.signup.auth())
   }
 
   def kifiSiteRedirect(path: String) = Action {

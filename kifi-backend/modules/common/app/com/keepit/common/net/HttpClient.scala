@@ -17,7 +17,7 @@ import com.keepit.common.strings._
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin, StackTrace}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, StackTrace}
 import com.keepit.common.concurrent.ExecutionContext.immediate
 import com.keepit.common.controller.CommonHeaders
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -86,7 +86,6 @@ trait HttpClient {
 case class HttpClientImpl(
     timeout: Int = 5000,
     headers: List[(String, String)] = List(),
-    healthcheckPlugin: HealthcheckPlugin,
     airbrake: Provider[AirbrakeNotifier],
     accessLog: AccessLog,
     serviceDiscovery: ServiceDiscovery,
@@ -111,7 +110,7 @@ case class HttpClientImpl(
           AirbrakeError.outgoing(
             exception = fullException,
             request = req.req,
-            message = s"[${remoteServiceString(req)}] calling ${req.url} after ${al.duration}ms"
+            message = s"[${remoteServiceString(req)}] calling ${req.httpUri.summary} after ${al.duration}ms"
           )
         )
     }
@@ -174,8 +173,7 @@ case class HttpClientImpl(
       f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (immediate)
       f.onSuccess {
         case response: ClientResponse => logSuccess(request, response)
-        case unknown => airbrake.get.notify(AirbrakeError(
-          message = Some(s"Unknown object in http client onSuccess: $unknown on $request")))
+        case unknown => airbrake.get.notify(s"Unknown object in http client onSuccess: $unknown on $request")
       } (immediate)
     }
   }
@@ -196,7 +194,7 @@ case class HttpClientImpl(
         statusCode = res.res.status))
 
     e.waitTime map {waitTime =>
-      if (waitTime > 100) {//ms
+      if (waitTime > 1000) {//ms
         val exception = request.tracer.withCause(LongWaitException(request.httpUri, res.res, waitTime))
         airbrake.get.notify(
           AirbrakeError.outgoing(

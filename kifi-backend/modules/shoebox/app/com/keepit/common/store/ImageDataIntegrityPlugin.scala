@@ -6,8 +6,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{NonOKResponseException, ClientResponse, HttpClient, DirectUrl}
 import com.keepit.common.plugin._
@@ -25,7 +24,6 @@ private[store] class ImageDataIntegrityActor @Inject() (
     store: S3ImageStore,
     client: HttpClient,
     userPictureRepo: UserPictureRepo,
-    healthcheckPlugin: HealthcheckPlugin,
     airbrake: AirbrakeNotifier
   ) extends FortyTwoActor(airbrake) with Logging {
 
@@ -44,20 +42,12 @@ private[store] class ImageDataIntegrityActor @Inject() (
           for (((url, response), cloudfrontInfo) <- findPictures(user)) {
             if (response.status != OK) {
               log.warn(s"S3 request for avatar at $url returned ${response.status}")
-              healthcheckPlugin.addError(HealthcheckError(
-                callType = Healthcheck.INTERNAL,
-                errorMessage = Some(
-                  s"S3 avatar for ${user.firstName} ${user.lastName} at $url returned ${response.status}")
-              ))
+              airbrake.notify(s"S3 avatar for ${user.firstName} ${user.lastName} at $url returned ${response.status}")
             }
             for ((url, response) <- cloudfrontInfo) {
               if (response.status != OK) {
                 log.warn(s"Cloudfront request for avatar at $url returned ${response.status}")
-                healthcheckPlugin.addError(HealthcheckError(
-                  callType = Healthcheck.INTERNAL,
-                  errorMessage = Some(
-                    s"Cloudfront avatar for ${user.firstName} ${user.lastName} at $url returned ${response.status}")
-                ))
+                airbrake.notify(s"Cloudfront avatar for ${user.firstName} ${user.lastName} at $url returned ${response.status}")
               }
             }
           }

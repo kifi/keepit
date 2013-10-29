@@ -80,16 +80,17 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     |                 Setting this to 'true' means that if grouping by a field that can have multiple values the events will be broken down into multiple events with one value each. 
     |                 Note that this caused events with the field missing to be ignored (will otherwise show up under 'null').
     |                 Default: "false".
-    |   mode=$        Where $ is either "count" or "users". The former counts number of events, the latter counts (and returns, in json mode) distinct users. Default: "count".
+    |   mode=$        Where $ is either "count" or "users" or "count_unique". "count" counts number of events, "users" counts (and returns, in json mode) distinct users, "count_unique" counts unique values of the field specified in the "uniqueField" param. Default: "count".
     |   fitler=$      Where $ specifies a filter name to exclude certain events. Currently supported: "none", "noadmins". Default: "none".
+    |   uniqueField=$ Where $ specifies which fields unique values to count in "count_unique" mode.
   """.stripMargin
 
-  def createMetric(name: String, start: String, window: Int, step: Int, description: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String) = Action { request =>
+  def createMetric(name: String, start: String, window: Int, step: Int, description: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, uniqueField: String) = Action { request =>
     if (request.queryString.get("help").nonEmpty) Ok(createHelp)
     else {
       assert(window>0)
       val startDT = DateTime.parse(start)
-      metricManager.createMetric(MetricDescriptor(name, startDT, window, step, description, if (events=="all") Seq() else events.split(","), groupBy, breakDown.toBoolean, mode, filter, startDT, ""))
+      metricManager.createMetric(MetricDescriptor(name, startDT, window, step, description, if (events=="all") Seq() else events.split(","), groupBy, breakDown.toBoolean, mode, filter, startDT, uniqueField))
       Ok("New metric created")
     }
   }

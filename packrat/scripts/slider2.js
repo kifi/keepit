@@ -38,14 +38,17 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
   function onKeyDown(e) {
     if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {  // esc
       var escHandler = $(document).data('esc');
-      if (escHandler) {
-        escHandler(e);
-      } else if ($pane) {
-        hidePane();
-      } else if ($slider) {
-        hideSlider('esc');
-      } else {
-        return;
+      if (escHandler && escHandler(e) === false) {
+        return false;
+      }
+      if (!e.defaultPrevented) {
+        if ($pane) {
+          hidePane();
+        } else if ($slider) {
+          hideSlider('esc');
+        } else {
+          return;
+        }
       }
       e.preventDefault();
       e.stopPropagation();

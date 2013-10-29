@@ -46,6 +46,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
+  def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -60,6 +61,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]]
+  def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]]
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
   def getBookmarksChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Bookmark]]
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]]
@@ -82,6 +84,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
   def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
+  def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -234,6 +237,14 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }.map{ m => m.map{ case (k, v) => (k.userId, v) } }
   }
+  
+  def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
+    val ids = userIds.mkString(",")
+    call(Shoebox.internal.getEmailsForUsers(ids)).map{ res =>
+      res.json.as[Map[String, Seq[String]]]
+      .map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
+    }
+  }
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)){ key=>
     cacheProvider.searchFriendsCache.get(key) match {
@@ -358,6 +369,13 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.fromJson[Seq[NormalizedURI]](r.json).get
     }
   }
+  
+  def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = {
+    call(Shoebox.internal.getUserIndexable(seqNum, fetchSize)).map{ r =>
+      r.json.as[JsArray].value.map{ x => Json.fromJson[User](x).get }
+    }
+  }
+
 
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]] = {
     cacheProvider.userSessionExternalIdCache.get(UserSessionExternalIdKey(sessionId)) match {
@@ -462,5 +480,14 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-
+  def clickAttribution(clicker: Id[User], uri: Id[NormalizedURI], keepers: ExternalId[User]*): Unit = {
+    implicit val userFormatter = Id.format[User]
+    implicit val uriFormatter = Id.format[NormalizedURI]
+    val payload = Json.obj(
+      "clicker" -> JsNumber(clicker.id),
+      "uriId" -> JsNumber(uri.id),
+      "keepers" -> JsArray(keepers.map(id => JsString(id.toString)))
+    )
+    call(Shoebox.internal.clickAttribution, payload)
+  }
 }

@@ -435,9 +435,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			var $wrapper = this.get$('.kifi-message-participant-list-root'),
 				list = $wrapper.children()[0];
 
-			if (win.slider2) {
-				win.slider2.shadePane();
-			}
+			this.parent.shadePane();
 
 			this.get$().addClass('kifi-expanded');
 
@@ -451,9 +449,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			this.get$().removeClass('kifi-expanded');
 			this.get$('.kifi-message-participant-list-root').height(0);
 
-			if (win.slider2) {
-				win.slider2.unshadePane();
-			}
+			this.parent.unshadePane();
 		},
 
 		updateParticipantsHeight: function () {
@@ -649,11 +645,8 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		destroy: function (trigger) {
 			if (this.initialized) {
 				this.initialized = false;
-				this.parent = null;
 
-				if (win.slider2) {
-					win.slider2.unshadePane();
-				}
+				this.parent = null;
 
 				$(document).data('esc', this.prevEscHandler);
 				this.prevEscHandler = null;

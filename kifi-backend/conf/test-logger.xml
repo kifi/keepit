@@ -1,4 +1,5 @@
 <configuration>
+
   <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
     <!-- deny all events with a level below INFO, that is TRACE and DEBUG -->
     <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
@@ -10,7 +11,12 @@
       </pattern>
     </encoder>
   </appender>
+
+  <!-- Disable if you want to see the access log in the console -->
+  <logger name="com.keepit.access" level="OFF"/>
+
   <root level="INFO">
     <appender-ref ref="CONSOLE" />
   </root>
+
 </configuration>

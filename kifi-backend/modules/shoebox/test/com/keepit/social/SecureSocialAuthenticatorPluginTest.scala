@@ -4,7 +4,7 @@ import org.joda.time.DateTime
 import org.specs2.mutable._
 
 import com.keepit.common.db.{TestSlickSessionProvider, ExternalId}
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.{User, SocialUserInfo, UserSession}
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
 
@@ -14,12 +14,11 @@ import securesocial.core.{Authenticator, IdentityId}
 import com.keepit.common.time.FakeClock
 
 class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxApplicationInjector {
-  def healthcheckPlugin = inject[HealthcheckPlugin]
+  def airbrake = inject[AirbrakeNotifier]
   "SecureSocialAuthenticatorPlugin" should {
     "find existing user sessions" in {
       running(new ShoeboxApplication()) {
-        val plugin =
-          new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
+        val plugin = new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, airbrake, current)
         val id = ExternalId[UserSession]()
         plugin.find(id.id) === Right(None)
         db.readWrite { implicit s =>
@@ -36,7 +35,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxAppl
     "not find deleted sessions" in {
       running(new ShoeboxApplication()) {
         val plugin =
-          new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
+          new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, airbrake, current)
         val id = ExternalId[UserSession]()
         db.readWrite { implicit s =>
           userSessionRepo.save(UserSession(
@@ -56,7 +55,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxAppl
         inject[FakeClock].push(new DateTime("2015-01-01"))
 
         val plugin =
-          new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
+          new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, airbrake, current)
         val id = ExternalId[UserSession]()
         db.readWrite { implicit s =>
           userSessionRepo.save(UserSession(
@@ -69,7 +68,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxAppl
     "associate with the correct user and save the session when needed" in {
       running(new ShoeboxApplication()) {
         val plugin =
-          new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
+          new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, airbrake, current)
         val id = ExternalId[UserSession]()
         val socialId = SocialId("gm")
         val provider = SocialNetworks.FACEBOOK

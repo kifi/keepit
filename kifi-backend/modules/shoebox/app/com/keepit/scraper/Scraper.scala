@@ -11,10 +11,9 @@ import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.search.LangDetector
 import org.apache.http.HttpStatus
 import org.joda.time.Seconds
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.store.S3ScreenshotStore
 import org.joda.time.Days
-import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.model.ScrapeInfo
 import com.keepit.search.Article
 import com.keepit.common.net.URI
@@ -38,7 +37,7 @@ class Scraper @Inject() (
   scraperConfig: ScraperConfig,
   scrapeInfoRepo: ScrapeInfoRepo,
   normalizedURIRepo: NormalizedURIRepo,
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   bookmarkRepo: BookmarkRepo,
   urlPatternRuleRepo: UrlPatternRuleRepo,
   s3ScreenshotStore: S3ScreenshotStore,
@@ -87,7 +86,7 @@ class Scraper @Inject() (
     } catch {
       case e: Throwable =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
-        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL))
+        airbrake.notify(e)
         val errorURI = db.readWrite { implicit s =>
           // first update the uri state to SCRAPE_FAILED
           val latestUri = normalizedURIRepo.get(uri.id.get)
@@ -121,7 +120,7 @@ class Scraper @Inject() (
         case Scraped(article, signature, redirects) =>
           val updatedUri = processRedirects(latestUri, redirects)
 
-          // check if document is not changed or does not need to be reindexed 
+          // check if document is not changed or does not need to be reindexed
           if (latestUri.title == Option(article.title) && // title change should always invoke indexing
               latestUri.restriction == updatedUri.restriction && // restriction change always invoke indexing
               latestUri.state != NormalizedURIStates.SCRAPE_WANTED &&

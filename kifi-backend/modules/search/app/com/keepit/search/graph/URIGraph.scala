@@ -67,6 +67,7 @@ class URIGraphImpl @Inject()(
   }
 
   def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = {
-    new CollectionSearcherWithUser(collectionIndexer.getSearcher, userId)
+    val (collectionIndexSearcher, collectionNameIndexSearcher) = collectionIndexer.getSearchers
+    new CollectionSearcherWithUser(collectionIndexSearcher, collectionNameIndexSearcher, userId)
   }
 }

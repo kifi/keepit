@@ -37,7 +37,7 @@ class ArticleIndexer @Inject() (
   val fetchSize = 10000
 
   override def onFailure(indexable: Indexable[NormalizedURI], e: Throwable) {
-    airbrake.notify(AirbrakeError(e))
+    airbrake.notify(e)
     super.onFailure(indexable, e)
   }
 

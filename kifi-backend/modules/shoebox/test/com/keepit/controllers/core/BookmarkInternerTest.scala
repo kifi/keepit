@@ -55,8 +55,8 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
         val user = db.readWrite { implicit db =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
-        val fakeHealthcheck = inject[FakeHealthcheck]
-        fakeHealthcheck.errorCount() === 0
+        val fakeAirbrake = inject[FakeAirbrakeNotifier]
+        fakeAirbrake.errorCount() === 0
         val bookmarkInterner = inject[BookmarkInterner]
         val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
             "url" -> "http://42go.com",
@@ -72,7 +72,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
           bookmarks.size === 2
           bookmarkRepo.all.size === 2
         }
-        fakeHealthcheck.errorCount() === 1
+        fakeAirbrake.errorCount() === 1
       }
     }
     "reactivate inactive bookmarks for the same url" in {

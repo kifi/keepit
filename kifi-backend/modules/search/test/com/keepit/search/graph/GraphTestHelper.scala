@@ -11,7 +11,6 @@ import com.keepit.search.Article
 import com.keepit.search.Lang
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.inject._
-import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.search.index.{IndexDirectory, VolatileIndexDirectoryImpl, DefaultAnalyzer}
@@ -118,7 +117,8 @@ trait GraphTestHelper extends ApplicationInjector {
   }
 
   def mkCollectionIndexer(collectionDir: IndexDirectory = new VolatileIndexDirectoryImpl()): CollectionIndexer = {
-    new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkURIGraph(graphDir: IndexDirectory = new VolatileIndexDirectoryImpl(), collectionDir: IndexDirectory = new VolatileIndexDirectoryImpl()): URIGraphImpl = {

@@ -5,7 +5,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.model._
-import com.keepit.search.graph.URIList
+import com.keepit.search.graph.Util
 import com.keepit.search.LangDetector
 import com.keepit.search.index._
 import com.keepit.search.line.LineFieldBuilder
@@ -19,7 +19,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.util.matching.Regex.Match
 import com.keepit.social.BasicUser
-import scala.Some
 import com.keepit.search.Lang
 
 
@@ -180,7 +179,7 @@ class CommentIndexer(
           case _ =>
         }
 
-        val commentIdListBytes = URIList.packLongArray(comments.map(_.id.get.id).toArray)
+        val commentIdListBytes = Util.packLongArray(comments.map(_.id.get.id).toArray)
         val commentIds = buildBinaryDocValuesField(commentIdField, commentIdListBytes)
         doc.add(commentIds)
 

@@ -1,8 +1,8 @@
 package com.keepit
 
 import org.apache.commons.compress.archivers.tar.{TarArchiveInputStream, TarArchiveEntry, TarArchiveOutputStream}
-import java.io.{FileOutputStream, File}
-import java.nio.file.{StandardCopyOption, CopyOption, Files}
+import java.io.File
+import java.nio.file.Files
 
 package object common {
 
@@ -39,6 +39,14 @@ package object common {
       catch {
         case t: Throwable => g(t)
       }
+    }
+  }
+
+  import com.keepit.common.concurrent.ExecutionContext
+  import scala.concurrent.Future
+  implicit class CoMap[T](f: => Future[T]) {
+    def comap[S](g: T => S): Future[S] = {
+      f.map(g)(ExecutionContext.immediate)
     }
   }
 

@@ -1,8 +1,15 @@
 package com.keepit.search.graph
 
+import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
+import com.keepit.common._
+import com.keepit.common.cache.TestCacheModule
+import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.strings._
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.query.parser.TermIterator
+import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test._
 import org.specs2.mutable._
 import play.api.test.Helpers._
@@ -13,11 +20,11 @@ import org.apache.lucene.search.TermQuery
 import scala.collection.JavaConversions._
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 
-class CollectionIndexerTest extends Specification with GraphTestHelper {
+class CollectionIndexerTest extends Specification with ApplicationInjector with GraphTestHelper {
 
   "CollectionIndexer" should {
     "maintain a sequence number on collections " in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
         val numURIs = uris.size
 
@@ -48,7 +55,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find collections by user" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -85,7 +92,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find collections by uri" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -122,7 +129,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "store collection to uri associations in URIList" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -149,7 +156,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "store colleciton external ids" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -176,8 +183,51 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
       }
     }
 
+    "detect collection names" in {
+      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+        val (users, uris) = initData
+
+        val collectionIndexer = mkCollectionIndexer()
+
+        val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
+        saveBookmarksByURI(expectedUriToUsers)
+
+        val user = users.head
+        val bookmarks = getBookmarksByUser(user.id.get)
+        val collNames = Seq("Design", "Flat Design", "Web Design", "Design Web", "Web")
+        val collections = (collNames zip bookmarks).map{ case (name, bookmark) =>
+          saveCollection(user, name) tap { saveBookmarksToCollection(_, Seq(bookmark)) }
+        }
+        collectionIndexer.update()
+        collectionIndexer.numDocs === collections.size
+
+        val (collectionIndexSearcher, collectionNameIndexSearcher) = collectionIndexer.getSearchers
+        val searcher = new CollectionSearcherWithUser(collectionIndexSearcher, collectionNameIndexSearcher, user.id.get)
+
+        def getCollectionId(name: String): Long = {
+          collections.find(_.name == name).get.id.get.id
+        }
+        def detect(text: String) = {
+          val termSeq = new TermIterator("", text, DefaultAnalyzer.forParsing).toIndexedSeq
+          val stemmedTermSeq = new TermIterator("", text, DefaultAnalyzer.forParsingWithStemmer).toIndexedSeq
+          searcher.detectCollectionNames(termSeq, stemmedTermSeq)
+        }
+        detect("design") === Set((0, 1, getCollectionId("Design")))
+
+        detect("designs") === Set((0, 1, getCollectionId("Design")))
+
+        detect("flat") === Set()
+
+        detect("flat design") === Set((1, 1, getCollectionId("Design")), (0, 2, getCollectionId("Flat Design")))
+
+        detect("web design") === Set((0, 1, getCollectionId("Web")), (1, 1, getCollectionId("Design")), (0, 2, getCollectionId("Web Design")))
+
+        detect("boring flat design movement") === Set((2, 1, getCollectionId("Design")), (1, 2, getCollectionId("Flat Design")))
+      }
+    }
+
     "dump Lucene Document" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))
         val uris = saveURIs(
           NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),

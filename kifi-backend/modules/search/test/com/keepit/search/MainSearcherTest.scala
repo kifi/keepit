@@ -2,7 +2,9 @@ package com.keepit.search
 
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.graph.BookmarkStore
-import com.keepit.search.index.{VolatileIndexDirectoryImpl, FakePhraseIndexer, DefaultAnalyzer, ArticleIndexer}
+import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.graph.CollectionNameIndexer
+import index.{FakePhraseIndexer, DefaultAnalyzer, ArticleIndexer}
 import com.keepit.search.phrasedetector._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
@@ -27,6 +29,7 @@ import com.keepit.model.User
 import com.keepit.inject._
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import play.api.Play.current
+import com.keepit.search.user.UserIndexer
 
 class MainSearcherTest extends Specification with ApplicationInjector {
 
@@ -48,11 +51,15 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     val bookmarkStoreConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val colNameConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+
     val articleIndexer = new ArticleIndexer(new VolatileIndexDirectoryImpl, articleConfig, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, bookmarkStoreConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val uriGraph = new URIGraphImpl(
       new URIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]),
-      new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]),
+      new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]),
       inject[ShoeboxServiceClient],
       inject[MonitoredAwait])
     implicit val clock = inject[Clock]
@@ -60,6 +67,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
 
     val mainSearcherFactory = new MainSearcherFactory(
       articleIndexer,
+      userIndexer,
       uriGraph,
       new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
       resultClickTracker,

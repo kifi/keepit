@@ -19,7 +19,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.concurrent._
 import scala.util.Success
-import com.keepit.common.healthcheck._
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 import com.keepit.learning.topicmodel._
@@ -41,7 +41,7 @@ class ExpertRecommenderControllerImpl @Inject()(
   clicksRepo: UserBookmarkClicksRepo,
   bookmarkRepo: BookmarkRepo,
   centralConfig: CentralConfig,
-  healthcheckPlugin: HealthcheckPlugin
+  airbrake: AirbrakeNotifier
 ) extends ExpertRecommenderController with Logging{
   var serviceEnabled = false
   var scoreMap = MutMap.empty[(Id[User], Int), Float]
@@ -87,8 +87,7 @@ class ExpertRecommenderControllerImpl @Inject()(
 
     genScoreMap(rcmder).onComplete{
       case Success(m) => scoreMap = m ; enableService()
-      case _ =>  healthcheckPlugin.addError(HealthcheckError(callType = Healthcheck.SEARCH,
-          errorMessage = Some("Error generating user-topic score map")))
+      case _ => airbrake.notify("Error generating user-topic score map")
     }
   }
 

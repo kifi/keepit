@@ -46,11 +46,12 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
             e.printStackTrace
             if (!firstErrorReported) {
               firstErrorReported = true
-              val he = healthcheck.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage)))
+              val he = healthcheck.addError(AirbrakeError(e, message = Some("Fail to send airbrake message")))
               log.error(s"can't deal with error: $he")
             }
           }
       }
+      healthcheck.addError(error)
     case m => self ! AirbrakeErrorNotice(throw new UnsupportedActorMessage(s"unknown message $m"), true)
   }
 }
@@ -67,7 +68,7 @@ class AirbrakeSender @Inject() (
     {
       case ex: Exception => if (!firstErrorReported) {
         firstErrorReported = true
-        val he = healthcheck.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        val he = healthcheck.addError(AirbrakeError(ex, message = Some("Fail to send airbrake message")))
         log.error(s"can't deal with error: $he")
       }
     }
@@ -96,6 +97,8 @@ class AirbrakeSender @Inject() (
 trait AirbrakeNotifier {
   def reportDeployment(): Unit
   def notify(error: AirbrakeError): AirbrakeError
+  def notify(errorException: Throwable): AirbrakeError
+  def notify(errorMessage: String): AirbrakeError
 }
 
 // apiKey is per service type (showbox, search etc)
@@ -103,6 +106,10 @@ class AirbrakeNotifierImpl (
   actor: ActorInstance[AirbrakeNotifierActor]) extends AirbrakeNotifier with Logging {
 
   def reportDeployment(): Unit = actor.ref ! AirbrakeDeploymentNotice
+
+  def notify(errorException: Throwable): AirbrakeError = notify(AirbrakeError(errorException))
+
+  def notify(errorMessage: String): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage)))
 
   def notify(error: AirbrakeError): AirbrakeError = {
     actor.ref ! AirbrakeErrorNotice(error)

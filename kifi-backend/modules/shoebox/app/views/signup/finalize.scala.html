@@ -1,0 +1,53 @@
+@(network: String, emailAddress: String, firstName: String = "", lastName: String = "", picturePath: String)
+
+@content = {
+<div class="curtain-l"></div>
+<div class="curtain-r"></div>
+
+<h1 class="main-logo">kifi</h1>
+<h2 class="page-title">Finalize Your Account</h2>
+
+<form class="signup-2 @if(network == "fortytwo") {signup-2-email} else {signup-2-social}" novalidate>
+  @if(network == "fortytwo") {
+  <div class="static-email-addr">@emailAddress</div>
+  } else {
+  <div class="form-creds">
+    <input class="form-email-addr" type="email" name="signup-email" value="@emailAddress" placeholder="Your email address">
+    <input class="form-password" type="password" name="signup-password" placeholder="Your new password">
+  </div>
+  }
+  <div class="form-name">
+    <input class="form-first-name" type="text" name="first-name" value="@firstName" placeholder="First name" required>
+    <input class="form-last-name" type="text" name="last-name" value="@lastName" placeholder="Last name" required>
+  </div>
+  <div class="form-pic">
+    <div class="form-photo"@if(picturePath != ""){ style="background-image:url(@picturePath)"}><div class="form-photo-progress"></div></div>
+    <div class="form-photo-controls">
+      <a class="form-photo-a facebook" href="javascript:">Use Facebook photo</a>
+      <a class="form-photo-a linkedin" href="javascript:">Use LinkedIn photo</a>
+      <label class="form-photo-a upload">
+        Upload a photo
+        <input class="form-photo-file" type="file" name="photo">
+      </label>
+    </div>
+    <div class="form-photo-drop">Drop picture here</div>
+  </div>
+  <button class="form-submit">Done</button>
+  <p class="terms">
+    By signing up, you agree to Kifi’s <a target="_blank" href="">Terms of Service</a>.
+  </p>
+</form>
+}
+
+@scripts = {
+<script src="assets/js/jquery-ui-position.min.js"></script>
+<script src="assets/js/auth.js"></script>
+<script>
+$('body').addClass('curtains-drawn');
+setTimeout(function() {
+  $('input').first().focus().select();
+}, 100);
+</script>
+}
+
+@helper.page(title = "kifi.com • Finalize Your Account", content = content, scripts = scripts)

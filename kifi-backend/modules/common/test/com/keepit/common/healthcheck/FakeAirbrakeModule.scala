@@ -28,7 +28,16 @@ case class FakeAirbrakeModule() extends AirbrakeModule {
 }
 
 @Singleton
-class FakeAirbrakeNotifier @Inject() (clock: Clock) extends AirbrakeNotifier {
+class FakeAirbrakeNotifier @Inject() (
+      clock: Clock)
+    extends AirbrakeNotifier {
+  var errors: List[AirbrakeError] = List()
+  def errorCount(): Int = errors.size
   def reportDeployment(): Unit = {}
-  def notify(error: AirbrakeError): AirbrakeError = error
+  def notify(errorException: Throwable): AirbrakeError = {println(errorException.toString); notify(AirbrakeError(errorException))}
+  def notify(errorMessage: String): AirbrakeError = {println(errorMessage); notify(AirbrakeError(message = Some(errorMessage)))}
+  def notify(error: AirbrakeError): AirbrakeError = {
+    errors = error :: errors
+    error
+  }
 }

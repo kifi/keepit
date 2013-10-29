@@ -5,7 +5,7 @@ import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck._
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net._
 import com.keepit.model._
 import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilderFactory, UserEvent, UserEventType}
@@ -17,7 +17,7 @@ import play.api.libs.json.Json
 class ExtAuthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  healthcheckPlugin: HealthcheckPlugin,
+  airbrake: AirbrakeNotifier,
   userRepo: UserRepo,
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
@@ -42,11 +42,10 @@ class ExtAuthController @Inject() (
            case Some(_) =>
            case None =>
              // They sent an invalid id. Bug on client side?
-             healthcheckPlugin.addError(HealthcheckError(
+             airbrake.notify(AirbrakeError(
                method = Some(request.method.toUpperCase()),
-               path = Some(request.path),
-               callType = Healthcheck.API,
-               errorMessage = Some("Invalid ExternalId passed in \"%s\" for userId %s".format(id, userId))))
+               url = Some(request.path),
+               message = Some(s"""Invalid ExternalId passed in "$id" for userId $userId""")))
          }
          kiId
        })

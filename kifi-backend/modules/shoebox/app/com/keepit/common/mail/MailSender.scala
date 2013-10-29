@@ -50,7 +50,7 @@ private[mail] class MailSenderActor @Inject() (
               Some(mailRepo.get(email))
             } catch {
               case ex: Throwable =>
-                airbrake.notify(AirbrakeError(ex))
+                airbrake.notify(ex)
                 None
             }
         }

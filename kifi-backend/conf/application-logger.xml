@@ -9,11 +9,17 @@
     </encoder>
   </appender>
   <logger name="com.jolbox.bonecp" level="TRACE"/>
-  
+
   <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
     <appender-ref ref="CONSOLE" />
   </appender>
-  
+
+  <!-- Disable if you want to see the access log in the console -->
+  <logger name="com.keepit.access" level="OFF"/>
+
+    <!-- Disable if you want to see the cache log in the console -->
+  <logger name="com.keepit.cache" level="OFF"/>
+
   <root level="INFO">
     <appender-ref ref="ASYNC" />
   </root>

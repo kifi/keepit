@@ -18,7 +18,7 @@ import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data.Forms._
 import play.api.data._
-import play.api.libs.json.Json
+import play.api.libs.json._
 import views.html
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -101,7 +101,7 @@ class AdminUserController @Inject() (
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
-    val cInfoF = abookClient.getContactInfos(userId, 40000000)
+    val contactsF = abookClient.getContacts(userId, 40000000)
     val (user, socialUserInfos, sentElectronicMails) = db.readOnly { implicit s =>
       val user = userRepo.get(userId)
       val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
@@ -112,7 +112,7 @@ class AdminUserController @Inject() (
       socialUserRawInfoStore.get(info.id.get)
     }
     val abookInfos:Seq[ABookInfo] = Await.result(abookInfoF, 5 seconds)
-    val contacts:Seq[ContactInfo] = Await.result(cInfoF, 10 seconds)
+    val contacts:Seq[Contact] = Await.result(contactsF, 10 seconds)
     Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails, abookInfos, contacts))
   }
 
@@ -147,7 +147,7 @@ class AdminUserController @Inject() (
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
-    val cInfoF = abookClient.getContactInfos(userId, 500)
+    val contactsF = abookClient.getContacts(userId, 500)
 
     val (user, bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
       val user = userRepo.get(userId)
@@ -190,7 +190,7 @@ class AdminUserController @Inject() (
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
     val abookInfos:Seq[ABookInfo] = Await.result(abookInfoF, 5 seconds)
-    val contacts:Seq[ContactInfo] = Await.result(cInfoF, 5 seconds)
+    val contacts:Seq[Contact] = Await.result(contactsF, 5 seconds)
     val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService()
     val abookEP = for (s <- abookServiceOpt) yield s"http://${s.instanceInfo.publicIp.ip}:9000/internal/abook/"
     val state = new BigInteger(130, new SecureRandom()).toString(32)
@@ -233,6 +233,11 @@ class AdminUserController @Inject() (
         }
         Ok(html.admin.users(users, 0, users.size, 1, searchTerm))
     }
+  }
+  
+  def searchBasicUsers(queryText: String, maxHits: Int = 10) = AdminHtmlAction { implicit request =>
+    val users = Await.result(searchClient.searchUsers(queryText, maxHits), 15 seconds)
+    Ok(JsArray(users.map{x => Json.toJson(x)}))
   }
 
   def updateUser(userId: Id[User]) = AdminHtmlAction { implicit request =>
