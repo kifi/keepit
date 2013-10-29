@@ -173,8 +173,7 @@ case class HttpClientImpl(
       f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (immediate)
       f.onSuccess {
         case response: ClientResponse => logSuccess(request, response)
-        case unknown => airbrake.get.notify(AirbrakeError(
-          message = Some(s"Unknown object in http client onSuccess: $unknown on $request")))
+        case unknown => airbrake.get.notify(s"Unknown object in http client onSuccess: $unknown on $request")
       } (immediate)
     }
   }

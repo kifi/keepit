@@ -66,7 +66,7 @@ class CollectionIndexer(
 
   override def onFailure(indexable: Indexable[Collection], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
-    airbrake.notify(AirbrakeError(message = Some(msg)))
+    airbrake.notify(msg)
     super.onFailure(indexable, e)
   }
 
