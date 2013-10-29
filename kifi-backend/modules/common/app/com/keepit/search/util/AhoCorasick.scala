@@ -17,9 +17,9 @@ object AhoCorasick {
 class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
   import AhoCorasick.State
 
-  private class StateImpl(fail: StateImpl) extends State[D] {
+  private class StateImpl extends State[D] {
     var nextStates: Map[I, StateImpl] = Map()
-    var failState: StateImpl = _root
+    var failState: StateImpl = null
     var hasMatch = false
     var data: Option[D] = None
 
@@ -30,7 +30,7 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
         case Some(nextState) =>
           nextState
         case _ =>
-          val nextState = new StateImpl(_root)
+          val nextState = new StateImpl
           nextStates += (item -> nextState)
           nextState
       }
@@ -50,7 +50,7 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
     def check(position: Int, onMatch: (Int, D)=>Unit): Unit = {
       if (hasMatch) {
         data.foreach(data => onMatch(position, data))
-        failState.check(position, onMatch)
+        if (failState != null) failState.check(position, onMatch)
       }
     }
 
@@ -60,7 +60,7 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
   private[this] var _size: Int = 0
   def size: Int = _size
 
-  private val _root: StateImpl = new StateImpl(null)
+  private val _root: StateImpl = new StateImpl
   def initialState: State[D] = _root
 
   val maxLength: Int = makeTrie(dict)
@@ -83,7 +83,8 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
       val s = queue.dequeue()
       s.nextStates.foreach{ case (item, next) =>
         queue += next
-        s.failState.next(item).foreach(next.setFailState(_))
+        val f = if (s.failState != null) s.failState else _root
+        f.next(item).foreach(next.setFailState(_))
       }
     }
   }
@@ -103,7 +104,10 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
   @tailrec private def _next(item: I, s: StateImpl): StateImpl = {
     s.next(item) match {
       case Some(next) => next
-      case _ => if (s eq _root) _root else _next(item, s.failState)
+      case _ =>
+        if (s eq _root) _root else {
+          _next(item, if (s.failState != null) s.failState else _root)
+        }
     }
   }
 }

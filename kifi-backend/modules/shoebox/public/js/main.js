@@ -1365,6 +1365,7 @@ $(function() {
 		$newColl.addClass("submitted");
 		$.postJson(xhrBase + '/collections/create', {name: name}, function(data) {
 			collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
+      $collList.find(".antiscroll-inner")[0].scrollTop = 0;
 			callback(data.id);
 		}).error(function() {
 			showMessage('Could not create tag, please try again later');

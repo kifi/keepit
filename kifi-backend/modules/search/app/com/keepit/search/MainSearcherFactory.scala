@@ -69,6 +69,7 @@ class MainSearcherFactory @Inject() (
         articleSearcher,
         parserFactory,
         socialGraphInfoFuture,
+        getCollectionSearcher(userId),
         clickBoostsFuture,
         browsingHistoryFuture,
         clickHistoryFuture,

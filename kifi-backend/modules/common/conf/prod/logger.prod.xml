@@ -40,6 +40,26 @@
 
   <!-- ================================ -->
 
+  <appender name="cache" class="ch.qos.logback.core.rolling.RollingFileAppender">
+   <file>log/cache.log</file>
+   <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+     <fileNamePattern>log/cache.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+   </rollingPolicy>
+   <encoder>
+     <pattern>%msg%n</pattern>
+   </encoder>
+  </appender>
+
+  <appender name="async_cache" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="cache" />
+  </appender>
+
+  <logger name="com.keepit.cache" level="ALL" additivity="false">
+    <appender-ref ref="async_cache" />
+  </logger>
+
+  <!-- ================================ -->
+
   <logger name="com.mysql" level="ERROR"/>
   <logger name="com.jolbox.bonecp" level="INFO"/>
   <logger name="com.ning.http" level="INFO"/>

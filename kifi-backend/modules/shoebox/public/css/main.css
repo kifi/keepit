@@ -65,9 +65,9 @@ body[data-view=profile] .my-pic::before { transition: none; animation-name: edit
 #collections>h2 {margin-top: 15px; padding-bottom: 2px; position: relative}
 #collections h3 {line-height: 36px}
 
-.collection-new {background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
+.collection-new {background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s;}
 .collection-new.submitted {background-color: rgba(255,255,255,0)}
-#collections input {min-width: 160px; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
+#collections input {width: 100%; margin: 0; border: 0; padding: 0; background-color: transparent; color: inherit; font: inherit; line-height: 1.35; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; background-image: url(../img/tag-icon-blue.png); background-repeat: no-repeat; background-size: auto 16px; padding-left: 22px}
 #collections-list {overflow: hidden}
 #collections-list.positioned {position: absolute; bottom: 0; left: 0; right: -1px}
 #collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; position: relative}
@@ -89,7 +89,6 @@ h3.collection {position: relative}
 .collection.renaming .tag-count {display: none}
 .tag-icon {display:inline-block; width: 14px; height: 16px; background-size: auto 16px; vertical-align: middle; margin-right: 4px}
 .tag-icon {background-image: url(../img/tag-icon-gray.png)}
-.collection-new .tag-icon {background-image: url(../img/tag-icon-blue.png)}
 .collection.active .tag-icon {background-image: url(../img/tag-icon-white.png)}
 .coll-tri {position: absolute; top: 0; bottom: 0; right: 0; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer}
 .active>.coll-tri {background-color: #b8c5d2}
@@ -549,7 +548,7 @@ li:first-child>.page-coll-add {background-color: #b8c5d2}
 li:first-child>.page-coll-add:hover {background-color: #a0b1c2}
 .page-coll-add:active::before,
 li:first-child>.page-coll-add:active {background-color: #8699ab}
-[data-kept^=p]>*>*>li:first-child>.page-coll-add::after {content: "Add this keep to a tag"}
+[data-kept^=p]>*>*>li:first-child>.page-coll-add::after {content: "Add a tag to this keep"}
 :not([data-kept^=p])>*>*>li:first-child>.page-coll-add::after {content: "Keep to a tag"}
 .page-coll-add::after {vertical-align: bottom; color: #fff; font-size: 13px; margin: 0 14px 0 8px; -webkit-font-smoothing: antialiased}
 .page-coll-sizer {position: absolute; visibility: hidden}
@@ -649,7 +648,7 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .my-keeps>a>.view-name::before,
   .my-friends>a>.view-name::before,
   .tag-icon {background-image: url(../img/tag-icon-gray.2x.png)}
-  .collection-new .tag-icon {background-image: url(../img/tag-icon-blue.2x.png)}
+  #collections input {background-image: url(../img/tag-icon-blue.2x.png)}
   .collection.active .tag-icon {background-image: url(../img/tag-icon-white.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}

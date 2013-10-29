@@ -49,6 +49,7 @@ class MainSearcher(
     articleSearcher: Searcher,
     parserFactory: MainQueryParserFactory,
     socialGraphInfoFuture: Future[SocialGraphInfo],
+    val collectionSearcher: CollectionSearcherWithUser,
     clickBoostsFuture: Future[ResultClickBoosts],
     browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
@@ -100,7 +101,6 @@ class MainSearcher(
   // social graph info
   private[this] lazy val socialGraphInfo = monitoredAwait.result(socialGraphInfoFuture, 5 seconds, s"getting SocialGraphInfo for user Id $userId")
   lazy val uriGraphSearcher = socialGraphInfo.uriGraphSearcher
-  lazy val collectionSearcher = socialGraphInfo.collectionSearcher
 
   @inline private[this] def findSharingUsers(id: Long, friendEdgeSet: UserToUserEdgeSet ): UserToUserEdgeSet = {
     uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
@@ -119,7 +119,7 @@ class MainSearcher(
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
+    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, collectionSearcher, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 
   def searchText(maxTextHitsPerCategory: Int) = {
@@ -137,7 +137,7 @@ class MainSearcher(
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
-    parsedQuery = parser.parse(queryString)
+    parsedQuery = parser.parse(queryString, Some(collectionSearcher))
 
     timeLogs.queryParsing = currentDateTime.getMillis() - tParse
     timeLogs.phraseDetection = parser.phraseDetectionTime
@@ -386,7 +386,7 @@ class MainSearcher(
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
-    parser.parse(queryString).map{ query =>
+    parser.parse(queryString, Some(collectionSearcher)).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
