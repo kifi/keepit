@@ -48,8 +48,8 @@ class UserIndexer(
   
   import UserIndexer._
   
-  val commitBatchSize = 500
-  val fetchSize = 5000
+  val commitBatchSize = 50
+  val fetchSize = 250
   
   def run(): Int = run(commitBatchSize, fetchSize)
   
