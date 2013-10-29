@@ -110,7 +110,7 @@ class S3ScreenshotStoreImpl @Inject() (
             val resizedImages = screenshotConfig.targetSizes.map { size =>
               for {
                 rawImage <- rawImageTry
-                resized <- Try { ImageUtils.resizeImage(rawImage, size) }
+                resized <- Try { ImageUtils.resizeImageKeepProportions(rawImage, size) }
               } yield (resized._1, resized._2, size)
             }
 
