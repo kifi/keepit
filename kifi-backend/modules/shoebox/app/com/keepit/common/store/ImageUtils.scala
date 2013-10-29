@@ -20,6 +20,19 @@ object ImageUtils {
 
     (os.size(), new ByteArrayInputStream(os.toByteArray()))
   }
+  def resizeImageMakeSquare(rawImage: BufferedImage, size: ImageSize) = {
+    val cropped = if (rawImage.getHeight != rawImage.getWidth) {
+      val h = rawImage.getHeight
+      val w = rawImage.getWidth
+      if (h > w) {
+        Try(cropSquareImage(rawImage, 0, (h-w)/2, w))
+      } else {
+        Try(cropSquareImage(rawImage, (w-h)/2, 0, h))
+      }
+    } else Try(rawImage)
+    resizeImageKeepProportions(cropped.getOrElse(rawImage), size)
+  }
+
   def cropImage(rawImage: BufferedImage, x: Int, y: Int, boxWidth: Int, boxHeight: Int) =
     Scalr.crop(rawImage, x, y, boxWidth, boxHeight)
   def cropSquareImage(rawImage: BufferedImage, x: Int, y: Int, side: Int) =
