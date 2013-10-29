@@ -4,6 +4,10 @@
   <h2>Users</h2>
   @analyticsView(data("installMetrics"), "install", "sum", "merged", "Total Invites sent vs. total unique users with the extension installed")
   @analyticsView(data("userMetrics"), "user", "simple", "merged", "Connected unique users vs. active (message,keep,kifi search result click) unique users by week")
+  @analyticsView(data("userMetrics"), "user_frac", "simple", "compare", "Fraction of unique connected users who were active (message,keep,kifi search result click) by week")
+
+  @analyticsView(data("keeperFraction"), "keeper_frac", "simple", "compare", "Fraction of unique connected users who are keeping by week")
+  @analyticsView(data("messagerFraction"), "messager_frac", "simple", "compare", "Fraction of unique connected users who are messaging by week")
   <h2>Keeping</h2>
   @analyticsView(data("keepActivityMetrics"), "keep_activity", "simple")
   @analyticsView(data("keepMetrics"), "keep", "simple")

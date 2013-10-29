@@ -77,6 +77,31 @@
       };
       merged.keys = _.keys(keys);
       return merged;
+    };
+
+    function compare(nmetric, dmetric){ //Warning, the metrics here have to have the same start, window and step
+      var compared = {};
+      compared.header = options.header;
+      compared.data = [];
+      compared.keys = ["Fraction"];
+      var nKey = nmetric.keys[0];
+      var dKey = dmetric.keys[0];
+      var numFrames = nmetric.data.length;
+      for (var i=0; i<numFrames; i++){
+        var nValue = nmetric.data[i].data[nKey] || 0;
+        var dValue = dmetric.data[i].data[dKey] || 0;
+        if (dValue>0){
+          var newFrame = {
+            time: nmetric.data[i].time, 
+            data: {
+              "Fraction" : (nValue/dValue)
+            }
+          }
+          compared.data.push(newFrame);
+        };
+      }
+      return compared;
+
     }
 
     function preprocess(metric){
@@ -150,7 +175,7 @@
             'ui': {
               'chartType': "LineChart",
                'chartOptions': {
-                  'chartArea': {'width': '75%'}
+                  'chartArea': {'width': '70%'}
                },
                'snapToData': true
             }
@@ -161,7 +186,7 @@
           'chartType': 'LineChart',
           'containerId': "chart_" + name + metric.header,
           'options': {
-            'chartArea': {'width': '75%', 'height': '80%'},
+            'chartArea': {'width': '70%', 'height': '80%'},
             'title': metric.header + suffix
           }
         });
@@ -179,7 +204,22 @@
       rawData = [merge(rawData)];
     }
 
+    if (options.compare){
+      //make sure there are only two charts
+      if (rawData.length!=2){
+        console.log("Error: You need supply exactly two charts for comparison. (Did you merge?)");
+        return;
+      };
+      //make sure they all have cardinality one
+      if (rawData[0].keys.length!=1 || rawData[0].keys.length!=1){
+        console.log("Error: Can only compare metrics of cardinality one. (Did you merge?)");
+      };
+      rawData = [compare(rawData[1], rawData[0])]
+    }
+
     _.forEach(rawData, function(metric){prepareDom(metric)});
+
+
 
     google.setOnLoadCallback(drawAndRedraw);
 
@@ -190,6 +230,7 @@
     {
       sum    : ("@mode"==="sum"),
       merge  : ("@display"==="merged"),
+      compare: ("@display"==="compare"),
       header : "@masterTitle"
     }
   );
