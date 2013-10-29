@@ -548,7 +548,7 @@ li:first-child>.page-coll-add {background-color: #b8c5d2}
 li:first-child>.page-coll-add:hover {background-color: #a0b1c2}
 .page-coll-add:active::before,
 li:first-child>.page-coll-add:active {background-color: #8699ab}
-[data-kept^=p]>*>*>li:first-child>.page-coll-add::after {content: "Add this keep to a tag"}
+[data-kept^=p]>*>*>li:first-child>.page-coll-add::after {content: "Add a tag to this keep"}
 :not([data-kept^=p])>*>*>li:first-child>.page-coll-add::after {content: "Keep to a tag"}
 .page-coll-add::after {vertical-align: bottom; color: #fff; font-size: 13px; margin: 0 14px 0 8px; -webkit-font-smoothing: antialiased}
 .page-coll-sizer {position: absolute; visibility: hidden}
