@@ -80,13 +80,25 @@ class AdminAnalyticsController @Inject() (
     ), totalable=false)
   )
 
+  val keeperFraction = Map[String, MetricAuxInfo](
+    "alive_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Connected Users")),
+    "keepers_weekly_nogroup" -> MetricAuxInfo("nothing yet", Map("null" -> "Keeping Users"))
+  )
+
+  val messagerFraction = Map[String, MetricAuxInfo](
+    "alive_weekly" -> MetricAuxInfo("nothing yet", Map("null" -> "Connected Users")),
+    "messagers_weekly_nogroup" -> MetricAuxInfo("nothing yet", Map("null" -> "Messaging Users"))
+  )
+
   val metrics = Map[String, Map[String, MetricAuxInfo]](
     "installMetrics" -> installMetrics,
     "userMetrics" -> userMetrics,
     "keepActivityMetrics" -> keepActivityMetrics,
     "keepMetrics" -> keepMetrics,
     "messageMetrics" -> messageMetrics,
-    "searchMetrics" -> searchMetrics
+    "searchMetrics" -> searchMetrics,
+    "keeperFraction" -> keeperFraction,
+    "messagerFraction" -> messagerFraction
   )
 
   private def augmentMetricData(metricData: JsObject, auxInfo: MetricAuxInfo): JsObject = {
