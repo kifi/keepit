@@ -1,7 +1,7 @@
 <configuration>
-    
+
   <conversionRule conversionWord="coloredLevel" converterClass="play.api.Logger$ColoredLevel" />
-  
+
   <appender name="FILE" class="ch.qos.logback.core.FileAppender">
      <file>${application.home}/logs/application.log</file>
      <encoder>
@@ -12,8 +12,11 @@
   <logger name="play" level="INFO" />
   <logger name="application" level="INFO" />
 
+  <!-- Disable if you want to see the access log in the console -->
+  <logger name="com.keepit.access" level="OFF"/>
+
   <root level="ERROR">
     <appender-ref ref="FILE" />
   </root>
-  
+
 </configuration>

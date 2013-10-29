@@ -58,7 +58,8 @@ class ShoeboxController @Inject() (
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
-  changedUriRepo: ChangedURIRepo)
+  changedUriRepo: ChangedURIRepo,
+  userBookmarkClicksRepo: UserBookmarkClicksRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -206,11 +207,24 @@ class ShoeboxController @Inject() (
   }
 
   def getBasicUsers(ids: String) = Action { request =>
-    val userIds = ids.split(',').map(id => Id[User](id.toLong))
+    val userIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(id => Id[User](id.toLong))
     val users = db.readOnly { implicit s =>
       userIds.map{ userId => userId.id.toString -> Json.toJson(basicUserRepo.load(userId)) }.toMap
     }
     Ok(Json.toJson(users))
+  }
+  
+  def getUserIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
+    val users = db.readOnly { implicit s => userRepo.getUsersSince(SequenceNumber(seqNum), fetchSize) }
+    Ok(JsArray(users.map{ u => Json.toJson(u)}))
+  }
+  
+  def getEmailsForUsers(ids: String) = Action { request =>
+    val userIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(id => Id[User](id.toLong))
+    val emails = db.readOnly{ implicit s =>
+      userIds.map{userId => userId.id.toString -> emailAddressRepo.getByUser(userId).map{_.address}}.toMap
+    }
+    Ok(Json.toJson(emails))
   }
 
   def getCollectionIdsByExternalIds(ids: String) = Action { request =>
@@ -313,5 +327,17 @@ class ShoeboxController @Inject() (
       JsObject(List("id" -> JsNumber(id.id), "uri" -> Json.toJson(uri)))
     }
     Ok(JsArray(jsChanges))
+  }
+
+  def clickAttribution() = SafeAsyncAction(parse.json) { request =>
+    val json = request.body
+    val clicker = Id.format[User].reads(json \ "clicker").get
+    val uriId = Id.format[NormalizedURI].reads(json \ "uriId").get
+    val keepers = (json \ "keepers").as[JsArray].value.map(jsString => ExternalId[User](jsString.as[String]))
+    db.readWrite { implicit session =>
+      if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, uriId, true)
+      else keepers.foreach { extId => userBookmarkClicksRepo.increaseCounts(userRepo.get(extId).id.get, uriId, false) }
+    }
+    Ok
   }
 }

@@ -22,17 +22,55 @@ this.scorefilter = (function () {
 		PRE,
 		POST;
 
-	function highlight(name, index, termLen) {
-		return name.substr(0, index) + PRE + name.substr(index, termLen) + POST + name.substr(index + termLen);
+	/**
+	 * Returns a highlighted string (html) of the matched text.
+	 *
+	 * @param {string} str - A candidate string to highlight its matched part
+	 * @param {number} index - A start index to highlight
+	 * @param {number} length - A length of highlighted part of the text
+	 *
+	 * @return {string} A highlighted text
+	 */
+
+	function highlight(str, index, length) {
+		return str.substr(0, index) + PRE + str.substr(index, length) + POST + str.substr(index + length);
 	}
+
+	/**
+	 * Tests whether the first string starts with the second string in locale comparison.
+	 *
+	 * @param {string} str1 - A string to test
+	 * @param {string} str2 - A prefix string to match
+	 *
+	 * @return {boolean} Whether the first string starts with the second string in locale comparison
+	 */
 
 	function localeStartsWith(str1, str2) {
 		return localeEquals(str1.substring(0, str2.length), str2);
 	}
 
-	function localeEquals(str1, str2) {
-		return str1.localeCompare(str2, void 0, LOCALE_COMPARE_OPTIONS) === 0;
+	/**
+	 * Tests whether the first string and the second string are equal in locale comparison.
+	 *
+	 * @param {string} str1 - A string
+	 * @param {string} str2 - Another string
+	 * @param {Object} [options] - An option for locale compare
+	 *
+	 * @return {boolean} Whether the first string and the second string are equal in locale comparison
+	 */
+
+	function localeEquals(str1, str2, options) {
+		return str1.localeCompare(str2, void 0, options || LOCALE_COMPARE_OPTIONS) === 0;
 	}
+
+	/**
+	 * Returns a score based on an index value.
+	 *
+	 * @param {number} ti - A candidate part index
+	 * @param {number} ni - An input part index
+	 *
+	 * @return {number} A score
+	 */
 
 	function getIndexScore(ti, ni) {
 		if (ti === ni) {
@@ -43,6 +81,19 @@ this.scorefilter = (function () {
 		}
 		return 2;
 	}
+
+	/**
+	 * Calculates and returns an object containing score and formatted (highlighted) text
+	 * for the current candidate.
+	 * Returns null if the candidate is not a match.
+	 *
+	 * @param {string[]} textParts - An array of candidate parts
+	 * @param {string[]} valParts - An array of input text parts
+	 * @param {boolean} formatResult - Whether to format the matched string
+	 * @param {boolean} caseSensitive - Whether to match in case sensitive way
+	 *
+	 * @return {Object} A match result object
+	 */
 
 	function scoreCandidate(textParts, valParts, formatResult, caseSensitive) {
 		formatResult = formatResult ? true : false;

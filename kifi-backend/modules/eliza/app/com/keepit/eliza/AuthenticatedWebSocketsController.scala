@@ -1,5 +1,6 @@
 package com.keepit.eliza
 
+import com.keepit.common.strings._
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.model.{User, SocialUserInfo, ExperimentType}
@@ -70,7 +71,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 exception = ex,
                 method = Some("ws"),
                 url = e.value.headOption.map(_.toString),
-                message = Some(s"[WS] user ${streamSession.userId.id} using ${extVersion} on ${streamSession.userAgent}")
+                message = Some(s"[WS] user ${streamSession.userId.id} using version ${extVersion} on ${streamSession.userAgent.abbreviate(30)} making call ${e.toString}")
               )
             )
           }

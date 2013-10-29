@@ -7,7 +7,7 @@ import com.keepit.model.{User, NormalizedURI}
 import com.keepit.search._
 import play.api.libs.json._
 import play.api.mvc.Action
-import com.keepit.heimdal.{SearchEngine, Kifi, SearchAnalytics}
+import com.keepit.heimdal.{SearchEngine, SearchAnalytics}
 import com.keepit.search.BrowsedURI
 import com.keepit.search.ClickedURI
 
@@ -26,7 +26,7 @@ class SearchEventController @Inject() (
     val (userId, queryUUID, searchExperiment, resultPosition, kifiResults, time) =
       (resultClicked.userId, resultClicked.queryUUID, resultClicked.searchExperiment, resultClicked.resultPosition, resultClicked.kifiResults, resultClicked.time)
     SearchEngine.get(resultClicked.resultSource) match {
-      case Kifi => searchAnalytics.kifiResultClicked(userId, queryUUID, searchExperiment, resultPosition, None, None, resultClicked.isUserKeep, None, kifiResults, None, time)
+      case SearchEngine.Kifi => searchAnalytics.kifiResultClicked(userId, queryUUID, searchExperiment, resultPosition, None, None, resultClicked.isUserKeep, None, kifiResults, None, time)
       case theOtherGuys => searchAnalytics.searchResultClicked(userId, queryUUID, searchExperiment, theOtherGuys, resultPosition, kifiResults, None, time)
     }
     Ok
@@ -34,11 +34,11 @@ class SearchEventController @Inject() (
 
   def logSearchEnded = Action(parse.json) { request =>
     val searchEnded = Json.fromJson[SearchEnded](request.body).get
-    searchAnalytics.searchEnded(searchEnded.userId, searchEnded.queryUUID, searchEnded.searchExperiment, searchEnded.kifiResults, searchEnded.kifiResultsClicked, searchEnded.googleResultsClicked, None, searchEnded.time)
+    searchAnalytics.searchEnded(searchEnded.userId, searchEnded.queryUUID, searchEnded.searchExperiment, searchEnded.kifiResults, searchEnded.kifiResultsClicked, SearchEngine.Google, searchEnded.googleResultsClicked, None, searchEnded.time)
     Ok
   }
 
-  def logBrowsingHistory(userId: Id[User]) = Action(parse.json) { request =>
+  def updateBrowsingHistory(userId: Id[User]) = Action(parse.json) { request =>
     val browsedUris = request.body.as[JsArray].value.map(Id.format[NormalizedURI].reads)
     browsedUris.foreach(uriIdJs => browsingHistoryTracker.add(userId, BrowsedURI(uriIdJs.get)))
     Ok

@@ -18,7 +18,7 @@ import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data.Forms._
 import play.api.data._
-import play.api.libs.json.Json
+import play.api.libs.json._
 import views.html
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -233,6 +233,11 @@ class AdminUserController @Inject() (
         }
         Ok(html.admin.users(users, 0, users.size, 1, searchTerm))
     }
+  }
+  
+  def searchBasicUsers(queryText: String, maxHits: Int = 10) = AdminHtmlAction { implicit request =>
+    val users = Await.result(searchClient.searchUsers(queryText, maxHits), 15 seconds)
+    Ok(JsArray(users.map{x => Json.toJson(x)}))
   }
 
   def updateUser(userId: Id[User]) = AdminHtmlAction { implicit request =>

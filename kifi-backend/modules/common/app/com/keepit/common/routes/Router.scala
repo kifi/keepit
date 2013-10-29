@@ -53,6 +53,7 @@ object Shoebox extends Service {
     def getUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getUsers", Param("ids", ids))
     def getUserIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/userIdsByExternalIds", Param("ids", ids))
     def getBasicUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getBasicUsers", Param("ids", ids))
+    def getEmailsForUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getEmailsForUsers", Param("ids", ids))
     def getCollectionIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/collectionIdsByExternalIds", Param("ids", ids))
     def getUserOpt(id: ExternalId[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserOpt", Param("id", id))
     def getUserExperiments(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserExperiments", Param("id", id))
@@ -72,6 +73,7 @@ object Shoebox extends Service {
     def getBookmarksInCollection(collectionId: Id[Collection]) = ServiceRoute(GET, "/internal/shoebox/database/getBookmarksInCollection", Param("collectionId", collectionId))
     def getCollectionsByUser(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getCollectionsByUser", Param("userId", userId))
     def getIndexable(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexable", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getUserIndexable(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getUserIndexable", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getActiveExperiments() = ServiceRoute(GET, "/internal/shoebox/database/getActiveExperiments")
     def getExperiments() = ServiceRoute(GET, "/internal/shoebox/database/getExperiments")
     def getExperiment(id: Id[SearchConfigExperiment]) = ServiceRoute(GET, "/internal/shoebox/database/getExperiment", Param("id", id))
@@ -89,6 +91,7 @@ object Shoebox extends Service {
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
     def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq), Param("highSeq", highSeq))
+    def clickAttribution() = ServiceRoute(POST, "/internal/shoebox/database/clickAttribution")
   }
 }
 
@@ -96,7 +99,7 @@ object Search extends Service {
   object internal {
     def logResultClicked() = ServiceRoute(POST, "/internal/search/events/resultClicked")
     def logSearchEnded() = ServiceRoute(POST, "/internal/search/events/searchEnded")
-    def logBrowsingHistory(id: Id[User]) = ServiceRoute(POST, s"/internal/search/events/browsed/${id.id}")
+    def updateBrowsingHistory(id: Id[User]) = ServiceRoute(POST, s"/internal/search/events/browsed/${id.id}")
     def commentIndexInfo() = ServiceRoute(GET, "/internal/search/comment/info")
     def commentReindex() = ServiceRoute(GET, "/internal/search/comment/reindex")
     def commentDumpLuceneDocument(id: Id[Comment]) = ServiceRoute(POST, "/internal/search/comment/dumpDoc", Param("id", id))
@@ -115,6 +118,7 @@ object Search extends Service {
     def refreshPhrases() = ServiceRoute(POST, "/internal/search/index/refreshPhrases")
     def searchDumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}")
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
+    def searchUsers(query: String, maxHits: Int) = ServiceRoute(GET, "/internal/search/search/users", Param("query", query), Param("maxHits", maxHits))
     def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String) =
       ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("lang", lang))
     def causeError() = ServiceRoute(GET, "/internal/search/search/causeError")
