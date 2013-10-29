@@ -183,8 +183,8 @@ class SendgridMailProvider @Inject() (
 
   private def mailError(mail: ElectronicMail, message: String, transport: Transport): ElectronicMail = {
     nullifyTransport(transport)
-    val error = airbrake.notify(AirbrakeError(
-      message = Some(s"Can't send email from ${mail.from} to ${mail.to}: ${mail.subject}. Error message: $message")))
+    val error = airbrake.notify(
+      s"Can't send email from ${mail.from} to ${mail.to}: ${mail.subject}. Error message: $message")
     db.readWrite { implicit s =>
       mailRepo.save(mail.errorSending(s"Error: $error"))
     }

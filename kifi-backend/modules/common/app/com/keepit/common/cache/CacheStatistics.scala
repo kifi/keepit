@@ -22,6 +22,8 @@ import play.modules.statsd.api.Statsd
 
 class CacheStatistics @Inject() (global: GlobalCacheStatistics) extends Logging {
 
+  private val cacheLog = Logger("com.keepit.cache")
+
   private def incrCount(key: String, m: ConcurrentMap[String, AtomicInteger]) {
     m.getOrElseUpdate(key, new AtomicInteger(0)).incrementAndGet()
   }
@@ -37,7 +39,7 @@ class CacheStatistics @Inject() (global: GlobalCacheStatistics) extends Logging 
     val name = s"$cachePlugin.$namespace"
     incrCount(s"$name", global.missesMap)
     Statsd.increment(s"$name.misses")
-    log.warn(s"Cache miss on key $fullKey in $cachePlugin")
+    cacheLog.warn(s"Cache miss on key $fullKey in $cachePlugin")
   }(ExecutionContext.singleThread)
 
   def recordSet(cachePlugin: String, logAccess: Boolean, namespace: String, fullKey: String, duration: Long): Unit = future {

@@ -5,7 +5,7 @@ import java.io.File
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, HealthcheckError, AirbrakeError, BenchmarkRunner}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
@@ -29,7 +29,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     injector.getInstance(clazz)
   } catch {
     case e: Throwable =>
-      injector.instance[AirbrakeNotifier].notify(AirbrakeError(e))
+      injector.instance[AirbrakeNotifier].notify(e)
       throw e
   }
 

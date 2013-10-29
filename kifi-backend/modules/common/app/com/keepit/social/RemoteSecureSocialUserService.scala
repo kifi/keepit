@@ -28,7 +28,7 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject()(
 
   private def reportExceptions[T](f: => T): Either[Error, T] =
     try Right(f) catch { case ex: Throwable =>
-      airbrake.notify(AirbrakeError(ex))
+      airbrake.notify(ex)
       Left(new Error(ex))
     }
 
@@ -67,7 +67,7 @@ class RemoteSecureSocialUserPlugin @Inject() (
 
   private def reportExceptions[T](f: => T): T =
     try f catch { case ex: Throwable =>
-      airbrake.notify(AirbrakeError(ex))
+      airbrake.notify(ex)
       throw ex
     }
 
