@@ -128,6 +128,8 @@ input.query::-ms-clear {display: none}
 .main-head,
 .main-keeps {box-shadow: inset -1px 0 #dbdee3}
 .main-head {padding: 13px 20px 0; height: 73px; box-sizing: border-box; -moz-box-sizing: border-box; position: relative}
+.main-head>h1 {margin-bottom: 8px}
+.main-head>h1.tag-head {padding-left: 28px; background-image: url(../img/tag-icon-blue.2x.png); background-repeat: no-repeat; background-size: auto 26px; background-position: 0 center}
 .main-keeps::before {content: " "; position: absolute; z-index: 1; top: 0; left: 18px; right: 18px; border-top: 1px none #f9f9f9}
 .main-keeps.grouped::before {height: 16px; z-index: 2; background: -ms-linear-gradient(#fff 25%,rgba(255,255,255,0)); background: linear-gradient(#fff 25%,rgba(255,255,255,0)); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff',endColorstr='#00ffffff',GradientType=0)}
 .main-keeps:not(.grouped)::before {border-top-style: solid; -webkit-transition: border-top-color .3s ease-out; transition: border-top-color .3s ease-out}
