@@ -48,13 +48,4 @@ class HeimdalServiceClientImpl @Inject() (
   }
 }
 
-class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient{
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
-  protected def httpClient: com.keepit.common.net.HttpClient = ???
 
-  def trackEvent(event: UserEvent): Unit = {}
-
-  def getMetricData(name: String): Future[JsObject] = Promise.successful(Json.obj()).future
-
-  def updateMetrics(): Unit = {}
-}
