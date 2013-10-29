@@ -48,7 +48,7 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
         db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Greg", lastName = "Methvin",
             externalId = ExternalId("59eba923-54cb-4257-9bb6-7c81d602bd76")))
-          userPictureRepo.save(UserPicture(userId = user.id.get, name = "0", origin = UserPictureSources.FACEBOOK))
+          userPictureRepo.save(UserPicture(userId = user.id.get, name = "0", origin = UserPictureSources.FACEBOOK, attributes = None))
         }
 
         inject[ImageDataIntegrityPlugin].verifyAll()
