@@ -16,6 +16,9 @@ import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
 import com.keepit.inject.AppScoped
 import java.io.File
 import com.keepit.common.logging.Logging
+import com.keepit.search.user.UserIndexer
+import com.keepit.search.user.UserIndexerPlugin
+import com.keepit.search.user.UserIndexerPluginImpl
 
 trait IndexModule extends ScalaModule
 
@@ -25,6 +28,7 @@ case class ProdIndexModule() extends IndexModule with Logging {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[CommentIndexerPlugin].to[CommentIndexerPluginImpl].in[AppScoped]
+    bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
   }
 
   private def getDirectory(maybeDir: Option[String]): Directory = {
@@ -46,6 +50,15 @@ case class ProdIndexModule() extends IndexModule with Logging {
     log.info(s"storing search index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     new ArticleIndexer(dir, config, articleStore, airbrake, shoeboxClient)
+  }
+  
+  @Singleton
+  @Provides
+  def userIndexer(airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): UserIndexer = {
+    val dir = getDirectory(current.configuration.getString("index.user.directory"))
+    log.info(s"storing user index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new UserIndexer(dir, config, airbrake, shoeboxClient)
   }
 
   @Singleton
@@ -131,6 +144,8 @@ case class DevIndexModule() extends IndexModule with Logging {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[CommentIndexerPlugin].to[CommentIndexerPluginImpl].in[AppScoped]
+    bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
+
   }
 
   private def getDirectory(maybeDir: Option[String]): Directory = {
@@ -155,6 +170,15 @@ case class DevIndexModule() extends IndexModule with Logging {
 
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     new ArticleIndexer(dir, config, articleStore, airbrake, shoeboxClient)
+  }
+  
+  @Singleton
+  @Provides
+  def userIndexer(airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): UserIndexer = {
+    val dir = getDirectory(current.configuration.getString("index.user.directory"))
+    log.info(s"storing user index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new UserIndexer(dir, config, airbrake, shoeboxClient)
   }
 
   @Singleton

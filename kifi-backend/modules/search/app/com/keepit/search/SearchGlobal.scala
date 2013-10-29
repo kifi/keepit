@@ -9,6 +9,7 @@ import com.keepit.search.index.ArticleIndexerPlugin
 import play.api.Mode._
 import play.api._
 import com.keepit.search.nlp.NlpParser
+import com.keepit.search.user.UserIndexerPlugin
 
 object SearchGlobal extends FortyTwoGlobal(Prod) with SearchServices {
   val module = SearchProdModule()
@@ -27,6 +28,7 @@ trait SearchServices { self: FortyTwoGlobal =>
     require(injector.instance[ArticleIndexerPlugin].enabled)
     require(injector.instance[URIGraphPlugin].enabled)
     require(injector.instance[CommentIndexerPlugin].enabled)
+    require(injector.instance[UserIndexerPlugin].enabled)
     require(injector.instance[HealthcheckPlugin].enabled)
     require(injector.instance[FortyTwoCachePlugin].enabled)
     require(injector.instance[InMemoryCachePlugin].enabled)

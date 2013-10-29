@@ -19,6 +19,7 @@ trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
   def countExcluding(excludeStates: State[User]*)(implicit session: RSession): Int
   def getOpt(id: Id[User])(implicit session: RSession): Option[User]
   def getAllIds()(implicit session: RSession): Set[Id[User]] //Note: Need to revisit when we have >50k users.
+  def getUsersSince(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[User]
 }
 
 @Singleton
@@ -97,5 +98,9 @@ class UserRepoImpl @Inject() (
 
   def getAllIds()(implicit session: RSession): Set[Id[User]] = { //Note: Need to revisit when we have >50k users.
     (for (row <- table) yield row.id).list.toSet
+  }
+  
+  def getUsersSince(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[User] = {
+    (for (r <- table if r.seq > seq) yield r).sortBy(_.seq).take(fetchSize).list
   }
 }
