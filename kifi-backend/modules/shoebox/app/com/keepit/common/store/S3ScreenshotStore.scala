@@ -37,15 +37,14 @@ import com.keepit.common.net.URI
 @ImplementedBy(classOf[S3ScreenshotStoreImpl])
 trait S3ScreenshotStore {
   def config: S3ImageConfig
-  val blankImage: Array[Byte] = Array(71, 73, 70, 56, 57, 97, 1, 0, 1, 0, -128, -1, 0, -1, -1, -1, 0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59)
+  val blankImage: Array[Byte] = Array(71, 73, 70, 56, 57, 97, 1, 0, 1, 0, -128, -1, 0, -1, -1, -1, 0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59).map(_.asInstanceOf[Byte])
 
   def getScreenshotUrl(normalizedUri: NormalizedURI): Option[String]
   def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): Option[String]
   def updatePicture(normalizedUri: NormalizedURI): Future[Option[Seq[Option[PutObjectResult]]]]
 }
 
-case class ScreenshotSize(width: Int, height: Int)
-case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ScreenshotSize])
+case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ImageSize])
 
 @Singleton
 class S3ScreenshotStoreImpl @Inject() (
@@ -57,8 +56,8 @@ class S3ScreenshotStoreImpl @Inject() (
     val config: S3ImageConfig
   ) extends S3ScreenshotStore with Logging {
 
-  val screenshotConfig = ScreenshotConfig("c", Seq(ScreenshotSize(1000, 560), ScreenshotSize(500, 280), ScreenshotSize(250, 140)))
-  val linkedSize = ScreenshotSize(500, 280) // which size to link to, by default; todo: user configurable
+  val screenshotConfig = ScreenshotConfig("c", Seq(ImageSize(1000, 560), ImageSize(500, 280), ImageSize(250, 140)))
+  val linkedSize = ImageSize(500, 280) // which size to link to, by default; todo: user configurable
 
   val code = "abf9cd2751"
 
@@ -71,7 +70,7 @@ class S3ScreenshotStoreImpl @Inject() (
     URI(uri.scheme orElse protocolDefault, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString
   }
 
-  def keyByExternalId(extNormId: ExternalId[NormalizedURI], size: ScreenshotSize): String =
+  def keyByExternalId(extNormId: ExternalId[NormalizedURI], size: ImageSize): String =
     s"screenshot/$extNormId/${size.width}x${size.height}.jpg"
 
   def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): Option[String] =
@@ -89,14 +88,6 @@ class S3ScreenshotStoreImpl @Inject() (
           None
       }
     }
-  }
-
-  private def resizeImage(rawImage: BufferedImage, size: ScreenshotSize) = {
-    val resized = Try { Scalr.resize(rawImage, Math.max(size.height, size.width)) }
-    val os = new ByteArrayOutputStream()
-    ImageIO.write(resized.getOrElse(rawImage), "jpeg", os)
-
-    (os.size(), new ByteArrayInputStream(os.toByteArray()))
   }
 
   def updatePicture(normalizedUri: NormalizedURI): Future[Option[Seq[Option[PutObjectResult]]]] = {
@@ -119,7 +110,7 @@ class S3ScreenshotStoreImpl @Inject() (
             val resizedImages = screenshotConfig.targetSizes.map { size =>
               for {
                 rawImage <- rawImageTry
-                resized <- Try { resizeImage(rawImage, size) }
+                resized <- Try { ImageUtils.resizeImage(rawImage, size) }
               } yield (resized._1, resized._2, size)
             }
 

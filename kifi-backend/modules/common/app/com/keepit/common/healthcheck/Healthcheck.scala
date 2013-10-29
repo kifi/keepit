@@ -128,7 +128,6 @@ class HealthcheckActor @Inject() (
       val history = errors.contains(signature) match {
         case false =>
           val newHistory = AirbrakeErrorHistory(signature, 1, 0, error)
-          new SendHealthcheckMail(newHistory, host, emailSender, services).sendMail()
           newHistory
         case true =>
           errors(signature).addError(error)

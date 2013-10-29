@@ -43,16 +43,16 @@ private[analytics] class PersistEventActor @Inject() (
       val diff = Seconds.secondsBetween(queueTime, currentDateTime).getSeconds
       if(diff > 120) {
         val ex = new Exception("Event log is backing up. Event was queued %s seconds ago".format(diff))
-        airbrake.notify(AirbrakeError(ex))
+        airbrake.notify(ex)
         // To keep the event log from backing too far up, ignore very old events.
         // If we get this, use parallel actors.
       }
       else {
         try { eventRepo.persistToS3(event) } catch { case ex: Throwable =>
-          airbrake.notify(AirbrakeError(ex))
+          airbrake.notify(ex)
         }
         try { eventRepo.persistToMongo(event) } catch { case ex: Throwable =>
-          airbrake.notify(AirbrakeError(ex))
+          airbrake.notify(ex)
         }
       }
     case PersistMany(events, queueTime) =>

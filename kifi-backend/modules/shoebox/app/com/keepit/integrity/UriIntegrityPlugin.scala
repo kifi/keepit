@@ -151,7 +151,7 @@ class UriIntegrityActor @Inject()(
           handleURIMigration(change)
         } catch {
           case e: Exception => {
-            airbrake.notify(AirbrakeError(e))
+            airbrake.notify(e)
             changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
           }
         }
@@ -179,7 +179,7 @@ class UriIntegrityActor @Inject()(
           renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.APPLIED))
         } catch {
           case e: Exception =>
-            airbrake.notify(AirbrakeError(e))
+            airbrake.notify(e)
             renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.INACTIVE))
         }
       }

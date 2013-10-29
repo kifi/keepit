@@ -87,8 +87,7 @@ class ExpertRecommenderControllerImpl @Inject()(
 
     genScoreMap(rcmder).onComplete{
       case Success(m) => scoreMap = m ; enableService()
-      case _ => airbrake.notify(AirbrakeError(
-          message = Some("Error generating user-topic score map")))
+      case _ => airbrake.notify("Error generating user-topic score map")
     }
   }
 
