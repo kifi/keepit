@@ -16,6 +16,8 @@ GET     /signin                     @com.keepit.controllers.core.AuthController.
 POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
 POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
 POST    /auth/social-finalize       @com.keepit.controllers.core.AuthController.socialFinalizeAccountAction()
+POST    /auth/upload-binary-image   @com.keepit.controllers.core.AuthController.uploadBinaryPicture()
+POST    /auth/upload-multipart-image @com.keepit.controllers.core.AuthController.uploadFormEncodedPicture()
 
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
@@ -24,6 +26,7 @@ POST    /authenticate/:provider     securesocial.controllers.ProviderController.
 # custom auth routes which set some session state
 
 # Standalone login page
+GET     /login/post                 @com.keepit.controllers.core.AuthController.postLogin()
 GET     /login/:provider            @com.keepit.controllers.core.AuthController.login(provider, format: String ?= "html")
 POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider, format: String ?= "html")
 POST    /login                      @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
