@@ -50,7 +50,7 @@ case class AirbrakeError(
     AirbrakeErrorSignature(new String(new Base64().encode(binaryHash), UTF8))
   }
 
-  private def causeStacktraceHead(depth: Int, throwable: Option[Throwable] = Some(exception)): Option[String] = throwable match {
+  def causeStacktraceHead(depth: Int, throwable: Option[Throwable] = Some(exception)): Option[String] = throwable match {
     case None => None
     case Some(t) =>
       causeStacktraceHead(depth, Option(t.getCause)) match {
