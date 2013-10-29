@@ -1,13 +1,11 @@
 package com.keepit.common.store
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.Id
-import com.keepit.inject._
 import play.api.Play
 import play.api.Play.current
-import java.io.InputStream
-import java.io.ByteArrayInputStream
+import java.io.{FileOutputStream, File}
 import scala.collection.mutable.HashMap
+import java.nio.file.Files
 
 trait InMemoryObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
 
@@ -29,4 +27,35 @@ trait InMemoryObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
   def get(id: A): Option[B] = localStore.get(id)
 
   override def toString =  s"[size=${localStore.size} keys=${localStore.keySet}"
+}
+
+trait LocalFileStore[A] extends ObjectStore[A, File] {
+
+  val inbox: File
+  if (!inbox.exists()) inbox.mkdirs()
+  require(inbox.isDirectory, "Inbox must be a local directory.")
+  require(!Play.isProd, "Can't have local file store in production")
+
+  protected val pathMap = new HashMap[A, String]()
+
+  def += (kv: (A, File)) = {
+    val (key, file) = kv
+    val copy = new File(inbox, file.getName)
+    val copyStream = new FileOutputStream(copy)
+    Files.copy(file.toPath, copyStream)
+    copyStream.close()
+    pathMap += (key -> copy.getAbsolutePath)
+    this
+  }
+
+  def -= (key: A) = {
+    get(key).foreach(_.delete())
+    pathMap -= key
+    this
+  }
+
+  def get(key: A): Option[File] = pathMap.get(key).map(new File(_))
+
+  override def toString =  s"[size=${pathMap.size} keys=${pathMap.keySet}"
+
 }

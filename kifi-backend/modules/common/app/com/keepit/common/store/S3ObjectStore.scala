@@ -1,14 +1,10 @@
 package com.keepit.common.store
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.Id
 import com.keepit.common.strings._
-import com.keepit.inject._
 
-import com.amazonaws.auth._
 import com.amazonaws.services.s3._
 import com.amazonaws.services.s3.model.ObjectMetadata
-import com.amazonaws.AmazonClientException
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.S3Object
@@ -17,16 +13,17 @@ import org.apache.poi.util.IOUtils
 
 import play.api.libs.json.Json
 import play.api.libs.json.Format
-import play.api.Play
 import play.api.Play.current
 import play.api.Logger
+import play.api.Play
 
 import java.io._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.serializer.BinaryFormat
 import java.util.zip.{GZIPOutputStream, GZIPInputStream}
-import java.nio.file.Files
+import java.nio.file.{StandardCopyOption, Files}
 import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 case class S3Bucket(name: String)
 
@@ -189,6 +186,7 @@ trait S3FileStore[A] extends S3ObjectStore[A, File] {
   require(inbox.isDirectory, s"$inbox is not a directory.")
 
   protected def packValue(value: File) = {
+    require(value.isFile, s"$value is not a file.")
     val metadata = new ObjectMetadata()
     metadata.setContentType(Files.probeContentType(value.toPath))
     metadata.setContentLength(value.length())
@@ -206,7 +204,7 @@ trait S3FileStore[A] extends S3ObjectStore[A, File] {
     val file = new File(inbox, name)
     val contentStream = s3obj.getObjectContent
     val inputStream = if (useCompression) new GZIPInputStream(contentStream) else contentStream
-    Files.copy(inputStream, file.toPath)
+    Files.copy(inputStream, file.toPath, StandardCopyOption.REPLACE_EXISTING)
     inputStream.close()
     file
   }
@@ -215,6 +213,7 @@ trait S3FileStore[A] extends S3ObjectStore[A, File] {
     val toPipe = new PipedOutputStream()
     val fromPipe = new PipedInputStream(toPipe)
     val gzipOutputStream = new GZIPOutputStream(toPipe)
+
     SafeFuture {
       val buffer = new Array[Byte](1024)
       var len = 0
