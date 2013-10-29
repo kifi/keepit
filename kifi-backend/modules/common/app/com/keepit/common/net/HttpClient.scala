@@ -17,7 +17,7 @@ import com.keepit.common.strings._
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin, StackTrace}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, StackTrace}
 import com.keepit.common.concurrent.ExecutionContext.immediate
 import com.keepit.common.controller.CommonHeaders
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -86,7 +86,6 @@ trait HttpClient {
 case class HttpClientImpl(
     timeout: Int = 5000,
     headers: List[(String, String)] = List(),
-    healthcheckPlugin: HealthcheckPlugin,
     airbrake: Provider[AirbrakeNotifier],
     accessLog: AccessLog,
     serviceDiscovery: ServiceDiscovery,

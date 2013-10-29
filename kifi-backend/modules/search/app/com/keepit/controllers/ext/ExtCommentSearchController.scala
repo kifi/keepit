@@ -14,7 +14,6 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError}
 import com.keepit.search.comment.CommentSearcher
 import com.keepit.search.comment.CommentSearchResult
 import com.keepit.search.comment.CommentHit
@@ -30,8 +29,7 @@ import com.keepit.social.BasicUser
 
 class ExtCommentSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  commentIndexer: CommentIndexer,
-  healthcheckPlugin: HealthcheckPlugin)
+  commentIndexer: CommentIndexer)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging{
