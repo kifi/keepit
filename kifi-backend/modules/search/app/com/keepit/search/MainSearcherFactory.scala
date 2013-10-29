@@ -18,10 +18,13 @@ import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent._
 import scala.concurrent.duration._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.search.user.UserIndexer
+import com.keepit.search.user.UserSearcher
 
 @Singleton
 class MainSearcherFactory @Inject() (
     articleIndexer: ArticleIndexer,
+    userIndexer: UserIndexer,
     uriGraph: URIGraph,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
@@ -80,6 +83,8 @@ class MainSearcherFactory @Inject() (
     consolidateURIGraphSearcherReq.clear()
     consolidateCollectionSearcherReq.clear()
   }
+  
+  def getUserSearcher = new UserSearcher(userIndexer.getSearcher)
 
   def getSocialGraphInfoFuture(userId: Id[User], filter: SearchFilter): Future[SocialGraphInfo] = {
     SafeFuture {

@@ -7,7 +7,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.healthcheck.{HealthcheckPlugin, AirbrakeNotifier}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.Play._
 
@@ -25,8 +25,7 @@ case class ProdHttpClientModule() extends HttpClientModule {
   def impersonateCookie: ImpersonateCookie = new ImpersonateCookie(current.configuration.getString("session.domain"))
 
   @Provides
-  def httpClientProvider(healthcheckPlugin: HealthcheckPlugin, airbrake: Provider[AirbrakeNotifier],
+  def httpClientProvider(airbrake: Provider[AirbrakeNotifier],
         accessLog: AccessLog, serviceDiscovery: ServiceDiscovery): HttpClient =
-    new HttpClientImpl(healthcheckPlugin = healthcheckPlugin, airbrake = airbrake,
-                      accessLog = accessLog, serviceDiscovery = serviceDiscovery)
+    new HttpClientImpl(airbrake = airbrake, accessLog = accessLog, serviceDiscovery = serviceDiscovery)
 }

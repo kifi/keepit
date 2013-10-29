@@ -29,6 +29,7 @@ import com.keepit.model.User
 import com.keepit.inject._
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import play.api.Play.current
+import com.keepit.search.user.UserIndexer
 
 class MainSearcherTest extends Specification with ApplicationInjector {
 
@@ -52,6 +53,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     val colNameConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     val articleIndexer = new ArticleIndexer(new RAMDirectory, articleConfig, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val userIndexer = new UserIndexer(new RAMDirectory, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val bookmarkStore = new BookmarkStore(new RAMDirectory, bookmarkStoreConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val collectionNameIndexer = new CollectionNameIndexer(new RAMDirectory, colNameConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val uriGraph = new URIGraphImpl(
@@ -64,6 +66,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
 
     val mainSearcherFactory = new MainSearcherFactory(
       articleIndexer,
+      userIndexer,
       uriGraph,
       new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
       resultClickTracker,

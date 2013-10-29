@@ -17,16 +17,13 @@ class ExtErrorReportController @Inject() (
     val json = request.body
     val message = (json \ "message").as[String]
     val (inst, userId, exps) = (request.kifiInstallationId.getOrElse(""), request.userId, request.experiments.mkString(","))
-    val errorReport = airbrake.notify(AirbrakeError(
-      message = Some(s"""Extension error "$message": on installation id $inst, user $userId, experiments [$exps]""")
-    ))
+    val errorReport = airbrake.notify(
+      s"""Extension error "$message": on installation id $inst, user $userId, experiments [$exps]""")
     Ok(JsObject(Seq("errorId" -> JsString(errorReport.id.id))))
   }, unauthenticatedAction = { request =>
     val json = request.body
     val message = (json \ "message").as[String]
-    val errorReport = airbrake.notify(AirbrakeError(
-      message = Some(s"error of unauthenticated user in extension: $message")
-    ))
+    val errorReport = airbrake.notify(s"error of unauthenticated user in extension: $message")
     Ok(JsObject(Seq("errorId" -> JsString(errorReport.id.id)))).as(ContentTypes.JSON)
   })
 }

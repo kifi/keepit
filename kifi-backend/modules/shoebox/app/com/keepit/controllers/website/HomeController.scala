@@ -64,7 +64,6 @@ class HomeController @Inject() (db: Database,
     val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
     if (newSignup && request.identityOpt.isDefined) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-        .flashing("signin_error" -> "no_account")
     }
     else
       Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))

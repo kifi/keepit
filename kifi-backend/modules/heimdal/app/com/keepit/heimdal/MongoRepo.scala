@@ -73,10 +73,10 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
 
   override def insert(obj: T, dropDups: Boolean = false) : Unit = {
     if (bufferSize.get>=maxBufferSize) {
-      airbrake.notify(AirbrakeError(message = Some(s"Mongo Insert Buffer Full! (${bufferSize.get})")))
+      airbrake.notify(s"Mongo Insert Buffer Full! (${bufferSize.get})")
       throw MongoInsertBufferFullException()
     } else if (bufferSize.get>=warnBufferSize && hasWarned.getAndSet(true)==false) {
-      airbrake.notify(AirbrakeError(message = Some(s"Mongo Insert almost Buffer Full. (${bufferSize.get})")))
+      airbrake.notify(s"Mongo Insert almost Buffer Full. (${bufferSize.get})")
     } else if (bufferSize.get < warnBufferSize) hasWarned.set(false)
 
     val inflight = bufferSize.incrementAndGet()

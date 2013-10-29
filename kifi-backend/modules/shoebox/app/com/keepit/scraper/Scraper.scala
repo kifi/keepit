@@ -86,7 +86,7 @@ class Scraper @Inject() (
     } catch {
       case e: Throwable =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
-        airbrake.notify(AirbrakeError(e))
+        airbrake.notify(e)
         val errorURI = db.readWrite { implicit s =>
           // first update the uri state to SCRAPE_FAILED
           val latestUri = normalizedURIRepo.get(uri.id.get)

@@ -20,12 +20,12 @@ class PlayMailerAPI @Inject()(
 
   private def reportErrors[A](block: => A): A = try block catch {
     case e: Throwable =>
-      airbrake.notify(AirbrakeError(e))
+      airbrake.notify(e)
       throw e
   }
 
   private def notImplemented: MailerAPI = {
-    airbrake.notify(AirbrakeError(message = Some("This method of the Mailer API is not supported")))
+    airbrake.notify("This method of the Mailer API is not supported")
     this
   }
 

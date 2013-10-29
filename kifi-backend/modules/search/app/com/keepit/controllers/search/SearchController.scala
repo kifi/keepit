@@ -21,6 +21,10 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Random
 import play.api.libs.json._
+import com.keepit.search.user.UserIndexer
+import com.keepit.search.user.UserQueryParser
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.social.BasicUser
 
 class SearchController @Inject()(
     searchConfigManager: SearchConfigManager,
@@ -33,6 +37,16 @@ class SearchController @Inject()(
     val searcher = searcherFactory.bookmarkSearcher(userId)
     val uris = searcher.search(query, Lang("en"))
     Ok(JsArray(uris.toSeq.map(JsNumber(_))))
+  }
+  
+  def searchUsers(queryText: String, maxHits: Int = 10) = Action{ request =>
+    val searcher = searcherFactory.getUserSearcher
+    val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
+    val users = parser.parse(queryText) match {
+      case None => Array.empty[BasicUser]
+      case Some(q) => searcher.search(q, maxHits)
+    }
+    Ok(JsArray(users.map{u => Json.toJson(u)}))
   }
 
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action { request =>
