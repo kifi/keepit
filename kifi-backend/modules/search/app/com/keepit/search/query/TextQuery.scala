@@ -20,7 +20,9 @@ class TextQuery extends DisjunctionMaxQuery(0.5f) {
 
   def addCollectionQuery(collectionId: Long) = {
     if (!collectionIds.contains(collectionId)) {
-      add(new CollectionQuery(collectionId))
+      val q = new CollectionQuery(collectionId)
+      q.setBoost(2.0f)
+      add(q)
       collectionIds += collectionId
     }
   }
