@@ -386,7 +386,7 @@ class MainSearcher(
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
-    parser.parse(queryString).map{ query =>
+    parser.parse(queryString, Some(collectionSearcher)).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")

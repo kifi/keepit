@@ -34,9 +34,7 @@ object ProximityQuery extends Logging {
 
   def apply(terms: Seq[Seq[Term]], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f) = new ProximityQuery(terms, phrases, phraseBoost)
 
-  def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]) = {
-    phrases.foreach{ case (pos, len) => if (pos - len < 0) log.error(s"bad phrase pos=$pos len=$len") }
-
+  def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]): Seq[(Seq[Int], Match)] = {
     val posNotInPhrase = (0 until termIds.length).toArray
     phrases.foreach{ case (pos, len) =>
       if (pos + len <= posNotInPhrase.length) {
@@ -44,8 +42,13 @@ object ProximityQuery extends Logging {
       }
     }
 
-    (posNotInPhrase.filter{ _ >= 0 }.map{ pos => (Seq(termIds(pos)), TermMatch(pos).asInstanceOf[Match]) } ++
+    val dict = (posNotInPhrase.filter{ _ >= 0 }.map{ pos => (Seq(termIds(pos)), TermMatch(pos).asInstanceOf[Match]) } ++
       phrases.map{ case (pos, len) => (termIds.slice(pos, pos + len).toSeq, (if (len == 1) TermMatch(pos) else PhraseMatch(pos, len)).asInstanceOf[Match]) })
+
+    // verify
+    dict.foreach{ case (p, m) => if (p.size != m.len) log.error(s"bad phrase: ($p, $m)") }
+
+    dict
   }
 }
 
