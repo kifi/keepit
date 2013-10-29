@@ -6,6 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import play.api.libs.json.JsObject
 
 @ImplementedBy(classOf[UserPictureRepoImpl])
 trait UserPictureRepo extends Repo[UserPicture] {
@@ -28,7 +29,9 @@ class UserPictureRepoImpl @Inject() (
     def name = column[String]("name", O.NotNull)
     def origin = column[UserPictureSource]("origin", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ name ~ origin ~ state <> (UserPicture.apply _, UserPicture.unapply _)
+    def attributes = column[JsObject]("attributes", O.Nullable)
+
+    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ name ~ origin ~ state ~ attributes.? <> (UserPicture.apply _, UserPicture.unapply _)
   }
 
   def getByName(userId: Id[User], name: String)(implicit session: RSession): Option[UserPicture] = {
