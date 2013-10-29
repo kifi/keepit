@@ -29,13 +29,3 @@ case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
 }
 
 
-case class TestHeimdalServiceClientModule() extends HeimdalServiceClientModule {
-  def configure() {}
-
-  @Singleton
-  @Provides
-  def heimdalServiceClient(airbrakeNotifier: AirbrakeNotifier): HeimdalServiceClient = {
-    new FakeHeimdalServiceClientImpl(airbrakeNotifier)
-  }
-
-}
