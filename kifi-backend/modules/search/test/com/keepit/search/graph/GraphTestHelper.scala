@@ -14,7 +14,7 @@ import com.keepit.inject._
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
-import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.index.{IndexDirectory, VolatileIndexDirectoryImpl, DefaultAnalyzer}
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.Play.current
 import play.api.test.Helpers._
@@ -112,16 +112,16 @@ trait GraphTestHelper extends ApplicationInjector {
     fakeShoeboxServiceClient.saveComment(comment, optionalRecipients:_*)
   }
 
-  def mkURIGraphIndexer(uriGraphDir: RAMDirectory = new RAMDirectory): URIGraphIndexer = {
-    val bookmarkStore = new BookmarkStore(new RAMDirectory, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+  def mkURIGraphIndexer(uriGraphDir: IndexDirectory = new VolatileIndexDirectoryImpl()): URIGraphIndexer = {
+    val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     new URIGraphIndexer(uriGraphDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
-  def mkCollectionIndexer(collectionDir: RAMDirectory = new RAMDirectory): CollectionIndexer = {
+  def mkCollectionIndexer(collectionDir: IndexDirectory = new VolatileIndexDirectoryImpl()): CollectionIndexer = {
     new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
-  def mkURIGraph(graphDir: RAMDirectory = new RAMDirectory, collectionDir: RAMDirectory = new RAMDirectory): URIGraphImpl = {
+  def mkURIGraph(graphDir: IndexDirectory = new VolatileIndexDirectoryImpl(), collectionDir: IndexDirectory = new VolatileIndexDirectoryImpl()): URIGraphImpl = {
     new URIGraphImpl(mkURIGraphIndexer(graphDir), mkCollectionIndexer(collectionDir), inject[ShoeboxServiceClient], inject[MonitoredAwait])
   }
 

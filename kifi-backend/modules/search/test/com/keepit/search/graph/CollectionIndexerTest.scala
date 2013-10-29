@@ -11,6 +11,7 @@ import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.TermQuery
 import scala.collection.JavaConversions._
+import com.keepit.search.index.VolatileIndexDirectoryImpl
 
 class CollectionIndexerTest extends Specification with GraphTestHelper {
 
@@ -20,7 +21,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
         val (users, uris) = initData
         val numURIs = uris.size
 
-        val collectionDir = new RAMDirectory
+        val collectionDir = new VolatileIndexDirectoryImpl()
         val collectionIndexer = mkCollectionIndexer(collectionDir)
 
         val expectedUriToUserEdges = uris.map{ (_, users) } // all users have all uris

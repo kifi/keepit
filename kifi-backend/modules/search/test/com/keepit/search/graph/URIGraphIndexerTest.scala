@@ -12,6 +12,7 @@ import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.TermQuery
 import scala.collection.JavaConversions._
+import com.keepit.search.index.VolatileIndexDirectoryImpl
 
 class URIGraphIndexerTest extends Specification with GraphTestHelper {
 
@@ -23,7 +24,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
 
-        val dir = new RAMDirectory
+        val dir = new VolatileIndexDirectoryImpl()
         val indexer = mkURIGraphIndexer(dir)
         indexer.update() === users.size
         indexer.sequenceNumber.value === bookmarks.size

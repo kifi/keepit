@@ -26,7 +26,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
 
   private trait IndexerScope extends Scope {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    val ramDir = new RAMDirectory
+    val ramDir = new VolatileIndexDirectoryImpl()
     val store = new FakeArticleStore()
     val uriIdArray = new Array[Long](3)
     val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()))
