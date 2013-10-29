@@ -206,8 +206,6 @@ class HealthcheckPluginImpl @Inject() (
     log.info(s"benchmark 1: ${benchmarkRunner.runBenchmark()}")
     Thread.sleep(30 * 1000)//30 sec
     log.info(s"benchmark 2: ${benchmarkRunner.runBenchmark()}")
-    Thread.sleep(30 * 1000)//30 sec
-    log.info(s"benchmark 3: ${benchmarkRunner.runBenchmark()}")
     log.info("ok, i'm warmed up and ready to roll!")
     super.warmUp(benchmarkRunner)
   }
