@@ -560,5 +560,49 @@ class MainSearcherTest extends Specification with ApplicationInjector {
         res3.hits.size == (coll1set.size + coll2set.size)
       }
     }
+
+    "search thru collection names" in {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+        val (users, uris) = initData(numUsers = 1, numUris = 20)
+        val user1 = users(0)
+        val bookmarks = saveBookmarksByUser(Seq((user1, uris)))
+
+        val (coll1set, _) = bookmarks.partition { b => b.userId == user1.id.get && b.uriId.id % 3 == 0 }
+        val (coll2set, _) = bookmarks.partition { b => b.userId == user1.id.get && b.uriId.id % 3 == 1 }
+        val Seq(coll1, coll2) = saveCollections(
+          Collection(userId = user1.id.get, name = "mycoll"),
+          Collection(userId = user1.id.get, name = "different mycoll")
+        )
+        saveBookmarksToCollection(coll1.id.get, coll1set:_*)
+        saveBookmarksToCollection(coll2.id.get, coll2set:_*)
+
+        val store = mkStore(uris)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
+
+        graph.update() === 1
+        indexer.run() === uris.size
+
+        val searchFilter = SearchFilter.mine(monitoredAwait = inject[MonitoredAwait])
+
+        val mainSearcher1 = mainSearcherFactory(user1.id.get, "mycoll", english, uris.size, searchFilter, noBoostConfig, None)
+        val res1 = mainSearcher1.search()
+        val expected1 = coll1set.toSet
+
+        res1.hits.size == expected1.size
+        res1.hits.map(_.uriId.id).toSet === expected1.map(_.uriId.id).toSet
+
+        val mainSearcher2 = mainSearcherFactory(user1.id.get, "different mycoll", english, uris.size, searchFilter, noBoostConfig, None)
+        val res2 = mainSearcher2.search()
+        val expected2 = (coll1set ++ coll2set).toSet
+
+        res2.hits.size == expected2.size
+        res2.hits.map(_.uriId.id).toSet === expected2.map(_.uriId.id).toSet
+
+        val mainSearcher3 = mainSearcherFactory(user1.id.get, "different", english, uris.size, searchFilter, noBoostConfig, None)
+        val res3 = mainSearcher3.search()
+
+        res3.hits.size == 0
+      }
+    }
   }
 }

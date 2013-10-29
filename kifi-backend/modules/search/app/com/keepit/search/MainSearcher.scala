@@ -49,6 +49,7 @@ class MainSearcher(
     articleSearcher: Searcher,
     parserFactory: MainQueryParserFactory,
     socialGraphInfoFuture: Future[SocialGraphInfo],
+    val collectionSearcher: CollectionSearcherWithUser,
     clickBoostsFuture: Future[ResultClickBoosts],
     browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
@@ -100,7 +101,6 @@ class MainSearcher(
   // social graph info
   private[this] lazy val socialGraphInfo = monitoredAwait.result(socialGraphInfoFuture, 5 seconds, s"getting SocialGraphInfo for user Id $userId")
   lazy val uriGraphSearcher = socialGraphInfo.uriGraphSearcher
-  lazy val collectionSearcher = socialGraphInfo.collectionSearcher
 
   @inline private[this] def findSharingUsers(id: Long, friendEdgeSet: UserToUserEdgeSet ): UserToUserEdgeSet = {
     uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
@@ -137,7 +137,7 @@ class MainSearcher(
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
-    parsedQuery = parser.parse(queryString)
+    parsedQuery = parser.parse(queryString, Some(collectionSearcher))
 
     timeLogs.queryParsing = currentDateTime.getMillis() - tParse
     timeLogs.phraseDetection = parser.phraseDetectionTime

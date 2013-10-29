@@ -1,15 +1,20 @@
 package com.keepit.search
 
 import com.keepit.search.phrasedetector.{PhraseDetector, NlpPhraseDetector}
+import com.keepit.search.graph.CollectionSearcherWithUser
 import com.keepit.search.query.parser.QueryParser
 import com.keepit.search.query.parser.DefaultSyntax
 import com.keepit.search.query.parser.PercentMatch
 import com.keepit.search.query.parser.QueryExpansion
 import com.keepit.search.query.parser.QueryParserException
+import com.keepit.search.query.MultiplicativeBoostQuery
+import com.keepit.search.query.NamedQueryContext
+import com.keepit.search.query.NamedQuery
 import com.keepit.search.query.ProximityQuery
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.SemanticVectorQuery
 import com.keepit.search.query.SiteQuery
+import com.keepit.search.query.TextQuery
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
@@ -20,11 +25,6 @@ import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import scala.collection.mutable.ArrayBuffer
-import com.keepit.search.query.MultiplicativeBoostQuery
-import com.keepit.search.query.BoostQuery
-import com.keepit.search.query.PhraseProximityQuery
-import com.keepit.search.query.NamedQueryContext
-import com.keepit.search.query.NamedQuery
 
 
 class MainQueryParser(
@@ -46,6 +46,10 @@ class MainQueryParser(
   private def namedQuery(name: String, query: Query) = new NamedQuery(name, query, namedQueryContext)
 
   override def parse(queryText: CharSequence): Option[Query] = {
+    throw new UnsupportedOperationException("use parse(queryText,collectionSearcher)")
+  }
+
+  def parse(queryText: CharSequence, collectionSearcher: Option[CollectionSearcherWithUser]): Option[Query] = {
     super.parse(queryText).map{ query =>
       val numTextQueries = textQueries.size
       if (numTextQueries <= 0) query
@@ -53,7 +57,7 @@ class MainQueryParser(
       else {
         val phrases = if (numTextQueries > 1 && phraseBoost > 0.0f) {
           val tPhraseDetection = System.currentTimeMillis
-          val p = phraseDetector.detectAll(phTerms)
+          val p = phraseDetector.detectAll(phStemmedTerms)
           phraseDetectionTime = System.currentTimeMillis - tPhraseDetection
 
           if (p.size > 0) p else {
@@ -64,6 +68,18 @@ class MainQueryParser(
           }
         } else {
           Set.empty[(Int, Int)]
+        }
+
+        // detect collection names and augment TextQueries
+        collectionSearcher.foreach{ cs =>
+          cs.detectCollectionNames(phTerms, phStemmedTerms).foreach{ case (index, length, collectionId) =>
+            var i = index
+            val end = index + length
+            while (i < end) {
+              indexToTextQuery(i).addCollectionQuery(collectionId)
+             i += 1
+            }
+          }
         }
 
         val auxQueries = ArrayBuffer.empty[Query]
@@ -93,10 +109,15 @@ class MainQueryParser(
     }
   }
 
-  private[this] def phTerms: IndexedSeq[Term] = {
+  private[this] lazy val phTerms: IndexedSeq[Term] = {
+    textQueries.flatMap{ _.terms }
+  }
+  private[this] lazy val phStemmedTerms: IndexedSeq[Term] = {
     textQueries.flatMap{ _.stems }
   }
-
+  private[this] lazy val indexToTextQuery: IndexedSeq[TextQuery] = {
+    textQueries.flatMap{ t => t.stems.map{ s => t } }
+  }
 
   private[this] def proxTermsFor(field: String): Seq[Seq[Term]] = {
     textQueries.foldLeft(new ArrayBuffer[ArrayBuffer[Term]]){ (terms, q) =>

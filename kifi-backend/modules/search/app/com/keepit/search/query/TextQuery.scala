@@ -9,11 +9,20 @@ class TextQuery extends DisjunctionMaxQuery(0.5f) {
   var terms: Array[Term] = TextQuery.noTerms
   var stems: Array[Term] = TextQuery.noTerms
 
+  private[this] var collectionIds: Set[Long] = Set()
+
   val concatStems: ArrayBuffer[String] = ArrayBuffer()
 
   def add(query: Query, boost: Float) {
     query.setBoost(boost)
     add(query)
+  }
+
+  def addCollectionQuery(collectionId: Long) = {
+    if (!collectionIds.contains(collectionId)) {
+      add(new CollectionQuery(collectionId))
+      collectionIds += collectionId
+    }
   }
 }
 

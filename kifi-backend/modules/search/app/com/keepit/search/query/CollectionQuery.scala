@@ -17,7 +17,7 @@ import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.util.Bits
 import java.util.{Set => JSet}
 
-class CollectionQuery(val collectionId: Id[Collection]) extends Query {
+class CollectionQuery(val collectionId: Long) extends Query {
   override def createWeight(searcher: IndexSearcher): Weight = new CollectionWeight(this, searcher.asInstanceOf[PersonalizedSearcher])
 
   override def rewrite(reader: IndexReader): Query = this
@@ -36,7 +36,7 @@ class CollectionQuery(val collectionId: Id[Collection]) extends Query {
 
 class CollectionWeight(query: CollectionQuery, searcher: PersonalizedSearcher) extends Weight with Logging {
   val idSetFilter = {
-    val edgeSet = searcher.collectionSearcher.getCollectionToUriEdgeSet(query.collectionId)
+    val edgeSet = searcher.collectionSearcher.getCollectionToUriEdgeSet(Id[Collection](query.collectionId))
     new IdSetFilter(edgeSet.destIdLongSet)
   }
 
@@ -80,7 +80,7 @@ class CollectionWeight(query: CollectionQuery, searcher: PersonalizedSearcher) e
 }
 
 class CollectionScorer(query: CollectionQuery, weight: CollectionWeight, iterator: DocIdSetIterator, scoreValue: Float) extends Scorer(weight) {
-  override def docID(): Int = iterator.nextDoc()
+  override def docID(): Int = iterator.docID()
   override def nextDoc(): Int = iterator.nextDoc()
   override def advance(target: Int): Int = iterator.advance(target)
   override def score() = scoreValue
