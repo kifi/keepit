@@ -1,4 +1,4 @@
-@(data: String, name: String, mode: String="simple", resolution: Int=1, display: String="seperate", masterTitle : String = "[merged]")
+@(data: String, name: String, mode: String="simple", display: String="seperate", masterTitle : String = "[merged]")
 <div id="chart_container_@name"></div>
 
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.2.1/lodash.min.js"></script>
@@ -6,123 +6,114 @@
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 
 <script type="text/javascript">
-  (function(){
-  window.chartData = window.chartData || {}
-  google.load('visualization', '1.0', {'packages':['corechart']});
+  (function(name, rawData, options){
+    window.chartData = window.chartData || {}
+    chartData[name] = rawData;
 
-  function discoverKeys(rawData, legend){
-    var keys = {}
-    rawData.forEach(function(datum){
-      datum.data.forEach(function(kv){
-        var new_key = legend['' + kv._id] || kv._id;
-        keys[new_key] = true;
+    //data error checking
+    if (rawData.length===0){
+      console.log("Error: Can't render zero charts.")
+      return;
+    }; 
+    google.load('visualization', '1.0', {'packages':['corechart']});
+
+    function discoverKeys(rawData, legend){
+      var keys = {}
+      rawData.forEach(function(datum){
+        datum.data.forEach(function(kv){
+          var new_key = legend['' + kv._id] || kv._id;
+          keys[new_key] = true;
+        });
       });
-    });
-    return _.keys(keys);
-  };
+      return _.keys(keys);
+    };
 
-  function objectify(rawData, legend){
-    rawData.forEach(function(datum){
-      var newData = {};
-      datum.data.forEach(function(kv){
-        var new_key = legend['' + kv._id] || kv._id;
-        newData[new_key] = kv.count;
+    function objectify(rawData, legend){
+      rawData.forEach(function(datum){
+        var newData = {};
+        datum.data.forEach(function(kv){
+          var new_key = legend['' + kv._id] || kv._id;
+          newData[new_key] = kv.count;
+        });
+        datum.data = newData; 
       });
-      datum.data = newData; 
-    });
-  }
+    };
 
-  var rawData = @Html(data);
-  chartData["@name"] = @Html(data);
-  var keys = {}
-  _.forEach(rawData, function(datum){
-    var val = datum.data;
-    var desc = datum.header;
-    keys[desc] = discoverKeys(val, datum.legend);
-    if (keys[desc].length===0){
-      keys[desc].push(datum.legend['null'] || 'null');
-    }
-    objectify(val, datum.legend);
-    if (keys[desc].length>1 && datum.totalable){
-      _.forEach(val, function(frame){
+    function addTotal(metric){
+      _.forEach(metric.data, function(frame){
         var total = 0;
         _.forEach(frame.data, function(subtotal){
           total += subtotal;
         });
         frame.data.total=total;
       });
-      keys[desc].push("total"); 
     };
-    if ("@display" != "merged"){
-      var chartParent = $("#chart_container_@name");
-      chartParent.append($('<div>', {id: "@name" + desc, style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
-    };
-  });
-  if ("@display"==="merged"){
-    var chartParent = $("#chart_container_@name");
-    chartParent.append($('<div>', {id: "chart_@name", style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
-  }
 
-  google.setOnLoadCallback(drawAndRedraw);
-
-  function drawAndRedraw(){
-    drawChart();
-    window.onresize = function(){
-      drawChart();
-    }
-  }
-
-  function drawChart(){
-    var data;
-    if ("@display"==="merged") {
-      data = new google.visualization.DataTable();
-      data.addColumn("datetime");
-      //add columns to data table
-      var key_max = {};
-      var key_sum = {};
-      _.forEach(rawData, function(datum){
-        key_max[datum.header] = {};
-        key_sum[datum.header] = {};
-        keys[datum.header].forEach(function(key){
-          data.addColumn('number', key);
+    function summify(metric){
+      var sum = {};
+      _.forEach(metric.data, function(frame){
+        _.forEach(metric.keys, function(key){
+          sum[key] = (sum[key] || 0) + (frame.data[key] || 0);
+          frame.data[key] = Math.round(sum[key]/(metric.resolution || 1)) + (metric.shift[key] || 0);
         });
       });
-      if (rawData.length===0){return;}
-      var numFrames = rawData[0].data.length;
-      for(var i=0; i<numFrames; i++){
-        var row = [];
-        row.push(new Date(rawData[0].data[i].time));
-        _.forEach(rawData, function(datum){
-          keys[datum.header].forEach(function(key){
-            var current_frame = datum.data[i];
-            var current_value = (current_frame.data[key] || 0);
+    };
 
-            key_max[datum.header][key] = (key_max[datum.header][key] || 0)>current_value?(key_max[datum.header][key] || 0):current_value;
-            key_sum[datum.header][key] = (key_sum[datum.header][key] || 0) + current_value;
-            if ("@mode"==="max") {
-              row.push(key_max[datum.header][key]);
-            } else if ("@mode"==="sum") {
-              row.push(Math.round(key_sum[datum.header][key]/@resolution) + (datum.shift[key + ''] || 0));
-            } else {
-              row.push(current_value);
-            };
+    function merge(metrics){ //Warning, the metrics here have to have the same start, window and step
+      var merged = {};
+      merged.header = options.header;
+      merged.data = [];
+      var keys = {};
+      var numFrames = metrics[0].data.length;
+      for (var i=0; i<numFrames; i++){
+        var newFrame = {time: metrics[0].data[i].time, data: {}}
+        _.forEach(metrics, function(metric){
+          _.forEach(metric.data[i].data, function(value, key){
+            newFrame.data[key] = value;
+            keys[key] = true;
           });
         });
-        data.addRow(row);
+        merged.data.push(newFrame);
       };
+      merged.keys = _.keys(keys);
+      return merged;
+    }
 
-      var chart = new google.visualization.LineChart(document.getElementById("chart_@name"));
-      chart.draw(data, {'title': "@masterTitle"});
-    } else {
-      _.forEach(rawData, function(datum){
-        var val = datum.data;
-        var desc = datum.header;
-        var shift = datum.shift;
+    function preprocess(metric){
+      var metricKeys = discoverKeys(metric.data, metric.legend)
+      if (metricKeys.length===0){
+        metricKeys.push(datum.legend['null'] || 'null'); 
+      }
+      metric.keys = metricKeys; 
+      objectify(metric.data, metric.legend);
+      if (metric.keys.length>1 && metric.totalable){
+        addTotal(metric);
+        metric.keys.push("total"); 
+      };
+      if (options.sum){
+        summify(metric);
+      };
+    };
+
+    function prepareDom(metric){
+      var chartParent = $("#chart_container_" + name);
+      chartParent.append($('<div>', {id: name + metric.header, style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
+    }; 
+
+    function drawAndRedraw(){
+      drawChart();
+      window.onresize = function(){
+        drawChart();
+      }
+    };
+
+    function drawChart(){
+      _.forEach(rawData, function(metric){
         var data = new google.visualization.DataTable();
         data.addColumn("datetime")
-        keys[desc].forEach(function(key){
+        metric.keys.forEach(function(key){
           if (key==="null"){
-            if (keys[desc].length===1){
+            if (metric.keys.length===1){
               data.addColumn('number', "Count");
             } else {
               data.addColumn('number', "[Group Field Missing]");
@@ -131,41 +122,46 @@
             data.addColumn('number', key);
           }
         });
-        var key_max = {};
-        var key_sum = {};
-        val.forEach(function(datum){
+        metric.data.forEach(function(frame){
           var row = [];
-          row.push(new Date(datum.time));
-          //console.log("Processing " + new Date(datum.time) + " with @mode" + " for " + desc)
-          keys[desc].forEach(function(key){
-            var current_value = datum.data[key] || 0;
-            key_max[key] = (key_max[key] || 0)>current_value?(key_max[key] || 0):current_value;
-            key_sum[key] = (key_sum[key] || 0) + current_value;
-            if ("@mode"==="max") {
-              row.push(key_max[key]);
-            } else if ("@mode"==="sum") {
-              row.push(Math.round(key_sum[key]/@resolution) + (shift[key + ''] || 0));
-              // console.log("@mode On:" + new Date(datum.time) + " Pushing " + Math.round(key_sum[key]/@resolution));
-            } else {
-              row.push(current_value);
-            };
+          row.push(new Date(frame.time));
+          metric.keys.forEach(function(key){
+            row.push(frame.data[key] || 0);
           });
           data.addRow(row);
         });
 
         var suffix = "";
-        if ("@mode"==="max") {
-          suffix = " (PEAK SO FAR)";
-        } else if ("@mode"==="sum") {
+        if (options.sum) {
           suffix = " (CUMMULATIVE)";
         }
 
-        var chart = new google.visualization.LineChart(document.getElementById("@name" + desc));
-        chart.draw(data, {'title': desc + suffix});
+        var chart = new google.visualization.LineChart(document.getElementById(name + metric.header));
+        chart.draw(data, {'title': metric.header + suffix});
       });
+    };
+
+
+    _.forEach(rawData, function(metric){preprocess(metric)});
+    
+    if (options.merge){
+      rawData = [merge(rawData)];
     }
-  };
-  })();
+
+    _.forEach(rawData, function(metric){prepareDom(metric)});
+
+    google.setOnLoadCallback(drawAndRedraw);
+
+
+  })(
+    "@name",
+    @Html(data),
+    {
+      sum    : ("@mode"==="sum"),
+      merge  : ("@display"==="merged"),
+      header : "@masterTitle"
+    }
+  );
 
   
 </script>

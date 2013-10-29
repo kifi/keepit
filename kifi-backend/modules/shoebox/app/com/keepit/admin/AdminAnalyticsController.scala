@@ -14,7 +14,7 @@ import scala.util.{Success, Failure}
 import com.google.inject.Inject
 
 
-case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int](), totalable : Boolean = true)
+case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int](), totalable : Boolean = true, resolution: Int = 1)
 
 case class MetricWithAuxInfo(data: JsObject, auxInfo: MetricAuxInfo)
 
@@ -49,18 +49,18 @@ class AdminAnalyticsController @Inject() (
       "public" -> 31450,
       "private" -> 22407,
       "total" -> 53857
-    )),
+    ), resolution=7),
     "private_keeps_weekly" -> MetricAuxInfo("nothing yet", Map(), Map(
       "INIT_LOAD" -> 20461,
       "HOVER_KEEP" -> 1804,
       "SITE" -> 33,
       "total" -> 22407
-    )),
+    ), resolution=7),
     "public_keeps_weekly" -> MetricAuxInfo("nothing yet", Map(), Map(
       "HOVER_KEEP" -> 23967,
       "SITE" -> 467,
       "total" -> 31450
-    ))
+    ), resolution=7)
   )
 
   val messageMetrics = Map[String, MetricAuxInfo](
@@ -94,7 +94,8 @@ class AdminAnalyticsController @Inject() (
         "help" -> auxInfo.helpText,
         "legend" -> JsObject(auxInfo.legend.mapValues(Json.toJson(_)).toSeq),
         "shift" -> JsObject(auxInfo.shift.mapValues(Json.toJson(_)).toSeq),
-        "totalable" -> auxInfo.totalable
+        "totalable" -> auxInfo.totalable,
+        "resolution" -> auxInfo.resolution
     )}
   }
 
