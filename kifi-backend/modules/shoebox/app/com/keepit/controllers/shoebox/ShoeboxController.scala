@@ -207,7 +207,7 @@ class ShoeboxController @Inject() (
   }
 
   def getBasicUsers(ids: String) = Action { request =>
-    val userIds = ids.split(',').map(id => Id[User](id.toLong))
+    val userIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(id => Id[User](id.toLong))
     val users = db.readOnly { implicit s =>
       userIds.map{ userId => userId.id.toString -> Json.toJson(basicUserRepo.load(userId)) }.toMap
     }
@@ -220,7 +220,7 @@ class ShoeboxController @Inject() (
   }
   
   def getEmailsForUsers(ids: String) = Action { request =>
-    val userIds = ids.split(',').map(id => Id[User](id.toLong))
+    val userIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(id => Id[User](id.toLong))
     val emails = db.readOnly{ implicit s =>
       userIds.map{userId => userId.id.toString -> emailAddressRepo.getByUser(userId).map{_.address}}.toMap
     }

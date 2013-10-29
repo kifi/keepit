@@ -56,10 +56,14 @@ class UserIndexer(
   def run(commitBatchSize: Int, fetchSize: Int): Int = {
     resetSequenceNumberIfReindex()
     
+    log.info("starting a new round of user indexing")
+    
     try {
       val info = getUsersInfo(fetchSize)
+      log.info(s"${info.size} users to be indexed")
       var cnt = successCount
       indexDocuments(info.toIterator.map{x => buildIndexable(x.user, x.basicUser, x.emails)}, commitBatchSize)
+      log.info("this round of user indexing finished")
       successCount - cnt
     } catch {
       case e: Throwable =>

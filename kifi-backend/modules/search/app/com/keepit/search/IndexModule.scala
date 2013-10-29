@@ -17,6 +17,8 @@ import com.keepit.inject.AppScoped
 import java.io.File
 import com.keepit.common.logging.Logging
 import com.keepit.search.user.UserIndexer
+import com.keepit.search.user.UserIndexerPlugin
+import com.keepit.search.user.UserIndexerPluginImpl
 
 trait IndexModule extends ScalaModule
 
@@ -26,6 +28,7 @@ case class ProdIndexModule() extends IndexModule with Logging {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[CommentIndexerPlugin].to[CommentIndexerPluginImpl].in[AppScoped]
+    bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
   }
 
   private def getDirectory(maybeDir: Option[String]): Directory = {
@@ -141,6 +144,8 @@ case class DevIndexModule() extends IndexModule with Logging {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[CommentIndexerPlugin].to[CommentIndexerPluginImpl].in[AppScoped]
+    bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
+
   }
 
   private def getDirectory(maybeDir: Option[String]): Directory = {
