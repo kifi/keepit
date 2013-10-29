@@ -281,21 +281,34 @@ class AuthController @Inject() (
 
   // user/email finalize action (new)
   def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = doUserPassFinalizeAccountAction(_), unauthenticatedAction = _ => Forbidden(JsNumber(0)))
-  private case class EmailPassFinalizeInfo(firstName: String, lastName: String, picToken: Option[String], crop: Option[String])
-  private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](
-    mapping("firstName" -> nonEmptyText, "lastName" -> nonEmptyText, "picToken" -> optional(text), "crop" -> optional(text))(EmailPassFinalizeInfo.apply)(EmailPassFinalizeInfo.unapply)
-  )
+  private case class EmailPassFinalizeInfo(
+    firstName: String,
+    lastName: String,
+    picToken: Option[String],
+    picHeight: Option[Int], picWidth: Option[Int],
+    cropX: Option[Int], cropY: Option[Int],
+    cropSize: Option[Int])
+  private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
+      "firstName" -> nonEmptyText,
+      "lastName" -> nonEmptyText,
+      "picToken" -> optional(text),
+      "picHeight" -> optional(number),
+      "picWidth" -> optional(number),
+      "cropX" -> optional(number),
+      "cropY" -> optional(number),
+      "cropSize" -> optional(number)
+    )(EmailPassFinalizeInfo.apply)(EmailPassFinalizeInfo.unapply))
   def doUserPassFinalizeAccountAction(implicit request: AuthenticatedRequest[JsValue]): Result = {
     userPassFinalizeAccountForm.bindFromRequest.fold(
     formWithErrors => Forbidden(Json.obj("error" -> "user_exists_failed_auth")),
-    { case EmailPassFinalizeInfo(firstName, lastName, picToken, crop) =>
+    { case EmailPassFinalizeInfo(firstName, lastName, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
       val identity = request.identityOpt.get
       val pinfo = identity.passwordInfo.get
       val email = identity.email.get
       val (newIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = pinfo,
         firstName = firstName, lastName = lastName, isComplete = true)
 
-      val cropAttributes = parseCropForm(crop) tap (r => log.info(s"Cropped attributes for ${request.user.id.get}: " + r))
+      val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize) tap (r => log.info(s"Cropped attributes for ${request.user.id.get}: " + r))
       picToken.map { token =>
         s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token, cropAttributes)
       }
@@ -306,7 +319,15 @@ class AuthController @Inject() (
 
   // social finalize action (new)
   def socialFinalizeAccountAction() = JsonToJsonAction(true)(authenticatedAction = doSocialFinalizeAccountAction(_), unauthenticatedAction = doSocialFinalizeAccountAction(_))
-  private case class SocialFinalizeInfo(email: String, password: String, firstName: String, lastName: String, picToken: Option[String], crop: Option[String])
+  private case class SocialFinalizeInfo(
+    email: String,
+    password: String,
+    firstName: String,
+    lastName: String,
+    picToken: Option[String],
+    picHeight: Option[Int], picWidth: Option[Int],
+    cropX: Option[Int], cropY: Option[Int],
+    cropSize: Option[Int])
   private val socialFinalizeAccountForm = Form[SocialFinalizeInfo](
     mapping(
       "email" -> email.verifying("email_exists_for_other_user", email => db.readOnly { implicit s =>
@@ -316,8 +337,11 @@ class AuthController @Inject() (
       "lastName" -> nonEmptyText,
       "password" -> text.verifying("password_too_short", pw => pw.length >= 7),
       "picToken" -> optional(text),
-      "crop" -> optional(text)
-      /*",picUrl" -> optional(text)*/
+      "picHeight" -> optional(number),
+      "picWidth" -> optional(number),
+      "cropX" -> optional(number),
+      "cropY" -> optional(number),
+      "cropSize" -> optional(number)
     )
       (SocialFinalizeInfo.apply)
       (SocialFinalizeInfo.unapply)
@@ -326,7 +350,7 @@ class AuthController @Inject() (
     socialFinalizeAccountForm.bindFromRequest.fold(
     formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
     {
-      case SocialFinalizeInfo(email, firstName, lastName, password, picToken, crop) =>
+      case SocialFinalizeInfo(email, firstName, lastName, password, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
 
         val pinfo = Registry.hashers.currentHasher.hash(password)
 
@@ -337,7 +361,7 @@ class AuthController @Inject() (
           userRepo.get(userId)
         }
 
-        val cropAttributes = parseCropForm(crop) tap (r => log.info(s"Cropped attributes for ${user.id.get}: " + r))
+        val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize) tap (r => log.info(s"Cropped attributes for ${user.id.get}: " + r))
         picToken.map { token =>
           s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
         }
@@ -373,12 +397,14 @@ class AuthController @Inject() (
     )
   }
 
-  private def parseCropForm(cropOpt: Option[String]) = {
+  private def parseCropForm(picHeight: Option[Int], picWidth: Option[Int], cropX: Option[Int], cropY: Option[Int], cropSize: Option[Int]) = {
     for{
-      crop <- cropOpt
-      c <- Try(Json.parse(crop).as[JsObject]).toOption
-      res <- Json.fromJson[ImageCropAttributes](c).asOpt
-    } yield res
+      h <- picHeight
+      w <- picWidth
+      x <- cropX
+      y <- cropY
+      s <- cropSize
+    } yield ImageCropAttributes(x, y, s, h, w)
   }
 
   def OkStreamFile(filename: String) =
