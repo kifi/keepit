@@ -27,6 +27,7 @@ import javax.imageio.ImageIO
 import org.apache.commons.lang3.RandomStringUtils
 import java.awt.image.BufferedImage
 import com.keepit.common.KestrelCombinator
+import play.api.libs.json.Json
 
 object S3UserPictureConfig {
   val ImageSizes = Seq(100, 200)
@@ -48,7 +49,7 @@ trait S3ImageStore {
   def uploadTemporaryPicture(file: File): Try[(String, String)]
 
   // Returns Some(urlOfUserPicture) or None
-  def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String): Option[String]
+  def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String, cropAttributes: Option[ImageCropAttributes]): Option[String]
 
   def avatarUrlByExternalId(w: Option[Int], userId: ExternalId[User], picName: String, protocolDefault: Option[String] = None): String = {
     val size = S3UserPictureConfig.ImageSizes.find(size => w.exists(size >= _)).map(_.toString).getOrElse(S3UserPictureConfig.OriginalImageSize)
@@ -154,7 +155,7 @@ class S3ImageStoreImpl @Inject() (
       })
       future onComplete {
         case Success(_) =>
-          updateUserPictureRecord(sui.userId.get, pictureName, UserPictureSource(sui.networkType.name), false)
+          updateUserPictureRecord(sui.userId.get, pictureName, UserPictureSource(sui.networkType.name), false, None)
         case Failure(e) =>
           airbrake.notify(AirbrakeError(
             exception = e,
@@ -185,18 +186,21 @@ class S3ImageStoreImpl @Inject() (
     log.info(s"Uploading picture ($label) to S3 key $key")
     val om = new ObjectMetadata()
     om.setContentType("image/jpeg")
-    if (contentLength != 0) {
+    if (contentLength > 0) {
       om.setContentLength(contentLength)
     }
     s3Client.putObject(config.bucketName, key, is, om)
   }
 
-  private def updateUserPictureRecord(userId: Id[User], pictureName: String, source: UserPictureSource, setDefault: Boolean) = {
+  private def updateUserPictureRecord(userId: Id[User], pictureName: String, source: UserPictureSource, setDefault: Boolean, cropAttributes: Option[ImageCropAttributes]) = {
+    val jsonCropAttributes = cropAttributes.map { c =>
+      Json.obj("x" -> c.x, "y" -> c.y, "h" -> c.h, "w" -> c.w, "s" -> c.s)
+    }
     db.readWrite { implicit s =>
       val user = userRepo.get(userId)
       if (user.userPictureId.isEmpty) {
         // User has no picture set
-        val userPicture = userPictureRepo.save(UserPicture(userId = userId, name = pictureName, origin = source))
+        val userPicture = userPictureRepo.save(UserPicture(userId = userId, name = pictureName, origin = source, attributes = jsonCropAttributes))
         userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id))
       } else {
         val prevPic = userPictureRepo.get(user.userPictureId.get)
@@ -205,7 +209,7 @@ class S3ImageStoreImpl @Inject() (
         } else {
           val userPicRecord = userPictureRepo.save(
             userPictureRepo.getByName(userId, pictureName)
-              .getOrElse(UserPicture(userId = userId, name = pictureName, origin = source))
+              .getOrElse(UserPicture(userId = userId, name = pictureName, origin = source, attributes = jsonCropAttributes))
               .withState(UserPictureStates.ACTIVE)
           )
           if (setDefault) {
@@ -230,7 +234,7 @@ class S3ImageStoreImpl @Inject() (
       (token, s"${config.cdnBase}/$key")
   }
 
-  def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String): Option[String] = {
+  def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String, cropAttributes: Option[ImageCropAttributes]): Option[String] = {
     def getImage(token: String) = Try {
       val obj = s3Client.getObject(config.bucketName, tempPath(token))
       ImageIO.read(obj.getObjectContent)
@@ -240,14 +244,26 @@ class S3ImageStoreImpl @Inject() (
       uploadToS3(key, is, contentLength, "uploaded pic to user location")
       key
     }
-    def resizeAndUpload(newFilename: String, bufferedImage: BufferedImage) = {
+    def cropImageOrFallback(newFilename: String, bufferedImage: BufferedImage, cropAttributes: Option[ImageCropAttributes]) = {
+      cropAttributes.map { attr =>
+        Try { ImageUtils.cropSquareImage(bufferedImage, attr.x, attr.y, attr.s) } match {
+          case Success(cropped) => Some(cropped)
+          case Failure(ex) =>
+            airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to crop picture $newFilename")))
+            None
+        }
+      }.flatten.getOrElse(bufferedImage)
+    }
+    def cropResizeAndUpload(newFilename: String, bufferedImage: BufferedImage, cropAttributes: Option[ImageCropAttributes]) = {
+
+      val image = cropImageOrFallback(newFilename, bufferedImage, cropAttributes)
       S3UserPictureConfig.sizes.map { size =>
-        Try(ImageUtils.resizeImage(bufferedImage, size)).map { case (contentLength, is) =>
+        Try(ImageUtils.resizeImageKeepProportions(image, size)).map { case (contentLength, is) =>
           uploadUserImage(newFilename, size.width.toString, is, contentLength)
         }.flatten match {
           case Success(res) => Some(res)
           case Failure(ex) =>
-            airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to resize/upload ${size.width} picture $newFilename from S3")))
+            airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to resize/upload ${size.width} picture $newFilename to S3")))
             None
         }
       }
@@ -259,9 +275,9 @@ class S3ImageStoreImpl @Inject() (
         val (origContentLength, origInputStream) = ImageUtils.bufferedImageToInputStream(bufferedImage)
         uploadUserImage(newFilename, "original", origInputStream, origContentLength) match {
           case Success(res) =>
-            val resizedImageResults = resizeAndUpload(newFilename, bufferedImage)
+            val resizedImageResults = cropResizeAndUpload(newFilename, bufferedImage, cropAttributes)
             resizedImageResults.find(_.isDefined).map { hadASuccess =>
-              updateUserPictureRecord(userId, newFilename, UserPictureSources.USER_UPLOAD, true)
+              updateUserPictureRecord(userId, newFilename, UserPictureSources.USER_UPLOAD, true, cropAttributes)
               hadASuccess
             }.flatten
           case Failure(ex) =>
