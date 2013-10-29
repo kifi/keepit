@@ -51,6 +51,7 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
             }
           }
       }
+      healthcheck.addError(error)
     case m => self ! AirbrakeErrorNotice(throw new UnsupportedActorMessage(s"unknown message $m"), true)
   }
 }
