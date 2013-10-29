@@ -69,7 +69,7 @@ class UrlController @Inject() (
       try {
         doRenormalize(readOnly, clearSeq, domain)
       } catch {
-        case ex: Throwable => airbrake.notify(AirbrakeError(ex))
+        case ex: Throwable => airbrake.notify(ex)
       }
     }
     Ok("Started!")

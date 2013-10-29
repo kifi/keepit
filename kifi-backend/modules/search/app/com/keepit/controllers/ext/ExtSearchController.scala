@@ -142,7 +142,7 @@ class ExtSearchController @Inject() (
         val link = "https://admin.kifi.com/admin/search/results/" + searchRes.uuid.id
         val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, ${timing.toString}." +
             "\n More details at: \n" + link + "\n" + searchDetails + "\n"
-        airbrake.notify(AirbrakeError(message = Some(msg)))
+        airbrake.notify(msg)
       }
     }
 

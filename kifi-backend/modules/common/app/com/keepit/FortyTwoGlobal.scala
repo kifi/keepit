@@ -29,7 +29,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     injector.getInstance(clazz)
   } catch {
     case e: Throwable =>
-      injector.instance[AirbrakeNotifier].notify(AirbrakeError(e))
+      injector.instance[AirbrakeNotifier].notify(e)
       throw e
   }
 

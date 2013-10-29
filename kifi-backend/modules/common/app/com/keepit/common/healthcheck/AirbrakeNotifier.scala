@@ -97,6 +97,8 @@ class AirbrakeSender @Inject() (
 trait AirbrakeNotifier {
   def reportDeployment(): Unit
   def notify(error: AirbrakeError): AirbrakeError
+  def notify(errorException: Throwable): AirbrakeError
+  def notify(errorMessage: String): AirbrakeError
 }
 
 // apiKey is per service type (showbox, search etc)
@@ -104,6 +106,10 @@ class AirbrakeNotifierImpl (
   actor: ActorInstance[AirbrakeNotifierActor]) extends AirbrakeNotifier with Logging {
 
   def reportDeployment(): Unit = actor.ref ! AirbrakeDeploymentNotice
+
+  def notify(errorException: Throwable): AirbrakeError = notify(AirbrakeError(errorException))
+
+  def notify(errorMessage: String): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage)))
 
   def notify(error: AirbrakeError): AirbrakeError = {
     actor.ref ! AirbrakeErrorNotice(error)

@@ -35,7 +35,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def reportExceptions[T](f: => T): T =
     try f catch { case ex: Throwable =>
-      airbrake.notify(AirbrakeError(ex))
+      airbrake.notify(ex)
       throw ex
     }
 
@@ -246,7 +246,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
 
   private def reportExceptions[T](f: => T): Either[Error, T] =
     try Right(f) catch { case ex: Throwable =>
-      airbrake.notify(AirbrakeError(ex))
+      airbrake.notify(ex)
       Left(new Error(ex))
     }
 
