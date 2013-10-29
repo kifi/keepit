@@ -12,8 +12,6 @@ import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxServiceClient
 import java.io.StringReader
 import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.store.Directory
-import org.apache.lucene.util.Version
 import com.keepit.search.SemanticVectorBuilder
 import com.google.inject.Inject
 import scala.concurrent.Await
@@ -26,7 +24,7 @@ object ArticleIndexer {
 }
 
 class ArticleIndexer @Inject() (
-    indexDirectory: Directory,
+    indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     articleStore: ArticleStore,
     airbrake: AirbrakeNotifier,
