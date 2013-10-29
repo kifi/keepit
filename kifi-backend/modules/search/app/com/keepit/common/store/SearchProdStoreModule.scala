@@ -52,6 +52,6 @@ case class SearchDevStoreModule() extends DevStoreModule(SearchProdStoreModule()
   def indexStore(amazonS3Client: AmazonS3): IndexStore = {
     whenConfigured("amazon.s3.index.bucket")(
       prodStoreModule.indexStore(amazonS3Client)
-    ).getOrElse(new LocalIndexStoreImpl(new File(current.configuration.getString("index.directory").get + "/devArchive")))
+    ).getOrElse(new LocalIndexStoreImpl(new File("./localIndexBackup")))
   }
 }
