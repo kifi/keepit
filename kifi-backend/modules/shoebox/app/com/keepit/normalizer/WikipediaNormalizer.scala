@@ -11,10 +11,11 @@ object WikipediaNormalizer extends StaticNormalizer {
     }
   }
   def apply(uri: URI) = {
-    uri match {
+    val desktopUri = uri match {
       case URI(scheme, userInfo, Some(Host(ext, "wikipedia", "m", lang)), port, path, query, fragment) =>
-        URI(Some("https"), userInfo, Some(Host(ext, "wikipedia", lang)), port, path, None, None)
-      case _ => SchemeNormalizer(Normalization.HTTPS)(uri)
+        URI(scheme, userInfo, Some(Host(ext, "wikipedia", lang)), port, path, query, fragment)
+      case _ => uri
     }
+    DefaultNormalizer(SchemeNormalizer(Normalization.HTTPS)(desktopUri))
   }
 }
