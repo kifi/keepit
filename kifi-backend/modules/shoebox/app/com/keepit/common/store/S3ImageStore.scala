@@ -22,7 +22,7 @@ import com.keepit.common.net.URI
 import scala.util.Failure
 import scala.Some
 import scala.util.Success
-import java.io.{ByteArrayOutputStream, ByteArrayInputStream, File}
+import java.io.{InputStream, ByteArrayOutputStream, ByteArrayInputStream, File}
 import javax.imageio.ImageIO
 import org.apache.commons.lang3.RandomStringUtils
 import java.awt.image.BufferedImage
@@ -111,11 +111,7 @@ class S3ImageStoreImpl @Inject() (
               if (!upToDate) {
                 suiRepo.getByUser(user.id.get).filter(_.networkType.name == pic.origin.name).map { sui =>
                   // For now, *replace* social images. Soon: detect if it has changed, and create new.
-                  if (user.pictureName.isEmpty) {
-                    uploadPictureFromSocialNetwork(sui, user.externalId)
-                  } else {
-                    uploadPictureFromSocialNetwork(sui, user.externalId, pictureName)
-                  }
+                  uploadPictureFromSocialNetwork(sui, user.externalId, pictureName)
                 }
               }
             }
@@ -146,16 +142,19 @@ class S3ImageStoreImpl @Inject() (
         val px = if (sizeName == "original") "1000" else sizeName
         val originalImageUrl = avatarUrlFromSocialNetwork(sui, px)
         WS.url(originalImageUrl).get().map { response =>
-          val key = keyByExternalId(sizeName.toString, externalId, pictureName)
-          log.info(s"Uploading picture $originalImageUrl to S3 key $key")
-          val om = new ObjectMetadata()
-          om.setContentType("image/jpeg")
-          (pictureName, Try(s3Client.putObject(config.bucketName, key, response.getAHCResponse.getResponseBodyAsStream, om)))
+          val key = keyByExternalId(sizeName, externalId, pictureName)
+          val putObj = uploadToS3(key, response.getAHCResponse.getResponseBodyAsStream, label = originalImageUrl)
+
+          // TEMPORARY: While we still have the extension loading 0.jpg, upload that one as well.
+          uploadToS3(keyByExternalId(sizeName, externalId, "0.jpg"), response.getAHCResponse.getResponseBodyAsStream, label = "0.jpg of " + originalImageUrl)
+          // ^^^^^^^^ Remove when extension is fixed ^^^^^^^^
+
+          (pictureName, putObj)
         }
       })
       future onComplete {
         case Success(_) =>
-          updateUserPictureRecord(sui.userId.get, pictureName, UserPictureSource(sui.networkType.name))
+          updateUserPictureRecord(sui.userId.get, pictureName, UserPictureSource(sui.networkType.name), false)
         case Failure(e) =>
           airbrake.notify(AirbrakeError(
             exception = e,
@@ -166,21 +165,52 @@ class S3ImageStoreImpl @Inject() (
     }
   }
 
-  private def updateUserPictureRecord(userId: Id[User], pictureName: String, source: UserPictureSource) = {
+  def forceUpdateSocialPictures(userId: Id[User]): Unit = {
+    val (sui, user, picName) = db.readOnly { implicit s =>
+      val user = userRepo.get(userId)
+      val suis = suiRepo.getByUser(user.id.get)
+      // If user has no picture, this is the preference order for social networks:
+      val sui = suis.find(_.networkType == SocialNetworks.FACEBOOK).orElse(suis.find(_.networkType == SocialNetworks.LINKEDIN)).getOrElse(suis.head)
+      val picName = user.userPictureId.map(pid => userPictureRepo.get(pid).name)
+      (sui, user, picName)
+    }
+    if (picName.isDefined) {
+      uploadPictureFromSocialNetwork(sui, user.externalId, picName.get)
+    } else {
+      uploadPictureFromSocialNetwork(sui, user.externalId)
+    }
+  }
+
+  private def uploadToS3(key: String, is: InputStream, contentLength: Int = 0, label: String = "") = Try {
+    log.info(s"Uploading picture ($label) to S3 key $key")
+    val om = new ObjectMetadata()
+    om.setContentType("image/jpeg")
+    if (contentLength != 0) {
+      om.setContentLength(contentLength)
+    }
+    s3Client.putObject(config.bucketName, key, is, om)
+  }
+
+  private def updateUserPictureRecord(userId: Id[User], pictureName: String, source: UserPictureSource, setDefault: Boolean) = {
     db.readWrite { implicit s =>
       val user = userRepo.get(userId)
-      if (user.userPictureId.isEmpty || user.pictureName.isEmpty || user.pictureName.get != pictureName) {
+      if (user.userPictureId.isEmpty) {
+        // User has no picture set
         val userPicture = userPictureRepo.save(UserPicture(userId = userId, name = pictureName, origin = source))
-
-        user.userPictureId match {
-          case Some(prevId) => // User has a picture set
-            val prevPic = userPictureRepo.get(prevId)
-            if (prevPic.origin.name == source.name) { // User currently is using this social network's picture
-              userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id))
-              userPictureRepo.save(userPictureRepo.get(prevId).withState(UserPictureStates.INACTIVE))
-            }
-          case None => // User has no picture set
-            userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id))
+        userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id))
+      } else {
+        val prevPic = userPictureRepo.get(user.userPictureId.get)
+        if (user.userPictureId.get == prevPic.id.get) {
+          userPictureRepo.save(prevPic) // touch updatedAt
+        } else {
+          val userPicRecord = userPictureRepo.save(
+            userPictureRepo.getByName(userId, pictureName)
+              .getOrElse(UserPicture(userId = userId, name = pictureName, origin = source))
+              .withState(UserPictureStates.ACTIVE)
+          )
+          if (setDefault) {
+            userRepo.save(user.copy(userPictureId = userPicRecord.id, pictureName = Some(pictureName)))
+          }
         }
       }
     }
@@ -193,16 +223,11 @@ class S3ImageStoreImpl @Inject() (
       ImageIO.write(bufImage, "jpeg", os)
       val is = new ByteArrayInputStream(os.toByteArray())
 
-      val om = new ObjectMetadata()
-      om.setContentType("image/jpeg")
-      om.setContentLength(os.size())
       val token = RandomStringUtils.randomAlphanumeric(10)
-      val path = tempPath(token)
-      val s3obj = s3Client.putObject(config.bucketName, s"$path", is, om)
+      val key = tempPath(token)
+      uploadToS3(key, is, os.size(), "temporary user upload")
 
-      is.close()
-      os.close()
-      (token, s"${config.cdnBase}/$path")
+      (token, s"${config.cdnBase}/$key")
   }
 
   def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String): Option[String] = {
@@ -211,12 +236,8 @@ class S3ImageStoreImpl @Inject() (
       ImageIO.read(obj.getObjectContent)
     }
     def uploadUserImage(filename: String, imageSizeName: String, is: ByteArrayInputStream, contentLength: Int) = Try {
-      val om = new ObjectMetadata()
-      om.setContentType("image/jpeg")
-      om.setContentLength(contentLength)
-
       val key = keyByExternalId(imageSizeName, userExtId, filename)
-      s3Client.putObject(config.bucketName, key, is, om)
+      uploadToS3(key, is, contentLength, "uploaded pic to user location")
       key
     }
     def resizeAndUpload(newFilename: String, bufferedImage: BufferedImage) = {
@@ -240,7 +261,7 @@ class S3ImageStoreImpl @Inject() (
           case Success(res) =>
             val resizedImageResults = resizeAndUpload(newFilename, bufferedImage)
             resizedImageResults.find(_.isDefined).map { hadASuccess =>
-              updateUserPictureRecord(userId, newFilename, UserPictureSources.USER_UPLOAD)
+              updateUserPictureRecord(userId, newFilename, UserPictureSources.USER_UPLOAD, true)
               hadASuccess
             }.flatten
           case Failure(ex) =>

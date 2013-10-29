@@ -288,15 +288,9 @@ class AuthController @Inject() (
       val newIdentity = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = pinfo,
         firstName = firstName, lastName = lastName, isComplete = true)
 
-      val pic = picToken.map { token =>
-        s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token) match {
-          case Some(url) => url
-          case None =>
-            "1"
-        }
-      }.getOrElse("2")
-      log.info("YYYYYYYYYYYYY\n\n\n")
-      log.info(pic)
+      picToken.map { token =>
+        s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token)
+      }
 
       finishSignup(newIdentity, true)
     })
