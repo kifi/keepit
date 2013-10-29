@@ -66,7 +66,7 @@ object Searcher {
 
 class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[IndexWarmer] = None) extends IndexSearcher(indexReader) {
 
-  def idf(term: Term) = getSimilarity.asInstanceOf[TFIDFSimilarity]idf(indexReader.docFreq(term), indexReader.maxDoc)
+  def idf(term: Term): Float = getSimilarity.asInstanceOf[TFIDFSimilarity].idf(indexReader.docFreq(term), indexReader.maxDoc)
 
   private[this] var sketchMap = Map.empty[Term, Sketch]
 

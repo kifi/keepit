@@ -4,6 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
 import com.keepit.search._
+import com.keepit.search.graph.CollectionSearcherWithUser
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import scala.concurrent.duration._
@@ -16,6 +17,7 @@ object PersonalizedSearcher {
   def apply(userId: Id[User],
             indexReader: WrappedIndexReader,
             myUris: Set[Long],
+            collectionSearcher: CollectionSearcherWithUser,
             browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
             clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
             svWeightMyBookMarks: Int,
@@ -32,19 +34,27 @@ object PersonalizedSearcher {
 
     new PersonalizedSearcher(
       indexReader, myUris,
+      collectionSearcher,
       browsingHistoryFilter,
       clickHistoryFilter,
       svWeightMyBookMarks * scale, svWeightBrowsingHistory * scale, svWeightClickHistory * scale)
   }
 
   def apply(searcher: Searcher, ids: Set[Long]) = {
-    new PersonalizedSearcher(searcher.indexReader, ids, MultiHashFilter.emptyFilter, MultiHashFilter.emptyFilter, 1, 0, 0)
+    new PersonalizedSearcher(searcher.indexReader, ids, null, MultiHashFilter.emptyFilter, MultiHashFilter.emptyFilter, 1, 0, 0)
   }
 }
 
-class PersonalizedSearcher(override val indexReader: WrappedIndexReader, myUris: Set[Long],
-                           val browsingFilter: MultiHashFilter[BrowsedURI], val clickFilter: MultiHashFilter[ClickedURI],
-                           scaledWeightMyBookMarks: Int, scaledWeightBrowsingHistory: Int, scaledWeightClickHistory: Int)
+class PersonalizedSearcher(
+  override val indexReader: WrappedIndexReader,
+  myUris: Set[Long],
+  val collectionSearcher: CollectionSearcherWithUser,
+  val browsingFilter: MultiHashFilter[BrowsedURI],
+  val clickFilter: MultiHashFilter[ClickedURI],
+  scaledWeightMyBookMarks: Int,
+  scaledWeightBrowsingHistory: Int,
+  scaledWeightClickHistory: Int
+)
 extends Searcher(indexReader) with Logging {
   import PersonalizedSearcher._
 
