@@ -87,8 +87,10 @@ h3.collection {position: relative}
 .collection:hover {background-color: #e9ecf2}
 .collection.active {background-color: #e3e6ee}
 .collection.renaming .tag-count {display: none}
-.tag-icon {display:inline-block; width: 17px; height: 17px; background-image: url(../img/tag-icon.png); background-size: auto 17px; vertical-align: middle; margin-right: 4px}
-.collection.active .tag-icon {background-image: url(../img/tag-icon.png)}
+.tag-icon {display:inline-block; width: 14px; height: 16px; background-size: auto 16px; vertical-align: middle; margin-right: 4px}
+.tag-icon {background-image: url(../img/tag-icon-gray.png)}
+.collection-new .tag-icon {background-image: url(../img/tag-icon-blue.png)}
+.collection.active .tag-icon {background-image: url(../img/tag-icon-white.png)}
 .coll-tri {position: absolute; top: 0; bottom: 0; right: 0; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer}
 .active>.coll-tri {background-color: #b8c5d2}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
@@ -365,7 +367,7 @@ body[data-view=search] .main-keeps {top: 108px}
 .keep>time {float: right; margin: 0 16px 0 4%; font-size: 12px; line-height: 28px; color: #99a3b3}
 .keep-title {max-width: 100%; font-size: 16px; line-height: 24px; color: #0089d5; -webkit-font-smoothing: antialiased}
 .keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
-.keep-colls {margin-right: 10px; border: solid transparent; border-width: 7px 0; background: url(../img/tag-icon-small.png) 0 0/12px 12px no-repeat; background-position: 0 1px; padding-left: 13px; font-size: 12px; line-height: 14px; overflow: hidden}
+.keep-colls {margin-right: 10px; border: solid transparent; border-width: 7px 0; background: url(../img/tag-icon-small.png) 0 0/18px 18px no-repeat; padding-left: 19px; font-size: 12px; line-height: 18px; overflow: hidden}
 @-moz-document url-prefix() {.keep-colls {background-position: 0 1px}}
 .keep-colls:empty {border-bottom-width: 0}
 .keep-coll {display: inline-block; position: relative; overflow: hidden; white-space: nowrap}
@@ -646,8 +648,9 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .query-x::before {background-image: url(../img/search.2x.png)}
   .my-keeps>a>.view-name::before,
   .my-friends>a>.view-name::before,
-  .tag-icon {background-image: url(../img/tag-icon.2x.png)}
-  .collection.active .tag-icon {background-image: url(../img/tag-icon.2x.png)}
+  .tag-icon {background-image: url(../img/tag-icon-gray.2x.png)}
+  .collection-new .tag-icon {background-image: url(../img/tag-icon-blue.2x.png)}
+  .collection.active .tag-icon {background-image: url(../img/tag-icon-white.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}
   .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
