@@ -15,7 +15,7 @@
       console.log("Error: Can't render zero charts.")
       return;
     }; 
-    google.load('visualization', '1.0', {'packages':['corechart']});
+    google.load('visualization', '1.1', {'packages':['corechart', 'controls']});
 
     function discoverKeys(rawData, legend){
       var keys = {}
@@ -97,7 +97,11 @@
 
     function prepareDom(metric){
       var chartParent = $("#chart_container_" + name);
-      chartParent.append($('<div>', {id: name + metric.header, style:"width: 100%; height:400px;", text: "Rendering chart. Hold tight!"}));
+      chartParent.append($('<div>', {id: name + metric.header, style:"width: 100%; height: 500px;"}));
+      var chartContainer = $(document.getElementById(name + metric.header));
+      chartContainer.append($('<div>', {id: "chart_" + name + metric.header, style:"height: 85%;", text: "Rendering chart. Hold tight!"}));
+      chartContainer.append($('<div>', {id: "selector_" + name + metric.header, style:"height: 15%;"}));
+      chartParent.append($('<hr>'));
     }; 
 
     function drawAndRedraw(){
@@ -136,8 +140,35 @@
           suffix = " (CUMMULATIVE)";
         }
 
-        var chart = new google.visualization.LineChart(document.getElementById(name + metric.header));
-        chart.draw(data, {'title': metric.header + suffix});
+        var dashboard = new google.visualization.Dashboard(document.getElementById(name + metric.header));
+
+        var selector = new google.visualization.ControlWrapper({
+          'controlType': 'ChartRangeFilter',
+          'containerId': "selector_" + name + metric.header,
+          'options': {
+            'filterColumnIndex': 0,          
+            'ui': {
+              'chartType': "LineChart",
+               'chartOptions': {
+                  'chartArea': {'width': '75%'}
+               },
+               'snapToData': true
+            }
+          }
+        });
+
+        var chart = new google.visualization.ChartWrapper({
+          'chartType': 'LineChart',
+          'containerId': "chart_" + name + metric.header,
+          'options': {
+            'chartArea': {'width': '75%', 'height': '80%'},
+            'title': metric.header + suffix
+          }
+        });
+
+        dashboard.bind(selector, chart);
+        dashboard.draw(data);
+
       });
     };
 
