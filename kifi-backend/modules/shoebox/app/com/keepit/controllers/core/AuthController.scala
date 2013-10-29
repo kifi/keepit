@@ -28,7 +28,7 @@ import securesocial.core._
 import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
 import play.api.libs.iteratee.Enumerator
 import play.api.Play
-import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
+import com.keepit.common.store.{S3UserPictureConfig, ImageCropAttributes, S3ImageStore}
 import scala.util.{Failure, Success}
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 
@@ -259,12 +259,19 @@ class AuthController @Inject() (
         ))
       case (None, Some(identity)) =>
         // No user exists, must finalize
+
+        val picture = identity.identityId.providerId match {
+          case "facebook" =>
+            s"//graph.facebook.com/${identity.identityId.userId}/picture?width=200&height=200"
+          case _ => identity.avatarUrl.getOrElse(S3UserPictureConfig.defaultImage)
+        }
+
         Ok(views.html.signup.finalize(
           network = SocialNetworkType(identity.identityId.providerId).name,
           firstName = User.sanitizeName(identity.firstName),
           lastName = User.sanitizeName(identity.lastName),
           emailAddress = identity.email.getOrElse(""),
-          picturePath = identity.avatarUrl.getOrElse("")
+          picturePath = picture
         ))
       case (None, None) =>
         // TODO(andrew): Forward user to initial signup page
