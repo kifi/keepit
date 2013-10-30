@@ -400,13 +400,13 @@ class AuthController @Inject() (
   }
 
   private def parseCropForm(picHeight: Option[Int], picWidth: Option[Int], cropX: Option[Int], cropY: Option[Int], cropSize: Option[Int]) = {
-    for{
+    for {
       h <- picHeight
       w <- picWidth
       x <- cropX
       y <- cropY
       s <- cropSize
-    } yield ImageCropAttributes(x, y, s, h, w)
+    } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
   }
 
   def OkStreamFile(filename: String) =
