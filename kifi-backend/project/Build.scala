@@ -97,6 +97,10 @@ object ApplicationBuild extends Build {
 
     val abookDependencies = Seq()
 
+    val scraperDependencies = Seq(
+      "org.jsoup" % "jsoup" % "1.7.1"      
+    )
+
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
       "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
       "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140")
@@ -182,7 +186,11 @@ object ApplicationBuild extends Build {
       commonSettings: _*
     ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
+    val scraper = play.Project("scraper", appVersion, scraperDependencies, path=file("modules/scraper")).settings(
+      commonSettings: _*
+    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+
     val aaaMain = play.Project(appName, appVersion).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile", abook % "test->test;compile->compile").aggregate(common, search, shoebox, eliza, heimdal, abook)
+    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile", abook % "test->test;compile->compile", scraper % "test->test;compile->compile").aggregate(common, search, shoebox, eliza, heimdal, abook, scraper)
 }

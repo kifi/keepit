@@ -6,6 +6,8 @@ import com.keepit.scraper.ScraperConfig
 import org.joda.time.DateTime
 import scala.math._
 
+object ScrapeInfoStates extends States[ScrapeInfo]
+
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
   uriId: Id[NormalizedURI], // = NormalizedURI id
@@ -58,4 +60,21 @@ case class ScrapeInfo(
   def withNextScrape(nextScrape: DateTime) = copy(nextScrape = nextScrape)
 }
 
-object ScrapeInfoStates extends States[ScrapeInfo]
+object ScrapeInfo {
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+
+  implicit val format = (
+      (__ \ 'id).formatNullable(Id.format[ScrapeInfo]) and
+      (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+      (__ \ 'lastScrape).format[DateTime] and
+      (__ \ 'nextScrape).format[DateTime] and
+      (__ \ 'interval).format[Double] and
+      (__ \ 'failures).format[Int] and
+      (__ \ 'state).format(State.format[ScrapeInfo]) and
+      (__ \ 'signature).format[String] and
+      (__ \ 'destinationUrl).formatNullable[String]
+    )(ScrapeInfo.apply, unlift(ScrapeInfo.unapply))
+}
+
+

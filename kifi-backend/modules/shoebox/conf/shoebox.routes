@@ -207,13 +207,13 @@ POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarks
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
 
-GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
-GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
+GET     /admin/scrape               @com.keepit.controllers.admin.ScraperAdminController.scrape
+GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminController.getScraped(uriId: Id[NormalizedURI])
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
 GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup
-GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domain: Option[String] ?= None)
+GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
@@ -223,10 +223,10 @@ GET     /admin/data/batchURLMigration   @com.keepit.controllers.admin.UrlControl
 GET     /admin/data/redirect       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
 GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.getPatterns
 POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
-GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperController.getProxies
-POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperController.saveProxies
-GET     /admin/data/scrape        @com.keepit.controllers.admin.ScraperController.searchScraper
-GET     /admin/data/scrape/regex  @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: String ?= "", withinMinutes: Int ?= 8)
+GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.getProxies
+POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
+GET     /admin/data/scrape        @com.keepit.controllers.admin.ScraperAdminController.searchScraper
+GET     /admin/data/scrape/regex  @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex(urlRegex: String ?= "", withinMinutes: Int ?= 8)
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
@@ -410,6 +410,8 @@ POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ex
 
 POST    /internal/geckoboard/refresh                  @com.keepit.reports.GeckoboardReporterController.refreshAll()
 
-
+POST     /internal/shoebox/database/getScrapeInfo     @com.keepit.controllers.shoebox.ShoeboxController.getScrapeInfo
+POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.shoebox.ShoeboxController.saveScrapeInfo
+POST     /internal/shoebox/database/saveNormalizedURI @com.keepit.controllers.shoebox.ShoeboxController.saveNormalizedURI
 
 ->  / common.Routes

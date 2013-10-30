@@ -7,7 +7,7 @@ import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.learning.topicmodel.TopicModelModule
 import com.keepit.model.ProdSliderHistoryTrackerModule
-import com.keepit.scraper.ScraperImplModule
+import com.keepit.scraper.{ProdScraperServiceClientModule, ScraperImplModule}
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
@@ -36,12 +36,12 @@ abstract class ShoeboxModule(
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
   val abookServiceClientModule = ProdABookServiceClientModule()
+  val scraperServiceClientModule = ProdScraperServiceClientModule()
 
   val slickModule = ShoeboxSlickModule()
   val scraperModule = ScraperImplModule()
   val socialGraphModule = ProdSocialGraphModule()
   val sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule()
-  val userIndexModule = UserIndexModule()
   val geckoboardModule = GeckoboardModule()
   val dataIntegrityModule = DataIntegrityModule()
 
