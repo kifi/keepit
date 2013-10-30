@@ -22,4 +22,17 @@ object BasicArticle {
     httpOriginalContentCharset = article.httpOriginalContentCharset,
     destinationUrl = article.destinationUrl
   )
+
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+  implicit val format = (
+    (__ \ 'title).format[String] and
+    (__ \ 'content).format[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'media).formatNullable[String] and
+    (__ \ 'httpContentType).formatNullable[String] and
+    (__ \ 'httpOriginalContentCharset).formatNullable[String] and
+    (__ \ 'destinationUrl).formatNullable[String]
+  )(BasicArticle.apply, unlift(BasicArticle.unapply))
+
 }

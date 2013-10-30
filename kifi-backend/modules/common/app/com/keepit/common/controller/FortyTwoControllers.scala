@@ -33,3 +33,4 @@ trait ShoeboxServiceController extends ServiceController
 trait ElizaServiceController extends ServiceController
 trait HeimdalServiceController extends ServiceController
 trait ABookServiceController extends ServiceController
+trait ScraperServiceController extends ServiceController

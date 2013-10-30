@@ -22,12 +22,6 @@ import com.keepit.normalizer.{TrustedCandidate, NormalizationService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Success
 
-object Scraper {
-  val BATCH_SIZE = 100
-
-  val maxContentChars = 100000 // 100K chars
-}
-
 @Singleton
 class Scraper @Inject() (
   db: Database,
@@ -55,7 +49,7 @@ class Scraper @Inject() (
     log.info("got %s uris to scrape".format(tasks.length))
     val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
     val jobTime = Seconds.secondsBetween(startedTime, currentDateTime).getSeconds()
-    log.info("succesfuly scraped %s articles out of %s in %s seconds:\n%s".format(
+    log.info("successfully scraped %s articles out of %s in %s seconds:\n%s".format(
         scrapedArticles.flatMap{ a => a._2 }.size, tasks.size, jobTime, scrapedArticles map {a => a._1} mkString "\n"))
     scrapedArticles
   }
@@ -109,8 +103,8 @@ class Scraper @Inject() (
     }
   }
 
-  private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
-    log.debug(s"scraping $uri")
+  private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = { // DB-RW
+    log.info(s"[processURI] scraping $uri $info")
 
     val fetchedArticle = fetchArticle(uri, info)
     db.readWrite { implicit s =>
@@ -222,6 +216,7 @@ class Scraper @Inject() (
   private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo): ScraperResult = {
     val url = normalizedUri.url
     val extractor = extractorFactory(url)
+    log.info(s"[fetchArticle] $normalizedUri $extractor")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
     try {
@@ -245,7 +240,7 @@ class Scraper @Inject() (
             }
             val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
 
-            Scraped(Article(
+            val res = Scraped(Article(
                 id = normalizedUri.id.get,
                 title = title,
                 description = description,
@@ -263,6 +258,8 @@ class Scraper @Inject() (
               ),
               signature,
               fetchStatus.redirects)
+            log.info(s"[fetchArticle] result=$res")
+            res
           }
         case HttpStatus.SC_NOT_MODIFIED =>
           NotModified

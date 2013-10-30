@@ -2,7 +2,7 @@ package com.keepit.normalizer
 
 import com.keepit.common.db.slick.DBSession.RSession
 import scala.concurrent.Future
-import com.keepit.scraper.{ScraperPlugin, Scraper, Signature}
+import com.keepit.scraper.{ScraperPlugin, ScraperConfig, Signature}
 import com.keepit.model.Normalization
 import com.keepit.scraper.extractor.LinkedInIdExtractor
 import com.keepit.common.logging.Logging
@@ -52,7 +52,7 @@ case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: 
 
   def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInCanonicalPublicProfile.findFirstIn(candidate.url).isDefined
   protected def check(publicProfileCandidate: NormalizationCandidate)(implicit session: RSession) = {
-    val idExtractor = new LinkedInIdExtractor(publicProfileCandidate.url, Scraper.maxContentChars)
+    val idExtractor = new LinkedInIdExtractor(publicProfileCandidate.url, ScraperConfig.maxContentChars)
 
     for { idArticleOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(idExtractor)) } yield {println(idArticleOption); idArticleOption match {
       case Some(idArticle) => idArticle.content == privateProfileId.toString

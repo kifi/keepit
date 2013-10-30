@@ -9,3 +9,10 @@ case class ScraperConfig(
   maxBackoff: Double = 1024.0d, //hours
   changeThreshold: Double = 0.05
 )
+
+object ScraperConfig {
+  val BATCH_SIZE = 100
+
+  val maxContentChars = 100000 // 100K chars
+}
+
