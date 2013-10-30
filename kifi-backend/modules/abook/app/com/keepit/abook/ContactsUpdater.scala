@@ -1,7 +1,7 @@
 package com.keepit.abook
 
 import com.google.inject.{ImplementedBy, Inject}
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.common.db.Id
