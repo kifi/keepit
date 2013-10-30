@@ -25,7 +25,6 @@
 <a class="curtain-back" href="javascript:">Back</a>
 
 <h1 class="main-logo">kifi</h1>
-<h2 class="page-title">@if(view == "login") {Log In}</h2>
 
 <div class="signup">
   <form class="signup-1" data-title="Sign Up" novalidate>
@@ -96,6 +95,9 @@
     </div>
   </div>
 </form>
+
+@* down here to prevent transition side effects (1px shifting) in Chrome *@
+<h2 class="page-title">@if(view == "login") {Log in}</h2>
 }
 
 @scripts = {
