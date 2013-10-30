@@ -1055,18 +1055,26 @@ $(function() {
   function selectTag() {
     var $highlight = getHighlightedTag();
     if ($highlight.length) {
-      $highlight.find('a').click();
+      if ($highlight.data('id')) {
+        $highlight.find('a').click();
+      }
+      else {
+        createTag($highlight.data('name'));
+      }
     }
     else {
-      var name = getTagInputValue();
-      if (name) {
-        $newTagInput.val('');
-        updateTags();
+      createTag(getTagInputValue());
+    }
+  }
 
-        createCollection(name, function(collId) {
-          $newColl.removeClass("submitted");
-        });
-      }
+  function createTag(name) {
+    if (name) {
+      $newTagInput.val('');
+      updateTags();
+
+      createCollection(name, function(collId) {
+        $newColl.removeClass("submitted");
+      });
     }
   }
 
@@ -1107,6 +1115,14 @@ $(function() {
     return $.trim($newTagInput && $newTagInput.val() || '');
   }
 
+  function getTagById(id) {
+    return $collList.find('.collection[data-id=' + id + ']');
+  }
+
+  function getTagByName(name) {
+    return $collList.find('.collection[data-name="' + (name ? $.trim(name) : '') + '"]');
+  }
+
   function updateTags(tags) {
     if (!tags) {
       tags = Object.keys(collections).map(function(key) {
@@ -1124,8 +1140,13 @@ $(function() {
     collTmpl.render(tags);
 
     if (val) {
+      var matched = getTagByName(val);
+      if (!matched.length) {
+        collTmpl.prepend({id: null, name: val, keeps: 'new'});
+      }
+
       var highlighted = false;
-      if (!(highlightId && highlightTag($collList.find('.collection[data-id=' + highlightId + ']')))) {
+      if (!(highlightId && highlightTag(getTagById(highlightId)))) {
         highlightTag(getFirstTag());
       }
     }
