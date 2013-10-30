@@ -42,7 +42,6 @@ abstract class ShoeboxModule(
   val scraperModule = ScraperImplModule()
   val socialGraphModule = ProdSocialGraphModule()
   val sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule()
-  val userIndexModule = UserIndexModule()
   val geckoboardModule = GeckoboardModule()
   val dataIntegrityModule = DataIntegrityModule()
 

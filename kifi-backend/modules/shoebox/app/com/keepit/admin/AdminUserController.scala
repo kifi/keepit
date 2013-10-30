@@ -13,7 +13,6 @@ import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.shoebox.usersearch.UserIndex
 import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data.Forms._
@@ -54,7 +53,6 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
-    userIndex: UserIndex,
     emailAddressRepo: EmailAddressRepo,
     invitationRepo: InvitationRepo,
     userSessionRepo: UserSessionRepo,
