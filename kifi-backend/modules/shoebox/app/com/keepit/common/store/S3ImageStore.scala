@@ -258,7 +258,7 @@ class S3ImageStoreImpl @Inject() (
 
       val image = cropImageOrFallback(newFilename, bufferedImage, cropAttributes)
       S3UserPictureConfig.sizes.map { size =>
-        Try(ImageUtils.resizeImageKeepProportions(image, size)).map { case (contentLength, is) =>
+        Try(ImageUtils.resizeImageMakeSquare(image, size)).map { case (contentLength, is) =>
           uploadUserImage(newFilename, size.width.toString, is, contentLength)
         }.flatten match {
           case Success(res) => Some(res)
