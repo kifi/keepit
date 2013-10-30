@@ -7,7 +7,6 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{ExternalId, Id, State}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.shoebox.usersearch._
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.db.SequenceNumber
@@ -28,8 +27,7 @@ class UserRepoImpl @Inject() (
     val clock: Clock,
     val externalIdCache: UserExternalIdCache,
     val idCache: UserIdCache,
-    basicUserCache: BasicUserUserIdCache,
-    userIndexProvider: Provider[UserIndex])
+    basicUserCache: BasicUserUserIdCache)
   extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
@@ -73,10 +71,6 @@ class UserRepoImpl @Inject() (
     for (id <- user.id) {
       idCache.set(UserIdKey(id), user)
       basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
-    }
-    externalIdCache.set(UserExternalIdKey(user.externalId), user)
-    future {
-      userIndexProvider.get.addUser(user)
     }
     user
   }
