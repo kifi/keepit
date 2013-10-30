@@ -317,7 +317,7 @@
 
   var iframeDeferred;
   function uploadPhotoIframe(form) {
-    $photo.css('background-image', 'none');
+    $photo.css('background-image', 'none').addClass('unset');
 
     if (iframeDeferred) {
       iframeDeferred.reject();  // clean up previous in-progress upload
@@ -335,7 +335,7 @@
         o = JSON.parse($iframe.contents().find('body').text());
       } catch (err) {
       }
-      $photo.css('background-image', o ? 'url(' + o.url + ')' : '');
+      $photo.css('background-image', o ? 'url(' + o.url + ')' : '').removeClass('unset');
       $(form).removeAttr('method target action');
     });
     form.method = 'POST';
@@ -376,7 +376,8 @@
           'background-image': 'url(' + localPhotoUrl + ')',
           'background-size': scale * details.width + 'px auto',
           'background-position': -(scale * details.x) + 'px ' + -(scale * details.y) + 'px'
-        }).removeData().data(details).data('uploadPromise', upload.promise);
+        }).removeClass('unset')
+        .removeData().data(details).data('uploadPromise', upload.promise);
       })
       .always(function () {
         $('.form-photo-file').val(null);
