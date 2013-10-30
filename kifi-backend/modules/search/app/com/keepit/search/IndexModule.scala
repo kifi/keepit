@@ -25,7 +25,7 @@ trait IndexModule extends ScalaModule with Logging {
   protected def getPersistentIndexDirectory(maybeDir: Option[String], indexStore: IndexStore): Option[IndexDirectory] = {
     maybeDir.map { d =>
       val dir = new File(d).getCanonicalFile
-      val indexDirectory = new IndexDirectoryImpl( dir, indexStore)
+      val indexDirectory = new IndexDirectoryImpl(dir, indexStore)
       if (!dir.exists()) {
         try { indexDirectory.restoreFromBackup() }
         catch { case e: Exception => {
