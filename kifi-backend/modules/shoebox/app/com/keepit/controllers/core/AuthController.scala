@@ -237,8 +237,7 @@ class AuthController @Inject() (
         Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
       case (Some(user), Some(identity)) =>
         // User exists, is incomplete
-        Ok(views.html.signup.finalize(
-          network = SocialNetworks.FORTYTWO.name,
+        Ok(views.html.signup.finalizeEmail(
           emailAddress = identity.email.getOrElse(""),
           picturePath = identity.avatarUrl.getOrElse("")
         ))
@@ -266,8 +265,7 @@ class AuthController @Inject() (
           case _ => identity.avatarUrl.getOrElse(S3UserPictureConfig.defaultImage)
         }
 
-        Ok(views.html.signup.finalize(
-          network = SocialNetworkType(identity.identityId.providerId).name,
+        Ok(views.html.signup.finalizeSocial(
           firstName = User.sanitizeName(identity.firstName),
           lastName = User.sanitizeName(identity.lastName),
           emailAddress = identity.email.getOrElse(""),
