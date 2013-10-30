@@ -52,7 +52,7 @@ class HomeController @Inject() (db: Database,
       Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
         .withSession(session - AuthController.LinkWithKey)
     } else if (request.user.state == UserStates.PENDING) {
-      pendingHome()
+      pendingHome() // todo(andrew): plug in new pending home view
     } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
@@ -63,10 +63,13 @@ class HomeController @Inject() (db: Database,
   }, unauthenticatedAction = { implicit request =>
     val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
     if (newSignup && request.identityOpt.isDefined) {
+      // User needs to sign up or (social) finalize
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     }
-    else
+    else {
+      // Non-user landing page
       Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
+    }
   })
 
   def curtainHome = Action {
