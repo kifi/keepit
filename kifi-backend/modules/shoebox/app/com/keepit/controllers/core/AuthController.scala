@@ -285,15 +285,17 @@ class AuthController @Inject() (
     firstName: String,
     lastName: String,
     picToken: Option[String],
-    picHeight: Option[Int], picWidth: Option[Int],
-    cropX: Option[Int], cropY: Option[Int],
+    picWidth: Option[Int],
+    picHeight: Option[Int],
+    cropX: Option[Int],
+    cropY: Option[Int],
     cropSize: Option[Int])
   private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
       "firstName" -> nonEmptyText,
       "lastName" -> nonEmptyText,
       "picToken" -> optional(text),
-      "picHeight" -> optional(number),
       "picWidth" -> optional(number),
+      "picHeight" -> optional(number),
       "cropX" -> optional(number),
       "cropY" -> optional(number),
       "cropSize" -> optional(number)
