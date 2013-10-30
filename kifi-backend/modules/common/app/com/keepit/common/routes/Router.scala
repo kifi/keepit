@@ -10,14 +10,19 @@ import com.keepit.common.strings.UTF8
 
 
 trait Service
-  case class ServiceRoute(method: Method, path: String, params: Param*) {
-    def url = path + (if(params.nonEmpty) "?" + params.map({ p =>
-      URLEncoder.encode(p.key, UTF8) + (if(p.value.value != "") "=" + URLEncoder.encode(p.value.value, UTF8) else "")
-    }).mkString("&") else "")
+
+case class ServiceRoute(method: Method, path: String, params: Param*) {
+  def url = path + (if(params.nonEmpty) "?" + params.map({ p =>
+    URLEncoder.encode(p.key, UTF8) + (if(p.value.value != "") "=" + URLEncoder.encode(p.value.value, UTF8) else "")
+  }).mkString("&") else "")
 }
 
-case class Param(key: String, value: ParamValue = ParamValue(""))
+case class Param(key: String, value: ParamValue = ParamValue("")) {
+  override def toString(): String = s"key->${value.value}"
+}
+
 case class ParamValue(value: String)
+
 object ParamValue {
   implicit def stringToParam(i: String) = ParamValue(i)
   implicit def longToParam(i: Long) = ParamValue(i.toString)

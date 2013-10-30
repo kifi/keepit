@@ -8,10 +8,25 @@ import javax.imageio.ImageIO
 import play.api.libs.json.Json
 
 case class ImageSize(width: Int, height: Int)
-case class ImageCropAttributes(x: Int, y: Int, s: Int, /* original image */ h: Int, /* original image */ w: Int)
+
+//                        w
+//       +----------------------------------+
+//       |        :                         |
+//       |        : (x, y)                  |
+//       |  -  -  +-----------+             |
+//    h  |        |           |             |
+//       |        |           | s           |
+//       |        |           |             |
+//       |        +-----------+             |
+//       |              s                   |
+//       +----------------------------------+
+//
+case class ImageCropAttributes(w: Int, h: Int, x: Int, y: Int, s: Int)
+
 object ImageCropAttributes {
   implicit val format = Json.format[ImageCropAttributes]
 }
+
 object ImageUtils {
   def resizeImageKeepProportions(rawImage: BufferedImage, size: ImageSize) = {
     val resized = Try { Scalr.resize(rawImage, Math.max(size.height, size.width)) }

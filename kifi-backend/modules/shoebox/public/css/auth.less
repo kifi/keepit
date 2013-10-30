@@ -35,8 +35,8 @@ input[type=password] {
   margin-top: 16px;
   margin-bottom: 16px;
   height: 40px;
-  border: 0;
-  padding: 0 1em;
+  border: 2px solid #e5e5e5;
+  padding: 0 .8em;
   line-height: 130%;
   -webkit-font-smoothing: antialiased;
 }
@@ -285,15 +285,16 @@ footer {
 .main-logo {
   width: 251px;
   height: 144px;
-  margin: 0 auto;
+  margin: 0 auto 84px;
   padding-top: 70px;
   background: url(../img/out/auth.png) -2px -148px content-box;
   text-indent: -9999px;
-  position: relative;
-  left: -10px;
 }
 .page-title {
-  margin: 4px 0;
+  position: absolute;
+  top: 218px;
+  width: 100%;
+  margin: 0;
   text-align: center;
   line-height: 44px;
   font-size: 38px;
@@ -445,6 +446,7 @@ footer {
   width: 100%;
 }
 @primary-button-color: #92c152;
+@cancel-button-color: #e8e8e8;
 .form-submit {
   display: block;
   width: 50%;
@@ -456,12 +458,12 @@ footer {
   line-height: 40px;
   text-align: center;
   -webkit-font-smoothing: antialiased;
-}
-.form-submit:hover {
-  background: tint(@primary-button-color, 10%);
-}
-.form-submit:active {
-  background: shade(@primary-button-color, 10%);
+  &:hover {
+    background: tint(@primary-button-color, 10%);
+  }
+  &:active {
+    background: shade(@primary-button-color, 10%);
+  }
 }
 .terms {
   font-weight: 300;
@@ -481,6 +483,15 @@ footer {
   left: 0;
   right: 0;
 }
+@signup-label-color: #6c839b;
+.signup-2-label {
+  display: block;
+  color: @signup-label-color;
+  font-size: 20px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  margin-bottom: 6px;
+}
 .static-email-addr {
   margin: 24px 0 20px;
 }
@@ -488,7 +499,8 @@ footer {
 .form-name,
 .form-pic {
   margin: 0 auto;
-  max-width: 320px;
+  max-width: 340px;
+  text-align: left;
 }
 .form-creds {
   margin: 32px auto 16px;
@@ -507,8 +519,12 @@ footer {
   float: right;
 }
 .form-pic {
-  margin: 32px auto;
+  margin: 24px auto 32px;
   text-align: left;
+}
+.form-photo-box {
+  padding: 8px 10px;
+  background: #ededed;
   position: relative;
   .clearfix;
 }
@@ -516,9 +532,23 @@ footer {
   width: 100px;
   height: 100px;
   float: left;
-  margin-right: 10px;
-  background: #ccc url(../img/out/ghost.100.png);
+  margin-right: 20px;
+  background: #ccc url(../img/out/ghost.png);
   position: relative;
+}
+.form-photo.unset:after {
+  content: 'Drag photo here';
+  position: absolute;
+  bottom: 42px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 14px;
+  color: @signup-label-color;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
 }
 .form-photo-progress {
   position: absolute;
@@ -528,20 +558,18 @@ footer {
   right: 0;
   background: rgba(255,255,255,.8);
 }
-.form-photo-controls {
-  overflow: hidden;
+.form-photo-grab {
+  font-size: 16px;
+  font-weight: 300;
+  color: @signup-label-color;
+  margin: 4px 0 8px;
 }
 .form-photo-a {
-  display: block;
-  color: #fff;
-  height: 30px;
-  line-height: 30px;
-  font-size: 14px;
-  font-weight: 300;
-  padding-left: 40px;
-  white-space: nowrap;
-  margin-bottom: 5px;
+  display: inline-block;
+  height: 48px;
+  width: 48px;
   position: relative;
+  margin-right: 6px;
 }
 .form-photo-a.facebook {
   background-color: @facebook-color;
@@ -561,43 +589,21 @@ footer {
     background-color: shade(@linkedin-color, 10%);
   }
 }
-@upload-color: #888;
-.form-photo-a.upload {
-  margin-bottom: 0;
-  cursor: pointer;
-  background-color: @upload-color;
-  &:hover {
-    background-color: tint(@upload-color, 10%);
-  }
-  &:active {
-    background-color: shade(@upload-color, 10%);
-  }
-}
 .form-photo-a:before {
   content: ' ';
   font-size: 0;
   position: absolute;
-  top: 6px;
-  left: 10px;
-  height: 16px;
-  width: 16px;
+  top: 8px;
+  left: 8px;
+  height: 32px;
+  width: 32px;
   background: url(../img/out/auth.png);
 }
 .form-photo-a.facebook:before {
-  background-position: -201px -328px;
+  background-position: -187px -294px;
 }
 .form-photo-a.linkedin:before {
-  background-position: -219px -328px;
-}
-.form-photo-a.upload:before {
-  background-position: -237px -328px;
-}
-.form-photo-file {
-  position: absolute;
-  height: 0;
-  width: 0;
-  overflow: hidden;
-  visibility: hidden;
+  background-position: -221px -294px;
 }
 .form-photo-drop {
   position: absolute;
@@ -605,9 +611,9 @@ footer {
   left: 0;
   bottom: 0;
   right: 0;
-  background: fade(#fff, 90%);
+  background: fade(#fff, 93%);
   border: 5px dashed #ccc;
-  padding-top: 30px;
+  padding-top: 38px;
   text-align: center;
   font-size: 24px;
   line-height: 28px;
@@ -616,11 +622,27 @@ footer {
   display: none;
 }
 .form-photo-drop.over {
-  background: fade(#fff, 93%);
-  color: #555;
-  border-color: #bbb;
+  border-color: #999;
 }
-@final-button-color: #84a2ec;
+.form-photo-upload {
+  margin-top: 6px;
+  text-align: right;
+  color: @signup-label-color;
+  font-size: 16px;
+  font-weight: 300;
+}
+.form-photo-upload>label {
+  text-decoration: underline;
+  cursor: pointer;
+}
+.form-photo-file {
+  position: absolute;
+  height: 0;
+  width: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+@final-button-color: #6fa6ef;
 .signup-2>.form-submit {
   margin: 20px auto 40px;
   width: 200px;
@@ -686,8 +708,162 @@ footer {
   .transform(none);
 }
 .finalizing .terms {
-  .translate(0, 20px);
+  .translate(0, 100px);
   .transition(transform @finalize-time ease-out);
+}
+
+@photo-size: 200px;
+@photo-padding: 40px;
+@canvas-margin: 12px;
+.photo-dialog {
+  display: table;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  background: rgba(0,0,0,.5);
+}
+.photo-dialog-cell {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+.photo-dialog-box {
+  margin: 0 auto;
+  width: (@photo-size + 2 * @photo-padding + 2 * @canvas-margin);
+  background: white;
+  text-align: left;
+  border-radius: 6px;
+}
+.photo-dialog-title {
+  padding: 4px 0;
+  background: #f1f1f1;
+  color: @signup-label-color;
+  text-align: center;
+  border-top-right-radius: inherit;
+  border-top-left-radius: inherit;
+  font-weight: 300;
+  position: relative;
+}
+.photo-dialog-x {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-top-right-radius: inherit;
+  padding: 3px 8px 5px 10px;
+  color: #999;
+  .user-select(none);
+  &:hover {
+    background-color: #ddd;
+  }
+  &:active {
+    background-color: #ccc;
+    color: #555;
+  }
+}
+.photo-dialog-canvas {
+  margin: 20px @canvas-margin 16px;
+  width: (@photo-size + 2 * @photo-padding);
+  height: (@photo-size + 2 * @photo-padding);
+  overflow: hidden;
+  position: relative;
+}
+.photo-dialog-mask {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  .box-shadow(inset 0 0 0 @photo-padding #fff, inset 0 0 0 (@photo-padding + 1) rgba(0,0,0,.1), inset 0 0 (@photo-padding / 2) (@photo-padding + 2) rgba(0,0,0,.2));
+  opacity: .75;
+  cursor: move;
+}
+.photo-dialog.dragging,
+.photo-dialog.dragging .photo-dialog-x,
+.photo-dialog.dragging .photo-dialog-cancel,
+.photo-dialog.dragging .photo-dialog-submit {
+  cursor: move;
+}
+.photo-dialog-img {
+  position: absolute;
+}
+.photo-dialog-slider {
+  height: 7px;
+  background-color: #eee;
+  border: none;
+  border-radius: 4px;
+  margin: 0 50px;
+  .box-shadow(inset 0 0 3px rgba(0,0,0,.15));
+  position: relative;
+}
+.photo-dialog-slider:before {
+  content: ' ';
+  background-color: red;
+  position: absolute;
+  top: 0;
+  left: -30px;
+  bottom: 0;
+  width: 12px;
+}
+.photo-dialog-slider:after {
+  content: ' ';
+  background-color: green;
+  position: absolute;
+  top: 0;
+  right: -30px;
+  bottom: 0;
+  width: 12px;
+}
+.photo-dialog-slider>.ui-slider-handle {
+  position: absolute;
+  top: -5px;
+  height: 16px;
+  width: 16px;
+  margin-left: -10px;
+  border: 1px solid #c5c5c5;
+  border-radius: 50%;
+  background: #fff;
+  .background-image(linear-gradient(#fff, #e0e0e0));
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff',endColorstr='#e0e0e0',GradientType=0);
+  .box-shadow(0 0 3px rgba(0,0,0,.1));
+  outline: none;
+  cursor: default;
+  &.ui-state-active {
+    background: #e9e9e9;
+  }
+}
+.photo-dialog-buttons {
+  margin-top: 24px;
+  border-top: 1px solid #e8e8e8;
+  padding: 14px 12px 16px;
+  text-align: right;
+}
+.photo-dialog-cancel,
+.photo-dialog-submit {
+  padding: 6px 16px;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  margin-left: 4px;
+}
+.photo-dialog-cancel {
+  color: #888;
+  background: @cancel-button-color;
+  &:hover {
+    background: tint(@cancel-button-color, 20%);
+  }
+  &:active {
+    background: shade(@cancel-button-color, 10%);
+  }
+}
+.photo-dialog-submit {
+  color: #fff;
+  background: @primary-button-color;
+  &:hover {
+    background: tint(@primary-button-color, 10%);
+  }
+  &:active {
+    background: shade(@primary-button-color, 10%);
+  }
 }
 
 /* retina image overrides */
@@ -703,7 +879,7 @@ footer {
     background-size: 255px auto;
   }
   .form-photo {
-    background-image: url(../img/out/ghost.200.png);
+    background-image: url(../img/out/ghost.2x.png);
     background-size: cover;
   }
 }

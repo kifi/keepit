@@ -196,7 +196,7 @@ class AuthController @Inject() (
                   val finalized = db.readOnly { implicit session =>
                     userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
                   }
-                  Ok(Json.obj("success"-> true, "email" -> email, "new_account" -> false, "finalized" -> finalized))
+                  Ok(Json.obj("success"-> true, "email" -> emailAddress, "new_account" -> false, "finalized" -> finalized))
                     .withNewSession
                     .withCookies(authenticator.toCookie)
                 }
@@ -210,7 +210,7 @@ class AuthController @Inject() (
           Authenticator.create(newIdentity).fold(
             error => Status(500)("0"),
             authenticator =>
-              Ok(Json.obj("success"-> true, "email" -> email, "new_account" -> true))
+              Ok(Json.obj("success"-> true, "email" -> emailAddress, "new_account" -> true))
                 .withNewSession
                 .withCookies(authenticator.toCookie)
           )
@@ -283,15 +283,17 @@ class AuthController @Inject() (
     firstName: String,
     lastName: String,
     picToken: Option[String],
-    picHeight: Option[Int], picWidth: Option[Int],
-    cropX: Option[Int], cropY: Option[Int],
+    picWidth: Option[Int],
+    picHeight: Option[Int],
+    cropX: Option[Int],
+    cropY: Option[Int],
     cropSize: Option[Int])
   private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
       "firstName" -> nonEmptyText,
       "lastName" -> nonEmptyText,
       "picToken" -> optional(text),
-      "picHeight" -> optional(number),
       "picWidth" -> optional(number),
+      "picHeight" -> optional(number),
       "cropX" -> optional(number),
       "cropY" -> optional(number),
       "cropSize" -> optional(number)
@@ -465,7 +467,7 @@ class AuthController @Inject() (
       "password" -> tuple("1" -> nonEmptyText, "2" -> nonEmptyText)
         .verifying("Passwords do not match", pw => pw._1 == pw._2).transform(_._1, (a: String) => (a, a))
         .verifying(Constraints.minLength(7))
-    )(identity)(Some)
+    )(identity)(Some(_))
   )
   def setNewPassword(code: String) = Action { implicit request =>
     passwordForm.bindFromRequest.fold(
@@ -531,8 +533,8 @@ class AuthController @Inject() (
     request.userOpt.orElse(request.identityOpt) match {
       case Some(_) =>
         s3ImageStore.uploadTemporaryPicture(request.body.file) match {
-          case Success((key, pictureUrl)) =>
-            Ok(Json.obj("key" -> key, "url" -> pictureUrl))
+          case Success((token, pictureUrl)) =>
+            Ok(Json.obj("token" -> token, "url" -> pictureUrl))
           case Failure(ex) =>
             airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
             BadRequest(JsNumber(0))
@@ -547,8 +549,8 @@ class AuthController @Inject() (
       case Some(_) =>
         request.body.file("picture").map { picture =>
           s3ImageStore.uploadTemporaryPicture(picture.ref.file) match {
-            case Success((key, pictureUrl)) =>
-              Ok(Json.obj("key" -> key, "url" -> pictureUrl))
+            case Success((token, pictureUrl)) =>
+              Ok(Json.obj("token" -> token, "url" -> pictureUrl))
             case Failure(ex) =>
               airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (form encoded)")))
               BadRequest(JsNumber(0))

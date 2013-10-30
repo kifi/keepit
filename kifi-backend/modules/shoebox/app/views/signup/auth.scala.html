@@ -25,10 +25,9 @@
 <a class="curtain-back" href="javascript:">Back</a>
 
 <h1 class="main-logo">kifi</h1>
-<h2 class="page-title">@if(view == "login") {Log In}</h2>
 
 <div class="signup">
-  <form class="signup-1" data-title="Sign Up" novalidate>
+  <form class="signup-1" data-title="Sign up" novalidate>
     <div class="form-sides">
       <div class="form-l">
         <h3>Use a social network</h3>
@@ -50,24 +49,30 @@
     </div>
   </form>
 
-  <form class="signup-2 signup-2-email" data-title="Finalize Your Account" novalidate>
+  <form class="signup-2 signup-2-email" data-title="Finalize your account" novalidate>
     <div class="form-name">
-      <input class="form-first-name" type="text" name="first-name" placeholder="First name" required>
-      <input class="form-last-name" type="text" name="last-name" placeholder="Last name" required>
+      <label class="signup-2-label">Your name</label>
+      <input class="form-first-name" type="text" name="first-name" placeholder="First" required>
+      <input class="form-last-name" type="text" name="last-name" placeholder="Last" required>
     </div>
     <div class="form-pic">
-      <div class="form-photo"><div class="form-photo-progress"></div></div>
-      <div class="form-photo-controls">
-        <a class="form-photo-a facebook" href="javascript:">Use Facebook photo</a>
-        <a class="form-photo-a linkedin" href="javascript:">Use LinkedIn photo</a>
-        <label class="form-photo-a upload">
-          Upload a photo
+      <label class="signup-2-label">Your photo</label>
+      <div class="form-photo-box">
+        <div class="form-photo unset"><div class="form-photo-progress"></div></div>
+        <div class="form-photo-grab">Grab photo from</div>
+        <a class="form-photo-a facebook" href="javascript:"></a>
+        <a class="form-photo-a linkedin" href="javascript:"></a>
+        <div class="form-photo-drop">Drop photo here</div>
+      </div>
+      <div class="form-photo-upload">
+        Or
+        <label>
+          upload from your computer
           <input class="form-photo-file" type="file" name="photo">
         </label>
       </div>
-      <div class="form-photo-drop">Drop picture here</div>
     </div>
-    <button class="form-submit">Done</button>
+    <button class="form-submit">Sign me up</button>
   </form>
 
   <p class="terms">
@@ -75,7 +80,7 @@
   </p>
 </div>
 
-<form class="login" data-title="Log In" novalidate@if(view == "login") { style="display:block"}>
+<form class="login" data-title="Log in" novalidate@if(view == "login") { style="display:block"}>
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>
@@ -96,10 +101,16 @@
     </div>
   </div>
 </form>
+
+@* down here to prevent transition side effects (1px shifting) in Chrome *@
+<h2 class="page-title">@if(view == "login") {Log in}</h2>
+
+@helper.photoDialog()
 }
 
 @scripts = {
 <script src="assets/js/jquery-ui-position.min.js"></script>
+<script src="assets/js/jquery-ui-slider.min.js"></script>
 <script src="assets/js/auth.js"></script>
 }
 

@@ -5,7 +5,6 @@
 <div class="curtain-r"></div>
 
 <h1 class="main-logo">kifi</h1>
-<h2 class="page-title">Finalize Your Account</h2>
 
 <form class="signup-2 @if(network == "fortytwo") {signup-2-email} else {signup-2-social}" novalidate>
   @if(network == "fortytwo") {
@@ -37,6 +36,11 @@
     By signing up, you agree to Kifi’s <a target="_blank" href="">Terms of Service</a>.
   </p>
 </form>
+
+@* down here to prevent transition side effects (1px shifting) in Chrome *@
+<h2 class="page-title">Finalize your account</h2>
+
+@helper.photoDialog()
 }
 
 @scripts = {
