@@ -80,14 +80,17 @@ h3.collection {position: relative}
 .collection.renaming>a {cursor: text}
 .collection.renaming,
 .collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
-.collection.drop-hover {background-color: #6fa6ef}
-.collection.drop-hover .view-name {color: #fff}
-.collection.drop-hover .tag-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection .tag-count {margin-left: 4px; border-radius: 10.5px; background: #e3e6ee; color: #93a7bc; font-size: 12px; line-height: 20px; padding: 2px 12px}
 .collection.active .tag-count {background-color: #eff2f7; color: #93a7bc}
 .collection.with-menu .tag-count,
 .collection:hover {background-color: #e9ecf2}
 .collection.active {background-color: #e3e6ee}
+.collection.highlight,
+.collection.drop-hover {background-color: #6fa6ef}
+.collection.highlight .view-name,
+.collection.drop-hover .view-name {color: #fff}
+.collection.highlight .tag-count,
+.collection.drop-hover .tag-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection.renaming .tag-count {display: none}
 .tag-icon {display:inline-block; width: 14px; height: 16px; background-size: auto 16px; vertical-align: middle; margin-right: 4px}
 .tag-icon {background-image: url(../img/tag-icon-gray.png)}

@@ -1002,11 +1002,140 @@ $(function() {
 		}
 	}
 
+  function filterTags(tags, text) {
+    return window.scorefilter.filter(text, tags, {
+      pre: '<b>',
+      post: '</b>',
+      extract: function (tag) {
+        return tag.name;
+      }
+    }).map(function(res) {
+      return res.original;
+    });
+  }
+
+  function highlightPrevTag() {
+    highlightTag(getPrevTag());
+  }
+
+  function highlightNextTag() {
+    highlightTag(getNextTag());
+  }
+
+  function getFirstTag() {
+    return $collList.find('.collection:first');
+  }
+
+  function getLastTag() {
+    return $collList.find('.collection:last');
+  }
+
+  function getPrevTag() {
+    var $prev = getHighlightedTag();
+    if ($prev.length) {
+      var $next = $prev.prev('.collection');
+      if ($next.length) {
+        return $next;
+      }
+    }
+    return getLastTag();
+  }
+
+  function getNextTag() {
+    var $prev = getHighlightedTag();
+    if ($prev.length) {
+      var $next = $prev.next('.collection');
+      if ($next.length) {
+        return $next;
+      }
+    }
+    return getFirstTag();
+  }
+
+  function selectTag() {
+    var $highlight = getHighlightedTag();
+    if ($highlight.length) {
+      $highlight.find('a').click();
+    }
+    else {
+      var name = getTagInputValue();
+      if (name) {
+        $newTagInput.val('');
+        updateTags();
+
+        createCollection(name, function(collId) {
+          $newColl.removeClass("submitted");
+        });
+      }
+    }
+  }
+
+  function highlightTag($el) {
+    getHighlightedTag().removeClass('highlight');
+    if ($el && $el.length) {
+      scrolledIntoViewLazy($el[0]);
+      return $el.addClass('highlight');
+    }
+    return null;
+  }
+
+  function scrolledIntoViewLazy(el, padding) {
+    var view;
+    if (!(el && (view = el.offsetParent))) {
+      return;
+    }
+
+    var viewTop = view.scrollTop,
+      viewHeight = view.clientHeight,
+      viewBottom = viewTop + viewHeight,
+      elemTop = el.offsetTop,
+      elemBottom = elemTop + el.offsetHeight;
+
+    if (elemBottom > viewBottom) {
+      view.scrollTop = elemBottom + (padding || 0) - viewHeight;
+    }
+    else if (elemTop < viewTop) {
+      view.scrollTop = elemTop - (padding || 0);
+    }
+  }
+
+  function getHighlightedTag() {
+    return $collList.find('.collection.highlight');
+  }
+
+  function getTagInputValue() {
+    return $.trim($newTagInput && $newTagInput.val() || '');
+  }
+
+  function updateTags(tags) {
+    if (!tags) {
+      tags = Object.keys(collections).map(function(key) {
+        return this[key];
+      }, collections);
+    }
+
+    var val = getTagInputValue(),
+      highlightId = getHighlightedTag().data('id');
+
+    if (val) {
+      tags = filterTags(tags, val);
+    }
+
+    collTmpl.render(tags);
+
+    if (val) {
+      var highlighted = false;
+      if (!(highlightId && highlightTag($collList.find('.collection[data-id=' + highlightId + ']')))) {
+        highlightTag(getFirstTag());
+      }
+    }
+  }
+
 	function updateCollections() {
 		promise.collections = $.getJSON(xhrBase + '/collections/all?sort=user&_=' + Date.now().toString(36), function(data) {
 			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
 			if ($collList.find('.renaming, .showing, .sortable-placeholder').length === 0) {
-				collTmpl.render(data.collections);
+        updateTags(data.collections);
 			}
 			$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.keeps);
 		}).promise();
@@ -1349,38 +1478,23 @@ $(function() {
 		}
 	});
 
-	var $newColl = $colls.find(".collection-new");
-	$newColl.find("input")
-  .on("keydown", function(e) {
-		if (e.which === 13) { // Enter
-			var name = $.trim(this.value);
-			if (name) {
-				createCollection(name, function(collId) {
-					$newColl.removeClass("submitted");
-				});
-			}
-		}
+	var $newColl = $colls.find(".collection-new"),
+    $newTagInput = $newColl.find("input");
+  $newTagInput.on("keydown", function(e) {
+    switch (e.which) {
+      case 13: // Enter
+        selectTag();
+        break;
+      case 38: // up
+        highlightPrevTag();
+        break;
+      case 40: // down
+        highlightNextTag();
+        break;
+    }
 	}).
   on('input', function (e) {
-    var tags = Object.keys(collections).map(function(key) {
-      return this[key];
-    }, collections);
-
-    var val = $.trim(this.value || '');
-
-    if (val) {
-      tags = window.scorefilter.filter(this.value, tags, {
-        pre: '<b>',
-        post: '</b>',
-        extract: function (tag) {
-          return tag.name;
-        }
-      }).map(function(res) {
-        return res.original;
-      });
-    }
-
-    collTmpl.render(tags);
+    updateTags();
   });
 
 	function createCollection(name, callback) {
