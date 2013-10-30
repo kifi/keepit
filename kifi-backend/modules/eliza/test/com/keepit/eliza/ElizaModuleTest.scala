@@ -3,7 +3,6 @@ package com.keepit.eliza
 import com.keepit.common.zookeeper._
 import com.keepit.common.net._
 import com.keepit.common.controller._
-//import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.test.DeprecatedElizaApplication
 import org.specs2.mutable.Specification
