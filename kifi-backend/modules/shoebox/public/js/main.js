@@ -1119,8 +1119,15 @@ $(function() {
     return $collList.find('.collection[data-id=' + id + ']');
   }
 
+  function normalizeTagName(name) {
+    return name ? $.trim(name).replace(/\s+/g, ' ').toLowerCase() : '';
+  }
+
   function getTagByName(name) {
-    return $collList.find('.collection[data-name="' + (name ? $.trim(name) : '') + '"]');
+    name = normalizeTagName(name);
+    return $collList.find('.collection').filter(function() {
+      return name && normalizeTagName($(this).data('name')) === name;
+    });
   }
 
   function updateTags(tags) {
@@ -1142,7 +1149,7 @@ $(function() {
     if (val) {
       var matched = getTagByName(val);
       if (!matched.length) {
-        collTmpl.prepend({id: null, name: val, keeps: 'new'});
+        collTmpl.append({id: null, name: val, keeps: 'new'});
       }
 
       var highlighted = false;
