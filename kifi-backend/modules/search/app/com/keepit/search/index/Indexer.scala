@@ -199,7 +199,11 @@ abstract class Indexer[T](
   }
 
   override def onCommit(successful: Seq[Indexable[T]]): Unit =
-    try { indexDirectory.processBackup() } catch { case e: Exception => log.error("Index directory could not be backed up", e) }
+    try {
+      indexDirectory.processBackup() }
+    catch {
+      case e: Exception => log.error("Index directory could not be backed up", e)
+    }
 
   def deleteAllDocuments(refresh: Boolean = true) {
     if (DirectoryReader.indexExists(indexDirectory)) {

@@ -8,6 +8,7 @@ import org.apache.lucene.store.{RAMDirectory, MMapDirectory, Directory}
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.S3Bucket
 import com.keepit.common.logging.Logging
+import java.util.concurrent.atomic.AtomicBoolean
 
 trait BackedUpDirectory {
   def scheduleBackup(): Unit
@@ -21,15 +22,18 @@ trait ArchivedDirectory extends BackedUpDirectory {
   protected def getArchive(): File
   protected def saveArchive(tarFile: File): Unit
 
-  private var shouldBackup: Boolean = false
-  def scheduleBackup() = shouldBackup = true
-  def cancelBackup() = shouldBackup = false
-  def processBackup() = if (shouldBackup) {
+  private val shouldBackup = new AtomicBoolean(false)
+  def scheduleBackup() = shouldBackup.set(true)
+  def cancelBackup() = shouldBackup.set(false)
+  def processBackup() = if (shouldBackup.getAndSet(false)) {
     val dir = getLocalDirectory()
     val tarFile = new File(dir, dir.getName + ".tar")
     val tarOut = new TarArchiveOutputStream(new FileOutputStream(tarFile))
-    IO.addToArchive(tarOut, dir)
-    tarOut.close()
+    try {
+      IO.addToArchive(tarOut, dir)
+    } finally {
+      tarOut.close()
+    }
     saveArchive(tarFile)
     tarFile.delete()
   }
@@ -38,8 +42,12 @@ trait ArchivedDirectory extends BackedUpDirectory {
     val dir = getLocalDirectory()
     val tarFile = getArchive()
     val tarIn = new TarArchiveInputStream(new FileInputStream(tarFile))
-    IO.deleteFile(dir)
-    IO.extractArchive(tarIn, dir.getParentFile.getAbsolutePath)
+    try {
+      IO.deleteFile(dir)
+      IO.extractArchive(tarIn, dir.getParentFile.getAbsolutePath)
+    } finally {
+      tarIn.close()
+    }
   }
 }
 
@@ -54,10 +62,10 @@ class IndexDirectoryImpl(dir: File, store: IndexStore) extends MMapDirectory(dir
 }
 
 class VolatileIndexDirectoryImpl extends RAMDirectory with IndexDirectory with Logging {
-  def scheduleBackup(): Unit = log.error(s"Cannot schedule backup of volatile index directory ${this.getLockID}")
-  def cancelBackup(): Unit = log.error(s"Cannot cancel backup of volatile index directory ${this.getLockID}")
-  def processBackup(): Unit = log.error(s"Cannot process backup of volatile index directory ${this.getLockID}")
-  def restoreFromBackup(): Unit = log.error(s"Cannot restore volatile index directory ${this.getLockID}")
+  def scheduleBackup(): Unit = log.warn(s"Cannot schedule backup of volatile index directory ${this.getLockID}")
+  def cancelBackup(): Unit = log.warn(s"Cannot cancel backup of volatile index directory ${this.getLockID}")
+  def processBackup(): Unit = log.warn(s"Cannot process backup of volatile index directory ${this.getLockID}")
+  def restoreFromBackup(): Unit = log.warn(s"Cannot restore volatile index directory ${this.getLockID}")
 }
 
 class S3IndexStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val inbox: File) extends S3FileStore[IndexDirectory] with IndexStore {

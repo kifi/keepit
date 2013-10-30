@@ -204,8 +204,11 @@ trait S3FileStore[A] extends S3ObjectStore[A, File] {
     val file = new File(inbox, name)
     val contentStream = s3obj.getObjectContent
     val inputStream = if (useCompression) new GZIPInputStream(contentStream) else contentStream
-    Files.copy(inputStream, file.toPath, StandardCopyOption.REPLACE_EXISTING)
-    inputStream.close()
+    try {
+      Files.copy(inputStream, file.toPath, StandardCopyOption.REPLACE_EXISTING)
+    } finally {
+      inputStream.close()
+    }
     file
   }
 
