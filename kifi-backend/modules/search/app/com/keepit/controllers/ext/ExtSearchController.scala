@@ -141,7 +141,7 @@ class ExtSearchController @Inject() (
       if (timing.getTotalTime > timeLimit && timing.timestamp - fortyTwoServices.started.getMillis() > 1000*60*8) {
         val link = "https://admin.kifi.com/admin/search/results/" + searchRes.uuid.id
         val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, ${timing.toString}." +
-            "\n More details at: \n" + link + "\n" + searchDetails + "\n"
+            s" More details at: $link $searchDetails"
         airbrake.notify(msg)
       }
     }
