@@ -194,7 +194,7 @@ class S3ImageStoreImpl @Inject() (
 
   private def updateUserPictureRecord(userId: Id[User], pictureName: String, source: UserPictureSource, setDefault: Boolean, cropAttributes: Option[ImageCropAttributes]) = {
     val jsonCropAttributes = cropAttributes.map { c =>
-      Json.obj("x" -> c.x, "y" -> c.y, "h" -> c.h, "w" -> c.w, "s" -> c.s)
+      Json.obj("w" -> c.w, "h" -> c.h, "x" -> c.x, "y" -> c.y, "s" -> c.s)
     }
     db.readWrite { implicit s =>
       val user = userRepo.get(userId)
