@@ -246,6 +246,7 @@ class AuthController @Inject() (
       case (None, Some(identity)) if hasEmail(identity) =>
         // No user exists, has identity and identity has an email in our records
         // Happens when user tries to sign up, but account exists with email address which belongs to current user
+        // todo(andrew): integrate loginAndLink form
         val error = request.flash.get("error").map { _ => "Login failed" }
         Ok("No user, identity, has email")
       case (None, Some(identity)) if request.flash.get("signin_error").exists(_ == "no_account") =>
