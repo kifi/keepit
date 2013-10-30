@@ -91,6 +91,8 @@ h3.collection {position: relative}
 .collection.drop-hover .view-name {color: #fff}
 .collection.highlight .tag-count,
 .collection.drop-hover .tag-count {background-color: #fff; border-color: #fff; color: #628196}
+.collection.tag-new .tag-count {background-color: #f76861; border-color: #f76861; color: white}
+.collection.tag-new.highlight .tag-count {background-color: white; border-color: white; color: #f76861}
 .collection.renaming .tag-count {display: none}
 .tag-icon {display:inline-block; width: 14px; height: 16px; background-size: auto 16px; vertical-align: middle; margin-right: 4px}
 .tag-icon {background-image: url(../img/tag-icon-gray.png)}
@@ -100,6 +102,7 @@ h3.collection {position: relative}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
 .active>.coll-tri::before {border-top-color: #fff}
 .collection:not(.with-menu):not(:hover)>.coll-tri,
+.collection.tag-new>.coll-tri,
 .collection.renaming>.coll-tri {display: none}
 #coll-menu {position: absolute; top: 100%; right: 0; z-index: 1; border: 1px solid #dbdee3; background: #fff; padding: 4px 0; border-radius: 4px; display: none; opacity: 0; -webkit-transform: scale(1,.6); transform: scale(1,.6); -webkit-transform-origin: top; transform-origin: top; -webkit-transition: opacity .12s linear, -webkit-transform .12s ease-in; transition: opacity .12s linear, transform .12s ease-in}
 #coll-menu.page-bottom {top: auto; bottom: 100%; -webkit-transform-origin: bottom}

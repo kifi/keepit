@@ -1149,7 +1149,7 @@ $(function() {
     if (val) {
       var matched = getTagByName(val);
       if (!matched.length) {
-        collTmpl.append({id: null, name: val, keeps: 'new'});
+        collTmpl.append({newClass: 'tag-new', id: null, name: val, keeps: 'new'});
       }
 
       var highlighted = false;
@@ -1498,6 +1498,14 @@ $(function() {
 	});
 	var collScroller = $collList.data("antiscroll");
 	$(window).resize(collScroller.refresh.bind(collScroller));
+
+  $collList.on('click', '.collection', function(e) {
+    var $el = $(this);
+    if (!$el.data('id')) {
+      e.preventDefault();
+      createTag($el.data('name'));
+    }
+  });
 
 	$colls.on("click", "h3.collection>a", function(e) {
 		if (e.target === this && $(this.parentNode).hasClass("renaming")) {
