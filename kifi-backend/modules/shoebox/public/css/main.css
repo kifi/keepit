@@ -77,10 +77,6 @@ body[data-view=profile] .my-pic::before { transition: none; animation-name: edit
 #collections-list>.antiscroll-inner>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
 #collections-list>.antiscroll-scrollbar {z-index: 2}
 h3.collection {position: relative; white-space: nowrap}
-.collection.renaming {background-color: #fff}
-.collection.renaming>a {cursor: text}
-.collection.renaming,
-.collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
 .collection .tag-count {margin-left: 4px; border-radius: 10.5px; background: #e3e6ee; color: #93a7bc; font-size: 12px; line-height: 20px; padding: 2px 12px}
 .collection .view-name {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 .collection.active .tag-count {background-color: #eff2f7; color: #93a7bc}
@@ -94,6 +90,10 @@ h3.collection {position: relative; white-space: nowrap}
 .collection.drop-hover .tag-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection.tag-new .tag-count {background-color: #f76861; border-color: #f76861; color: white}
 .collection.tag-new.highlight .tag-count {background-color: white; border-color: white; color: #f76861}
+.collection.renaming {background-color: #fff}
+.collection.renaming>a {cursor: text}
+.collection.renaming,
+.collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
 .collection.renaming .tag-count {display: none}
 .tag-icon {display:inline-block; width: 14px; height: 16px; background-size: auto 16px; vertical-align: middle; margin-right: 4px}
 .tag-icon {background-image: url(../img/tag-icon-gray.png)}
