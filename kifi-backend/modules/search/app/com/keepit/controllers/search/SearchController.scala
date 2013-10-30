@@ -25,6 +25,7 @@ import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserQueryParser
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.social.BasicUser
+import com.keepit.search.user.UserHit
 
 class SearchController @Inject()(
     searchConfigManager: SearchConfigManager,
@@ -43,7 +44,7 @@ class SearchController @Inject()(
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
     val users = parser.parse(queryText) match {
-      case None => Array.empty[BasicUser]
+      case None => Array.empty[UserHit]
       case Some(q) => searcher.search(q, maxHits)
     }
     Ok(JsArray(users.map{u => Json.toJson(u)}))
