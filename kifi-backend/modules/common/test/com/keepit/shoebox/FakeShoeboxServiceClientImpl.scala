@@ -395,4 +395,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}
 
   def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit = {}
+
+  def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = ???
+
+  def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = ???
+
+  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
 }

@@ -14,7 +14,7 @@ import com.keepit.search.ArticleStore
 
 import views.html
 
-class ScraperController @Inject() (
+class ScraperAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   scraper: ScraperPlugin,
@@ -44,7 +44,7 @@ class ScraperController @Inject() (
     val updateCount = db.readWrite { implicit session =>
       scrapeInfoRepo.setForRescrapeByRegex(urlRegex, withinMinutes)
     }
-    Redirect(com.keepit.controllers.admin.routes.ScraperController.searchScraper).flashing(
+    Redirect(com.keepit.controllers.admin.routes.ScraperAdminController.searchScraper).flashing(
         "success" -> "%s page(s) matching %s to be rescraped within %s minutes(s). ".format(updateCount, urlRegex, withinMinutes)
       )
   }
@@ -108,7 +108,7 @@ class ScraperController @Inject() (
         ))
       }
     }
-    Redirect(routes.ScraperController.getProxies)
+    Redirect(routes.ScraperAdminController.getProxies)
   }
 
 
