@@ -536,7 +536,7 @@ class AuthController @Inject() (
       case Some(_) =>
         s3ImageStore.uploadTemporaryPicture(request.body.file) match {
           case Success((key, url)) =>
-            Ok(Json.obj("key" -> key, "url" -> url))
+            Ok(Json.obj("token" -> key, "url" -> url))
           case Failure(ex) =>
             airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
             BadRequest(JsNumber(0))
@@ -552,7 +552,7 @@ class AuthController @Inject() (
         request.body.file("picture").map { picture =>
           s3ImageStore.uploadTemporaryPicture(picture.ref.file) match {
             case Success((key, url)) =>
-              Ok(Json.obj("key" -> key, "url" -> url))
+              Ok(Json.obj("token" -> key, "url" -> url))
             case Failure(ex) =>
               airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (form encoded)")))
               BadRequest(JsNumber(0))
