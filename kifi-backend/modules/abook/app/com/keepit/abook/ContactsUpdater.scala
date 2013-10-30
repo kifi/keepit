@@ -95,6 +95,7 @@ class ContactsUpdater @Inject() (
       }
       log.info(s"[upload($userId,$origin)] time-lapsed: ${System.currentTimeMillis - ts}")
     }
+    case m => throw new UnsupportedActorMessage(m)
   }
 
 }
