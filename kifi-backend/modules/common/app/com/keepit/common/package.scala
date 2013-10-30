@@ -66,6 +66,7 @@ package object common {
     def addToArchive(tarArchive: TarArchiveOutputStream, file: File, base: String = ""): Unit = {
       val entryName = base + file.getName
       val entry = new TarArchiveEntry(file, entryName)
+      entry.setSize(file.length())
       tarArchive.putArchiveEntry(entry)
       if (file.isFile) Files.copy(file.toPath, tarArchive)
       tarArchive.closeArchiveEntry()
