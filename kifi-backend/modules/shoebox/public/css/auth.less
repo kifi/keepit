@@ -466,13 +466,17 @@ footer {
   }
 }
 .terms {
+  text-align: center;
   font-weight: 300;
   font-size: 14px;
   line-height: 18px;
   color: #515151;
+  padding-bottom: 50px;
 }
 
 /* finalize new account */
+@signup-label-color: #6c839b;
+@signup-box-color: #ededed;
 .signup-2 {
   text-align: center;
 }
@@ -483,7 +487,6 @@ footer {
   left: 0;
   right: 0;
 }
-@signup-label-color: #6c839b;
 .signup-2-label {
   display: block;
   color: @signup-label-color;
@@ -492,15 +495,34 @@ footer {
   -webkit-font-smoothing: antialiased;
   margin-bottom: 6px;
 }
-.static-email-addr {
-  margin: 24px 0 20px;
-}
+.signup-resume,
 .form-creds,
 .form-name,
 .form-pic {
   margin: 0 auto;
   max-width: 340px;
   text-align: left;
+}
+.signup-resume {
+  position: relative;
+  margin: -12px auto 24px;
+}
+.signup-resume-email {
+  line-height: 40px;
+  text-align: center;
+  background: @signup-box-color;
+  color: @signup-label-color;
+  font-size: 16px;
+  font-weight: 300;
+}
+.signup-resume-not-you {
+  position: absolute;
+  right: 2px;
+  bottom: -20px;
+  line-height: 16px;
+  font-size: 12px;
+  color: @signup-label-color;
+  -webkit-font-smoothing: antialiased;
 }
 .form-creds {
   margin: 32px auto 16px;
@@ -524,7 +546,7 @@ footer {
 }
 .form-photo-box {
   padding: 8px 10px;
-  background: #ededed;
+  background: @signup-box-color;
   position: relative;
   .clearfix;
 }
@@ -533,7 +555,7 @@ footer {
   height: 100px;
   float: left;
   margin-right: 20px;
-  background: #ccc url(../img/out/ghost.png);
+  background: #fff url(../img/out/ghost.png);
   position: relative;
 }
 .form-photo.unset:after {
@@ -708,7 +730,7 @@ footer {
   .transform(none);
 }
 .finalizing .terms {
-  .translate(0, 100px);
+  .translate(0, 106px);
   .transition(transform @finalize-time ease-out);
 }
 
