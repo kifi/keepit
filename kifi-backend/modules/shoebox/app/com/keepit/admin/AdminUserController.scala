@@ -226,8 +226,8 @@ class AdminUserController @Inject() (
     val searchTerm = form.flatMap{ _.get("searchTerm") }
     searchTerm match {
       case None => Redirect(routes.AdminUserController.usersView(0))
-      case Some(term) =>
-        val userIds = userIndex.search(term)
+      case Some(queryText) =>
+        val userIds = Await.result(searchClient.searchUsers(queryText, 100), 15 seconds).map{_.id}
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
