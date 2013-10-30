@@ -72,6 +72,7 @@ class UserRepoImpl @Inject() (
       idCache.set(UserIdKey(id), user)
       basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
     }
+    externalIdCache.set(UserExternalIdKey(user.externalId), user)
     user
   }
 
