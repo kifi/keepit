@@ -15,11 +15,14 @@ import com.google.inject.Inject
 
 class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingRepo) extends HeimdalServiceController {
 
-
-  def trackInternalEvent = Action(parse.json) { request =>
-    SafeFuture{
-      val event: UserEvent = request.body.as[UserEvent]
+  def trackInternalEvent(eventJs: JsValue) = {
+      val event: UserEvent = eventJs.as[UserEvent]
       userEventLoggingRepo.insert(event)
+  }
+
+  def trackInternalEventAction = Action(parse.json) { request =>
+    SafeFuture{
+      trackInternalEvent(request.body)
     }(SlowRunningExecutionContext.ec)
     Status(202)
   }
