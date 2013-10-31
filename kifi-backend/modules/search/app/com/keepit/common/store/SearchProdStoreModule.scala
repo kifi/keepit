@@ -5,7 +5,7 @@ import com.amazonaws.services.s3.AmazonS3
 import play.api.Play._
 import com.keepit.search._
 import com.keepit.search.BrowsingHistoryBuilder
-import com.keepit.search.index.{LocalIndexStoreImpl, IndexStore, S3IndexStoreImpl}
+import com.keepit.search.index.{InMemoryIndexStoreImpl, IndexStore, S3IndexStoreImpl}
 import java.io.File
 
 case class SearchProdStoreModule() extends ProdStoreModule {
@@ -52,6 +52,6 @@ case class SearchDevStoreModule() extends DevStoreModule(SearchProdStoreModule()
   def indexStore(amazonS3Client: AmazonS3): IndexStore = {
     whenConfigured("amazon.s3.index.bucket")(
       prodStoreModule.indexStore(amazonS3Client)
-    ).getOrElse(new LocalIndexStoreImpl(new File("./localIndexBackup")))
+    ).getOrElse(new InMemoryIndexStoreImpl(new File("./localIndexBackup")))
   }
 }

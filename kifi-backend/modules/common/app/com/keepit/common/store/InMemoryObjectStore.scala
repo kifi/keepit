@@ -29,12 +29,12 @@ trait InMemoryObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
   override def toString =  s"[size=${localStore.size} keys=${localStore.keySet}"
 }
 
-trait LocalFileStore[A] extends ObjectStore[A, File] {
+trait InMemoryFileStore[A] extends ObjectStore[A, File] {
 
   val inbox: File
   if (!inbox.exists()) inbox.mkdirs()
   require(inbox.isDirectory, "Inbox must be a local directory.")
-  require(!Play.isProd, "Can't have local file store in production")
+  require(!Play.isProd, "Can't have in memory file store in production")
 
   protected val pathMap = new HashMap[A, String]()
 

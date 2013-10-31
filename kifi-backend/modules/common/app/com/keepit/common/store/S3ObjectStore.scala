@@ -20,10 +20,9 @@ import play.api.Play
 import java.io._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.serializer.BinaryFormat
-import java.util.zip.{GZIPOutputStream, GZIPInputStream}
+import java.util.zip.GZIPInputStream
 import java.nio.file.{StandardCopyOption, Files}
-import com.keepit.common.akka.SafeFuture
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.IO.CompressedInputStream
 
 case class S3Bucket(name: String)
 
@@ -212,22 +211,6 @@ trait S3FileStore[A] extends S3ObjectStore[A, File] {
     file
   }
 
-  private class CompressedInputStream(inputStream: InputStream) extends InputStream {
-    val toPipe = new PipedOutputStream()
-    val fromPipe = new PipedInputStream(toPipe)
-    val gzipOutputStream = new GZIPOutputStream(toPipe)
-
-    SafeFuture {
-      val buffer = new Array[Byte](1024)
-      var len = 0
-      do {
-        len = inputStream.read(buffer)
-        gzipOutputStream.write(buffer, 0, len)
-      } while (len != -1)
-    }
-
-    def read(): Int = fromPipe.read()
-  }
 }
 
 trait S3Module extends ScalaModule

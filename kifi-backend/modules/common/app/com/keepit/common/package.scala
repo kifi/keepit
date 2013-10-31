@@ -1,8 +1,11 @@
 package com.keepit
 
 import org.apache.commons.compress.archivers.tar.{TarArchiveInputStream, TarArchiveEntry, TarArchiveOutputStream}
-import java.io.File
-import java.nio.file.Files
+import java.io._
+import java.util.zip.GZIPOutputStream
+import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import org.apache.commons.io.{IOUtils, FileUtils}
 
 package object common {
 
@@ -51,38 +54,34 @@ package object common {
   }
 
   object IO {
-    def copyFile(source: File, destination: String): Unit = {
-      val target = new File(destination)
-      if (target.exists()) deleteFile(target)
-      Files.copy(source.toPath, target.toPath)
-      if (source.isDirectory) source.listFiles().foreach(file => copyFile(file, source.getAbsolutePath + "/" + file.getName))
-    }
-
-    def deleteFile(file: File): Unit = {
-      if (file.isDirectory) file.listFiles().foreach(deleteFile)
-      file.delete()
-    }
 
     def addToArchive(tarArchive: TarArchiveOutputStream, file: File, base: String = ""): Unit = {
       val entryName = base + file.getName
-      val entry = new TarArchiveEntry(file, entryName)
-      entry.setSize(file.length())
-      tarArchive.putArchiveEntry(entry)
-      if (file.isFile) Files.copy(file.toPath, tarArchive)
-      tarArchive.closeArchiveEntry()
-      if (file.isDirectory) file.listFiles().foreach(addToArchive(tarArchive, _, entryName + "/"))
+      if (file.isFile) {
+        val entry = new TarArchiveEntry(file, entryName)
+        entry.setSize(file.length())
+        tarArchive.putArchiveEntry(entry)
+        FileUtils.copyFile(file, tarArchive)
+        tarArchive.closeArchiveEntry()
+      } else
+        file.listFiles().foreach(addToArchive(tarArchive, _, entryName + "/"))
     }
 
     def extractArchive(tarArchive: TarArchiveInputStream, destination: String): Unit = {
       var entryOption = Option(tarArchive.getNextTarEntry)
       while (entryOption.isDefined) {
-        entryOption.foreach { entry =>
-          val file = new File(destination + "/" + entry.getName)
-          if (entry.isDirectory) file.mkdirs()
-          else Files.copy(entry.getFile.toPath, file.toPath)
-        }
+        entryOption.foreach { entry => FileUtils.copyFile(entry.getFile, new File(destination + "/" + entry.getName)) }
         entryOption = Option(tarArchive.getNextTarEntry)
       }
+    }
+
+    class CompressedInputStream(inputStream: InputStream) extends InputStream {
+      val toPipe = new PipedOutputStream()
+      val fromPipe = new PipedInputStream(toPipe)
+      val gzipOutputStream = new GZIPOutputStream(toPipe)
+      SafeFuture { IOUtils.copy(inputStream, gzipOutputStream) }
+
+      def read(): Int = fromPipe.read()
     }
   }
 }
