@@ -216,7 +216,7 @@ class Scraper @Inject() (
   private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo): ScraperResult = {
     val url = normalizedUri.url
     val extractor = extractorFactory(url)
-    log.info(s"[fetchArticle] $normalizedUri $extractor")
+    log.info(s"[fetchArticle] uri=$normalizedUri extractor=$extractor")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
     try {
@@ -240,25 +240,24 @@ class Scraper @Inject() (
             }
             val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
 
-            val res = Scraped(Article(
-                id = normalizedUri.id.get,
-                title = title,
-                description = description,
-                keywords = keywords,
-                media = media,
-                content = content,
-                scrapedAt = currentDateTime,
-                httpContentType = extractor.getMetadata("Content-Type"),
-                httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-                state = NormalizedURIStates.SCRAPED,
-                message = None,
-                titleLang = Some(titleLang),
-                contentLang = Some(contentLang),
-                destinationUrl = fetchStatus.destinationUrl
-              ),
-              signature,
-              fetchStatus.redirects)
-            log.info(s"[fetchArticle] result=$res")
+            val article = Article(
+              id = normalizedUri.id.get,
+              title = title,
+              description = description,
+              keywords = keywords,
+              media = media,
+              content = content,
+              scrapedAt = currentDateTime,
+              httpContentType = extractor.getMetadata("Content-Type"),
+              httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
+              state = NormalizedURIStates.SCRAPED,
+              message = None,
+              titleLang = Some(titleLang),
+              contentLang = Some(contentLang),
+              destinationUrl = fetchStatus.destinationUrl
+            )
+            val res = Scraped(article, signature, fetchStatus.redirects)
+            log.info(s"[fetchArticle] scraped article: id=${article.id} title=${article.title} state=${article.state}")
             res
           }
         case HttpStatus.SC_NOT_MODIFIED =>

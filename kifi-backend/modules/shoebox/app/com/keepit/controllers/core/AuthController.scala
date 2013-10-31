@@ -391,7 +391,7 @@ class AuthController @Inject() (
 
     Authenticator.create(newIdentity).fold(
       error => Status(500)("0"),
-      authenticator => Ok.withNewSession.withCookies(authenticator.toCookie)
+      authenticator => Ok("1").withNewSession.withCookies(authenticator.toCookie)
     )
   }
 

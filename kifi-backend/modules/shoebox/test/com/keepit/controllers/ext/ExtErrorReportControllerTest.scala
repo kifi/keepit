@@ -37,7 +37,6 @@ class ExtErrorReportControllerTest extends Specification with ShoeboxApplication
         .withBody[JsValue](json))
   }
 
-  //todo(stephen) plug in the fake heimdal
   "ExtAuthController" should {
     "start" in {
       running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule(), FakeAirbrakeModule(), TestHeimdalServiceClientModule())) {
