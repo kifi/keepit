@@ -1,4 +1,4 @@
-package com.keepit.heimdal
+package com.keepit.heimdal.controllers
 
 import org.specs2.mutable._
 
@@ -9,7 +9,7 @@ import com.google.inject.Injector
 import com.keepit.common.cache.HeimdalCacheModule
 import com.keepit.common.time._
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.heimdal.controllers.EventTrackingController
+import com.keepit.heimdal._
 
 import play.api.test.Helpers._
 import play.api.libs.json.{Json}
