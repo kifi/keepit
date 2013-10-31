@@ -1017,6 +1017,7 @@ footer {
   display: table;
   border-collapse: collapse;
   background-color: #ededed;
+  position: relative;
 }
 .social-photo {
   display: table-cell;
