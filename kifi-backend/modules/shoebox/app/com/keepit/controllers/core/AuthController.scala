@@ -348,7 +348,7 @@ class AuthController @Inject() (
   )
   def doSocialFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
     socialFinalizeAccountForm.bindFromRequest.fold(
-    formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
+    formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
     {
       case SocialFinalizeInfo(email, firstName, lastName, password, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
 
