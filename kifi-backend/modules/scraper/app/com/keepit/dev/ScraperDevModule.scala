@@ -14,7 +14,7 @@ import com.keepit.inject.CommonDevModule
 import com.keepit.common.store.ScraperDevStoreModule
 
 case class ScraperDevModule() extends ScraperServiceModule (
-  // cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
+  cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
   storeModule = ScraperDevStoreModule()
 ) with CommonDevModule {
 
