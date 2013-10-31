@@ -925,7 +925,18 @@ $(function() {
 		collId = collId || null;
 		var $h3 = $(".left-col h3");
 		$h3.filter(".active").removeClass("active");
-		$h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps").addClass("active");
+		var $active = $h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps");
+
+    if (collId && !$active.length) {
+      clearTagInput();
+      $active = $(".left-col h3").filter("[data-id='" + collId + "']");
+    }
+
+    $active.addClass("active");
+
+    if (collId) {
+      scrolledIntoViewLazy($active[0]);
+    }
 
 		var fromSearch = $('body').attr("data-view") == "search";
 		$('body').attr("data-view", "mine");
@@ -1073,10 +1084,16 @@ $(function() {
     }
   }
 
-  function createTag(name) {
-    if (name) {
+  function clearTagInput() {
+    if ($.trim($newTagInput.val())) {
       $newTagInput.val('');
       updateTags();
+    }
+  }
+
+  function createTag(name) {
+    if (name) {
+      clearTagInput();
 
       createCollection(name, function(collId) {
         $newColl.removeClass("submitted");
@@ -1136,13 +1153,18 @@ $(function() {
     });
   }
 
+  function toValue(key) {
+    return this[key];
+  }
+
 	var newTagTemplate = Handlebars.compile($('#tag-new-template').html());
 
   function updateTags(tags) {
+    if (!collections) {
+      return;
+    }
     if (!tags) {
-      tags = Object.keys(collections).map(function(key) {
-        return this[key];
-      }, collections);
+      tags = Object.keys(collections).map(toValue, collections);
     }
 
     var val = getTagInputValue(),
@@ -1151,6 +1173,7 @@ $(function() {
     if (val) {
       tags = filterTags(tags, val);
     }
+    $newColl.toggleClass('non-empty', Boolean(val));
 
     var $inner = $collList.find(".antiscroll-inner");
     $inner.empty();
@@ -1347,6 +1370,7 @@ $(function() {
 		}
 		var title, kind = uri.match(/[\w-]*/)[0];
 		console.log('[navigate]', uri, opts || '', kind);
+    var clearTags = true;
 		switch (kind) {
 			case '':
 				title = 'Your Keeps';
@@ -1354,6 +1378,7 @@ $(function() {
 			case 'collection':
 			case 'tag':
 				title = collections[uri.substr(kind.length + 1)].name;
+        clearTags = false;
 				break;
 			case 'find':
 				title = queryFromUri(uri);
@@ -1368,6 +1393,9 @@ $(function() {
 			  title = 'Updates and Features'
 			  break;
 		}
+    if (clearTags) {
+      clearTagInput();
+    }
 		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
 	}
 
@@ -1445,6 +1473,7 @@ $(function() {
 	$queryWrap.focusout($.fn.removeClass.bind($queryWrap, 'focus'));
 	var $query = $("input.query").on("keydown input", function(e) {
 		console.log("[clearTimeout]", e.type);
+    clearTagInput();
 		clearTimeout(searchTimeout);
 		var val = this.value, q = $.trim(val);
 		$queryWrap.toggleClass("empty", !val);
@@ -1551,6 +1580,13 @@ $(function() {
 	}).
   on('input', function (e) {
     updateTags();
+  });
+
+  $newColl.on('click', '.tag-input-clear', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    clearTagInput();
   });
 
 	function createCollection(name, callback) {
