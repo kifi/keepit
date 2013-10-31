@@ -59,7 +59,9 @@ class ShoeboxController @Inject() (
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
   changedUriRepo: ChangedURIRepo,
-  userBookmarkClicksRepo: UserBookmarkClicksRepo)
+  userBookmarkClicksRepo: UserBookmarkClicksRepo,
+  scrapeInfoRepo:ScrapeInfoRepo
+)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -121,6 +123,15 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uri))
   }
 
+  def saveNormalizedURI() = SafeAsyncAction(parse.json) { request =>
+    val normalizedUri = request.body.as[NormalizedURI]
+    val saved = db.readWrite { implicit s =>
+      normUriRepo.save(normalizedUri)
+    }
+    log.info(s"[saveNormalizedURI] $normalizedUri saved=$saved")
+    Ok(Json.toJson(saved))
+  }
+
   def getNormalizedURIs(ids: String) = SafeAsyncAction { request =>
     val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
     val uris = db.readOnly { implicit s => uriIds map normUriRepo.get }
@@ -156,6 +167,26 @@ class ShoeboxController @Inject() (
       normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
     }
     Ok(Json.toJson(uriId))
+  }
+
+  def getScrapeInfo() = SafeAsyncAction(parse.json) { request =>
+    val json = request.body
+    val uri = json.as[NormalizedURI]
+    val info = db.readWrite { implicit s =>
+      scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
+    }
+    log.info(s"[getScrapeInfo] $uri $info")
+    Ok(Json.toJson(info))
+  }
+
+  def saveScrapeInfo() = SafeAsyncAction(parse.json) { request =>
+    val json = request.body
+    val info = json.as[ScrapeInfo]
+    val saved = db.readWrite( { implicit s =>
+      scrapeInfoRepo.save(info)
+    })
+    log.info(s"[saveScrapeInfo] $saved")
+    Ok(Json.toJson(saved))
   }
 
   def getBookmarks(userId: Id[User]) = Action { request =>

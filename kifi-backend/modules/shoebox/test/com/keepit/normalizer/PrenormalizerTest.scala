@@ -153,10 +153,6 @@ class PrenormalizerTest extends Specification {
       Prenormalizer("http://www.youtube.com/watch?NR=1&feature=endscreen&v=ill6RQDN5zI") === "http://www.youtube.com/watch?v=ill6RQDN5zI"
       Prenormalizer("https://www.youtube.com/watch?feature=player_embedded&v=DHEOF_rcND8") === "https://www.youtube.com/watch?v=DHEOF_rcND8"
 
-      // techcrunch
-      Prenormalizer("http://www.techcrunch.com") === "http://techcrunch.com"
-      Prenormalizer("http://techcrunch.com") === "http://techcrunch.com"
-
       // amazon
       // - product
       Prenormalizer("http://www.amazon.com/Play-Framework-Cookbook-Alexander-Reelsen/dp/1849515522/ref=sr_1_1?ie=UTF8&qid=1355167842&sr=8-1&keywords=play+scala") ===
@@ -207,6 +203,14 @@ class PrenormalizerTest extends Specification {
 
       path = "http://fr.linkedin.com/pub/marc-milowski/13/640/1a8/en"
       Prenormalizer(path) === "http://www.linkedin.com/pub/marc-milowski/13/640/1a8/en"
+
+      //Wikipedia
+
+      Prenormalizer("http://en.m.wikipedia.org/wiki/Douze") === "https://en.wikipedia.org/wiki/Douze"
+      Prenormalizer("http://en.wikipedia.org/wiki/Douze") === "https://en.wikipedia.org/wiki/Douze"
+      Prenormalizer("https://en.wikipedia.org/wiki/Douze") === "https://en.wikipedia.org/wiki/Douze"
+      Prenormalizer("http://fr.m.wikipedia.org/wiki/Douze_(rivière)") === "https://fr.wikipedia.org/wiki/Douze_(rivière)"
+      Prenormalizer("http://fr.wikipedia.org/wiki/Douze_(rivière)") === "https://fr.wikipedia.org/wiki/Douze_(rivière)"
     }
   }
 }

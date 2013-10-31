@@ -35,8 +35,7 @@ class ScrapeInfoRepoImpl @Inject() (
     def signature =  column[String]("signature", O.NotNull)
     def destinationUrl = column[String]("destination_url", O.Nullable)
     def seq = column[Int]("seq", O.NotNull)
-    def * = id.? ~ uriId ~ lastScrape ~ nextScrape ~ interval ~ failures ~ state ~ signature ~
-      destinationUrl.? <> (ScrapeInfo, ScrapeInfo.unapply _)
+    def * = id.? ~ uriId ~ lastScrape ~ nextScrape ~ interval ~ failures ~ state ~ signature ~ destinationUrl.? <> (ScrapeInfo.apply _, ScrapeInfo.unapply _)
   }
 
   def allActive(implicit session: RSession): Seq[ScrapeInfo] = {

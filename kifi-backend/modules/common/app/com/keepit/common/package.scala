@@ -44,8 +44,8 @@ package object common {
 
   import com.keepit.common.concurrent.ExecutionContext
   import scala.concurrent.Future
-  implicit class CoMap[T](f: => Future[T]) {
-    def comap[S](g: T => S): Future[S] = {
+  implicit class ImmediateMap[T](f: => Future[T]) {
+    def imap[S](g: T => S): Future[S] = {
       f.map(g)(ExecutionContext.immediate)
     }
   }

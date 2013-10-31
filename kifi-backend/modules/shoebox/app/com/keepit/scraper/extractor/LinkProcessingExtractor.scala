@@ -1,7 +1,7 @@
 package com.keepit.scraper.extractor
 
 import org.apache.tika.parser.html.HtmlMapper
-import com.keepit.scraper.{Scraper, HttpFetcher}
+import com.keepit.scraper.{ScraperConfig, HttpFetcher}
 import com.keepit.common.db.slick.Database
 import com.keepit.model.UrlPatternRuleRepo
 import com.google.inject.{Inject, Singleton}
@@ -50,7 +50,7 @@ extends DefaultExtractor(url, maxContentChars, htmlMapper) {
 @Singleton
 class LinkProcessingExtractorProvider @Inject() (httpFetcher: HttpFetcher, db: Database, urlPatternRuleRepo: UrlPatternRuleRepo) extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
-  def apply(uri: URI) = new LinkProcessingExtractor(uri.toString, Scraper.maxContentChars, DefaultExtractorProvider.htmlMapper, processLink(uri), httpFetcher, db, urlPatternRuleRepo)
+  def apply(uri: URI) = new LinkProcessingExtractor(uri.toString, ScraperConfig.maxContentChars, DefaultExtractorProvider.htmlMapper, processLink(uri), httpFetcher, db, urlPatternRuleRepo)
 
   private def processLink(uri: URI)(link: Link): Option[String] = {
     val url = uri.toString()

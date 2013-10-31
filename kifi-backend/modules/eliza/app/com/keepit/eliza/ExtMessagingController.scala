@@ -51,10 +51,11 @@ class ExtMessagingController @Inject() (
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val tStart = currentDateTime
     val o = request.body
-    val (title, text, recipients) = (
+    val (title, text, recipients, version) = (
       (o \ "title").asOpt[String],
       (o \ "text").as[String].trim,
-      (o \ "recipients").as[Seq[String]])
+      (o \ "recipients").as[Seq[String]],
+      (o \ "extVersion").asOpt[String])
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
     val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).flatMap { recipientSet =>
@@ -77,6 +78,7 @@ class ExtMessagingController @Inject() (
           contextBuilder += ("threadId", thread.id.get.id)
           contextBuilder += ("url", thread.url.getOrElse(""))
           contextBuilder += ("isActuallyNew", messages.length<=1)
+          contextBuilder += ("extVersion", version.getOrElse(""))
 
           thread.uriId.map{ uriId =>
             shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
@@ -106,6 +108,7 @@ class ExtMessagingController @Inject() (
     val tStart = currentDateTime
     val o = request.body
     val text = (o \ "text").as[String].trim
+    val version = (o \ "extVersion").asOpt[String]
     val (thread, message) = messagingController.sendMessage(request.user.id.get, threadExtId, text, None)
 
     //Analytics
@@ -114,6 +117,7 @@ class ExtMessagingController @Inject() (
 
       contextBuilder += ("threadId", message.thread.id)
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
+      contextBuilder += ("extVersion", version.getOrElse(""))
       thread.participants.foreach{_.allExcept(request.userId).foreach{ recipient =>
         contextBuilder += ("recipient", recipient.id)
       }}

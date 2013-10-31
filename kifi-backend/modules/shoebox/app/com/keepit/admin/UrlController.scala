@@ -64,10 +64,10 @@ class UrlController @Inject() (
     Ok(html.admin.adminDashboard())
   }
 
-  def renormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
+  def renormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domainRegex: Option[String] = None) = AdminHtmlAction { implicit request =>
     Akka.future {
       try {
-        doRenormalize(readOnly, clearSeq, domain)
+        doRenormalize(readOnly, clearSeq, domainRegex)
       } catch {
         case ex: Throwable => airbrake.notify(ex)
       }
@@ -75,17 +75,17 @@ class UrlController @Inject() (
     Ok("Started!")
   }
 
-  def doRenormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domain: Option[String] = None) = {
+  def doRenormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domainRegex: Option[String] = None) = {
 
     def getUrlList() = {
       val urls = db.readOnly { implicit s =>
-        domain match {
-          case Some(domainStr) => urlRepo.getByDomain(domainStr)
+        domainRegex match {
+          case Some(regex) => urlRepo.getByDomainRegex(regex)
           case None => urlRepo.all
         }
       }.sortBy(_.id.get.id)
 
-      val lastId = if (domain.isDefined) 0L else { centralConfig(RenormalizationCheckKey) getOrElse 0L }
+      val lastId = if (domainRegex.isDefined) 0L else { centralConfig(RenormalizationCheckKey) getOrElse 0L }
       urls.filter(_.id.get.id > lastId).filter(_.state == URLStates.ACTIVE)
     }
 
@@ -105,7 +105,7 @@ class UrlController @Inject() (
 
     def sendStartEmail(urls: Seq[URL]) = {
       val title = "Renormalization Begins"
-      val msg = s"domain = ${domain}, scanning ${urls.size} urls. readOnly = ${readOnly}"
+      val msg = s"domainRegex = ${domainRegex}, scanning ${urls.size} urls. readOnly = ${readOnly}"
       db.readWrite{ implicit s =>
         postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = title, htmlBody = msg, category = PostOffice.Categories.ADMIN))
@@ -142,7 +142,7 @@ class UrlController @Inject() (
           }
         }
       }
-      if (domain.isEmpty && !readOnly) urls.lastOption.map{ url => centralConfig.update(RenormalizationCheckKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
+      if (domainRegex.isEmpty && !readOnly) urls.lastOption.map{ url => centralConfig.update(RenormalizationCheckKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
     }
 
     changes = changes.sortBy(_._1.url)

@@ -44,7 +44,7 @@ class UriNormalizationUpdater @Inject() (
       case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSequenceNumber && serviceDiscovery.isLeader) => {
         val updatesFuture = shoebox.getNormalizedUriUpdates(localSequenceNumber, remoteSequenceNumber)
         updatesFuture.map{ updates =>
-          applyUpdates(updates)
+          applyUpdates(updates, reapply=true)
           db.readWrite{ implicit session => renormRepo.addNew(remoteSequenceNumber, updates.size, updates.map{_._1}) }
         }
       }
@@ -52,7 +52,7 @@ class UriNormalizationUpdater @Inject() (
     }
   }
 
-  private def applyUpdates(updates: Seq[(Id[NormalizedURI], NormalizedURI)]) : Unit = {
+  private def applyUpdates(updates: Seq[(Id[NormalizedURI], NormalizedURI)], reapply: Boolean = false) : Unit = {
     val userThreadUpdates = db.readOnly { implicit session => updates.map{ //Note: This will need to change when we have detached threads!
         case (oldId, newNUri) => (userThreadRepo.getByUriId(oldId), newNUri.url)
       }
@@ -61,9 +61,11 @@ class UriNormalizationUpdater @Inject() (
     userThreadUpdates.map{
       case (userThreads, newNUrl) => userThreads.map(fixLastNotificationJson(_, newNUrl))
     }
-    system.scheduler.scheduleOnce(1 minutes){
-      applyUpdates(updates)
-    } 
+    if (reapply){
+      system.scheduler.scheduleOnce(1 minutes){
+        applyUpdates(updates)
+      } 
+    }
   }
 
   def fixLastNotificationJson(userThread: UserThread, newNUrl: String) : Unit = {

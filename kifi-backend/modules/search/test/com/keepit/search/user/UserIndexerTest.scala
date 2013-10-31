@@ -113,6 +113,13 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         hits2.size === 4
         hits2.map{_.firstName} === (0 to 3).map{ i => s"firstName${i}"}.toArray
 
+        hits(0).basicUser.firstName === "Woody"
+
+        val query2 = parser.parse("firstNa")
+        val hits2 = searcher.search(query2.get, 5)
+        hits2.size === 4
+        hits2.map{_.basicUser.firstName} === (0 to 3).map{ i => s"firstName${i}"}.toArray
+        hits2.map{_.id.id}.seq === (1 to 4)
       }
     }
   }

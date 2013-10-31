@@ -10,3 +10,5 @@
 -> /  heimdal.Routes
 
 -> /  abook.Routes
+
+-> /  scraper.Routes

@@ -10,14 +10,19 @@ import com.keepit.common.strings.UTF8
 
 
 trait Service
-  case class ServiceRoute(method: Method, path: String, params: Param*) {
-    def url = path + (if(params.nonEmpty) "?" + params.map({ p =>
-      URLEncoder.encode(p.key, UTF8) + (if(p.value.value != "") "=" + URLEncoder.encode(p.value.value, UTF8) else "")
-    }).mkString("&") else "")
+
+case class ServiceRoute(method: Method, path: String, params: Param*) {
+  def url = path + (if(params.nonEmpty) "?" + params.map({ p =>
+    URLEncoder.encode(p.key, UTF8) + (if(p.value.value != "") "=" + URLEncoder.encode(p.value.value, UTF8) else "")
+  }).mkString("&") else "")
 }
 
-case class Param(key: String, value: ParamValue = ParamValue(""))
+case class Param(key: String, value: ParamValue = ParamValue("")) {
+  override def toString(): String = s"key->${value.value}"
+}
+
 case class ParamValue(value: String)
+
 object ParamValue {
   implicit def stringToParam(i: String) = ParamValue(i)
   implicit def longToParam(i: Long) = ParamValue(i.toString)
@@ -92,6 +97,9 @@ object Shoebox extends Service {
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
     def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq), Param("highSeq", highSeq))
     def clickAttribution() = ServiceRoute(POST, "/internal/shoebox/database/clickAttribution")
+    def getScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/getScrapeInfo")
+    def saveScrapeInfo()  = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
+    def saveNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/saveNormalizedURI")
   }
 }
 
@@ -164,6 +172,13 @@ object ABook extends Service {
     def getContactInfos(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getContactInfos", Param("maxRows", maxRows))
     def getABookRawInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
     def getContactsRawInfo(userId:Id[User], origin:ABookOriginType) = ServiceRoute(GET, s"/internal/abook/${userId.id}/${origin.name}/getContactsRawInfo")
+  }
+}
+
+object Scraper extends Service {
+  object internal {
+    def asyncScrapeArticle() = ServiceRoute(POST, s"/internal/scraper/asyncScrape")
+    def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
   }
 }
 
