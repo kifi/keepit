@@ -1153,10 +1153,6 @@ $(function() {
     });
   }
 
-  function toValue(key) {
-    return this[key];
-  }
-
 	var newTagTemplate = Handlebars.compile($('#tag-new-template').html());
 
   function updateTags(tags) {
@@ -1164,7 +1160,7 @@ $(function() {
       return;
     }
     if (!tags) {
-      tags = Object.keys(collections).map(toValue, collections);
+      tags = util.values(collections);
     }
 
     var val = getTagInputValue(),
