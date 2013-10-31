@@ -27,7 +27,7 @@ input[type=password] {
   margin-bottom: 16px;
   height: 40px;
   border: 2px solid #e5e5e5;
-  padding: 0 .8em;
+  padding: 0 0.8em;
   line-height: 130%;
   -webkit-font-smoothing: antialiased;
 }
@@ -545,7 +545,6 @@ footer {
   margin-bottom: 6px;
 }
 .signup-resume,
-.form-creds,
 .form-name,
 .form-pic {
   margin: 0 auto;
@@ -572,12 +571,6 @@ footer {
   font-size: 12px;
   color: #6c839b;
   -webkit-font-smoothing: antialiased;
-}
-.signup-resume-not-you:hover {
-  text-decoration: underline;
-}
-.form-creds {
-  margin: 32px auto 16px;
 }
 .form-name:after {
   content: ' ';
@@ -616,6 +609,7 @@ footer {
   float: left;
   margin-right: 20px;
   background: #ffffff url(../img/out/ghost.png);
+  background-size: cover;
   position: relative;
 }
 .form-photo.unset:after {
@@ -1011,6 +1005,113 @@ footer {
 .photo-dialog-submit:active {
   background: #83ae4a;
 }
+/* social signup 2 */
+.social-info,
+.form-creds {
+  margin: 0 auto;
+  max-width: 360px;
+  width: 100%;
+  text-align: left;
+}
+.social-info {
+  display: table;
+  border-collapse: collapse;
+  background-color: #ededed;
+}
+.social-photo {
+  display: table-cell;
+  background-clip: content-box;
+  background-origin: content-box;
+  margin: 0;
+  padding: 12px;
+}
+.social-text-info {
+  display: table-cell;
+  width: 99%;
+  vertical-align: top;
+  padding: 12px 0 0 12px;
+  position: relative;
+}
+.social-name {
+  margin: 14px 0 2px;
+  color: #6c839b;
+  line-height: 20px;
+  font-size: 20px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+}
+input.social-email {
+  display: block;
+  width: 100%;
+  margin: 0 -0.8em;
+  border: 0;
+  height: 30px;
+  font-size: 14px;
+}
+input.social-email[disabled] {
+  background: transparent;
+}
+.social-change-email {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  padding: 4px 8px;
+  background-color: #e5e5e5;
+  color: #6c839b;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+.social-change-email:hover {
+  background: #e0e0e0;
+}
+.social-change-email:active {
+  background: #d8d8d8;
+}
+.social-change-email.clicked {
+  opacity: 0;
+  visibility: hidden;
+  -webkit-transition: opacity 0.2s linear, visibility 0s 0.2s;
+  -moz-transition: opacity 0.2s linear, visibility 0s 0.2s;
+  -o-transition: opacity 0.2s linear, visibility 0s 0.2s;
+  -ms-transition: opacity 0.2s linear, visibility 0s 0.2s;
+  transition: opacity 0.2s linear, visibility 0s 0.2s;
+}
+.form-creds {
+  margin: 24px auto 16px;
+}
+.signup-password-label {
+  line-height: 22px;
+  position: relative;
+}
+.signup-password-label:after {
+  content: ' ';
+  position: absolute;
+  top: 40px;
+  left: 194px;
+  width: 12px;
+  height: 16px;
+  background: url(../img/out/auth.png) -241px -328px;
+}
+.form-creds .form-password {
+  display: inline-block;
+  margin: 6px 0 0;
+  width: 220px;
+}
+.signup-2-social .form-submit {
+  margin-top: 40px;
+  height: 66px;
+  width: 260px;
+  font-size: 24px;
+  font-weight: 300;
+}
+.form-password-tip {
+  position: absolute;
+  left: 236px;
+  bottom: 12px;
+  line-height: 15px;
+  font-size: 13px;
+  font-weight: normal;
+}
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .curtain-logo-l:before,
@@ -1019,7 +1120,8 @@ footer {
   .us-on,
   .main-logo,
   .form-network-icon:before,
-  .form-photo-a:before {
+  .form-photo-a:before,
+  .signup-password-label:after {
     background-image: url(../img/out/auth.2x.png);
     background-size: 255px auto;
   }
