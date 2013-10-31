@@ -18,7 +18,7 @@ class AdminClusterController @Inject() (
     httpClient: HttpClient,
     serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
-    val serviceTypes : List[ServiceType] =  ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: Nil
+    val serviceTypes : List[ServiceType] =  ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil
 
     val machineNames = Map[String, String](
         "50.18.183.73"    -> "b01",
