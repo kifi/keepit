@@ -13,6 +13,7 @@ import com.keepit.social.UserIdentity
 import com.keepit.social.{SocialNetworkType, SocialNetworks}
 import com.keepit.common.KestrelCombinator
 
+import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.Play._
 import play.api.data.Forms._
 import play.api.data._
@@ -207,7 +208,7 @@ class AuthController @Inject() (
             val identity = sui.credentials.get
             if (hasher.matches(identity.passwordInfo.get, password)) {
               Authenticator.create(identity).fold(
-                error => Status(500)("0"),
+                error => Status(INTERNAL_SERVER_ERROR)("0"),
                 authenticator => {
                   val finalized = db.readOnly { implicit session =>
                     userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
@@ -226,7 +227,7 @@ class AuthController @Inject() (
           val pInfo = hasher.hash(password)
           val (newIdentity, _) = saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
           Authenticator.create(newIdentity).fold(
-            error => Status(500)("0"),
+            error => Status(INTERNAL_SERVER_ERROR)("0"),
             authenticator =>
               Ok(Json.obj("success"-> true, "email" -> emailAddress, "new_account" -> true))
                 .withNewSession
@@ -408,7 +409,7 @@ class AuthController @Inject() (
     }
 
     Authenticator.create(newIdentity).fold(
-      error => Status(500)("0"),
+      error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => Ok("1").withNewSession.withCookies(authenticator.toCookie)
     )
   }

@@ -13,6 +13,7 @@ import com.keepit.common.akka.SafeFuture
 import scala.concurrent.{Promise, future, Await, Future}
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.http.Status.ACCEPTED
 
 import com.google.inject.Inject
 
@@ -174,7 +175,7 @@ class MessagingController @Inject() (
       createGlobalNotificaiton(userIds, title, body, linkText, linkUrl, imageUrl, sticky)
 
     }
-    Status(202)
+    Status(ACCEPTED)
   }
 
   def verifyAllNotifications() = Action { request => //Use with caution, very expensive!
@@ -194,7 +195,7 @@ class MessagingController @Inject() (
         }
       }
     }
-    Status(202)
+    Status(ACCEPTED)
   }
 
   def createGlobalNotificaiton(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {

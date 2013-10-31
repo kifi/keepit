@@ -6,7 +6,7 @@ import com.keepit.heimdal.{UserEventLoggingRepo, UserEvent}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.akka.SlowRunningExecutionContext
 
-
+import play.api.http.Status.ACCEPTED
 import play.api.mvc.Action
 import play.api.libs.json.{JsValue}
 
@@ -24,8 +24,7 @@ class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingR
     SafeFuture{
       trackInternalEvent(request.body)
     }(SlowRunningExecutionContext.ec)
-    Status(202)
+    Status(ACCEPTED)
   }
-
 
 }
