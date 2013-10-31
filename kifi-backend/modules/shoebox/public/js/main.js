@@ -929,7 +929,13 @@ $(function() {
 
 		var fromSearch = $('body').attr("data-view") == "search";
 		$('body').attr("data-view", "mine");
-		$mainHead.find("h1").text(collId ? collections[collId].name : "Browse your Keeps");
+    
+    if (collId) {
+      $mainHead.find("h1").text('Tags / ' + collections[collId].name).addClass('tag-head');
+    }
+    else {
+      $mainHead.find("h1").text("Browse your Keeps").removeClass('tag-head');
+    }
 
 		$results.empty();
 		$query.val('').removeAttr("data-q");
