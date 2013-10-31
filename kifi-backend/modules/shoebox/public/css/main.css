@@ -83,7 +83,6 @@ h3.collection {position: relative; white-space: nowrap}
 .collection:hover {background-color: #e9ecf2}
 .collection.active {background-color: #e3e6ee}
 .collection.highlight,
-.collection.tag-new.highlight,
 .collection.drop-hover {background-color: #6fa6ef}
 .collection.highlight .caption,
 .collection.highlight .view-name,
