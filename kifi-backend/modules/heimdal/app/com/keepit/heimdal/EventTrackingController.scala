@@ -15,7 +15,7 @@ import com.google.inject.Inject
 
 class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingRepo) extends HeimdalServiceController {
 
-  def trackInternalEvent(eventJs: JsValue) = {
+  private[controllers] def trackInternalEvent(eventJs: JsValue) = {
       val event: UserEvent = eventJs.as[UserEvent]
       userEventLoggingRepo.insert(event)
   }
