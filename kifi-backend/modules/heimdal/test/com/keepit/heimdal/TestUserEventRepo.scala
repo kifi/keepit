@@ -13,14 +13,14 @@ import scala.concurrent.{Promise, Future}
 
 class TestUserEventLoggingRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends UserEventLoggingRepo {
 
-  var events: List[UserEvent] = Nil
+  var events: Vector[UserEvent] = Vector()
 
   def eventCount(): Int = events.length
 
   def lastEvent(): UserEvent = events.head
 
   override def insert(obj: UserEvent, dropDups: Boolean = false) : Unit = synchronized {
-    events = obj::events
+    events = events :+ obj
   }
 
   override def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
