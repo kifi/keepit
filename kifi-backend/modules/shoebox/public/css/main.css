@@ -370,6 +370,15 @@ body[data-view=search] .main-keeps {top: 108px}
 .keep-arrow-4:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
 .keep:hover .keep-arrow-4 {background-position: right}
 .keep.detailed .keep-arrow-4 {background-position: right; -webkit-transform: scale(-1,1); transform: scale(-1,1)}
+.keep-hover-button-wrapper {display: none; position: absolute; right: 0; top: 0; height: 100%; width: 1px}
+.keep-hover-button-table {display: table; width: 100%; height: 100%}
+.keep-hover-button-cell {display: table-cell; vertical-align: middle}
+.keep-hover-button {font-size: 11px; color: #9ea3ad; background: #eff2f7; padding: 7px 12px; border: 1px solid #f4f6f9; border-radius: 9px; position: absolute; right: 16px; cursor: pointer; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
+.keep .keep-button-close {display: none}
+.keep:hover .keep-hover-button-wrapper {display: block}
+.keep.detailed .keep-button-preview {display: none}
+.keep.detailed .keep-button-close {display: block}
+.keep.detailed .keep-hover-button {background: #e3e6ee;}
 .keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
 .keep>.handle:hover,
 .keep.detailed>.handle,
