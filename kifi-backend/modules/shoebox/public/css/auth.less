@@ -38,8 +38,16 @@ input[type=password] {
   height: 40px;
   border: 2px solid #e5e5e5;
   padding: 0 @input-hor-padding;
+  font-size: 16px;
   line-height: 130%;
   -webkit-font-smoothing: antialiased;
+}
+@placeholder-color: #a9a9a9;
+::-webkit-input-placeholder {
+  color: @placeholder-color;
+}
+::-moz-placeholder {
+  color: shade(@placeholder-color, 10%);
 }
 
 @kifi-green: #9fc062;
@@ -101,7 +109,7 @@ input[type=password] {
 }
 .curtain-welcome-l,
 .curtain-welcome-r {
-  position: absolute;
+  position: fixed;
   top: 224px;
   width: 50%;
   z-index: 10;
@@ -224,14 +232,16 @@ input[type=password] {
   position: relative;
   left: 2px;
 }
-.curtain-back:hover {
+.curtain-back:hover,
+.curtain-back:focus {
   color: #fff;
 }
 .curtain-back,
 .curtain-back:active {
   color: rgba(255, 255, 255, .8);
 }
-.curtain-back:hover:before {
+.curtain-back:hover:before,
+.curtain-back:focus:before {
   opacity: .8;
 }
 .curtain-back:before,
@@ -316,6 +326,7 @@ footer {
 @form-error-color: #ef6f6e;
 .form-error {
   position: absolute;
+  z-index: 10;
   padding: 10px 18px;
   background-color: @form-error-color;
   color: #fff;
@@ -441,10 +452,32 @@ footer {
   -webkit-font-smoothing: antialiased;
   padding-right: 16px;
 }
+.password-label {
+  display: block;
+  position: relative;
+}
+.password-label:after {
+  content: ' ';
+  position: absolute;
+  top: 11px;
+  right: 14px;
+  width: 12px;
+  height: 16px;
+  background: url(../img/out/auth.png) -241px -328px;
+}
 .form-email-addr,
 .form-password {
   display: block;
   width: 100%;
+}
+.password-forgot {
+  position: absolute;
+  bottom: -28px;
+  right: 0;
+  color: @placeholder-color;
+  line-height: 14px;
+  font-size: 13px;
+  font-weight: 300;
 }
 @primary-button-color: #92c152;
 @cancel-button-color: #e8e8e8;
@@ -662,16 +695,16 @@ footer {
   overflow: hidden;
   visibility: hidden;
 }
-@final-button-color: #6fa6ef;
+@alt-button-color: #6fa6ef;
 .signup-2>.form-submit {
   margin: 20px auto 40px;
   width: 200px;
-  background: @final-button-color;
+  background: @alt-button-color;
   &:hover {
-    background: tint(@final-button-color, 10%);
+    background: tint(@alt-button-color, 10%);
   }
   &:active {
-    background: shade(@final-button-color, 10%);
+    background: shade(@alt-button-color, 10%);
   }
 }
 
@@ -732,10 +765,8 @@ footer {
   .transition(transform @finalize-time ease-out);
 }
 
-@photo-size: 200px;
-@photo-padding: 40px;
-@canvas-margin: 12px;
-.photo-dialog {
+/* dialogs */
+.dialog {
   display: table;
   position: fixed;
   top: 0;
@@ -745,17 +776,25 @@ footer {
   z-index: 10;
   background: rgba(0,0,0,.5);
 }
-.photo-dialog-cell {
+.dialog-cell {
   display: table-cell;
   vertical-align: middle;
   text-align: center;
 }
-.photo-dialog-box {
+.dialog-box {
   margin: 0 auto;
-  width: (@photo-size + 2 * @photo-padding + 2 * @canvas-margin);
   background: white;
   text-align: left;
   border-radius: 6px;
+  position: relative;
+}
+
+/* photo dialog */
+@photo-size: 200px;
+@photo-padding: 40px;
+@canvas-margin: 12px;
+.photo-dialog .dialog-box {
+  width: (@photo-size + 2 * @photo-padding + 2 * @canvas-margin);
 }
 .photo-dialog-title {
   padding: 4px 0;
@@ -864,6 +903,9 @@ footer {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   margin-left: 4px;
+  &:focus {
+    outline-color: #888;
+  }
 }
 .photo-dialog-cancel {
   color: #888;
@@ -885,6 +927,143 @@ footer {
     background: shade(@primary-button-color, 10%);
   }
 }
+
+/* reset password dialog */
+@dialog-text-color: #515051;
+.reset-password .dialog-box {
+  width: 480px;
+  text-align: center;
+  overflow: hidden;
+}
+.reset-password .dialog-box:before,
+.reset-password .dialog-box:after {
+  content: ' ';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 70px;
+  z-index: 1;
+  border-radius: inherit;
+}
+.reset-password .dialog-box:before {
+  left: 0;
+  .background-image(linear-gradient(to right, #fff, transparent));
+}
+.reset-password .dialog-box:after {
+  right: 0;
+  .background-image(linear-gradient(to left, #fff, transparent));
+}
+.reset-password-x {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  height: 24px;
+  width: 24px;
+  z-index: 2;
+  border-radius: 50%;
+  &:before,
+  &:after {
+    content: ' ';
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    left: 50%;
+    width: 1px;
+    background: #aaa;
+    font-size: 0;
+  }
+  &:before {
+    .transform(translate3d(-.5px,0,0) rotate(45deg));
+  }
+  &:after {
+    .transform(translate3d(-.5px,0,0) rotate(-45deg));
+  }
+  &:hover {
+    background: #e8e8e8;
+  }
+  &:active {
+    background: #d8d8d8;
+  }
+  &:focus {
+    outline-color: #ccc;
+  }
+}
+.reset-password-title {
+  padding: 20px 0 10px;
+  line-height: 32px;
+  font-size: 28px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  color: @dialog-text-color;
+}
+.reset-password-text {
+  margin: 0;
+  line-height: 19px;
+  font-size: 15px;
+  font-weight: 300;
+  color: @dialog-text-color;
+}
+.reset-password-email {
+  width: 300px;
+}
+.reset-password-buttons {
+  padding: 2px 0 20px;
+}
+.reset-password-cancel,
+.reset-password-submit {
+  display: inline-block;
+  margin: 0 4px;
+  padding: 10px 30px;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  &:focus {
+    outline-color: #888;
+  }
+}
+.reset-password-cancel {
+  color: #888;
+  background: @cancel-button-color;
+  &:hover {
+    background: tint(@cancel-button-color, 20%);
+  }
+  &:active {
+    background: shade(@cancel-button-color, 10%);
+  }
+}
+.reset-password-submit {
+  color: #fff;
+  background: @alt-button-color;
+  &:hover {
+    background: tint(@alt-button-color, 10%);
+  }
+  &:active {
+    background: shade(@alt-button-color, 10%);
+  }
+}
+.reset-password-success {
+  position: absolute;
+  top: 62px;
+  left: 0;
+  width: 100%;
+  .translate(80%);
+  visibility: hidden;
+  &>.reset-password-text {
+    margin: 30px 0 42px;
+  }
+}
+.reset-password-sent {
+  .reset-password-form {
+    .translate(-80%);
+    visibility: hidden;
+    .transition(visibility 0 .2s, transform .2s ease-in-out);
+  }
+  .reset-password-success {
+    .transform(none);
+    visibility: visible;
+    .transition(visibility 0, transform .2s ease-in-out);
+  }
+}
+
 
 /* social signup 2 */
 .social-info,
@@ -957,24 +1136,18 @@ input.social-email {
 .form-creds {
   margin: 24px auto 16px;
 }
-.signup-password-label {
+@social-2-password-width: 220px;
+.password-label.signup-2-label {
   line-height: 22px;
-  position: relative;
 }
-.signup-password-label:after {
-  content: ' ';
-  position: absolute;
+.password-label.signup-2-label:after {
   top: 40px;
-  left: (@social-password-width - 26px);
-  width: 12px;
-  height: 16px;
-  background: url(../img/out/auth.png) -241px -328px;
+  left: (@social-2-password-width - 26px);
 }
-@social-password-width: 220px;
 .form-creds .form-password {
   display: inline-block;
   margin: 6px 0 0;
-  width: @social-password-width;
+  width: @social-2-password-width;
 }
 .signup-2-social .form-submit {
   margin-top: 40px;
@@ -985,7 +1158,7 @@ input.social-email {
 }
 .form-password-tip {
   position: absolute;
-  left: (@social-password-width + 16px);
+  left: (@social-2-password-width + 16px);
   bottom: 12px;
   line-height: 15px;
   font-size: 13px;
@@ -1001,7 +1174,7 @@ input.social-email {
   .main-logo,
   .form-network-icon:before,
   .form-photo-a:before,
-  .signup-password-label:after {
+  .password-label:after {
     background-image: url(../img/out/auth.2x.png);
     background-size: 255px auto;
   }
