@@ -1476,7 +1476,14 @@ $(function() {
 				showMessage('Could not reorder the tags, please try again later');
 				// TODO: revert the re-order in the DOM
 			});
-		}
+		},
+    stop: function(e, ui) {
+      ui.item.css({
+        position: '',
+        opacity: '',
+        zIndex: ''
+      });
+    }
 	}).on("mousedown", ".coll-tri", function(e) {
 		if (e.button > 0) return;
 		e.preventDefault();  // do not start selection
