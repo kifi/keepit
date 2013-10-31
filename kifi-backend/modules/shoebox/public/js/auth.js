@@ -182,18 +182,14 @@
     }
     $('.form-error').remove();
     var $form = $(this);
-    var email = validateEmailAddress($form.find('.form-email-addr'));
-    var password = email && validateNewPassword($form.find('.form-password'));
-    var first = email && password && validateName($form.find('.form-first-name'));
-    var last = email && password && first && validateName($form.find('.form-last-name'));
-    if (email && password && first && last) {
-      // TODO: use iframe photo upload promise
+    var email = validateEmailAddress($form.find('.social-email'));
+    var password = validateNewPassword($form.find('.form-password'));
+    if (password) {
       signup2Promise = $.postJson(baseUri + '/auth/social-finalize', {
+        firstName: $form.data('first'),
+        lastName: $form.data('last'),
         email: email,
-        password: password,
-        firstName: first,
-        lastName: last
-        // picToken: TODO
+        password: password
       })
       .done(navigateToApp)
       .fail(function (xhr) {
@@ -201,6 +197,10 @@
       });
     }
     return false;
+  }).on('click', '.social-change-email', function(e) {
+    if (e.which !== 1) return;
+    $('.social-email').removeAttr('disabled').focus().select();
+    $(this).addClass('clicked');
   });
 
   var loginPromise;

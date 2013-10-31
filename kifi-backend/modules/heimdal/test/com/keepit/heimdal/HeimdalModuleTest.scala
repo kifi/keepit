@@ -1,10 +1,10 @@
-package com.keepit.eliza
+package com.keepit.heimdal
 
 import com.keepit.common.zookeeper._
 import com.keepit.common.net._
 import com.keepit.common.controller._
 import com.keepit.common.logging.Logging
-import com.keepit.test.DeprecatedElizaApplication
+import com.keepit.test.DeprecatedHeimdalApplication
 import org.specs2.mutable.Specification
 import play.api.Play.current
 import play.api.mvc.Controller
@@ -15,20 +15,20 @@ import net.spy.memcached.MemcachedClient
 import com.keepit.inject.ApplicationInjector
 import scala.reflect.ManifestFactory.classType
 
-class ElizaModuleTest extends Specification with Logging with ApplicationInjector {
+class HeimdalModuleTest extends Specification with Logging with ApplicationInjector {
 
   
-  private def isElizaController(clazz: Class[_]): Boolean = {
-    classOf[ElizaServiceController] isAssignableFrom clazz
+  private def isHeimdalController(clazz: Class[_]): Boolean = {
+    classOf[HeimdalServiceController] isAssignableFrom clazz
   }
 
   "Module" should {
     "instantiate controllers" in {
-      running(new DeprecatedElizaApplication().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)) {
+      running(new DeprecatedHeimdalApplication().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)
-        }.distinct.filter(isElizaController)
+        }.distinct.filter(isHeimdalController)
         for (c <- classes) inject(classType[Controller](c), injector)
         val bindings = injector.getAllBindings()
         val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor], classOf[akka.actor.Actor], classOf[MemcachedClient])

@@ -26,6 +26,9 @@ import com.keepit.search.user.UserQueryParser
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.social.BasicUser
 import com.keepit.search.user.UserHit
+import com.keepit.search.user.UserSearchResult
+import com.keepit.search.IdFilterCompressor
+
 
 class SearchController @Inject()(
     searchConfigManager: SearchConfigManager,
@@ -39,15 +42,15 @@ class SearchController @Inject()(
     val uris = searcher.search(query, Lang("en"))
     Ok(JsArray(uris.toSeq.map(JsNumber(_))))
   }
-  
-  def searchUsers(queryText: String, maxHits: Int = 10) = Action{ request =>
+
+  def searchUsers(queryText: String, maxHits: Int = 10, context: String = "") = Action{ request =>
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
-    val users = parser.parse(queryText) match {
-      case None => Array.empty[UserHit]
-      case Some(q) => searcher.search(q, maxHits)
+    val res = parser.parse(queryText) match {
+      case None => UserSearchResult(Array.empty[UserHit], context)
+      case Some(q) => searcher.search(q, maxHits, IdFilterCompressor.fromBase64ToSet(context))
     }
-    Ok(JsArray(users.map{u => Json.toJson(u)}))
+    Ok(Json.toJson(res))
   }
 
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action { request =>

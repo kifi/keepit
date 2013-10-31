@@ -36,8 +36,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   override def beforeStart(app: Application): Unit = {
     val conf = app.configuration
     val appName = conf.getString("application.name").get
-    val dbs = conf.getConfig("db").get.subKeys
-    println("starting app %s with dbs %s".format(appName, dbs.mkString(",")))
+    conf.getConfig("db") match {
+      case Some(dbs) => println(s"starting app $appName with dbs ${dbs.subKeys.mkString(",")}")
+      case None => println(s"starting app $appName without db")
+    }
+
   }
 
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
