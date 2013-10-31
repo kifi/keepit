@@ -184,7 +184,7 @@ case class HttpClientImpl(
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
-        remoteLeader = remoteLeader.toString,
+        remoteLeader = remoteLeader,
         result = "success",
         query = request.queryString,
         remoteServiceType = remoteInstance.map(_.remoteService.serviceType.shortName).getOrElse(null),
