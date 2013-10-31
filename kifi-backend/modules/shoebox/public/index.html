@@ -64,7 +64,7 @@
       </h3>
 			<div id="collections-list">
 				<div class="antiscroll-inner">
-          <h3 class="collection {{newClass}}" data-template data-id="{{id}}" data-name="{{name}}" style="display:none">
+          <h3 class="collection" data-template data-id="{{id}}" data-name="{{name}}" style="display:none">
 						<a href="tag/{{id}}">
               <span class="tag-icon"></span>
 							<span class="view-name">{{name}}</span>
@@ -74,6 +74,15 @@
 					</h3>
 				</div>
 			</div>
+      <div id="tag-new-template" style="display:none">
+        <h3 class="collection tag-new" data-name="{{name}}">
+          <a href="javascript:void(0)">
+            <span class="tag-create"></span>
+            <div class="caption">Add a new tag:</div>
+            <span class="view-name">{{name}}</span>
+          </a>
+        </h3>
+      </div>
 			<menu id="coll-menu">
 				<li><a class="coll-rename" href="javascript:">Rename</a></li>
 				<li><a class="coll-remove" href="javascript:">Remove</a></li>

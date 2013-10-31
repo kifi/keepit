@@ -1130,6 +1130,8 @@ $(function() {
     });
   }
 
+	var newTagTemplate = Handlebars.compile($('#tag-new-template').html());
+
   function updateTags(tags) {
     if (!tags) {
       tags = Object.keys(collections).map(function(key) {
@@ -1144,12 +1146,17 @@ $(function() {
       tags = filterTags(tags, val);
     }
 
+    var $inner = $collList.find(".antiscroll-inner");
+    $inner.empty();
     collTmpl.render(tags);
 
     if (val) {
       var matched = getTagByName(val);
       if (!matched.length) {
-        collTmpl.append({newClass: 'tag-new', id: null, name: val, keeps: 'new'});
+        var newTagHtml = newTagTemplate({
+          name: val
+        });
+        $inner.append(newTagHtml);
       }
 
       var highlighted = false;
