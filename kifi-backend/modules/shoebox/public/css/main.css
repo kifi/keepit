@@ -98,6 +98,7 @@ h3.collection {position: relative; white-space: nowrap}
 .tag-icon {display:inline-block; width: 14px; height: 16px; background-size: auto 16px; vertical-align: middle; margin-right: 4px}
 .tag-icon {background-image: url(../img/tag-icon-gray.png)}
 .collection.active .tag-icon {background-image: url(../img/tag-icon-white.png)}
+.collection.renaming .tag-icon {background-image: url(../img/tag-icon-gray.png)}
 .coll-tri {position: absolute; top: 0; bottom: 0; right: 0; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer}
 .active>.coll-tri {background-color: #b8c5d2}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
@@ -657,8 +658,9 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .my-keeps>a>.view-name::before,
   .my-friends>a>.view-name::before {background-image: url(../img/nav-icons.2x.png)}
   .tag-icon {background-image: url(../img/tag-icon-gray.2x.png)}
-  #collections input {background-image: url(../img/tag-icon-blue.2x.png)}
+  .collection-new input {background-image: url(../img/tag-icon-blue.2x.png)}
   .collection.active .tag-icon {background-image: url(../img/tag-icon-white.2x.png)}
+  .collection.renaming .tag-icon {background-image: url(../img/tag-icon-gray.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}
   .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
