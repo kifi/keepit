@@ -555,11 +555,12 @@ footer {
   font-size: 14px;
   line-height: 18px;
   color: #515151;
-  padding-bottom: 50px;
+  padding-bottom: 20px;
 }
 /* finalize new account */
 .signup-2 {
   text-align: center;
+  padding-bottom: 10px;
 }
 .signup > .signup-2 {
   visibility: hidden;
@@ -865,16 +866,13 @@ footer {
   transform: none;
 }
 .finalizing .terms {
-  -webkit-transform: translate(0, 106px);
-  -moz-transform: translate(0, 106px);
-  -o-transform: translate(0, 106px);
-  -ms-transform: translate(0, 106px);
-  transform: translate(0, 106px);
-  -webkit-transition: -webkit-transform 0.24s ease-out;
-  -moz-transition: -moz-transform 0.24s ease-out;
-  -o-transition: -o-transform 0.24s ease-out;
-  -ms-transition: -ms-transform 0.24s ease-out;
-  transition: transform 0.24s ease-out;
+  opacity: 0;
+  visibility: hidden;
+  -webkit-transition: opacity 0.12s linear, visibility 0 0.12s;
+  -moz-transition: opacity 0.12s linear, visibility 0 0.12s;
+  -o-transition: opacity 0.12s linear, visibility 0 0.12s;
+  -ms-transition: opacity 0.12s linear, visibility 0 0.12s;
+  transition: opacity 0.12s linear, visibility 0 0.12s;
 }
 /* dialogs */
 .dialog {
