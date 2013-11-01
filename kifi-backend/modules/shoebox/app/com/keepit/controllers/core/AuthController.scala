@@ -521,18 +521,13 @@ class AuthController @Inject() (
     }
   }
 
-  def resetPasswordPage() = Action { implicit request =>
-    Ok(views.html.website.resetPassword(email = request.flash.get("email")))
-  }
-
-
   // todo(andrew): Send reset email to ALL verified email addresses of an account (unless none, in which case, to one)
-  def resetPassword() = Action { implicit request =>
-    val formEmailOpt: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("email")).flatMap(_.headOption)
-    val jsonEmailOpt: Option[String] = request.body.asJson.flatMap(_.asOpt[JsObject]).map(o => (o \ "email").as[JsString].value)
-    formEmailOpt orElse jsonEmailOpt map { emailAddr =>
+
+  def resetPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doResetPassword(_), unauthenticatedAction = doResetPassword(_))
+  def doResetPassword(implicit request: Request[JsValue]): Result = {
+    (request.body \ "email").asOpt[JsString] map { emailAddr =>
       db.readWrite { implicit s =>
-        emailRepo.getByAddressOpt(emailAddr).map(emailRepo.saveWithVerificationCode).map { email =>
+        emailRepo.getByAddressOpt(emailAddr.value).map(emailRepo.saveWithVerificationCode).map { email =>
           postOffice.sendMail(ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(GenericEmailAddress(email.address)),
@@ -544,10 +539,6 @@ class AuthController @Inject() (
           email
         }
       } match {
-        case Some(email) if formEmailOpt.isDefined =>
-          Redirect(routes.AuthController.resetPasswordPage()).flashing("email" -> email.address)
-        case None if formEmailOpt.isDefined =>
-          Redirect(routes.AuthController.resetPasswordPage())
         case Some(email) =>
           Ok(Json.obj("success" -> true))
         case None =>
