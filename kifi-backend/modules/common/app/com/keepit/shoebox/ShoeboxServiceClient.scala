@@ -37,6 +37,7 @@ import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.scraper.HttpRedirect
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -65,6 +66,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
   def getBookmarksChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Bookmark]]
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]]
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Bookmark]]
+  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]]
+  def saveBookmark(bookmark:Bookmark): Future[Bookmark]
   def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiments: Future[Seq[SearchConfigExperiment]]
@@ -88,6 +92,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
   def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI):Future[NormalizedURI]
+  def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect):Future[NormalizedURI]
+  def getProxy(url:String):Future[Option[HttpProxy]]
+  def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -172,6 +179,24 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getBookmarkByUriAndUser(uriId, userId)).map { r =>
           Json.fromJson[Option[Bookmark]](r.json).get
       }
+    }
+  }
+
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Bookmark]] = {
+    call(Shoebox.internal.getBookmarksByUriWithoutTitle(uriId)).map { r =>
+      r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
+    }
+  }
+
+  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]] = {
+    call(Shoebox.internal.getLatestBookmark(uriId)).map { r =>
+      Json.fromJson[Option[Bookmark]](r.json).get
+    }
+  }
+
+  def saveBookmark(bookmark: Bookmark): Future[Bookmark] = {
+    call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark)).map { r =>
+      Json.fromJson[Bookmark](r.json).get
     }
   }
 
@@ -509,6 +534,24 @@ class ShoeboxServiceClientImpl @Inject() (
   def saveNormalizedURI(uri:NormalizedURI): Future[NormalizedURI] = {
     call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri)).map { r =>
       r.json.as[NormalizedURI]
+    }
+  }
+
+  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = {
+    call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect)))).map { r =>
+      r.json.as[NormalizedURI]
+    }
+  }
+
+  def getProxy(url:String):Future[Option[HttpProxy]] = {
+    call(Shoebox.internal.getProxy(url)).map { r =>
+      r.json.as[Option[HttpProxy]]
+    }
+  }
+
+  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = {
+    call(Shoebox.internal.isUnscrapable(url, destinationUrl)).map { r =>
+      r.json.as[Boolean]
     }
   }
 }

@@ -16,7 +16,7 @@ trait EmailAddressRepo extends Repo[EmailAddress] {
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[EmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
-  def verifyByCode(verificationCode: String, clear: Boolean = false)(implicit session: RWSession): Boolean
+  def verifyByCode(verificationCode: String)(implicit session: RWSession): Option[Boolean]
   def saveWithVerificationCode(email: EmailAddress)(implicit session: RWSession): EmailAddress
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress]
 }
@@ -46,10 +46,16 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
     (for(f <- table if f.userId === userId && f.state =!= EmailAddressStates.INACTIVE) yield f).list
 
-  def verifyByCode(verificationCode: String, clear: Boolean = false)(implicit session: RWSession): Boolean = {
-    val q = table.filter(_.verificationCode === verificationCode)
-    if (clear) q.map(_.verificationCode).update(None)
-    q.map(e => e.verifiedAt ~ e.updatedAt ~ e.state).update((clock.now(), clock.now(), EmailAddressStates.VERIFIED)) > 0
+  // Some(true) means UNVERIFIED -> VERIFIED. Some(false) means already VERIFIED. None means no such code.
+  def verifyByCode(verificationCode: String)(implicit session: RWSession): Option[Boolean] = {
+    val now = clock.now()
+    table.filter(e => e.verificationCode === verificationCode && e.state =!= EmailAddressStates.UNVERIFIED)
+      .map(e => e.verifiedAt ~ e.updatedAt ~ e.state).update((now, now, EmailAddressStates.VERIFIED)) match {
+      case count if count > 0 =>
+        Some(true)
+      case _ =>
+        getByCode(verificationCode).map(_ => false)
+    }
   }
 
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress] = {

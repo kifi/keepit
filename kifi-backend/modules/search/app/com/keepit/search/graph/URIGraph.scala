@@ -17,6 +17,7 @@ trait URIGraph {
   def getCollectionSearcher(): CollectionSearcher
   def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser
   def close(): Unit
+  def backup(): Unit
 }
 
 @Singleton
@@ -44,6 +45,11 @@ class URIGraphImpl @Inject()(
   def close() {
     collectionIndexer.close()
     uriGraphIndexer.close()
+  }
+
+  def backup() {
+    collectionIndexer.backup()
+    uriGraphIndexer.backup()
   }
 
   def getURIGraphSearcher(): URIGraphSearcher = {

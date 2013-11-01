@@ -3,7 +3,7 @@ package com.keepit.search.comment
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.search.graph.GraphTestHelper
-import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.index.{IndexDirectory, VolatileIndexDirectoryImpl, DefaultAnalyzer}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.inject._
 import com.keepit.test._
@@ -19,10 +19,10 @@ import scala.collection.JavaConversions._
 
 class CommentIndexerTest extends Specification with GraphTestHelper {
 
-  def mkCommentStore(commentStoreDir: RAMDirectory = new RAMDirectory): CommentStore = {
+  def mkCommentStore(commentStoreDir: IndexDirectory = new VolatileIndexDirectoryImpl()): CommentStore = {
     new CommentStore(commentStoreDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
-  def mkCommentIndexer(commentDir: RAMDirectory = new RAMDirectory, commentStore: CommentStore = mkCommentStore()): CommentIndexer = {
+  def mkCommentIndexer(commentDir: IndexDirectory = new VolatileIndexDirectoryImpl(), commentStore: CommentStore = mkCommentStore()): CommentIndexer = {
     new CommentIndexer(commentDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), commentStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 

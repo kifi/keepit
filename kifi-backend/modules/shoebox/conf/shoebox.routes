@@ -45,11 +45,9 @@ POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.
 
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 
-GET     /resetPassword              @com.keepit.controllers.core.AuthController.resetPasswordPage()
-POST    /resetPassword              @com.keepit.controllers.core.AuthController.resetPassword()
-
-GET     /setPassword/:code          @com.keepit.controllers.core.AuthController.setNewPasswordPage(code: String)
-POST    /setPassword/:code          @com.keepit.controllers.core.AuthController.setNewPassword(code: String)
+POST    /password/forgot            @com.keepit.controllers.core.AuthController.forgotPassword()
+GET     /password/:code             @com.keepit.controllers.core.AuthController.setPasswordPage(code: String)
+POST    /password/set               @com.keepit.controllers.core.AuthController.setPassword()
 
 POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
@@ -380,6 +378,9 @@ GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.sh
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Id[User])
 GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.shoebox.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
+GET     /internal/shoebox/database/getBookmarksByUriWithoutTitle @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])
+GET     /internal/shoebox/database/getLatestBookmark  @com.keepit.controllers.shoebox.ShoeboxController.getLatestBookmark(uriId: Id[NormalizedURI])
+POST    /internal/shoebox/database/saveBookmark       @com.keepit.controllers.shoebox.ShoeboxController.saveBookmark
 GET     /internal/shoebox/database/commentRecipientIds  @com.keepit.controllers.shoebox.ShoeboxController.getCommentRecipientIds(commentId: Id[Comment])
 POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
@@ -413,5 +414,8 @@ POST    /internal/geckoboard/refresh                  @com.keepit.reports.Geckob
 POST     /internal/shoebox/database/getScrapeInfo     @com.keepit.controllers.shoebox.ShoeboxController.getScrapeInfo
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.shoebox.ShoeboxController.saveScrapeInfo
 POST     /internal/shoebox/database/saveNormalizedURI @com.keepit.controllers.shoebox.ShoeboxController.saveNormalizedURI
+POST     /internal/shoebox/database/recordPermanentRedirect @com.keepit.controllers.shoebox.ShoeboxController.recordPermanentRedirect
+GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.shoebox.ShoeboxController.getProxy(url:String)
+GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])
 
 ->  / common.Routes

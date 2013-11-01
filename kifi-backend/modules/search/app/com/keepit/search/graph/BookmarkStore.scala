@@ -4,20 +4,18 @@ import com.keepit.common.db._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.model._
 import com.keepit.model.BookmarkStates._
-import com.keepit.search.Lang
-import com.keepit.search.index.{DefaultAnalyzer, FieldDecoder, Indexable, Indexer}
+import com.keepit.search.index._
 import java.io.StringReader
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.store.Directory
-import org.apache.lucene.util.Version
 import com.google.inject.Inject
 import BookmarkRecordSerializer._
 import scala.collection.mutable.ArrayBuffer
 import org.apache.lucene.util.BytesRef
 import org.joda.time.DateTime
 import com.keepit.shoebox.ShoeboxServiceClient
+import scala.Some
 
 
 object BookmarkStoreFields {
@@ -32,7 +30,7 @@ object BookmarkStore {
 }
 
 class BookmarkStore @Inject() (
-    indexDirectory: Directory,
+    indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient)

@@ -4,14 +4,12 @@ import com.keepit.common.db.{Id,SequenceNumber}
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.model.Phrase
-import com.keepit.search.index.Indexer
-import com.keepit.search.index.Indexable
+import com.keepit.search.index.{IndexDirectory, Indexer, Indexable}
 import com.keepit.search.Lang
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.store.Directory
 import org.apache.lucene.util.PriorityQueue
 import com.google.inject.{Inject, Singleton}
 import scala.slick.util.CloseableIterator
@@ -147,13 +145,13 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
   }
 }
 
-abstract class PhraseIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase](indexDirectory, indexWriterConfig) {
+abstract class PhraseIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase](indexDirectory, indexWriterConfig) {
   def reload(): Unit
   def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true): Unit
 }
 
 class PhraseIndexerImpl(
-  indexDirectory: Directory,
+  indexDirectory: IndexDirectory,
   indexWriterConfig: IndexWriterConfig,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {

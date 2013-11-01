@@ -2,23 +2,15 @@ package com.keepit.search.user
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
-import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.index.{VolatileIndexDirectoryImpl, IndexDirectory, DefaultAnalyzer}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.inject._
 import com.keepit.test._
 import org.specs2.mutable._
-import play.api.Play.current
 import play.api.test.Helpers._
 import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
-import org.apache.lucene.search.TermQuery
-import org.apache.lucene.index.Term
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
-import com.google.inject.{Inject}
-import collection.JavaConversions._
-import com.keepit.social.BasicUser
-import org.apache.lucene.util.BytesRef
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.IdFilterCompressor
 
@@ -40,7 +32,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     usersWithId
   }
 
-  def mkUserIndexer(dir: RAMDirectory = new RAMDirectory): UserIndexer = {
+  def mkUserIndexer(dir: IndexDirectory = new VolatileIndexDirectoryImpl): UserIndexer = {
     new UserIndexer(dir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 

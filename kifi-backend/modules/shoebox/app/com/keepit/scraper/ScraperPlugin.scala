@@ -76,20 +76,19 @@ class ScraperPluginImpl @Inject() (
 
   override def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
     actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
-    // scraperClient.asyncScrape(uri) // TODO
+    // scraperClient.asyncScrape(uri)
   }
 
 
   override def scrapeBasicArticle(url: String, customExtractor: Option[Extractor] = None): Future[Option[BasicArticle]] = {
-    readOnlyActor.ref.ask(ScrapeBasicArticle(url, customExtractor))(1 minutes).mapTo[Option[BasicArticle]]
-    // TODO
-//    customExtractor match {
-//      case Some(custom) => {
-//        readOnlyActor.ref.ask(ScrapeBasicArticle(url, customExtractor))(1 minutes).mapTo[Option[BasicArticle]]
-//      }
-//      case None => {
-//        scraperClient.getBasicArticle(url)
-//      }
-//    }
+    // readOnlyActor.ref.ask(ScrapeBasicArticle(url, customExtractor))(1 minutes).mapTo[Option[BasicArticle]]
+    customExtractor match {
+      case Some(custom) => {
+        readOnlyActor.ref.ask(ScrapeBasicArticle(url, customExtractor))(1 minutes).mapTo[Option[BasicArticle]] // TODO
+      }
+      case None => {
+        scraperClient.getBasicArticle(url)
+      }
+    }
   }
 }

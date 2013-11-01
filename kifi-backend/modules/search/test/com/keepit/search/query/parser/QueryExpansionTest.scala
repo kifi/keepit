@@ -24,6 +24,7 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.query.TextQuery
 
 class QueryExpansionTest extends Specification {
 
@@ -36,73 +37,96 @@ class QueryExpansionTest extends Specification {
     }
   }
 
+  private[this] val p = TextQuery.personalQueryTieBreakerMultiplier
+  private[this] val r = TextQuery.regularQueryTieBreakerMultiplier
+
   "QueryExpansion" should {
     "expand queries (with no concat)" in new QueryParserScope(concatBoostValue = 0.0f) {
       parser.parse("super conductivity").get.toString ===
-        "(t:super | c:super | title:super | site_keywords:super | ts:super | cs:super | title_stemmed:super)~0.5 "+
-        "(t:conductivity | c:conductivity | title:conductivity | site_keywords:conductivity | ts:conductivity | cs:conductivity | title_stemmed:conductivity)~0.5"
+        s"TextQuery((title:super | title_stemmed:super)~$p (t:super | c:super | site_keywords:super | ts:super | cs:super)~$r ()) "+
+        s"TextQuery((title:conductivity | title_stemmed:conductivity)~$p (t:conductivity | c:conductivity | site_keywords:conductivity | ts:conductivity | cs:conductivity)~$r ())"
 
       parser.parse("Electromagnetically induced transparency").get.toString ===
-        "(t:electromagnetically | c:electromagnetically | title:electromagnetically | site_keywords:electromagnetically |"+
-        " ts:electromagnet | cs:electromagnet | title_stemmed:electromagnet)~0.5 "+
-        "(t:induced | c:induced | title:induced | site_keywords:induced |"+
-        " ts:induce | cs:induce | title_stemmed:induce)~0.5 "+
-        "(t:transparency | c:transparency | title:transparency | site_keywords:transparency |"+
-        " ts:transparency | cs:transparency | title_stemmed:transparency)~0.5"
+        s"TextQuery((title:electromagnetically | title_stemmed:electromagnet)~$p (t:electromagnetically | c:electromagnetically | site_keywords:electromagnetically | ts:electromagnet | cs:electromagnet)~$r ()) "+
+        s"TextQuery((title:induced | title_stemmed:induce)~$p (t:induced | c:induced | site_keywords:induced | ts:induce | cs:induce)~$r ()) "+
+        s"TextQuery((title:transparency | title_stemmed:transparency)~$p (t:transparency | c:transparency | site_keywords:transparency | ts:transparency | cs:transparency)~$r ())"
 
       parser.parse("bose-einstein condensate").get.toString ===
-        """(t:"bose einstein" | c:"bose einstein" | title:"bose einstein" |"""+
-        """ ts:"bose einstein" | cs:"bose einstein" | title_stemmed:"bose einstein")~0.5 """+
-        """(t:condensate | c:condensate | title:condensate | site_keywords:condensate | """+
-        """ts:condensate | cs:condensate | title_stemmed:condensate)~0.5"""
+        "TextQuery("+
+        s"""(title:"bose einstein" | title_stemmed:"bose einstein")~$p """+
+        s"""(t:"bose einstein" | c:"bose einstein" | ts:"bose einstein" | cs:"bose einstein")~$r """ +
+        "()) "+
+        "TextQuery("+
+        s"""(title:condensate | title_stemmed:condensate)~$p (t:condensate | c:condensate | site_keywords:condensate | ts:condensate | cs:condensate)~$r """+
+        "())"
 
       parser.parse("\"Spin-statistics\" theorem").get.toString ===
-        """(t:"spin statistics" | c:"spin statistics" | title:"spin statistics")~0.5 """+
-        """(t:theorem | c:theorem | title:theorem | site_keywords:theorem | ts:theorem | cs:theorem | title_stemmed:theorem)~0.5"""
+        "TextQuery("+
+        s"""(title:"spin statistics")~$p (t:"spin statistics" | c:"spin statistics")~$r """+
+        "()) "+
+        "TextQuery("+
+        s"""(title:theorem | title_stemmed:theorem)~$p (t:theorem | c:theorem | site_keywords:theorem | ts:theorem | cs:theorem)~$r """ +
+        "())"
     }
 
     "expand queries (with concat)" in new QueryParserScope(concatBoostValue = 0.5f) {
       parser.parse("super conductivity").get.toString ===
-        "(t:super | c:super | title:super | site_keywords:super |"+
-        " ts:super | cs:super | title_stemmed:super |"+
-        " t:superconductivity^0.5 | c:superconductivity^0.5 | title:superconductivity^0.5 | site_keywords:superconductivity^0.5 |"+
-        " ts:superconductivity^0.5 | cs:superconductivity^0.5 | title_stemmed:superconductivity^0.5)~0.5 "+
-        "(t:conductivity | c:conductivity | title:conductivity | site_keywords:conductivity |"+
-        " ts:conductivity | cs:conductivity | title_stemmed:conductivity |"+
-        " t:superconductivity^0.5 | c:superconductivity^0.5 | title:superconductivity^0.5 | site_keywords:superconductivity^0.5 |"+
-        " ts:superconductivity^0.5 | cs:superconductivity^0.5 | title_stemmed:superconductivity^0.5)~0.5"
+        "TextQuery("+
+        s"(title:super | title_stemmed:super |"+
+        s" title:superconductivity^0.5 | title_stemmed:superconductivity^0.5)~$p "+
+        s"(t:super | c:super | site_keywords:super | ts:super | cs:super |"+
+        s" t:superconductivity^0.5 | c:superconductivity^0.5 | site_keywords:superconductivity^0.5 | ts:superconductivity^0.5 | cs:superconductivity^0.5)~$r "+
+        "()) "+
+        "TextQuery("+
+        s"(title:conductivity | title_stemmed:conductivity |"+
+        s" title:superconductivity^0.5 | title_stemmed:superconductivity^0.5)~$p " +
+        s"(t:conductivity | c:conductivity | site_keywords:conductivity | ts:conductivity | cs:conductivity |"+
+        s" t:superconductivity^0.5 | c:superconductivity^0.5 | site_keywords:superconductivity^0.5 | ts:superconductivity^0.5 | cs:superconductivity^0.5)~$r "+
+        "())"
 
       parser.parse("Electromagnetically induced transparency").get.toString ===
-        "(t:electromagnetically | c:electromagnetically | title:electromagnetically | site_keywords:electromagnetically |"+
-        " ts:electromagnet | cs:electromagnet | title_stemmed:electromagnet |"+
-        " t:electromagneticallyinduced^0.5 | c:electromagneticallyinduced^0.5 | title:electromagneticallyinduced^0.5 | site_keywords:electromagneticallyinduced^0.5 |"+
-        " ts:electromagneticallyinduce^0.5 | cs:electromagneticallyinduce^0.5 | title_stemmed:electromagneticallyinduce^0.5)~0.5 "+
-        "(t:induced | c:induced | title:induced | site_keywords:induced |"+
-        " ts:induce | cs:induce | title_stemmed:induce |"+
-        " t:electromagneticallyinduced^0.5 | c:electromagneticallyinduced^0.5 | title:electromagneticallyinduced^0.5 | site_keywords:electromagneticallyinduced^0.5 |"+
-        " ts:electromagneticallyinduce^0.5 | cs:electromagneticallyinduce^0.5 | title_stemmed:electromagneticallyinduce^0.5 |"+
-        " t:inducedtransparency^0.5 | c:inducedtransparency^0.5 | title:inducedtransparency^0.5 | site_keywords:inducedtransparency^0.5 |"+
-        " ts:inducedtransparency^0.5 | cs:inducedtransparency^0.5 | title_stemmed:inducedtransparency^0.5)~0.5 "+
-        "(t:transparency | c:transparency | title:transparency | site_keywords:transparency |"+
-        " ts:transparency | cs:transparency | title_stemmed:transparency |"+
-        " t:inducedtransparency^0.5 | c:inducedtransparency^0.5 | title:inducedtransparency^0.5 | site_keywords:inducedtransparency^0.5 |"+
-        " ts:inducedtransparency^0.5 | cs:inducedtransparency^0.5 | title_stemmed:inducedtransparency^0.5)~0.5"
+        "TextQuery("+
+        s"(title:electromagnetically | title_stemmed:electromagnet | title:electromagneticallyinduced^0.5 | title_stemmed:electromagneticallyinduce^0.5)~$p "+
+        s"(t:electromagnetically | c:electromagnetically | site_keywords:electromagnetically | ts:electromagnet | cs:electromagnet |"+
+        s" t:electromagneticallyinduced^0.5 | c:electromagneticallyinduced^0.5 | site_keywords:electromagneticallyinduced^0.5 |"+
+        s" ts:electromagneticallyinduce^0.5 | cs:electromagneticallyinduce^0.5)~$r "+
+        "()) "+
+        "TextQuery("+
+        s"(title:induced | title_stemmed:induce |"+
+        s" title:electromagneticallyinduced^0.5 | title_stemmed:electromagneticallyinduce^0.5 | title:inducedtransparency^0.5 | title_stemmed:inducedtransparency^0.5)~$p "+
+        s"(t:induced | c:induced | site_keywords:induced | ts:induce | cs:induce |"+
+        s" t:electromagneticallyinduced^0.5 | c:electromagneticallyinduced^0.5 | site_keywords:electromagneticallyinduced^0.5 | ts:electromagneticallyinduce^0.5 | cs:electromagneticallyinduce^0.5 |"+
+        s" t:inducedtransparency^0.5 | c:inducedtransparency^0.5 | site_keywords:inducedtransparency^0.5 | ts:inducedtransparency^0.5 | cs:inducedtransparency^0.5)~$r "+
+        "()) "+
+        "TextQuery("+
+        s"(title:transparency | title_stemmed:transparency | title:inducedtransparency^0.5 | title_stemmed:inducedtransparency^0.5)~$p "+
+        s"(t:transparency | c:transparency | site_keywords:transparency | ts:transparency | cs:transparency |"+
+        s" t:inducedtransparency^0.5 | c:inducedtransparency^0.5 | site_keywords:inducedtransparency^0.5 | ts:inducedtransparency^0.5 | cs:inducedtransparency^0.5)~$r "+
+        "())"
 
       parser.parse("bose-einstein condensate").get.toString ===
-        """(t:"bose einstein" | c:"bose einstein" | title:"bose einstein" |"""+
-        """ ts:"bose einstein" | cs:"bose einstein" | title_stemmed:"bose einstein" |"""+
-        """ t:boseeinstein^0.5 | c:boseeinstein^0.5 | title:boseeinstein^0.5 | site_keywords:boseeinstein^0.5 |"""+
-        """ ts:boseeinstein^0.5 | cs:boseeinstein^0.5 | title_stemmed:boseeinstein^0.5 |"""+
-        """ t:boseeinsteincondensate^0.5 | c:boseeinsteincondensate^0.5 | title:boseeinsteincondensate^0.5 | site_keywords:boseeinsteincondensate^0.5 |"""+
-        """ ts:boseeinsteincondensate^0.5 | cs:boseeinsteincondensate^0.5 | title_stemmed:boseeinsteincondensate^0.5)~0.5 """+
-        """(t:condensate | c:condensate | title:condensate | site_keywords:condensate |"""+
-        """ ts:condensate | cs:condensate | title_stemmed:condensate |"""+
-        """ t:boseeinsteincondensate^0.5 | c:boseeinsteincondensate^0.5 | title:boseeinsteincondensate^0.5 | site_keywords:boseeinsteincondensate^0.5 |"""+
-        """ ts:boseeinsteincondensate^0.5 | cs:boseeinsteincondensate^0.5 | title_stemmed:boseeinsteincondensate^0.5)~0.5"""
+        "TextQuery("+
+        s"""(title:"bose einstein" | title_stemmed:"bose einstein" |"""+
+        s""" title:boseeinstein^0.5 | title_stemmed:boseeinstein^0.5 | title:boseeinsteincondensate^0.5 | title_stemmed:boseeinsteincondensate^0.5)~$p """+
+        s"""(t:"bose einstein" | c:"bose einstein" | ts:"bose einstein" | cs:"bose einstein" |"""+
+        s""" t:boseeinstein^0.5 | c:boseeinstein^0.5 | site_keywords:boseeinstein^0.5 | ts:boseeinstein^0.5 | cs:boseeinstein^0.5 |"""+
+        s""" t:boseeinsteincondensate^0.5 | c:boseeinsteincondensate^0.5 | site_keywords:boseeinsteincondensate^0.5 | ts:boseeinsteincondensate^0.5 | cs:boseeinsteincondensate^0.5)~$r """+
+        "()) "+
+        "TextQuery("+
+        s"""(title:condensate | title_stemmed:condensate | title:boseeinsteincondensate^0.5 | title_stemmed:boseeinsteincondensate^0.5)~$p """+
+        s"""(t:condensate | c:condensate | site_keywords:condensate | ts:condensate | cs:condensate |"""+
+        s""" t:boseeinsteincondensate^0.5 | c:boseeinsteincondensate^0.5 | site_keywords:boseeinsteincondensate^0.5 | ts:boseeinsteincondensate^0.5 | cs:boseeinsteincondensate^0.5)~$r """+
+        "())"
 
       parser.parse("\"Spin-statistics\" theorem").get.toString ===
-        """(t:"spin statistics" | c:"spin statistics" | title:"spin statistics")~0.5 """+
-        """(t:theorem | c:theorem | title:theorem | site_keywords:theorem | ts:theorem | cs:theorem | title_stemmed:theorem)~0.5"""
+        "TextQuery("+
+        s"""(title:"spin statistics")~$p """+
+        s"""(t:"spin statistics" | c:"spin statistics")~$r """+
+        "()) "+
+        s"TextQuery("+
+        s"""(title:theorem | title_stemmed:theorem)~$p """+
+        s"""(t:theorem | c:theorem | site_keywords:theorem | ts:theorem | cs:theorem)~$r """+
+        "())"
     }
   }
 }
