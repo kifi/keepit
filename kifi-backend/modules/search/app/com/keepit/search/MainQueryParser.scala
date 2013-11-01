@@ -76,7 +76,7 @@ class MainQueryParser(
             var i = index
             val end = index + length
             while (i < end) {
-              indexToTextQuery(i).addCollectionQuery(collectionId)
+              indexToTextQuery(i).addCollectionQuery(collectionId, 1.5f)
              i += 1
             }
           }

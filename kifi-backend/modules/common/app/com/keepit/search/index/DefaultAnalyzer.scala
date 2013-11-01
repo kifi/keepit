@@ -123,10 +123,10 @@ object DefaultAnalyzer {
   def forIndexingWithStemmer(lang: Lang): Analyzer = getAnalyzerWithStemmer(lang).map(_.withFilter[SymbolDecompounder]).getOrElse(forIndexing(lang))
 
   def forParsing: Analyzer = forParsing(Lang("en"))
-  def forParsing(lang: Lang): Analyzer = getAnalyzer(lang)
+  def forParsing(lang: Lang): Analyzer = getAnalyzer(lang).withFilter[SymbolDecompounder]
 
   def forParsingWithStemmer: Analyzer = forParsingWithStemmer(Lang("en"))
-  def forParsingWithStemmer(lang: Lang): Analyzer = getAnalyzerWithStemmer(lang).getOrElse(forParsing(lang))
+  def forParsingWithStemmer(lang: Lang): Analyzer = getAnalyzerWithStemmer(lang).map(_.withFilter[SymbolDecompounder]).getOrElse(forParsing(lang))
 }
 
 class DefaultTokenizerFactory extends TokenizerFactory {
