@@ -4,7 +4,6 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.model.{User, NormalizedURI}
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.model.Collection
 
 case class ArticleHit(uriId: Id[NormalizedURI], score: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[Id[User]], bookmarkCount: Int)
 
