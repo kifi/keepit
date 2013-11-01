@@ -41,15 +41,14 @@ trait QueryExpansion extends QueryParser {
       }
     }
 
-    def addSiteQuery(baseQuery: DisjunctionMaxQuery, queryText: String, query: Query) {
+    def addSiteQuery(baseQuery: TextQuery, queryText: String, query: Query) {
       (if (Domain.isValid(queryText)) Option(SiteQuery(queryText)) else None).orElse{
         query match {
           case query: TermQuery => Option(copyFieldQuery(query, "site_keywords"))
           case _ => None
         }
       }.foreach{ q =>
-        q.setBoost(siteBoost)
-        baseQuery.add(q)
+        baseQuery.addRegularQuery(q, siteBoost)
       }
     }
 
@@ -63,9 +62,9 @@ trait QueryExpansion extends QueryParser {
 
     super.getFieldQuery("t", queryText, quoted).foreach{ query =>
       textQuery.terms = extractTerms(query)
-      textQuery.add(query)
-      textQuery.add(copyFieldQuery(query, "c"))
-      textQuery.add(copyFieldQuery(query, "title"))
+      textQuery.addRegularQuery(query)
+      textQuery.addRegularQuery(copyFieldQuery(query, "c"))
+      textQuery.addPersonalQuery(copyFieldQuery(query, "title"))
       addSiteQuery(textQuery, queryText, query)
       if (isNumericTermQuery(query) && textQuery.getBoost() >= 1.0f) textQuery.setBoost(0.5f)
     }
@@ -73,19 +72,19 @@ trait QueryExpansion extends QueryParser {
     getStemmedFieldQuery("ts", queryText).foreach{ query =>
       textQuery.stems = extractTerms(query)
       if(!quoted) {
-        textQuery.add(query)
-        textQuery.add(copyFieldQuery(query, "cs"))
-        textQuery.add(copyFieldQuery(query, "title_stemmed"))
+        textQuery.addRegularQuery(query)
+        textQuery.addRegularQuery(copyFieldQuery(query, "cs"))
+        textQuery.addPersonalQuery(copyFieldQuery(query, "title_stemmed"))
       }
     }
-    if (textQuery.iterator().hasNext) Some(textQuery) else None
+    if (textQuery.isEmpty) None else Some(textQuery)
   }
 
   private def extractTerms(query: Query): Array[Term] = {
     query match {
       case q: TermQuery => Array(q.getTerm)
       case q: PhraseQuery => q.getTerms
-      case _ => TextQuery.noTerms
+      case _ => Array.empty[Term]
     }
   }
 
@@ -94,14 +93,14 @@ trait QueryExpansion extends QueryParser {
 
     textQuery.concatStems += t2
 
-    textQuery.add(new TermQuery(new Term("t", t1)), concatBoost)
-    textQuery.add(new TermQuery(new Term("c", t1)), concatBoost)
-    textQuery.add(new TermQuery(new Term("title", t1)), concatBoost)
-    textQuery.add(new TermQuery(new Term("site_keywords", t1)), concatBoost)
+    textQuery.addRegularQuery(new TermQuery(new Term("t", t1)), concatBoost)
+    textQuery.addRegularQuery(new TermQuery(new Term("c", t1)), concatBoost)
+    textQuery.addRegularQuery(new TermQuery(new Term("site_keywords", t1)), concatBoost)
+    textQuery.addPersonalQuery(new TermQuery(new Term("title", t1)), concatBoost)
 
-    textQuery.add(new TermQuery(new Term("ts", t2)), concatBoost)
-    textQuery.add(new TermQuery(new Term("cs", t2)), concatBoost)
-    textQuery.add(new TermQuery(new Term("title_stemmed", t2)), concatBoost)
+    textQuery.addRegularQuery(new TermQuery(new Term("ts", t2)), concatBoost)
+    textQuery.addRegularQuery(new TermQuery(new Term("cs", t2)), concatBoost)
+    textQuery.addPersonalQuery(new TermQuery(new Term("title_stemmed", t2)), concatBoost)
   }
 
   private def concat(q1: TextQuery, q2: TextQuery): (String, String) = {
