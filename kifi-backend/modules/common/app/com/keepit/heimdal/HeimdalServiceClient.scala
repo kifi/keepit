@@ -69,7 +69,7 @@ class HeimdalClientActor @Inject() (
         }
       }
     case FlushEventQueueAndClose =>
-      closing = false
+      closing = true
       flush()
     case FlushEventQueue =>
       flush()
