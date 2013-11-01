@@ -26,6 +26,7 @@ class ArticleSearchResultTest extends Specification with ShoeboxTestInjector {
               uuid = ExternalId[ArticleSearchResult](),
               pageNumber = 3,
               millisPassed = 23,
+              collections = Set(1L,10L,100L),
               svVariance = 1.0f)
          val json = new ArticleSearchResultSerializer().writes(res)
          val deserialized = new ArticleSearchResultSerializer().reads(json).get

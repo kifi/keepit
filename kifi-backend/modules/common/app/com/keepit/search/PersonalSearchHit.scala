@@ -25,4 +25,5 @@ case class PersonalSearchResultPacket(
   show: Boolean,
   experimentId: Option[Id[SearchConfigExperiment]],
   context: String,
+  collections: Seq[ExternalId[Collection]] = Nil,
   expertNames: Seq[String] = Nil)
