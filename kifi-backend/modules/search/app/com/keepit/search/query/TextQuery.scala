@@ -18,11 +18,16 @@ import java.util.{Set => JSet}
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
 
+object TextQuery {
+  val personalQueryTieBreakerMultiplier = 0.5f
+  val regularQueryTieBreakerMultiplier = 0.5f
+}
 
 class TextQuery extends Query {
+  import TextQuery._
 
-  private var personalQuery: Query = new DisjunctionMaxQuery(0.3f)
-  private var regularQuery: Query = new DisjunctionMaxQuery(0.3f)
+  private var personalQuery: Query = new DisjunctionMaxQuery(personalQueryTieBreakerMultiplier)
+  private var regularQuery: Query = new DisjunctionMaxQuery(regularQueryTieBreakerMultiplier)
   private var semanticVectorQuery: Query = new DisjunctionMaxQuery(0.0f)
 
   var terms: Array[Term] = Array()
@@ -39,7 +44,7 @@ class TextQuery extends Query {
         disjunct.add(query)
         disjunct
       case _ => {
-        val disjunct = new DisjunctionMaxQuery(0.3f)
+        val disjunct = new DisjunctionMaxQuery(personalQueryTieBreakerMultiplier)
         disjunct.add(personalQuery)
         disjunct.add(query)
         disjunct
@@ -55,7 +60,7 @@ class TextQuery extends Query {
         disjunct.add(query)
         disjunct
       case _ => {
-        val disjunct = new DisjunctionMaxQuery(0.3f)
+        val disjunct = new DisjunctionMaxQuery(regularQueryTieBreakerMultiplier)
         disjunct.add(personalQuery)
         disjunct.add(query)
         disjunct
@@ -255,7 +260,7 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
         semanticScorer.score() * semanticBoost + semanticScoreBase
       } else {
         if (docP == doc) {
-          0.8f * semanticBoost + semanticScoreBase
+          0.9f * semanticBoost + semanticScoreBase
         } else {
           semanticScoreBase
         }

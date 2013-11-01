@@ -87,7 +87,7 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
   def score: Float = alignmentScore
 }
 
-class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float, localAlignment: LocalAlignment, nonPhraseWeight: Float = 0.5f) extends LocalAlignment with Logging {
+class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float, localAlignment: LocalAlignment, nonPhraseWeight: Float = 0.3f) extends LocalAlignment with Logging {
   private[this] val bufSize = phraseMatcher.maxLength
   private[this] var bufferedPos = -1
   private[this] var processedPos = -1
