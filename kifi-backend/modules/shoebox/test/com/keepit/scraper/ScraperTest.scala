@@ -7,7 +7,7 @@ import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.search.ArticleStore
-import com.keepit.test.ShoeboxTestInjector
+import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxTestInjector}
 import com.keepit.scraper.extractor.{ExtractorFactory, Extractor, TikaBasedExtractor}
 import org.specs2.mutable._
 import org.apache.http.HttpStatus
@@ -28,7 +28,8 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
     intervalDecrement = 2.0d, //hours
     initialBackoff = 1.0d, //hours
     maxBackoff = 12.0d, //hours
-    changeThreshold = 0.05
+    changeThreshold = 0.05,
+    disableScraperService = true // TODO
   )
 
   "Scraper" should {
@@ -364,7 +365,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
   def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher)(implicit injector: Injector) = {
     new Scraper(inject[Database], mockHttpFetcher, articleStore, mockExtractorFactory, config,
       inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[AirbrakeNotifier],
-      inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore, inject[Provider[NormalizationService]]) {
+      inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore, inject[Provider[NormalizationService]], inject[ScraperServiceClient]) {
 
     }
   }
