@@ -22,6 +22,7 @@ import com.keepit.model.UserExperiment
 import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsObject
+import com.keepit.scraper.HttpRedirect
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -172,6 +173,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val edges = for ((user, uris) <- edgesByUser; uri <- uris) yield (uri, user, uniqueTitle)
     saveBookmarksByEdges(edges, isPrivate, source)
   }
+
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Bookmark]] = ???
+
+  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]] = ???
+
+  def saveBookmark(bookmark: Bookmark): Future[Bookmark] = ???
 
   def getCollection(collectionId: Id[Collection]): Collection = {
     allCollections(collectionId)
@@ -401,4 +408,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = ???
 
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
+
+  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = ???
+
+  def getProxy(url: String): Future[Option[HttpProxy]] = ???
+
+  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
 }
