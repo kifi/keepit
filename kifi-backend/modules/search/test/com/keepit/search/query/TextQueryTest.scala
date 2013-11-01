@@ -125,14 +125,16 @@ class TextQueryTest extends Specification {
       q0.addPersonalQuery(new TermQuery(new Term("p", "xyz"))) //no hit
       q0.setSemanticBoost(1.0f)
       q0.addSemanticVectorQuery("sv", "mno")
-      indexer.getPersonalizedSearcher(Set(0L)).search(q0).take(2).map(_.id).toSet !== Set(3L, 4L)
+      indexer.getPersonalizedSearcher(Set(0L)).search(q0).map(_.score).toSet.size === 1 // all scores are same
 
       val q1 = new TextQuery
       q1.addRegularQuery(new TermQuery(new Term("c", "abc")))
       q1.addPersonalQuery(new TermQuery(new Term("p", "mno")))
       q1.setSemanticBoost(1.0f)
       q1.addSemanticVectorQuery("sv", "mno")
-      indexer.getPersonalizedSearcher(Set(0L)).search(q1).take(2).map(_.id).toSet === Set(3L, 4L)
+      val result = indexer.getPersonalizedSearcher(Set(0L)).search(q1)
+      result.map(_.score).toSet.size !== 1 // there are different scores
+      result.take(2).map(_.id).toSet === Set(3L, 4L)
     }
   }
 }
