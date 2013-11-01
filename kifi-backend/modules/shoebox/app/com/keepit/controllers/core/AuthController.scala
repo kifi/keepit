@@ -19,7 +19,7 @@ import play.api.data.Forms._
 import play.api.data._
 import play.api.data.validation.Constraints
 import play.api.http.HeaderNames
-import play.api.libs.json.{JsNumber, JsValue, Json}
+import play.api.libs.json.{JsNumber, JsObject, JsString, JsValue, Json}
 import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
@@ -528,23 +528,32 @@ class AuthController @Inject() (
 
   // todo(andrew): Send reset email to ALL verified email addresses of an account (unless none, in which case, to one)
   def resetPassword() = Action { implicit request =>
-    db.readWrite { implicit s =>
-      val emailOpt = request.body.asFormUrlEncoded.flatMap(_.get("email")).flatMap(_.headOption)
-      val verifiedEmailOpt = emailOpt.flatMap(emailRepo.getByAddressOpt(_)).map(emailRepo.saveWithVerificationCode)
-      verifiedEmailOpt map { email =>
-        postOffice.sendMail(ElectronicMail(
-          from = EmailAddresses.NOTIFICATIONS,
-          to = Seq(GenericEmailAddress(email.address)),
-          subject = "Reset your password",
-          htmlBody = s"You can set a new password by going to " +
-              s"$url${routes.AuthController.setNewPassword(email.verificationCode.get)}",
-          category = ElectronicMailCategory("reset_password")
-        ))
-        Redirect(routes.AuthController.resetPasswordPage()).flashing("email" -> email.address)
-      } getOrElse {
-        Redirect(routes.AuthController.resetPasswordPage())
+    val formEmailOpt: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("email")).flatMap(_.headOption)
+    val jsonEmailOpt: Option[String] = request.body.asJson.flatMap(_.asOpt[JsObject]).map(o => (o \ "email").as[JsString].value)
+    formEmailOpt orElse jsonEmailOpt map { emailAddr =>
+      db.readWrite { implicit s =>
+        emailRepo.getByAddressOpt(emailAddr).map(emailRepo.saveWithVerificationCode).map { email =>
+          postOffice.sendMail(ElectronicMail(
+            from = EmailAddresses.NOTIFICATIONS,
+            to = Seq(GenericEmailAddress(email.address)),
+            subject = "Reset your password",
+            htmlBody = "You can set a new password by going to " +
+                s"$url${routes.AuthController.setNewPassword(email.verificationCode.get)}",
+            category = ElectronicMailCategory("reset_password")
+          ))
+          email
+        }
+      } match {
+        case Some(email) if formEmailOpt.isDefined =>
+          Redirect(routes.AuthController.resetPasswordPage()).flashing("email" -> email.address)
+        case None if formEmailOpt.isDefined =>
+          Redirect(routes.AuthController.resetPasswordPage())
+        case Some(email) =>
+          Ok(Json.obj("success" -> true))
+        case None =>
+          Ok(Json.obj("error" -> "no_account"))
       }
-    }
+    } getOrElse BadRequest
   }
 
   def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = doUploadBinaryPicture(_), unauthenticatedAction = doUploadBinaryPicture(_))

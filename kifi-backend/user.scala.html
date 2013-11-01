@@ -232,7 +232,7 @@
 		        <td><span class="badge">@bookmark.id.get.id</span></td>
 		        <td>
 		          <input type="hidden" name="private_@{bookmark.id.get.id}" value="0" />
-  					  <center><input type="checkbox" id="private_@bookmark.id.get.id" name="private_@{bookmark.id.get.id}" value="1" @if(bookmark.isPrivate) {checked="checked"}"></input></center>
+              <center><input type="checkbox" id="private_@bookmark.id.get.id" name="private_@{bookmark.id.get.id}" value="1" @if(bookmark.isPrivate) {checked="checked"}"></input></center>
 		        </td>
 		        <td>
               <input type="hidden" name="active_@{bookmark.id.get.id}" value="0" />
@@ -321,7 +321,7 @@ var helper = (function() {
         },
         processData: false
       });
-    }, 
+    },
     contacts: function() {
       $.ajax({
         type: 'GET',
