@@ -505,7 +505,7 @@ footer {
   font-size: 14px;
   line-height: 18px;
   color: #515151;
-  padding-bottom: 50px;
+  padding-bottom: 20px;
 }
 
 /* finalize new account */
@@ -513,6 +513,7 @@ footer {
 @signup-box-color: #ededed;
 .signup-2 {
   text-align: center;
+  padding-bottom: 10px;
 }
 .signup>.signup-2 {
   visibility: hidden;
@@ -761,8 +762,9 @@ footer {
   .transform(none);
 }
 .finalizing .terms {
-  .translate(0, 106px);
-  .transition(transform @finalize-time ease-out);
+  opacity: 0;
+  visibility: hidden;
+  .transition(opacity (@finalize-time / 2) linear, visibility 0 (@finalize-time / 2));
 }
 
 /* dialogs */
