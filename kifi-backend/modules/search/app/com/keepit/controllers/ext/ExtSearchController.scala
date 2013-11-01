@@ -184,8 +184,10 @@ class ExtSearchController @Inject() (
     }
     log.info("experts recommended: " + expertNames.mkString(" ; "))
 
+    val collections: Seq[ExternalId[Collection]] = Nil
+
     PersonalSearchResultPacket(res.uuid, res.query, decoratedResult.hits,
-      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, expertNames)
+      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, decoratedResult.collections, expertNames)
   }
 
   private[ext] def suggestExperts(searchRes: ArticleSearchResult) = {
