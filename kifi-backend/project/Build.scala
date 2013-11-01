@@ -59,6 +59,7 @@ object ApplicationBuild extends Build {
       "org.apache.lucene" % "lucene-core" % "4.2.1",
       "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
       "org.apache.lucene" % "lucene-suggest" % "4.2.1",
+      "org.imgscalr" % "imgscalr-lib" % "4.2",
       "us.theatr" %% "akka-quartz" % "0.2.0_42.1"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
@@ -82,7 +83,6 @@ object ApplicationBuild extends Build {
     val shoeboxDependencies = Seq(
       "javax.mail" % "mail" % "1.4.5",
       "com.typesafe.slick" %% "slick-testkit" % "1.0.1",
-      "org.imgscalr" % "imgscalr-lib" % "4.2",
       "org.jsoup" % "jsoup" % "1.7.1"
     )
 

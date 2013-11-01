@@ -1,6 +1,6 @@
 package com.keepit.controllers.shoebox
 
-import com.google.inject.Inject
+import com.google.inject.{Provider, Inject}
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.EventPersister
 import com.keepit.common.analytics.Events
@@ -17,7 +17,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.normalizer.NormalizationCandidate
+import com.keepit.normalizer.{TrustedCandidate, NormalizationService, NormalizationCandidate}
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.common.akka.SafeFuture
@@ -29,6 +29,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.scraper.HttpRedirect
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -45,6 +46,8 @@ class ShoeboxController @Inject() (
   bookmarkRepo: BookmarkRepo,
   commentRecipientRepo: CommentRecipientRepo,
   normUriRepo: NormalizedURIRepo,
+  normalizationServiceProvider:Provider[NormalizationService],
+  urlPatternRuleRepo: UrlPatternRuleRepo,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
   userExperimentRepo: UserExperimentRepo,
   EventPersister: EventPersister,
@@ -132,6 +135,45 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(saved))
   }
 
+  def recordPermanentRedirect() = SafeAsyncAction(parse.json) { request =>
+    val args = request.body.as[JsArray].value
+    require((!args.isEmpty && args.length == 2), "Both uri and redirect need to be supplied")
+    val uri = args(0).as[NormalizedURI]
+    val redirect = args(1).as[HttpRedirect]
+    require(redirect.isPermanent, "HTTP redirect is not permanent.")
+    require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
+    val toBeRedirected = db.readWrite { implicit session =>
+      for {
+        candidateUri <- normUriRepo.getByUri(redirect.newDestination)
+        normalization <- candidateUri.normalization
+      } yield {
+        val toBeRedirected = uri.withNormalization(Normalization.MOVED)
+        // session.onTransactionSuccess(normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization)))
+        normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization)) // TODO:revisit
+        toBeRedirected
+      }
+    }
+    val res = toBeRedirected getOrElse uri
+    log.info(s"[recordPermanentRedirect($uri, $redirect)] res=$res")
+    Ok(Json.toJson(res))
+  }
+
+  def getProxy(url:String) = SafeAsyncAction { request =>
+    val httpProxyOpt = db.readOnly { implicit session =>
+      urlPatternRuleRepo.getProxy(url)
+    }
+    log.info(s"[getProxy($url): $httpProxyOpt")
+    Ok(Json.toJson(httpProxyOpt))
+  }
+
+  def isUnscrapable(url: String, destinationUrl: Option[String]) = SafeAsyncAction { request =>
+    val res = db.readOnly { implicit s =>
+      (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
+    }
+    log.info(s"[isUnscrapable($url, $destinationUrl)] res=$res")
+    Ok(JsBoolean(res))
+  }
+
   def getNormalizedURIs(ids: String) = SafeAsyncAction { request =>
     val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
     val uris = db.readOnly { implicit s => uriIds map normUriRepo.get }
@@ -208,6 +250,31 @@ class ShoeboxController @Inject() (
       bookmarkRepo.getByUriAndUser(uriId, userId)
     }.map(Json.toJson(_)).getOrElse(JsNull)
     Ok(bookmark)
+  }
+
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]) = Action { request =>
+    val bookmarks = db.readOnly { implicit session =>
+      bookmarkRepo.getByUriWithoutTitle(uriId)
+    }
+    log.info(s"[getBookmarksByUriWithoutTitle($uriId)] ${bookmarks}")
+    Ok(Json.toJson(bookmarks))
+  }
+
+  def getLatestBookmark(uriId: Id[NormalizedURI]) = Action { request =>
+    val bookmarkOpt = db.readOnly { implicit session =>
+      bookmarkRepo.latestBookmark(uriId)
+    }
+    log.info(s"[getLatestBookmark($uriId)] $bookmarkOpt")
+    Ok(Json.toJson(bookmarkOpt))
+  }
+
+  def saveBookmark() = Action(parse.json) { request =>
+    val bookmark = request.body.as[Bookmark]
+    val saved = db.readWrite { implicit session =>
+      bookmarkRepo.save(bookmark)
+    }
+    log.info(s"[saveBookmark] saved=$saved")
+    Ok(Json.toJson(saved))
   }
 
   def getCommentRecipientIds(commentId: Id[Comment]) = Action { request =>

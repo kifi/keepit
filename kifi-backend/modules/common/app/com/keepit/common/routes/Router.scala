@@ -68,6 +68,9 @@ object Shoebox extends Service {
     def getBookmarks(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmark", Param("userId", userId))
     def getBookmarksChanged(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedBookmark", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmarkByUriUser", Param("uriId", uriId), Param("userId", userId))
+    def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getBookmarksByUriWithoutTitle", Param("uriId"))
+    def getLatestBookmark(uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getLatestBookmark", Param("uriId"))
+    def saveBookmark() = ServiceRoute(POST, "/internal/shoebox/database/saveBookmark")
     def getCommentsChanged(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedComment", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getCommentRecipientIds(commentId: Id[Comment]) = ServiceRoute(GET, "/internal/shoebox/database/commentRecipientIds", Param("commentId", commentId))
     def persistServerSearchEvent() = ServiceRoute(POST, "/internal/shoebox/persistServerSearchEvent")
@@ -100,6 +103,9 @@ object Shoebox extends Service {
     def getScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/getScrapeInfo")
     def saveScrapeInfo()  = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
     def saveNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/saveNormalizedURI")
+    def recordPermanentRedirect() = ServiceRoute(POST, "/internal/shoebox/database/recordPermanentRedirect")
+    def getProxy(url: String) = ServiceRoute(GET, "/internal/shoebox/database/getProxy", Param("url"))
+    def isUnscrapable(url: String, destinationUrl: Option[String]) = ServiceRoute(GET, "/internal/shoebox/database/isUnscrapable", Param("url", url), Param("destinationUrl", destinationUrl))
   }
 }
 
