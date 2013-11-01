@@ -24,6 +24,7 @@ import scala.util.Try
 import play.modules.statsd.api.Statsd
 import javax.imageio.ImageIO
 import com.keepit.common.net.URI
+import com.keepit.shoebox.ShoeboxServiceClient
 
 
 @ImplementedBy(classOf[S3ScreenshotStoreImpl])
@@ -40,9 +41,8 @@ case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ImageSize])
 
 @Singleton
 class S3ScreenshotStoreImpl @Inject() (
-//    db: Database,
     s3Client: AmazonS3,
-//    normUriRepo: NormalizedURIRepo,
+    shoeboxServiceClient: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
     clock: Clock,
     val config: S3ImageConfig
@@ -146,10 +146,7 @@ class S3ScreenshotStoreImpl @Inject() (
           result.map { s =>
             if(s.exists(_.isDefined)) { // *an* image persisted successfully
               // todo(andrew): create Screenshot model, track what sizes we have and when they were captured
-//              db.readWrite { implicit s =>
-//                normUriRepo.save(normalizedUri.copy(screenshotUpdatedAt = Some(clock.now)))
-//              }
-
+              shoeboxServiceClient.saveNormalizedURI(normalizedUri.copy(screenshotUpdatedAt = Some(clock.now)))
             }
           }
         case Failure(e) =>
