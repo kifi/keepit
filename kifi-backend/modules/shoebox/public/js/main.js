@@ -1249,7 +1249,7 @@ $(function() {
 			}
 		});
 		var $name = $coll.find(".view-name"), name = $name.text();
-		var $in = $("<input type=text placeholder='Type new tag name'>").val(name).data("orig", name);
+		var $in = $("<input class='tag-rename' type=text placeholder='Type new tag name'>").val(name).data("orig", name);
 		$name.empty().append($in);
 		setTimeout(function() {
 			$in[0].setSelectionRange(0, name.length, "backward");
