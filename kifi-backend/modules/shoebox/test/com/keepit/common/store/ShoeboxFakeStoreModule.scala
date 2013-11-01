@@ -44,6 +44,6 @@ case class FakeS3ImageStore(val config: S3ImageConfig) extends S3ImageStore {
     Success("token", "http://cloudfront/token.jpg")
 
   // Returns Some(urlOfUserPicture) or None
-  def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String): Option[String] = None
+  def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String, cropAttributes: Option[ImageCropAttributes]): Option[String] = None
 
 }

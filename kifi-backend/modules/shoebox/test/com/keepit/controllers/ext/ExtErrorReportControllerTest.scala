@@ -10,7 +10,7 @@ import SocialNetworks.FACEBOOK
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.User
 import com.keepit.test._
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.heimdal.{TestHeimdalServiceClientModule, FakeHeimdalServiceClientImpl, HeimdalServiceClient}
 
 import play.api.libs.json._
 import play.api.test.FakeRequest
@@ -40,17 +40,14 @@ class ExtErrorReportControllerTest extends Specification with ShoeboxApplication
   "ExtAuthController" should {
     "start" in {
       running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule(), FakeAirbrakeModule(), TestHeimdalServiceClientModule())) {
-        val fakeAirbrake = inject[FakeAirbrakeNotifier]
-        fakeAirbrake.errorCount() === 0
+        val fakeHeimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
+        fakeHeimdal.eventCount === 0
 
         val requestJson = Json.obj("message" -> JsString("bad thing happened"))
         val result = inject[ExtErrorReportController].addErrorReport(fakeRequest(requestJson))
 
-        fakeAirbrake.errorCount() === 1
+        fakeHeimdal.eventCount === 1
         status(result) must equalTo(OK)
-        val json = Json.parse(contentAsString(result)).asInstanceOf[JsObject]
-        val errorExtId = fakeAirbrake.errors(0).id
-        json \ "errorId" === JsString(errorExtId.id)
       }
     }
   }

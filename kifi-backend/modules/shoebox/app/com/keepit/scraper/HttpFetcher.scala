@@ -23,10 +23,10 @@ import com.keepit.model.HttpProxy
 import org.apache.http.auth.{UsernamePasswordCredentials, AuthScope}
 import org.apache.http.client.protocol.HttpClientContext
 
-trait HttpFetcher {
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
-  def close()
-}
+//trait HttpFetcher {
+//  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
+//  def close()
+//}
 
 class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean) extends HttpFetcher with Logging {
   val cm = if (trustBlindly) {
@@ -177,17 +177,17 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
   }
 }
 
-case class HttpFetchStatus(statusCode: Int, message: Option[String], context: HttpContext) {
-  def destinationUrl = Option(context.getAttribute("scraper_destination_url").asInstanceOf[String])
-  def redirects = Option(context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]]).getOrElse(Seq.empty[HttpRedirect])
-}
-
-case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination: String) {
-  def isPermanent = (statusCode == HttpStatus.SC_MOVED_PERMANENTLY)
-  def isAbsolute = URI.isAbsolute(currentLocation) && URI.isAbsolute(newDestination)
-  def isLocatedAt(url: String) = (currentLocation == url)
-}
-
-object HttpRedirect {
-  def withStandardizationEffort(statusCode: Int, currentLocation: String, newDestination: String): HttpRedirect = HttpRedirect(statusCode, currentLocation, URI.url(currentLocation, newDestination))
-}
+//case class HttpFetchStatus(statusCode: Int, message: Option[String], context: HttpContext) {
+//  def destinationUrl = Option(context.getAttribute("scraper_destination_url").asInstanceOf[String])
+//  def redirects = Option(context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]]).getOrElse(Seq.empty[HttpRedirect])
+//}
+//
+//case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination: String) {
+//  def isPermanent = (statusCode == HttpStatus.SC_MOVED_PERMANENTLY)
+//  def isAbsolute = URI.isAbsolute(currentLocation) && URI.isAbsolute(newDestination)
+//  def isLocatedAt(url: String) = (currentLocation == url)
+//}
+//
+//object HttpRedirect {
+//  def withStandardizationEffort(statusCode: Int, currentLocation: String, newDestination: String): HttpRedirect = HttpRedirect(statusCode, currentLocation, URI.url(currentLocation, newDestination))
+//}

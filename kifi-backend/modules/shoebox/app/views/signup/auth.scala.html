@@ -22,13 +22,12 @@
   <span class="curtain-welcome-l">Welcome to our</span>
   <span class="curtain-welcome-r">private beta</span>
 </h2>
-<a class="curtain-back" href="javascript:">Back</a>
+<a class="curtain-back" href="javascript:" tabindex="1">Back</a>
 
 <h1 class="main-logo">kifi</h1>
-<h2 class="page-title">@if(view == "login") {Log In}</h2>
 
 <div class="signup">
-  <form class="signup-1" data-title="Sign Up" novalidate>
+  <form class="signup-1" data-title="Sign up" novalidate>
     <div class="form-sides">
       <div class="form-l">
         <h3>Use a social network</h3>
@@ -44,62 +43,56 @@
       <div class="form-r">
         <h3>Use your email address</h3>
         <input class="form-email-addr" type="email" name="signup-email" placeholder="Your email address">
-        <input class="form-password" type="password" name="signup-password" placeholder="Your new password">
+        <label class="password-label">
+          <input class="form-password" type="password" name="signup-password" placeholder="Your new password">
+        </label>
         <button class="form-submit">Sign up</button>
       </div>
     </div>
   </form>
 
-  <form class="signup-2 signup-2-email" data-title="Finalize Your Account" novalidate>
-    <div class="form-name">
-      <input class="form-first-name" type="text" name="first-name" placeholder="First name" required>
-      <input class="form-last-name" type="text" name="last-name" placeholder="Last name" required>
-    </div>
-    <div class="form-pic">
-      <div class="form-photo"><div class="form-photo-progress"></div></div>
-      <div class="form-photo-controls">
-        <a class="form-photo-a facebook" href="javascript:">Use Facebook photo</a>
-        <a class="form-photo-a linkedin" href="javascript:">Use LinkedIn photo</a>
-        <label class="form-photo-a upload">
-          Upload a photo
-          <input class="form-photo-file" type="file" name="photo">
-        </label>
-      </div>
-      <div class="form-photo-drop">Drop picture here</div>
-    </div>
-    <button class="form-submit">Done</button>
-  </form>
+  @helper.emailSignupForm2()
 
   <p class="terms">
     By signing up, you agree to Kifi’s <a target="_blank" href="">Terms of Service</a>.
   </p>
 </div>
 
-<form class="login" data-title="Log In" novalidate@if(view == "login") { style="display:block"}>
+<form class="login" data-title="Log in" novalidate@if(view == "login") { style="display:block"}>
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>
-      <a class="form-network facebook" href="javascript:">
+      <a class="form-network facebook" href="javascript:" tabindex="1">
         <span class="form-network-icon"></span>
         <span class="form-network-text">Log in using Facebook</span>
       </a>
-      <a class="form-network linkedin" href="javascript:">
+      <a class="form-network linkedin" href="javascript:" tabindex="1">
         <span class="form-network-icon"></span>
         <span class="form-network-text">Log in using LinkedIn</span>
       </a>
     </div>
     <div class="form-r">
       <h3>Use your email address</h3>
-      <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address" required@if(view == "login") { autofocus}>
-      <input class="form-password" type="password" name="login-password" placeholder="Your password" required>
-      <button class="form-submit">Log in</button>
+      <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address" required tabindex="1"@if(view == "login") { autofocus}>
+      <label class="password-label">
+        <input class="form-password" type="password" name="login-password" placeholder="Your password" required tabindex="1">
+        <a class="password-forgot" href="javascript:" tabindex="2">I forgot</a>
+      </label>
+      <button class="form-submit" tabindex="1">Log in</button>
     </div>
   </div>
 </form>
+
+@* down here to prevent transition side effects (1px shifting) in Chrome *@
+<h2 class="page-title">@if(view == "login") {Log in}</h2>
+
+@helper.photoDialog()
+@helper.resetPasswordDialog()
 }
 
 @scripts = {
 <script src="assets/js/jquery-ui-position.min.js"></script>
+<script src="assets/js/jquery-ui-slider.min.js"></script>
 <script src="assets/js/auth.js"></script>
 }
 

@@ -31,8 +31,10 @@
     var $login = $('.login').css('display', !isLogin ? 'none' : 'block');
     var $form = isLogin ? $login : $('.signup-1');
     $('.page-title').text($form.data('title'));
-    $form.find('.form-email-addr').focus();
     $('body').addClass('curtains-drawn');
+    setTimeout(function () {
+      $form.find('.form-email-addr').focus();
+    });
   });
   $('.curtain-back').on('mousedown click', function (e) {
     if (e.which !== 1) return;
@@ -119,7 +121,7 @@
       signup1Promise = $.postJson(baseUri + '/auth/sign-up', {
         email: email,
         password: password
-      }).done(function(data) {
+      }).done(function (data) {
         if (!data.finalized) {
           transitionTitle($('.signup-2').data('title'));
           $('body').addClass('finalizing droppable');
@@ -154,14 +156,23 @@
     var first = validateName($form.find('.form-first-name'));
     var last = first && validateName($form.find('.form-last-name'));
     if (first && last) {
-      signup2Promise = $.postJson(baseUri + '/auth/email-finalize', {
-        firstName: first,
-        lastName: last
-        // picToken: TODO
-      }).fail(function (xhr) {
-        signup2Promise = null;
+      var pic = $photo.data();
+      signup2Promise = $.when(pic.uploadPromise).done(function (upload) {
+         signup2Promise = $.postJson(baseUri + '/auth/email-finalize', {
+          firstName: first,
+          lastName: last,
+          picToken: upload && upload.token,
+          picWidth: pic.width,
+          picHeight: pic.height,
+          cropX: pic.x,
+          cropY: pic.y,
+          cropSize: pic.size
+        })
+        .done(navigateToApp)
+        .fail(function (xhr) {
+          signup2Promise = null;
+        });
       });
-      $.when(signup2Promise, photoPromise).done(navigateToApp);
     }
     return false;
   });
@@ -171,23 +182,25 @@
     }
     $('.form-error').remove();
     var $form = $(this);
-    var email = validateEmailAddress($form.find('.form-email-addr'));
-    var password = email && validateNewPassword($form.find('.form-password'));
-    var first = email && password && validateName($form.find('.form-first-name'));
-    var last = email && password && first && validateName($form.find('.form-last-name'));
-    if (email && password && first && last) {
+    var email = validateEmailAddress($form.find('.social-email'));
+    var password = validateNewPassword($form.find('.form-password'));
+    if (password) {
       signup2Promise = $.postJson(baseUri + '/auth/social-finalize', {
+        firstName: $form.data('first'),
+        lastName: $form.data('last'),
         email: email,
-        password: password,
-        firstName: first,
-        lastName: last
-        // picToken: TODO
-      }).fail(function (xhr) {
+        password: password
+      })
+      .done(navigateToApp)
+      .fail(function (xhr) {
         signup2Promise = null;
       });
-      $.when(signup2Promise, photoPromise).done(navigateToApp);
     }
     return false;
+  }).on('click', '.social-change-email', function (e) {
+    if (e.which !== 1) return;
+    $('.social-email').removeAttr('disabled').focus().select();
+    $(this).addClass('clicked');
   });
 
   var loginPromise;
@@ -222,8 +235,12 @@
       });
     }
     return false;
+  }).on('click', '.password-forgot', function (e) {
+    if (e.which !== 1) return;
+    resetPasswordDialog.show($(this).closest('form').find('.form-email-addr').val());
   });
 
+  var URL = window.URL || window.webkitURL;
   var $photo = $('.form-photo');
   $('.form-photo-a').click(function (e) {
     if (e.which !== 1) return;
@@ -234,9 +251,12 @@
       window.open('https://www.linkedin.com', 'photo', 'width=720,height=400,dialog=yes,menubar=no,resizable=yes,scrollbars=yes,status=yes');
     }
   });
-  $('.form-photo-file').change(function (e) {
-    if (this.files) {
-      uploadPhotoXhr2(this.files);
+  $('.form-photo-file').change(function () {
+    if (this.files && URL) {
+      var upload = uploadPhotoXhr2(this.files);
+      if (upload) {
+        showLocalPhotoDialog(upload)
+      }
     } else {
       uploadPhotoIframe(this.form);
     }
@@ -248,7 +268,10 @@
         $(document).on('mousemove.drag', removeDropTarget);
       } else if (e.type === 'drop') {
         removeDropTarget();
-        uploadPhotoXhr2(e.originalEvent.dataTransfer.files);
+        var upload = uploadPhotoXhr2(e.originalEvent.dataTransfer.files);
+        if (upload) {
+          showLocalPhotoDialog(upload);
+        }
       }
       return false;
     }
@@ -262,44 +285,34 @@
   }
 
   var photoXhr2;
-  var URL = window.URL || window.webkitURL;
   function uploadPhotoXhr2(files) {
     var file = Array.prototype.filter.call(files, isImage)[0];
-    if (!file) return;
-
-    if (URL) {
-      var url = $photo.data('url');
-      if (url) URL.revokeObjectURL(url);
-      url = URL.createObjectURL(file);
-      $photo.css('background-image', 'url(' + url + ')').data('url', url);
-    } else {  // TODO: URL alternative for Safari 5
-      $photo.css('background-image', '');
+    if (file) {
+      if (photoXhr2) {
+        photoXhr2.abort();
+      }
+      var xhr = photoXhr2 = new XMLHttpRequest();
+      var deferred = createPhotoUploadDeferred();
+      xhr.upload.addEventListener('progress', function (e) {
+        if (e.lengthComputable) {
+          deferred.notify(e.loaded / e.total);
+        }
+      });
+      xhr.addEventListener('load', function () {
+        deferred.resolve(JSON.parse(xhr.responseText));
+      });
+      xhr.addEventListener('loadend', function () {
+        if (photoXhr2 === xhr) {
+          photoXhr2 = null;
+        }
+        if (deferred.state() === 'pending') {
+          deferred.reject();
+        }
+      });
+      xhr.open('POST', baseUri + '/auth/upload-binary-image', true);
+      xhr.send(file);
+      return {file: file, promise: deferred.promise()};
     }
-
-    if (photoXhr2) {
-      photoXhr2.abort();
-    }
-
-    var xhr = photoXhr2 = new XMLHttpRequest();
-    var deferred = createPhotoUploadDeferred();
-    xhr.upload.addEventListener('progress', function (e) {
-      if (e.lengthComputable) {
-        deferred.notify(e.loaded / e.total);
-      }
-    });
-    xhr.upload.addEventListener('load', function() {
-      deferred.resolve();
-    });
-    xhr.upload.addEventListener('loadend', function() {
-      if (photoXhr2 === xhr) {
-        photoXhr2 = null;
-      }
-      if (deferred.state() === 'pending') {
-        deferred.reject();
-      }
-    });
-    xhr.open('POST', 'https://www.kifi.com/testing/upload', true);
-    xhr.send(file);
   }
   function isImage(file) {
     return file.type.search(/^image\/(?:jpeg|png|gif)$/) === 0;
@@ -307,13 +320,13 @@
 
   var iframeDeferred;
   function uploadPhotoIframe(form) {
-    $photo.css('background-image', 'none');
+    $photo.css('background-image', 'none').addClass('unset');
 
     if (iframeDeferred) {
       iframeDeferred.reject();  // clean up previous in-progress upload
     }
     var deferred = iframeDeferred = createPhotoUploadDeferred()
-      .always(function() {
+      .always(function () {
         clearTimeout(fakeProgressTimer);
         iframeDeferred = null;
         $iframe.remove();
@@ -325,12 +338,12 @@
         o = JSON.parse($iframe.contents().find('body').text());
       } catch (err) {
       }
-      $photo.css('background-image', o ? 'url(' + o.url + ')' : '');
+      $photo.css('background-image', o ? 'url(' + o.url + ')' : '').removeClass('unset');
       $(form).removeAttr('method target action');
     });
     form.method = 'POST';
     form.target = 'upload';
-    form.action = 'https://www.kifi.com/testing/upload';
+    form.action = baseUri + '/auth/upload-multipart-image';
     form.submit();
 
     var fakeProgressTimer;
@@ -341,20 +354,248 @@
     }
   }
 
-  var photoPromise;
   function createPhotoUploadDeferred() {
-    var deferred = $.Deferred();
-    photoPromise = deferred.promise();
-    return deferred
-      .progress(updateUploadProgressBar)
-      .notify(0)
-      .done(updateUploadProgressBar.bind(null, 1))
-      .always(function() {
-        photoPromise = null;
-      });
+    return $.Deferred()
+      // .progress(updateUploadProgressBar)
+      // .notify(0)
+      // .done(updateUploadProgressBar.bind(null, 1))
   }
   var uploadProgressBar = $('.form-photo-progress')[0];
   function updateUploadProgressBar(frac) {
     uploadProgressBar.style.left = Math.round(100 * frac) + '%';
   }
+
+  var localPhotoUrl;
+  function showLocalPhotoDialog(upload) {
+    if (localPhotoUrl) {
+      URL.revokeObjectURL(localPhotoUrl);
+    }
+    localPhotoUrl = URL.createObjectURL(upload.file);
+    photoDialog
+      .show(localPhotoUrl)
+      .done(function (details) {
+        var scale = $photo.innerWidth() / details.size;
+        $photo.css({
+          'background-image': 'url(' + localPhotoUrl + ')',
+          'background-size': scale * details.width + 'px auto',
+          'background-position': -(scale * details.x) + 'px ' + -(scale * details.y) + 'px'
+        }).removeClass('unset')
+        .removeData().data(details).data('uploadPromise', upload.promise);
+      })
+      .always(function () {
+        $('.form-photo-file').val(null);
+      });
+  }
+
+  var photoDialog = (function () {
+    var $dialog, $mask, $image, $slider, deferred;
+    var INNER_SIZE = 200;
+    var SHADE_SIZE = 40;
+    var OUTER_SIZE = INNER_SIZE + 2 * SHADE_SIZE;
+    var SLIDER_MAX = 180;
+
+    return {
+      show: function (photoUrl) {
+        var img = new Image();
+        img.onload = onPhotoLoad;
+        img.src = photoUrl;
+
+        $dialog = ($dialog || $('.photo-dialog').remove().css('display', '')).click(onDialogClick);
+        $mask = $('.photo-dialog-mask', $dialog).mousedown(onMaskMouseDown);
+        $image = $(img).addClass('photo-dialog-img').insertBefore($mask);
+        $slider = $('.photo-dialog-slider', $dialog);
+
+        return (deferred = $.Deferred());
+      }
+    };
+
+    function onPhotoLoad() {
+      var nw = this.width;
+      var nh = this.height;
+      var dMin = INNER_SIZE;
+      var dMax = Math.max(OUTER_SIZE, Math.min(1000, nw, nh));
+      var d0 = Math.max(INNER_SIZE, Math.min(OUTER_SIZE, nw, nh));
+      var wScale = Math.max(1, nw / nh);
+      var hScale = Math.max(1, nh / nw);
+      var w = d0 * wScale;
+      var h = d0 * hScale;
+      var top = .5 * (OUTER_SIZE - h);
+      var left = .5 * (OUTER_SIZE - w);
+      $image
+        .css({width: w, height: h, top: top, left: left})
+        .data({
+          naturalWidth: nw,
+          naturalHeight: nh,
+          width: w,
+          height: h,
+          top: top,
+          left: left});
+      $slider.slider({
+        max: SLIDER_MAX,
+        value: Math.round(SLIDER_MAX * (d0 - dMin) / (dMax - dMin)),
+        slide: onSliderSlide.bind($image[0], $image.data(), percentToPx(dMin, dMax), wScale, hScale)});
+      $dialog.appendTo('body');
+    }
+
+    function percentToPx(pxMin, pxMax) {
+      var factor = (pxMax - pxMin) / SLIDER_MAX;
+      return function (pct) {
+        return pxMin + pct * factor;
+      };
+    }
+
+    function onSliderSlide(data, pctToPx, wScale, hScale, e, ui) {
+      var d = pctToPx(ui.value);
+      var w = d * wScale;
+      var h = d * hScale;
+      var top = Math.min(SHADE_SIZE, Math.max(SHADE_SIZE + INNER_SIZE - h, data.top - .5 * (h - data.height)));
+      var left = Math.min(SHADE_SIZE, Math.max(SHADE_SIZE + INNER_SIZE - w, data.left - .5 * (w - data.width)));
+      this.style.top = top + 'px';
+      this.style.left = left + 'px';
+      this.style.width = w + 'px';
+      this.style.height = h + 'px';
+      data.width = w;
+      data.height = h;
+      data.top = top;
+      data.left = left;
+    }
+
+    function onMaskMouseDown(e) {
+      e.preventDefault();
+      var x0 = e.screenX;
+      var y0 = e.screenY;
+      var data = $image.data();
+      var leftMin = INNER_SIZE + SHADE_SIZE - data.width;
+      var topMin = INNER_SIZE + SHADE_SIZE - data.height;
+      var move = throttle(onMaskMouseMove.bind($image[0], x0, y0, data.left, data.top, leftMin, topMin, data), 10);
+      document.addEventListener('mousemove', move, true);
+      document.addEventListener('mouseup', onMaskMouseUp, true);
+      document.addEventListener('mouseout', onMaskMouseOut, true);
+      $mask.data('move', move);
+      $dialog.addClass('dragging');
+    }
+
+    function onMaskMouseMove(x0, y0, left0, top0, leftMin, topMin, data, e) {
+      var left = data.left = Math.min(SHADE_SIZE, Math.max(leftMin, left0 + e.screenX - x0));
+      var top = data.top = Math.min(SHADE_SIZE, Math.max(topMin, top0 + e.screenY - y0));
+      this.style.left = left + 'px';
+      this.style.top = top + 'px';
+    }
+
+    function onMaskMouseUp() {
+      document.removeEventListener('mousemove', $mask.data('move'), true);
+      document.removeEventListener('mouseup', onMaskMouseUp, true);
+      document.removeEventListener('mouseout', onMaskMouseOut, true);
+      $mask.removeData('move');
+      $dialog.removeClass('dragging');
+    }
+
+    function onMaskMouseOut(e) {
+      if (!e.relatedTarget) {
+        onMaskMouseUp();
+      }
+    }
+
+    function onDialogClick(e) {
+      if (e.which !== 1) return;
+      var $el = $(e.target);
+      var submitted = $el.hasClass('photo-dialog-submit');
+      if (submitted || $el.is('.photo-dialog-cancel,.photo-dialog-x,.dialog-cell')) {
+        var o = $image.data();
+        $dialog.remove();
+        $image.remove();
+        if (submitted) {
+          var scale = o.naturalWidth / o.width;
+          deferred.resolve({
+            width: o.naturalWidth,
+            height: o.naturalHeight,
+            x: Math.round(scale * (SHADE_SIZE - o.left)),
+            y: Math.round(scale * (SHADE_SIZE - o.top)),
+            size: Math.round(scale * INNER_SIZE)});
+        } else {
+          deferred.reject();
+        }
+        $mask = $image = $slider = deferred = null;
+      }
+    }
+  }());
+
+  var resetPasswordDialog = (function () {
+    var $dialog, $form, promise;
+    return {
+      show: function (emailAddr) {
+        $dialog = $dialog || $('.reset-password').remove().css('display', '');
+        $form = $dialog.find('.reset-password-form').submit(onFormSubmit);
+
+        $dialog.appendTo('body').click(onDialogClick);
+        $dialog.find('.reset-password-email').val(emailAddr).focus().select();
+      }
+    };
+
+    function onFormSubmit(e) {
+      e.preventDefault();
+      if (promise && promise.status() === 'pending') {
+        return false;
+      }
+      var $email = $form.find('.reset-password-email');
+      var email = validateEmailAddress($email);
+      if (email) {
+        promise = $.postJson(this.action, {email: email})
+        .done(function (resp) {
+          if (resp.error === 'no_account') {
+            showFormError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
+          } else {
+            $dialog.addClass('reset-password-sent');
+          }
+        })
+        .always(function () {
+          promise = null;
+        });
+      }
+    }
+
+    function onDialogClick(e) {
+      if (e.which !== 1) return;
+      if (e.target.className === 'reset-password-submit') {
+        $form.submit();
+      } else if ($(e.target).is('.reset-password-cancel,.reset-password-x,.dialog-cell')) {
+        hideDialog();
+      }
+    }
+
+    function hideDialog() {
+      $dialog.remove().removeClass('reset-password-sent');
+      $form = null;
+      promise = null;
+    }
+  }());
+
+  // from underscore.js 1.5.2 underscorejs.org
+  function throttle(func, wait, options) {
+    var context, args, result;
+    var timeout = null;
+    var previous = 0;
+    options || (options = {});
+    var later = function () {
+      previous = options.leading === false ? 0 : Date.now();
+      timeout = null;
+      result = func.apply(context, args);
+    };
+    return function () {
+      var now = Date.now();
+      if (!previous && options.leading === false) previous = now;
+      var remaining = wait - (now - previous);
+      context = this;
+      args = arguments;
+      if (remaining <= 0) {
+        clearTimeout(timeout);
+        timeout = null;
+        previous = now;
+        result = func.apply(context, args);
+      } else if (!timeout && options.trailing !== false) {
+        timeout = setTimeout(later, remaining);
+      }
+      return result;
+    };
+  };
 }());

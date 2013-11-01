@@ -1,6 +1,6 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.scraper.{HttpFetcher, Scraper}
+import com.keepit.scraper.{HttpFetcher, ScraperConfig}
 import com.keepit.common.net.{Host, URI}
 import com.keepit.search.Lang
 import org.jsoup.nodes.{Element, Document}
@@ -20,7 +20,7 @@ class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher, db: Database
       case _ => false
     }
   }
-  def apply(uri: URI) = new YoutubeExtractor(uri.toString, Scraper.maxContentChars, httpFetcher, db: Database, urlPatternRuleRepo)
+  def apply(uri: URI) = new YoutubeExtractor(uri.toString, ScraperConfig.maxContentChars, httpFetcher, db: Database, urlPatternRuleRepo)
 }
 
 class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetcher, db: Database, urlPatternRuleRepo: UrlPatternRuleRepo) extends JsoupBasedExtractor(url, maxContentChars) {

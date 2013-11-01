@@ -58,14 +58,14 @@
 		<div id="collections">
 			<h2>Tags</h2>
       <h3 class="collection-new" data-before-template>
-        <a>
-          <span class="tag-icon"></span>
-          <input placeholder="Add a tag">
-        </a>
+        <label>
+          <input placeholder="Find or add a tag...">
+          <a class="tag-input-clear" tabindex="-1">&times;</a>
+        </label>
       </h3>
 			<div id="collections-list">
 				<div class="antiscroll-inner">
-					<h3 class="collection" data-template data-id="{{id}}" style="display:none">
+          <h3 class="collection" data-template data-id="{{id}}" data-name="{{name}}" style="display:none">
 						<a href="tag/{{id}}">
               <span class="tag-icon"></span>
 							<span class="view-name">{{name}}</span>
@@ -75,6 +75,15 @@
 					</h3>
 				</div>
 			</div>
+      <div id="tag-new-template" style="display:none">
+        <h3 class="collection tag-new" data-name="{{name}}">
+          <a href="javascript:void(0)">
+            <span class="tag-create"></span>
+            <div class="caption">Add a new tag:</div>
+            <span class="view-name">{{name}}</span>
+          </a>
+        </h3>
+      </div>
 			<menu id="coll-menu">
 				<li><a class="coll-rename" href="javascript:">Rename</a></li>
 				<li><a class="coll-remove" href="javascript:">Remove</a></li>
@@ -190,6 +199,13 @@
 							</span>
 						</div>
 						<div class="keep-arrow-1"><div class="keep-arrow-2"><div class="keep-arrow-3"><div class="keep-arrow-4"></div></div></div></div>
+            <div class="keep-hover-button-wrapper">
+              <div class="keep-hover-button-table">
+                <div class="keep-hover-button-cell">
+                  <div class="keep-hover-button"><span class="keep-button-preview">Preview</span><span class="keep-button-close">Close</span></div>
+                </div>
+              </div>
+            </div>
 					</li>
 				</ol>
 				<div class="keep-group-title-fixed"></div>
@@ -519,6 +535,8 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 	<script src="assets/js/jquery.mousewheel.min.js"></script>
 	<script src="assets/js/antiscroll.min.js"></script>
 	<script src="assets/js/tempo.min.js"></script>
+	<script src="assets/js/util.js"></script>
+	<script src="assets/js/scorefilter.js"></script>
 	<script src="assets/js/main.js"></script>
 	<script src="assets/js/fancybox/jquery.fancybox.pack.js" async defer></script>
 	<script>

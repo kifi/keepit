@@ -1,0 +1,45 @@
+@(emailAddress: String, firstName: String, lastName: String, picturePath: String)
+
+@content = {
+<div class="curtain-l"></div>
+<div class="curtain-r"></div>
+
+<h1 class="main-logo">kifi</h1>
+
+<form class="signup-2 signup-2-social" novalidate data-first="@firstName" data-last="@lastName">
+  <div class="social-info">
+    <div class="social-photo form-photo"@if(picturePath != ""){ style="background-image:url(@picturePath)"}></div>
+    <div class="social-text-info">
+      <div class="social-name">@firstName @lastName</div>
+      <input class="social-email" type="email" name="signup-email" value="@emailAddress" placeholder="Your email address" disabled>
+      <a class="social-change-email" href="javascript:">Change email</a>
+    </div>
+  </div>
+  <div class="form-creds">
+    <label class="password-label signup-2-label">
+      Create a password
+      <input class="form-password" type="password" name="signup-password">
+      <span class="form-password-tip">at least 7 characters</span>
+    </label>
+  </div>
+  <button class="form-submit">Sign me up</button>
+</form>
+
+@* down here to prevent transition side effects (1px shifting) in Chrome *@
+<h2 class="page-title">Finalize your account</h2>
+
+@helper.photoDialog()
+}
+
+@scripts = {
+<script src="assets/js/jquery-ui-position.min.js"></script>
+<script src="assets/js/auth.js"></script>
+<script>
+$('body').addClass('curtains-drawn');
+setTimeout(function() {
+  $('.form-password').focus().select();
+}, 100);
+</script>
+}
+
+@helper.page(title = "kifi.com • Finalize Your Account", content = content, scripts = scripts)

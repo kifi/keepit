@@ -1,0 +1,12 @@
+##########################################
+#INTERNAL ROUTES/Scraper
+##########################################
+
+GET     /internal/scraper/getBasicArticle          @com.keepit.scraper.ScraperController.getBasicArticle(url:String)
+POST    /internal/scraper/asyncScrape              @com.keepit.scraper.ScraperController.asyncScrape
+
+->  / common.Routes
+
+
+
+

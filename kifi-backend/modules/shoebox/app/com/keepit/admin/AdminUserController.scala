@@ -13,7 +13,6 @@ import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.shoebox.usersearch.UserIndex
 import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data.Forms._
@@ -54,7 +53,6 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
-    userIndex: UserIndex,
     emailAddressRepo: EmailAddressRepo,
     invitationRepo: InvitationRepo,
     userSessionRepo: UserSessionRepo,
@@ -226,17 +224,17 @@ class AdminUserController @Inject() (
     val searchTerm = form.flatMap{ _.get("searchTerm") }
     searchTerm match {
       case None => Redirect(routes.AdminUserController.usersView(0))
-      case Some(term) =>
-        val userIds = userIndex.search(term)
+      case Some(queryText) =>
+        val userIds = Await.result(searchClient.searchUsers(queryText, 100, ""), 15 seconds).hits.map{_.id}
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
         Ok(html.admin.users(users, 0, users.size, 1, searchTerm))
     }
   }
-  
+
   def searchBasicUsers(queryText: String, maxHits: Int = 10) = AdminHtmlAction { implicit request =>
-    val users = Await.result(searchClient.searchUsers(queryText, maxHits), 15 seconds)
+    val users = Await.result(searchClient.searchUsers(queryText, maxHits, ""), 15 seconds).hits
     Ok(JsArray(users.map{x => Json.toJson(x)}))
   }
 
@@ -364,7 +362,7 @@ class AdminUserController @Inject() (
 
     Redirect(routes.AdminUserController.notification())
   }
-  
+
   def initUserSeq() = AdminHtmlAction { implicit request =>
     db.readWrite{ implicit s =>
       userRepo.all.sortBy(_.id.get.id).foreach{ u => userRepo.save(u) }

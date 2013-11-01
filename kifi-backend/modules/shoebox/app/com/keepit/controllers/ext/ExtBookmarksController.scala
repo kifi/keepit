@@ -14,6 +14,7 @@ import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 
+import play.api.http.Status.ACCEPTED
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.Some
@@ -198,7 +199,7 @@ class ExtBookmarksController @Inject() (
           }}
 
         }
-        Status(202)(JsNumber(0))
+        Status(ACCEPTED)(JsNumber(0))
     }
   }
 

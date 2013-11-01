@@ -925,11 +925,28 @@ $(function() {
 		collId = collId || null;
 		var $h3 = $(".left-col h3");
 		$h3.filter(".active").removeClass("active");
-		$h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps").addClass("active");
+		var $active = $h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps");
+
+    if (collId && !$active.length) {
+      clearTagInput();
+      $active = $(".left-col h3").filter("[data-id='" + collId + "']");
+    }
+
+    $active.addClass("active");
+
+    if (collId) {
+      scrolledIntoViewLazy($active[0]);
+    }
 
 		var fromSearch = $('body').attr("data-view") == "search";
 		$('body').attr("data-view", "mine");
-		$mainHead.find("h1").text(collId ? collections[collId].name : "Browse your Keeps");
+    
+    if (collId) {
+      $mainHead.find("h1").text('Tags / ' + collections[collId].name).addClass('tag-head');
+    }
+    else {
+      $mainHead.find("h1").text("Browse your Keeps").removeClass('tag-head');
+    }
 
 		$results.empty();
 		$query.val('').removeAttr("data-q");
@@ -1002,11 +1019,183 @@ $(function() {
 		}
 	}
 
+  function filterTags(tags, text) {
+    return window.scorefilter.filter(text, tags, {
+      pre: '<b>',
+      post: '</b>',
+      extract: function (tag) {
+        return tag.name;
+      }
+    }).map(function(res) {
+      return res.original;
+    });
+  }
+
+  function highlightPrevTag() {
+    highlightTag(getPrevTag());
+  }
+
+  function highlightNextTag() {
+    highlightTag(getNextTag());
+  }
+
+  function getFirstTag() {
+    return $collList.find('.collection:first');
+  }
+
+  function getLastTag() {
+    return $collList.find('.collection:last');
+  }
+
+  function getPrevTag() {
+    var $prev = getHighlightedTag();
+    if ($prev.length) {
+      var $next = $prev.prev('.collection');
+      if ($next.length) {
+        return $next;
+      }
+    }
+    return getLastTag();
+  }
+
+  function getNextTag() {
+    var $prev = getHighlightedTag();
+    if ($prev.length) {
+      var $next = $prev.next('.collection');
+      if ($next.length) {
+        return $next;
+      }
+    }
+    return getFirstTag();
+  }
+
+  function selectTag() {
+    var $highlight = getHighlightedTag();
+    if ($highlight.length) {
+      if ($highlight.data('id')) {
+        $highlight.find('a').click();
+      }
+      else {
+        createTag($highlight.data('name'));
+      }
+    }
+    else {
+      createTag(getTagInputValue());
+    }
+  }
+
+  function clearTagInput() {
+    if ($.trim($newTagInput.val())) {
+      $newTagInput.val('');
+      updateTags();
+    }
+  }
+
+  function createTag(name) {
+    if (name) {
+      clearTagInput();
+
+      createCollection(name, function(collId) {
+        $newColl.removeClass("submitted");
+      });
+    }
+  }
+
+  function highlightTag($el) {
+    getHighlightedTag().removeClass('highlight');
+    if ($el && $el.length) {
+      scrolledIntoViewLazy($el[0]);
+      return $el.addClass('highlight');
+    }
+    return null;
+  }
+
+  function scrolledIntoViewLazy(el, padding) {
+    var view;
+    if (!(el && (view = el.offsetParent))) {
+      return;
+    }
+
+    var viewTop = view.scrollTop,
+      viewHeight = view.clientHeight,
+      viewBottom = viewTop + viewHeight,
+      elemTop = el.offsetTop,
+      elemBottom = elemTop + el.offsetHeight;
+
+    if (elemBottom > viewBottom) {
+      view.scrollTop = elemBottom + (padding || 0) - viewHeight;
+    }
+    else if (elemTop < viewTop) {
+      view.scrollTop = elemTop - (padding || 0);
+    }
+  }
+
+  function getHighlightedTag() {
+    return $collList.find('.collection.highlight');
+  }
+
+  function getTagInputValue() {
+    return $.trim($newTagInput && $newTagInput.val() || '');
+  }
+
+  function getTagById(id) {
+    return $collList.find('.collection[data-id=' + id + ']');
+  }
+
+  function normalizeTagName(name) {
+    return name ? $.trim(name).replace(/\s+/g, ' ').toLowerCase() : '';
+  }
+
+  function getTagByName(name) {
+    name = normalizeTagName(name);
+    return $collList.find('.collection').filter(function() {
+      return name && normalizeTagName($(this).data('name')) === name;
+    });
+  }
+
+	var newTagTemplate = Handlebars.compile($('#tag-new-template').html());
+
+  function updateTags(tags) {
+    if (!collections) {
+      return;
+    }
+    if (!tags) {
+      tags = util.values(collections);
+    }
+
+    var val = getTagInputValue(),
+      highlightId = getHighlightedTag().data('id');
+
+    if (val) {
+      tags = filterTags(tags, val);
+    }
+    $newColl.toggleClass('non-empty', Boolean(val));
+
+    var $inner = $collList.find(".antiscroll-inner");
+    $inner.empty();
+    collTmpl.render(tags);
+
+    if (val) {
+      var matched = getTagByName(val);
+      if (!matched.length) {
+        var newTagHtml = newTagTemplate({
+          name: val
+        });
+        $inner.append(newTagHtml);
+      }
+
+      var highlighted = false;
+      if (!(highlightId && highlightTag(getTagById(highlightId)))) {
+        highlightTag(getFirstTag());
+      }
+    }
+  }
+
 	function updateCollections() {
 		promise.collections = $.getJSON(xhrBase + '/collections/all?sort=user&_=' + Date.now().toString(36), function(data) {
 			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
 			if ($collList.find('.renaming, .showing, .sortable-placeholder').length === 0) {
-				collTmpl.render(data.collections);
+        updateTags(data.collections);
 			}
 			$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.keeps);
 		}).promise();
@@ -1177,6 +1366,7 @@ $(function() {
 		}
 		var title, kind = uri.match(/[\w-]*/)[0];
 		console.log('[navigate]', uri, opts || '', kind);
+    var clearTags = true;
 		switch (kind) {
 			case '':
 				title = 'Your Keeps';
@@ -1184,6 +1374,7 @@ $(function() {
 			case 'collection':
 			case 'tag':
 				title = collections[uri.substr(kind.length + 1)].name;
+        clearTags = false;
 				break;
 			case 'find':
 				title = queryFromUri(uri);
@@ -1198,6 +1389,9 @@ $(function() {
 			  title = 'Updates and Features'
 			  break;
 		}
+    if (clearTags) {
+      clearTagInput();
+    }
 		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
 	}
 
@@ -1275,6 +1469,7 @@ $(function() {
 	$queryWrap.focusout($.fn.removeClass.bind($queryWrap, 'focus'));
 	var $query = $("input.query").on("keydown input", function(e) {
 		console.log("[clearTimeout]", e.type);
+    clearTagInput();
 		clearTimeout(searchTimeout);
 		var val = this.value, q = $.trim(val);
 		$queryWrap.toggleClass("empty", !val);
@@ -1319,7 +1514,14 @@ $(function() {
 				showMessage('Could not reorder the tags, please try again later');
 				// TODO: revert the re-order in the DOM
 			});
-		}
+		},
+    stop: function(e, ui) {
+      ui.item.css({
+        position: '',
+        opacity: '',
+        zIndex: ''
+      });
+    }
 	}).on("mousedown", ".coll-tri", function(e) {
 		if (e.button > 0) return;
 		e.preventDefault();  // do not start selection
@@ -1342,6 +1544,14 @@ $(function() {
 	var collScroller = $collList.data("antiscroll");
 	$(window).resize(collScroller.refresh.bind(collScroller));
 
+  $collList.on('click', '.collection', function(e) {
+    var $el = $(this);
+    if (!$el.data('id')) {
+      e.preventDefault();
+      createTag($el.data('name'));
+    }
+  });
+
 	$colls.on("click", "h3.collection>a", function(e) {
 		if (e.target === this && $(this.parentNode).hasClass("renaming")) {
 			e.preventDefault();
@@ -1349,22 +1559,37 @@ $(function() {
 		}
 	});
 
-	var $newColl = $colls.find(".collection-new");
-	$newColl.find("input").on("blur keydown", function(e) {
-		if ((e.which === 13 || e.type === "blur") && !$newColl.is(":animated")) { // 13 is Enter
-			var name = $.trim(this.value);
-			if (name) {
-				createCollection(name, function(collId) {
-					$newColl.removeClass("submitted");
-				});
-			}
-		}
-	});
+	var $newColl = $colls.find(".collection-new"),
+    $newTagInput = $newColl.find("input");
+  $newTagInput.on("keydown", function(e) {
+    switch (e.which) {
+      case 13: // Enter
+        selectTag();
+        break;
+      case 38: // up
+        highlightPrevTag();
+        break;
+      case 40: // down
+        highlightNextTag();
+        break;
+    }
+	}).
+  on('input', function (e) {
+    updateTags();
+  });
+
+  $newColl.on('click', '.tag-input-clear', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    clearTagInput();
+  });
 
 	function createCollection(name, callback) {
 		$newColl.addClass("submitted");
 		$.postJson(xhrBase + '/collections/create', {name: name}, function(data) {
 			collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
+      $collList.find(".antiscroll-inner")[0].scrollTop = 0;
 			callback(data.id);
 		}).error(function() {
 			showMessage('Could not create tag, please try again later');
