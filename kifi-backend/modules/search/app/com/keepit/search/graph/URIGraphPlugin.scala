@@ -14,6 +14,9 @@ import com.keepit.inject._
 import play.api.Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import com.keepit.search.index.BackUp
+import com.keepit.common.service.ServiceStatus
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 case object Update
 
@@ -31,6 +34,7 @@ private[graph] class URIGraphActor @Inject() (
               message = Some("Error updating uri graph")))
           sender ! -1
       }
+    case BackUp => uriGraph.backup()
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -43,7 +47,8 @@ trait URIGraphPlugin extends SchedulingPlugin {
 
 class URIGraphPluginImpl @Inject() (
     actor: ActorInstance[URIGraphActor],
-    uriGraph: URIGraph)
+    uriGraph: URIGraph,
+    serviceDiscovery: ServiceDiscovery)
   extends URIGraphPlugin with Logging {
 
   val schedulingProperties = SchedulingProperties.AlwaysEnabled
@@ -53,6 +58,9 @@ class URIGraphPluginImpl @Inject() (
   override def onStart() {
     scheduleTask(actor.system, 30 seconds, 1 minute, actor.ref, Update)
     log.info("starting URIGraphPluginImpl")
+    serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
+      scheduleTask(actor.system, 1 hour, 1 hour, actor.ref, BackUp)
+    }
   }
   override def onStop() {
     log.info("stopping URIGraphPluginImpl")
