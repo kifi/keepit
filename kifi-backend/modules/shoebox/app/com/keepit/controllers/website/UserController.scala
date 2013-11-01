@@ -197,7 +197,7 @@ class UserController @Inject() (
           ))
         }
         for (emails <- userData.emails) {
-          val (existing, toRemove) = emailRepo.getByUser(request.user.id.get).partition(emails contains _.address)
+          val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(emails contains _.address)
           for (email <- toRemove) {
             emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
           }
@@ -217,7 +217,7 @@ class UserController @Inject() (
     val info = db.readOnly { implicit s =>
       UpdatableUserInfo(
         description = Some(userValueRepo.getValue(request.userId, "user_description").getOrElse("")),
-        emails = Some(emailRepo.getByUser(request.userId).map(_.address))
+        emails = Some(emailRepo.getAllByUser(request.userId).map(_.address))
       )
     }
     Ok(toJson(basicUser).as[JsObject] ++ toJson(info).as[JsObject] ++ Json.obj("experiments" -> request.experiments.map(_.value)))

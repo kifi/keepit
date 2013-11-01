@@ -111,7 +111,7 @@ class HomeController @Inject() (db: Database,
       }
     }
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
-      val email = emailRepo.getByUser(user.id.get).headOption.map(_.address)
+      val email = emailRepo.getAllByUser(user.id.get).headOption.map(_.address)
       val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
         val user = userRepo.get(u)
         if(user.state == UserStates.ACTIVE) Some(user.externalId)
@@ -132,7 +132,7 @@ class HomeController @Inject() (db: Database,
               invitationRepo.save(invite.withState(InvitationStates.JOINED))
               invite.senderUserId match {
                 case Some(senderUserId) =>
-                  for (address <- emailAddressRepo.getByUser(senderUserId)) {
+                  for (address <- emailAddressRepo.getAllByUser(senderUserId)) {
                     postOffice.sendMail(ElectronicMail(
                       senderUserId = None,
                       from = EmailAddresses.CONGRATS,

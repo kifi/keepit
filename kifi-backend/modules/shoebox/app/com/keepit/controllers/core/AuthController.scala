@@ -531,6 +531,12 @@ class AuthController @Inject() (
     val formEmailOpt: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("email")).flatMap(_.headOption)
     val jsonEmailOpt: Option[String] = request.body.asJson.flatMap(_.asOpt[JsObject]).map(o => (o \ "email").as[JsString].value)
     formEmailOpt orElse jsonEmailOpt map { emailAddr =>
+      // User requested to reset `emailAddr`'s password. However that may not be their social login email address. Sigh.
+      db.readOnly { implicit session =>
+        emailRepo.getByAddressOpt(emailAddr) map { suppliedEmailRecord =>
+          socialRepo.getByUser(suppliedEmailRecord.userId).find(_.networkType == SocialNetworks.FACEBOOK)
+        }
+      }
       db.readWrite { implicit s =>
         emailRepo.getByAddressOpt(emailAddr).map(emailRepo.saveWithVerificationCode).map { email =>
           postOffice.sendMail(ElectronicMail(

@@ -19,6 +19,7 @@ case class User(
   externalId: ExternalId[User] = ExternalId(),
   firstName: String,
   lastName: String,
+  primaryEmailId: Option[Id[EmailAddress]] = None,
   state: State[User] = UserStates.ACTIVE,
   pictureName: Option[String] = None, // denormalized UserPicture.name
   userPictureId: Option[Id[UserPicture]] = None,
@@ -33,6 +34,7 @@ case class User(
 
 object User {
   implicit val userPicIdFormat = Id.format[UserPicture]
+  implicit val primaryEmailIdFormat = Id.format[EmailAddress]
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[User]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
@@ -40,6 +42,7 @@ object User {
     (__ \ 'externalId).format(ExternalId.format[User]) and
     (__ \ 'firstName).format[String] and
     (__ \ 'lastName).format[String] and
+    (__ \ 'primaryEmailId).formatNullable[Id[EmailAddress]] and
     (__ \ 'state).format(State.format[User]) and
     (__ \ 'pictureName).formatNullable[String] and
     (__ \ 'userPictureId).formatNullable[Id[UserPicture]] and
@@ -51,7 +54,7 @@ object User {
 }
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
-  override val version = 4
+  override val version = 5
   val namespace = "user_by_external_id"
   def toKey(): String = externalId.id
 }
@@ -60,7 +63,7 @@ class UserExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[UserExternalIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class UserIdKey(id: Id[User]) extends Key[User] {
-  override val version = 5
+  override val version = 6
   val namespace = "user_by_id"
   def toKey(): String = id.id.toString
 }
@@ -69,7 +72,7 @@ class UserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginS
   extends JsonCacheImpl[UserIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
-  override val version = 4
+  override val version = 5
   val namespace = "user_id_by_external_id"
   def toKey(): String = id.id.toString
 }

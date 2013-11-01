@@ -153,7 +153,7 @@ class AdminEventController @Inject() (
     val header = Seq("Name", "Email", "active past 7 days", "active past 30 days").mkString(",")
     val includedUsers = getIncludedUsers()
     val users = db.readOnly { implicit s =>
-      includedUsers.map { u => (u, emailRepo.getByUser(u.id.get)) }
+      includedUsers.map { u => (u, emailRepo.getAllByUser(u.id.get)) }
     }.toSeq.sortBy(u => s"${u._1.lastName}, ${u._1.firstName}")
     val csvString = header + users.map { case (user, emails) =>
       Seq(s"${user.firstName} ${user.lastName}", emails.map(_.address).mkString("; "),

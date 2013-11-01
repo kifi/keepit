@@ -26,7 +26,7 @@ class FeedbackController @Inject() (
   extends WebsiteController(actionAuthenticator) {
   
   def feedbackForm = HtmlAction(true)(authenticatedAction = { request =>
-    val email = db.readOnly(emailAddressRepo.getByUser(request.user.id.get)(_)).last.address
+    val email = db.readOnly(emailAddressRepo.getAllByUser(request.user.id.get)(_)).last.address
     val picUrlFut = s3ImageStore.getPictureUrl(50, request.user)
 
     Async {
@@ -40,7 +40,7 @@ class FeedbackController @Inject() (
   })
 
   def feedback = HtmlAction(true)(authenticatedAction = { request =>
-    val email = db.readOnly(emailAddressRepo.getByUser(request.user.id.get)(_)).last.address
+    val email = db.readOnly(emailAddressRepo.getAllByUser(request.user.id.get)(_)).last.address
     val avatarFut = s3ImageStore.getPictureUrl(50, request.user)
 
     Async {

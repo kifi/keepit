@@ -15,14 +15,17 @@ import com.keepit.common.time._
 trait EmailAddressRepo extends Repo[EmailAddress] {
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[EmailAddress]
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
+  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
   def verifyByCode(verificationCode: String, clear: Boolean = false)(implicit session: RWSession): Boolean
   def saveWithVerificationCode(email: EmailAddress)(implicit session: RWSession): EmailAddress
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress]
 }
 
 @Singleton
-class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[EmailAddress] with EmailAddressRepo {
+class EmailAddressRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val userRepo: UserRepo) extends DbRepo[EmailAddress] with EmailAddressRepo {
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
   import DBSession._
@@ -43,8 +46,14 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
       (implicit session: RSession): Option[EmailAddress] =
     (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).firstOption
 
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
+  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
     (for(f <- table if f.userId === userId && f.state =!= EmailAddressStates.INACTIVE) yield f).list
+
+  def getPrimaryByUser(userId: Id[User])(implicit session: RSession): Option[EmailAddress] = {
+    userRepo.get(userId)
+    (for (f <- table if f.userId === userId) yield f).firstOption
+  }
+
 
   def verifyByCode(verificationCode: String, clear: Boolean = false)(implicit session: RWSession): Boolean = {
     val q = table.filter(_.verificationCode === verificationCode)
