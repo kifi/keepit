@@ -35,10 +35,10 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
 
   //using round robin, also use sick etc. instances if less than half of the instances ar UP.
   def nextService(): Option[ServiceInstance] = {
-    val healthyList = routingList.filter(_.isHealthy)
+    val upList = routingList.filter(_.isUp)
     val availableList = routingList.filter(_.isAvailable)
-    var list = healthyList
-    if (healthyList.length < availableList.length/2.0) list = availableList
+    var list = upList
+    if (upList.length < availableList.length/2.0) list = availableList
     if (list.isEmpty) None
     else Some(list(nextRoutingInstance.getAndIncrement % list.size))
   }

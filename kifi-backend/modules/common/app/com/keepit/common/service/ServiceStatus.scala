@@ -11,6 +11,7 @@ object ServiceStatus {
   case object STOPPING extends ServiceStatus("stopping")
   case object SICK extends ServiceStatus("sick")
   case object SELFCHECK_FAIL extends ServiceStatus("helthcheck_fail")
+  case object BACKING_UP extends ServiceStatus("backing_up")
 
   def fromString(str: String) = str match {
     case UP.name => UP

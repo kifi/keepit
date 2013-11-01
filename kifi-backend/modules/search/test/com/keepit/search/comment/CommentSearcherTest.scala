@@ -1,12 +1,11 @@
 package com.keepit.search.comment
 
-import com.keepit.search.index.{Searcher, WrappedIndexReader, WrappedSubReader}
+import com.keepit.search.index._
 import com.keepit.model._
 import com.keepit.model.CommentStates._
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.graph.GraphTestHelper
-import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.inject._
 import com.keepit.test._
@@ -16,7 +15,6 @@ import play.api.test._
 import play.api.test.Helpers._
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
@@ -28,10 +26,10 @@ class CommentSearcherTest extends Specification with GraphTestHelper {
 
   import CommentFields._
 
-  def mkCommentStore(commentStoreDir: RAMDirectory = new RAMDirectory): CommentStore = {
+  def mkCommentStore(commentStoreDir: VolatileIndexDirectoryImpl = new VolatileIndexDirectoryImpl): CommentStore = {
     new CommentStore(commentStoreDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
-  def mkCommentIndexer(commentDir: RAMDirectory = new RAMDirectory, commentStore: CommentStore = mkCommentStore()): CommentIndexer = {
+  def mkCommentIndexer(commentDir: VolatileIndexDirectoryImpl = new VolatileIndexDirectoryImpl, commentStore: CommentStore = mkCommentStore()): CommentIndexer = {
     new CommentIndexer(commentDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), commentStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 

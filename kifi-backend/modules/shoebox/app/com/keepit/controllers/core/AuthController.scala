@@ -472,59 +472,16 @@ class AuthController @Inject() (
 
   def verifyEmail(code: String) = Action { implicit request =>
     db.readWrite { implicit s =>
-      if (emailRepo.verifyByCode(code))
+      if (emailRepo.verifyByCode(code).isDefined) // TODO: distinguish redundant case, which is Some(false)
         Ok(views.html.website.verifyEmail(success = true))
       else
         BadRequest(views.html.website.verifyEmail(success = false))
     }
   }
 
-  private val passwordForm = Form[String](
-    mapping(
-      "password" -> tuple("1" -> nonEmptyText, "2" -> nonEmptyText)
-        .verifying("Passwords do not match", pw => pw._1 == pw._2).transform(_._1, (a: String) => (a, a))
-        .verifying(Constraints.minLength(7))
-    )(identity)(Some(_))
-  )
-  def setNewPassword(code: String) = Action { implicit request =>
-    passwordForm.bindFromRequest.fold(
-      formWithErrors => Redirect(routes.AuthController.setNewPasswordPage(code)).flashing(
-        "error" -> "Passwords must match and be at least 7 characters"
-      ), { password =>
-        db.readWrite { implicit s =>
-          emailRepo.getByCode(code).map { email =>
-            emailRepo.verifyByCode(code, clear = true)
-            for (sui <- socialRepo.getByUser(email.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
-              UserService.save(UserIdentity(
-                userId = sui.userId,
-                socialUser = sui.credentials.get.copy(
-                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password))
-                )
-              ))
-            }
-            Redirect(routes.AuthController.setNewPasswordPage(code)).flashing("success" -> "true")
-          } getOrElse {
-            Redirect(routes.AuthController.setNewPasswordPage(code)).flashing("invalid" -> "true")
-          }
-        }
-      })
-  }
-
-  def setNewPasswordPage(code: String) = Action { implicit request =>
-    db.readWrite { implicit s =>
-      val error = request.flash.get("error")
-      val isValid = !request.flash.get("invalid").isDefined
-      if (!emailRepo.verifyByCode(code) || !isValid || error.isDefined)
-        BadRequest(views.html.website.setPassword(valid = isValid, error = error))
-      else
-        Ok(views.html.website.setPassword(valid = isValid, done = request.flash.get("success").isDefined))
-    }
-  }
-
   // todo(andrew): Send reset email to ALL verified email addresses of an account (unless none, in which case, to one)
-
-  def resetPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doResetPassword(_), unauthenticatedAction = doResetPassword(_))
-  def doResetPassword(implicit request: Request[JsValue]): Result = {
+  def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doForgotPassword(_), unauthenticatedAction = doForgotPassword(_))
+  def doForgotPassword(implicit request: Request[JsValue]): Result = {
     (request.body \ "email").asOpt[JsString] map { emailAddr =>
       db.readWrite { implicit s =>
         emailRepo.getByAddressOpt(emailAddr.value).map(emailRepo.saveWithVerificationCode).map { email =>
@@ -533,7 +490,7 @@ class AuthController @Inject() (
             to = Seq(GenericEmailAddress(email.address)),
             subject = "Reset your password",
             htmlBody = "You can set a new password by going to " +
-                s"$url${routes.AuthController.setNewPassword(email.verificationCode.get)}",
+                s"$url${routes.AuthController.setPasswordPage(email.verificationCode.get)}",
             category = ElectronicMailCategory("reset_password")
           ))
           email
@@ -545,6 +502,47 @@ class AuthController @Inject() (
           Ok(Json.obj("error" -> "no_account"))
       }
     } getOrElse BadRequest
+  }
+
+  def setPasswordPage(code: String) = Action { implicit request =>
+    db.readWrite { implicit s =>
+      emailRepo.getByCode(code) match {
+        case Some(email) if email.state == EmailAddressStates.UNVERIFIED =>
+          Ok(views.html.website.setPassword())
+        case Some(email) =>
+          Ok(views.html.website.setPassword("already_used"))
+        case None =>
+          Ok(views.html.website.setPassword("invalid_code"))
+      }
+    }
+  }
+
+  def setPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doSetPassword(_), unauthenticatedAction = doSetPassword(_))
+  def doSetPassword(implicit request: Request[JsValue]): Result = {
+    (for {
+      code <- (request.body \ "code").asOpt[JsString]
+      password <- (request.body \ "password").asOpt[JsString].filter(_.value.length >= 7)
+    } yield {
+      db.readWrite { implicit s =>
+        emailRepo.verifyByCode(code.value) match {
+          case Some(true) =>
+            val email = emailRepo.getByCode(code.value).get  // TODO: optimize second query away
+            for (sui <- socialRepo.getByUser(email.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
+              UserService.save(UserIdentity(
+                userId = sui.userId,
+                socialUser = sui.credentials.get.copy(
+                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password.value))
+                )
+              ))
+            }
+            Ok(Json.obj("success" -> true)) // TODO: create session
+          case Some(false) =>
+            Ok(Json.obj("error" -> "already_used"))  // TODO: "error" -> "expired" case
+          case None =>
+            Ok(Json.obj("error" -> "invalid"))
+        }
+      }
+    }) getOrElse BadRequest("0")
   }
 
   def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = doUploadBinaryPicture(_), unauthenticatedAction = doUploadBinaryPicture(_))

@@ -1,30 +1,24 @@
 package com.keepit.common.store
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.Id
 import com.keepit.common.strings._
-import com.keepit.inject._
 
-import com.amazonaws.auth._
 import com.amazonaws.services.s3._
 import com.amazonaws.services.s3.model.ObjectMetadata
-import com.amazonaws.AmazonClientException
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.S3Object
-
-import org.apache.poi.util.IOUtils
-
 import play.api.libs.json.Json
 import play.api.libs.json.Format
-import play.api.Play
 import play.api.Play.current
 import play.api.Logger
+import play.api.Play
 
-import java.io.InputStream
-import java.io.ByteArrayInputStream
+import java.io._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.serializer.BinaryFormat
+import org.apache.commons.io.{IOUtils, FileUtils}
+
 
 case class S3Bucket(name: String)
 
@@ -177,6 +171,30 @@ trait BlobFormat[B] {
   val format: BinaryFormat[B]
   protected def encodeValue(value: B) : Array[Byte] = format.writes(Some(value))
   protected def decodeValue(data: Array[Byte]) : B = format.reads(data).get
+}
+
+trait S3FileStore[A] extends S3ObjectStore[A, File] {
+
+  protected val inbox = FileUtils.getTempDirectory
+
+  protected def packValue(value: File) = {
+    require(value.isFile, s"$value is not a file.")
+    val metadata = new ObjectMetadata()
+    metadata.addUserMetadata("name", value.getName)
+    metadata.setContentLength(value.length())
+    (FileUtils.openInputStream(value), metadata)
+  }
+
+  protected def unpackValue(s3obj: S3Object) = {
+    val metadata = s3obj.getObjectMetadata
+    val name = metadata.getUserMetadata.get("name")
+    val file = new File(inbox, name)
+    file.deleteOnExit()
+    val contentStream = s3obj.getObjectContent
+    try { FileUtils.copyInputStreamToFile(contentStream, file) }
+    finally { contentStream.close() }
+    file
+  }
 }
 
 trait S3Module extends ScalaModule

@@ -6,33 +6,20 @@ import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.model._
 import com.keepit.search.graph.Util
-import com.keepit.search.Lang
 import com.keepit.search.LangDetector
-import com.keepit.search.index.DocUtil
-import com.keepit.search.index.FieldDecoder
-import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer}
-import com.keepit.search.index.Indexable.IteratorTokenStream
-import com.keepit.search.index.Searcher
-import com.keepit.search.line.LineField
+import com.keepit.search.index._
 import com.keepit.search.line.LineFieldBuilder
 import com.keepit.shoebox.ShoeboxServiceClient
-import org.apache.lucene.analysis.TokenStream
-import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.index.Term
-import org.apache.lucene.store.Directory
-import org.apache.lucene.util.BytesRef
-import org.apache.lucene.util.Version
 import java.io.StringReader
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
-import scala.concurrent.future
-import scala.concurrent.Promise
 import scala.util.matching.Regex.Match
 import com.keepit.social.BasicUser
+import com.keepit.search.Lang
 
 
 object CommentFields {
@@ -64,7 +51,7 @@ object CommentLookHereRemover {
 }
 
 class CommentIndexer(
-    indexDirectory: Directory,
+    indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     val commentStore: CommentStore,
     airbrake: AirbrakeNotifier,
