@@ -62,7 +62,7 @@ class SemanticVectorQueryTest extends Specification {
 
   "SemanticVectorQuery" should {
     "score using a personalized vector" in {
-      var q = SemanticVectorQuery(Seq(new Term("sv", "abc")), "fallback")
+      var q = SemanticVectorQuery(new Term("sv", "abc"))
 
       val searcher0 = indexer.getPersonalizedSeacher(Set(0L))
       val searcher1 = indexer.getPersonalizedSeacher(Set(1L))
@@ -72,19 +72,6 @@ class SemanticVectorQueryTest extends Specification {
       searcher1.search(q).head.id === 1
       searcher2.search(q).head.id === 2
       searcher3.search(q).head.id === 0
-    }
-
-    "score using a fallback field" in {
-      var q = SemanticVectorQuery(Seq(new Term("sv", "jkl")), "fallback")
-
-      val searcher0 = indexer.getPersonalizedSeacher(Set(0L))
-      val searcher1 = indexer.getPersonalizedSeacher(Set(1L))
-      val searcher2 = indexer.getPersonalizedSeacher(Set(2L))
-      val searcher3 = indexer.getPersonalizedSeacher(Set(3L))
-      searcher0.search(q).head.id === 3
-      searcher1.search(q).head.id === 3
-      searcher2.search(q).head.id === 3
-      searcher3.search(q).head.id === 3
     }
   }
 }

@@ -11,6 +11,8 @@ import com.keepit.inject.AppScoped
 import com.keepit.model._
 import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilderFactory, UserEvent, UserEventType}
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
+import com.keepit.common.KestrelCombinator
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -30,7 +32,8 @@ class SecureSocialUserPluginImpl @Inject() (
   emailRepo: EmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
   userEventContextBuilder: UserEventContextBuilderFactory,
-  heimdal: HeimdalServiceClient)
+  heimdal: HeimdalServiceClient,
+  clock: Clock)
   extends UserService with SecureSocialUserPlugin with Logging {
 
   private def reportExceptions[T](f: => T): T =
@@ -43,11 +46,28 @@ class SecureSocialUserPluginImpl @Inject() (
     db.readOnly { implicit s =>
       socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
     } match {
+      case None if id.providerId == SocialNetworks.FORTYTWO.authProvider =>
+        // Email social accounts are only tied to one email address
+        // Since we support multiple email addresses, if we do not
+        // find a SUI with the correct email address, we go searching.
+        db.readOnly { implicit session =>
+          emailRepo.getByAddressOpt(id.userId).flatMap { emailAddr =>
+            if (emailAddr.state == EmailAddressStates.VERIFIED) {
+              socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
+                sui.credentials
+              }
+            } else {
+              None
+            }
+          }
+        } tap { res =>
+          log.info(s"No immediate SocialUserInfo found for $id, found $res")
+        }
       case None =>
-        log.info("No SocialUserInfo found for %s".format(id))
+        log.info(s"No SocialUserInfo found for $id")
         None
       case Some(user) =>
-        log.info("User found: %s for %s".format(user, id))
+        log.info(s"User found: $user for $id")
         user.credentials
     }
   }
@@ -63,10 +83,10 @@ class SecureSocialUserPluginImpl @Inject() (
         userId,
         allowSignup,
         isComplete)
-      require(socialUserInfo.credentials.isDefined, "social user info's credentials is not defined: %s".format(socialUserInfo))
+      require(socialUserInfo.credentials.isDefined, s"social user info's credentials is not defined: $socialUserInfo")
       if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
         socialGraphPlugin.asyncFetch(socialUserInfo)
-      log.info("[save] persisting %s into %s".format(socialUser, socialUserInfo))
+      log.info(s"[save] persisting $socialUser into $socialUserInfo")
       socialUser
     }
   }
@@ -119,10 +139,12 @@ class SecureSocialUserPluginImpl @Inject() (
     def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser): Unit = {
       for (email <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
         val emailAddress = emailRepo.getByAddressOpt(address = email) match {
+          case Some(e) if e.state == EmailAddressStates.VERIFIED && e.verifiedAt.isEmpty =>
+            emailRepo.save(e.copy(verifiedAt = Some(clock.now))) // we didn't originally set this
           case Some(e) if e.state == EmailAddressStates.VERIFIED => e
-          case Some(e) => emailRepo.save(e.withState(EmailAddressStates.VERIFIED))
+          case Some(e) => emailRepo.save(e.withState(EmailAddressStates.VERIFIED).copy(verifiedAt = Some(clock.now)))
           case None => emailRepo.save(
-            EmailAddress(userId = userId, address = email, state = EmailAddressStates.VERIFIED))
+            EmailAddress(userId = userId, address = email, state = EmailAddressStates.VERIFIED, verifiedAt = Some(clock.now)))
         }
         log.info(s"[save] Saved email is $emailAddress")
       }

@@ -70,10 +70,11 @@ CREATE TABLE email_address (
     state varchar(128) NOT NULL,
     verified_at datetime NULL,
     last_verification_sent datetime NULL,
-    
+
     PRIMARY KEY (id),
-    
-    CONSTRAINT web_session_f_email FOREIGN KEY (user_id) REFERENCES user(id)    
+    INDEX email_address_i_address (address),
+
+    CONSTRAINT email_address_f_user FOREIGN KEY (user_id) REFERENCES user(id)
 );
 
 ALTER TABLE user ADD CONSTRAINT user_f_email FOREIGN KEY (primary_email_id) REFERENCES email_address(id);

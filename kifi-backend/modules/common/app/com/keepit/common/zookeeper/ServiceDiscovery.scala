@@ -42,7 +42,7 @@ class ServiceDiscoveryImpl @Inject() (
     amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
     scheduler: Scheduler,
     servicesToListenOn: Seq[ServiceType] =
-        ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: Nil)
+        ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil)
   extends ServiceDiscovery with Logging {
 
   private var myInstance: Option[ServiceInstance] = None

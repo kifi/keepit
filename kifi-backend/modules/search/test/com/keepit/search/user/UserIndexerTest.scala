@@ -2,17 +2,17 @@ package com.keepit.search.user
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
-import com.keepit.search.index.{IndexDirectory, VolatileIndexDirectoryImpl, DefaultAnalyzer}
+import com.keepit.search.index.{VolatileIndexDirectoryImpl, IndexDirectory, DefaultAnalyzer}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.inject._
 import com.keepit.test._
 import org.specs2.mutable._
-import play.api.Play.current
 import play.api.test.Helpers._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.search.IdFilterCompressor
 
 
 class UserIndexerTest extends Specification with ApplicationInjector {
@@ -29,7 +29,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
      EmailAddress(userId = usersWithId(4).id.get, address = "Woody.Allen@GMAIL.com"))
 
     client.saveEmails(emails: _*)
-
+    usersWithId
   }
 
   def mkUserIndexer(dir: IndexDirectory = new VolatileIndexDirectoryImpl): UserIndexer = {
@@ -104,22 +104,62 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val parser = new UserQueryParser(analyzer)
         val query = parser.parse("woody.allen@gmail.com")
 
-        val hits = searcher.search(query.get, maxHit = 5)
+        val hits = searcher.search(query.get, maxHit = 5).hits
         hits.size === 1
-        hits(0).firstName === "Woody"
-
-        val query2 = parser.parse("firstNa")
-        val hits2 = searcher.search(query2.get, 5)
-        hits2.size === 4
-        hits2.map{_.firstName} === (0 to 3).map{ i => s"firstName${i}"}.toArray
-
         hits(0).basicUser.firstName === "Woody"
 
         val query2 = parser.parse("firstNa")
-        val hits2 = searcher.search(query2.get, 5)
+        val hits2 = searcher.search(query2.get, 5).hits
         hits2.size === 4
         hits2.map{_.basicUser.firstName} === (0 to 3).map{ i => s"firstName${i}"}.toArray
         hits2.map{_.id.id}.seq === (1 to 4)
+      }
+    }
+
+    "paginate" in {
+      running(new TestApplication(FakeShoeboxServiceModule())){
+        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        setup(client)
+        val indexer = mkUserIndexer()
+        indexer.run()
+        indexer.numDocs === 5
+
+        val searcher = new UserSearcher(indexer.getSearcher)
+        val analyzer = DefaultAnalyzer.defaultAnalyzer
+        val parser = new UserQueryParser(analyzer)
+        val query = parser.parse("firstNa")
+
+        var context = ""
+        var filter = IdFilterCompressor.fromBase64ToSet(context)
+        var res = searcher.search(query.get, maxHit = 2, idFilter = filter)
+        res.hits.size === 2
+        res.hits.map(_.id.id).seq === (1 to 2)
+        context = res.context
+        filter = IdFilterCompressor.fromBase64ToSet(context)
+        res = searcher.search(query.get, maxHit = 10, idFilter = filter)
+        res.hits.size === 2
+        res.hits.map(_.id.id).seq === (3 to 4)
+      }
+    }
+
+    "keep track of deleted users" in {
+      running(new TestApplication(FakeShoeboxServiceModule())) {
+        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        val users = setup(client)
+        val indexer = mkUserIndexer()
+        indexer.run()
+        indexer.numDocs === 5
+
+        client.saveUsers(users(0).withState(UserStates.INACTIVE))
+        indexer.run()
+
+        val searcher = new UserSearcher(indexer.getSearcher)
+        val analyzer = DefaultAnalyzer.defaultAnalyzer
+        val parser = new UserQueryParser(analyzer)
+        val query = parser.parse("firstNa")
+
+        val hits = searcher.search(query.get, maxHit = 10).hits
+        hits.size === 3
       }
     }
   }

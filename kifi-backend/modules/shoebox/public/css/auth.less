@@ -28,6 +28,7 @@ a:link,
 a:visited {
   text-decoration: none;
 }
+@input-hor-padding: .8em;
 input[type=text],
 input[type=email],
 input[type=password] {
@@ -36,15 +37,23 @@ input[type=password] {
   margin-bottom: 16px;
   height: 40px;
   border: 2px solid #e5e5e5;
-  padding: 0 .8em;
+  padding: 0 @input-hor-padding;
+  font-size: 16px;
   line-height: 130%;
   -webkit-font-smoothing: antialiased;
+}
+@placeholder-color: #a9a9a9;
+::-webkit-input-placeholder {
+  color: @placeholder-color;
+}
+::-moz-placeholder {
+  color: shade(@placeholder-color, 10%);
 }
 
 @kifi-green: #9fc062;
 @kifi-blue: #85a4ea;
 
-/* curtains */
+// curtains
 @curtain-time: .42s;
 .curtain-l,
 .curtain-r {
@@ -70,7 +79,7 @@ input[type=password] {
   .translate(67%);
 }
 
-/* stuff on curtains */
+// stuff on curtains
 .curtain-logo-l,
 .curtain-logo-r {
   position: absolute;
@@ -100,7 +109,7 @@ input[type=password] {
 }
 .curtain-welcome-l,
 .curtain-welcome-r {
-  position: absolute;
+  position: fixed;
   top: 224px;
   width: 50%;
   z-index: 10;
@@ -190,7 +199,7 @@ input[type=password] {
   visibility: hidden;
 }
 
-/* back button */
+// back button
 .curtain-back {
   position: fixed;
   top: 0;
@@ -223,14 +232,16 @@ input[type=password] {
   position: relative;
   left: 2px;
 }
-.curtain-back:hover {
+.curtain-back:hover,
+.curtain-back:focus {
   color: #fff;
 }
 .curtain-back,
 .curtain-back:active {
   color: rgba(255, 255, 255, .8);
 }
-.curtain-back:hover:before {
+.curtain-back:hover:before,
+.curtain-back:focus:before {
   opacity: .8;
 }
 .curtain-back:before,
@@ -238,7 +249,7 @@ input[type=password] {
   opacity: .6;
 }
 
-/* right-side footer */
+// right-side footer
 footer {
   position: absolute;
   top: 56px;
@@ -281,7 +292,7 @@ footer {
   color: #fff;
 }
 
-/* main page */
+// main page
 .main-logo {
   width: 251px;
   height: 144px;
@@ -311,10 +322,11 @@ footer {
   .transition(opacity (.6 * @curtain-time) (.4 * @curtain-time) linear, transform @curtain-time ease-in-out);
 }
 
-/* form errors */
+// form errors
 @form-error-color: #ef6f6e;
 .form-error {
   position: absolute;
+  z-index: 10;
   padding: 10px 18px;
   background-color: @form-error-color;
   color: #fff;
@@ -346,7 +358,7 @@ footer {
   line-height: 14px;
 }
 
-/* forms */
+// forms
 .signup,
 .login {
   display: none;
@@ -440,10 +452,32 @@ footer {
   -webkit-font-smoothing: antialiased;
   padding-right: 16px;
 }
+.password-label {
+  display: block;
+  position: relative;
+}
+.password-label:after {
+  content: ' ';
+  position: absolute;
+  top: 11px;
+  right: 14px;
+  width: 12px;
+  height: 16px;
+  background: url(../img/out/auth.png) -241px -328px;
+}
 .form-email-addr,
 .form-password {
   display: block;
   width: 100%;
+}
+.password-forgot {
+  position: absolute;
+  bottom: -28px;
+  right: 0;
+  color: @placeholder-color;
+  line-height: 14px;
+  font-size: 13px;
+  font-weight: 300;
 }
 @primary-button-color: #92c152;
 @cancel-button-color: #e8e8e8;
@@ -471,14 +505,15 @@ footer {
   font-size: 14px;
   line-height: 18px;
   color: #515151;
-  padding-bottom: 50px;
+  padding-bottom: 20px;
 }
 
-/* finalize new account */
+// finalize new account
 @signup-label-color: #6c839b;
 @signup-box-color: #ededed;
 .signup-2 {
   text-align: center;
+  padding-bottom: 10px;
 }
 .signup>.signup-2 {
   visibility: hidden;
@@ -496,7 +531,6 @@ footer {
   margin-bottom: 6px;
 }
 .signup-resume,
-.form-creds,
 .form-name,
 .form-pic {
   margin: 0 auto;
@@ -523,9 +557,6 @@ footer {
   font-size: 12px;
   color: @signup-label-color;
   -webkit-font-smoothing: antialiased;
-}
-.form-creds {
-  margin: 32px auto 16px;
 }
 .form-name {
   .clearfix;
@@ -556,6 +587,7 @@ footer {
   float: left;
   margin-right: 20px;
   background: #fff url(../img/out/ghost.png);
+  background-size: cover;
   position: relative;
 }
 .form-photo.unset:after {
@@ -664,20 +696,20 @@ footer {
   overflow: hidden;
   visibility: hidden;
 }
-@final-button-color: #6fa6ef;
+@alt-button-color: #6fa6ef;
 .signup-2>.form-submit {
   margin: 20px auto 40px;
   width: 200px;
-  background: @final-button-color;
+  background: @alt-button-color;
   &:hover {
-    background: tint(@final-button-color, 10%);
+    background: tint(@alt-button-color, 10%);
   }
   &:active {
-    background: shade(@final-button-color, 10%);
+    background: shade(@alt-button-color, 10%);
   }
 }
 
-/* finalize transition */
+// finalize transition
 @finalize-time: .24s;
 .finalizing>.curtain-back {
   visibility: hidden;
@@ -730,14 +762,13 @@ footer {
   .transform(none);
 }
 .finalizing .terms {
-  .translate(0, 106px);
-  .transition(transform @finalize-time ease-out);
+  opacity: 0;
+  visibility: hidden;
+  .transition(opacity (@finalize-time / 2) linear, visibility 0 (@finalize-time / 2));
 }
 
-@photo-size: 200px;
-@photo-padding: 40px;
-@canvas-margin: 12px;
-.photo-dialog {
+// dialogs
+.dialog {
   display: table;
   position: fixed;
   top: 0;
@@ -747,17 +778,25 @@ footer {
   z-index: 10;
   background: rgba(0,0,0,.5);
 }
-.photo-dialog-cell {
+.dialog-cell {
   display: table-cell;
   vertical-align: middle;
   text-align: center;
 }
-.photo-dialog-box {
+.dialog-box {
   margin: 0 auto;
-  width: (@photo-size + 2 * @photo-padding + 2 * @canvas-margin);
   background: white;
   text-align: left;
   border-radius: 6px;
+  position: relative;
+}
+
+// photo dialog
+@photo-size: 200px;
+@photo-padding: 40px;
+@canvas-margin: 12px;
+.photo-dialog .dialog-box {
+  width: (@photo-size + 2 * @photo-padding + 2 * @canvas-margin);
 }
 .photo-dialog-title {
   padding: 4px 0;
@@ -814,27 +853,28 @@ footer {
   background-color: #eee;
   border: none;
   border-radius: 4px;
-  margin: 0 50px;
+  margin: 0 52px 0 48px;
   .box-shadow(inset 0 0 3px rgba(0,0,0,.15));
   position: relative;
 }
-.photo-dialog-slider:before {
-  content: ' ';
-  background-color: red;
-  position: absolute;
-  top: 0;
-  left: -30px;
-  bottom: 0;
-  width: 12px;
-}
+.photo-dialog-slider:before,
 .photo-dialog-slider:after {
   content: ' ';
-  background-color: green;
   position: absolute;
-  top: 0;
-  right: -30px;
-  bottom: 0;
+  background: #ccc;
+  .box-shadow(inset 0 0 0 1px #ddd, inset 0 0 0 2px #fff);
+}
+.photo-dialog-slider:before {
+  left: -28px;
+  bottom: -2px;
   width: 12px;
+  height: 11px;
+}
+.photo-dialog-slider:after {
+  right: -33px;
+  bottom: -5px;
+  width: 20px;
+  height: 17px;
 }
 .photo-dialog-slider>.ui-slider-handle {
   position: absolute;
@@ -858,7 +898,7 @@ footer {
   margin-top: 24px;
   border-top: 1px solid #e8e8e8;
   padding: 14px 12px 16px;
-  text-align: right;
+  text-align: center;
 }
 .photo-dialog-cancel,
 .photo-dialog-submit {
@@ -866,6 +906,9 @@ footer {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   margin-left: 4px;
+  &:focus {
+    outline-color: #888;
+  }
 }
 .photo-dialog-cancel {
   color: #888;
@@ -888,7 +931,244 @@ footer {
   }
 }
 
-/* retina image overrides */
+// reset password dialog
+@dialog-text-color: #515051;
+.reset-password .dialog-box {
+  width: 480px;
+  text-align: center;
+  overflow: hidden;
+}
+.reset-password .dialog-box:before,
+.reset-password .dialog-box:after {
+  content: ' ';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 70px;
+  z-index: 1;
+  border-radius: inherit;
+}
+.reset-password .dialog-box:before {
+  left: 0;
+  .background-image(linear-gradient(to right, #fff, transparent));
+}
+.reset-password .dialog-box:after {
+  right: 0;
+  .background-image(linear-gradient(to left, #fff, transparent));
+}
+.reset-password-x {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  height: 24px;
+  width: 24px;
+  z-index: 2;
+  border-radius: 50%;
+  &:before,
+  &:after {
+    content: ' ';
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    left: 50%;
+    width: 1px;
+    background: #aaa;
+    font-size: 0;
+  }
+  &:before {
+    .transform(translate3d(-.5px,0,0) rotate(45deg));
+  }
+  &:after {
+    .transform(translate3d(-.5px,0,0) rotate(-45deg));
+  }
+  &:hover {
+    background: #e8e8e8;
+  }
+  &:active {
+    background: #d8d8d8;
+  }
+  &:focus {
+    outline-color: #ccc;
+  }
+}
+.reset-password-title {
+  padding: 20px 0 10px;
+  line-height: 32px;
+  font-size: 28px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  color: @dialog-text-color;
+}
+.reset-password-text {
+  margin: 0;
+  line-height: 19px;
+  font-size: 15px;
+  font-weight: 300;
+  color: @dialog-text-color;
+}
+.reset-password-email {
+  width: 300px;
+}
+.reset-password-buttons {
+  padding: 2px 0 20px;
+}
+.reset-password-cancel,
+.reset-password-submit {
+  display: inline-block;
+  margin: 0 4px;
+  padding: 10px 30px;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  &:focus {
+    outline-color: #888;
+  }
+}
+.reset-password-cancel {
+  color: #888;
+  background: @cancel-button-color;
+  &:hover {
+    background: tint(@cancel-button-color, 20%);
+  }
+  &:active {
+    background: shade(@cancel-button-color, 10%);
+  }
+}
+.reset-password-submit {
+  color: #fff;
+  background: @alt-button-color;
+  &:hover {
+    background: tint(@alt-button-color, 10%);
+  }
+  &:active {
+    background: shade(@alt-button-color, 10%);
+  }
+}
+.reset-password-success {
+  position: absolute;
+  top: 62px;
+  left: 0;
+  width: 100%;
+  .translate(80%);
+  visibility: hidden;
+  &>.reset-password-text {
+    margin: 30px 0 42px;
+  }
+}
+.reset-password-sent {
+  .reset-password-form {
+    .translate(-80%);
+    visibility: hidden;
+    .transition(visibility 0 .2s, transform .2s ease-in-out);
+  }
+  .reset-password-success {
+    .transform(none);
+    visibility: visible;
+    .transition(visibility 0, transform .2s ease-in-out);
+  }
+}
+
+
+// social signup 2
+.social-info,
+.form-creds {
+  margin: 0 auto;
+  max-width: 360px;
+  width: 100%;
+  text-align: left;
+}
+.social-info {
+  display: table;
+  border-collapse: collapse;
+  background-color: @signup-box-color;
+  position: relative;  // bugzil.la/63895
+}
+.social-photo {
+  display: table-cell;
+  background-clip: content-box;
+  background-origin: content-box;
+  margin: 0;
+  padding: 12px;
+}
+.social-text-info {
+  display: table-cell;
+  width: 99%;
+  vertical-align: top;
+  padding: 12px 0 0 12px;
+  position: relative;
+}
+.social-name {
+  margin: 14px 0 2px;
+  color: @signup-label-color;
+  line-height: 20px;
+  font-size: 20px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+}
+input.social-email {
+  display: block;
+  width: 100%;
+  margin: 0 (-@input-hor-padding);
+  border: 0;
+  height: 30px;
+  font-size: 14px;
+  &[disabled] {
+    background: transparent;
+  }
+}
+.social-change-email {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  padding: 4px 8px;
+  background-color: #e5e5e5;
+  color: @signup-label-color;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  &:hover {
+    background: #e0e0e0;
+  }
+  &:active {
+    background: #d8d8d8;
+  }
+  &.clicked {
+    opacity: 0;
+    visibility: hidden;
+    .transition(opacity .2s linear, visibility 0s .2s)
+  }
+}
+.form-creds {
+  margin: 24px auto 16px;
+}
+@social-2-password-width: 220px;
+.password-label.signup-2-label {
+  line-height: 22px;
+}
+.password-label.signup-2-label:after {
+  top: 40px;
+  left: (@social-2-password-width - 26px);
+}
+.form-creds .form-password {
+  display: inline-block;
+  margin: 6px 0 0;
+  width: @social-2-password-width;
+}
+.signup-2-social .form-submit {
+  margin-top: 40px;
+  height: 66px;
+  width: 260px;
+  font-size: 24px;
+  font-weight: 300;
+}
+.form-password-tip {
+  position: absolute;
+  left: (@social-2-password-width + 16px);
+  bottom: 12px;
+  line-height: 15px;
+  font-size: 13px;
+  font-weight: normal;
+}
+
+// retina image overrides
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .curtain-logo-l:before,
   .curtain-logo-r:before,
@@ -896,7 +1176,8 @@ footer {
   .us-on,
   .main-logo,
   .form-network-icon:before,
-  .form-photo-a:before {
+  .form-photo-a:before,
+  .password-label:after {
     background-image: url(../img/out/auth.2x.png);
     background-size: 255px auto;
   }

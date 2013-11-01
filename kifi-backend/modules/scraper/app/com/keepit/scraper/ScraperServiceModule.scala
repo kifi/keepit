@@ -7,7 +7,7 @@ import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.common.store.StoreModule
 
 abstract class ScraperServiceModule(
-  // val cacheModule: CacheModule,
+  val cacheModule: CacheModule,
   val storeModule: StoreModule
 ) extends ConfigurationModule with CommonServiceModule  {
   // Service clients

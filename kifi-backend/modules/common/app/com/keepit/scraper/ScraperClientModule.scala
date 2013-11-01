@@ -21,7 +21,7 @@ case class ProdScraperServiceClientModule() extends ScraperServiceClientModule {
     new ScraperServiceClientImpl(
       airbrakeNotifier,
       client,
-      serviceDiscovery.serviceCluster(ServiceType.ABOOK)
+      serviceDiscovery.serviceCluster(ServiceType.SCRAPER)
     )
   }
 

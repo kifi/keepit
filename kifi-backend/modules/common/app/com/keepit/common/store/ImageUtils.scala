@@ -2,9 +2,9 @@ package com.keepit.common.store
 
 import java.awt.image.BufferedImage
 import scala.util.Try
-import org.imgscalr.Scalr
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import javax.imageio.ImageIO
+import org.imgscalr._
 import play.api.libs.json.Json
 
 case class ImageSize(width: Int, height: Int)

@@ -32,7 +32,7 @@
     var $form = isLogin ? $login : $('.signup-1');
     $('.page-title').text($form.data('title'));
     $('body').addClass('curtains-drawn');
-    setTimeout(function() {
+    setTimeout(function () {
       $form.find('.form-email-addr').focus();
     });
   });
@@ -121,7 +121,7 @@
       signup1Promise = $.postJson(baseUri + '/auth/sign-up', {
         email: email,
         password: password
-      }).done(function(data) {
+      }).done(function (data) {
         if (!data.finalized) {
           transitionTitle($('.signup-2').data('title'));
           $('body').addClass('finalizing droppable');
@@ -157,7 +157,7 @@
     var last = first && validateName($form.find('.form-last-name'));
     if (first && last) {
       var pic = $photo.data();
-      signup2Promise = $.when(pic.uploadPromise).done(function(upload) {
+      signup2Promise = $.when(pic.uploadPromise).done(function (upload) {
          signup2Promise = $.postJson(baseUri + '/auth/email-finalize', {
           firstName: first,
           lastName: last,
@@ -182,18 +182,14 @@
     }
     $('.form-error').remove();
     var $form = $(this);
-    var email = validateEmailAddress($form.find('.form-email-addr'));
-    var password = email && validateNewPassword($form.find('.form-password'));
-    var first = email && password && validateName($form.find('.form-first-name'));
-    var last = email && password && first && validateName($form.find('.form-last-name'));
-    if (email && password && first && last) {
-      // TODO: use iframe photo upload promise
+    var email = validateEmailAddress($form.find('.social-email'));
+    var password = validateNewPassword($form.find('.form-password'));
+    if (password) {
       signup2Promise = $.postJson(baseUri + '/auth/social-finalize', {
+        firstName: $form.data('first'),
+        lastName: $form.data('last'),
         email: email,
-        password: password,
-        firstName: first,
-        lastName: last
-        // picToken: TODO
+        password: password
       })
       .done(navigateToApp)
       .fail(function (xhr) {
@@ -201,6 +197,10 @@
       });
     }
     return false;
+  }).on('click', '.social-change-email', function (e) {
+    if (e.which !== 1) return;
+    $('.social-email').removeAttr('disabled').focus().select();
+    $(this).addClass('clicked');
   });
 
   var loginPromise;
@@ -235,6 +235,9 @@
       });
     }
     return false;
+  }).on('click', '.password-forgot', function (e) {
+    if (e.which !== 1) return;
+    resetPasswordDialog.show($(this).closest('form').find('.form-email-addr').val());
   });
 
   var URL = window.URL || window.webkitURL;
@@ -295,10 +298,10 @@
           deferred.notify(e.loaded / e.total);
         }
       });
-      xhr.addEventListener('load', function() {
+      xhr.addEventListener('load', function () {
         deferred.resolve(JSON.parse(xhr.responseText));
       });
-      xhr.addEventListener('loadend', function() {
+      xhr.addEventListener('loadend', function () {
         if (photoXhr2 === xhr) {
           photoXhr2 = null;
         }
@@ -323,7 +326,7 @@
       iframeDeferred.reject();  // clean up previous in-progress upload
     }
     var deferred = iframeDeferred = createPhotoUploadDeferred()
-      .always(function() {
+      .always(function () {
         clearTimeout(fakeProgressTimer);
         iframeDeferred = null;
         $iframe.remove();
@@ -436,7 +439,7 @@
 
     function percentToPx(pxMin, pxMax) {
       var factor = (pxMax - pxMin) / SLIDER_MAX;
-      return function(pct) {
+      return function (pct) {
         return pxMin + pct * factor;
       };
     }
@@ -497,7 +500,7 @@
       if (e.which !== 1) return;
       var $el = $(e.target);
       var submitted = $el.hasClass('photo-dialog-submit');
-      if (submitted || $el.is('.photo-dialog-cancel,.photo-dialog-x,.photo-dialog-cell')) {
+      if (submitted || $el.is('.photo-dialog-cancel,.photo-dialog-x,.dialog-cell')) {
         var o = $image.data();
         $dialog.remove();
         $image.remove();
@@ -517,18 +520,68 @@
     }
   }());
 
+  var resetPasswordDialog = (function () {
+    var $dialog, $form, promise;
+    return {
+      show: function (emailAddr) {
+        $dialog = $dialog || $('.reset-password').remove().css('display', '');
+        $form = $dialog.find('.reset-password-form').submit(onFormSubmit);
+
+        $dialog.appendTo('body').click(onDialogClick);
+        $dialog.find('.reset-password-email').val(emailAddr).focus().select();
+      }
+    };
+
+    function onFormSubmit(e) {
+      e.preventDefault();
+      if (promise && promise.status() === 'pending') {
+        return false;
+      }
+      var $email = $form.find('.reset-password-email');
+      var email = validateEmailAddress($email);
+      if (email) {
+        promise = $.postJson(this.action, {email: email})
+        .done(function (resp) {
+          if (resp.error === 'no_account') {
+            showFormError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
+          } else {
+            $dialog.addClass('reset-password-sent');
+          }
+        })
+        .always(function () {
+          promise = null;
+        });
+      }
+    }
+
+    function onDialogClick(e) {
+      if (e.which !== 1) return;
+      if (e.target.className === 'reset-password-submit') {
+        $form.submit();
+      } else if ($(e.target).is('.reset-password-cancel,.reset-password-x,.dialog-cell')) {
+        hideDialog();
+      }
+    }
+
+    function hideDialog() {
+      $dialog.remove().removeClass('reset-password-sent');
+      $form = null;
+      promise = null;
+    }
+  }());
+
   // from underscore.js 1.5.2 underscorejs.org
   function throttle(func, wait, options) {
     var context, args, result;
     var timeout = null;
     var previous = 0;
     options || (options = {});
-    var later = function() {
+    var later = function () {
       previous = options.leading === false ? 0 : Date.now();
       timeout = null;
       result = func.apply(context, args);
     };
-    return function() {
+    return function () {
       var now = Date.now();
       if (!previous && options.leading === false) previous = now;
       var remaining = wait - (now - previous);

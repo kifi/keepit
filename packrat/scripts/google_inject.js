@@ -163,7 +163,7 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   function parseQuery(hash) {
     var m = /[?#&]q=[^&]*/.exec(hash);
-    return m && unescape(m[0].substr(3).replace(/\+/g, " ")).trim() || "";
+    return m && decodeURIComponent(m[0].substr(3).replace(/\+/g, " ")).trim() || "";
   }
 
   function reportTiming() {

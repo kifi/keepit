@@ -6,7 +6,6 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Failure
 import scala.util.Success
-import org.joda.time.Weeks
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectResult
@@ -14,23 +13,16 @@ import com.google.inject.ImplementedBy
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import com.keepit.common.db.ExternalId
-import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time.Clock
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURIRepo
-import com.keepit.model.NormalizedURIRepoImpl
 import play.api.libs.ws.WS
 import scala.util.Try
 import play.modules.statsd.api.Statsd
-import org.imgscalr.Scalr
-import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
-import java.io.ByteArrayOutputStream
-import java.io.ByteArrayInputStream
 import com.keepit.common.net.URI
 
 
@@ -48,9 +40,9 @@ case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ImageSize])
 
 @Singleton
 class S3ScreenshotStoreImpl @Inject() (
-    db: Database,
+//    db: Database,
     s3Client: AmazonS3,
-    normUriRepo: NormalizedURIRepo,
+//    normUriRepo: NormalizedURIRepo,
     airbrake: AirbrakeNotifier,
     clock: Clock,
     val config: S3ImageConfig
@@ -154,9 +146,10 @@ class S3ScreenshotStoreImpl @Inject() (
           result.map { s =>
             if(s.exists(_.isDefined)) { // *an* image persisted successfully
               // todo(andrew): create Screenshot model, track what sizes we have and when they were captured
-              db.readWrite { implicit s =>
-                normUriRepo.save(normalizedUri.copy(screenshotUpdatedAt = Some(clock.now)))
-              }
+//              db.readWrite { implicit s =>
+//                normUriRepo.save(normalizedUri.copy(screenshotUpdatedAt = Some(clock.now)))
+//              }
+
             }
           }
         case Failure(e) =>
