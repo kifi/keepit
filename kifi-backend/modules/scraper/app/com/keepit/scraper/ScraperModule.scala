@@ -3,13 +3,14 @@ package com.keepit.scraper
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.google.inject.{Provides, Singleton}
+import com.keepit.scraper.extractor.{ExtractorFactoryImpl, ExtractorFactory}
 
 trait ScraperModule extends ScalaModule
 
 case class ScraperImplModule() extends ScraperModule {
 
   def configure {
-    bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
+    bind[ExtractorFactory].to[ExtractorFactoryImpl].in[AppScoped]
   }
 
   @Singleton
