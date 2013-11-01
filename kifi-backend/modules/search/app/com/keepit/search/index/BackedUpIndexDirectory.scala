@@ -1,8 +1,7 @@
 package com.keepit.search.index
 
-import java.io.{FileInputStream, FileOutputStream, File}
+import java.io.File
 import com.keepit.common.store._
-import org.apache.commons.compress.archivers.tar._
 import com.keepit.common.IO
 import org.apache.lucene.store.{RAMDirectory, MMapDirectory, Directory}
 import com.amazonaws.services.s3.AmazonS3
@@ -21,38 +20,25 @@ trait BackedUpDirectory {
 trait ArchivedDirectory extends BackedUpDirectory {
   protected def getLocalDirectory(): File
   protected def getArchive(): File
-  protected def saveArchive(tarFile: File): Unit
+  protected def saveArchive(archive: File): Unit
 
   private val shouldBackup = new AtomicBoolean(false)
   def scheduleBackup() = shouldBackup.set(true)
   def cancelBackup() = shouldBackup.set(false)
   def doBackup() = if (shouldBackup.getAndSet(false)) {
     val dir = getLocalDirectory()
-    val tarFile = new File(FileUtils.getTempDirectory, dir.getName + ".tar")
-    val tarStream = new FileOutputStream(tarFile)
-    val tarOut = new TarArchiveOutputStream(tarStream)
-    tarOut.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_STAR)
-    try {
-      IO.addToArchive(tarOut, dir)
-      tarOut.finish()
-      saveArchive(tarFile)
-    } finally {
-      tarOut.close()
-      tarFile.delete()
-    }
+    val tarGz = IO.compress(dir)
+    saveArchive(tarGz)
+    tarGz.delete()
     true
   } else false
 
   def restoreFromBackup(): Unit = {
     val dir = getLocalDirectory()
-    val tarFile = getArchive()
-    val tarIn = new TarArchiveInputStream(new FileInputStream(tarFile))
-    try {
-      FileUtils.deleteDirectory(dir)
-      IO.extractArchive(tarIn, dir.getParentFile.getAbsolutePath)
-    } finally {
-      tarIn.close()
-    }
+    val tarGz = getArchive()
+    FileUtils.deleteDirectory(dir)
+    IO.uncompress(tarGz, dir.getParentFile.getAbsolutePath)
+    tarGz.delete()
   }
 }
 
@@ -74,8 +60,7 @@ class VolatileIndexDirectoryImpl extends RAMDirectory with IndexDirectory with L
 }
 
 class S3IndexStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends S3FileStore[IndexDirectory] with IndexStore {
-  def idToKey(indexDirectory: IndexDirectory): String = { val id = indexDirectory.getLockID; println("############### INDEX KEY: " + id); id }
-  val useCompression = true
+  def idToKey(indexDirectory: IndexDirectory): String = indexDirectory.getLockID
 }
 
 class InMemoryIndexStoreImpl extends InMemoryFileStore[IndexDirectory] with IndexStore

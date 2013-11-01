@@ -3,6 +3,8 @@ package com.keepit
 import org.apache.commons.compress.archivers.tar.{TarArchiveInputStream, TarArchiveEntry, TarArchiveOutputStream}
 import java.io._
 import org.apache.commons.io.{IOUtils, FileUtils}
+import org.apache.commons.compress.compressors.gzip.{GzipCompressorInputStream, GzipCompressorOutputStream}
+import scala.collection.mutable.ListBuffer
 
 package object common {
 
@@ -61,22 +63,51 @@ package object common {
         FileUtils.copyFile(file, tarArchive)
         tarArchive.closeArchiveEntry()
       } else
-        file.listFiles().foreach(addToArchive(tarArchive, _, entryName + "/"))
+        file.listFiles().foreach(addToArchive(tarArchive, _, entryName + "/")) // empty directories will not be archived
     }
 
-    def extractArchive(tarArchive: TarArchiveInputStream, destination: String): Unit = {
+    def extractArchive(tarArchive: TarArchiveInputStream, destDir: String): Seq[File] = {
+      val files = new ListBuffer[File]
       var entryOption = Option(tarArchive.getNextTarEntry)
       while (entryOption.isDefined) {
         entryOption.foreach { entry =>
-          val out = FileUtils.openOutputStream(new File(destination, entry.getName))
-          try {
-            IOUtils.copyLarge(tarArchive, out, 0, entry.getSize)
-          } finally {
-            out.close()
-          }
+          val file = new File(destDir, entry.getName)
+          files.append(file)
+          val out = FileUtils.openOutputStream(file)
+          try { IOUtils.copyLarge(tarArchive, out, 0, entry.getSize) }
+          catch { case e: Throwable => files.foreach(_.delete()); throw e }
+          finally { out.close() }
         }
         entryOption = Option(tarArchive.getNextTarEntry)
       }
+      files.toList
+    }
+
+    def compress(file: File, outputStream: OutputStream): Unit = {
+      val compressedTarArchive = new TarArchiveOutputStream(new GzipCompressorOutputStream(outputStream))
+      compressedTarArchive.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_STAR)
+      addToArchive(compressedTarArchive, file)
+      compressedTarArchive.finish()
+    }
+
+    def compress(file: File, destDir: String = FileUtils.getTempDirectoryPath): File = {
+      val tarGz = new File(destDir, file.getName + ".tar.gz")
+      val out = FileUtils.openOutputStream(tarGz)
+      try { compress(file, out) }
+      catch { case e: Throwable => tarGz.delete(); throw e } // directories created by FileUtils.openOutputStream may not be cleaned up
+      finally { out.close() }
+      tarGz
+    }
+
+    def uncompress(tarGzStream: InputStream, destDir: String): Unit = {
+      val uncompressedTarArchive = new TarArchiveInputStream(new GzipCompressorInputStream(tarGzStream))
+      extractArchive(uncompressedTarArchive, destDir)
+    }
+
+    def uncompress(tarGz: File, destDir: String): Unit = {
+      val inputStream = FileUtils.openInputStream(tarGz)
+      try { uncompress(inputStream, destDir) }
+      finally { inputStream.close() }
     }
   }
 }

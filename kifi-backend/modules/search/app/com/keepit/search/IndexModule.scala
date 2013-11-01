@@ -19,7 +19,7 @@ import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserIndexerPlugin
 import com.keepit.search.user.UserIndexerPluginImpl
 import com.keepit.common.time._
-
+import org.apache.commons.io.FileUtils
 
 trait IndexModule extends ScalaModule with Logging {
 
@@ -36,6 +36,7 @@ trait IndexModule extends ScalaModule with Logging {
         }
         catch { case e: Exception => {
           log.error(s"Could not restore $dir from backup", e)
+          FileUtils.deleteDirectory(dir)
           if (!dir.mkdirs()) {
             throw new Exception(s"Could not create directory $dir")
           }

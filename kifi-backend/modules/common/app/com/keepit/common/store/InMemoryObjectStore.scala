@@ -35,10 +35,11 @@ trait InMemoryFileStore[A] extends ObjectStore[A, File] {
   require(!Play.isProd, "Can't have in memory file store in production")
 
   protected val pathMap = new HashMap[A, String]()
+  protected val localStore = FileUtils.getTempDirectory
 
   def += (kv: (A, File)) = {
     val (key, file) = kv
-    val copy = new File(FileUtils.getTempDirectory, file.getName)
+    val copy = new File(localStore, file.getName)
     copy.deleteOnExit()
     val copyStream = new FileOutputStream(copy)
     Files.copy(file.toPath, copyStream)

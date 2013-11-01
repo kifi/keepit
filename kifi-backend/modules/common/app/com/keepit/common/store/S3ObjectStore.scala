@@ -17,12 +17,7 @@ import play.api.Play
 import java.io._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.serializer.BinaryFormat
-import java.util.zip.{GZIPOutputStream, GZIPInputStream}
-import java.nio.file.Files
 import org.apache.commons.io.{IOUtils, FileUtils}
-import com.keepit.common.akka.SafeFuture
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import org.apache.commons.compress.compressors.gzip.{GzipCompressorInputStream, GzipCompressorOutputStream}
 
 
 case class S3Bucket(name: String)
@@ -180,40 +175,24 @@ trait BlobFormat[B] {
 
 trait S3FileStore[A] extends S3ObjectStore[A, File] {
 
-  val useCompression: Boolean
+  protected val inbox = FileUtils.getTempDirectory
 
   protected def packValue(value: File) = {
     require(value.isFile, s"$value is not a file.")
     val metadata = new ObjectMetadata()
-    val toBeSent = if (!useCompression) value else {
-      val gzipped = new File(FileUtils.getTempDirectory, value.getName + ".gz")
-      gzipped.delete()
-      gzipped.deleteOnExit()
-      val gzipOutputStream = new GzipCompressorOutputStream(new FileOutputStream(gzipped))
-      try {
-        FileUtils.copyFile(value, gzipOutputStream)
-      } finally {
-        gzipOutputStream.close()
-      }
-      gzipped
-    }
-
-    metadata.addUserMetadata("name", toBeSent.getName)
-    metadata.setContentLength(toBeSent.length())
-    (new FileInputStream(toBeSent), metadata)
+    metadata.addUserMetadata("name", value.getName)
+    metadata.setContentLength(value.length())
+    (FileUtils.openInputStream(value), metadata)
   }
 
   protected def unpackValue(s3obj: S3Object) = {
     val metadata = s3obj.getObjectMetadata
-    val name = metadata.getUserMetadata.get("name").stripSuffix(".gz")
-    val file = new File(FileUtils.getTempDirectory, name)
+    val name = metadata.getUserMetadata.get("name")
+    val file = new File(inbox, name)
     file.deleteOnExit()
-    val inputStream = if (useCompression) new GzipCompressorInputStream(s3obj.getObjectContent) else s3obj.getObjectContent
-    try {
-      FileUtils.copyInputStreamToFile(inputStream, file)
-    } finally {
-      inputStream.close()
-    }
+    val contentStream = s3obj.getObjectContent
+    try { FileUtils.copyInputStreamToFile(contentStream, file) }
+    finally { contentStream.close() }
     file
   }
 }
