@@ -155,8 +155,7 @@ class HealthcheckPluginImpl @Inject() (
     actor: ActorInstance[HealthcheckActor],
     services: FortyTwoServices,
     host: HealthcheckHost)
-  extends HealthcheckPlugin
-  with SchedulingPlugin with Logging {
+  extends HealthcheckPlugin with SchedulingPlugin with Logging {
 
   val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
