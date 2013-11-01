@@ -45,9 +45,9 @@ POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.
 
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 
-POST    /password/reset             @com.keepit.controllers.core.AuthController.resetPassword()
-GET     /password/:code             @com.keepit.controllers.core.AuthController.setNewPasswordPage(code: String)
-POST    /password/:code             @com.keepit.controllers.core.AuthController.setNewPassword(code: String)
+POST    /password/forgot            @com.keepit.controllers.core.AuthController.forgotPassword()
+GET     /password/:code             @com.keepit.controllers.core.AuthController.setPasswordPage(code: String)
+POST    /password/set               @com.keepit.controllers.core.AuthController.setPassword()
 
 POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
