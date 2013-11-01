@@ -545,7 +545,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getProxy(url:String):Future[Option[HttpProxy]] = {
     call(Shoebox.internal.getProxy(url)).map { r =>
-      r.json.as[Option[HttpProxy]]
+      if (r.json == null) None else r.json.asOpt[HttpProxy]
     }
   }
 

@@ -936,7 +936,10 @@ function sendNotificationToTabs(n) {
   api.tabs.eachSelected(tellTab);
   forEachTabAtLocator('/notices', tellTab);
   tellVisibleTabsNoticeCountIfChanged();
-  api.play("media/notification.mp3");
+
+  if (n.unread) {
+    api.play("media/notification.mp3");
+  }
 
   function tellTab(tab) {
     if (told[tab.id]) return;
