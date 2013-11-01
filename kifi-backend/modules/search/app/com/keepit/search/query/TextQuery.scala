@@ -195,11 +195,17 @@ class TextWeight(
       result.setDescription("TextQuery")
       result.setValue(sc.score)
       result.setMatch(true)
-      if (personalWeight != null) result.addDetail(personalWeight.explain(context, doc))
-      if (regularWeight != null) result.addDetail(regularWeight.explain(context, doc))
+      if (personalWeight != null) {
+        val exp = personalWeight.explain(context, doc)
+        if (exp.getValue() > 0.0f) result.addDetail(personalWeight.explain(context, doc))
+      }
+      if (regularWeight != null) {
+        val exp = regularWeight.explain(context, doc)
+        if (exp.getValue() > 0.0f) result.addDetail(regularWeight.explain(context, doc))
+      }
     } else {
       result.setDescription("TextQuery, doesn't match id %d".format(doc))
-      result.setValue(0)
+      result.setValue(0.0f)
       result.setMatch(false)
     }
     result
