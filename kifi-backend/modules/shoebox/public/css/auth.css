@@ -38,7 +38,6 @@ input[type=password] {
 ::-moz-placeholder {
   color: #989898;
 }
-/* curtains */
 .curtain-l,
 .curtain-r {
   position: fixed;
@@ -74,7 +73,6 @@ input[type=password] {
   -ms-transform: translate(67%, 0);
   transform: translate(67%, 0);
 }
-/* stuff on curtains */
 .curtain-logo-l,
 .curtain-logo-r {
   position: absolute;
@@ -223,7 +221,6 @@ input[type=password] {
   opacity: 0;
   visibility: hidden;
 }
-/* back button */
 .curtain-back {
   position: fixed;
   top: 0;
@@ -287,7 +284,6 @@ input[type=password] {
 .curtain-back:active:before {
   opacity: .6;
 }
-/* right-side footer */
 footer {
   position: absolute;
   top: 56px;
@@ -329,7 +325,6 @@ footer {
 .contact-us:hover {
   color: #fff;
 }
-/* main page */
 .main-logo {
   width: 251px;
   height: 144px;
@@ -374,7 +369,6 @@ footer {
   -ms-transition: opacity 0.252s 0.168s linear, -ms-transform 0.42s ease-in-out;
   transition: opacity 0.252s 0.168s linear, transform 0.42s ease-in-out;
 }
-/* form errors */
 .form-error {
   position: absolute;
   z-index: 10;
@@ -408,7 +402,6 @@ footer {
   font-weight: normal;
   line-height: 14px;
 }
-/* forms */
 .signup,
 .login {
   display: none;
@@ -557,7 +550,6 @@ footer {
   color: #515151;
   padding-bottom: 20px;
 }
-/* finalize new account */
 .signup-2 {
   text-align: center;
   padding-bottom: 10px;
@@ -762,7 +754,6 @@ footer {
 .signup-2 > .form-submit:active {
   background: #6495d7;
 }
-/* finalize transition */
 .finalizing > .curtain-back {
   visibility: hidden;
   opacity: 0;
@@ -874,7 +865,6 @@ footer {
   -ms-transition: opacity 0.12s linear, visibility 0 0.12s;
   transition: opacity 0.12s linear, visibility 0 0.12s;
 }
-/* dialogs */
 .dialog {
   display: table;
   position: fixed;
@@ -897,7 +887,6 @@ footer {
   border-radius: 6px;
   position: relative;
 }
-/* photo dialog */
 .photo-dialog .dialog-box {
   width: 304px;
 }
@@ -1047,7 +1036,6 @@ footer {
 .photo-dialog-submit:active {
   background: #83ae4a;
 }
-/* reset password dialog */
 .reset-password .dialog-box {
   width: 480px;
   text-align: center;
@@ -1216,7 +1204,6 @@ footer {
   -ms-transition: visibility 0, -ms-transform 0.2s ease-in-out;
   transition: visibility 0, transform 0.2s ease-in-out;
 }
-/* social signup 2 */
 .social-info,
 .form-creds {
   margin: 0 auto;
@@ -1318,7 +1305,6 @@ input.social-email[disabled] {
   font-size: 13px;
   font-weight: normal;
 }
-/* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .curtain-logo-l:before,
   .curtain-logo-r:before,
