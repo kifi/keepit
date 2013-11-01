@@ -113,7 +113,7 @@ class TextQuery extends Query {
       this,
       personalQuery.createWeight(searcher),
       regularQuery.createWeight(searcher),
-      semanticVectorQuery.createWeight(searcher))
+      if (semanticBoost > 0.0f) semanticVectorQuery.createWeight(searcher) else null)
   }
 
   override def rewrite(reader: IndexReader): Query = {
@@ -162,10 +162,10 @@ class TextWeight(
   override def scoresDocsOutOfOrder() = false
 
   override def getValueForNormalization(): Float = {
-    semanticWeight.getValueForNormalization() // for side effect
+    if (semanticWeight != null) semanticWeight.getValueForNormalization() // for side effect
 
-    val psub = personalWeight.getValueForNormalization()
-    val rsub = regularWeight.getValueForNormalization()
+    val psub = if (personalWeight != null) personalWeight.getValueForNormalization() else 1.0f
+    val rsub = if (regularWeight != null) regularWeight.getValueForNormalization() else 1.0f
     val sumVal = psub + rsub
     val maxVal = max(psub, rsub)
     val boost = query.getBoost()
@@ -173,11 +173,11 @@ class TextWeight(
   }
 
   override def normalize(norm: Float, topLevelBoost: Float): Unit = {
-    semanticWeight.normalize(1.0f, 1.0f) // for side effect
+    if (semanticWeight != null) semanticWeight.normalize(1.0f, 1.0f) // for side effect
 
     val boost = query.getBoost
-    personalWeight.normalize(norm, topLevelBoost * boost)
-    regularWeight.normalize(norm, topLevelBoost * boost)
+    if (personalWeight != null) personalWeight.normalize(norm, topLevelBoost * boost)
+    if (regularWeight != null) regularWeight.normalize(norm, topLevelBoost * boost)
   }
 
   override def explain(context: AtomicReaderContext, doc: Int): Explanation = {
@@ -190,8 +190,8 @@ class TextWeight(
       result.setDescription("TextQuery")
       result.setValue(sc.score)
       result.setMatch(true)
-      result.addDetail(personalWeight.explain(context, doc))
-      result.addDetail(regularWeight.explain(context, doc))
+      if (personalWeight != null) result.addDetail(personalWeight.explain(context, doc))
+      if (regularWeight != null) result.addDetail(regularWeight.explain(context, doc))
     } else {
       result.setDescription("TextQuery, doesn't match id %d".format(doc))
       result.setValue(0)
@@ -202,9 +202,9 @@ class TextWeight(
 
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    val personalScorer = personalWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs)
-    val regularScorer = regularWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs)
-    val semanticScorer = semanticWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs)
+    val personalScorer = if (personalWeight != null) personalWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) else null
+    val regularScorer = if (regularWeight != null) regularWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) else null
+    val semanticScorer = if (semanticWeight != null) semanticWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) else null
 
     if (personalScorer == null && regularScorer == null) null
     else new TextScorer(this, personalScorer, regularScorer, semanticScorer, query.getSemanticBoost, tieBreakerMultiplier)
