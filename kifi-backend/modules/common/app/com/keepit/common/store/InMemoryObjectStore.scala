@@ -6,6 +6,7 @@ import play.api.Play.current
 import java.io.{FileOutputStream, File}
 import scala.collection.mutable.HashMap
 import java.nio.file.Files
+import org.apache.commons.io.FileUtils
 
 trait InMemoryObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
 
@@ -31,16 +32,14 @@ trait InMemoryObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
 
 trait InMemoryFileStore[A] extends ObjectStore[A, File] {
 
-  val inbox: File
-  if (!inbox.exists()) inbox.mkdirs()
-  require(inbox.isDirectory, "Inbox must be a local directory.")
   require(!Play.isProd, "Can't have in memory file store in production")
 
   protected val pathMap = new HashMap[A, String]()
 
   def += (kv: (A, File)) = {
     val (key, file) = kv
-    val copy = new File(inbox, file.getName)
+    val copy = new File(FileUtils.getTempDirectory, file.getName)
+    copy.deleteOnExit()
     val copyStream = new FileOutputStream(copy)
     Files.copy(file.toPath, copyStream)
     copyStream.close()

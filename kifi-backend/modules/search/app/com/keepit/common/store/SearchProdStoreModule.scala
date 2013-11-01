@@ -25,9 +25,8 @@ case class SearchProdStoreModule() extends ProdStoreModule {
 
   @Provides @Singleton
   def indexStore(amazonS3Client: AmazonS3): IndexStore = {
-    val inbox = new File(current.configuration.getString("index.inbox").get)
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.index.bucket").get)
-    new S3IndexStoreImpl(bucketName, amazonS3Client, inbox)
+    new S3IndexStoreImpl(bucketName, amazonS3Client)
   }
 }
 
@@ -52,6 +51,6 @@ case class SearchDevStoreModule() extends DevStoreModule(SearchProdStoreModule()
   def indexStore(amazonS3Client: AmazonS3): IndexStore = {
     whenConfigured("amazon.s3.index.bucket")(
       prodStoreModule.indexStore(amazonS3Client)
-    ).getOrElse(new InMemoryIndexStoreImpl(new File("./localIndexBackup")))
+    ).getOrElse(new InMemoryIndexStoreImpl())
   }
 }

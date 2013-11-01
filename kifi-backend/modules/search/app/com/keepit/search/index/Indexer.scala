@@ -200,7 +200,11 @@ abstract class Indexer[T](
 
   override def onCommit(successful: Seq[Indexable[T]]): Unit =
     try {
-      if (indexDirectory.doBackup()) log.info("Index directory has been backed up.")
+      val start = currentDateTime.getMillis
+      if (indexDirectory.doBackup()) {
+        val end = currentDateTime.getMillis
+        log.info(s"Index directory has been backed up in ${ (end - start) / 1000} seconds")
+      }
     } catch {
       case e: Throwable => log.error("Index directory could not be backed up", e)
     }

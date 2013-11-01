@@ -28,15 +28,16 @@ trait ArchivedDirectory extends BackedUpDirectory {
   def cancelBackup() = shouldBackup.set(false)
   def doBackup() = if (shouldBackup.getAndSet(false)) {
     val dir = getLocalDirectory()
-    val tarFile = new File(dir, dir.getName + ".tar")
+    val tarFile = new File(FileUtils.getTempDirectory, dir.getName + ".tar")
     val tarStream = new FileOutputStream(tarFile)
     val tarOut = new TarArchiveOutputStream(tarStream)
+    tarOut.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_STAR)
     try {
       IO.addToArchive(tarOut, dir)
       tarOut.finish()
       saveArchive(tarFile)
     } finally {
-      tarStream.close()
+      tarOut.close()
       tarFile.delete()
     }
     true
@@ -51,7 +52,6 @@ trait ArchivedDirectory extends BackedUpDirectory {
       IO.extractArchive(tarIn, dir.getParentFile.getAbsolutePath)
     } finally {
       tarIn.close()
-      tarFile.delete()
     }
   }
 }
@@ -73,9 +73,9 @@ class VolatileIndexDirectoryImpl extends RAMDirectory with IndexDirectory with L
   def restoreFromBackup(): Unit = log.warn(s"Cannot restore volatile index directory ${this.getLockID}")
 }
 
-class S3IndexStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val inbox: File) extends S3FileStore[IndexDirectory] with IndexStore {
-  def idToKey(indexDirectory: IndexDirectory): String = indexDirectory.getLockID
+class S3IndexStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends S3FileStore[IndexDirectory] with IndexStore {
+  def idToKey(indexDirectory: IndexDirectory): String = { val id = indexDirectory.getLockID; println("############### INDEX KEY: " + id); id }
   val useCompression = true
 }
 
-class InMemoryIndexStoreImpl(val inbox: File) extends InMemoryFileStore[IndexDirectory] with IndexStore
+class InMemoryIndexStoreImpl extends InMemoryFileStore[IndexDirectory] with IndexStore

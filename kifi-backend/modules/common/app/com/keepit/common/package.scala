@@ -2,9 +2,6 @@ package com.keepit
 
 import org.apache.commons.compress.archivers.tar.{TarArchiveInputStream, TarArchiveEntry, TarArchiveOutputStream}
 import java.io._
-import java.util.zip.GZIPOutputStream
-import com.keepit.common.akka.SafeFuture
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.apache.commons.io.{IOUtils, FileUtils}
 
 package object common {
@@ -70,18 +67,16 @@ package object common {
     def extractArchive(tarArchive: TarArchiveInputStream, destination: String): Unit = {
       var entryOption = Option(tarArchive.getNextTarEntry)
       while (entryOption.isDefined) {
-        entryOption.foreach { entry => FileUtils.copyFile(entry.getFile, new File(destination + "/" + entry.getName)) }
+        entryOption.foreach { entry =>
+          val out = FileUtils.openOutputStream(new File(destination, entry.getName))
+          try {
+            IOUtils.copyLarge(tarArchive, out, 0, entry.getSize)
+          } finally {
+            out.close()
+          }
+        }
         entryOption = Option(tarArchive.getNextTarEntry)
       }
-    }
-
-    class CompressedInputStream(inputStream: InputStream) extends InputStream {
-      val toPipe = new PipedOutputStream()
-      val fromPipe = new PipedInputStream(toPipe)
-      val gzipOutputStream = new GZIPOutputStream(toPipe)
-      SafeFuture { IOUtils.copy(inputStream, gzipOutputStream) }
-
-      def read(): Int = fromPipe.read()
     }
   }
 }

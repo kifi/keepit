@@ -1,7 +1,6 @@
 package com.keepit.search
 
 import net.codingwell.scalaguice.ScalaModule
-import org.apache.lucene.store.{RAMDirectory, MMapDirectory, Directory}
 import com.google.inject.{Provides, Singleton}
 import com.keepit.search.graph._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -19,6 +18,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserIndexerPlugin
 import com.keepit.search.user.UserIndexerPluginImpl
+import com.keepit.common.time._
+
 
 trait IndexModule extends ScalaModule with Logging {
 
@@ -27,7 +28,12 @@ trait IndexModule extends ScalaModule with Logging {
       val dir = new File(d).getCanonicalFile
       val indexDirectory = new IndexDirectoryImpl(dir, indexStore)
       if (!dir.exists()) {
-        try { indexDirectory.restoreFromBackup() }
+        try {
+          val t1 = currentDateTime.getMillis
+          indexDirectory.restoreFromBackup()
+          val t2 = currentDateTime.getMillis
+          log.info(s"$d was restored from S3 in ${(t2 - t1) / 1000} seconds")
+        }
         catch { case e: Exception => {
           log.error(s"Could not restore $dir from backup", e)
           if (!dir.mkdirs()) {
