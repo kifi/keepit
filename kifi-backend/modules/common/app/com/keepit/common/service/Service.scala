@@ -26,6 +26,7 @@ object ServiceType {
   case object ELIZA extends ServiceType("ELIZA", "EZ")
   case object HEIMDAL extends ServiceType("HEIMDAL", "HD")
   case object ABOOK extends ServiceType("ABOOK", "AB")
+  case object SCRAPER extends ServiceType("SCRAPER", "SC")
   case object DEV_MODE extends ServiceType("DEV_MODE", "DM")
   case object TEST_MODE extends ServiceType("TEST_MODE", "TM")
 
@@ -35,6 +36,7 @@ object ServiceType {
     case ELIZA.name => ELIZA
     case HEIMDAL.name => HEIMDAL
     case ABOOK.name => ABOOK
+    case SCRAPER.name => SCRAPER
     case DEV_MODE.name => DEV_MODE
     case TEST_MODE.name => TEST_MODE
   }
@@ -59,7 +61,8 @@ class FortyTwoServices(
     ServiceType.SEARCH.name -> ServiceType.SEARCH,
     ServiceType.ELIZA.name -> ServiceType.ELIZA,
     ServiceType.HEIMDAL.name -> ServiceType.HEIMDAL,
-    ServiceType.ABOOK.name -> ServiceType.ABOOK
+    ServiceType.ABOOK.name -> ServiceType.ABOOK,
+    ServiceType.SCRAPER.name -> ServiceType.SCRAPER
   )
 
   lazy val currentService: ServiceType = playMode match {

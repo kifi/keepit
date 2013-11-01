@@ -2,7 +2,7 @@ package com.keepit.eliza
 
 import com.keepit.common.zookeeper._
 import com.keepit.common.net._
-//import com.keepit.common.controller.ElizaServiceController
+import com.keepit.common.controller._
 import com.keepit.common.logging.Logging
 import com.keepit.test.DeprecatedElizaApplication
 import org.specs2.mutable.Specification
@@ -17,7 +17,7 @@ import scala.reflect.ManifestFactory.classType
 
 class ElizaModuleTest extends Specification with Logging with ApplicationInjector {
 
-  /*
+  
   private def isElizaController(clazz: Class[_]): Boolean = {
     classOf[ElizaServiceController] isAssignableFrom clazz
   }
@@ -46,5 +46,5 @@ class ElizaModuleTest extends Specification with Logging with ApplicationInjecto
       }
     }
   }
-  */
+  
 }

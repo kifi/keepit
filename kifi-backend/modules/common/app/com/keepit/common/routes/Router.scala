@@ -97,6 +97,9 @@ object Shoebox extends Service {
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
     def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq), Param("highSeq", highSeq))
     def clickAttribution() = ServiceRoute(POST, "/internal/shoebox/database/clickAttribution")
+    def getScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/getScrapeInfo")
+    def saveScrapeInfo()  = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
+    def saveNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/saveNormalizedURI")
   }
 }
 
@@ -123,7 +126,7 @@ object Search extends Service {
     def refreshPhrases() = ServiceRoute(POST, "/internal/search/index/refreshPhrases")
     def searchDumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}")
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
-    def searchUsers(query: String, maxHits: Int) = ServiceRoute(GET, "/internal/search/search/users", Param("query", query), Param("maxHits", maxHits))
+    def searchUsers(query: String, maxHits: Int = 10, context: String = "") = ServiceRoute(GET, "/internal/search/search/users", Param("query", query), Param("maxHits", maxHits), Param("context", context))
     def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String) =
       ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("lang", lang))
     def causeError() = ServiceRoute(GET, "/internal/search/search/causeError")
@@ -153,6 +156,7 @@ object Eliza extends Service {
 object Heimdal extends Service {
   object internal {
     def trackEvent() = ServiceRoute(POST, "/internal/heimdal/trackEvent")
+    def trackEvents() = ServiceRoute(POST, "/internal/heimdal/trackEvents")
     def getMetricData(name: String) = ServiceRoute(GET, s"/internal/heimdal/getMetricData?name=${name}")
     def updateMetrics() = ServiceRoute(GET, "/internal/heimdal/updateMetrics")
   }
@@ -169,6 +173,13 @@ object ABook extends Service {
     def getContactInfos(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getContactInfos", Param("maxRows", maxRows))
     def getABookRawInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
     def getContactsRawInfo(userId:Id[User], origin:ABookOriginType) = ServiceRoute(GET, s"/internal/abook/${userId.id}/${origin.name}/getContactsRawInfo")
+  }
+}
+
+object Scraper extends Service {
+  object internal {
+    def asyncScrapeArticle() = ServiceRoute(POST, s"/internal/scraper/asyncScrape")
+    def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
   }
 }
 

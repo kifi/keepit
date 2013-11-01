@@ -1,14 +1,14 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.logging.Logging
-import com.keepit.scraper.Scraper
+import com.keepit.scraper.ScraperConfig
 import org.jsoup.nodes.Document
 import com.keepit.common.net.URI
 import com.keepit.normalizer.LinkedInNormalizer
 
 object LinkedInExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = LinkedInNormalizer.linkedInCanonicalPublicProfile.findFirstIn(uri.toString).isDefined
-  def apply(uri: URI) = new LinkedInExtractor(uri.toString, Scraper.maxContentChars)
+  def apply(uri: URI) = new LinkedInExtractor(uri.toString, ScraperConfig.maxContentChars)
 }
 
 class LinkedInExtractor(publicProfileUrl: String, maxContentChars: Int) extends JsoupBasedExtractor(publicProfileUrl, maxContentChars) with Logging {
