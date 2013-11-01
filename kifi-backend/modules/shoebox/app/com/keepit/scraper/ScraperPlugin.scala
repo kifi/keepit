@@ -54,16 +54,12 @@ class ScraperPluginImpl @Inject() (
     actor: ActorInstance[ScraperActor],
     readOnlyActor: ActorInstance[ReadOnlyScraperActor],
     scraper: Scraper,
+    scraperConfig: ScraperConfig,
     scraperClient: ScraperServiceClient,
     val schedulingProperties: SchedulingProperties) //only on leader
   extends ScraperPlugin with SchedulingPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
-
-  val disableScraperService = {
-    val p = System.getProperty("scraper.service.disable")
-    (p != null && p.equalsIgnoreCase("true"))
-  }
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
@@ -80,7 +76,7 @@ class ScraperPluginImpl @Inject() (
     actor.ref.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
 
   override def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
-    if (disableScraperService) {
+    if (scraperConfig.disableScraperService) {
       actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
     } else {
       log.info(s"[asyncScrape] invoke (remote) Scraper service; url=${uri.url}")
@@ -90,7 +86,7 @@ class ScraperPluginImpl @Inject() (
 
 
   override def scrapeBasicArticle(url: String, customExtractor: Option[Extractor] = None): Future[Option[BasicArticle]] = {
-    if (disableScraperService || customExtractor.isDefined) {
+    if (scraperConfig.disableScraperService || customExtractor.isDefined) {
       readOnlyActor.ref.ask(ScrapeBasicArticle(url, customExtractor))(1 minutes).mapTo[Option[BasicArticle]]
     } else {
       log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url")
