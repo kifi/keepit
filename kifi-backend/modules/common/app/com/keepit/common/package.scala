@@ -3,8 +3,8 @@ package com.keepit
 import org.apache.commons.compress.archivers.tar.{TarArchiveInputStream, TarArchiveEntry, TarArchiveOutputStream}
 import java.io._
 import org.apache.commons.io.{IOUtils, FileUtils}
-import org.apache.commons.compress.compressors.gzip.{GzipCompressorInputStream, GzipCompressorOutputStream}
 import scala.collection.mutable.ListBuffer
+import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 
 package object common {
 
@@ -75,7 +75,7 @@ package object common {
           files.append(file)
           val out = FileUtils.openOutputStream(file)
           try { IOUtils.copyLarge(tarArchive, out, 0, entry.getSize) }
-          catch { case e: Throwable => files.foreach(_.delete()); throw e }
+          catch { case e: Throwable => files.foreach(_.delete()); throw e } // directories created by FileUtils.openOutputStream may not be cleaned up
           finally { out.close() }
         }
         entryOption = Option(tarArchive.getNextTarEntry)
@@ -84,23 +84,25 @@ package object common {
     }
 
     def compress(file: File, outputStream: OutputStream): Unit = {
-      val compressedTarArchive = new TarArchiveOutputStream(new GzipCompressorOutputStream(outputStream))
+      val gZip = new GZIPOutputStream(outputStream)
+      val compressedTarArchive = new TarArchiveOutputStream(gZip)
       compressedTarArchive.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_STAR)
       addToArchive(compressedTarArchive, file)
       compressedTarArchive.finish()
+      gZip.finish()
     }
 
     def compress(file: File, destDir: String = FileUtils.getTempDirectoryPath): File = {
       val tarGz = new File(destDir, file.getName + ".tar.gz")
       val out = FileUtils.openOutputStream(tarGz)
       try { compress(file, out) }
-      catch { case e: Throwable => tarGz.delete(); throw e } // directories created by FileUtils.openOutputStream may not be cleaned up
+      catch { case e: Throwable => tarGz.delete(); throw e }
       finally { out.close() }
       tarGz
     }
 
     def uncompress(tarGzStream: InputStream, destDir: String): Unit = {
-      val uncompressedTarArchive = new TarArchiveInputStream(new GzipCompressorInputStream(tarGzStream))
+      val uncompressedTarArchive = new TarArchiveInputStream(new GZIPInputStream(tarGzStream))
       extractArchive(uncompressedTarArchive, destDir)
     }
 
