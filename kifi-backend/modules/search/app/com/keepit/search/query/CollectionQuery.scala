@@ -75,11 +75,11 @@ class CollectionWeight(query: CollectionQuery, searcher: PersonalizedSearcher) e
   }
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    new CollectionScorer(query, this, idSetFilter.getDocIdSet(context, acceptDocs).iterator(), value)
+    new CollectionScorer(this, idSetFilter.getDocIdSet(context, acceptDocs).iterator(), value)
   }
 }
 
-class CollectionScorer(query: CollectionQuery, weight: CollectionWeight, iterator: DocIdSetIterator, scoreValue: Float) extends Scorer(weight) {
+class CollectionScorer(weight: CollectionWeight, iterator: DocIdSetIterator, scoreValue: Float) extends Scorer(weight) {
   override def docID(): Int = iterator.docID()
   override def nextDoc(): Int = iterator.nextDoc()
   override def advance(target: Int): Int = iterator.advance(target)

@@ -86,9 +86,10 @@ class MainQueryParser(
         val auxStrengths = ArrayBuffer.empty[Float]
 
         if (semanticBoost > 0.0f) {
-          val svq = SemanticVectorQuery(svTerms, fallbackField = "title_stemmed")
-          auxQueries += namedQuery("semantic vector", svq)
-          auxStrengths += semanticBoost
+          textQueries.foreach{ textQuery =>
+            textQuery.setSemanticBoost(semanticBoost)
+            textQuery.stems.map{ stemTerm => textQuery.addSemanticVectorQuery("sv", stemTerm.text) }
+          }
         }
 
         if (proximityBoost > 0.0f && numTextQueries > 1) {
