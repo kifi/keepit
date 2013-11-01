@@ -60,6 +60,11 @@ class ScraperPluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 seconds)
 
+  val disableScraperService = {
+    val p = System.getProperty("scraper.service.disable")
+    (p != null && p.equalsIgnoreCase("true"))
+  }
+
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
@@ -75,20 +80,21 @@ class ScraperPluginImpl @Inject() (
     actor.ref.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
 
   override def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
-    actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
-    // scraperClient.asyncScrape(uri)
+    if (disableScraperService) {
+      actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
+    } else {
+      log.info(s"[asyncScrape] invoke (remote) Scraper service; url=${uri.url}")
+      scraperClient.asyncScrape(uri)
+    }
   }
 
 
   override def scrapeBasicArticle(url: String, customExtractor: Option[Extractor] = None): Future[Option[BasicArticle]] = {
-    // readOnlyActor.ref.ask(ScrapeBasicArticle(url, customExtractor))(1 minutes).mapTo[Option[BasicArticle]]
-    customExtractor match {
-      case Some(custom) => {
-        readOnlyActor.ref.ask(ScrapeBasicArticle(url, customExtractor))(1 minutes).mapTo[Option[BasicArticle]] // TODO
-      }
-      case None => {
-        scraperClient.getBasicArticle(url)
-      }
+    if (disableScraperService || customExtractor.isDefined) {
+      readOnlyActor.ref.ask(ScrapeBasicArticle(url, customExtractor))(1 minutes).mapTo[Option[BasicArticle]]
+    } else {
+      log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url")
+      scraperClient.getBasicArticle(url)
     }
   }
 }
