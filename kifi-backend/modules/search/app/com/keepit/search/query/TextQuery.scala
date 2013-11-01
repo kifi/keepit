@@ -19,8 +19,11 @@ import scala.collection.mutable.ArrayBuffer
 import scala.math._
 
 
-class TextQuery(private var personalQuery: Query, private var regularQuery: Query, private var semanticVectorQuery: Query) extends Query {
-  def this() = this(new DisjunctionMaxQuery(0.3f), new DisjunctionMaxQuery(0.3f), new DisjunctionMaxQuery(0.0f))
+class TextQuery extends Query {
+
+  private var personalQuery: Query = new DisjunctionMaxQuery(0.3f)
+  private var regularQuery: Query = new DisjunctionMaxQuery(0.3f)
+  private var semanticVectorQuery: Query = new DisjunctionMaxQuery(0.0f)
 
   var terms: Array[Term] = Array()
   var stems: Array[Term] = Array()
@@ -119,9 +122,10 @@ class TextQuery(private var personalQuery: Query, private var regularQuery: Quer
     val rewrittenSemanticVectorQuery = semanticVectorQuery.rewrite(reader)
     if ((personalQuery eq rewrittenPersonalQuery) && (regularQuery eq rewrittenRegularQuery) && (semanticVectorQuery eq rewrittenSemanticVectorQuery)) this
     else {
-       val rewritten = new TextQuery(rewrittenPersonalQuery, rewrittenRegularQuery, rewrittenSemanticVectorQuery)
-      rewritten.terms = terms
-      rewritten.stems = stems
+      val rewritten = this.clone().asInstanceOf[TextQuery]
+      rewritten.personalQuery = rewrittenPersonalQuery
+      rewritten.regularQuery = rewrittenRegularQuery
+      rewritten.semanticVectorQuery = rewrittenSemanticVectorQuery
       rewritten
     }
   }
@@ -202,7 +206,8 @@ class TextWeight(
     val regularScorer = regularWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs)
     val semanticScorer = semanticWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs)
 
-    new TextScorer(this, personalScorer, regularScorer, semanticScorer, query.getSemanticBoost, tieBreakerMultiplier)
+    if (personalScorer == null && regularScorer == null) null
+    else new TextScorer(this, personalScorer, regularScorer, semanticScorer, query.getSemanticBoost, tieBreakerMultiplier)
   }
 }
 
@@ -235,19 +240,25 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
       val scoreR = if (docR == doc) regularScorer.score() else 0.0f
       val scoreMax = max(scoreP, scoreR)
       val scoreSum = scoreP + scoreR
-      scoreVal = scoreMax + (scoreSum - scoreMax) * tieBreakerMultiplier
+      val semScore = semanticScore()
+
+      scoreVal = (scoreMax + (scoreSum - scoreMax) * tieBreakerMultiplier) * semScore
     }
     scoreVal
   }
 
-  private def semanticScore(): Float = {
+  @inline private[this] def semanticScore(): Float = {
     if (semanticScorer != null) {
       if (semanticScorer.docID < doc) semanticScorer.advance(doc)
 
       if (semanticScorer.docID == doc) {
         semanticScorer.score() * semanticBoost + semanticScoreBase
       } else {
-        if (docP == doc) 0.8f * semanticBoost + semanticScoreBase else semanticScoreBase
+        if (docP == doc) {
+          0.8f * semanticBoost + semanticScoreBase
+        } else {
+          semanticScoreBase
+        }
       }
     } else {
       1.0f
