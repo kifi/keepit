@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import org.apache.commons.io.FileUtils
 
 trait BackedUpDirectory {
+  def getDirectory(): File
   def scheduleBackup(): Unit
   def cancelBackup(): Unit
   def doBackup(): Boolean
@@ -18,7 +19,6 @@ trait BackedUpDirectory {
 }
 
 trait ArchivedDirectory extends BackedUpDirectory {
-  protected def getLocalDirectory(): File
   protected def getArchive(): File
   protected def saveArchive(archive: File): Unit
 
@@ -26,7 +26,7 @@ trait ArchivedDirectory extends BackedUpDirectory {
   def scheduleBackup() = shouldBackup.set(true)
   def cancelBackup() = shouldBackup.set(false)
   def doBackup() = if (shouldBackup.getAndSet(false)) {
-    val dir = getLocalDirectory()
+    val dir = getDirectory()
     val tarGz = IO.compress(dir)
     saveArchive(tarGz)
     tarGz.delete()
@@ -34,7 +34,7 @@ trait ArchivedDirectory extends BackedUpDirectory {
   } else false
 
   def restoreFromBackup(): Unit = {
-    val dir = getLocalDirectory()
+    val dir = getDirectory()
     val tarGz = getArchive()
     FileUtils.deleteDirectory(dir)
     IO.uncompress(tarGz, dir.getParentFile.getAbsolutePath)
@@ -47,12 +47,12 @@ trait IndexStore extends ObjectStore[IndexDirectory, File]
 trait IndexDirectory extends Directory with BackedUpDirectory
 
 class IndexDirectoryImpl(dir: File, store: IndexStore) extends MMapDirectory(dir) with ArchivedDirectory with IndexDirectory {
-  protected def getLocalDirectory(): File = directory
   protected def getArchive() = store.get(this).get
   protected def saveArchive(tarFile: File) = store += (this, tarFile)
 }
 
 class VolatileIndexDirectoryImpl extends RAMDirectory with IndexDirectory with Logging {
+  def getDirectory(): File = throw new UnsupportedOperationException(s"Cannot get file for volatile directory ${this.getLockID}.")
   def scheduleBackup(): Unit = log.warn(s"Cannot schedule backup of volatile index directory ${this.getLockID}")
   def cancelBackup(): Unit = log.warn(s"Cannot cancel backup of volatile index directory ${this.getLockID}")
   def doBackup(): Boolean = false
@@ -60,7 +60,7 @@ class VolatileIndexDirectoryImpl extends RAMDirectory with IndexDirectory with L
 }
 
 class S3IndexStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends S3FileStore[IndexDirectory] with IndexStore {
-  def idToKey(indexDirectory: IndexDirectory): String = indexDirectory.getLockID
+  def idToKey(indexDirectory: IndexDirectory): String = indexDirectory.getDirectory().getName + ".tar.gz"
 }
 
 class InMemoryIndexStoreImpl extends InMemoryFileStore[IndexDirectory] with IndexStore
