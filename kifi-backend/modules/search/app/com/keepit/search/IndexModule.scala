@@ -35,7 +35,7 @@ trait IndexModule extends ScalaModule with Logging {
           log.info(s"$d was restored from S3 in ${(t2 - t1) / 1000} seconds")
         }
         catch { case e: Exception => {
-          log.error(s"Could not restore $dir from backup with id ${indexDirectory.getLockID}", e)
+          log.error(s"Could not restore $dir from S3}", e)
           FileUtils.deleteDirectory(dir)
           FileUtils.forceMkdir(dir)
         }}
