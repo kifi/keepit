@@ -229,9 +229,9 @@ kifi.form = (function () {
       .fail(function (xhr) {
         loginPromise = null;
         if (xhr.status === 403) {
-          var o = xhr.responseJson;
-          if (o && o.error === 'no_such_user') {
-            kifi.form.showError($email, 'There is no account associated<br>with this email address', {ms: 2000});
+          var o = JSON.parse(xhr.responseText);
+          if (o.error === 'no_such_user') {
+            kifi.form.showError($email, 'No account with this email address', {ms: 1500});
           } else {
             kifi.form.showError($password, 'Incorrect password');
           }
