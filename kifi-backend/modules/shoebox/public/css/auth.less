@@ -322,6 +322,41 @@ footer {
   .transition(opacity (.6 * @curtain-time) (.4 * @curtain-time) linear, transform @curtain-time ease-in-out);
 }
 
+// buttons
+.primary-button {
+  @bg-color: #92c152;
+  color: #fff;
+  background: @bg-color;
+  &:hover {
+    background: tint(@bg-color, 10%);
+  }
+  &:active {
+    background: shade(@bg-color, 10%);
+  }
+}
+.alt-button {
+  @bg-color: #6fa6ef;
+  color: #fff;
+  background: @bg-color;
+  &:hover {
+    background: tint(@bg-color, 10%);
+  }
+  &:active {
+    background: shade(@bg-color, 10%);
+  }
+}
+.cancel-button {
+  @bg-color: #e8e8e8;
+  color: #888;
+  background: @bg-color;
+  &:hover {
+    background: tint(@bg-color, 20%);
+  }
+  &:active {
+    background: shade(@bg-color, 10%);
+  }
+}
+
 // form errors
 @form-error-color: #ef6f6e;
 .form-error {
@@ -479,25 +514,15 @@ footer {
   font-size: 13px;
   font-weight: 300;
 }
-@primary-button-color: #92c152;
-@cancel-button-color: #e8e8e8;
 .form-submit {
   display: block;
   width: 50%;
   border: 0;
   padding: 0;
-  background: @primary-button-color;
-  color: #fff;
   height: 40px;
   line-height: 40px;
   text-align: center;
   -webkit-font-smoothing: antialiased;
-  &:hover {
-    background: tint(@primary-button-color, 10%);
-  }
-  &:active {
-    background: shade(@primary-button-color, 10%);
-  }
 }
 .terms {
   text-align: center;
@@ -696,17 +721,9 @@ footer {
   overflow: hidden;
   visibility: hidden;
 }
-@alt-button-color: #6fa6ef;
 .signup-2>.form-submit {
   margin: 20px auto 40px;
   width: 200px;
-  background: @alt-button-color;
-  &:hover {
-    background: tint(@alt-button-color, 10%);
-  }
-  &:active {
-    background: shade(@alt-button-color, 10%);
-  }
 }
 
 // finalize transition
@@ -910,26 +927,6 @@ footer {
     outline-color: #888;
   }
 }
-.photo-dialog-cancel {
-  color: #888;
-  background: @cancel-button-color;
-  &:hover {
-    background: tint(@cancel-button-color, 20%);
-  }
-  &:active {
-    background: shade(@cancel-button-color, 10%);
-  }
-}
-.photo-dialog-submit {
-  color: #fff;
-  background: @primary-button-color;
-  &:hover {
-    background: tint(@primary-button-color, 10%);
-  }
-  &:active {
-    background: shade(@primary-button-color, 10%);
-  }
-}
 
 // reset password dialog
 @dialog-text-color: #515051;
@@ -1021,26 +1018,6 @@ footer {
   -webkit-font-smoothing: antialiased;
   &:focus {
     outline-color: #888;
-  }
-}
-.reset-password-cancel {
-  color: #888;
-  background: @cancel-button-color;
-  &:hover {
-    background: tint(@cancel-button-color, 20%);
-  }
-  &:active {
-    background: shade(@cancel-button-color, 10%);
-  }
-}
-.reset-password-submit {
-  color: #fff;
-  background: @alt-button-color;
-  &:hover {
-    background: tint(@alt-button-color, 10%);
-  }
-  &:active {
-    background: shade(@alt-button-color, 10%);
   }
 }
 .reset-password-success {
