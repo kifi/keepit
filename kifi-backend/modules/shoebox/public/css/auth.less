@@ -721,6 +721,9 @@ footer {
   overflow: hidden;
   visibility: hidden;
 }
+.form-photo-file-a {
+  color: inherit;
+}
 .signup-2>.form-submit {
   margin: 20px auto 40px;
   width: 200px;
@@ -785,6 +788,7 @@ footer {
 }
 
 // dialogs
+@dialog-time: .25s;
 .dialog {
   display: table;
   position: fixed;
@@ -794,6 +798,8 @@ footer {
   height: 100%;
   z-index: 10;
   background: rgba(0,0,0,.5);
+  opacity: 0;
+  .transition(opacity @dialog-time linear);
 }
 .dialog-cell {
   display: table-cell;
@@ -806,6 +812,15 @@ footer {
   text-align: left;
   border-radius: 6px;
   position: relative;
+  .scale(.7, .7);
+  .transition(transform @dialog-time ease-in);
+}
+.dialog-showing {
+  opacity: 1;
+  .dialog-box {
+    .transform(none);
+    .transition-timing-function(ease-out);
+  }
 }
 
 // photo dialog

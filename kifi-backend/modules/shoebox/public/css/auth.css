@@ -765,6 +765,9 @@ footer {
   overflow: hidden;
   visibility: hidden;
 }
+.form-photo-file-a {
+  color: inherit;
+}
 .signup-2 > .form-submit {
   margin: 20px auto 40px;
   width: 200px;
@@ -889,6 +892,12 @@ footer {
   height: 100%;
   z-index: 10;
   background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  -webkit-transition: opacity 0.25s linear;
+  -moz-transition: opacity 0.25s linear;
+  -o-transition: opacity 0.25s linear;
+  -ms-transition: opacity 0.25s linear;
+  transition: opacity 0.25s linear;
 }
 .dialog-cell {
   display: table-cell;
@@ -901,6 +910,30 @@ footer {
   text-align: left;
   border-radius: 6px;
   position: relative;
+  -webkit-transform: scale(0.7, 0.7);
+  -moz-transform: scale(0.7, 0.7);
+  -o-transform: scale(0.7, 0.7);
+  -ms-transform: scale(0.7, 0.7);
+  transform: scale(0.7, 0.7);
+  -webkit-transition: -webkit-transform 0.25s ease-in;
+  -moz-transition: -moz-transform 0.25s ease-in;
+  -o-transition: -o-transform 0.25s ease-in;
+  -ms-transition: -ms-transform 0.25s ease-in;
+  transition: transform 0.25s ease-in;
+}
+.dialog-showing {
+  opacity: 1;
+}
+.dialog-showing .dialog-box {
+  -webkit-transform: none;
+  -moz-transform: none;
+  -o-transform: none;
+  -ms-transform: none;
+  transform: none;
+  -webkit-transition-timing-function: ease-out;
+  -moz-transition-timing-function: ease-out;
+  -o-transition-timing-function: ease-out;
+  transition-timing-function: ease-out;
 }
 .photo-dialog .dialog-box {
   width: 304px;
