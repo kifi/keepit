@@ -39,7 +39,7 @@ class ScraperController @Inject() (
 
   // TODO: polling/queue
 
-  def getBasicArticle(url:String) = SafeAsyncAction { request =>
+  def getBasicArticle(url:String) = Action { request =>
     val extractor = extractorFactory(url)
     val res = try {
       val fetchStatus = httpFetcher.fetch(url, proxy = syncGetProxy(url)) { input => extractor.process(input) }
@@ -55,14 +55,15 @@ class ScraperController @Inject() (
     Ok(json)
   }
 
-  def asyncScrape() = SafeAsyncAction(parse.json) { request =>
+  def asyncScrape() = Action(parse.json) { request =>
+    log.info(s"[asyncScrape] body=${Json.prettyPrint(request.body)}")
     val normalizedUri = request.body.as[NormalizedURI]
     log.info(s"[asyncScrape] url=${normalizedUri.url}")
     val info = Await.result(shoeboxServiceClient.getScrapeInfo(normalizedUri), 10 seconds)
     log.info(s"[asyncScrape(${normalizedUri.url})] scrapeInfo=$info")
     val t = safeProcessURI(normalizedUri, info)
     val res = ScrapeTuple(t._1, t._2)
-    log.info(s"[asyncScrape(${normalizedUri.url})] result=$res")
+    log.info(s"[asyncScrape(${normalizedUri.url})] result=${t._1}")
     Ok(Json.toJson(res))
   }
 
@@ -119,7 +120,7 @@ class ScraperController @Inject() (
           syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
             saveBookmark(bookmark.copy(title = scrapedURI.title))
           }
-          log.info(s"[processURI] fetched uri $scrapedURI => $article")
+          log.info(s"[processURI] fetched uri $scrapedURI => article(${article.id}, ${article.title})")
 
           def shouldUpdateScreenshot(uri: NormalizedURI) = {
             uri.screenshotUpdatedAt map { update =>
@@ -225,7 +226,7 @@ class ScraperController @Inject() (
             }
             val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
 
-            val res = Scraped(Article(
+            val article: Article = Article(
               id = normalizedUri.id.get,
               title = title,
               description = description,
@@ -239,10 +240,9 @@ class ScraperController @Inject() (
               message = None,
               titleLang = Some(titleLang),
               contentLang = Some(contentLang),
-              destinationUrl = fetchStatus.destinationUrl),
-              signature,
-              fetchStatus.redirects)
-            log.info(s"[fetchArticle] result=$res")
+              destinationUrl = fetchStatus.destinationUrl)
+            val res = Scraped(article, signature, fetchStatus.redirects)
+            log.info(s"[fetchArticle] result=(Scraped($signature, ${fetchStatus.redirects}) article=(${article.id}, ${article.title}, content.len=${article.content.length}})")
             res
           }
         case HttpStatus.SC_NOT_MODIFIED =>
