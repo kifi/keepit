@@ -88,7 +88,9 @@ class HeimdalClientActor @Inject() (
   def verifyEventStaleTime(event: UserEvent, timeout: Long, message: String): Unit = {
     val timeSinceEventStarted = clock.getMillis - event.time.getMillis
     if (timeSinceEventStarted > timeout) {
-      airbrakeNotifier.notify(s"Event ${event.eventType} started ${timeSinceEventStarted}ms ago but was $message only now (timeout: ${timeout}ms): $event")
+      val msg = s"Event ${event.eventType} started ${timeSinceEventStarted}ms ago but was $message only now (timeout: ${timeout}ms): $event"
+      log.error(msg, new Exception(msg))
+      //airbrakeNotifier.notify(message)
     }
   }
 
@@ -132,7 +134,10 @@ class HeimdalServiceClientImpl @Inject() (
     super.onStop()
   }
 
-  def trackEvent(event: UserEvent) : Unit = actor.ref ! event
+  def trackEvent(event: UserEvent) : Unit = {
+    actor.ref ! event
+    verifyEventStaleTime(event, EventQueueConsts.StaleEventAddTime, "post to actor")
+  }
 
   def getMetricData(name: String): Future[JsObject] = {
     call(Heimdal.internal.getMetricData(name)).map{ response =>
