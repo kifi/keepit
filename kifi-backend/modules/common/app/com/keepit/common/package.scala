@@ -56,14 +56,12 @@ package object common {
 
     def addToArchive(tarArchive: TarArchiveOutputStream, file: File, base: String = ""): Unit = {
       val entryName = base + file.getName
-      if (file.isFile) {
-        val entry = new TarArchiveEntry(file, entryName)
-        entry.setSize(file.length())
-        tarArchive.putArchiveEntry(entry)
-        FileUtils.copyFile(file, tarArchive)
-        tarArchive.closeArchiveEntry()
-      } else
-        file.listFiles().foreach(addToArchive(tarArchive, _, entryName + "/")) // empty directories will not be archived
+      val entry = new TarArchiveEntry(file, entryName)
+      tarArchive.putArchiveEntry(entry)
+      entry.setSize(file.length())
+      if (file.isFile) { FileUtils.copyFile(file, tarArchive) }
+      tarArchive.closeArchiveEntry()
+      if (file.isDirectory) file.listFiles().foreach(addToArchive(tarArchive, _, entryName + "/"))
     }
 
     def extractArchive(tarArchive: TarArchiveInputStream, destDir: String): Seq[File] = {
@@ -73,10 +71,16 @@ package object common {
         entryOption.foreach { entry =>
           val file = new File(destDir, entry.getName)
           files.append(file)
-          val out = FileUtils.openOutputStream(file)
-          try { IOUtils.copyLarge(tarArchive, out, 0, entry.getSize) }
-          catch { case e: Throwable => files.foreach(_.delete()); throw e } // directories created by FileUtils.openOutputStream may not be cleaned up
-          finally { out.close() }
+          if (entry.isFile) {
+            val out = FileUtils.openOutputStream(file)
+            try { IOUtils.copyLarge(tarArchive, out, 0, entry.getSize) }
+            catch { case e: Throwable => files.foreach(_.delete()); throw e } // directories created by FileUtils.openOutputStream may not be cleaned up
+            finally { out.close() }
+          }
+          else {
+            try { FileUtils.forceMkdir(file) }
+            catch { case e: Throwable => files.foreach(_.delete()); throw e } // directories created by FileUtils.forceMkdir may not be cleaned up
+          }
         }
         entryOption = Option(tarArchive.getNextTarEntry)
       }
