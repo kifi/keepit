@@ -56,7 +56,7 @@ object NormalizedURI {
     (__ \ 'restriction).formatNullable[Restriction] and
     (__ \ 'normalization).formatNullable[Normalization] and
     (__ \ 'redirect).formatNullable(Id.format[NormalizedURI]) and
-    (__ \'redirectTime).formatNullable[DateTime]
+    (__ \ 'redirectTime).formatNullable[DateTime]
     )(NormalizedURI.apply, unlift(NormalizedURI.unapply))
 
   def hashUrl(normalizedUrl: String): UrlHash = {
