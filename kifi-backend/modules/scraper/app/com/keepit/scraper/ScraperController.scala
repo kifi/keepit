@@ -39,7 +39,7 @@ class ScraperController @Inject() (
 
   // TODO: polling/queue
 
-  def getBasicArticle(url:String) = Action { request =>
+  def getBasicArticle(url:String) = SafeAsyncAction { request =>
     val extractor = extractorFactory(url)
     val res = try {
       val fetchStatus = httpFetcher.fetch(url, proxy = syncGetProxy(url)) { input => extractor.process(input) }
@@ -55,12 +55,13 @@ class ScraperController @Inject() (
     Ok(json)
   }
 
-  def asyncScrape() = Action(parse.json) { request =>
+  def asyncScrape() = SafeAsyncAction(parse.json) { request =>
     val normalizedUri = request.body.as[NormalizedURI]
     val info = Await.result(shoeboxServiceClient.getScrapeInfo(normalizedUri), 5 seconds)
     log.info(s"[asyncScrape] url=${normalizedUri.url} $info")
     val t = safeProcessURI(normalizedUri, info)
     val res = ScrapeTuple(t._1, t._2)
+    log.info(s"[asyncScrape] url=${normalizedUri.url} res=$res")
     Ok(Json.toJson(res))
   }
 
@@ -99,9 +100,9 @@ class ScraperController @Inject() (
           latestUri.state != NormalizedURIStates.SCRAPE_FAILED &&
           signature.similarTo(Signature(info.signature)) >= (1.0d - config.changeThreshold * (config.minInterval / info.interval))
         ) {
-          // the article does not need to be reindexed
-          // update the scrape schedule, uri is not changed
+          // the article does not need to be reindexed update the scrape schedule, uri is not changed
           saveScrapeInfo(info.withDocumentUnchanged())
+          log.info(s"[processURI] (${uri.url}) no change detected")
           (latestUri, None)
         } else {
           // the article needs to be reindexed
@@ -117,7 +118,7 @@ class ScraperController @Inject() (
           syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
             saveBookmark(bookmark.copy(title = scrapedURI.title))
           }
-          log.debug("fetched uri %s => %s".format(scrapedURI, article))
+          log.info(s"[processURI] fetched uri $scrapedURI => $article")
 
           def shouldUpdateScreenshot(uri: NormalizedURI) = {
             uri.screenshotUpdatedAt map { update =>
@@ -126,6 +127,7 @@ class ScraperController @Inject() (
           }
           if(shouldUpdateScreenshot(scrapedURI)) s3ScreenshotStore.updatePicture(scrapedURI)
 
+          log.info(s"[processURI] (${uri.url}) needs re-indexing; scrapedURI=$scrapedURI")
           (scrapedURI, Some(article))
         }
       case NotScrapable(destinationUrl, redirects) =>
@@ -134,10 +136,12 @@ class ScraperController @Inject() (
           val toBeSaved = processRedirects(latestUri, redirects).withState(NormalizedURIStates.UNSCRAPABLE)
           syncSaveNormalizedUri(toBeSaved)
         }
+        log.info(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=$unscrapableURI")
         (unscrapableURI, None)
       case com.keepit.scraper.NotModified =>
         // update the scrape schedule, uri is not changed
         saveScrapeInfo(info.withDocumentUnchanged())
+        log.info(s"[processURI] (${uri.url} not modified; latestUri=$latestUri")
         (latestUri, None)
       case Error(httpStatus, msg) =>
         // store a fallback article in a store map
@@ -162,6 +166,7 @@ class ScraperController @Inject() (
           syncSaveScrapeInfo(info.withFailure())
           syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
+        log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=$errorURI")
         (errorURI, None)
     }
   }
