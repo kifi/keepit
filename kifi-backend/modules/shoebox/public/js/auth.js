@@ -448,9 +448,11 @@ kifi.form = (function () {
         value: Math.round(SLIDER_MAX * (d0 - dMin) / (dMax - dMin)),
         slide: onSliderSlide.bind($image[0], $image.data(), percentToPx(dMin, dMax), wScale, hScale)});
       $dialog.appendTo('body').layout().addClass('dialog-showing').find('.ui-slider-handle').focus();
+      onEsc(hide);
     }
 
     function hide() {
+      offEsc(hide);
       $dialog.removeClass('dialog-showing');
       hideTimer = setTimeout(function () {
         $dialog.remove();
@@ -551,10 +553,12 @@ kifi.form = (function () {
 
         $dialog.appendTo('body').layout().addClass('dialog-showing');
         $dialog.find('.reset-password-email').val(emailAddr).focus().select();
+        onEsc(hide);
       }
     };
 
     function hide() {
+      offEsc(hide);
       $dialog.removeClass('dialog-showing');
       hideTimer = setTimeout(function () {
         $dialog.remove();
@@ -596,6 +600,21 @@ kifi.form = (function () {
       }
     }
   }());
+
+  function onEsc(handler) {
+    onKeyDown.guid = handler.guid = handler.guid || $.guid++;
+    $(document).keydown(onKeyDown);
+    function onKeyDown(e) {
+      if (e.which === 27) {
+        handler(e);
+        e.preventDefault();
+      }
+    }
+  }
+
+  function offEsc(handler) {
+    $(document).off('keydown', handler);
+  }
 
   // from underscore.js 1.5.2 underscorejs.org
   function throttle(func, wait, options) {
