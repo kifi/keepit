@@ -18,13 +18,15 @@ import scala.concurrent.duration._
 import org.h2.tools.Backup
 import com.keepit.common.service.{ServiceStatus, FortyTwoServices}
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.search.phrasedetector.PhraseIndexer
 
 case object Index
 case object BackUp
 
 private[index] class ArticleIndexerActor @Inject() (
     airbrake: AirbrakeNotifier,
-    articleIndexer: ArticleIndexer)
+    articleIndexer: ArticleIndexer,
+  phraseIndexer: PhraseIndexer)
   extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
@@ -39,7 +41,10 @@ private[index] class ArticleIndexerActor @Inject() (
           airbrake.notify(AirbrakeError(exception = e, message = Some("Error indexing articles")))
           sender ! -1
       }
-    case BackUp => articleIndexer.backup()
+    case BackUp => {
+      articleIndexer.backup()
+      phraseIndexer.backup()
+    }
     case m => throw new UnsupportedActorMessage(m)
   }
 }

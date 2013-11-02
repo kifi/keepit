@@ -112,6 +112,11 @@ class URIGraphIndexer(
     bookmarkStore.reindex()
   }
 
+  override def backup() {
+    super.backup()
+    bookmarkStore.backup()
+  }
+
   def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIGraphIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
     val bookmarks = bookmarkStore.getBookmarks(userId)
