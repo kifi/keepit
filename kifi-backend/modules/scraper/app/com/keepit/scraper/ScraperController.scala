@@ -51,17 +51,18 @@ class ScraperController @Inject() (
       case e: Throwable => None
     }
     val json = Json.toJson(res)
-    log.info(s"[getBasicArticle($url)=$res json=${Json.prettyPrint(json)}")
+    log.info(s"[getBasicArticle($url)] result: ${Json.prettyPrint(json)}")
     Ok(json)
   }
 
   def asyncScrape() = SafeAsyncAction(parse.json) { request =>
     val normalizedUri = request.body.as[NormalizedURI]
-    val info = Await.result(shoeboxServiceClient.getScrapeInfo(normalizedUri), 5 seconds)
-    log.info(s"[asyncScrape] url=${normalizedUri.url} $info")
+    log.info(s"[asyncScrape] url=${normalizedUri.url}")
+    val info = Await.result(shoeboxServiceClient.getScrapeInfo(normalizedUri), 10 seconds)
+    log.info(s"[asyncScrape(${normalizedUri.url})] scrapeInfo=$info")
     val t = safeProcessURI(normalizedUri, info)
     val res = ScrapeTuple(t._1, t._2)
-    log.info(s"[asyncScrape] url=${normalizedUri.url} res=$res")
+    log.info(s"[asyncScrape(${normalizedUri.url})] result=$res")
     Ok(Json.toJson(res))
   }
 
