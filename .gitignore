@@ -71,6 +71,11 @@ kifi-backend/modules/abook/.classpath
 kifi-backend/modules/abook/.project
 kifi-backend/modules/abook/.settings/*
 kifi-backend/modules/abook/.cache
+kifi-backend/modules/scraper/.target/*
+kifi-backend/modules/scraper/.classpath
+kifi-backend/modules/scraper/.project
+kifi-backend/modules/scraper/.settings/*
+kifi-backend/modules/scraper/.cache
 
 
 # Compiled source #
