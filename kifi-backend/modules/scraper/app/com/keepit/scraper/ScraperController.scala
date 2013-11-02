@@ -63,7 +63,7 @@ class ScraperController @Inject() (
     log.info(s"[asyncScrape(${normalizedUri.url})] scrapeInfo=$info")
     val t = safeProcessURI(normalizedUri, info)
     val res = ScrapeTuple(t._1, t._2)
-    log.info(s"[asyncScrape(${normalizedUri.url})] result=$res")
+    log.info(s"[asyncScrape(${normalizedUri.url})] result=${t._1}")
     Ok(Json.toJson(res))
   }
 
@@ -120,7 +120,7 @@ class ScraperController @Inject() (
           syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
             saveBookmark(bookmark.copy(title = scrapedURI.title))
           }
-          log.info(s"[processURI] fetched uri $scrapedURI => $article")
+          log.info(s"[processURI] fetched uri $scrapedURI => article(${article.id}, ${article.title})")
 
           def shouldUpdateScreenshot(uri: NormalizedURI) = {
             uri.screenshotUpdatedAt map { update =>
