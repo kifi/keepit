@@ -3,10 +3,16 @@ package com.keepit.common.mail
 import com.keepit.test._
 import org.specs2.mutable.Specification
 
-
 class ElectronicMailTest extends Specification with ShoeboxTestInjector {
 
   "ElectronicMail" should {
+    "long title" in {
+      ElectronicMail(from = EmailAddresses.TEAM,
+        to = List(EmailAddresses.ENG),
+        subject = new StringBuilder("foo") * 500,
+        htmlBody = "body",
+        category = PostOffice.Categories.HEALTHCHECK) must throwA[IllegalArgumentException]
+    }
     "user filters" in {
       withDb(FakeMailModule()) { implicit injector =>
         val mails = db.readWrite { implicit s =>

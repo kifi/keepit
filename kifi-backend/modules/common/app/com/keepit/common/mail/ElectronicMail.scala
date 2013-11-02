@@ -39,6 +39,11 @@ case class ElectronicMail (
   inReplyTo: Option[ElectronicMailMessageId] = None,
   category: ElectronicMailCategory //type of mail in free form, will be use for tracking
 ) extends ModelWithExternalId[ElectronicMail] {
+
+  if (subject.length > 1024) {
+    throw new IllegalArgumentException(s"email subject length is ${subject.length} (more then 1024 chars): $subject")
+  }
+
   def withId(id: Id[ElectronicMail]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
