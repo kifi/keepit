@@ -127,7 +127,7 @@ class ShoeboxController @Inject() (
   }
 
   def saveNormalizedURI() = SafeAsyncAction(parse.json) { request =>
-    log.info(s"[saveNormalizedURI] body=${Json.prettyPrint(request.body)}")
+    log.info(s"[saveNormalizedURI] body=${request.body}")
     val normalizedUri = request.body.as[NormalizedURI]
     val saved = db.readWrite { implicit s =>
       normUriRepo.save(normalizedUri)
@@ -225,7 +225,7 @@ class ShoeboxController @Inject() (
   }
 
   def saveScrapeInfo() = SafeAsyncAction(parse.json) { request =>
-    log.info(s"[saveScrapeInfo] body=${Json.prettyPrint(request.body)}")
+    log.info(s"[saveScrapeInfo] body=${request.body}")
     val json = request.body
     val info = json.as[ScrapeInfo]
     val saved = db.readWrite( { implicit s =>
