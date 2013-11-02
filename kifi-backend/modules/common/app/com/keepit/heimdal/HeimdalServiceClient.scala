@@ -62,7 +62,7 @@ class HeimdalClientActor @Inject() (
 
   def receive = {
     case event: UserEvent =>
-      verifyEventStaleTime(event, EventQueueConsts.StaleEventAddTime)
+      verifyEventStaleTime(event, EventQueueConsts.StaleEventAddTime, "added")
       events = events :+ event
       if (closing) {
         flush()
@@ -85,10 +85,10 @@ class HeimdalClientActor @Inject() (
       throw new UnsupportedActorMessage(m)
   }
 
-  def verifyEventStaleTime(event: UserEvent, timeout: Long): Unit = {
+  def verifyEventStaleTime(event: UserEvent, timeout: Long, message: String): Unit = {
     val timeSinceEventStarted = clock.getMillis - event.time.getMillis
     if (timeSinceEventStarted > timeout) {
-      airbrakeNotifier.notify(s"Event started ${timeSinceEventStarted}ms ago but was added/flushed only now (timeout: ${timeout}ms): $event")
+      airbrakeNotifier.notify(s"Event ${event.eventType} started ${timeSinceEventStarted}ms ago but was $message only now (timeout: ${timeout}ms): $event")
     }
   }
 
@@ -99,12 +99,12 @@ class HeimdalClientActor @Inject() (
       case 1 =>
         log.info("Sending a single event to Heimdal")
         val event = events(0)
-        verifyEventStaleTime(event, EventQueueConsts.StaleEventAddTime)
+        verifyEventStaleTime(event, EventQueueConsts.StaleEventAddTime, "flush")
         call(Heimdal.internal.trackEvent, Json.toJson(event))
         events = Vector()
       case more =>
         log.info(s"Sending ${events.size} events to Heimdal")
-        events map { event => verifyEventStaleTime(event, EventQueueConsts.StaleEventFlushTime) }
+        events map { event => verifyEventStaleTime(event, EventQueueConsts.StaleEventFlushTime, "flush") }
         call(Heimdal.internal.trackEvents, Json.toJson(events))
         events = Vector()
     }
