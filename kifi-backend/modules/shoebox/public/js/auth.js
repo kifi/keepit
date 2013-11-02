@@ -18,6 +18,67 @@
   }
 }());
 
+var kifi = {};
+kifi.form = (function () {
+  'use strict';
+  var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  return {
+    showError: function ($in, msg, opts) {
+      var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
+        .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
+        .css('visibility', '')
+        .delay(opts && opts.ms || 1000).fadeOut(300, removeError);
+      $in.blur();  // closes browser autocomplete suggestion list
+      $in.focus().select().on('input blur', removeError);
+      function removeError() {
+        $err.remove();
+        $in.off('input blur', removeError);
+      }
+    },
+    validateEmailAddress: function ($in) {
+      var s = $.trim($in.val());
+      if (!s) {
+        kifi.form.showError($in, 'Please enter your email address');
+      } else if (!emailAddrRe.test(s)) {
+        kifi.form.showError($in, 'Invalid email address');
+      } else {
+        return s;
+      }
+    },
+    validateNewPassword: function ($in) {
+      var s = $in.val();
+      if (!s) {
+        kifi.form.showError($in, 'Please choose a password<br>for your account', {ms: 1500});
+      } else if (s.length < 7) {
+        kifi.form.showError($in, 'Password must be at least 7 characters', {ms: 1500});
+      } else {
+        return s;
+      }
+    },
+    validatePassword: function ($in) {
+      var s = $in.val();
+      if (!s) {
+        kifi.form.showError($in, 'Please enter your password');
+      } else if (s.length < 7) {
+        kifi.form.showError($in, 'Incorrect password', {ms: 1500});
+      } else {
+        return s;
+      }
+    },
+    validateName: function ($in) {
+      var s = $.trim($in.val());
+      if (!s) {
+        kifi.form.showError($in,
+          '<div class=form-error-title>Name is required</div>' +
+          '<div class=form-error-explanation>We need your name so that<br>your friends will be able to<br>communicate with you</div>',
+          {ms: 3000});
+      } else {
+        return s;
+      }
+    }
+  };
+}());
+
 (function () {
   'use strict';
   var baseUri = '';
@@ -53,61 +114,6 @@
     }
   });
 
-  var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-  function showFormError($in, msg, opts) {
-    var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
-      .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
-      .css('visibility', '')
-      .delay(opts && opts.ms || 1000).fadeOut(300, removeError);
-    $in.blur();  // closes browser autocomplete suggestion list
-    $in.focus().select().on('input blur', removeError);
-    function removeError() {
-      $err.remove();
-      $in.off('input blur', removeError);
-    }
-  }
-  function validateEmailAddress($in) {
-    var s = $.trim($in.val());
-    if (!s) {
-      showFormError($in, 'Please enter your email address');
-    } else if (!emailAddrRe.test(s)) {
-      showFormError($in, 'Invalid email address');
-    } else {
-      return s;
-    }
-  }
-  function validateNewPassword($in) {
-    var s = $in.val();
-    if (!s) {
-      showFormError($in, 'Please choose a password<br>for your account', {ms: 1500});
-    } else if (s.length < 7) {
-      showFormError($in, 'Password must be at least 7 characters', {ms: 1500});
-    } else {
-      return s;
-    }
-  }
-  function validatePassword($in) {
-    var s = $in.val();
-    if (!s) {
-      showFormError($in, 'Please enter your password');
-    } else if (s.length < 7) {
-      showFormError($in, 'Incorrect password', {ms: 1500});
-    } else {
-      return s;
-    }
-  }
-  function validateName($in) {
-    var s = $.trim($in.val());
-    if (!s) {
-      showFormError($in,
-        '<div class=form-error-title>Name is required</div>' +
-        '<div class=form-error-explanation>We need your name so that<br>your friends will be able to<br>communicate with you</div>',
-        {ms: 3000});
-    } else {
-      return s;
-    }
-  }
-
   var signup1Promise;
   $('.signup-1').submit(function (e) {
     if (signup1Promise && signup1Promise.state() === 'pending') {
@@ -115,8 +121,8 @@
     }
     $('.form-error').remove();
     var $form = $(this);
-    var email = validateEmailAddress($form.find('.form-email-addr'));
-    var password = email && validateNewPassword($form.find('.form-password'));
+    var email = kifi.form.validateEmailAddress($form.find('.form-email-addr'));
+    var password = email && kifi.form.validateNewPassword($form.find('.form-password'));
     if (email && password) {
       signup1Promise = $.postJson(baseUri + '/auth/sign-up', {
         email: email,
@@ -153,8 +159,8 @@
     }
     $('.form-error').remove();
     var $form = $(this);
-    var first = validateName($form.find('.form-first-name'));
-    var last = first && validateName($form.find('.form-last-name'));
+    var first = kifi.form.validateName($form.find('.form-first-name'));
+    var last = first && kifi.form.validateName($form.find('.form-last-name'));
     if (first && last) {
       var pic = $photo.data();
       signup2Promise = $.when(pic.uploadPromise).done(function (upload) {
@@ -182,8 +188,8 @@
     }
     $('.form-error').remove();
     var $form = $(this);
-    var email = validateEmailAddress($form.find('.social-email'));
-    var password = validateNewPassword($form.find('.form-password'));
+    var email = kifi.form.validateEmailAddress($form.find('.social-email'));
+    var password = kifi.form.validateNewPassword($form.find('.form-password'));
     if (password) {
       signup2Promise = $.postJson(baseUri + '/auth/social-finalize', {
         firstName: $form.data('first'),
@@ -212,8 +218,8 @@
     var $form = $(this);
     var $email = $form.find('.form-email-addr');
     var $password = $form.find('.form-password');
-    var email = validateEmailAddress($email);
-    var password = email && validatePassword($password);
+    var email = kifi.form.validateEmailAddress($email);
+    var password = email && kifi.form.validatePassword($password);
     if (email && password) {
       loginPromise = $.postJson(baseUri + '/auth/log-in', {
         username: email,
@@ -225,9 +231,9 @@
         if (xhr.status === 403) {
           var o = xhr.responseJson;
           if (o && o.error === 'no_such_user') {
-            showFormError($email, 'There is no account associated<br>with this email address', {ms: 2000});
+            kifi.form.showError($email, 'There is no account associated<br>with this email address', {ms: 2000});
           } else {
-            showFormError($password, 'Incorrect password');
+            kifi.form.showError($password, 'Incorrect password');
           }
         } else {
           // TODO: offline? 500?
@@ -538,12 +544,12 @@
         return false;
       }
       var $email = $form.find('.reset-password-email');
-      var email = validateEmailAddress($email);
+      var email = kifi.form.validateEmailAddress($email);
       if (email) {
         promise = $.postJson(this.action, {email: email})
         .done(function (resp) {
           if (resp.error === 'no_account') {
-            showFormError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
+            kifi.form.showError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
           } else {
             $dialog.addClass('reset-password-sent');
           }

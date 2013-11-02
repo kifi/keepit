@@ -239,7 +239,7 @@ class AuthController @Inject() (
   }
 
   private def doLoginPage(implicit request: Request[_]): Result = {
-    Ok(views.html.signup.auth("login"))
+    Ok(views.html.auth.auth("login"))
   }
 
   private def doFinalizePage(implicit request: Request[_]): Result = {
@@ -253,7 +253,7 @@ class AuthController @Inject() (
         Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
       case (Some(user), Some(identity)) =>
         // User exists, is incomplete
-        Ok(views.html.signup.finalizeEmail(
+        Ok(views.html.auth.finalizeEmail(
           emailAddress = identity.email.getOrElse(""),
           picturePath = identity.avatarUrl.getOrElse("")
         ))
@@ -270,7 +270,7 @@ class AuthController @Inject() (
       case (None, Some(identity)) if request.flash.get("signin_error").exists(_ == "no_account") =>
         // No user exists, social login was attempted. Let user choose what to do next.
         // todo: Handle if we know who they are by their email
-        Ok(views.html.signup.loggedInWithWrongNetwork(
+        Ok(views.html.auth.loggedInWithWrongNetwork(
           network = SocialNetworkType(identity.identityId.providerId)
         ))
       case (None, Some(identity)) =>
@@ -282,7 +282,7 @@ class AuthController @Inject() (
           case _ => identity.avatarUrl.getOrElse(S3UserPictureConfig.defaultImage)
         }
 
-        Ok(views.html.signup.finalizeSocial(
+        Ok(views.html.auth.finalizeSocial(
           firstName = User.sanitizeName(identity.firstName),
           lastName = User.sanitizeName(identity.lastName),
           emailAddress = identity.email.getOrElse(""),
@@ -508,11 +508,11 @@ class AuthController @Inject() (
     db.readWrite { implicit s =>
       emailRepo.getByCode(code) match {
         case Some(email) if email.state == EmailAddressStates.UNVERIFIED =>
-          Ok(views.html.website.setPassword())
+          Ok(views.html.auth.setPassword(code = code))
         case Some(email) =>
-          Ok(views.html.website.setPassword("already_used"))
+          Ok(views.html.auth.setPassword(error = "already_used"))
         case None =>
-          Ok(views.html.website.setPassword("invalid_code"))
+          Ok(views.html.auth.setPassword(error = "invalid_code"))
       }
     }
   }
@@ -535,11 +535,11 @@ class AuthController @Inject() (
                 )
               ))
             }
-            Ok(Json.obj("success" -> true)) // TODO: create session
+            Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url)) // TODO: create session
           case Some(false) =>
             Ok(Json.obj("error" -> "already_used"))  // TODO: "error" -> "expired" case
           case None =>
-            Ok(Json.obj("error" -> "invalid"))
+            Ok(Json.obj("error" -> "invalid_code"))
         }
       }
     }) getOrElse BadRequest("0")
