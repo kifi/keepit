@@ -127,15 +127,17 @@ class ShoeboxController @Inject() (
   }
 
   def saveNormalizedURI() = SafeAsyncAction(parse.json) { request =>
+    log.info(s"[saveNormalizedURI] body=${Json.prettyPrint(request.body)}")
     val normalizedUri = request.body.as[NormalizedURI]
     val saved = db.readWrite { implicit s =>
       normUriRepo.save(normalizedUri)
     }
-    log.info(s"[saveNormalizedURI] $normalizedUri saved=$saved")
+    log.info(s"[saveNormalizedURI(${normalizedUri.url})] result=$saved")
     Ok(Json.toJson(saved))
   }
 
   def recordPermanentRedirect() = SafeAsyncAction(parse.json) { request =>
+    log.info(s"[recordPermanentRedirect] body=${Json.prettyPrint(request.body)}")
     val args = request.body.as[JsArray].value
     require((!args.isEmpty && args.length == 2), "Both uri and redirect need to be supplied")
     val uri = args(0).as[NormalizedURI]
@@ -154,7 +156,7 @@ class ShoeboxController @Inject() (
       }
     }
     val res = toBeRedirected getOrElse uri
-    log.info(s"[recordPermanentRedirect($uri, $redirect)] res=$res")
+    log.info(s"[recordPermanentRedirect($uri, $redirect)] result=$res")
     Ok(Json.toJson(res))
   }
 
@@ -162,7 +164,7 @@ class ShoeboxController @Inject() (
     val httpProxyOpt = db.readOnly { implicit session =>
       urlPatternRuleRepo.getProxy(url)
     }
-    log.info(s"[getProxy($url): $httpProxyOpt")
+    log.info(s"[getProxy($url): result=$httpProxyOpt")
     Ok(Json.toJson(httpProxyOpt))
   }
 
@@ -170,7 +172,7 @@ class ShoeboxController @Inject() (
     val res = db.readOnly { implicit s =>
       (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
     }
-    log.info(s"[isUnscrapable($url, $destinationUrl)] res=$res")
+    log.info(s"[isUnscrapable($url, $destinationUrl)] result=$res")
     Ok(JsBoolean(res))
   }
 
@@ -212,22 +214,24 @@ class ShoeboxController @Inject() (
   }
 
   def getScrapeInfo() = SafeAsyncAction(parse.json) { request =>
+    log.info(s"[getScrapeInfo] body=${Json.prettyPrint(request.body)}")
     val json = request.body
     val uri = json.as[NormalizedURI]
     val info = db.readWrite { implicit s =>
       scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
     }
-    log.info(s"[getScrapeInfo] $uri $info")
+    log.info(s"[getScrapeInfo(${uri.url})] result=$info")
     Ok(Json.toJson(info))
   }
 
   def saveScrapeInfo() = SafeAsyncAction(parse.json) { request =>
+    log.info(s"[saveScrapeInfo] body=${Json.prettyPrint(request.body)}")
     val json = request.body
     val info = json.as[ScrapeInfo]
     val saved = db.readWrite( { implicit s =>
       scrapeInfoRepo.save(info)
     })
-    log.info(s"[saveScrapeInfo] $saved")
+    log.info(s"[saveScrapeInfo] result=$saved")
     Ok(Json.toJson(saved))
   }
 
