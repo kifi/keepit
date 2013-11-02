@@ -32,7 +32,7 @@ object ServiceType {
   case object TEST_MODE extends ServiceType("TEST_MODE", "TM")
   case object SEARCH extends ServiceType("SEARCH", "SR") {
     override def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = instance.instanceType match {
-      case AmazonInstanceInfo.micro => ServiceStatus.BACKING_UP
+      case AmazonInstanceInfo.small => ServiceStatus.BACKING_UP
       case _ => ServiceStatus.UP
     }
   }
