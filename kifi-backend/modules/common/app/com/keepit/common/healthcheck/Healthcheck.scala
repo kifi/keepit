@@ -6,6 +6,8 @@ import scala.concurrent.duration._
 
 import com.google.inject.Inject
 import com.google.inject.ImplementedBy
+import com.keepit.common.strings._
+
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{AlertingActor, UnsupportedActorMessage}
 import com.keepit.common.logging.Logging
@@ -87,7 +89,7 @@ class MailSender @Inject() (sender: HealthcheckMailSender) {
 class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, sender: MailSender, services: FortyTwoServices) {
   def sendMail() {
     val last = history.lastError
-    val subject = s"[REPEATING ERROR #${history.count}][${services.currentService}] ${last.message.getOrElse("")} ${last.exception}"
+    val subject = s"[REPEATING ERROR #${history.count}][${services.currentService}] ${last.message.getOrElse("")} ${last.exception}".abbreviate(512)
     val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString, host.host).body
     sender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
       subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
@@ -155,8 +157,7 @@ class HealthcheckPluginImpl @Inject() (
     actor: ActorInstance[HealthcheckActor],
     services: FortyTwoServices,
     host: HealthcheckHost)
-  extends HealthcheckPlugin
-  with SchedulingPlugin with Logging {
+  extends HealthcheckPlugin with SchedulingPlugin with Logging {
 
   val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)

@@ -11,15 +11,23 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.time.Clock
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{Future, Promise, Await}
+import scala.concurrent.duration._
 
+import akka.actor._
+import akka.pattern.ask
+import akka.util.Timeout
+
+import play.api.Plugin
 import play.api.libs.json.{JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
 
-trait HeimdalServiceClient extends ServiceClient {
+trait HeimdalServiceClient extends ServiceClient with Plugin {
   final val serviceType = ServiceType.HEIMDAL
 
   def trackEvent(event: UserEvent): Unit
@@ -29,18 +37,79 @@ trait HeimdalServiceClient extends ServiceClient {
   def updateMetrics(): Unit
 }
 
+object FlushEventQueue
+object FlushEventQueueAndClose
+
+object EventQueueConsts extends Logging {
+  val MaxBatchSize = 100
+  val LowWatermarkBatchSize = 10
+  val BatchFlushTiming = 10 //seconds
+  val StaleEventAddTime = 10000 //milli
+  val StaleEventFlushTime = (BatchFlushTiming * 1000) + StaleEventAddTime + 2000 //milli
+
+  def verifyEventStaleTime(clock: Clock, event: UserEvent, timeout: Long, message: String): Unit = {
+    val timeSinceEventStarted = clock.getMillis - event.time.getMillis
+    if (timeSinceEventStarted > timeout) {
+      val msg = s"Event ${event.eventType} started ${timeSinceEventStarted}ms ago but was $message only now (timeout: ${timeout}ms): $event"
+      log.error(msg, new Exception(msg))
+      //airbrakeNotifier.notify(message)
+    }
+  }
+}
+
 class HeimdalClientActor @Inject() (
     val airbrakeNotifier: AirbrakeNotifier,
     val httpClient: HttpClient,
-    serviceDiscovery: ServiceDiscovery
+    serviceDiscovery: ServiceDiscovery,
+    clock: Clock
   ) extends FortyTwoActor(airbrakeNotifier) with ServiceClient with Logging {
 
-  final val serviceType = ServiceType.HEIMDAL
+  private final val serviceType = ServiceType.HEIMDAL
   val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
+  private var events: Vector[UserEvent] = Vector()
+  private var closing = false
 
   def receive = {
-    case event: UserEvent => call(Heimdal.internal.trackEvent, Json.toJson(event))
-    case m => throw new UnsupportedActorMessage(m)
+    case event: UserEvent =>
+      EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventAddTime, "added")
+      events = events :+ event
+      if (closing) {
+        flush()
+      } else {
+        events.size match {
+          case s if(s >= EventQueueConsts.LowWatermarkBatchSize) =>
+            self ! FlushEventQueue //flush with the events in the actor mailbox
+          case s if(s >= EventQueueConsts.MaxBatchSize) =>
+            flush() //flushing without taking in account events in the mailbox
+          case _ =>
+            //ignore
+        }
+      }
+    case FlushEventQueueAndClose =>
+      closing = true
+      flush()
+    case FlushEventQueue =>
+      flush()
+    case m =>
+      throw new UnsupportedActorMessage(m)
+  }
+
+  def flush() = {
+    events.size match {
+      case 0 =>
+        //ignore
+      case 1 =>
+        log.info("Sending a single event to Heimdal")
+        val event = events(0)
+        EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventAddTime, "flush")
+        call(Heimdal.internal.trackEvent, Json.toJson(event))
+        events = Vector()
+      case more =>
+        log.info(s"Sending ${events.size} events to Heimdal")
+        events map { event => EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventFlushTime, "flush") }
+        call(Heimdal.internal.trackEvents, Json.toJson(events))
+        events = Vector()
+    }
   }
 }
 
@@ -48,10 +117,28 @@ class HeimdalServiceClientImpl @Inject() (
     val airbrakeNotifier: AirbrakeNotifier,
     val httpClient: HttpClient,
     val serviceCluster: ServiceCluster,
-    actor: ActorInstance[HeimdalClientActor])
-  extends HeimdalServiceClient with Logging {
+    actor: ActorInstance[HeimdalClientActor],
+    clock: Clock)
+  extends HeimdalServiceClient with SchedulingPlugin with Logging {
 
-  def trackEvent(event: UserEvent) : Unit = actor.ref ! event
+  implicit val actorTimeout = Timeout(30 seconds)
+
+  val schedulingProperties = SchedulingProperties.AlwaysEnabled
+
+  override def onStart(): Unit = {
+    scheduleTask(actor.system, 1 seconds, EventQueueConsts.BatchFlushTiming seconds, actor.ref, FlushEventQueue)
+  }
+
+  override def onStop() {
+    val res = actor.ref ? FlushEventQueueAndClose
+    Await.result(res, Duration(30, SECONDS))
+    super.onStop()
+  }
+
+  def trackEvent(event: UserEvent) : Unit = {
+    actor.ref ! event
+    EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventAddTime, "post to actor")
+  }
 
   def getMetricData(name: String): Future[JsObject] = {
     call(Heimdal.internal.getMetricData(name)).map{ response =>
@@ -63,5 +150,3 @@ class HeimdalServiceClientImpl @Inject() (
     broadcast(Heimdal.internal.updateMetrics())
   }
 }
-
-

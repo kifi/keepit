@@ -56,9 +56,6 @@ class CommentIndexerPluginImpl @Inject() (
   override def onStart() {
     scheduleTask(actor.system, 30 seconds, 1 minute, actor.ref, Update)
     log.info("starting CommentIndexerPluginImpl")
-    serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
-      scheduleTask(actor.system, 1 hour, 1 hour, actor.ref, BackUp)
-    }
   }
   override def onStop() {
     log.info("stopping CommentIndexerPluginImpl")

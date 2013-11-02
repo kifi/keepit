@@ -369,6 +369,36 @@ footer {
   -ms-transition: opacity 0.252s 0.168s linear, -ms-transform 0.42s ease-in-out;
   transition: opacity 0.252s 0.168s linear, transform 0.42s ease-in-out;
 }
+.primary-button {
+  color: #fff;
+  background: #92c152;
+}
+.primary-button:hover {
+  background: #9dc763;
+}
+.primary-button:active {
+  background: #83ae4a;
+}
+.alt-button {
+  color: #fff;
+  background: #6fa6ef;
+}
+.alt-button:hover {
+  background: #7daff1;
+}
+.alt-button:active {
+  background: #6495d7;
+}
+.cancel-button {
+  color: #888;
+  background: #e8e8e8;
+}
+.cancel-button:hover {
+  background: #ededed;
+}
+.cancel-button:active {
+  background: #d1d1d1;
+}
 .form-error {
   position: absolute;
   z-index: 10;
@@ -529,18 +559,10 @@ footer {
   width: 50%;
   border: 0;
   padding: 0;
-  background: #92c152;
-  color: #fff;
   height: 40px;
   line-height: 40px;
   text-align: center;
   -webkit-font-smoothing: antialiased;
-}
-.form-submit:hover {
-  background: #9dc763;
-}
-.form-submit:active {
-  background: #83ae4a;
 }
 .terms {
   text-align: center;
@@ -746,13 +768,6 @@ footer {
 .signup-2 > .form-submit {
   margin: 20px auto 40px;
   width: 200px;
-  background: #6fa6ef;
-}
-.signup-2 > .form-submit:hover {
-  background: #7daff1;
-}
-.signup-2 > .form-submit:active {
-  background: #6495d7;
 }
 .finalizing > .curtain-back {
   visibility: hidden;
@@ -1016,26 +1031,6 @@ footer {
 .photo-dialog-submit:focus {
   outline-color: #888;
 }
-.photo-dialog-cancel {
-  color: #888;
-  background: #e8e8e8;
-}
-.photo-dialog-cancel:hover {
-  background: #ededed;
-}
-.photo-dialog-cancel:active {
-  background: #d1d1d1;
-}
-.photo-dialog-submit {
-  color: #fff;
-  background: #92c152;
-}
-.photo-dialog-submit:hover {
-  background: #9dc763;
-}
-.photo-dialog-submit:active {
-  background: #83ae4a;
-}
 .reset-password .dialog-box {
   width: 480px;
   text-align: center;
@@ -1142,26 +1137,6 @@ footer {
 .reset-password-cancel:focus,
 .reset-password-submit:focus {
   outline-color: #888;
-}
-.reset-password-cancel {
-  color: #888;
-  background: #e8e8e8;
-}
-.reset-password-cancel:hover {
-  background: #ededed;
-}
-.reset-password-cancel:active {
-  background: #d1d1d1;
-}
-.reset-password-submit {
-  color: #fff;
-  background: #6fa6ef;
-}
-.reset-password-submit:hover {
-  background: #7daff1;
-}
-.reset-password-submit:active {
-  background: #6495d7;
 }
 .reset-password-success {
   position: absolute;

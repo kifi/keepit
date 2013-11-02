@@ -26,6 +26,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
         "time" -> Json.toJson(res.time),
         "millisPassed" -> JsNumber(res.millisPassed),
         "pageNumber" -> JsNumber(res.pageNumber),
+        "collections" -> JsArray(res.collections.map(id => JsNumber(id)).toSeq),
         "svVariance" ->  JsNumber(res.svVariance),
         "svExistenceVar" -> JsNumber(res.svExistenceVar)
       )
@@ -67,6 +68,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       time = (json \ "time").as[DateTime],
       millisPassed = (json \ "millisPassed").as[Int],
       pageNumber = (json \ "pageNumber").as[Int],
+      collections = (json \ "collections").asOpt[Seq[Long]].getOrElse(Seq.empty[Long]).toSet,
       svVariance = (json \ "svVariance").asOpt[Float].getOrElse(-1.0f),
       svExistenceVar = (json \ "svExistenceVar").asOpt[Float].getOrElse(-1.0f)
     ))
