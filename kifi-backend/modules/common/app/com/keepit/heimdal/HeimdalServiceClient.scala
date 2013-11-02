@@ -72,6 +72,8 @@ class HeimdalClientActor @Inject() (
             self ! FlushEventQueue //flush with the events in the actor mailbox
           case s if(s >= EventQueueConsts.MaxBatchSize) =>
             flush() //flushing without taking in account events in the mailbox
+          case _ =>
+            //ignore
         }
       }
     case FlushEventQueueAndClose =>
