@@ -14,7 +14,7 @@
     return this.each(forceLayout);
   };
   function forceLayout() {
-    this.clientHeight;
+    this.offsetHeight;
   }
 }());
 
@@ -261,10 +261,16 @@ kifi.form = (function () {
     if (this.files && URL) {
       var upload = uploadPhotoXhr2(this.files);
       if (upload) {
-        showLocalPhotoDialog(upload)
+        // wait for file dialog to go away before starting dialog transition
+        setTimeout(showLocalPhotoDialog.bind(null, upload), 200);
       }
     } else {
       uploadPhotoIframe(this.form);
+    }
+  });
+  $('.form-photo-file-a').click(function (e) {
+    if (e.which === 1) {
+      $('.form-photo-file').click();
     }
   });
   $(document).on('dragenter dragover drop', '.droppable', function (e) {
@@ -394,7 +400,7 @@ kifi.form = (function () {
   }
 
   var photoDialog = (function () {
-    var $dialog, $mask, $image, $slider, deferred;
+    var $dialog, $mask, $image, $slider, deferred, hideTimer;
     var INNER_SIZE = 200;
     var SHADE_SIZE = 40;
     var OUTER_SIZE = INNER_SIZE + 2 * SHADE_SIZE;
@@ -410,6 +416,7 @@ kifi.form = (function () {
         $mask = $('.photo-dialog-mask', $dialog).mousedown(onMaskMouseDown);
         $image = $(img).addClass('photo-dialog-img').insertBefore($mask);
         $slider = $('.photo-dialog-slider', $dialog);
+        clearTimeout(hideTimer), hideTimer = null;
 
         return (deferred = $.Deferred());
       }
@@ -440,7 +447,16 @@ kifi.form = (function () {
         max: SLIDER_MAX,
         value: Math.round(SLIDER_MAX * (d0 - dMin) / (dMax - dMin)),
         slide: onSliderSlide.bind($image[0], $image.data(), percentToPx(dMin, dMax), wScale, hScale)});
-      $dialog.appendTo('body');
+      $dialog.appendTo('body').layout().addClass('dialog-showing').find('.ui-slider-handle').focus();
+    }
+
+    function hide() {
+      $dialog.removeClass('dialog-showing');
+      hideTimer = setTimeout(function () {
+        $dialog.remove();
+        $image.remove();
+        $mask = $image = $slider = deferred = hideTimer = null;
+      }, 500);
     }
 
     function percentToPx(pxMin, pxMax) {
@@ -508,8 +524,6 @@ kifi.form = (function () {
       var submitted = $el.hasClass('photo-dialog-submit');
       if (submitted || $el.is('.photo-dialog-cancel,.photo-dialog-x,.dialog-cell')) {
         var o = $image.data();
-        $dialog.remove();
-        $image.remove();
         if (submitted) {
           var scale = o.naturalWidth / o.width;
           deferred.resolve({
@@ -521,22 +535,32 @@ kifi.form = (function () {
         } else {
           deferred.reject();
         }
-        $mask = $image = $slider = deferred = null;
+        hide();
       }
     }
   }());
 
   var resetPasswordDialog = (function () {
-    var $dialog, $form, promise;
+    var $dialog, $form, promise, hideTimer;
     return {
       show: function (emailAddr) {
         $dialog = $dialog || $('.reset-password').remove().css('display', '');
+        $dialog.removeClass('reset-password-sent').click(onDialogClick);
         $form = $dialog.find('.reset-password-form').submit(onFormSubmit);
+        clearTimeout(hideTimer), hideTimer = null;
 
-        $dialog.appendTo('body').click(onDialogClick);
+        $dialog.appendTo('body').layout().addClass('dialog-showing');
         $dialog.find('.reset-password-email').val(emailAddr).focus().select();
       }
     };
+
+    function hide() {
+      $dialog.removeClass('dialog-showing');
+      hideTimer = setTimeout(function () {
+        $dialog.remove();
+        $form = promise = null;
+      }, 500);
+    }
 
     function onFormSubmit(e) {
       e.preventDefault();
@@ -552,6 +576,7 @@ kifi.form = (function () {
             kifi.form.showError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
           } else {
             $dialog.addClass('reset-password-sent');
+            setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 200);
           }
         })
         .always(function () {
@@ -561,18 +586,14 @@ kifi.form = (function () {
     }
 
     function onDialogClick(e) {
-      if (e.which !== 1) return;
-      if (e.target.className === 'reset-password-submit') {
-        $form.submit();
-      } else if ($(e.target).is('.reset-password-cancel,.reset-password-x,.dialog-cell')) {
-        hideDialog();
+      if (e.which === 1) {
+        var $el = $(e.target);
+        if ($el.hasClass('reset-password-submit')) {
+          $form.submit();
+        } else if ($el.is('.reset-password-cancel,.reset-password-x,.dialog-cell')) {
+          hide();
+        }
       }
-    }
-
-    function hideDialog() {
-      $dialog.remove().removeClass('reset-password-sent');
-      $form = null;
-      promise = null;
     }
   }());
 
