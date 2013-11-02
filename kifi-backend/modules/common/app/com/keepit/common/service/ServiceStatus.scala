@@ -20,6 +20,7 @@ object ServiceStatus {
     case STOPPING.name => STOPPING
     case SICK.name => SICK
     case SELFCHECK_FAIL.name => SELFCHECK_FAIL
+    case BACKING_UP.name => BACKING_UP
   }
 
   implicit def format[T]: Format[ServiceStatus] = Format(
