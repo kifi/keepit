@@ -141,14 +141,19 @@ class AuthController @Inject() (
     val actualProvider = if (authType == AuthType.LoginAndLink) SocialNetworks.FORTYTWO.authProvider else provider
     ProviderController.authenticate(actualProvider)(augmentedRequest) match {
       case res: SimpleResult[_] =>
-        res.withSession(authType match {
+        val session = authType match {
           case AuthType.Login => getSession(res)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID
           case AuthType.Signup => getSession(res)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID +
             (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)
           case AuthType.Link => getSession(res, augmentedRequest.headers.get(HeaderNames.REFERER))(augmentedRequest)
           case AuthType.LoginAndLink => getSession(res, None)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID -
             SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> provider)
-        })
+        }
+        if (authType == AuthType.Login && format == "json") {
+          Ok(Json.obj("success" -> true)).withSession(session)
+        } else {
+          res.withSession(session)
+        }
       case res => res
     }
   }
