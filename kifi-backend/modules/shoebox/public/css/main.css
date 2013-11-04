@@ -267,7 +267,7 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .requested>*>.friend-status::before {background-position: -90px; width: 20px; position: relative; left: 2px}
 .friend-action-desc {position: absolute; right: 0; bottom: -20px; font-size: 13px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
 
-.invite-filters {height: 41px; border-bottom: 1px solid #b8c5d2; margin-bottom: 14px}
+.invite-filters {height: 41px; border-bottom: 1px solid #b7ce84; margin-bottom: 14px}
 .invite-filters>a {display: inline-block; width: 36px; height: 36px; margin-right: 5px; vertical-align: top; -webkit-transition: height .1s; transition: height .1s}
 .invite-filters>a:not([data-nw]) {background-color: #b7ce84; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
 .invite-filters>a[data-nw] { background-image: url(../img/networks.png); background-repeat: no-repeat; background-size: 400%; }
