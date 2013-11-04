@@ -265,10 +265,11 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }.map{ m => m.map{ case (k, v) => (k.userId, v) } }
   }
-  
+
   def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
-    val ids = userIds.mkString(",")
-    call(Shoebox.internal.getEmailsForUsers(ids)).map{ res =>
+    implicit val idFormat = Id.format[User]
+    val payload = JsArray(userIds.map{ x => Json.toJson(x)})
+    call(Shoebox.internal.getEmailsForUsers(), payload).map{ res =>
       res.json.as[Map[String, Seq[String]]]
       .map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
@@ -397,7 +398,7 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.fromJson[Seq[NormalizedURI]](r.json).get
     }
   }
-  
+
   def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = {
     call(Shoebox.internal.getUserIndexable(seqNum, fetchSize)).map{ r =>
       r.json.as[JsArray].value.map{ x => Json.fromJson[User](x).get }

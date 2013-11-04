@@ -316,14 +316,14 @@ class ShoeboxController @Inject() (
     }
     Ok(Json.toJson(users))
   }
-  
+
   def getUserIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
     val users = db.readOnly { implicit s => userRepo.getUsersSince(SequenceNumber(seqNum), fetchSize) }
     Ok(JsArray(users.map{ u => Json.toJson(u)}))
   }
-  
-  def getEmailsForUsers(ids: String) = Action { request =>
-    val userIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(id => Id[User](id.toLong))
+
+  def getEmailsForUsers() = Action(parse.json) { request =>
+    val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val emails = db.readOnly{ implicit s =>
       userIds.map{userId => userId.id.toString -> emailAddressRepo.getByUser(userId).map{_.address}}.toMap
     }
