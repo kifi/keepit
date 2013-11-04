@@ -15,7 +15,8 @@ case class Phrase (
   phrase: String,
   lang: Lang,
   source: String,
-  state: State[Phrase] = PhraseStates.ACTIVE
+  state: State[Phrase] = PhraseStates.ACTIVE,
+  seq: SequenceNumber = SequenceNumber.ZERO
   ) extends Model[Phrase] {
   def withId(id: Id[Phrase]): Phrase = copy(id = Some(id))
   def withUpdateTime(now: DateTime): Phrase = this.copy(updatedAt = now)
@@ -31,8 +32,9 @@ object Phrase {
     (__ \ 'phrase).format[String] and
     (__ \ 'lang).format[String].inmap(Lang.apply, unlift(Lang.unapply)) and
     (__ \ 'source).format[String] and
-    (__ \ 'state).format(State.format[Phrase])
-   )(Phrase.apply, unlift(Phrase.unapply))
+    (__ \ 'state).format(State.format[Phrase]) and
+    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+    )(Phrase.apply, unlift(Phrase.unapply))
 }
 
 object PhraseStates extends States[Phrase]
