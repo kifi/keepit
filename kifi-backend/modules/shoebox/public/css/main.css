@@ -267,9 +267,9 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .requested>*>.friend-status::before {background-position: -90px; width: 20px; position: relative; left: 2px}
 .friend-action-desc {position: absolute; right: 0; bottom: -20px; font-size: 13px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
 
-.invite-filters {height: 49px; border-bottom: 1px solid #b8c5d2; margin-bottom: 14px}
+.invite-filters {height: 41px; border-bottom: 1px solid #b7ce84; margin-bottom: 14px}
 .invite-filters>a {display: inline-block; width: 36px; height: 36px; margin-right: 5px; vertical-align: top; -webkit-transition: height .1s; transition: height .1s}
-.invite-filters>a:not([data-nw]) {background-color: #b8c5d2; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
+.invite-filters>a:not([data-nw]) {background-color: #b7ce84; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
 .invite-filters>a[data-nw] { background-image: url(../img/networks.png); background-repeat: no-repeat; background-size: 400%; }
 .invite-filters>a[data-nw=facebook] {background-color: #637ab8}
 .invite-filters>a[data-nw=linkedin] {background-color: #4f83c3; background-position: -36px top;}
@@ -277,10 +277,10 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .invite-filters[data-nw-selected=linkedin] {border-color: #4f83c3;}
 .invite-filters[data-nw-selected]>:not([data-nw]):hover,
 .invite-filters:not([data-nw-selected=facebook])>[data-nw=facebook]:hover,
-.invite-filters:not([data-nw-selected=linkedin])>[data-nw=linkedin]:hover {height: 40px}
+.invite-filters:not([data-nw-selected=linkedin])>[data-nw=linkedin]:hover {height: 38px}
 .invite-filters:not([data-nw-selected])>:not([data-nw]),
 .invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
-.invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px}
+.invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 41px}
 
 .invites-left {float: right; margin-top: 2px; font-size: 13px; color: #818692; display: none}
 .invites-left>.num-invites {display: inline-block; border: 1px solid #b8c5d2; color: #628196; border-radius: 10.5px; padding: 0 12px; vertical-align: baseline; font-size: 12px; line-height: 20px; height: 19px; margin-left: 6px}
