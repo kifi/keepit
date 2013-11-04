@@ -294,8 +294,7 @@ class AuthController @Inject() (
           picturePath = picture
         ))
       case (None, None) =>
-        // TODO(andrew): Forward user to initial signup page
-        Ok("You should sign up!")
+        Ok(views.html.auth.auth("signup"))
     }
   }
 

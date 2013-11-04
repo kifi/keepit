@@ -26,7 +26,7 @@
 
 <h1 class="main-logo">kifi</h1>
 
-<div class="signup">
+<div class="signup"@if(view == "signup") { style="display:block"}>
   <form class="signup-1" data-title="Sign up" novalidate>
     <div class="form-sides">
       <div class="form-l">
@@ -42,7 +42,7 @@
       </div>
       <div class="form-r">
         <h3>Use your email address</h3>
-        <input class="form-email-addr" type="email" name="signup-email" placeholder="Your email address">
+        <input class="form-email-addr" type="email" name="signup-email" placeholder="Your email address"@if(view == "signup") { autofocus}>
         <label class="password-label">
           <input class="form-password" type="password" name="signup-password" placeholder="Your new password">
         </label>
@@ -84,7 +84,12 @@
 </form>
 
 @* down here to prevent transition side effects (1px shifting) in Chrome *@
-<h2 class="page-title">@if(view == "login") {Log in}</h2>
+<h2 class="page-title">
+  @view match {
+    case "login" => {Log in}
+    case "signup" => {Sign up}
+  }
+</h2>
 
 @helper.photoDialog()
 @helper.resetPasswordDialog()
@@ -96,4 +101,4 @@
 <script src="/assets/js/auth.js"></script>
 }
 
-@helper.page(curtainsDrawn = view == "login", content = content, scripts = scripts)
+@helper.page(curtainsDrawn = view != "", content = content, scripts = scripts)
