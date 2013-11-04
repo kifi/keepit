@@ -19,6 +19,9 @@ import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import scala.concurrent.ExecutionContext.Implicits.global
+
+
 
 class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -87,10 +90,13 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
         }
         val shoeboxController = inject[ShoeboxController]
         val query = users.map(_.id.get).mkString(",")
-        val result = shoeboxController.getBasicUsers(query)(FakeRequest())
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
-        contentAsString(result) must equalTo(Json.toJson(basicUsersJson).toString())
+        val payload = JsArray(users.map(_.id.get).map(x => JsNumber(x.id)))
+        shoeboxController.getBasicUsers()(FakeRequest().withJsonBody(payload)).run.map{ result =>
+          status(result) must equalTo(OK);
+          contentType(result) must beSome("application/json");
+          contentAsString(result) must equalTo(Json.toJson(basicUsersJson).toString())
+        }
+        1 === 1
       }
     }
 
