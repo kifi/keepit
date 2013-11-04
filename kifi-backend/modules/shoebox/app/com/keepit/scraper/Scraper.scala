@@ -56,7 +56,7 @@ class Scraper @Inject() (
       val buf = new mutable.ArrayBuffer[(NormalizedURI, Option[Article])]
       tasks.grouped(scraperConfig.batchSize).foreach { g =>  // revisit rate-limit
         val futures = g.map { case (uri, info) =>
-          scraperServiceClient.asyncScrape(uri)
+          scraperServiceClient.asyncScrapeWithInfo(uri, info)
         }
         val res:Seq[(NormalizedURI, Option[Article])] = futures.map(f => Await.result(f, 10 seconds)) // revisit
         log.info(s"[run] (remote) results=$res")
@@ -65,10 +65,29 @@ class Scraper @Inject() (
       }
       buf.toSeq
     }
-    val jobTime = Seconds.secondsBetween(startedTime, currentDateTime).getSeconds()
-    log.info("[run] successfully scraped %s articles out of %s in %s seconds:\n%s".format(
-        scrapedArticles.flatMap{ a => a._2 }.size, tasks.size, jobTime, scrapedArticles map {a => a._1} mkString "\n"))
     scrapedArticles
+  }
+
+  def schedule(): Unit = {
+    log.info("[schedule] starting a new scrape round")
+    val tasks = db.readOnly { implicit s =>
+      scrapeInfoRepo.getOverdueList().map{ info => (normalizedURIRepo.get(info.uriId), info) }
+    }
+    log.info("[schedule] got %s uris to scrape".format(tasks.length))
+    val ts = System.currentTimeMillis
+    if (config.disableScraperService) {
+      val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
+    } else {
+      log.info(s"[schedule] invoke (remote) Scraper service; uris(len=${tasks.length}) $tasks")
+      tasks.grouped(scraperConfig.batchSize).foreach { g => // revisit rate-limit
+        val futures = g.map { case (uri, info) =>
+          scraperServiceClient.scheduleScrape(uri, info)
+        }
+        val res = futures.map(f => Await.result(f, 5 seconds)) // revisit artificial wait/delay
+        log.info(s"[schedule] (remote) results=$res")
+      }
+    }
+    log.info(s"[schedule] finished scheduling ${tasks.length} uris for scraping. time-lapsed: ${System.currentTimeMillis - ts} ms")
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
