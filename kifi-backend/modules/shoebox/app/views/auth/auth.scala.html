@@ -1,5 +1,7 @@
 @(view: String = "")
 
+@import com.keepit.controllers.core.routes.{AuthController => routes}
+
 @content = {
 <div class="curtain-l">
   <div class="curtain-logo-l"></div>
@@ -27,15 +29,15 @@
 <h1 class="main-logo">kifi</h1>
 
 <div class="signup"@if(view == "signup") { style="display:block"}>
-  <form class="signup-1" data-title="Sign up" novalidate>
+  <form class="signup-1" data-title="Sign up" data-uri="@routes.userPasswordSignup()" novalidate>
     <div class="form-sides">
       <div class="form-l">
         <h3>Use a social network</h3>
-        <a class="form-network facebook" href="javascript:">
+        <a class="form-network facebook" href="@routes.signup("facebook")">
           <span class="form-network-icon"></span>
           <span class="form-network-text">Sign up using Facebook</span>
         </a>
-        <a class="form-network linkedin" href="javascript:">
+        <a class="form-network linkedin" href="@routes.signup("linkedin")">
           <span class="form-network-icon"></span>
           <span class="form-network-text">Sign up using LinkedIn</span>
         </a>
@@ -58,15 +60,15 @@
   </p>
 </div>
 
-<form class="login" data-title="Log in" novalidate@if(view == "login") { style="display:block"}>
+<form class="login" data-title="Log in" data-uri="@routes.loginWithUserPass("json")" novalidate@if(view == "login") { style="display:block"}>
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>
-      <a class="form-network facebook" href="javascript:" tabindex="1">
+      <a class="form-network facebook" href="@routes.login("facebook")" tabindex="1">
         <span class="form-network-icon"></span>
         <span class="form-network-text">Log in using Facebook</span>
       </a>
-      <a class="form-network linkedin" href="javascript:" tabindex="1">
+      <a class="form-network linkedin" href="@routes.login("linkedin")" tabindex="1">
         <span class="form-network-icon"></span>
         <span class="form-network-text">Log in using LinkedIn</span>
       </a>
@@ -88,6 +90,7 @@
   @view match {
     case "login" => {Log in}
     case "signup" => {Sign up}
+    case _ => {}
   }
 </h2>
 

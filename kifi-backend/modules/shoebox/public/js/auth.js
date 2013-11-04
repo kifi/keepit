@@ -81,7 +81,6 @@ kifi.form = (function () {
 
 (function () {
   'use strict';
-  var baseUri = '';
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
 
@@ -102,18 +101,6 @@ kifi.form = (function () {
     $('body').removeClass('curtains-drawn');
   });
 
-  $('.form-network').click(function (e) {
-    if (e.which !== 1) return;
-    var $a = $(this);
-    var network = ['facebook', 'linkedin'].filter($.fn.hasClass.bind($a))[0];
-    var $form = $a.closest('form');
-    if ($form.hasClass('signup-1')) {
-      window.location = baseUri + '/signup/' + network;
-    } else if ($form.hasClass('login')) {
-      window.location = baseUri + '/login/' + network;
-    }
-  });
-
   var signup1Promise;
   $('.signup-1').submit(function (e) {
     if (signup1Promise && signup1Promise.state() === 'pending') {
@@ -124,7 +111,7 @@ kifi.form = (function () {
     var email = kifi.form.validateEmailAddress($form.find('.form-email-addr'));
     var password = email && kifi.form.validateNewPassword($form.find('.form-password'));
     if (email && password) {
-      signup1Promise = $.postJson(baseUri + '/auth/sign-up', {
+      signup1Promise = $.postJson($form.data('uri'), {
         email: email,
         password: password
       }).done(function (data) {
@@ -164,7 +151,7 @@ kifi.form = (function () {
     if (first && last) {
       var pic = $photo.data();
       signup2Promise = $.when(pic.uploadPromise).done(function (upload) {
-         signup2Promise = $.postJson(baseUri + '/auth/email-finalize', {
+         signup2Promise = $.postJson($form.data('uri'), {
           firstName: first,
           lastName: last,
           picToken: upload && upload.token,
@@ -191,7 +178,7 @@ kifi.form = (function () {
     var email = kifi.form.validateEmailAddress($form.find('.social-email'));
     var password = kifi.form.validateNewPassword($form.find('.form-password'));
     if (password) {
-      signup2Promise = $.postJson(baseUri + '/auth/social-finalize', {
+      signup2Promise = $.postJson($form.data('uri'), {
         firstName: $form.data('first'),
         lastName: $form.data('last'),
         email: email,
@@ -221,7 +208,7 @@ kifi.form = (function () {
     var email = kifi.form.validateEmailAddress($email);
     var password = email && kifi.form.validatePassword($password);
     if (email && password) {
-      loginPromise = $.postJson(baseUri + '/auth/log-in', {
+      loginPromise = $.postJson($form.data('uri'), {
         username: email,
         password: password
       })
@@ -321,7 +308,7 @@ kifi.form = (function () {
           deferred.reject();
         }
       });
-      xhr.open('POST', baseUri + '/auth/upload-binary-image', true);
+      xhr.open('POST', $photo.data('uri'), true);
       xhr.send(file);
       return {file: file, promise: deferred.promise()};
     }
@@ -355,7 +342,7 @@ kifi.form = (function () {
     });
     form.method = 'POST';
     form.target = 'upload';
-    form.action = baseUri + '/auth/upload-multipart-image';
+    form.action = $photo.data('form-uri');
     form.submit();
 
     var fakeProgressTimer;

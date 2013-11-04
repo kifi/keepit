@@ -1,6 +1,8 @@
 @()
 
-<form class="signup-2 signup-2-email" data-title="Finalize your account" novalidate>
+@import com.keepit.controllers.core.routes.{AuthController => routes}
+
+<form class="signup-2 signup-2-email" data-title="Finalize your account" data-uri="@routes.userPassFinalizeAccountAction()" novalidate>
   <div class="form-name">
     <label class="signup-2-label">Your name</label>
     <input class="form-first-name" type="text" name="first-name" placeholder="First" required>
@@ -9,7 +11,7 @@
   <div class="form-pic">
     <label class="signup-2-label">Your photo</label>
     <div class="form-photo-box">
-      <div class="form-photo unset"><div class="form-photo-progress"></div></div>
+      <div class="form-photo unset" data-uri="@routes.uploadBinaryPicture()" data-form-uri="@routes.uploadFormEncodedPicture()"><div class="form-photo-progress"></div></div>
       <div class="form-photo-grab">Grab photo from</div>
       <a class="form-photo-a facebook" href="javascript:"></a>
       <a class="form-photo-a linkedin" href="javascript:"></a>
