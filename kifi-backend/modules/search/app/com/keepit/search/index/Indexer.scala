@@ -5,14 +5,11 @@ import java.io.IOException
 import java.lang.OutOfMemoryError
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
-import org.apache.lucene.document.StringField
-import org.apache.lucene.document.TextField
 import org.apache.lucene.index.CorruptIndexException
 import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
-import org.apache.lucene.store.Directory
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -53,12 +50,12 @@ trait IndexingEventHandler[T] {
 }
 
 abstract class Indexer[T](
-    indexDirectory: Directory,
+    indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     fieldDecoders: Map[String, FieldDecoder])
   extends IndexingEventHandler[T] with Logging {
 
-  def this(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
+  def this(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
 
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
   private[this] val indexWriterLock = new AnyRef
@@ -195,6 +192,22 @@ abstract class Indexer[T](
     indexWriter.commit()
     log.info(s"index committed seqNum=${seqNum}")
   }
+
+  def backup(): Unit = {
+    log.info("Index will be backed up on next commit")
+    indexDirectory.scheduleBackup()
+  }
+
+  override def onCommit(successful: Seq[Indexable[T]]): Unit =
+    try {
+      val start = currentDateTime.getMillis
+      if (indexDirectory.doBackup()) {
+        val end = currentDateTime.getMillis
+        log.info(s"Index directory has been backed up in ${ (end - start) / 1000} seconds")
+      }
+    } catch {
+      case e: Throwable => log.error("Index directory could not be backed up", e)
+    }
 
   def deleteAllDocuments(refresh: Boolean = true) {
     if (DirectoryReader.indexExists(indexDirectory)) {

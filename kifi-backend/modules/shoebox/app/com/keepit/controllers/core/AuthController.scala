@@ -141,14 +141,19 @@ class AuthController @Inject() (
     val actualProvider = if (authType == AuthType.LoginAndLink) SocialNetworks.FORTYTWO.authProvider else provider
     ProviderController.authenticate(actualProvider)(augmentedRequest) match {
       case res: SimpleResult[_] =>
-        res.withSession(authType match {
+        val session = authType match {
           case AuthType.Login => getSession(res)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID
           case AuthType.Signup => getSession(res)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID +
             (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)
           case AuthType.Link => getSession(res, augmentedRequest.headers.get(HeaderNames.REFERER))(augmentedRequest)
           case AuthType.LoginAndLink => getSession(res, None)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID -
             SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> provider)
-        })
+        }
+        if (authType == AuthType.Login && format == "json") {
+          Ok(Json.obj("success" -> true)).withSession(session)
+        } else {
+          res.withSession(session)
+        }
       case res => res
     }
   }
@@ -239,7 +244,7 @@ class AuthController @Inject() (
   }
 
   private def doLoginPage(implicit request: Request[_]): Result = {
-    Ok(views.html.signup.auth("login"))
+    Ok(views.html.auth.auth("login"))
   }
 
   private def doFinalizePage(implicit request: Request[_]): Result = {
@@ -253,7 +258,7 @@ class AuthController @Inject() (
         Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
       case (Some(user), Some(identity)) =>
         // User exists, is incomplete
-        Ok(views.html.signup.finalizeEmail(
+        Ok(views.html.auth.finalizeEmail(
           emailAddress = identity.email.getOrElse(""),
           picturePath = identity.avatarUrl.getOrElse("")
         ))
@@ -270,7 +275,7 @@ class AuthController @Inject() (
       case (None, Some(identity)) if request.flash.get("signin_error").exists(_ == "no_account") =>
         // No user exists, social login was attempted. Let user choose what to do next.
         // todo: Handle if we know who they are by their email
-        Ok(views.html.signup.loggedInWithWrongNetwork(
+        Ok(views.html.auth.loggedInWithWrongNetwork(
           network = SocialNetworkType(identity.identityId.providerId)
         ))
       case (None, Some(identity)) =>
@@ -282,7 +287,7 @@ class AuthController @Inject() (
           case _ => identity.avatarUrl.getOrElse(S3UserPictureConfig.defaultImage)
         }
 
-        Ok(views.html.signup.finalizeSocial(
+        Ok(views.html.auth.finalizeSocial(
           firstName = User.sanitizeName(identity.firstName),
           lastName = User.sanitizeName(identity.lastName),
           emailAddress = identity.email.getOrElse(""),
@@ -472,59 +477,16 @@ class AuthController @Inject() (
 
   def verifyEmail(code: String) = Action { implicit request =>
     db.readWrite { implicit s =>
-      if (emailRepo.verifyByCode(code))
+      if (emailRepo.verifyByCode(code).isDefined) // TODO: distinguish redundant case, which is Some(false)
         Ok(views.html.website.verifyEmail(success = true))
       else
         BadRequest(views.html.website.verifyEmail(success = false))
     }
   }
 
-  private val passwordForm = Form[String](
-    mapping(
-      "password" -> tuple("1" -> nonEmptyText, "2" -> nonEmptyText)
-        .verifying("Passwords do not match", pw => pw._1 == pw._2).transform(_._1, (a: String) => (a, a))
-        .verifying(Constraints.minLength(7))
-    )(identity)(Some(_))
-  )
-  def setNewPassword(code: String) = Action { implicit request =>
-    passwordForm.bindFromRequest.fold(
-      formWithErrors => Redirect(routes.AuthController.setNewPasswordPage(code)).flashing(
-        "error" -> "Passwords must match and be at least 7 characters"
-      ), { password =>
-        db.readWrite { implicit s =>
-          emailRepo.getByCode(code).map { email =>
-            emailRepo.verifyByCode(code, clear = true)
-            for (sui <- socialRepo.getByUser(email.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
-              UserService.save(UserIdentity(
-                userId = sui.userId,
-                socialUser = sui.credentials.get.copy(
-                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password))
-                )
-              ))
-            }
-            Redirect(routes.AuthController.setNewPasswordPage(code)).flashing("success" -> "true")
-          } getOrElse {
-            Redirect(routes.AuthController.setNewPasswordPage(code)).flashing("invalid" -> "true")
-          }
-        }
-      })
-  }
-
-  def setNewPasswordPage(code: String) = Action { implicit request =>
-    db.readWrite { implicit s =>
-      val error = request.flash.get("error")
-      val isValid = !request.flash.get("invalid").isDefined
-      if (!emailRepo.verifyByCode(code) || !isValid || error.isDefined)
-        BadRequest(views.html.website.setPassword(valid = isValid, error = error))
-      else
-        Ok(views.html.website.setPassword(valid = isValid, done = request.flash.get("success").isDefined))
-    }
-  }
-
   // todo(andrew): Send reset email to ALL verified email addresses of an account (unless none, in which case, to one)
-
-  def resetPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doResetPassword(_), unauthenticatedAction = doResetPassword(_))
-  def doResetPassword(implicit request: Request[JsValue]): Result = {
+  def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doForgotPassword(_), unauthenticatedAction = doForgotPassword(_))
+  def doForgotPassword(implicit request: Request[JsValue]): Result = {
     (request.body \ "email").asOpt[JsString] map { emailAddr =>
       db.readWrite { implicit s =>
         emailRepo.getByAddressOpt(emailAddr.value).map(emailRepo.saveWithVerificationCode).map { email =>
@@ -533,7 +495,7 @@ class AuthController @Inject() (
             to = Seq(GenericEmailAddress(email.address)),
             subject = "Reset your password",
             htmlBody = "You can set a new password by going to " +
-                s"$url${routes.AuthController.setNewPassword(email.verificationCode.get)}",
+                s"$url${routes.AuthController.setPasswordPage(email.verificationCode.get)}",
             category = ElectronicMailCategory("reset_password")
           ))
           email
@@ -545,6 +507,47 @@ class AuthController @Inject() (
           Ok(Json.obj("error" -> "no_account"))
       }
     } getOrElse BadRequest
+  }
+
+  def setPasswordPage(code: String) = Action { implicit request =>
+    db.readWrite { implicit s =>
+      emailRepo.getByCode(code) match {
+        case Some(email) if email.state == EmailAddressStates.UNVERIFIED =>
+          Ok(views.html.auth.setPassword(code = code))
+        case Some(email) =>
+          Ok(views.html.auth.setPassword(error = "already_used"))
+        case None =>
+          Ok(views.html.auth.setPassword(error = "invalid_code"))
+      }
+    }
+  }
+
+  def setPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doSetPassword(_), unauthenticatedAction = doSetPassword(_))
+  def doSetPassword(implicit request: Request[JsValue]): Result = {
+    (for {
+      code <- (request.body \ "code").asOpt[JsString]
+      password <- (request.body \ "password").asOpt[JsString].filter(_.value.length >= 7)
+    } yield {
+      db.readWrite { implicit s =>
+        emailRepo.verifyByCode(code.value) match {
+          case Some(true) =>
+            val email = emailRepo.getByCode(code.value).get  // TODO: optimize second query away
+            for (sui <- socialRepo.getByUser(email.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
+              UserService.save(UserIdentity(
+                userId = sui.userId,
+                socialUser = sui.credentials.get.copy(
+                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password.value))
+                )
+              ))
+            }
+            Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url)) // TODO: create session
+          case Some(false) =>
+            Ok(Json.obj("error" -> "already_used"))  // TODO: "error" -> "expired" case
+          case None =>
+            Ok(Json.obj("error" -> "invalid_code"))
+        }
+      }
+    }) getOrElse BadRequest("0")
   }
 
   def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = doUploadBinaryPicture(_), unauthenticatedAction = doUploadBinaryPicture(_))

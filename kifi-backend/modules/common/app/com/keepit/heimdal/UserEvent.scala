@@ -34,7 +34,7 @@ object UserEventContext {
                 case JsNumber(x) => ContextDoubleData(x.doubleValue)
                 case JsString(s) => ContextStringData(s)
                 case _ => return JsError()
-              } 
+              }
             }
             case _ => return JsError()
           }
@@ -49,7 +49,7 @@ object UserEventContext {
       JsObject(obj.data.mapValues{ seq =>
         JsArray(seq.map{ _ match {
           case ContextStringData(s) => JsString(s)
-          case ContextDoubleData(x) => JsNumber(x) 
+          case ContextDoubleData(x) => JsNumber(x)
         }})
       }.toSeq)
     }
@@ -111,7 +111,9 @@ case class UserEvent(
   context: UserEventContext,
   eventType: UserEventType,
   time: DateTime = currentDateTime
-)
+) {
+  override def toString(): String = s"UserEvent[user=$userId,type=${eventType.name},time=$time]"
+}
 
 object UserEvent {
   implicit val format = Json.format[UserEvent]

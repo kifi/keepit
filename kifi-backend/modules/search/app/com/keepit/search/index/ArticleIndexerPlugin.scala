@@ -15,12 +15,18 @@ import play.api.Play.current
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import org.h2.tools.Backup
+import com.keepit.common.service.{ServiceStatus, FortyTwoServices}
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.search.phrasedetector.PhraseIndexer
 
 case object Index
+case object BackUp
 
 private[index] class ArticleIndexerActor @Inject() (
     airbrake: AirbrakeNotifier,
-    articleIndexer: ArticleIndexer)
+    articleIndexer: ArticleIndexer,
+  phraseIndexer: PhraseIndexer)
   extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
@@ -35,6 +41,10 @@ private[index] class ArticleIndexerActor @Inject() (
           airbrake.notify(AirbrakeError(exception = e, message = Some("Error indexing articles")))
           sender ! -1
       }
+    case BackUp => {
+      articleIndexer.backup()
+      phraseIndexer.backup()
+    }
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -46,7 +56,8 @@ trait ArticleIndexerPlugin extends SchedulingPlugin {
 
 class ArticleIndexerPluginImpl @Inject() (
     actor: ActorInstance[ArticleIndexerActor],
-    articleIndexer: ArticleIndexer)
+    articleIndexer: ArticleIndexer,
+    serviceDiscovery: ServiceDiscovery)
   extends ArticleIndexerPlugin with Logging {
 
   val schedulingProperties = SchedulingProperties.AlwaysEnabled
@@ -57,6 +68,9 @@ class ArticleIndexerPluginImpl @Inject() (
   override def onStart() {
     log.info("starting ArticleIndexerPluginImpl")
     scheduleTask(actor.system, 30 seconds, 1 minutes, actor.ref, Index)
+    serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
+      scheduleTask(actor.system, 30 minutes, 2 hours, actor.ref, BackUp)
+    }
   }
   override def onStop() {
     log.info("stopping ArticleIndexerPluginImpl")

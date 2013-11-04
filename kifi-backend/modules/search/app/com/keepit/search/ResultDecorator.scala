@@ -18,6 +18,7 @@ import com.keepit.search.index.SymbolDecompounder
 import com.keepit.common.logging.Logging
 import com.keepit.social.BasicUser
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.db.ExternalId
 
 trait ResultDecorator {
   def decorate(resultSet: ArticleSearchResult): DecoratedResult
@@ -103,6 +104,15 @@ object ResultDecorator extends Logging {
 class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends ResultDecorator {
 
   override def decorate(resultSet: ArticleSearchResult): DecoratedResult = {
+    var collectionIdCache: Map[Long, ExternalId[Collection]] = Map()
+    def getCollectionExternalId(id: Long): ExternalId[Collection] = {
+      collectionIdCache.getOrElse(id, {
+        val extId = searcher.collectionSearcher.getExternalId(id)
+        collectionIdCache += (id -> extId)
+        extId
+      })
+    }
+
     val collectionSearcher = searcher.collectionSearcher
     val myCollectionEdgeSet = collectionSearcher.myCollectionEdgeSet
     val hits = resultSet.hits
@@ -119,7 +129,7 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
 
         val collections = {
           val collIds = collectionSearcher.intersect(myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(h.uriId)).destIdLongSet
-          if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => collectionSearcher.getExternalId(id) })
+          if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => getCollectionExternalId(id) })
         }
 
         PersonalSearchHit(
@@ -162,9 +172,10 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
           users,
           hit.score,
           isNew)
-      }
+      },
+      resultSet.collections.iterator.map{ id => getCollectionExternalId(id) }.toSeq
     )
   }
 }
 
-class DecoratedResult(val users: Map[Id[User], BasicUser], val hits: Seq[PersonalSearchResult])
+class DecoratedResult(val users: Map[Id[User], BasicUser], val hits: Seq[PersonalSearchResult], val collections: Seq[ExternalId[Collection]])

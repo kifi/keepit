@@ -1,46 +1,21 @@
 package com.keepit.search.query
 
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
-import play.api.test.Helpers._
-import scala.math._
-import scala.collection.mutable.ArrayBuffer
-import org.apache.lucene.document.Document
-import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.index.IndexWriter
-import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.BooleanClause
-import org.apache.lucene.search.DocIdSetIterator
-import org.apache.lucene.search.PhraseQuery
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.TermQuery
-import org.apache.lucene.search.IndexSearcher
-import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
-import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.index.Indexable
-import com.keepit.search.Lang
-import com.keepit.search.SemanticVector
+import com.keepit.search.index._
 import com.keepit.search.SemanticVectorBuilder
 import java.io.StringReader
-import org.apache.lucene.store.Directory
-import org.apache.lucene.analysis.Analyzer
-import com.keepit.search.index.Indexer
-import com.keepit.search.index.PersonalizedSearcher
-import com.keepit.search.query.parser.QueryParser
+import scala.Some
 
 class SemanticVectorQueryTest extends Specification {
 
   class Tst(val id: Id[Tst], val text: String, val fallbackText: String)
 
-  class TstIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig)
+  class TstIndexer(indexDirectory: VolatileIndexDirectoryImpl, indexWriterConfig: IndexWriterConfig)
     extends Indexer[Tst](indexDirectory, indexWriterConfig) {
 
     class TstIndexable[Tst](override val id: Id[Tst], val text: String, val fallbackText: String) extends Indexable[Tst] {
@@ -80,8 +55,7 @@ class SemanticVectorQueryTest extends Specification {
   val indexingAnalyzer = DefaultAnalyzer.forIndexing
   val config = new IndexWriterConfig(Version.LUCENE_41, indexingAnalyzer)
 
-  val ramDir = new RAMDirectory
-  val indexer = new TstIndexer(ramDir, config)
+  val indexer = new TstIndexer(new VolatileIndexDirectoryImpl, config)
   Array("abc", "abc def", "abc def ghi", "def ghi").zip(Array("", "", "", "jkl")).zipWithIndex.map{ case ((text, fallbackText), id) =>
     indexer.index(Id[Tst](id), text, fallbackText)
   }

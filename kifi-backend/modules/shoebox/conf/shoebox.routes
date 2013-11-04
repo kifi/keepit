@@ -45,9 +45,9 @@ POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.
 
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 
-POST    /password/reset             @com.keepit.controllers.core.AuthController.resetPassword()
-GET     /password/:code             @com.keepit.controllers.core.AuthController.setNewPasswordPage(code: String)
-POST    /password/:code             @com.keepit.controllers.core.AuthController.setNewPassword(code: String)
+POST    /password/forgot            @com.keepit.controllers.core.AuthController.forgotPassword()
+GET     /password/:code             @com.keepit.controllers.core.AuthController.setPasswordPage(code: String)
+POST    /password/set               @com.keepit.controllers.core.AuthController.setPassword()
 
 POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
@@ -367,8 +367,8 @@ POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize @com.keep
 POST    /internal/shoebox/database/internNormalizedURI                 @com.keepit.controllers.shoebox.ShoeboxController.internNormalizedURI()
 GET     /internal/shoebox/database/getUsers                            @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
-POST     /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers(ids: String)
-POST     /internal/shoebox/database/getEmailsForUsers                   @com.keepit.controllers.shoebox.ShoeboxController.getEmailsForUsers(ids: String)
+POST     /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers()
+POST     /internal/shoebox/database/getEmailsForUsers                   @com.keepit.controllers.shoebox.ShoeboxController.getEmailsForUsers()
 GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])

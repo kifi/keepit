@@ -127,15 +127,17 @@ class ShoeboxController @Inject() (
   }
 
   def saveNormalizedURI() = SafeAsyncAction(parse.json) { request =>
+    log.info(s"[saveNormalizedURI] body=${request.body}")
     val normalizedUri = request.body.as[NormalizedURI]
     val saved = db.readWrite { implicit s =>
       normUriRepo.save(normalizedUri)
     }
-    log.info(s"[saveNormalizedURI] $normalizedUri saved=$saved")
+    log.info(s"[saveNormalizedURI(${normalizedUri.url})] result=$saved")
     Ok(Json.toJson(saved))
   }
 
   def recordPermanentRedirect() = SafeAsyncAction(parse.json) { request =>
+    log.info(s"[recordPermanentRedirect] body=${Json.prettyPrint(request.body)}")
     val args = request.body.as[JsArray].value
     require((!args.isEmpty && args.length == 2), "Both uri and redirect need to be supplied")
     val uri = args(0).as[NormalizedURI]
@@ -154,7 +156,7 @@ class ShoeboxController @Inject() (
       }
     }
     val res = toBeRedirected getOrElse uri
-    log.info(s"[recordPermanentRedirect($uri, $redirect)] res=$res")
+    log.info(s"[recordPermanentRedirect($uri, $redirect)] result=$res")
     Ok(Json.toJson(res))
   }
 
@@ -162,7 +164,7 @@ class ShoeboxController @Inject() (
     val httpProxyOpt = db.readOnly { implicit session =>
       urlPatternRuleRepo.getProxy(url)
     }
-    log.info(s"[getProxy($url): $httpProxyOpt")
+    log.info(s"[getProxy($url): result=$httpProxyOpt")
     Ok(Json.toJson(httpProxyOpt))
   }
 
@@ -170,7 +172,7 @@ class ShoeboxController @Inject() (
     val res = db.readOnly { implicit s =>
       (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
     }
-    log.info(s"[isUnscrapable($url, $destinationUrl)] res=$res")
+    log.info(s"[isUnscrapable($url, $destinationUrl)] result=$res")
     Ok(JsBoolean(res))
   }
 
@@ -212,22 +214,24 @@ class ShoeboxController @Inject() (
   }
 
   def getScrapeInfo() = SafeAsyncAction(parse.json) { request =>
+    log.info(s"[getScrapeInfo] body=${Json.prettyPrint(request.body)}")
     val json = request.body
     val uri = json.as[NormalizedURI]
     val info = db.readWrite { implicit s =>
       scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
     }
-    log.info(s"[getScrapeInfo] $uri $info")
+    log.info(s"[getScrapeInfo(${uri.url})] result=$info")
     Ok(Json.toJson(info))
   }
 
   def saveScrapeInfo() = SafeAsyncAction(parse.json) { request =>
+    log.info(s"[saveScrapeInfo] body=${request.body}")
     val json = request.body
     val info = json.as[ScrapeInfo]
     val saved = db.readWrite( { implicit s =>
       scrapeInfoRepo.save(info)
     })
-    log.info(s"[saveScrapeInfo] $saved")
+    log.info(s"[saveScrapeInfo] result=$saved")
     Ok(Json.toJson(saved))
   }
 
@@ -256,8 +260,9 @@ class ShoeboxController @Inject() (
     val bookmarks = db.readOnly { implicit session =>
       bookmarkRepo.getByUriWithoutTitle(uriId)
     }
-    log.info(s"[getBookmarksByUriWithoutTitle($uriId)] ${bookmarks}")
-    Ok(Json.toJson(bookmarks))
+    val res = Json.toJson(bookmarks)
+    log.info(s"[getBookmarksByUriWithoutTitle($uriId)] ${bookmarks} json=$res")
+    Ok(res)
   }
 
   def getLatestBookmark(uriId: Id[NormalizedURI]) = Action { request =>
@@ -304,21 +309,24 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(users))
   }
 
-  def getBasicUsers(ids: String) = Action { request =>
-    val userIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(id => Id[User](id.toLong))
+  def getBasicUsers() = Action(parse.json) { request =>
+    val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val users = db.readOnly { implicit s =>
       userIds.map{ userId => userId.id.toString -> Json.toJson(basicUserRepo.load(userId)) }.toMap
     }
     Ok(Json.toJson(users))
   }
-  
+
   def getUserIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
     val users = db.readOnly { implicit s => userRepo.getUsersSince(SequenceNumber(seqNum), fetchSize) }
     Ok(JsArray(users.map{ u => Json.toJson(u)}))
   }
-  
-  def getEmailsForUsers(ids: String) = Action { request =>
-    val userIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(id => Id[User](id.toLong))
+
+  def getEmailsForUsers() = Action(parse.json) { request =>
+    val jsArr = request.body.as[JsArray]
+    log.info("request js array: " + jsArr)
+    log.info("request js array value: " + jsArr.value)
+    val userIds = jsArr.value.map{x => Id[User](x.as[Long])}
     val emails = db.readOnly{ implicit s =>
       userIds.map{userId => userId.id.toString -> emailAddressRepo.getByUser(userId).map{_.address}}.toMap
     }

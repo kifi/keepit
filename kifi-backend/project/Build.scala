@@ -45,6 +45,7 @@ object ApplicationBuild extends Build {
       "org.apache.httpcomponents" % "httpclient" % "4.3",
       "org.apache.tika" % "tika-parsers" % "1.3",
       "org.apache.commons" % "commons-math3" % "3.1.1",
+      "commons-io" % "commons-io" % "2.4",
       "org.apache.zookeeper" % "zookeeper" % "3.4.5",
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       "org.mindrot" % "jbcrypt" % "0.3m",

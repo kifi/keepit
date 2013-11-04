@@ -369,6 +369,36 @@ footer {
   -ms-transition: opacity 0.252s 0.168s linear, -ms-transform 0.42s ease-in-out;
   transition: opacity 0.252s 0.168s linear, transform 0.42s ease-in-out;
 }
+.primary-button {
+  color: #fff;
+  background: #92c152;
+}
+.primary-button:hover {
+  background: #9dc763;
+}
+.primary-button:active {
+  background: #83ae4a;
+}
+.alt-button {
+  color: #fff;
+  background: #6fa6ef;
+}
+.alt-button:hover {
+  background: #7daff1;
+}
+.alt-button:active {
+  background: #6495d7;
+}
+.cancel-button {
+  color: #888;
+  background: #e8e8e8;
+}
+.cancel-button:hover {
+  background: #ededed;
+}
+.cancel-button:active {
+  background: #d1d1d1;
+}
 .form-error {
   position: absolute;
   z-index: 10;
@@ -529,18 +559,10 @@ footer {
   width: 50%;
   border: 0;
   padding: 0;
-  background: #92c152;
-  color: #fff;
   height: 40px;
   line-height: 40px;
   text-align: center;
   -webkit-font-smoothing: antialiased;
-}
-.form-submit:hover {
-  background: #9dc763;
-}
-.form-submit:active {
-  background: #83ae4a;
 }
 .terms {
   text-align: center;
@@ -743,16 +765,12 @@ footer {
   overflow: hidden;
   visibility: hidden;
 }
+.form-photo-file-a {
+  color: inherit;
+}
 .signup-2 > .form-submit {
   margin: 20px auto 40px;
   width: 200px;
-  background: #6fa6ef;
-}
-.signup-2 > .form-submit:hover {
-  background: #7daff1;
-}
-.signup-2 > .form-submit:active {
-  background: #6495d7;
 }
 .finalizing > .curtain-back {
   visibility: hidden;
@@ -874,6 +892,12 @@ footer {
   height: 100%;
   z-index: 10;
   background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  -webkit-transition: opacity 0.25s linear;
+  -moz-transition: opacity 0.25s linear;
+  -o-transition: opacity 0.25s linear;
+  -ms-transition: opacity 0.25s linear;
+  transition: opacity 0.25s linear;
 }
 .dialog-cell {
   display: table-cell;
@@ -886,6 +910,30 @@ footer {
   text-align: left;
   border-radius: 6px;
   position: relative;
+  -webkit-transform: scale(0.7, 0.7);
+  -moz-transform: scale(0.7, 0.7);
+  -o-transform: scale(0.7, 0.7);
+  -ms-transform: scale(0.7, 0.7);
+  transform: scale(0.7, 0.7);
+  -webkit-transition: -webkit-transform 0.25s ease-in;
+  -moz-transition: -moz-transform 0.25s ease-in;
+  -o-transition: -o-transform 0.25s ease-in;
+  -ms-transition: -ms-transform 0.25s ease-in;
+  transition: transform 0.25s ease-in;
+}
+.dialog-showing {
+  opacity: 1;
+}
+.dialog-showing .dialog-box {
+  -webkit-transform: none;
+  -moz-transform: none;
+  -o-transform: none;
+  -ms-transform: none;
+  transform: none;
+  -webkit-transition-timing-function: ease-out;
+  -moz-transition-timing-function: ease-out;
+  -o-transition-timing-function: ease-out;
+  transition-timing-function: ease-out;
 }
 .photo-dialog .dialog-box {
   width: 304px;
@@ -1016,26 +1064,6 @@ footer {
 .photo-dialog-submit:focus {
   outline-color: #888;
 }
-.photo-dialog-cancel {
-  color: #888;
-  background: #e8e8e8;
-}
-.photo-dialog-cancel:hover {
-  background: #ededed;
-}
-.photo-dialog-cancel:active {
-  background: #d1d1d1;
-}
-.photo-dialog-submit {
-  color: #fff;
-  background: #92c152;
-}
-.photo-dialog-submit:hover {
-  background: #9dc763;
-}
-.photo-dialog-submit:active {
-  background: #83ae4a;
-}
 .reset-password .dialog-box {
   width: 480px;
   text-align: center;
@@ -1142,26 +1170,6 @@ footer {
 .reset-password-cancel:focus,
 .reset-password-submit:focus {
   outline-color: #888;
-}
-.reset-password-cancel {
-  color: #888;
-  background: #e8e8e8;
-}
-.reset-password-cancel:hover {
-  background: #ededed;
-}
-.reset-password-cancel:active {
-  background: #d1d1d1;
-}
-.reset-password-submit {
-  color: #fff;
-  background: #6fa6ef;
-}
-.reset-password-submit:hover {
-  background: #7daff1;
-}
-.reset-password-submit:active {
-  background: #6495d7;
 }
 .reset-password-success {
   position: absolute;

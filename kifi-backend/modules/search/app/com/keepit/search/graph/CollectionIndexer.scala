@@ -1,29 +1,19 @@
 package com.keepit.search.graph
 
-import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.document.BinaryDocValuesField
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
-import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
-import org.apache.lucene.util.Version
 import com.keepit.common.db._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{AirbrakeNotifier}
 import com.keepit.common.strings._
 import com.keepit.model._
 import com.keepit.model.CollectionStates._
-import com.keepit.search.Lang
-import com.keepit.search.LangDetector
+import com.keepit.search.index._
 import com.keepit.search.index.DocUtil
-import com.keepit.search.index.FieldDecoder
-import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer}
-import com.keepit.search.index.Indexable.IteratorTokenStream
+import com.keepit.search.index.{Indexable, Indexer}
 import com.keepit.search.index.Searcher
-import com.keepit.search.line.LineField
-import com.keepit.search.line.LineFieldBuilder
 import com.keepit.shoebox.ShoeboxServiceClient
-import java.io.StringReader
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import scala.concurrent.Await
 
@@ -47,7 +37,7 @@ object CollectionIndexer {
 }
 
 class CollectionIndexer(
-    indexDirectory: Directory,
+    indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     collectionNameIndexer: CollectionNameIndexer,
     airbrake: AirbrakeNotifier,
@@ -68,6 +58,11 @@ class CollectionIndexer(
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
+  }
+
+  override def backup(): Unit = {
+    collectionNameIndexer.backup()
+    super.backup()
   }
 
   def update(): Int = updateLock.synchronized {

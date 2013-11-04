@@ -24,6 +24,7 @@ case class ArticleSearchResult(
   svExistenceVar: Float = -1.0f,
   toShow: Boolean = true,
   timeLogs: Option[SearchTimeLogs] = None,
+  collections: Set[Long] = Set.empty[Long],
   lang: Lang = Lang("en"))
 
 

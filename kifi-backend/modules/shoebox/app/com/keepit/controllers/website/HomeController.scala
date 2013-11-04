@@ -73,7 +73,7 @@ class HomeController @Inject() (db: Database,
   })
 
   def curtainHome = Action {
-    Ok(views.html.signup.auth())
+    Ok(views.html.auth.auth())
   }
 
   def kifiSiteRedirect(path: String) = Action {

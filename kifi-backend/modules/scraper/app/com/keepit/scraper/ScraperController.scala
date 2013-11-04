@@ -51,16 +51,19 @@ class ScraperController @Inject() (
       case e: Throwable => None
     }
     val json = Json.toJson(res)
-    log.info(s"[getBasicArticle($url)=$res json=${Json.prettyPrint(json)}")
+    log.info(s"[getBasicArticle($url)] result: ${Json.prettyPrint(json)}")
     Ok(json)
   }
 
   def asyncScrape() = Action(parse.json) { request =>
+    log.info(s"[asyncScrape] body=${Json.prettyPrint(request.body)}")
     val normalizedUri = request.body.as[NormalizedURI]
-    val info = Await.result(shoeboxServiceClient.getScrapeInfo(normalizedUri), 5 seconds)
-    log.info(s"[asyncScrape] url=${normalizedUri.url} $info")
+    log.info(s"[asyncScrape] url=${normalizedUri.url}")
+    val info = Await.result(shoeboxServiceClient.getScrapeInfo(normalizedUri), 10 seconds)
+    log.info(s"[asyncScrape(${normalizedUri.url})] scrapeInfo=$info")
     val t = safeProcessURI(normalizedUri, info)
     val res = ScrapeTuple(t._1, t._2)
+    log.info(s"[asyncScrape(${normalizedUri.url})] result=${t._1}")
     Ok(Json.toJson(res))
   }
 
@@ -99,9 +102,9 @@ class ScraperController @Inject() (
           latestUri.state != NormalizedURIStates.SCRAPE_FAILED &&
           signature.similarTo(Signature(info.signature)) >= (1.0d - config.changeThreshold * (config.minInterval / info.interval))
         ) {
-          // the article does not need to be reindexed
-          // update the scrape schedule, uri is not changed
+          // the article does not need to be reindexed update the scrape schedule, uri is not changed
           saveScrapeInfo(info.withDocumentUnchanged())
+          log.info(s"[processURI] (${uri.url}) no change detected")
           (latestUri, None)
         } else {
           // the article needs to be reindexed
@@ -117,7 +120,7 @@ class ScraperController @Inject() (
           syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
             saveBookmark(bookmark.copy(title = scrapedURI.title))
           }
-          log.debug("fetched uri %s => %s".format(scrapedURI, article))
+          log.info(s"[processURI] fetched uri $scrapedURI => article(${article.id}, ${article.title})")
 
           def shouldUpdateScreenshot(uri: NormalizedURI) = {
             uri.screenshotUpdatedAt map { update =>
@@ -126,6 +129,7 @@ class ScraperController @Inject() (
           }
           if(shouldUpdateScreenshot(scrapedURI)) s3ScreenshotStore.updatePicture(scrapedURI)
 
+          log.info(s"[processURI] (${uri.url}) needs re-indexing; scrapedURI=$scrapedURI")
           (scrapedURI, Some(article))
         }
       case NotScrapable(destinationUrl, redirects) =>
@@ -134,10 +138,12 @@ class ScraperController @Inject() (
           val toBeSaved = processRedirects(latestUri, redirects).withState(NormalizedURIStates.UNSCRAPABLE)
           syncSaveNormalizedUri(toBeSaved)
         }
+        log.info(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=$unscrapableURI")
         (unscrapableURI, None)
       case com.keepit.scraper.NotModified =>
         // update the scrape schedule, uri is not changed
         saveScrapeInfo(info.withDocumentUnchanged())
+        log.info(s"[processURI] (${uri.url} not modified; latestUri=$latestUri")
         (latestUri, None)
       case Error(httpStatus, msg) =>
         // store a fallback article in a store map
@@ -162,6 +168,7 @@ class ScraperController @Inject() (
           syncSaveScrapeInfo(info.withFailure())
           syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
+        log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=$errorURI")
         (errorURI, None)
     }
   }
@@ -219,7 +226,7 @@ class ScraperController @Inject() (
             }
             val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
 
-            val res = Scraped(Article(
+            val article: Article = Article(
               id = normalizedUri.id.get,
               title = title,
               description = description,
@@ -233,10 +240,9 @@ class ScraperController @Inject() (
               message = None,
               titleLang = Some(titleLang),
               contentLang = Some(contentLang),
-              destinationUrl = fetchStatus.destinationUrl),
-              signature,
-              fetchStatus.redirects)
-            log.info(s"[fetchArticle] result=$res")
+              destinationUrl = fetchStatus.destinationUrl)
+            val res = Scraped(article, signature, fetchStatus.redirects)
+            log.info(s"[fetchArticle] result=(Scraped($signature, ${fetchStatus.redirects}) article=(${article.id}, ${article.title}, content.len=${article.content.length}})")
             res
           }
         case HttpStatus.SC_NOT_MODIFIED =>

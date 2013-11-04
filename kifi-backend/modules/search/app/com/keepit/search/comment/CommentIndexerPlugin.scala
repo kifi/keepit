@@ -14,6 +14,9 @@ import com.keepit.inject._
 import play.api.Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import com.keepit.common.service.ServiceStatus
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.search.index.BackUp
 
 case object Update
 
@@ -30,6 +33,7 @@ private[comment] class CommentIndexerActor @Inject() (
           airbrake.notify(AirbrakeError(exception = e, message = Some("Error updating comment index")))
           sender ! -1
       }
+    case BackUp => commentIndexer.backup()
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -41,7 +45,8 @@ trait CommentIndexerPlugin extends SchedulingPlugin {
 
 class CommentIndexerPluginImpl @Inject() (
     actor: ActorInstance[CommentIndexerActor],
-    commentIndexer: CommentIndexer)
+    commentIndexer: CommentIndexer,
+    serviceDiscovery: ServiceDiscovery)
   extends CommentIndexerPlugin with Logging {
 
   val schedulingProperties = SchedulingProperties.AlwaysEnabled

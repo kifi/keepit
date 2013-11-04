@@ -2,26 +2,20 @@ package com.keepit.search
 
 import org.specs2.mutable.Specification
 import com.keepit.common.db.Id
-import org.apache.lucene.store.Directory
 import org.apache.lucene.index.IndexWriterConfig
-import com.keepit.search.index.Indexer
-import com.keepit.search.index.Indexable
+import com.keepit.search.index._
 import java.io.StringReader
 import com.keepit.common.db.SequenceNumber
-import com.keepit.search.index.PersonalizedSearcher
-import com.keepit.search.index.DefaultAnalyzer
 import org.apache.lucene.util.Version
-import org.apache.lucene.store.RAMDirectory
 import com.keepit.search.query.TextQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.index.Term
-import com.keepit.search.query.SemanticVectorQuery
 
 class SemanticVarianceTest extends Specification {
 
   class Tst(val id: Id[Tst], val text: String, val personalText: String)
 
-  class TstIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig)
+  class TstIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig)
     extends Indexer[Tst](indexDirectory, indexWriterConfig) {
 
     class TstIndexable[Tst](override val id: Id[Tst], val text: String, val personalText: String) extends Indexable[Tst] {
@@ -61,8 +55,7 @@ class SemanticVarianceTest extends Specification {
   val indexingAnalyzer = DefaultAnalyzer.forIndexing
   val config = new IndexWriterConfig(Version.LUCENE_41, indexingAnalyzer)
 
-  val ramDir = new RAMDirectory
-  val indexer = new TstIndexer(ramDir, config)
+  val indexer = new TstIndexer(new VolatileIndexDirectoryImpl, config)
   Array("abc def", "abc def", "abc def", "abc ghi", "abc jkl").zip(Array("", "", "", "mno", "mno")).zipWithIndex.map{ case ((text, fallbackText), id) =>
     indexer.index(Id[Tst](id), text, fallbackText)
   }

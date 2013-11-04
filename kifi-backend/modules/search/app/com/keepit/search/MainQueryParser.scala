@@ -40,6 +40,8 @@ class MainQueryParser(
 ) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
 
   val namedQueryContext = new NamedQueryContext
+  var collectionIds = Set.empty[Long]
+
   var phraseDetectionTime: Long = 0L
   var nlpPhraseDetectionTime: Long = 0L
 
@@ -73,10 +75,11 @@ class MainQueryParser(
         // detect collection names and augment TextQueries
         collectionSearcher.foreach{ cs =>
           cs.detectCollectionNames(phTerms, phStemmedTerms).foreach{ case (index, length, collectionId) =>
+            collectionIds += collectionId
             var i = index
             val end = index + length
             while (i < end) {
-              indexToTextQuery(i).addCollectionQuery(collectionId)
+              indexToTextQuery(i).addCollectionQuery(collectionId, 1.5f)
              i += 1
             }
           }

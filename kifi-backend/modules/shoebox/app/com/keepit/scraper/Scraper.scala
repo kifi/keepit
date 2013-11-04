@@ -21,6 +21,9 @@ import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.normalizer.{TrustedCandidate, NormalizationService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Success
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.collection.mutable
 
 @Singleton
 class Scraper @Inject() (
@@ -35,21 +38,35 @@ class Scraper @Inject() (
   bookmarkRepo: BookmarkRepo,
   urlPatternRuleRepo: UrlPatternRuleRepo,
   s3ScreenshotStore: S3ScreenshotStore,
-  normalizationServiceProvider: Provider[NormalizationService])
-    extends Logging {
+  normalizationServiceProvider: Provider[NormalizationService],
+  scraperServiceClient:ScraperServiceClient
+) extends Logging {
 
   implicit val config = scraperConfig
 
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
-    log.info("starting a new scrape round")
+    log.info("[run] starting a new scrape round")
     val tasks = db.readOnly { implicit s =>
       scrapeInfoRepo.getOverdueList().map{ info => (normalizedURIRepo.get(info.uriId), info) }
     }
-    log.info("got %s uris to scrape".format(tasks.length))
-    val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
+    log.info("[run] got %s uris to scrape".format(tasks.length))
+    val scrapedArticles = if (config.disableScraperService) tasks.map{ case (uri, info) => safeProcessURI(uri, info) } else {
+      log.info(s"[run] invoke (remote) Scraper service; uris(len=${tasks.length}) $tasks")
+      val buf = new mutable.ArrayBuffer[(NormalizedURI, Option[Article])]
+      tasks.grouped(scraperConfig.batchSize).foreach { g =>  // revisit rate-limit
+        val futures = g.map { case (uri, info) =>
+          scraperServiceClient.asyncScrape(uri)
+        }
+        val res:Seq[(NormalizedURI, Option[Article])] = futures.map(f => Await.result(f, 10 seconds)) // revisit
+        log.info(s"[run] (remote) results=$res")
+        buf ++= res
+        res
+      }
+      buf.toSeq
+    }
     val jobTime = Seconds.secondsBetween(startedTime, currentDateTime).getSeconds()
-    log.info("successfully scraped %s articles out of %s in %s seconds:\n%s".format(
+    log.info("[run] successfully scraped %s articles out of %s in %s seconds:\n%s".format(
         scrapedArticles.flatMap{ a => a._2 }.size, tasks.size, jobTime, scrapedArticles map {a => a._1} mkString "\n"))
     scrapedArticles
   }

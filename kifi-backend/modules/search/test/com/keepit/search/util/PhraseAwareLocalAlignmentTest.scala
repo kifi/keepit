@@ -51,31 +51,31 @@ class PhraseAwareLocalAlignmentTest extends Specification {
       val dummy = new DummyLocalAlignment
       val doc = Seq("b", "a", "b", "c", "d", "e")
 
-      var localAlignment = new PhraseAwareLocalAlignment(pm0, 0.0f, dummy)
+      var localAlignment = new PhraseAwareLocalAlignment(pm0, 0.0f, dummy, 0.5f)
       localAlignment.begin()
       doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
       dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 0.5f),  (toId("b"), 2, 1.0f), (toId("c"), 3, 1.0f), (toId("d"), 4, 1.0f), (toId("e"), 5, 0.5f))
 
-      localAlignment = new PhraseAwareLocalAlignment(pm1, 0.0f, dummy)
+      localAlignment = new PhraseAwareLocalAlignment(pm1, 0.0f, dummy, 0.5f)
       localAlignment.begin()
       doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
       dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 0.5f),  (toId("b"), 2, 1.0f), (toId("c"), 3, 1.0f), (toId("d"), 4, 1.0f), (toId("e"), 5, 1.0f))
 
-      localAlignment = new PhraseAwareLocalAlignment(pm2, 0.0f, dummy)
+      localAlignment = new PhraseAwareLocalAlignment(pm2, 0.0f, dummy, 0.5f)
       localAlignment.begin()
       doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
       dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 1.0f),  (toId("b"), 2, 1.0f), (toId("c"), 3, 0.5f), (toId("d"), 4, 1.0f), (toId("e"), 5, 1.0f))
 
-      localAlignment = new PhraseAwareLocalAlignment(pm3, 0.0f, dummy)
+      localAlignment = new PhraseAwareLocalAlignment(pm3, 0.0f, dummy, 0.5f)
       localAlignment.begin()
       doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
       dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 0.5f),  (toId("b"), 2, 1.0f), (toId("c"), 3, 1.0f), (toId("d"), 4, 1.0f), (toId("e"), 5, 1.0f))
 
-      localAlignment = new PhraseAwareLocalAlignment(pm4, 0.0f, dummy)
+      localAlignment = new PhraseAwareLocalAlignment(pm4, 0.0f, dummy, 0.5f)
       localAlignment.begin()
       doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()

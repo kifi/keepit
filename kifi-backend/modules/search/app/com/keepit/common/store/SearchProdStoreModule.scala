@@ -1,10 +1,12 @@
 package com.keepit.common.store
 
-import com.google.inject.{Provider, Provides, Singleton}
+import com.google.inject.{Provides, Singleton}
 import com.amazonaws.services.s3.AmazonS3
 import play.api.Play._
 import com.keepit.search._
 import com.keepit.search.BrowsingHistoryBuilder
+import com.keepit.search.index.{InMemoryIndexStoreImpl, IndexStore, S3IndexStoreImpl}
+import java.io.File
 
 case class SearchProdStoreModule() extends ProdStoreModule {
   def configure {}
@@ -19,6 +21,12 @@ case class SearchProdStoreModule() extends ProdStoreModule {
   def clickHistoryStore(amazonS3Client: AmazonS3, cache: ClickHistoryUserIdCache, builder: ClickHistoryBuilder): ClickHistoryStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.clickHistory.bucket").get)
     new S3ClickHistoryStoreImpl(bucketName, amazonS3Client, cache, builder)
+  }
+
+  @Provides @Singleton
+  def indexStore(amazonS3Client: AmazonS3): IndexStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.index.bucket").get)
+    new S3IndexStoreImpl(bucketName, amazonS3Client)
   }
 }
 
@@ -37,5 +45,12 @@ case class SearchDevStoreModule() extends DevStoreModule(SearchProdStoreModule()
     whenConfigured("amazon.s3.clickHistory.bucket")(
       prodStoreModule.clickHistoryStore(amazonS3Client, cache, builder)
     ).getOrElse(new InMemoryClickHistoryStoreImpl())
+  }
+
+  @Provides @Singleton
+  def indexStore(amazonS3Client: AmazonS3): IndexStore = {
+    whenConfigured("amazon.s3.index.bucket")(
+      prodStoreModule.indexStore(amazonS3Client)
+    ).getOrElse(new InMemoryIndexStoreImpl())
   }
 }

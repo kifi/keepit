@@ -28,6 +28,9 @@ object AmazonInstanceInfo {
     (__ \ 'amiId).format[String] and
     (__ \ 'amiLaunchIndex).format[String]
   )(AmazonInstanceInfo.apply, unlift(AmazonInstanceInfo.unapply))
+
+  val micro = "t1.micro"
+  val small = "m1.small"
 }
 
 case class AmazonInstanceInfo (

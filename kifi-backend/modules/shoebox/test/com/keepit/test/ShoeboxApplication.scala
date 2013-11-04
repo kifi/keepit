@@ -16,9 +16,10 @@ import com.google.inject.util.Modules
 import com.google.inject.Module
 import com.keepit.common.cache.{HashMapMemoryCacheModule, ShoeboxCacheModule}
 import com.keepit.common.zookeeper.FakeDiscoveryModule
-import com.keepit.scraper.FakeScraperModule
+import com.keepit.scraper.{ProdScraperServiceClientModule, TestScraperServiceClientModule, FakeScraperModule}
 import com.keepit.normalizer.TestNormalizationServiceModule
 import com.keepit.eliza.TestElizaServiceClientModule
+import com.keepit.common.net.ProdHttpClientModule
 
 class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Module])
   extends TestGlobal(defaultModules, overridingModules) {
@@ -57,6 +58,7 @@ trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with Shoe
     FakeHealthcheckModule(),
     TestSlickModule(TestDbInfo.dbInfo),
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
-    TestNormalizationServiceModule()
+    TestNormalizationServiceModule(),
+    TestScraperServiceClientModule()
   )
 }

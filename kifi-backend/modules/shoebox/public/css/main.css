@@ -98,6 +98,7 @@ h3.collection {position: relative; white-space: nowrap}
 .collection.renaming,
 .collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
 .collection.renaming .tag-count {display: none}
+.collection input {color: black}
 .tag-icon {display:inline-block; width: 14px; height: 16px; background-size: auto 16px; background-repeat: no-repeat; vertical-align: middle; margin-right: 4px}
 .tag-icon {background-image: url(../img/tag-icon-gray.png)}
 .collection.active .tag-icon {background-image: url(../img/tag-icon-white.png)}
