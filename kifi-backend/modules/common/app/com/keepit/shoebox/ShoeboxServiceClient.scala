@@ -94,7 +94,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveNormalizedURI(uri:NormalizedURI):Future[NormalizedURI]
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect):Future[NormalizedURI]
   def getProxy(url:String):Future[Option[HttpProxy]]
+  def getProxyP(url:String):Future[Option[HttpProxy]]
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
+  def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -552,8 +554,20 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getProxyP(url:String):Future[Option[HttpProxy]] = {
+    call(Shoebox.internal.getProxyP, Json.toJson(url)).map { r =>
+      if (r.json == null) None else r.json.asOpt[HttpProxy]
+    }
+  }
+
   def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = {
     call(Shoebox.internal.isUnscrapable(url, destinationUrl)).map { r =>
+      r.json.as[Boolean]
+    }
+  }
+
+  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = {
+    call(Shoebox.internal.isUnscrapableP, JsArray(Seq(Json.toJson(url), Json.toJson(destinationUrl)))).map { r =>
       r.json.as[Boolean]
     }
   }

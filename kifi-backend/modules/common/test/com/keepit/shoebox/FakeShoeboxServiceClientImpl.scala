@@ -413,5 +413,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 
+  def getProxyP(url: String): Future[Option[HttpProxy]] = ???
+
   def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
+
+  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
 }
