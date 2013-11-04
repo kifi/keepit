@@ -57,7 +57,7 @@ object Shoebox extends Service {
     def internNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/internNormalizedURI")
     def getUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getUsers", Param("ids", ids))
     def getUserIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/userIdsByExternalIds", Param("ids", ids))
-    def getBasicUsers(ids: String) = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsers", Param("ids", ids))
+    def getBasicUsers() = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsers")
     def getEmailsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailsForUsers")
     def getCollectionIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/collectionIdsByExternalIds", Param("ids", ids))
     def getUserOpt(id: ExternalId[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserOpt", Param("id", id))

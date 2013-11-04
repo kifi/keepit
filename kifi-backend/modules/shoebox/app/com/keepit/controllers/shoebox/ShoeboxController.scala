@@ -309,8 +309,8 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(users))
   }
 
-  def getBasicUsers(ids: String) = Action { request =>
-    val userIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(id => Id[User](id.toLong))
+  def getBasicUsers() = Action(parse.json) { request =>
+    val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val users = db.readOnly { implicit s =>
       userIds.map{ userId => userId.id.toString -> Json.toJson(basicUserRepo.load(userId)) }.toMap
     }

@@ -32,7 +32,7 @@ import com.keepit.social.SocialId
 import com.keepit.model.NormalizedURIKey
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.UserConnectionIdKey
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, JsValue}
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
@@ -256,8 +256,8 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
     cacheProvider.basicUserCache.bulkGetOrElseFuture(userIds.map{ BasicUserUserIdKey(_) }.toSet){ keys =>
-      val query = keys.map(_.userId.id).mkString(",")
-      call(Shoebox.internal.getBasicUsers(query)).map{ res =>
+      val payload = JsArray(keys.toSeq.map(x => JsNumber(x.userId.id)))
+      call(Shoebox.internal.getBasicUsers(), payload).map{ res =>
         res.json.as[Map[String, BasicUser]].map{ u =>
           val id = Id[User](u._1.toLong)
           (BasicUserUserIdKey(id), u._2)
