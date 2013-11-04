@@ -53,7 +53,7 @@ class UserIndexerPluginImpl @Inject()(
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 30 seconds, 10 minute, actor.ref, Update)
+    scheduleTask(actor.system, 30 seconds, 20 minute, actor.ref, Update)
     log.info("starting UserIndexerPluginImpl")
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
       scheduleTask(actor.system, 1 minute, 4 hours, actor.ref, BackUp)
