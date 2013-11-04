@@ -31,11 +31,11 @@
     <div class="form-sides">
       <div class="form-l">
         <h3>Use a social network</h3>
-        <a class="form-network facebook" href="javascript:">
+        <a class="form-network facebook" href="@com.keepit.controllers.core.routes.AuthController.signup("facebook")">
           <span class="form-network-icon"></span>
           <span class="form-network-text">Sign up using Facebook</span>
         </a>
-        <a class="form-network linkedin" href="javascript:">
+        <a class="form-network linkedin" href="@com.keepit.controllers.core.routes.AuthController.signup("linkedin")">
           <span class="form-network-icon"></span>
           <span class="form-network-text">Sign up using LinkedIn</span>
         </a>
@@ -62,11 +62,11 @@
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>
-      <a class="form-network facebook" href="javascript:" tabindex="1">
+      <a class="form-network facebook" href="@com.keepit.controllers.core.routes.AuthController.login("facebook")" tabindex="1">
         <span class="form-network-icon"></span>
         <span class="form-network-text">Log in using Facebook</span>
       </a>
-      <a class="form-network linkedin" href="javascript:" tabindex="1">
+      <a class="form-network linkedin" href="@com.keepit.controllers.core.routes.AuthController.login("linkedin")" tabindex="1">
         <span class="form-network-icon"></span>
         <span class="form-network-text">Log in using LinkedIn</span>
       </a>
@@ -88,6 +88,7 @@
   @view match {
     case "login" => {Log in}
     case "signup" => {Sign up}
+    case _ => {}
   }
 </h2>
 
