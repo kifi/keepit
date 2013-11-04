@@ -267,6 +267,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
+    log.info("\n\n\n ====== \n\n\n getting emails for users: " + userIds)
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
     log.info("\n\n\n ====== \n\n\n client sending request payload: " + payload)
