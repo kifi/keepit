@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
-import com.keepit.common.db.State
+import com.keepit.common.db.{SequenceNumber, State}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import scala.slick.util.CloseableIterator
 import com.keepit.common.time.Clock
@@ -26,7 +26,8 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
     def phrase = column[String]("phrase", O.NotNull)
     def source = column[String]("source", O.NotNull)
     def lang = column[Lang]("lang", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ phrase ~ lang ~ source ~ state <> (Phrase.apply _, Phrase.unapply _)
+    def seq = column[SequenceNumber]("seq", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ phrase ~ lang ~ source ~ state ~ seq <> (Phrase.apply _, Phrase.unapply _)
   }
 
   def get(phrase: String, lang: Lang, excludeState: Option[State[Phrase]] = Some(PhraseStates.INACTIVE))(implicit session: RSession): Option[Phrase] =
@@ -37,5 +38,9 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
 
   def allIterator(implicit session: RSession): CloseableIterator[Phrase] = {
     table.map(t => t).elements
+  }
+
+  def getPhrasesSince(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Phrase] = {
+    (for (r <- table if r.seq > seq) yield r).sortBy(_.seq).take(fetchSize).list
   }
 }
