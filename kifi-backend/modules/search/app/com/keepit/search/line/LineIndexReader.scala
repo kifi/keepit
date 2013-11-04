@@ -50,4 +50,6 @@ object LineIndexReader extends Logging {
     }
     new CachingIndexReader(index)
   }
+
+  def empty: CachingIndexReader = new CachingIndexReader(new CachedIndex(0))
 }
