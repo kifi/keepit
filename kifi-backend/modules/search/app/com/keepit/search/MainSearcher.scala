@@ -76,6 +76,7 @@ class MainSearcher(
   private[this] val isInitialSearch = idFilter.isEmpty
 
   // get config params
+  private[this] val enableWarp = config.asBoolean("enableWarp")
   private[this] val newContentDiscoveryThreshold = config.asFloat("newContentDiscoveryThreshold")
   private[this] val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   private[this] val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
@@ -153,37 +154,51 @@ class MainSearcher(
       val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
       val friendlyUris = socialGraphInfo.friendlyUris
 
-      val tClickBoosts = currentDateTime.getMillis()
-      val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
-      timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
-
       val tPersonalSearcher = currentDateTime.getMillis()
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
-      hotDocs.set(personalizedSearcher.browsingFilter, clickBoosts)
+
+      val tClickBoosts = currentDateTime.getMillis()
+      val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
+      timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
+
+      val warped = if (enableWarp && isInitialSearch && filter.isDefault) {
+        val warpThreshold = config.asFloat("maxResultClickBoost") * 0.8
+        socialGraphInfo.myUris.find{ id => clickBoosts(id) > warpThreshold } match {
+          case Some(id) =>
+            val clickBoost = clickBoosts(id)
+            myUriEdgeAccessor.seek(id)
+            myHits.insert(id, clickBoost, 1.0f, clickBoost, true, !myUriEdgeAccessor.isPublic)
+            true
+          case _ => false
+        }
+      } else false
 
       val tLucene = currentDateTime.getMillis()
-      personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
-        val visibility = new ArticleVisibility(reader)
-        val mapper = reader.getIdMapper
-        var doc = scorer.nextDoc()
-        while (doc != NO_MORE_DOCS) {
-          val id = mapper.getId(doc)
-          if (!idFilter.contains(id)) {
-            val clickBoost = clickBoosts(id)
-            val score = scorer.score()
-            if (friendlyUris.contains(id)) {
-              if (myUriEdgeAccessor.seek(id)) {
-                myHits.insert(id, score * clickBoost, score, clickBoost, true, !myUriEdgeAccessor.isPublic)
-              } else {
-                if (visibility.isVisible(doc)) friendsHits.insert(id, score * clickBoost, score, clickBoost, false, false)
+      if (!warped) {
+        hotDocs.set(personalizedSearcher.browsingFilter, clickBoosts)
+        personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
+          val visibility = new ArticleVisibility(reader)
+          val mapper = reader.getIdMapper
+          var doc = scorer.nextDoc()
+          while (doc != NO_MORE_DOCS) {
+            val id = mapper.getId(doc)
+            if (!idFilter.contains(id)) {
+              val clickBoost = clickBoosts(id)
+              val score = scorer.score()
+              if (friendlyUris.contains(id)) {
+                if (myUriEdgeAccessor.seek(id)) {
+                  myHits.insert(id, score * clickBoost, score, clickBoost, true, !myUriEdgeAccessor.isPublic)
+                } else {
+                  if (visibility.isVisible(doc)) friendsHits.insert(id, score * clickBoost, score, clickBoost, false, false)
+                }
+              } else if (filter.includeOthers) {
+                if (visibility.isVisible(doc)) othersHits.insert(id, score * clickBoost, score, clickBoost, false, false)
               }
-            } else if (filter.includeOthers) {
-              if (visibility.isVisible(doc)) othersHits.insert(id, score * clickBoost, score, clickBoost, false, false)
             }
+            doc = scorer.nextDoc()
           }
-          doc = scorer.nextDoc()
         }
       }
       timeLogs.search = currentDateTime.getMillis() - tLucene
