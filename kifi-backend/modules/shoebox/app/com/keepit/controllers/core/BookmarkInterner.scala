@@ -66,7 +66,9 @@ class BookmarkInterner @Inject() (
         else initialURI
       }
 
-      if (uri.state == NormalizedURIStates.SCRAPE_WANTED) scraper.asyncScrape(uri)
+      if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
+        scraper.scheduleScrape(uri)
+      }
       internBookmark(uri, user, isPrivate, experiments, installationId, source, title, url)
 
     } else {

@@ -32,7 +32,8 @@ class ScraperController @Inject() (
   scraperConfig: ScraperConfig,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
-  shoeboxServiceClient: ShoeboxServiceClient
+  shoeboxServiceClient: ShoeboxServiceClient,
+  scrapeProcessor: ScrapeProcessorPlugin
 ) extends WebsiteController(actionAuthenticator) with ScraperServiceController with Logging {
 
   implicit val config = scraperConfig
@@ -65,6 +66,32 @@ class ScraperController @Inject() (
     val res = ScrapeTuple(t._1, t._2)
     log.info(s"[asyncScrape(${normalizedUri.url})] result=${t._1}")
     Ok(Json.toJson(res))
+  }
+
+
+  def asyncScrapeWithInfo() = Action(parse.json) { request =>
+    log.info(s"[asyncScrapeWithInfo] body=${Json.prettyPrint(request.body)}")
+    val jsValues = request.body.as[JsArray].value
+    require(jsValues != null && jsValues.length == 2, "Expect args to be nUri & scrapeInfo")
+    val normalizedUri = jsValues(0).as[NormalizedURI]
+    val info = jsValues(1).as[ScrapeInfo]
+    log.info(s"[asyncScrapeWithInfo] url=${normalizedUri.url}, scrapeInfo=$info")
+    val t = safeProcessURI(normalizedUri, info)
+    val res = ScrapeTuple(t._1, t._2)
+    log.info(s"[asyncScrapeWithInfo(${normalizedUri.url})] result=${t._1}")
+    Ok(Json.toJson(res))
+  }
+
+  def scheduleScrape() = Action(parse.json) { request =>
+    log.info(s"[scheduleScrape] body=${Json.prettyPrint(request.body)}")
+    val jsValues = request.body.as[JsArray].value
+    require(jsValues != null && jsValues.length == 2, "Expect args to be nUri & scrapeInfo")
+    val normalizedUri = jsValues(0).as[NormalizedURI]
+    val info = jsValues(1).as[ScrapeInfo]
+    log.info(s"[scheduleScrape] url=${normalizedUri.url}, scrapeInfo=$info")
+    scrapeProcessor.asyncScrape(normalizedUri, info, safeProcessURI _)
+    log.info(s"[scheduleScrape] scheduled scraping job (${normalizedUri.url})")
+    Ok(JsBoolean(true))
   }
 
   private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {

@@ -185,6 +185,8 @@ object ABook extends Service {
 object Scraper extends Service {
   object internal {
     def asyncScrapeArticle() = ServiceRoute(POST, s"/internal/scraper/asyncScrape")
+    def asyncScrapeArticleWithInfo() = ServiceRoute(POST, s"/internal/scraper/asyncScrapeWithInfo")
+    def scheduleScrape() = ServiceRoute(POST, s"/internal/scraper/scheduleScrape")
     def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
   }
 }
