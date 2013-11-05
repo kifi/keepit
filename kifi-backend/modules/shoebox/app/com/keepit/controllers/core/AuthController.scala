@@ -92,7 +92,7 @@ class AuthController @Inject() (
       Redirect(com.keepit.controllers.website.routes.HomeController.install())
     } else {
       session.get(SecureSocial.OriginalUrlKey) map { url =>
-        Redirect(url).discardingCookies(DiscardingCookie(SecureSocial.OriginalUrlKey))
+        Redirect(url).withSession(session - SecureSocial.OriginalUrlKey)
       } getOrElse {
         Redirect("/")
       }
