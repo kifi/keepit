@@ -40,7 +40,7 @@ class ScrapeProcessor @Inject() (
       log.info(s"[AsyncScrape] begin scraping ${uri.url}")
       val ts = System.currentTimeMillis
       val res = proc(uri, info)
-      log.info(s"[AsyncScrape(${uri.url})] time-lapsed: ${System.currentTimeMillis - ts}ms result=$res")
+      log.info(s"[AsyncScrape(${uri.url})] time-lapsed: ${System.currentTimeMillis - ts} ms result=${res._1}")
     }
   }
 

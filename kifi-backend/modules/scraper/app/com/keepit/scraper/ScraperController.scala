@@ -52,12 +52,12 @@ class ScraperController @Inject() (
       case e: Throwable => None
     }
     val json = Json.toJson(res)
-    log.info(s"[getBasicArticle($url)] result: ${Json.prettyPrint(json)}")
+    log.info(s"[getBasicArticle($url)] result: ${json}")
     Ok(json)
   }
 
   def asyncScrape() = Action(parse.json) { request =>
-    log.info(s"[asyncScrape] body=${Json.prettyPrint(request.body)}")
+    log.info(s"[asyncScrape] body=${request.body}")
     val normalizedUri = request.body.as[NormalizedURI]
     log.info(s"[asyncScrape] url=${normalizedUri.url}")
     val info = Await.result(shoeboxServiceClient.getScrapeInfo(normalizedUri), 10 seconds)
@@ -70,7 +70,7 @@ class ScraperController @Inject() (
 
 
   def asyncScrapeWithInfo() = Action(parse.json) { request =>
-    log.info(s"[asyncScrapeWithInfo] body=${Json.prettyPrint(request.body)}")
+    log.info(s"[asyncScrapeWithInfo] body=${request.body}")
     val jsValues = request.body.as[JsArray].value
     require(jsValues != null && jsValues.length == 2, "Expect args to be nUri & scrapeInfo")
     val normalizedUri = jsValues(0).as[NormalizedURI]
@@ -83,14 +83,13 @@ class ScraperController @Inject() (
   }
 
   def scheduleScrape() = Action(parse.json) { request =>
-    log.info(s"[scheduleScrape] body=${Json.prettyPrint(request.body)}")
+    log.info(s"[scheduleScrape] body=${request.body}")
     val jsValues = request.body.as[JsArray].value
     require(jsValues != null && jsValues.length == 2, "Expect args to be nUri & scrapeInfo")
     val normalizedUri = jsValues(0).as[NormalizedURI]
     val info = jsValues(1).as[ScrapeInfo]
-    log.info(s"[scheduleScrape] url=${normalizedUri.url}, scrapeInfo=$info")
     scrapeProcessor.asyncScrape(normalizedUri, info, safeProcessURI _)
-    log.info(s"[scheduleScrape] scheduled scraping job (${normalizedUri.url})")
+    log.info(s"[scheduleScrape] scheduled scraping job for (url=${normalizedUri.url}, info=$info)")
     Ok(JsBoolean(true))
   }
 
@@ -114,7 +113,7 @@ class ScraperController @Inject() (
   }
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
-    log.info(s"[processURI] scraping $uri $info")
+    log.info(s"[processURI] scraping ${uri.url} $info")
     val fetchedArticle = fetchArticle(uri, info)
     val latestUri = syncGetNormalizedUri(uri).get
     if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
@@ -147,7 +146,7 @@ class ScraperController @Inject() (
           syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
             saveBookmark(bookmark.copy(title = scrapedURI.title))
           }
-          log.info(s"[processURI] fetched uri $scrapedURI => article(${article.id}, ${article.title})")
+          log.info(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
           def shouldUpdateScreenshot(uri: NormalizedURI) = {
             uri.screenshotUpdatedAt map { update =>
@@ -156,7 +155,7 @@ class ScraperController @Inject() (
           }
           if(shouldUpdateScreenshot(scrapedURI)) s3ScreenshotStore.updatePicture(scrapedURI)
 
-          log.info(s"[processURI] (${uri.url}) needs re-indexing; scrapedURI=$scrapedURI")
+          log.info(s"[processURI] (${uri.url}) needs re-indexing; scrapedURI=(${scrapedURI.id}, ${scrapedURI.state}, ${scrapedURI.url})")
           (scrapedURI, Some(article))
         }
       case NotScrapable(destinationUrl, redirects) =>
@@ -165,12 +164,12 @@ class ScraperController @Inject() (
           val toBeSaved = processRedirects(latestUri, redirects).withState(NormalizedURIStates.UNSCRAPABLE)
           syncSaveNormalizedUri(toBeSaved)
         }
-        log.info(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=$unscrapableURI")
+        log.info(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
         (unscrapableURI, None)
       case com.keepit.scraper.NotModified =>
         // update the scrape schedule, uri is not changed
         saveScrapeInfo(info.withDocumentUnchanged())
-        log.info(s"[processURI] (${uri.url} not modified; latestUri=$latestUri")
+        log.info(s"[processURI] (${uri.url} not modified; latestUri=(${latestUri.id}, ${latestUri.state}, ${latestUri.url}})")
         (latestUri, None)
       case Error(httpStatus, msg) =>
         // store a fallback article in a store map
@@ -195,7 +194,7 @@ class ScraperController @Inject() (
           syncSaveScrapeInfo(info.withFailure())
           syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
-        log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=$errorURI")
+        log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=(${errorURI.id}, ${errorURI.state}, ${errorURI.url})")
         (errorURI, None)
     }
   }
@@ -229,7 +228,7 @@ class ScraperController @Inject() (
   private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo): ScraperResult = {
     val url = normalizedUri.url
     val extractor = extractorFactory(url)
-    log.info(s"[fetchArticle] $normalizedUri $extractor")
+    log.info(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
     try {
@@ -269,7 +268,7 @@ class ScraperController @Inject() (
               contentLang = Some(contentLang),
               destinationUrl = fetchStatus.destinationUrl)
             val res = Scraped(article, signature, fetchStatus.redirects)
-            log.info(s"[fetchArticle] result=(Scraped($signature, ${fetchStatus.redirects}) article=(${article.id}, ${article.title}, content.len=${article.content.length}})")
+            log.info(s"[fetchArticle] result=(Scraped(dstUrl=${fetchStatus.destinationUrl} redirects=${fetchStatus.redirects}) article=(${article.id}, ${article.title}, content.len=${article.content.length}})")
             res
           }
         case HttpStatus.SC_NOT_MODIFIED =>

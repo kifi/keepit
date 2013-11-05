@@ -22,7 +22,8 @@ case class User(
   state: State[User] = UserStates.ACTIVE,
   pictureName: Option[String] = None, // denormalized UserPicture.name
   userPictureId: Option[Id[UserPicture]] = None,
-  seq: SequenceNumber = SequenceNumber.ZERO
+  seq: SequenceNumber = SequenceNumber.ZERO,
+  primaryEmailId: Option[Id[EmailAddress]] = None
 ) extends ModelWithExternalId[User] {
   def withId(id: Id[User]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -33,6 +34,7 @@ case class User(
 
 object User {
   implicit val userPicIdFormat = Id.format[UserPicture]
+  implicit val emailAddressIdFormat = Id.format[EmailAddress]
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[User]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
@@ -43,7 +45,8 @@ object User {
     (__ \ 'state).format(State.format[User]) and
     (__ \ 'pictureName).formatNullable[String] and
     (__ \ 'userPictureId).formatNullable[Id[UserPicture]] and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat) and
+    (__ \ 'primaryEmailId).formatNullable[Id[EmailAddress]]
   )(User.apply, unlift(User.unapply))
 
   val brackets = "[<>]".r
@@ -51,7 +54,7 @@ object User {
 }
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
-  override val version = 4
+  override val version = 5
   val namespace = "user_by_external_id"
   def toKey(): String = externalId.id
 }
@@ -60,7 +63,7 @@ class UserExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[UserExternalIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class UserIdKey(id: Id[User]) extends Key[User] {
-  override val version = 5
+  override val version = 6
   val namespace = "user_by_id"
   def toKey(): String = id.id.toString
 }

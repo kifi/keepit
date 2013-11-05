@@ -127,17 +127,19 @@ class ShoeboxController @Inject() (
   }
 
   def saveNormalizedURI() = SafeAsyncAction(parse.json) { request =>
+    val ts = System.currentTimeMillis
     log.info(s"[saveNormalizedURI] body=${request.body}")
     val normalizedUri = request.body.as[NormalizedURI]
     val saved = db.readWrite { implicit s =>
       normUriRepo.save(normalizedUri)
     }
-    log.info(s"[saveNormalizedURI(${normalizedUri.url})] result=$saved")
+    log.info(s"[saveNormalizedURI(${normalizedUri.url})] time-lapsed: ${System.currentTimeMillis - ts} ms result=$saved")
     Ok(Json.toJson(saved))
   }
 
   def recordPermanentRedirect() = SafeAsyncAction(parse.json) { request =>
-    log.info(s"[recordPermanentRedirect] body=${Json.prettyPrint(request.body)}")
+    val ts = System.currentTimeMillis
+    log.info(s"[recordPermanentRedirect] body=${request.body}")
     val args = request.body.as[JsArray].value
     require((!args.isEmpty && args.length == 2), "Both uri and redirect need to be supplied")
     val uri = args(0).as[NormalizedURI]
@@ -156,7 +158,7 @@ class ShoeboxController @Inject() (
       }
     }
     val res = toBeRedirected getOrElse uri
-    log.info(s"[recordPermanentRedirect($uri, $redirect)] result=$res")
+    log.info(s"[recordPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$res")
     Ok(Json.toJson(res))
   }
 
@@ -169,11 +171,12 @@ class ShoeboxController @Inject() (
   }
 
   def getProxyP = SafeAsyncAction(parse.json) { request =>
+    val ts = System.currentTimeMillis
     val url = request.body.as[String]
     val httpProxyOpt = db.readOnly { implicit session =>
       urlPatternRuleRepo.getProxy(url)
     }
-    log.info(s"[getProxyP($url): result=$httpProxyOpt")
+    log.info(s"[getProxyP($url)] time-lapsed: ${System.currentTimeMillis - ts} ms; result=$httpProxyOpt")
     Ok(Json.toJson(httpProxyOpt))
   }
 
@@ -186,6 +189,7 @@ class ShoeboxController @Inject() (
   }
 
   def isUnscrapableP() = SafeAsyncAction(parse.json) { request =>
+    val ts = System.currentTimeMillis
     val args = request.body.as[JsArray].value
     require(args != null && args.length >= 1, "Expect args to be url && opt[dstUrl] ")
     val url = args(0).as[String]
@@ -194,7 +198,7 @@ class ShoeboxController @Inject() (
     val res = db.readOnly { implicit s =>
       (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
     }
-    log.info(s"[isUnscrapableP($url, $destinationUrl)] result=$res")
+    log.info(s"[isUnscrapableP($url, $destinationUrl)] time-lapsed: ${System.currentTimeMillis - ts} ms; result=$res")
     Ok(JsBoolean(res))
   }
 
@@ -236,24 +240,26 @@ class ShoeboxController @Inject() (
   }
 
   def getScrapeInfo() = SafeAsyncAction(parse.json) { request =>
-    log.info(s"[getScrapeInfo] body=${Json.prettyPrint(request.body)}")
+    val ts = System.currentTimeMillis
+    log.info(s"[getScrapeInfo] body=${request.body}")
     val json = request.body
     val uri = json.as[NormalizedURI]
     val info = db.readWrite { implicit s =>
       scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
     }
-    log.info(s"[getScrapeInfo(${uri.url})] result=$info")
+    log.info(s"[getScrapeInfo(${uri.url})] time-lapsed: ${System.currentTimeMillis - ts} ms; result=$info")
     Ok(Json.toJson(info))
   }
 
   def saveScrapeInfo() = SafeAsyncAction(parse.json) { request =>
+    val ts = System.currentTimeMillis
     log.info(s"[saveScrapeInfo] body=${request.body}")
     val json = request.body
     val info = json.as[ScrapeInfo]
     val saved = db.readWrite( { implicit s =>
       scrapeInfoRepo.save(info)
     })
-    log.info(s"[saveScrapeInfo] result=$saved")
+    log.info(s"[saveScrapeInfo] time-lapsed: ${System.currentTimeMillis - ts} ms; result=$saved")
     Ok(Json.toJson(saved))
   }
 

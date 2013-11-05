@@ -58,6 +58,8 @@ case class ScrapeInfo(
 
   private[this] def hoursToSeconds(hours: Double) = (hours * 60.0d * 60.0d).toInt
   def withNextScrape(nextScrape: DateTime) = copy(nextScrape = nextScrape)
+
+  override def toString = s"[ScrapeInfo(id=$id, uriId=$uriId): state=$state, lastScrape=$lastScrape, nextScrape=$nextScrape, interval=$interval, failures=$failures, dstUrl=$destinationUrl]"
 }
 
 object ScrapeInfo {

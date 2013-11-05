@@ -44,7 +44,8 @@ class UserRepoImpl @Inject() (
     def pictureName = column[String]("picture_name", O.Nullable)
     def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
     def seq = column[SequenceNumber]("seq", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state ~ pictureName.? ~ userPictureId.? ~ seq <> (User.apply _, User.unapply _)
+    def primaryEmailId = column[Id[EmailAddress]]("primary_email_id", O.Nullable)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state ~ pictureName.? ~ userPictureId.? ~ seq  ~ primaryEmailId.? <> (User.apply _, User.unapply _)
   }
   
   override def save(user: User)(implicit session: RWSession): User = {
