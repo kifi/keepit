@@ -73,7 +73,7 @@
       </thead>
       @for((maybeInviteWithUser, socialUserInfo) <- invitesWithSocial) {
       <tr>
-        <td><a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfo.id.get)">@socialUserInfo.fullName</a>
+        <td><a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfo.id.get)">@if(socialUserInfo.fullName.isEmpty) { @socialUserInfo.socialId } else { @socialUserInfo.fullName }</a>
         <td>
           @maybeInviteWithUser.collect { case (_, Some(user)) =>
             <a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get)">@user.firstName @user.lastName</a>
@@ -102,7 +102,7 @@
         </td>
       }
     </table>
-    
+
   @pagination(page, numPages)
 
 <script>
