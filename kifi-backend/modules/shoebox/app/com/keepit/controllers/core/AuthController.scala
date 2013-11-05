@@ -259,10 +259,6 @@ class AuthController @Inject() (
         Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
       case (Some(user), Some(identity)) =>
         // User exists, is incomplete
-        log.info("XXXXXXXXXXXXXXXXX")
-        log.info(identity.toString)
-        log.info(identity.authMethod.toString)
-        log.info(identity.firstName)
 
         val (firstName, lastName) = if (identity.firstName.contains("@")) ("","") else (identity.firstName, identity.lastName)
         val picture = identityPicture(identity)
