@@ -23,7 +23,7 @@ class PhraseIndexerImpl(
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {
 
-  final val commitBatchSize = 10000
+  final val commitBatchSize = 1000
   private[this] val updateLock = new AnyRef
 
   def getCommitBatchSize() = commitBatchSize
