@@ -168,11 +168,33 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(httpProxyOpt))
   }
 
+  def getProxyP = SafeAsyncAction(parse.json) { request =>
+    val url = request.body.as[String]
+    val httpProxyOpt = db.readOnly { implicit session =>
+      urlPatternRuleRepo.getProxy(url)
+    }
+    log.info(s"[getProxyP($url): result=$httpProxyOpt")
+    Ok(Json.toJson(httpProxyOpt))
+  }
+
   def isUnscrapable(url: String, destinationUrl: Option[String]) = SafeAsyncAction { request =>
     val res = db.readOnly { implicit s =>
       (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
     }
     log.info(s"[isUnscrapable($url, $destinationUrl)] result=$res")
+    Ok(JsBoolean(res))
+  }
+
+  def isUnscrapableP() = SafeAsyncAction(parse.json) { request =>
+    val args = request.body.as[JsArray].value
+    require(args != null && args.length >= 1, "Expect args to be url && opt[dstUrl] ")
+    val url = args(0).as[String]
+    val destinationUrl = if (args.length > 1) args(1).asOpt[String] else None
+    log.info(s"[isUnscrapableP] url=$url, dstUrl=$destinationUrl")
+    val res = db.readOnly { implicit s =>
+      (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
+    }
+    log.info(s"[isUnscrapableP($url, $destinationUrl)] result=$res")
     Ok(JsBoolean(res))
   }
 

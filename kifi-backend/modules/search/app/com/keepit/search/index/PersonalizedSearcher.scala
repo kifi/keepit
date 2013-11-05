@@ -26,18 +26,15 @@ object PersonalizedSearcher {
             shoeboxServiceClient: ShoeboxServiceClient,
             monitoredAwait: MonitoredAwait) = {
 
-    val browsingHistoryFilter = monitoredAwait.result(browsingHistoryFuture, 40 millisecond,
-      s"getting browsing history for user $userId", MultiHashFilter.emptyFilter[BrowsedURI])
-
-    val clickHistoryFilter = monitoredAwait.result(clickHistoryFuture, 5 seconds,
-      s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
-
     new PersonalizedSearcher(
-      indexReader, myUris,
+      indexReader,
+      myUris,
       collectionSearcher,
-      browsingHistoryFilter,
-      clickHistoryFilter,
-      svWeightMyBookMarks * scale, svWeightBrowsingHistory * scale, svWeightClickHistory * scale)
+      monitoredAwait.result(browsingHistoryFuture, 40 millisecond, s"getting browsing history for user $userId", MultiHashFilter.emptyFilter[BrowsedURI]),
+      monitoredAwait.result(clickHistoryFuture, 40 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI]),
+      svWeightMyBookMarks * scale,
+      svWeightBrowsingHistory * scale,
+      svWeightClickHistory * scale)
   }
 
   def apply(searcher: Searcher, ids: Set[Long]) = {
@@ -49,14 +46,17 @@ class PersonalizedSearcher(
   override val indexReader: WrappedIndexReader,
   myUris: Set[Long],
   val collectionSearcher: CollectionSearcherWithUser,
-  val browsingFilter: MultiHashFilter[BrowsedURI],
-  val clickFilter: MultiHashFilter[ClickedURI],
+  brosingFilterFunc: => MultiHashFilter[BrowsedURI],
+  clickFilterFunc: => MultiHashFilter[ClickedURI],
   scaledWeightMyBookMarks: Int,
   scaledWeightBrowsingHistory: Int,
   scaledWeightClickHistory: Int
 )
 extends Searcher(indexReader) with Logging {
   import PersonalizedSearcher._
+
+  lazy val browsingFilter: MultiHashFilter[BrowsedURI] = brosingFilterFunc
+  lazy val clickFilter: MultiHashFilter[ClickedURI] = clickFilterFunc
 
   override protected def getSemanticVectorComposer(term: Term) = {
     val subReaders = indexReader.wrappedSubReaders

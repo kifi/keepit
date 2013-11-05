@@ -120,7 +120,11 @@ class HomeController @Inject() (db: Database,
 
       (email, friendsOnKifi)
     }
-    Ok(views.html.website.onboarding.userRequestReceived(user, email, friendsOnKifi))
+    if (current.configuration.getBoolean("newSignup").getOrElse(false)) {
+      Ok(views.html.website.onboarding.userRequestReceived2(user, email, friendsOnKifi))
+    } else {
+      Ok(views.html.website.onboarding.userRequestReceived(user, email, friendsOnKifi))
+    }
   }
 
   def install = AuthenticatedHtmlAction { implicit request =>
