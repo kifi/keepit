@@ -57,6 +57,6 @@ case class DevActorSystemModule() extends ActorSystemModule {
   @Singleton
   @Provides
   def schedulingProperties: SchedulingProperties = new SchedulingProperties() {
-    def allowScheduling = true
+    def allowScheduling = current.configuration.getBoolean("scheduler.enabled").getOrElse(true)
   }
 }
