@@ -78,7 +78,7 @@ class PhraseIndexerImpl(
   }
 
   override def onCommit(successful: Seq[Indexable[Phrase]]): Unit = {
-    log.info(s"[PhraseIndexer] imported ${countInBatch} phrases. First in batch id: ${firstInBatch}")
+    log.info(s"imported ${countInBatch} phrases. First in batch id: ${firstInBatch}")
   }
 }
 
