@@ -47,7 +47,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
-  def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]]
+  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -268,12 +268,10 @@ class ShoeboxServiceClientImpl @Inject() (
     }.map{ m => m.map{ case (k, v) => (k.userId, v) } }
   }
 
-  def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
-    log.info("\n\n\n ====== \n\n\n getting emails for users: " + userIds)
+  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
-    log.info("\n\n\n ====== \n\n\n client sending request payload: " + payload)
-    call(Shoebox.internal.getEmailsForUsers(), payload).map{ res =>
+    call(Shoebox.internal.getEmailAddressesForUsers(), payload).map{ res =>
       res.json.as[Map[String, Seq[String]]]
       .map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
