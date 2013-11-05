@@ -82,7 +82,8 @@ class AuthController @Inject() (
   def login(provider: String, format: String) = getAuthAction(provider, AuthType.Login, format)
   def loginByPost(provider: String, format: String) = getAuthAction(provider, AuthType.Login, format)
   def loginWithUserPass(format: String) = getAuthAction("userpass", AuthType.Login, format)
-  def postLogin() = HtmlAction(allowPending = true)(authenticatedAction = { implicit request =>
+
+  def afterLogin() = HtmlAction(allowPending = true)(authenticatedAction = { implicit request =>
     val linkWith = request.session.get(AuthController.LinkWithKey)
     if (request.user.state == UserStates.PENDING) {
       // User is pending!
