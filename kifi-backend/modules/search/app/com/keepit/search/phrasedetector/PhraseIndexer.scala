@@ -2,7 +2,7 @@ package com.keepit.search.phrasedetector
 
 import com.keepit.search.index.{Indexable, Indexer, IndexDirectory}
 import org.apache.lucene.index.IndexWriterConfig
-import com.keepit.model.Phrase
+import com.keepit.model.{Collection, Phrase}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
@@ -13,8 +13,8 @@ import com.keepit.search.Lang
 import scala.concurrent.duration._
 
 abstract class PhraseIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase](indexDirectory, indexWriterConfig) {
-  def reload(): Unit
-  def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true): Unit
+  def update(): Int
+  def getCommitBatchSize(): Int
 }
 
 class PhraseIndexerImpl(
@@ -23,46 +23,38 @@ class PhraseIndexerImpl(
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {
 
-  final val BATCH_SIZE = 200000
+  final val commitBatchSize = 1000
+  private[this] val updateLock = new AnyRef
 
-  def reload() {
-    log.info("[PhraseIndexer] reloading phrase index")
-    val indexableIterator = new Iterator[PhraseIndexable] {
-      var cache = collection.mutable.Queue[PhraseIndexable]()
-      var page = 0
-      private def update() = {
-        if(cache.size <= 1) {
-          cache = cache ++ Await.result(shoeboxClient.getPhrasesByPage(page, BATCH_SIZE), 5 seconds).map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
-          page += 1
-        }
-      }
+  def getCommitBatchSize() = commitBatchSize
 
-      def next() = {
-        update()
-        cache.dequeue
-      }
-      def hasNext() = {
-        update()
-        cache.size > 0
+  def update(): Int = updateLock.synchronized {
+    resetSequenceNumberIfReindex()
+
+    var total = 0
+    var done = false
+    while (!done) {
+      total += update {
+        val phrases = Await.result(shoeboxClient.getPhrasesChanged(sequenceNumber, commitBatchSize), 180 seconds)
+        done = phrases.isEmpty
+        phrases
       }
     }
-    //val indexableIterator = phraseRepo.allIterator.map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
-    log.info("[PhraseIndexer] Iterator created")
-    reload(indexableIterator, refresh = false)
-    log.info("[PhraseIndexer] refreshing searcher")
-    refreshSearcher()
-    log.info("[PhraseIndexer] phrase import complete")
+    total
   }
 
-  def reloadWithCloseableIterator(indexableIterator: CloseableIterator[PhraseIndexable], refresh: Boolean) {
-    try { reload(indexableIterator, refresh) }
-    finally { indexableIterator.close }
-  }
+  private def update(phrasesChanged: => Seq[Phrase]): Int = {
+    log.info("updating Phrases")
+    try {
+      val cnt = successCount
+      val changed = phrasesChanged
+      indexDocuments(changed.iterator.map(PhraseIndexable(_)), commitBatchSize)
+      successCount - cnt
+    } catch { case e: Throwable =>
+      log.error("error in Phrase update", e)
+      throw e
+    }
 
-  def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true) {
-    deleteAllDocuments(refresh = false)
-    indexDocuments(indexableIterator, BATCH_SIZE, refresh = false)
-    if (refresh) refreshSearcher()
   }
 
   override def onFailure(indexable: Indexable[Phrase], e: Throwable): Unit = {
@@ -86,17 +78,24 @@ class PhraseIndexerImpl(
   }
 
   override def onCommit(successful: Seq[Indexable[Phrase]]): Unit = {
-    log.info(s"[PhraseIndexer] imported ${countInBatch} phrases. First in batch id: ${firstInBatch}")
+    log.info(s"imported ${countInBatch} phrases. First in batch id: ${firstInBatch}")
   }
 }
 
 
-class PhraseIndexable(override val id: Id[Phrase], phrase: String, lang: Lang) extends Indexable[Phrase] with PhraseFieldBuilder {
-  override val sequenceNumber = SequenceNumber.ZERO
-  override val isDeleted = false
+class PhraseIndexable(
+  override val id: Id[Phrase],
+  override val sequenceNumber: SequenceNumber,
+  override val isDeleted: Boolean,
+  phrase: String, lang: Lang)
+extends Indexable[Phrase] with PhraseFieldBuilder {
   override def buildDocument = {
     val doc = super.buildDocument
     doc.add(buildPhraseField("p", phrase, lang))
     doc
   }
+}
+
+object PhraseIndexable {
+  def apply(phrase: Phrase) = new PhraseIndexable(phrase.id.get, phrase.seq, !phrase.isActive, phrase.phrase, phrase.lang)
 }

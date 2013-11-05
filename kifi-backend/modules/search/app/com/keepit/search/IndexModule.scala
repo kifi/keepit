@@ -10,7 +10,7 @@ import play.api.Play._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.search.comment.{CommentIndexerPluginImpl, CommentIndexerPlugin, CommentIndexer, CommentStore}
-import com.keepit.search.phrasedetector.{PhraseIndexerImpl, PhraseIndexer}
+import com.keepit.search.phrasedetector.{PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer}
 import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
 import com.keepit.inject.AppScoped
 import java.io.File
@@ -47,6 +47,7 @@ trait IndexModule extends ScalaModule with Logging {
   protected def getIndexDirectory(maybeDir: Option[String], indexStore: IndexStore): IndexDirectory
 
   def configure() {
+    bind[PhraseIndexerPlugin].to[PhraseIndexerPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[CommentIndexerPlugin].to[CommentIndexerPluginImpl].in[AppScoped]
