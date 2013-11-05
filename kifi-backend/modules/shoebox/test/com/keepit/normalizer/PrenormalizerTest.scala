@@ -211,6 +211,12 @@ class PrenormalizerTest extends Specification {
       Prenormalizer("https://en.wikipedia.org/wiki/Douze") === "https://en.wikipedia.org/wiki/Douze"
       Prenormalizer("http://fr.m.wikipedia.org/wiki/Douze_(rivière)") === "https://fr.wikipedia.org/wiki/Douze_(rivière)"
       Prenormalizer("http://fr.wikipedia.org/wiki/Douze_(rivière)") === "https://fr.wikipedia.org/wiki/Douze_(rivière)"
+
+      //Quora
+      Prenormalizer("http://www.quora.com") === "https://www.quora.com"
+      Prenormalizer("http://blog.quora.com/Making-Sharing-Better") === "https://blog.quora.com/Making-Sharing-Better"
+      path = "http://www.quora.com/Software-Engineering/What-makes-a-good-engineering-culture?ref=fb"
+      Prenormalizer(path) === "https://www.quora.com/Software-Engineering/What-makes-a-good-engineering-culture?share=1"
     }
   }
 }
