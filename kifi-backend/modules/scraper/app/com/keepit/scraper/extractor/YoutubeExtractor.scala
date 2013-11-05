@@ -8,9 +8,13 @@ import java.net.URLEncoder
 import com.google.inject.{Inject, Singleton}
 import org.apache.commons.lang3.StringEscapeUtils
 import scala.collection.JavaConversions._
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
+import com.keepit.model.HttpProxy
+import com.keepit.shoebox.ShoeboxServiceClient
 
 @Singleton
-class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher /* db: Database urlPatternRuleRepo: UrlPatternRuleRepo */) extends ExtractorProvider {
+class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxServiceClient: ShoeboxServiceClient) extends ExtractorProvider {
   def isDefinedAt(uri: URI) = {
     uri match {
       case URI(_, _, Some(Host("com", "youtube", _*)), _, Some(path), Some(query), _) =>
@@ -18,17 +22,17 @@ class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher /* db: Databa
       case _ => false
     }
   }
-  def apply(uri: URI) = new YoutubeExtractor(uri.toString, ScraperConfig.maxContentChars, httpFetcher /* db: Database urlPatternRuleRepo */)
+  def apply(uri: URI) = new YoutubeExtractor(uri.toString, ScraperConfig.maxContentChars, httpFetcher, shoeboxServiceClient)
 }
 
-class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetcher /* db: Database urlPatternRuleRepo: UrlPatternRuleRepo */) extends JsoupBasedExtractor(url, maxContentChars) {
+class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetcher, shoeboxServiceClient: ShoeboxServiceClient) extends JsoupBasedExtractor(url, maxContentChars) {
 
   def parse(doc: Document): String = {
     val headline = doc.getElementById("watch-headline-title").text
     val description = doc.select("#watch-description-text, #watch-description-extras div.content, #watch-description-extra-info").text
     val channel = doc.select("#watch7-user-header .yt-user-name").text()
     val closedCaptions = getClosedCaptions(doc).getOrElse("")
-
+    log.info(s"[parse] headline=$headline desc=$description channel=$channel cc=$closedCaptions")
     Seq(headline, description, channel, closedCaptions).filter(_.nonEmpty).mkString("\n")
   }
 
@@ -72,11 +76,14 @@ class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetch
       def parse(doc: Document): String = StringEscapeUtils.unescapeXml(doc.getElementsByTag("text").map(_.text).mkString(" "))
     }
     httpFetcher.fetch(trackUrl, proxy = getProxy(url))(trackExtractor.process)
-    log.info(s"Fetched ${(if (track.isDefault) "default " else "") + (if (track.isAutomatic) "automatic " else "") + track.langTranslated} closed captions for ${url}")
+    log.info(s"[getTrack] fetched ${(if (track.isDefault) "default " else "") + (if (track.isAutomatic) "automatic " else "") + track.langTranslated} closed captions for ${url}")
     trackExtractor.getContent()
   }
 
-  private def getProxy(url: String) = ??? // db.readOnly { implicit session => urlPatternRuleRepo.getProxy(url) }
+  private def getProxy(url: String) = syncGetProxyP(url)
+
+  private[extractor] def getProxyP(url: String):Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
+  private[extractor] def syncGetProxyP(url: String):Option[HttpProxy] = Await.result(getProxyP(url), 10 seconds)
 }
 
 class YoutubeTrackListExtractor(trackListUrl: String) extends JsoupBasedExtractor(trackListUrl, Int.MaxValue) {

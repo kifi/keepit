@@ -23,6 +23,7 @@ import scala.util.Success
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import com.keepit.common.store.S3ScreenshotStore
+import java.io.{File, PrintWriter}
 
 class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
@@ -96,9 +97,9 @@ class ScraperController @Inject() (
   private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
     processURI(uri, info)
   } catch {
-    case e: Throwable => {
-      log.error("uncaught exception while scraping uri %s".format(uri), e)
-      airbrake.notify(e)
+    case t: Throwable => {
+      log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
+      airbrake.notify(t)
       val latestUriOpt = syncGetNormalizedUri(uri)
       // update the uri state to SCRAPE_FAILED
       val savedUriOpt = for (latestUri <- latestUriOpt) yield {
@@ -210,7 +211,10 @@ class ScraperController @Inject() (
         case _ => fetchArticle(normalizedUri, httpFetcher, info)
       }
     } catch {
-      case _: Throwable => fetchArticle(normalizedUri, httpFetcher, info)
+      case t: Throwable => {
+        log.error(s"[fetchArticle] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
+        fetchArticle(normalizedUri, httpFetcher, info)
+      }
     }
   }
 
@@ -277,7 +281,10 @@ class ScraperController @Inject() (
           Error(fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed"))
       }
     } catch {
-      case e: Throwable => Error(-1, "fetch failed: %s".format(e.toString))
+      case e: Throwable => {
+        log.error(s"[fetchArticle] fetch failed ${normalizedUri.url} $info $httpFetcher;\nException: $e; Cause: ${e.getCause};\nStack trace:\n${e.getStackTrace.mkString(File.separator)}")
+        Error(-1, "fetch failed: %s".format(e.toString))
+      }
     }
   }
 

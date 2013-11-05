@@ -87,7 +87,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
   val httpClient = httpClientBuilder.build()
 
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
-
+    val ts = System.currentTimeMillis
     val httpGet = new HttpGet(url)
     val httpContext = new BasicHttpContext()
 
@@ -108,13 +108,13 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
       httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.toHttpHeaderString)
     }
 
-    log.info("executing request " + httpGet.getURI() + proxy.map(httpProxy => s" via ${httpProxy.alias}").getOrElse(""))
+    log.info("[fetch] executing request " + httpGet.getURI() + proxy.map(httpProxy => s" via ${httpProxy.alias}").getOrElse(""))
 
     httpContext.setAttribute("scraper_destination_url", url)
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
 
     val response = httpClient.execute(httpGet, httpContext)
-    log.info(response.getStatusLine.toString)
+    log.info(s"[fetch] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
 
     val statusCode = response.getStatusLine.getStatusCode
 
