@@ -250,11 +250,13 @@
 
 		<div class="friends">
 			<h1>Your Friends</h1>
-			<nav class="friends-tabs">
-				<a data-href="friends">Kifi Friends</a>
-				<a data-href="friends/invite">Add Friends</a>
-				<a data-href="friends/requests">Requests <span class="friend-req-count"><span></a>
-			</nav>
+      <div class="friends-tabs-border">
+        <nav class="friends-tabs">
+          <a data-href="friends">Kifi Friends</a>
+          <a data-href="friends/invite">Add Friends</a>
+          <a data-href="friends/requests">Requests <span class="friend-req-count"><span></a>
+        </nav>
+      </div>
 			<div class="friends-page" data-href="friends">
 				<div class="above-friends-list">
 					<input class="friends-filter" type="text" placeholder="Start typing a friend’s name">
@@ -296,12 +298,14 @@
 				<div class="above-invite-friends">
 					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
 				</div>
-				<div class="invites-left">Invites Left <span class="num-invites"></span></div>
-				<nav class="invite-filters">
-					<a href="javascript:">All</a>
-					<a href="javascript:" data-nw="facebook"></a>
-					<a href="javascript:" data-nw="linkedin"></a>
-				</nav>
+        <div class="invite-filter-wrapper">
+          <nav class="invite-filters">
+            <a href="javascript:">All</a>
+            <a href="javascript:" data-nw="facebook"></a>
+            <a href="javascript:" data-nw="linkedin"></a>
+          </nav>
+          <div class="invites-left">Invites Left <span class="num-invites"></span></div>
+        </div>
 				<div class="dialog no-invites-dialog" style="display:none">
 					<div class="dialog-content">
 						<h2>You have no invites left</h2>
@@ -333,10 +337,10 @@ I would like to invite you to the private beta of kifi.com. Click this link to a
 								<div class="invite-status">
 									{% if status == "joined" %} Joined Kifi {% endif %}
 									{% if status == "invited" %} Invited {% endif %}
-									{% if !status %} Invite through {{value | replace '/.*', ''}} {% endif %}
+									{% if !status %} A friend on {{value | replace '/.*', ''}} {% endif %}
 								</div>
 								{% if !status %}
-									<a class="invite-button" href="javascript:"></a>
+									<a class="invite-button" href="javascript:">Invite</a>
 								{% endif %}
 							</li>
 						</ul>
