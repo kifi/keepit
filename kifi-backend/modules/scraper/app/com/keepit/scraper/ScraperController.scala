@@ -32,7 +32,8 @@ class ScraperController @Inject() (
   scraperConfig: ScraperConfig,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
-  shoeboxServiceClient: ShoeboxServiceClient
+  shoeboxServiceClient: ShoeboxServiceClient,
+  scrapeProcessor: ScrapeProcessorPlugin
 ) extends WebsiteController(actionAuthenticator) with ScraperServiceController with Logging {
 
   implicit val config = scraperConfig
@@ -42,9 +43,9 @@ class ScraperController @Inject() (
   def getBasicArticle(url:String) = Action { request =>
     val extractor = extractorFactory(url)
     val res = try {
-      val fetchStatus = httpFetcher.fetch(url, proxy = syncGetProxy(url)) { input => extractor.process(input) }
+      val fetchStatus = httpFetcher.fetch(url, proxy = syncGetProxyP(url)) { input => extractor.process(input) }
       fetchStatus.statusCode match {
-        case HttpStatus.SC_OK if !(isUnscrapable(url, fetchStatus.destinationUrl)) => Some(basicArticle(url, extractor))
+        case HttpStatus.SC_OK if !(isUnscrapableP(url, fetchStatus.destinationUrl)) => Some(basicArticle(url, extractor))
         case _ => None
       }
     } catch {
@@ -65,6 +66,32 @@ class ScraperController @Inject() (
     val res = ScrapeTuple(t._1, t._2)
     log.info(s"[asyncScrape(${normalizedUri.url})] result=${t._1}")
     Ok(Json.toJson(res))
+  }
+
+
+  def asyncScrapeWithInfo() = Action(parse.json) { request =>
+    log.info(s"[asyncScrapeWithInfo] body=${Json.prettyPrint(request.body)}")
+    val jsValues = request.body.as[JsArray].value
+    require(jsValues != null && jsValues.length == 2, "Expect args to be nUri & scrapeInfo")
+    val normalizedUri = jsValues(0).as[NormalizedURI]
+    val info = jsValues(1).as[ScrapeInfo]
+    log.info(s"[asyncScrapeWithInfo] url=${normalizedUri.url}, scrapeInfo=$info")
+    val t = safeProcessURI(normalizedUri, info)
+    val res = ScrapeTuple(t._1, t._2)
+    log.info(s"[asyncScrapeWithInfo(${normalizedUri.url})] result=${t._1}")
+    Ok(Json.toJson(res))
+  }
+
+  def scheduleScrape() = Action(parse.json) { request =>
+    log.info(s"[scheduleScrape] body=${Json.prettyPrint(request.body)}")
+    val jsValues = request.body.as[JsArray].value
+    require(jsValues != null && jsValues.length == 2, "Expect args to be nUri & scrapeInfo")
+    val normalizedUri = jsValues(0).as[NormalizedURI]
+    val info = jsValues(1).as[ScrapeInfo]
+    log.info(s"[scheduleScrape] url=${normalizedUri.url}, scrapeInfo=$info")
+    scrapeProcessor.asyncScrape(normalizedUri, info, safeProcessURI _)
+    log.info(s"[scheduleScrape] scheduled scraping job (${normalizedUri.url})")
+    Ok(JsBoolean(true))
   }
 
   private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
@@ -206,11 +233,11 @@ class ScraperController @Inject() (
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
     try {
-      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, proxy = syncGetProxy(url)){ input => extractor.process(input) }
+      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, proxy = syncGetProxyP(url)){ input => extractor.process(input) }
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
-          if (isUnscrapable(url, fetchStatus.destinationUrl)) {
+          if (isUnscrapableP(url, fetchStatus.destinationUrl)) {
             NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects)
           } else {
             val content = extractor.getContent
@@ -331,11 +358,11 @@ class ScraperController @Inject() (
 
   private[scraper] def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = Await.result(recordPermanentRedirect(uri, redirect), 5 seconds)
 
-  private[scraper] def getProxy(url: String):Future[Option[HttpProxy]] = shoeboxServiceClient.getProxy(url)
+  private[scraper] def getProxyP(url: String):Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
 
-  private[scraper] def syncGetProxy(url: String):Option[HttpProxy] = Await.result(getProxy(url), 5 seconds)
+  private[scraper] def syncGetProxyP(url: String):Option[HttpProxy] = Await.result(getProxyP(url), 5 seconds)
 
-  private[scraper] def asyncIsUnscrapable(url: String, destinationUrl: Option[String]) = shoeboxServiceClient.isUnscrapable(url, destinationUrl)
+  private[scraper] def asyncIsUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxServiceClient.isUnscrapableP(url, destinationUrl)
 
-  protected def isUnscrapable(url: String, destinationUrl: Option[String]) = Await.result(asyncIsUnscrapable(url, destinationUrl), 5 seconds)
+  protected def isUnscrapableP(url: String, destinationUrl: Option[String]) = Await.result(asyncIsUnscrapableP(url, destinationUrl), 5 seconds)
 }

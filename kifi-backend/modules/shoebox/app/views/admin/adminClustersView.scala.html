@@ -42,7 +42,7 @@
             </thead>
             <tbody>
             @for(cmi <- data) {
-                <tr class="@(if (cmi.state.name!="up" || cmi.state.name!="backing_up") "error" else "")" style="font-weight: @(if (cmi.isLeader) "bold" else "normal");">
+                <tr class="@(if (!(cmi.state.name=="up" || cmi.state.name=="backing_up")) "error" else "")" style="font-weight: @(if (cmi.isLeader) "bold" else "normal");">
                     <td>@cmi.serviceType.name</td>
                     <td>@cmi.zkid</td>
                     <td>@cmi.instanceInfo.localIp / @cmi.instanceInfo.publicIp </td>

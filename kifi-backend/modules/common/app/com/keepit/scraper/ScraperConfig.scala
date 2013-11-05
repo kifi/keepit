@@ -14,7 +14,7 @@ case class ScraperConfig(
   },
   batchSize: Int = {
     val p = System.getProperty("scraper.batch.size")
-    if (p != null && p.isInstanceOf[Int]) p.toInt else 2
+    if (p != null) p.toInt else 2
   }
 )
 

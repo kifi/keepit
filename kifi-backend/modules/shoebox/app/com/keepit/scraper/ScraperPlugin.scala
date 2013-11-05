@@ -4,7 +4,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ScrapeInfoRepo, ScrapeInfo, NormalizedURI}
 import com.keepit.search.Article
 
 import akka.actor._
@@ -13,7 +13,6 @@ import scala.concurrent.Future
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Plugin
 
 import scala.concurrent.duration._
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
@@ -21,6 +20,7 @@ import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.keepit.scraper.extractor.Extractor
+import com.keepit.common.db.slick.Database
 
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
@@ -28,13 +28,19 @@ case class ScrapeBasicArticle(url: String, customExtractor: Option[Extractor])
 
 private[scraper] class ScraperActor @Inject() (
     scraper: Scraper,
+    scraperConfig: ScraperConfig,
     airbrake: AirbrakeNotifier)
   extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
-    case Scrape =>
+    case Scrape => {
       log.info("Starting scraping session")
-      sender ! scraper.run()
+      if (scraperConfig.disableScraperService) {
+        sender ! scraper.run()
+      } else {
+        sender ! scraper.schedule()
+      }
+    }
     case ScrapeInstance(uri) => sender ! scraper.safeProcessURI(uri)
     case m => throw new UnsupportedActorMessage(m)
   }
@@ -51,6 +57,8 @@ private[scraper] class ReadOnlyScraperActor @Inject() (
 }
 
 class ScraperPluginImpl @Inject() (
+    db: Database,
+    scrapeInfoRepo: ScrapeInfoRepo,
     actor: ActorInstance[ScraperActor],
     readOnlyActor: ActorInstance[ReadOnlyScraperActor],
     scraper: Scraper,
@@ -80,10 +88,26 @@ class ScraperPluginImpl @Inject() (
       actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
     } else {
       log.info(s"[asyncScrape] invoke (remote) Scraper service; url=${uri.url}")
-      scraperClient.asyncScrape(uri)
+      val info = db.readWrite { implicit s =>
+        scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
+      }
+      scraperClient.asyncScrapeWithInfo(uri, info)
     }
   }
 
+
+  def scheduleScrape(uri: NormalizedURI): Unit = {
+    if (scraperConfig.disableScraperService) {
+      actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
+    } else {
+      log.info(s"[scheduleScrape] invoke (remote) Scraper service; url=${uri.url}")
+      val info = db.readWrite { implicit s =>
+        scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
+      }
+      val f = scraperClient.scheduleScrape(uri, info)
+      Await.result(f, 5 seconds) // should be really quick
+    }
+  }
 
   override def scrapeBasicArticle(url: String, customExtractor: Option[Extractor] = None): Future[Option[BasicArticle]] = {
     if (scraperConfig.disableScraperService || customExtractor.isDefined) {
