@@ -68,7 +68,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     val publicList = getURIList(publicListField, docid)
     val privateList = getURIList(privateListField, docid)
     val bookmarkIdArray = getLongArray(bookmarkIdField, docid)
-    new UserInfo(myUserId, docid, publicList, privateList, bookmarkIdArray)
+    new UserInfo(myUserId, publicList, privateList, bookmarkIdArray)
   }
 
   lazy val myUriEdgeSet: UserToUriEdgeSet = UserToUriEdgeSet(myInfo)
@@ -107,10 +107,15 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     if (myInfo.mapper.maxDoc != myInfo.uriIdArray.length)
       log.error(s"mapper.maxDocs=${myInfo.mapper.maxDoc} ids.length=${myInfo.uriIdArray.length} publicList.size=${myInfo.publicList.size} privateList.size=${myInfo.privateList.size}")
 
-    val terms = QueryUtil.getTerms(query)
-    val r = LineIndexReader(reader, myInfo.docId, terms, myInfo.uriIdArray.length, cachedIndexOpt)
-    cachedIndexOpt = Some(r.index)
-    (r, myInfo.mapper)
+    searcher.findDocIdAndAtomicReaderContext(myUserId.id) match{
+      case Some((docId, context)) =>
+        val terms = QueryUtil.getTerms(query)
+        val r = LineIndexReader(context.reader, docId, terms, myInfo.uriIdArray.length, cachedIndexOpt)
+        cachedIndexOpt = Some(r.index)
+        (r, myInfo.mapper)
+      case _ =>
+        (LineIndexReader.empty, myInfo.mapper)
+    }
   }
 
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = {
@@ -121,7 +126,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   }
 }
 
-class UserInfo(val id: Id[User], val docId: Int, val publicList: URIList, val privateList: URIList, val bookmarkIdArray: Array[Long]) {
+class UserInfo(val id: Id[User], val publicList: URIList, val privateList: URIList, val bookmarkIdArray: Array[Long]) {
   val uriIdArray: Array[Long] = {
     val publicIds = publicList.ids
     val privateIds = privateList.ids
