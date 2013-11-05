@@ -141,7 +141,8 @@ class AuthController @Inject() (
         authType match {
           case AuthType.Login =>
             if (format == "json") {
-              Ok(Json.obj("uri" -> resSession.get(SecureSocial.OriginalUrlKey).getOrElse("/")))
+              val uri: String = resSession.get(SecureSocial.OriginalUrlKey).getOrElse("/")
+              Ok(Json.obj("uri" -> uri))
                 .withSession(resSession - ActionAuthenticator.FORTYTWO_USER_ID - SecureSocial.OriginalUrlKey)
             } else {
               res.withSession(resSession - ActionAuthenticator.FORTYTWO_USER_ID)
@@ -150,8 +151,11 @@ class AuthController @Inject() (
             Redirect(routes.AuthController.signupPage().url)
               .withSession(resSession - ActionAuthenticator.FORTYTWO_USER_ID)
           case AuthType.Link =>
-            val url = resSession.get(SecureSocial.OriginalUrlKey).getOrElse(request.headers.get(HeaderNames.REFERER))
-            Redirect(url).withSession(resSession - SecureSocial.OriginalUrlKey)
+            resSession.get(SecureSocial.OriginalUrlKey) map { url =>
+              Redirect(url).withSession(resSession - SecureSocial.OriginalUrlKey)
+            } getOrElse {
+              request.headers.get(HeaderNames.REFERER).map(Redirect(_)).getOrElse(res)
+            }
           case AuthType.LoginAndLink =>
             res.withSession(resSession - ActionAuthenticator.FORTYTWO_USER_ID
               - SecureSocial.OriginalUrlKey  // TODO: why is OriginalUrlKey being removed? should we keep it?
