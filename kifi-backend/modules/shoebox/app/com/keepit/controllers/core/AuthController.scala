@@ -142,7 +142,7 @@ class AuthController @Inject() (
         authType match {
           case AuthType.Login =>
             if (format == "json") {
-              val uri = resSession.get(SecureSocial.OriginalUrlKey).getOrElse("/")
+              val uri = request.session.get(SecureSocial.OriginalUrlKey).getOrElse("/")
               Ok(Json.obj("uri" -> uri))
                 .withSession(resSession - FORTYTWO_USER_ID - SecureSocial.OriginalUrlKey)
             } else {
