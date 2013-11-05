@@ -251,8 +251,8 @@
 		<div class="friends">
 			<h1>Your Friends</h1>
 			<nav class="friends-tabs">
-				<a data-href="friends">Friends</a>
-				<a data-href="friends/invite">Invite Friends</a>
+				<a data-href="friends">Kifi Friends</a>
+				<a data-href="friends/invite">Add Friends</a>
 				<a data-href="friends/requests">Requests <span class="friend-req-count"><span></a>
 			</nav>
 			<div class="friends-page" data-href="friends">
@@ -289,15 +289,19 @@
 				</div>
 			</div>
 			<div class="friends-page" data-href="friends/invite">
+        <nav class="add-friends-tabs">
+          <a data-href="friends/invite">Invite your friends & contacts</a>
+          <a href="friends/connect" data-href="friends/connect">Connect to other kifi users</a>
+        </nav>
+				<div class="above-invite-friends">
+					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
+				</div>
 				<div class="invites-left">Invites Left <span class="num-invites"></span></div>
 				<nav class="invite-filters">
 					<a href="javascript:">All</a>
 					<a href="javascript:" data-nw="facebook"></a>
 					<a href="javascript:" data-nw="linkedin"></a>
 				</nav>
-				<div class="above-invite-friends">
-					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
-				</div>
 				<div class="dialog no-invites-dialog" style="display:none">
 					<div class="dialog-content">
 						<h2>You have no invites left</h2>

@@ -267,7 +267,14 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .requested>*>.friend-status::before {background-position: -90px; width: 20px; position: relative; left: 2px}
 .friend-action-desc {position: absolute; right: 0; bottom: -20px; font-size: 13px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
 
-.invite-filters {height: 41px; border-bottom: 1px solid #b7ce84; margin-bottom: 14px}
+.add-friends-tabs {font-size: 14px; margin: 15px 0 24px; line-height: 46px; border-bottom: 1px solid #c5d0da; white-space: nowrap; -webkit-font-smoothing: antialiased}
+.add-friends-tabs>a {position: relative; bottom: -1px; display: inline-block; border: 1px solid #c5d0da; ; border-radius: 2px 2px 0 0; padding: 0 25px; vertical-align: top}
+.add-friends-tabs>a[href]:not(:hover) {color: #627d99}
+.add-friends-tabs>a[href]:focus {border-color: rgba(227,230,238,.3)}
+.add-friends-tabs>a:not([href]) {color: #686868; border-bottom-color: white}
+.add-friends-tabs>a[href] {background-color: #f8f9fb; color: #67829c}
+
+.invite-filters {height: 41px; border-bottom: 1px solid #b7ce84; margin-top: 14px}
 .invite-filters>a {display: inline-block; width: 36px; height: 36px; margin-right: 5px; vertical-align: top; -webkit-transition: height .1s; transition: height .1s}
 .invite-filters>a:not([data-nw]) {background-color: #b7ce84; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
 .invite-filters>a[data-nw] { background-image: url(../img/networks.png); background-repeat: no-repeat; background-size: 400%; }
@@ -286,7 +293,7 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .invites-left>.num-invites {display: inline-block; border: 1px solid #b8c5d2; color: #628196; border-radius: 10.5px; padding: 0 12px; vertical-align: baseline; font-size: 12px; line-height: 20px; height: 19px; margin-left: 6px}
 @-moz-document url-prefix() {.invites-left>.num-invites {line-height: 19px}}
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
-.invite-friends { position: absolute; top: 248px; bottom: 0; right: -1px; left: 20px; overflow: hidden}
+.invite-friends { position: relative; bottom: 0; right: -1px; left: 20px; overflow: hidden}
 .invite-friend {display: block; background-color: #eff2f7; padding: 10px; margin-bottom: 12px; -moz-box-sizing: border-box; box-sizing: border-box; position: relative}
 .invite-friend::after {content: " "; display: block; clear: both}
 .invite-friend[data-status=invited] { background: #629eed; }
