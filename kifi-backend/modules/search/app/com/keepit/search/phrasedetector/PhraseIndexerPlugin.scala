@@ -26,11 +26,7 @@ extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case Index => try {
-      val phrasesIndexed = phraseIndexer.update()
-      if (phrasesIndexed >= phraseIndexer.getCommitBatchSize) {
-        self.forward(Index)
-      }
-      sender ! phrasesIndexed
+      sender ! phraseIndexer.update()
     } catch {
       case e: Exception =>
         airbrake.notify(AirbrakeError(exception = e, message = Some("Error indexing Phrases")))
