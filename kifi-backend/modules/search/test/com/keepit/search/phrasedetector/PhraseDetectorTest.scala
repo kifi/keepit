@@ -15,6 +15,7 @@ import java.io.StringReader
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.util.Version
 import scala.collection.mutable.ListBuffer
+import com.keepit.common.db.SequenceNumber
 
 class PhraseDetectorTest extends Specification with ApplicationInjector {
 
@@ -41,7 +42,7 @@ class PhraseDetectorTest extends Specification with ApplicationInjector {
           ("product research project", Set((0,2),(1,2))),
           ("large classroom project", Set((1,2))))
 
-        indexer.reload(phrases.zipWithIndex.map{ case (p, i) => new PhraseIndexable(Id[Phrase](i), p, lang) }.iterator)
+        indexer.indexDocuments(phrases.zipWithIndex.map{ case (p, i) => new PhraseIndexable(Id[Phrase](i), SequenceNumber(i), false, p, lang) }.iterator, 10)
 
         val detector = new PhraseDetector(indexer)
         val analyzer = DefaultAnalyzer.forIndexingWithStemmer(Lang("en"))

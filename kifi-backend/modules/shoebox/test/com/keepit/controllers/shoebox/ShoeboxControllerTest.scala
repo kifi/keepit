@@ -105,11 +105,11 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
       }
     }
 
-    "return phrases from the database" in {
+    "return phrases changed from the database" in {
       running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
         setupSomePhrases()
         val shoeboxController = inject[ShoeboxController]
-        val result = shoeboxController.getPhrasesByPage(0,2)(FakeRequest())
+        val result = shoeboxController.getPhrasesChanged(4 ,2)(FakeRequest())
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
         contentAsString(result) must contain("gaz parfait");
