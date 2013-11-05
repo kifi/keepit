@@ -333,7 +333,9 @@ class AuthController @Inject() (
     userPassFinalizeAccountForm.bindFromRequest.fold(
     formWithErrors => Forbidden(Json.obj("error" -> "user_exists_failed_auth")),
     { case EmailPassFinalizeInfo(firstName, lastName, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
-      val identity = request.identityOpt.get
+      val identity = db.readOnly { implicit session =>
+        socialRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
+      } getOrElse(request.identityOpt.get)
       val pinfo = identity.passwordInfo.get
       val email = identity.email.get
       val (newIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = pinfo,
