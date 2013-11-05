@@ -141,13 +141,11 @@ class AuthController @Inject() (
         // TODO: set FORTYTWO_USER_ID in login/signup cases instead of clearing it and then setting it on the next request
         authType match {
           case AuthType.Login =>
-            if (format == "json") {
-              val uri = request.session.get(SecureSocial.OriginalUrlKey).getOrElse("/")
-              Ok(Json.obj("uri" -> uri))
-                .withSession(resSession - FORTYTWO_USER_ID - SecureSocial.OriginalUrlKey)
+            if (format == "json" && res.header.headers.get("Location").isDefined) {
+              Ok(Json.obj("uri" -> res.header.headers.get("Location").get))
             } else {
-              res.withSession(resSession - FORTYTWO_USER_ID)
-            }
+              res
+            }.withSession(resSession - FORTYTWO_USER_ID)
           case AuthType.Signup =>
             res.withSession(resSession - FORTYTWO_USER_ID
               + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
