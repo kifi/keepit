@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 
 import org.specs2.mutable.Specification
 
-import com.keepit.common.db.Id
+import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse, HttpUri}
 import com.keepit.inject._
 import com.keepit.model._
@@ -30,7 +30,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
     case s if s.url.contains("/internal/shoebox/database/getConnectedUsers") && s.url.contains("1965") => "[1933,1935,1927,1921]"
     case s if s.url.contains("/internal/shoebox/database/searchFriends") && s.url.contains("1965") => "[1933,1935,1927,1921]"
     case s if s.url.contains("/internal/shoebox/database/getUsers") && s.url.contains("1965%2C1933") => Json.stringify(Json.toJson(users))
-    case s if s.url.contains("/internal/shoebox/database/getPhrasesByPage") && s.url.contains("page=0&size=2") => Json.stringify(Json.toJson(phrases))
+    case s if s.url.contains("/internal/shoebox/database/getPhrasesChanged") && s.url.contains("seqNum=0&fetchSize=4") => Json.stringify(Json.toJson(phrases))
   }
 
   "ShoeboxServiceClient" should {
@@ -57,7 +57,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
     "get phrases by page" in {
       running(new TestApplication(shoeboxServiceClientTestModules:_*)) {
         val shoeboxServiceClient = inject[ShoeboxServiceClient]
-        val phrasesFuture = shoeboxServiceClient.getPhrasesByPage(0,2)
+        val phrasesFuture = shoeboxServiceClient.getPhrasesChanged(SequenceNumber(0), 4)
         Await.result(phrasesFuture, Duration(5, SECONDS)) ===  phrases
 
       }

@@ -56,7 +56,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def sendMail(email: ElectronicMail): Future[Boolean]
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
-  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]]
+  def getPhrasesChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Phrase]]
   def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Bookmark]]
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]]
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
@@ -335,8 +335,8 @@ class ShoeboxServiceClientImpl @Inject() (
      call(Shoebox.internal.persistServerSearchEvent, metaData)
   }
 
-  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = {
-    call(Shoebox.internal.getPhrasesByPage(page, size)).map { r =>
+  def getPhrasesChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Phrase]] = {
+    call(Shoebox.internal.getPhrasesChanged(seqNum.value, fetchSize)).map { r =>
       Json.fromJson[Seq[Phrase]](r.json).get
     }
   }

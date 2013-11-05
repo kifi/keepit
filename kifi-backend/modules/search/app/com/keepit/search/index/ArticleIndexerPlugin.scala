@@ -25,8 +25,7 @@ case object BackUp
 
 private[index] class ArticleIndexerActor @Inject() (
     airbrake: AirbrakeNotifier,
-    articleIndexer: ArticleIndexer,
-  phraseIndexer: PhraseIndexer)
+    articleIndexer: ArticleIndexer)
   extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
@@ -41,10 +40,7 @@ private[index] class ArticleIndexerActor @Inject() (
           airbrake.notify(AirbrakeError(exception = e, message = Some("Error indexing articles")))
           sender ! -1
       }
-    case BackUp => {
-      articleIndexer.backup()
-      phraseIndexer.backup()
-    }
+    case BackUp => articleIndexer.backup()
     case m => throw new UnsupportedActorMessage(m)
   }
 }

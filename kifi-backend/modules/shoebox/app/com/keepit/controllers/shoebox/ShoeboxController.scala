@@ -405,8 +405,8 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(experiments))
   }
 
-  def getPhrasesByPage(page: Int, size: Int) = Action { request =>
-    val phrases = db.readOnly { implicit s => phraseRepo.page(page,size) }
+  def getPhrasesChanged(seqNum: Long, fetchSize: Int) = Action { request =>
+    val phrases = db.readOnly { implicit s => phraseRepo.getPhrasesChanged(SequenceNumber(seqNum), fetchSize) }
     Ok(Json.toJson(phrases))
   }
 
