@@ -9,7 +9,7 @@ object Prenormalizer extends StaticNormalizer {
 
   val serialNormalizers: Seq[StaticNormalizer] = Seq(DefaultPageNormalizer)
   val parallelNormalizers: Seq[StaticNormalizer] =
-    Seq(WikipediaNormalizer, AmazonNormalizer, GoogleNormalizer, YoutubeNormalizer, LinkedInNormalizer, DefaultNormalizer)
+    Seq(QuoraNormalizer, WikipediaNormalizer, AmazonNormalizer, GoogleNormalizer, YoutubeNormalizer, LinkedInNormalizer, DefaultNormalizer)
 
   def isDefinedAt(uri: URI) = parallelNormalizers.exists(_.isDefinedAt(uri))
   def apply(uri: URI) = applyAll(applyFirst(uri, parallelNormalizers), serialNormalizers)
