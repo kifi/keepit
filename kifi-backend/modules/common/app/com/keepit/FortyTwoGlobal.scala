@@ -5,7 +5,7 @@ import java.io.File
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner, MemoryUsageMonitor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
@@ -70,7 +70,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       log.error("STARTUP SELF CHECK FAILED!")
     }
     serviceDiscovery.forceUpdate()
+
+    memoryUsageMonitor = MemoryUsageMonitor(injector.instance[AirbrakeNotifier])
   }
+
+  private var memoryUsageMonitor: MemoryUsageMonitor = null
 
   // Get a file within the .fortytwo folder in the user's home directory
   def getUserFile(filename: String): File =
