@@ -116,8 +116,8 @@ class AuthController @Inject() (
   def link(provider: String) = getAuthAction(provider, AuthType.Link)
   def linkByPost(provider: String) = getAuthAction(provider, AuthType.Link)
 
-  def signup(provider: String) = getAuthAction(provider, AuthType.Signup, "html")
-  def signupByPost(provider: String) = getAuthAction(provider, AuthType.Signup, "html")
+  def signup(provider: String) = getAuthAction(provider, AuthType.Signup)
+  def signupByPost(provider: String) = getAuthAction(provider, AuthType.Signup)
 
   // log in with username/password and link the account with a provider
   def passwordLoginAndLink(provider: String) = getAuthAction(provider, AuthType.LoginAndLink)
@@ -130,32 +130,32 @@ class AuthController @Inject() (
     db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
   }
 
-
-  private def getSession(res: SimpleResult[_], originalUrl: Option[String] = None)
-      (implicit request: RequestHeader): Session = {
-    val sesh = Session.decodeFromCookie(
-      res.header.headers.get(SET_COOKIE).flatMap(Cookies.decode(_).find(_.name == Session.COOKIE_NAME)))
-    val originalUrlOpt = sesh.get(SecureSocial.OriginalUrlKey) orElse originalUrl
-    originalUrlOpt map { url => sesh + (SecureSocial.OriginalUrlKey -> url) } getOrElse sesh
-  }
-
   private def getAuthAction(provider: String, authType: AuthType, format: String = "html"): Action[AnyContent] = Action { request =>
     val augmentedRequest = augmentRequestWithTag(request, "format" -> format)
     val actualProvider = if (authType == AuthType.LoginAndLink) SocialNetworks.FORTYTWO.authProvider else provider
     ProviderController.authenticate(actualProvider)(augmentedRequest) match {
       case res: SimpleResult[_] =>
-        val session = authType match {
-          case AuthType.Login => getSession(res)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID
-          case AuthType.Signup => getSession(res)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID +
-            (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)
-          case AuthType.Link => getSession(res, augmentedRequest.headers.get(HeaderNames.REFERER))(augmentedRequest)
-          case AuthType.LoginAndLink => getSession(res, None)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID -
-            SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> provider)
-        }
-        if (authType == AuthType.Login && format == "json") {
-          Ok(Json.obj("success" -> true)).withSession(session)
-        } else {
-          res.withSession(session)
+        val resSession = Session.decodeFromCookie(
+          res.header.headers.get(SET_COOKIE).flatMap(Cookies.decode(_).find(_.name == Session.COOKIE_NAME)))
+        // TODO: set FORTYTWO_USER_ID in login/signup cases instead of clearing it and then setting it on the next request
+        authType match {
+          case AuthType.Login =>
+            if (format == "json") {
+              Ok(Json.obj("uri" -> resSession.get(SecureSocial.OriginalUrlKey).getOrElse("/")))
+                .withSession(resSession - ActionAuthenticator.FORTYTWO_USER_ID - SecureSocial.OriginalUrlKey)
+            } else {
+              res.withSession(resSession - ActionAuthenticator.FORTYTWO_USER_ID)
+            }
+          case AuthType.Signup =>
+            Redirect(routes.AuthController.signupPage().url)
+              .withSession(resSession - ActionAuthenticator.FORTYTWO_USER_ID)
+          case AuthType.Link =>
+            val url = resSession.get(SecureSocial.OriginalUrlKey).getOrElse(request.headers.get(HeaderNames.REFERER))
+            Redirect(url).withSession(resSession - SecureSocial.OriginalUrlKey)
+          case AuthType.LoginAndLink =>
+            res.withSession(resSession - ActionAuthenticator.FORTYTWO_USER_ID
+              - SecureSocial.OriginalUrlKey  // TODO: why is OriginalUrlKey being removed? should we keep it?
+              + (AuthController.LinkWithKey -> provider))
         }
       case res => res
     }
