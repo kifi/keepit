@@ -10,15 +10,16 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.time._
+import com.keepit.common.strings
+import com.keepit.common.mail.EmailAddressHolder
 
 @ImplementedBy(classOf[PasswordResetRepoImpl])
 trait PasswordResetRepo extends Repo[PasswordReset] {
-  def getByAddressOpt(address: String, excludeState: Option[State[PasswordReset]] = Some(PasswordResetStates.INACTIVE))
-      (implicit session: RSession): Option[PasswordReset]
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[PasswordReset]
-  def verifyByCode(verificationCode: String, clear: Boolean = false)(implicit session: RWSession): Boolean
-  def saveWithVerificationCode(email: PasswordReset)(implicit session: RWSession): PasswordReset
-  def getByCode(verificationCode: String)(implicit session: RSession): Option[PasswordReset]
+  def getByUser(userId: Id[User], getPotentiallyExpired: Boolean = true)(implicit session: RSession): Seq[PasswordReset]
+  def useResetToken(token: String, ip: String)(implicit session: RWSession): Boolean
+  def getByToken(passwordResetToken: String)(implicit session: RSession): Option[PasswordReset]
+  def tokenIsNotExpired(passwordReset: PasswordReset): Boolean
+  def createNewResetToken(userId: Id[User], sentTo: EmailAddressHolder)(implicit session: RWSession): PasswordReset
 }
 
 @Singleton
@@ -35,34 +36,46 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
     def token = column[String]("token", O.NotNull)
     def usedAt = column[DateTime]("used_at", O.Nullable)
     def usedByIP = column[String]("used_by_ip", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ state ~ token ~ usedAt.? ~ usedByIP.? <> (PasswordReset, PasswordReset.unapply _)
+    def sentTo = column[String]("sent_to", O.Nullable)
+    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ state ~ token ~ usedAt.? ~ usedByIP.? ~ sentTo.? <> (PasswordReset, PasswordReset.unapply _)
   }
 
-  def getByAddressOpt(address: String, excludeState: Option[State[PasswordReset]] = Some(PasswordResetStates.INACTIVE))
-      (implicit session: RSession): Option[PasswordReset] =
-    (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).firstOption
+  def getByUser(userId: Id[User], getPotentiallyExpired: Boolean = true)(implicit session: RSession): Seq[PasswordReset] =
+    if (getPotentiallyExpired) {
+      (for(f <- table if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE) yield f).list
+    } else {
+      (for(f <- table if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE && f.createdAt > clock.now().minus(EXPIRATION_TIME)) yield f).list
+    }
 
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[PasswordReset] =
-    (for(f <- table if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE) yield f).list
-
-  def verifyByCode(verificationCode: String, clear: Boolean = false)(implicit session: RWSession): Boolean = {
-    val q = table.filter(_.token === verificationCode)
-    if (clear) q.map(_.token).update(None)
-    q.map(e => e.token ~ e.updatedAt ~ e.state).update((clock.now(), clock.now(), PasswordResetStates.VERIFIED)) > 0
+  def useResetToken(token: String, ip: String)(implicit session: RWSession): Boolean = {
+    val tokenCannotBeOlderThan = clock.now().minus(EXPIRATION_TIME)
+    val resetResult = table.filter(pr => pr.token === token.toLowerCase && pr.state === PasswordResetStates.ACTIVE && pr.createdAt > tokenCannotBeOlderThan)
+      .map(e => e.usedAt ~ e.updatedAt ~ e.usedByIP ~ e.state)
+      .update((clock.now(), clock.now(), ip.take(16), PasswordResetStates.USED)) > 0
+    if (resetResult) {
+      table.filter(pr => pr.state === PasswordResetStates.ACTIVE).map(e => e.updatedAt ~ e.state).update((clock.now(), PasswordResetStates.INACTIVE))
+    }
+    resetResult
   }
 
   def getByToken(passwordResetToken: String)(implicit session: RSession): Option[PasswordReset] = {
-    (for (e <- table if e.token === passwordResetToken && e.state =!= PasswordResetStates.INACTIVE) yield e).firstOption.flatMap { pr =>
-      if (pr.createdAt.plus(EXPIRATION_TIME).isBefore(clock.now)) {
-        None
-      } else {
-        Some(pr)
-      }
-    }
+    (for (e <- table if e.token === passwordResetToken.toLowerCase) yield e).firstOption
   }
 
-  def saveWithNewToken(passwordReset: PasswordReset)(implicit session: RWSession): PasswordReset = {
-    val code = new BigInteger(128, random).toString(36)
+  def tokenIsNotExpired(passwordReset: PasswordReset): Boolean = {
+    passwordReset.state == PasswordResetStates.ACTIVE && passwordReset.createdAt.plus(EXPIRATION_TIME).isAfter(clock.now)
+  }
+
+  def createNewResetToken(userId: Id[User], sentTo: EmailAddressHolder)(implicit session: RWSession): PasswordReset = {
+    // Inactivate all outstanding reset tokens
+    getByUser(userId, getPotentiallyExpired = true).map { pr =>
+      save(pr.withState(PasswordResetStates.INACTIVE))
+    }
+    saveWithNewToken(PasswordReset(userId = userId, state = PasswordResetStates.ACTIVE, token = "", sentTo = Some(sentTo.address)))
+  }
+
+  private def saveWithNewToken(passwordReset: PasswordReset)(implicit session: RWSession): PasswordReset = {
+    val code = strings.humanFriendlyToken(7) // 29**7 = 17,249,876,309 combinations, must be used in 30 minutes
     save(passwordReset.copy(token = code))
   }
 }

@@ -13,7 +13,8 @@ case class PasswordReset (
   state: State[PasswordReset] = PasswordResetStates.ACTIVE,
   token: String,
   usedAt: Option[DateTime] = None,
-  usedByIP: Option[String] = None
+  usedByIP: Option[String] = None,
+  sentTo: Option[String] = None
 ) extends Model[PasswordReset] {
   def withId(id: Id[PasswordReset]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)

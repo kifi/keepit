@@ -48,13 +48,13 @@ class AuthController @Inject() (
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
     actionAuthenticator: ActionAuthenticator,
-    emailRepo: EmailAddressRepo,
     userRepo: UserRepo,
     postOffice: LocalPostOffice,
     userValueRepo: UserValueRepo,
     s3ImageStore: S3ImageStore,
     airbrakeNotifier: AirbrakeNotifier,
-    emailAddressRepo: EmailAddressRepo
+    emailAddressRepo: EmailAddressRepo,
+    passwordResetRepo: PasswordResetRepo
   ) extends WebsiteController(actionAuthenticator) with Logging {
 
   // Note: some of the below code is taken from ProviderController in SecureSocial
@@ -249,7 +249,7 @@ class AuthController @Inject() (
 
   private def doFinalizePage(implicit request: Request[_]): Result = {
     def hasEmail(identity: Identity): Boolean = db.readOnly { implicit s =>
-      identity.email.flatMap(emailRepo.getByAddressOpt(_)).isDefined
+      identity.email.flatMap(emailAddressRepo.getByAddressOpt(_)).isDefined
     }
 
     (request.userOpt, request.identityOpt) match {
@@ -399,8 +399,8 @@ class AuthController @Inject() (
       db.readWrite { implicit s =>
         val email = newIdentity.email.get
         val emailWithVerification =
-          emailRepo.getByAddressOpt(email)
-            .map(emailRepo.saveWithVerificationCode)
+          emailAddressRepo.getByAddressOpt(email)
+            .map(emailAddressRepo.saveWithVerificationCode)
             .get
         postOffice.sendMail(ElectronicMail(
           from = EmailAddresses.NOTIFICATIONS,
@@ -477,46 +477,55 @@ class AuthController @Inject() (
 
   def verifyEmail(code: String) = Action { implicit request =>
     db.readWrite { implicit s =>
-      if (emailRepo.verifyByCode(code).isDefined) // TODO: distinguish redundant case, which is Some(false)
+      if (emailAddressRepo.verifyByCode(code).isDefined) // TODO: distinguish redundant case, which is Some(false)
         Ok(views.html.website.verifyEmail(success = true))
       else
         BadRequest(views.html.website.verifyEmail(success = false))
     }
   }
 
-  // todo(andrew): Send reset email to ALL verified email addresses of an account (unless none, in which case, to one)
   def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doForgotPassword(_), unauthenticatedAction = doForgotPassword(_))
   def doForgotPassword(implicit request: Request[JsValue]): Result = {
-    (request.body \ "email").asOpt[JsString] map { emailAddr =>
-      db.readWrite { implicit s =>
-        emailRepo.getByAddressOpt(emailAddr.value).map(emailRepo.saveWithVerificationCode).map { email =>
-          postOffice.sendMail(ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
-            to = Seq(GenericEmailAddress(email.address)),
-            subject = "Reset your password",
-            htmlBody = "You can set a new password by going to " +
-                s"$url${routes.AuthController.setPasswordPage(email.verificationCode.get)}",
-            category = ElectronicMailCategory("reset_password")
-          ))
-          email
+    (request.body \ "email").asOpt[String] map { emailAddrStr =>
+        val emailAddressesOpt = db.readOnly { implicit session =>
+          getResetEmailAddresses(emailAddrStr)
         }
-      } match {
-        case Some(email) =>
-          Ok(Json.obj("success" -> true))
-        case None =>
-          Ok(Json.obj("error" -> "no_account"))
-      }
-    } getOrElse BadRequest
+        emailAddressesOpt match {
+          case Some((userId, emailAddresses)) if emailAddresses.nonEmpty =>
+            db.readWrite { implicit session =>
+              emailAddresses.map { resetEmailAddress =>
+                val reset = passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
+                emailAddresses.foreach { emailAddress =>
+                  postOffice.sendMail(ElectronicMail(
+                    from = EmailAddresses.NOTIFICATIONS,
+                    to = Seq(resetEmailAddress),
+                    subject = "Reset your Kifi password",
+                    htmlBody = "You can set a new Kifi password by going to " +
+                      s"$url${routes.AuthController.setPasswordPage(reset.token)}",
+                    category = ElectronicMailCategory("reset_password")
+                  ))
+                }
+              }
+            }
+            Ok(Json.obj("success" -> true))
+          case _ =>
+            log.warn(s"Could not reset password because supplied email address $emailAddrStr not found.")
+            BadRequest(Json.obj("error" -> "no_account"))
+        }
+    } getOrElse BadRequest("0")
   }
+
 
   def setPasswordPage(code: String) = Action { implicit request =>
     db.readWrite { implicit s =>
-      emailRepo.getByCode(code) match {
-        case Some(email) if email.state == EmailAddressStates.UNVERIFIED =>
+      passwordResetRepo.getByToken(code) match {
+        case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
           Ok(views.html.auth.setPassword(code = code))
-        case Some(email) =>
+        case Some(pr) if pr.state == PasswordResetStates.ACTIVE || pr.state == PasswordResetStates.INACTIVE =>
+          Ok(views.html.auth.setPassword(error = "expired"))
+        case Some(pr) if pr.state == PasswordResetStates.USED =>
           Ok(views.html.auth.setPassword(error = "already_used"))
-        case None =>
+        case _ =>
           Ok(views.html.auth.setPassword(error = "invalid_code"))
       }
     }
@@ -525,29 +534,60 @@ class AuthController @Inject() (
   def setPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doSetPassword(_), unauthenticatedAction = doSetPassword(_))
   def doSetPassword(implicit request: Request[JsValue]): Result = {
     (for {
-      code <- (request.body \ "code").asOpt[JsString]
-      password <- (request.body \ "password").asOpt[JsString].filter(_.value.length >= 7)
+      code <- (request.body \ "code").asOpt[String]
+      password <- (request.body \ "password").asOpt[String].filter(_.length >= 7)
     } yield {
       db.readWrite { implicit s =>
-        emailRepo.verifyByCode(code.value) match {
-          case Some(true) =>
-            val email = emailRepo.getByCode(code.value).get  // TODO: optimize second query away
-            for (sui <- socialRepo.getByUser(email.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
+        passwordResetRepo.getByToken(code) match {
+          case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
+            val email = passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+            for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
               UserService.save(UserIdentity(
                 userId = sui.userId,
                 socialUser = sui.credentials.get.copy(
-                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password.value))
+                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password))
                 )
               ))
             }
             Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url)) // TODO: create session
-          case Some(false) =>
-            Ok(Json.obj("error" -> "already_used"))  // TODO: "error" -> "expired" case
-          case None =>
+          case Some(pr) if pr.state == PasswordResetStates.ACTIVE || pr.state == PasswordResetStates.INACTIVE =>
+            Ok(Json.obj("error" -> "expired"))
+          case Some(pr) if pr.state == PasswordResetStates.USED =>
+            Ok(Json.obj("error" -> "already_used"))
+          case _ =>
             Ok(Json.obj("error" -> "invalid_code"))
         }
       }
     }) getOrElse BadRequest("0")
+  }
+
+
+  private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Set[EmailAddressHolder])] = {
+    def emailToEmailHolder(em: EmailAddress) = new EmailAddressHolder {
+      val address: String = em.address
+    }
+
+    db.readOnly { implicit s =>
+      val emailAddresses: Option[(Id[User], Set[EmailAddressHolder])] = emailAddressRepo.getByAddressOpt(emailAddrStr, excludeState = None).flatMap { emailAddress =>
+        val user = userRepo.get(emailAddress.userId)
+        val primaryEmail = user.primaryEmailId.map(emailAddressRepo.get).map(Set(_)).getOrElse(Set.empty)
+
+        if (emailAddress.state == EmailAddressStates.VERIFIED) {
+          Some((user.id.get, (Set(emailAddress) ++ primaryEmail).map(emailToEmailHolder)))
+        } else {
+          val allUserEmailAddresses = emailAddressRepo.getByUser(emailAddress.userId)
+          val _addrs = allUserEmailAddresses.filter(em => em.state == EmailAddressStates.VERIFIED).toSet ++ primaryEmail
+          if (_addrs.isEmpty) {
+            None // we could also send to the oldest email address on file
+          } else Some((user.id.get, _addrs.map(emailToEmailHolder)))
+        }
+      }
+      emailAddresses.orElse {
+        socialRepo.getOpt(SocialId(emailAddrStr), SocialNetworks.FORTYTWO).collect { case sui if sui.userId.isDefined =>
+          (sui.userId.get, Set(new EmailAddressHolder { val address: String = emailAddrStr }))
+        }
+      }
+    }
   }
 
   def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = doUploadBinaryPicture(_), unauthenticatedAction = doUploadBinaryPicture(_))
