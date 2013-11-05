@@ -14,6 +14,7 @@ import scala.concurrent.duration._
 
 abstract class PhraseIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase](indexDirectory, indexWriterConfig) {
   def update(): Int
+  def getCommitBatchSize(): Int
 }
 
 class PhraseIndexerImpl(
@@ -24,6 +25,8 @@ class PhraseIndexerImpl(
 
   final val commitBatchSize = 200000
   private[this] val updateLock = new AnyRef
+
+  def getCommitBatchSize() = commitBatchSize
 
   def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()

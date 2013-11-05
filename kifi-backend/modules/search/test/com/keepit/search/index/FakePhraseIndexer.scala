@@ -11,6 +11,7 @@ import com.keepit.search.phrasedetector.{PhraseIndexable, PhraseIndexer}
 
 class FakePhraseIndexer extends PhraseIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)) {
   def update() = 0
+  def getCommitBatchSize() = 0
 }
 
 case class FakePhraseIndexerModule() extends ScalaModule {
