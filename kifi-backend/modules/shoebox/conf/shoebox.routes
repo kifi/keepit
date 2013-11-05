@@ -96,6 +96,12 @@ POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageControlle
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
 ##########################################
+# Mobile V1.0
+##########################################
+GET     /mobile/v1.0/user/friends   @com.keepit.controllers.mobile.MobileUserController.getFriends()
+GET     /mobile/v1.0/user/networks  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
+
+##########################################
 # Website
 ##########################################
 

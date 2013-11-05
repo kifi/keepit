@@ -7,6 +7,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.common.time._
+import com.keepit.commanders.{UserCommander, BasicSocialUser}
 
 import play.api.Play.current
 import play.api.libs.json.{JsObject, Json}
@@ -16,9 +17,8 @@ import com.keepit.common.net.URI
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
-import com.keepit.common.analytics.{EventPersister, Event, EventFamilies, Events}
+import com.keepit.common.analytics.{Event, EventFamilies, Events}
 import play.api.libs.concurrent.Akka
-import com.keepit.common.service.FortyTwoServices
 
 class ExtUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -26,15 +26,8 @@ class ExtUserController @Inject() (
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo,
   networkInfoLoader: NetworkInfoLoader,
-  userRepo: UserRepo,
-  userConnectionRepo: UserConnectionRepo,
-  experimentRepo: UserExperimentRepo,
-  basicUserRepo: BasicUserRepo,
-  EventPersister: EventPersister,
-  implicit val clock: Clock,
-  implicit val fortyTwoServices: FortyTwoServices)
+  userCommander: UserCommander)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
-
 
   def getLoggedIn() = AuthenticatedJsonAction { request =>
     Ok("0")
@@ -45,32 +38,7 @@ class ExtUserController @Inject() (
   }
 
   def getFriends() = AuthenticatedJsonAction { request =>
-    val basicUsers = db.readOnly { implicit s =>
-      if (canMessageAllUsers(request.user.id.get)) {
-        userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
-          .collect { case u if u.id.get != request.user.id.get => BasicUser.fromUser(u) }.toSet
-      } else {
-        userConnectionRepo.getConnectedUsers(request.user.id.get).map(basicUserRepo.load)
-      }
-    }
-
-    // Apologies for this code. "Personal favor" for Danny. Doing it right should be speced and requires
-    // two models, service clients, and caches.
-    val iNeededToDoThisIn20Minutes = if (request.experiments.contains(ExperimentType.ADMIN)) {
-      Seq(
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424201"), "FortyTwo Engineering", "", "0.jpg"),
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424202"), "FortyTwo Family", "", "0.jpg"),
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424203"), "FortyTwo Product", "", "0.jpg")
-      )
-    } else {
-      Seq()
-    }
-    Ok(Json.toJson(basicUsers ++ iNeededToDoThisIn20Minutes))
-  }
-
-
-  private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
-    experimentRepo.hasExperiment(userId, ExperimentType.CAN_MESSAGE_ALL_USERS)
+    Ok(Json.toJson(userCommander.getFriends(request.user, request.experiments)))
   }
 
   def suppressSliderForSite() = AuthenticatedJsonToJsonAction { request =>
