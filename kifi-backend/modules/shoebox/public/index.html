@@ -266,17 +266,11 @@
 						<li class="friend" data-template>
 							<div class="friend-pic">
 								<img src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+                <a class="friend-nw friend-nw-kifi"></a>
 							</div>
 							<div class="friend-info">
 								<div class="friend-name">{{firstName}} {{lastName}}</div>
-								<div class="friend-label">Connected to you through:</div>
-								<div class="friend-networks">
-									<a class="friend-nw friend-nw-kifi"></a>
-									<a class="friend-nw friend-nw-facebook" target="_blank"></a>
-									<a class="friend-nw friend-nw-linkedin" target="_blank"></a>
-									<a class="friend-nw friend-nw-twitter"></a>
-									<a class="friend-nw friend-nw-google"></a>
-								</div>
+                <div class="friend-label">{{lastName}} friend{% if lastName !== 1 %}s{% endif %} on kifi</div>
 							</div>
 							<div class="friend-actions {{state}}">
 								<div style="position:relative">
