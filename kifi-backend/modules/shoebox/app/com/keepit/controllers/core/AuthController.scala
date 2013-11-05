@@ -222,7 +222,7 @@ class AuthController @Inject() (
                     userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
                   }
                   Ok(Json.obj("success"-> true, "email" -> emailAddress, "new_account" -> false, "finalized" -> finalized))
-                    .withNewSession
+                    .withSession(session + (ActionAuthenticator.FORTYTWO_USER_ID -> sui.userId.get.toString))
                     .withCookies(authenticator.toCookie)
                 }
               )
@@ -233,12 +233,12 @@ class AuthController @Inject() (
             }
         }.getOrElse {
           val pInfo = hasher.hash(password)
-          val (newIdentity, _) = saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
+          val (newIdentity, userId) = saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
           Authenticator.create(newIdentity).fold(
             error => Status(INTERNAL_SERVER_ERROR)("0"),
             authenticator =>
               Ok(Json.obj("success"-> true, "email" -> emailAddress, "new_account" -> true))
-                .withNewSession
+                .withSession(session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
                 .withCookies(authenticator.toCookie)
           )
         }
@@ -261,9 +261,14 @@ class AuthController @Inject() (
         Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
       case (Some(user), Some(identity)) =>
         // User exists, is incomplete
+
+        val (firstName, lastName) = if (identity.firstName.contains("@")) ("","") else (identity.firstName, identity.lastName)
+        val picture = identityPicture(identity)
         Ok(views.html.auth.finalizeEmail(
           emailAddress = identity.email.getOrElse(""),
-          picturePath = identity.avatarUrl.getOrElse("")
+          picturePath = picture,
+          firstName = firstName,
+          lastName = lastName
         ))
       case (Some(user), None) =>
         // User but no identity. Huh?
@@ -284,11 +289,7 @@ class AuthController @Inject() (
       case (None, Some(identity)) =>
         // No user exists, must finalize
 
-        val picture = identity.identityId.providerId match {
-          case "facebook" =>
-            s"//graph.facebook.com/${identity.identityId.userId}/picture?width=200&height=200"
-          case _ => identity.avatarUrl.getOrElse(S3UserPictureConfig.defaultImage)
-        }
+        val picture = identityPicture(identity)
 
         Ok(views.html.auth.finalizeSocial(
           firstName = User.sanitizeName(identity.firstName),
@@ -298,6 +299,14 @@ class AuthController @Inject() (
         ))
       case (None, None) =>
         Ok(views.html.auth.auth("signup"))
+    }
+  }
+
+  private def identityPicture(identity: Identity) = {
+    identity.identityId.providerId match {
+      case "facebook" =>
+        s"//graph.facebook.com/${identity.identityId.userId}/picture?width=200&height=200"
+      case _ => identity.avatarUrl.getOrElse(S3UserPictureConfig.defaultImage)
     }
   }
 
@@ -326,7 +335,9 @@ class AuthController @Inject() (
     userPassFinalizeAccountForm.bindFromRequest.fold(
     formWithErrors => Forbidden(Json.obj("error" -> "user_exists_failed_auth")),
     { case EmailPassFinalizeInfo(firstName, lastName, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
-      val identity = request.identityOpt.get
+      val identity = db.readOnly { implicit session =>
+        socialRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
+      } getOrElse(request.identityOpt.get)
       val pinfo = identity.passwordInfo.get
       val email = identity.email.get
       val (newIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = pinfo,
@@ -440,13 +451,15 @@ class AuthController @Inject() (
   private def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
       email: String, passwordInfo: PasswordInfo,
       firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
+    val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email)
+    val lName = User.sanitizeName(lastName)
     val newIdentity = UserIdentity(
       userId = userIdOpt,
       socialUser = SocialUser(
         identityId = IdentityId(email, SocialNetworks.FORTYTWO.authProvider),
-        firstName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email),
-        lastName = User.sanitizeName(lastName),
-        fullName = User.sanitizeName(s"$firstName $lastName"),
+        firstName = fName,
+        lastName = lName,
+        fullName = s"$fName $lName",
         email = Some(email),
         avatarUrl = GravatarHelper.avatarFor(email),
         authMethod = AuthenticationMethod.UserPassword,
