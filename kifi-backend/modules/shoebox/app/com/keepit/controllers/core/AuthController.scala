@@ -84,16 +84,18 @@ class AuthController @Inject() (
   def loginWithUserPass(format: String) = getAuthAction("userpass", AuthType.Login, format)
 
   def afterLogin() = HtmlAction(allowPending = true)(authenticatedAction = { implicit request =>
-    val linkWith = request.session.get(AuthController.LinkWithKey)
     if (request.user.state == UserStates.PENDING) {
-      // User is pending!
       Redirect("/")
     } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(com.keepit.controllers.website.routes.HomeController.install())
     } else {
-      Redirect(session.get(SecureSocial.OriginalUrlKey).getOrElse("/"))
+      session.get(SecureSocial.OriginalUrlKey) map { url =>
+        Redirect(url).discardingCookies(DiscardingCookie(SecureSocial.OriginalUrlKey))
+      } getOrElse {
+        Redirect("/")
+      }
     }
   }, unauthenticatedAction = { implicit request =>
     val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
