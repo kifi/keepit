@@ -639,4 +639,10 @@ class AuthController @Inject() (
     }
   }
 
+  def cancelAuth() = HtmlAction(allowPending = true)(authenticatedAction = doCancelPage(_), unauthenticatedAction = doCancelPage(_))
+  private def doCancelPage(implicit request: Request[_]): Result = {
+
+    Ok
+  }
+
 }
