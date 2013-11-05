@@ -149,14 +149,14 @@ class AuthController @Inject() (
               res.withSession(resSession - FORTYTWO_USER_ID)
             }
           case AuthType.Signup =>
-            Redirect(routes.AuthController.signupPage().url)
-              .withSession(resSession - FORTYTWO_USER_ID)
+            res.withSession(resSession - FORTYTWO_USER_ID
+              + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
           case AuthType.Link =>
-            resSession.get(SecureSocial.OriginalUrlKey) map { url =>
-              Redirect(url).withSession(resSession - SecureSocial.OriginalUrlKey)
-            } getOrElse {
-              request.headers.get(HeaderNames.REFERER).map(Redirect(_)).getOrElse(res)
-            }
+            if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
+              request.headers.get(HeaderNames.REFERER).map { url =>
+                res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
+              } getOrElse res
+            } else res
           case AuthType.LoginAndLink =>
             res.withSession(resSession - FORTYTWO_USER_ID
               - SecureSocial.OriginalUrlKey  // TODO: why is OriginalUrlKey being removed? should we keep it?
