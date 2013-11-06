@@ -9,6 +9,7 @@ import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.search.index.{DefaultAnalyzer, Indexable, VolatileIndexDirectoryImpl}
 import com.keepit.search.Lang
+import com.keepit.eliza.FakeElizaServiceClientImpl
 
 import com.google.inject.Injector
 
@@ -31,7 +32,8 @@ class MessageSearcherTest extends Specification with TestInjector{
 
     val thread1 = ThreadContent(
       mode =  FULL,
-      id = Id[ThreadContent](1), 
+      id = Id[ThreadContent](1),
+      seq = SequenceNumber(1), 
       participants = Seq(user1, user2),
       updatedAt = currentDateTime,
       url = "http://theenterprise.com",
@@ -39,16 +41,17 @@ class MessageSearcherTest extends Specification with TestInjector{
       pageTitleOpt = Some("cheese"),
       digest = "This is thread 1.",
       content = Seq(
-        user1 -> "Hey, how is life on the illogical side of things?",
-        user2 -> "Pretty good. Can't complain.",
-        user1 -> "Good to hear."
+        "Hey, how is life on the illogical side of things?",
+        "Pretty good. Can't complain.",
+        "Good to hear."
       ),
-      participantIds = Set(Id[User](1), Id[User](2)) 
+      participantIds = Seq(Id[User](1), Id[User](2)) 
     )
 
     val thread2 = ThreadContent(
       mode =  FULL,
-      id = Id[ThreadContent](2), 
+      id = Id[ThreadContent](2),
+      seq = SequenceNumber(2),  
       participants = Seq(user1, user2),
       updatedAt = currentDateTime,
       url = "http://thereliant.com",
@@ -56,15 +59,16 @@ class MessageSearcherTest extends Specification with TestInjector{
       pageTitleOpt = None,
       digest = "This is thread 2.",
       content = Seq(
-        user2 -> "How's the vulcan doing? Good?",
-        user1 -> "No complaints. Living long and prosper."
+        "How's the vulcan doing? Good?",
+        "No complaints. Living long and prosper."
       ),
-      participantIds = Set(Id[User](1), Id[User](2)) 
+      participantIds = Seq(Id[User](1), Id[User](2)) 
     )
 
     val thread3 = ThreadContent(
       mode =  FULL,
-      id = Id[ThreadContent](3), 
+      id = Id[ThreadContent](3),
+      seq = SequenceNumber(3),  
       participants = Seq(user1, user3),
       updatedAt = currentDateTime,
       url = "http://amazon.com",
@@ -72,26 +76,26 @@ class MessageSearcherTest extends Specification with TestInjector{
       pageTitleOpt = None,
       digest = "This is thread 3.",
       content = Seq(
-        user3 -> "Good evening Ambassador. How are you feeling?",
-        user2 -> "You are so illogical."
+        "Good evening Ambassador. How are you feeling?",
+        "You are so illogical."
       ),
-      participantIds = Set(Id[User](1), Id[User](3)) 
+      participantIds = Seq(Id[User](1), Id[User](3)) 
     )
 
     val threadIndexable1 = new MessageContentIndexable(
       data = thread1,
       id = thread1.id,
-      sequenceNumber = SequenceNumber(1)
+      sequenceNumber = thread1.seq
     )
     val threadIndexable2 = new MessageContentIndexable(
       data = thread2,
       id = thread2.id,
-      sequenceNumber = SequenceNumber(2)
+      sequenceNumber = thread2.seq
     )
     val threadIndexable3 = new MessageContentIndexable(
       data = thread3,
       id = thread3.id,
-      sequenceNumber = SequenceNumber(3)
+      sequenceNumber = thread3.seq
     )
 
     val threadIndexableIterable = Seq[Indexable[ThreadContent]](threadIndexable1,threadIndexable2,threadIndexable3)
@@ -99,6 +103,7 @@ class MessageSearcherTest extends Specification with TestInjector{
     val indexer = new MessageIndexer(
       indexDirectory =  new VolatileIndexDirectoryImpl(),
       indexWriterConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing),
+      eliza = new FakeElizaServiceClientImpl(inject[AirbrakeNotifier]),
       airbrake = inject[AirbrakeNotifier]
     )
 

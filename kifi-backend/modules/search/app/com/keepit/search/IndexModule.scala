@@ -20,6 +20,7 @@ import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserIndexerPlugin
 import com.keepit.search.user.UserIndexerPluginImpl
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 import org.apache.commons.io.FileUtils
 
 trait IndexModule extends ScalaModule with Logging {
@@ -130,11 +131,11 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def messageIndexer(backup: IndexStore, airbrake: AirbrakeNotifier): MessageIndexer = {
+  def messageIndexer(backup: IndexStore, eliza: ElizaServiceClient, airbrake: AirbrakeNotifier): MessageIndexer = {
     val dir = getIndexDirectory(current.configuration.getString("index.message.directory"), backup)
     log.info(s"storing message index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new MessageIndexer(dir, config, airbrake)
+    new MessageIndexer(dir, config, eliza, airbrake)
   }
 
   @Singleton

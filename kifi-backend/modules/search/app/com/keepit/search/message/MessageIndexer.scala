@@ -7,8 +7,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.net.{URI, Host}
 import com.keepit.common.strings.UTF8
-import com.keepit.social.BasicUser
-import com.keepit.model.User
+import com.keepit.eliza.ElizaServiceClient
 
 import org.apache.lucene.store.Directory
 import org.apache.lucene.index.IndexWriterConfig
@@ -16,16 +15,10 @@ import org.apache.lucene.document.Document
 
 import play.api.libs.json.Json
 
-import org.joda.time.DateTime
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import java.io.StringReader
-
-
-
-
-sealed trait ThreadContentUpdateMode 
-case object DIFF extends ThreadContentUpdateMode //ZZZ not supported yet
-case object FULL extends ThreadContentUpdateMode
 
 
 object ThreadIndexFields {
@@ -41,18 +34,7 @@ object ThreadIndexFields {
   val resultLengthField = "mt_result_length"
 }
 
-case class ThreadContent( //ZZZ here for testing, will move to common, to be used by Eliza and Search
-  mode: ThreadContentUpdateMode,
-  id: Id[ThreadContent],
-  participants: Seq[BasicUser],
-  updatedAt: DateTime,
-  url: String,
-  threadExternalId: String,
-  pageTitleOpt: Option[String],
-  digest: String,
-  content: Seq[(BasicUser,String)],
-  participantIds: Set[Id[User]] 
-)
+
 
 class MessageContentIndexable(
     val data: ThreadContent,
@@ -67,21 +49,20 @@ class MessageContentIndexable(
 
     //add the content 
     val threadContentList = (0 until data.content.length).map{ i =>
-      val (sender, message) = data.content(i)
-      val senderName = sender.firstName + sender.lastName
+      val message = data.content(i)
       val messageLang = LangDetector.detect(message, preferedLang)
-      (i, (senderName, message), messageLang)
+      (i, message, messageLang)
     }
 
-    val content = buildLineField(ThreadIndexFields.contentField, threadContentList){ (fieldName, userAndText, lang) =>
+    val content = buildLineField(ThreadIndexFields.contentField, threadContentList){ (fieldName, text, lang) =>
       val analyzer = DefaultAnalyzer.forIndexing(lang)
-      analyzer.tokenStream(fieldName, new StringReader(userAndText._1 + "\n\n" + userAndText._2))
+      analyzer.tokenStream(fieldName, new StringReader(text))
     }
     doc.add(content)
 
-    val contentStemmed = buildLineField(ThreadIndexFields.contentStemmedField, threadContentList){ (fieldName, userAndText, lang) =>
+    val contentStemmed = buildLineField(ThreadIndexFields.contentStemmedField, threadContentList){ (fieldName, text, lang) =>
       val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
-      analyzer.tokenStream(fieldName, new StringReader(userAndText._2))
+      analyzer.tokenStream(fieldName, new StringReader(text))
     }
     doc.add(contentStemmed)
 
@@ -142,15 +123,36 @@ class MessageContentIndexable(
 class MessageIndexer(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
+    eliza: ElizaServiceClient,
     airbrake: AirbrakeNotifier)
   extends Indexer[ThreadContent](indexDirectory, indexWriterConfig) {
+
+    var indexingInProgress : Boolean = false
+    val loadBatchSize : Int = 100
+    val commitBatchSize : Int = 50
+    val updateLock = new AnyRef
+
   
-    def update() = { //ZZZ Todo
+    def update() = updateLock.synchronized {
       resetSequenceNumberIfReindex()
-      //lock?
-      //get things to index from eliza given sequence number and batch size
-      //convert them to an indexable
-      //call indexDocuments( Iterbale[Indexable[MessageContent]], commitBatchSize: Int)
+      if (!indexingInProgress){
+        indexingInProgress = true 
+
+        var done: Boolean = false
+        while(!done){
+          val batch = Await.result(eliza.getThreadContentForIndexing(sequenceNumber.value, loadBatchSize), 60 seconds)
+          val indexables = batch.map{ threadContent =>
+            new MessageContentIndexable(
+              data = threadContent,
+              id = threadContent.id,
+              sequenceNumber = threadContent.seq
+            )
+          }
+          indexDocuments(indexables.iterator, commitBatchSize)
+          if (batch.length==0) done=true
+        }
+        indexingInProgress = false
+      }
     }
 
   }
