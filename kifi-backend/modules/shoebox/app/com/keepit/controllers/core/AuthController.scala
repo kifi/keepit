@@ -138,17 +138,15 @@ class AuthController @Inject() (
     val actualProvider = if (authType == AuthType.LoginAndLink) SocialNetworks.FORTYTWO.authProvider else provider
     ProviderController.authenticate(actualProvider)(augmentedRequest) match {
       case res: SimpleResult[_] =>
-        val resSession = Session.decodeFromCookie(
-          res.header.headers.get(SET_COOKIE).flatMap(Cookies.decode(_).find(_.name == Session.COOKIE_NAME)))
+        val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
+        val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
         // TODO: set FORTYTWO_USER_ID in login/signup cases instead of clearing it and then setting it on the next request
-
-        val responseCookies = res.header.headers.get(SET_COOKIE).map { sc => Cookies.decode(sc) }.getOrElse(Nil)
         authType match {
           case AuthType.Login =>
             if (format == "json" && res.header.headers.get("Location").isDefined) {
-              Ok(Json.obj("uri" -> res.header.headers.get("Location").get)).withCookies(responseCookies: _*).withSession(resSession)
+              Ok(Json.obj("uri" -> res.header.headers.get("Location").get)).withCookies(resCookies: _*)
             } else {
-              res.withSession(resSession)
+              res
             }
           case AuthType.Signup =>
             res.withSession(resSession - FORTYTWO_USER_ID
