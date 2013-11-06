@@ -18,6 +18,7 @@ POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.
 POST    /auth/social-finalize       @com.keepit.controllers.core.AuthController.socialFinalizeAccountAction()
 POST    /auth/upload-binary-image   @com.keepit.controllers.core.AuthController.uploadBinaryPicture()
 POST    /auth/upload-multipart-image @com.keepit.controllers.core.AuthController.uploadFormEncodedPicture()
+POST    /auth/cancel                @com.keepit.controllers.core.AuthController.cancelAuth()
 
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
@@ -85,15 +86,21 @@ GET     /session/end                @com.keepit.controllers.ext.ExtAuthControlle
 
 GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
 GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceController.normalize(url: String)
-GET     /ext/pref/rules                  @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
+GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs()
-POST    /ext/pref/keeperPosition         @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
-POST    /ext/pref/enterToSend            @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
-GET     /ext/user/friends                @com.keepit.controllers.ext.ExtUserController.getFriends()
-GET     /ext/user/networks               @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
+POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
+POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
+GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
+GET     /ext/user/networks          @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
+
+##########################################
+# Mobile V1
+##########################################
+GET     /m/1/user/friends           @com.keepit.controllers.mobile.MobileUserController.getFriends()
+GET     /m/1/user/networks          @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 
 ##########################################
 # Website

@@ -7,15 +7,18 @@ import com.keepit.common.net.URI
 import org.apache.tika.sax.{Link, LinkContentHandler, TeeContentHandler}
 import org.xml.sax.ContentHandler
 import scala.collection.JavaConversions._
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
+import com.keepit.model.HttpProxy
 
 class LinkProcessingExtractor(
   url: String,
   maxContentChars: Int,
   htmlMapper: Option[HtmlMapper],
   processLink: Link => Option[String],
-  httpFetcher: HttpFetcher
-  // db: Database
-  // urlPatternRuleRepo: UrlPatternRuleRepo
+  httpFetcher: HttpFetcher,
+  shoeboxServiceClient: ShoeboxServiceClient
 )
 extends DefaultExtractor(url, maxContentChars, htmlMapper) {
 
@@ -30,11 +33,15 @@ extends DefaultExtractor(url, maxContentChars, htmlMapper) {
       linkUrl <- processLink(link)
     } yield linkUrl
     val linkedContentWithKeywords = relevantLinks.distinct.map { case linkUrl =>
+      val ts = System.currentTimeMillis
       log.info(s"Scraping additional content from link ${linkUrl} for url ${url}")
       val extractor = new DefaultExtractor(linkUrl, maxContentChars, htmlMapper)
-//      val proxy = db.readOnly {implicit session => urlPatternRuleRepo.getProxy(linkUrl) }
-//      httpFetcher.fetch(linkUrl, proxy = proxy)(extractor.process)
-      (extractor.getContent(), extractor.getKeywords())
+      val proxy = syncGetProxyP(url)
+      httpFetcher.fetch(linkUrl, proxy = proxy)(extractor.process)
+      val content = extractor.getContent
+      val keywords = extractor.getKeywords
+      log.info(s"Scraped additional content from link ${linkUrl} for url ${url}: time-lapsed:${System.currentTimeMillis - ts} content.len=${content.length} keywords=$keywords")
+      (content, keywords)
     }
     linkedContentWithKeywords.unzip
   }
@@ -44,12 +51,15 @@ extends DefaultExtractor(url, maxContentChars, htmlMapper) {
     val keywords = (super.getKeywords() +: linkedKeywords).flatten.mkString(" ● ● ● ")
     if (keywords.isEmpty) None else Some(keywords)
   }
+
+  private[extractor] def getProxyP(url: String):Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
+  private[extractor] def syncGetProxyP(url: String):Option[HttpProxy] = Await.result(getProxyP(url), 10 seconds)
 }
 
 @Singleton
-class LinkProcessingExtractorProvider @Inject() (httpFetcher: HttpFetcher /* db: Database urlPatternRuleRepo: UrlPatternRuleRepo */) extends ExtractorProvider {
+class LinkProcessingExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxServiceClient: ShoeboxServiceClient) extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
-  def apply(uri: URI) = new LinkProcessingExtractor(uri.toString, ScraperConfig.maxContentChars, DefaultExtractorProvider.htmlMapper, processLink(uri), httpFetcher /* db urlPatternRuleRepo */)
+  def apply(uri: URI) = new LinkProcessingExtractor(uri.toString, ScraperConfig.maxContentChars, DefaultExtractorProvider.htmlMapper, processLink(uri), httpFetcher, shoeboxServiceClient) // TODO
 
   private def processLink(uri: URI)(link: Link): Option[String] = {
     val url = uri.toString()

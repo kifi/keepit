@@ -3,10 +3,12 @@ package com.keepit.controllers.core
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 import com.keepit.common.controller.{AuthenticatedRequest, WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.ActionAuthenticator.FORTYTWO_USER_ID
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
+import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.social.SocialId
 import com.keepit.social.UserIdentity
@@ -45,6 +47,7 @@ object AuthController {
 
 class AuthController @Inject() (
     db: Database,
+    clock: Clock,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
     actionAuthenticator: ActionAuthenticator,
@@ -116,8 +119,8 @@ class AuthController @Inject() (
   def link(provider: String) = getAuthAction(provider, AuthType.Link)
   def linkByPost(provider: String) = getAuthAction(provider, AuthType.Link)
 
-  def signup(provider: String) = getAuthAction(provider, AuthType.Signup, "html")
-  def signupByPost(provider: String) = getAuthAction(provider, AuthType.Signup, "html")
+  def signup(provider: String) = getAuthAction(provider, AuthType.Signup)
+  def signupByPost(provider: String) = getAuthAction(provider, AuthType.Signup)
 
   // log in with username/password and link the account with a provider
   def passwordLoginAndLink(provider: String) = getAuthAction(provider, AuthType.LoginAndLink)
@@ -130,32 +133,34 @@ class AuthController @Inject() (
     db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
   }
 
-
-  private def getSession(res: SimpleResult[_], originalUrl: Option[String] = None)
-      (implicit request: RequestHeader): Session = {
-    val sesh = Session.decodeFromCookie(
-      res.header.headers.get(SET_COOKIE).flatMap(Cookies.decode(_).find(_.name == Session.COOKIE_NAME)))
-    val originalUrlOpt = sesh.get(SecureSocial.OriginalUrlKey) orElse originalUrl
-    originalUrlOpt map { url => sesh + (SecureSocial.OriginalUrlKey -> url) } getOrElse sesh
-  }
-
   private def getAuthAction(provider: String, authType: AuthType, format: String = "html"): Action[AnyContent] = Action { request =>
     val augmentedRequest = augmentRequestWithTag(request, "format" -> format)
     val actualProvider = if (authType == AuthType.LoginAndLink) SocialNetworks.FORTYTWO.authProvider else provider
     ProviderController.authenticate(actualProvider)(augmentedRequest) match {
       case res: SimpleResult[_] =>
-        val session = authType match {
-          case AuthType.Login => getSession(res)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID
-          case AuthType.Signup => getSession(res)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID +
-            (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)
-          case AuthType.Link => getSession(res, augmentedRequest.headers.get(HeaderNames.REFERER))(augmentedRequest)
-          case AuthType.LoginAndLink => getSession(res, None)(augmentedRequest) - ActionAuthenticator.FORTYTWO_USER_ID -
-            SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> provider)
-        }
-        if (authType == AuthType.Login && format == "json") {
-          Ok(Json.obj("success" -> true)).withSession(session)
-        } else {
-          res.withSession(session)
+        val resSession = Session.decodeFromCookie(
+          res.header.headers.get(SET_COOKIE).flatMap(Cookies.decode(_).find(_.name == Session.COOKIE_NAME)))
+        // TODO: set FORTYTWO_USER_ID in login/signup cases instead of clearing it and then setting it on the next request
+        authType match {
+          case AuthType.Login =>
+            if (format == "json" && res.header.headers.get("Location").isDefined) {
+              Ok(Json.obj("uri" -> res.header.headers.get("Location").get))
+            } else {
+              res
+            }.withSession(resSession - FORTYTWO_USER_ID)
+          case AuthType.Signup =>
+            res.withSession(resSession - FORTYTWO_USER_ID
+              + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
+          case AuthType.Link =>
+            if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
+              request.headers.get(HeaderNames.REFERER).map { url =>
+                res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
+              } getOrElse res
+            } else res
+          case AuthType.LoginAndLink =>
+            res.withSession(resSession - FORTYTWO_USER_ID
+              - SecureSocial.OriginalUrlKey  // TODO: why is OriginalUrlKey being removed? should we keep it?
+              + (AuthController.LinkWithKey -> provider))
         }
       case res => res
     }
@@ -221,9 +226,13 @@ class AuthController @Inject() (
                   val finalized = db.readOnly { implicit session =>
                     userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
                   }
-                  Ok(Json.obj("success"-> true, "email" -> emailAddress, "new_account" -> false, "finalized" -> finalized))
-                    .withSession(session + (ActionAuthenticator.FORTYTWO_USER_ID -> sui.userId.get.toString))
-                    .withCookies(authenticator.toCookie)
+                  if (finalized) {
+                    val uri = session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url)
+                    Ok(Json.obj("uri" -> uri))
+                      .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                  } else {
+                    Ok(Json.obj("success" -> true)).withSession(session + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                  }
                 }
               )
             } else {
@@ -238,7 +247,7 @@ class AuthController @Inject() (
             error => Status(INTERNAL_SERVER_ERROR)("0"),
             authenticator =>
               Ok(Json.obj("success"-> true, "email" -> emailAddress, "new_account" -> true))
-                .withSession(session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
+                .withSession(session + (FORTYTWO_USER_ID -> userId.toString))
                 .withCookies(authenticator.toCookie)
           )
         }
@@ -410,25 +419,25 @@ class AuthController @Inject() (
   private def finishSignup(newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
     if (!emailConfirmedAlready) {
       db.readWrite { implicit s =>
-        val email = newIdentity.email.get
-        val emailWithVerification =
-          emailAddressRepo.getByAddressOpt(email)
-            .map(emailAddressRepo.saveWithVerificationCode)
-            .get
+        val emailAddrStr = newIdentity.email.get
+        val emailAddr = emailAddressRepo.save(
+          emailAddressRepo.getByAddressOpt(emailAddrStr).get.withVerificationCode(clock.now))
         postOffice.sendMail(ElectronicMail(
           from = EmailAddresses.NOTIFICATIONS,
-          to = Seq(GenericEmailAddress(email)),
+          to = Seq(GenericEmailAddress(emailAddrStr)),
           subject = "Confirm your email address for Kifi",
-          htmlBody = s"Please confirm your email address by going to " +
-            s"$url${routes.AuthController.verifyEmail(emailWithVerification.verificationCode.get)}",
+          htmlBody = "Please confirm your email address by going to " +
+            s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}",
           category = ElectronicMailCategory("email_confirmation")
         ))
       }
     }
 
+    val uri = session.get(SecureSocial.OriginalUrlKey).getOrElse("/")
+
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
-      authenticator => Ok("1").withNewSession.withCookies(authenticator.toCookie)
+      authenticator => Ok(Json.obj("uri" -> uri)).withNewSession.withCookies(authenticator.toCookie)
     )
   }
 
@@ -490,13 +499,19 @@ class AuthController @Inject() (
     (newIdentity, user.get)
   }
 
-  def verifyEmail(code: String) = Action { implicit request =>
+  def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = doVerifyEmail(code)(_), unauthenticatedAction = requireLoginToVerifyEmail(code)(_))
+  def doVerifyEmail(code: String)(implicit request: AuthenticatedRequest[_]): Result = {
     db.readWrite { implicit s =>
-      if (emailAddressRepo.verifyByCode(code).isDefined) // TODO: distinguish redundant case, which is Some(false)
+      if (emailAddressRepo.verify(request.userId, code).isDefined) { // TODO: distinguish redundant case, which is Some(false)
         Ok(views.html.website.verifyEmail(success = true))
-      else
+      } else {
         BadRequest(views.html.website.verifyEmail(success = false))
+      }
     }
+  }
+  def requireLoginToVerifyEmail(code: String)(implicit request: Request[_]): Result = {
+    Redirect(routes.AuthController.signinPage())
+      .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
 
   def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doForgotPassword(_), unauthenticatedAction = doForgotPassword(_))
@@ -637,6 +652,12 @@ class AuthController @Inject() (
         }
       case None => Forbidden(JsNumber(0))
     }
+  }
+
+  def cancelAuth() = HtmlAction(allowPending = true)(authenticatedAction = doCancelPage(_), unauthenticatedAction = doCancelPage(_))
+  private def doCancelPage(implicit request: Request[_]): Result = {
+    // todo(Andrew): Remove user and credentials
+    Redirect(securesocial.controllers.routes.LoginPage.logout)
   }
 
 }

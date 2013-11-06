@@ -32,12 +32,19 @@ case class AirbrakeError(
 
   lazy val trimmedMessage = message.map(_.toString.abbreviate(AirbrakeError.MaxMessageSize))
   override def toString(): String = {
-    s"${super.toString()}\n${exception.getStackTrace mkString "\nat \t"}"
+    s"${super.toString()}\n${rootException.getStackTrace mkString "\nat \t"}"
   }
 
+  private val maxCauseDepth = 5
   lazy val rootException: Throwable = findRootException(exception)
-  private def findRootException(throwable: Throwable): Throwable =
-    Option(exception.getCause()).map(c => findRootException(c)).getOrElse(throwable)
+  private def findRootException(throwable: Throwable, depth: Int = 0): Throwable = {
+    if (depth > maxCauseDepth) {
+      System.err.println(s"[AirbrakeError] Depth was greater than $maxCauseDepth")
+      exception.printStackTrace()
+      throwable
+    }
+    else Option(throwable.getCause()).map(c => findRootException(c, depth + 1)).getOrElse(throwable)
+  }
 
   private val Max8M = 8 * 1024 * 1024
 

@@ -4,7 +4,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ScrapeInfoRepo, ScrapeInfo, NormalizedURI}
+import com.keepit.model.{ScrapeInfoStates, ScrapeInfoRepo, ScrapeInfo, NormalizedURI}
 import com.keepit.search.Article
 
 import akka.actor._
@@ -89,7 +89,7 @@ class ScraperPluginImpl @Inject() (
     } else {
       log.info(s"[asyncScrape] invoke (remote) Scraper service; url=${uri.url}")
       val info = db.readWrite { implicit s =>
-        scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
+        scrapeInfoRepo.getByUriId(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
       }
       scraperClient.asyncScrapeWithInfo(uri, info)
     }
@@ -100,11 +100,20 @@ class ScraperPluginImpl @Inject() (
     if (scraperConfig.disableScraperService) {
       actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
     } else {
-      log.info(s"[scheduleScrape] invoke (remote) Scraper service; url=${uri.url}")
-      val info = db.readWrite { implicit s =>
-        scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
+      log.info(s"[scheduleScrape] invoke (remote) Scraper service; uri=(${uri.id}, ${uri.state}, ${uri.url})")
+
+      val uriId = uri.id.get
+      val info = db.readOnly { implicit s =>
+        scrapeInfoRepo.getByUriId(uriId)
       }
-      val f = scraperClient.scheduleScrape(uri, info)
+      val toSave = info match {
+        case Some(s) => s.withState(ScrapeInfoStates.PENDING)
+        case None => ScrapeInfo(uriId = uriId, state = ScrapeInfoStates.PENDING)
+      }
+      val saved = db.readWrite { implicit s =>
+        scrapeInfoRepo.save(toSave)
+      }
+      val f = scraperClient.scheduleScrape(uri, saved)
       Await.result(f, 5 seconds) // should be really quick
     }
   }

@@ -21,8 +21,9 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import org.joda.time.Days
 import scala.util.Success
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.db.Id
+import com.keepit.common.db.{State, Id}
 import com.keepit.common.store.S3ScreenshotStore
+import java.io.File
 
 class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
@@ -57,7 +58,6 @@ class ScraperController @Inject() (
   }
 
   def asyncScrape() = Action(parse.json) { request =>
-    log.info(s"[asyncScrape] body=${request.body}")
     val normalizedUri = request.body.as[NormalizedURI]
     log.info(s"[asyncScrape] url=${normalizedUri.url}")
     val info = Await.result(shoeboxServiceClient.getScrapeInfo(normalizedUri), 10 seconds)
@@ -70,7 +70,6 @@ class ScraperController @Inject() (
 
 
   def asyncScrapeWithInfo() = Action(parse.json) { request =>
-    log.info(s"[asyncScrapeWithInfo] body=${request.body}")
     val jsValues = request.body.as[JsArray].value
     require(jsValues != null && jsValues.length == 2, "Expect args to be nUri & scrapeInfo")
     val normalizedUri = jsValues(0).as[NormalizedURI]
@@ -83,7 +82,6 @@ class ScraperController @Inject() (
   }
 
   def scheduleScrape() = Action(parse.json) { request =>
-    log.info(s"[scheduleScrape] body=${request.body}")
     val jsValues = request.body.as[JsArray].value
     require(jsValues != null && jsValues.length == 2, "Expect args to be nUri & scrapeInfo")
     val normalizedUri = jsValues(0).as[NormalizedURI]
@@ -96,9 +94,9 @@ class ScraperController @Inject() (
   private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
     processURI(uri, info)
   } catch {
-    case e: Throwable => {
-      log.error("uncaught exception while scraping uri %s".format(uri), e)
-      airbrake.notify(e)
+    case t: Throwable => {
+      log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
+      airbrake.notify(t)
       val latestUriOpt = syncGetNormalizedUri(uri)
       // update the uri state to SCRAPE_FAILED
       val savedUriOpt = for (latestUri <- latestUriOpt) yield {
@@ -210,7 +208,10 @@ class ScraperController @Inject() (
         case _ => fetchArticle(normalizedUri, httpFetcher, info)
       }
     } catch {
-      case _: Throwable => fetchArticle(normalizedUri, httpFetcher, info)
+      case t: Throwable => {
+        log.error(s"[fetchArticle] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
+        fetchArticle(normalizedUri, httpFetcher, info)
+      }
     }
   }
 
@@ -277,7 +278,10 @@ class ScraperController @Inject() (
           Error(fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed"))
       }
     } catch {
-      case e: Throwable => Error(-1, "fetch failed: %s".format(e.toString))
+      case e: Throwable => {
+        log.error(s"[fetchArticle] fetch failed ${normalizedUri.url} $info $httpFetcher;\nException: $e; Cause: ${e.getCause};\nStack trace:\n${e.getStackTrace.mkString(File.separator)}")
+        Error(-1, "fetch failed: %s".format(e.toString))
+      }
     }
   }
 
@@ -339,7 +343,7 @@ class ScraperController @Inject() (
 
   private[scraper] def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI = Await.result(saveNormalizedUri(uri), 5 seconds)
 
-  private[scraper] def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo] = shoeboxServiceClient.saveScrapeInfo(info)
+  private[scraper] def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo] = shoeboxServiceClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE))
 
   private[scraper] def syncSaveScrapeInfo(info:ScrapeInfo):ScrapeInfo = Await.result(saveScrapeInfo(info), 5 seconds)
 
