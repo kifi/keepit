@@ -1,8 +1,5 @@
 package com.keepit.model
 
-import java.math.BigInteger
-import java.security.SecureRandom
-
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
@@ -17,7 +14,6 @@ trait EmailAddressRepo extends Repo[EmailAddress] {
       (implicit session: RSession): Option[EmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
   def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Option[Boolean]
-  def saveWithVerificationCode(email: EmailAddress)(implicit session: RWSession): EmailAddress
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress]
 }
 
@@ -26,8 +22,6 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
   import DBSession._
-
-  private lazy val random: SecureRandom = new SecureRandom()
 
   override val table = new RepoTable[EmailAddress](db, "email_address") {
     def userId = column[Id[User]]("user_id", O.NotNull)
@@ -60,10 +54,5 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
 
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress] = {
     (for (e <- table if e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
-  }
-
-  def saveWithVerificationCode(email: EmailAddress)(implicit session: RWSession): EmailAddress = {
-    val code = new BigInteger(128, random).toString(36)
-    save(email.copy(verificationCode = Some(code)))
   }
 }

@@ -8,6 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
+import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.social.SocialId
 import com.keepit.social.UserIdentity
@@ -46,6 +47,7 @@ object AuthController {
 
 class AuthController @Inject() (
     db: Database,
+    clock: Clock,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
     actionAuthenticator: ActionAuthenticator,
@@ -417,17 +419,15 @@ class AuthController @Inject() (
   private def finishSignup(newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
     if (!emailConfirmedAlready) {
       db.readWrite { implicit s =>
-        val email = newIdentity.email.get
-        val emailWithVerification =
-          emailAddressRepo.getByAddressOpt(email)
-            .map(emailAddressRepo.saveWithVerificationCode)
-            .get
+        val emailAddrStr = newIdentity.email.get
+        val emailAddr = emailAddressRepo.save(
+          emailAddressRepo.getByAddressOpt(emailAddrStr).get.withVerificationCode(clock.now))
         postOffice.sendMail(ElectronicMail(
           from = EmailAddresses.NOTIFICATIONS,
-          to = Seq(GenericEmailAddress(email)),
+          to = Seq(GenericEmailAddress(emailAddrStr)),
           subject = "Confirm your email address for Kifi",
-          htmlBody = s"Please confirm your email address by going to " +
-            s"$url${routes.AuthController.verifyEmail(emailWithVerification.verificationCode.get)}",
+          htmlBody = "Please confirm your email address by going to " +
+            s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}",
           category = ElectronicMailCategory("email_confirmation")
         ))
       }
