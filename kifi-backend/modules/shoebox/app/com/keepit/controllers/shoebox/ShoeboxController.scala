@@ -344,6 +344,14 @@ class ShoeboxController @Inject() (
     Ok(JsArray(users.map{ u => Json.toJson(u)}))
   }
 
+  def getEmailsForUsers() = Action(parse.json) { request =>
+    val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
+    val emails = db.readOnly{ implicit s =>
+      userIds.map{userId => userId.id.toString -> emailAddressRepo.getByUser(userId).map{_.address}}.toMap
+    }
+    Ok(Json.toJson(emails))
+  }
+
   def getEmailAddressesForUsers() = Action(parse.json) { request =>
     val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val emails = db.readOnly{ implicit s =>
