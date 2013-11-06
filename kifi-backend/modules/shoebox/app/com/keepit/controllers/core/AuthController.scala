@@ -502,10 +502,13 @@ class AuthController @Inject() (
   def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = doVerifyEmail(code)(_), unauthenticatedAction = requireLoginToVerifyEmail(code)(_))
   def doVerifyEmail(code: String)(implicit request: AuthenticatedRequest[_]): Result = {
     db.readWrite { implicit s =>
-      if (emailAddressRepo.verify(request.userId, code).isDefined) { // TODO: distinguish redundant case, which is Some(false)
-        Ok(views.html.website.verifyEmail(success = true))
-      } else {
-        BadRequest(views.html.website.verifyEmail(success = false))
+      emailAddressRepo.verify(request.userId, code) match {
+        case true if request.user.state == UserStates.PENDING =>
+          Redirect("/?m=1")
+        case true =>
+          Redirect("/profile?m=1")
+        case _ =>  // TODO: make these links expire and handle "expired" case
+          BadRequest(views.html.website.verifyEmailError(error = "invalid_code"))
       }
     }
   }
