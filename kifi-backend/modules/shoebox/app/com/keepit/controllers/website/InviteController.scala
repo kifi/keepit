@@ -42,6 +42,9 @@ class InviteController @Inject() (db: Database,
   heimdal: HeimdalServiceClient)
     extends WebsiteController(actionAuthenticator) {
 
+  private def newSignup()(implicit request: Request[_]) =
+    request.cookies.get("QA").isDefined || current.configuration.getBoolean("newSignup").getOrElse(false)
+
   private def createBasicUserInvitation(socialUser: SocialUserInfo, state: State[Invitation]): BasicUserInvitation = {
     BasicUserInvitation(name = socialUser.fullName, picture = socialUser.getPictureUrl(75, 75), state = state)
   }
@@ -158,9 +161,8 @@ class InviteController @Inject() (db: Database,
     Redirect("/friends/invite")
   }
 
-  def acceptInvite(id: ExternalId[Invitation]) = Action {
+  def acceptInvite(id: ExternalId[Invitation]) = Action { implicit request =>
     db.readOnly { implicit session =>
-      val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
       val invitation = invitationRepo.getOpt(id)
       invitation match {
         case Some(invite) if (invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE) =>

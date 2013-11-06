@@ -43,7 +43,8 @@ class HomeController @Inject() (
     db.readWrite { implicit s => userValueRepo.setValue(request.userId, "has_seen_install", true.toString) }
   }
 
-  private def newSignup() = current.configuration.getBoolean("newSignup").getOrElse(false)
+  private def newSignup()(implicit request: Request[_]) =
+    request.cookies.get("QA").isDefined || current.configuration.getBoolean("newSignup").getOrElse(false)
 
   def version = Action {
     Ok(fortyTwoServices.currentVersion.toString)
@@ -74,7 +75,7 @@ class HomeController @Inject() (
   })
 
   def curtainHome = Action {
-    Ok(views.html.auth.auth())
+    Ok(views.html.auth.auth()).withCookies(Cookie("QA", "1"))
   }
 
   def kifiSiteRedirect(path: String) = Action {
