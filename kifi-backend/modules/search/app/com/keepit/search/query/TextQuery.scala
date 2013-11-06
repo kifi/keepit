@@ -161,8 +161,6 @@ class TextWeight(
   regularWeight: Weight,
   semanticWeight: Weight) extends Weight with Logging {
 
-  private[this] val tieBreakerMultiplier = 0.3f
-
   override def getQuery() = query
   override def scoresDocsOutOfOrder() = false
 
@@ -171,10 +169,10 @@ class TextWeight(
 
     val psub = if (personalWeight != null) personalWeight.getValueForNormalization() else 1.0f
     val rsub = if (regularWeight != null) regularWeight.getValueForNormalization() else 1.0f
-    val sumVal = psub + rsub
     val maxVal = max(psub, rsub)
     val boost = query.getBoost()
-    (((sumVal - maxVal) * tieBreakerMultiplier * tieBreakerMultiplier) + maxVal) * boost * boost
+
+    (maxVal * boost * boost)
   }
 
   override def normalize(norm: Float, topLevelBoost: Float): Unit = {
@@ -218,11 +216,11 @@ class TextWeight(
     val semanticScorer = if (semanticWeight != null) semanticWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) else null
 
     if (personalScorer == null && regularScorer == null) null
-    else new TextScorer(this, personalScorer, regularScorer, semanticScorer, query.getSemanticBoost, tieBreakerMultiplier)
+    else new TextScorer(this, personalScorer, regularScorer, semanticScorer, query.getSemanticBoost)
   }
 }
 
-class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scorer, semanticScorer: Scorer, semanticBoost: Float, tieBreakerMultiplier: Float) extends Scorer(weight) {
+class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scorer, semanticScorer: Scorer, semanticBoost: Float) extends Scorer(weight) {
   private[this] var doc = -1
   private[this] var docP = if (personalScorer == null) NO_MORE_DOCS else -1
   private[this] var docR = if (regularScorer == null) NO_MORE_DOCS else -1
@@ -253,7 +251,7 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
       val scoreSum = scoreP + scoreR
       val semScore = semanticScore()
 
-      scoreVal = (scoreMax + (scoreSum - scoreMax) * tieBreakerMultiplier) * semScore
+      scoreVal = scoreMax * semScore
     }
     scoreVal
   }
