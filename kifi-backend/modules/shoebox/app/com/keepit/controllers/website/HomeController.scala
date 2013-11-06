@@ -43,6 +43,8 @@ class HomeController @Inject() (
     db.readWrite { implicit s => userValueRepo.setValue(request.userId, "has_seen_install", true.toString) }
   }
 
+  private def newSignup() = current.configuration.getBoolean("newSignup").getOrElse(false)
+
   def version = Action {
     Ok(fortyTwoServices.currentVersion.toString)
   }
@@ -62,12 +64,10 @@ class HomeController @Inject() (
       Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
   }, unauthenticatedAction = { implicit request =>
-    val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
     if (newSignup && request.identityOpt.isDefined) {
       // User needs to sign up or (social) finalize
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-    }
-    else {
+    } else {
       // Non-user landing page
       Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
     }
@@ -121,7 +121,7 @@ class HomeController @Inject() (
 
       (email, friendsOnKifi)
     }
-    if (current.configuration.getBoolean("newSignup").getOrElse(false)) {
+    if (newSignup) {
       Ok(views.html.website.onboarding.userRequestReceived2(
         user = user,
         email = email,
@@ -137,7 +137,7 @@ class HomeController @Inject() (
       socialUserRepo.getByUser(request.user.id.get) map { su =>
         invitationRepo.getByRecipient(su.id.get) match {
           case Some(invite) =>
-            if(invite.state != InvitationStates.JOINED) {
+            if (invite.state != InvitationStates.JOINED) {
               invitationRepo.save(invite.withState(InvitationStates.JOINED))
               invite.senderUserId match {
                 case Some(senderUserId) =>
@@ -159,7 +159,11 @@ class HomeController @Inject() (
       }
     }
     setHasSeenInstall()
-    Ok(views.html.website.install(request.user))
+    if (newSignup) {
+      Ok(views.html.website.install2(request.user))
+    } else {
+      Ok(views.html.website.install(request.user))
+    }
   }
 
   def disconnect(networkString: String) = AuthenticatedHtmlAction { implicit request =>
