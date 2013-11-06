@@ -33,11 +33,11 @@ class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjec
 
           implicit val conf = com.keepit.scraper.ScraperConfig()
 
-          scrapeRepo.save(scrapeRepo.getByUri(nuri1.id.get).get.copy(signature = sig1.toBase64))
-          scrapeRepo.save(scrapeRepo.getByUri(nuri2.id.get).get.copy(signature = sig1.toBase64))
-          scrapeRepo.save(scrapeRepo.getByUri(nuri3.id.get).get.copy(signature = sig2.toBase64))
-          scrapeRepo.save(scrapeRepo.getByUri(nuri4.id.get).get.copy(signature = sig3.toBase64))
-          scrapeRepo.save(scrapeRepo.getByUri(nuri5.id.get).get.copy(signature = sig4.toBase64))
+          scrapeRepo.save(scrapeRepo.getByUriId(nuri1.id.get).get.copy(signature = sig1.toBase64))
+          scrapeRepo.save(scrapeRepo.getByUriId(nuri2.id.get).get.copy(signature = sig1.toBase64))
+          scrapeRepo.save(scrapeRepo.getByUriId(nuri3.id.get).get.copy(signature = sig2.toBase64))
+          scrapeRepo.save(scrapeRepo.getByUriId(nuri4.id.get).get.copy(signature = sig3.toBase64))
+          scrapeRepo.save(scrapeRepo.getByUriId(nuri5.id.get).get.copy(signature = sig4.toBase64))
 
           scrapeRepo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
         }

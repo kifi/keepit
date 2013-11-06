@@ -10,10 +10,8 @@ import com.keepit.model.Phrase
 import com.keepit.search.phrasedetector.{PhraseIndexable, PhraseIndexer}
 
 class FakePhraseIndexer extends PhraseIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)) {
-  def reload() = {}
-  def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true) = {}
-  def buildIndexable(data: Phrase): Indexable[Phrase] = throw new UnsupportedOperationException
-  def buildIndexable(id: Id[Phrase]): Indexable[Phrase] = throw new UnsupportedOperationException
+  def update() = 0
+  def getCommitBatchSize() = 0
 }
 
 case class FakePhraseIndexerModule() extends ScalaModule {

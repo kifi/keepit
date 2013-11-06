@@ -60,7 +60,7 @@ class ScraperAdminController @Inject() (
     articleStore.get(id) match {
       case Some(article) => {
         db.readOnly { implicit s =>
-          (normalizedURIRepo.get(article.id), scrapeInfoRepo.getByUri(article.id))
+          (normalizedURIRepo.get(article.id), scrapeInfoRepo.getByUriId(article.id))
         } match {
           case (uri, Some(info)) => Ok(html.admin.article(article, uri, info))
           case (uri, None) => errorMsg(id)
