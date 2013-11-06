@@ -1,4 +1,4 @@
-@(title: String = "kifi.com", styles: Html = Html(""), curtainsDrawn: Boolean = false, content: Html = Html(""), scripts: Html = Html(""))
+@(title: String = "kifi.com", headScripts: Html = Html(""), styles: Html = Html(""), curtainsDrawn: Boolean = false, content: Html = Html(""), scripts: Html = Html(""))
 <!DOCTYPE html>
 <head>
   <meta charset="utf-8">
@@ -16,6 +16,7 @@
   <title>@title</title>
   <meta name="viewport" content="width=device-width">
   <script>if (/^Mac/.test(navigator.platform)) document.documentElement.className = 'mac'</script>
+  @headScripts
   <link rel="stylesheet" href="/assets/css/normalize.css">
   <link rel="stylesheet" href="/assets/css/auth.css">
   <link rel="shortcut icon" type="image/png" href="/assets/images/kifi-favi-50.png">

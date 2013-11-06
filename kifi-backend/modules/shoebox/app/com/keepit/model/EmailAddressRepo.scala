@@ -10,6 +10,8 @@ import com.keepit.common.time._
 
 @ImplementedBy(classOf[EmailAddressRepoImpl])
 trait EmailAddressRepo extends Repo[EmailAddress] {
+  def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
+    (implicit session: RSession): Seq[EmailAddress]
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[EmailAddress]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
@@ -33,9 +35,15 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
         verificationCode <> (EmailAddress, EmailAddress.unapply _)
   }
 
+  def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
+    (implicit session: RSession): Seq[EmailAddress] =
+    (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).list
+
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
-      (implicit session: RSession): Option[EmailAddress] =
-    (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).firstOption
+      (implicit session: RSession): Option[EmailAddress] = {
+    val allAddresses = getByAddress(address, excludeState)
+    allAddresses.find(_.state == EmailAddressStates.VERIFIED).orElse(allAddresses.headOption)
+  }
 
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
     (for(f <- table if f.userId === userId && f.state =!= EmailAddressStates.INACTIVE) yield f).list
