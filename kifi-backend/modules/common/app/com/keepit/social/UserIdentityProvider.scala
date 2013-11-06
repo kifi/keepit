@@ -16,12 +16,14 @@ import securesocial.core.{Identity, UserService, IdentityProvider}
  * All our providers should extend this trait.
  */
 trait UserIdentityProvider extends IdentityProvider with Logging {
+  private def newSignup()(implicit request: Request[_]) =
+    request.cookies.get("QA").isDefined || current.configuration.getBoolean("newSignup").getOrElse(false)
+
   abstract override def authenticate[A]()(implicit request: Request[A]): Either[Result, Identity] = {
     log.info(s"UserIdentityProvider got request: $request")
     log.info(s"session data: ${request.session.data}")
     val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map { id => Id[User](id.toLong) }
-    // TODO: remove when we split login and signup
-    val allowSignup = !current.configuration.getBoolean("newSignup").getOrElse(false)
+    val allowSignup = newSignup // TODO: remove when we split login and signup
     doAuth() match {
       case Right(socialUser) =>
         val filledSocialUser = fillProfile(socialUser)

@@ -65,6 +65,9 @@ class AuthController @Inject() (
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
+  private def newSignup()(implicit request: Request[_]) =
+    request.cookies.get("QA").isDefined || current.configuration.getBoolean("newSignup").getOrElse(false)
+
   def mobileAuth(providerName: String) = Action(parse.json) { implicit request =>
     // format { "accessToken": "..." }
     val oauth2Info = request.body.asOpt[OAuth2Info]
@@ -101,7 +104,6 @@ class AuthController @Inject() (
       }
     }
   }, unauthenticatedAction = { implicit request =>
-    val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
     if (newSignup && request.identityOpt.isDefined) {
 
       // TODO(andrew): Handle special case. User tried to log in (not sign up) with social network, email exists in system but social user doesn't.
