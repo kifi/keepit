@@ -143,7 +143,7 @@ class MailToKeepActor @Inject() (
         subject = Option(newMessage.getSubject).getOrElse(""),
         htmlBody = htmlBody,
         inReplyTo = newMessage.getHeader("In-Reply-To").headOption.map(ElectronicMailMessageId.fromEmailHeader),
-        category = PostOffice.Categories.EMAIL_KEEP
+        category = PostOffice.Categories.User.EMAIL_KEEP
       ))
     }
   }

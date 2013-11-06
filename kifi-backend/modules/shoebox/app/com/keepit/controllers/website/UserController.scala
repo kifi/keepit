@@ -258,7 +258,7 @@ class UserController @Inject() (
         to = Seq(EmailAddresses.EFFI),
         subject = s"${request.user.firstName} ${request.user.lastName} wants more invites.",
         htmlBody = s"Go to https://admin.kifi.com/admin/user/${request.userId} to give more invites.",
-        category = PostOffice.Categories.INVITATION))
+        category = PostOffice.Categories.User.INVITATION))
     }
     Ok
   }

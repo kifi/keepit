@@ -107,12 +107,12 @@ class HomeController @Inject() (
             subject = s"""${su.fullName} wants to be let in!""",
             htmlBody = s"""<a href="https://admin.kifi.com/admin/user/${user.id.get}">${su.fullName}</a> wants to be let in!\n<br/>
                            Go to the <a href="https://admin.kifi.com/admin/invites?show=accepted">admin invitation page</a> to accept or reject this user.""",
-            category = PostOffice.Categories.ADMIN))
+            category = PostOffice.Categories.System.ADMIN))
         }
       }
     }
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
-      val email = emailRepo.getByUser(user.id.get).sortBy(a => a.verifiedAt.getOrElse(a.createdAt.minusYears(10)).getMillis).lastOption.map(_.address)
+      val email = emailRepo.getAllByUser(user.id.get).sortBy(a => a.verifiedAt.getOrElse(a.createdAt.minusYears(10)).getMillis).lastOption.map(_.address)
       val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
         val user = userRepo.get(u)
         if(user.state == UserStates.ACTIVE) Some(user.externalId)
@@ -141,7 +141,7 @@ class HomeController @Inject() (
               invitationRepo.save(invite.withState(InvitationStates.JOINED))
               invite.senderUserId match {
                 case Some(senderUserId) =>
-                  for (address <- emailAddressRepo.getByUser(senderUserId)) {
+                  for (address <- emailAddressRepo.getAllByUser(senderUserId)) {
                     postOffice.sendMail(ElectronicMail(
                       senderUserId = None,
                       from = EmailAddresses.CONGRATS,
@@ -149,7 +149,7 @@ class HomeController @Inject() (
                       to = List(address),
                       subject = s"${request.user.firstName} ${request.user.lastName} joined KiFi!",
                       htmlBody = views.html.email.invitationFriendJoined(request.user).body,
-                      category = PostOffice.Categories.INVITATION))
+                      category = PostOffice.Categories.User.INVITATION))
                   }
                 case None =>
               }

@@ -608,7 +608,7 @@ class AuthController @Inject() (
         if (emailAddress.state == EmailAddressStates.VERIFIED) {
           Some((user.id.get, (Set(emailAddress) ++ primaryEmail).map(emailToEmailHolder)))
         } else {
-          val allUserEmailAddresses = emailAddressRepo.getByUser(emailAddress.userId)
+          val allUserEmailAddresses = emailAddressRepo.getAllByUser(emailAddress.userId)
           val _addrs = allUserEmailAddresses.filter(em => em.state == EmailAddressStates.VERIFIED).toSet ++ primaryEmail
           if (_addrs.isEmpty) {
             None // we could also send to the oldest email address on file

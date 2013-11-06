@@ -45,6 +45,8 @@ trait S3ImageStore {
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String): Future[Seq[(String, Try[PutObjectResult])]]
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[(String, Try[PutObjectResult])]]
 
+  def forceUpdateSocialPictures(userId: Id[User]): Unit
+
   // Returns (token, urlOfTempImage)
   def uploadTemporaryPicture(file: File): Try[(String, String)]
 
@@ -147,7 +149,7 @@ class S3ImageStoreImpl @Inject() (
           val putObj = uploadToS3(key, response.getAHCResponse.getResponseBodyAsStream, label = originalImageUrl)
 
           // TEMPORARY: While we still have the extension loading 0.jpg, upload that one as well.
-          uploadToS3(keyByExternalId(sizeName, externalId, "0.jpg"), response.getAHCResponse.getResponseBodyAsStream, label = "0.jpg of " + originalImageUrl)
+          uploadToS3(keyByExternalId(sizeName, externalId, "0"), response.getAHCResponse.getResponseBodyAsStream, label = "0.jpg of " + originalImageUrl)
           // ^^^^^^^^ Remove when extension is fixed ^^^^^^^^
 
           (pictureName, putObj)

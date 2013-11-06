@@ -11,14 +11,14 @@ import com.keepit.common.time._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.mail.{ElectronicMailCategory, EmailAddressHolder}
 
 case class EmailOptOut(
   id: Option[Id[EmailOptOut]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
-  address: String,
-  name: String,
-  value: String,
+  address: EmailAddressHolder,
+  category: ElectronicMailCategory,
   state: State[EmailOptOut] = EmailOptOutStates.ACTIVE
 ) extends Model[EmailOptOut] {
   def withId(id: Id[EmailOptOut]) = this.copy(id = Some(id))

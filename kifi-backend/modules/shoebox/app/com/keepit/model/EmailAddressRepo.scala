@@ -12,7 +12,7 @@ import com.keepit.common.time._
 trait EmailAddressRepo extends Repo[EmailAddress] {
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[EmailAddress]
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
+  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress]
   def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Boolean
 }
@@ -37,7 +37,7 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
       (implicit session: RSession): Option[EmailAddress] =
     (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).firstOption
 
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
+  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
     (for(f <- table if f.userId === userId && f.state =!= EmailAddressStates.INACTIVE) yield f).list
 
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress] =

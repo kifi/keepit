@@ -75,7 +75,7 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
   }
 
   private def saveWithNewToken(passwordReset: PasswordReset)(implicit session: RWSession): PasswordReset = {
-    val code = strings.humanFriendlyToken(7) // 29**7 = 17,249,876,309 combinations, must be used in 30 minutes
+    val code = strings.humanFriendlyToken(8) // 29**7 = 500 billion combinations, must be used in 30 minutes
     save(passwordReset.copy(token = code))
   }
 }
