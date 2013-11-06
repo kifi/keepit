@@ -6,7 +6,9 @@ import com.keepit.scraper.ScraperConfig
 import org.joda.time.DateTime
 import scala.math._
 
-object ScrapeInfoStates extends States[ScrapeInfo]
+object ScrapeInfoStates extends States[ScrapeInfo] {
+  val PENDING = State[ScrapeInfo]("pending") // scheduled
+}
 
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
@@ -25,6 +27,7 @@ case class ScrapeInfo(
   def withState(state: State[ScrapeInfo]) = state match {
     case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
     case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
+    case ScrapeInfoStates.PENDING => copy(state = state, nextScrape = currentDateTime)
   }
 
   def withDestinationUrl(destinationUrl: Option[String]) = copy(destinationUrl = destinationUrl)

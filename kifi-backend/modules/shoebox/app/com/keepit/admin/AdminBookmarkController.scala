@@ -42,7 +42,7 @@ class AdminBookmarksController @Inject() (
         val bookmark = bookmarkRepo.get(id)
         val uri = uriRepo.get(bookmark.uriId)
         val user = userRepo.get(bookmark.userId)
-        val scrapeInfo = scrapeRepo.getByUri(bookmark.uriId)
+        val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
         val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri).getOrElse("")
         Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, screenshotUrl))
       }
@@ -116,7 +116,7 @@ class AdminBookmarksController @Inject() (
             bookmarks map (_.uriId) map uriRepo.get
           }}}
           scrapes <- future { time("load scrape info") { db.readOnly { implicit s =>
-            bookmarks map (_.uriId) map scrapeRepo.getByUri
+            bookmarks map (_.uriId) map scrapeRepo.getByUriId
           }}}
         } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
       }

@@ -128,12 +128,11 @@ class ShoeboxController @Inject() (
 
   def saveNormalizedURI() = SafeAsyncAction(parse.json) { request =>
     val ts = System.currentTimeMillis
-    log.info(s"[saveNormalizedURI] body=${request.body}")
     val normalizedUri = request.body.as[NormalizedURI]
     val saved = db.readWrite { implicit s =>
       normUriRepo.save(normalizedUri)
     }
-    log.info(s"[saveNormalizedURI(${normalizedUri.url})] time-lapsed: ${System.currentTimeMillis - ts} ms result=$saved")
+    log.info(s"[saveNormalizedURI] time-lapsed:${System.currentTimeMillis - ts} url=(${normalizedUri.url}) result=$saved")
     Ok(Json.toJson(saved))
   }
 
@@ -176,7 +175,7 @@ class ShoeboxController @Inject() (
     val httpProxyOpt = db.readOnly { implicit session =>
       urlPatternRuleRepo.getProxy(url)
     }
-    log.info(s"[getProxyP($url)] time-lapsed: ${System.currentTimeMillis - ts} ms; result=$httpProxyOpt")
+    log.info(s"[getProxyP] time-lapsed:${System.currentTimeMillis - ts} url=$url result=$httpProxyOpt")
     Ok(Json.toJson(httpProxyOpt))
   }
 
@@ -194,11 +193,10 @@ class ShoeboxController @Inject() (
     require(args != null && args.length >= 1, "Expect args to be url && opt[dstUrl] ")
     val url = args(0).as[String]
     val destinationUrl = if (args.length > 1) args(1).asOpt[String] else None
-    log.info(s"[isUnscrapableP] url=$url, dstUrl=$destinationUrl")
     val res = db.readOnly { implicit s =>
       (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
     }
-    log.info(s"[isUnscrapableP($url, $destinationUrl)] time-lapsed: ${System.currentTimeMillis - ts} ms; result=$res")
+    log.info(s"[isUnscrapableP] time-lapsed:${System.currentTimeMillis - ts} url=$url dstUrl=$destinationUrl result=$res")
     Ok(JsBoolean(res))
   }
 
@@ -241,25 +239,23 @@ class ShoeboxController @Inject() (
 
   def getScrapeInfo() = SafeAsyncAction(parse.json) { request =>
     val ts = System.currentTimeMillis
-    log.info(s"[getScrapeInfo] body=${request.body}")
     val json = request.body
     val uri = json.as[NormalizedURI]
     val info = db.readWrite { implicit s =>
-      scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
+      scrapeInfoRepo.getByUriId(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
     }
-    log.info(s"[getScrapeInfo(${uri.url})] time-lapsed: ${System.currentTimeMillis - ts} ms; result=$info")
+    log.info(s"[getScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=$info")
     Ok(Json.toJson(info))
   }
 
   def saveScrapeInfo() = SafeAsyncAction(parse.json) { request =>
     val ts = System.currentTimeMillis
-    log.info(s"[saveScrapeInfo] body=${request.body}")
     val json = request.body
     val info = json.as[ScrapeInfo]
     val saved = db.readWrite( { implicit s =>
       scrapeInfoRepo.save(info)
     })
-    log.info(s"[saveScrapeInfo] time-lapsed: ${System.currentTimeMillis - ts} ms; result=$saved")
+    log.info(s"[saveScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
     Ok(Json.toJson(saved))
   }
 
@@ -285,12 +281,12 @@ class ShoeboxController @Inject() (
   }
 
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]) = Action { request =>
+    val ts = System.currentTimeMillis
     val bookmarks = db.readOnly { implicit session =>
       bookmarkRepo.getByUriWithoutTitle(uriId)
     }
-    val res = Json.toJson(bookmarks)
-    log.info(s"[getBookmarksByUriWithoutTitle($uriId)] ${bookmarks} json=$res")
-    Ok(res)
+    log.info(s"[getBookmarksByUriWithoutTitle($uriId)] time-lapsed:${System.currentTimeMillis - ts} bookmarks(len=${bookmarks.length}):${bookmarks.mkString}")
+    Ok(Json.toJson(bookmarks))
   }
 
   def getLatestBookmark(uriId: Id[NormalizedURI]) = Action { request =>
