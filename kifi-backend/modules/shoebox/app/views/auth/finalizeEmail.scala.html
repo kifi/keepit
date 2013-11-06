@@ -1,4 +1,4 @@
-@(emailAddress: String, picturePath: String)
+@(emailAddress: String, picturePath: String, firstName: String, lastName: String)
 
 @content = {
 <div class="curtain-l"></div>
@@ -11,7 +11,7 @@
   <div class="signup-resume-email">@emailAddress</div>
   <a class="signup-resume-not-you" href="@securesocial.controllers.routes.LoginPage.logout()">Not you?</a>
 </div>
-@helper.emailSignupForm2()
+@helper.emailSignupForm2(firstName, lastName)
 
 @* down here to prevent transition side effects (1px shifting) in Chrome *@
 <h2 class="page-title">Finalize your account</h2>
@@ -20,9 +20,9 @@
 }
 
 @scripts = {
-<script src="assets/js/jquery-ui-position.min.js"></script>
-<script src="assets/js/jquery-ui-slider.min.js"></script>
-<script src="assets/js/auth.js"></script>
+<script src="/assets/js/jquery-ui-position.min.js"></script>
+<script src="/assets/js/jquery-ui-slider.min.js"></script>
+<script src="/assets/js/auth.js"></script>
 <script>
 $('body').addClass('curtains-drawn');
 setTimeout(function() {

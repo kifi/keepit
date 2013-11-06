@@ -148,6 +148,7 @@ class ServiceDiscoveryImpl @Inject() (
   }
 
   def myStatus : Option[ServiceStatus] = myInstance.map(_.remoteService.status)
+  private def myHealthyStatus: Option[ServiceStatus] = myInstance.map(_.remoteService.healthyStatus)
 
   def myVersion: ServiceVersion = services.currentVersion
 
@@ -160,7 +161,7 @@ class ServiceDiscoveryImpl @Inject() (
       selfCheckFuture.onComplete{
           case Success(passed) =>
             val result = if (passed) {
-              changeStatus(ServiceStatus.UP)
+              changeStatus(myHealthyStatus.get)
               selfCheckPromise.success(true)
             } else {
               changeStatus(ServiceStatus.SELFCHECK_FAIL)

@@ -283,7 +283,6 @@ object BooleanScorer {
 
 class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float, maxOverlapValue: Float, numSubScores: Int) extends Scorer(weight) {
 
-  private[this] val overlapValueUnit = maxOverlapValue / numSubScores
   private[this] val maxOptionalOverlapValue = maxOverlapValue - required.value
 
   private[this] var doc = -1
@@ -374,54 +373,79 @@ class BooleanOrScorer(weight: Weight, scorers: Array[(Scorer, Float)], coordFact
 extends Scorer(weight) with Logging {
 
   private[this] var doc = -1
+  private[this] var scoredDoc = -1
   private[this] var scoreValue = 0.0f
-  private[this] var overlapValue = 0.0f
-  private[this] val overlapValueUnit = maxOverlapValue / scorers.length
 
-  private[this] class ScorerDoc(scorer: Scorer, val value: Float) {
+  private[this] class ScorerDoc(scorer: Scorer, value: Float) {
     private[this] var _doc: Int = -1
+    private[this] var _state: Int = 0
 
     def doc: Int = _doc
 
+    def state: Int = _state
+
     def advance(target: Int) {
+      _state = 0
       _doc = scorer.advance(target)
     }
 
-    def scoreAndNext(): Float = {
-      val scoreVal = scorer.score()
+    def next() {
+      _state = 0
       _doc = scorer.nextDoc()
-      scoreVal
+    }
+
+    def prepare(): Float = {
+      _state = 1
+      value
+    }
+
+    def prepared: Boolean = (_state == 1)
+
+    def scoreAndNext(): Float = {
+      val sc = scorer.score()
+      _state = 0
+      _doc = scorer.nextDoc()
+      sc
     }
   }
 
   private[this] val pq = new PriorityQueue[ScorerDoc](scorers.length) {
-    override def lessThan(a: ScorerDoc, b: ScorerDoc) = (a.doc < b.doc)
+    override def lessThan(a: ScorerDoc, b: ScorerDoc) = ((a.doc < b.doc) || (a.doc == b.doc && a.state < b.state))
   }
 
   scorers.foreach{ case (s, v) => pq.insertWithOverflow(new ScorerDoc(s, v)) }
 
   override def docID() = doc
 
-  override def score(): Float = scoreValue
+  override def score(): Float = {
+    if (scoredDoc < doc) {
+      scoredDoc = doc
+      scoreValue = doScore()
+    }
+    scoreValue
+  }
 
-  private def doScore(): Float = {
-    var matchValue = 0.0f
+  @inline private[this] def doScore(): Float = {
     var sum = 0.0f
     var cnt = 0
     var top = pq.top
     while (top.doc == doc) {
-      sum += top.scoreAndNext
-      matchValue += top.value
+      sum += top.scoreAndNext()
       cnt += 1
       top = pq.updateTop()
     }
+    sum * coordFactors(cnt)
+  }
 
-    if (matchValue >= threshold || (matchValue >= thresholdForHotDocs && hotDocSet.get(doc))) {
-      overlapValue = matchValue
-      sum * coordFactors(cnt)
-    } else {
-      0.0f
+  @inline private[this] def qualified(): Boolean = {
+    var top = pq.top
+    var matchValue = 0.0f
+    while (top.doc == doc && !(top.prepared)) {
+      matchValue += top.prepare()
+      top = pq.updateTop()
     }
+
+    (matchValue >= threshold || (matchValue >= thresholdForHotDocs && hotDocSet.get(doc)))
   }
 
   override def nextDoc(): Int = advance(0)
@@ -437,19 +461,20 @@ extends Scorer(weight) with Logging {
       doc = top.doc
 
       while (doc < NO_MORE_DOCS) {
-        scoreValue = doScore() // doScore advances underlying scorers
-        if (scoreValue > 0.0f) return doc
-        doc = pq.top.doc
+        if (qualified()) return doc
+
+        while (top.doc == doc) {
+          top.next()
+          top = pq.updateTop()
+        }
+        doc = top.doc
       }
     }
     scoreValue = 0.0f
-    overlapValue = 0.0f
     NO_MORE_DOCS
   }
 
   override def freq(): Int = 1
-
-  def value = overlapValue
 }
 
 class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]) extends Scorer(weight) {

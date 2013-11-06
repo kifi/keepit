@@ -11,6 +11,7 @@ object ServiceStatus {
   case object STOPPING extends ServiceStatus("stopping")
   case object SICK extends ServiceStatus("sick")
   case object SELFCHECK_FAIL extends ServiceStatus("helthcheck_fail")
+  case object BACKING_UP extends ServiceStatus("backing_up")
 
   def fromString(str: String) = str match {
     case UP.name => UP
@@ -19,6 +20,7 @@ object ServiceStatus {
     case STOPPING.name => STOPPING
     case SICK.name => SICK
     case SELFCHECK_FAIL.name => SELFCHECK_FAIL
+    case BACKING_UP.name => BACKING_UP
   }
 
   implicit def format[T]: Format[ServiceStatus] = Format(

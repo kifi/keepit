@@ -14,13 +14,73 @@
     return this.each(forceLayout);
   };
   function forceLayout() {
-    this.clientHeight;
+    this.offsetHeight;
   }
+}());
+
+var kifi = {};
+kifi.form = (function () {
+  'use strict';
+  var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  return {
+    showError: function ($in, msg, opts) {
+      var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
+        .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
+        .css('visibility', '')
+        .delay(opts && opts.ms || 1000).fadeOut(300, removeError);
+      $in.blur();  // closes browser autocomplete suggestion list
+      $in.focus().select().on('input blur', removeError);
+      function removeError() {
+        $err.remove();
+        $in.off('input blur', removeError);
+      }
+    },
+    validateEmailAddress: function ($in) {
+      var s = $.trim($in.val());
+      if (!s) {
+        kifi.form.showError($in, 'Please enter your email address');
+      } else if (!emailAddrRe.test(s)) {
+        kifi.form.showError($in, 'Invalid email address');
+      } else {
+        return s;
+      }
+    },
+    validateNewPassword: function ($in) {
+      var s = $in.val();
+      if (!s) {
+        kifi.form.showError($in, 'Please choose a password<br>for your account', {ms: 1500});
+      } else if (s.length < 7) {
+        kifi.form.showError($in, 'Password must be at least 7 characters', {ms: 1500});
+      } else {
+        return s;
+      }
+    },
+    validatePassword: function ($in) {
+      var s = $in.val();
+      if (!s) {
+        kifi.form.showError($in, 'Please enter your password');
+      } else if (s.length < 7) {
+        kifi.form.showError($in, 'Incorrect password', {ms: 1500});
+      } else {
+        return s;
+      }
+    },
+    validateName: function ($in) {
+      var s = $.trim($in.val());
+      if (!s) {
+        kifi.form.showError($in,
+          '<div class=form-error-title>Name is required</div>' +
+          '<div class=form-error-explanation>We need your name so that<br>your friends will be able to<br>communicate with you</div>',
+          {ms: 3000});
+      } else {
+        return s;
+      }
+    }
+  };
 }());
 
 (function () {
   'use strict';
-  var baseUri = '';
   var $logoL = $('.curtain-logo-l');
   var $logoR = $('.curtain-logo-r');
 
@@ -41,73 +101,6 @@
     $('body').removeClass('curtains-drawn');
   });
 
-  $('.form-network').click(function (e) {
-    if (e.which !== 1) return;
-    var $a = $(this);
-    var network = ['facebook', 'linkedin'].filter($.fn.hasClass.bind($a))[0];
-    var $form = $a.closest('form');
-    if ($form.hasClass('signup-1')) {
-      window.location = baseUri + '/signup/' + network;
-    } else if ($form.hasClass('login')) {
-      window.location = baseUri + '/login/' + network;
-    }
-  });
-
-  var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-  function showFormError($in, msg, opts) {
-    var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
-      .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
-      .css('visibility', '')
-      .delay(opts && opts.ms || 1000).fadeOut(300, removeError);
-    $in.blur();  // closes browser autocomplete suggestion list
-    $in.focus().select().on('input blur', removeError);
-    function removeError() {
-      $err.remove();
-      $in.off('input blur', removeError);
-    }
-  }
-  function validateEmailAddress($in) {
-    var s = $.trim($in.val());
-    if (!s) {
-      showFormError($in, 'Please enter your email address');
-    } else if (!emailAddrRe.test(s)) {
-      showFormError($in, 'Invalid email address');
-    } else {
-      return s;
-    }
-  }
-  function validateNewPassword($in) {
-    var s = $in.val();
-    if (!s) {
-      showFormError($in, 'Please choose a password<br>for your account', {ms: 1500});
-    } else if (s.length < 7) {
-      showFormError($in, 'Password must be at least 7 characters', {ms: 1500});
-    } else {
-      return s;
-    }
-  }
-  function validatePassword($in) {
-    var s = $in.val();
-    if (!s) {
-      showFormError($in, 'Please enter your password');
-    } else if (s.length < 7) {
-      showFormError($in, 'Incorrect password', {ms: 1500});
-    } else {
-      return s;
-    }
-  }
-  function validateName($in) {
-    var s = $.trim($in.val());
-    if (!s) {
-      showFormError($in,
-        '<div class=form-error-title>Name is required</div>' +
-        '<div class=form-error-explanation>We need your name so that<br>your friends will be able to<br>communicate with you</div>',
-        {ms: 3000});
-    } else {
-      return s;
-    }
-  }
-
   var signup1Promise;
   $('.signup-1').submit(function (e) {
     if (signup1Promise && signup1Promise.state() === 'pending') {
@@ -115,21 +108,19 @@
     }
     $('.form-error').remove();
     var $form = $(this);
-    var email = validateEmailAddress($form.find('.form-email-addr'));
-    var password = email && validateNewPassword($form.find('.form-password'));
+    var email = kifi.form.validateEmailAddress($form.find('.form-email-addr'));
+    var password = email && kifi.form.validateNewPassword($form.find('.form-password'));
     if (email && password) {
-      signup1Promise = $.postJson(baseUri + '/auth/sign-up', {
+      signup1Promise = $.postJson($form.data('uri'), {
         email: email,
         password: password
       }).done(function (data) {
-        if (!data.finalized) {
+        if (!navigate(data)) {
           transitionTitle($('.signup-2').data('title'));
           $('body').addClass('finalizing droppable');
           setTimeout(function () {
             $('.form-first-name').focus();
           }, 200);
-        } else {
-          navigateToApp();
         }
       }).fail(function (xhr) {
         signup1Promise = null;
@@ -142,8 +133,11 @@
     var $title = $('.page-title');
     $title.after($title.clone().text(text)).addClass('obsolete').layout();
   }
-  function navigateToApp() {
-    window.location = '/';
+  function navigate(data) {
+    if (data.uri) {
+      window.location = data.uri;
+      return true;
+    }
   }
 
   var signup2Promise;
@@ -153,12 +147,12 @@
     }
     $('.form-error').remove();
     var $form = $(this);
-    var first = validateName($form.find('.form-first-name'));
-    var last = first && validateName($form.find('.form-last-name'));
+    var first = kifi.form.validateName($form.find('.form-first-name'));
+    var last = first && kifi.form.validateName($form.find('.form-last-name'));
     if (first && last) {
       var pic = $photo.data();
       signup2Promise = $.when(pic.uploadPromise).done(function (upload) {
-         signup2Promise = $.postJson(baseUri + '/auth/email-finalize', {
+         signup2Promise = $.postJson($form.data('uri'), {
           firstName: first,
           lastName: last,
           picToken: upload && upload.token,
@@ -168,7 +162,7 @@
           cropY: pic.y,
           cropSize: pic.size
         })
-        .done(navigateToApp)
+        .done(navigate)
         .fail(function (xhr) {
           signup2Promise = null;
         });
@@ -182,16 +176,16 @@
     }
     $('.form-error').remove();
     var $form = $(this);
-    var email = validateEmailAddress($form.find('.social-email'));
-    var password = validateNewPassword($form.find('.form-password'));
+    var email = kifi.form.validateEmailAddress($form.find('.social-email'));
+    var password = kifi.form.validateNewPassword($form.find('.form-password'));
     if (password) {
-      signup2Promise = $.postJson(baseUri + '/auth/social-finalize', {
+      signup2Promise = $.postJson($form.data('uri'), {
         firstName: $form.data('first'),
         lastName: $form.data('last'),
         email: email,
         password: password
       })
-      .done(navigateToApp)
+      .done(navigate)
       .fail(function (xhr) {
         signup2Promise = null;
       });
@@ -212,22 +206,22 @@
     var $form = $(this);
     var $email = $form.find('.form-email-addr');
     var $password = $form.find('.form-password');
-    var email = validateEmailAddress($email);
-    var password = email && validatePassword($password);
+    var email = kifi.form.validateEmailAddress($email);
+    var password = email && kifi.form.validatePassword($password);
     if (email && password) {
-      loginPromise = $.postJson(baseUri + '/auth/log-in', {
+      loginPromise = $.postJson($form.data('uri'), {
         username: email,
         password: password
       })
-      .done(navigateToApp)
+      .done(navigate)
       .fail(function (xhr) {
         loginPromise = null;
         if (xhr.status === 403) {
-          var o = xhr.responseJson;
-          if (o && o.error === 'no_such_user') {
-            showFormError($email, 'There is no account associated<br>with this email address', {ms: 2000});
+          var o = JSON.parse(xhr.responseText);
+          if (o.error === 'no_such_user') {
+            kifi.form.showError($email, 'No account with this email address', {ms: 1500});
           } else {
-            showFormError($password, 'Incorrect password');
+            kifi.form.showError($password, 'Incorrect password');
           }
         } else {
           // TODO: offline? 500?
@@ -255,10 +249,16 @@
     if (this.files && URL) {
       var upload = uploadPhotoXhr2(this.files);
       if (upload) {
-        showLocalPhotoDialog(upload)
+        // wait for file dialog to go away before starting dialog transition
+        setTimeout(showLocalPhotoDialog.bind(null, upload), 200);
       }
     } else {
       uploadPhotoIframe(this.form);
+    }
+  });
+  $('.form-photo-file-a').click(function (e) {
+    if (e.which === 1) {
+      $('.form-photo-file').click();
     }
   });
   $(document).on('dragenter dragover drop', '.droppable', function (e) {
@@ -309,7 +309,7 @@
           deferred.reject();
         }
       });
-      xhr.open('POST', baseUri + '/auth/upload-binary-image', true);
+      xhr.open('POST', $photo.data('uri'), true);
       xhr.send(file);
       return {file: file, promise: deferred.promise()};
     }
@@ -343,7 +343,7 @@
     });
     form.method = 'POST';
     form.target = 'upload';
-    form.action = baseUri + '/auth/upload-multipart-image';
+    form.action = $photo.data('form-uri');
     form.submit();
 
     var fakeProgressTimer;
@@ -388,7 +388,7 @@
   }
 
   var photoDialog = (function () {
-    var $dialog, $mask, $image, $slider, deferred;
+    var $dialog, $mask, $image, $slider, deferred, hideTimer;
     var INNER_SIZE = 200;
     var SHADE_SIZE = 40;
     var OUTER_SIZE = INNER_SIZE + 2 * SHADE_SIZE;
@@ -404,6 +404,7 @@
         $mask = $('.photo-dialog-mask', $dialog).mousedown(onMaskMouseDown);
         $image = $(img).addClass('photo-dialog-img').insertBefore($mask);
         $slider = $('.photo-dialog-slider', $dialog);
+        clearTimeout(hideTimer), hideTimer = null;
 
         return (deferred = $.Deferred());
       }
@@ -434,7 +435,18 @@
         max: SLIDER_MAX,
         value: Math.round(SLIDER_MAX * (d0 - dMin) / (dMax - dMin)),
         slide: onSliderSlide.bind($image[0], $image.data(), percentToPx(dMin, dMax), wScale, hScale)});
-      $dialog.appendTo('body');
+      $dialog.appendTo('body').layout().addClass('dialog-showing').find('.ui-slider-handle').focus();
+      onEsc(hide);
+    }
+
+    function hide() {
+      offEsc(hide);
+      $dialog.removeClass('dialog-showing');
+      hideTimer = setTimeout(function () {
+        $dialog.remove();
+        $image.remove();
+        $mask = $image = $slider = deferred = hideTimer = null;
+      }, 500);
     }
 
     function percentToPx(pxMin, pxMax) {
@@ -502,8 +514,6 @@
       var submitted = $el.hasClass('photo-dialog-submit');
       if (submitted || $el.is('.photo-dialog-cancel,.photo-dialog-x,.dialog-cell')) {
         var o = $image.data();
-        $dialog.remove();
-        $image.remove();
         if (submitted) {
           var scale = o.naturalWidth / o.width;
           deferred.resolve({
@@ -515,22 +525,34 @@
         } else {
           deferred.reject();
         }
-        $mask = $image = $slider = deferred = null;
+        hide();
       }
     }
   }());
 
   var resetPasswordDialog = (function () {
-    var $dialog, $form, promise;
+    var $dialog, $form, promise, hideTimer;
     return {
       show: function (emailAddr) {
         $dialog = $dialog || $('.reset-password').remove().css('display', '');
+        $dialog.removeClass('reset-password-sent').click(onDialogClick);
         $form = $dialog.find('.reset-password-form').submit(onFormSubmit);
+        clearTimeout(hideTimer), hideTimer = null;
 
-        $dialog.appendTo('body').click(onDialogClick);
+        $dialog.appendTo('body').layout().addClass('dialog-showing');
         $dialog.find('.reset-password-email').val(emailAddr).focus().select();
+        onEsc(hide);
       }
     };
+
+    function hide() {
+      offEsc(hide);
+      $dialog.removeClass('dialog-showing');
+      hideTimer = setTimeout(function () {
+        $dialog.remove();
+        $form = promise = null;
+      }, 500);
+    }
 
     function onFormSubmit(e) {
       e.preventDefault();
@@ -538,14 +560,15 @@
         return false;
       }
       var $email = $form.find('.reset-password-email');
-      var email = validateEmailAddress($email);
+      var email = kifi.form.validateEmailAddress($email);
       if (email) {
         promise = $.postJson(this.action, {email: email})
         .done(function (resp) {
           if (resp.error === 'no_account') {
-            showFormError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
+            kifi.form.showError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
           } else {
             $dialog.addClass('reset-password-sent');
+            setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 200);
           }
         })
         .always(function () {
@@ -555,20 +578,31 @@
     }
 
     function onDialogClick(e) {
-      if (e.which !== 1) return;
-      if (e.target.className === 'reset-password-submit') {
-        $form.submit();
-      } else if ($(e.target).is('.reset-password-cancel,.reset-password-x,.dialog-cell')) {
-        hideDialog();
+      if (e.which === 1) {
+        var $el = $(e.target);
+        if ($el.hasClass('reset-password-submit')) {
+          $form.submit();
+        } else if ($el.is('.reset-password-cancel,.reset-password-x,.dialog-cell')) {
+          hide();
+        }
       }
     }
-
-    function hideDialog() {
-      $dialog.remove().removeClass('reset-password-sent');
-      $form = null;
-      promise = null;
-    }
   }());
+
+  function onEsc(handler) {
+    onKeyDown.guid = handler.guid = handler.guid || $.guid++;
+    $(document).keydown(onKeyDown);
+    function onKeyDown(e) {
+      if (e.which === 27) {
+        handler(e);
+        e.preventDefault();
+      }
+    }
+  }
+
+  function offEsc(handler) {
+    $(document).off('keydown', handler);
+  }
 
   // from underscore.js 1.5.2 underscorejs.org
   function throttle(func, wait, options) {

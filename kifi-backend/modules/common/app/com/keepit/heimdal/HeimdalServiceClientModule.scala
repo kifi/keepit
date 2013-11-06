@@ -6,6 +6,7 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import com.keepit.common.actor.ActorInstance
+import com.keepit.common.time.Clock
 
 import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
@@ -21,12 +22,13 @@ case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
     airbrakeNotifier: AirbrakeNotifier,
-    actor: ActorInstance[HeimdalClientActor]): HeimdalServiceClient = {
+    actor: ActorInstance[HeimdalClientActor],
+    clock: Clock): HeimdalServiceClient = {
 
     new HeimdalServiceClientImpl(
       airbrakeNotifier,
       client,
       serviceDiscovery.serviceCluster(ServiceType.HEIMDAL),
-      actor)
+      actor, clock)
   }
 }

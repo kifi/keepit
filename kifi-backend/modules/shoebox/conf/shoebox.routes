@@ -18,6 +18,7 @@ POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.
 POST    /auth/social-finalize       @com.keepit.controllers.core.AuthController.socialFinalizeAccountAction()
 POST    /auth/upload-binary-image   @com.keepit.controllers.core.AuthController.uploadBinaryPicture()
 POST    /auth/upload-multipart-image @com.keepit.controllers.core.AuthController.uploadFormEncodedPicture()
+POST    /auth/cancel                @com.keepit.controllers.core.AuthController.cancelAuth()
 
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
@@ -26,7 +27,7 @@ POST    /authenticate/:provider     securesocial.controllers.ProviderController.
 # custom auth routes which set some session state
 
 # Standalone login page
-GET     /login/post                 @com.keepit.controllers.core.AuthController.postLogin()
+GET     /login/after                @com.keepit.controllers.core.AuthController.afterLogin()
 GET     /login/:provider            @com.keepit.controllers.core.AuthController.login(provider, format: String ?= "html")
 POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider, format: String ?= "html")
 POST    /login                      @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
@@ -45,11 +46,9 @@ POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.
 
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 
-GET     /resetPassword              @com.keepit.controllers.core.AuthController.resetPasswordPage()
-POST    /resetPassword              @com.keepit.controllers.core.AuthController.resetPassword()
-
-GET     /setPassword/:code          @com.keepit.controllers.core.AuthController.setNewPasswordPage(code: String)
-POST    /setPassword/:code          @com.keepit.controllers.core.AuthController.setNewPassword(code: String)
+POST    /password/forgot            @com.keepit.controllers.core.AuthController.forgotPassword()
+GET     /password/:code             @com.keepit.controllers.core.AuthController.setPasswordPage(code: String)
+POST    /password/set               @com.keepit.controllers.core.AuthController.setPassword()
 
 POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
@@ -87,15 +86,21 @@ GET     /session/end                @com.keepit.controllers.ext.ExtAuthControlle
 
 GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
 GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceController.normalize(url: String)
-GET     /ext/pref/rules                  @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
+GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs()
-POST    /ext/pref/keeperPosition         @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
-POST    /ext/pref/enterToSend            @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
-GET     /ext/user/friends                @com.keepit.controllers.ext.ExtUserController.getFriends()
-GET     /ext/user/networks               @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
+POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
+POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
+GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
+GET     /ext/user/networks          @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
+
+##########################################
+# Mobile V1
+##########################################
+GET     /m/1/user/friends           @com.keepit.controllers.mobile.MobileUserController.getFriends()
+GET     /m/1/user/networks          @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 
 ##########################################
 # Website
@@ -369,8 +374,9 @@ POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize @com.keep
 POST    /internal/shoebox/database/internNormalizedURI                 @com.keepit.controllers.shoebox.ShoeboxController.internNormalizedURI()
 GET     /internal/shoebox/database/getUsers                            @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
-POST     /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers(ids: String)
-POST     /internal/shoebox/database/getEmailsForUsers                   @com.keepit.controllers.shoebox.ShoeboxController.getEmailsForUsers(ids: String)
+POST     /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers()
+POST     /internal/shoebox/database/getEmailsForUsers                   @com.keepit.controllers.shoebox.ShoeboxController.getEmailsForUsers()
+POST     /internal/shoebox/database/getEmailAddressesForUsers                   @com.keepit.controllers.shoebox.ShoeboxController.getEmailAddressesForUsers()
 GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])
@@ -380,11 +386,14 @@ GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.sh
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Id[User])
 GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.shoebox.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
+GET     /internal/shoebox/database/getBookmarksByUriWithoutTitle @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])
+GET     /internal/shoebox/database/getLatestBookmark  @com.keepit.controllers.shoebox.ShoeboxController.getLatestBookmark(uriId: Id[NormalizedURI])
+POST    /internal/shoebox/database/saveBookmark       @com.keepit.controllers.shoebox.ShoeboxController.saveBookmark
 GET     /internal/shoebox/database/commentRecipientIds  @com.keepit.controllers.shoebox.ShoeboxController.getCommentRecipientIds(commentId: Id[Comment])
 POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.shoebox.ShoeboxController.sendMailToUser
-GET     /internal/shoebox/database/getPhrasesByPage   @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesByPage(page: Int, size: Int)
+GET     /internal/shoebox/database/getPhrasesChanged   @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getCollectionsChanged @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsChangedDeprecated(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/changedCollections @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getBookmarksInCollection @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksInCollection(collectionId: Id[Collection])
@@ -413,5 +422,10 @@ POST    /internal/geckoboard/refresh                  @com.keepit.reports.Geckob
 POST     /internal/shoebox/database/getScrapeInfo     @com.keepit.controllers.shoebox.ShoeboxController.getScrapeInfo
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.shoebox.ShoeboxController.saveScrapeInfo
 POST     /internal/shoebox/database/saveNormalizedURI @com.keepit.controllers.shoebox.ShoeboxController.saveNormalizedURI
+POST     /internal/shoebox/database/recordPermanentRedirect @com.keepit.controllers.shoebox.ShoeboxController.recordPermanentRedirect
+GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.shoebox.ShoeboxController.getProxy(url:String)
+POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.shoebox.ShoeboxController.getProxyP()
+GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])
+POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapableP
 
 ->  / common.Routes

@@ -12,4 +12,12 @@ package object strings {
     def abbreviate(count: Int) = StringUtils.abbreviate(str, count)
   }
 
+  private val humanFriendlyCharacters = Array('a','b','c','d','e','f','g','h','j','k','m','n','p','q','r','s','t','w','x','y','z','2','3','4','5','6','7','8','9')
+  def humanFriendlyToken(length: Int) = {
+    def nextChar: Char = {
+      val rnd = util.Random.nextInt(humanFriendlyCharacters.length)
+      humanFriendlyCharacters(rnd)
+    }
+    Seq.fill(length)(nextChar).mkString
+  }
 }

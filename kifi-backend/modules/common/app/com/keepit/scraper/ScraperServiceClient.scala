@@ -10,10 +10,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 import scala.concurrent.{Future, Promise}
-import play.api.libs.json.{JsValue, JsArray, Json, JsObject}
+import play.api.libs.json._
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.routes.Scraper
 import com.keepit.search.Article
+import play.api.libs.json.JsArray
 
 case class ScrapeTuple(uri:NormalizedURI, articleOpt:Option[Article])
 object ScrapeTuple {
@@ -29,6 +30,8 @@ trait ScraperServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SCRAPER
 
   def asyncScrape(uri:NormalizedURI):Future[(NormalizedURI, Option[Article])] // pass in simple url? not sure if Tuple2
+  def asyncScrapeWithInfo(uri:NormalizedURI, info:ScrapeInfo):Future[(NormalizedURI, Option[Article])]
+  def scheduleScrape(uri:NormalizedURI, info:ScrapeInfo):Future[Boolean] // ack
   def getBasicArticle(url:String):Future[Option[BasicArticle]]
 }
 
@@ -42,6 +45,19 @@ class ScraperServiceClientImpl @Inject() (
     call(Scraper.internal.asyncScrapeArticle, Json.toJson(uri)).map{ r =>
       val t = r.json.as[ScrapeTuple]
       (t.uri, t.articleOpt)
+    }
+  }
+
+  def asyncScrapeWithInfo(uri: NormalizedURI, info:ScrapeInfo): Future[(NormalizedURI, Option[Article])] = {
+    call(Scraper.internal.asyncScrapeArticleWithInfo, JsArray(Seq(Json.toJson(uri), Json.toJson(info)))).map{ r =>
+      val t = r.json.as[ScrapeTuple]
+      (t.uri, t.articleOpt)
+    }
+  }
+
+  def scheduleScrape(uri: NormalizedURI, info: ScrapeInfo): Future[Boolean] = {
+    call(Scraper.internal.scheduleScrape, JsArray(Seq(Json.toJson(uri), Json.toJson(info)))).map { r =>
+      r.json.as[JsBoolean].value
     }
   }
 
@@ -60,6 +76,10 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = ???
+
+  def asyncScrapeWithInfo(uri: NormalizedURI, info: ScrapeInfo): Future[(NormalizedURI, Option[Article])] = ???
+
+  def scheduleScrape(uri: NormalizedURI, info: ScrapeInfo): Future[Boolean] = ???
 
   def getBasicArticle(url: String): Future[Option[BasicArticle]] = ???
 

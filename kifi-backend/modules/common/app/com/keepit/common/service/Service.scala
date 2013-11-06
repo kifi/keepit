@@ -11,6 +11,7 @@ import play.api.Mode
 import play.api.Mode._
 import play.api.libs.json._
 import scala.concurrent.{Future, promise}
+import com.keepit.common.amazon.AmazonInstanceInfo
 
 case class ServiceVersion(val value: String) {
   override def toString(): String = value
@@ -18,17 +19,24 @@ case class ServiceVersion(val value: String) {
 
 sealed abstract class ServiceType(val name: String, val shortName: String) {
   def selfCheck() : Future[Boolean] = promise[Boolean].success(true).future
+  def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = ServiceStatus.UP
+  override def toString(): String = name
 }
 
 object ServiceType {
   case object SHOEBOX extends ServiceType("SHOEBOX", "SB")
-  case object SEARCH extends ServiceType("SEARCH", "SR")
   case object ELIZA extends ServiceType("ELIZA", "EZ")
   case object HEIMDAL extends ServiceType("HEIMDAL", "HD")
   case object ABOOK extends ServiceType("ABOOK", "AB")
   case object SCRAPER extends ServiceType("SCRAPER", "SC")
   case object DEV_MODE extends ServiceType("DEV_MODE", "DM")
   case object TEST_MODE extends ServiceType("TEST_MODE", "TM")
+  case object SEARCH extends ServiceType("SEARCH", "SR") {
+    override def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = instance.instanceType match {
+      case AmazonInstanceInfo.small => ServiceStatus.BACKING_UP
+      case _ => ServiceStatus.UP
+    }
+  }
 
   def fromString(str: String) = str match {
     case SHOEBOX.name => SHOEBOX

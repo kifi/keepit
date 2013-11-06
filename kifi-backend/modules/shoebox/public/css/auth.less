@@ -53,7 +53,7 @@ input[type=password] {
 @kifi-green: #9fc062;
 @kifi-blue: #85a4ea;
 
-/* curtains */
+// curtains
 @curtain-time: .42s;
 .curtain-l,
 .curtain-r {
@@ -79,7 +79,7 @@ input[type=password] {
   .translate(67%);
 }
 
-/* stuff on curtains */
+// stuff on curtains
 .curtain-logo-l,
 .curtain-logo-r {
   position: absolute;
@@ -199,7 +199,7 @@ input[type=password] {
   visibility: hidden;
 }
 
-/* back button */
+// back button
 .curtain-back {
   position: fixed;
   top: 0;
@@ -249,7 +249,7 @@ input[type=password] {
   opacity: .6;
 }
 
-/* right-side footer */
+// right-side footer
 footer {
   position: absolute;
   top: 56px;
@@ -292,7 +292,7 @@ footer {
   color: #fff;
 }
 
-/* main page */
+// main page
 .main-logo {
   width: 251px;
   height: 144px;
@@ -322,7 +322,42 @@ footer {
   .transition(opacity (.6 * @curtain-time) (.4 * @curtain-time) linear, transform @curtain-time ease-in-out);
 }
 
-/* form errors */
+// buttons
+.primary-button {
+  @bg-color: #92c152;
+  color: #fff;
+  background: @bg-color;
+  &:hover {
+    background: tint(@bg-color, 10%);
+  }
+  &:active {
+    background: shade(@bg-color, 10%);
+  }
+}
+.alt-button {
+  @bg-color: #6fa6ef;
+  color: #fff;
+  background: @bg-color;
+  &:hover {
+    background: tint(@bg-color, 10%);
+  }
+  &:active {
+    background: shade(@bg-color, 10%);
+  }
+}
+.cancel-button {
+  @bg-color: #e8e8e8;
+  color: #888;
+  background: @bg-color;
+  &:hover {
+    background: tint(@bg-color, 20%);
+  }
+  &:active {
+    background: shade(@bg-color, 10%);
+  }
+}
+
+// form errors
 @form-error-color: #ef6f6e;
 .form-error {
   position: absolute;
@@ -358,7 +393,7 @@ footer {
   line-height: 14px;
 }
 
-/* forms */
+// forms
 .signup,
 .login {
   display: none;
@@ -479,25 +514,15 @@ footer {
   font-size: 13px;
   font-weight: 300;
 }
-@primary-button-color: #92c152;
-@cancel-button-color: #e8e8e8;
 .form-submit {
   display: block;
   width: 50%;
   border: 0;
   padding: 0;
-  background: @primary-button-color;
-  color: #fff;
   height: 40px;
   line-height: 40px;
   text-align: center;
   -webkit-font-smoothing: antialiased;
-  &:hover {
-    background: tint(@primary-button-color, 10%);
-  }
-  &:active {
-    background: shade(@primary-button-color, 10%);
-  }
 }
 .terms {
   text-align: center;
@@ -508,7 +533,7 @@ footer {
   padding-bottom: 20px;
 }
 
-/* finalize new account */
+// finalize new account
 @signup-label-color: #6c839b;
 @signup-box-color: #ededed;
 .signup-2 {
@@ -696,20 +721,15 @@ footer {
   overflow: hidden;
   visibility: hidden;
 }
-@alt-button-color: #6fa6ef;
+.form-photo-file-a {
+  color: inherit;
+}
 .signup-2>.form-submit {
   margin: 20px auto 40px;
   width: 200px;
-  background: @alt-button-color;
-  &:hover {
-    background: tint(@alt-button-color, 10%);
-  }
-  &:active {
-    background: shade(@alt-button-color, 10%);
-  }
 }
 
-/* finalize transition */
+// finalize transition
 @finalize-time: .24s;
 .finalizing>.curtain-back {
   visibility: hidden;
@@ -767,7 +787,8 @@ footer {
   .transition(opacity (@finalize-time / 2) linear, visibility 0 (@finalize-time / 2));
 }
 
-/* dialogs */
+// dialogs
+@dialog-time: .25s;
 .dialog {
   display: table;
   position: fixed;
@@ -777,6 +798,8 @@ footer {
   height: 100%;
   z-index: 10;
   background: rgba(0,0,0,.5);
+  opacity: 0;
+  .transition(opacity @dialog-time linear);
 }
 .dialog-cell {
   display: table-cell;
@@ -789,9 +812,18 @@ footer {
   text-align: left;
   border-radius: 6px;
   position: relative;
+  .scale(.7, .7);
+  .transition(transform @dialog-time ease-in);
+}
+.dialog-showing {
+  opacity: 1;
+  .dialog-box {
+    .transform(none);
+    .transition-timing-function(ease-out);
+  }
 }
 
-/* photo dialog */
+// photo dialog
 @photo-size: 200px;
 @photo-padding: 40px;
 @canvas-margin: 12px;
@@ -910,28 +942,8 @@ footer {
     outline-color: #888;
   }
 }
-.photo-dialog-cancel {
-  color: #888;
-  background: @cancel-button-color;
-  &:hover {
-    background: tint(@cancel-button-color, 20%);
-  }
-  &:active {
-    background: shade(@cancel-button-color, 10%);
-  }
-}
-.photo-dialog-submit {
-  color: #fff;
-  background: @primary-button-color;
-  &:hover {
-    background: tint(@primary-button-color, 10%);
-  }
-  &:active {
-    background: shade(@primary-button-color, 10%);
-  }
-}
 
-/* reset password dialog */
+// reset password dialog
 @dialog-text-color: #515051;
 .reset-password .dialog-box {
   width: 480px;
@@ -1023,26 +1035,6 @@ footer {
     outline-color: #888;
   }
 }
-.reset-password-cancel {
-  color: #888;
-  background: @cancel-button-color;
-  &:hover {
-    background: tint(@cancel-button-color, 20%);
-  }
-  &:active {
-    background: shade(@cancel-button-color, 10%);
-  }
-}
-.reset-password-submit {
-  color: #fff;
-  background: @alt-button-color;
-  &:hover {
-    background: tint(@alt-button-color, 10%);
-  }
-  &:active {
-    background: shade(@alt-button-color, 10%);
-  }
-}
 .reset-password-success {
   position: absolute;
   top: 62px;
@@ -1068,7 +1060,7 @@ footer {
 }
 
 
-/* social signup 2 */
+// social signup 2
 .social-info,
 .form-creds {
   margin: 0 auto;
@@ -1168,7 +1160,7 @@ input.social-email {
   font-weight: normal;
 }
 
-/* retina image overrides */
+// retina image overrides
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .curtain-logo-l:before,
   .curtain-logo-r:before,

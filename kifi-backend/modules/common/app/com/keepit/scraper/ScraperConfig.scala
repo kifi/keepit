@@ -7,7 +7,15 @@ case class ScraperConfig(
   intervalDecrement: Double = 1.0d, //hours
   initialBackoff: Double = 1.0d, //hours
   maxBackoff: Double = 1024.0d, //hours
-  changeThreshold: Double = 0.05
+  changeThreshold: Double = 0.05,
+  disableScraperService: Boolean = {
+    val p = System.getProperty("scraper.service.disable")
+    (p != null && p.equalsIgnoreCase("true"))
+  },
+  batchSize: Int = {
+    val p = System.getProperty("scraper.batch.size")
+    if (p != null) p.toInt else 2
+  }
 )
 
 object ScraperConfig {

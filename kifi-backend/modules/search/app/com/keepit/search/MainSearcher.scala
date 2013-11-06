@@ -20,6 +20,7 @@ import org.apache.lucene.search.Explanation
 import org.apache.lucene.util.PriorityQueue
 import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
+import com.keepit.search.query.TextQuery
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
@@ -60,6 +61,9 @@ class MainSearcher(
     private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
 
+  private[this] var parser: MainQueryParser = null
+  def getParserUsed: Option[MainQueryParser] = Option(parser)
+
   private[this] var parsedQuery: Option[Query] = None
   def getParsedQuery: Option[Query] = parsedQuery
 
@@ -72,6 +76,7 @@ class MainSearcher(
   private[this] val isInitialSearch = idFilter.isEmpty
 
   // get config params
+  private[this] val enableWarp = config.asBoolean("enableWarp")
   private[this] val newContentDiscoveryThreshold = config.asFloat("newContentDiscoveryThreshold")
   private[this] val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   private[this] val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
@@ -133,7 +138,7 @@ class MainSearcher(
     lang = LangDetector.detectShortText(queryString, langProbabilities)
 
     val hotDocs = new HotDocSetFilter()
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost, concatBoost)
+    parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost, concatBoost)
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
@@ -149,43 +154,52 @@ class MainSearcher(
       val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
       val friendlyUris = socialGraphInfo.friendlyUris
 
-      val namedQueryContext = parser.namedQueryContext
-      val semanticVectorScoreAccessor = namedQueryContext.getScoreAccessor("semantic vector")
+      val tPersonalSearcher = currentDateTime.getMillis()
+      val personalizedSearcher = getPersonalizedSearcher(articleQuery)
+      personalizedSearcher.setSimilarity(similarity)
+      timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
       val tClickBoosts = currentDateTime.getMillis()
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
       timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
 
-      val tPersonalSearcher = currentDateTime.getMillis()
-      val personalizedSearcher = getPersonalizedSearcher(articleQuery)
-      personalizedSearcher.setSimilarity(similarity)
-      timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
-      hotDocs.set(personalizedSearcher.browsingFilter, clickBoosts)
+      val warped = if (enableWarp && isInitialSearch && filter.isDefault) {
+        val warpThreshold = config.asFloat("maxResultClickBoost") * 0.8
+        socialGraphInfo.myUris.find{ id => clickBoosts(id) > warpThreshold } match {
+          case Some(id) =>
+            val clickBoost = clickBoosts(id)
+            myUriEdgeAccessor.seek(id)
+            myHits.insert(id, clickBoost, 1.0f, clickBoost, true, !myUriEdgeAccessor.isPublic)
+            true
+          case _ => false
+        }
+      } else false
 
       val tLucene = currentDateTime.getMillis()
-      personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
-        val visibility = new ArticleVisibility(reader)
-        val mapper = reader.getIdMapper
-        var doc = scorer.nextDoc()
-        while (doc != NO_MORE_DOCS) {
-          val id = mapper.getId(doc)
-          if (!idFilter.contains(id)) {
-            val clickBoost = clickBoosts(id)
-            val score = scorer.score()
-            val newSemanticScore = semanticVectorScoreAccessor.getScore(doc)
-            if (friendlyUris.contains(id)) {
-              if (myUriEdgeAccessor.seek(id)) {
-                myHits.insert(id, score * clickBoost, score, newSemanticScore, clickBoost, true, !myUriEdgeAccessor.isPublic)
-              } else {
-                if (visibility.isVisible(doc)) friendsHits.insert(id, score * clickBoost, score, newSemanticScore, clickBoost, false, false)
+      if (!warped) {
+        hotDocs.set(personalizedSearcher.browsingFilter, clickBoosts)
+        personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
+          val visibility = new ArticleVisibility(reader)
+          val mapper = reader.getIdMapper
+          var doc = scorer.nextDoc()
+          while (doc != NO_MORE_DOCS) {
+            val id = mapper.getId(doc)
+            if (!idFilter.contains(id)) {
+              val clickBoost = clickBoosts(id)
+              val score = scorer.score()
+              if (friendlyUris.contains(id)) {
+                if (myUriEdgeAccessor.seek(id)) {
+                  myHits.insert(id, score * clickBoost, score, clickBoost, true, !myUriEdgeAccessor.isPublic)
+                } else {
+                  if (visibility.isVisible(doc)) friendsHits.insert(id, score * clickBoost, score, clickBoost, false, false)
+                }
+              } else if (filter.includeOthers) {
+                if (visibility.isVisible(doc)) othersHits.insert(id, score * clickBoost, score, clickBoost, false, false)
               }
-            } else if (filter.includeOthers) {
-              if (visibility.isVisible(doc)) othersHits.insert(id, score * clickBoost, score, newSemanticScore, clickBoost, false, false)
             }
+            doc = scorer.nextDoc()
           }
-          doc = scorer.nextDoc()
         }
-        namedQueryContext.reset()
       }
       timeLogs.search = currentDateTime.getMillis() - tLucene
       personalizedSearcher
@@ -324,7 +338,8 @@ class MainSearcher(
     var hitList = hits.toSortedList
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
-    val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
+    val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
+    val svVar = SemanticVariance.svVariance(textQueries, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
 
     // simple classifier
     val show = (parsedQuery, personalizedSearcher) match {
@@ -348,18 +363,18 @@ class MainSearcher(
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
-        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show,
+        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
         timeLogs = Some(timeLogs.toSearchTimeLogs),
+        collections = parser.collectionIds,
         lang = lang)
   }
 
   private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher, svVar: Float) = {
-    val semanticScoreThreshold = (1.0f - semanticBoost) + semanticBoost * 0.2f
     def classify(hit: MutableArticleHit) = {
       (hit.clickBoost) > 1.1f ||
       hit.scoring.recencyScore > 0.25f ||
       hit.scoring.textScore > 0.7f ||
-      (hit.scoring.textScore >= 0.04f && hit.semanticScore >= semanticScoreThreshold && svVar < 0.18f)
+      (hit.scoring.textScore >= 0.02f && svVar < 0.18f)
     }
     hitList.take(3).exists(classify(_))
   }
@@ -382,7 +397,7 @@ class MainSearcher(
     // TODO: use user profile info as a bias
     lang = LangDetector.detectShortText(queryString, langProbabilities)
     val hotDocs = new HotDocSetFilter()
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost, concatBoost)
+    parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost, concatBoost)
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
@@ -434,9 +449,9 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
 
   var overflow: MutableArticleHit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
 
-  def insert(id: Long, score: Float, textScore: Float, semanticScore: Float, clickBoost: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS, bookmarkCount: Int = 0) {
-    if (overflow == null) overflow = new MutableArticleHit(id, score, textScore, semanticScore, clickBoost, isMyBookmark, isPrivate, friends, bookmarkCount, null)
-    else overflow(id, score, textScore, semanticScore, clickBoost, isMyBookmark, isPrivate, friends, bookmarkCount)
+  def insert(id: Long, score: Float, textScore: Float, clickBoost: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS, bookmarkCount: Int = 0) {
+    if (overflow == null) overflow = new MutableArticleHit(id, score, textScore, clickBoost, isMyBookmark, isPrivate, friends, bookmarkCount, null)
+    else overflow(id, score, textScore, clickBoost, isMyBookmark, isPrivate, friends, bookmarkCount)
 
     if (score > highScore) highScore = score
 
@@ -494,12 +509,11 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
 
 
 // mutable hit object for efficiency
-class MutableArticleHit(var id: Long, var score: Float, var luceneScore: Float, var semanticScore: Float, var clickBoost: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int, var scoring: Scoring) {
-  def apply(newId: Long, newScore: Float, newTextScore: Float, newSemanticScore: Float, newClickBoost: Float, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newUsers: Set[Id[User]], newBookmarkCount: Int) = {
+class MutableArticleHit(var id: Long, var score: Float, var luceneScore: Float, var clickBoost: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int, var scoring: Scoring) {
+  def apply(newId: Long, newScore: Float, newTextScore: Float, newClickBoost: Float, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newUsers: Set[Id[User]], newBookmarkCount: Int) = {
     id = newId
     score = newScore
     luceneScore = newTextScore
-    semanticScore = newSemanticScore
     clickBoost = newClickBoost
     isMyBookmark = newIsMyBookmark
     isPrivate = newIsPrivate

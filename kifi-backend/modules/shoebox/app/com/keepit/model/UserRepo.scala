@@ -41,11 +41,11 @@ class UserRepoImpl @Inject() (
   override val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
-    def primaryEmailId = column[Id[EmailAddress]]("primary_email_id", O.Nullable)
     def pictureName = column[String]("picture_name", O.Nullable)
     def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
     def seq = column[SequenceNumber]("seq", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ primaryEmailId ~ state ~ pictureName.? ~ userPictureId.? ~ seq <> (User.apply _, User.unapply _)
+    def primaryEmailId = column[Id[EmailAddress]]("primary_email_id", O.Nullable)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state ~ pictureName.? ~ userPictureId.? ~ seq  ~ primaryEmailId.? <> (User.apply _, User.unapply _)
   }
   
   override def save(user: User)(implicit session: RWSession): User = {
@@ -98,9 +98,5 @@ class UserRepoImpl @Inject() (
   
   def getUsersSince(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[User] = {
     (for (r <- table if r.seq > seq) yield r).sortBy(_.seq).take(fetchSize).list
-  }
-
-  def getPrimaryEmailId(userId: Id[User])(implicit session: RSession): Option[Id[EmailAddress]] = {
-    (for (u <- table if u.id === userId) yield u.primaryEmailId).firstOption
   }
 }

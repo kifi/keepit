@@ -23,10 +23,11 @@ case class ServiceInstance(node: Node, var remoteService: RemoteService, thisIns
 
   def instanceInfo : AmazonInstanceInfo = remoteService.amazonInstanceInfo
 
-  def isAvailable : Boolean = isHealthy ||
-                              remoteService.status == ServiceStatus.SICK ||
-                              remoteService.status == ServiceStatus.SELFCHECK_FAIL
+  def isHealthy : Boolean = remoteService.status == remoteService.healthyStatus
 
-  def isHealthy : Boolean = remoteService.status == ServiceStatus.UP
+  def isUp: Boolean = remoteService.status == ServiceStatus.UP
 
+  def isAvailable : Boolean = isUp || isAlmostUp
+
+  private def isAlmostUp: Boolean = remoteService.healthyStatus == ServiceStatus.UP && (remoteService.status == ServiceStatus.SICK || remoteService.status == ServiceStatus.SELFCHECK_FAIL)
 }

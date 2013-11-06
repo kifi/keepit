@@ -32,11 +32,12 @@ import com.keepit.social.SocialId
 import com.keepit.model.NormalizedURIKey
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.UserConnectionIdKey
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, JsValue}
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.scraper.HttpRedirect
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -47,6 +48,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]]
+  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -55,7 +57,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def sendMail(email: ElectronicMail): Future[Boolean]
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
-  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]]
+  def getPhrasesChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Phrase]]
   def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Bookmark]]
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]]
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
@@ -65,6 +67,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
   def getBookmarksChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Bookmark]]
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]]
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Bookmark]]
+  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]]
+  def saveBookmark(bookmark:Bookmark): Future[Bookmark]
   def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiments: Future[Seq[SearchConfigExperiment]]
@@ -88,6 +93,11 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
   def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI):Future[NormalizedURI]
+  def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect):Future[NormalizedURI]
+  def getProxy(url:String):Future[Option[HttpProxy]]
+  def getProxyP(url:String):Future[Option[HttpProxy]]
+  def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
+  def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -175,6 +185,24 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Bookmark]] = {
+    call(Shoebox.internal.getBookmarksByUriWithoutTitle(uriId)).map { r =>
+      r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
+    }
+  }
+
+  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]] = {
+    call(Shoebox.internal.getLatestBookmark(uriId)).map { r =>
+      Json.fromJson[Option[Bookmark]](r.json).get
+    }
+  }
+
+  def saveBookmark(bookmark: Bookmark): Future[Bookmark] = {
+    call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark)).map { r =>
+      Json.fromJson[Bookmark](r.json).get
+    }
+  }
+
   def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]] = {
     call(Shoebox.internal.getCommentRecipientIds(commentId)).map{ r =>
       Json.fromJson[Seq[Long]](r.json).get.map(Id[User](_))
@@ -231,8 +259,8 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
     cacheProvider.basicUserCache.bulkGetOrElseFuture(userIds.map{ BasicUserUserIdKey(_) }.toSet){ keys =>
-      val query = keys.map(_.userId.id).mkString(",")
-      call(Shoebox.internal.getBasicUsers(query)).map{ res =>
+      val payload = JsArray(keys.toSeq.map(x => JsNumber(x.userId.id)))
+      call(Shoebox.internal.getBasicUsers(), payload).map{ res =>
         res.json.as[Map[String, BasicUser]].map{ u =>
           val id = Id[User](u._1.toLong)
           (BasicUserUserIdKey(id), u._2)
@@ -240,10 +268,20 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }.map{ m => m.map{ case (k, v) => (k.userId, v) } }
   }
-  
+
   def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
-    val ids = userIds.mkString(",")
-    call(Shoebox.internal.getEmailsForUsers(ids)).map{ res =>
+    implicit val idFormat = Id.format[User]
+    val payload = JsArray(userIds.map{ x => Json.toJson(x)})
+    call(Shoebox.internal.getEmailsForUsers(), payload).map{ res =>
+      res.json.as[Map[String, Seq[String]]]
+      .map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
+    }
+  }
+
+  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
+    implicit val idFormat = Id.format[User]
+    val payload = JsArray(userIds.map{ x => Json.toJson(x)})
+    call(Shoebox.internal.getEmailAddressesForUsers(), payload).map{ res =>
       res.json.as[Map[String, Seq[String]]]
       .map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
@@ -305,8 +343,8 @@ class ShoeboxServiceClientImpl @Inject() (
      call(Shoebox.internal.persistServerSearchEvent, metaData)
   }
 
-  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = {
-    call(Shoebox.internal.getPhrasesByPage(page, size)).map { r =>
+  def getPhrasesChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Phrase]] = {
+    call(Shoebox.internal.getPhrasesChanged(seqNum.value, fetchSize)).map { r =>
       Json.fromJson[Seq[Phrase]](r.json).get
     }
   }
@@ -372,7 +410,7 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.fromJson[Seq[NormalizedURI]](r.json).get
     }
   }
-  
+
   def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = {
     call(Shoebox.internal.getUserIndexable(seqNum, fetchSize)).map{ r =>
       r.json.as[JsArray].value.map{ x => Json.fromJson[User](x).get }
@@ -509,6 +547,36 @@ class ShoeboxServiceClientImpl @Inject() (
   def saveNormalizedURI(uri:NormalizedURI): Future[NormalizedURI] = {
     call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri)).map { r =>
       r.json.as[NormalizedURI]
+    }
+  }
+
+  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = {
+    call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect)))).map { r =>
+      r.json.as[NormalizedURI]
+    }
+  }
+
+  def getProxy(url:String):Future[Option[HttpProxy]] = {
+    call(Shoebox.internal.getProxy(url)).map { r =>
+      if (r.json == null) None else r.json.asOpt[HttpProxy]
+    }
+  }
+
+  def getProxyP(url:String):Future[Option[HttpProxy]] = {
+    call(Shoebox.internal.getProxyP, Json.toJson(url)).map { r =>
+      if (r.json == null) None else r.json.asOpt[HttpProxy]
+    }
+  }
+
+  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = {
+    call(Shoebox.internal.isUnscrapable(url, destinationUrl)).map { r =>
+      r.json.as[Boolean]
+    }
+  }
+
+  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = {
+    call(Shoebox.internal.isUnscrapableP, JsArray(Seq(Json.toJson(url), Json.toJson(destinationUrl)))).map { r =>
+      r.json.as[Boolean]
     }
   }
 }

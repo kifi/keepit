@@ -19,7 +19,8 @@ import play.api._
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 
-class HomeController @Inject() (db: Database,
+class HomeController @Inject() (
+  db: Database,
   userRepo: UserRepo,
   userValueRepo: UserValueRepo,
   socialUserRepo: SocialUserInfoRepo,
@@ -52,7 +53,7 @@ class HomeController @Inject() (db: Database,
       Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
         .withSession(session - AuthController.LinkWithKey)
     } else if (request.user.state == UserStates.PENDING) {
-      pendingHome() // todo(andrew): plug in new pending home view
+      pendingHome()
     } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
@@ -73,7 +74,7 @@ class HomeController @Inject() (db: Database,
   })
 
   def curtainHome = Action {
-    Ok(views.html.signup.auth())
+    Ok(views.html.auth.auth())
   }
 
   def kifiSiteRedirect(path: String) = Action {
@@ -111,7 +112,7 @@ class HomeController @Inject() (db: Database,
       }
     }
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
-      val email = emailRepo.getAllByUser(user.id.get).headOption.map(_.address)
+      val email = emailRepo.getByUser(user.id.get).sortBy(a => a.verifiedAt.getOrElse(a.createdAt.minusYears(10)).getMillis).lastOption.map(_.address)
       val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
         val user = userRepo.get(u)
         if(user.state == UserStates.ACTIVE) Some(user.externalId)
@@ -120,7 +121,15 @@ class HomeController @Inject() (db: Database,
 
       (email, friendsOnKifi)
     }
-    Ok(views.html.website.onboarding.userRequestReceived(user, email, friendsOnKifi))
+    if (current.configuration.getBoolean("newSignup").getOrElse(false)) {
+      Ok(views.html.website.onboarding.userRequestReceived2(
+        user = user,
+        email = email,
+        justVerified = request.queryString.get("m").map(_.headOption == Some("1")).getOrElse(false),
+        friendsOnKifi = friendsOnKifi))
+    } else {
+      Ok(views.html.website.onboarding.userRequestReceived(user, email, friendsOnKifi))
+    }
   }
 
   def install = AuthenticatedHtmlAction { implicit request =>
@@ -132,7 +141,7 @@ class HomeController @Inject() (db: Database,
               invitationRepo.save(invite.withState(InvitationStates.JOINED))
               invite.senderUserId match {
                 case Some(senderUserId) =>
-                  for (address <- emailAddressRepo.getAllByUser(senderUserId)) {
+                  for (address <- emailAddressRepo.getByUser(senderUserId)) {
                     postOffice.sendMail(ElectronicMail(
                       senderUserId = None,
                       from = EmailAddresses.CONGRATS,

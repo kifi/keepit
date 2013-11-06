@@ -8,12 +8,13 @@ import com.keepit.search.index.PersonalizedSearcher
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
+import org.apache.lucene.search.ComplexExplanation
+import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
-import org.apache.lucene.search.Weight
-import org.apache.lucene.search.ComplexExplanation
 import org.apache.lucene.search.Scorer
-import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.Weight
+import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.util.Bits
 import java.util.{Set => JSet}
 
@@ -40,18 +41,20 @@ class CollectionWeight(query: CollectionQuery, searcher: PersonalizedSearcher) e
     new IdSetFilter(edgeSet.destIdLongSet)
   }
 
+  private[this] val idf: Float = searcher.getSimilarity.asInstanceOf[TFIDFSimilarity].idf(idSetFilter.ids.size, searcher.indexReader.maxDoc)
+
   override def getQuery() = query
   override def scoresDocsOutOfOrder() = false
 
   override def getValueForNormalization() = {
-    val value = query.getBoost()
+    val value = query.getBoost() * idf
     (value * value)
   }
 
   private[this] var value = 0.0f
 
   override def normalize(norm: Float, topLevelBoost: Float) {
-    value = query.getBoost * norm * topLevelBoost
+    value = norm * topLevelBoost * query.getBoost * idf * idf
   }
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
@@ -75,11 +78,11 @@ class CollectionWeight(query: CollectionQuery, searcher: PersonalizedSearcher) e
   }
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    new CollectionScorer(query, this, idSetFilter.getDocIdSet(context, acceptDocs).iterator(), value)
+    new CollectionScorer(this, idSetFilter.getDocIdSet(context, acceptDocs).iterator(), value)
   }
 }
 
-class CollectionScorer(query: CollectionQuery, weight: CollectionWeight, iterator: DocIdSetIterator, scoreValue: Float) extends Scorer(weight) {
+class CollectionScorer(weight: CollectionWeight, iterator: DocIdSetIterator, scoreValue: Float) extends Scorer(weight) {
   override def docID(): Int = iterator.docID()
   override def nextDoc(): Int = iterator.nextDoc()
   override def advance(target: Int): Int = iterator.advance(target)

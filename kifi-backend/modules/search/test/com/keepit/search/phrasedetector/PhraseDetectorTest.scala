@@ -3,9 +3,8 @@ package com.keepit.search.phrasedetector
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.Lang
-import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.index.{VolatileIndexDirectoryImpl, DefaultAnalyzer}
 import org.apache.lucene.index.{IndexWriterConfig, Term}
-import org.apache.lucene.store.RAMDirectory
 import org.specs2.mutable._
 import play.api.Play.current
 import play.api.test.Helpers._
@@ -16,13 +15,14 @@ import java.io.StringReader
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.util.Version
 import scala.collection.mutable.ListBuffer
+import com.keepit.common.db.SequenceNumber
 
 class PhraseDetectorTest extends Specification with ApplicationInjector {
 
   "PhraseDetectorTest" should {
     "detects all phrases in input text" in {
         running(new DeprecatedEmptyApplication()) {
-        val indexer = new PhraseIndexerImpl(new RAMDirectory(), new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+        val indexer = new PhraseIndexerImpl(new VolatileIndexDirectoryImpl(), new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
         val lang = Lang("en")
         val phrases = List(
           "classroom project",
@@ -42,7 +42,7 @@ class PhraseDetectorTest extends Specification with ApplicationInjector {
           ("product research project", Set((0,2),(1,2))),
           ("large classroom project", Set((1,2))))
 
-        indexer.reload(phrases.zipWithIndex.map{ case (p, i) => new PhraseIndexable(Id[Phrase](i), p, lang) }.iterator)
+        indexer.indexDocuments(phrases.zipWithIndex.map{ case (p, i) => new PhraseIndexable(Id[Phrase](i), SequenceNumber(i), false, p, lang) }.iterator, 10)
 
         val detector = new PhraseDetector(indexer)
         val analyzer = DefaultAnalyzer.forIndexingWithStemmer(Lang("en"))

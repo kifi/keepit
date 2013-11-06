@@ -57,8 +57,9 @@ object Shoebox extends Service {
     def internNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/internNormalizedURI")
     def getUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getUsers", Param("ids", ids))
     def getUserIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/userIdsByExternalIds", Param("ids", ids))
-    def getBasicUsers(ids: String) = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsers", Param("ids", ids))
-    def getEmailsForUsers(ids: String) = ServiceRoute(POST, "/internal/shoebox/database/getEmailsForUsers", Param("ids", ids))
+    def getBasicUsers() = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsers")
+    def getEmailsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailsForUsers")
+    def getEmailAddressesForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailAddressesForUsers")
     def getCollectionIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/collectionIdsByExternalIds", Param("ids", ids))
     def getUserOpt(id: ExternalId[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserOpt", Param("id", id))
     def getUserExperiments(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserExperiments", Param("id", id))
@@ -68,12 +69,15 @@ object Shoebox extends Service {
     def getBookmarks(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmark", Param("userId", userId))
     def getBookmarksChanged(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedBookmark", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmarkByUriUser", Param("uriId", uriId), Param("userId", userId))
+    def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getBookmarksByUriWithoutTitle", Param("uriId", uriId))
+    def getLatestBookmark(uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getLatestBookmark", Param("uriId", uriId))
+    def saveBookmark() = ServiceRoute(POST, "/internal/shoebox/database/saveBookmark")
     def getCommentsChanged(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedComment", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getCommentRecipientIds(commentId: Id[Comment]) = ServiceRoute(GET, "/internal/shoebox/database/commentRecipientIds", Param("commentId", commentId))
     def persistServerSearchEvent() = ServiceRoute(POST, "/internal/shoebox/persistServerSearchEvent")
     def sendMail() = ServiceRoute(POST, "/internal/shoebox/database/sendMail")
     def sendMailToUser() = ServiceRoute(POST, "/internal/shoebox/database/sendMailToUser")
-    def getPhrasesByPage(page: Int, size: Int) = ServiceRoute(GET, "/internal/shoebox/database/getPhrasesByPage", Param("page", page), Param("size", size))
+    def getPhrasesChanged(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getPhrasesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getCollectionsChanged(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedCollections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getBookmarksInCollection(collectionId: Id[Collection]) = ServiceRoute(GET, "/internal/shoebox/database/getBookmarksInCollection", Param("collectionId", collectionId))
     def getCollectionsByUser(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getCollectionsByUser", Param("userId", userId))
@@ -100,6 +104,11 @@ object Shoebox extends Service {
     def getScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/getScrapeInfo")
     def saveScrapeInfo()  = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
     def saveNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/saveNormalizedURI")
+    def recordPermanentRedirect() = ServiceRoute(POST, "/internal/shoebox/database/recordPermanentRedirect")
+    def getProxy(url: String) = ServiceRoute(GET, "/internal/shoebox/database/getProxy", Param("url"))
+    def getProxyP() = ServiceRoute(POST, "/internal/shoebox/database/getProxyP")
+    def isUnscrapable(url: String, destinationUrl: Option[String]) = ServiceRoute(GET, "/internal/shoebox/database/isUnscrapable", Param("url", url), Param("destinationUrl", destinationUrl))
+    def isUnscrapableP() = ServiceRoute(POST, "/internal/shoebox/database/isUnscrapableP")
   }
 }
 
@@ -127,6 +136,7 @@ object Search extends Service {
     def searchDumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}")
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
     def searchUsers(query: String, maxHits: Int = 10, context: String = "") = ServiceRoute(GET, "/internal/search/search/users", Param("query", query), Param("maxHits", maxHits), Param("context", context))
+    def searchUsers2() = ServiceRoute(POST, "/internal/search/search/users2")
     def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String) =
       ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("lang", lang))
     def causeError() = ServiceRoute(GET, "/internal/search/search/causeError")
@@ -179,6 +189,8 @@ object ABook extends Service {
 object Scraper extends Service {
   object internal {
     def asyncScrapeArticle() = ServiceRoute(POST, s"/internal/scraper/asyncScrape")
+    def asyncScrapeArticleWithInfo() = ServiceRoute(POST, s"/internal/scraper/asyncScrapeWithInfo")
+    def scheduleScrape() = ServiceRoute(POST, s"/internal/scraper/scheduleScrape")
     def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
   }
 }

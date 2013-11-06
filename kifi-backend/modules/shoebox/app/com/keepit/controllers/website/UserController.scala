@@ -10,6 +10,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail, LocalPostOffice}
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
+import com.keepit.commanders.UserCommander
 import com.keepit.model._
 
 import play.api.libs.json.Json.toJson
@@ -29,7 +30,8 @@ class UserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   friendRequestRepo: FriendRequestRepo,
   searchFriendRepo: SearchFriendRepo,
-  postOffice: LocalPostOffice)
+  postOffice: LocalPostOffice,
+  userCommander: UserCommander)
     extends WebsiteController(actionAuthenticator) {
 
   def friends() = AuthenticatedJsonAction { request =>
@@ -60,17 +62,8 @@ class UserController @Inject() (
     }
   }
 
-  private case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
-  private object BasicSocialUser {
-    implicit val writesBasicSocialUser = Json.writes[BasicSocialUser]
-    def from(sui: SocialUserInfo): BasicSocialUser =
-      BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
-  }
-
   def socialNetworkInfo() = AuthenticatedJsonAction { request =>
-    Ok(toJson(db.readOnly { implicit s =>
-      socialUserRepo.getByUser(request.userId).map(BasicSocialUser from _)
-    }))
+    Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
 
   def friendNetworkInfo(id: ExternalId[User]) = AuthenticatedJsonAction { request =>

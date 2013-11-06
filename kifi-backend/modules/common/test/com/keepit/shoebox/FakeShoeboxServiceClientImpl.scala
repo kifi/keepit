@@ -22,6 +22,7 @@ import com.keepit.model.UserExperiment
 import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsObject
+import com.keepit.scraper.HttpRedirect
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -53,12 +54,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   private val commentIdCounter = new AtomicInteger(0)
   private def nextCommentId() = { Id[Comment](commentIdCounter.incrementAndGet()) }
-  
+
   private val emailIdCounter = new AtomicInteger(0)
   private def nextEmailId = Id[EmailAddress](emailIdCounter.incrementAndGet())
 
   // Fake sequence counters
-  
+
   private val userSeqCounter = new AtomicInteger(0)
   private def nextUserSeqNum() = SequenceNumber(userSeqCounter.incrementAndGet())
 
@@ -173,6 +174,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     saveBookmarksByEdges(edges, isPrivate, source)
   }
 
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Bookmark]] = ???
+
+  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]] = ???
+
+  def saveBookmark(bookmark: Bookmark): Future[Bookmark] = ???
+
   def getCollection(collectionId: Id[Collection]): Collection = {
     allCollections(collectionId)
   }
@@ -196,7 +203,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     allCommentRecipients(id) = commentRecipients
     updatedComment
   }
-  
+
   def saveEmails(emails: EmailAddress*) = {
     emails.map{ email =>
       val id = email.id.getOrElse(nextEmailId)
@@ -299,8 +306,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     }.toMap
     Future.successful(basicUsers)
   }
-  
+
   def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
+    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address}}.toMap
+    Future.successful(m)
+  }
+
+  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
     val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address}}.toMap
     Future.successful(m)
   }
@@ -308,7 +320,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
-  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Future.successful(Seq())
+  def getPhrasesChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Phrase]] = Future.successful(Seq())
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
   def getSessionByExternalId(sessionId: com.keepit.common.db.ExternalId[com.keepit.model.UserSession]): scala.concurrent.Future[Option[com.keepit.model.UserSession]] = ???
   def getSocialUserInfosByUserId(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[List[com.keepit.model.SocialUserInfo]] = ???
@@ -344,7 +356,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris)
   }
-  
+
   def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = {
     val users = allUsers.values.filter(_.seq.value > seqNum).toSeq.sortBy(_.seq.value).take(fetchSize)
     Future.successful(users)
@@ -401,4 +413,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = ???
 
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
+
+  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = ???
+
+  def getProxy(url: String): Future[Option[HttpProxy]] = ???
+
+  def getProxyP(url: String): Future[Option[HttpProxy]] = ???
+
+  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
+
+  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
 }

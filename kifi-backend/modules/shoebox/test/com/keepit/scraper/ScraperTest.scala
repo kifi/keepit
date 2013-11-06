@@ -7,7 +7,7 @@ import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.search.ArticleStore
-import com.keepit.test.ShoeboxTestInjector
+import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxTestInjector}
 import com.keepit.scraper.extractor.{ExtractorFactory, Extractor, TikaBasedExtractor}
 import org.specs2.mutable._
 import org.apache.http.HttpStatus
@@ -28,7 +28,8 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
     intervalDecrement = 2.0d, //hours
     initialBackoff = 1.0d, //hours
     maxBackoff = 12.0d, //hours
-    changeThreshold = 0.05
+    changeThreshold = 0.05,
+    disableScraperService = true // TODO
   )
 
   "Scraper" should {
@@ -72,8 +73,8 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
               .withState(NormalizedURIStates.SCRAPED))
           val uri2 = uriRepo.save(NormalizedURI.withHash(title = Some("missing"), normalizedUrl = "http://www.keepit.com/missing")
               .withState(NormalizedURIStates.SCRAPED))
-          val info1 = scrapeRepo.getByUri(uri1.id.get).get
-          val info2 = scrapeRepo.getByUri(uri2.id.get).get
+          val info1 = scrapeRepo.getByUriId(uri1.id.get).get
+          val info2 = scrapeRepo.getByUriId(uri2.id.get).get
           val all = scrapeRepo.allActive
           all.size === 2
         }
@@ -87,8 +88,8 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         val (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
           val uri1 = uriRepo.save(NormalizedURI.withHash(title = Some("existing"), normalizedUrl = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
           val uri2 = uriRepo.save(NormalizedURI.withHash(title = Some("missing"), normalizedUrl = "http://www.keepit.com/missing", state = NormalizedURIStates.SCRAPE_WANTED))
-          val info1 = scrapeRepo.getByUri(uri1.id.get).get
-          val info2 = scrapeRepo.getByUri(uri2.id.get).get
+          val info1 = scrapeRepo.getByUriId(uri1.id.get).get
+          val info2 = scrapeRepo.getByUriId(uri2.id.get).get
           (uri1, uri2, info1, info2)
         }
         val store = new FakeArticleStore()
@@ -114,8 +115,8 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         var (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
           val uri1 = uriRepo.save(NormalizedURI.withHash(title = Some("existing"), normalizedUrl = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
           val uri2 = uriRepo.save(NormalizedURI.withHash(title = Some("missing"), normalizedUrl = "http://www.keepit.com/missing", state = NormalizedURIStates.SCRAPE_WANTED))
-          val info1 = scrapeRepo.getByUri(uri1.id.get).get
-          val info2 = scrapeRepo.getByUri(uri2.id.get).get
+          val info1 = scrapeRepo.getByUriId(uri1.id.get).get
+          val info2 = scrapeRepo.getByUriId(uri2.id.get).get
           (uri1, uri2, info1, info2)
         }
         val store = new FakeArticleStore()
@@ -126,7 +127,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
 
         // get ScrapeInfo from db
         val (info1a, info2a) = inject[Database].readOnly { implicit s =>
-          (scrapeRepo.getByUri(uri1.id.get).get, scrapeRepo.getByUri(uri2.id.get).get)
+          (scrapeRepo.getByUriId(uri1.id.get).get, scrapeRepo.getByUriId(uri2.id.get).get)
         }
 
         info1a.failures === 0
@@ -184,7 +185,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         val scrapeRepo = inject[ScrapeInfoRepo]
         val (uri1, info1) = inject[Database].readWrite { implicit s =>
           val uri1 = uriRepo.save(NormalizedURI.withHash(title = Some("notModified"), normalizedUrl = "http://www.keepit.com/notModified", state = NormalizedURIStates.SCRAPE_WANTED))
-          val info1 = scrapeRepo.getByUri(uri1.id.get).get
+          val info1 = scrapeRepo.getByUriId(uri1.id.get).get
           (uri1, info1)
         }
         val store = new FakeArticleStore()
@@ -194,7 +195,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
 
         // get ScrapeInfo from db
         val info1a = inject[Database].readOnly { implicit s =>
-          scrapeRepo.getByUri(uri1.id.get).get
+          scrapeRepo.getByUriId(uri1.id.get).get
         }
 
         info1a.failures === 0
@@ -207,7 +208,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         inject[Database].readWrite { implicit s => repo.save(info1a.withNextScrape(info1a.lastScrape)) }
         scraper.run.head._2 must beNone // check the article
 
-        val info1b = inject[Database].readOnly { implicit s => repo.getByUri(info1a.uriId).get }
+        val info1b = inject[Database].readOnly { implicit s => repo.getByUriId(info1a.uriId).get }
         ((info1b.lastScrape compareTo info1a.lastScrape) == 0) === true // last scrape should not be changed
         (info1b.interval > info1a.interval) === true
         ((info1b.nextScrape compareTo info1a.nextScrape) > 0) === true
@@ -215,7 +216,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         inject[Database].readWrite { implicit s => repo.save(info1b.withNextScrape(info1b.lastScrape)) }
         scraper.run.head._2 must beNone // check the article
 
-        val info1c = inject[Database].readOnly { implicit s => repo.getByUri(info1b.uriId).get }
+        val info1c = inject[Database].readOnly { implicit s => repo.getByUriId(info1b.uriId).get }
         ((info1c.lastScrape compareTo info1b.lastScrape) == 0) === true // last scrape should not be changed
         (info1c.interval > info1b.interval) === true
         ((info1c.nextScrape compareTo info1b.nextScrape) > 0) === true
@@ -228,14 +229,14 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         val scrapeRepo = inject[ScrapeInfoRepo]
         var info = inject[Database].readWrite { implicit s =>
           val uri = uriRepo.save(NormalizedURI.withHash(title = Some("existing"), normalizedUrl = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
-          scrapeRepo.getByUri(uri.id.get).get
+          scrapeRepo.getByUriId(uri.id.get).get
         }
         inject[Database].readWrite { implicit s =>
-          info = scrapeRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
+          info = scrapeRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
           info.nextScrape === END_OF_TIME
         }
         inject[Database].readWrite { implicit s =>
-          info = scrapeRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
+          info = scrapeRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.ACTIVE))
           (info.nextScrape.getMillis <= currentDateTime.getMillis) === true
         }
       }
@@ -296,7 +297,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
     val repo = inject[ScrapeInfoRepo]
     inject[Database].readWrite { implicit s => repo.save(info.withNextScrape(info.lastScrape)) }
     scraper.run
-    inject[Database].readOnly { implicit s => repo.getByUri(info.uriId).get }
+    inject[Database].readOnly { implicit s => repo.getByUriId(info.uriId).get }
   }
 
   private def toHttpInputStream(text: String) = {
@@ -364,7 +365,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
   def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher)(implicit injector: Injector) = {
     new Scraper(inject[Database], mockHttpFetcher, articleStore, mockExtractorFactory, config,
       inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[AirbrakeNotifier],
-      inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore, inject[Provider[NormalizationService]]) {
+      inject[BookmarkRepo], inject[UrlPatternRuleRepo], new FakeS3ScreenshotStore, inject[Provider[NormalizationService]], inject[ScraperServiceClient]) {
 
     }
   }

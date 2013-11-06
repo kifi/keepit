@@ -940,7 +940,7 @@ $(function() {
 
 		var fromSearch = $('body').attr("data-view") == "search";
 		$('body').attr("data-view", "mine");
-    
+
     if (collId) {
       $mainHead.find("h1").text('Tags / ' + collections[collId].name).addClass('tag-head');
     }
@@ -1998,7 +1998,8 @@ $(function() {
 	}
 
 	var messages = {
-		'0': 'You already have an account with those credentials, so we signed you in.'
+		0: 'Welcome back!',
+		1: 'Thank you for verifying your email address.'
 	};
 
 	function showNotification(messageId) {
@@ -2006,9 +2007,9 @@ $(function() {
 		if (msg) {
 			$('<div>').addClass('notification')
 			  .append($('<span>').addClass('notification-box').text(msg))
-			  .appendTo('.main-head')
+			  .appendTo('.query-wrap')
 			  .show()
-			  .delay(3000)
+			  .delay(2000)
 			  .fadeOut('slow');
 		}
 	}

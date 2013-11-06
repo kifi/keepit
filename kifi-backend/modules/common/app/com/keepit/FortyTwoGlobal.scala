@@ -105,6 +105,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       case reported: ReportedException => reported.id
       case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex)).id
     }
+    System.err.println(s"Play onError handler for ${ex.toString}")
     ex.printStackTrace()
     serviceDiscovery.startSelfCheck()
     serviceDiscovery.forceUpdate()

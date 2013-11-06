@@ -1,0 +1,29 @@
+@(firstName: String = "", lastName: String = "")
+
+@import com.keepit.controllers.core.routes.{AuthController => routes}
+
+<form class="signup-2 signup-2-email" data-title="Finalize your account" data-uri="@routes.userPassFinalizeAccountAction()" novalidate>
+  <div class="form-name">
+    <label class="signup-2-label">Your name</label>
+    <input class="form-first-name" type="text" name="first-name" placeholder="First" value="@firstName" required>
+    <input class="form-last-name" type="text" name="last-name" placeholder="Last" value="@lastName" required>
+  </div>
+  <div class="form-pic">
+    <label class="signup-2-label">Your photo</label>
+    <div class="form-photo-box">
+      <div class="form-photo unset" data-uri="@routes.uploadBinaryPicture()" data-form-uri="@routes.uploadFormEncodedPicture()"><div class="form-photo-progress"></div></div>
+      <div class="form-photo-grab">Grab photo from</div>
+      <a class="form-photo-a facebook" href="javascript:"></a>
+      <a class="form-photo-a linkedin" href="javascript:"></a>
+      <div class="form-photo-drop">Drop photo here</div>
+    </div>
+    <div class="form-photo-upload">
+      Or
+      <label>
+        <a class="form-photo-file-a" href="javascript:">upload from your computer</a>
+        <input class="form-photo-file" type="file" name="photo">
+      </label>
+    </div>
+  </div>
+  <button class="form-submit alt-button">Sign me up</button>
+</form>

@@ -16,6 +16,7 @@ class FakeScraperPlugin(fakeArticles: Option[PartialFunction[(String, Option[Ext
   def scrapePending() = Future.successful(Seq())
   def asyncScrape(uri: NormalizedURI) =
     Future.failed(new Exception("Not Implemented"))
+  def scheduleScrape(uri: NormalizedURI): Unit = {}
   def scrapeBasicArticle(url: String, customExtractor: Option[Extractor] = None): Future[Option[BasicArticle]] =
     Future.successful(fakeArticles.map(_.apply((url, customExtractor))))
 }

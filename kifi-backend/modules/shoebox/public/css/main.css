@@ -49,7 +49,7 @@ body[data-view=profile] .my-pic::before { transition: none; animation-name: edit
 .left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
 .left-col .active {background-color: #e3e6ee}
 .left-col>*>h3:not(.active):hover {background-color: #e9ecf2}
-.left-col h3>a, 
+.left-col h3>a,
 .left-col h3>label {display: block; padding: 0 6px 0 40px; color: #818692}
 .left-col h3>label {cursor: text}
 .left-col .nav-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; background: #eff2f7; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
@@ -98,6 +98,7 @@ h3.collection {position: relative; white-space: nowrap}
 .collection.renaming,
 .collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
 .collection.renaming .tag-count {display: none}
+.collection input {color: black}
 .tag-icon {display:inline-block; width: 14px; height: 16px; background-size: auto 16px; background-repeat: no-repeat; vertical-align: middle; margin-right: 4px}
 .tag-icon {background-image: url(../img/tag-icon-gray.png)}
 .collection.active .tag-icon {background-image: url(../img/tag-icon-white.png)}
@@ -162,7 +163,7 @@ body:not([data-view=profile]) .profile,
 body:not([data-view=friends]) .friends,
 body:not([data-view=blog]) .blog-outer {display: none}
 h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
-.undo, .notification {position: absolute; top: -8px; left: 0; right: 0; z-index: 1; text-align: center; display: none}
+.undo, .notification {position: absolute; bottom: -12px; left: 0; right: 0; z-index: 1; text-align: center; display: none}
 .undo-box, .notification-box {display: inline-block; background-color: #ffc; border: 1px solid #f8f4e8; border-radius: 2px; padding: 0 12px; font-size: 13px; font-weight: 300; line-height: 17px; height: 18px; white-space: nowrap}
 a.undo-link[href] {margin-left: 4px; font-weight: 500}
 a.undo-link[href]:hover {text-decoration: underline}
@@ -266,9 +267,9 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .requested>*>.friend-status::before {background-position: -90px; width: 20px; position: relative; left: 2px}
 .friend-action-desc {position: absolute; right: 0; bottom: -20px; font-size: 13px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
 
-.invite-filters {height: 49px; border-bottom: 1px solid #b8c5d2; margin-bottom: 14px}
+.invite-filters {height: 41px; border-bottom: 1px solid #b7ce84; margin-bottom: 14px}
 .invite-filters>a {display: inline-block; width: 36px; height: 36px; margin-right: 5px; vertical-align: top; -webkit-transition: height .1s; transition: height .1s}
-.invite-filters>a:not([data-nw]) {background-color: #b8c5d2; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
+.invite-filters>a:not([data-nw]) {background-color: #b7ce84; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
 .invite-filters>a[data-nw] { background-image: url(../img/networks.png); background-repeat: no-repeat; background-size: 400%; }
 .invite-filters>a[data-nw=facebook] {background-color: #637ab8}
 .invite-filters>a[data-nw=linkedin] {background-color: #4f83c3; background-position: -36px top;}
@@ -276,10 +277,10 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .invite-filters[data-nw-selected=linkedin] {border-color: #4f83c3;}
 .invite-filters[data-nw-selected]>:not([data-nw]):hover,
 .invite-filters:not([data-nw-selected=facebook])>[data-nw=facebook]:hover,
-.invite-filters:not([data-nw-selected=linkedin])>[data-nw=linkedin]:hover {height: 40px}
+.invite-filters:not([data-nw-selected=linkedin])>[data-nw=linkedin]:hover {height: 38px}
 .invite-filters:not([data-nw-selected])>:not([data-nw]),
 .invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
-.invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px}
+.invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 41px}
 
 .invites-left {float: right; margin-top: 2px; font-size: 13px; color: #818692; display: none}
 .invites-left>.num-invites {display: inline-block; border: 1px solid #b8c5d2; color: #628196; border-radius: 10.5px; padding: 0 12px; vertical-align: baseline; font-size: 12px; line-height: 20px; height: 19px; margin-left: 6px}

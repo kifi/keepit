@@ -24,4 +24,12 @@ case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination
 
 object HttpRedirect {
   def withStandardizationEffort(statusCode: Int, currentLocation: String, newDestination: String): HttpRedirect = HttpRedirect(statusCode, currentLocation, URI.url(currentLocation, newDestination))
+
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+  implicit val format = (
+    (__ \ 'statusCode).format[Int] and
+    (__ \ 'currentLocation).format[String] and
+    (__ \ 'newDestination).format[String]
+  )(HttpRedirect.apply _, unlift(HttpRedirect.unapply))
 }
