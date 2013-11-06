@@ -618,6 +618,9 @@ $(function() {
 				xhr = $.post(xhrBase + '/user/' + o.id + '/unfriend', function(data) {
 					o.state = 'unfriended';
 				});
+        xhr.done(function() {
+          $a.closest('.friend').hide();
+        });
 		}
 		xhr.always(function() {
 			$a.removeAttr('href').closest('.friend-actions').removeClass('requested unfriended').addClass(o.state);
