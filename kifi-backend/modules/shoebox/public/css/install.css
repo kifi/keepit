@@ -1,0 +1,112 @@
+body {
+  text-align: center;
+}
+section {
+  width: 64%;
+  max-width: 540px;
+  margin: -10px auto 0;
+  padding-bottom: 40px;
+  color: #515051;
+  line-height: 20px;
+  font-size: 16px;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+section > h2 {
+  margin: 0;
+  padding: 19px 0 0;
+  text-align: left;
+  line-height: 34px;
+  font-size: 26px;
+  font-weight: 300;
+}
+section > h3 {
+  margin: 0 0 16px;
+  padding: 0 0 6px;
+  text-align: left;
+  line-height: 24px;
+  font-size: 18px;
+  font-weight: 300;
+  border-bottom: 5px solid #e5e5e5;
+}
+.user-pic {
+  float: left;
+  height: 72px;
+  width: 72px;
+  margin: 0 20px 0 2px;
+}
+.chrome .browser-name:before {
+  content: 'Chrome';
+}
+.firefox .browser-name:before {
+  content: 'Firefox';
+}
+.install-title {
+  margin: 1em 0;
+  line-height: 40px;
+  font-size: 26px;
+  color: #6fa6ef;
+}
+.install-button,
+.browser-button {
+  background: #6fa6ef no-repeat;
+  background-size: 72px auto;
+  color: #fff;
+  display: inline-block;
+  height: 100px;
+  line-height: 100px;
+  font-size: 18px;
+  text-align: left;
+}
+.install-button {
+  background-image: url(/assets/img/kifi-k-white.png);
+  background-position: 18px 14px;
+  padding: 0 26px 0 110px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  min-width: 350px;
+}
+.browser-button {
+  background-image: url(/assets/img/browsers.png);
+  padding: 0 42px 0 120px;
+  margin: 0 3px 10px;
+}
+.browser-button.chrome {
+  background-position: 18px 14px;
+}
+.browser-button.firefox {
+  background-position: 18px -84px;
+}
+.install-button[href]:hover,
+.install-button[href]:focus {
+  background-color: #7daff1;
+}
+.install-button[href]:active {
+  background-color: #699ee3;
+}
+.install-button[href]:focus {
+  outline-color: #888;
+}
+.install-error {
+  line-height: 150%;
+}
+.browser-newer {
+  margin: -20px 0 30px;
+}
+html.unsupported .install,
+html.supported .install-old,
+html.unsupported.other .install-old,
+html.supported .install-other,
+html.unsupported.chrome .install-other,
+html.unsupported.firefox .install-other {
+  display: none;
+}
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .install-button {
+    background-image: url(/assets/img/kifi-k-white.2x.png);
+  }
+  .browser-button {
+    background-image: url(/assets/img/browsers.2x.png);
+  }
+}
