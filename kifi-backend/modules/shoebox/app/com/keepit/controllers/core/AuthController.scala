@@ -36,7 +36,7 @@ sealed abstract class AuthType
 
 object AuthType {
   case object Login extends AuthType
-  case object Signup extends AuthType
+  case object SocialSignup extends AuthType
   case object Link extends AuthType
   case object LoginAndLink extends AuthType
 }
@@ -119,8 +119,8 @@ class AuthController @Inject() (
   def link(provider: String) = getAuthAction(provider, AuthType.Link)
   def linkByPost(provider: String) = getAuthAction(provider, AuthType.Link)
 
-  def signup(provider: String) = getAuthAction(provider, AuthType.Signup)
-  def signupByPost(provider: String) = getAuthAction(provider, AuthType.Signup)
+  def signup(provider: String) = getAuthAction(provider, AuthType.SocialSignup)
+  def signupByPost(provider: String) = getAuthAction(provider, AuthType.SocialSignup)
 
   // log in with username/password and link the account with a provider
   def passwordLoginAndLink(provider: String) = getAuthAction(provider, AuthType.LoginAndLink)
@@ -148,7 +148,7 @@ class AuthController @Inject() (
             } else {
               res
             }
-          case AuthType.Signup =>
+          case AuthType.SocialSignup =>
             res.withSession(resSession - FORTYTWO_USER_ID
               + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
           case AuthType.Link =>
