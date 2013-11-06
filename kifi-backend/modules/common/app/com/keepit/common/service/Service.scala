@@ -20,6 +20,7 @@ case class ServiceVersion(val value: String) {
 sealed abstract class ServiceType(val name: String, val shortName: String) {
   def selfCheck() : Future[Boolean] = promise[Boolean].success(true).future
   def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = ServiceStatus.UP
+  override def toString(): String = name
 }
 
 object ServiceType {

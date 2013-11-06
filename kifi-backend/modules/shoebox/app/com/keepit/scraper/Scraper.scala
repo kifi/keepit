@@ -70,8 +70,25 @@ class Scraper @Inject() (
 
   def schedule(): Unit = {
     log.info("[schedule] starting a new scrape round")
-    val tasks = db.readOnly { implicit s =>
-      scrapeInfoRepo.getOverdueList().map{ info => (normalizedURIRepo.get(info.uriId), info) }
+    val (activeOverdues, pendingCount, pendingOverdues) = db.readOnly { implicit s =>
+      (scrapeInfoRepo.getOverdueList(), scrapeInfoRepo.getPendingCount(), scrapeInfoRepo.getOverduePendingList())
+    }
+    log.info(s"[schedule] (active)  overdues: (len=${activeOverdues.length}) ${activeOverdues.mkString}")
+    log.info(s"[schedule] (pending) count=${pendingCount} overdues: (len=${pendingOverdues.length}) ${pendingOverdues.mkString}")
+
+    val skipThreshold = 50 // make configurable or calculated
+    val adjPendingCount = (pendingCount - pendingOverdues.length) // assuming overdue ones are no longer being worked on
+    val infos = if (adjPendingCount > skipThreshold) {
+      log.warn(s"[schedule] # of pending jobs (adj=${adjPendingCount}, pending=${pendingCount}, pendingOverdues=${pendingOverdues.length}) > $skipThreshold. Skip a round.")
+      Seq.empty[ScrapeInfo]
+    } else {
+      activeOverdues ++ pendingOverdues
+    }
+
+    val tasks = if (infos.isEmpty) {
+      Seq.empty[(NormalizedURI, ScrapeInfo)]
+    } else db.readOnly { implicit s =>
+      infos.map{ info => (normalizedURIRepo.get(info.uriId), info) }
     }
     log.info("[schedule] got %s uris to scrape".format(tasks.length))
     val ts = System.currentTimeMillis
@@ -87,12 +104,12 @@ class Scraper @Inject() (
         log.info(s"[schedule] (remote) results=$res")
       }
     }
-    log.info(s"[schedule] finished scheduling ${tasks.length} uris for scraping. time-lapsed: ${System.currentTimeMillis - ts} ms")
+    log.info(s"[schedule] finished scheduling ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
     val info = db.readWrite { implicit s =>
-      scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
+      scrapeInfoRepo.getByUriId(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
     }
     safeProcessURI(uri, info)
   }

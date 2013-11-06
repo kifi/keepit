@@ -42,21 +42,21 @@ class ScrapeInfoTest extends Specification with ShoeboxTestInjector {
           scrapeInfoRepo.setForRescrapeByRegex("%.pdf", 4) === 2
           val deadline = currentDateTime.plusHours(4)
 
-          (scrapeInfoRepo.getByUri(uri1.id.get).get.nextScrape isBefore deadline) === false
-          (scrapeInfoRepo.getByUri(uri2.id.get).get.nextScrape isBefore deadline) === false
-          (scrapeInfoRepo.getByUri(uri3.id.get).get.nextScrape isBefore deadline) === true
-          (scrapeInfoRepo.getByUri(uri4.id.get).get.nextScrape isBefore deadline) === true
-          (scrapeInfoRepo.getByUri(uri5.id.get).get.nextScrape isBefore deadline) === false
-          (scrapeInfoRepo.getByUri(uri6.id.get).get.nextScrape isBefore deadline) === false
-          (scrapeInfoRepo.getByUri(uri7.id.get).get.nextScrape isBefore deadline) === false
+          (scrapeInfoRepo.getByUriId(uri1.id.get).get.nextScrape isBefore deadline) === false
+          (scrapeInfoRepo.getByUriId(uri2.id.get).get.nextScrape isBefore deadline) === false
+          (scrapeInfoRepo.getByUriId(uri3.id.get).get.nextScrape isBefore deadline) === true
+          (scrapeInfoRepo.getByUriId(uri4.id.get).get.nextScrape isBefore deadline) === true
+          (scrapeInfoRepo.getByUriId(uri5.id.get).get.nextScrape isBefore deadline) === false
+          (scrapeInfoRepo.getByUriId(uri6.id.get).get.nextScrape isBefore deadline) === false
+          (scrapeInfoRepo.getByUriId(uri7.id.get).get.nextScrape isBefore deadline) === false
 
-          (scrapeInfoRepo.getByUri(uri1.id.get).get.signature) must not beEmpty;
-          (scrapeInfoRepo.getByUri(uri2.id.get).get.signature) must not beEmpty;
-          (scrapeInfoRepo.getByUri(uri3.id.get).get.signature) must beEmpty;
-          (scrapeInfoRepo.getByUri(uri4.id.get).get.signature) must beEmpty;
-          (scrapeInfoRepo.getByUri(uri5.id.get).get.signature) must not beEmpty;
-          (scrapeInfoRepo.getByUri(uri6.id.get).get.signature) must not beEmpty;
-          (scrapeInfoRepo.getByUri(uri7.id.get).get.signature) must not beEmpty;
+          (scrapeInfoRepo.getByUriId(uri1.id.get).get.signature) must not beEmpty;
+          (scrapeInfoRepo.getByUriId(uri2.id.get).get.signature) must not beEmpty;
+          (scrapeInfoRepo.getByUriId(uri3.id.get).get.signature) must beEmpty;
+          (scrapeInfoRepo.getByUriId(uri4.id.get).get.signature) must beEmpty;
+          (scrapeInfoRepo.getByUriId(uri5.id.get).get.signature) must not beEmpty;
+          (scrapeInfoRepo.getByUriId(uri6.id.get).get.signature) must not beEmpty;
+          (scrapeInfoRepo.getByUriId(uri7.id.get).get.signature) must not beEmpty;
         }
 
       }

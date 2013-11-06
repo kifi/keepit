@@ -1,5 +1,8 @@
 package com.keepit.model
 
+import java.math.BigInteger
+import java.security.SecureRandom
+
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
@@ -20,6 +23,13 @@ case class EmailAddress (
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def sameAddress(otherAddress: String) = otherAddress == address
   def withState(state: State[EmailAddress]) = copy(state = state)
+  def withVerificationCode(now: DateTime) = this.copy(
+    lastVerificationSent = Some(now),
+    verificationCode = Some(new BigInteger(128, EmailAddressObject.random).toString(36)))
+}
+
+object EmailAddressObject {
+  lazy val random = new SecureRandom()
 }
 
 object EmailAddressStates {

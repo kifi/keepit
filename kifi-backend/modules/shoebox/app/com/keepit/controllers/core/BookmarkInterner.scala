@@ -31,11 +31,14 @@ class BookmarkInterner @Inject() (
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
 
-  def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): List[Bookmark] = value match {
-    case JsArray(elements) => (elements map {e => internBookmarks(e, user, experiments, source, installationId)} flatten).toList
-    case json: JsObject if(json.keys.contains("children")) => internBookmarks(json \ "children" , user, experiments, source)
-    case json: JsObject => List(internBookmark(json, user, experiments, source)).flatten
-    case e: Throwable => throw new Exception("can't figure what to do with %s".format(e))
+  def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): List[Bookmark] = {
+    log.info(s"[internBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$value] ")
+    value match {
+      case JsArray(elements) => (elements map {e => internBookmarks(e, user, experiments, source, installationId)} flatten).toList
+      case json: JsObject if(json.keys.contains("children")) => internBookmarks(json \ "children" , user, experiments, source)
+      case json: JsObject => List(internBookmark(json, user, experiments, source)).flatten
+      case e: Throwable => throw new Exception("can't figure what to do with %s".format(e))
+    }
   }
 
   def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, experiments: Set[ExperimentType],

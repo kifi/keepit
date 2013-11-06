@@ -3,6 +3,7 @@ package com.keepit.common.healthcheck
 //writableStackTrace == true. that's the whole point!
 class StackTrace() extends Throwable("Stack Trace") {
   def withCause(cause: Throwable): Throwable = {
+    if (cause == this) throw new IllegalStateException("Setting cause as itself!")
     new CrossContextException(cause).withStackTrace(getStackTrace)
   }
 }
