@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
-import com.keepit.common.time.{currentDateTime, zones, Clock}
+import com.keepit.common.time._
 import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import play.api.libs.json._
@@ -62,7 +62,7 @@ object MessageThreadParticipants{
   }
 
   def apply(initialParticipants: Set[Id[User]]) : MessageThreadParticipants = {
-    new MessageThreadParticipants(initialParticipants.map{userId => (userId, currentDateTime(zones.PT))}.toMap)
+    new MessageThreadParticipants(initialParticipants.map{userId => (userId, currentDateTime)}.toMap)
   }
 
   def apply(participants: Map[Id[User], DateTime]) : MessageThreadParticipants = {
@@ -74,8 +74,8 @@ object MessageThreadParticipants{
 
 case class MessageThread(
     id: Option[Id[MessageThread]] = None,
-    createdAt: DateTime = currentDateTime(zones.PT),
-    updateAt: DateTime = currentDateTime(zones.PT),
+    createdAt: DateTime = currentDateTime,
+    updateAt: DateTime = currentDateTime,
     externalId: ExternalId[MessageThread] = ExternalId(),
     uriId: Option[Id[NormalizedURI]],
     url: Option[String],

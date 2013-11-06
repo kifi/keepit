@@ -75,7 +75,7 @@ private[classify] class DomainTagImportActor @Inject() (
   private val FILE_FORMAT = "domains_%s.zip"
 
   private val DATE_FORMAT = DateTimeFormat.forPattern("yyyy_MM_dd_HH_mm_ss")
-    .withLocale(Locale.ENGLISH).withZone(zones.PT)
+    .withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE)
 
   // the size of the group of domains to insert at a time
   private val GROUP_SIZE = 500
