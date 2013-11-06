@@ -1,0 +1,117 @@
+@import "lesshat";
+
+body {
+  text-align: center;
+}
+section {
+  width: 64%;
+  max-width: 540px;
+  margin: -10px auto 0;
+  padding-bottom: 40px;
+  color: #515051;
+  line-height: 20px;
+  font-size: 16px;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+section>h2 {
+  margin: 0;
+  padding: 19px 0 0;
+  text-align: left;
+  line-height: 34px;
+  font-size: 26px;
+  font-weight: 300;
+}
+section>h3 {
+  margin: 0 0 16px;
+  padding: 0 0 6px;
+  text-align: left;
+  line-height: 24px;
+  font-size: 18px;
+  font-weight: 300;
+  border-bottom: 5px solid #e5e5e5;
+}
+.user-pic {
+  float: left;
+  height: 72px;
+  width: 72px;
+  margin: 0 20px 0 2px;
+}
+.chrome .browser-name:before {
+  content: 'Chrome';
+}
+.firefox .browser-name:before {
+  content: 'Firefox';
+}
+@kifi-k-blue: #6fa6ef;
+.install-title {
+  margin: 1em 0;
+  line-height: 40px;
+  font-size: 26px;
+  color: @kifi-k-blue;
+}
+.install-button,
+.browser-button {
+  background: @kifi-k-blue no-repeat;
+  background-size: 72px auto;
+  color: #fff;
+  display: inline-block;
+  height: 100px;
+  line-height: 100px;
+  font-size: 18px;
+  text-align: left;
+}
+.install-button {
+  background-image: url(/assets/img/kifi-k-white.png);
+  background-position: 18px 14px;
+  padding: 0 26px 0 110px;
+  .box-sizing(border-box);
+  min-width: 350px;
+}
+.browser-button {
+  background-image: url(/assets/img/browsers.png);
+  padding: 0 42px 0 120px;
+  margin: 0 3px 10px;
+}
+.browser-button.chrome {
+  background-position: 18px 14px;
+}
+.browser-button.firefox {
+  background-position: 18px -84px;
+}
+.install-button[href] {
+  &:hover,
+  &:focus {
+    background-color: tint(@kifi-k-blue, 10%);
+  }
+  &:active {
+    background-color: shade(@kifi-k-blue, 5%);
+  }
+  &:focus {
+    outline-color: #888;
+  }
+}
+.install-error {
+  line-height: 150%;
+}
+.browser-newer {
+  margin: -20px 0 30px;
+}
+html.unsupported .install,
+html.supported .install-old,
+html.unsupported.other .install-old,
+html.supported .install-other,
+html.unsupported.chrome .install-other,
+html.unsupported.firefox .install-other {
+  display: none;
+}
+
+// retina image overrides
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+.install-button {
+  background-image: url(/assets/img/kifi-k-white.2x.png);
+}
+.browser-button {
+  background-image: url(/assets/img/browsers.2x.png);
+}
+}
