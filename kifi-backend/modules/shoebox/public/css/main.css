@@ -23,6 +23,8 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .right-col {display: table-cell; vertical-align: top; position: relative; width: 31%; min-width: 330px}
 .page-col-inner {position: relative; height: 100%; width: 100%} /* bugzil.la/35168 */
 
+.image-preload {position: absolute; left: -10000px; top: -10000px; width: 1px; height: 1px}
+
 /* left col */
 .header-left {height: 70px; background-color: #67829c; text-align: center; padding-top: 18px; -moz-box-sizing: border-box; box-sizing: border-box; position: relative; z-index: 2}
 .header-logo {display: inline-block; width: 51px; height: 29px; background: url(../img/kifi-logo.png) 0/100%; position: relative}
@@ -238,10 +240,12 @@ a.undo-link[href]:hover {text-decoration: underline}
 .above-friends-list {padding-bottom: 20px; border-bottom: 1px solid #e3e6ee; position: relative; z-index: 1; -webkit-transition: border-bottom-color .3s ease-out; transition: border-bottom-color .3s ease-out}
 .above-friends-list.scrolled {border-bottom-color: #dbdee3; -webkit-transition-timing-function: ease-in; transition-timing-function: ease-in}
 input.friends-filter,
-input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 1px solid #c5d0da; height: 36px; width: 48%; width: -webkit-calc(50% - 6px); width: calc(50% - 6px); min-width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
+input.invite-filter,
+input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 1px solid #c5d0da; height: 36px; width: 48%; width: -webkit-calc(50% - 6px); width: calc(50% - 6px); min-width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
 #friends-list {position: absolute; top: 128px; left: 20px; right: -1px; bottom: 0; overflow-y: auto; overflow-x: hidden}
 #friends-list>.antiscroll-inner,
-.invite-friends>.antiscroll-inner {position: absolute; left: 0; right: 1px; top: 0; bottom: 0; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
+.invite-friends>.antiscroll-inner,
+.found-user-list>.antiscroll-inner {position: absolute; left: 0; right: 1px; top: 0; bottom: 0; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
 .friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
 .friend.no-match {display: none}
 .friend:last-child {border-bottom: 1px solid #e3e6ee}
@@ -279,19 +283,34 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .add-friends-tabs>a[href] {background-color: #f8f9fb; color: #67829c}
 
 .invite-filters {height: 41px; border-bottom: 1px solid #b7ce84; margin-top: 14px}
+
+.invite-filters[data-nw-selected=facebook] {border-color: #637ab8}
+.invite-filters[data-nw-selected=linkedin] {border-color: #4f83c3}
+.invite-filters[data-nw-selected=twitter] {border-color: #55acee}
+.invite-filters[data-nw-selected=gmail] {border-color: #e36767}
+
 .invite-filters>a {display: inline-block; width: 36px; height: 36px; margin-right: 5px; vertical-align: top; -webkit-transition: height .1s; transition: height .1s}
 .invite-filters>a:not([data-nw]) {background-color: #b7ce84; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
+
 .invite-filters>a[data-nw] { background-image: url(../img/networks.png); background-repeat: no-repeat; background-size: 400%; }
 .invite-filters>a[data-nw=facebook] {background-color: #637ab8}
-.invite-filters>a[data-nw=linkedin] {background-color: #4f83c3; background-position: -36px top;}
-.invite-filters[data-nw-selected=facebook] {border-color: #637ab8;}
-.invite-filters[data-nw-selected=linkedin] {border-color: #4f83c3;}
+.invite-filters>a[data-nw=linkedin] {background-color: #4f83c3; background-position: -36px top}
+.invite-filters>a[data-nw=twitter] {background-color: #55acee; background-position: -72px top}
+.invite-filters>a[data-nw=gmail] {background-color: #e36767; background-position: -108px top}
+
+.invite-filters>a:not([href]) {background-color: #edeff1}
+
 .invite-filters[data-nw-selected]>:not([data-nw]):hover,
-.invite-filters:not([data-nw-selected=facebook])>[data-nw=facebook]:hover,
-.invite-filters:not([data-nw-selected=linkedin])>[data-nw=linkedin]:hover {height: 38px}
+.invite-filters:not([data-nw-selected=facebook])>[href][data-nw=facebook]:hover,
+.invite-filters:not([data-nw-selected=linkedin])>[href][data-nw=linkedin]:hover,
+.invite-filters:not([data-nw-selected=twitter])>[href][data-nw=twitter]:hover,
+.invite-filters:not([data-nw-selected=gmail])>[href][data-nw=gmail]:hover {height: 38px}
+
 .invite-filters:not([data-nw-selected])>:not([data-nw]),
 .invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
-.invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 41px}
+.invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin],
+.invite-filters[data-nw-selected=twitter]>[data-nw=twitter],
+.invite-filters[data-nw-selected=gmail]>[data-nw=gmail] {height: 41px}
 
 .invite-filter-wrapper {position: relative}
 .invites-left {position: absolute; right: 6px; bottom: 5px; font-size: 13px; color: #818692; display: none}
@@ -316,7 +335,8 @@ input.invite-filter {-moz-box-sizing: border-box; box-sizing: border-box; border
 .invite-button::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background: url(../img/friend-actions.png) -70px; background-size: auto 16px; width: 20px; position: relative; left: 1px}
 */
 a.invite-button {position: absolute; bottom: 10px; right: 10px; font-size: 13px; font-weight: 300; letter-spacing: .5px; background: #b8c4d8; color: white; padding: 4px 14px; border-radius:2px}
-.invite-friends-loading {margin: 12px auto; display: block;}
+.invite-friends-loading,
+.found-user-list-loading {margin: 12px auto; display: block;}
 @media screen and (min-width: 1140px) {
   .invite-friend {display: inline-block; vertical-align: top; width: 48%; width: -webkit-calc(50% - 6px); width: calc(50% - 6px)}
   .invite-friend:nth-child(even) {margin-left: 12px}

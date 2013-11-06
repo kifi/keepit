@@ -515,15 +515,66 @@ $(function() {
 		$('body').attr('data-view', 'friends');
 		$('.left-col .active').removeClass('active');
 		$('.my-friends').addClass('active');
-		var $tab = $friendsTabs.filter('[data-href="' + path + '"]').removeAttr('href');
-		if ($tab.length) {
-			$friendsTabs.not($tab).filter(':not([href])').each(function() {this.href = $(this).data('href')});
-			[prepFriendsTab, prepInviteTab, prepRequestsTab][$tab.index()]();
-			$friendsTabPages.hide().filter('[data-href="' + path + '"]').show().find('input').focus();
-		} else {
-			navigate('friends', {replace: true});
-		}
+    selectFriendsTab(path);
 	}
+
+  var FRIENDS_PARENT_PATHS = {
+    'friends/find': 'friends/invite'
+  };
+
+  var FRIENDS_PREPS = {
+    'friends': prepFriendsTab,
+    'friends/invite': showAddFriends,
+    'friends/find': showAddFriends,
+    'friends/requests': prepRequestsTab
+  };
+
+  function selectFriendsTab(path) {
+    var pPath = FRIENDS_PARENT_PATHS[path] || path,
+      $tab = $friendsTabs.filter('[data-href="' + pPath + '"]');
+      console.log('[selectFriendsTab]', path, pPath, $tab);
+    if ($tab.length) {
+      $tab.removeAttr('href');
+      $friendsTabs.not($tab).filter(':not([href])').each(function() {
+        this.href = $(this).data('href');
+      });
+
+      $friendsTabPages.hide();
+      $friendsTabPages.filter('[data-href="' + pPath + '"]').show().find('input').focus();
+
+      FRIENDS_PREPS[path](path);
+    }
+    else {
+			navigate('friends', {replace: true});
+    }
+  }
+
+	var $addFriendsTabs = $friends.find('.add-friends-tabs>a');
+	var $addFriendsTabPages = $friends.find('.add-friends-page');
+
+  function showAddFriends(path) {
+    var $tab = $addFriendsTabs.filter('[data-href="' + path + '"]');
+    console.log('[showAddFriends]', path, $tab);
+    if ($tab.length) {
+      $tab.removeAttr('href');
+      $addFriendsTabs.not($tab).filter(':not([href])').each(function() {
+        this.href = $(this).data('href');
+      });
+
+      $addFriendsTabPages.hide();
+      $addFriendsTabPages.filter('[data-href="' + path + '"]').show().find('input').focus();
+
+      if (path === 'friends/invite') {
+        prepInviteTab();
+      }
+      else {
+        prepFindTab();
+      }
+    }
+    else {
+			navigate('friends', {replace: true});
+    }
+  }
 
 	// All kifi Friends
 
@@ -711,7 +762,7 @@ $(function() {
 			$('.num-invites').text(invitesLeft).parent().show();
 		});
 	}
-	$('.invite-filters>a').click(function () {
+	$('.invite-filters>a[href]').click(function () {
 		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 		filterFriends();
 	});
@@ -759,6 +810,11 @@ $(function() {
 			$inviteMessageDialog.dialog('show');
 		}
 	});
+
+  // Friend Find
+
+  function prepFindTab() {
+  }
 
 	// Friend Requests
 
@@ -1383,7 +1439,12 @@ $(function() {
 				title = 'Profile';
 				break;
 			case 'friends':
-				title = {friends: 'Friends', 'friends/invite': 'Invite Friends', 'friends/requests': 'Friend Requests'}[uri];
+				title = {
+          friends: 'Friends',
+          'friends/invite': 'Invite Friends',
+          'friends/find': 'Find Friends',
+          'friends/requests': 'Friend Requests'
+        }[uri];
 				break;
 			case 'blog':
 			  title = 'Updates and Features'

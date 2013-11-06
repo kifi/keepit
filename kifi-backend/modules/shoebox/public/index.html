@@ -249,7 +249,7 @@
 		</div>
 
 		<div class="friends">
-			<h1>Your Friends</h1>
+			<h1>Friends</h1>
       <div class="friends-tabs-border">
         <nav class="friends-tabs">
           <a data-href="friends">Kifi Friends</a>
@@ -259,8 +259,10 @@
       </div>
 			<div class="friends-page" data-href="friends">
 				<div class="above-friends-list">
-					<input class="friends-filter" type="text" placeholder="Start typing a friend’s name">
+					<input class="friends-filter" type="text" placeholder="Type a name of a kifi friend">
 				</div>
+        <img class="image-preload" src="assets/img/friend-actions.png">
+        <img class="image-preload" src="assets/img/friend-actions.2x.png">
 				<div id="friends-list">
 					<ul class="antiscroll-inner">
 						<li class="friend" data-template>
@@ -287,61 +289,90 @@
 			<div class="friends-page" data-href="friends/invite">
         <nav class="add-friends-tabs">
           <a data-href="friends/invite">Invite your friends & contacts</a>
-          <a href="friends/connect" data-href="friends/connect">Connect to other kifi users</a>
+          <a href="friends/find" data-href="friends/find">Connect to other kifi users</a>
         </nav>
-				<div class="above-invite-friends">
-					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
-				</div>
-        <div class="invite-filter-wrapper">
-          <nav class="invite-filters">
-            <a href="javascript:">All</a>
-            <a href="javascript:" data-nw="facebook"></a>
-            <a href="javascript:" data-nw="linkedin"></a>
-          </nav>
-          <div class="invites-left">Invites Left <span class="num-invites"></span></div>
-        </div>
-				<div class="dialog no-invites-dialog" style="display:none">
-					<div class="dialog-content">
-						<h2>You have no invites left</h2>
-						<p>We are limiting the number of users we accept to Kifi.</p>
-						<p>Need more invites? Tell us.</p>
-						<button class="more-invites">I need more invites</button>
-					</div>
-				</div>
-				<div class="dialog invite-message-dialog" style="display:none">
-					<form method="POST" action="/invite" class="dialog-content" data-template>
-						<div class="invite-message-header">Your Kifi invite to {{label}}</div>
-						<a href="javascript:" class="invite-cancel">×</a>
-						<input type="hidden" name="fullSocialId" value="{{fullSocialId}}">
-						<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
-						<textarea class="invite-message" name="message">Hi {{label | replace ' .*', '' }},
+        <div class="add-friends-page" data-href="friends/invite">
+          <div class="above-invite-friends">
+            <input class="invite-filter" type="text" placeholder="Type a name or email">
+          </div>
+          <div class="invite-filter-wrapper">
+            <nav class="invite-filters">
+              <a href="javascript:">All</a>
+              <a href="javascript:" data-nw="facebook"></a>
+              <a href="javascript:" data-nw="linkedin"></a>
+              <a href="javascript:" data-nw="gmail"></a>
+              <a data-nw="twitter"></a>
+            </nav>
+            <div class="invites-left">Invites Left <span class="num-invites"></span></div>
+          </div>
+          <div class="dialog no-invites-dialog" style="display:none">
+            <div class="dialog-content">
+              <h2>You have no invites left</h2>
+              <p>We are limiting the number of users we accept to Kifi.</p>
+              <p>Need more invites? Tell us.</p>
+              <button class="more-invites">I need more invites</button>
+            </div>
+          </div>
+          <div class="dialog invite-message-dialog" style="display:none">
+            <form method="POST" action="/invite" class="dialog-content" data-template>
+              <div class="invite-message-header">Your Kifi invite to {{label}}</div>
+              <a href="javascript:" class="invite-cancel">×</a>
+              <input type="hidden" name="fullSocialId" value="{{fullSocialId}}">
+              <input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
+              <textarea class="invite-message" name="message">Hi {{label | replace ' .*', '' }},
 
-I would like to invite you to the private beta of kifi.com. Click this link to accept the invitation:
-</textarea>
-						<p>A link for the invite will be attached to your message.</p>
-						<button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
-					</form>
-				</div>
-				<div class="invite-friends">
-					<div class="antiscroll-inner">
-						<ul>
-							<li class="invite-friend" data-template data-value="{{value}}" data-status="{{status}}">
-								<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image && /^linkedin/.test(value) %}assets/img/ghost-linkedin.100.png{% endif %}">
-								<div class="invite-name">{{label}}</div>
-								<div class="invite-status">
-									{% if status == "joined" %} Joined Kifi {% endif %}
-									{% if status == "invited" %} Invited {% endif %}
-									{% if !status %} A friend on {{value | replace '/.*', ''}} {% endif %}
-								</div>
-								{% if !status %}
-									<a class="invite-button" href="javascript:">Invite</a>
-								{% endif %}
-							</li>
-						</ul>
-						<img class="invite-friends-loading" src="assets/img/wait.gif">
-						<div class="no-results"></div>
-					</div>
-				</div>
+  I would like to invite you to the private beta of kifi.com. Click this link to accept the invitation:
+  </textarea>
+              <p>A link for the invite will be attached to your message.</p>
+              <button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
+            </form>
+          </div>
+          <div class="invite-friends" data-href="friends/invite">
+            <div class="antiscroll-inner">
+              <ul>
+                <li class="invite-friend" data-template data-value="{{value}}" data-status="{{status}}">
+                  <img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image && /^linkedin/.test(value) %}assets/img/ghost-linkedin.100.png{% endif %}">
+                  <div class="invite-name">{{label}}</div>
+                  <div class="invite-status">
+                    {% if status == "joined" %} Joined Kifi {% endif %}
+                    {% if status == "invited" %} Invited {% endif %}
+                    {% if !status %} A friend on {{value | replace '/.*', ''}} {% endif %}
+                  </div>
+                  {% if !status %}
+                    <a class="invite-button" href="javascript:">Invite</a>
+                  {% endif %}
+                </li>
+              </ul>
+              <img class="invite-friends-loading" src="assets/img/wait.gif">
+              <div class="no-results"></div>
+            </div>
+          </div>
+        </div>
+        <div class="add-friends-page" data-href="friends/find">
+          <div class="above-found-user-list">
+            <input class="user-filter" type="text" placeholder="Type a name">
+          </div>
+          <div class="found-user-list">
+            <div class="antiscroll-inner">
+              <ul>
+                <li class="found-user" data-template data-value="{{value}}" data-status="{{status}}">
+                  <img class="user-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image && /^linkedin/.test(value) %}assets/img/ghost-linkedin.100.png{% endif %}">
+                  <div class="user-name">{{label}}</div>
+                  <div class="user-status">
+                    {% if status == "joined" %} Joined Kifi {% endif %}
+                    {% if status == "connected" %} Connected {% endif %}
+                    {% if !status %} A friend on {{value | replace '/.*', ''}} {% endif %}
+                  </div>
+                  {% if !status %}
+                    <a class="connect-button" href="javascript:">Connect</a>
+                  {% endif %}
+                </li>
+              </ul>
+              <img class="found-user-list-loading" src="assets/img/wait.gif">
+              <div class="no-results"></div>
+            </div>
+          </div>
+        </div>
 			</div>
 			<div class="friends-page" data-href="friends/requests">
 				<div class="friend-reqs-status"></div>
