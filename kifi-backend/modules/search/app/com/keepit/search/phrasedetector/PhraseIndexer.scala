@@ -1,6 +1,6 @@
 package com.keepit.search.phrasedetector
 
-import com.keepit.search.index.{Indexable, Indexer, IndexDirectory}
+import com.keepit.search.index.{ArchivedDirectory, Indexable, Indexer, IndexDirectory}
 import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.model.{Collection, Phrase}
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -27,7 +27,7 @@ class PhraseIndexerImpl(
 
   def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
-
+    log.info("updating Phrases")
     var total = 0
     var done = false
     while (!done) {
@@ -37,11 +37,11 @@ class PhraseIndexerImpl(
         phrases
       }
     }
+    log.info(s"$total Phrases updated")
     total
   }
 
   private def update(phrasesChanged: => Seq[Phrase]): Int = {
-    log.info("updating Phrases")
     try {
       val cnt = successCount
       val changed = phrasesChanged
@@ -51,7 +51,6 @@ class PhraseIndexerImpl(
       log.error("error in Phrase update", e)
       throw e
     }
-
   }
 
   override def onFailure(indexable: Indexable[Phrase], e: Throwable): Unit = {
@@ -72,10 +71,6 @@ class PhraseIndexerImpl(
   override def onStart(batch: Seq[Indexable[Phrase]]): Unit = {
     firstInBatch = -1L
     countInBatch = 0
-  }
-
-  override def onCommit(successful: Seq[Indexable[Phrase]]): Unit = {
-    log.info(s"imported ${countInBatch} phrases. First in batch id: ${firstInBatch}")
   }
 }
 
