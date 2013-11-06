@@ -10,6 +10,7 @@ import play.api.Play._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.search.comment.{CommentIndexerPluginImpl, CommentIndexerPlugin, CommentIndexer, CommentStore}
+import com.keepit.search.message.{MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl}
 import com.keepit.search.phrasedetector.{PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer}
 import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
 import com.keepit.inject.AppScoped
@@ -51,6 +52,7 @@ trait IndexModule extends ScalaModule with Logging {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[CommentIndexerPlugin].to[CommentIndexerPluginImpl].in[AppScoped]
+    bind[MessageIndexerPlugin].to[MessageIndexerPluginImpl].in[AppScoped]
     bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
   }
 
@@ -124,6 +126,15 @@ trait IndexModule extends ScalaModule with Logging {
     log.info(s"storing comment index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     new CommentIndexer(dir, config, commentStore, airbrake, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def messageIndexer(backup: IndexStore, airbrake: AirbrakeNotifier): MessageIndexer = {
+    val dir = getIndexDirectory(current.configuration.getString("index.message.directory"), backup)
+    log.info(s"storing message index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new MessageIndexer(dir, config, airbrake)
   }
 
   @Singleton
