@@ -20,7 +20,7 @@ import play.api.Play._
 import play.api.data.Forms._
 import play.api.data._
 import play.api.data.validation.Constraints
-import play.api.http.HeaderNames
+import play.api.http.HeaderNames.{LOCATION, REFERER, SET_COOKIE}
 import play.api.libs.json.{JsNumber, JsObject, JsString, JsValue, Json}
 import play.api.mvc._
 import securesocial.controllers.ProviderController
@@ -143,8 +143,8 @@ class AuthController @Inject() (
         // TODO: set FORTYTWO_USER_ID in login/signup cases instead of clearing it and then setting it on the next request
         authType match {
           case AuthType.Login =>
-            if (format == "json" && res.header.headers.get("Location").isDefined) {
-              Ok(Json.obj("uri" -> res.header.headers.get("Location").get)).withCookies(resCookies: _*)
+            if (format == "json" && res.header.headers.get(LOCATION).isDefined) {
+              Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(resCookies: _*)
             } else {
               res
             }
@@ -153,7 +153,7 @@ class AuthController @Inject() (
               + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
           case AuthType.Link =>
             if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
-              request.headers.get(HeaderNames.REFERER).map { url =>
+              request.headers.get(REFERER).map { url =>
                 res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
               } getOrElse res
             } else res
