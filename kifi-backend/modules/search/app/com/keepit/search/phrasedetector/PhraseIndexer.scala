@@ -37,7 +37,6 @@ class PhraseIndexerImpl(
         phrases
       }
     }
-    log.info(s"$total Phrases updated")
     total
   }
 
