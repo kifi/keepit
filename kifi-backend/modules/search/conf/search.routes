@@ -3,6 +3,7 @@
 ##########################################
 GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
 GET     /search/comment             @com.keepit.controllers.ext.ExtCommentSearchController.search(q: String, maxHits: Int, context: Option[String])
+GET     /search/message             @com.keepit.controllers.ext.ExtMessageSearchController.search(q: String, page: Int ?= 0)
 POST    /search/events/resultClicked      @com.keepit.controllers.ext.ExtSearchEventController.resultClicked()
 POST    /search/events/searchEnded      @com.keepit.controllers.ext.ExtSearchEventController.searchEnded()
 POST    /search/events/browsed      @com.keepit.controllers.ext.ExtSearchEventController.updateBrowsingHistory()

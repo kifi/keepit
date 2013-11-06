@@ -95,6 +95,8 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[Message]
 
+  def getFromIdToId(fromId: Id[Message], toId: Id[Message])(implicit session: RSession): Seq[Message]
+
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit
 
 }
@@ -165,6 +167,10 @@ class MessageRepoImpl @Inject() (
     updates.foreach{ case (oldId, newId) =>
       (for (row <- table if row.sentOnUriId===oldId) yield row.sentOnUriId).update(newId)
     }
+  }
+
+  def getFromIdToId(fromId: Id[Message], toId: Id[Message])(implicit session: RSession): Seq[Message] = {
+    (for (row <- table if row.id>=fromId && row.id<=toId) yield row).list
   }
 
 

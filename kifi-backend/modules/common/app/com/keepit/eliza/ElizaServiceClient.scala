@@ -8,6 +8,7 @@ import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.search.message.ThreadContent
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Promise}
@@ -25,6 +26,8 @@ trait ElizaServiceClient extends ServiceClient {
   def connectedClientCount: Future[Seq[Int]]
 
   def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) : Unit
+
+  def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]]
 
   //migration
   def importThread(data: JsObject): Unit
@@ -74,6 +77,13 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.sendGlobalNotification, payload)
   }
 
+  def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]] = {
+    call(Eliza.internal.getThreadContentForIndexing(sequenceNumber, maxBatchSize)).map{ response =>
+      val json = Json.parse(response.body).as[JsArray]
+      json.value.map(_.as[ThreadContent])
+    }
+  }
+
   //migration
   def importThread(data: JsObject): Unit = {
     call(Eliza.internal.importThread, data)
@@ -96,6 +106,11 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   }
 
   def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) : Unit = {}
+
+  def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]] = {
+    val p = Promise.successful(Seq[ThreadContent]())
+    p.future
+  }
 
   //migration
   def importThread(data: JsObject): Unit = {}
