@@ -1,0 +1,40 @@
+@(error: String)
+
+@styles = {
+<style>
+body {
+  text-align: center;
+}
+section {
+  width: 64%;
+  margin: 0 auto;
+  padding-bottom: 40px;
+  color: #515051;
+  line-height: 20px;
+  font-size: 16px;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+</style>
+}
+
+@content = {
+  <div class="curtain-l"></div>
+  <div class="curtain-r"></div>
+
+  <h1 class="main-logo">kifi</h1>
+  <h2 class="page-title">Email Address Verification</h2>
+
+  <section>
+    @error match {
+      case "invalid_code" => {
+        <p>Sorry, this is not a valid email address verification link.</p>
+      }
+      case "expired" => {
+        <p>This email address verification link has expired.</p>
+      }
+    }
+  </section>
+}
+
+@views.html.auth.helper.page(title = "kifi.com • Email Address Verification", styles = styles, curtainsDrawn = true, content = content)
