@@ -248,6 +248,8 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .found-user-list>.antiscroll-inner {position: absolute; left: 0; right: 1px; top: 0; bottom: 0; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
 .friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
 .friend.no-match {display: none}
+.friend.unfriended,
+.friend.requested {display: none}
 .friend:last-child {border-bottom: 1px solid #e3e6ee}
 .friend-pic {display: table-cell; width: 70px; padding: 9px 0 9px 7px; vertical-align: top}
 .friend-pic>img {width: 70px; height: 70px}
