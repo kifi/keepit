@@ -54,7 +54,7 @@ class AdminBookmarksController @Inject() (
     db.readOnly { implicit session =>
       val bookmark = bookmarkRepo.get(id)
       val uri = uriRepo.get(bookmark.uriId)
-      Await.result(scraper.asyncScrape(uri), 1 minutes)
+      scraper.scheduleScrape(uri)
       Ok(JsObject(Seq("status" -> JsString("ok"))))
     }
   }
