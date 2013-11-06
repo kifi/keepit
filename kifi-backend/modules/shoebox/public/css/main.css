@@ -51,7 +51,7 @@ body[data-view=profile] .my-pic::before { transition: none; animation-name: edit
 .left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
 .left-col .active {background-color: #e3e6ee}
 .left-col>*>h3:not(.active):hover {background-color: #e9ecf2}
-.left-col h3>a, 
+.left-col h3>a,
 .left-col h3>label {display: block; padding: 0 6px 0 40px; color: #818692}
 .left-col h3>label {cursor: text}
 .left-col .nav-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; background: #eff2f7; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
@@ -165,7 +165,7 @@ body:not([data-view=profile]) .profile,
 body:not([data-view=friends]) .friends,
 body:not([data-view=blog]) .blog-outer {display: none}
 h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
-.undo, .notification {position: absolute; top: -8px; left: 0; right: 0; z-index: 1; text-align: center; display: none}
+.undo, .notification {position: absolute; bottom: -12px; left: 0; right: 0; z-index: 1; text-align: center; display: none}
 .undo-box, .notification-box {display: inline-block; background-color: #ffc; border: 1px solid #f8f4e8; border-radius: 2px; padding: 0 12px; font-size: 13px; font-weight: 300; line-height: 17px; height: 18px; white-space: nowrap}
 a.undo-link[href] {margin-left: 4px; font-weight: 500}
 a.undo-link[href]:hover {text-decoration: underline}

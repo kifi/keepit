@@ -13,8 +13,8 @@ trait EmailAddressRepo extends Repo[EmailAddress] {
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[EmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Option[Boolean]
-  def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress]
+  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress]
+  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Boolean
 }
 
 @Singleton
@@ -40,15 +40,15 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
     (for(f <- table if f.userId === userId && f.state =!= EmailAddressStates.INACTIVE) yield f).list
 
-  // Some(true) means UNVERIFIED -> VERIFIED. Some(false) means already VERIFIED. None means no such code.
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Option[Boolean] = {
+  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress] =
+    (for (e <- table if e.userId === userId && e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
+
+  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Boolean = {
     val now = clock.now()
-    table.filter(e => e.userId === userId && e.verificationCode === verificationCode && e.state =!= EmailAddressStates.UNVERIFIED)
+    table.filter(e => e.userId === userId && e.verificationCode === verificationCode && e.state === EmailAddressStates.UNVERIFIED)
       .map(e => e.verifiedAt ~ e.updatedAt ~ e.state).update((now, now, EmailAddressStates.VERIFIED)) match {
-      case count if count > 0 =>
-        Some(true)
-      case _ =>
-        getByCode(verificationCode).map(_ => false)
+      case count if count > 0 => true
+      case _ => getByUserAndCode(userId, verificationCode).isDefined
     }
   }
 

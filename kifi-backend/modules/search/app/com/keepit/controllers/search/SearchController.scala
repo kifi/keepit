@@ -28,11 +28,14 @@ import com.keepit.social.BasicUser
 import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.IdFilterCompressor
+import com.keepit.search.user.UserSearchFilterFactory
+import com.keepit.search.user.UserSearchRequest
 
 
 class SearchController @Inject()(
     searchConfigManager: SearchConfigManager,
     searcherFactory: MainSearcherFactory,
+    userSearchFilterFactory: UserSearchFilterFactory,
     shoeboxClient: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier
   ) extends SearchServiceController {
@@ -49,6 +52,22 @@ class SearchController @Inject()(
     val res = parser.parse(queryText) match {
       case None => UserSearchResult(Array.empty[UserHit], context)
       case Some(q) => searcher.search(q, maxHits, IdFilterCompressor.fromBase64ToSet(context))
+    }
+    Ok(Json.toJson(res))
+  }
+
+  def searchUsers2() = Action(parse.json){ request =>
+    val UserSearchRequest(userId, queryText, maxHits, context, filter) = Json.fromJson[UserSearchRequest](request.body).get
+    val searcher = searcherFactory.getUserSearcher
+    val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
+    val userFilter = filter match {
+      case "f" if userId.isDefined => userSearchFilterFactory.friendsOnly(userId.get, Some(context))
+      case "nf"if userId.isDefined => userSearchFilterFactory.nonFriendsOnly(userId.get, Some(context))
+      case _ => userSearchFilterFactory.default(Some(context))
+    }
+    val res = parser.parse(queryText) match {
+      case None => UserSearchResult(Array.empty[UserHit], context)
+      case Some(q) => searcher.searchWithFilter(q, maxHits, userFilter)
     }
     Ok(Json.toJson(res))
   }

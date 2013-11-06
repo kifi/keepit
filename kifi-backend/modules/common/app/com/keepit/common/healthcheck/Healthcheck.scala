@@ -89,7 +89,7 @@ class MailSender @Inject() (sender: HealthcheckMailSender) {
 class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, sender: MailSender, services: FortyTwoServices) {
   def sendMail() {
     val last = history.lastError
-    val subject = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.exception}".abbreviate(512)
+    val subject = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.rootException}".abbreviate(512)
     val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString, host.host).body
     sender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
       subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))

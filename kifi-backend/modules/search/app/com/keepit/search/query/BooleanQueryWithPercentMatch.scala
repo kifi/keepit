@@ -283,7 +283,6 @@ object BooleanScorer {
 
 class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float, maxOverlapValue: Float, numSubScores: Int) extends Scorer(weight) {
 
-  private[this] val overlapValueUnit = maxOverlapValue / numSubScores
   private[this] val maxOptionalOverlapValue = maxOverlapValue - required.value
 
   private[this] var doc = -1
@@ -376,10 +375,8 @@ extends Scorer(weight) with Logging {
   private[this] var doc = -1
   private[this] var scoredDoc = -1
   private[this] var scoreValue = 0.0f
-  private[this] var overlapValue = 0.0f
-  private[this] val overlapValueUnit = maxOverlapValue / scorers.length
 
-  private[this] class ScorerDoc(scorer: Scorer, val value: Float) {
+  private[this] class ScorerDoc(scorer: Scorer, value: Float) {
     private[this] var _doc: Int = -1
     private[this] var _state: Int = 0
 
@@ -406,7 +403,8 @@ extends Scorer(weight) with Logging {
 
     def scoreAndNext(): Float = {
       val sc = scorer.score()
-      next()
+      _state = 0
+      _doc = scorer.nextDoc()
       sc
     }
   }
@@ -439,7 +437,7 @@ extends Scorer(weight) with Logging {
     sum * coordFactors(cnt)
   }
 
-  @inline private[this] def computeOverlapValue(): Float = {
+  @inline private[this] def qualified(): Boolean = {
     var top = pq.top
     var matchValue = 0.0f
     while (top.doc == doc && !(top.prepared)) {
@@ -447,11 +445,7 @@ extends Scorer(weight) with Logging {
       top = pq.updateTop()
     }
 
-    if (matchValue >= threshold || (matchValue >= thresholdForHotDocs && hotDocSet.get(doc))) {
-      matchValue
-    } else {
-      0.0f
-    }
+    (matchValue >= threshold || (matchValue >= thresholdForHotDocs && hotDocSet.get(doc)))
   }
 
   override def nextDoc(): Int = advance(0)
@@ -466,11 +460,8 @@ extends Scorer(weight) with Logging {
       }
       doc = top.doc
 
-      overlapValue = 0.0f
-      while (doc < NO_MORE_DOCS && overlapValue == 0.0f) {
-        overlapValue = computeOverlapValue()
-
-        if (overlapValue > 0.0f) return doc
+      while (doc < NO_MORE_DOCS) {
+        if (qualified()) return doc
 
         while (top.doc == doc) {
           top.next()
@@ -480,13 +471,10 @@ extends Scorer(weight) with Logging {
       }
     }
     scoreValue = 0.0f
-    overlapValue = 0.0f
     NO_MORE_DOCS
   }
 
   override def freq(): Int = 1
-
-  def value = overlapValue
 }
 
 class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]) extends Scorer(weight) {

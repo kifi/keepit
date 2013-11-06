@@ -65,7 +65,7 @@ class UserIndexer(
     val usersFuture = shoeboxClient.getUserIndexable(sequenceNumber.value, fetchSize)
     val userIdsFuture = usersFuture.map{users => users.map(_.id.get)}
     val basicUsersFuture = userIdsFuture.flatMap{ ids => shoeboxClient.getBasicUsers(ids) }
-    val emailsFuture = userIdsFuture.flatMap{ ids => shoeboxClient.getEmailsForUsers(ids) }
+    val emailsFuture = userIdsFuture.flatMap{ ids => shoeboxClient.getEmailAddressesForUsers(ids) }
 
     val infoFuture = for {
       users <- usersFuture
