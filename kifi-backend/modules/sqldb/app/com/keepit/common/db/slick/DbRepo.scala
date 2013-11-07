@@ -20,6 +20,7 @@ trait Repo[M <: Model[M]] {
   def save(model: M)(implicit session: RWSession): M
   def count(implicit session: RSession): Int
   def page(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[M]
+  def invalidateCache(model: M)(implicit session: RSession): M
 }
 
 trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
@@ -39,7 +40,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
   import db.Driver.Implicit._ // here's the driver, abstracted away
   import db.Driver.Table
 
-  def invalidateCache(model: M)(implicit session: RSession): M = model
+  override def invalidateCache(model: M)(implicit session: RSession): M = model
 
   implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
   implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]

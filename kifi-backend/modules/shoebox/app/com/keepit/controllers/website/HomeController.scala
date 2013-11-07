@@ -181,6 +181,7 @@ class HomeController @Inject() (
       socialGraphPlugin.asyncRevokePermissions(sui)
       db.readWrite { implicit s =>
         socialConnectionRepo.deactivateAllConnections(sui.id.get)
+        socialUserRepo.invalidateCache(sui)
         socialUserRepo.save(sui.copy(credentials = None, userId = None))
       }
       otherNetworks map socialGraphPlugin.asyncFetch
