@@ -10,6 +10,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import play.api.Plugin
+import com.keepit.model.EmailOptOutRepo
 
 trait MailSenderPlugin extends Plugin {
   def processMail(mail: ElectronicMail)
@@ -38,6 +39,7 @@ private[mail] case class ProcessMail(mailId: ElectronicMail)
 private[mail] class MailSenderActor @Inject() (
     db: Database,
     mailRepo: ElectronicMailRepo,
+    emailOptOutRepo: EmailOptOutRepo,
     airbrake: AirbrakeNotifier,
     mailProvider: MailProvider)
   extends FortyTwoActor(airbrake) with Logging {
@@ -59,7 +61,26 @@ private[mail] class MailSenderActor @Inject() (
       emailsToSend.foreach { mail =>
         self ! ProcessMail(mail)
       }
-    case ProcessMail(mail) => mailProvider.sendMail(mail)
+    case ProcessMail(mail) =>
+      val (newTo, newCC) = db.readOnly { implicit session =>
+        val newTo = mail.to.filterNot { toAddr =>
+          emailOptOutRepo.hasOptedOut(toAddr, mail.category)
+        }
+        val newCC = mail.cc.filterNot { toAddr =>
+          emailOptOutRepo.hasOptedOut(toAddr, mail.category)
+        }
+        (newTo, newCC)
+      }
+      if (newTo.toSet != mail.to.toSet || newCC.toSet != mail.cc.toSet) {
+        if (newTo.isEmpty) {
+          mail.copy(state = ElectronicMailStates.OPT_OUT)
+        }
+        db.readWrite { implicit session =>
+
+        }
+      }
+      emailOptOutRepo.hasOptedOut(mail.to)
+      mailProvider.sendMail(mail)
     case m => throw new UnsupportedActorMessage(m)
   }
 }
