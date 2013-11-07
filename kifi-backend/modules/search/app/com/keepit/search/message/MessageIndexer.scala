@@ -149,7 +149,7 @@ class MessageIndexer(
             )
           }
           indexDocuments(indexables.iterator, commitBatchSize)
-          if (batch.length==0) done=true
+          if (batch.length<=1) done=true
         }
         indexingInProgress = false
       }

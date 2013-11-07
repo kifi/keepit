@@ -99,6 +99,8 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit
 
+  def getMaxId()(implicit session: RSession): Id[Message]
+
 }
 
 @Singleton
@@ -171,6 +173,10 @@ class MessageRepoImpl @Inject() (
 
   def getFromIdToId(fromId: Id[Message], toId: Id[Message])(implicit session: RSession): Seq[Message] = {
     (for (row <- table if row.id>=fromId && row.id<=toId) yield row).list
+  }
+
+  def getMaxId()(implicit session: RSession): Id[Message] = {
+    (for (row <- table) yield row.id.max).first.getOrElse(Id[Message](0))
   }
 
 
