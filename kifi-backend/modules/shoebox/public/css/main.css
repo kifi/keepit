@@ -289,7 +289,7 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-filters[data-nw-selected=facebook] {border-color: #637ab8}
 .invite-filters[data-nw-selected=linkedin] {border-color: #4f83c3}
 .invite-filters[data-nw-selected=twitter] {border-color: #55acee}
-.invite-filters[data-nw-selected=gmail] {border-color: #e36767}
+.invite-filters[data-nw-selected=email] {border-color: #e36767}
 
 .invite-filters>a {display: inline-block; width: 36px; height: 36px; margin-right: 5px; vertical-align: top; -webkit-transition: height .1s; transition: height .1s}
 .invite-filters>a:not([data-nw]) {background-color: #b7ce84; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
@@ -298,7 +298,7 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-filters>a[data-nw=facebook] {background-color: #637ab8}
 .invite-filters>a[data-nw=linkedin] {background-color: #4f83c3; background-position: -36px top}
 .invite-filters>a[data-nw=twitter] {background-color: #55acee; background-position: -72px top}
-.invite-filters>a[data-nw=gmail] {background-color: #e36767; background-position: -108px top}
+.invite-filters>a[data-nw=email] {background-color: #e36767; background-position: -108px top}
 
 .invite-filters>a:not([href]) {background-color: #edeff1}
 
@@ -306,13 +306,13 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-filters:not([data-nw-selected=facebook])>[href][data-nw=facebook]:hover,
 .invite-filters:not([data-nw-selected=linkedin])>[href][data-nw=linkedin]:hover,
 .invite-filters:not([data-nw-selected=twitter])>[href][data-nw=twitter]:hover,
-.invite-filters:not([data-nw-selected=gmail])>[href][data-nw=gmail]:hover {height: 38px}
+.invite-filters:not([data-nw-selected=email])>[href][data-nw=email]:hover {height: 38px}
 
 .invite-filters:not([data-nw-selected])>:not([data-nw]),
 .invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
 .invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin],
 .invite-filters[data-nw-selected=twitter]>[data-nw=twitter],
-.invite-filters[data-nw-selected=gmail]>[data-nw=gmail] {height: 41px}
+.invite-filters[data-nw-selected=email]>[data-nw=email] {height: 41px}
 
 .invite-filter-wrapper {position: relative}
 .invites-left {position: absolute; right: 6px; bottom: 5px; font-size: 13px; color: #818692; display: none}
