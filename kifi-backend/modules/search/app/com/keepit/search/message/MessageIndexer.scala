@@ -39,6 +39,7 @@ class MessageContentIndexable(
     val data: ThreadContent,
     val id: Id[ThreadContent],
     val sequenceNumber: SequenceNumber,
+    val airbrake: AirbrakeNotifier,
     val isDeleted: Boolean = false
   ) extends Indexable[ThreadContent] with LineFieldBuilder{
 
@@ -116,6 +117,7 @@ class MessageContentIndexable(
     } else {
       val fakeResultData = Json.stringify(Json.obj("err" -> "result too large")).getBytes(UTF8)
       doc.add(buildBinaryDocValuesField(ThreadIndexFields.resultField,fakeResultData))
+      airbrake.notify(s"Failed to index thread ${data.threadExternalId} correctly. Result json would be too large.")
     }
 
     doc
@@ -148,7 +150,8 @@ class MessageIndexer(
             new MessageContentIndexable(
               data = threadContent,
               id = threadContent.id,
-              sequenceNumber = threadContent.seq
+              sequenceNumber = threadContent.seq,
+              airbrake = airbrake
             )
           }
           indexDocuments(indexables.iterator, commitBatchSize)
