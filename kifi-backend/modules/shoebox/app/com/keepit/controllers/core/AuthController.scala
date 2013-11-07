@@ -60,6 +60,8 @@ class AuthController @Inject() (
     passwordResetRepo: PasswordResetRepo
   ) extends WebsiteController(actionAuthenticator) with Logging {
 
+  private val PopupKey = "popup"
+
   // Note: some of the below code is taken from ProviderController in SecureSocial
   // Logout is still handled by SecureSocial directly.
 
@@ -127,6 +129,15 @@ class AuthController @Inject() (
   // log in with username/password and link the account with a provider
   def passwordLoginAndLink(provider: String) = getAuthAction(provider, AuthType.LoginAndLink)
 
+  def popupBeforeLinkSocial(provider: String) = AuthenticatedHtmlAction(allowPending = true) { implicit request =>
+    Ok(views.html.auth.popupBeforeLinkSocial(SocialNetworkType(provider))).withSession(session + (PopupKey -> "1"))
+  }
+
+  def popupAfterLinkSocial(provider: String) = AuthenticatedHtmlAction(allowPending = true) { implicit request =>
+    val url = identityPicture(request.identityOpt.get)
+    Ok("<script>try{window.opener.afterSocialLink('" + url.replaceAll("'", """\\'""") + "')}finally{window.close()}</script>").withSession(session - PopupKey)
+  }
+
   // --
   // Utility methods
   // --
@@ -154,7 +165,9 @@ class AuthController @Inject() (
             res.withSession(resSession - FORTYTWO_USER_ID
               + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
           case AuthType.Link =>
-            if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
+            if (resSession.get(PopupKey).isDefined) {
+              res.withSession(resSession + (SecureSocial.OriginalUrlKey -> routes.AuthController.popupAfterLinkSocial(provider).url))
+            } else if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
               request.headers.get(REFERER).map { url =>
                 res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
               } getOrElse res

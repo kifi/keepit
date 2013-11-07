@@ -239,11 +239,8 @@ kifi.form = (function () {
   $('.form-photo-a').click(function (e) {
     if (e.which !== 1) return;
     var $a = $(this);
-    if ($a.hasClass('facebook')) {
-      window.open('https://www.facebook.com', 'photo', 'width=720,height=400,dialog=yes,menubar=no,resizable=yes,scrollbars=yes,status=yes');
-    } else if ($a.hasClass('linkedin')) {
-      window.open('https://www.linkedin.com', 'photo', 'width=720,height=400,dialog=yes,menubar=no,resizable=yes,scrollbars=yes,status=yes');
-    }
+    window.open($a.data('uri'), 'photo', 'width=880,height=460,dialog=yes,menubar=no,resizable=yes,scrollbars=no,status=no');
+    window.afterSocialLink = afterSocialLink;
   });
   $('.form-photo-file').change(function () {
     if (this.files && URL) {
@@ -282,6 +279,9 @@ kifi.form = (function () {
   function removeDropTarget() {
     $drop.css('display', '');
     $(document).off('mousemove.drag');
+  }
+  function afterSocialLink(photoUrl) {
+    $photo.css({'background-image': 'url(' + photoUrl + ')', 'background-position': '', 'background-size': ''}).removeClass('unset');
   }
 
   var photoXhr2;
