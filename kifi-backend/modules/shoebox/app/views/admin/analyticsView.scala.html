@@ -107,7 +107,7 @@
     function preprocess(metric){
       var metricKeys = discoverKeys(metric.data, metric.legend)
       if (metricKeys.length===0){
-        metricKeys.push(datum.legend['null'] || 'null'); 
+        metricKeys.push(metric.legend['null'] || 'null');
       }
       metric.keys = metricKeys; 
       objectify(metric.data, metric.legend);
