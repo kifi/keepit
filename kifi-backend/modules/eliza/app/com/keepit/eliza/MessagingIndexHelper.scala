@@ -20,11 +20,11 @@ trait MessagingIndexHelper{
   protected val db: Database
   protected val shoebox: ShoeboxServiceClient
 
-  private def getMessages(fromId: Id[Message], toId: Id[Message]) : Seq[Message] = {
+  private def getMessages(fromId: Id[Message], toId: Id[Message], maxId: Id[Message]) : Seq[Message] = {
     val messages = db.readOnly{ implicit session => messageRepo.getFromIdToId(fromId, toId) }
     val filteredMessages = messages.filter(_.from.isDefined)
-    if (filteredMessages.length > 0 || messages.length==0) filteredMessages
-    else getMessages(fromId, Id[Message](2*toId.id))
+    if (filteredMessages.length > 0 || toId.id >= maxId.id) filteredMessages
+    else getMessages(fromId, Id[Message](2*toId.id), maxId)
   }
 
   private def getThreadContentsForThreadWithSequenceNumber(threadId: Id[MessageThread], seq: SequenceNumber): Future[ThreadContent] = {
@@ -58,7 +58,8 @@ trait MessagingIndexHelper{
   }
 
   def getThreadContentsForMessagesFromIdToId(fromId: Id[Message], toId: Id[Message]) : Future[Seq[ThreadContent]] = {
-    val allMessages = getMessages(fromId, toId)
+    val maxMessageId = db.readOnly{ implicit session => messageRepo.getMaxId()}
+    val allMessages = getMessages(fromId, toId, maxMessageId)
     val threadMessages = allMessages.groupBy(_.thread)
     Future.sequence(threadMessages.toSeq.map{ case (threadId, messages) =>
       getThreadContentsForThreadWithSequenceNumber(threadId, SequenceNumber(messages.map(_.id.get.id).max))
