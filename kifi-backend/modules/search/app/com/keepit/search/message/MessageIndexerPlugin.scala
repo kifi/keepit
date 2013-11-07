@@ -56,7 +56,7 @@ class MessageIndexerPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 30 seconds, 1 minute, actor.ref, UpdateIndex)
+    //scheduleTask(actor.system, 30 seconds, 1 minute, actor.ref, UpdateIndex)
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
       scheduleTask(actor.system, 15 minutes, 2 hours, actor.ref, BackUp)
     }
