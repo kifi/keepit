@@ -11,7 +11,7 @@ import org.apache.lucene.search.{Query, TermQuery}
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.BytesRef
 
-import play.api.libs.json.{Json, JsValue}
+import play.api.libs.json.{Json, JsValue, JsString}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -49,6 +49,12 @@ class MessageSearcher(searcher: Searcher){
     }.drop(from).take(howMany)
 
 
-    orderedResults.map(x => Json.parse(x.value))
+    orderedResults.map{ x => 
+      try {
+        Json.parse(x.value)
+      } catch {
+        case _ : Throwable => Json.obj("err" -> JsString(x.value))
+      }
+    }
   }
 } 
