@@ -15,11 +15,11 @@ import play.api.libs.json.{Json, JsValue, JsString}
 
 import scala.collection.mutable.ArrayBuffer
 
-case class ResultWithScore(score: Float, value: String, len: Long, rlen: Long) //ZZZ clean up extra fields
+case class ResultWithScore(score: Float, value: String)
 
 class MessageSearcher(searcher: Searcher){
 
-  //not super effcient. we'll see how it behaves
+  //not super effcient. we'll see how it behaves -Stephen
   def search(userId: Id[User], query: Query, from: Int = 0, howMany: Int = 20): Seq[JsValue] = {
 
     val participantFilterQuery = new TermQuery(new Term(ThreadIndexFields.participantIdsField, userId.id.toString))
@@ -38,9 +38,7 @@ class MessageSearcher(searcher: Searcher){
         allResults.append(
           ResultWithScore(
             scorer.score(),
-            resultString,
-            resultLength,
-            resultString.length
+            resultString
           )
         )
         docNumber = scorer.nextDoc()
@@ -57,9 +55,7 @@ class MessageSearcher(searcher: Searcher){
         Json.parse(x.value)
       } catch {
         case _ : Throwable => Json.obj(
-          "err" -> JsString(x.value),
-          "exlen" -> x.len,
-          "rlen" -> x.rlen
+          "err" -> JsString(x.value)
         )
       }
     }
