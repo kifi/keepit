@@ -98,7 +98,7 @@ class OrphanCleaner @Inject() (
     if (!readOnly) {
       log.info(s"Changing ${oldScrapeInfos.size} ScrapeInfos.")
       oldScrapeInfos foreach { si =>
-        scrapeInfoRepo.save(si.withState(ScrapeInfoStates.INACTIVE))
+        scrapeInfoRepo.save(si.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
       }
     } else {
       log.info(s"Would have changed ${oldScrapeInfos.size} ScrapeInfos.")

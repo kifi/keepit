@@ -232,11 +232,11 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
           scrapeRepo.getByUriId(uri.id.get).get
         }
         inject[Database].readWrite { implicit s =>
-          info = scrapeRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
+          info = scrapeRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
           info.nextScrape === END_OF_TIME
         }
         inject[Database].readWrite { implicit s =>
-          info = scrapeRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
+          info = scrapeRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.ACTIVE))
           (info.nextScrape.getMillis <= currentDateTime.getMillis) === true
         }
       }

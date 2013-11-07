@@ -67,10 +67,6 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
   }
 
   def createNewResetToken(userId: Id[User], sentTo: EmailAddressHolder)(implicit session: RWSession): PasswordReset = {
-    // Inactivate all outstanding reset tokens
-    getByUser(userId, getPotentiallyExpired = true).map { pr =>
-      save(pr.withState(PasswordResetStates.INACTIVE))
-    }
     saveWithNewToken(PasswordReset(userId = userId, state = PasswordResetStates.ACTIVE, token = "", sentTo = Some(sentTo.address)))
   }
 

@@ -20,7 +20,7 @@ import play.api.Play._
 import play.api.data.Forms._
 import play.api.data._
 import play.api.data.validation.Constraints
-import play.api.http.HeaderNames
+import play.api.http.HeaderNames.{LOCATION, REFERER, SET_COOKIE}
 import play.api.libs.json.{JsNumber, JsObject, JsString, JsValue, Json}
 import play.api.mvc._
 import securesocial.controllers.ProviderController
@@ -36,7 +36,7 @@ sealed abstract class AuthType
 
 object AuthType {
   case object Login extends AuthType
-  case object Signup extends AuthType
+  case object SocialSignup extends AuthType
   case object Link extends AuthType
   case object LoginAndLink extends AuthType
 }
@@ -64,6 +64,9 @@ class AuthController @Inject() (
   // Logout is still handled by SecureSocial directly.
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
+
+  private def newSignup()(implicit request: Request[_]) =
+    request.cookies.get("QA").isDefined || current.configuration.getBoolean("newSignup").getOrElse(false)
 
   def mobileAuth(providerName: String) = Action(parse.json) { implicit request =>
     // format { "accessToken": "..." }
@@ -101,7 +104,6 @@ class AuthController @Inject() (
       }
     }
   }, unauthenticatedAction = { implicit request =>
-    val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
     if (newSignup && request.identityOpt.isDefined) {
 
       // TODO(andrew): Handle special case. User tried to log in (not sign up) with social network, email exists in system but social user doesn't.
@@ -119,8 +121,8 @@ class AuthController @Inject() (
   def link(provider: String) = getAuthAction(provider, AuthType.Link)
   def linkByPost(provider: String) = getAuthAction(provider, AuthType.Link)
 
-  def signup(provider: String) = getAuthAction(provider, AuthType.Signup)
-  def signupByPost(provider: String) = getAuthAction(provider, AuthType.Signup)
+  def signup(provider: String) = getAuthAction(provider, AuthType.SocialSignup)
+  def signupByPost(provider: String) = getAuthAction(provider, AuthType.SocialSignup)
 
   // log in with username/password and link the account with a provider
   def passwordLoginAndLink(provider: String) = getAuthAction(provider, AuthType.LoginAndLink)
@@ -138,24 +140,22 @@ class AuthController @Inject() (
     val actualProvider = if (authType == AuthType.LoginAndLink) SocialNetworks.FORTYTWO.authProvider else provider
     ProviderController.authenticate(actualProvider)(augmentedRequest) match {
       case res: SimpleResult[_] =>
-        val resSession = Session.decodeFromCookie(
-          res.header.headers.get(SET_COOKIE).flatMap(Cookies.decode(_).find(_.name == Session.COOKIE_NAME)))
+        val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
+        val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
         // TODO: set FORTYTWO_USER_ID in login/signup cases instead of clearing it and then setting it on the next request
-
-        val responseCookies = res.header.headers.get(SET_COOKIE).map { sc => Cookies.decode(sc) }.getOrElse(Nil)
         authType match {
           case AuthType.Login =>
-            if (format == "json" && res.header.headers.get("Location").isDefined) {
-              Ok(Json.obj("uri" -> res.header.headers.get("Location").get)).withCookies(responseCookies: _*).withSession(resSession)
+            if (format == "json" && res.header.headers.get(LOCATION).isDefined) {
+              Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(resCookies: _*)
             } else {
-              res.withSession(resSession)
+              res
             }
-          case AuthType.Signup =>
+          case AuthType.SocialSignup =>
             res.withSession(resSession - FORTYTWO_USER_ID
               + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
           case AuthType.Link =>
             if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
-              request.headers.get(HeaderNames.REFERER).map { url =>
+              request.headers.get(REFERER).map { url =>
                 res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
               } getOrElse res
             } else res
