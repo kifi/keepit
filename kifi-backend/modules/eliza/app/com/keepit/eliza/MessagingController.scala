@@ -56,16 +56,23 @@ object MessagingController {
 }
 
 class MessagingController @Inject() (
-    threadRepo: MessageThreadRepo,
+    protected val threadRepo: MessageThreadRepo,
     userThreadRepo: UserThreadRepo,
-    messageRepo: MessageRepo,
-    shoebox: ShoeboxServiceClient,
-    db: Database,
+    protected val messageRepo: MessageRepo,
+    protected val shoebox: ShoeboxServiceClient,
+    protected val db: Database,
     notificationRouter: NotificationRouter,
     clock: Clock,
     uriNormalizationUpdater: UriNormalizationUpdater,
     urbanAirship: UrbanAirship)
-  extends ElizaServiceController with Logging {
+  extends ElizaServiceController with MessagingIndexHelper with Logging {
+
+  //for indexing data requests
+  def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long) = Action { request =>
+    Async(getThreadContentsForMessagesFromIdToId(Id[Message](sequenceNumber), Id[Message](sequenceNumber+maxBatchSize)).map{ threadContents =>
+      Ok(JsArray(threadContents.map(Json.toJson(_))))
+    })
+  }
 
   //migration code
   private def recoverNotification(userId: Id[User], thread: MessageThread, messages: Seq[Message], id2BasicUser: Map[Id[User], BasicUser])(implicit session: RWSession) : Unit = {
@@ -88,8 +95,8 @@ class MessagingController @Inject() (
 
       userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson, false)
       userThreadRepo.clearNotification(userId)
-      userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime(zones.PT))
-      userThreadRepo.setNotificationLastSeen(userId, currentDateTime(zones.PT))
+      userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime)
+      userThreadRepo.setNotificationLastSeen(userId, currentDateTime)
     }
   }
 

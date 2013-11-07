@@ -21,6 +21,7 @@ import com.keepit.model.User
 import com.keepit.social.BasicUser
 import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
+import com.keepit.search.user.UserSearchRequest
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -48,6 +49,7 @@ trait SearchServiceClient extends ServiceClient {
   def refreshPhrases(): Unit
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
   def searchUsers(query: String, maxHits: Int = 10, context: String = ""): Future[UserSearchResult]
+  def searchUsers2(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
   def buildSpellCorrectorDictionary(): Unit
@@ -161,6 +163,13 @@ class SearchServiceClientImpl(
 
   def searchUsers(query: String, maxHits: Int = 10, context: String = ""): Future[UserSearchResult] = {
     call(Search.internal.searchUsers(query, maxHits, context)).map{ r =>
+      Json.fromJson[UserSearchResult](r.json).get
+    }
+  }
+
+  def searchUsers2(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = {
+    val payload = Json.toJson(UserSearchRequest(userId, query, maxHits, context, filter))
+    call(Search.internal.searchUsers2(), payload).map{ r =>
       Json.fromJson[UserSearchResult](r.json).get
     }
   }

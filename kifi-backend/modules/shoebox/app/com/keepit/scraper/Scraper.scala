@@ -70,8 +70,26 @@ class Scraper @Inject() (
 
   def schedule(): Unit = {
     log.info("[schedule] starting a new scrape round")
-    val tasks = db.readOnly { implicit s =>
-      scrapeInfoRepo.getOverdueList().map{ info => (normalizedURIRepo.get(info.uriId), info) }
+    val (activeOverdues, pendingCount, pendingOverdues) = db.readOnly { implicit s =>
+      (scrapeInfoRepo.getOverdueList(), scrapeInfoRepo.getPendingCount(), scrapeInfoRepo.getOverduePendingList())
+    }
+    log.info(s"[schedule] (active):  (len=${activeOverdues.length}) ${activeOverdues.map(i => (i.id, i.destinationUrl)).mkString}")
+    log.info(s"[schedule] (pending): pendingCount=${pendingCount} overdues: (len=${pendingOverdues.length}) ${pendingOverdues.map(i => (i.id, i.destinationUrl)).mkString}")
+
+    val batchMax = 100     // make configurable
+    val skipThreshold = 50 // make configurable or calculated
+    val adjPendingCount = (pendingCount - pendingOverdues.length) // assuming overdue ones are no longer being worked on
+    val infos = if (adjPendingCount > skipThreshold) {
+      log.warn(s"[schedule] # of pending jobs (adj=${adjPendingCount}, pending=${pendingCount}, pendingOverdues=${pendingOverdues.length}) > $skipThreshold. Skip a round.")
+      Seq.empty[ScrapeInfo]
+    } else {
+      activeOverdues.take(batchMax) ++ pendingOverdues.take(batchMax)
+    }
+
+    val tasks = if (infos.isEmpty) {
+      Seq.empty[(NormalizedURI, ScrapeInfo)]
+    } else db.readOnly { implicit s =>
+      infos.map{ info => (normalizedURIRepo.get(info.uriId), info) }
     }
     log.info("[schedule] got %s uris to scrape".format(tasks.length))
     val ts = System.currentTimeMillis
@@ -81,18 +99,18 @@ class Scraper @Inject() (
       log.info(s"[schedule] invoke (remote) Scraper service; uris(len=${tasks.length}) $tasks")
       tasks.grouped(scraperConfig.batchSize).foreach { g => // revisit rate-limit
         val futures = g.map { case (uri, info) =>
-          scraperServiceClient.scheduleScrape(uri, info)
+          (uri.url, scraperServiceClient.scheduleScrape(uri, info))
         }
-        val res = futures.map(f => Await.result(f, 5 seconds)) // revisit artificial wait/delay
-        log.info(s"[schedule] (remote) results=$res")
+        val res = futures.map(f => (f._1, Await.result(f._2, 5 seconds))) // revisit artificial wait/delay
+        log.info(s"[schedule] (remote) results=${res.mkString}")
       }
     }
-    log.info(s"[schedule] finished scheduling ${tasks.length} uris for scraping. time-lapsed: ${System.currentTimeMillis - ts} ms")
+    log.info(s"[schedule] finished scheduling ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
     val info = db.readWrite { implicit s =>
-      scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
+      scrapeInfoRepo.getByUriId(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
     }
     safeProcessURI(uri, info)
   }

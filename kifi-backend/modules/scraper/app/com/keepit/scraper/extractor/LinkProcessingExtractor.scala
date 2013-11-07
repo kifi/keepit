@@ -33,13 +33,14 @@ extends DefaultExtractor(url, maxContentChars, htmlMapper) {
       linkUrl <- processLink(link)
     } yield linkUrl
     val linkedContentWithKeywords = relevantLinks.distinct.map { case linkUrl =>
+      val ts = System.currentTimeMillis
       log.info(s"Scraping additional content from link ${linkUrl} for url ${url}")
       val extractor = new DefaultExtractor(linkUrl, maxContentChars, htmlMapper)
       val proxy = syncGetProxyP(url)
       httpFetcher.fetch(linkUrl, proxy = proxy)(extractor.process)
       val content = extractor.getContent
       val keywords = extractor.getKeywords
-      log.info(s"Scraped ${url}: content=$content keywords=$keywords")
+      log.info(s"Scraped additional content from link ${linkUrl} for url ${url}: time-lapsed:${System.currentTimeMillis - ts} content.len=${content.length} keywords=$keywords")
       (content, keywords)
     }
     linkedContentWithKeywords.unzip

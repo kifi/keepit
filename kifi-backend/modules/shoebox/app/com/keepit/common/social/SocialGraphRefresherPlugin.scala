@@ -26,13 +26,13 @@ private[social] class SocialGraphRefresherActor @Inject() (
 
   def receive() = {
     case RefreshAll => {
-      log.info("going to check which SocilaUserInfo Was not fetched Lately")
+      log.info("going to check which SocialUserInfo was not fetched lately")
       val needToBeRefreshed = db.readOnly { implicit s => socialRepo.getNeedToBeRefreshed }
       log.info("find %s users that need to be refreshed".format(needToBeRefreshed.size))
       needToBeRefreshed.foreach(self ! RefreshUserInfo(_))
     }
     case RefreshUserInfo(userInfo) => {
-      log.info("found socialUserInfo that need to be refreshed %s".format(userInfo))
+      log.info("found SocialUserInfo that needed to be refreshed %s".format(userInfo))
       socialGraphPlugin.asyncFetch(userInfo)
     }
     case m => throw new UnsupportedActorMessage(m)

@@ -20,6 +20,7 @@ case class ServiceVersion(val value: String) {
 sealed abstract class ServiceType(val name: String, val shortName: String) {
   def selfCheck() : Future[Boolean] = promise[Boolean].success(true).future
   def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = ServiceStatus.UP
+  override def toString(): String = name
 }
 
 object ServiceType {
@@ -89,7 +90,7 @@ class FortyTwoServices(
     case _ if currentVersionFile.isEmpty => currentDateTime
     case _ =>
       val timeStr = io.Source.fromURL(compilationTimeFile.get).mkString
-	  DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(zones.PT).parseDateTime(timeStr)
+	  DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(zones.UTC).parseDateTime(timeStr)
   }
 
   lazy val baseUrl: String = Play.current.configuration.getString("application.baseUrl").get

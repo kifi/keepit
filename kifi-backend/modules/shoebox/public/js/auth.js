@@ -115,14 +115,12 @@ kifi.form = (function () {
         email: email,
         password: password
       }).done(function (data) {
-        if (!data.finalized) {
+        if (!navigate(data)) {
           transitionTitle($('.signup-2').data('title'));
           $('body').addClass('finalizing droppable');
           setTimeout(function () {
             $('.form-first-name').focus();
           }, 200);
-        } else {
-          navigateToApp();
         }
       }).fail(function (xhr) {
         signup1Promise = null;
@@ -135,8 +133,11 @@ kifi.form = (function () {
     var $title = $('.page-title');
     $title.after($title.clone().text(text)).addClass('obsolete').layout();
   }
-  function navigateToApp() {
-    window.location = '/';
+  function navigate(data) {
+    if (data.uri) {
+      window.location = data.uri;
+      return true;
+    }
   }
 
   var signup2Promise;
@@ -161,7 +162,7 @@ kifi.form = (function () {
           cropY: pic.y,
           cropSize: pic.size
         })
-        .done(navigateToApp)
+        .done(navigate)
         .fail(function (xhr) {
           signup2Promise = null;
         });
@@ -184,7 +185,7 @@ kifi.form = (function () {
         email: email,
         password: password
       })
-      .done(navigateToApp)
+      .done(navigate)
       .fail(function (xhr) {
         signup2Promise = null;
       });
@@ -212,7 +213,7 @@ kifi.form = (function () {
         username: email,
         password: password
       })
-      .done(navigateToApp)
+      .done(navigate)
       .fail(function (xhr) {
         loginPromise = null;
         if (xhr.status === 403) {
@@ -238,11 +239,8 @@ kifi.form = (function () {
   $('.form-photo-a').click(function (e) {
     if (e.which !== 1) return;
     var $a = $(this);
-    if ($a.hasClass('facebook')) {
-      window.open('https://www.facebook.com', 'photo', 'width=720,height=400,dialog=yes,menubar=no,resizable=yes,scrollbars=yes,status=yes');
-    } else if ($a.hasClass('linkedin')) {
-      window.open('https://www.linkedin.com', 'photo', 'width=720,height=400,dialog=yes,menubar=no,resizable=yes,scrollbars=yes,status=yes');
-    }
+    window.open($a.data('uri'), 'photo', 'width=880,height=460,dialog=yes,menubar=no,resizable=yes,scrollbars=no,status=no');
+    window.afterSocialLink = afterSocialLink;
   });
   $('.form-photo-file').change(function () {
     if (this.files && URL) {
@@ -281,6 +279,9 @@ kifi.form = (function () {
   function removeDropTarget() {
     $drop.css('display', '');
     $(document).off('mousemove.drag');
+  }
+  function afterSocialLink(photoUrl) {
+    $photo.css({'background-image': 'url(' + photoUrl + ')', 'background-position': '', 'background-size': ''}).removeClass('unset');
   }
 
   var photoXhr2;
