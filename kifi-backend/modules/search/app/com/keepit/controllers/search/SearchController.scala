@@ -47,12 +47,14 @@ class SearchController @Inject()(
   }
 
   def searchUsers(queryText: String, maxHits: Int = 10, context: String = "") = Action{ request =>
+    log.info(s"search user: queryText = ${queryText}")
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
     val res = parser.parse(queryText) match {
       case None => UserSearchResult(Array.empty[UserHit], context)
       case Some(q) => searcher.search(q, maxHits, IdFilterCompressor.fromBase64ToSet(context))
     }
+    log.info(s"search user: result = " + res.hits.mkString("\n"))
     Ok(Json.toJson(res))
   }
 
