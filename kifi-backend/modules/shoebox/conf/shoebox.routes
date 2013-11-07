@@ -33,6 +33,8 @@ POST    /login/:provider            @com.keepit.controllers.core.AuthController.
 POST    /login                      @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
 POST    /auth/log-in                @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
 
+GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
+GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
 POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
 
@@ -297,8 +299,6 @@ GET     /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchCon
 POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.addNewExperiment
 POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
 POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
-GET     /admin/searchExperiments/kvg/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiVsGoogle(id: Id[SearchConfigExperiment])
-GET     /admin/searchExperiments/kifiHadResults/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiHadResults(id: Id[SearchConfigExperiment])
 
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])

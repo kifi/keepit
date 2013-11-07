@@ -6,7 +6,7 @@ import org.specs2.mutable.Specification
 import com.google.inject.Injector
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.time._
-import com.keepit.common.time.zones.PT
+
 import com.keepit.test.{ShoeboxApplication, ShoeboxTestInjector}
 
 import play.api.test.Helpers._
@@ -15,8 +15,8 @@ import com.keepit.FortyTwoGlobal
 class CollectionTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
-    val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
-    val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, PT)
+    val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+    val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
     db.readWrite {implicit s =>
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner", createdAt = t1))

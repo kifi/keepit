@@ -112,8 +112,14 @@ class MessageContentIndexable(
     )
     val searchResultData = Json.stringify(searchResultJson).getBytes(UTF8)
     val searchResultDocValue = buildBinaryDocValuesField(ThreadIndexFields.resultField,searchResultData)
-    doc.add(buildLongValueField(ThreadIndexFields.resultLengthField, searchResultData.length))
-    doc.add(searchResultDocValue)
+    if (searchResultData.length < 20000) { //ZZZ TEMPORARY 
+      doc.add(buildLongValueField(ThreadIndexFields.resultLengthField, searchResultData.length))
+      doc.add(searchResultDocValue)
+    } else {
+      val fakeResultData = Json.stringify(Json.obj()).getBytes(UTF8)
+      doc.add(buildLongValueField(ThreadIndexFields.resultLengthField, fakeResultData.length))
+      doc.add(buildBinaryDocValuesField(ThreadIndexFields.resultField,fakeResultData))
+    }
 
     doc
   }
