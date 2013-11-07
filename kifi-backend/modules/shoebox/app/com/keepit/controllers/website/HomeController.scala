@@ -181,14 +181,19 @@ class HomeController @Inject() (
       socialGraphPlugin.asyncRevokePermissions(sui)
       db.readWrite { implicit s =>
         socialConnectionRepo.deactivateAllConnections(sui.id.get)
+        socialUserRepo.invalidateCache(sui)
         socialUserRepo.save(sui.copy(credentials = None, userId = None))
       }
       otherNetworks map socialGraphPlugin.asyncFetch
-      Redirect(securesocial.controllers.routes.LoginPage.logout())
+      Redirect(com.keepit.controllers.website.routes.HomeController.home())
     }
   }
 
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
-    Ok(views.html.website.gettingStarted(request.user))
+    if (newSignup) {
+      Ok(views.html.website.gettingStarted2(request.user))
+    } else {
+      Ok(views.html.website.gettingStarted(request.user))
+    }
   }
 }
