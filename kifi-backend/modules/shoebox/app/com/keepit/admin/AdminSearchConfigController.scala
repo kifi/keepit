@@ -114,12 +114,12 @@ class AdminSearchConfigController @Inject() (
       (None +: experiments.map(Some(_))).map { id =>
         id -> Json.arr(
           MetricAuxInfo.augmentMetricData(
-            totalResultsClickedByExperiment.getOrElse(id, Json.obj()),
+            totalResultsClickedByExperiment(id),
             MetricAuxInfo("nothing yet", Map("null" -> "All Clicks on Searches with Kifi Results"))
           ),
           MetricAuxInfo.augmentMetricData(
-            kifiResultsClickedByExperiment.getOrElse(id, Json.obj()),
-            MetricAuxInfo("nothing yet", Map("null" -> "KiFi Clicks"))
+            kifiResultsClickedByExperiment(id),
+            MetricAuxInfo("nothing yet", Map("null" -> "Kifi Clicks"))
           )
         )
       }.toMap
@@ -141,11 +141,11 @@ class AdminSearchConfigController @Inject() (
       (None +: experiments.map(Some(_))).map { id =>
         id -> Json.arr(
           MetricAuxInfo.augmentMetricData(
-            totalSearchesByExperiment.getOrElse(id, Json.obj()),
+            totalSearchesByExperiment(id),
             MetricAuxInfo("nothing yet", Map("null" -> "All Searches"))
           ),
           MetricAuxInfo.augmentMetricData(
-            searchesWithKifiResultsByExperiment.getOrElse(id, Json.obj()),
+            searchesWithKifiResultsByExperiment(id),
             MetricAuxInfo("nothing yet", Map("null" -> "All Searches with Kifi Results"))
           )
         )
@@ -153,8 +153,15 @@ class AdminSearchConfigController @Inject() (
     }
   }
 
+  private def wrapData(id: Option[Id[SearchConfigExperiment]], header: String, points: Seq[JsValue]): JsObject =
+    Json.obj(
+      "header" -> JsString(header + s": ${id.map(_.toString).getOrElse("None")}"),
+      "data" -> JsArray(points)
+    )
+
   private def ungroup(searchExperimentMetricData: JsObject): Map[Option[Id[SearchConfigExperiment]], JsObject] = {
     val dataPointsByExperiment = MutableMap[Option[Id[SearchConfigExperiment]], ListBuffer[JsValue]]()
+
     val header = (searchExperimentMetricData \ "header").as[String]
     val dataByTime = (searchExperimentMetricData \ "data").as[JsArray]
     dataByTime.value.foreach { dataWithTime =>
@@ -162,18 +169,13 @@ class AdminSearchConfigController @Inject() (
       val dataByExperiment = (dataWithTime \ "data").as[JsArray]
       dataByExperiment.value.foreach { dataWithExperiment =>
         val id = (dataWithExperiment \ "_id") match {
-          case js: JsNumber => Some(Id[SearchConfigExperiment](js.value.toLong))
-          case jsNull => None
+          case JsArray(Seq(JsNumber(id))) => Some(Id[SearchConfigExperiment](id.toLong))
+          case JsNull => None
         }
         val count = (dataWithExperiment \ "count")
         dataPointsByExperiment.getOrElseUpdate(id, new ListBuffer[JsValue]()).append(Json.obj("time" -> time, "data" -> Json.arr(Json.obj("count" -> count))))
       }
     }
-    dataPointsByExperiment.map { case (id, points) =>
-      id -> Json.obj(
-        "header" -> JsString(header + s": ${id.map(_.toString).getOrElse("None")}"),
-        "data" -> JsArray(points)
-      )
-    }.toMap
+    dataPointsByExperiment.map { case (id, points) => id -> wrapData(id, header, points) }.toMap.withDefault(wrapData(_, header, Seq.empty))
   }
 }
