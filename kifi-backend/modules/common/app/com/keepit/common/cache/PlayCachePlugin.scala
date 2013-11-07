@@ -50,10 +50,10 @@ private object PlayBinaryFormat extends BinaryFormat[Any] {
   protected def reads(obj: Array[Byte], offset: Int, length: Int): Any = {
     new ObjectInputStream(new ByteArrayInputStream(obj, offset, length)).readObject()
   }
-  protected def writes(value: Any): Array[Byte] = {
+  protected def writes(prefix: Byte, value: Any): Array[Byte] = {
     val out = new ByteArrayOutputStream()
 
-    out.write(1) // we have something
+    out.write(prefix) // we have something
 
     new ObjectOutputStream(out).writeObject(value)
     out.toByteArray

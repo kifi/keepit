@@ -16,14 +16,14 @@ import org.joda.time.DateTime
 
 class SliderHistoryBinarySerializer extends BinaryFormat[SliderHistory] with Logging {
 
-  protected def writes(history: SliderHistory): Array[Byte] = {
+  protected def writes(prefix: Byte, history: SliderHistory): Array[Byte] = {
     val json = historyJsonWrites(history).toString.getBytes(UTF8)
     val filter = history.filter
 
     assume(filter.size == history.tableSize, "Filter is not tableSize: %s != %s".format(filter.size, history.tableSize))
     val byteStream = new ByteArrayOutputStream(json.size + filter.size + 8 + 1)
 
-    byteStream.write(1) // we have something
+    byteStream.write(prefix) // we have something
 
     val outStream = new DataOutputStream(byteStream)
 

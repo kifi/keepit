@@ -6,7 +6,7 @@ import java.io.ByteArrayOutputStream
 trait BinaryFormat[T] {
   def writes(value: Option[T]): Array[Byte] = {
     value match{
-      case Some(obj) => writes(obj)
+      case Some(obj) => writes(1.toByte, obj)
       case None => Array[Byte](0)
     }
   }
@@ -16,7 +16,7 @@ trait BinaryFormat[T] {
     else Some(reads(bytes, 0, bytes.length))
   }
 
-  protected def writes(value: T): Array[Byte]
+  protected def writes(prefix: Byte, value: T): Array[Byte]
   protected def reads(obj: Array[Byte], offset: Int, length: Int): T
 }
 
