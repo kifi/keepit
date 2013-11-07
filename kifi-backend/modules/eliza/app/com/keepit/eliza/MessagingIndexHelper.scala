@@ -24,7 +24,7 @@ trait MessagingIndexHelper{
     val messages = db.readOnly{ implicit session => messageRepo.getFromIdToId(fromId, toId) }
     val filteredMessages = messages.filter(_.from.isDefined)
     if (filteredMessages.length > 1 || toId.id >= maxId.id) filteredMessages
-    else getMessages(fromId, Id[Message](2*toId.id), maxId)
+    else getMessages(fromId, Id[Message](toId.id+100), maxId)
   }
 
   private def getThreadContentsForThreadWithSequenceNumber(threadId: Id[MessageThread], seq: SequenceNumber): Future[ThreadContent] = {
