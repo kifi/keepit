@@ -1,6 +1,8 @@
 
 GET     /curtain                    @com.keepit.controllers.website.HomeController.curtainHome()
 
+# Uncomment when we roll out new auth.
+#GET     /login                      @com.keepit.controllers.core.AuthController.signinPage()
 GET     /login                      securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
@@ -19,6 +21,10 @@ POST    /auth/social-finalize       @com.keepit.controllers.core.AuthController.
 POST    /auth/upload-binary-image   @com.keepit.controllers.core.AuthController.uploadBinaryPicture()
 POST    /auth/upload-multipart-image @com.keepit.controllers.core.AuthController.uploadFormEncodedPicture()
 POST    /auth/cancel                @com.keepit.controllers.core.AuthController.cancelAuth()
+
+GET     /unsubscribe/:optOutToken   @com.keepit.controllers.website.EmailOptOutController.optOut(optOutToken: String)
+GET     /unsubscribe/:optOutToken   @com.keepit.controllers.website.EmailOptOutController.optOutAction(optOutToken: String)
+GET     /unsubscribe/getToken/:email   @com.keepit.controllers.website.EmailOptOutController.getToken(email: String)
 
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)

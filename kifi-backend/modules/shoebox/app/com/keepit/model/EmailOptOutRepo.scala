@@ -28,7 +28,7 @@ class EmailOptOutRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock
   import db.Driver.Implicit._
   import DBSession._
 
-  override val table = new RepoTable[EmailOptOut](db, "password_reset") {
+  override val table = new RepoTable[EmailOptOut](db, "email_opt_out") {
     def address = column[EmailAddressHolder]("address", O.NotNull)
     def category = column[ElectronicMailCategory]("category", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ address ~ category ~ state <> (EmailOptOut, EmailOptOut.unapply _)
