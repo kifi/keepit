@@ -23,7 +23,7 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
     log.info(s"UserIdentityProvider got request: $request")
     log.info(s"session data: ${request.session.data}")
     val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map { id => Id[User](id.toLong) }
-    val allowSignup = newSignup // TODO: remove when we split login and signup
+    val allowSignup = !newSignup // TODO: remove when we split login and signup
     doAuth() match {
       case Right(socialUser) =>
         val filledSocialUser = fillProfile(socialUser)
