@@ -17,6 +17,7 @@ import scala.concurrent.duration.Duration
 import play.api.libs.json._
 import play.api.libs.json.util._
 import play.api.libs.functional.syntax._
+import scala.slick.lifted.Query
 
 case class Message(
     id: Option[Id[Message]] = None,
@@ -176,7 +177,7 @@ class MessageRepoImpl @Inject() (
   }
 
   def getMaxId()(implicit session: RSession): Id[Message] = {
-    (for (row <- table) yield row.id.max).first.getOrElse(Id[Message](0))
+    Query(table.map(_.id).max).first.getOrElse(Id[Message](0))
   }
 
 
