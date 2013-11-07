@@ -361,12 +361,26 @@ class MainSearcher(
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
 
+    checkScoreValues(hitList)
+
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
         (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
         timeLogs = Some(timeLogs.toSearchTimeLogs),
         collections = parser.collectionIds,
         lang = lang)
+  }
+
+  private[this] def checkScoreValues(hitList: List[MutableArticleHit]): Unit = {
+    hitList.foreach{ h =>
+      if (h.score.isInfinity) {
+        log.error(s"the score value is infinity textScore=${h.luceneScore} clickBoost=${h.clickBoost}")
+        h.score = Float.MaxValue
+      } else if (h.score.isNaN) {
+        log.error(s"the score value is Nan textScore=${h.luceneScore} clickBoost=${h.clickBoost}")
+        h.score = -1.0f
+      }
+    }
   }
 
   private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher, svVar: Float) = {
