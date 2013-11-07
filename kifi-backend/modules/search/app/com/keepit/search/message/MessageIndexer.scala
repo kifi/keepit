@@ -31,7 +31,6 @@ object ThreadIndexFields {
   val contentStemmedField = "mt_content_stemmed"
   val participantIdsField = "mt_participant_ids"
   val resultField = "mt_result"
-  val resultLengthField = "mt_result_length"
 }
 
 
@@ -112,12 +111,10 @@ class MessageContentIndexable(
     )
     val searchResultData = Json.stringify(searchResultJson).getBytes(UTF8)
     val searchResultDocValue = buildBinaryDocValuesField(ThreadIndexFields.resultField,searchResultData)
-    if (searchResultData.length < 20000) { //ZZZ TEMPORARY 
-      doc.add(buildLongValueField(ThreadIndexFields.resultLengthField, searchResultData.length))
+    if (searchResultData.length < 30000) {
       doc.add(searchResultDocValue)
     } else {
-      val fakeResultData = Json.stringify(Json.obj()).getBytes(UTF8)
-      doc.add(buildLongValueField(ThreadIndexFields.resultLengthField, fakeResultData.length))
+      val fakeResultData = Json.stringify(Json.obj("err" -> "result too large")).getBytes(UTF8)
       doc.add(buildBinaryDocValuesField(ThreadIndexFields.resultField,fakeResultData))
     }
 

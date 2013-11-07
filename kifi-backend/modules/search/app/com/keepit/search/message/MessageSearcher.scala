@@ -28,10 +28,8 @@ class MessageSearcher(searcher: Searcher){
     val allResults = ArrayBuffer[ResultWithScore]()
     searcher.doSearch(filterdQuery) { (scorer, reader) =>
       val resultDocVals = reader.getBinaryDocValues(ThreadIndexFields.resultField)
-      val resultLengthDocVals = reader.getNumericDocValues(ThreadIndexFields.resultLengthField)
       var docNumber = scorer.nextDoc()
       while (docNumber != NO_MORE_DOCS){
-        val resultLength: Long = resultLengthDocVals.get(scorer.docID())
         val resultBytes = new BytesRef()
         resultDocVals.get(scorer.docID(), resultBytes)
         val resultString = new String(resultBytes.bytes, resultBytes.offset, resultBytes.length, UTF8)
@@ -59,5 +57,6 @@ class MessageSearcher(searcher: Searcher){
         )
       }
     }
+
   }
 } 
