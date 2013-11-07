@@ -189,6 +189,10 @@ class HomeController @Inject() (
   }
 
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
-    Ok(views.html.website.gettingStarted(request.user))
+    if (newSignup) {
+      Ok(views.html.website.gettingStarted2(request.user))
+    } else {
+      Ok(views.html.website.gettingStarted(request.user))
+    }
   }
 }
