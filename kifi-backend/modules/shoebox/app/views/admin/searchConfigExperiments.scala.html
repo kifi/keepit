@@ -47,12 +47,10 @@
       </div>
       <div class="charts">
         <div class="experiment-chart">
-          <h3 class="chart-title">Kifi vs. Google</h3>
-            @analyticsView(kifiVsGoogle(experiment.id), "kifi_click_frac_" + experiment.id.get, "simple", "compare", "Kifi vs. Google")
+            @analyticsView(kifiVsGoogle(experiment.id), "kifi_click_frac_" + experiment.id.get, "simple", "compare", "Fraction of Kifi vs Google clicks on searches with Kifi results")
         </div>
         <div class="experiment-chart">
-          <h3 class="chart-title">Kifi had results</h3>
-            @analyticsView(searchesWithKiFiResults(experiment.id), "kifi_result_frac" + experiment.id.get, "simple", "compare", "Fraction of searches for which KiFi had results")
+            @analyticsView(searchesWithKiFiResults(experiment.id), "kifi_result_frac" + experiment.id.get, "simple", "compare", "Fraction of searches for which Kifi had results")
         </div>
       </div>
       <table class="table table-bordered experiment-settings">
@@ -78,12 +76,10 @@
       </div>
       <div class="charts">
         <div class="experiment-chart">
-          <h3 class="chart-title">Kifi vs. Google</h3>
-            @analyticsView(kifiVsGoogle(None), "kifi_click_frac", "simple", "compare", "Kifi vs. Google")
+            @analyticsView(kifiVsGoogle(None), "kifi_click_frac", "simple", "compare", "Fraction of Kifi vs Google clicks on searches with Kifi results")
         </div>
         <div class="experiment-chart">
-          <h3 class="chart-title">Kifi had results</h3>
-            @analyticsView(searchesWithKiFiResults(None), "kifi_result_frac", "simple", "compare", "Fraction of searches for which KiFi had results")
+            @analyticsView(searchesWithKiFiResults(None), "kifi_result_frac", "simple", "compare", "Fraction of searches for which Kifi had results")
         </div>
       </div>
       <table class="table table-bordered experiment-settings">

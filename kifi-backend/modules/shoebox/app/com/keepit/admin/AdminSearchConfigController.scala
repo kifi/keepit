@@ -166,13 +166,13 @@ class AdminSearchConfigController @Inject() (
           case jsNull => None
         }
         val count = (dataWithExperiment \ "count")
-        dataPointsByExperiment.getOrElseUpdate(id, new ListBuffer[JsValue]()).append(Json.obj("time" -> time, "count" -> count))
+        dataPointsByExperiment.getOrElseUpdate(id, new ListBuffer[JsValue]()).append(Json.obj("time" -> time, "data" -> Json.arr(Json.obj("count" -> count))))
       }
     }
     dataPointsByExperiment.map { case (id, points) =>
       id -> Json.obj(
-        "header" -> JsString(header + s" [SE-${id.map(_.toString).getOrElse("None")}]"),
-        "data" -> Json.arr(points)
+        "header" -> JsString(header + s": ${id.map(_.toString).getOrElse("None")}"),
+        "data" -> JsArray(points)
       )
     }.toMap
   }
