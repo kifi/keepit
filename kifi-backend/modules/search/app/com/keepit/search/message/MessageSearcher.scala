@@ -11,11 +11,11 @@ import org.apache.lucene.search.{Query, TermQuery}
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.BytesRef
 
-import play.api.libs.json.{Json, JsValue}
+import play.api.libs.json.{Json, JsValue, JsString}
 
 import scala.collection.mutable.ArrayBuffer
 
-case class ResultWithScore(score: Float, value: String)
+case class ResultWithScore(score: Float, value: String, len: Long, rlen: Long) //ZZZ clean up extra fields
 
 class MessageSearcher(searcher: Searcher){
 
@@ -31,13 +31,16 @@ class MessageSearcher(searcher: Searcher){
       val resultLengthDocVals = reader.getNumericDocValues(ThreadIndexFields.resultLengthField)
       var docNumber = scorer.nextDoc()
       while (docNumber != NO_MORE_DOCS){
-        val resultLength: Int = resultLengthDocVals.get(docNumber).toInt
-        val resultBytes = new BytesRef(resultLength)
-        resultDocVals.get(docNumber, resultBytes)
+        val resultLength: Long = resultLengthDocVals.get(scorer.docID())
+        val resultBytes = new BytesRef()
+        resultDocVals.get(scorer.docID(), resultBytes)
+        val resultString = new String(resultBytes.bytes, resultBytes.offset, resultBytes.length, UTF8)
         allResults.append(
           ResultWithScore(
             scorer.score(),
-            new String(resultBytes.bytes, UTF8)
+            resultString,
+            resultLength,
+            resultString.length
           )
         )
         docNumber = scorer.nextDoc()
@@ -49,6 +52,16 @@ class MessageSearcher(searcher: Searcher){
     }.drop(from).take(howMany)
 
 
-    orderedResults.map(x => Json.parse(x.value))
+    orderedResults.map{ x => 
+      try {
+        Json.parse(x.value)
+      } catch {
+        case _ : Throwable => Json.obj(
+          "err" -> JsString(x.value),
+          "exlen" -> x.len,
+          "rlen" -> x.rlen
+        )
+      }
+    }
   }
 } 

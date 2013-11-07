@@ -30,7 +30,7 @@ package object time {
     val UTC = DateTimeZone.UTC
   }
 
-  implicit val DEFAULT_DATE_TIME_ZONE = zones.PT
+  implicit val DEFAULT_DATE_TIME_ZONE = zones.UTC
 
   // intentionally labeling UTC as "GMT" (see RFCs 2616, 2822)
   // http://stackoverflow.com/questions/1638932/timezone-for-expires-and-last-modified-http-headers
@@ -43,10 +43,10 @@ package object time {
       Array[DateTimeParser](
         ISODateTimeFormat.dateTime.getParser,
         DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z").getParser))
-    .toFormatter.withLocale(Locale.ENGLISH).withZone(zones.PT)
+    .toFormatter.withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE)
 
   val UTC_DATETIME_FORMAT = STANDARD_DATETIME_FORMAT.withLocale(Locale.ENGLISH).withZone(zones.UTC)
-  val STANDARD_DATE_FORMAT = ISODateTimeFormat.date.withLocale(Locale.ENGLISH).withZone(zones.PT)
+  val STANDARD_DATE_FORMAT = ISODateTimeFormat.date.withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE)
 
   implicit object DateTimeJsonFormat extends Format[DateTime] {
     def reads(json: JsValue) = try {

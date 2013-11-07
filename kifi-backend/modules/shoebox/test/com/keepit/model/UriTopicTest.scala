@@ -1,7 +1,8 @@
 package com.keepit.model
 
 import org.joda.time.DateTime
-import com.keepit.common.time.zones.PT
+import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
+
 import org.specs2.mutable.Specification
 import com.google.inject.Injector
 import com.keepit.common.db.Id
@@ -21,7 +22,7 @@ class UriTopicTest extends Specification with ShoeboxTestInjector {
 
   // uri i concentrates on topic i
   def setup()(implicit injector: Injector) = {
-    val t = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
+    val t = new DateTime(2013, 5, 20, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
     val numUris = 10
     val ids =  (0 until numUris).map{Id[NormalizedURI](_)}
     val topics = (0 until numUris).map{ genTopic(numTopics, _) }

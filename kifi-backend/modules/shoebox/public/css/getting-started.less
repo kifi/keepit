@@ -1,0 +1,85 @@
+@import "lesshat";
+
+@video-still-w: 499px;
+@video-still-h: 279px;
+@video-still-box-size: 68px;
+@video-still-tri-size: 34px;
+
+body {
+  text-align: center;
+}
+.video-still {
+  @btn-color: #6fa6ef;
+  display: block;
+  width: @video-still-w;
+  height: @video-still-h;
+  font-size: 0;
+  line-height: 0;
+  margin: 0 auto;
+  background: rgba(0,0,0,.1) url(/assets/img/video-still.jpg);
+  background-size: cover;
+  position: relative;
+  &:before {
+    content: ' ';
+    position: absolute;
+    top: ((@video-still-h - @video-still-box-size) / 2);
+    left: ((@video-still-w - @video-still-box-size) / 2);
+    height: @video-still-box-size;
+    width: @video-still-box-size;
+    background-color: @btn-color;
+    border-radius: 4px;
+  }
+  &:hover:before,
+  &:focus:before {
+    background: tint(@btn-color, 10%);
+  }
+  &:active:before {
+    background: shade(@btn-color, 5%);
+  }
+  &:after {
+    content: ' ';
+    position: absolute;
+    top: ((@video-still-h - @video-still-tri-size) / 2);
+    left: ((@video-still-w - @video-still-tri-size) / 2 + 2);
+    border-style: solid;
+    border-color: transparent #fff;
+    border-width: (@video-still-tri-size / 2) 0 (@video-still-tri-size / 2) @video-still-tri-size;
+  }
+}
+.skip-wrap {
+  margin: 18px auto 0;
+  width: @video-still-w;
+  text-align: right;
+  padding-bottom: 50px;
+}
+.skip {
+  @btn-color: #d8d8d8;
+  display: inline-block;
+  width: 120px;
+  height: 48px;
+  line-height: 48px;
+  font-size: 20px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+  color: #6d6d6d;
+  background: @btn-color;
+  &:hover,
+  &:focus {
+    background: tint(@btn-color, 10%);
+  }
+  &:active {
+    background: shade(@btn-color, 5%);
+  }
+  &:focus {
+    outline-color: #888;
+  }
+}
+
+// retina image overrides
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+// TODO: Get a hi-res (2x) video still from Danny
+// .video-still {
+//   background-image: url(/assets/img/video-still.2x.png);
+// }
+}

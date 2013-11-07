@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.FortyTwoTypeMappers._
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
-import com.keepit.common.time.{currentDateTime, zones, Clock}
+import com.keepit.common.time._
 import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import MessagingTypeMappers._
@@ -20,8 +20,8 @@ import play.api.libs.functional.syntax._
 
 case class Message(
     id: Option[Id[Message]] = None,
-    createdAt: DateTime = currentDateTime(zones.PT),
-    updatedAt: DateTime = currentDateTime(zones.PT),
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
     externalId: ExternalId[Message] = ExternalId(),
     from: Option[Id[User]],
     thread: Id[MessageThread],
@@ -99,6 +99,8 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit
 
+  def getMaxId()(implicit session: RSession): Id[Message]
+
 }
 
 @Singleton
@@ -171,6 +173,10 @@ class MessageRepoImpl @Inject() (
 
   def getFromIdToId(fromId: Id[Message], toId: Id[Message])(implicit session: RSession): Seq[Message] = {
     (for (row <- table if row.id>=fromId && row.id<=toId) yield row).list
+  }
+
+  def getMaxId()(implicit session: RSession): Id[Message] = {
+    (for (row <- table) yield row.id.max).first.getOrElse(Id[Message](0))
   }
 
 

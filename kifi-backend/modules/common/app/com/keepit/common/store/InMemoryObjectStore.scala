@@ -16,7 +16,8 @@ trait InMemoryObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
 
   def += (kv: (A, B)) = {
     localStore += kv
-    log.info(s"[+=] (${kv._1} -> ${kv._2}) localStore=$localStore")
+    val v = if (kv._2 != null) kv._2.toString else ""
+    log.info(s"[+=] (${kv._1} -> ${v.take(50)}) localStore.size=${localStore.size}")
     this
   }
 
