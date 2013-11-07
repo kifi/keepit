@@ -15,7 +15,7 @@ import play.api.libs.json.{Json, JsValue, JsString}
 
 import scala.collection.mutable.ArrayBuffer
 
-case class ResultWithScore(score: Float, value: String, len: Long, rlen: Long)
+case class ResultWithScore(score: Float, value: String, len: Long, rlen: Long) //ZZZ clean up extra fields
 
 class MessageSearcher(searcher: Searcher){
 
@@ -31,9 +31,9 @@ class MessageSearcher(searcher: Searcher){
       val resultLengthDocVals = reader.getNumericDocValues(ThreadIndexFields.resultLengthField)
       var docNumber = scorer.nextDoc()
       while (docNumber != NO_MORE_DOCS){
-        val resultLength: Long = resultLengthDocVals.get(docNumber)
+        val resultLength: Long = resultLengthDocVals.get(scorer.docID())
         val resultBytes = new BytesRef(resultLength.toInt)
-        resultDocVals.get(docNumber, resultBytes)
+        resultDocVals.get(scorer.docID(), resultBytes)
         val resultString = new String(resultBytes.bytes, 0, resultLength.toInt, UTF8)
         allResults.append(
           ResultWithScore(
