@@ -50,8 +50,8 @@ trait MessagingIndexHelper{
         url = thread.url.getOrElse(""),
         threadExternalId = thread.externalId.id,
         pageTitleOpt = thread.pageTitle,
-        digest = messages.head.messageText,
-        content = messages.map(_.messageText),
+        digest = MessageLookHereRemover(messages.head.messageText).slice(0,255),
+        content = messages.map{ message => MessageLookHereRemover(message.messageText) },
         participantIds = participants
       )
     }

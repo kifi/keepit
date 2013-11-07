@@ -12,10 +12,7 @@ import com.keepit.search._
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
-class SearchConfigController @Inject() (
-  configManager: SearchConfigManager,
-  store: MongoEventStore)
-    extends SearchServiceController {
+class SearchConfigController @Inject() (configManager: SearchConfigManager) extends SearchServiceController {
 
   def getSearchDefaultConfig = Action{ request =>
     Ok(Json.toJson(configManager.defaultConfig.params))

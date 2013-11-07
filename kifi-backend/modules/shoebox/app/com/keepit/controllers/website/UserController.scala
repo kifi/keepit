@@ -52,7 +52,8 @@ class UserController @Inject() (
             "searchFriend" -> searchFriends.contains(userId),
             "networks" -> networkInfoLoader.load(socialUsers, userId),
             "unfriended" -> unfriended,
-            "description" -> userValueRepo.getValue(userId, "user_description")
+            "description" -> userValueRepo.getValue(userId, "user_description"),
+            "friendCount" -> userConnectionRepo.getConnectionCount(userId)
           )
         }
       }

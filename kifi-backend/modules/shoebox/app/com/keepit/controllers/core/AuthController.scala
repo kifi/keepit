@@ -134,8 +134,10 @@ class AuthController @Inject() (
   }
 
   def popupAfterLinkSocial(provider: String) = AuthenticatedHtmlAction(allowPending = true) { implicit request =>
-    val url = identityPicture(request.identityOpt.get)
-    Ok("<script>try{window.opener.afterSocialLink('" + url.replaceAll("'", """\\'""") + "')}finally{window.close()}</script>").withSession(session - PopupKey)
+    def esc(s: String) = s.replaceAll("'", """\\'""")
+    val identity = request.identityOpt.get
+    Ok(s"<script>try{window.opener.afterSocialLink('${esc(identity.firstName)}','${esc(identity.lastName)}','${esc(identityPicture(identity))}')}finally{window.close()}</script>")
+      .withSession(session - PopupKey)
   }
 
   // --

@@ -153,29 +153,26 @@ class AdminSearchConfigController @Inject() (
     }
   }
 
-  private def keyToId(key: JsValue): Option[Id[SearchConfigExperiment]] = {
-    key match {
-      case JsNull => None
-      case js: JsNumber => Some(Id[SearchConfigExperiment](js.value.toLong))
-    }
-  }
-
   private def ungroup(searchExperimentMetricData: JsObject): Map[Option[Id[SearchConfigExperiment]], JsObject] = {
-    val header = (searchExperimentMetricData \ "header").as[String]
     val dataPointsByExperiment = MutableMap[Option[Id[SearchConfigExperiment]], ListBuffer[JsValue]]()
+    val header = (searchExperimentMetricData \ "header").as[String]
     val dataByTime = (searchExperimentMetricData \ "data").as[JsArray]
     dataByTime.value.foreach { dataWithTime =>
-        val time = (dataWithTime \ "time")
-        val data = (dataWithTime \ "data")
-        val id = keyToId(data \ "_id")
-        val count = (data \ "count")
-        val points = dataPointsByExperiment.getOrElseUpdate(id, new ListBuffer[JsValue]())
-        points.append(Json.obj("time" -> time, "count" -> count))
+      val time = (dataWithTime \ "time")
+      val dataByExperiment = (dataWithTime \ "data").as[JsArray]
+      dataByExperiment.value.foreach { dataWithExperiment =>
+        val id = (dataWithExperiment \ "_id") match {
+          case js: JsNumber => Some(Id[SearchConfigExperiment](js.value.toLong))
+          case jsNull => None
+        }
+        val count = (dataWithExperiment \ "count")
+        dataPointsByExperiment.getOrElseUpdate(id, new ListBuffer[JsValue]()).append(Json.obj("time" -> time, "data" -> Json.arr(Json.obj("count" -> count))))
       }
+    }
     dataPointsByExperiment.map { case (id, points) =>
       id -> Json.obj(
-        "header" -> JsString(header + s" [SE-${id.map(_.toString).getOrElse("None")}]"),
-        "data" -> Json.arr(points)
+        "header" -> JsString(header + s": ${id.map(_.toString).getOrElse("None")}"),
+        "data" -> JsArray(points)
       )
     }.toMap
   }
