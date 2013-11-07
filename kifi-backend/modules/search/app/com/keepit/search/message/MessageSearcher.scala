@@ -32,9 +32,9 @@ class MessageSearcher(searcher: Searcher){
       var docNumber = scorer.nextDoc()
       while (docNumber != NO_MORE_DOCS){
         val resultLength: Long = resultLengthDocVals.get(scorer.docID())
-        val resultBytes = new BytesRef(resultLength.toInt)
+        val resultBytes = new BytesRef()
         resultDocVals.get(scorer.docID(), resultBytes)
-        val resultString = new String(resultBytes.bytes, 0, resultLength.toInt, UTF8)
+        val resultString = new String(resultBytes.bytes, resultBytes.offset, resultBytes.length, UTF8)
         allResults.append(
           ResultWithScore(
             scorer.score(),
