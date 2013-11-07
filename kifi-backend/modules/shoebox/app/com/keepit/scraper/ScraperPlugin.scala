@@ -107,7 +107,7 @@ class ScraperPluginImpl @Inject() (
         scrapeInfoRepo.getByUriId(uriId)
       }
       val toSave = info match {
-        case Some(s) => s.withStateAndNextScrape(ScrapeInfoStates.PENDING)
+        case Some(s) => s.withState(ScrapeInfoStates.PENDING)
         case None => ScrapeInfo(uriId = uriId, state = ScrapeInfoStates.PENDING)
       }
       val saved = db.readWrite { implicit s =>
