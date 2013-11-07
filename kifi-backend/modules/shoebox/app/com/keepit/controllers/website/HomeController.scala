@@ -185,7 +185,7 @@ class HomeController @Inject() (
         socialUserRepo.save(sui.copy(credentials = None, userId = None))
       }
       otherNetworks map socialGraphPlugin.asyncFetch
-      Redirect(securesocial.controllers.routes.LoginPage.logout())
+      Redirect(com.keepit.controllers.website.routes.HomeController.home())
     }
   }
 
