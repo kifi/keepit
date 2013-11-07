@@ -33,6 +33,8 @@ POST    /login/:provider            @com.keepit.controllers.core.AuthController.
 POST    /login                      @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
 POST    /auth/log-in                @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
 
+GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
+GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
 POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
 
