@@ -45,7 +45,7 @@ class S3BrowsingHistoryStoreImpl(val bucketName: S3Bucket, val amazonS3Client: A
 }
 
 case class BrowsingHistoryUserIdKey(userId: Id[User]) extends Key[MultiHashFilter[BrowsedURI]] {
-  override val version = 4
+  override val version = 5
   val namespace = "browsing_history_by_userid"
   def toKey(): String = userId.id.toString
 }
