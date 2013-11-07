@@ -764,8 +764,24 @@ $(function() {
 		});
 	}
 	$('.invite-filters>a[href]').click(function () {
-		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
-		filterFriends();
+		var $this = $(this);
+		promise.myNetworks.done(function(data) {
+			var nw = $this.data('nw') || null,
+				shouldConnect = /^facebook|linkedin$/.test(nw) && data.every(function(nObj) {
+					return nObj.network !== nw;
+				});
+			if (shouldConnect) {
+				var url = wwwDomain + '/link/' + nw;
+				$('<form method="post" action="' + url + '">')
+					.appendTo('body')
+					.submit()
+					.remove();
+			}
+			else {
+				$this.parent().attr('data-nw-selected', nw);
+				filterFriends();
+			}
+		});
 	});
 	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
 	.on('click', '.more-invites', function(e) {
