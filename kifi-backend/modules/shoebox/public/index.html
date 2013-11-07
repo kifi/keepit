@@ -331,7 +331,7 @@
             <div class="antiscroll-inner">
               <ul>
                 <li class="invite-friend" data-template data-value="{{value}}" data-status="{{status}}">
-                  <img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image && /^linkedin/.test(value) %}assets/img/ghost-linkedin.100.png{% endif %}">
+                  <img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image %}assets/img/ghost-linkedin.100.png{% endif %}">
                   <div class="invite-name">{{label}}</div>
                   <div class="invite-status">
                     {% if status == "joined" %} Joined Kifi {% endif %}

@@ -735,7 +735,15 @@ $(function() {
 			updatedAt: invitesUpdatedAt
 		};
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
-			console.log('[prepInviteTab] friends:', friends.length);
+			console.log('[prepInviteTab] friends:', friends.length, friends);
+			friends && friends.forEach(function(obj) {
+				if (!obj.image) {
+					obj.image = '';
+				}
+				if (!obj.status) {
+					obj.status = '';
+				}
+			});
 			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
 			var filter = $('.invite-filter').val() || undefined;
 			if (filter != search || nw != network) return;
@@ -822,7 +830,7 @@ $(function() {
 			$('<form method=POST action=/invite target="' + fullSocialId + '" style="position:fixed;height:0;width:0;left:-99px">')
 			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">')
 			.appendTo('body').submit().remove();
-		} else if (/^linkedin/.test(fullSocialId)) {
+		} else if (/^linkedin|email/.test(fullSocialId)) {
 			inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: $friend.find('.invite-name').text()});
 			$inviteMessageDialog.dialog('show');
 		}

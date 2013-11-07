@@ -318,7 +318,7 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invites-left {position: absolute; right: 6px; bottom: 5px; font-size: 13px; color: #818692; display: none}
 .invites-left>.num-invites {display: inline-block; border: 1px solid #b8c5d2; color: #628196; border-radius: 10.5px; padding: 0 12px; vertical-align: baseline; font-size: 12px; line-height: 20px; height: 19px; margin-left: 6px}
 @-moz-document url-prefix() {.invites-left>.num-invites {line-height: 19px}}
-.invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
+.invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 .invite-friends { position: absolute; top: 236px; bottom: 0; right: -1px; left: 20px; overflow: hidden}
 .invite-friend {display: block; background-color: #eff2f7; padding: 10px; margin-bottom: 12px; -moz-box-sizing: border-box; box-sizing: border-box; position: relative}
 .invite-friend::after {content: " "; display: block; clear: both}
@@ -331,6 +331,8 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-friend[data-status=joined]::before { border-color: #27ae60; }
 .invite-friend[data-value^=facebook]::before { background-color: #637ab8; background-position: 0 top;  }
 .invite-friend[data-value^=linkedin]::before { background-color: #4f83c3; background-position: -20px top; }
+.invite-friend[data-value^=twitter]::before { background-color: #55acee; background-position: -40px top; }
+.invite-friend[data-value^=email]::before { background-color: #e36767; background-position: -60px top; }
 .invite-status {font-size: 13px; font-weight: 300; color: #96a9bd; letter-spacing: .5px; margin-top: 2px; margin-right: 42px}
 /*
 .invite-button {position: absolute; top: 30px; right: 24px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
