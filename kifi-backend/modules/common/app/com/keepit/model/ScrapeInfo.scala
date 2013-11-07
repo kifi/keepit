@@ -28,7 +28,7 @@ case class ScrapeInfo(
   def withStateAndNextScrape(state: State[ScrapeInfo]) = state match { // TODO: revisit
     case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
     case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
-    case ScrapeInfoStates.PENDING => copy(state = state, nextScrape = currentDateTime)
+    case ScrapeInfoStates.PENDING => copy(state = state, nextScrape = currentDateTime) // TODO: add & use updatedAt
   }
 
   def withDestinationUrl(destinationUrl: Option[String]) = copy(destinationUrl = destinationUrl)
