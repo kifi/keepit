@@ -14,6 +14,8 @@ import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import scala.collection.mutable.ArrayBuffer
+import play.modules.statsd.api.Statsd
+import org.apache.commons.io.FileUtils
 
 object Indexer {
   val idFieldName = "_ID"
@@ -203,6 +205,7 @@ abstract class Indexer[T](
       val start = currentDateTime.getMillis
       if (indexDirectory.doBackup()) {
         val end = currentDateTime.getMillis
+        Statsd.gauge(Seq("index", indexDirectory.getDirectory().getName, "size").mkString("."), FileUtils.sizeOfDirectory(indexDirectory.getDirectory()))
         log.info(s"Index directory has been backed up in ${ (end - start) / 1000} seconds")
       }
     } catch {
