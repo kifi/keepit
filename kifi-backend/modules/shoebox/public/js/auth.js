@@ -240,7 +240,7 @@ kifi.form = (function () {
     if (e.which !== 1) return;
     var $a = $(this);
     window.open($a.data('uri'), 'photo', 'width=880,height=460,dialog=yes,menubar=no,resizable=yes,scrollbars=no,status=no');
-    window.afterSocialLink = afterSocialLink;
+    window.afterSocialLink = afterSocialLink.bind($a.closest('form')[0]);
   });
   $('.form-photo-file').change(function () {
     if (this.files && URL) {
@@ -280,8 +280,19 @@ kifi.form = (function () {
     $drop.css('display', '');
     $(document).off('mousemove.drag');
   }
-  function afterSocialLink(photoUrl) {
-    $photo.css({'background-image': 'url(' + photoUrl + ')', 'background-position': '', 'background-size': ''}).removeClass('unset');
+  function afterSocialLink(firstName, lastName, photoUrl) {
+    var $form = $(this);
+    var $first = $form.find('.form-first-name');
+    var $last = $form.find('.form-last-name');
+    if (firstName && !$.trim($first.val())) {
+      $first.val(firstName);
+    }
+    if (lastName && !$.trim($last.val())) {
+      $last.val(lastName);
+    }
+    if (photoUrl) {
+      $photo.css({'background-image': 'url(' + photoUrl + ')', 'background-position': '', 'background-size': ''}).removeClass('unset');
+    }
   }
 
   var photoXhr2;
