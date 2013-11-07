@@ -2053,7 +2053,7 @@ $(function() {
 	function updateFriendRequests(n) {
 		var $a = $('h3.my-friends>a'), $count = $a.find('.nav-count');
 		if (n < 0) {
-			n += +$count.text();
+			n = Math.max(Number($count.text() || 0) + n, 0);
 		}
 		$count.add('.friend-req-count').text(n || '');
 		$a[0].href = n ? 'friends/requests' : 'friends';
