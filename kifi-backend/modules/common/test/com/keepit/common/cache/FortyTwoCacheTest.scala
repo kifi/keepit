@@ -28,8 +28,17 @@ case class TestBinaryCacheKey(id: String) extends Key[Array[Byte]] {
 }
 
 object DummyBinarySerializer extends BinaryFormat[Array[Byte]] {
-  protected def writes(x: Array[Byte]) = x
-  protected def reads(x: Array[Byte], offset: Int, length: Int) = x
+  protected def writes(prefix: Byte, x: Array[Byte]) = {
+    val rv = new Array[Byte](1 + x.length)
+    rv(0) = prefix
+    System.arraycopy(x, 0, rv, 1, x.length)
+    rv
+  }
+  protected def reads(x: Array[Byte], offset: Int, length: Int) = {
+    val rv = new Array[Byte](length)
+    System.arraycopy(x, offset, rv, 0, length)
+    rv
+  }
 }
 
 class TestBinaryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
