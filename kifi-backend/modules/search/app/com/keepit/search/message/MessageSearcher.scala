@@ -15,7 +15,7 @@ import play.api.libs.json.{Json, JsValue, JsString}
 
 import scala.collection.mutable.ArrayBuffer
 
-case class ResultWithScore(score: Float, value: String)
+case class ResultWithScore(score: Float, value: String, len: Long, rlen: Long)
 
 class MessageSearcher(searcher: Searcher){
 
@@ -31,13 +31,16 @@ class MessageSearcher(searcher: Searcher){
       val resultLengthDocVals = reader.getNumericDocValues(ThreadIndexFields.resultLengthField)
       var docNumber = scorer.nextDoc()
       while (docNumber != NO_MORE_DOCS){
-        val resultLength: Int = resultLengthDocVals.get(docNumber).toInt
-        val resultBytes = new BytesRef(resultLength)
+        val resultLength: Long = resultLengthDocVals.get(docNumber)
+        val resultBytes = new BytesRef(resultLength.toInt)
         resultDocVals.get(docNumber, resultBytes)
+        val resultString = new String(resultBytes.bytes, 0, resultLength.toInt, UTF8)
         allResults.append(
           ResultWithScore(
             scorer.score(),
-            new String(resultBytes.bytes, UTF8)
+            resultString,
+            resultLength,
+            resultString.length
           )
         )
         docNumber = scorer.nextDoc()
@@ -53,7 +56,11 @@ class MessageSearcher(searcher: Searcher){
       try {
         Json.parse(x.value)
       } catch {
-        case _ : Throwable => Json.obj("err" -> JsString(x.value))
+        case _ : Throwable => Json.obj(
+          "err" -> JsString(x.value),
+          "exlen" -> x.len,
+          "rlen" -> x.rlen
+        )
       }
     }
   }
