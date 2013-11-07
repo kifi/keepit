@@ -295,7 +295,7 @@ class ABookController @Inject() (
       }
       val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
       m.keysIterator.foreach { k =>
-        jsonBuilder += Json.obj("name" -> k, "emails" -> Json.toJson(m.get(k).get))
+        jsonBuilder += Json.obj("name" -> JsString(k), "emails" -> JsArray(m.get(k).getOrElse(Set.empty[String]).toSeq.map(JsString(_))))
       }
       val contacts = jsonBuilder.result
       JsArray(contacts)

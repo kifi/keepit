@@ -29,6 +29,7 @@ trait ABookServiceClient extends ServiceClient {
   def getContactInfos(userId:Id[User], maxRows:Int):Future[Seq[ContactInfo]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getContactsRawInfo(userId:Id[User], origin:ABookOriginType):Future[Seq[ContactInfo]]
+  def getMergedContactInfos(userId:Id[User], maxRows:Int):Future[JsArray]
 }
 
 
@@ -84,6 +85,12 @@ class ABookServiceClientImpl @Inject() (
       Json.fromJson[Seq[ContactInfo]](r.json).get
     }
   }
+
+  def getMergedContactInfos(userId: Id[User], maxRows: Int): Future[JsArray] = {
+    call(ABook.internal.getMergedContactInfo(userId, maxRows)).map { r =>
+      Json.fromJson[JsArray](r.json).get
+    }
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ABookServiceClient {
@@ -109,4 +116,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
 
   def getContactsRawInfo(userId: Id[User], origin: ABookOriginType): Future[Seq[ContactInfo]] = ???
+
+  def getMergedContactInfos(userId: Id[User], maxRows: Int): Future[JsArray] = ???
 }
