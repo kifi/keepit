@@ -71,10 +71,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     }
     serviceDiscovery.forceUpdate()
 
-    memoryUsageMonitor = MemoryUsageMonitor(injector.instance[AirbrakeNotifier])
+    injector.instance[MemoryUsageMonitor].start()
   }
-
-  private var memoryUsageMonitor: MemoryUsageMonitor = null
 
   // Get a file within the .fortytwo folder in the user's home directory
   def getUserFile(filename: String): File =
