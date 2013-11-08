@@ -346,7 +346,7 @@ class MessagingController @Inject() (
       val locator = "/messages/" + thread.externalId
 
       val muted = db.readOnly { implicit session =>
-        userThreadRepo.getUserThread(userId, thread.id.get).muted
+        userThreadRepo.isMuted(userId, thread.id.get)
       }
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator, !muted)
 
@@ -494,6 +494,15 @@ class MessagingController @Inject() (
     thread.allParticipantsExcept(from).foreach { userId =>
       sendNotificationForMessage(userId, message, thread, messageWithBasicUser)
     }
+
+    //set notification json for message sender (if there isn't another yet)
+    val isMuted = db.readOnly { implicit session => userThreadRepo.isMuted(from, thread.id.get) }
+    val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, "/messages/" + thread.externalId, !isMuted)
+
+    db.readWrite(attempts=2){ implicit session =>
+      userThreadRepo.setNotificationJsonIfNotPresent(from, thread.id.get, notifJson)
+    }
+
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
       (nUriOpt match {
