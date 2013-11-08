@@ -78,7 +78,7 @@ class ExtAuthController @Inject() (
     }
 
     Ok(Json.obj(
-      "name" -> identity.fullName,
+      "name" -> s"${user.firstName} ${user.lastName}",
       "userId" -> user.externalId.id,
       "installationId" -> installation.externalId.id,
       "experiments" -> request.experiments.map(_.value),
