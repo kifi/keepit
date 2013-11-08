@@ -1,5 +1,7 @@
 package com.keepit.test
 
+import com.keepit.common.controller._
+import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
 import play.api.{Application, Mode}
 import com.keepit.inject.{TestFortyTwoModule, ApplicationInjector, EmptyInjector}
 import com.keepit.common.db.{TestDbInfo}
@@ -44,7 +46,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
       FakeDiscoveryModule(),
       TestSlickModule(TestDbInfo.dbInfo),
       ShoeboxCacheModule(HashMapMemoryCacheModule()),
-      TestNormalizationServiceModule()
+      TestNormalizationServiceModule(),
+      FakeActionAuthenticatorModule()
     ), overridingModules
   ))
 

@@ -266,6 +266,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   private def reportExceptions[T](f: => T): Either[Error, T] =
     try Right(f) catch { case ex: Throwable =>
       airbrake.notify(ex)
+      log.error("error while using secure social plugin", ex)
       Left(new Error(ex))
     }
 
