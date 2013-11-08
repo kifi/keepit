@@ -43,6 +43,7 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
           log.error(s"can't format or send error $error")
           if (!selfError) throw e
           else {
+            System.err.println(s"Airbrake Notifier exception: ${e.toString}")
             e.printStackTrace
             if (!firstErrorReported) {
               firstErrorReported = true

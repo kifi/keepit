@@ -42,21 +42,21 @@ class SliderRuleTest extends Specification with ShoeboxTestInjector {
     }
 
     "compute group version based on last update time" in {
-      val t1 = new DateTime(2008, 12, 15, 16, 42, 38, 180, zones.PT)
+      val t1 = new DateTime(2008, 12, 15, 16, 42, 38, 180, DEFAULT_DATE_TIME_ZONE)
       val (t2, t3) = (t1.plus(2), t1.plus(4))
       SliderRuleGroup(Seq(
         SliderRule(None, "foo", "a", None, updatedAt = t2),
         SliderRule(None, "foo", "b", None, updatedAt = t3),
         SliderRule(None, "foo", "c", None, updatedAt = t1)))
-      .version === "fortytwo"
+      .version === "forctjoo"
     }
 
     "format compact JSON representation" in {
-      val t = new DateTime(2008, 12, 15, 16, 42, 38, 184, zones.PT)
+      val t = new DateTime(2008, 12, 15, 16, 42, 38, 184, DEFAULT_DATE_TIME_ZONE)
       SliderRuleGroup(Seq(
         SliderRule(None, "foo", "a", None, updatedAt = t),
         SliderRule(None, "foo", "b", Some(JsArray(Seq(JsBoolean(true), JsNumber(9)))), updatedAt = t)))
-      .compactJson.toString === """{"version":"fortytwo","rules":{"a":1,"b":[true,9]}}"""
+      .compactJson.toString === """{"version":"forctjoo","rules":{"a":1,"b":[true,9]}}"""
     }
   }
 }

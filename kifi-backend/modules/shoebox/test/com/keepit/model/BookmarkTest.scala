@@ -5,7 +5,7 @@ import org.specs2.mutable._
 
 import com.keepit.common.time._
 import com.keepit.common.db.slick._
-import com.keepit.common.time.zones.PT
+
 import com.keepit.test._
 import com.google.inject.Injector
 
@@ -15,8 +15,8 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
   val initLoad = BookmarkSource.initLoad
 
   def setup()(implicit injector: Injector) = {
-    val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
-    val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, PT)
+    val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+    val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
     db.readWrite {implicit s =>
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
@@ -133,7 +133,7 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
-    
+
     "invalidate cache when delete" in {
       withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, url1, _) = setup()
@@ -142,14 +142,14 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
           val bm = bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get)
           bookmarkRepo.delete(bm.get.id.get)
           bookmarkRepo.count == 2
-          val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
+          val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
           bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
           uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
           bookmarkRepo.count == 3
         }
       }
     }
-    
+
     "get by exclude state should work" in {
        withDb() { implicit injector =>
          val (user1, user2, uri1, uri2, url1, _) = setup()

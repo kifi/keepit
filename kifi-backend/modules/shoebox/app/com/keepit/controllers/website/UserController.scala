@@ -4,16 +4,22 @@ import java.text.Normalizer
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail, LocalPostOffice}
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
+import com.keepit.commanders.UserCommander
 import com.keepit.model._
-
+import scala.concurrent.duration._
 import play.api.libs.json.Json.toJson
+import com.keepit.abook.ABookServiceClient
+import scala.concurrent.{Await, Future}
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import scala.collection.mutable
+import play.api.libs.concurrent.Execution.Implicits._
 
 class UserController @Inject() (
   db: Database,
@@ -29,8 +35,10 @@ class UserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   friendRequestRepo: FriendRequestRepo,
   searchFriendRepo: SearchFriendRepo,
-  postOffice: LocalPostOffice)
-    extends WebsiteController(actionAuthenticator) {
+  postOffice: LocalPostOffice,
+  userCommander: UserCommander,
+  abookServiceClient: ABookServiceClient
+) extends WebsiteController(actionAuthenticator) {
 
   def friends() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
@@ -44,7 +52,8 @@ class UserController @Inject() (
             "searchFriend" -> searchFriends.contains(userId),
             "networks" -> networkInfoLoader.load(socialUsers, userId),
             "unfriended" -> unfriended,
-            "description" -> userValueRepo.getValue(userId, "user_description")
+            "description" -> userValueRepo.getValue(userId, "user_description"),
+            "friendCount" -> userConnectionRepo.getConnectionCount(userId)
           )
         }
       }
@@ -60,17 +69,8 @@ class UserController @Inject() (
     }
   }
 
-  private case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
-  private object BasicSocialUser {
-    implicit val writesBasicSocialUser = Json.writes[BasicSocialUser]
-    def from(sui: SocialUserInfo): BasicSocialUser =
-      BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
-  }
-
   def socialNetworkInfo() = AuthenticatedJsonAction { request =>
-    Ok(toJson(db.readOnly { implicit s =>
-      socialUserRepo.getByUser(request.userId).map(BasicSocialUser from _)
-    }))
+    Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
 
   def friendNetworkInfo(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
@@ -270,11 +270,49 @@ class UserController @Inject() (
     Ok
   }
 
-  def getAllConnections(search: Option[String], network: Option[String],
-      after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+  @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
+
+  private def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
+    @inline def mkId(email:String) = s"email/$email"
+    val searchTerms = search.toSeq.map(_.split("[@\\s+]")).flatten.filterNot(_.isEmpty).map(normalize)
+    @inline def searchScore(s: String): Int = {
+      if (searchTerms.isEmpty) 1
+      else {
+        val name = normalize(s)
+        if (searchTerms.exists(!name.contains(_))) 0
+        else {
+          val names = name.split("\\s+").filterNot(_.isEmpty)
+          names.count(n => searchTerms.exists(n.startsWith))*2 +
+            names.count(n => searchTerms.exists(n.contains)) +
+            (if (searchTerms.exists(name.startsWith)) 1 else 0)
+        }
+      }
+    }
+
+    val res = abookServiceClient.getEContacts(userId, 40000000).map { contacts =>
+      val filtered = contacts.filter(e => ((searchScore(e.name) > 0) || (searchScore(e.email) > 0)))
+      val paged = after match {
+        case Some(a) => filtered.dropWhile(e => (mkId(e.email) != a)) match {
+          case hd +: tl => tl
+          case tl => tl
+        }
+        case None => filtered
+      }
+      val objs = paged.take(limit).map { e =>
+        Json.obj("label" -> e.name, "value" -> mkId(e.email))
+      }
+      log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
+      objs
+    }
+    res
+  }
+
+  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+    val contactsF = network match { // revisit
+      case Some(n) => if (n == "email") queryContacts(request.userId, search, after, limit) else Future.successful(Seq.empty[JsObject])
+      case None => Future.successful(Seq.empty[JsObject])
+    }
     @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
-    @inline def normalize(str: String) =
-      Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
     val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
     @inline def searchScore(sci: SocialConnectionInfo): Int = {
       if (network.exists(sci.networkType.name !=)) 0
@@ -315,13 +353,18 @@ class UserController @Inject() (
       }).take(limit).map(getWithInviteStatus)
     }
 
-    Ok(JsArray(connections.map { conn =>
+    val jsConns: Seq[JsObject] = connections.map { conn =>
       Json.obj(
         "label" -> conn._1.fullName,
         "image" -> toJson(conn._1.getPictureUrl(75, 75)),
         "value" -> socialIdString(conn._1),
         "status" -> conn._2
       )
-    })).withHeaders("Cache-Control" -> "private, max-age=300")
+    }
+    val jsContacts: Seq[JsObject] = Await.result(contactsF, 10 seconds)
+    val jsCombined = jsConns ++ jsContacts
+    log.info(s"[getAllConnections(${request.userId})] jsContacts(sz=${jsContacts.size}) jsConns(sz=${jsConns.size})")
+    val jsArray = JsArray(jsCombined)
+    Ok(jsArray).withHeaders("Cache-Control" -> "private, max-age=300")
   }
 }

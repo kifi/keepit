@@ -6,14 +6,14 @@ import com.keepit.common.db.Id
 import com.keepit.test._
 import com.keepit.common.db.SequenceNumber
 import org.joda.time.DateTime
-import com.keepit.common.time.zones.PT
+import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 
 class ChangedURITest extends Specification with ShoeboxTestInjector{
   "ChangedURIRepo" should {
     "work" in {
        withDb() { implicit injector =>
-         val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
-         
+         val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
          db.readOnly{ implicit s =>
            changedURIRepo.getHighestSeqNum() === None
          }

@@ -9,7 +9,7 @@ import com.keepit.test._
 
 class DatabaseDialectTest extends Specification with DbTestInjector {
 
-  val dec_20_2013 = new DateTime(2013, 12, 20, 0, 0, 0, zones.PT)
+  val dec_20_2013 = new DateTime(2013, 12, 20, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
   "MySqlDatabaseDialect" should {
 

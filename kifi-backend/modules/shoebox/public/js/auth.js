@@ -90,19 +90,33 @@ kifi.form = (function () {
     var $signup = $('.signup').css('display', isLogin ? 'none' : 'block');
     var $login = $('.login').css('display', !isLogin ? 'none' : 'block');
     var $form = isLogin ? $login : $('.signup-1');
-    $('.page-title').text($form.data('title'));
+    $('.page-title').text($form.data('title')).layout();
     $('body').addClass('curtains-drawn');
-    setTimeout(function () {
-      $form.find('.form-email-addr').focus();
-    });
+    setTimeout($.fn.focus.bind($form.find('.form-email-addr')), 100);
   });
   $('.curtain-back').on('mousedown click', function (e) {
-    if (e.which !== 1) return;
-    $('body').removeClass('curtains-drawn');
+    if (e.which !== 1 || e.type === 'click' && (e.pageX || e.pageY)) return;
+    $signup1Form[0].reset();
+    $loginForm[0].reset();
+    var $body = $('body');
+    if (!$body.hasClass('finalizing')) {
+      $('.page-title').removeClass('returned');
+      $body.removeClass('curtains-drawn');
+    } else {
+      transitionTitle();
+      $body.removeClass('finalizing');
+      $.post($(this).data('cancelUri'));
+      setTimeout($.fn.focus.bind($signup1Form.find('.form-email-addr')), 100);
+      setTimeout(function() {
+        $signup2EmailForm.hide();
+        $signup2SocialForm.hide();
+        $('.signup-resume').remove();
+      }, 500);
+    }
   });
 
   var signup1Promise;
-  $('.signup-1').submit(function (e) {
+  var $signup1Form = $('.signup-1').submit(function (e) {
     if (signup1Promise && signup1Promise.state() === 'pending') {
       return false;
     }
@@ -116,11 +130,10 @@ kifi.form = (function () {
         password: password
       }).done(function (data) {
         if (!navigate(data)) {
-          transitionTitle($('.signup-2').data('title'));
+          transitionTitle($signup2EmailForm.data('title'));
+          $signup2EmailForm.css('display', 'block').layout();
           $('body').addClass('finalizing droppable');
-          setTimeout(function () {
-            $('.form-first-name').focus();
-          }, 200);
+          setTimeout($.fn.focus.bind($('.form-first-name')), 100);
         }
       }).fail(function (xhr) {
         signup1Promise = null;
@@ -129,9 +142,17 @@ kifi.form = (function () {
     return false;
   });
   function transitionTitle(text) {
-    $('.page-title.obsolete').remove();
     var $title = $('.page-title');
-    $title.after($title.clone().text(text)).addClass('obsolete').layout();
+    var $obsolete = $title.filter('.obsolete');
+    var $abandoned = $title.filter('.abandoned').remove();
+    $title = $title.not($obsolete).not($abandoned);
+    if (text) {
+      $obsolete.remove();
+      $title.removeClass('returned').after($title.clone().text(text)).addClass('obsolete').layout();
+    } else {
+      $title.addClass('abandoned');
+      $obsolete.removeClass('obsolete').addClass('returned').layout();
+    }
   }
   function navigate(data) {
     if (data.uri) {
@@ -141,7 +162,7 @@ kifi.form = (function () {
   }
 
   var signup2Promise;
-  $('.signup-2-email').submit(function (e) {
+  var $signup2EmailForm = $('.signup-2-email').submit(function (e) {
     if (signup2Promise && signup2Promise.state() === 'pending') {
       return false;
     }
@@ -170,7 +191,7 @@ kifi.form = (function () {
     }
     return false;
   });
-  $('.signup-2-social').submit(function (e) {
+  var $signup2SocialForm = $('.signup-2-social').submit(function (e) {
     if (signup2Promise && signup2Promise.state() === 'pending') {
       return false;
     }
@@ -198,7 +219,7 @@ kifi.form = (function () {
   });
 
   var loginPromise;
-  $('.login').submit(function (e) {
+  var $loginForm = $('.login').submit(function (e) {
     if (loginPromise && loginPromise === 'pending') {
       return false;
     }
@@ -239,11 +260,8 @@ kifi.form = (function () {
   $('.form-photo-a').click(function (e) {
     if (e.which !== 1) return;
     var $a = $(this);
-    if ($a.hasClass('facebook')) {
-      window.open('https://www.facebook.com', 'photo', 'width=720,height=400,dialog=yes,menubar=no,resizable=yes,scrollbars=yes,status=yes');
-    } else if ($a.hasClass('linkedin')) {
-      window.open('https://www.linkedin.com', 'photo', 'width=720,height=400,dialog=yes,menubar=no,resizable=yes,scrollbars=yes,status=yes');
-    }
+    window.open($a.data('uri'), 'photo', 'width=880,height=460,dialog=yes,menubar=no,resizable=yes,scrollbars=no,status=no');
+    window.afterSocialLink = afterSocialLink.bind($a.closest('form')[0]);
   });
   $('.form-photo-file').change(function () {
     if (this.files && URL) {
@@ -282,6 +300,20 @@ kifi.form = (function () {
   function removeDropTarget() {
     $drop.css('display', '');
     $(document).off('mousemove.drag');
+  }
+  function afterSocialLink(firstName, lastName, photoUrl) {
+    var $form = $(this);
+    var $first = $form.find('.form-first-name');
+    var $last = $form.find('.form-last-name');
+    if (firstName && !$.trim($first.val())) {
+      $first.val(firstName);
+    }
+    if (lastName && !$.trim($last.val())) {
+      $last.val(lastName);
+    }
+    if (photoUrl) {
+      $photo.css({'background-image': 'url(' + photoUrl + ')', 'background-position': '', 'background-size': ''}).removeClass('unset');
+    }
   }
 
   var photoXhr2;
@@ -568,7 +600,7 @@ kifi.form = (function () {
             kifi.form.showError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
           } else {
             $dialog.addClass('reset-password-sent');
-            setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 200);
+            setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 100);
           }
         })
         .always(function () {

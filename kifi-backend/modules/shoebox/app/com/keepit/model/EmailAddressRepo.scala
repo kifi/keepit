@@ -1,8 +1,5 @@
 package com.keepit.model
 
-import java.math.BigInteger
-import java.security.SecureRandom
-
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
@@ -13,12 +10,13 @@ import com.keepit.common.time._
 
 @ImplementedBy(classOf[EmailAddressRepoImpl])
 trait EmailAddressRepo extends Repo[EmailAddress] {
+  def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
+    (implicit session: RSession): Seq[EmailAddress]
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[EmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Option[Boolean]
-  def saveWithVerificationCode(email: EmailAddress)(implicit session: RWSession): EmailAddress
-  def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress]
+  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress]
+  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Boolean
 }
 
 @Singleton
@@ -26,8 +24,6 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
   import DBSession._
-
-  private lazy val random: SecureRandom = new SecureRandom()
 
   override val table = new RepoTable[EmailAddress](db, "email_address") {
     def userId = column[Id[User]]("user_id", O.NotNull)
@@ -39,31 +35,32 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
         verificationCode <> (EmailAddress, EmailAddress.unapply _)
   }
 
+  def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
+    (implicit session: RSession): Seq[EmailAddress] =
+    (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).list
+
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
-      (implicit session: RSession): Option[EmailAddress] =
-    (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).firstOption
+      (implicit session: RSession): Option[EmailAddress] = {
+    val allAddresses = getByAddress(address, excludeState)
+    allAddresses.find(_.state == EmailAddressStates.VERIFIED).orElse(allAddresses.headOption)
+  }
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
     (for(f <- table if f.userId === userId && f.state =!= EmailAddressStates.INACTIVE) yield f).list
 
-  // Some(true) means UNVERIFIED -> VERIFIED. Some(false) means already VERIFIED. None means no such code.
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Option[Boolean] = {
+  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress] =
+    (for (e <- table if e.userId === userId && e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
+
+  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Boolean = {
     val now = clock.now()
-    table.filter(e => e.userId === userId && e.verificationCode === verificationCode && e.state =!= EmailAddressStates.UNVERIFIED)
+    table.filter(e => e.userId === userId && e.verificationCode === verificationCode && e.state === EmailAddressStates.UNVERIFIED)
       .map(e => e.verifiedAt ~ e.updatedAt ~ e.state).update((now, now, EmailAddressStates.VERIFIED)) match {
-      case count if count > 0 =>
-        Some(true)
-      case _ =>
-        getByCode(verificationCode).map(_ => false)
+      case count if count > 0 => true
+      case _ => getByUserAndCode(userId, verificationCode).isDefined
     }
   }
 
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress] = {
     (for (e <- table if e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
-  }
-
-  def saveWithVerificationCode(email: EmailAddress)(implicit session: RWSession): EmailAddress = {
-    val code = new BigInteger(128, random).toString(36)
-    save(email.copy(verificationCode = Some(code)))
   }
 }

@@ -95,8 +95,8 @@ class MessagingController @Inject() (
 
       userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson, false)
       userThreadRepo.clearNotification(userId)
-      userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime(zones.PT))
-      userThreadRepo.setNotificationLastSeen(userId, currentDateTime(zones.PT))
+      userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime)
+      userThreadRepo.setNotificationLastSeen(userId, currentDateTime)
     }
   }
 

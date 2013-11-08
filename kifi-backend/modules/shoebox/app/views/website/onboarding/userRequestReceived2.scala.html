@@ -1,4 +1,4 @@
-@(user: User, email: Option[String], friendsOnKifi: Set[ExternalId[User]])
+@(user: User, email: Option[String], justVerified: Boolean, friendsOnKifi: Set[ExternalId[User]])
 
 @styles = {
 <style>
@@ -168,7 +168,11 @@ span.email-address {
 
   <h1 class="main-logo">kifi</h1>
   <h2 class="page-title">Thank you!</h2>
-  <h3>Thanks for your interest in our private beta</h3>
+  @if(justVerified) {
+    <h3>Thanks for verifying your email address</h3>
+  } else {
+    <h3>Thanks for your interest in our private beta</h3>
+  }
 
   <section>
     <p>When you’re approved, we’ll email you at:</p>
@@ -232,7 +236,10 @@ $(function () {
     $input.css('width', 2 + $span.outerWidth());
   }
 });
+if (window.history && history.replaceState) {
+  history.replaceState(null, null, location.pathname);
+}
 </script>
 }
 
-@views.html.auth.helper.page(title = "kifi.com • Thank You", styles = styles, curtainsDrawn = true, content = content, scripts = scripts)
+@views.html.auth.helper.page(title = "kifi.com • Thank You", styles = styles, content = content, scripts = scripts)

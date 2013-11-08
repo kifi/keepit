@@ -1,6 +1,8 @@
 package com.keepit.model
+
 import org.joda.time.DateTime
-import com.keepit.common.time.zones.PT
+
+import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import org.specs2.mutable.Specification
 import com.google.inject.Injector
 import com.keepit.common.db.Id
@@ -9,8 +11,6 @@ import com.keepit.learning.topicmodel.TopicModelGlobalTest
 import play.api.libs.json._
 import com.keepit.test._
 import com.keepit.common.cache._
-
-
 
 class UserTopicTest extends Specification with ShoeboxTestInjector {
 
@@ -22,7 +22,7 @@ class UserTopicTest extends Specification with ShoeboxTestInjector {
 
   // user i concentrates on topic i
   def setup()(implicit injector: Injector) = {
-    val t = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
+    val t = new DateTime(2013, 5, 20, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
     val numTopics = TopicModelGlobalTest.numTopics
     val ids = (0 until numTopics).map{Id[User](_)}
     val userTopics = (0 until numTopics).map{ i =>
@@ -69,8 +69,8 @@ class UserTopicTest extends Specification with ShoeboxTestInjector {
 
   "userTopic Serializer " should {
     "work" in {
-      val t1 = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
-      val t2 = new DateTime(2013, 5, 22, 21, 59, 0, 0, PT)
+      val t1 = new DateTime(2013, 5, 20, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+      val t2 = new DateTime(2013, 5, 22, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
       val topic = new Array[Int](TopicModelGlobalTest.numTopics)
       topic(1) = 1; topic(5) = 5;
       val helper = new UserTopicByteArrayHelper

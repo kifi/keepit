@@ -18,8 +18,11 @@ import play.api.Play.current
 import play.api._
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
+import com.keepit.commanders.InviteCommander
+import com.keepit.common.db.ExternalId
 
-class HomeController @Inject() (db: Database,
+class HomeController @Inject() (
+  db: Database,
   userRepo: UserRepo,
   userValueRepo: UserValueRepo,
   socialUserRepo: SocialUserInfoRepo,
@@ -31,7 +34,8 @@ class HomeController @Inject() (db: Database,
   emailAddressRepo: EmailAddressRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialGraphPlugin: SocialGraphPlugin,
-  fortyTwoServices: FortyTwoServices)
+  fortyTwoServices: FortyTwoServices,
+  inviteCommander: InviteCommander)
   extends WebsiteController(actionAuthenticator) with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
@@ -41,6 +45,9 @@ class HomeController @Inject() (db: Database,
   private def setHasSeenInstall()(implicit request: AuthenticatedRequest[_]): Unit = {
     db.readWrite { implicit s => userValueRepo.setValue(request.userId, "has_seen_install", true.toString) }
   }
+
+  private def newSignup()(implicit request: Request[_]) =
+    request.cookies.get("QA").isDefined || current.configuration.getBoolean("newSignup").getOrElse(false)
 
   def version = Action {
     Ok(fortyTwoServices.currentVersion.toString)
@@ -52,7 +59,7 @@ class HomeController @Inject() (db: Database,
       Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
         .withSession(session - AuthController.LinkWithKey)
     } else if (request.user.state == UserStates.PENDING) {
-      pendingHome() // todo(andrew): plug in new pending home view
+      pendingHome()
     } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
@@ -61,19 +68,17 @@ class HomeController @Inject() (db: Database,
       Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
   }, unauthenticatedAction = { implicit request =>
-    val newSignup = current.configuration.getBoolean("newSignup").getOrElse(false)
     if (newSignup && request.identityOpt.isDefined) {
       // User needs to sign up or (social) finalize
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-    }
-    else {
+    } else {
       // Non-user landing page
       Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
     }
   })
 
   def curtainHome = Action {
-    Ok(views.html.auth.auth())
+    Ok(views.html.auth.auth()).withCookies(Cookie("QA", "1"))
   }
 
   def kifiSiteRedirect(path: String) = Action {
@@ -84,34 +89,11 @@ class HomeController @Inject() (db: Database,
 
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
     val user = request.user
-    val anyPendingInvite = db.readOnly { implicit s =>
-      socialUserRepo.getByUser(user.id.get) map { su =>
-        su -> invitationRepo.getByRecipient(su.id.get).getOrElse(Invitation(
-          createdAt = user.createdAt,
-          senderUserId = None,
-          recipientSocialUserId = su.id.get,
-          state = InvitationStates.ACTIVE
-        ))
-      }
-    }
-    for ((su, invite) <- anyPendingInvite) {
-      if (invite.state == InvitationStates.ACTIVE) {
-        db.readWrite { implicit s =>
-          invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-          postOffice.sendMail(ElectronicMail(
-            senderUserId = None,
-            from = EmailAddresses.NOTIFICATIONS,
-            fromName = Some("Invitations"),
-            to = List(EmailAddresses.INVITATION),
-            subject = s"""${su.fullName} wants to be let in!""",
-            htmlBody = s"""<a href="https://admin.kifi.com/admin/user/${user.id.get}">${su.fullName}</a> wants to be let in!\n<br/>
-                           Go to the <a href="https://admin.kifi.com/admin/invites?show=accepted">admin invitation page</a> to accept or reject this user.""",
-            category = PostOffice.Categories.ADMIN))
-        }
-      }
-    }
+
+    inviteCommander.markPendingInvitesAsAccepted(user.id.get, request.cookies.get("inv").map(v => ExternalId[Invitation](v.name)))
+
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
-      val email = emailRepo.getByUser(user.id.get).headOption.map(_.address)
+      val email = emailRepo.getByUser(user.id.get).sortBy(a => a.verifiedAt.getOrElse(a.createdAt.minusYears(10)).getMillis).lastOption.map(_.address)
       val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
         val user = userRepo.get(u)
         if(user.state == UserStates.ACTIVE) Some(user.externalId)
@@ -120,8 +102,12 @@ class HomeController @Inject() (db: Database,
 
       (email, friendsOnKifi)
     }
-    if (current.configuration.getBoolean("newSignup").getOrElse(false)) {
-      Ok(views.html.website.onboarding.userRequestReceived2(user, email, friendsOnKifi))
+    if (newSignup) {
+      Ok(views.html.website.onboarding.userRequestReceived2(
+        user = user,
+        email = email,
+        justVerified = request.queryString.get("m").map(_.headOption == Some("1")).getOrElse(false),
+        friendsOnKifi = friendsOnKifi))
     } else {
       Ok(views.html.website.onboarding.userRequestReceived(user, email, friendsOnKifi))
     }
@@ -132,7 +118,7 @@ class HomeController @Inject() (db: Database,
       socialUserRepo.getByUser(request.user.id.get) map { su =>
         invitationRepo.getByRecipient(su.id.get) match {
           case Some(invite) =>
-            if(invite.state != InvitationStates.JOINED) {
+            if (invite.state != InvitationStates.JOINED) {
               invitationRepo.save(invite.withState(InvitationStates.JOINED))
               invite.senderUserId match {
                 case Some(senderUserId) =>
@@ -154,7 +140,11 @@ class HomeController @Inject() (db: Database,
       }
     }
     setHasSeenInstall()
-    Ok(views.html.website.install(request.user))
+    if (newSignup) {
+      Ok(views.html.website.install2(request.user))
+    } else {
+      Ok(views.html.website.install(request.user))
+    }
   }
 
   def disconnect(networkString: String) = AuthenticatedHtmlAction { implicit request =>
@@ -171,14 +161,19 @@ class HomeController @Inject() (db: Database,
       socialGraphPlugin.asyncRevokePermissions(sui)
       db.readWrite { implicit s =>
         socialConnectionRepo.deactivateAllConnections(sui.id.get)
+        socialUserRepo.invalidateCache(sui)
         socialUserRepo.save(sui.copy(credentials = None, userId = None))
       }
       otherNetworks map socialGraphPlugin.asyncFetch
-      Redirect(securesocial.controllers.routes.LoginPage.logout())
+      Redirect(com.keepit.controllers.website.routes.HomeController.home())
     }
   }
 
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
-    Ok(views.html.website.gettingStarted(request.user))
+    if (newSignup) {
+      Ok(views.html.website.gettingStarted2(request.user))
+    } else {
+      Ok(views.html.website.gettingStarted(request.user))
+    }
   }
 }

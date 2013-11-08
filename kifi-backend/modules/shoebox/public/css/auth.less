@@ -178,8 +178,7 @@ input[type=password] {
 .curtain-note {
   position: absolute;
   top: 20%;
-  margin-top: 340px;
-  padding: 32px 0 38px;
+  margin-top: 372px;
   width: 284px;
   right: 8%;
   color: #fff;
@@ -247,6 +246,12 @@ input[type=password] {
 .curtain-back:before,
 .curtain-back:active:before {
   opacity: .6;
+}
+.curtain-back-1,
+.curtain-back-2 {
+  position: absolute;
+  left: 0;
+  right: 0;
 }
 
 // right-side footer
@@ -325,31 +330,46 @@ footer {
 // buttons
 .primary-button {
   @bg-color: #92c152;
+  display: inline-block;
+  white-space: nowrap;
   color: #fff;
   background: @bg-color;
-  &:hover {
+  &:hover,
+  &:focus {
     background: tint(@bg-color, 10%);
   }
   &:active {
     background: shade(@bg-color, 10%);
+  }
+  &:focus {
+    outline-color: #888;
   }
 }
 .alt-button {
   @bg-color: #6fa6ef;
+  display: inline-block;
+  white-space: nowrap;
   color: #fff;
   background: @bg-color;
-  &:hover {
+  &:hover,
+  &:focus {
     background: tint(@bg-color, 10%);
   }
   &:active {
     background: shade(@bg-color, 10%);
   }
+  &:focus {
+    outline-color: #888;
+  }
 }
 .cancel-button {
   @bg-color: #e8e8e8;
+  display: inline-block;
+  white-space: nowrap;
   color: #888;
   background: @bg-color;
-  &:hover {
+  &:hover,
+  &:focus {
     background: tint(@bg-color, 20%);
   }
   &:active {
@@ -537,15 +557,13 @@ footer {
 @signup-label-color: #6c839b;
 @signup-box-color: #ededed;
 .signup-2 {
-  text-align: center;
-  padding-bottom: 10px;
-}
-.signup>.signup-2 {
-  visibility: hidden;
+  display: none;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
+  text-align: center;
+  padding-bottom: 10px;
 }
 .signup-2-label {
   display: block;
@@ -731,60 +749,84 @@ footer {
 
 // finalize transition
 @finalize-time: .24s;
-.finalizing>.curtain-back {
-  visibility: hidden;
-  opacity: 0;
-  .translate(-110px);
-  .transition(visibility 0s @finalize-time, opacity @finalize-time linear, transform @finalize-time ease-in);
+.curtain-back-1,
+.curtain-back-2 {
+  .transition(visibility 0s, opacity @finalize-time linear);
 }
-.page-title.obsolete {
+.finalizing .curtain-back-1,
+.curtain-back-2 {
+  opacity: 0;
+  visibility: hidden;
+  .transition-delay(@finalize-time, 0s);
+}
+.finalizing .curtain-back-2 {
+  opacity: 1;
+  visibility: visible;
+  .transition-delay(0s);
+}
+.page-title.obsolete,  // navigating forward from
+.page-title.abandoned {  // navigating back from
   position: absolute;
   width: 100%;
   .transition(opacity (.6 * @finalize-time) linear, visibility 0s @finalize-time, transform @finalize-time ease-in-out);
 }
-.obsolete+.page-title {
-  opacity: 0;
-  .translate(0, 70%);
-  .transition(opacity (.8 * @finalize-time) (.2 * @finalize-time) linear, transform @finalize-time ease-in-out);
-}
-.finalizing>.page-title.obsolete {
+.finalizing>.page-title.obsolete {  // navigated forward from
   opacity: 0;
   visibility: hidden;
   .translate(0, -70%);
 }
-.finalizing>.obsolete+.page-title {
+.finalizing>.page-title.abandoned,  // about to navigate back from
+.finalizing>.obsolete+.page-title {  // navigated forward to
   opacity: 1;
+  visibility: visible;
   .transform(none);
+}
+.page-title.abandoned,  // navigated back from
+.obsolete+.page-title {  // about to navigate forward to
+  opacity: 0;
+  visibility: hidden;
+  .translate(0, 70%);
+}
+.finalizing>.obsolete+.page-title,  // navigated forward to
+.page-title.returned {  // navigated back to
+  .transition(opacity (.8 * @finalize-time) (.2 * @finalize-time) linear, visibility @finalize-time, transform @finalize-time ease-in-out);
 }
 .form-l,
 .form-r {
-  .transition(opacity @finalize-time linear, visibility 0s @finalize-time, transform @finalize-time ease-in);
+  .transition(opacity @finalize-time linear, visibility, transform @finalize-time ease-in);
 }
-.finalizing .form-l {
-  opacity: 0;
-  visibility: hidden;
-  .translate(-100%);
-}
+.finalizing .form-l,
 .finalizing .form-r {
   opacity: 0;
   visibility: hidden;
+  .transition-delay(0s, @finalize-time);
+}
+.finalizing .form-l {
+  .translate(-100%);
+}
+.finalizing .form-r {
   .translate(100%);
 }
-.signup>.signup-2 {
-  visibility: hidden;
+.signup-2 {
   opacity: 0;
+  visibility: hidden;
   .translate(0, 60px);
-  .transition(opacity @finalize-time linear, transform @finalize-time ease-out);
+  .transition(opacity @finalize-time linear, visibility 0s @finalize-time, transform @finalize-time ease-in);
 }
 .finalizing .signup-2 {
-  visibility: visible;
   opacity: 1;
+  visibility: visible;
   .transform(none);
+  .transition(opacity @finalize-time linear, visibility, transform @finalize-time ease-out);
+}
+.terms {
+  .transition(opacity (@finalize-time / 2) linear (@finalize-time / 2), visibility, transform (@finalize-time / 2) ease-out (@finalize-time / 2));
 }
 .finalizing .terms {
   opacity: 0;
   visibility: hidden;
-  .transition(opacity (@finalize-time / 2) linear, visibility 0 (@finalize-time / 2));
+  .translate(0, 20px);
+  .transition(opacity (@finalize-time / 2) linear, visibility 0s @finalize-time, transform 0s @finalize-time);
 }
 
 // dialogs
@@ -938,9 +980,6 @@ footer {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   margin-left: 4px;
-  &:focus {
-    outline-color: #888;
-  }
 }
 
 // reset password dialog
@@ -1031,9 +1070,6 @@ footer {
   padding: 10px 30px;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
-  &:focus {
-    outline-color: #888;
-  }
 }
 .reset-password-success {
   position: absolute;

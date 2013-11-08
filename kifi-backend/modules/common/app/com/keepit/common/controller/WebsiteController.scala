@@ -33,13 +33,23 @@ class WebsiteController(actionAuthenticator: ActionAuthenticator) extends Contro
   def JsonAction[T](allowPending: Boolean, parser: BodyParser[T] = parse.anyContent)(authenticatedAction: AuthenticatedRequest[T] => Result, unauthenticatedAction: Request[T] => Result): Action[T] =
     actionAuthenticator.authenticatedAction(true, allowPending, parser, authenticatedAction, unauthenticatedAction)
 
-  def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
-    actionAuthenticator.authenticatedAction(false, false, parse.anyContent, action)
+  def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = AuthenticatedHtmlAction(false)(action)
+
+  def AuthenticatedHtmlAction(allowPending: Boolean)(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = Action { request =>
+    actionAuthenticator.authenticatedAction(false, allowPending, parse.anyContent, action)(request) match {
+      case r: PlainResult => r.as(ContentTypes.HTML)
+      case any => any
+    }
+  }
 
   def HtmlAction(authenticatedAction: AuthenticatedRequest[AnyContent] => Result, unauthenticatedAction: Request[AnyContent] => Result): Action[AnyContent] =
     HtmlAction(false)(authenticatedAction, unauthenticatedAction)
 
-  def HtmlAction(allowPending: Boolean)(authenticatedAction: AuthenticatedRequest[AnyContent] => Result, unauthenticatedAction: Request[AnyContent] => Result): Action[AnyContent] =
-    actionAuthenticator.authenticatedAction(false, allowPending, parse.anyContent, authenticatedAction, unauthenticatedAction)
+  def HtmlAction(allowPending: Boolean)(authenticatedAction: AuthenticatedRequest[AnyContent] => Result, unauthenticatedAction: Request[AnyContent] => Result): Action[AnyContent] = Action { request =>
+    actionAuthenticator.authenticatedAction(false, allowPending, parse.anyContent, authenticatedAction, unauthenticatedAction)(request) match {
+      case r: PlainResult => r.as(ContentTypes.HTML)
+      case any => any
+    }
+  }
 
 }
