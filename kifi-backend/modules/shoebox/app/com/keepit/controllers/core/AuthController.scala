@@ -33,14 +33,6 @@ import scala.util.{Failure, Success}
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.commanders.InviteCommander
 
-sealed abstract class AuthType
-
-object AuthType {
-  case object Login extends AuthType
-  case object SocialSignup extends AuthType
-  case object Link extends AuthType
-}
-
 object AuthController {
   val LinkWithKey = "linkWith"
 }
@@ -89,7 +81,19 @@ class AuthController @Inject() (
   }
 
   def loginSocial(provider: String) = ProviderController.authenticate(provider)
-  def loginWithUserPass(format: String) = getAuthAction("userpass", AuthType.Login)
+  def loginWithUserPass(link: String) = Action { implicit request =>
+    ProviderController.authenticate("userpass")(request) match {
+      case res: SimpleResult[_] if res.header.status == 303 =>
+        val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
+        val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
+        val newSession = if (link != "") {
+          // TODO: why is OriginalUrlKey being removed? should we keep it?
+          resSession - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link)
+        } else resSession
+        Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(resCookies: _*).withSession(newSession)
+      case res => res
+    }
+  }
 
   def afterLogin() = HtmlAction(allowPending = true)(authenticatedAction = { implicit request =>
     if (request.user.state == UserStates.PENDING) {
@@ -120,11 +124,33 @@ class AuthController @Inject() (
     }
   })
 
-  def link(provider: String) = getAuthAction(provider, AuthType.Link)
-  def linkByPost(provider: String) = getAuthAction(provider, AuthType.Link)
+  def signup(provider: String) = Action { implicit request =>
+    ProviderController.authenticate(provider)(request) match {
+      case res: SimpleResult[_] =>
+        val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
+        val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
+        // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
+        res.withSession(resSession - FORTYTWO_USER_ID
+          + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
+      case res => res
+    }
+  }
 
-  def signup(provider: String) = getAuthAction(provider, AuthType.SocialSignup)
-  def signupByPost(provider: String) = getAuthAction(provider, AuthType.SocialSignup)
+  def link(provider: String) = Action { implicit request =>
+    ProviderController.authenticate(provider)(request) match {
+      case res: SimpleResult[_] =>
+        val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
+        val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
+        if (resSession.get(PopupKey).isDefined) {
+          res.withSession(resSession + (SecureSocial.OriginalUrlKey -> routes.AuthController.popupAfterLinkSocial(provider).url))
+        } else if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
+          request.headers.get(REFERER).map { url =>
+            res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
+          } getOrElse res
+        } else res
+      case res => res
+    }
+  }
 
   def popupBeforeLinkSocial(provider: String) = AuthenticatedHtmlAction(allowPending = true) { implicit request =>
     Ok(views.html.auth.popupBeforeLinkSocial(SocialNetworkType(provider))).withSession(session + (PopupKey -> "1"))
@@ -143,39 +169,6 @@ class AuthController @Inject() (
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
     db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
-  }
-
-  private def getAuthAction(provider: String, authType: AuthType): Action[AnyContent] = Action { request =>
-    ProviderController.authenticate(provider)(request) match {
-      case res: SimpleResult[_] =>
-        val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
-        val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
-        authType match {
-          case AuthType.Login =>
-            var newRes = res.header.headers.get(LOCATION).map { location =>
-              Ok(Json.obj("uri" -> location)).withCookies(resCookies: _*)
-            } getOrElse {
-              res
-            }
-            request.queryString.get("link").flatMap(_.headOption).map(SocialNetworkType(_)).map { network =>
-              // TODO: why is OriginalUrlKey being removed? should we keep it?
-              newRes.withSession(resSession - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> network.name))
-            } getOrElse newRes
-          case AuthType.SocialSignup =>
-            // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
-            res.withSession(resSession - FORTYTWO_USER_ID
-              + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
-          case AuthType.Link =>
-            if (resSession.get(PopupKey).isDefined) {
-              res.withSession(resSession + (SecureSocial.OriginalUrlKey -> routes.AuthController.popupAfterLinkSocial(provider).url))
-            } else if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
-              request.headers.get(REFERER).map { url =>
-                res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
-              } getOrElse res
-            } else res
-        }
-      case res => res
-    }
   }
 
   private case class EmailPassword(email: String, password: String)
