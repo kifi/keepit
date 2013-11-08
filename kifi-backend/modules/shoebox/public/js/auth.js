@@ -259,8 +259,10 @@ kifi.form = (function () {
   var $photo = $('.form-photo');
   $('.form-photo-a').click(function (e) {
     if (e.which !== 1) return;
-    var $a = $(this);
-    window.open($a.data('uri'), 'photo', 'width=880,height=460,dialog=yes,menubar=no,resizable=yes,scrollbars=no,status=no');
+    var $a = $(this), w = 880, h = 460;
+    var top = (window.screenTop || window.screenY || 0) + Math.round(.5 * (window.innerHeight - h));
+    var left = (window.screenLeft || window.screenX || 0) + Math.round(.5 * (window.innerWidth - w));
+    window.open($a.data('uri'), 'photo', 'width=' + w + ',height=' + h + ',top=' + top + ',left=' + left + ',dialog=yes,menubar=no,resizable=yes,scrollbars=no,status=no');
     window.afterSocialLink = afterSocialLink.bind($a.closest('form')[0]);
   });
   $('.form-photo-file').change(function () {
