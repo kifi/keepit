@@ -402,6 +402,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(allUserConnections.getOrElse(userId, Set.empty))
   }
 
+  def getSocialFriendsOnKifi(userId: Id[User]): Future[Set[Id[User]]] = ???
+
   def logEvent(userId: Id[User], event: JsObject) = {}
 
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}

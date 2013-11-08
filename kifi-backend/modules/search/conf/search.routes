@@ -7,6 +7,8 @@ GET     /search/message             @com.keepit.controllers.ext.ExtMessageSearch
 POST    /search/events/resultClicked      @com.keepit.controllers.ext.ExtSearchEventController.resultClicked()
 POST    /search/events/searchEnded      @com.keepit.controllers.ext.ExtSearchEventController.searchEnded()
 POST    /search/events/browsed      @com.keepit.controllers.ext.ExtSearchEventController.updateBrowsingHistory()
+GET     /search/users/page          @com.keepit.controllers.ext.ExtUserSearchController.page(query: String, filter: Option[String], pageNum: Int, pageSize: Int)
+GET     /search/users/search        @com.keepit.controllers.ext.ExtUserSearchController.search(query: String, filter: Option[String], context: Option[String], maxHits: Int)
 
 # INTERNAL ROUTES/Search
 POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()

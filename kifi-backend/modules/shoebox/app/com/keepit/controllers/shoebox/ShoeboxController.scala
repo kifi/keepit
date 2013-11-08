@@ -58,6 +58,7 @@ class ShoeboxController @Inject() (
   keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
+  socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
@@ -370,12 +371,21 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(collectionIds))
   }
 
+  // on kifi
   def getConnectedUsers(id : Id[User]) = Action { request =>
     val ids = db.readOnly { implicit s =>
       userConnectionRepo.getConnectedUsers(id).toSeq
         .map { friendId => JsNumber(friendId.id) }
     }
     Ok(JsArray(ids))
+  }
+
+  def getSocialFriendsOnKifi(id: Id[User]) = Action { request =>
+    val socialFriends = db.readOnly{ implicit s =>
+      socialConnectionRepo.getUserConnections(id)
+    }
+    val ids = socialFriends.filter(_.userId.isDefined).sortBy(_.fullName).flatMap(_.userId).distinct
+    Ok(JsArray(ids.map{x => JsNumber(x.id)}))
   }
 
   def getActiveExperiments = Action { request =>

@@ -95,4 +95,27 @@ class UserSearcher(searcher: Searcher) {
     UserSearchResult(hits, context)
   }
 
+  def searchPagingWithFilter(query: Query, searchFilter: UserSearchFilter, pageNum: Int, pageSize: Int): UserSearchResult = {
+    var hits = Vector.empty[UserHit]
+    searcher.doSearch(query) { (scorer, reader) =>
+      val bv = reader.getBinaryDocValues(UserIndexer.BASIC_USER_FIELD)
+      val mapper = reader.getIdMapper
+      var doc = scorer.nextDoc()
+      while (doc != NO_MORE_DOCS) {
+        val id = mapper.getId(doc)
+        if (id >= 0 && searchFilter.accept(id)) {
+          var ref = new BytesRef()
+          bv.get(doc, ref)
+          val user = BasicUser.fromByteArray(ref.bytes, ref.offset, ref.length)
+          val userId = Id[User](id)
+          val isFriend = searchFilter.friends.contains(id)
+          hits = hits :+ UserHit(userId, user, isFriend)
+        }
+        doc = scorer.nextDoc()
+      }
+    }
+    val pageHits = hits.sortBy(x => x.basicUser.firstName + x.basicUser.lastName).drop(pageNum * pageSize).take(pageSize).toArray
+    UserSearchResult(pageHits, "")
+  }
+
 }

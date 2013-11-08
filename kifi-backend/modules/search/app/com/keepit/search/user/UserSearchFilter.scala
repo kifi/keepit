@@ -21,8 +21,9 @@ abstract case class UserSearchFilter(
 
 object UserSearchFilterType extends Enumeration {
   val DEFAULT = Value("default")
-  val FRIENDS_ONLY = Value("friends_only")
+  val FRIENDS_ONLY = Value("friends_only")                                            // kifi friends
   val NON_FRIENDS_ONLY = Value("non_friends_only")
+  val NON_KIFI_NON_SOCIAL_FRIENDS_ONLY = Value("non_kifi_non_social_friends_only")    // kifi user not connected to me in any social network (kifi, facebook, linkedin, etc)
 }
 
 @Singleton
@@ -51,5 +52,13 @@ class UserSearchFilterFactory @Inject()(client: ShoeboxServiceClient) {
     override val friends = getFriends(userId)
     override def filterType = UserSearchFilterType.NON_FRIENDS_ONLY
     override def accept(id: Long) = !friends.contains(id) && !idFilter.contains(id) && (userId.get.id != id)
+  }
+
+  def nonKifiNonSocialOnly(userId: Id[User], context: Option[String] = None) = new UserSearchFilter(Some(userId), context){
+    override val friends = getFriends(userId)
+    val socialFriendsOnKifi = Await.result(client.getSocialFriendsOnKifi(userId.get), 5 seconds).map{_.id}
+    val allFriends = friends ++ socialFriendsOnKifi
+    override def filterType = UserSearchFilterType.NON_KIFI_NON_SOCIAL_FRIENDS_ONLY
+    override def accept(id: Long) = !allFriends.contains(id) && (userId.get.id != id)
   }
 }
