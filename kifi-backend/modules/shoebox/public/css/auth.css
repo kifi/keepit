@@ -78,7 +78,7 @@ input[type=password] {
   position: absolute;
   top: 70px;
   height: 144px;
-  background: url(../img/out/auth.png) no-repeat;
+  background: url(../img/auth.png) no-repeat;
   -webkit-transition: opacity 0.21s ease-out;
   -moz-transition: opacity 0.21s ease-out;
   -o-transition: opacity 0.21s ease-out;
@@ -193,8 +193,7 @@ input[type=password] {
 .curtain-note {
   position: absolute;
   top: 20%;
-  margin-top: 340px;
-  padding: 32px 0 38px;
+  margin-top: 372px;
   width: 284px;
   right: 8%;
   color: #fff;
@@ -264,7 +263,7 @@ input[type=password] {
   height: 42px;
   width: 42px;
   margin: 0 auto;
-  background: url(../img/out/auth.png) -2px -328px;
+  background: url(../img/auth.png) -2px -328px;
   position: relative;
   left: 2px;
 }
@@ -284,6 +283,12 @@ input[type=password] {
 .curtain-back:active:before {
   opacity: .6;
 }
+.curtain-back-1,
+.curtain-back-2 {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
 footer {
   position: absolute;
   top: 56px;
@@ -299,7 +304,7 @@ footer {
   height: 32px;
   width: 32px;
   margin-left: 5px;
-  background: url(../img/out/auth.png);
+  background: url(../img/auth.png);
   opacity: .5;
 }
 .us-on:hover {
@@ -330,7 +335,7 @@ footer {
   height: 144px;
   margin: 0 auto 84px;
   padding-top: 70px;
-  background: url(../img/out/auth.png) -2px -148px content-box;
+  background: url(../img/auth.png) -2px -148px content-box;
   text-indent: -9999px;
 }
 .page-title {
@@ -370,30 +375,45 @@ footer {
   transition: opacity 0.252s 0.168s linear, transform 0.42s ease-in-out;
 }
 .primary-button {
+  display: inline-block;
+  white-space: nowrap;
   color: #fff;
   background: #92c152;
 }
-.primary-button:hover {
+.primary-button:hover,
+.primary-button:focus {
   background: #9dc763;
 }
 .primary-button:active {
   background: #83ae4a;
 }
+.primary-button:focus {
+  outline-color: #888;
+}
 .alt-button {
+  display: inline-block;
+  white-space: nowrap;
   color: #fff;
   background: #6fa6ef;
 }
-.alt-button:hover {
+.alt-button:hover,
+.alt-button:focus {
   background: #7daff1;
 }
 .alt-button:active {
   background: #6495d7;
 }
+.alt-button:focus {
+  outline-color: #888;
+}
 .cancel-button {
+  display: inline-block;
+  white-space: nowrap;
   color: #888;
   background: #e8e8e8;
 }
-.cancel-button:hover {
+.cancel-button:hover,
+.cancel-button:focus {
   background: #ededed;
 }
 .cancel-button:active {
@@ -509,7 +529,7 @@ footer {
   font-size: 0;
   height: 32px;
   width: 32px;
-  background-image: url(../img/out/auth.png);
+  background-image: url(../img/auth.png);
 }
 .facebook > .form-network-icon:before {
   background-position: -187px -294px;
@@ -538,7 +558,7 @@ footer {
   right: 14px;
   width: 12px;
   height: 16px;
-  background: url(../img/out/auth.png) -241px -328px;
+  background: url(../img/auth.png) -241px -328px;
 }
 .form-email-addr,
 .form-password {
@@ -573,15 +593,13 @@ footer {
   padding-bottom: 20px;
 }
 .signup-2 {
-  text-align: center;
-  padding-bottom: 10px;
-}
-.signup > .signup-2 {
-  visibility: hidden;
+  display: none;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
+  text-align: center;
+  padding-bottom: 10px;
 }
 .signup-2-label {
   display: block;
@@ -655,7 +673,7 @@ footer {
   height: 100px;
   float: left;
   margin-right: 20px;
-  background: #ffffff url(../img/out/ghost.png);
+  background: #ffffff url(../img/ghost.100.png);
   background-size: cover;
   position: relative;
 }
@@ -720,7 +738,7 @@ footer {
   left: 8px;
   height: 32px;
   width: 32px;
-  background: url(../img/out/auth.png);
+  background: url(../img/auth.png);
 }
 .form-photo-a.facebook:before {
   background-position: -187px -294px;
@@ -772,21 +790,33 @@ footer {
   margin: 20px auto 40px;
   width: 200px;
 }
-.finalizing > .curtain-back {
-  visibility: hidden;
-  opacity: 0;
-  -webkit-transform: translate(-110px, 0);
-  -moz-transform: translate(-110px, 0);
-  -o-transform: translate(-110px, 0);
-  -ms-transform: translate(-110px, 0);
-  transform: translate(-110px, 0);
-  -webkit-transition: visibility 0s 0.24s, opacity 0.24s linear, -webkit-transform 0.24s ease-in;
-  -moz-transition: visibility 0s 0.24s, opacity 0.24s linear, -moz-transform 0.24s ease-in;
-  -o-transition: visibility 0s 0.24s, opacity 0.24s linear, -o-transform 0.24s ease-in;
-  -ms-transition: visibility 0s 0.24s, opacity 0.24s linear, -ms-transform 0.24s ease-in;
-  transition: visibility 0s 0.24s, opacity 0.24s linear, transform 0.24s ease-in;
+.curtain-back-1,
+.curtain-back-2 {
+  -webkit-transition: visibility 0s, opacity 0.24s linear;
+  -moz-transition: visibility 0s, opacity 0.24s linear;
+  -o-transition: visibility 0s, opacity 0.24s linear;
+  -ms-transition: visibility 0s, opacity 0.24s linear;
+  transition: visibility 0s, opacity 0.24s linear;
 }
-.page-title.obsolete {
+.finalizing .curtain-back-1,
+.curtain-back-2 {
+  opacity: 0;
+  visibility: hidden;
+  -webkit-transition-delay: 0.24s, 0s;
+  -moz-transition-delay: 0.24s, 0s;
+  -o-transition-delay: 0.24s, 0s;
+  transition-delay: 0.24s, 0s;
+}
+.finalizing .curtain-back-2 {
+  opacity: 1;
+  visibility: visible;
+  -webkit-transition-delay: 0s;
+  -moz-transition-delay: 0s;
+  -o-transition-delay: 0s;
+  transition-delay: 0s;
+}
+.page-title.obsolete,
+.page-title.abandoned {
   position: absolute;
   width: 100%;
   -webkit-transition: opacity 0.144s linear, visibility 0s 0.24s, -webkit-transform 0.24s ease-in-out;
@@ -794,19 +824,6 @@ footer {
   -o-transition: opacity 0.144s linear, visibility 0s 0.24s, -o-transform 0.24s ease-in-out;
   -ms-transition: opacity 0.144s linear, visibility 0s 0.24s, -ms-transform 0.24s ease-in-out;
   transition: opacity 0.144s linear, visibility 0s 0.24s, transform 0.24s ease-in-out;
-}
-.obsolete + .page-title {
-  opacity: 0;
-  -webkit-transform: translate(0, 70%);
-  -moz-transform: translate(0, 70%);
-  -o-transform: translate(0, 70%);
-  -ms-transform: translate(0, 70%);
-  transform: translate(0, 70%);
-  -webkit-transition: opacity 0.192s 0.048s linear, -webkit-transform 0.24s ease-in-out;
-  -moz-transition: opacity 0.192s 0.048s linear, -moz-transform 0.24s ease-in-out;
-  -o-transition: opacity 0.192s 0.048s linear, -o-transform 0.24s ease-in-out;
-  -ms-transition: opacity 0.192s 0.048s linear, -ms-transform 0.24s ease-in-out;
-  transition: opacity 0.192s 0.048s linear, transform 0.24s ease-in-out;
 }
 .finalizing > .page-title.obsolete {
   opacity: 0;
@@ -817,25 +834,52 @@ footer {
   -ms-transform: translate(0, -70%);
   transform: translate(0, -70%);
 }
+.finalizing > .page-title.abandoned,
 .finalizing > .obsolete + .page-title {
   opacity: 1;
+  visibility: visible;
   -webkit-transform: none;
   -moz-transform: none;
   -o-transform: none;
   -ms-transform: none;
   transform: none;
 }
-.form-l,
-.form-r {
-  -webkit-transition: opacity 0.24s linear, visibility 0s 0.24s, -webkit-transform 0.24s ease-in;
-  -moz-transition: opacity 0.24s linear, visibility 0s 0.24s, -moz-transform 0.24s ease-in;
-  -o-transition: opacity 0.24s linear, visibility 0s 0.24s, -o-transform 0.24s ease-in;
-  -ms-transition: opacity 0.24s linear, visibility 0s 0.24s, -ms-transform 0.24s ease-in;
-  transition: opacity 0.24s linear, visibility 0s 0.24s, transform 0.24s ease-in;
-}
-.finalizing .form-l {
+.page-title.abandoned,
+.obsolete + .page-title {
   opacity: 0;
   visibility: hidden;
+  -webkit-transform: translate(0, 70%);
+  -moz-transform: translate(0, 70%);
+  -o-transform: translate(0, 70%);
+  -ms-transform: translate(0, 70%);
+  transform: translate(0, 70%);
+}
+.finalizing > .obsolete + .page-title,
+.page-title.returned {
+  -webkit-transition: opacity 0.192s 0.048s linear, visibility 0.24s, -webkit-transform 0.24s ease-in-out;
+  -moz-transition: opacity 0.192s 0.048s linear, visibility 0.24s, -moz-transform 0.24s ease-in-out;
+  -o-transition: opacity 0.192s 0.048s linear, visibility 0.24s, -o-transform 0.24s ease-in-out;
+  -ms-transition: opacity 0.192s 0.048s linear, visibility 0.24s, -ms-transform 0.24s ease-in-out;
+  transition: opacity 0.192s 0.048s linear, visibility 0.24s, transform 0.24s ease-in-out;
+}
+.form-l,
+.form-r {
+  -webkit-transition: opacity 0.24s linear, visibility, -webkit-transform 0.24s ease-in;
+  -moz-transition: opacity 0.24s linear, visibility, -moz-transform 0.24s ease-in;
+  -o-transition: opacity 0.24s linear, visibility, -o-transform 0.24s ease-in;
+  -ms-transition: opacity 0.24s linear, visibility, -ms-transform 0.24s ease-in;
+  transition: opacity 0.24s linear, visibility, transform 0.24s ease-in;
+}
+.finalizing .form-l,
+.finalizing .form-r {
+  opacity: 0;
+  visibility: hidden;
+  -webkit-transition-delay: 0s, 0.24s;
+  -moz-transition-delay: 0s, 0.24s;
+  -o-transition-delay: 0s, 0.24s;
+  transition-delay: 0s, 0.24s;
+}
+.finalizing .form-l {
   -webkit-transform: translate(-100%, 0);
   -moz-transform: translate(-100%, 0);
   -o-transform: translate(-100%, 0);
@@ -843,45 +887,60 @@ footer {
   transform: translate(-100%, 0);
 }
 .finalizing .form-r {
-  opacity: 0;
-  visibility: hidden;
   -webkit-transform: translate(100%, 0);
   -moz-transform: translate(100%, 0);
   -o-transform: translate(100%, 0);
   -ms-transform: translate(100%, 0);
   transform: translate(100%, 0);
 }
-.signup > .signup-2 {
-  visibility: hidden;
+.signup-2 {
   opacity: 0;
+  visibility: hidden;
   -webkit-transform: translate(0, 60px);
   -moz-transform: translate(0, 60px);
   -o-transform: translate(0, 60px);
   -ms-transform: translate(0, 60px);
   transform: translate(0, 60px);
-  -webkit-transition: opacity 0.24s linear, -webkit-transform 0.24s ease-out;
-  -moz-transition: opacity 0.24s linear, -moz-transform 0.24s ease-out;
-  -o-transition: opacity 0.24s linear, -o-transform 0.24s ease-out;
-  -ms-transition: opacity 0.24s linear, -ms-transform 0.24s ease-out;
-  transition: opacity 0.24s linear, transform 0.24s ease-out;
+  -webkit-transition: opacity 0.24s linear, visibility 0s 0.24s, -webkit-transform 0.24s ease-in;
+  -moz-transition: opacity 0.24s linear, visibility 0s 0.24s, -moz-transform 0.24s ease-in;
+  -o-transition: opacity 0.24s linear, visibility 0s 0.24s, -o-transform 0.24s ease-in;
+  -ms-transition: opacity 0.24s linear, visibility 0s 0.24s, -ms-transform 0.24s ease-in;
+  transition: opacity 0.24s linear, visibility 0s 0.24s, transform 0.24s ease-in;
 }
 .finalizing .signup-2 {
-  visibility: visible;
   opacity: 1;
+  visibility: visible;
   -webkit-transform: none;
   -moz-transform: none;
   -o-transform: none;
   -ms-transform: none;
   transform: none;
+  -webkit-transition: opacity 0.24s linear, visibility, -webkit-transform 0.24s ease-out;
+  -moz-transition: opacity 0.24s linear, visibility, -moz-transform 0.24s ease-out;
+  -o-transition: opacity 0.24s linear, visibility, -o-transform 0.24s ease-out;
+  -ms-transition: opacity 0.24s linear, visibility, -ms-transform 0.24s ease-out;
+  transition: opacity 0.24s linear, visibility, transform 0.24s ease-out;
+}
+.terms {
+  -webkit-transition: opacity 0.12s linear 0.12s, visibility, -webkit-transform 0.12s ease-out 0.12s;
+  -moz-transition: opacity 0.12s linear 0.12s, visibility, -moz-transform 0.12s ease-out 0.12s;
+  -o-transition: opacity 0.12s linear 0.12s, visibility, -o-transform 0.12s ease-out 0.12s;
+  -ms-transition: opacity 0.12s linear 0.12s, visibility, -ms-transform 0.12s ease-out 0.12s;
+  transition: opacity 0.12s linear 0.12s, visibility, transform 0.12s ease-out 0.12s;
 }
 .finalizing .terms {
   opacity: 0;
   visibility: hidden;
-  -webkit-transition: opacity 0.12s linear, visibility 0 0.12s;
-  -moz-transition: opacity 0.12s linear, visibility 0 0.12s;
-  -o-transition: opacity 0.12s linear, visibility 0 0.12s;
-  -ms-transition: opacity 0.12s linear, visibility 0 0.12s;
-  transition: opacity 0.12s linear, visibility 0 0.12s;
+  -webkit-transform: translate(0, 20px);
+  -moz-transform: translate(0, 20px);
+  -o-transform: translate(0, 20px);
+  -ms-transform: translate(0, 20px);
+  transform: translate(0, 20px);
+  -webkit-transition: opacity 0.12s linear, visibility 0s 0.24s, -webkit-transform 0s 0.24s;
+  -moz-transition: opacity 0.12s linear, visibility 0s 0.24s, -moz-transform 0s 0.24s;
+  -o-transition: opacity 0.12s linear, visibility 0s 0.24s, -o-transform 0s 0.24s;
+  -ms-transition: opacity 0.12s linear, visibility 0s 0.24s, -ms-transform 0s 0.24s;
+  transition: opacity 0.12s linear, visibility 0s 0.24s, transform 0s 0.24s;
 }
 .dialog {
   display: table;
@@ -1060,10 +1119,6 @@ footer {
   -webkit-font-smoothing: antialiased;
   margin-left: 4px;
 }
-.photo-dialog-cancel:focus,
-.photo-dialog-submit:focus {
-  outline-color: #888;
-}
 .reset-password .dialog-box {
   width: 480px;
   text-align: center;
@@ -1166,10 +1221,6 @@ footer {
   padding: 10px 30px;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
-}
-.reset-password-cancel:focus,
-.reset-password-submit:focus {
-  outline-color: #888;
 }
 .reset-password-success {
   position: absolute;
@@ -1314,19 +1365,19 @@ input.social-email[disabled] {
   font-weight: normal;
 }
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .curtain-logo-l:before,
-  .curtain-logo-r:before,
+  .curtain-logo-l,
+  .curtain-logo-r,
   .curtain-back:before,
   .us-on,
   .main-logo,
   .form-network-icon:before,
-  .form-photo-a:before,
-  .password-label:after {
-    background-image: url(../img/out/auth.2x.png);
+  .password-label:after,
+  .form-photo-a:before {
+    background-image: url(../img/auth.2x.png);
     background-size: 255px auto;
   }
   .form-photo {
-    background-image: url(../img/out/ghost.2x.png);
+    background-image: url(../img/ghost.200.png);
     background-size: cover;
   }
 }

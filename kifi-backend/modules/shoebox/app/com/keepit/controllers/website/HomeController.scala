@@ -76,7 +76,7 @@ class HomeController @Inject() (
       if (newSignup) {
         Ok(views.html.auth.auth())
       } else {
-        Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
+      Ok(views.html.website.welcome(msg = request.flash.get("error")))
       }
     }
   })

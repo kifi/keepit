@@ -7,21 +7,23 @@
 </div>
 
 <div align="center">
-<figure>
-<img id="mainSearch">
-<figcaption><font size="5">Main Search Performance</font></figcaption>
-</fiugre>
-<select class="input-medium params" id="metric"></select>
-<select class="input-medium params" id="yscale"></select>
+  <p><img id="mainSearch"></p>
+  <select class="input-medium params" id="metric"></select>
+  <select class="input-medium params" id="yscale"></select>
 </div>
 
 <div align="center">
-<figure>
-<img id="extSearch">
-<figcaption><font size="5">Ext Search Performance</font></figcaption>
-</fiugre>
-<select class="input-medium params" id="metric2"></select>
-<select class="input-medium params" id="yscale2"></select>
+  <p><img id="extSearch"></p>
+  <select class="input-medium params" id="metric2"></select>
+  <select class="input-medium params" id="yscale2"></select>
+</div>
+
+<div align="center">
+  <p><img id="articleIndex" class="img-polaroid"></p>
+</div>
+
+<div align="center">
+  <p><img id="index" class="img-polaroid"></p>
 </div>
 
 
@@ -38,6 +40,7 @@
     "48 Hours": "-48h",
     "1 Week": "-1w",
     "2 Weeks": "-2w",
+    "1 Month": "-1mon",
     "1 Month": "-1mon",
     "3 Months": "-3mon"
   };
@@ -103,15 +106,27 @@
     var baseTargetsForLogScale = []
 
     options.from = $("#timerange").val();
-  
+
     if (chart == "mainSearch") {
+      options.title = "Main Search Performance"
       options.target = ($("#yscale").val() == "log" ? baseTargetsForLogScale : baseTargets).concat([$("#metric").val()])
       options.logBase = $("#yscale").val() == "log" ? 2 : null;
     }
 
     if (chart == "extSearch") {
+      options.title = "Ext Search Performance"
       options.target = ($("#yscale2").val() == "log" ? baseTargetsForLogScale : baseTargets).concat([$("#metric2").val()])
       options.logBase = $("#yscale2").val() == "log" ? 2 : null;
+    }
+
+    if (chart == "articleIndex") {
+      options.title = "Article Index"
+      options.target = baseTargets.concat("stats.gauges.search.index.article.size")
+    }
+
+    if (chart == "index") {
+      options.title = "Other Indices"
+      options.target = baseTargets.concat('exclude(stats.gauges.search.index.*.size, "article")')
     }
 
     $("#" + chart).graphite(options);
@@ -120,6 +135,8 @@
   function renderAll() {
     renderChart("mainSearch")
     renderChart("extSearch")
+    renderChart("articleIndex")
+    renderChart("index")
   }
 
   $(".params").change(renderAll);

@@ -102,6 +102,7 @@ class AdminUserController @Inject() (
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val contactsF = abookClient.getContacts(userId, 40000000)
+    val econtactsF = abookClient.getEContacts(userId, 40000000)
     val (user, socialUserInfos, sentElectronicMails) = db.readOnly { implicit s =>
       val user = userRepo.get(userId)
       val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
@@ -113,7 +114,8 @@ class AdminUserController @Inject() (
     }
     val abookInfos:Seq[ABookInfo] = Await.result(abookInfoF, 5 seconds)
     val contacts:Seq[Contact] = Await.result(contactsF, 10 seconds)
-    Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails, abookInfos, contacts))
+    val econtacts:Seq[EContact] = Await.result(econtactsF, 10 seconds)
+    Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails, abookInfos, contacts, econtacts))
   }
 
   def updateCollectionsForBookmark(id: Id[Bookmark]) = AdminHtmlAction { implicit request =>
@@ -148,6 +150,7 @@ class AdminUserController @Inject() (
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val contactsF = abookClient.getContacts(userId, 500)
+    val econtactsF = abookClient.getEContacts(userId, 500)
 
     val (user, bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
       val user = userRepo.get(userId)
@@ -191,12 +194,13 @@ class AdminUserController @Inject() (
 
     val abookInfos:Seq[ABookInfo] = Await.result(abookInfoF, 5 seconds)
     val contacts:Seq[Contact] = Await.result(contactsF, 5 seconds)
+    val econtacts:Seq[EContact] = Await.result(econtactsF, 5 seconds)
     val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService()
     val abookEP = for (s <- abookServiceOpt) yield s"http://${s.instanceInfo.publicIp.ip}:9000/internal/abook/"
     val state = new BigInteger(130, new SecureRandom()).toString(32)
 
     Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-      fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, abookEP,
+      fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, econtacts, abookEP,
       collections, collectionFilter, state)).withSession(session + ("stateToken" -> state ))
   }
 

@@ -2,36 +2,28 @@
 
 @styles = {
 <style>
-.curtains-drawn {
+body {
   text-align: center;
 }
-.curtains-drawn>p {
-  margin: 32px 0 48px;
-  line-height: 30px;
+section {
+  margin: 0 auto;
+  width: 64%;
+}
+.copy-1,
+.copy-2 {
+  color: #515051;
+}
+.copy-1 {
+  margin: 32px 0 0;
+}
+.copy-2 {
+  margin: 12px 0 42px;
 }
 .button-sign-up,
 .button-sign-in {
-  padding: 20px;
-  color: #fff;
+  padding: 20px 32px;
   -webkit-font-smoothing: antialiased;
-}
-.button-sign-up {
-  background: #92c152;
-}
-.button-sign-up:hover {
-  background: #9dc763;
-}
-.button-sign-up:active {
-  background: #83ae4a;
-}
-.button-sign-in {
-  background: #84a2ec;
-}
-.button-sign-in:hover {
-  background: #90abee;
-}
-.button-sign-in:active {
-  background: #7792d4;
+  margin: 0 2px 10px;
 }
 </style>
 }
@@ -43,13 +35,13 @@
 <h1 class="main-logo">kifi</h1>
 <h2 class="page-title">Account Not Found</h2>
 
-<p>
-  Hmmm... We’ve never seen this @network.displayName account before.<br>
-  Have you signed up with us before?
-</p>
+<section>
+  <p class="copy-1">Hmmm... We’ve never seen this @network.displayName account before.</p>
+  <p class="copy-2">Have you signed up with us before?</p>
 
-<a class="button-sign-up" href="@com.keepit.controllers.core.routes.AuthController.signupPage">I’m new here, sign me up!</a>
-<a class="button-sign-in" href="@com.keepit.controllers.core.routes.AuthController.signinPage">I already have a Kifi account</a>
+  <a class="button-sign-up primary-button" href="@com.keepit.controllers.core.routes.AuthController.signupPage">I’m new here, sign me up!</a>
+  <a class="button-sign-in alt-button" href="@com.keepit.controllers.core.routes.AuthController.signinPage">I already have a Kifi account</a>
+</section>
 }
 
-@helper.page(styles = styles, curtainsDrawn = true, content = content)
+@helper.page(styles = styles, content = content)

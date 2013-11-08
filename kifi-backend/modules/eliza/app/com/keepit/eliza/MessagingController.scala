@@ -346,7 +346,7 @@ class MessagingController @Inject() (
       val locator = "/messages/" + thread.externalId
 
       val muted = db.readOnly { implicit session =>
-        userThreadRepo.getUserThread(userId, thread.id.get).muted
+        userThreadRepo.isMuted(userId, thread.id.get)
       }
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator, !muted)
 
@@ -494,6 +494,15 @@ class MessagingController @Inject() (
     thread.allParticipantsExcept(from).foreach { userId =>
       sendNotificationForMessage(userId, message, thread, messageWithBasicUser)
     }
+
+    //set notification json for message sender (if there isn't another yet)
+    val isMuted = db.readOnly { implicit session => userThreadRepo.isMuted(from, thread.id.get) }
+    val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, "/messages/" + thread.externalId, !isMuted)
+
+    db.readWrite(attempts=2){ implicit session =>
+      userThreadRepo.setNotificationJsonIfNotPresent(from, thread.id.get, notifJson, message)
+    }
+
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
       (nUriOpt match {
@@ -758,6 +767,24 @@ class MessagingController @Inject() (
     }
   }
 
+  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
+    db.readOnly{ implicit session =>
+      userThreadRepo.getLatestUnreadSendableNotifications(userId, howMany)
+    }
+  }
+
+  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
+    db.readOnly{ implicit session =>
+      userThreadRepo.getLatestMutedSendableNotifications(userId, howMany)
+    }
+  }
+
+  def getLatestSentNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = { //ZZZ Need to backpolutate the json on threads with only one active user
+    val activeThreads : Seq[Id[MessageThread]] = getActiveThreadsForUser(userId)
+    val notifJson : Seq[JsObject] = db.readOnly{ implicit session => userThreadRepo.getLatestSendableNotificationsForThreads(userId, activeThreads, howMany) }
+    notifJson
+  }
+
   def getPendingNotificationCount(userId: Id[User]): Int = {
     db.readOnly{ implicit session =>
       userThreadRepo.getPendingNotificationCount(userId)
@@ -870,6 +897,10 @@ class MessagingController @Inject() (
     }
     notificationRouter.sendToUser(userId, Json.arr("set_notification_unread", threadExtId.id))
     notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getPendingNotificationCount(userId)))
+  }
+
+  def getActiveThreadsForUser(userId: Id[User]): Seq[Id[MessageThread]] = {
+    db.readOnly{ implicit session => messageRepo.getActiveThreadsForUser(userId) }
   }
 
 

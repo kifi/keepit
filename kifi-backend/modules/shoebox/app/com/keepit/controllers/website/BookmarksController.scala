@@ -2,6 +2,10 @@ package com.keepit.controllers.website
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
+
+import com.keepit.common.akka.SafeFuture
+import com.keepit.commanders.{BasicCollection, CollectionCommander}
+import com.keepit.commanders.BasicCollection._
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick.DBSession.RWSession
@@ -14,6 +18,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal._
+
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.store.S3ScreenshotStore
@@ -22,16 +27,6 @@ import com.keepit.social.BasicUser
 import scala.Some
 import com.keepit.model.KeepToCollection
 import play.api.libs.json.JsObject
-
-private case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
-
-private object BasicCollection {
-  private implicit val externalIdFormat = ExternalId.format[Collection]
-  implicit val format = Json.format[BasicCollection]
-
-  def fromCollection(c: Collection, keeps: Option[Int] = None): BasicCollection =
-    BasicCollection(Some(c.externalId), c.name, keeps)
-}
 
 private case class KeepInfo(id: Option[ExternalId[Bookmark]], title: Option[String], url: String, isPrivate: Boolean)
 
@@ -68,14 +63,14 @@ class BookmarksController @Inject() (
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     basicUserRepo: BasicUserRepo,
-    userValueRepo: UserValueRepo,
     searchClient: SearchServiceClient,
     bookmarkInterner: BookmarkInterner,
     uriRepo: NormalizedURIRepo,
     actionAuthenticator: ActionAuthenticator,
     s3ScreenshotStore: S3ScreenshotStore,
     heimdal: HeimdalServiceClient,
-    userEventContextBuilder: UserEventContextBuilderFactory
+    userEventContextBuilder: UserEventContextBuilderFactory,
+    collectionCommander: CollectionCommander
   )
   extends WebsiteController(actionAuthenticator) {
 
@@ -102,20 +97,12 @@ class BookmarksController @Inject() (
     }
   }
 
-  val CollectionOrderingKey = "user_collection_ordering"
-
-  def updateCollectionOrdering() = AuthenticatedJsonAction { request =>
-    implicit val externalIdFormat = ExternalId.format[Collection]
-    request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Collection]]](_).asOpt) map { orderedIds =>
-      val newCollectionIds = db.readWrite { implicit s => setCollectionOrdering(request.userId, orderedIds) }
-      Ok(Json.obj(
-        "collectionIds" -> newCollectionIds
-      ))
-    } getOrElse {
-      BadRequest(Json.obj(
-        "error" -> "Could not parse JSON array of collection ids from request body"
-      ))
-    }
+  def updateCollectionOrdering() = AuthenticatedAction(parse.tolerantJson) { request =>
+    val orderedIds = request.body.as[Seq[ExternalId[Collection]]]
+    val newCollectionIds = db.readWrite { implicit s => collectionCommander.setCollectionOrdering(request.userId, orderedIds) }
+    Ok(Json.obj(
+      "collectionIds" -> newCollectionIds.map{ id => Json.toJson(id) }
+    ))
   }
 
   def getScreenshotUrl() = AuthenticatedJsonToJsonAction { request =>
@@ -268,28 +255,17 @@ class BookmarksController @Inject() (
   }
 
   def allCollections(sort: String) = AuthenticatedJsonAction { request =>
-    implicit val collectionIdFormat = ExternalId.format[Collection]
-    log.info(s"Getting all collections for ${request.userId} (sort $sort)")
-    val (unsortedCollections, numKeeps) = db.readOnly { implicit s => (
-      collectionRepo.getByUser(request.userId).map { c =>
-        val count = keepToCollectionRepo.count(c.id.get)
-        BasicCollection fromCollection(c, Some(count))
-      },
-      bookmarkRepo.getCountByUser(request.userId)
-    )}
-    log.info(s"Sorting collections for ${request.userId}")
-    val collections = sort match {
-      case "user" =>
-        val orderedCollectionIds = db.readWrite { implicit s => getCollectionOrdering(request.userId) }
-        unsortedCollections.sortBy(c => orderedCollectionIds.indexOf(c.id.get))
-      case _ => // default is "last_kept"
-        unsortedCollections
+    Async {
+      for {
+        numKeeps <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
+        collections <- SafeFuture { db.readOnly { implicit s => bookmarkRepo.getCountByUser(request.userId) } }
+      } yield {
+        Ok(Json.obj(
+          "keeps" -> numKeeps,
+          "collections" -> collections
+        ))
+      }
     }
-    log.info(s"Returning collection and keep counts for ${request.userId}")
-    Ok(Json.obj(
-      "keeps" -> numKeeps,
-      "collections" -> collections
-    ))
   }
 
   def saveCollection(id: String) = AuthenticatedJsonAction { request =>
@@ -305,7 +281,7 @@ class BookmarksController @Inject() (
             bc.id map { id =>
               collectionRepo.getByUserAndExternalId(request.userId, id) map { coll =>
                 val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
-                updateCollectionOrdering(request.userId)
+                collectionCommander.updateCollectionOrdering(request.userId)
                 Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
               } getOrElse {
                 NotFound(Json.obj("error" -> s"Collection not found for id $id"))
@@ -314,7 +290,7 @@ class BookmarksController @Inject() (
               val newColl = collectionRepo.save(existingCollection
                   map { _.copy(name = name, state = CollectionStates.ACTIVE) }
                   getOrElse Collection(userId = request.userId, name = name))
-              updateCollectionOrdering(request.userId)
+              collectionCommander.updateCollectionOrdering(request.userId)
               Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
             }
           } else {
@@ -333,7 +309,7 @@ class BookmarksController @Inject() (
     db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
       db.readWrite { implicit s =>
         collectionRepo.save(coll.copy(state = CollectionStates.INACTIVE))
-        updateCollectionOrdering(request.userId)
+        collectionCommander.updateCollectionOrdering(request.userId)
       }
       Ok(Json.obj())
     } getOrElse {
@@ -410,30 +386,5 @@ class BookmarksController @Inject() (
       }
       ((activated ++ created).toSet, removed.toSet)
     }
-  }
-
-  private def updateCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
-    setCollectionOrdering(uid, getCollectionOrdering(uid))
-  }
-
-  private def getCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
-    implicit val externalIdFormat = ExternalId.format[Collection]
-    log.info(s"Getting collection ordering for user $uid")
-    val allCollectionIds = collectionRepo.getByUser(uid).map(_.externalId)
-    Json.fromJson[Seq[ExternalId[Collection]]](Json.parse {
-      userValueRepo.getValue(uid, CollectionOrderingKey) getOrElse {
-        log.info(s"Updating collection ordering for user $uid: $allCollectionIds")
-        userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(allCollectionIds)))
-      }
-    }).get
-  }
-
-  private def setCollectionOrdering(uid: Id[User],
-      order: Seq[ExternalId[Collection]])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
-    implicit val externalIdFormat = ExternalId.format[Collection]
-    val allCollectionIds = collectionRepo.getByUser(uid).map(_.externalId)
-    val newCollectionIds = allCollectionIds.sortBy(order.indexOf(_))
-    userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(newCollectionIds)))
-    newCollectionIds
   }
 }

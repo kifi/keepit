@@ -38,6 +38,7 @@ class ContactsUpdater @Inject() (
   s3:ABookRawInfoStore,
   contactInfoRepo:ContactInfoRepo, // not used -- may remove later
   contactRepo:ContactRepo,
+  econtactRepo:EContactRepo,
   airbrake:AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
@@ -80,6 +81,13 @@ class ContactsUpdater @Inject() (
               Seq.empty[String]
             })
           )
+          emails.foreach { email =>
+            val name = mkName(sOpt((contact \ "name").asOpt[String]), fName, lName, email)
+            db.readWrite { implicit s =>
+              val e: EContact = EContact(userId = userId, email = email, name = name, firstName = fName, lastName = lName)
+              econtactRepo.insertOnDupUpdate(userId, e)
+            }
+          }
           for (email <- emails.headOption) {
             val name = mkName(sOpt((contact \ "name").asOpt[String]), fName, lName, email)
             val c = Contact.newInstance(userId, abookInfo.id.get, email, emails.tail, origin, Some(name), fName, lName, None)
