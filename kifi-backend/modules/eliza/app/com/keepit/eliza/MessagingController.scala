@@ -767,6 +767,13 @@ class MessagingController @Inject() (
     }
   }
 
+  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
+    db.readOnly{ implicit session =>
+      userThreadRepo.getLatestUnreadSendableNotifications(userId, howMany)
+    }
+  }
+
+
   def getPendingNotificationCount(userId: Id[User]): Int = {
     db.readOnly{ implicit session =>
       userThreadRepo.getPendingNotificationCount(userId)
