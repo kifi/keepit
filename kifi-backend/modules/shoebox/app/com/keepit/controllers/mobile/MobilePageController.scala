@@ -1,4 +1,4 @@
-package com.keepit.controllers.ext
+package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
 
@@ -23,7 +23,7 @@ import play.api.libs.json._
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class ExtPageController @Inject() (
+class MobilePageController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   pageCommander: PageCommander)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
