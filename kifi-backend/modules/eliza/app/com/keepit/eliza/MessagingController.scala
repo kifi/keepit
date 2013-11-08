@@ -893,6 +893,10 @@ class MessagingController @Inject() (
     notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getPendingNotificationCount(userId)))
   }
 
+  def getActiveThreadsForUser(userId: Id[User]): Seq[Id[MessageThread]] = {
+    db.readOnly{ implicit session => messageRepo.getActiveThreadsForUser(userId) }
+  }
+
 
 }
 
