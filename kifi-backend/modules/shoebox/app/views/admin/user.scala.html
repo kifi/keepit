@@ -11,6 +11,7 @@
   emails: Seq[EmailAddress],
   abookInfos: Seq[ABookInfo],
   contacts: Seq[Contact],
+  econtacts: Seq[EContact],
   abookEP: Option[String],
   collections: Seq[Collection],
   collectionFilter: Option[Id[Collection]],
@@ -125,6 +126,7 @@
 	</div>
   <h2>User has uploaded @abookInfos.size Address Book(s)</h2>
   @if(abookInfos.size > 0) {
+    <br/>
     <h3>Address Book(s)</h3>
     <table class="table table-condensed table-striped">
         <tr><th>ABookId</th><th>Origin</th><th>State</th><th>OwnerId</th><th>OwnerEmail</th><th>RawInfoLoc</th></tr>
@@ -134,6 +136,7 @@
     </table>
   }
   @if(contacts.size > 0) {
+    <br/>
     <h3>Contacts (up to 500)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
@@ -144,6 +147,19 @@
         </table>
     </div>
   }
+  @if(econtacts.size > 0) {
+    <br/>
+    <h3>EContacts (up to 500)</h3>
+    <div class="scrollArea">
+        <table class="table table-condensed table-striped">
+            <tr><th>EContactId</th><th>Name</th><th>Email</th></tr>
+            @for(contact <- econtacts) {
+            <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td></tr>
+            }
+        </table>
+    </div>
+  }
+
   <h3>Import Contacts</h3>
   <h4>Direct Import from Gmail</h4>
   <div>

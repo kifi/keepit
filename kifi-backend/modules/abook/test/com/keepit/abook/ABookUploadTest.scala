@@ -25,9 +25,10 @@ class ABookUploadTest extends Specification with DbTestInjector {
     val abookInfoRepo = inject[ABookInfoRepo]
     val contactInfoRepo = inject[ContactInfoRepo]
     val contactRepo = inject[ContactRepo]
+    val econtactRepo = inject[EContactRepo]
     val contactsUpdater = inject[ContactsUpdaterPlugin]
     val s3 = inject[ABookRawInfoStore]
-    val abookController = new ABookController(null, db, s3, abookInfoRepo, contactRepo, contactInfoRepo, contactsUpdater)
+    val abookController = new ABookController(null, db, s3, abookInfoRepo, contactRepo, econtactRepo, contactInfoRepo, contactsUpdater)
     abookController
   }
 
@@ -53,7 +54,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
       "name" -> "forty two",
       "firstName" -> "forty",
       "lastName" -> "two",
-      "emails" -> Seq("fortytwo@42go.com"))
+      "emails" -> Seq("fortytwo@42go.com", "foo@42go.com", "bar@42go.com"))
   )
 
   "ABook Controller" should {
@@ -86,7 +87,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
         (contacts(0) \ "name").as[String] mustEqual "foo bar"
         (contacts(0) \ "emails").as[Seq[String]].length mustEqual 2
         (contacts(1) \ "name").as[String] mustEqual "forty two"
-        (contacts(1) \ "emails").as[Seq[String]].length mustEqual 1
+        (contacts(1) \ "emails").as[Seq[String]].length mustEqual 3
 
         val contactsJsArr = abookController.getContactsDirect(u42, 500)
         val contactsSeqOpt = contactsJsArr.validate[Seq[Contact]].asOpt
@@ -111,6 +112,13 @@ class ABookUploadTest extends Specification with DbTestInjector {
         gbookInfoSeqOpt.isEmpty mustEqual false
         val gBookRawInfoSeq = gbookInfoSeqOpt.get
         gBookRawInfoSeq.length mustEqual 2
+
+        val econtactsJsArr = abookController.getEContactsDirect(u42, 500)
+        val econtactsSeqOpt = econtactsJsArr.validate[Seq[EContact]].asOpt
+        econtactsSeqOpt.isEmpty mustEqual false
+        val econtactsSeq = econtactsSeqOpt.get
+        econtactsSeq.isEmpty mustEqual false
+        econtactsSeq.length mustEqual 3 // distinct
       }
     }
 

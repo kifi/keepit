@@ -3,7 +3,8 @@
   socialUserInfos: Seq[SocialUserInfo],
   sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail],
   abookInfos: Seq[ABookInfo],
-  contacts: Seq[Contact]
+  contacts: Seq[Contact],
+  econtacts: Seq[EContact]
   )
 
 @admin("User: " + user.firstName + " " + user.lastName) {
@@ -29,6 +30,7 @@
   
   <h2>User has uploaded @abookInfos.size Address Book(s)</h2>
     @if(abookInfos.size > 0) {
+      <br/>
       <h3>Address Book(s)</h3>
       <table class="table table-condensed table-striped">
           <tr><th>ABookId</th><th>Origin</th><th>State</th><th>RawInfoLoc</th></tr>
@@ -38,12 +40,25 @@
       </table>
     }
   @if(contacts.size > 0) {
+    <br/>
     <h3>Contacts (total = @contacts.size)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
             <tr><th>ContactId</th><th>Origin</th><th>ABookId</th><th>Name</th><th>Email</th><td>Alt Emails</td></tr>
             @for(contact <- contacts) {
                 <tr><td>@contact.id</td><td>@contact.origin</td><td>@contact.abookId</td><td>@contact.name</td><td>@contact.email</td><td>@contact.altEmails</td></tr>
+            }
+        </table>
+    </div>
+  }
+  @if(econtacts.size > 0) {
+    <br/>
+    <h3>EContacts (total = @econtacts.size)</h3>
+    <div class="scrollArea">
+        <table class="table table-condensed table-striped">
+            <tr><th>EContactId</th><th>Name</th><th>Email</th></tr>
+            @for(contact <- econtacts) {
+            <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td></tr>
             }
         </table>
     </div>
