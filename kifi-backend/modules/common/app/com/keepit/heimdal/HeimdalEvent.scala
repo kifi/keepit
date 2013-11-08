@@ -9,6 +9,7 @@ import com.keepit.common.controller.AuthenticatedRequest
 import play.api.mvc.RequestHeader
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.serializer.{Companion, TypeCode}
 
 case class EventType(name: String)
 
@@ -105,29 +106,19 @@ class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) 
   }
 }
 
-sealed trait Event {
+sealed trait HeimdalEvent {
   val context: EventContext
   val eventType: EventType
   val time: DateTime
 }
 
-object Event {
-  private val system = "system"
-  private val user = "user"
-  implicit val format: Format[Event] = new Format[Event] {
-    def writes(event: Event) = event match {
-      case systemEvent: SystemEvent => Json.obj("repo" -> system, "event" -> SystemEvent.format.writes(systemEvent))
-      case userEvent: UserEvent => Json.obj("repo" -> user, "event" -> UserEvent.format.writes(userEvent))
+object HeimdalEvent {
+  implicit val format = new Format[HeimdalEvent] {
+    def writes(event: HeimdalEvent) = event match {
+      case e: UserEvent => Companion.writes(e)
+      case e: SystemEvent => Companion.writes(e)
     }
-
-    def reads(json : JsValue) = {
-      val repo = (json \ "repo").as[String]
-      val event = (json \ "event")
-      repo match {
-        case Event.system => SystemEvent.format.reads(event)
-        case Event.user => UserEvent.format.reads(event)
-      }
-    }
+    def reads(json: JsValue) = Companion.reads(UserEvent, SystemEvent)(json)
   }
 }
 
@@ -136,18 +127,22 @@ case class UserEvent(
   context: EventContext,
   eventType: EventType,
   time: DateTime = currentDateTime
-) extends Event {
+) extends HeimdalEvent {
   override def toString(): String = s"UserEvent[user=$userId,type=${eventType.name},time=$time]"
 }
 
-object UserEvent {
+object UserEvent extends Companion[UserEvent] {
+  case object User extends TypeCode[UserEvent]
   implicit val format = Json.format[UserEvent]
+  implicit val typeCode = User
 }
 
-case class SystemEvent(context: EventContext, eventType: EventType, time: DateTime = currentDateTime) extends Event {
+case class SystemEvent(context: EventContext, eventType: EventType, time: DateTime = currentDateTime) extends HeimdalEvent {
   override def toString(): String = s"SystemEvent[type=${eventType.name},time=$time]"
 }
 
-object SystemEvent {
+object SystemEvent extends Companion[SystemEvent] {
+  case object System extends TypeCode[SystemEvent]
   implicit val format = Json.format[SystemEvent]
+  implicit val typeCode = System
 }
