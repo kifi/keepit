@@ -382,7 +382,7 @@ class AuthController @Inject() (
         s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token, cropAttributes)
       }
 
-      inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").map(v => ExternalId[Invitation](v.name)))
+      inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
 
       finishSignup(newIdentity, emailConfirmedAlready = false)
     })
