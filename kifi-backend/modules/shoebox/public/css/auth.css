@@ -673,7 +673,7 @@ footer {
   height: 100px;
   float: left;
   margin-right: 20px;
-  background: #ffffff url(../img/out/ghost.png);
+  background: #ffffff url(../img/ghost.100.png);
   background-size: cover;
   position: relative;
 }
@@ -1377,7 +1377,7 @@ input.social-email[disabled] {
     background-size: 255px auto;
   }
   .form-photo {
-    background-image: url(../img/out/ghost.2x.png);
+    background-image: url(../img/ghost.200.png);
     background-size: cover;
   }
 }
