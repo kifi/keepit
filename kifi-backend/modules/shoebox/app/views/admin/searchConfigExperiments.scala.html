@@ -1,4 +1,8 @@
-@(experiments: Seq[com.keepit.search.SearchConfigExperiment], defaultParams: Map[String,String])
+@(experiments: Seq[com.keepit.search.SearchConfigExperiment],
+  defaultParams: Map[String,String],
+  kifiVsGoogle: Map[Option[Id[com.keepit.search.SearchConfigExperiment]], String],
+  searchesWithKiFiResults: Map[Option[Id[com.keepit.search.SearchConfigExperiment]], String]
+)
 @import com.keepit.common.db.Id
 @import com.keepit.controllers.admin.routes.AdminSearchConfigController
 
@@ -43,14 +47,10 @@
       </div>
       <div class="charts">
         <div class="experiment-chart">
-          <h3 class="chart-title">Kifi vs. Google</h3>
-          <div class="growth-chart"
-            data-uri="@AdminSearchConfigController.getKifiVsGoogle(experiment.id.get)"></div>
+            @analyticsView(kifiVsGoogle(experiment.id), "kifi_click_frac_" + experiment.id.get, "simple", "compare", "Fraction of Kifi vs Google clicks on searches with Kifi results")
         </div>
         <div class="experiment-chart">
-          <h3 class="chart-title">Kifi had results</h3>
-          <div class="growth-chart"
-            data-uri="@AdminSearchConfigController.getKifiHadResults(experiment.id.get)"></div>
+            @analyticsView(searchesWithKiFiResults(experiment.id), "kifi_result_frac" + experiment.id.get, "simple", "compare", "Fraction of searches for which Kifi had results")
         </div>
       </div>
       <table class="table table-bordered experiment-settings">
@@ -76,12 +76,10 @@
       </div>
       <div class="charts">
         <div class="experiment-chart">
-          <h3 class="chart-title">Kifi vs. Google</h3>
-          <div class="growth-chart" data-uri="@AdminSearchConfigController.getKifiVsGoogle(Id(0))"></div>
+            @analyticsView(kifiVsGoogle(None), "kifi_click_frac", "simple", "compare", "Fraction of Kifi vs Google clicks on searches with Kifi results")
         </div>
         <div class="experiment-chart">
-          <h3 class="chart-title">Kifi had results</h3>
-          <div class="growth-chart" data-uri="@AdminSearchConfigController.getKifiHadResults(Id(0))"></div>
+            @analyticsView(searchesWithKiFiResults(None), "kifi_result_frac", "simple", "compare", "Fraction of searches for which Kifi had results")
         </div>
       </div>
       <table class="table table-bordered experiment-settings">

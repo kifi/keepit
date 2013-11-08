@@ -12,9 +12,9 @@ object ArrayBinaryFormat {
       outArray
     }
 
-    protected def writes(value: Array[Int]): Array[Byte] = {
+    protected def writes(prefix: Byte, value: Array[Int]): Array[Byte] = {
       val byteBuffer = ByteBuffer.allocate(1+ value.length*4)
-      byteBuffer.put(1.toByte) // we have something
+      byteBuffer.put(prefix) // we have something
       byteBuffer.asIntBuffer.put(value)
       byteBuffer.array
     }
@@ -28,9 +28,9 @@ object ArrayBinaryFormat {
       outArray
     }
 
-    protected def writes(value: Array[Long]): Array[Byte] = {
+    protected def writes(prefix: Byte, value: Array[Long]): Array[Byte] = {
       val byteBuffer = ByteBuffer.allocate(1 + value.length*8)
-      byteBuffer.put(1.toByte) // we have something
+      byteBuffer.put(prefix) // we have something
       byteBuffer.asLongBuffer.put(value)
       byteBuffer.array
     }

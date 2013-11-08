@@ -45,7 +45,7 @@ class S3ClickHistoryStoreImpl(val bucketName: S3Bucket, val amazonS3Client: Amaz
 }
 
 case class ClickHistoryUserIdKey(userId: Id[User]) extends Key[MultiHashFilter[ClickedURI]] {
-  override val version = 3
+  override val version = 5
   val namespace = "click_history_by_userid"
   def toKey(): String = userId.id.toString
 }

@@ -69,7 +69,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
       articleIndexer,
       userIndexer,
       uriGraph,
-      new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
+      new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),
       resultClickTracker,
       inject[BrowsingHistoryTracker],
       inject[ClickHistoryTracker],

@@ -19,7 +19,7 @@ case class ResultWithScore(score: Float, value: String)
 
 class MessageSearcher(searcher: Searcher){
 
-  //not super effcient. we'll see how it behaves
+  //not super effcient. we'll see how it behaves -Stephen
   def search(userId: Id[User], query: Query, from: Int = 0, howMany: Int = 20): Seq[JsValue] = {
 
     val participantFilterQuery = new TermQuery(new Term(ThreadIndexFields.participantIdsField, userId.id.toString))
@@ -28,16 +28,15 @@ class MessageSearcher(searcher: Searcher){
     val allResults = ArrayBuffer[ResultWithScore]()
     searcher.doSearch(filterdQuery) { (scorer, reader) =>
       val resultDocVals = reader.getBinaryDocValues(ThreadIndexFields.resultField)
-      val resultLengthDocVals = reader.getNumericDocValues(ThreadIndexFields.resultLengthField)
       var docNumber = scorer.nextDoc()
       while (docNumber != NO_MORE_DOCS){
-        val resultLength: Int = resultLengthDocVals.get(docNumber).toInt
-        val resultBytes = new BytesRef(resultLength)
-        resultDocVals.get(docNumber, resultBytes)
+        val resultBytes = new BytesRef()
+        resultDocVals.get(scorer.docID(), resultBytes)
+        val resultString = new String(resultBytes.bytes, resultBytes.offset, resultBytes.length, UTF8)
         allResults.append(
           ResultWithScore(
             scorer.score(),
-            new String(resultBytes.bytes, UTF8)
+            resultString
           )
         )
         docNumber = scorer.nextDoc()
@@ -53,8 +52,11 @@ class MessageSearcher(searcher: Searcher){
       try {
         Json.parse(x.value)
       } catch {
-        case _ : Throwable => Json.obj("err" -> JsString(x.value))
+        case _ : Throwable => Json.obj(
+          "err" -> JsString(x.value)
+        )
       }
     }
+
   }
 } 

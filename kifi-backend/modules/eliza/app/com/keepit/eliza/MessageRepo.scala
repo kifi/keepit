@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.FortyTwoTypeMappers._
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
-import com.keepit.common.time.{currentDateTime, zones, Clock}
+import com.keepit.common.time._
 import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import MessagingTypeMappers._
@@ -17,11 +17,12 @@ import scala.concurrent.duration.Duration
 import play.api.libs.json._
 import play.api.libs.json.util._
 import play.api.libs.functional.syntax._
+import scala.slick.lifted.Query
 
 case class Message(
     id: Option[Id[Message]] = None,
-    createdAt: DateTime = currentDateTime(zones.PT),
-    updatedAt: DateTime = currentDateTime(zones.PT),
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
     externalId: ExternalId[Message] = ExternalId(),
     from: Option[Id[User]],
     thread: Id[MessageThread],
@@ -176,7 +177,7 @@ class MessageRepoImpl @Inject() (
   }
 
   def getMaxId()(implicit session: RSession): Id[Message] = {
-    (for (row <- table) yield row.id.max).first.getOrElse(Id[Message](0))
+    Query(table.map(_.id).max).first.getOrElse(Id[Message](0))
   }
 
 

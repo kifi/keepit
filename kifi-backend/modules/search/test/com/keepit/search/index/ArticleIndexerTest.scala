@@ -1,5 +1,6 @@
 package com.keepit.search.index
 
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -29,7 +30,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     val ramDir = new VolatileIndexDirectoryImpl()
     val store = new FakeArticleStore()
     val uriIdArray = new Array[Long](3)
-    val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()))
+    val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait])
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     var indexer = new ArticleIndexer(ramDir, config, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 

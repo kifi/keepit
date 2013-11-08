@@ -45,6 +45,8 @@ trait S3ImageStore {
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String): Future[Seq[(String, Try[PutObjectResult])]]
   def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[(String, Try[PutObjectResult])]]
 
+  def forceUpdateSocialPictures(userId: Id[User]): Unit
+
   // Returns (token, urlOfTempImage)
   def uploadTemporaryPicture(file: File): Try[(String, String)]
 
@@ -80,7 +82,7 @@ class S3ImageStoreImpl @Inject() (
 
   private val ExpirationTime = Weeks.ONE
 
-  def getPictureUrl(width: Int, user: User): Future[String] = getPictureUrl(Some(width), user, "0.jpg") // todo: Change to default
+  def getPictureUrl(width: Int, user: User): Future[String] = getPictureUrl(Some(width), user, "0") // todo: Change to default
 
   def getPictureUrl(width: Option[Int], user: User, pictureName: String): Future[String] = {
     if (config.isLocal) {

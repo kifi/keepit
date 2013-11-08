@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 import com.keepit.common.controller.{AuthenticatedRequest, WebsiteController, ActionAuthenticator}
 import com.keepit.common.controller.ActionAuthenticator.FORTYTWO_USER_ID
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
@@ -31,6 +31,7 @@ import play.api.Play
 import com.keepit.common.store.{S3UserPictureConfig, ImageCropAttributes, S3ImageStore}
 import scala.util.{Failure, Success}
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.commanders.InviteCommander
 
 sealed abstract class AuthType
 
@@ -56,6 +57,7 @@ class AuthController @Inject() (
     s3ImageStore: S3ImageStore,
     airbrakeNotifier: AirbrakeNotifier,
     emailAddressRepo: EmailAddressRepo,
+    inviteCommander: InviteCommander,
     passwordResetRepo: PasswordResetRepo
   ) extends WebsiteController(actionAuthenticator) with Logging {
 
@@ -234,8 +236,10 @@ class AuthController @Inject() (
                     val uri = session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url)
                     Ok(Json.obj("uri" -> uri))
                       .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                      .withCookies(authenticator.toCookie)
                   } else {
                     Ok(Json.obj("success" -> true)).withSession(session + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                      .withCookies(authenticator.toCookie)
                   }
                 }
               )
@@ -363,6 +367,8 @@ class AuthController @Inject() (
         s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token, cropAttributes)
       }
 
+      inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
+
       finishSignup(newIdentity, emailConfirmedAlready = false)
     })
   }
@@ -415,6 +421,8 @@ class AuthController @Inject() (
         picToken.map { token =>
           s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
         }
+
+        inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").map(v => ExternalId[Invitation](v.name)))
 
         val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == emailAddress.trim)
 

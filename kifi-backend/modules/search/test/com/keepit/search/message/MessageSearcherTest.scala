@@ -85,17 +85,20 @@ class MessageSearcherTest extends Specification with TestInjector{
     val threadIndexable1 = new MessageContentIndexable(
       data = thread1,
       id = thread1.id,
-      sequenceNumber = thread1.seq
+      sequenceNumber = thread1.seq,
+      airbrake = inject[AirbrakeNotifier]
     )
     val threadIndexable2 = new MessageContentIndexable(
       data = thread2,
       id = thread2.id,
-      sequenceNumber = thread2.seq
+      sequenceNumber = thread2.seq,
+      airbrake = inject[AirbrakeNotifier]
     )
     val threadIndexable3 = new MessageContentIndexable(
       data = thread3,
       id = thread3.id,
-      sequenceNumber = thread3.seq
+      sequenceNumber = thread3.seq,
+      airbrake = inject[AirbrakeNotifier]
     )
 
     val threadIndexableIterable = Seq[Indexable[ThreadContent]](threadIndexable1,threadIndexable2,threadIndexable3)

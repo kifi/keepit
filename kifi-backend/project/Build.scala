@@ -15,13 +15,13 @@ object ApplicationBuild extends Build {
 
     val appName         = "kifi-backend"
 
+    val UTC = DateTimeZone.UTC
     val BUILD_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyyMMdd-HHmm")
                                                  .withLocale(Locale.ENGLISH)
-                                                 .withZone(DateTimeZone.forID("America/Los_Angeles"))
-    val buildTime = BUILD_DATETIME_FORMAT.print(new DateTime(DateTimeZone.forID("America/Los_Angeles")))
-    val appVersion      = "%s-%s-%s".format(buildTime,"git rev-parse --abbrev-ref HEAD".!!.trim, "git rev-parse --short HEAD".!!.trim)
-    val PT = DateTimeZone.forID("America/Los_Angeles")
-    val now = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(PT).print(new DateTime(PT))
+                                                 .withZone(UTC)
+    val buildTime  = BUILD_DATETIME_FORMAT.print(new DateTime(UTC))
+    val appVersion = "%s-%s-%s".format(buildTime,"git rev-parse --abbrev-ref HEAD".!!.trim, "git rev-parse --short HEAD".!!.trim)
+    val now = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(UTC).print(new DateTime(UTC))
 
     def writeToFile(fileName: String, value: String) = {
       val file = new PrintWriter(new File(fileName))
@@ -99,7 +99,7 @@ object ApplicationBuild extends Build {
     val abookDependencies = Seq()
 
     val scraperDependencies = Seq(
-      "org.jsoup" % "jsoup" % "1.7.1"      
+      "org.jsoup" % "jsoup" % "1.7.1"
     )
 
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
@@ -152,11 +152,11 @@ object ApplicationBuild extends Build {
       templatesImport ++= _templatesImport,
 
       javaOptions in test ++= javaTestOptions,
-      Keys.fork in Test := true,
       parallelExecution in Test := false,
       testOptions in Test ++= _testOptions,
       EclipseKeys.skipParents in ThisBuild := false,
-      sources in doc in Compile := List()
+      sources in doc in Compile := List(),
+      Keys.fork := true
     )
 
     lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(

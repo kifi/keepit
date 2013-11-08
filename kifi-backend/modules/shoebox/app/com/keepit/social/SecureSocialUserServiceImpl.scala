@@ -52,12 +52,9 @@ class SecureSocialUserPluginImpl @Inject() (
         // find a SUI with the correct email address, we go searching.
         db.readOnly { implicit session =>
           emailRepo.getByAddressOpt(id.userId).flatMap { emailAddr =>
-            if (emailAddr.state == EmailAddressStates.VERIFIED) {
-              socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
-                sui.credentials
-              }
-            } else {
-              None
+            // todo(andrew): Don't let unverified people log in. For now, we are, but come up with something better.
+            socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
+              sui.credentials
             }
           }
         } tap { res =>

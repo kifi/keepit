@@ -18,6 +18,8 @@ import play.api.Play.current
 import play.api._
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
+import com.keepit.commanders.InviteCommander
+import com.keepit.common.db.ExternalId
 
 class HomeController @Inject() (
   db: Database,
@@ -32,7 +34,8 @@ class HomeController @Inject() (
   emailAddressRepo: EmailAddressRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialGraphPlugin: SocialGraphPlugin,
-  fortyTwoServices: FortyTwoServices)
+  fortyTwoServices: FortyTwoServices,
+  inviteCommander: InviteCommander)
   extends WebsiteController(actionAuthenticator) with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
@@ -86,32 +89,9 @@ class HomeController @Inject() (
 
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
     val user = request.user
-    val anyPendingInvite = db.readOnly { implicit s =>
-      socialUserRepo.getByUser(user.id.get) map { su =>
-        su -> invitationRepo.getByRecipient(su.id.get).getOrElse(Invitation(
-          createdAt = user.createdAt,
-          senderUserId = None,
-          recipientSocialUserId = su.id.get,
-          state = InvitationStates.ACTIVE
-        ))
-      }
-    }
-    for ((su, invite) <- anyPendingInvite) {
-      if (invite.state == InvitationStates.ACTIVE) {
-        db.readWrite { implicit s =>
-          invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-          postOffice.sendMail(ElectronicMail(
-            senderUserId = None,
-            from = EmailAddresses.NOTIFICATIONS,
-            fromName = Some("Invitations"),
-            to = List(EmailAddresses.INVITATION),
-            subject = s"""${su.fullName} wants to be let in!""",
-            htmlBody = s"""<a href="https://admin.kifi.com/admin/user/${user.id.get}">${su.fullName}</a> wants to be let in!\n<br/>
-                           Go to the <a href="https://admin.kifi.com/admin/invites?show=accepted">admin invitation page</a> to accept or reject this user.""",
-            category = PostOffice.Categories.ADMIN))
-        }
-      }
-    }
+
+    inviteCommander.markPendingInvitesAsAccepted(user.id.get, request.cookies.get("inv").map(v => ExternalId[Invitation](v.name)))
+
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
       val email = emailRepo.getByUser(user.id.get).sortBy(a => a.verifiedAt.getOrElse(a.createdAt.minusYears(10)).getMillis).lastOption.map(_.address)
       val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
