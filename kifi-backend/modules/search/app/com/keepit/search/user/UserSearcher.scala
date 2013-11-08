@@ -75,7 +75,7 @@ class UserSearcher(searcher: Searcher) {
           bv.get(doc, ref)
           val user = BasicUser.fromByteArray(ref.bytes, ref.offset, ref.length)
           val userId = Id[User](id)
-          val isFriend = searchFilter.friends.contains(id)
+          val isFriend = searchFilter.getKifiFriends.contains(id)
           pq.insertWithOverflow(UserHit(userId, user, isFriend))
         }
         doc = scorer.nextDoc()
@@ -108,7 +108,7 @@ class UserSearcher(searcher: Searcher) {
           bv.get(doc, ref)
           val user = BasicUser.fromByteArray(ref.bytes, ref.offset, ref.length)
           val userId = Id[User](id)
-          val isFriend = searchFilter.friends.contains(id)
+          val isFriend = searchFilter.getKifiFriends.contains(id)
           hits = hits :+ UserHit(userId, user, isFriend)
         }
         doc = scorer.nextDoc()
