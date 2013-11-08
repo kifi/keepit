@@ -11,7 +11,7 @@ import java.io.File
 import play.utils.Threads
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.db.TestSlickModule
-import com.keepit.common.healthcheck.{FakeAirbrakeModule, FakeHealthcheckModule}
+import com.keepit.common.healthcheck.{FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule}
 import com.google.inject.util.Modules
 import com.google.inject.Module
 import com.keepit.common.cache.{HashMapMemoryCacheModule, ShoeboxCacheModule}
@@ -37,6 +37,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     Seq(
       TestElizaServiceClientModule(),
       FakeAirbrakeModule(),
+      FakeMemoryUsageModule(),
       FakeClockModule(),
       FakeHealthcheckModule(),
       TestFortyTwoModule(),
@@ -54,6 +55,7 @@ trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with Shoe
   val module = Modules.combine(
     TestElizaServiceClientModule(),
     FakeAirbrakeModule(),
+    FakeMemoryUsageModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
     TestSlickModule(TestDbInfo.dbInfo),

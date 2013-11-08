@@ -47,6 +47,7 @@ class DeprecatedEmptyApplication(path: File = new File("./modules/common/")) ext
 case class DeprecatedTestModule() extends ScalaModule {
   def configure(): Unit = {
     install(FakeHealthcheckModule())
+    install(FakeMemoryUsageModule())
     install(TestCacheModule())
     install(FakeDiscoveryModule())
     install(TestShoeboxServiceClientModule())
