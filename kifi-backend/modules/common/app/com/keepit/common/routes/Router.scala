@@ -170,6 +170,7 @@ object Heimdal extends Service {
     def trackEvents() = ServiceRoute(POST, "/internal/heimdal/trackEvents")
     def getMetricData(name: String) = ServiceRoute(GET, s"/internal/heimdal/getMetricData?name=${name}")
     def updateMetrics() = ServiceRoute(GET, "/internal/heimdal/updateMetrics")
+    def getRawEvents(eventTypes: Seq[String], limit: Int) = ServiceRoute(GET, "/internal/heimdal/rawEvents", Param("events", eventTypes.mkString(",")), Param("limit", limit))
   }
 }
 

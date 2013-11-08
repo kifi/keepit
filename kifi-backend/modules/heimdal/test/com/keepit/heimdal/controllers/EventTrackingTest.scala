@@ -19,7 +19,7 @@ class EventTrackingTest extends Specification with TestInjector {
   def setup()(implicit injector: Injector) = {
     val eventTrackingController = inject[EventTrackingController]
 
-    val testContext = UserEventContext(Map(
+    val testContext = EventContext(Map(
       "testField" -> Seq(ContextStringData("Yay!"))
     ))
     val eventRepo = inject[UserEventLoggingRepo].asInstanceOf[TestUserEventLoggingRepo]
@@ -32,7 +32,7 @@ class EventTrackingTest extends Specification with TestInjector {
     "store correctly" in {
       withInjector(TestMongoModule(), StandaloneTestActorSystemModule()) { implicit injector =>
         val (eventTrackingController, eventRepo, testContext) = setup()
-        val event = UserEvent(1, testContext, UserEventType("test_event"))
+        val event: Event = UserEvent(1, testContext, EventType("test_event"))
         eventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvent(Json.toJson(event))
         eventRepo.eventCount() === 1
@@ -44,10 +44,10 @@ class EventTrackingTest extends Specification with TestInjector {
     "store array" in {
       withInjector(TestMongoModule(), StandaloneTestActorSystemModule()) { implicit injector =>
         val (eventTrackingController, eventRepo, testContext) = setup()
-        val events = Array( UserEvent(1, testContext, UserEventType("test_event")),
-                            UserEvent(2, testContext, UserEventType("test_event")),
-                            UserEvent(3, testContext, UserEventType("test_event")),
-                            UserEvent(4, testContext, UserEventType("test_event")))
+        val events: Array[Event] = Array( UserEvent(1, testContext, EventType("test_event")),
+                            UserEvent(2, testContext, EventType("test_event")),
+                            UserEvent(3, testContext, EventType("test_event")),
+                            UserEvent(4, testContext, EventType("test_event")))
         eventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvents(Json.toJson(events))
         eventRepo.eventCount() === 4

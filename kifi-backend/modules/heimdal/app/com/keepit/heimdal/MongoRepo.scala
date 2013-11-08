@@ -1,15 +1,16 @@
 package com.keepit.heimdal
 
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.common.akka.SafeFuture
-
-
-import reactivemongo.bson.BSONDocument
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson._
 import reactivemongo.core.commands.{PipelineOperator, Aggregate, LastError}
 
-import scala.concurrent.{Promise, Future, future}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext //Might want to change this to a custom play one
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import reactivemongo.bson.BSONDouble
+import reactivemongo.bson.BSONString
+import reactivemongo.api.collections.default.BSONCollection
+
+//Might want to change this to a custom play one
 import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
 
 import play.modules.statsd.api.Statsd
@@ -90,12 +91,23 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
 
 }
 
+object EventRepo {
+  private def contextToBSON(context: EventContext): BSONDocument = {
+    BSONDocument(
+      context.data.mapValues{ seq =>
+        BSONArray(
+          seq.map{ _ match {
+            case ContextStringData(s)  => BSONString(s)
+            case ContextDoubleData(x) => BSONDouble(x)
+          }}
+        )
+      }
+    )
+  }
 
-
-
-
-
-
-
-
-
+  def eventToBSONFields(event: Event): Seq[(String, BSONValue)] = Seq(
+    "context" -> contextToBSON(event.context),
+    "event_type" -> BSONString(event.eventType.name),
+    "time" -> BSONDateTime(event.time.getMillis)
+  )
+}

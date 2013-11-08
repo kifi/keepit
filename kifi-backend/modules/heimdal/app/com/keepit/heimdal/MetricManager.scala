@@ -84,7 +84,7 @@ class MetricManager @Inject() (
   def updateMetricOnce(desc: MetricDescriptor): MetricDescriptor = {
     val tStart = desc.lastUpdate.minusHours(desc.window).plusHours(desc.step)
     val tEnd = desc.lastUpdate.plusHours(desc.step)
-    val eventsToConsider = if (desc.events.isEmpty) AllEvents else SpecificEventSet(desc.events.toSet.map( (s: String) => UserEventType(s)) )
+    val eventsToConsider = if (desc.events.isEmpty) AllEvents else SpecificEventSet(desc.events.toSet.map( (s: String) => EventType(s)) )
     val contextRestriction = definedRestrictions(desc.filter)
 
     val definition = desc.mode match {

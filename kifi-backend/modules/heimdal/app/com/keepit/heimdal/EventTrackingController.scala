@@ -2,21 +2,24 @@ package com.keepit.heimdal.controllers
 
 import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.time._
-import com.keepit.heimdal.{UserEventLoggingRepo, UserEvent}
+import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.akka.SlowRunningExecutionContext
 
-import play.api.http.Status.ACCEPTED
 import play.api.mvc.Action
-import play.api.libs.json.{JsValue, JsArray}
+import play.api.libs.json.JsValue
 
 import com.google.inject.Inject
+import play.api.libs.json.JsArray
 
-class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingRepo) extends HeimdalServiceController {
+class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingRepo, systemEventLoggingRepo: SystemEventLoggingRepo) extends HeimdalServiceController {
 
   private[controllers] def trackInternalEvent(eventJs: JsValue) = {
-    val event: UserEvent = eventJs.as[UserEvent]
-    userEventLoggingRepo.insert(event)
+    val event: Event = eventJs.as[Event]
+    event match {
+      case systemEvent: SystemEvent => systemEventLoggingRepo.insert(systemEvent)
+      case userEvent: UserEvent => userEventLoggingRepo.insert(userEvent)
+    }
   }
 
   def trackInternalEventAction = Action(parse.json) { request =>
@@ -27,7 +30,10 @@ class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingR
   }
 
   private[controllers] def trackInternalEvents(eventsJs: JsValue) = {
-    eventsJs.as[JsArray].value.map(js => js.as[UserEvent]).map{e => userEventLoggingRepo.insert(e)}
+    eventsJs.as[JsArray].value.map(js => js.as[Event]).map {
+      case systemEvent: SystemEvent => systemEventLoggingRepo.insert(systemEvent)
+      case userEvent: UserEvent => userEventLoggingRepo.insert(userEvent)
+    }
   }
 
   def trackInternalEventsAction = Action(parse.json) { request =>

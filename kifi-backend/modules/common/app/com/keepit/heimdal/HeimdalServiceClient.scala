@@ -1,7 +1,5 @@
 package com.keepit.heimdal
 
-import com.keepit.model.User
-import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
@@ -14,7 +12,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.time.Clock
 
-import scala.concurrent.{Future, Promise, Await}
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 
 import akka.actor._
@@ -30,11 +28,13 @@ import com.google.inject.Inject
 trait HeimdalServiceClient extends ServiceClient with Plugin {
   final val serviceType = ServiceType.HEIMDAL
 
-  def trackEvent(event: UserEvent): Unit
+  def trackEvent(event: Event): Unit
 
   def getMetricData(name: String): Future[JsObject]
 
   def updateMetrics(): Unit
+
+  def getRawEvents(limit: Int, events: EventType*): Future[JsArray]
 }
 
 object FlushEventQueue
@@ -47,7 +47,7 @@ object EventQueueConsts extends Logging {
   val StaleEventAddTime = 10000 //milli
   val StaleEventFlushTime = (BatchFlushTiming * 1000) + StaleEventAddTime + 2000 //milli
 
-  def verifyEventStaleTime(clock: Clock, event: UserEvent, timeout: Long, message: String): Unit = {
+  def verifyEventStaleTime(clock: Clock, event: Event, timeout: Long, message: String): Unit = {
     val timeSinceEventStarted = clock.getMillis - event.time.getMillis
     if (timeSinceEventStarted > timeout) {
       val msg = s"Event started ${timeSinceEventStarted}ms ago but was $message only now (timeout: ${timeout}ms): $event"
@@ -66,11 +66,11 @@ class HeimdalClientActor @Inject() (
 
   private final val serviceType = ServiceType.HEIMDAL
   val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
-  private var events: Vector[UserEvent] = Vector()
+  private var events: Vector[Event] = Vector()
   private var closing = false
 
   def receive = {
-    case event: UserEvent =>
+    case event: Event =>
       log.info(s"Event added to queue: $event")
       EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventAddTime, "added")
       events = events :+ event
@@ -136,7 +136,7 @@ class HeimdalServiceClientImpl @Inject() (
     super.onStop()
   }
 
-  def trackEvent(event: UserEvent) : Unit = {
+  def trackEvent(event: Event) : Unit = {
     actor.ref ! event
     EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventAddTime, "post to actor")
   }
@@ -149,5 +149,12 @@ class HeimdalServiceClientImpl @Inject() (
 
   def updateMetrics(): Unit = {
     broadcast(Heimdal.internal.updateMetrics())
+  }
+
+  def getRawEvents(limit: Int, events: EventType*): Future[JsArray] = {
+    val eventNames = if (events.isEmpty) Seq("all") else events.map(_.name)
+    call(Heimdal.internal.getRawEvents(eventNames, limit)).map { response =>
+      Json.parse(response.body).as[JsArray]
+    }
   }
 }

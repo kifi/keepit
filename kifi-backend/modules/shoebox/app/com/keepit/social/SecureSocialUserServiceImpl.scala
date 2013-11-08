@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.store.S3ImageStore
 import com.keepit.inject.AppScoped
 import com.keepit.model._
-import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilderFactory, UserEvent, UserEventType}
+import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilderFactory, UserEvent, EventType}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
 import com.keepit.common.KestrelCombinator
@@ -31,7 +31,7 @@ class SecureSocialUserPluginImpl @Inject() (
   airbrake: AirbrakeNotifier,
   emailRepo: EmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
-  userEventContextBuilder: UserEventContextBuilderFactory,
+  userEventContextBuilder: EventContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   clock: Clock)
   extends UserService with SecureSocialUserPlugin with Logging {
@@ -130,7 +130,7 @@ class SecureSocialUserPluginImpl @Inject() (
         ))
         SafeFuture{
           val contextBuilder = userEventContextBuilder()
-          heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, UserEventType("signup")))
+          heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, EventType("signup")))
         }
         userOpt
       } else None

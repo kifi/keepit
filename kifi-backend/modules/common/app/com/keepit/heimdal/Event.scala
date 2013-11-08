@@ -8,25 +8,24 @@ import play.api.libs.json.{Json, Format, JsResult, JsError, JsSuccess, JsObject,
 import com.keepit.common.controller.AuthenticatedRequest
 import play.api.mvc.RequestHeader
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.zookeeper.ServiceDiscovery
 
-case class UserEventType(name: String)
+case class EventType(name: String)
 
-object UserEventType {
-  implicit val format = Json.format[UserEventType]
+object EventType {
+  implicit val format = Json.format[EventType]
 }
 
 sealed trait ContextData
 case class ContextStringData(value: String) extends ContextData
 case class ContextDoubleData(value: Double) extends ContextData
 
-case class UserEventContext(data: Map[String, Seq[ContextData]]) extends AnyVal
+case class EventContext(data: Map[String, Seq[ContextData]]) extends AnyVal
 
-object UserEventContext {
-  implicit val format = new Format[UserEventContext] {
+object EventContext {
+  implicit val format = new Format[EventContext] {
 
-    def reads(json: JsValue): JsResult[UserEventContext] = {
+    def reads(json: JsValue): JsResult[EventContext] = {
       val map = json match {
         case obj: JsObject => obj.value.mapValues{ value =>
           val seq : Seq[ContextData] = value match {
@@ -42,10 +41,10 @@ object UserEventContext {
         }
         case _ => return JsError()
       }
-      JsSuccess(UserEventContext(Map[String, Seq[ContextData]](map.toSeq :_*)))
+      JsSuccess(EventContext(Map[String, Seq[ContextData]](map.toSeq :_*)))
     }
 
-    def writes(obj: UserEventContext) : JsValue = {
+    def writes(obj: EventContext) : JsValue = {
       JsObject(obj.data.mapValues{ seq =>
         JsArray(seq.map{ _ match {
           case ContextStringData(s) => JsString(s)
@@ -57,7 +56,7 @@ object UserEventContext {
   }
 }
 
-class UserEventContextBuilder {
+class EventContextBuilder {
   val data = new scala.collection.mutable.HashMap[String, Seq[ContextData]]()
 
   def +=(key: String, value: Double) : Unit = {
@@ -74,15 +73,15 @@ class UserEventContextBuilder {
     data(key) = (currentValues :+ ContextStringData(value)).toSet.toSeq
   }
 
-  def build : UserEventContext = {
-    UserEventContext(Map(data.toSeq:_*))
+  def build : EventContext = {
+    EventContext(Map(data.toSeq:_*))
   }
 }
 
 @Singleton
-class UserEventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) {
-  def apply(request: Option[RequestHeader] = None): UserEventContextBuilder = {
-    val contextBuilder = new UserEventContextBuilder()
+class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) {
+  def apply(request: Option[RequestHeader] = None): EventContextBuilder = {
+    val contextBuilder = new EventContextBuilder()
     contextBuilder += ("serviceVersion", serviceDiscovery.myVersion.value)
     serviceDiscovery.thisInstance.map { instance =>
       contextBuilder += ("serviceInstance", instance.instanceInfo.instanceId.id)
@@ -106,15 +105,49 @@ class UserEventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscove
   }
 }
 
+sealed trait Event {
+  val context: EventContext
+  val eventType: EventType
+  val time: DateTime
+}
+
+object Event {
+  private val system = "system"
+  private val user = "user"
+  implicit val format: Format[Event] = new Format[Event] {
+    def writes(event: Event) = event match {
+      case systemEvent: SystemEvent => Json.obj("repo" -> system, "event" -> SystemEvent.format.writes(systemEvent))
+      case userEvent: UserEvent => Json.obj("repo" -> user, "event" -> UserEvent.format.writes(userEvent))
+    }
+
+    def reads(json : JsValue) = {
+      val repo = (json \ "repo").as[String]
+      val event = (json \ "event")
+      repo match {
+        case Event.system => SystemEvent.format.reads(event)
+        case Event.user => UserEvent.format.reads(event)
+      }
+    }
+  }
+}
+
 case class UserEvent(
   userId: Long,
-  context: UserEventContext,
-  eventType: UserEventType,
+  context: EventContext,
+  eventType: EventType,
   time: DateTime = currentDateTime
-) {
+) extends Event {
   override def toString(): String = s"UserEvent[user=$userId,type=${eventType.name},time=$time]"
 }
 
 object UserEvent {
   implicit val format = Json.format[UserEvent]
+}
+
+case class SystemEvent(context: EventContext, eventType: EventType, time: DateTime = currentDateTime) extends Event {
+  override def toString(): String = s"SystemEvent[type=${eventType.name},time=$time]"
+}
+
+object SystemEvent {
+  implicit val format = Json.format[SystemEvent]
 }

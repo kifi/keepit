@@ -23,7 +23,7 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   var eventsRecorded : Int = 0
 
-  def trackEvent(event: UserEvent): Unit = synchronized{
+  def trackEvent(event: Event): Unit = synchronized{
     eventsRecorded =  eventsRecorded + 1
   }
 
@@ -32,4 +32,6 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getMetricData(name: String): Future[JsObject] = Promise.successful(Json.obj()).future
 
   def updateMetrics(): Unit = {}
+
+  def getRawEvents(limit: Int, events: EventType*): Future[JsArray] = Future.successful(Json.arr())
 }

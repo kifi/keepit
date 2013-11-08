@@ -2,15 +2,15 @@ package com.keepit.heimdal.controllers
 
 import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.heimdal.{
-  MetricManager, 
-  NoContextRestriction, 
-  GroupedEventCountMetricDefinition, 
-  UserEventType, 
-  SpecificEventSet, 
-  AllEvents, 
-  GroupedUserCountMetricDefinition, 
-  ContextRestriction, 
-  AnyContextRestriction, 
+  MetricManager,
+  NoContextRestriction,
+  GroupedEventCountMetricDefinition,
+  EventType,
+  SpecificEventSet,
+  AllEvents,
+  GroupedUserCountMetricDefinition,
+  ContextRestriction,
+  AnyContextRestriction,
   NotEqualTo,
   ContextStringData,
   EventGrouping,
@@ -46,8 +46,8 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     |   to=$          Where $ is a valid ISO datetime string or "now". Default: "now".
     |   events=$      Where $ is a comma seperated list of the event types to include or "all". Default: "all".
     |   groupBy=$     Where $ is a event field name that the results will be grouped by. Default: no grouping .
-    |   breakDown=$   Where $ is 'true' or 'false'. 
-    |                 Setting this to 'true' means that if grouping by a field that can have multiple values the events will be broken down into multiple events with one value each. 
+    |   breakDown=$   Where $ is 'true' or 'false'.
+    |                 Setting this to 'true' means that if grouping by a field that can have multiple values the events will be broken down into multiple events with one value each.
     |                 Note that this caused events with the field missing to be ignored (will otherwise show up under 'null').
     |                 Default: "false".
     |   mode=$        Where $ is either "count" or "users". The former counts number of events, the latter counts (and returns, in json mode) distinct users. Default: "count".
@@ -59,7 +59,7 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     | Returns most recent events
     | Usage: http://[184.169.206.118|b08]:9000/internal/heimdal/rawEvents
     | Options (all optional):
-    |   help          Print this message (ignoring all other parameters). 
+    |   help          Print this message (ignoring all other parameters).
     |   events=$      Where $ is a comma seperated list of the event types to include or "all". Default: "all".
     |   limit=$       Where $ is the number of events to return. Default: 10.
   """.stripMargin
@@ -69,15 +69,15 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     | Usage: http://[184.169.206.118|b08]:9000/internal/heimdal/createMetric
     | Options (all optional):
     |   help          Print this message (ignoring all other parameters).
-    |   name=$        Unique identifier for this metric. Default: "default"  
+    |   name=$        Unique identifier for this metric. Default: "default"
     |   start=$       Where $ is a valid ISO datetime string. Default: one hour ago.
     |   window=$      Where $ is an integer specifing the sliding window size in hours. Default: 24.
     |   step=$        Where $ is an integer specifing the sliding window step in hours (i.e. how often do we compute). Default: 24.
     |   description=$ Where $ is a string describing the metric. Shows up in the UI.
     |   events=$      Where $ is a comma seperated list of the event types to include or "all". Default: "all".
     |   groupBy=$     Where $ is a event field name that the results will be grouped by. Default: no grouping .
-    |   breakDown=$   Where $ is 'true' or 'false'. 
-    |                 Setting this to 'true' means that if grouping by a field that can have multiple values the events will be broken down into multiple events with one value each. 
+    |   breakDown=$   Where $ is 'true' or 'false'.
+    |                 Setting this to 'true' means that if grouping by a field that can have multiple values the events will be broken down into multiple events with one value each.
     |                 Note that this caused events with the field missing to be ignored (will otherwise show up under 'null').
     |                 Default: "false".
     |   mode=$        Where $ is either "count" or "users" or "count_unique". "count" counts number of events, "users" counts (and returns, in json mode) distinct users, "count_unique" counts unique values of the field specified in the "uniqueField" param. Default: "count".
@@ -140,7 +140,7 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
 
     if (as=="json") Ok(json)
     else Ok(html.storedMetricChart(json.toString, errors))
-  } 
+  }
 
   def getMetricData(name: String) = Action { request => //see comment in getMetric
     Async(SafeFuture{
@@ -174,7 +174,7 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
       val doBreakDown = if (breakDown!="false" && groupBy.startsWith("context")) true else false
       val fromTime = if (from=="") currentDateTime.minusHours(1) else DateTime.parse(from)
       val toTime = if (to=="now") currentDateTime else DateTime.parse(to)
-      val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(UserEventType(_)).toSet)
+      val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(EventType(_)).toSet)
 
       val contextRestriction  = metricManager.definedRestrictions(filter)
 
@@ -190,12 +190,12 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
         Async(jsonFuture.map{ json => Ok(json)})
       } else if (as=="pie") {
         Async(jsonFuture.map{ json =>
-          var title = (if (mode=="users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'" 
+          var title = (if (mode=="users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'"
           Ok(html.adhocPieChart(Json.stringify(json), title))
         })
       } else if (as=="hist"){
         Async(jsonFuture.map{ json =>
-          var title = (if (mode=="users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'" 
+          var title = (if (mode=="users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'"
           Ok(html.adhocHistChart(Json.stringify(json), title))
         })
       } else {
@@ -207,7 +207,7 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
   def rawEvents(events: String, limit: Int) = Action { request =>
     if (request.queryString.get("help").nonEmpty) Ok(rawHelp)
     else {
-      val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(UserEventType(_)).toSet)
+      val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(EventType(_)).toSet)
       Async(metricManager.getLatestRawEvents(eventsToConsider, limit).map(Ok(_)))
     }
   }

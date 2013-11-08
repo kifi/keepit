@@ -75,7 +75,7 @@ class BookmarksController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     s3ScreenshotStore: S3ScreenshotStore,
     heimdal: HeimdalServiceClient,
-    userEventContextBuilder: UserEventContextBuilderFactory
+    userEventContextBuilder: EventContextBuilderFactory
   )
   extends WebsiteController(actionAuthenticator) {
 
@@ -148,7 +148,7 @@ class BookmarksController @Inject() (
         contextBuilder += ("source", "SITE")
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
 
-        heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("keep"), tStart))
+        heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("keep"), tStart))
       }}
 
       val addedToCollection = collection flatMap {
