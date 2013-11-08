@@ -118,7 +118,8 @@ object HeimdalEvent {
       case e: UserEvent => Companion.writes(e)
       case e: SystemEvent => Companion.writes(e)
     }
-    def reads(json: JsValue) = Companion.reads(UserEvent, SystemEvent)(json)
+    private val readsFunc = Companion.reads(UserEvent, SystemEvent) // optimization
+    def reads(json: JsValue) = readsFunc(json)
   }
 }
 

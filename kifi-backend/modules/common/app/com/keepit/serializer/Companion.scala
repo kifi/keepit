@@ -24,7 +24,7 @@ object Companion {
   }
 
   def writes[E <: T <% Companion[E], T](instance: E) = Json.obj("typeCode" -> instance.typeCode.toString, "value" -> instance.format.writes(instance)) // Could also use a context bound
-  def reads[T](companions: Companion[_ <: T]*): JsValue => JsResult[T] = {
+  def reads[T](companions: Companion[_ <: T]*): JsValue => JsResult[T] = { // Not using currying syntactic sugar for optimization
     val getCompanion = typeCodeMap[T](companions: _*)
     json: JsValue => getCompanion((json \ "typeCode").as[String]).format.reads((json \ "value"))
   }
