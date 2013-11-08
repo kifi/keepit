@@ -70,7 +70,7 @@ class HomeController @Inject() (
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else {
       // Non-user landing page
-      Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
+      Ok(views.html.website.welcome(msg = request.flash.get("error")))
     }
   })
 

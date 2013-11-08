@@ -17,7 +17,6 @@ class ShoeboxTemplatesPlugin(app: Application) extends DefaultTemplatesPlugin(ap
   // todo: wtf? Kill this (give it an obscure route, redirect any requests to our login page), we can handle the log in form ourselves
   override def getLoginPage[A](implicit request: Request[A], form: Form[(String, String)], msg: Option[String]): Html = {
     log.info(s"[getLoginPage] request=$request form=$form")
-    views.html.website.welcome(msg = msg.map(Messages(_)) orElse request.flash.get("error"),
-      skipLetMeIn = true, newSignup = newSignup)
+    views.html.website.welcome(msg = msg.map(Messages(_)) orElse request.flash.get("error"), skipLetMeIn = true)
   }
 }
