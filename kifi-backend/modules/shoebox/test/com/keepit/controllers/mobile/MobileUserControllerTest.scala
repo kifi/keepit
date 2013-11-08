@@ -81,7 +81,8 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         inject[Database].readWrite {implicit s =>
           val user = userRepo.save(User(firstName="Richard", lastName="Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("FRF"), networkType = SocialNetworks.FACEBOOK))
-          socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("LRF"), networkType = SocialNetworks.LINKEDIN))
+          socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("LRF"), networkType = SocialNetworks.LINKEDIN,
+              profileUrl = Some("http://www.linkedin.com/in/rf"), pictureUrl = Some("http://my.pic.com/pic.jpg")))
           inject[FakeActionAuthenticator].setUser(user)
         }
         val mobileController = inject[MobileUserController]
@@ -90,7 +91,7 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         contentType(result) must beSome("application/json");
         val expected = Json.parse("""[
             {"network":"facebook","profileUrl":"http://facebook.com/FRF","pictureUrl":"http://graph.facebook.com/FRF/picture?width=50&height=50"},
-            {"network":"linkedin"}
+            {"network":"linkedin","profileUrl":"http://www.linkedin.com/in/rf","pictureUrl":"http://my.pic.com/pic.jpg"}
           ]""")
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
