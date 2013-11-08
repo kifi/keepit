@@ -78,7 +78,7 @@ input[type=password] {
   position: absolute;
   top: 70px;
   height: 144px;
-  background: url(../img/out/auth.png) no-repeat;
+  background: url(../img/auth.png) no-repeat;
   -webkit-transition: opacity 0.21s ease-out;
   -moz-transition: opacity 0.21s ease-out;
   -o-transition: opacity 0.21s ease-out;
@@ -263,7 +263,7 @@ input[type=password] {
   height: 42px;
   width: 42px;
   margin: 0 auto;
-  background: url(../img/out/auth.png) -2px -328px;
+  background: url(../img/auth.png) -2px -328px;
   position: relative;
   left: 2px;
 }
@@ -304,7 +304,7 @@ footer {
   height: 32px;
   width: 32px;
   margin-left: 5px;
-  background: url(../img/out/auth.png);
+  background: url(../img/auth.png);
   opacity: .5;
 }
 .us-on:hover {
@@ -335,7 +335,7 @@ footer {
   height: 144px;
   margin: 0 auto 84px;
   padding-top: 70px;
-  background: url(../img/out/auth.png) -2px -148px content-box;
+  background: url(../img/auth.png) -2px -148px content-box;
   text-indent: -9999px;
 }
 .page-title {
@@ -529,7 +529,7 @@ footer {
   font-size: 0;
   height: 32px;
   width: 32px;
-  background-image: url(../img/out/auth.png);
+  background-image: url(../img/auth.png);
 }
 .facebook > .form-network-icon:before {
   background-position: -187px -294px;
@@ -558,7 +558,7 @@ footer {
   right: 14px;
   width: 12px;
   height: 16px;
-  background: url(../img/out/auth.png) -241px -328px;
+  background: url(../img/auth.png) -241px -328px;
 }
 .form-email-addr,
 .form-password {
@@ -738,7 +738,7 @@ footer {
   left: 8px;
   height: 32px;
   width: 32px;
-  background: url(../img/out/auth.png);
+  background: url(../img/auth.png);
 }
 .form-photo-a.facebook:before {
   background-position: -187px -294px;
@@ -1365,15 +1365,15 @@ input.social-email[disabled] {
   font-weight: normal;
 }
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .curtain-logo-l:before,
-  .curtain-logo-r:before,
+  .curtain-logo-l,
+  .curtain-logo-r,
   .curtain-back:before,
   .us-on,
   .main-logo,
   .form-network-icon:before,
-  .form-photo-a:before,
-  .password-label:after {
-    background-image: url(../img/out/auth.2x.png);
+  .password-label:after,
+  .form-photo-a:before {
+    background-image: url(../img/auth.2x.png);
     background-size: 255px auto;
   }
   .form-photo {
