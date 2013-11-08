@@ -24,6 +24,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import java.math.BigInteger
 import java.security.SecureRandom
+import com.keepit.common.store.S3ImageStore
 
 case class UserStatistics(
     user: User,
@@ -56,6 +57,7 @@ class AdminUserController @Inject() (
     emailAddressRepo: EmailAddressRepo,
     invitationRepo: InvitationRepo,
     userSessionRepo: UserSessionRepo,
+    imageStore: S3ImageStore,
     clock: Clock,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
@@ -329,6 +331,11 @@ class AdminUserController @Inject() (
       Await.result(socialGraphPlugin.asyncFetch(info), 5 minutes)
     }
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
+  }
+
+  def updateUserPicture(userId: Id[User]) = AdminHtmlAction { request =>
+    imageStore.forceUpdateSocialPictures(userId)
+    Ok
   }
 
   def notification() = AdminHtmlAction { implicit request =>
