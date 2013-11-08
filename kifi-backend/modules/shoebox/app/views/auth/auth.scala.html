@@ -2,7 +2,7 @@
 
 @import com.keepit.controllers.core.routes.{AuthController => routes}
 
-@content = {
+@curtains = {
 <div class="curtain-l">
   <div class="curtain-logo-l"></div>
   <a class="curtain-action curtain-signup" href="javascript:">
@@ -28,7 +28,9 @@
   <span class="curtain-back-1">Back</span>
   <span class="curtain-back-2">Cancel</span>
 </a>
+}
 
+@content = {
 <h1 class="main-logo">kifi</h1>
 
 <div class="signup"@if(view == "signup" || view == "signup2Email" || view == "signup2Social") { style="display:block"}>
@@ -161,4 +163,6 @@
 <script src="/assets/js/auth.js"></script>
 }
 
-@helper.page(bodyClass = if (view == "") "" else if (view == "signup2Email" || view == "signup2Social") "curtains-drawn finalizing" else "curtains-drawn", content = content, scripts = scripts)
+@helper.page(
+  bodyClass = if (view == "") "" else if (view == "signup2Email" || view == "signup2Social") "curtains-drawn finalizing" else "curtains-drawn",
+  curtains = curtains, content = content, scripts = scripts)

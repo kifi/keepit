@@ -9,20 +9,25 @@
   }
 }
 
-html,
-body {
-  height: 100%;
-  width: 100%;
-}
 html {
+  height: 100%;
   font: 16px/140% Arial, sans-serif;
 }
 html.mac {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 body {
+  height: 100%;
   position: relative;
   background-color: #f3f3f3;
+  text-align: center;
+  overflow: hidden;
+}
+main {
+  height: 100%;
+  overflow: auto;
+  margin: 0 16.5%;
+  position: relative;
 }
 a:link,
 a:visited {
@@ -57,7 +62,7 @@ input[type=password] {
 @curtain-time: .42s;
 .curtain-l,
 .curtain-r {
-  position: fixed;
+  position: absolute;
   z-index: 10;
   top: 0;
   height: 100%;
@@ -104,15 +109,19 @@ input[type=password] {
 }
 .curtain-welcome {
   position: absolute;
+  top: 224px;
   left: 0;
-  right: 0;
+  width: 100%;
+  z-index: 10;
+  display: table;
+  table-layout: fixed;
+  border-collapse: collapse;
+  overflow: hidden;
 }
 .curtain-welcome-l,
 .curtain-welcome-r {
-  position: fixed;
-  top: 224px;
+  display: table-cell;
   width: 50%;
-  z-index: 10;
   font-size: 32px;
   line-height: 32px;
   color: #fff;
@@ -123,13 +132,12 @@ input[type=password] {
   .transition(opacity @curtain-time, visibility @curtain-time, transform @curtain-time ease-out);
 }
 .curtain-welcome-l {
-  left: 0;
   padding-right: 5px;
   text-align: right;
 }
 .curtain-welcome-r {
-  right: 0;
   padding-left: 5px;
+  text-align: left;
 }
 .curtains-drawn .curtain-welcome-l,
 .curtains-drawn .curtain-welcome-r {
@@ -200,7 +208,7 @@ input[type=password] {
 
 // back button
 .curtain-back {
-  position: fixed;
+  position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
@@ -219,7 +227,7 @@ input[type=password] {
   visibility: visible;
   opacity: 1;
   .transform(none);
-  .transition-delay(0);
+  .transition-delay(0s);
 }
 .curtain-back:before {
   content: ' ';
@@ -258,7 +266,8 @@ input[type=password] {
 footer {
   position: absolute;
   top: 56px;
-  right: 38px;
+  right: -65px;
+  margin-right: 8.25%;
   z-index: 10;
   text-align: right;
   font-size: 14px;
@@ -321,7 +330,7 @@ footer {
   .translate(0, -70%);
   .transition(opacity 0 @curtain-time, transform 0 @curtain-time);
 }
-.curtains-drawn>.page-title {
+.curtains-drawn .page-title {
   .transform(none);
   opacity: 1;
   .transition(opacity (.6 * @curtain-time) (.4 * @curtain-time) linear, transform @curtain-time ease-in-out);
@@ -418,7 +427,6 @@ footer {
 .login {
   display: none;
   text-align: center;
-  margin: 0 16.5%;
   position: relative;
 }
 .form-sides {
@@ -770,13 +778,13 @@ footer {
   width: 100%;
   .transition(opacity (.6 * @finalize-time) linear, visibility 0s @finalize-time, transform @finalize-time ease-in-out);
 }
-.finalizing>.page-title.obsolete {  // navigated forward from
+.finalizing .page-title.obsolete {  // navigated forward from
   opacity: 0;
   visibility: hidden;
   .translate(0, -70%);
 }
-.finalizing>.page-title.abandoned,  // about to navigate back from
-.finalizing>.obsolete+.page-title {  // navigated forward to
+.finalizing .page-title.abandoned,  // about to navigate back from
+.finalizing .obsolete+.page-title {  // navigated forward to
   opacity: 1;
   visibility: visible;
   .transform(none);
@@ -787,7 +795,7 @@ footer {
   visibility: hidden;
   .translate(0, 70%);
 }
-.finalizing>.obsolete+.page-title,  // navigated forward to
+.finalizing .obsolete+.page-title,  // navigated forward to
 .page-title.returned {  // navigated back to
   .transition(opacity (.8 * @finalize-time) (.2 * @finalize-time) linear, visibility @finalize-time, transform @finalize-time ease-in-out);
 }
