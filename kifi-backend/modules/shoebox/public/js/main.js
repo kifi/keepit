@@ -512,19 +512,33 @@ $(function() {
 	var $friendsTabPages = $friends.find('.friends-page');
 
 	function showFriends(path) {
+		path = normalizePath(path);
 		$('body').attr('data-view', 'friends');
 		$('.left-col .active').removeClass('active');
 		$('.my-friends').addClass('active');
-    selectFriendsTab(path);
+		selectFriendsTab(path);
+	}
+
+	function normalizePath(path) {
+		if (path) {
+			return path.replace(/^[\s\/]+|[\s\/]+$/g, '');
+		}
+		return '';
 	}
 
   var FRIENDS_PARENT_PATHS = {
-    'friends/find': 'friends/invite'
+    'friends/find': 'friends/invite',
+    'friends/invite/facebook': 'friends/invite',
+    'friends/invite/linkedin': 'friends/invite',
+    'friends/invite/email': 'friends/invite'
   };
 
   var FRIENDS_PREPS = {
     'friends': prepFriendsTab,
     'friends/invite': showAddFriends,
+    'friends/invite/facebook': showAddFriends,
+    'friends/invite/linkedin': showAddFriends,
+    'friends/invite/email': showAddFriends,
     'friends/find': showAddFriends,
     'friends/requests': prepRequestsTab
   };
@@ -545,7 +559,7 @@ $(function() {
       FRIENDS_PREPS[path](path);
     }
     else {
-			navigate('friends', {replace: true});
+      navigate('friends', {replace: true});
     }
   }
 
@@ -553,8 +567,9 @@ $(function() {
 	var $addFriendsTabPages = $friends.find('.add-friends-page');
 
   function showAddFriends(path) {
-    var $tab = $addFriendsTabs.filter('[data-href="' + path + '"]');
-    console.log('[showAddFriends]', path, $tab);
+    var pPath = FRIENDS_PARENT_PATHS[path] || path,
+		$tab = $addFriendsTabs.filter('[data-href="' + pPath + '"]');
+    console.log('[showAddFriends]', path, pPath, $tab);
     if ($tab.length) {
       $tab.removeAttr('href');
       $addFriendsTabs.not($tab).filter(':not([href])').each(function() {
@@ -562,9 +577,12 @@ $(function() {
       });
 
       $addFriendsTabPages.hide();
-      $addFriendsTabPages.filter('[data-href="' + path + '"]').show().find('input').focus();
+      $addFriendsTabPages.filter('[data-href="' + pPath + '"]').show().find('input').focus();
 
-      if (path === 'friends/invite') {
+	  var match = path.match(/^friends\/invite(\/\w*)?$/);
+      if (match) {
+		  var network = (match[1] || '').replace(/\//g, '');
+		  chooseNetworkFilterDOM(network);
         prepInviteTab();
       }
       else {
@@ -572,8 +590,57 @@ $(function() {
       }
     }
     else {
-			navigate('friends', {replace: true});
+      navigate('friends', {replace: true});
     }
+  }
+
+  function chooseNetworkFilterDOM(network) {
+	  if (!network) {
+		  network = '';
+	  }
+
+	  var $filters = $('.invite-filters');
+	  if (network) {
+		  $filters.attr('data-nw-selected', network);
+	  }
+	  else {
+		  $filters.removeAttr('data-nw-selected');
+	  }
+
+	  $filters.children('a').each(function() {
+		  var $this = $(this),
+		  nw = $this.data('nw');
+		  if (nw === network || (!nw && !network)) {
+			  $this.removeAttr('href');
+		  }
+		  else {
+			  $this.attr('href', $this.data('href'));
+		  }
+	  });
+
+	  $nwFriends.find('ul').empty();
+  }
+
+  function filterFriendsByNetwork(network) {
+	  if (!network) {
+		  network = '';
+	  }
+	  chooseNetworkFilterDOM(network);
+	  promise.myNetworks.done(function(data) {
+		  var shouldConnect = /^facebook|linkedin$/.test(network) && data.every(function(nObj) {
+			  return nObj.network !== network;
+		  });
+		  if (shouldConnect) {
+			  var url = wwwDomain + '/link/' + network;
+			  $('<form method="post" action="' + url + '">')
+			  .appendTo('body')
+			  .submit()
+			  .remove();
+		  }
+		  else {
+			  filterFriends();
+		  }
+	  });
   }
 
 	// All kifi Friends
@@ -771,25 +838,9 @@ $(function() {
 			$('.num-invites').text(invitesLeft).parent().show();
 		});
 	}
-	$('.invite-filters>a[href]').click(function () {
-		var $this = $(this);
-		promise.myNetworks.done(function(data) {
-			var nw = $this.data('nw') || null,
-				shouldConnect = /^facebook|linkedin$/.test(nw) && data.every(function(nObj) {
-					return nObj.network !== nw;
-				});
-			if (shouldConnect) {
-				var url = wwwDomain + '/link/' + nw;
-				$('<form method="post" action="' + url + '">')
-					.appendTo('body')
-					.submit()
-					.remove();
-			}
-			else {
-				$this.parent().attr('data-nw-selected', nw);
-				filterFriends();
-			}
-		});
+	$('.invite-filters>a[href]').click(function (e) {
+		e.preventDefault();
+		filterFriendsByNetwork($(this).data('nw'));
 	});
 	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
 	.on('click', '.more-invites', function(e) {

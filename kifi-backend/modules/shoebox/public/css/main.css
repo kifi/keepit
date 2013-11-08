@@ -300,7 +300,7 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-filters>a[data-nw=twitter] {background-color: #55acee; background-position: -72px top}
 .invite-filters>a[data-nw=email] {background-color: #e36767; background-position: -108px top}
 
-.invite-filters>a:not([href]) {background-color: #edeff1}
+.invite-filters>a:not([data-href]) {background-color: #edeff1}
 
 .invite-filters[data-nw-selected]>:not([data-nw]):hover,
 .invite-filters:not([data-nw-selected=facebook])>[href][data-nw=facebook]:hover,
