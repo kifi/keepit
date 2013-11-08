@@ -40,12 +40,12 @@ class ExtUserSearchController @Inject()(
 
   def search(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = AuthenticatedJsonAction { request =>
     val userId = request.userId
-    val searchFilter = createFilter(Some(userId), filter, None)
+    val searchFilter = createFilter(Some(userId), filter, context)
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
 
     val res = parser.parse(queryText) match {
-      case None => UserSearchResult(Array.empty[UserHit], context = "")
+      case None => UserSearchResult(Array.empty[UserHit], context.getOrElse(""))
       case Some(q) => searcher.searchWithFilter(q, maxHits, searchFilter)
     }
 
