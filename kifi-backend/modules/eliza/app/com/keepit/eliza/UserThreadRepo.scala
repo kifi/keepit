@@ -284,7 +284,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def setNotificationJsonIfNotPresent(userId: Id[User], threadId: Id[MessageThread], notifJson: JsValue)(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user===userId && row.thread===threadId && (row.lastNotification===JsNull.asInstanceOf[JsValue] || row.lastNotification===null.asInstanceOf[JsValue])) yield row.lastNotification).update(notifJson)
+    (for (row <- table if row.user===userId && row.thread===threadId && row.lastMsgFromOther.isNull) yield row.lastNotification).update(notifJson)
   }
 
 }
