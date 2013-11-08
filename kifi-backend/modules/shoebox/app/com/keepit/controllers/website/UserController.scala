@@ -289,31 +289,20 @@ class UserController @Inject() (
       }
     }
 
-    val res = abookServiceClient.getMergedContactInfos(userId, 40000000).map { jsArr => // TODO: revisit maxRows
-      val contacts:Seq[(String, Seq[String])] = jsArr.value.map{c =>
-        val name = (c \ "name").as[String]
-        val emails = (c \ "emails").as[JsArray].value.map(_.as[JsString].value)
-        (name, emails)
-      }
-      val contactsBuilder = mutable.ArrayBuilder.make[(String, String)]
-      contacts.foreach { c =>
-        c._2.foreach { e =>
-          contactsBuilder += Tuple2(c._1, e)
-        }
-      }
-      val flatContacts = contactsBuilder.result
-      val jsConnsBuilder = mutable.ArrayBuilder.make[JsObject]
-      val filteredContacts = flatContacts.filter(t => (searchScore(t._1) > 0 || searchScore(t._2) > 0))
+    val res = abookServiceClient.getEContacts(userId, 40000000).map { contacts =>
+      val filtered = contacts.filter(e => ((searchScore(e.name) > 0) || (searchScore(e.email) > 0)))
       val paged = after match {
-        case Some(a) => filteredContacts.dropWhile(c => mkId(c._2) != a)
-        case None => filteredContacts
+        case Some(a) => filtered.dropWhile(e => (mkId(e.email) != a)) match {
+          case hd +: tl => tl
+          case tl => tl
+        }
+        case None => filtered
       }
-      paged.take(limit).foreach { c =>
-        jsConnsBuilder += Json.obj("label" -> c._1, "value" -> mkId(c._2))
+      val objs = paged.take(limit).map { e =>
+        Json.obj("label" -> e.name, "value" -> mkId(e.email))
       }
-      val res = jsConnsBuilder.result
-      log.info(s"[queryContacts(id=$userId)] res(len=${res.length}):${res.mkString.take(200)}")
-      res.toSeq
+      log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
+      objs
     }
     res
   }
