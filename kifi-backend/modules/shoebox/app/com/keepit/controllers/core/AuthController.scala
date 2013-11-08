@@ -425,16 +425,18 @@ class AuthController @Inject() (
 
   private def finishSignup(newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
     if (!emailConfirmedAlready) {
+      // todo: Move to user controller/commander
       db.readWrite { implicit s =>
         val emailAddrStr = newIdentity.email.get
         val emailAddr = emailAddressRepo.save(
           emailAddressRepo.getByAddressOpt(emailAddrStr).get.withVerificationCode(clock.now))
+        val verifyUrl = s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+
         postOffice.sendMail(ElectronicMail(
           from = EmailAddresses.NOTIFICATIONS,
           to = Seq(GenericEmailAddress(emailAddrStr)),
-          subject = "Confirm your email address for Kifi",
-          htmlBody = "Please confirm your email address by going to " +
-            s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}",
+          subject = "Kifi.com |  Please confirm your email address",
+          htmlBody = views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body,
           category = ElectronicMailCategory("email_confirmation")
         ))
       }
@@ -535,13 +537,13 @@ class AuthController @Inject() (
             db.readWrite { implicit session =>
               emailAddresses.map { resetEmailAddress =>
                 val reset = passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
+                val resetUrl = s"$url${routes.AuthController.setPasswordPage(reset.token)}"
                 emailAddresses.foreach { emailAddress =>
                   postOffice.sendMail(ElectronicMail(
                     from = EmailAddresses.NOTIFICATIONS,
                     to = Seq(resetEmailAddress),
-                    subject = "Reset your Kifi password",
-                    htmlBody = "You can set a new Kifi password by going to " +
-                      s"$url${routes.AuthController.setPasswordPage(reset.token)}",
+                    subject = "Kifi.com | Password reset requested",
+                    htmlBody = views.html.email.resetPassword(resetUrl).body,
                     category = ElectronicMailCategory("reset_password")
                   ))
                 }
