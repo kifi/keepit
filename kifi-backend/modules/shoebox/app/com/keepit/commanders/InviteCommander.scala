@@ -2,22 +2,12 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
-import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
-import com.keepit.common.service.FortyTwoServices
-import com.keepit.controllers.core.AuthController
 import com.keepit.model._
-import com.keepit.social.{SocialNetworkType, SocialGraphPlugin}
+import com.keepit.social.SocialNetworks
 
-import ActionAuthenticator.MaybeAuthenticatedRequest
-import play.api.Play.current
-import play.api._
-import play.api.libs.iteratee.Enumerator
-import play.api.mvc._
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.RWSession
@@ -25,34 +15,45 @@ import com.keepit.common.db.slick.DBSession.RWSession
 class InviteCommander @Inject() (
   db: Database,
   userRepo: UserRepo,
-  userValueRepo: UserValueRepo,
   socialUserRepo: SocialUserInfoRepo,
-  emailRepo: EmailAddressRepo,
   userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
   postOffice: LocalPostOffice,
   emailAddressRepo: EmailAddressRepo,
   socialConnectionRepo: SocialConnectionRepo,
-  socialGraphPlugin: SocialGraphPlugin,
-  fortyTwoServices: FortyTwoServices,
   clock: Clock) {
 
-  def getPendingInvitesForUser(userId: Id[User]) = {
+  def getOrCreatePendingInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
     db.readOnly { implicit s =>
-      socialUserRepo.getByUser(userId) map { su =>
-        su -> invitationRepo.getByRecipient(su.id.get).getOrElse(Invitation(
-          createdAt = clock.now,
-          senderUserId = None,
-          recipientSocialUserId = su.id.get,
-          state = InvitationStates.ACTIVE
-        ))
+      val cookieInvite = invId.map { inviteExtId =>
+        val invite = invitationRepo.get(inviteExtId)
+        // todo: When invite.recipientSocialUserId is an Option, check here if it's set. If not, set it on the invite record.
+        socialUserRepo.get(invite.recipientSocialUserId) -> invite
+      }
+
+      val userSocialAccounts = socialUserRepo.getByUser(userId)
+      val existingInvites = userSocialAccounts.map { su =>
+        invitationRepo.getByRecipient(su.id.get).map { inv => su -> inv }
+      }.flatten.toSet.++(cookieInvite)
+
+      if (existingInvites.isEmpty) {
+        userSocialAccounts.find(_.networkType == SocialNetworks.FORTYTWO).map { su =>
+          Set(su -> Invitation(
+            createdAt = clock.now,
+            senderUserId = None,
+            recipientSocialUserId = su.id.get,
+            state = InvitationStates.ACTIVE
+          ))
+        }.getOrElse(Set())
+      } else {
+        existingInvites
       }
     }
   }
 
   def markPendingInvitesAsAccepted(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
-    val anyPendingInvites = getPendingInvitesForUser(userId)
+    val anyPendingInvites = getOrCreatePendingInvitesForUser(userId, invId)
     db.readWrite { implicit s =>
       for ((su, invite) <- anyPendingInvites) {
         connectInvitedUsers(userId, invite)
@@ -76,6 +77,14 @@ class InviteCommander @Inject() (
 
   private def connectInvitedUsers(userId: Id[User], invite: Invitation)(implicit session: RWSession) = {
     invite.senderUserId.map { senderUserId =>
+      val newFortyTwoSocialUser = socialUserRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO)
+      val inviterFortyTwoSocialUser = socialUserRepo.getByUser(senderUserId).find(_.networkType == SocialNetworks.FORTYTWO)
+      for {
+        su1 <- newFortyTwoSocialUser
+        su2 <- inviterFortyTwoSocialUser
+      } yield {
+        socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get))
+      }
       userConnectionRepo.addConnections(userId, Set(senderUserId), requested = true)
     }
   }
