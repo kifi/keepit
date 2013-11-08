@@ -73,7 +73,11 @@ class HomeController @Inject() (
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else {
       // Non-user landing page
-      Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
+      if (newSignup) {
+        Ok(views.html.auth.auth())
+      } else {
+        Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
+      }
     }
   })
 
@@ -107,7 +111,7 @@ class HomeController @Inject() (
         user = user,
         email = email,
         justVerified = request.queryString.get("m").map(_.headOption == Some("1")).getOrElse(false),
-        friendsOnKifi = friendsOnKifi))
+        friendsOnKifi = friendsOnKifi)).discardingCookies(DiscardingCookie("inv"))
     } else {
       Ok(views.html.website.onboarding.userRequestReceived(user, email, friendsOnKifi))
     }
@@ -116,26 +120,22 @@ class HomeController @Inject() (
   def install = AuthenticatedHtmlAction { implicit request =>
     db.readWrite { implicit session =>
       socialUserRepo.getByUser(request.user.id.get) map { su =>
-        invitationRepo.getByRecipient(su.id.get) match {
-          case Some(invite) =>
-            if (invite.state != InvitationStates.JOINED) {
-              invitationRepo.save(invite.withState(InvitationStates.JOINED))
-              invite.senderUserId match {
-                case Some(senderUserId) =>
-                  for (address <- emailAddressRepo.getByUser(senderUserId)) {
-                    postOffice.sendMail(ElectronicMail(
-                      senderUserId = None,
-                      from = EmailAddresses.CONGRATS,
-                      fromName = Some("KiFi Team"),
-                      to = List(address),
-                      subject = s"${request.user.firstName} ${request.user.lastName} joined KiFi!",
-                      htmlBody = views.html.email.invitationFriendJoined(request.user).body,
-                      category = PostOffice.Categories.INVITATION))
-                  }
-                case None =>
+        invitationRepo.getByRecipient(su.id.get).map { invite =>
+          if (invite.state != InvitationStates.JOINED) {
+            invitationRepo.save(invite.withState(InvitationStates.JOINED))
+            invite.senderUserId.map { senderUserId =>
+              for (address <- emailAddressRepo.getByUser(senderUserId)) {
+                postOffice.sendMail(ElectronicMail(
+                  senderUserId = None,
+                  from = EmailAddresses.CONGRATS,
+                  fromName = Some("KiFi Team"),
+                  to = List(address),
+                  subject = s"${request.user.firstName} ${request.user.lastName} joined KiFi!",
+                  htmlBody = views.html.email.invitationFriendJoined(request.user).body,
+                  category = PostOffice.Categories.INVITATION))
               }
             }
-          case None =>
+          }
         }
       }
     }
