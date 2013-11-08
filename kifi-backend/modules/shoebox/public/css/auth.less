@@ -330,31 +330,46 @@ footer {
 // buttons
 .primary-button {
   @bg-color: #92c152;
+  display: inline-block;
+  white-space: nowrap;
   color: #fff;
   background: @bg-color;
-  &:hover {
+  &:hover,
+  &:focus {
     background: tint(@bg-color, 10%);
   }
   &:active {
     background: shade(@bg-color, 10%);
+  }
+  &:focus {
+    outline-color: #888;
   }
 }
 .alt-button {
   @bg-color: #6fa6ef;
+  display: inline-block;
+  white-space: nowrap;
   color: #fff;
   background: @bg-color;
-  &:hover {
+  &:hover,
+  &:focus {
     background: tint(@bg-color, 10%);
   }
   &:active {
     background: shade(@bg-color, 10%);
   }
+  &:focus {
+    outline-color: #888;
+  }
 }
 .cancel-button {
   @bg-color: #e8e8e8;
+  display: inline-block;
+  white-space: nowrap;
   color: #888;
   background: @bg-color;
-  &:hover {
+  &:hover,
+  &:focus {
     background: tint(@bg-color, 20%);
   }
   &:active {
@@ -965,9 +980,6 @@ footer {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   margin-left: 4px;
-  &:focus {
-    outline-color: #888;
-  }
 }
 
 // reset password dialog
@@ -1058,9 +1070,6 @@ footer {
   padding: 10px 30px;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
-  &:focus {
-    outline-color: #888;
-  }
 }
 .reset-password-success {
   position: absolute;
