@@ -288,9 +288,10 @@ class AuthController @Inject() (
       case (Some(user), Some(identity)) =>
         // User exists, is incomplete
 
-        val (firstName, lastName) = if (identity.firstName.contains("@")) ("","") else (identity.firstName, identity.lastName)
+        val (firstName, lastName) = if (identity.firstName.contains("@")) ("","") else (User.sanitizeName(identity.firstName), User.sanitizeName(identity.lastName))
         val picture = identityPicture(identity)
-        Ok(views.html.auth.finalizeEmail(
+        Ok(views.html.auth.auth(
+          view = "signup2Email",
           emailAddress = identity.email.getOrElse(""),
           picturePath = picture,
           firstName = firstName,
@@ -317,7 +318,8 @@ class AuthController @Inject() (
 
         val picture = identityPicture(identity)
 
-        Ok(views.html.auth.finalizeSocial(
+        Ok(views.html.auth.auth(
+          view = "signup2Social",
           firstName = User.sanitizeName(identity.firstName),
           lastName = User.sanitizeName(identity.lastName),
           emailAddress = identity.email.getOrElse(""),
@@ -674,10 +676,11 @@ class AuthController @Inject() (
     }
   }
 
-  def cancelAuth() = HtmlAction(allowPending = true)(authenticatedAction = doCancelPage(_), unauthenticatedAction = doCancelPage(_))
+  def cancelAuth() = JsonAction(allowPending = true)(authenticatedAction = doCancelPage(_), unauthenticatedAction = doCancelPage(_))
   private def doCancelPage(implicit request: Request[_]): Result = {
-    // todo(Andrew): Remove user and credentials
-    Redirect(securesocial.controllers.routes.LoginPage.logout)
+    // todo(Andrew): Remove from database: user, credentials, securesocial session
+    Ok("1").withNewSession.discardingCookies(
+      DiscardingCookie(Authenticator.cookieName, Authenticator.cookiePath, Authenticator.cookieDomain, Authenticator.cookieSecure))
   }
 
 }
