@@ -109,16 +109,14 @@ class AuthController @Inject() (
     }
   }, unauthenticatedAction = { implicit request =>
     if (newSignup && request.identityOpt.isDefined) {
-
-      // TODO(andrew): Handle special case. User tried to log in (not sign up) with social network, email exists in system but social user doesn't.
-      //
-
-      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-        .flashing("signin_error" -> "no_account")
-    }
-    else{
+      // User tried to log in (not sign up) with social network. Email address exists in system, but social user doesn't.
+      Ok(views.html.auth.loggedInWithNewNetwork(
+        emailAddress = request.identityOpt.get.email.get,
+        network = SocialNetworkType(request.identityOpt.get.identityId.providerId)
+      ))
+    } else {
       Redirect("/") // error??
-      //      Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
+      // Ok(views.html.website.welcome(newSignup = newSignup, msg = request.flash.get("error")))
     }
   })
 
@@ -129,7 +127,7 @@ class AuthController @Inject() (
   def signupByPost(provider: String) = getAuthAction(provider, AuthType.SocialSignup)
 
   // log in with username/password and link the account with a provider
-  def passwordLoginAndLink(provider: String) = getAuthAction(provider, AuthType.LoginAndLink)
+  def passwordLoginAndLink(provider: String, format: String) = getAuthAction(provider, AuthType.LoginAndLink, format)
 
   def popupBeforeLinkSocial(provider: String) = AuthenticatedHtmlAction(allowPending = true) { implicit request =>
     Ok(views.html.auth.popupBeforeLinkSocial(SocialNetworkType(provider))).withSession(session + (PopupKey -> "1"))
@@ -177,7 +175,11 @@ class AuthController @Inject() (
               } getOrElse res
             } else res
           case AuthType.LoginAndLink =>
-            res.withSession(resSession - FORTYTWO_USER_ID
+            (if (format == "json" && res.header.headers.get(LOCATION).isDefined) {
+              Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(resCookies: _*)
+            } else {
+              res
+            }).withSession(resSession - FORTYTWO_USER_ID
               - SecureSocial.OriginalUrlKey  // TODO: why is OriginalUrlKey being removed? should we keep it?
               + (AuthController.LinkWithKey -> provider))
         }

@@ -1,0 +1,71 @@
+@(emailAddress: String, network: com.keepit.social.SocialNetworkType)
+
+@styles = {
+<style>
+body {
+  text-align: center;
+}
+section {
+  margin: 0 auto;
+  width: 64%;
+}
+.login {
+  display: block;
+  margin: 0 auto;
+  width: 50%;
+  min-width: 240px;
+  max-width: 360px;
+}
+.copy-1,
+.copy-2 {
+  color: #515051;
+}
+.copy-1 {
+  margin: 32px 0 0;
+}
+.copy-2 {
+  margin: 12px 0 42px;
+}
+.email-address {
+  text-align: left;
+  border: 2px solid #e5e5e5;
+  padding: 0 .8em;
+  line-height: 36px;
+  font-size: 16px;
+}
+</style>
+}
+
+@import com.keepit.controllers.core.routes.{AuthController => routes}
+
+@content = {
+<div class="curtain-l"></div>
+<div class="curtain-r"></div>
+<a class="curtain-back" href="javascript:" tabindex="1" data-cancel-uri="@routes.cancelAuth">Cancel</a>
+
+<h1 class="main-logo">kifi</h1>
+<h2 class="page-title">Connect @network.displayName</h2>
+
+<section>
+  <p class="copy-1">This is the first time you’ve used your @network.displayName account here.</p>
+  <p class="copy-2">Please enter your Kifi password to connect @network.displayName.</p>
+
+  <form class="login" data-uri="@routes.passwordLoginAndLink(network.name, "json")" novalidate>
+    <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address" required tabindex="1" value="@emailAddress">
+    <label class="password-label">
+      <input class="form-password" type="password" name="login-password" placeholder="Your password" required autofocus tabindex="1">
+      <a class="password-forgot" href="javascript:" tabindex="2">I forgot</a>
+    </label>
+    <button class="form-submit primary-button" tabindex="1">Log in</button>
+  </form>
+</section>
+
+@helper.resetPasswordDialog()
+}
+
+@scripts = {
+<script src="/assets/js/jquery-ui-position.min.js"></script>
+<script src="/assets/js/auth.js"></script>
+}
+
+@helper.page(styles = styles, content = content, scripts = scripts)
