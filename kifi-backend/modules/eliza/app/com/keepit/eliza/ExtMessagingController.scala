@@ -240,7 +240,7 @@ class ExtMessagingController @Inject() (
       val notices = messagingController.getLatestMutedSendableNotifications(socket.userId, howMany.toInt)
       socket.channel.push(Json.arr("muted_notifications", notices))
     },
-    "get_setnotifications" -> { case JsNumber(howMany) +: _ =>
+    "get_sent_notifications" -> { case JsNumber(howMany) +: _ =>
       val notices = messagingController.getLatestSentNotifications(socket.userId, howMany.toInt)
       socket.channel.push(Json.arr("sent_notifications", notices))
     },

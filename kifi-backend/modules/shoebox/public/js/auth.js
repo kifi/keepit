@@ -172,7 +172,7 @@ kifi.form = (function () {
     var last = first && kifi.form.validateName($form.find('.form-last-name'));
     if (first && last) {
       var pic = $photo.data();
-      signup2Promise = $.when(pic.uploadPromise).done(function (upload) {
+      signup2Promise = $.when(pic.uploadPromise).always(function (upload) {
          signup2Promise = $.postJson($form.data('uri'), {
           firstName: first,
           lastName: last,
@@ -312,6 +312,9 @@ kifi.form = (function () {
       $last.val(lastName);
     }
     if (photoUrl) {
+      if (photoXhr2) {
+        photoXhr2.abort();
+      }
       $photo.css({'background-image': 'url(' + photoUrl + ')', 'background-position': '', 'background-size': ''}).removeClass('unset');
     }
   }
