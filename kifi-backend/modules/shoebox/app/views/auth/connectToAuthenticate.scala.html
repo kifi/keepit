@@ -1,4 +1,4 @@
-@(emailAddress: String, network: com.keepit.social.SocialNetworkType)
+@(emailAddress: String, network: com.keepit.social.SocialNetworkType, logInAttempted: Boolean)
 
 @styles = {
 <style>
@@ -41,16 +41,22 @@ section {
 @content = {
 <div class="curtain-l"></div>
 <div class="curtain-r"></div>
-<a class="curtain-back" href="javascript:" tabindex="1" data-cancel-uri="@routes.cancelAuth">Cancel</a>
+<a class="curtain-back" href="javascript:" tabindex="1" data-cancel-uri="@routes.cancelAuth">Cancel</a> @* TODO: Handle Cancel click properly *@
 
 <h1 class="main-logo">kifi</h1>
 <h2 class="page-title">Connect @network.displayName</h2>
 
 <section>
-  <p class="copy-1">This is the first time you’ve used your @network.displayName account here.</p>
+  <p class="copy-1">
+    @if(logInAttempted) {
+      This is the first time you’ve used your @network.displayName account here.
+    } else {
+      We already have an account for <b>@emailAddress</b>.
+    }
+  </p>
   <p class="copy-2">Please enter your Kifi password to connect @network.displayName.</p>
 
-  <form class="login" data-uri="@routes.passwordLoginAndLink(network.name, "json")" novalidate>
+  <form class="login" data-uri="@routes.loginWithUserPass(network.name)" novalidate>
     <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address" required tabindex="1" value="@emailAddress">
     <label class="password-label">
       <input class="form-password" type="password" name="login-password" placeholder="Your password" required autofocus tabindex="1">

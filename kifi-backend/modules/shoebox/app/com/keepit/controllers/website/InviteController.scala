@@ -168,7 +168,7 @@ class InviteController @Inject() (db: Database,
         case Some(invite) if (invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE) =>
           val socialUser = socialUserInfoRepo.get(invitation.get.recipientSocialUserId)
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage).withCookies(Cookie("inv", invite.externalId.id))
-          //Ok(views.html.website.welcome(Some(id), Some(socialUser), newSignup = newSignup))
+          //Ok(views.html.website.welcome(Some(id), Some(socialUser)))
         case _ =>
           Redirect(routes.HomeController.home)
       }

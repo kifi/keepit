@@ -94,5 +94,3 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
   }
 
 }
-
-
