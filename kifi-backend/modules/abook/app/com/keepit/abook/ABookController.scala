@@ -51,6 +51,7 @@ class ABookController @Inject() (
   s3:ABookRawInfoStore,
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
+  econtactRepo:EContactRepo,
   contactInfoRepo:ContactInfoRepo,
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
@@ -223,6 +224,30 @@ class ABookController @Inject() (
     JsArray(contacts)
   }
 
+  def getEContacts(userId:Id[User], maxRows:Int) = Action { request =>
+    val resF:Future[JsValue] = Future {
+      getEContactsDirect(userId, maxRows)
+    }
+    val async: AsyncResult = Async {
+      resF.map { js => Ok(js) }
+    }
+    async
+  }
+
+  def getEContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
+    val ts = System.currentTimeMillis
+    val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
+    db.readOnly {
+      implicit session =>
+        econtactRepo.getByUserIdIter(userId, maxRows).foreach {
+          jsonBuilder += Json.toJson(_)
+        } // TODO: paging & caching
+    }
+    val contacts = jsonBuilder.result
+    log.info(s"[getEContacts($userId, $maxRows)] # of contacts returned: ${contacts.length} time-lapsed: ${System.currentTimeMillis - ts}")
+    JsArray(contacts)
+  }
+
   def getContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
     val resF:Future[JsValue] = Future {
       val ts = System.currentTimeMillis
@@ -276,22 +301,23 @@ class ABookController @Inject() (
   def getMergedContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
     val resF:Future[JsValue] = Future {
       val m = new mutable.HashMap[String, Set[String]]()
-      db.readOnly { implicit session =>
-        contactRepo.getByUserIdIter(userId, maxRows).foreach { c => // assume c.name exists (fix import)
-          val emails = Set(c.email) ++ {
-            c.altEmails.map { s =>
-              val js = Json.parse(s)
-              js.validate[Seq[String]].fold(
-                valid = (res => res.seq.toSet),
-                invalid = ( e => {
-                  log.error(s"[getMergedContactInfos] cannot parse $s error: $e")
-                  Set.empty[String]
-                })
-              )
-            }.getOrElse(Set.empty[String])
-          }
-          m.put(c.name.get, m.get(c.name.get).getOrElse(Set.empty[String]) ++ emails)
+      val iter = db.readOnly { implicit session =>
+        contactRepo.getByUserIdIter(userId, maxRows)
+      }
+      iter.foreach { c => // assume c.name exists (fix import)
+        val emails = Set(c.email) ++ {
+          c.altEmails.map { s =>
+            val js = Json.parse(s)
+            js.validate[Seq[String]].fold(
+              valid = (res => res.seq.toSet),
+              invalid = ( e => {
+                log.error(s"[getMergedContactInfos] cannot parse $s error: $e")
+                Set.empty[String]
+              })
+            )
+          }.getOrElse(Set.empty[String])
         }
+        m.put(c.name.get, m.get(c.name.get).getOrElse(Set.empty[String]) ++ emails)
       }
       val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
       m.keysIterator.foreach { k =>

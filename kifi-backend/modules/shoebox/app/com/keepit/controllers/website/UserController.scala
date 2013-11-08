@@ -274,11 +274,11 @@ class UserController @Inject() (
 
   private def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
     @inline def mkId(email:String) = s"email/$email"
-    val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
-    @inline def searchScore(fullName: String): Int = {
+    val searchTerms = search.toSeq.map(_.split("[@\\s+]")).flatten.filterNot(_.isEmpty).map(normalize)
+    @inline def searchScore(s: String): Int = {
       if (searchTerms.isEmpty) 1
       else {
-        val name = normalize(fullName)
+        val name = normalize(s)
         if (searchTerms.exists(!name.contains(_))) 0
         else {
           val names = name.split("\\s+").filterNot(_.isEmpty)
