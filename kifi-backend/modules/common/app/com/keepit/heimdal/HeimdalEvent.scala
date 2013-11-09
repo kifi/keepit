@@ -113,6 +113,9 @@ sealed trait HeimdalEvent {
 }
 
 object HeimdalEvent {
+  private val companionByTypeCode = Companion.companionByTypeCode(UserEvent, SystemEvent)
+  def getCompanion(typeCode: String) = companionByTypeCode(typeCode.toLowerCase)
+
   implicit val format = new Format[HeimdalEvent] {
     def writes(event: HeimdalEvent) = event match {
       case e: UserEvent => Companion.writes(e)

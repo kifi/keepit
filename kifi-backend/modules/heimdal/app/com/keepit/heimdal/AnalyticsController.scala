@@ -1,30 +1,17 @@
 package com.keepit.heimdal.controllers
 
 import com.keepit.common.controller.HeimdalServiceController
-import com.keepit.heimdal.{
-  MetricManager,
-  NoContextRestriction,
-  GroupedEventCountMetricDefinition,
-  EventType,
-  SpecificEventSet,
-  AllEvents,
-  GroupedUserCountMetricDefinition,
-  ContextRestriction,
-  AnyContextRestriction,
-  NotEqualTo,
-  ContextStringData,
-  EventGrouping,
-  MetricDescriptor
-}
+import com.keepit.heimdal._
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
-
 import org.joda.time.DateTime
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.heimdal.SpecificEventSet
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext //Might want to change this to a custom play one
+//Might want to change this to a custom play one
 
-import play.api.mvc.{Action}
-import play.api.libs.json.{Json, JsObject, JsArray}
+import play.api.mvc.Action
+import play.api.libs.json.{Json, JsObject}
 
 import com.google.inject.Inject
 
@@ -34,8 +21,13 @@ import scala.concurrent.{Await, Future}
 import views.html
 
 
-class AnalyticsController @Inject() (metricManager: MetricManager) extends HeimdalServiceController {
+class AnalyticsController @Inject() (
+  userEventLoggingRepo: UserEventLoggingRepo,
+  systemEventLoggingRepo: SystemEventLoggingRepo,
+  metricManager: MetricManager)
+  extends HeimdalServiceController {
 
+  private def getRepo(eventTypeCode: String) = EventRepo.findByEventTypeCode(userEventLoggingRepo, systemEventLoggingRepo)(eventTypeCode).get
 
   val adhocHelp = """
     | Returns simple event statistics
@@ -85,7 +77,8 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     |   uniqueField=$ Where $ specifies which fields unique values to count in "count_unique" mode.
   """.stripMargin
 
-  def createMetric(name: String, start: String, window: Int, step: Int, description: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, uniqueField: String) = Action { request =>
+  def createMetric(repo: String, name: String, start: String, window: Int, step: Int, description: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, uniqueField: String) = Action { request =>
+    require(repo == "user", s"Metrics are not supported yet for $repo events")
     if (request.queryString.get("help").nonEmpty) Ok(createHelp)
     else {
       assert(window>0)
@@ -101,13 +94,15 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     Ok("Update has been triggered. Please be patient. Calling this repeatedly in rapid succession will only make it take longer. If you think it didn't work, wait at least 30 seconds.")
   }
 
-  def getAvailableMetrics = Action { request =>
+  def getAvailableMetrics(repo: String) = Action { request =>
+    require(repo == UserEvent.typeCode.toString, s"Metrics are not supported yet for $repo events")
     Async(metricManager.getAvailableMetrics.map{ metricDescriptors =>
       Ok(Json.toJson(metricDescriptors))
     })
   }
 
-  def getMetric(name: String, as: String) = Action { request => //this is going to need some serious refactoring at some point
+  def getMetric(repo: String, name: String, as: String) = Action { request => //this is going to need some serious refactoring at some point
+    require(repo == UserEvent.typeCode.toString, s"Metrics are not supported yet for $repo events")
     val names : Seq[String] = if (name=="all") {
       Await.result(metricManager.getAvailableMetrics.map{ metricDescriptors => metricDescriptors.map(_.name)}, 20 seconds)
     } else {
@@ -142,7 +137,8 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     else Ok(html.storedMetricChart(json.toString, errors))
   }
 
-  def getMetricData(name: String) = Action { request => //see comment in getMetric
+  def getMetricData(repo: String, name: String) = Action { request => //see comment in getMetric
+    require(repo == UserEvent.typeCode.toString, s"Metrics are not supported yet for $repo events")
     Async(SafeFuture{
       val infoOptions : Option[MetricDescriptor] = Await.result(metricManager.getMetricInfo(name), 20 seconds)
       val json : JsObject = infoOptions.map{ desc =>
@@ -168,7 +164,8 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     })
   }
 
-  def adhocMetric(from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, as: String) = Action{ request =>
+  def adhocMetric(repo: String, from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, as: String) = Action{ request =>
+    require(repo == UserEvent.typeCode.toString, s"Metrics are not supported yet for $repo events")
     if (request.queryString.get("help").nonEmpty) Ok(adhocHelp)
     else {
       val doBreakDown = if (breakDown!="false" && groupBy.startsWith("context")) true else false
@@ -204,11 +201,11 @@ class AnalyticsController @Inject() (metricManager: MetricManager) extends Heimd
     }
   }
 
-  def rawEvents(events: String, limit: Int) = Action { request =>
+  def rawEvents(repo: String, events: String, limit: Int) = Action { request =>
     if (request.queryString.get("help").nonEmpty) Ok(rawHelp)
     else {
       val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(EventType(_)).toSet)
-      Async(metricManager.getLatestRawEvents(eventsToConsider, limit).map(Ok(_)))
+      Async(getRepo(repo).getLatestRawEvents(eventsToConsider, limit).map(Ok(_)))
     }
   }
 }

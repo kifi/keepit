@@ -15,8 +15,7 @@ import play.api.libs.json.JsArray
 class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingRepo, systemEventLoggingRepo: SystemEventLoggingRepo) extends HeimdalServiceController {
 
   private[controllers] def trackInternalEvent(eventJs: JsValue) = {
-    val event: Event = eventJs.as[Event]
-    event match {
+    eventJs.as[HeimdalEvent] match {
       case systemEvent: SystemEvent => systemEventLoggingRepo.insert(systemEvent)
       case userEvent: UserEvent => userEventLoggingRepo.insert(userEvent)
     }
@@ -29,12 +28,7 @@ class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingR
     Status(ACCEPTED)
   }
 
-  private[controllers] def trackInternalEvents(eventsJs: JsValue) = {
-    eventsJs.as[JsArray].value.map(js => js.as[Event]).map {
-      case systemEvent: SystemEvent => systemEventLoggingRepo.insert(systemEvent)
-      case userEvent: UserEvent => userEventLoggingRepo.insert(userEvent)
-    }
-  }
+  private[controllers] def trackInternalEvents(eventsJs: JsValue) = eventsJs.as[JsArray].value.map(trackInternalEvent)
 
   def trackInternalEventsAction = Action(parse.json) { request =>
     SafeFuture{

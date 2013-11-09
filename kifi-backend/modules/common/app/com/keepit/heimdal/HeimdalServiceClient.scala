@@ -24,17 +24,18 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
+import com.keepit.serializer.Companion
 
 trait HeimdalServiceClient extends ServiceClient with Plugin {
   final val serviceType = ServiceType.HEIMDAL
 
-  def trackEvent(event: Event): Unit
+  def trackEvent(event: HeimdalEvent): Unit
 
-  def getMetricData(name: String): Future[JsObject]
+  def getMetricData[E <: HeimdalEvent: Companion](name: String): Future[JsObject]
 
   def updateMetrics(): Unit
 
-  def getRawEvents(limit: Int, events: EventType*): Future[JsArray]
+  def getRawEvents[E <: HeimdalEvent: Companion](limit: Int, events: EventType*): Future[JsArray]
 }
 
 object FlushEventQueue
@@ -47,7 +48,7 @@ object EventQueueConsts extends Logging {
   val StaleEventAddTime = 10000 //milli
   val StaleEventFlushTime = (BatchFlushTiming * 1000) + StaleEventAddTime + 2000 //milli
 
-  def verifyEventStaleTime(clock: Clock, event: Event, timeout: Long, message: String): Unit = {
+  def verifyEventStaleTime(clock: Clock, event: HeimdalEvent, timeout: Long, message: String): Unit = {
     val timeSinceEventStarted = clock.getMillis - event.time.getMillis
     if (timeSinceEventStarted > timeout) {
       val msg = s"Event started ${timeSinceEventStarted}ms ago but was $message only now (timeout: ${timeout}ms): $event"
@@ -66,11 +67,11 @@ class HeimdalClientActor @Inject() (
 
   private final val serviceType = ServiceType.HEIMDAL
   val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
-  private var events: Vector[Event] = Vector()
+  private var events: Vector[HeimdalEvent] = Vector()
   private var closing = false
 
   def receive = {
-    case event: Event =>
+    case event: HeimdalEvent =>
       log.info(s"Event added to queue: $event")
       EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventAddTime, "added")
       events = events :+ event
@@ -136,13 +137,13 @@ class HeimdalServiceClientImpl @Inject() (
     super.onStop()
   }
 
-  def trackEvent(event: Event) : Unit = {
+  def trackEvent(event: HeimdalEvent) : Unit = {
     actor.ref ! event
     EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventAddTime, "post to actor")
   }
 
-  def getMetricData(name: String): Future[JsObject] = {
-    call(Heimdal.internal.getMetricData(name)).map{ response =>
+  def getMetricData[E <: HeimdalEvent: Companion](name: String): Future[JsObject] = {
+    call(Heimdal.internal.getMetricData(implicitly[Companion[E]].typeCode.toString, name)).map{ response =>
       Json.parse(response.body).as[JsObject]
     }
   }
@@ -151,9 +152,9 @@ class HeimdalServiceClientImpl @Inject() (
     broadcast(Heimdal.internal.updateMetrics())
   }
 
-  def getRawEvents(limit: Int, events: EventType*): Future[JsArray] = {
+  def getRawEvents[E <: HeimdalEvent: Companion](limit: Int, events: EventType*): Future[JsArray] = {
     val eventNames = if (events.isEmpty) Seq("all") else events.map(_.name)
-    call(Heimdal.internal.getRawEvents(eventNames, limit)).map { response =>
+    call(Heimdal.internal.getRawEvents(implicitly[Companion[E]].typeCode.toString, eventNames, limit)).map { response =>
       Json.parse(response.body).as[JsArray]
     }
   }

@@ -16,7 +16,7 @@ import com.keepit.eliza.ElizaServiceClient
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import views.html
-import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.heimdal.{UserEvent, HeimdalServiceClient}
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsBoolean
 import com.keepit.classify.DomainTag
@@ -184,7 +184,7 @@ class SliderAdminController @Inject() (
   def getImportEvents = AdminHtmlAction { implicit request =>
     import com.keepit.classify.DomainTagImportEvents._
 
-    val eventsFuture = heimdal.getRawEvents(50, DOMAIN_TAG_IMPORT).map { rawEvents =>
+    val eventsFuture = heimdal.getRawEvents[UserEvent](50, DOMAIN_TAG_IMPORT).map { rawEvents =>
       rawEvents.value.map { event =>
         val createdAt = DateTimeJsonFormat.reads(event \ "time").get
         val context = (event \ "context")

@@ -9,7 +9,7 @@ import reactivemongo.core.commands.PipelineOperator
 
 import scala.concurrent.{Promise, Future}
 
-trait UserEventLoggingRepo extends BufferedMongoRepo[UserEvent] {
+abstract class UserEventLoggingRepo extends MongoEventRepo[UserEvent] {
   val warnBufferSize = 500
   val maxBufferSize = 10000
 

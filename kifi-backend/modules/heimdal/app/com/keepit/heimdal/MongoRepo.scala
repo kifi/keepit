@@ -9,6 +9,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONDouble
 import reactivemongo.bson.BSONString
 import reactivemongo.api.collections.default.BSONCollection
+import com.keepit.serializer.Companion
+import play.api.libs.json.JsArray
 
 //Might want to change this to a custom play one
 import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
@@ -89,25 +91,4 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
 
   }
 
-}
-
-object EventRepo {
-  private def contextToBSON(context: EventContext): BSONDocument = {
-    BSONDocument(
-      context.data.mapValues{ seq =>
-        BSONArray(
-          seq.map{ _ match {
-            case ContextStringData(s)  => BSONString(s)
-            case ContextDoubleData(x) => BSONDouble(x)
-          }}
-        )
-      }
-    )
-  }
-
-  def eventToBSONFields(event: Event): Seq[(String, BSONValue)] = Seq(
-    "context" -> contextToBSON(event.context),
-    "event_type" -> BSONString(event.eventType.name),
-    "time" -> BSONDateTime(event.time.getMillis)
-  )
 }

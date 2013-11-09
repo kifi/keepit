@@ -168,9 +168,9 @@ object Heimdal extends Service {
   object internal {
     def trackEvent() = ServiceRoute(POST, "/internal/heimdal/trackEvent")
     def trackEvents() = ServiceRoute(POST, "/internal/heimdal/trackEvents")
-    def getMetricData(name: String) = ServiceRoute(GET, s"/internal/heimdal/getMetricData?name=${name}")
+    def getMetricData(repo: String, name: String) = ServiceRoute(GET, s"/internal/heimdal/$repo/getMetricData", Param("name", name))
     def updateMetrics() = ServiceRoute(GET, "/internal/heimdal/updateMetrics")
-    def getRawEvents(eventTypes: Seq[String], limit: Int) = ServiceRoute(GET, "/internal/heimdal/rawEvents", Param("events", eventTypes.mkString(",")), Param("limit", limit))
+    def getRawEvents(repo: String, eventTypes: Seq[String], limit: Int) = ServiceRoute(GET, s"/internal/heimdal/$repo/rawEvents", Param("events", eventTypes.mkString(",")), Param("limit", limit))
   }
 }
 

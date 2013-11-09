@@ -32,7 +32,7 @@ class EventTrackingTest extends Specification with TestInjector {
     "store correctly" in {
       withInjector(TestMongoModule(), StandaloneTestActorSystemModule()) { implicit injector =>
         val (eventTrackingController, eventRepo, testContext) = setup()
-        val event: Event = UserEvent(1, testContext, EventType("test_event"))
+        val event: HeimdalEvent = UserEvent(1, testContext, EventType("test_event"))
         eventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvent(Json.toJson(event))
         eventRepo.eventCount() === 1
@@ -44,7 +44,7 @@ class EventTrackingTest extends Specification with TestInjector {
     "store array" in {
       withInjector(TestMongoModule(), StandaloneTestActorSystemModule()) { implicit injector =>
         val (eventTrackingController, eventRepo, testContext) = setup()
-        val events: Array[Event] = Array( UserEvent(1, testContext, EventType("test_event")),
+        val events: Array[HeimdalEvent] = Array( UserEvent(1, testContext, EventType("test_event")),
                             UserEvent(2, testContext, EventType("test_event")),
                             UserEvent(3, testContext, EventType("test_event")),
                             UserEvent(4, testContext, EventType("test_event")))
