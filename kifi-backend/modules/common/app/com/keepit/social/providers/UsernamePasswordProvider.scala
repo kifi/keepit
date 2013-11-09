@@ -24,6 +24,10 @@ class UsernamePasswordProvider(application: Application)
             } yield Right(SocialUser(identity))
             result getOrElse Left(error("wrong_password"))
           case None =>
+            // TODO
+            // if (emailAddressRepo.getByAddressOpt(...).isDefined) {
+            //   Left(error("wrong_password"))
+            // } else
             Left(error("no_such_user"))
         }
       }

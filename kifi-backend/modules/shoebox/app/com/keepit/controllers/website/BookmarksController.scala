@@ -257,8 +257,8 @@ class BookmarksController @Inject() (
   def allCollections(sort: String) = AuthenticatedJsonAction { request =>
     Async {
       for {
-        numKeeps <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
-        collections <- SafeFuture { db.readOnly { implicit s => bookmarkRepo.getCountByUser(request.userId) } }
+        numKeeps <- SafeFuture { db.readOnly { implicit s => bookmarkRepo.getCountByUser(request.userId) } }
+        collections <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
       } yield {
         Ok(Json.obj(
           "keeps" -> numKeeps,
