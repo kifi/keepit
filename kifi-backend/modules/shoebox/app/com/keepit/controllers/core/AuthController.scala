@@ -110,6 +110,7 @@ class AuthController @Inject() (
     if (request.identityOpt.isDefined) {
       // User tried to log in (not sign up) with social network.
       // A user with this email address exists in the system, but it is not yet linked to this social identity.
+      // TODO: actually verify that a user with this email address exists in the database?!?
       Ok(views.html.auth.connectToAuthenticate(
         emailAddress = request.identityOpt.get.email.get,
         network = SocialNetworkType(request.identityOpt.get.identityId.providerId),
