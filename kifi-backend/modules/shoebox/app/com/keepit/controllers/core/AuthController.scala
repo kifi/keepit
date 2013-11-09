@@ -600,6 +600,35 @@ class AuthController @Inject() (
     }) getOrElse BadRequest("0")
   }
 
+  def createABunchOfUsers() = Action { implicit request =>
+    db.readWrite { implicit session =>
+      val users = userRepo.all()
+
+      users.map { user =>
+        scala.util.Try {
+          val hasLogin = socialRepo.getByUser(user.id.get).exists(_.networkType == SocialNetworks.FORTYTWO)
+          if (!hasLogin) {
+            val password = ExternalId().id
+            val pInfo = Registry.hashers.currentHasher.hash(password)
+
+            val allEmails = emailAddressRepo.getByUser(user.id.get)
+            val email = allEmails.find(_.state == EmailAddressStates.VERIFIED).getOrElse(allEmails.last)
+
+            val (newIdentity, userId) = saveUserPasswordIdentity(userIdOpt = None, identityOpt = None, email = email.address, passwordInfo = pInfo, isComplete = true, firstName = user.firstName, lastName = user.lastName)
+            Authenticator.create(newIdentity).fold(
+              error => Ok,
+              authenticator =>
+                Ok
+            )
+          }
+        }
+      }
+    }
+
+    Ok
+
+  }
+
 
   private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Set[EmailAddressHolder])] = {
     def emailToEmailHolder(em: EmailAddress) = new EmailAddressHolder {
