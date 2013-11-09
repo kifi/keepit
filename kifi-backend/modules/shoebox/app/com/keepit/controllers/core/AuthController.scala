@@ -614,12 +614,9 @@ class AuthController @Inject() (
             val allEmails = emailAddressRepo.getByUser(user.id.get)
             val email = allEmails.find(_.state == EmailAddressStates.VERIFIED).getOrElse(allEmails.last)
 
-            val (newIdentity, userId) = saveUserPasswordIdentity(userIdOpt = None, identityOpt = None, email = email.address, passwordInfo = pInfo, isComplete = true, firstName = user.firstName, lastName = user.lastName)
-            Authenticator.create(newIdentity).fold(
-              error => Ok,
-              authenticator =>
-                Ok
-            )
+            val (newIdentity, userId) = saveUserPasswordIdentity(userIdOpt = user.id, identityOpt = None, email = email.address, passwordInfo = pInfo, isComplete = true, firstName = user.firstName, lastName = user.lastName)
+
+
           }
         }
       }
