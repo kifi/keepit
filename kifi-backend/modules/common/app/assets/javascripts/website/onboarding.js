@@ -28,29 +28,10 @@ $(function() {
       if ($.trim(this.value) == ''){ this.value = (this.defaultValue ? this.defaultValue : ''); }
   });
 
-
-  /* checkbox */
-
-  $("body").on("click", ".agree_check", function(){
-    var fakeCheck = $(this).find('.check').toggleClass("checked"), realCheck = fakeCheck.find("input"), btn = $("#agree_btn");
-    if(fakeCheck.hasClass("checked")){
-      realCheck.attr("checked", "checked").trigger("change");
-      btn.slideDown(150);
-    } else {
-      realCheck.removeAttr("checked").trigger("change");
-      btn.slideUp(150);
-    }
-  });
-
-  $("#agree_btn").on("click", function() {
-    $("#agree_form").submit();
-  });
-
   $("#email_display").click(function() {
     $(this).hide();
     $("#email_input").show();
   });
-
 
   $("#change_email").on("click", function(){
     var $button = $(this);

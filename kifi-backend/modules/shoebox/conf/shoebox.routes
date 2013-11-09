@@ -119,8 +119,7 @@ POST    /invite                     @com.keepit.controllers.website.InviteContro
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], error_msg: Option[String], error_code: Option[Int])
 GET     /sign-up                    @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
-GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
-POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
+GET     /terms                      @com.keepit.controllers.website.OnboardingController.tos
 
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
