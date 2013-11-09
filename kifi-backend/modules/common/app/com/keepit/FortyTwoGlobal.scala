@@ -84,8 +84,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   }
   override def onBadRequest(request: RequestHeader, error: String): Result = {
     val errorId = ExternalId[Exception]()
-    val msg = "BAD REQUEST: %s: [%s] on %s:%s query: %s".format(errorId, error, request.method, request.path, request.queryString.mkString("::"))
+    val msg = s"BAD REQUEST: $errorId: [$error] on ${request.method}:${request.path} query: ${request.queryString.mkString("::")}"
     log.warn(msg)
+    if (mode == Mode.Test) {
+      throw new Exception(s"error [$msg] on $request")
+    }
     allowCrossOrigin(request, BadRequest(msg))
   }
 
