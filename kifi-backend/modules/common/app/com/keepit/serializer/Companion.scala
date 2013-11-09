@@ -9,8 +9,8 @@ trait Companion[T] {
   implicit def instanceToCompanion(instance: T): Companion[T] = this
 }
 
-trait TypeCode[+T] {
-  override def toString = super.toString.toLowerCase
+case class TypeCode[+T](code: String) {
+  override def toString = code
 }
 
 object TypeCode {

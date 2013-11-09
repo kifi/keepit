@@ -136,9 +136,8 @@ case class UserEvent(
 }
 
 object UserEvent extends Companion[UserEvent] {
-  case object User extends TypeCode[UserEvent]
   implicit val format = Json.format[UserEvent]
-  implicit val typeCode = User
+  implicit val typeCode = TypeCode("user")
 }
 
 case class SystemEvent(context: EventContext, eventType: EventType, time: DateTime = currentDateTime) extends HeimdalEvent {
@@ -146,7 +145,6 @@ case class SystemEvent(context: EventContext, eventType: EventType, time: DateTi
 }
 
 object SystemEvent extends Companion[SystemEvent] {
-  case object System extends TypeCode[SystemEvent]
   implicit val format = Json.format[SystemEvent]
-  implicit val typeCode = System
+  implicit val typeCode = TypeCode("system")
 }

@@ -41,9 +41,9 @@ case class ProdMongoModule() extends MongoModule {
   def systemEventLoggingRepo(airbrake: AirbrakeNotifier): SystemEventLoggingRepo = {
     val nodeA = current.configuration.getString("mongodb.heimdal.nodeA").get
     val nodeB = current.configuration.getString("mongodb.heimdal.nodeB").get
-    val systemname = current.configuration.getString("mongodb.heimdal.systemname").get
+    val username = current.configuration.getString("mongodb.heimdal.username").get
     val password = current.configuration.getString("mongodb.heimdal.password").get
-    val auth = Authenticate("heimdal", systemname, password)
+    val auth = Authenticate("heimdal", username, password)
     val driver = new MongoDriver
     val connection = driver.connection(List(nodeA), List(auth), 2, Some("SystemEventLoggingMongoActorSystem"))
     val db = connection("heimdal")
