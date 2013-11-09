@@ -60,9 +60,6 @@ class AuthController @Inject() (
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
-  private def newSignup()(implicit request: Request[_]) =
-    request.cookies.get("QA").isDefined || current.configuration.getBoolean("newSignup").getOrElse(false)
-
   def mobileAuth(providerName: String) = Action(parse.json) { implicit request =>
     // format { "accessToken": "..." }
     val oauth2Info = request.body.asOpt[OAuth2Info]
@@ -110,7 +107,7 @@ class AuthController @Inject() (
       }
     }
   }, unauthenticatedAction = { implicit request =>
-    if (newSignup && request.identityOpt.isDefined) {
+    if (request.identityOpt.isDefined) {
       // User tried to log in (not sign up) with social network.
       // A user with this email address exists in the system, but it is not yet linked to this social identity.
       Ok(views.html.auth.connectToAuthenticate(
