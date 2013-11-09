@@ -1,7 +1,7 @@
 
-GET     /curtain                    @com.keepit.controllers.website.HomeController.curtainHome()
 
-GET     /login                      securesocial.controllers.LoginPage.login
+GET     /login                      @com.keepit.controllers.core.AuthController.signinPage
+GET     /ss/login                   securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
 GET     /importContacts             @com.keepit.controllers.core.OAuth2Controller.importContacts(provider:Option[String])
@@ -10,8 +10,6 @@ GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controlle
 POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.accessTokenCallback(provider:String)
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
-GET     /signin                     @com.keepit.controllers.core.AuthController.signinPage()
-# TODO: /signin should move to /login
 
 POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
 POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
@@ -118,7 +116,6 @@ GET     /invite                     @com.keepit.controllers.website.InviteContro
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], error_msg: Option[String], error_code: Option[Int])
-GET     /sign-up                    @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
 GET     /terms                      @com.keepit.controllers.website.OnboardingController.tos
 
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback

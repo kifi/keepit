@@ -7,7 +7,9 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
 import com.keepit.search.{TestSearchServiceClientModule, Lang}
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
+import com.keepit.common.controller._
 
+import play.api.Play
 import play.api.libs.json.{Json, JsNumber, JsArray}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -21,8 +23,6 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 
-
-
 class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
 
   val shoeboxControllerTestModules = Seq(
@@ -33,7 +33,8 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     TestSearchServiceClientModule(),
-    FakeAirbrakeModule()
+    FakeAirbrakeModule(),
+    AuthHelperModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {
@@ -47,7 +48,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
       val friends = List(user1933,user1935,user1927,user1921)
 
       friends.foreach {friend => userConnRepo.save(UserConnection(user1=user1965.id.get,user2=friend.id.get))}
-      (user1965,friends)
+      (user1965, friends)
     }
   }
 
@@ -69,7 +70,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
 
     "return users from the database" in {
         running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
-          val (user1965,friends) = setupSomeUsers()
+          val (user1965, friends) = setupSomeUsers()
           val users = user1965::friends
           val shoeboxController = inject[ShoeboxController]
           val query = users.map(_.id.get).mkString(",")
@@ -82,7 +83,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
 
     "return basic users from the database" in {
       running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
-        val (user1965,friends) = setupSomeUsers()
+        val (user1965, friends) = setupSomeUsers()
         val users = user1965::friends
         val basicUserRepo = inject[BasicUserRepo]
         val basicUsersJson = inject[Database].readOnly { implicit s =>
@@ -102,7 +103,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
 
     "return connected users' ids from the database" in {
       running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
-        val (user1965,friends) = setupSomeUsers()
+        val (user1965, friends) = setupSomeUsers()
         val shoeboxController = inject[ShoeboxController]
         val result = shoeboxController.getConnectedUsers(user1965.id.get)(FakeRequest())
         status(result) must equalTo(OK);
@@ -114,6 +115,8 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     "return phrases changed from the database" in {
       running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
         setupSomePhrases()
+        val route = com.keepit.controllers.shoebox.routes.ShoeboxController.getPhrasesChanged(4, 2).toString
+        route === "/internal/shoebox/database/getPhrasesChanged?seqNum=4&fetchSize=2"
         val shoeboxController = inject[ShoeboxController]
         val result = shoeboxController.getPhrasesChanged(4 ,2)(FakeRequest())
         status(result) must equalTo(OK);

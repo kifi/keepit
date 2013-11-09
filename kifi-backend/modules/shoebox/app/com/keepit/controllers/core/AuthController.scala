@@ -60,9 +60,6 @@ class AuthController @Inject() (
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
-  private def newSignup()(implicit request: Request[_]) =
-    request.cookies.get("QA").isDefined || current.configuration.getBoolean("newSignup").getOrElse(false)
-
   def mobileAuth(providerName: String) = Action(parse.json) { implicit request =>
     // format { "accessToken": "..." }
     val oauth2Info = request.body.asOpt[OAuth2Info]
@@ -110,7 +107,7 @@ class AuthController @Inject() (
       }
     }
   }, unauthenticatedAction = { implicit request =>
-    if (newSignup && request.identityOpt.isDefined) {
+    if (request.identityOpt.isDefined) {
       // User tried to log in (not sign up) with social network.
       // A user with this email address exists in the system, but it is not yet linked to this social identity.
       // TODO: actually verify that a user with this email address exists in the database?!?
@@ -426,16 +423,18 @@ class AuthController @Inject() (
 
   private def finishSignup(newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
     if (!emailConfirmedAlready) {
+      // todo: Move to user controller/commander
       db.readWrite { implicit s =>
         val emailAddrStr = newIdentity.email.get
         val emailAddr = emailAddressRepo.save(
           emailAddressRepo.getByAddressOpt(emailAddrStr).get.withVerificationCode(clock.now))
+        val verifyUrl = s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+
         postOffice.sendMail(ElectronicMail(
           from = EmailAddresses.NOTIFICATIONS,
           to = Seq(GenericEmailAddress(emailAddrStr)),
-          subject = "Confirm your email address for Kifi",
-          htmlBody = "Please confirm your email address by going to " +
-            s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}",
+          subject = "Kifi.com |  Please confirm your email address",
+          htmlBody = views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body,
           category = ElectronicMailCategory("email_confirmation")
         ))
       }
@@ -445,7 +444,7 @@ class AuthController @Inject() (
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
-      authenticator => Ok(Json.obj("uri" -> uri)).withNewSession.withCookies(authenticator.toCookie)
+      authenticator => Ok(Json.obj("uri" -> uri)).withNewSession.withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
     )
   }
 
@@ -536,13 +535,13 @@ class AuthController @Inject() (
             db.readWrite { implicit session =>
               emailAddresses.map { resetEmailAddress =>
                 val reset = passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
+                val resetUrl = s"$url${routes.AuthController.setPasswordPage(reset.token)}"
                 emailAddresses.foreach { emailAddress =>
                   postOffice.sendMail(ElectronicMail(
                     from = EmailAddresses.NOTIFICATIONS,
                     to = Seq(resetEmailAddress),
-                    subject = "Reset your Kifi password",
-                    htmlBody = "You can set a new Kifi password by going to " +
-                      s"$url${routes.AuthController.setPasswordPage(reset.token)}",
+                    subject = "Kifi.com | Password reset requested",
+                    htmlBody = views.html.email.resetPassword(resetUrl).body,
                     category = ElectronicMailCategory("reset_password")
                   ))
                 }

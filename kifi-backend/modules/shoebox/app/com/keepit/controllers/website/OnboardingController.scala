@@ -16,8 +16,4 @@ class OnboardingController @Inject() (
   def tos = Action { implicit request =>
     Ok(views.html.website.termsOfService())
   }
-
-  def signup(inviteId: String = "") = Action { implicit request =>
-    Redirect("/login")
-  }
 }
