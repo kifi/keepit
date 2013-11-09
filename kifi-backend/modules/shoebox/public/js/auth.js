@@ -600,12 +600,14 @@ kifi.form = (function () {
       var email = kifi.form.validateEmailAddress($email);
       if (email) {
         promise = $.postJson(this.action, {email: email})
-        .done(function (resp) {
-          if (resp.error === 'no_account') {
+        .done(function () {
+          $dialog.addClass('reset-password-sent');
+          setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 100);
+        })
+        .fail(function (xhr) {
+          var o = xhr.responseJSON;
+          if (o && o.error === 'no_account') {
             kifi.form.showError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
-          } else {
-            $dialog.addClass('reset-password-sent');
-            setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 100);
           }
         })
         .always(function () {
