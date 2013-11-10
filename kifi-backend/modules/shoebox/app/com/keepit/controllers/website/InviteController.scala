@@ -42,42 +42,12 @@ class InviteController @Inject() (db: Database,
   heimdal: HeimdalServiceClient)
     extends WebsiteController(actionAuthenticator) {
 
-  private def newSignup()(implicit request: Request[_]) =
-    request.cookies.get("QA").isDefined || current.configuration.getBoolean("newSignup").getOrElse(false)
-
   private def createBasicUserInvitation(socialUser: SocialUserInfo, state: State[Invitation]): BasicUserInvitation = {
     BasicUserInvitation(name = socialUser.fullName, picture = socialUser.getPictureUrl(75, 75), state = state)
   }
 
   def invite = AuthenticatedHtmlAction { implicit request =>
-    if(userCanInvite(request.experiments)) {
-      val friendsOnKifi = db.readOnly { implicit session =>
-        userConnectionRepo.getConnectedUsers(request.user.id.get) flatMap { u =>
-          val user = userRepo.get(u)
-          if(user.state == UserStates.ACTIVE) Some(user.externalId)
-          else None
-        }
-      }
-
-      val (invites, invitesLeft, invitesSent, invitesAccepted) = db.readOnly { implicit session =>
-        val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
-        val currentInvitations = invitationRepo.getByUser(request.user.id.get).map{ s =>
-          val socialUser = socialUserRepo.get(s.recipientSocialUserId)
-          Some(createBasicUserInvitation(socialUser, s.state))
-        }
-        val left = totalAllowedInvites - currentInvitations.length
-        val sent = currentInvitations.length
-        val accepted = currentInvitations.count( s => if(s.isDefined && s.get.state == InvitationStates.JOINED) true else false)
-        val invites = currentInvitations ++ Seq.fill(left)(None)
-
-        (invites, left, sent, accepted)
-      }
-
-      Ok(views.html.website.inviteFriends(request.user, friendsOnKifi, invites, invitesLeft, invitesSent, invitesAccepted))
-    }
-    else {
-      Redirect(routes.HomeController.home())
-    }
+    Redirect("/friends/invite") // Can't use reverse routes because we need to send to this URL exactly
   }
 
   private def CloseWindow() = Ok(Html("<script>window.close()</script>"))

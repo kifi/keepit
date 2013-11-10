@@ -2,12 +2,10 @@
 
 @styles = {
 <style>
-body {
-  text-align: center;
-}
 section {
+  width: 96%;
   margin: 0 auto;
-  width: 64%;
+  text-align: center;
 }
 .login {
   display: block;
@@ -39,8 +37,6 @@ section {
 @import com.keepit.controllers.core.routes.{AuthController => routes}
 
 @content = {
-<div class="curtain-l"></div>
-<div class="curtain-r"></div>
 <a class="curtain-back" href="javascript:" tabindex="1" data-cancel-uri="@routes.cancelAuth">Cancel</a> @* TODO: Handle Cancel click properly *@
 
 <h1 class="main-logo">kifi</h1>

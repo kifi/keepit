@@ -46,9 +46,6 @@ class HomeController @Inject() (
     db.readWrite { implicit s => userValueRepo.setValue(request.userId, "has_seen_install", true.toString) }
   }
 
-  private def newSignup()(implicit request: Request[_]) =
-    request.cookies.get("QA").isDefined || current.configuration.getBoolean("newSignup").getOrElse(false)
-
   def version = Action {
     Ok(fortyTwoServices.currentVersion.toString)
   }
@@ -68,18 +65,14 @@ class HomeController @Inject() (
       Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
   }, unauthenticatedAction = { implicit request =>
-    if (newSignup && request.identityOpt.isDefined) {
+    if (request.identityOpt.isDefined) {
       // User needs to sign up or (social) finalize
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else {
       // Non-user landing page
-      Ok(views.html.website.welcome(msg = request.flash.get("error")))
+      Ok(views.html.auth.auth())
     }
   })
-
-  def curtainHome = Action {
-    Ok(views.html.auth.auth()).withCookies(Cookie("QA", "1"))
-  }
 
   def kifiSiteRedirect(path: String) = Action {
     MovedPermanently(s"/$path")
@@ -102,49 +95,37 @@ class HomeController @Inject() (
 
       (email, friendsOnKifi)
     }
-    if (newSignup) {
-      Ok(views.html.website.onboarding.userRequestReceived2(
-        user = user,
-        email = email,
-        justVerified = request.queryString.get("m").map(_.headOption == Some("1")).getOrElse(false),
-        friendsOnKifi = friendsOnKifi))
-    } else {
-      Ok(views.html.website.onboarding.userRequestReceived(user, email, friendsOnKifi))
-    }
+    Ok(views.html.website.onboarding.userRequestReceived2(
+      user = user,
+      email = email,
+      justVerified = request.queryString.get("m").map(_.headOption == Some("1")).getOrElse(false),
+      friendsOnKifi = friendsOnKifi)).discardingCookies(DiscardingCookie("inv"))
   }
 
   def install = AuthenticatedHtmlAction { implicit request =>
     db.readWrite { implicit session =>
       socialUserRepo.getByUser(request.user.id.get) map { su =>
-        invitationRepo.getByRecipient(su.id.get) match {
-          case Some(invite) =>
-            if (invite.state != InvitationStates.JOINED) {
-              invitationRepo.save(invite.withState(InvitationStates.JOINED))
-              invite.senderUserId match {
-                case Some(senderUserId) =>
-                  for (address <- emailAddressRepo.getByUser(senderUserId)) {
-                    postOffice.sendMail(ElectronicMail(
-                      senderUserId = None,
-                      from = EmailAddresses.CONGRATS,
-                      fromName = Some("KiFi Team"),
-                      to = List(address),
-                      subject = s"${request.user.firstName} ${request.user.lastName} joined KiFi!",
-                      htmlBody = views.html.email.invitationFriendJoined(request.user).body,
-                      category = PostOffice.Categories.INVITATION))
-                  }
-                case None =>
+        invitationRepo.getByRecipient(su.id.get).map { invite =>
+          if (invite.state != InvitationStates.JOINED) {
+            invitationRepo.save(invite.withState(InvitationStates.JOINED))
+            invite.senderUserId.map { senderUserId =>
+              for (address <- emailAddressRepo.getByUser(senderUserId)) {
+                postOffice.sendMail(ElectronicMail(
+                  senderUserId = None,
+                  from = EmailAddresses.CONGRATS,
+                  fromName = Some("KiFi Team"),
+                  to = List(address),
+                  subject = s"${request.user.firstName} ${request.user.lastName} joined KiFi!",
+                  htmlBody = views.html.email.invitationFriendJoined(request.user).body,
+                  category = PostOffice.Categories.INVITATION))
               }
             }
-          case None =>
+          }
         }
       }
     }
     setHasSeenInstall()
-    if (newSignup) {
-      Ok(views.html.website.install2(request.user))
-    } else {
-      Ok(views.html.website.install(request.user))
-    }
+    Ok(views.html.website.install2(request.user))
   }
 
   def disconnect(networkString: String) = AuthenticatedHtmlAction { implicit request =>
@@ -170,10 +151,6 @@ class HomeController @Inject() (
   }
 
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
-    if (newSignup) {
-      Ok(views.html.website.gettingStarted2(request.user))
-    } else {
-      Ok(views.html.website.gettingStarted(request.user))
-    }
+    Ok(views.html.website.gettingStarted2(request.user))
   }
 }

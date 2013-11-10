@@ -24,17 +24,26 @@ class InviteCommander @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   clock: Clock) {
 
-  def getOrCreatePendingInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
+  def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
     db.readOnly { implicit s =>
+      val userSocialAccounts = socialUserRepo.getByUser(userId)
       val cookieInvite = invId.map { inviteExtId =>
         val invite = invitationRepo.get(inviteExtId)
+        val invitedSocial = userSocialAccounts.find(_.id.get == invite.recipientSocialUserId)
+        val detectedInvite = if (invitedSocial.isEmpty && userSocialAccounts.nonEmpty) {
+          // User signed up using a different social account than what we know about.
+          invite.copy(recipientSocialUserId = userSocialAccounts.head.id.get)
+        } else {
+          invite
+        }
         // todo: When invite.recipientSocialUserId is an Option, check here if it's set. If not, set it on the invite record.
-        socialUserRepo.get(invite.recipientSocialUserId) -> invite
+        socialUserRepo.get(invite.recipientSocialUserId) -> detectedInvite
       }
 
-      val userSocialAccounts = socialUserRepo.getByUser(userId)
       val existingInvites = userSocialAccounts.map { su =>
-        invitationRepo.getByRecipient(su.id.get).map { inv => su -> inv }
+        invitationRepo.getByRecipient(su.id.get).map { inv =>
+          su -> inv
+        }
       }.flatten.toSet.++(cookieInvite)
 
       if (existingInvites.isEmpty) {
@@ -53,22 +62,15 @@ class InviteCommander @Inject() (
   }
 
   def markPendingInvitesAsAccepted(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
-    val anyPendingInvites = getOrCreatePendingInvitesForUser(userId, invId)
+    val anyPendingInvites = getOrCreateInvitesForUser(userId, invId).filter { case (_, in) =>
+      Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(in.state)
+    }
     db.readWrite { implicit s =>
       for ((su, invite) <- anyPendingInvites) {
         connectInvitedUsers(userId, invite)
-        invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-        if (invite.state == InvitationStates.ACTIVE) {
+        if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
+          invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
           notifyAdminsAboutNewSignupRequest(userId, su.fullName)
-        }
-      }
-      invId.map { extId =>
-        val invite = invitationRepo.get(extId)
-        connectInvitedUsers(userId, invite)
-        invitationRepo.save(invite.withState(InvitationStates.ACCEPTED))
-        if (invite.state == InvitationStates.ACTIVE) {
-          val user = userRepo.get(userId)
-          notifyAdminsAboutNewSignupRequest(userId, s"${user.firstName} ${user.lastName}")
         }
       }
       socialConnectionRepo
@@ -83,7 +85,12 @@ class InviteCommander @Inject() (
         su1 <- newFortyTwoSocialUser
         su2 <- inviterFortyTwoSocialUser
       } yield {
-        socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get))
+        socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
+          case Some(sc) =>
+            socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
+          case None =>
+            socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
+        }
       }
       userConnectionRepo.addConnections(userId, Set(senderUserId), requested = true)
     }
