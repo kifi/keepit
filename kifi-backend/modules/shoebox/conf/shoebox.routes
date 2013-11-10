@@ -355,7 +355,6 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 
 GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
 
-POST    /internal/createABunchOfUsers                 @com.keepit.controllers.core.AuthController.createABunchOfUsers()
 
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
