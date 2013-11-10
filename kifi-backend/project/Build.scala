@@ -165,31 +165,31 @@ object ApplicationBuild extends Build {
 
     lazy val sqldb = play.Project("sqldb", appVersion, sqldbDependencies, path = file("modules/sqldb")).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    ).dependsOn(common % "compile->compile").aggregate(common)
 
     val shoebox = play.Project("shoebox", appVersion, shoeboxDependencies, path = file("modules/shoebox")).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
+    ).dependsOn(common % "compile->compile", sqldb % "compile->compile").aggregate(common, sqldb)
 
     val search = play.Project("search", appVersion, searchDependencies, path = file("modules/search")).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    ).dependsOn(common % "compile->compile").aggregate(common)
 
     val eliza = play.Project("eliza", appVersion, Nil, path = file("modules/eliza")).settings(
       (commonSettings ++ (routesImport += "com.keepit.eliza._")) : _*
-    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
+    ).dependsOn(common % "compile->compile", sqldb % "compile->compile").aggregate(common, sqldb)
 
     val heimdal = play.Project("heimdal", appVersion, heimdalDependencies, path=file("modules/heimdal")).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    ).dependsOn(common % "compile->compile").aggregate(common)
 
     val abook = play.Project("abook", appVersion, abookDependencies, path=file("modules/abook")).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
+    ).dependsOn(common % "compile->compile", sqldb % "compile->compile").aggregate(common, sqldb)
 
     val scraper = play.Project("scraper", appVersion, scraperDependencies, path=file("modules/scraper")).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    ).dependsOn(common % "compile->compile").aggregate(common)
 
     val aaaMain = play.Project(appName, appVersion).settings(
       commonSettings: _*
