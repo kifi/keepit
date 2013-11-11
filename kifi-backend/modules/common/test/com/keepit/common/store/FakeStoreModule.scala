@@ -18,9 +18,6 @@ trait FakeStoreModule extends StoreModule {
   }
 
   @Provides @Singleton
-  def fakeMongoStore() : MongoEventStore = new FakeMongoS3EventStore()
-
-  @Provides @Singleton
   def articleSearchResultStore(): ArticleSearchResultStore = new InMemoryArticleSearchResultStoreImpl()
 
 }
