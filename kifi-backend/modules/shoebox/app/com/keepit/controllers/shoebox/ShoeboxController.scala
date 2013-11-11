@@ -380,14 +380,6 @@ class ShoeboxController @Inject() (
     Ok(JsArray(ids))
   }
 
-  def getSocialFriendsOnKifi(id: Id[User]) = Action { request =>
-    val socialFriends = db.readOnly{ implicit s =>
-      socialConnectionRepo.getUserConnections(id)
-    }
-    val ids = socialFriends.filter(_.userId.isDefined).sortBy(_.fullName).flatMap(_.userId).distinct
-    Ok(JsArray(ids.map{x => JsNumber(x.id)}))
-  }
-
   def getActiveExperiments = Action { request =>
     val exp = db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }
     Ok(Json.toJson(exp))

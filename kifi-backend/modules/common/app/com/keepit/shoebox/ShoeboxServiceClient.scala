@@ -86,7 +86,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
-  def getSocialFriendsOnKifi(userId: Id[User]): Future[Set[Id[User]]]
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
   def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
@@ -305,12 +304,6 @@ class ShoeboxServiceClientImpl @Inject() (
         call(Shoebox.internal.getConnectedUsers(userId)).map {r =>
           r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
         }
-    }
-  }
-
-  def getSocialFriendsOnKifi(userId: Id[User]): Future[Set[Id[User]]] = {
-    call(Shoebox.internal.getSocialFriendsOnKifi(userId)).map{ r =>
-      r.json.as[JsArray].value.map{jsv => Id[User](jsv.as[Long])}.toSet
     }
   }
 

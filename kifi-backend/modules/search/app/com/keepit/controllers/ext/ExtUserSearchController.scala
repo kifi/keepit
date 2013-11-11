@@ -8,12 +8,13 @@ import com.keepit.model.User
 import com.keepit.search.MainSearcherFactory
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.user._
-
 import play.api.libs.json.Json
+import com.keepit.shoebox.ShoeboxServiceClient
 
 class ExtUserSearchController @Inject()(
   searcherFactory: MainSearcherFactory,
   filterFactory: UserSearchFilterFactory,
+  shoeboxClient: ShoeboxServiceClient,
   actionAuthenticator: ActionAuthenticator
 ) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
@@ -21,7 +22,6 @@ class ExtUserSearchController @Inject()(
     filter match {
       case Some("f") if userId.isDefined => filterFactory.friendsOnly(userId.get, context)
       case Some("non-f") if userId.isDefined => filterFactory.nonFriendsOnly(userId.get, context)
-      case Some("non_social_f") if userId.isDefined => filterFactory.nonKifiNonSocialOnly(userId.get, context)
       case _ => filterFactory.default(context)
     }
   }
