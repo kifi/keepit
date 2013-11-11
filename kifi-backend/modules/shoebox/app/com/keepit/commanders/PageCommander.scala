@@ -14,6 +14,7 @@ import com.keepit.model._
 import com.keepit.normalizer.NormalizationService
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
+import com.keepit.common.logging.Logging
 
 import play.api.Play.current
 import play.api.libs.functional.syntax._
@@ -34,7 +35,7 @@ class PageCommander @Inject() (
     domainClassifier: DomainClassifier,
     basicUserRepo: BasicUserRepo,
     historyTracker: SliderHistoryTracker,
-    searchClient: SearchServiceClient) {
+    searchClient: SearchServiceClient) extends Logging {
 
   def getPageDetails(url: String, userId: Id[User], experiments: Set[ExperimentType]): KeeperInfo = {
 
@@ -51,6 +52,7 @@ class PageCommander @Inject() (
           collectionRepo.get(collId)
         }
       }.getOrElse(Seq())
+      log.info(s"loading info for url $url of user $userId, found nuri $nUri ($nUriStr) bookmark $bookmark with tags: $tags")
 
       val host: Option[String] = URI.parse(nUriStr).get.host.map(_.name)
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))

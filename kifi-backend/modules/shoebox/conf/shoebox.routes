@@ -93,6 +93,7 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 ##########################################
 GET     /m/1/user/friends           @com.keepit.controllers.mobile.MobileUserController.getFriends()
 GET     /m/1/user/networks          @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
+POST    /m/1/page/details           @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 
 ##########################################
 # Website

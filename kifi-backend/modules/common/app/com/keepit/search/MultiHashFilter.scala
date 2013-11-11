@@ -6,7 +6,12 @@ import play.api.Play.current
 
 object MultiHashFilter {
   def apply[T](tableSize: Int, numHashFuncs: Int, minHits: Int) = {
-    val filter = new Array[Byte](tableSize)
+    val filter: Array[Byte] = try {
+        new Array[Byte](tableSize)
+      } catch {
+        case e: NegativeArraySizeException =>
+          throw new Exception(s"with table size $tableSize", e)
+      }
     new MultiHashFilter[T](tableSize, filter, numHashFuncs, minHits)
   }
 
