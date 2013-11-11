@@ -24,18 +24,18 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
-import com.keepit.serializer.Companion
+import com.keepit.serializer.TypeCode
 
 trait HeimdalServiceClient extends ServiceClient with Plugin {
   final val serviceType = ServiceType.HEIMDAL
 
   def trackEvent(event: HeimdalEvent): Unit
 
-  def getMetricData[E <: HeimdalEvent: Companion](name: String): Future[JsObject]
+  def getMetricData[E <: HeimdalEvent: TypeCode](name: String): Future[JsObject]
 
   def updateMetrics(): Unit
 
-  def getRawEvents[E <: HeimdalEvent: Companion](limit: Int, events: EventType*): Future[JsArray]
+  def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray]
 }
 
 object FlushEventQueue
@@ -142,8 +142,8 @@ class HeimdalServiceClientImpl @Inject() (
     EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventAddTime, "post to actor")
   }
 
-  def getMetricData[E <: HeimdalEvent: Companion](name: String): Future[JsObject] = {
-    call(Heimdal.internal.getMetricData(implicitly[Companion[E]].typeCode.toString, name)).map{ response =>
+  def getMetricData[E <: HeimdalEvent: TypeCode](name: String): Future[JsObject] = {
+    call(Heimdal.internal.getMetricData(implicitly[TypeCode[E]].code, name)).map{ response =>
       Json.parse(response.body).as[JsObject]
     }
   }
@@ -152,9 +152,9 @@ class HeimdalServiceClientImpl @Inject() (
     broadcast(Heimdal.internal.updateMetrics())
   }
 
-  def getRawEvents[E <: HeimdalEvent: Companion](limit: Int, events: EventType*): Future[JsArray] = {
+  def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray] = {
     val eventNames = if (events.isEmpty) Seq("all") else events.map(_.name)
-    call(Heimdal.internal.getRawEvents(implicitly[Companion[E]].typeCode.toString, eventNames, limit)).map { response =>
+    call(Heimdal.internal.getRawEvents(implicitly[TypeCode[E]].code, eventNames, limit)).map { response =>
       Json.parse(response.body).as[JsArray]
     }
   }
