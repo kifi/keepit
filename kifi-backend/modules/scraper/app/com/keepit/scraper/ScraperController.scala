@@ -17,18 +17,8 @@ import com.keepit.common.store.S3ScreenshotStore
 class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
   actionAuthenticator:ActionAuthenticator,
-  httpFetcher: HttpFetcher,
-  extractorFactory: ExtractorFactory,
-  scraperConfig: ScraperConfig,
-  articleStore: ArticleStore,
-  s3ScreenshotStore: S3ScreenshotStore,
-  shoeboxServiceClient: ShoeboxServiceClient,
   scrapeProcessor: ScrapeProcessorPlugin
 ) extends WebsiteController(actionAuthenticator) with ScraperServiceController with Logging {
-
-  implicit val config = scraperConfig
-
-  // TODO: polling/queue
 
   def getBasicArticle(url:String) = Action { request =>
     val resF = scrapeProcessor.fetchBasicArticle(url)
