@@ -175,7 +175,7 @@ class AuthController @Inject() (
   private case class EmailPassword(email: String, password: String)
 
   // TODO: something different if already logged in?
-  def signinPage() = HtmlAction(allowPending = true)(authenticatedAction = doLoginPage(_), unauthenticatedAction = doLoginPage(_))
+  def loginPage() = HtmlAction(allowPending = true)(authenticatedAction = doLoginPage(_), unauthenticatedAction = doLoginPage(_))
 
   // Finalize account
   def signupPage() = HtmlAction(allowPending = true)(authenticatedAction = doSignupPage(_), unauthenticatedAction = doSignupPage(_))
@@ -398,14 +398,12 @@ class AuthController @Inject() (
   )
   def doSocialFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
     socialFinalizeAccountForm.bindFromRequest.fold(
-    formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
-    {
-      case SocialFinalizeInfo(emailAddress, firstName, lastName, password, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
-
-        val pinfo = Registry.hashers.currentHasher.hash(password)
+      formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
+      { case SocialFinalizeInfo(emailAddress, firstName, lastName, password, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
+        val pInfo = Registry.hashers.currentHasher.hash(password)
 
         val (emailPassIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt,
-          email = emailAddress, passwordInfo = pinfo, firstName = firstName, lastName = lastName, isComplete = true)
+          email = emailAddress, passwordInfo = pInfo, firstName = firstName, lastName = lastName, isComplete = true)
 
         val user = db.readOnly { implicit session =>
           userRepo.get(userId)
@@ -421,7 +419,7 @@ class AuthController @Inject() (
         val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == emailAddress.trim)
 
         finishSignup(emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
-    })
+      })
   }
 
   private def finishSignup(newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
@@ -523,7 +521,7 @@ class AuthController @Inject() (
     }
   }
   def requireLoginToVerifyEmail(code: String)(implicit request: Request[_]): Result = {
-    Redirect(routes.AuthController.signinPage())
+    Redirect(routes.AuthController.loginPage())
       .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
 
