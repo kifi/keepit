@@ -404,8 +404,6 @@ class AuthController @Inject() (
 
         val pinfo = Registry.hashers.currentHasher.hash(password)
 
-        if(1==1) ""
-
         val (emailPassIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt,
           email = emailAddress, passwordInfo = pinfo, firstName = firstName, lastName = lastName, isComplete = true)
 
