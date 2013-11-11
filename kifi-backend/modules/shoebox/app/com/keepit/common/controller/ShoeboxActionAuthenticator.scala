@@ -1,6 +1,5 @@
 package com.keepit.common.controller
 
-
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.FortyTwoCookies.{KifiInstallationCookie, ImpersonateCookie}
 import com.keepit.common.db.slick.DBSession.RSession

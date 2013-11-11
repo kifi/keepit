@@ -26,14 +26,13 @@ object BasicSocialUser {
     BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
 }
 
-
 class UserCommander @Inject() (
   db: Database,
   userRepo: UserRepo,
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
   userExperimentRepo: UserExperimentRepo,
-  socialUserRepo: SocialUserInfoRepo) {
+  socialUserInfoRepo: SocialUserInfoRepo) {
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
     val basicUsers = db.readOnly { implicit s =>
@@ -64,6 +63,6 @@ class UserCommander @Inject() (
   }
 
   def socialNetworkInfo(userId: Id[User]) = db.readOnly { implicit s =>
-    socialUserRepo.getByUser(userId).map(BasicSocialUser from _)
+    socialUserInfoRepo.getByUser(userId).map(BasicSocialUser from _)
   }
 }

@@ -152,11 +152,11 @@ object ApplicationBuild extends Build {
       templatesImport ++= _templatesImport,
 
       javaOptions in test ++= javaTestOptions,
-      Keys.fork in Test := true,
       parallelExecution in Test := false,
       testOptions in Test ++= _testOptions,
       EclipseKeys.skipParents in ThisBuild := false,
-      sources in doc in Compile := List()
+      sources in doc in Compile := List(),
+      Keys.fork := false
     )
 
     lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(

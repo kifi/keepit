@@ -1,7 +1,7 @@
 
-GET     /curtain                    @com.keepit.controllers.website.HomeController.curtainHome()
 
-GET     /login                      securesocial.controllers.LoginPage.login
+GET     /login                      @com.keepit.controllers.core.AuthController.signinPage
+GET     /ss/login                   securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
 GET     /importContacts             @com.keepit.controllers.core.OAuth2Controller.importContacts(provider:Option[String])
@@ -9,9 +9,7 @@ GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controlle
 GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
 POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.accessTokenCallback(provider:String)
 
-# Relevant when we support traditional user signups:
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
-GET     /signin                     @com.keepit.controllers.core.AuthController.signinPage()
 
 POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
 POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
@@ -26,23 +24,15 @@ POST    /authenticate/:provider     securesocial.controllers.ProviderController.
 
 # custom auth routes which set some session state
 
-# Standalone login page
 GET     /login/after                @com.keepit.controllers.core.AuthController.afterLogin()
-GET     /login/:provider            @com.keepit.controllers.core.AuthController.login(provider, format: String ?= "html")
-POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider, format: String ?= "html")
-POST    /login                      @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
-POST    /auth/log-in                @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
+GET     /login/:provider            @com.keepit.controllers.core.AuthController.loginSocial(provider)
+POST    /auth/log-in                @com.keepit.controllers.core.AuthController.loginWithUserPass(link: String ?= "")
 
 GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
 GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
-POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
 
-# Initial signup using provider pages
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
-POST    /signup/:provider           @com.keepit.controllers.core.AuthController.signupByPost(provider)
-
-POST    /loginAndLink/:provider     @com.keepit.controllers.core.AuthController.passwordLoginAndLink(provider)
 
 POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
 
@@ -103,6 +93,7 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 ##########################################
 GET     /m/1/user/friends           @com.keepit.controllers.mobile.MobileUserController.getFriends()
 GET     /m/1/user/networks          @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
+POST    /m/1/page/details           @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 
 ##########################################
 # Website
@@ -126,9 +117,7 @@ GET     /invite                     @com.keepit.controllers.website.InviteContro
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], error_msg: Option[String], error_code: Option[Int])
-GET     /sign-up                    @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
-GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
-POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
+GET     /terms                      @com.keepit.controllers.website.OnboardingController.tos
 
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
@@ -358,6 +347,7 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 ##########################################
 
 GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
+
 
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)

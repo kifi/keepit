@@ -1,8 +1,8 @@
-@(view: String = "")
+@(view: String = "", emailAddress: String = "", firstName: String = "", lastName: String = "", picturePath: String = "")
 
 @import com.keepit.controllers.core.routes.{AuthController => routes}
 
-@content = {
+@curtains = {
 <div class="curtain-l">
   <div class="curtain-logo-l"></div>
   <a class="curtain-action curtain-signup" href="javascript:">
@@ -24,11 +24,16 @@
   <span class="curtain-welcome-l">Welcome to our</span>
   <span class="curtain-welcome-r">private beta</span>
 </h2>
-<a class="curtain-back" href="javascript:" tabindex="1">Back</a>
+<a class="curtain-back" href="javascript:" tabindex="1" data-cancel-uri="@routes.cancelAuth">
+  <span class="curtain-back-1">Back</span>
+  <span class="curtain-back-2">Cancel</span>
+</a>
+}
 
+@content = {
 <h1 class="main-logo">kifi</h1>
 
-<div class="signup"@if(view == "signup") { style="display:block"}>
+<div class="signup"@if(view == "signup" || view == "signup2Email" || view == "signup2Social") { style="display:block"}>
   <form class="signup-1" data-title="Sign up" data-uri="@routes.userPasswordSignup()" novalidate>
     <div class="form-sides">
       <div class="form-l">
@@ -52,23 +57,72 @@
       </div>
     </div>
   </form>
-
-  @helper.emailSignupForm2()
-
   <p class="terms">
-    By signing up, you agree to Kifi’s <a target="_blank" href="">Terms of Service</a>.
+    By signing up, you agree to Kifi’s <a target="_blank" href="@com.keepit.controllers.website.routes.OnboardingController.tos">Terms of Service</a>.
   </p>
+
+  <form class="signup-2 signup-2-email" data-title="Finalize your account" data-uri="@routes.userPassFinalizeAccountAction()" novalidate@if(view == "signup2Email") { style="display:block"}>
+    @if(view == "signup2Email") {
+      <div class="signup-resume">
+        <div class="signup-2-label">Welcome back</div>
+        <div class="signup-resume-email">@emailAddress</div>
+        <a class="signup-resume-not-you" href="@securesocial.controllers.routes.LoginPage.logout()">Not you?</a>
+      </div>
+    }
+    <div class="form-name">
+      <label class="signup-2-label">Your name</label>
+      <input class="form-first-name" type="text" name="first-name" placeholder="First" value="@firstName" required>
+      <input class="form-last-name" type="text" name="last-name" placeholder="Last" value="@lastName" required>
+    </div>
+    <div class="form-pic">
+      <label class="signup-2-label">Your photo</label>
+      <div class="form-photo-box">
+        <div class="form-photo unset" data-uri="@routes.uploadBinaryPicture()" data-form-uri="@routes.uploadFormEncodedPicture()"><div class="form-photo-progress"></div></div>
+        <div class="form-photo-grab">Grab photo from</div>
+        <a class="form-photo-a facebook" href="javascript:" data-uri="@routes.popupBeforeLinkSocial("facebook")"></a>
+        <a class="form-photo-a linkedin" href="javascript:" data-uri="@routes.popupBeforeLinkSocial("linkedin")"></a>
+        <div class="form-photo-drop">Drop photo here</div>
+      </div>
+      <div class="form-photo-upload">
+        Or
+        <label>
+          <a class="form-photo-file-a" href="javascript:">upload from your computer</a>
+          <input class="form-photo-file" type="file" name="photo">
+        </label>
+      </div>
+    </div>
+    <button class="form-submit alt-button">Sign me up</button>
+  </form>
+
+  <form class="signup-2 signup-2-social" novalidate data-first="@firstName" data-last="@lastName" data-uri="@routes.socialFinalizeAccountAction()" novalidate@if(view == "signup2Social") { style="display:block"}>
+    <div class="social-info">
+      <div class="social-photo form-photo"@if(picturePath != ""){ style="background-image:url(@picturePath)"}></div>
+      <div class="social-text-info">
+        <div class="social-name">@firstName @lastName</div>
+        <input class="social-email" type="email" name="signup-email" value="@emailAddress" placeholder="Your email address" disabled>
+        <a class="social-change-email" href="javascript:">Change email</a>
+      </div>
+    </div>
+    <div class="form-creds">
+      <label class="password-label signup-2-label">
+        Create a password
+        <input class="form-password" type="password" name="signup-password">
+        <span class="form-password-tip">at least 7 characters</span>
+      </label>
+    </div>
+    <button class="form-submit alt-button">Sign me up</button>
+  </form>
 </div>
 
-<form class="login" data-title="Log in" data-uri="@routes.loginWithUserPass("json")" novalidate@if(view == "login") { style="display:block"}>
+<form class="login" data-title="Log in" data-uri="@routes.loginWithUserPass()" novalidate@if(view == "login") { style="display:block"}>
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>
-      <a class="form-network facebook" href="@routes.login("facebook")" tabindex="1">
+      <a class="form-network facebook" href="@routes.loginSocial("facebook")" tabindex="1">
         <span class="form-network-icon"></span>
         <span class="form-network-text">Log in using Facebook</span>
       </a>
-      <a class="form-network linkedin" href="@routes.login("linkedin")" tabindex="1">
+      <a class="form-network linkedin" href="@routes.loginSocial("linkedin")" tabindex="1">
         <span class="form-network-icon"></span>
         <span class="form-network-text">Log in using LinkedIn</span>
       </a>
@@ -86,10 +140,15 @@
 </form>
 
 @* down here to prevent transition side effects (1px shifting) in Chrome *@
+@if(view == "signup2Email" || view == "signup2Social") {
+  <h2 class="page-title obsolete">Sign up</h2>
+}
 <h2 class="page-title">
   @view match {
     case "login" => {Log in}
     case "signup" => {Sign up}
+    case "signup2Email" => {Finalize your account}
+    case "signup2Social" => {Finalize your account}
     case _ => {}
   }
 </h2>
@@ -104,4 +163,6 @@
 <script src="/assets/js/auth.js"></script>
 }
 
-@helper.page(curtainsDrawn = view != "", content = content, scripts = scripts)
+@helper.page(
+  bodyClass = if (view == "") "" else if (view == "signup2Email" || view == "signup2Social") "curtains-drawn finalizing" else "curtains-drawn",
+  curtains = curtains, content = content, scripts = scripts)

@@ -54,7 +54,7 @@ object User {
 }
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
-  override val version = 5
+  override val version = 6
   val namespace = "user_by_external_id"
   def toKey(): String = externalId.id
 }
@@ -63,7 +63,7 @@ class UserExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[UserExternalIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class UserIdKey(id: Id[User]) extends Key[User] {
-  override val version = 6
+  override val version = 7
   val namespace = "user_by_id"
   def toKey(): String = id.id.toString
 }
@@ -72,7 +72,7 @@ class UserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginS
   extends JsonCacheImpl[UserIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
-  override val version = 4
+  override val version = 5
   val namespace = "user_id_by_external_id"
   def toKey(): String = id.id.toString
 }
