@@ -33,6 +33,7 @@ class SecureSocialUserPluginImpl @Inject() (
   socialGraphPlugin: SocialGraphPlugin,
   userEventContextBuilder: UserEventContextBuilderFactory,
   heimdal: HeimdalServiceClient,
+  userExperimentRepo: UserExperimentRepo,
   clock: Clock)
   extends UserService with SecureSocialUserPlugin with Logging {
 
@@ -84,7 +85,21 @@ class SecureSocialUserPluginImpl @Inject() (
       if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
         socialGraphPlugin.asyncFetch(socialUserInfo)
       log.info(s"[save] persisting $socialUser into $socialUserInfo")
+      socialUserInfo.userId.map { userId =>
+        emailRepo.getByUser(userId) map { email =>
+          updateExperimentIfTestUser(userId, email)
+        }
+      }
       socialUser
+    }
+  }
+
+  private def updateExperimentIfTestUser(userId: Id[User], email: EmailAddress)(implicit session: RWSession): Unit = if(email.isTestEmail()) {
+    if(userExperimentRepo.hasExperiment(userId, ExperimentType.FAKE)) {
+      log.info(s"user $userId is already marked as FAKE")
+    } else {
+      log.info(s"setting user $userId as FAKE")
+      userExperimentRepo.save(UserExperiment(userId = userId, experimentType = ExperimentType.FAKE))
     }
   }
 
@@ -106,6 +121,34 @@ class SecureSocialUserPluginImpl @Inject() (
     )
   }
 
+  private def getOrCreateUser(existingUserOpt: Option[User], allowSignup: Boolean, isComplete: Boolean, socialUser: SocialUser)(implicit session: RWSession): Option[User] = existingUserOpt orElse {
+    if (allowSignup) {
+      val userOpt: Option[User] = Some(userRepo.save(
+        createUser(socialUser, isComplete)
+      ))
+      SafeFuture{
+        val contextBuilder = userEventContextBuilder()
+        heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, UserEventType("signup")))
+      }
+      userOpt
+    } else None
+  }
+
+  private def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Unit = {
+    for (email <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
+      val emailAddress = emailRepo.getByAddressOpt(address = email) match {
+        case Some(e) if e.state == EmailAddressStates.VERIFIED && e.verifiedAt.isEmpty =>
+          emailRepo.save(e.copy(verifiedAt = Some(clock.now))) // we didn't originally set this
+        case Some(e) if e.state == EmailAddressStates.VERIFIED => e
+        case Some(e) => emailRepo.save(e.withState(EmailAddressStates.VERIFIED).copy(verifiedAt = Some(clock.now)))
+        case None => emailRepo.save(
+          EmailAddress(userId = userId, address = email, state = EmailAddressStates.VERIFIED, verifiedAt = Some(clock.now)))
+      }
+      log.info(s"[save] Saved email is $emailAddress")
+      emailAddress
+    }
+  }
+
   private def internUser(
       socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
       userId: Option[Id[User]], allowSignup: Boolean, isComplete: Boolean)
@@ -120,34 +163,7 @@ class SecureSocialUserPluginImpl @Inject() (
       }
     } flatMap userRepo.getOpt
 
-    def getOrCreateUser(): Option[User] = existingUserOpt orElse {
-      if (allowSignup) {
-        val userOpt = Some(userRepo.save(
-          createUser(socialUser, isComplete)
-        ))
-        SafeFuture{
-          val contextBuilder = userEventContextBuilder()
-          heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, UserEventType("signup")))
-        }
-        userOpt
-      } else None
-    }
-
-    def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser): Unit = {
-      for (email <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
-        val emailAddress = emailRepo.getByAddressOpt(address = email) match {
-          case Some(e) if e.state == EmailAddressStates.VERIFIED && e.verifiedAt.isEmpty =>
-            emailRepo.save(e.copy(verifiedAt = Some(clock.now))) // we didn't originally set this
-          case Some(e) if e.state == EmailAddressStates.VERIFIED => e
-          case Some(e) => emailRepo.save(e.withState(EmailAddressStates.VERIFIED).copy(verifiedAt = Some(clock.now)))
-          case None => emailRepo.save(
-            EmailAddress(userId = userId, address = email, state = EmailAddressStates.VERIFIED, verifiedAt = Some(clock.now)))
-        }
-        log.info(s"[save] Saved email is $emailAddress")
-      }
-    }
-
-    suiOpt.map(_.withCredentials(socialUser)) match {
+    val sui: SocialUserInfo = suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
         // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
         val sui = if (suiOpt == Some(socialUserInfo)) {
@@ -162,7 +178,7 @@ class SecureSocialUserPluginImpl @Inject() (
         saveVerifiedEmail(sui.userId.get, sui.credentials.get)
         sui
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
-        val userOpt = getOrCreateUser()
+        val userOpt = getOrCreateUser(existingUserOpt, allowSignup, isComplete, socialUser)
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
@@ -176,13 +192,12 @@ class SecureSocialUserPluginImpl @Inject() (
 
         val sui = socialUserInfoRepo.save(userOpt map socialUserInfo.withUser getOrElse socialUserInfo)
         for (user <- userOpt) {
-
           if (socialUserInfo.networkType != SocialNetworks.FORTYTWO) imageStore.uploadPictureFromSocialNetwork(sui, user.externalId)
           saveVerifiedEmail(sui.userId.get, sui.credentials.get)
         }
         sui
       case None =>
-        val userOpt = getOrCreateUser()
+        val userOpt = getOrCreateUser(existingUserOpt, allowSignup, isComplete, socialUser)
         log.info("creating new SocialUserInfo for %s".format(userOpt))
 
         val userInfo = SocialUserInfo(userId = userOpt.flatMap(_.id),//verify saved
@@ -213,6 +228,7 @@ class SecureSocialUserPluginImpl @Inject() (
         }
         sui
     }
+    sui
   }
 
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = reportExceptions {

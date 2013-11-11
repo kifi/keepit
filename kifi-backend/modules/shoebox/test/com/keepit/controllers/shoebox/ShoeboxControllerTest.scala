@@ -34,6 +34,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     TestActorSystemModule(),
     TestSearchServiceClientModule(),
     FakeAirbrakeModule(),
+    FakeActionAuthenticatorModule(),
     AuthHelperModule()
   )
 
@@ -89,15 +90,14 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
         val basicUsersJson = inject[Database].readOnly { implicit s =>
           users.map{ u => (u.id.get.id.toString -> Json.toJson(basicUserRepo.load(u.id.get))) }.toMap
         }
-        val shoeboxController = inject[ShoeboxController]
+
         val query = users.map(_.id.get).mkString(",")
         val payload = JsArray(users.map(_.id.get).map(x => JsNumber(x.id)))
-        shoeboxController.getBasicUsers()(FakeRequest().withJsonBody(payload)).run.map{ result =>
-          status(result) must equalTo(OK);
-          contentType(result) must beSome("application/json");
-          contentAsString(result) must equalTo(Json.toJson(basicUsersJson).toString())
-        }
-        1 === 1
+        val path = com.keepit.controllers.shoebox.routes.ShoeboxController.getBasicUsers().toString
+        val result = route(FakeRequest("POST", path).withJsonBody(payload)).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+        contentAsString(result) must equalTo(Json.toJson(basicUsersJson).toString())
       }
     }
 

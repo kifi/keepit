@@ -29,6 +29,7 @@ class MobilePageController @Inject() (
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def getPageDetails() = AuthenticatedJsonToJsonAction { request =>
+    println(request.body)
     val url = (request.body \ "url").as[String]
     val info = pageCommander.getPageDetails(url, request.userId, request.experiments)
     Ok(Json.toJson(info))

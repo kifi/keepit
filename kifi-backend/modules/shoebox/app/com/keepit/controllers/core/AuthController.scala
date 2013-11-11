@@ -404,6 +404,8 @@ class AuthController @Inject() (
 
         val pinfo = Registry.hashers.currentHasher.hash(password)
 
+        if(1==1) ""
+
         val (emailPassIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt,
           email = emailAddress, passwordInfo = pinfo, firstName = firstName, lastName = lastName, isComplete = true)
 
@@ -416,7 +418,7 @@ class AuthController @Inject() (
           s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
         }
 
-        inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").map(v => ExternalId[Invitation](v.name)))
+        inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.name)))
 
         val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == emailAddress.trim)
 
@@ -604,33 +606,6 @@ class AuthController @Inject() (
       }
     }) getOrElse BadRequest("0")
   }
-
-  def createABunchOfUsers() = Action { implicit request =>
-    db.readWrite { implicit session =>
-      val users = userRepo.all()
-
-      users.map { user =>
-        scala.util.Try {
-          val hasLogin = socialRepo.getByUser(user.id.get).exists(_.networkType == SocialNetworks.FORTYTWO)
-          if (!hasLogin) {
-            val password = ExternalId().id
-            val pInfo = Registry.hashers.currentHasher.hash(password)
-
-            val allEmails = emailAddressRepo.getByUser(user.id.get)
-            val email = allEmails.find(_.state == EmailAddressStates.VERIFIED).getOrElse(allEmails.last)
-
-            val (newIdentity, userId) = saveUserPasswordIdentity(userIdOpt = user.id, identityOpt = None, email = email.address, passwordInfo = pInfo, isComplete = true, firstName = user.firstName, lastName = user.lastName)
-
-
-          }
-        }
-      }
-    }
-
-    Ok
-
-  }
-
 
   private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddressHolder])] = {
     db.readOnly { implicit s =>

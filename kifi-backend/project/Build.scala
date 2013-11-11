@@ -156,7 +156,7 @@ object ApplicationBuild extends Build {
       testOptions in Test ++= _testOptions,
       EclipseKeys.skipParents in ThisBuild := false,
       sources in doc in Compile := List(),
-      Keys.fork := true
+      Keys.fork := false
     )
 
     lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
