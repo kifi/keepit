@@ -5,8 +5,6 @@ import com.google.inject.{Provider, Provides, Singleton}
 import play.api.Play._
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.analytics._
-import com.keepit.common.analytics.reports.{InMemoryReportStoreImpl, S3ReportStoreImpl, ReportStore}
-import com.mongodb.casbah.MongoConnection
 import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule {
@@ -35,13 +33,6 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.event.bucket").get)
     new S3EventStoreImpl(bucketName, amazonS3Client)
   }
-
-  @Singleton
-  @Provides
-  def reportStore(amazonS3Client: AmazonS3): ReportStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.report.bucket").get)
-    new S3ReportStoreImpl(bucketName, amazonS3Client)
-  }
 }
 
 case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule()) {
@@ -67,11 +58,4 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
     whenConfigured("amazon.s3.event.bucket")(
       prodStoreModule.eventStore(amazonS3ClientProvider.get)
     ).getOrElse(new InMemoryS3EventStoreImpl())
-
-  @Singleton
-  @Provides
-  def reportStore(amazonS3ClientProvider: Provider[AmazonS3]): ReportStore =
-    whenConfigured("amazon.s3.report.bucket")(
-      prodStoreModule.reportStore(amazonS3ClientProvider.get)
-    ).getOrElse(new InMemoryReportStoreImpl())
 }
