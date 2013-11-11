@@ -1090,7 +1090,7 @@ footer {
   .translate(80%);
   visibility: hidden;
   &>.reset-password-text {
-    margin: 30px 0 42px;
+    margin: 16px 0 0;
   }
 }
 .reset-password-sent {
@@ -1105,7 +1105,16 @@ footer {
     .transition(visibility 0, transform .2s ease-in-out);
   }
 }
-
+.reset-password-addresses {
+  margin: 10px 0 20px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 19px;
+  list-style: none;
+}
+.reset-password-address:only-child {
+  padding: 8px 0 10px;
+}
 
 // social signup 2
 .social-info,

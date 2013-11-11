@@ -26,6 +26,7 @@ case class EmailAddress (
   def withVerificationCode(now: DateTime) = this.copy(
     lastVerificationSent = Some(now),
     verificationCode = Some(new BigInteger(128, EmailAddressObject.random).toString(36)))
+  def verified: Boolean = state == EmailAddressStates.VERIFIED
 }
 
 object EmailAddressObject {
