@@ -83,7 +83,7 @@ class HomeController @Inject() (
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
     val user = request.user
 
-    inviteCommander.markPendingInvitesAsAccepted(user.id.get, request.cookies.get("inv").map(v => ExternalId[Invitation](v.name)))
+    inviteCommander.markPendingInvitesAsAccepted(user.id.get, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.name)))
 
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
       val email = emailRepo.getByUser(user.id.get).sortBy(a => a.verifiedAt.getOrElse(a.createdAt.minusYears(10)).getMillis).lastOption.map(_.address)
