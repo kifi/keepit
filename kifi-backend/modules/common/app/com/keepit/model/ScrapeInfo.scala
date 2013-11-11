@@ -5,6 +5,7 @@ import com.keepit.common.time._
 import com.keepit.scraper.ScraperConfig
 import org.joda.time.DateTime
 import scala.math._
+import com.keepit.common.logging.Logging
 
 object ScrapeInfoStates extends States[ScrapeInfo] {
   val PENDING = State[ScrapeInfo]("pending") // scheduled
@@ -20,15 +21,23 @@ case class ScrapeInfo(
   state: State[ScrapeInfo] = ScrapeInfoStates.ACTIVE,
   signature: String = "",
   destinationUrl: Option[String] = None
-) extends Model[ScrapeInfo] {
+) extends Model[ScrapeInfo] with Logging {
   def withId(id: Id[ScrapeInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this
-  def withState(state: State[ScrapeInfo]) = this.copy(state = state)
+  def withState(state: State[ScrapeInfo]) = {
+    log.info(s"[withState($id, $uriId, $destinationUrl)] ${this.state} => ${state.toString.toUpperCase}; nextScrape(not set)=${this.nextScrape}")
+    this.copy(state = state)
+  }
 
-  def withStateAndNextScrape(state: State[ScrapeInfo]) = state match { // TODO: revisit
-    case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
-    case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
-    case ScrapeInfoStates.PENDING => copy(state = state, nextScrape = currentDateTime) // TODO: add & use updatedAt
+  def withStateAndNextScrape(state: State[ScrapeInfo]) = {
+    val (curState, curNS) = (this.state, this.nextScrape)
+    val res = state match { // TODO: revisit
+      case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
+      case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
+      case ScrapeInfoStates.PENDING => copy(state = state, nextScrape = currentDateTime) // TODO: add & use updatedAt
+    }
+    log.info(s"[withStateAndNextScrape($id, $uriId, $destinationUrl)] ${curState} => ${res.state.toString.toUpperCase}; ${curNS} => ${res.nextScrape}")
+    res
   }
 
   def withDestinationUrl(destinationUrl: Option[String]) = copy(destinationUrl = destinationUrl)

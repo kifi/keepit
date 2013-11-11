@@ -26,10 +26,16 @@ case class EmailAddress (
   def withVerificationCode(now: DateTime) = this.copy(
     lastVerificationSent = Some(now),
     verificationCode = Some(new BigInteger(128, EmailAddressObject.random).toString(36)))
+
+  def isTestEmail(): Boolean = address match {
+    case EmailAddressObject.TestEmailPattern(_) => true
+    case _ => false
+  }
 }
 
 object EmailAddressObject {
   lazy val random = new SecureRandom()
+  val TestEmailPattern = """^(.*\+test.*@42go.com)$""".r
 }
 
 object EmailAddressStates {

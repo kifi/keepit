@@ -44,7 +44,7 @@ case class SocialUserInfo(
     case SocialNetworks.FACEBOOK => Some(s"http://facebook.com/$socialId")
     case _ => None
   })
-  override def toString(): String = s"SocialUserInfo[Id=$id,User=$userId,Name=$fullName,network=$networkType]"
+  override def toString(): String = s"SocialUserInfo[Id=$id,User=$userId,Name=$fullName,network=$networkType,socialId=$socialId]"
 }
 
 object SocialUserInfo {
@@ -66,7 +66,7 @@ object SocialUserInfo {
 }
 
 case class SocialUserInfoCountKey() extends Key[Int] {
-  override val version = 0
+  override val version = 1
   val namespace = "social_user_info_count"
   def toKey(): String = "all"
 }
@@ -76,7 +76,7 @@ class SocialUserInfoCountCache(stats: CacheStatistics, accessLog: AccessLog, inn
 
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
-  override val version = 4
+  override val version = 5
   def toKey(): String = userId.id.toString
 }
 
@@ -84,7 +84,7 @@ class SocialUserInfoUserCache(stats: CacheStatistics, accessLog: AccessLog, inne
   extends JsonCacheImpl[SocialUserInfoUserKey, Seq[SocialUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUserInfo] {
-  override val version = 3
+  override val version = 4
   val namespace = "social_user_info_by_network_and_id"
   def toKey(): String = networkType.name.toString + "_" + id.id
 }

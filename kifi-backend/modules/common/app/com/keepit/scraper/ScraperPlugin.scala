@@ -8,7 +8,6 @@ import com.keepit.scraper.extractor.Extractor
 
 trait ScraperPlugin extends Plugin {
   def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]]
-  def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])]
   def scheduleScrape(uri: NormalizedURI): Unit
   def scrapeBasicArticle(url: String, customExtractor: Option[Extractor] = None): Future[Option[BasicArticle]]
 }

@@ -42,9 +42,10 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     socialGraphPlugin: SocialGraphPlugin,
     userEventContextBuilder: UserEventContextBuilderFactory,
     heimdal: HeimdalServiceClient,
+    userExperimentRepo: UserExperimentRepo,
     clock: Clock
   ): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
-    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userEventContextBuilder, heimdal, clock
+    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userEventContextBuilder, heimdal, userExperimentRepo, clock
   )
 }
 

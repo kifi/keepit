@@ -172,7 +172,7 @@ kifi.form = (function () {
     var last = first && kifi.form.validateName($form.find('.form-last-name'));
     if (first && last) {
       var pic = $photo.data();
-      signup2Promise = $.when(pic.uploadPromise).done(function (upload) {
+      signup2Promise = $.when(pic.uploadPromise).always(function (upload) {
          signup2Promise = $.postJson($form.data('uri'), {
           firstName: first,
           lastName: last,
@@ -259,8 +259,10 @@ kifi.form = (function () {
   var $photo = $('.form-photo');
   $('.form-photo-a').click(function (e) {
     if (e.which !== 1) return;
-    var $a = $(this);
-    window.open($a.data('uri'), 'photo', 'width=880,height=460,dialog=yes,menubar=no,resizable=yes,scrollbars=no,status=no');
+    var $a = $(this), w = 880, h = 460;
+    var top = (window.screenTop || window.screenY || 0) + Math.round(.5 * (window.innerHeight - h));
+    var left = (window.screenLeft || window.screenX || 0) + Math.round(.5 * (window.innerWidth - w));
+    window.open($a.data('uri'), 'photo', 'width=' + w + ',height=' + h + ',top=' + top + ',left=' + left + ',dialog=yes,menubar=no,resizable=yes,scrollbars=no,status=no');
     window.afterSocialLink = afterSocialLink.bind($a.closest('form')[0]);
   });
   $('.form-photo-file').change(function () {
@@ -312,6 +314,9 @@ kifi.form = (function () {
       $last.val(lastName);
     }
     if (photoUrl) {
+      if (photoXhr2) {
+        photoXhr2.abort();
+      }
       $photo.css({'background-image': 'url(' + photoUrl + ')', 'background-position': '', 'background-size': ''}).removeClass('unset');
     }
   }
@@ -595,12 +600,14 @@ kifi.form = (function () {
       var email = kifi.form.validateEmailAddress($email);
       if (email) {
         promise = $.postJson(this.action, {email: email})
-        .done(function (resp) {
-          if (resp.error === 'no_account') {
+        .done(function () {
+          $dialog.addClass('reset-password-sent');
+          setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 100);
+        })
+        .fail(function (xhr) {
+          var o = xhr.responseJSON;
+          if (o && o.error === 'no_account') {
             kifi.form.showError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
-          } else {
-            $dialog.addClass('reset-password-sent');
-            setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 100);
           }
         })
         .always(function () {

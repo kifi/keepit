@@ -492,13 +492,9 @@ $(function() {
 					}
 				} else {
 					$a.addClass('not-connected').attr('title', 'Click to connect')
-						.attr('href', 'javascript:')
-						.data('action', '/link/' + name)
-						.click(postLink);
-					$('<a>').attr('title', 'Click to connect').addClass('connect').text('Connect')
-						.attr('href', 'javascript:')
-						.data('action', '/link/' + name)
-						.click(postLink)
+						.attr('href', wwwDomain + '/link/' + name);
+					$('<a class=connect title="Click to connect">Connect</a>')
+						.attr('href', wwwDomain + '/link/' + name)
 						.appendTo($this);
 				}
 			});
