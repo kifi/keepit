@@ -21,7 +21,6 @@ import java.math.BigDecimal
 
 class ExtEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  eventPersister: EventPersister,
   db: Database,
   userRepo: UserRepo,
   heimdal: HeimdalServiceClient,
@@ -46,9 +45,7 @@ class ExtEventController @Inject() (
       val user = db.readOnly { implicit s => userRepo.get(userId) }
       val event = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
       log.debug(s"Created new event: $event")
-      eventPersister.persist(event)
 
-      //Mirroring to heimdal (temporary, will be the only destination soon without going through shoebox)
       val contextBuilder = new EventContextBuilder()
       experiments.foreach{ experiment =>
         contextBuilder += ("experiment", experiment.toString)

@@ -6,7 +6,6 @@ import com.keepit.common.analytics.reports.{ReportBuilderPluginImpl, ReportBuild
 
 case class TestAnalyticsModule() extends AnalyticsModule {
   def configure() {
-    bind[EventPersister].to[FakeEventPersisterImpl].in[AppScoped]
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
     val listenerBinder = ScalaMultibinder.newSetBinder[EventListener](binder)
     listenerBinder.addBinding.to[ResultClickedListener]

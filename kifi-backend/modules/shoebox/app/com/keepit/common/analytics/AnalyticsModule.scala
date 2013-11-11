@@ -16,7 +16,6 @@ trait AnalyticsModule extends ScalaModule
 case class ProdAnalyticsModule() extends AnalyticsModule {
 
   def configure() {
-    bind[EventPersister].to[EventPersisterImpl].in[AppScoped]
     val listenerBinder = ScalaMultibinder.newSetBinder[EventListener](binder)
     listenerBinder.addBinding.to[ResultClickedListener]
     listenerBinder.addBinding.to[UsefulPageListener]
@@ -39,7 +38,6 @@ case class ProdAnalyticsModule() extends AnalyticsModule {
 case class DevAnalyticsModule() extends AnalyticsModule {
 
   def configure() {
-    bind[EventPersister].to[FakeEventPersisterImpl].in[AppScoped]
     val listenerBinder = ScalaMultibinder.newSetBinder[EventListener](binder)
     listenerBinder.addBinding.to[ResultClickedListener]
     listenerBinder.addBinding.to[UsefulPageListener]
