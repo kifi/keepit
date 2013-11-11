@@ -15,7 +15,7 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
-import com.keepit.serializer.Companion
+import com.keepit.serializer.TypeCode
 
 
 class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient{
@@ -30,9 +30,9 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def eventCount: Int = eventsRecorded
 
-  def getMetricData[E <: HeimdalEvent: Companion](name: String): Future[JsObject] = Promise.successful(Json.obj()).future
+  def getMetricData[E <: HeimdalEvent: TypeCode](name: String): Future[JsObject] = Promise.successful(Json.obj()).future
 
   def updateMetrics(): Unit = {}
 
-  def getRawEvents[E <: HeimdalEvent: Companion](limit: Int, events: EventType*): Future[JsArray] = Future.successful(Json.arr())
+  def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray] = Future.successful(Json.arr())
 }
