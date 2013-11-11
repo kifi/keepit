@@ -1,14 +1,10 @@
 package com.keepit.common.analytics
 
 import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
-import com.keepit.inject.AppScoped
-import com.keepit.common.analytics.reports.{ReportBuilderPluginImpl, ReportBuilderPlugin}
-import com.google.inject.{Provider, Provides, Singleton}
+import com.google.inject.{Provides, Singleton}
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{NormalizedURIRepo, UserRepo}
 import com.keepit.search.SearchServiceClient
-import com.keepit.common.time.Clock
-import com.keepit.common.service.FortyTwoServices
 import play.api.Play._
 
 trait AnalyticsModule extends ScalaModule
@@ -21,7 +17,6 @@ case class ProdAnalyticsModule() extends AnalyticsModule {
     listenerBinder.addBinding.to[UsefulPageListener]
     listenerBinder.addBinding.to[SliderShownListener]
     listenerBinder.addBinding.to[SearchUnloadListener]
-    bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
   }
 
   @Singleton
@@ -43,7 +38,6 @@ case class DevAnalyticsModule() extends AnalyticsModule {
     listenerBinder.addBinding.to[UsefulPageListener]
     listenerBinder.addBinding.to[SliderShownListener]
     listenerBinder.addBinding.to[SearchUnloadListener]
-    bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
   }
 
   @Singleton
