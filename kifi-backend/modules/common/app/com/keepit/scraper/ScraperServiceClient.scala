@@ -33,6 +33,7 @@ trait ScraperServiceClient extends ServiceClient {
   def asyncScrapeWithInfo(uri:NormalizedURI, info:ScrapeInfo):Future[(NormalizedURI, Option[Article])]
   def scheduleScrape(uri:NormalizedURI, info:ScrapeInfo):Future[Boolean] // ack
   def getBasicArticle(url:String):Future[Option[BasicArticle]]
+  def getBasicArticleP(url:String, proxy:Option[HttpProxy]):Future[Option[BasicArticle]]
 }
 
 class ScraperServiceClientImpl @Inject() (
@@ -67,6 +68,11 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
+  def getBasicArticleP(url: String, proxy: Option[HttpProxy]): Future[Option[BasicArticle]] = {
+    call(Scraper.internal.getBasicArticleP, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy))).map{ r =>
+      r.json.validate[BasicArticle].asOpt
+    }
+  }
 }
 
 class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ScraperServiceClient {
@@ -83,4 +89,5 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getBasicArticle(url: String): Future[Option[BasicArticle]] = ???
 
+  def getBasicArticleP(url: String, proxy: Option[HttpProxy]): Future[Option[BasicArticle]] = ???
 }
