@@ -83,19 +83,6 @@ class ScraperPluginImpl @Inject() (
   override def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]] =
     actor.ref.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
 
-  override def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
-    if (scraperConfig.disableScraperService) {
-      actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
-    } else {
-      log.info(s"[asyncScrape] invoke (remote) Scraper service; url=${uri.url}")
-      val info = db.readWrite { implicit s =>
-        scrapeInfoRepo.getByUriId(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
-      }
-      scraperClient.asyncScrapeWithInfo(uri, info)
-    }
-  }
-
-
   def scheduleScrape(uri: NormalizedURI): Unit = {
     if (scraperConfig.disableScraperService) {
       actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]

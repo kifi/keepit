@@ -9,20 +9,25 @@
   }
 }
 
-html,
-body {
-  height: 100%;
-  width: 100%;
-}
 html {
+  height: 100%;
   font: 16px/140% Arial, sans-serif;
 }
 html.mac {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 body {
+  height: 100%;
   position: relative;
   background-color: #f3f3f3;
+  text-align: center;
+  overflow: hidden;
+}
+main {
+  height: 100%;
+  overflow: auto;
+  margin: 0 16.5%;
+  position: relative;
 }
 a:link,
 a:visited {
@@ -57,7 +62,7 @@ input[type=password] {
 @curtain-time: .42s;
 .curtain-l,
 .curtain-r {
-  position: fixed;
+  position: absolute;
   z-index: 10;
   top: 0;
   height: 100%;
@@ -85,7 +90,7 @@ input[type=password] {
   position: absolute;
   top: 70px;
   height: 144px;
-  background: url(../img/out/auth.png) no-repeat;
+  background: url(../img/auth.png) no-repeat;
   .transition(opacity (@curtain-time / 2) ease-out);
 }
 .curtain-logo-l {
@@ -104,15 +109,19 @@ input[type=password] {
 }
 .curtain-welcome {
   position: absolute;
+  top: 224px;
   left: 0;
-  right: 0;
+  width: 100%;
+  z-index: 10;
+  display: table;
+  table-layout: fixed;
+  border-collapse: collapse;
+  overflow: hidden;
 }
 .curtain-welcome-l,
 .curtain-welcome-r {
-  position: fixed;
-  top: 224px;
+  display: table-cell;
   width: 50%;
-  z-index: 10;
   font-size: 32px;
   line-height: 32px;
   color: #fff;
@@ -123,13 +132,12 @@ input[type=password] {
   .transition(opacity @curtain-time, visibility @curtain-time, transform @curtain-time ease-out);
 }
 .curtain-welcome-l {
-  left: 0;
   padding-right: 5px;
   text-align: right;
 }
 .curtain-welcome-r {
-  right: 0;
   padding-left: 5px;
+  text-align: left;
 }
 .curtains-drawn .curtain-welcome-l,
 .curtains-drawn .curtain-welcome-r {
@@ -200,7 +208,7 @@ input[type=password] {
 
 // back button
 .curtain-back {
-  position: fixed;
+  position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
@@ -219,7 +227,7 @@ input[type=password] {
   visibility: visible;
   opacity: 1;
   .transform(none);
-  .transition-delay(0);
+  .transition-delay(0s);
 }
 .curtain-back:before {
   content: ' ';
@@ -227,7 +235,7 @@ input[type=password] {
   height: 42px;
   width: 42px;
   margin: 0 auto;
-  background: url(../img/out/auth.png) -2px -328px;
+  background: url(../img/auth.png) -2px -328px;
   position: relative;
   left: 2px;
 }
@@ -258,7 +266,8 @@ input[type=password] {
 footer {
   position: absolute;
   top: 56px;
-  right: 38px;
+  right: -65px;
+  margin-right: 8.25%;
   z-index: 10;
   text-align: right;
   font-size: 14px;
@@ -270,7 +279,7 @@ footer {
   height: 32px;
   width: 32px;
   margin-left: 5px;
-  background: url(../img/out/auth.png);
+  background: url(../img/auth.png);
   opacity: .5;
 }
 .us-on:hover {
@@ -303,7 +312,7 @@ footer {
   height: 144px;
   margin: 0 auto 84px;
   padding-top: 70px;
-  background: url(../img/out/auth.png) -2px -148px content-box;
+  background: url(../img/auth.png) -2px -148px content-box;
   text-indent: -9999px;
 }
 .page-title {
@@ -321,7 +330,7 @@ footer {
   .translate(0, -70%);
   .transition(opacity 0 @curtain-time, transform 0 @curtain-time);
 }
-.curtains-drawn>.page-title {
+.curtains-drawn .page-title {
   .transform(none);
   opacity: 1;
   .transition(opacity (.6 * @curtain-time) (.4 * @curtain-time) linear, transform @curtain-time ease-in-out);
@@ -330,31 +339,46 @@ footer {
 // buttons
 .primary-button {
   @bg-color: #92c152;
+  display: inline-block;
+  white-space: nowrap;
   color: #fff;
   background: @bg-color;
-  &:hover {
+  &:hover,
+  &:focus {
     background: tint(@bg-color, 10%);
   }
   &:active {
     background: shade(@bg-color, 10%);
+  }
+  &:focus {
+    outline-color: #888;
   }
 }
 .alt-button {
   @bg-color: #6fa6ef;
+  display: inline-block;
+  white-space: nowrap;
   color: #fff;
   background: @bg-color;
-  &:hover {
+  &:hover,
+  &:focus {
     background: tint(@bg-color, 10%);
   }
   &:active {
     background: shade(@bg-color, 10%);
   }
+  &:focus {
+    outline-color: #888;
+  }
 }
 .cancel-button {
   @bg-color: #e8e8e8;
+  display: inline-block;
+  white-space: nowrap;
   color: #888;
   background: @bg-color;
-  &:hover {
+  &:hover,
+  &:focus {
     background: tint(@bg-color, 20%);
   }
   &:active {
@@ -403,7 +427,6 @@ footer {
 .login {
   display: none;
   text-align: center;
-  margin: 0 16.5%;
   position: relative;
 }
 .form-sides {
@@ -474,7 +497,7 @@ footer {
   font-size: 0;
   height: 32px;
   width: 32px;
-  background-image: url(../img/out/auth.png);
+  background-image: url(../img/auth.png);
 }
 .facebook>.form-network-icon:before {
   background-position: -187px -294px;
@@ -503,7 +526,7 @@ footer {
   right: 14px;
   width: 12px;
   height: 16px;
-  background: url(../img/out/auth.png) -241px -328px;
+  background: url(../img/auth.png) -241px -328px;
 }
 .form-email-addr,
 .form-password {
@@ -518,6 +541,9 @@ footer {
   line-height: 14px;
   font-size: 13px;
   font-weight: 300;
+}
+.password-forgot:hover {
+  text-decoration: underline;
 }
 .form-submit {
   display: block;
@@ -614,7 +640,7 @@ footer {
   height: 100px;
   float: left;
   margin-right: 20px;
-  background: #fff url(../img/out/ghost.png);
+  background: #fff url(../img/ghost.100.png);
   background-size: cover;
   position: relative;
 }
@@ -679,7 +705,7 @@ footer {
   left: 8px;
   height: 32px;
   width: 32px;
-  background: url(../img/out/auth.png);
+  background: url(../img/auth.png);
 }
 .form-photo-a.facebook:before {
   background-position: -187px -294px;
@@ -755,13 +781,13 @@ footer {
   width: 100%;
   .transition(opacity (.6 * @finalize-time) linear, visibility 0s @finalize-time, transform @finalize-time ease-in-out);
 }
-.finalizing>.page-title.obsolete {  // navigated forward from
+.finalizing .page-title.obsolete {  // navigated forward from
   opacity: 0;
   visibility: hidden;
   .translate(0, -70%);
 }
-.finalizing>.page-title.abandoned,  // about to navigate back from
-.finalizing>.obsolete+.page-title {  // navigated forward to
+.finalizing .page-title.abandoned,  // about to navigate back from
+.finalizing .obsolete+.page-title {  // navigated forward to
   opacity: 1;
   visibility: visible;
   .transform(none);
@@ -772,7 +798,7 @@ footer {
   visibility: hidden;
   .translate(0, 70%);
 }
-.finalizing>.obsolete+.page-title,  // navigated forward to
+.finalizing .obsolete+.page-title,  // navigated forward to
 .page-title.returned {  // navigated back to
   .transition(opacity (.8 * @finalize-time) (.2 * @finalize-time) linear, visibility @finalize-time, transform @finalize-time ease-in-out);
 }
@@ -965,9 +991,6 @@ footer {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   margin-left: 4px;
-  &:focus {
-    outline-color: #888;
-  }
 }
 
 // reset password dialog
@@ -1058,9 +1081,6 @@ footer {
   padding: 10px 30px;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
-  &:focus {
-    outline-color: #888;
-  }
 }
 .reset-password-success {
   position: absolute;
@@ -1189,19 +1209,19 @@ input.social-email {
 
 // retina image overrides
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .curtain-logo-l:before,
-  .curtain-logo-r:before,
+  .curtain-logo-l,
+  .curtain-logo-r,
   .curtain-back:before,
   .us-on,
   .main-logo,
   .form-network-icon:before,
-  .form-photo-a:before,
-  .password-label:after {
-    background-image: url(../img/out/auth.2x.png);
+  .password-label:after,
+  .form-photo-a:before {
+    background-image: url(../img/auth.2x.png);
     background-size: 255px auto;
   }
   .form-photo {
-    background-image: url(../img/out/ghost.2x.png);
+    background-image: url(../img/ghost.200.png);
     background-size: cover;
   }
 }

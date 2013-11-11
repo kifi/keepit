@@ -2,7 +2,7 @@
 
 @import com.keepit.controllers.core.routes.{AuthController => routes}
 
-@content = {
+@curtains = {
 <div class="curtain-l">
   <div class="curtain-logo-l"></div>
   <a class="curtain-action curtain-signup" href="javascript:">
@@ -28,7 +28,9 @@
   <span class="curtain-back-1">Back</span>
   <span class="curtain-back-2">Cancel</span>
 </a>
+}
 
+@content = {
 <h1 class="main-logo">kifi</h1>
 
 <div class="signup"@if(view == "signup" || view == "signup2Email" || view == "signup2Social") { style="display:block"}>
@@ -112,15 +114,15 @@
   </form>
 </div>
 
-<form class="login" data-title="Log in" data-uri="@routes.loginWithUserPass("json")" novalidate@if(view == "login") { style="display:block"}>
+<form class="login" data-title="Log in" data-uri="@routes.loginWithUserPass()" novalidate@if(view == "login") { style="display:block"}>
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>
-      <a class="form-network facebook" href="@routes.login("facebook")" tabindex="1">
+      <a class="form-network facebook" href="@routes.loginSocial("facebook")" tabindex="1">
         <span class="form-network-icon"></span>
         <span class="form-network-text">Log in using Facebook</span>
       </a>
-      <a class="form-network linkedin" href="@routes.login("linkedin")" tabindex="1">
+      <a class="form-network linkedin" href="@routes.loginSocial("linkedin")" tabindex="1">
         <span class="form-network-icon"></span>
         <span class="form-network-text">Log in using LinkedIn</span>
       </a>
@@ -161,4 +163,6 @@
 <script src="/assets/js/auth.js"></script>
 }
 
-@helper.page(bodyClass = if (view == "") "" else if (view == "signup2Email" || view == "signup2Social") "curtains-drawn finalizing" else "curtains-drawn", content = content, scripts = scripts)
+@helper.page(
+  bodyClass = if (view == "") "" else if (view == "signup2Email" || view == "signup2Social") "curtains-drawn finalizing" else "curtains-drawn",
+  curtains = curtains, content = content, scripts = scripts)

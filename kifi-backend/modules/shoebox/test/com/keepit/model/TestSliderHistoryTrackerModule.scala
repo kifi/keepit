@@ -10,6 +10,6 @@ case class TestSliderHistoryTrackerModule() extends SliderHistoryTrackerModule {
   @Provides
   @Singleton
   def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker =
-    new SliderHistoryTrackerImpl(sliderHistoryRepo, db, -1, -1, -1)
+    new SliderHistoryTrackerImpl(sliderHistoryRepo, db, 8, 2, 2)
 
 }

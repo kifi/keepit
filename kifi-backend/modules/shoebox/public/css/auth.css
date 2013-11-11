@@ -1,17 +1,22 @@
-html,
-body {
-  height: 100%;
-  width: 100%;
-}
 html {
+  height: 100%;
   font: 16px/140% Arial, sans-serif;
 }
 html.mac {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 body {
+  height: 100%;
   position: relative;
   background-color: #f3f3f3;
+  text-align: center;
+  overflow: hidden;
+}
+main {
+  height: 100%;
+  overflow: auto;
+  margin: 0 16.5%;
+  position: relative;
 }
 a:link,
 a:visited {
@@ -40,7 +45,7 @@ input[type=password] {
 }
 .curtain-l,
 .curtain-r {
-  position: fixed;
+  position: absolute;
   z-index: 10;
   top: 0;
   height: 100%;
@@ -78,7 +83,7 @@ input[type=password] {
   position: absolute;
   top: 70px;
   height: 144px;
-  background: url(../img/out/auth.png) no-repeat;
+  background: url(../img/auth.png) no-repeat;
   -webkit-transition: opacity 0.21s ease-out;
   -moz-transition: opacity 0.21s ease-out;
   -o-transition: opacity 0.21s ease-out;
@@ -101,15 +106,19 @@ input[type=password] {
 }
 .curtain-welcome {
   position: absolute;
+  top: 224px;
   left: 0;
-  right: 0;
+  width: 100%;
+  z-index: 10;
+  display: table;
+  table-layout: fixed;
+  border-collapse: collapse;
+  overflow: hidden;
 }
 .curtain-welcome-l,
 .curtain-welcome-r {
-  position: fixed;
-  top: 224px;
+  display: table-cell;
   width: 50%;
-  z-index: 10;
   font-size: 32px;
   line-height: 32px;
   color: #fff;
@@ -126,13 +135,12 @@ input[type=password] {
   transition: opacity 0.42s, visibility 0.42s, transform 0.42s ease-out;
 }
 .curtain-welcome-l {
-  left: 0;
   padding-right: 5px;
   text-align: right;
 }
 .curtain-welcome-r {
-  right: 0;
   padding-left: 5px;
+  text-align: left;
 }
 .curtains-drawn .curtain-welcome-l,
 .curtains-drawn .curtain-welcome-r {
@@ -221,7 +229,7 @@ input[type=password] {
   visibility: hidden;
 }
 .curtain-back {
-  position: fixed;
+  position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
@@ -252,10 +260,10 @@ input[type=password] {
   -o-transform: none;
   -ms-transform: none;
   transform: none;
-  -webkit-transition-delay: 0;
-  -moz-transition-delay: 0;
-  -o-transition-delay: 0;
-  transition-delay: 0;
+  -webkit-transition-delay: 0s;
+  -moz-transition-delay: 0s;
+  -o-transition-delay: 0s;
+  transition-delay: 0s;
 }
 .curtain-back:before {
   content: ' ';
@@ -263,7 +271,7 @@ input[type=password] {
   height: 42px;
   width: 42px;
   margin: 0 auto;
-  background: url(../img/out/auth.png) -2px -328px;
+  background: url(../img/auth.png) -2px -328px;
   position: relative;
   left: 2px;
 }
@@ -292,7 +300,8 @@ input[type=password] {
 footer {
   position: absolute;
   top: 56px;
-  right: 38px;
+  right: -65px;
+  margin-right: 8.25%;
   z-index: 10;
   text-align: right;
   font-size: 14px;
@@ -304,7 +313,7 @@ footer {
   height: 32px;
   width: 32px;
   margin-left: 5px;
-  background: url(../img/out/auth.png);
+  background: url(../img/auth.png);
   opacity: .5;
 }
 .us-on:hover {
@@ -335,7 +344,7 @@ footer {
   height: 144px;
   margin: 0 auto 84px;
   padding-top: 70px;
-  background: url(../img/out/auth.png) -2px -148px content-box;
+  background: url(../img/auth.png) -2px -148px content-box;
   text-indent: -9999px;
 }
 .page-title {
@@ -361,7 +370,7 @@ footer {
   -ms-transition: opacity 0 0.42s, -ms-transform 0 0.42s;
   transition: opacity 0 0.42s, transform 0 0.42s;
 }
-.curtains-drawn > .page-title {
+.curtains-drawn .page-title {
   -webkit-transform: none;
   -moz-transform: none;
   -o-transform: none;
@@ -375,30 +384,45 @@ footer {
   transition: opacity 0.252s 0.168s linear, transform 0.42s ease-in-out;
 }
 .primary-button {
+  display: inline-block;
+  white-space: nowrap;
   color: #fff;
   background: #92c152;
 }
-.primary-button:hover {
+.primary-button:hover,
+.primary-button:focus {
   background: #9dc763;
 }
 .primary-button:active {
   background: #83ae4a;
 }
+.primary-button:focus {
+  outline-color: #888;
+}
 .alt-button {
+  display: inline-block;
+  white-space: nowrap;
   color: #fff;
   background: #6fa6ef;
 }
-.alt-button:hover {
+.alt-button:hover,
+.alt-button:focus {
   background: #7daff1;
 }
 .alt-button:active {
   background: #6495d7;
 }
+.alt-button:focus {
+  outline-color: #888;
+}
 .cancel-button {
+  display: inline-block;
+  white-space: nowrap;
   color: #888;
   background: #e8e8e8;
 }
-.cancel-button:hover {
+.cancel-button:hover,
+.cancel-button:focus {
   background: #ededed;
 }
 .cancel-button:active {
@@ -441,7 +465,6 @@ footer {
 .login {
   display: none;
   text-align: center;
-  margin: 0 16.5%;
   position: relative;
 }
 .form-sides {
@@ -514,7 +537,7 @@ footer {
   font-size: 0;
   height: 32px;
   width: 32px;
-  background-image: url(../img/out/auth.png);
+  background-image: url(../img/auth.png);
 }
 .facebook > .form-network-icon:before {
   background-position: -187px -294px;
@@ -543,7 +566,7 @@ footer {
   right: 14px;
   width: 12px;
   height: 16px;
-  background: url(../img/out/auth.png) -241px -328px;
+  background: url(../img/auth.png) -241px -328px;
 }
 .form-email-addr,
 .form-password {
@@ -558,6 +581,9 @@ footer {
   line-height: 14px;
   font-size: 13px;
   font-weight: 300;
+}
+.password-forgot:hover {
+  text-decoration: underline;
 }
 .form-submit {
   display: block;
@@ -658,7 +684,7 @@ footer {
   height: 100px;
   float: left;
   margin-right: 20px;
-  background: #ffffff url(../img/out/ghost.png);
+  background: #ffffff url(../img/ghost.100.png);
   background-size: cover;
   position: relative;
 }
@@ -723,7 +749,7 @@ footer {
   left: 8px;
   height: 32px;
   width: 32px;
-  background: url(../img/out/auth.png);
+  background: url(../img/auth.png);
 }
 .form-photo-a.facebook:before {
   background-position: -187px -294px;
@@ -810,7 +836,7 @@ footer {
   -ms-transition: opacity 0.144s linear, visibility 0s 0.24s, -ms-transform 0.24s ease-in-out;
   transition: opacity 0.144s linear, visibility 0s 0.24s, transform 0.24s ease-in-out;
 }
-.finalizing > .page-title.obsolete {
+.finalizing .page-title.obsolete {
   opacity: 0;
   visibility: hidden;
   -webkit-transform: translate(0, -70%);
@@ -819,8 +845,8 @@ footer {
   -ms-transform: translate(0, -70%);
   transform: translate(0, -70%);
 }
-.finalizing > .page-title.abandoned,
-.finalizing > .obsolete + .page-title {
+.finalizing .page-title.abandoned,
+.finalizing .obsolete + .page-title {
   opacity: 1;
   visibility: visible;
   -webkit-transform: none;
@@ -839,7 +865,7 @@ footer {
   -ms-transform: translate(0, 70%);
   transform: translate(0, 70%);
 }
-.finalizing > .obsolete + .page-title,
+.finalizing .obsolete + .page-title,
 .page-title.returned {
   -webkit-transition: opacity 0.192s 0.048s linear, visibility 0.24s, -webkit-transform 0.24s ease-in-out;
   -moz-transition: opacity 0.192s 0.048s linear, visibility 0.24s, -moz-transform 0.24s ease-in-out;
@@ -1104,10 +1130,6 @@ footer {
   -webkit-font-smoothing: antialiased;
   margin-left: 4px;
 }
-.photo-dialog-cancel:focus,
-.photo-dialog-submit:focus {
-  outline-color: #888;
-}
 .reset-password .dialog-box {
   width: 480px;
   text-align: center;
@@ -1210,10 +1232,6 @@ footer {
   padding: 10px 30px;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
-}
-.reset-password-cancel:focus,
-.reset-password-submit:focus {
-  outline-color: #888;
 }
 .reset-password-success {
   position: absolute;
@@ -1358,19 +1376,19 @@ input.social-email[disabled] {
   font-weight: normal;
 }
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .curtain-logo-l:before,
-  .curtain-logo-r:before,
+  .curtain-logo-l,
+  .curtain-logo-r,
   .curtain-back:before,
   .us-on,
   .main-logo,
   .form-network-icon:before,
-  .form-photo-a:before,
-  .password-label:after {
-    background-image: url(../img/out/auth.2x.png);
+  .password-label:after,
+  .form-photo-a:before {
+    background-image: url(../img/auth.2x.png);
     background-size: 255px auto;
   }
   .form-photo {
-    background-image: url(../img/out/ghost.2x.png);
+    background-image: url(../img/ghost.200.png);
     background-size: cover;
   }
 }

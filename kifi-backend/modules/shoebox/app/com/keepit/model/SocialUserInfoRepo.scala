@@ -62,9 +62,12 @@ class SocialUserInfoRepoImpl @Inject() (
       (for(f <- table if f.userId === userId) yield f).list
     }
 
-  def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo =
-    networkCache.getOrElse(SocialUserInfoNetworkKey(networkType, id)) {
-      (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).first
+  def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo = try {
+      networkCache.getOrElse(SocialUserInfoNetworkKey(networkType, id)) {
+        (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).first
+      }
+    } catch {
+      case e: Throwable => throw new Exception(s"Can't get social user info for social id [$id] on network [$networkType]", e)
     }
 
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo] = {

@@ -85,4 +85,3 @@ class MemoryUsageMonitorImpl(warn: (MemoryPoolMXBean, Long, Long, Int) => Unit) 
     }
   }
 }
-
