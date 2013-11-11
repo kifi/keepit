@@ -35,6 +35,9 @@ import com.keepit.commanders.InviteCommander
 
 object AuthController {
   val LinkWithKey = "linkWith"
+
+  private lazy val obscureRegex = """^(?:[^@]|([^@])[^@]+)@""".r
+  def obscureEmailAddress(address: String) = obscureRegex.replaceFirstIn(address, """$1...@""")
 }
 
 class AuthController @Inject() (
@@ -529,27 +532,28 @@ class AuthController @Inject() (
   def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doForgotPassword(_), unauthenticatedAction = doForgotPassword(_))
   def doForgotPassword(implicit request: Request[JsValue]): Result = {
     (request.body \ "email").asOpt[String] map { emailAddrStr =>
-        val emailAddressesOpt = db.readOnly { implicit session =>
+        db.readOnly { implicit session =>
           getResetEmailAddresses(emailAddrStr)
-        }
-        emailAddressesOpt match {
-          case Some((userId, emailAddresses)) if emailAddresses.nonEmpty =>
+        } match {
+          case Some((userId, verifiedEmailAddressOpt)) =>
+            val emailAddresses = Set(GenericEmailAddress(emailAddrStr)) ++ verifiedEmailAddressOpt
             db.readWrite { implicit session =>
               emailAddresses.map { resetEmailAddress =>
+                // TODO: Invalidate both reset tokens the first time one is used.
                 val reset = passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
                 val resetUrl = s"$url${routes.AuthController.setPasswordPage(reset.token)}"
-                emailAddresses.foreach { emailAddress =>
-                  postOffice.sendMail(ElectronicMail(
-                    from = EmailAddresses.NOTIFICATIONS,
-                    to = Seq(resetEmailAddress),
-                    subject = "Kifi.com | Password reset requested",
-                    htmlBody = views.html.email.resetPassword(resetUrl).body,
-                    category = ElectronicMailCategory("reset_password")
-                  ))
-                }
+                postOffice.sendMail(ElectronicMail(
+                  from = EmailAddresses.NOTIFICATIONS,
+                  to = Seq(resetEmailAddress),
+                  subject = "Kifi.com | Password reset requested",
+                  htmlBody = views.html.email.resetPassword(resetUrl).body,
+                  category = ElectronicMailCategory("reset_password")
+                ))
               }
             }
-            Ok(Json.obj("success" -> true))
+            Ok(Json.obj("addresses" -> emailAddresses.map { email =>
+              if (email.address == emailAddrStr) emailAddrStr else AuthController.obscureEmailAddress(email.address)
+            }))
           case _ =>
             log.warn(s"Could not reset password because supplied email address $emailAddrStr not found.")
             BadRequest(Json.obj("error" -> "no_account"))
@@ -603,29 +607,15 @@ class AuthController @Inject() (
     }) getOrElse BadRequest("0")
   }
 
-  private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Set[EmailAddressHolder])] = {
-    def emailToEmailHolder(em: EmailAddress) = new EmailAddressHolder {
-      val address: String = em.address
-    }
-
+  private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddressHolder])] = {
     db.readOnly { implicit s =>
-      val emailAddresses: Option[(Id[User], Set[EmailAddressHolder])] = emailAddressRepo.getByAddressOpt(emailAddrStr, excludeState = None).flatMap { emailAddress =>
-        val user = userRepo.get(emailAddress.userId)
-        val primaryEmail = user.primaryEmailId.map(emailAddressRepo.get).map(Set(_)).getOrElse(Set.empty)
-
-        if (emailAddress.state == EmailAddressStates.VERIFIED) {
-          Some((user.id.get, (Set(emailAddress) ++ primaryEmail).map(emailToEmailHolder)))
-        } else {
-          val allUserEmailAddresses = emailAddressRepo.getByUser(emailAddress.userId)
-          val _addrs = allUserEmailAddresses.filter(em => em.state == EmailAddressStates.VERIFIED).toSet ++ primaryEmail
-          if (_addrs.isEmpty) {
-            None // we could also send to the oldest email address on file
-          } else Some((user.id.get, _addrs.map(emailToEmailHolder)))
-        }
-      }
-      emailAddresses.orElse {
-        socialRepo.getOpt(SocialId(emailAddrStr), SocialNetworks.FORTYTWO).collect { case sui if sui.userId.isDefined =>
-          (sui.userId.get, Set(new EmailAddressHolder { val address: String = emailAddrStr }))
+      val emailAddrOpt = emailAddressRepo.getByAddressOpt(emailAddrStr, excludeState = None)  // TODO: exclude INACTIVE records
+      emailAddrOpt.map(_.userId) orElse socialRepo.getOpt(SocialId(emailAddrStr), SocialNetworks.FORTYTWO).flatMap(_.userId) map { userId =>
+        emailAddrOpt.filter(_.verified) map { _ =>
+          (userId, None)
+        } getOrElse {
+          // TODO: use user's primary email address once hooked up
+          (userId, emailAddressRepo.getByUser(userId).filter(_.verified).headOption)
         }
       }
     }
