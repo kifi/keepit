@@ -19,6 +19,9 @@ class BrowserExtensionController(actionAuthenticator: ActionAuthenticator) exten
     }
   }
 
+  def JsonAction[T](allowPending: Boolean, parser: BodyParser[T] = parse.anyContent)(authenticatedAction: AuthenticatedRequest[T] => Result, unauthenticatedAction: Request[T] => Result): Action[T] =
+    actionAuthenticator.authenticatedAction(true, allowPending, parser, authenticatedAction, unauthenticatedAction)
+
   def JsonToJsonAction(authenticatedAction: AuthenticatedRequest[JsValue] => Result, unauthenticatedAction: Request[JsValue] => Result): Action[JsValue] =
     JsonToJsonAction(false)(authenticatedAction, unauthenticatedAction)
 

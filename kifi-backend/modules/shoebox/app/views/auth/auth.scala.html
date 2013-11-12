@@ -49,9 +49,9 @@
       </div>
       <div class="form-r">
         <h3>Use your email address</h3>
-        <input class="form-email-addr" type="email" name="signup-email" placeholder="Your email address"@if(view == "signup") { autofocus}>
+        <input class="form-email-addr" type="email" name="signup-1-email" placeholder="Your email address"@if(view == "signup") { autofocus}>
         <label class="password-label">
-          <input class="form-password" type="password" name="signup-password" placeholder="Your new password">
+          <input class="form-password" type="password" name="signup-1-password" placeholder="Your new password">
         </label>
         <button class="form-submit primary-button">Sign up</button>
       </div>
@@ -94,25 +94,27 @@
     <button class="form-submit alt-button">Sign me up</button>
   </form>
 
+  @if(view == "signup2Social") {
   <form class="signup-2 signup-2-social" novalidate data-first="@firstName" data-last="@lastName" action="@routes.socialFinalizeAccountAction()" novalidate@if(view == "signup2Social") { style="display:block"}>
     <div class="social-info">
       <div class="social-photo form-photo"@if(picturePath != ""){ style="background-image:url(@picturePath)"}></div>
       <div class="social-text-info">
         <div class="social-name">@firstName @lastName</div>
-        <input class="social-email" type="email" name="signup-email" value="@emailAddress" placeholder="Your email address" disabled>
+        <input class="social-email" type="email" name="signup-2-email" value="@emailAddress" placeholder="Your email address" disabled>
         <a class="social-change-email" href="javascript:">Change email</a>
       </div>
     </div>
     <div class="form-creds">
       <label class="password-label signup-2-label">
         Create a password
-        <input class="form-password" type="password" name="signup-password">
+        <input class="form-password" type="password" name="signup-2-password" autofocus>
         <span class="form-password-tip">at least 7 characters</span>
       </label>
     </div>
     <button class="form-submit alt-button">Sign me up</button>
   </form>
 </div>
+}
 
 <form class="login" data-title="Log in" action="@routes.logInWithUserPass()" novalidate@if(view == "login") { style="display:block"}>
   <div class="form-sides">

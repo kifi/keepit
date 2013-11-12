@@ -813,14 +813,15 @@ api.port.on({
       width: 1020,
       height: 530}, {
       navigate: function(url) {
-        var window = this;
+        var popup = this;
         if (url == baseUri + "/#_=_" || url == baseUri + "/") {
-          ajax("GET", "/ext/authed", function userIsLoggedIn() {
-            // user is now logged in
-            authenticate(function() {
-              log("[open_login_popup] closing popup")();
-              window.close();
-            });
+          ajax("GET", "/ext/authed", function (loggedIn) {
+            if (loggedIn !== false) {
+              startSession(function() {
+                log("[open_login_popup] closing popup")();
+                popup.close();
+              });
+            }
           });
         }
       }
@@ -1211,14 +1212,15 @@ function kifify(tab) {
   }
 
   if (!session) {
-    if (!getStored("user_logout")) { // user did not explicitly log out
-      ajax("GET", "/ext/authed", function() {
-        // user is logged in; need to fetch session data
-        authenticate(function() {
-          if (api.tabs.get(tab.id) === tab) {  // tab still at same page
-            kifify(tab);
-          }
-        });
+    if (!getStored('logout')) { // user did not explicitly log out
+      ajax("GET", "/ext/authed", function(loggedIn) {
+        if (loggedIn !== false) {
+          startSession(function() {
+            if (api.tabs.get(tab.id) === tab) {  // tab still at same page
+              kifify(tab);
+            }
+          });
+        }
       });
     }
     return;
@@ -1607,6 +1609,10 @@ function store(key, value) {
   }
 }
 
+function unstore(key) {
+  delete api.storage[getFullyQualifiedKey(key)];
+}
+
 api.on.install.add(function() {
   logEvent("extension", "install");
 });
@@ -1680,6 +1686,7 @@ function startSession(callback, retryMs) {
   function done(data) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
     logEvent("extension", "authenticated");
+    unstore('logout');
 
     session = data;
     session.prefs = {}; // to come via socket
@@ -1767,6 +1774,7 @@ function clearSession() {
 function deauthenticate() {
   log("[deauthenticate]")();
   clearSession();
+  store('logout', Date.now());
   api.popup.open({
     name: "kifi-deauthenticate",
     url: webBaseUri() + "/logout#_=_",
