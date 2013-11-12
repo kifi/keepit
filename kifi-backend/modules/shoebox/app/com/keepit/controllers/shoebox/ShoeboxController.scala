@@ -391,6 +391,16 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(experiments))
   }
 
+  def getExperimentsByUserIds() = Action(parse.json) { request =>
+    val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
+    val exps = db.readOnly { implicit s =>
+      userIds.map{ uid =>
+        uid.id.toString -> userExperimentRepo.getUserExperiments(uid)
+      }.toMap
+    }
+    Ok(Json.toJson(exps))
+  }
+
   def getPhrasesChanged(seqNum: Long, fetchSize: Int) = Action { request =>
     val phrases = db.readOnly { implicit s => phraseRepo.getPhrasesChanged(SequenceNumber(seqNum), fetchSize) }
     Ok(Json.toJson(phrases))
