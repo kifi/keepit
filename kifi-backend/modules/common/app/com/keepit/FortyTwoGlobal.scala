@@ -5,7 +5,7 @@ import java.io.File
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner, MemoryUsageMonitor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
@@ -70,6 +70,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       log.error("STARTUP SELF CHECK FAILED!")
     }
     serviceDiscovery.forceUpdate()
+
+    injector.instance[MemoryUsageMonitor].start()
   }
 
   // Get a file within the .fortytwo folder in the user's home directory
@@ -82,8 +84,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   }
   override def onBadRequest(request: RequestHeader, error: String): Result = {
     val errorId = ExternalId[Exception]()
-    val msg = "BAD REQUEST: %s: [%s] on %s:%s query: %s".format(errorId, error, request.method, request.path, request.queryString.mkString("::"))
+    val msg = s"BAD REQUEST: $errorId: [$error] on ${request.method}:${request.path} query: ${request.queryString.mkString("::")}"
     log.warn(msg)
+    if (mode == Mode.Test) {
+      throw new Exception(s"error [$msg] on $request")
+    }
     allowCrossOrigin(request, BadRequest(msg))
   }
 

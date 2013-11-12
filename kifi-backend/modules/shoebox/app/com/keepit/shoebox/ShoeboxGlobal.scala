@@ -2,7 +2,6 @@ package com.keepit.shoebox
 
 import com.keepit.reports._
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.analytics.reports.ReportBuilderPlugin
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
 import com.keepit.common.mail.{InvitationMailPlugin, MailToKeepPlugin, MailSenderPlugin}
@@ -38,7 +37,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     injector.instance[MailSenderPlugin].processOutbox()
     require(injector.instance[MailToKeepPlugin].enabled)
     require(injector.instance[HealthcheckPlugin].enabled)
-    require(injector.instance[ReportBuilderPlugin].enabled)
     require(injector.instance[DataIntegrityPlugin].enabled)
     require(injector.instance[UriIntegrityPlugin].enabled)
     require(injector.instance[FortyTwoCachePlugin].enabled)

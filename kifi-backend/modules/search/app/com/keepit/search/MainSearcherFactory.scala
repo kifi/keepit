@@ -39,7 +39,7 @@ class MainSearcherFactory @Inject() (
 
   private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[Id[User], URIGraphSearcherWithUser](3 seconds)
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[Id[User], CollectionSearcherWithUser](3 seconds)
-  private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[BrowsedURI]](3 seconds)
+  private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[BrowsedURI]](10 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](3 seconds)
 
   def apply(
@@ -83,7 +83,7 @@ class MainSearcherFactory @Inject() (
     consolidateURIGraphSearcherReq.clear()
     consolidateCollectionSearcherReq.clear()
   }
-  
+
   def getUserSearcher = new UserSearcher(userIndexer.getSearcher)
 
   def getSocialGraphInfoFuture(userId: Id[User], filter: SearchFilter): Future[SocialGraphInfo] = {

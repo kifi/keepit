@@ -58,7 +58,6 @@ object Shoebox extends Service {
     def getUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getUsers", Param("ids", ids))
     def getUserIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/userIdsByExternalIds", Param("ids", ids))
     def getBasicUsers() = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsers")
-    def getEmailsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailsForUsers")
     def getEmailAddressesForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailAddressesForUsers")
     def getCollectionIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/collectionIdsByExternalIds", Param("ids", ids))
     def getUserOpt(id: ExternalId[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserOpt", Param("id", id))
@@ -109,6 +108,7 @@ object Shoebox extends Service {
     def getProxyP() = ServiceRoute(POST, "/internal/shoebox/database/getProxyP")
     def isUnscrapable(url: String, destinationUrl: Option[String]) = ServiceRoute(GET, "/internal/shoebox/database/isUnscrapable", Param("url", url), Param("destinationUrl", destinationUrl))
     def isUnscrapableP() = ServiceRoute(POST, "/internal/shoebox/database/isUnscrapableP")
+    def getFriendRequestBySender(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getFriendRequestBySender", Param("senderId", senderId) )
   }
 }
 
@@ -168,8 +168,9 @@ object Heimdal extends Service {
   object internal {
     def trackEvent() = ServiceRoute(POST, "/internal/heimdal/trackEvent")
     def trackEvents() = ServiceRoute(POST, "/internal/heimdal/trackEvents")
-    def getMetricData(name: String) = ServiceRoute(GET, s"/internal/heimdal/getMetricData?name=${name}")
+    def getMetricData(repo: String, name: String) = ServiceRoute(GET, s"/internal/heimdal/$repo/getMetricData", Param("name", name))
     def updateMetrics() = ServiceRoute(GET, "/internal/heimdal/updateMetrics")
+    def getRawEvents(repo: String, eventTypes: Seq[String], limit: Int) = ServiceRoute(GET, s"/internal/heimdal/$repo/rawEvents", Param("events", eventTypes.mkString(",")), Param("limit", limit))
   }
 }
 
@@ -181,6 +182,7 @@ object ABook extends Service {
     def uploadDirect(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/uploadDirect")
     def getABookInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookInfos")
     def getContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getContacts", Param("maxRows", maxRows))
+    def getEContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContacts", Param("maxRows", maxRows))
     def getContactInfos(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getContactInfos", Param("maxRows", maxRows))
     def getABookRawInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
     def getContactsRawInfo(userId:Id[User], origin:ABookOriginType) = ServiceRoute(GET, s"/internal/abook/${userId.id}/${origin.name}/getContactsRawInfo")
@@ -194,6 +196,7 @@ object Scraper extends Service {
     def asyncScrapeArticleWithInfo() = ServiceRoute(POST, s"/internal/scraper/asyncScrapeWithInfo")
     def scheduleScrape() = ServiceRoute(POST, s"/internal/scraper/scheduleScrape")
     def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
+    def getBasicArticleP() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
   }
 }
 

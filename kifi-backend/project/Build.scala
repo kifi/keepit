@@ -50,7 +50,6 @@ object ApplicationBuild extends Build {
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
-      "org.mongodb" %% "casbah" % "2.5.0",
       "com.typesafe.slick" %% "slick" % "1.0.1",
       "net.sf.uadetector" % "uadetector-resources" % "2013.02",
       "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
@@ -78,7 +77,7 @@ object ApplicationBuild extends Build {
 
     val sqldbDependencies = Seq(
       "mysql" % "mysql-connector-java" % "5.1.25",
-      "com.jolbox" % "bonecp" % "0.8.0.RELEASE"
+      "com.jolbox" % "bonecp" % "0.8.1-SNAPSHOT"
     )
 
     val shoeboxDependencies = Seq(
@@ -152,11 +151,11 @@ object ApplicationBuild extends Build {
       templatesImport ++= _templatesImport,
 
       javaOptions in test ++= javaTestOptions,
-      Keys.fork in Test := true,
       parallelExecution in Test := false,
       testOptions in Test ++= _testOptions,
       EclipseKeys.skipParents in ThisBuild := false,
-      sources in doc in Compile := List()
+      sources in doc in Compile := List(),
+      Keys.fork := false
     )
 
     lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(

@@ -42,7 +42,7 @@ class ExtMessagingController @Inject() (
     protected val clock: Clock,
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
-    protected val userEventContextBuilder: UserEventContextBuilderFactory
+    protected val userEventContextBuilder: EventContextBuilderFactory
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
@@ -84,11 +84,11 @@ class ExtMessagingController @Inject() (
             shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
               case Success(bookmarkOpt) => {
                 contextBuilder += ("isKeep", bookmarkOpt.isDefined)
-                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("new_message"), tStart))
+                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("new_message"), tStart))
               }
               case Failure(ex) => {
                 log.warn("Failed to check if url is a keep.")
-                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("new_message"), tStart))
+                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("new_message"), tStart))
               }
             }
           }
@@ -126,11 +126,11 @@ class ExtMessagingController @Inject() (
         shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
           case Success(bookmarkOpt) => {
             contextBuilder += ("isKeep", bookmarkOpt.isDefined)
-            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("reply_message"), tStart))
+            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("reply_message"), tStart))
           }
           case Failure(ex) => {
             log.warn("Failed to check if url is a keep.")
-            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("reply_message"), tStart))
+            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("reply_message"), tStart))
           }
         }
       }
@@ -231,6 +231,18 @@ class ExtMessagingController @Inject() (
       val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
       val unvisited = messagingController.getPendingNotificationCount(socket.userId)
       socket.channel.push(Json.arr("notifications", notices, unvisited))
+    },
+    "get_unread_notifications" -> { case JsNumber(howMany) +: _ =>
+      val notices = messagingController.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt)
+      socket.channel.push(Json.arr("unread_notifications", notices))
+    },
+    "get_muted_notifications" -> { case JsNumber(howMany) +: _ =>
+      val notices = messagingController.getLatestMutedSendableNotifications(socket.userId, howMany.toInt)
+      socket.channel.push(Json.arr("muted_notifications", notices))
+    },
+    "get_sent_notifications" -> { case JsNumber(howMany) +: _ =>
+      val notices = messagingController.getLatestSentNotifications(socket.userId, howMany.toInt)
+      socket.channel.push(Json.arr("sent_notifications", notices))
     },
     "get_missed_notifications" -> { case JsString(time) +: _ =>
       val notices = messagingController.getSendableNotificationsAfter(socket.userId, parseStandardTime(time))

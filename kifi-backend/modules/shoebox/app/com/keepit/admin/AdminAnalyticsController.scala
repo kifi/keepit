@@ -1,17 +1,19 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.heimdal.{UserEvent, HeimdalServiceClient}
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{Json, JsObject, JsArray}
+import play.api.libs.json._
 
 import views.html
 
 import scala.concurrent.{Future, Promise}
-import scala.util.{Success, Failure}
-
 import com.google.inject.Inject
+import com.keepit.common.db.Id
+import scala.collection.mutable.{ListBuffer, Map => MutableMap}
+import scala.util.Failure
+import scala.util.Success
 
 
 case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int](), totalable : Boolean = true, resolution: Int = 1)
@@ -25,6 +27,37 @@ object MetricAuxInfo {
       "resolution" -> auxInfo.resolution
     )}
   }
+
+  def ungroupMetricById[T](ids: Seq[Option[Id[T]]], metricGroupedById: JsObject): Map[Option[Id[T]], JsObject] = {
+    val dataPointsById = MutableMap[Option[Id[T]], ListBuffer[JsValue]]()
+    ids.foreach(dataPointsById.update(_, new ListBuffer[JsValue]()))
+
+    val header = (metricGroupedById \ "header").as[String]
+    val dataByTime = (metricGroupedById \ "data").as[JsArray]
+    dataByTime.value.foreach { dataWithTime =>
+      val time = (dataWithTime \ "time")
+      val counts = (dataWithTime \ "data").as[JsArray].value.map { countWithId =>
+        val id = (countWithId \ "_id") match {
+          case JsArray(Seq(JsNumber(id))) => Some(Id[T](id.toLong))
+          case JsNull => None
+        }
+        val count = (countWithId \ "count")
+        id -> count
+      }.toMap
+
+      ids.foreach { id =>
+        val idData = counts.get(id).map(c => Json.arr(Json.obj("count" -> c))).getOrElse(Json.arr())
+        dataPointsById(id).append(Json.obj("time" -> time, "data" -> idData))
+      }
+    }
+    dataPointsById.map { case (id, points) => id -> wrapIntoMetric(id, header, points) }.toMap
+  }
+
+  private def wrapIntoMetric[T](id: Option[Id[T]], header: String, points: Seq[JsValue]): JsObject =
+    Json.obj(
+      "header" -> JsString(header + s": ${id.map(_.toString).getOrElse("None")}"),
+      "data" -> JsArray(points)
+    )
 }
 
 case class MetricWithAuxInfo(data: JsObject, auxInfo: MetricAuxInfo)
@@ -112,10 +145,10 @@ class AdminAnalyticsController @Inject() (
     "messagerFraction" -> messagerFraction
   )
 
-  private def metricData : Future[Map[String, JsArray]] = {
+  private def userMetricData : Future[Map[String, JsArray]] = {
     val innerFutures = metrics.mapValues{ groupMap =>
       Future.sequence(groupMap.toSeq.map{ case (metricName, auxInfo) =>
-        heimdal.getMetricData(metricName).map{MetricAuxInfo.augmentMetricData(_, auxInfo)}
+        heimdal.getMetricData[UserEvent](metricName).map{MetricAuxInfo.augmentMetricData(_, auxInfo)}
       })
     }
     val keys: Seq[String] = innerFutures.keys.toSeq
@@ -134,7 +167,7 @@ class AdminAnalyticsController @Inject() (
 
   def index() = AdminHtmlAction { request =>
     heimdal.updateMetrics()
-    Async(metricData.map{ dataMap =>
+    Async(userMetricData.map{ dataMap =>
       Ok(html.admin.analyticsDashboardView(dataMap.mapValues(Json.stringify(_))))
     })
   }

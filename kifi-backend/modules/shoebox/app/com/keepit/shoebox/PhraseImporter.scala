@@ -4,25 +4,17 @@ import java.io._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
-import com.keepit.search.Lang
-import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.model.PhraseRepo
 import com.keepit.model.{Phrase => PhraseModel}
-import akka.actor.Status.Failure
-import akka.actor.{ActorSystem, Props, Actor}
-import akka.pattern.ask
-import play.api.libs.json.{JsArray, JsNumber, JsString, JsObject}
 
-import com.google.inject.{Provider, ImplementedBy, Inject}
-import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
-import com.keepit.common.db.Id
+import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import play.api.Play.current
 
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.search.Lang
 
 object PhraseImporter {
@@ -94,11 +86,7 @@ trait PhraseImporter {
   def importFile(file: File): Unit
 }
 
-class PhraseImporterImpl @Inject()(
-    actor: ActorInstance[PhraseImporterActor],
-    EventPersister: EventPersister)
-  extends PhraseImporter {
-
+class PhraseImporterImpl @Inject()(actor: ActorInstance[PhraseImporterActor]) extends PhraseImporter {
   def importFile(file: File): Unit = {
     actor.ref ! ImportFile(file)
   }

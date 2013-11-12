@@ -3,7 +3,6 @@ package com.keepit.controllers.search
 import scala.Some
 
 import com.google.inject.Inject
-import com.keepit.common.analytics.MongoEventStore
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db._
 import com.keepit.model._

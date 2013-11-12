@@ -47,7 +47,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val clock: Clock
   protected val airbrake: AirbrakeNotifier
   protected val heimdal: HeimdalServiceClient
-  protected val userEventContextBuilder: UserEventContextBuilderFactory
+  protected val userEventContextBuilder: EventContextBuilderFactory
 
   protected def onConnect(socket: SocketInfo) : Unit
   protected def onDisconnect(socket: SocketInfo) : Unit
@@ -164,7 +164,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
             contextBuilder += ("experiment", experiment.toString)
           }
           versionOpt.foreach{ version => contextBuilder += ("extVersion", version) }
-          heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_connect"), tStart))
+          heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, EventType("ws_connect"), tStart))
         }
 
         def endSession(reason: String)(implicit channel: Concurrent.Channel[JsArray]) = {
@@ -183,7 +183,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               contextBuilder += ("experiment", experiment.toString)
             }
             versionOpt.foreach{ version => contextBuilder += ("extVersion", version) }
-            heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, UserEventType("ws_disconnect"), tStart))
+            heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, EventType("ws_disconnect"), tStart))
           }
         }
 

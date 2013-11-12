@@ -1,0 +1,23 @@
+@(network: com.keepit.social.SocialNetworkType)
+
+<div class="dialog claim-account" style="display:none">
+  <div class="dialog-cell">
+    <div class="dialog-box">
+      <a class="dialog-x" href="javascript:"></a>
+      <div class="dialog-title">
+        Claim Your Account
+      </div>
+      <form class="claim-account-form" action="@com.keepit.controllers.core.routes.AuthController.logInWithUserPass(network.name)" novalidate>
+        <p class="dialog-text">Log in to claim your Kifi account and connect @network.displayName.</p>
+        <input class="form-email-addr" type="email" name="claim-account-email" placeholder="Your email address" required>
+        <label class="password-label">
+          <input class="form-password" type="password" name="claim-account-password" placeholder="Your password" required>
+        </label>
+        <div class="claim-account-buttons">
+          <a class="claim-account-cancel cancel-button" href="javascript:">Cancel</a>
+          <button class="claim-account-submit primary-button">Log In</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

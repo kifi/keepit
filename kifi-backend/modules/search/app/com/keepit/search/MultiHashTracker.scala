@@ -39,5 +39,5 @@ trait MultiHashFilterBuilder[E] extends BinaryFormat[MultiHashFilter[E]] {
     System.arraycopy(array, 0, rv, 1, array.length)
     rv
   }
-  protected def reads(array: Array[Byte], offset: Int, length: Int): MultiHashFilter[E] = build(array.slice(offset, length))
+  protected def reads(array: Array[Byte], offset: Int, length: Int): MultiHashFilter[E] = build(array.slice(offset, offset+length))
 }

@@ -16,7 +16,7 @@ import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.social.{SocialGraphPlugin, SocialNetworks, SocialNetworkType, SocialId}
 import com.keepit.common.akka.SafeFuture
-import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilderFactory, UserEvent, UserEventType}
+import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilderFactory, UserEvent, EventType}
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Play.current
@@ -38,46 +38,16 @@ class InviteController @Inject() (db: Database,
   socialGraphPlugin: SocialGraphPlugin,
   actionAuthenticator: ActionAuthenticator,
   httpClient: HttpClient,
-  userEventContextBuilder: UserEventContextBuilderFactory,
+  eventContextBuilder: EventContextBuilderFactory,
   heimdal: HeimdalServiceClient)
     extends WebsiteController(actionAuthenticator) {
-
-  private def newSignup()(implicit request: Request[_]) =
-    request.cookies.get("QA").isDefined || current.configuration.getBoolean("newSignup").getOrElse(false)
 
   private def createBasicUserInvitation(socialUser: SocialUserInfo, state: State[Invitation]): BasicUserInvitation = {
     BasicUserInvitation(name = socialUser.fullName, picture = socialUser.getPictureUrl(75, 75), state = state)
   }
 
   def invite = AuthenticatedHtmlAction { implicit request =>
-    if(userCanInvite(request.experiments)) {
-      val friendsOnKifi = db.readOnly { implicit session =>
-        userConnectionRepo.getConnectedUsers(request.user.id.get) flatMap { u =>
-          val user = userRepo.get(u)
-          if(user.state == UserStates.ACTIVE) Some(user.externalId)
-          else None
-        }
-      }
-
-      val (invites, invitesLeft, invitesSent, invitesAccepted) = db.readOnly { implicit session =>
-        val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
-        val currentInvitations = invitationRepo.getByUser(request.user.id.get).map{ s =>
-          val socialUser = socialUserRepo.get(s.recipientSocialUserId)
-          Some(createBasicUserInvitation(socialUser, s.state))
-        }
-        val left = totalAllowedInvites - currentInvitations.length
-        val sent = currentInvitations.length
-        val accepted = currentInvitations.count( s => if(s.isDefined && s.get.state == InvitationStates.JOINED) true else false)
-        val invites = currentInvitations ++ Seq.fill(left)(None)
-
-        (invites, left, sent, accepted)
-      }
-
-      Ok(views.html.website.inviteFriends(request.user, friendsOnKifi, invites, invitesLeft, invitesSent, invitesAccepted))
-    }
-    else {
-      Redirect(routes.HomeController.home())
-    }
+    Redirect("/friends/invite") // Can't use reverse routes because we need to send to this URL exactly
   }
 
   private def CloseWindow() = Ok(Html("<script>window.close()</script>"))
@@ -85,7 +55,7 @@ class InviteController @Inject() (db: Database,
   private val url = current.configuration.getString("application.baseUrl").get
   private val appId = current.configuration.getString("securesocial.facebook.clientId").get
   private def fbInviteUrl(invite: Invitation)(implicit session: RSession): String = {
-    val identity = socialUserInfoRepo.get(invite.recipientSocialUserId)
+    val identity = socialUserInfoRepo.get(invite.recipientSocialUserId.get)
     val link = URLEncoder.encode(s"$url${routes.InviteController.acceptInvite(invite.externalId)}", "UTF-8")
     val confirmUri = URLEncoder.encode(
       s"$url${routes.InviteController.confirmInvite(invite.externalId, None, None)}", "UTF-8")
@@ -133,14 +103,14 @@ class InviteController @Inject() (db: Database,
             val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
             val currentInvitations = invitationRepo.getByUser(request.user.id.get).collect {
               case s if s.state != InvitationStates.INACTIVE =>
-                Some(createBasicUserInvitation(socialUserRepo.get(s.recipientSocialUserId), s.state))
+                Some(createBasicUserInvitation(socialUserRepo.get(s.recipientSocialUserId.get), s.state))
             }
             if (currentInvitations.length < totalAllowedInvites) {
               val invite = inactiveOpt map {
                 _.copy(senderUserId = Some(request.user.id.get))
               } getOrElse Invitation(
                 senderUserId = Some(request.user.id.get),
-                recipientSocialUserId = socialUserInfo.id.get,
+                recipientSocialUserId = socialUserInfo.id,
                 state = InvitationStates.INACTIVE
               )
               sendInvitation(socialUserInfo, invite)
@@ -166,8 +136,9 @@ class InviteController @Inject() (db: Database,
       val invitation = invitationRepo.getOpt(id)
       invitation match {
         case Some(invite) if (invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE) =>
-          val socialUser = socialUserInfoRepo.get(invitation.get.recipientSocialUserId)
-          Ok(views.html.website.welcome(Some(id), Some(socialUser), newSignup = newSignup))
+          val socialUser = socialUserInfoRepo.get(invitation.get.recipientSocialUserId.get)
+          Redirect(com.keepit.controllers.core.routes.AuthController.signupPage).withCookies(Cookie("inv", invite.externalId.id))
+          //Ok(views.html.website.welcome(Some(id), Some(socialUser)))
         case _ =>
           Redirect(routes.HomeController.home)
       }
@@ -182,9 +153,9 @@ class InviteController @Inject() (db: Database,
           if (errorCode.isEmpty) {
             invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE))
             SafeFuture{
-              val contextBuilder = userEventContextBuilder()
-              contextBuilder += ("invitee", invite.recipientSocialUserId.id)
-              heimdal.trackEvent(UserEvent(invite.senderUserId.map(_.id).getOrElse(-1), contextBuilder.build, UserEventType("invite_sent")))
+              val contextBuilder = eventContextBuilder()
+              contextBuilder += ("invitee", invite.recipientSocialUserId.get.id)
+              heimdal.trackEvent(UserEvent(invite.senderUserId.map(_.id).getOrElse(-1), contextBuilder.build, EventType("invite_sent")))
             }
           }
           CloseWindow()

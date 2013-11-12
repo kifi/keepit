@@ -73,14 +73,16 @@ private[mail] class MailSenderActor @Inject() (
       }
       if (newTo.toSet != mail.to.toSet || newCC.toSet != mail.cc.toSet) {
         if (newTo.isEmpty) {
-          mail.copy(state = ElectronicMailStates.OPT_OUT)
-        }
-        db.readWrite { implicit session =>
-
+          db.readWrite { implicit session =>
+            mailRepo.save(mail.copy(state = ElectronicMailStates.OPT_OUT))
+          }
+        } else {
+          val newMail = db.readWrite { implicit session =>
+            mailRepo.save(mail.copy(to = newTo, cc = newCC))
+          }
+          mailProvider.sendMail(newMail)
         }
       }
-      emailOptOutRepo.hasOptedOut(mail.to)
-      mailProvider.sendMail(mail)
     case m => throw new UnsupportedActorMessage(m)
   }
 }

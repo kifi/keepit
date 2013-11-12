@@ -65,7 +65,7 @@ class SearchController @Inject()(
     val userFilter = filter match {
       case "f" if userId.isDefined => userSearchFilterFactory.friendsOnly(userId.get, Some(context))
       case "nf"if userId.isDefined => userSearchFilterFactory.nonFriendsOnly(userId.get, Some(context))
-      case _ => userSearchFilterFactory.default(Some(context))
+      case _ => userSearchFilterFactory.default(userId, Some(context))
     }
     val res = parser.parse(queryText) match {
       case None => UserSearchResult(Array.empty[UserHit], context)

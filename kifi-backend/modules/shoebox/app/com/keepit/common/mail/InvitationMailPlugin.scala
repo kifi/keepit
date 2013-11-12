@@ -46,7 +46,7 @@ private[mail] class InvitationMailActor @Inject() (
       log.debug("Checking for invitations to resend")
       for {
         (inv, userId) <- db.readOnly { implicit s =>
-          invitationRepo.getAdminAccepted().map(i => i -> suiRepo.get(i.recipientSocialUserId).userId.get)
+          invitationRepo.getAdminAccepted().map(i => i -> suiRepo.get(i.recipientSocialUserId.get).userId.get)
         } if inv.updatedAt plus TimeBeforeResend isBefore clock.now()
       } {
         val resent =

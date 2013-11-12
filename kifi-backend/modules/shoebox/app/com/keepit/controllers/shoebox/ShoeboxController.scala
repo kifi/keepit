@@ -1,9 +1,6 @@
 package com.keepit.controllers.shoebox
 
 import com.google.inject.{Provider, Inject}
-import com.keepit.common.analytics.EventFamilies
-import com.keepit.common.analytics.EventPersister
-import com.keepit.common.analytics.Events
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
@@ -50,7 +47,6 @@ class ShoeboxController @Inject() (
   urlPatternRuleRepo: UrlPatternRuleRepo,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
   userExperimentRepo: UserExperimentRepo,
-  EventPersister: EventPersister,
   postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
   phraseRepo: PhraseRepo,
@@ -58,12 +54,14 @@ class ShoeboxController @Inject() (
   keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
+  socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
   changedUriRepo: ChangedURIRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
-  scrapeInfoRepo:ScrapeInfoRepo
+  scrapeInfoRepo:ScrapeInfoRepo,
+  friendRequestRepo: FriendRequestRepo
 )
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
@@ -113,7 +111,7 @@ class ShoeboxController @Inject() (
     val email = (request.body \ "email").as[ElectronicMail]
 
     val addrs = db.readOnly{ implicit session => emailAddressRepo.getAllByUser(userId) }
-    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
+    for (addr <- addrs.find(_.verifiedAt.isDefined).orElse(addrs.headOption)) {
       db.readWrite{ implicit session => postOffice.sendMail(email.copy(to=List(addr))) }
     }
     Ok("true")
@@ -313,12 +311,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(commentRecipientIds))
   }
 
-  def persistServerSearchEvent() = Action(parse.json) { request =>
-    val metaData = request.body
-    EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject]))
-    Ok("server search event persisted")
-  }
-
   def getUsers(ids: String) = Action { request =>
     val userIds = ids.split(',').map(id => Id[User](id.toLong))
     val users = db.readOnly { implicit s => userIds map userRepo.get }
@@ -346,14 +338,6 @@ class ShoeboxController @Inject() (
     Ok(JsArray(users.map{ u => Json.toJson(u)}))
   }
 
-  def getEmailsForUsers() = Action(parse.json) { request =>
-    val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
-    val emails = db.readOnly{ implicit s =>
-      userIds.map{userId => userId.id.toString -> emailAddressRepo.getAllByUser(userId).map{_.address}}.toMap
-    }
-    Ok(Json.toJson(emails))
-  }
-
   def getEmailAddressesForUsers() = Action(parse.json) { request =>
     val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val emails = db.readOnly{ implicit s =>
@@ -370,6 +354,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(collectionIds))
   }
 
+  // on kifi
   def getConnectedUsers(id : Id[User]) = Action { request =>
     val ids = db.readOnly { implicit s =>
       userConnectionRepo.getConnectedUsers(id).toSeq
@@ -474,5 +459,12 @@ class ShoeboxController @Inject() (
       else keepers.foreach { extId => userBookmarkClicksRepo.increaseCounts(userRepo.get(extId).id.get, uriId, false) }
     }
     Ok
+  }
+
+  def getFriendRequestsBySender(senderId: Id[User]) = Action { request =>
+    val requests = db.readOnly{ implicit s =>
+      friendRequestRepo.getBySender(senderId)
+    }
+    Ok(JsArray(requests.map{ x => Json.toJson(x) }))
   }
 }

@@ -1,19 +1,24 @@
-# SHOEBOX
+#ABOOK
 
 # --- !Ups
 
-CREATE TABLE email_opt_out (
-    id bigint(20) NOT NULL AUTO_INCREMENT,
-    created_at datetime NOT NULL,
-    updated_at datetime NOT NULL,
-    address varchar(512) NOT NULL,
-    category varchar(64) NOT NULL,
-    state VARCHAR(20) NOT NULL,
-    PRIMARY KEY (id),
+CREATE TABLE econtact (
+	id bigint(20) NOT NULL AUTO_INCREMENT,
+	created_at datetime NOT NULL,
+	updated_at datetime NOT NULL,
 
-    INDEX email_opt_out_i_address (address)
-);
+	user_id    bigint(20)    NOT NULL,
+	email      varchar(512) NOT NULL,
+	name       varchar(1024) NOT NULL,
+	first_name varchar(512),
+	last_name  varchar(512),
 
-insert into evolutions (name, description) values('120.sql', 'adding email_opt_out table');
+	PRIMARY KEY (id),
+	UNIQUE INDEX econtact_i_user_id_email (user_id, email)
+
+) -- DEFAULT CHARSET=utf8mb4
+;
 
 # --- !Downs
+
+DROP TABLE econtact;

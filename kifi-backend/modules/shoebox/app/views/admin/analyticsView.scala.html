@@ -1,4 +1,4 @@
-@(data: String, name: String, mode: String="simple", display: String="seperate", masterTitle : String = "[merged]")
+@(data: String, name: String, mode: String="simple", display: String="seperate", masterTitle : String = "[merged]", showLegend : Boolean = true)
 <div id="chart_container_@name"></div>
 
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.2.1/lodash.min.js"></script>
@@ -107,7 +107,7 @@
     function preprocess(metric){
       var metricKeys = discoverKeys(metric.data, metric.legend)
       if (metricKeys.length===0){
-        metricKeys.push(datum.legend['null'] || 'null'); 
+        metricKeys.push(metric.legend['null'] || 'null');
       }
       metric.keys = metricKeys; 
       objectify(metric.data, metric.legend);
@@ -182,12 +182,18 @@
           }
         });
 
+        var legendPosition = "none";
+        if (options.showLegend) {
+          legendPosition = "right";
+        }
+
         var chart = new google.visualization.ChartWrapper({
           'chartType': 'LineChart',
           'containerId': "chart_" + name + metric.header,
           'options': {
             'chartArea': {'width': '70%', 'height': '80%'},
-            'title': metric.header + suffix
+            'title': metric.header + suffix,
+            'legend': {'position': legendPosition }
           }
         });
 
@@ -231,7 +237,8 @@
       sum    : ("@mode"==="sum"),
       merge  : ("@display"==="merged"),
       compare: ("@display"==="compare"),
-      header : "@masterTitle"
+      header : "@masterTitle",
+      showLegend: @showLegend
     }
   );
 

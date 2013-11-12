@@ -8,19 +8,14 @@ case class ScraperConfig(
   initialBackoff: Double = 1.0d, //hours
   maxBackoff: Double = 1024.0d, //hours
   changeThreshold: Double = 0.05,
-  disableScraperService: Boolean = {
-    val p = System.getProperty("scraper.service.disable")
-    (p != null && p.equalsIgnoreCase("true"))
-  },
-  batchSize: Int = {
-    val p = System.getProperty("scraper.batch.size")
-    if (p != null) p.toInt else 2
-  }
+  disableScraperService: Boolean = sys.props.getOrElse("scraper.service.disable", "false").toBoolean,
+  batchSize: Int = sys.props.getOrElse("scraper.service.batch.size", "10").toInt,
+  batchMax: Int = sys.props.getOrElse("scraper.service.batch.max", "200").toInt,
+  pendingSkipThreshold: Int = sys.props.getOrElse("scraper.service.pending.skip.threshold", "100").toInt
 )
 
 object ScraperConfig {
   val BATCH_SIZE = 100
-
   val maxContentChars = 100000 // 100K chars
 }
 

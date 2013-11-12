@@ -1,9 +1,7 @@
 
-GET     /curtain                    @com.keepit.controllers.website.HomeController.curtainHome()
 
-# Uncomment when we roll out new auth.
-#GET     /login                      @com.keepit.controllers.core.AuthController.signinPage()
-GET     /login                      securesocial.controllers.LoginPage.login
+GET     /login                      @com.keepit.controllers.core.AuthController.loginPage
+GET     /ss/login                   securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
 GET     /importContacts             @com.keepit.controllers.core.OAuth2Controller.importContacts(provider:Option[String])
@@ -11,9 +9,7 @@ GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controlle
 GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
 POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.accessTokenCallback(provider:String)
 
-# Relevant when we support traditional user signups:
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
-GET     /signin                     @com.keepit.controllers.core.AuthController.signinPage()
 
 POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
 POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
@@ -22,33 +18,21 @@ POST    /auth/upload-binary-image   @com.keepit.controllers.core.AuthController.
 POST    /auth/upload-multipart-image @com.keepit.controllers.core.AuthController.uploadFormEncodedPicture()
 POST    /auth/cancel                @com.keepit.controllers.core.AuthController.cancelAuth()
 
-GET     /unsubscribe/:optOutToken   @com.keepit.controllers.website.EmailOptOutController.optOut(optOutToken: String)
-GET     /unsubscribe/:optOutToken   @com.keepit.controllers.website.EmailOptOutController.optOutAction(optOutToken: String)
-GET     /unsubscribe/getToken/:email   @com.keepit.controllers.website.EmailOptOutController.getToken(email: String)
-
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
 POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
 
 # custom auth routes which set some session state
 
-# Standalone login page
 GET     /login/after                @com.keepit.controllers.core.AuthController.afterLogin()
-GET     /login/:provider            @com.keepit.controllers.core.AuthController.login(provider, format: String ?= "html")
-POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider, format: String ?= "html")
-POST    /login                      @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
-POST    /auth/log-in                @com.keepit.controllers.core.AuthController.loginWithUserPass(format: String ?= "json")
+GET     /login/:provider            @com.keepit.controllers.core.AuthController.loginSocial(provider)
+POST    /auth/log-in                @com.keepit.controllers.core.AuthController.logInWithUserPass(link: String ?= "")
 
 GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
 GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
-POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
 
-# Initial signup using provider pages
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
-POST    /signup/:provider           @com.keepit.controllers.core.AuthController.signupByPost(provider)
-
-POST    /loginAndLink/:provider     @com.keepit.controllers.core.AuthController.passwordLoginAndLink(provider)
 
 POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
 
@@ -109,6 +93,7 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 ##########################################
 GET     /m/1/user/friends           @com.keepit.controllers.mobile.MobileUserController.getFriends()
 GET     /m/1/user/networks          @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
+POST    /m/1/page/details           @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 
 ##########################################
 # Website
@@ -132,9 +117,7 @@ GET     /invite                     @com.keepit.controllers.website.InviteContro
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], error_msg: Option[String], error_code: Option[Int])
-GET     /sign-up                    @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
-GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
-POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
+GET     /terms                      @com.keepit.controllers.website.OnboardingController.tos
 
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
@@ -199,14 +182,6 @@ POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMail
 GET     /admin                      @com.keepit.controllers.admin.AdminDashboardController.index
 GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
-
-GET     /admin/events               @com.keepit.controllers.admin.AdminEventController.reportList
-POST    /admin/events/buildReport   @com.keepit.controllers.admin.AdminEventController.buildReport
-GET     /admin/events/report        @com.keepit.controllers.admin.AdminEventController.getReport(reportName: String)
-GET     /admin/events/activityData  @com.keepit.controllers.admin.AdminEventController.activityDataAsCsv
-
-GET     /admin/realtime/event       @com.keepit.controllers.admin.AdminEventController.eventViewer
-GET     /admin/realtime/event/stream      @com.keepit.controllers.admin.AdminEventController.eventStream
 
 GET     /admin/analytics            @com.keepit.controllers.admin.AdminAnalyticsController.index()
 
@@ -280,7 +255,6 @@ POST    /admin/user/:id/update      @com.keepit.controllers.admin.AdminUserContr
 POST    /admin/user/:id/setInvitesCount      @com.keepit.controllers.admin.AdminUserController.setInvitesCount(id: Id[User])
 GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.AdminUserController.refreshAllSocialInfo(id: Id[User])
 POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
-POST    /admin/user/:id/updatePic   @com.keepit.controllers.admin.AdminUserController.updateUserPicture(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
@@ -374,6 +348,7 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 
 GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
 
+
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
 POST    /internal/shoebox/database/getNormalizedURIByURL               @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIByURL()
@@ -382,7 +357,6 @@ POST    /internal/shoebox/database/internNormalizedURI                 @com.keep
 GET     /internal/shoebox/database/getUsers                            @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
 POST     /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers()
-POST     /internal/shoebox/database/getEmailsForUsers                   @com.keepit.controllers.shoebox.ShoeboxController.getEmailsForUsers()
 POST     /internal/shoebox/database/getEmailAddressesForUsers                   @com.keepit.controllers.shoebox.ShoeboxController.getEmailAddressesForUsers()
 GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
@@ -397,7 +371,6 @@ GET     /internal/shoebox/database/getBookmarksByUriWithoutTitle @com.keepit.con
 GET     /internal/shoebox/database/getLatestBookmark  @com.keepit.controllers.shoebox.ShoeboxController.getLatestBookmark(uriId: Id[NormalizedURI])
 POST    /internal/shoebox/database/saveBookmark       @com.keepit.controllers.shoebox.ShoeboxController.saveBookmark
 GET     /internal/shoebox/database/commentRecipientIds  @com.keepit.controllers.shoebox.ShoeboxController.getCommentRecipientIds(commentId: Id[Comment])
-POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.shoebox.ShoeboxController.sendMailToUser
 GET     /internal/shoebox/database/getPhrasesChanged   @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesChanged(seqNum: Long, fetchSize: Int)
@@ -434,5 +407,6 @@ GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.sh
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.shoebox.ShoeboxController.getProxyP()
 GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])
 POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapableP
+GET     /internal/shoebox/database/getFriendRequestBySender @com.keepit.controllers.shoebox.ShoeboxController.getFriendRequestsBySender(senderId: Id[User])
 
 ->  / common.Routes

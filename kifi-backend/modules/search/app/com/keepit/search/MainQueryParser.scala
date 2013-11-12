@@ -1,5 +1,8 @@
 package com.keepit.search
 
+import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.search.phrasedetector.{PhraseDetector, NlpPhraseDetector}
 import com.keepit.search.graph.CollectionSearcherWithUser
 import com.keepit.search.query.parser.QueryParser
@@ -25,7 +28,9 @@ import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import scala.collection.mutable.ArrayBuffer
-
+import scala.concurrent._
+import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class MainQueryParser(
   lang: Lang,
@@ -36,16 +41,15 @@ class MainQueryParser(
   phraseBoost: Float,
   override val siteBoost: Float,
   override val concatBoost: Float,
-  phraseDetector: PhraseDetector
+  phraseDetector: PhraseDetector,
+  phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
+  monitoredAwait: MonitoredAwait
 ) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
 
-  val namedQueryContext = new NamedQueryContext
   var collectionIds = Set.empty[Long]
 
   var phraseDetectionTime: Long = 0L
   var nlpPhraseDetectionTime: Long = 0L
-
-  private def namedQuery(name: String, query: Query) = new NamedQuery(name, query, namedQueryContext)
 
   override def parse(queryText: CharSequence): Option[Query] = {
     throw new UnsupportedOperationException("use parse(queryText,collectionSearcher)")
@@ -57,20 +61,7 @@ class MainQueryParser(
       if (numTextQueries <= 0) query
       else if (numTextQueries > ProximityQuery.maxLength) query // too many terms, skip proximity and semantic vector
       else {
-        val phrases = if (numTextQueries > 1 && phraseBoost > 0.0f) {
-          val tPhraseDetection = System.currentTimeMillis
-          val p = phraseDetector.detectAll(phStemmedTerms)
-          phraseDetectionTime = System.currentTimeMillis - tPhraseDetection
-
-          if (p.size > 0) p else {
-            val tNlpPhraseDetection = System.currentTimeMillis
-            val nlpPhrases = NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
-            nlpPhraseDetectionTime = System.currentTimeMillis - tNlpPhraseDetection
-            nlpPhrases
-          }
-        } else {
-          Set.empty[(Int, Int)]
-        }
+        val phrasesFuture = if (numTextQueries > 1 && phraseBoost > 0.0f) detectPhrases(queryText, lang) else null
 
         // detect collection names and augment TextQueries
         collectionSearcher.foreach{ cs =>
@@ -85,9 +76,6 @@ class MainQueryParser(
           }
         }
 
-        val auxQueries = ArrayBuffer.empty[Query]
-        val auxStrengths = ArrayBuffer.empty[Float]
-
         if (semanticBoost > 0.0f) {
           textQueries.foreach{ textQuery =>
             textQuery.setSemanticBoost(semanticBoost)
@@ -96,16 +84,12 @@ class MainQueryParser(
         }
 
         if (proximityBoost > 0.0f && numTextQueries > 1) {
+          val phrases = monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection")
           val proxQ = new DisjunctionMaxQuery(0.0f)
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost))
           proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost))
           proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), phrases, phraseBoost))
-          auxQueries += namedQuery("proximity", proxQ)
-          auxStrengths += proximityBoost
-        }
-
-        if (!auxQueries.isEmpty) {
-          new MultiplicativeBoostQuery(query, auxQueries.toArray, auxStrengths.toArray)
+          new MultiplicativeBoostQuery(query, proxQ, proximityBoost)
         } else {
           query
         }
@@ -137,5 +121,22 @@ class MainQueryParser(
 
   private[this] def svTerms: Seq[Term] = {
     textQueries.flatMap{ _.stems.map{ t => new Term("sv", t.text) } }
+  }
+
+  private def detectPhrases(queryText: CharSequence, lang: Lang): Future[Set[(Int, Int)]] = {
+    phraseDetectionConsolidator((queryText, lang)){ _ =>
+      SafeFuture {
+        val tPhraseDetection = System.currentTimeMillis
+        val p = phraseDetector.detectAll(phStemmedTerms)
+        phraseDetectionTime = System.currentTimeMillis - tPhraseDetection
+
+        if (p.size > 0) p else {
+          val tNlpPhraseDetection = System.currentTimeMillis
+          val nlpPhrases = NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
+          nlpPhraseDetectionTime = System.currentTimeMillis - tNlpPhraseDetection
+          nlpPhrases
+        }
+      }
+    }
   }
 }

@@ -33,7 +33,7 @@ object S3UserPictureConfig {
   val ImageSizes = Seq(100, 200)
   val sizes = ImageSizes.map(s => ImageSize(s, s))
   val OriginalImageSize = "original"
-  val defaultImage = "http://s.c.lnkd.licdn.com/scds/common/u/images/themes/katy/ghosts/person/ghost_person_200x200_v1.png"
+  val defaultImage = "https://www.kifi.com/assets/img/ghost.200.png"
 }
 
 @ImplementedBy(classOf[S3ImageStoreImpl])
@@ -82,7 +82,7 @@ class S3ImageStoreImpl @Inject() (
 
   private val ExpirationTime = Weeks.ONE
 
-  def getPictureUrl(width: Int, user: User): Future[String] = getPictureUrl(Some(width), user, "0.jpg") // todo: Change to default
+  def getPictureUrl(width: Int, user: User): Future[String] = getPictureUrl(Some(width), user, "0") // todo: Change to default
 
   def getPictureUrl(width: Option[Int], user: User, pictureName: String): Future[String] = {
     if (config.isLocal) {
@@ -102,6 +102,7 @@ class S3ImageStoreImpl @Inject() (
               avatarUrlByExternalId(width, user.externalId, res.head._1)
             }
           } else {
+            uploadPictureFromSocialNetwork(sui, user.externalId)
             Promise.successful(avatarUrlFromSocialNetwork(sui, width.map(_.toString).getOrElse("original"))).future
           }
         case Some(userPicId) =>

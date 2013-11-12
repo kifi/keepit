@@ -1,5 +1,4 @@
-@(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None, msg: Option[String] = None,
-    skipLetMeIn: Boolean = false, newSignup: Boolean = false)
+@(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None, msg: Option[String] = None, skipLetMeIn: Boolean = false)
 
 @helper.main(title = "Welcome to Kifi!", hiddenElements = Seq("header"), head = Html(s"""
     <meta property="og:url" content="https://www.kifi.com${id map (com.keepit.controllers.website.routes.InviteController.acceptInvite(_).url) getOrElse com.keepit.controllers.website.routes.HomeController.home()}">
@@ -29,41 +28,17 @@
       <div class="networks">
       @for(network <- SocialNetworks.SUPPORTED.sortBy(network => !socialUser.exists(_.networkType == network))) {
         @if(socialUser.isEmpty || socialUser.get.networkType == network) {
-          <a href="@com.keepit.controllers.core.routes.AuthController.login(network.name)" class="big blue btn">
+          <a href="@com.keepit.controllers.core.routes.AuthController.loginSocial(network.name)" class="big blue btn">
             Log in with @network.displayName
           </a>
-          @if(newSignup) {
-            <a href="@com.keepit.controllers.core.routes.AuthController.signup(network.name)" class="big blue btn">
-              Sign up with @network.displayName
-            </a>
-          }
         } else {
           <br>
-          <a href="@com.keepit.controllers.core.routes.AuthController.login(network.name)" class="btn">
+          <a href="@com.keepit.controllers.core.routes.AuthController.loginSocial(network.name)" class="btn">
             I want to log in with @network.displayName instead
           </a>
         }
       }
       </div>
-      @if(newSignup) {
-        <a href="javascript:" class="btn" id="userpass_login">Log in with email and password</a><br>
-        <div class="userpass_login">
-          <form method="post" action="@com.keepit.controllers.core.routes.AuthController.login("userpass")">
-            <input type="text" placeholder="Email Address" name="username"><br>
-            <input type="password" placeholder="Password" name="password"><br>
-            <input type="submit" class="blue btn" value="Log in">
-          </form>
-        </div>
-        <a href="javascript:" class="btn" id="userpass_signup">Sign up with email and password</a>
-        <div class="userpass_signup">
-          <form method="post" action="">
-            <input type="text" placeholder="Email Address" name="email"><br>
-            <input type="password" placeholder="Password" name="password.1"><br>
-            <input type="password" placeholder="Confirm Password" name="password.2"><br>
-            <input type="submit" class="blue btn" value="Sign up">
-          </form>
-        </div>
-      }
     </div>
   </section>
 }

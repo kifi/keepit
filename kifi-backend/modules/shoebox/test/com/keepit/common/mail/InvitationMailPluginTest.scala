@@ -65,14 +65,14 @@ class InvitationMailPluginTest extends TestKit(ActorSystem()) with Specification
           (user, sui1, sui2)
         }
         val inv1 = db.readWrite { implicit s =>
-          invitationRepo.save(Invitation(senderUserId = user.id, recipientSocialUserId = sui1.id.get,
+          invitationRepo.save(Invitation(senderUserId = user.id, recipientSocialUserId = sui1.id,
             state = InvitationStates.ADMIN_ACCEPTED))
         }
 
         clock += Days.TWO
 
         val inv2 = db.readWrite { implicit s =>
-          invitationRepo.save(Invitation(senderUserId = user.id, recipientSocialUserId = sui2.id.get,
+          invitationRepo.save(Invitation(senderUserId = user.id, recipientSocialUserId = sui2.id,
             state = InvitationStates.ADMIN_ACCEPTED))
         }
 

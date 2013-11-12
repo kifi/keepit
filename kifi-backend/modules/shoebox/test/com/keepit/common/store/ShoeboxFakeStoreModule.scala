@@ -1,7 +1,6 @@
 package com.keepit.common.store
 
 import com.google.inject.{Singleton, Provides}
-import com.keepit.common.analytics.reports.{InMemoryReportStoreImpl, ReportStore}
 import com.keepit.model.{User, SocialUserInfo, NormalizedURI}
 import scala.concurrent._
 import com.amazonaws.services.s3.model.PutObjectResult
@@ -10,9 +9,6 @@ import scala.util.{Success, Try}
 import java.io.File
 
 case class ShoeboxFakeStoreModule() extends FakeStoreModule {
-
-  @Provides @Singleton
-  def reportStore(): ReportStore = new InMemoryReportStoreImpl()
 
   @Provides @Singleton
   def s3ScreenshotStore = FakeS3ScreenshotStore()
@@ -42,6 +38,8 @@ case class FakeS3ImageStore(val config: S3ImageConfig) extends S3ImageStore {
 
   def uploadTemporaryPicture(file: File): Try[(String, String)] =
     Success("token", "http://cloudfront/token.jpg")
+
+  def forceUpdateSocialPictures(userId: Id[User]): Unit = {}
 
   // Returns Some(urlOfUserPicture) or None
   def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String, cropAttributes: Option[ImageCropAttributes]): Option[String] = None

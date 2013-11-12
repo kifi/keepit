@@ -1,6 +1,5 @@
 package com.keepit.search.index
 
-import scala.collection.JavaConversions._
 import java.io.IOException
 import java.lang.OutOfMemoryError
 import org.apache.lucene.document.Document
@@ -13,7 +12,12 @@ import org.apache.lucene.index.Term
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import play.modules.statsd.api.Statsd
+import org.apache.commons.io.FileUtils
+import org.apache.lucene.store.IOContext
+import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
+import scala.math._
 
 object Indexer {
   val idFieldName = "_ID"
@@ -70,13 +74,37 @@ abstract class Indexer[T](
       indexWriter.updateDocument(idTerm, seedDoc)
       indexWriter.commit()
     }
-    val reader = DirectoryReader.open(indexDirectory)
+    val reader = getReader()
     Searcher(reader)
+  }
+
+  private[this] def getReader(): DirectoryReader = {
+    log.info(s"warming up an index directory [${indexDirectory.toString}]...")
+    val startTime = System.currentTimeMillis
+
+    val reader = DirectoryReader.open(indexDirectory)
+
+    val buffer = new Array[Byte](1<<16)
+    reader.getIndexCommit().getFileNames().foreach{ filename =>
+      if (indexDirectory.fileExists(filename)) {
+        var remaining = indexDirectory.fileLength(filename)
+        val input = indexDirectory.openInput(filename, new IOContext)
+        while (remaining > 0) {
+          val amount = min(remaining, buffer.length)
+          input.readBytes(buffer, 0, amount.toInt)
+          remaining -= amount
+        }
+      }
+    }
+    val elapsed = System.currentTimeMillis - startTime
+    log.info(s"warmed up an index directory [${indexDirectory.toString}], took {$elapsed}ms")
+
+    reader
   }
 
   def getSearcher = searcher
 
-  private var _sequenceNumber =
+  private[this] var _sequenceNumber =
     SequenceNumber(commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong)
 
   def sequenceNumber = _sequenceNumber
@@ -203,6 +231,7 @@ abstract class Indexer[T](
       val start = currentDateTime.getMillis
       if (indexDirectory.doBackup()) {
         val end = currentDateTime.getMillis
+        Statsd.gauge(Seq("index", indexDirectory.getDirectory().getName, "size").mkString("."), FileUtils.sizeOfDirectory(indexDirectory.getDirectory()))
         log.info(s"Index directory has been backed up in ${ (end - start) / 1000} seconds")
       }
     } catch {

@@ -12,9 +12,8 @@ import com.keepit.search._
 
 import play.api.libs.json._
 import views.html
-import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.heimdal.{UserEvent, HeimdalServiceClient}
 import scala.Predef._
-import scala.collection.mutable.{ListBuffer, Map => MutableMap}
 
 class AdminSearchConfigController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -100,26 +99,27 @@ class AdminSearchConfigController @Inject() (
   }
 
   private def kifiVsGoogle(experiments: Seq[Id[SearchConfigExperiment]]): Future[Map[Option[Id[SearchConfigExperiment]], JsArray]] = {
-    val totalResultsClickedFuture = heimdal.getMetricData("total_results_clicked_with_kifi_result_by_search_experiment")
-    val kifiResultsClickedFuture = heimdal.getMetricData("kifi_results_clicked_by_search_experiment")
+    val totalResultsClickedFuture = heimdal.getMetricData[UserEvent]("total_results_clicked_with_kifi_result_by_search_experiment")
+    val kifiResultsClickedFuture = heimdal.getMetricData[UserEvent]("kifi_results_clicked_by_search_experiment")
 
     for {
       totalResultsClicked <- totalResultsClickedFuture
       kifiResultsClicked <- kifiResultsClickedFuture
     } yield {
 
-      val totalResultsClickedByExperiment = ungroup(totalResultsClicked)
-      val kifiResultsClickedByExperiment = ungroup(kifiResultsClicked)
+      val ids = None +: experiments.map(Some(_))
+      val totalResultsClickedByExperiment = MetricAuxInfo.ungroupMetricById(ids, totalResultsClicked)
+      val kifiResultsClickedByExperiment = MetricAuxInfo.ungroupMetricById(ids, kifiResultsClicked)
 
-      (None +: experiments.map(Some(_))).map { id =>
+      ids.map { id =>
         id -> Json.arr(
           MetricAuxInfo.augmentMetricData(
-            totalResultsClickedByExperiment.getOrElse(id, Json.obj()),
+            totalResultsClickedByExperiment(id),
             MetricAuxInfo("nothing yet", Map("null" -> "All Clicks on Searches with Kifi Results"))
           ),
           MetricAuxInfo.augmentMetricData(
-            kifiResultsClickedByExperiment.getOrElse(id, Json.obj()),
-            MetricAuxInfo("nothing yet", Map("null" -> "KiFi Clicks"))
+            kifiResultsClickedByExperiment(id),
+            MetricAuxInfo("nothing yet", Map("null" -> "Kifi Clicks"))
           )
         )
       }.toMap
@@ -127,53 +127,30 @@ class AdminSearchConfigController @Inject() (
   }
 
   private def searchesWithKifiResults(experiments: Seq[Id[SearchConfigExperiment]]): Future[Map[Option[Id[SearchConfigExperiment]], JsArray]] = {
-    val totalSearchesFuture = heimdal.getMetricData("total_unique_searches_by_search_experiment")
-    val searchesWithKifiResultsFuture = heimdal.getMetricData("unique_searches_with_kifi_result_by_search_experiment")
+    val totalSearchesFuture = heimdal.getMetricData[UserEvent]("total_unique_searches_by_search_experiment")
+    val searchesWithKifiResultsFuture = heimdal.getMetricData[UserEvent]("unique_searches_with_kifi_result_by_search_experiment")
 
     for {
       totalSearches <- totalSearchesFuture
       searchesWithKifiResults <- searchesWithKifiResultsFuture
     } yield {
 
-      val totalSearchesByExperiment = ungroup(totalSearches)
-      val searchesWithKifiResultsByExperiment = ungroup(searchesWithKifiResults)
+      val ids = None +: experiments.map(Some(_))
+      val totalSearchesByExperiment = MetricAuxInfo.ungroupMetricById(ids, totalSearches)
+      val searchesWithKifiResultsByExperiment = MetricAuxInfo.ungroupMetricById(ids, searchesWithKifiResults)
 
-      (None +: experiments.map(Some(_))).map { id =>
+      ids.map { id =>
         id -> Json.arr(
           MetricAuxInfo.augmentMetricData(
-            totalSearchesByExperiment.getOrElse(id, Json.obj()),
+            totalSearchesByExperiment(id),
             MetricAuxInfo("nothing yet", Map("null" -> "All Searches"))
           ),
           MetricAuxInfo.augmentMetricData(
-            searchesWithKifiResultsByExperiment.getOrElse(id, Json.obj()),
+            searchesWithKifiResultsByExperiment(id),
             MetricAuxInfo("nothing yet", Map("null" -> "All Searches with Kifi Results"))
           )
         )
       }.toMap
     }
-  }
-
-  private def ungroup(searchExperimentMetricData: JsObject): Map[Option[Id[SearchConfigExperiment]], JsObject] = {
-    val dataPointsByExperiment = MutableMap[Option[Id[SearchConfigExperiment]], ListBuffer[JsValue]]()
-    val header = (searchExperimentMetricData \ "header").as[String]
-    val dataByTime = (searchExperimentMetricData \ "data").as[JsArray]
-    dataByTime.value.foreach { dataWithTime =>
-      val time = (dataWithTime \ "time")
-      val dataByExperiment = (dataWithTime \ "data").as[JsArray]
-      dataByExperiment.value.foreach { dataWithExperiment =>
-        val id = (dataWithExperiment \ "_id") match {
-          case js: JsNumber => Some(Id[SearchConfigExperiment](js.value.toLong))
-          case jsNull => None
-        }
-        val count = (dataWithExperiment \ "count")
-        dataPointsByExperiment.getOrElseUpdate(id, new ListBuffer[JsValue]()).append(Json.obj("time" -> time, "data" -> Json.arr(Json.obj("count" -> count))))
-      }
-    }
-    dataPointsByExperiment.map { case (id, points) =>
-      id -> Json.obj(
-        "header" -> JsString(header + s": ${id.map(_.toString).getOrElse("None")}"),
-        "data" -> JsArray(points)
-      )
-    }.toMap
   }
 }

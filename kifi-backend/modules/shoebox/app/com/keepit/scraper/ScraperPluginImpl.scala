@@ -4,7 +4,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ScrapeInfoStates, ScrapeInfoRepo, ScrapeInfo, NormalizedURI}
+import com.keepit.model._
 import com.keepit.search.Article
 
 import akka.actor._
@@ -17,8 +17,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import net.codingwell.scalaguice.ScalaModule
-import com.keepit.inject.AppScoped
 import com.keepit.scraper.extractor.Extractor
 import com.keepit.common.db.slick.Database
 
@@ -59,6 +57,7 @@ private[scraper] class ReadOnlyScraperActor @Inject() (
 class ScraperPluginImpl @Inject() (
     db: Database,
     scrapeInfoRepo: ScrapeInfoRepo,
+    urlPatternRuleRepo: UrlPatternRuleRepo,
     actor: ActorInstance[ScraperActor],
     readOnlyActor: ActorInstance[ReadOnlyScraperActor],
     scraper: Scraper,
@@ -82,19 +81,6 @@ class ScraperPluginImpl @Inject() (
 
   override def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]] =
     actor.ref.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
-
-  override def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
-    if (scraperConfig.disableScraperService) {
-      actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
-    } else {
-      log.info(s"[asyncScrape] invoke (remote) Scraper service; url=${uri.url}")
-      val info = db.readWrite { implicit s =>
-        scrapeInfoRepo.getByUriId(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
-      }
-      scraperClient.asyncScrapeWithInfo(uri, info)
-    }
-  }
-
 
   def scheduleScrape(uri: NormalizedURI): Unit = {
     if (scraperConfig.disableScraperService) {
@@ -122,8 +108,11 @@ class ScraperPluginImpl @Inject() (
     if (scraperConfig.disableScraperService || customExtractor.isDefined) {
       readOnlyActor.ref.ask(ScrapeBasicArticle(url, customExtractor))(1 minutes).mapTo[Option[BasicArticle]]
     } else {
-      log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url")
-      scraperClient.getBasicArticle(url)
+      val proxyOpt = db.readOnly { implicit s =>
+        urlPatternRuleRepo.getProxy(url)
+      }
+      log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt")
+      scraperClient.getBasicArticleP(url, proxyOpt)
     }
   }
 }
