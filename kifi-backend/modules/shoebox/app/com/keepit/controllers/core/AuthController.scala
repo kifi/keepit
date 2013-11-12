@@ -230,12 +230,12 @@ class AuthController @Inject() (
                     userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
                   }
                   if (finalized) {
-                    val uri = session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url)
-                    Ok(Json.obj("uri" -> uri))
+                    Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
                       .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
                       .withCookies(authenticator.toCookie)
                   } else {
-                    Ok(Json.obj("success" -> true)).withSession(session + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                    Ok(Json.obj("success" -> true))
+                      .withSession(session + (FORTYTWO_USER_ID -> sui.userId.get.toString))
                       .withCookies(authenticator.toCookie)
                   }
                 }
@@ -251,7 +251,7 @@ class AuthController @Inject() (
           Authenticator.create(newIdentity).fold(
             error => Status(INTERNAL_SERVER_ERROR)("0"),
             authenticator =>
-              Ok(Json.obj("success"-> true, "email" -> emailAddress, "new_account" -> true))
+              Ok(Json.obj("success" -> true))
                 .withSession(session + (FORTYTWO_USER_ID -> userId.toString))
                 .withCookies(authenticator.toCookie)
           )
