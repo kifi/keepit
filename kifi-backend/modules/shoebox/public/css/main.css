@@ -345,7 +345,9 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-friend[data-value^=email]::before { background-color: #e36767; background-position: -60px top; }
 .invite-status {font-size: 13px; font-weight: 300; color: #96a9bd; letter-spacing: .5px; margin-top: 2px; margin-right: 42px}
 .user-connected {display:none; color: #acc377; font-size: 12px; font-weight: 300; letter-spacing: 1px; margin-top: 2px}
+.user-requested {display:none; color: #acc377; font-size: 12px; font-weight: 300; letter-spacing: 1px; margin-top: 2px}
 .found-user.friend .user-connected {display: block}
+.found-user.requested .user-requested {display: block}
 .connect-button {position: absolute; top: 30px; right: 24px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
 .connect-button::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background: url(../img/friend-actions.png) -70px; background-size: auto 16px; width: 20px; position: relative; left: 1px}
 .found-user.friend .connect-button {background-color: #dfedc2}
