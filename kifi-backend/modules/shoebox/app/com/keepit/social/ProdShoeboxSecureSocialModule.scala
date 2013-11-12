@@ -8,7 +8,7 @@ import com.keepit.model._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.controller.{ShoeboxActionAuthenticator, ActionAuthenticator}
-import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilderFactory}
+import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilderFactory}
 import com.keepit.common.time.Clock
 
 
@@ -40,7 +40,7 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     airbrake: AirbrakeNotifier,
     emailRepo: EmailAddressRepo,
     socialGraphPlugin: SocialGraphPlugin,
-    userEventContextBuilder: UserEventContextBuilderFactory,
+    userEventContextBuilder: EventContextBuilderFactory,
     heimdal: HeimdalServiceClient,
     userExperimentRepo: UserExperimentRepo,
     clock: Clock

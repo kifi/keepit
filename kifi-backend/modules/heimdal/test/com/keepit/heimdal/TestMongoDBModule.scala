@@ -18,5 +18,9 @@ case class TestMongoModule() extends MongoModule {
     new TestUserEventLoggingRepo(null, airbrake)
   }
 
-
+  @Singleton
+  @Provides
+  def systemEventLoggingRepo(airbrake: AirbrakeNotifier): SystemEventLoggingRepo = {
+    new TestSystemEventLoggingRepo(null, airbrake)
+  }
 }

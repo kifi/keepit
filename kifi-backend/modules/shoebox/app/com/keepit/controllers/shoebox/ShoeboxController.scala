@@ -1,9 +1,6 @@
 package com.keepit.controllers.shoebox
 
 import com.google.inject.{Provider, Inject}
-import com.keepit.common.analytics.EventFamilies
-import com.keepit.common.analytics.EventPersister
-import com.keepit.common.analytics.Events
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
@@ -50,7 +47,6 @@ class ShoeboxController @Inject() (
   urlPatternRuleRepo: UrlPatternRuleRepo,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
   userExperimentRepo: UserExperimentRepo,
-  EventPersister: EventPersister,
   postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
   phraseRepo: PhraseRepo,
@@ -312,12 +308,6 @@ class ShoeboxController @Inject() (
       commentRecipientRepo.getByComment(commentId).filter(_.state == CommentRecipientStates.ACTIVE).flatMap(_.userId.map(_.id))
     }
     Ok(Json.toJson(commentRecipientIds))
-  }
-
-  def persistServerSearchEvent() = Action(parse.json) { request =>
-    val metaData = request.body
-    EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject]))
-    Ok("server search event persisted")
   }
 
   def getUsers(ids: String) = Action { request =>

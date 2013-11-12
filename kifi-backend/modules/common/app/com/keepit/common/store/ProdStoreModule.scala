@@ -74,16 +74,6 @@ trait ProdStoreModule extends StoreModule {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
     new S3TopicWordsStoreImpl(bucketName, amazonS3Client)
   }
-
-  @Singleton
-  @Provides
-  def mongoEventStore(): MongoEventStore = {
-    current.configuration.getString("mongo.events.server").map { server =>
-      val mongoConn = MongoConnection(server)
-      val mongoDB = mongoConn(current.configuration.getString("mongo.events.database").getOrElse("events"))
-      new MongoS3EventStoreImpl(mongoDB)
-    }.get
-  }
 }
 
 abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) extends StoreModule {
@@ -139,12 +129,4 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
     whenConfigured("amazon.s3.wordTopic.bucket")(
       prodStoreModule.topicWordsStore(amazonS3ClientProvider.get)
     ).getOrElse(new InMemoryTopicWordsStoreImpl())
-
-
-  @Singleton
-  @Provides
-  def mongoEventStore(): MongoEventStore =
-    whenConfigured("mongo.events.server")(
-      prodStoreModule.mongoEventStore()
-    ).getOrElse(new FakeMongoS3EventStore())
 }
