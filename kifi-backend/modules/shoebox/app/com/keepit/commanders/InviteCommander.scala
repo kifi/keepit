@@ -11,6 +11,7 @@ import com.keepit.social.SocialNetworks
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.RWSession
+import scala.util.Try
 
 class InviteCommander @Inject() (
   db: Database,
@@ -27,17 +28,18 @@ class InviteCommander @Inject() (
   def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
     db.readOnly { implicit s =>
       val userSocialAccounts = socialUserRepo.getByUser(userId)
-      val cookieInvite = invId.map { inviteExtId =>
-        val invite = invitationRepo.get(inviteExtId)
-        val invitedSocial = userSocialAccounts.find(_.id.get == invite.recipientSocialUserId)
-        val detectedInvite = if (invitedSocial.isEmpty && userSocialAccounts.nonEmpty) {
-          // User signed up using a different social account than what we know about.
-          invite.copy(recipientSocialUserId = userSocialAccounts.head.id.get)
-        } else {
-          invite
-        }
-        // todo: When invite.recipientSocialUserId is an Option, check here if it's set. If not, set it on the invite record.
-        socialUserRepo.get(invite.recipientSocialUserId) -> detectedInvite
+      val cookieInvite = invId.flatMap { inviteExtId =>
+        Try(invitationRepo.get(inviteExtId)).map { invite =>
+          val invitedSocial = userSocialAccounts.find(_.id.get == invite.recipientSocialUserId)
+          val detectedInvite = if (invitedSocial.isEmpty && userSocialAccounts.nonEmpty) {
+            // User signed up using a different social account than what we know about.
+            invite.copy(recipientSocialUserId = userSocialAccounts.head.id.get)
+          } else {
+            invite
+          }
+          // todo: When invite.recipientSocialUserId is an Option, check here if it's set. If not, set it on the invite record.
+          socialUserRepo.get(invite.recipientSocialUserId) -> detectedInvite
+        }.toOption
       }
 
       val existingInvites = userSocialAccounts.map { su =>
