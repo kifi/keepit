@@ -1,0 +1,27 @@
+@()
+
+@styles = {
+<link rel="stylesheet" href="/assets/css/optout.css">
+}
+
+@content = {
+  <h1 class="main-logo">kifi</h1>
+  <h2 class="page-title">Opt-out of Kifi Emails</h2>
+
+  <section>
+    <p>Uncheck any email types you do not want to recieve, or opt-out of all Kifi emails by clicking the “Opt-out of all emails” button.</p>
+    <form>
+      <label for="message">
+        <input type="checkbox" name="message" value="true"> Kifi Messages from friends
+      </label>
+      <label for="invite">
+        <input type="checkbox" name="invite" value="true"> Invitations to join Kifi from friends
+      </label>
+      <span class="optout">Opt-out from selected emails</span>
+      <span class="optout">Opt-out of all emails</span>
+    </form>
+  </section>
+}
+
+
+@views.html.auth.helper.page(title = "kifi.com • Opt-out of emails", content = content)

@@ -14,6 +14,6 @@ CREATE TABLE email_opt_out (
     INDEX email_opt_out_i_address (address)
 );
 
-insert into evolutions (name, description) values('120.sql', 'adding email_opt_out table');
+insert into evolutions (name, description) values('122.sql', 'adding email_opt_out table');
 
 # --- !Downs

@@ -22,8 +22,7 @@ class EmailOptOutController @Inject() (
 
   def optOut(optOutToken: String) = Action {
     val email = getEmailFromOptOutToken(optOutToken)
-    // TODO: We need this view!
-    Ok
+    Ok//(views.website.optOutEmails())
   }
 
   val optOutForm = Form(
@@ -40,14 +39,14 @@ class EmailOptOutController @Inject() (
       optOutForm.bindFromRequest.fold(
       formWithErrors => BadRequest,
       { case (all, invite, message) =>
-        // Checkbox checked == unsubscribe
+        // Checkbox unchecked == unsubscribe
         db.readWrite { implicit session =>
-          all.map { _ => emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.ALL) }
-            .getOrElse { emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.ALL) }
-          invite.map { _ => emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.User.INVITATION) }
-            .getOrElse { emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.User.INVITATION) }
-          message.map { _ => emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.User.MESSAGE) }
-            .getOrElse { emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.User.MESSAGE) }
+          all.map { _ => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.ALL) }
+            .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.ALL) }
+          invite.map { _ => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.User.INVITATION) }
+            .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.User.INVITATION) }
+          message.map { _ => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.User.MESSAGE) }
+            .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.User.MESSAGE) }
         }
         Ok // TODO: now what? "Email preferences saved"?
       })
