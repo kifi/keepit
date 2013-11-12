@@ -1,5 +1,6 @@
 var xhrDomain = 'https://api.kifi.com';
 var wwwDomain = 'https://www.kifi.com';
+var searchDomain = 'https://search.kifi.com';
 //xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
@@ -563,22 +564,29 @@ $(function() {
 	var $addFriendsTabPages = $friends.find('.add-friends-page');
 
   function showAddFriends(path) {
-    var pPath = FRIENDS_PARENT_PATHS[path] || path,
-		$tab = $addFriendsTabs.filter('[data-href="' + pPath + '"]');
+  var pPath;
+	if (/^friends\/invite/.test(path)) {
+		pPath = 'friends/invite';
+	}
+	else {
+		pPath = path;
+	}
+	var $tab = $addFriendsTabs.filter('[data-href="' + pPath + '"]');
+    console.log('[showAddFriends]', path, pPath, $tab);
+    console.log('[showAddFriends]', path, pPath, $tab);
     console.log('[showAddFriends]', path, pPath, $tab);
     if ($tab.length) {
       $tab.removeAttr('href');
       $addFriendsTabs.not($tab).filter(':not([href])').each(function() {
         this.href = $(this).data('href');
       });
-
       $addFriendsTabPages.hide();
       $addFriendsTabPages.filter('[data-href="' + pPath + '"]').show().find('input').focus();
 
 	  var match = path.match(/^friends\/invite(\/\w*)?$/);
       if (match) {
-		  var network = (match[1] || '').replace(/\//g, '');
-		  chooseNetworkFilterDOM(network);
+		var network = (match[1] || '').replace(/\//g, '');
+		chooseNetworkFilterDOM(network);
         prepInviteTab();
       }
       else {
@@ -885,7 +893,114 @@ $(function() {
 
   // Friend Find
 
-  function prepFindTab() {
+	var $foundUsers = $('.found-user-list').antiscroll({x: false, width: '100%'});
+	$foundUsers.find(".antiscroll-inner").scroll(function() { // infinite scroll
+		var sT = this.scrollTop, sH = this.scrollHeight;
+		// tweak these values as desired
+		const offset = sH / 3, toFetch = 40;
+		if (!$('.found-user-list-loading').is(':visible') && this.clientHeight + sT > sH - offset) {
+			console.log('loading more users');
+			prepFindTab(toFetch);
+		}
+	});
+	var foundUsersScroller = $foundUsers.data("antiscroll");
+	$(window).resize(foundUsersScroller.refresh.bind(foundUsersScroller));  // TODO: throttle, and only bind while visible
+	var usersTmpl = Tempo.prepare($foundUsers).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$('.found-user-list-loading').hide();
+		foundUsersScroller.refresh();
+	});
+
+
+	var usersTimeout;
+	function filterUsers() {
+		clearTimeout(usersTimeout);
+		$foundUsers.find('ul').empty();
+		usersTimeout = setTimeout(prepFindTab, 200);
+	}
+
+	$('.user-filter').on('input', filterUsers);
+	$('.found-user-list').on('click', '.connect-button', function() {
+		var $a = $(this), o = $a.closest('.found-user').data(), xhr;
+		switch (o.status) {
+			case 'friend':
+				xhr = $.post(xhrBase + '/user/' + o.id + '/unfriend', function(data) {
+					o.status = '';
+				});
+				break;
+			case 'requested':
+				xhr = $.post(xhrBase + '/user/' + o.id + '/cancelRequest', function(data) {
+					o.status = '';
+				}).error(function() {
+					if (xhr && xhr.responseText && JSON.parse(xhr.responseText).alreadyAccepted) {
+						o.status = 'friend';
+					}
+				});
+				break;
+			//case '':
+			default:
+				xhr = $.post(xhrBase + '/user/' + o.id + '/friend', function(data) {
+					o.status = data.acceptedRequest ? '' : 'requested';
+				});
+				break;
+		}
+		xhr.always(function() {
+			$a.closest('.found-user').data('status', o.status);
+		});
+	});
+
+	const usersToShow = 40;
+	const usersShowing = [];
+	var moreUsers = true;
+  function prepFindTab(moreToShow) {
+	  console.log('prepFindTab', moreToShow);
+	  if (moreToShow && !moreUsers) return;
+	  moreUsers = true;
+	  var search = $('.user-filter').val() || undefined;
+	  $('.found-user-list-loading').show();
+	  var opts = {
+		  pageNum: moreToShow ? Math.floor(usersShowing[usersShowing.length - 1].value / usersToShow) : 0,
+		  pageSize: moreToShow || usersToShow,
+		  query: search
+	  };
+	  $.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
+	  //$.getJSON(searchDomain + '/search/users/page', opts, function(friends) {
+		  console.log('[prepFindTab] friends:', friends.length, friends);
+		  friends && friends.forEach(function(obj, i) {
+			  if (!obj.image) {
+				  obj.image = '';
+			  }
+			  if (!obj.status) {
+				  obj.status = '';
+			  }
+			  //TODO: dev
+			  if (i === 0) {
+				  obj.status = 'requested';
+			  }
+			  if (i === 1) {
+				  obj.status = 'friend';
+			  }
+		  });
+		  var filter = $('.user-filter').val() || undefined;
+		  if (filter != search) return;
+		  if (friends.length < moreToShow) {
+			  moreUsers = false;
+		  }
+		  if (!moreToShow) {
+			  usersTmpl.clear();
+			  usersShowing.length = 0;
+		  }
+		  usersShowing.push.apply(usersShowing, friends);
+		  var $noResults = $foundUsers.find('.no-results').empty().hide();
+		  if (!usersShowing.length) {
+			  $noResults.html(noResultsTmpl({ filter: search })).show();
+			  $noResults.find('.refresh-friends').click(function () {
+				  $('<form method="post">').attr('action', wwwDomain + '/friends/invite/refresh').appendTo('body').submit();
+			  });
+			  $noResults.find('.tell-us').click(sendFeedback);
+		  }
+		  usersTmpl.append(friends);
+		  //inviteFilterTmpl.render({results: usersShowing.length, filter: filter});
+	  });
   }
 
 	// Friend Requests
