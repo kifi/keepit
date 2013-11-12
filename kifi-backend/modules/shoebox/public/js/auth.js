@@ -106,6 +106,7 @@ kifi.form = (function () {
     if (e.which !== 1 || e.type === 'click' && (e.pageX || e.pageY)) return;
     $signup1Form.reset();
     $loginForm.reset();
+    var ms = 1000 * $signup2EmailForm.css('transition-duration').split('s')[0];
     var $body = $('body');
     if (!$body.hasClass('finalizing')) {
       $('.page-title').removeClass('returned');
@@ -114,12 +115,12 @@ kifi.form = (function () {
       transitionTitle();
       $body.removeClass('finalizing');
       $.post($(this).data('cancelUri'));
-      setTimeout($.fn.focus.bind($signup1Form.find('.form-email-addr')), 100);
       setTimeout(function() {
         $signup2EmailForm.hide();
         $signup2SocialForm.hide();
         $('.signup-resume').remove();
-      }, 500);
+        $signup1Form.find('.form-email-addr').focus();
+      }, ms);
     }
   });
 
