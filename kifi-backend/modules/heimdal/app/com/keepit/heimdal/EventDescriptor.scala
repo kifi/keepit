@@ -17,7 +17,6 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.db.States
-import com.keepit.common.ImmediateMap
 
 case class EventDescriptor[E <: HeimdalEvent](
   name: EventType,
@@ -65,7 +64,7 @@ trait ProdEventDescriptorRepo[E <: HeimdalEvent] extends EventDescriptorRepo[E] 
       update = toBSON(obj.copy(updatedAt = currentDateTime)),
       upsert = true,
       multi = false
-    ) imap { lastError => if (lastError.inError) throw lastError.getCause else lastError }
+    ) map { lastError => if (lastError.inError) throw lastError.getCause else lastError }
   )
 }
 
