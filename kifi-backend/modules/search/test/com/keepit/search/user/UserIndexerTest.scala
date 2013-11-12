@@ -72,6 +72,9 @@ class UserIndexerTest extends Specification with ApplicationInjector {
 
       query = parser.parse("firstNaM")
       searcher.search(query.get).seq.size === 4
+
+      query = parser.parse("")
+      searcher.search(query.get).seq.size === 5     // wildcard query used. match all
     }
   }
 

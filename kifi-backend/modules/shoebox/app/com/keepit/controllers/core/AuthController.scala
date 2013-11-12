@@ -174,8 +174,11 @@ class AuthController @Inject() (
 
   private case class EmailPassword(email: String, password: String)
 
-  // TODO: something different if already logged in?
-  def loginPage() = HtmlAction(allowPending = true)(authenticatedAction = doLoginPage(_), unauthenticatedAction = doLoginPage(_))
+  def loginPage() = HtmlAction(allowPending = true)(authenticatedAction = { request =>
+    Redirect("/")
+  }, unauthenticatedAction = { request =>
+    Ok(views.html.auth.auth("login"))
+  })
 
   // Finalize account
   def signupPage() = HtmlAction(allowPending = true)(authenticatedAction = doSignupPage(_), unauthenticatedAction = doSignupPage(_))
@@ -227,12 +230,12 @@ class AuthController @Inject() (
                     userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
                   }
                   if (finalized) {
-                    val uri = session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url)
-                    Ok(Json.obj("uri" -> uri))
+                    Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
                       .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
                       .withCookies(authenticator.toCookie)
                   } else {
-                    Ok(Json.obj("success" -> true)).withSession(session + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                    Ok(Json.obj("success" -> true))
+                      .withSession(session + (FORTYTWO_USER_ID -> sui.userId.get.toString))
                       .withCookies(authenticator.toCookie)
                   }
                 }
@@ -248,17 +251,13 @@ class AuthController @Inject() (
           Authenticator.create(newIdentity).fold(
             error => Status(INTERNAL_SERVER_ERROR)("0"),
             authenticator =>
-              Ok(Json.obj("success"-> true, "email" -> emailAddress, "new_account" -> true))
+              Ok(Json.obj("success" -> true))
                 .withSession(session + (FORTYTWO_USER_ID -> userId.toString))
                 .withCookies(authenticator.toCookie)
           )
         }
       }
     )
-  }
-
-  private def doLoginPage(implicit request: Request[_]): Result = {
-    Ok(views.html.auth.auth("login"))
   }
 
   private def doSignupPage(implicit request: Request[_]): Result = {
