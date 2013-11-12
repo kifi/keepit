@@ -6,7 +6,6 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, BenchmarkResults}
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
-import com.keepit.model.Comment
 import com.keepit.model.Collection
 import play.api.libs.json.{JsValue, Json}
 import play.api.templates.Html
@@ -40,9 +39,6 @@ trait SearchServiceClient extends ServiceClient {
   def articleIndexInfo(): Future[IndexInfo]
   def articleIndexerSequenceNumber(): Future[Int]
 
-  def commentIndexInfo(): Future[Seq[IndexInfo]]
-  def reindexComment(): Unit
-
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo]
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]]
   def refreshSearcher(): Unit
@@ -62,7 +58,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html]
-  def dumpLuceneComment(commentId: Id[Comment]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
 
   def benchmarks(): Future[BenchmarkResults]
@@ -103,10 +98,6 @@ class SearchServiceClientImpl(
     broadcast(Search.internal.collectionReindex())
   }
 
-  def reindexComment(): Unit = {
-    broadcast(Search.internal.commentReindex())
-  }
-
   def index(): Unit = {
     broadcast(Search.internal.searchUpdate())
   }
@@ -117,10 +108,6 @@ class SearchServiceClientImpl(
 
   def articleIndexInfo(): Future[IndexInfo] = {
     call(Search.internal.indexInfo()).map(r => Json.fromJson[IndexInfo](r.json).get)
-  }
-
-  def commentIndexInfo(): Future[Seq[IndexInfo]] = {
-    call(Search.internal.commentIndexInfo()).map(r => Json.fromJson[Seq[IndexInfo]](r.json).get)
   }
 
   def uriGraphIndexInfo(): Future[Seq[IndexInfo]] = {
@@ -188,10 +175,6 @@ class SearchServiceClientImpl(
 
   def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html] = {
     call(Search.internal.collectionDumpLuceneDocument(colId, userId)).map(r => Html(r.body))
-  }
-
-  def dumpLuceneComment(commentId: Id[Comment]): Future[Html] = {
-    call(Search.internal.commentDumpLuceneDocument(commentId)).map(r => Html(r.body))
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = {
