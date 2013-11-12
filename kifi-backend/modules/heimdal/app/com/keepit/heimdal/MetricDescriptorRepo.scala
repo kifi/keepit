@@ -6,6 +6,7 @@ import reactivemongo.core.commands.{LastError, PipelineOperator}
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONArray, Macros}
 import CustomBSONHandlers._
+import com.keepit.common.ImmediateMap
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Promise}
@@ -34,7 +35,7 @@ class ProdMetricDescriptorRepo(val collection: BSONCollection, protected val air
       update = toBSON(obj),
       upsert = true,
       multi = false
-    )
+    ) imap { lastError => if (lastError.inError) throw lastError.getCause else lastError }
   )
 }
 
