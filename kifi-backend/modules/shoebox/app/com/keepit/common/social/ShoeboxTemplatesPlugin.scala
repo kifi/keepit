@@ -18,6 +18,6 @@ class ShoeboxTemplatesPlugin(app: Application) extends DefaultTemplatesPlugin(ap
   // todo: wtf? Kill this (give it an obscure route, redirect any requests to our login page), we can handle the log in form ourselves
   override def getLoginPage[A](implicit request: Request[A], form: Form[(String, String)], msg: Option[String]): Html = {
     log.info(s"[getLoginPage] request=$request form=$form")
-    Html(s"""<script>window.location="${com.keepit.controllers.core.routes.AuthController.signinPage}"</script>""")
+    Html(s"""<script>window.location="${com.keepit.controllers.core.routes.AuthController.loginPage}"</script>""")
   }
 }

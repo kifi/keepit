@@ -96,7 +96,6 @@ class Scraper @Inject() (
     if (config.disableScraperService) {
       val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
     } else {
-      log.info(s"[schedule] invoke (remote) Scraper service; uris(len=${tasks.length}) ${tasks.map(_._1).mkString(System.lineSeparator)}")
       tasks.grouped(scraperConfig.batchSize).foreach { g => // revisit rate-limit
         val futures = g.map { case (uri, info) =>
           val saved = db.readWrite { implicit s =>

@@ -73,7 +73,7 @@ case object NoContextRestriction extends ContextRestriction {
 
 sealed trait EventSet
 
-case class SpecificEventSet(events: Set[UserEventType]) extends EventSet
+case class SpecificEventSet(events: Set[EventType]) extends EventSet
 case object AllEvents extends EventSet
 
 
@@ -100,14 +100,14 @@ case class NaturalGrouping(val fieldName: String) extends EventGrouping {
   val allowBreakdown = true;
 }
 
-sealed trait DerivedGrouping extends EventGrouping 
+sealed trait DerivedGrouping extends EventGrouping
 
 
 //location (country), weekday, hour of day, local hour of day, OS, browser
 object DerivedGrouping {
   def apply(name: String): DerivedGrouping = {
     null
-  } 
+  }
 }
 
 
@@ -155,12 +155,12 @@ class GroupedEventCountMetricDefinition(eventsToConsider: EventSet, contextRestr
     else pipeline = pipeline :+ Sort(Seq(Descending("count")))
 
     val postprocess = (x: Stream[BSONDocument]) => x.toSeq
-    
+
     (pipeline, postprocess)
   }
 }
 
-class SimpleEventCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction) 
+class SimpleEventCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction)
   extends GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, NaturalGrouping("_")) //This is bit of a hack to keep it dry. Could be done more efficiently with "find(...).count()". (-Stephen)
 
 
@@ -196,7 +196,7 @@ class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestri
     else pipeline = pipeline :+ Sort(Seq(Descending("count")))
 
     val postprocess = (x: Stream[BSONDocument]) => x.toSeq
-    
+
     (pipeline, postprocess)
   }
 }
@@ -232,8 +232,8 @@ class GroupedUniqueFieldCountMetricDefinition(eventsToConsider: EventSet, contex
     pipeline = pipeline :+ Sort(Seq(Descending("count")))
 
     val postprocess = (x: Stream[BSONDocument]) => x.toSeq
-    
-    (pipeline, postprocess)    
+
+    (pipeline, postprocess)
   }
 }
 

@@ -50,7 +50,7 @@ class ExtBookmarksController @Inject() (
   searchClient: SearchServiceClient,
   healthcheck: HealthcheckPlugin,
   heimdal: HeimdalServiceClient,
-  userEventContextBuilder: UserEventContextBuilderFactory)
+  userEventContextBuilder: EventContextBuilderFactory)
     extends BrowserExtensionController(actionAuthenticator) {
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
@@ -195,7 +195,7 @@ class ExtBookmarksController @Inject() (
             contextBuilder += ("source", bookmarkSource.getOrElse("UNKNOWN"))
             contextBuilder += ("hasTitle", bookmark.title.isDefined)
 
-            heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("keep"), tStart))
+            heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("keep"), tStart))
           }}
 
         }

@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.store.S3ImageStore
 import com.keepit.inject.AppScoped
 import com.keepit.model._
-import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilderFactory, UserEvent, UserEventType}
+import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
 import com.keepit.common.KestrelCombinator
@@ -20,6 +20,13 @@ import play.api.Play.current
 import play.api.{Application, Play}
 import securesocial.core._
 import securesocial.core.providers.{UsernamePasswordProvider, Token}
+import securesocial.core.IdentityId
+import com.keepit.model.EmailAddress
+import securesocial.core.providers.Token
+import scala.Some
+import securesocial.core.PasswordInfo
+import com.keepit.model.UserExperiment
+import com.keepit.model.UserCred
 
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
@@ -31,7 +38,7 @@ class SecureSocialUserPluginImpl @Inject() (
   airbrake: AirbrakeNotifier,
   emailRepo: EmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
-  userEventContextBuilder: UserEventContextBuilderFactory,
+  eventContextBuilder: EventContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   userExperimentRepo: UserExperimentRepo,
   clock: Clock)
@@ -127,8 +134,8 @@ class SecureSocialUserPluginImpl @Inject() (
         createUser(socialUser, isComplete)
       ))
       SafeFuture{
-        val contextBuilder = userEventContextBuilder()
-        heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, UserEventType("signup")))
+        val contextBuilder = eventContextBuilder()
+        heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, EventType("signup")))
       }
       userOpt
     } else None

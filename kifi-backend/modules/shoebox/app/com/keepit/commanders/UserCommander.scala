@@ -16,7 +16,6 @@ import com.keepit.common.net.URI
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
-import com.keepit.common.analytics.{EventPersister, Event, EventFamilies, Events}
 import play.api.libs.concurrent.Akka
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])

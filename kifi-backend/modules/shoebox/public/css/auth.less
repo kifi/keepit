@@ -840,8 +840,9 @@ footer {
   .transition(opacity (@finalize-time / 2) linear, visibility 0s @finalize-time, transform 0s @finalize-time);
 }
 
-// dialogs
+// dialogs (reusable stuff)
 @dialog-time: .25s;
+@dialog-text-color: #515051;
 .dialog {
   display: table;
   position: fixed;
@@ -874,6 +875,56 @@ footer {
     .transform(none);
     .transition-timing-function(ease-out);
   }
+}
+.dialog-x {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  height: 24px;
+  width: 24px;
+  z-index: 2;
+  border-radius: 50%;
+  &:before,
+  &:after {
+    content: ' ';
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    left: 50%;
+    width: 1px;
+    background: #aaa;
+    font-size: 0;
+  }
+  &:before {
+    .transform(translate3d(-.5px,0,0) rotate(45deg));
+  }
+  &:after {
+    .transform(translate3d(-.5px,0,0) rotate(-45deg));
+  }
+  &:hover {
+    background: #e8e8e8;
+  }
+  &:active {
+    background: #d8d8d8;
+  }
+  &:focus {
+    outline-color: #ccc;
+  }
+}
+.dialog-title {
+  padding: 20px 0 10px;
+  line-height: 32px;
+  font-size: 28px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  color: @dialog-text-color;
+}
+.dialog-text {
+  margin: 0;
+  line-height: 19px;
+  font-size: 15px;
+  font-weight: 300;
+  color: @dialog-text-color;
 }
 
 // photo dialog
@@ -994,7 +1045,6 @@ footer {
 }
 
 // reset password dialog
-@dialog-text-color: #515051;
 .reset-password .dialog-box {
   width: 480px;
   text-align: center;
@@ -1018,56 +1068,6 @@ footer {
   right: 0;
   .background-image(linear-gradient(to left, #fff, transparent));
 }
-.reset-password-x {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-  height: 24px;
-  width: 24px;
-  z-index: 2;
-  border-radius: 50%;
-  &:before,
-  &:after {
-    content: ' ';
-    position: absolute;
-    top: 5px;
-    bottom: 5px;
-    left: 50%;
-    width: 1px;
-    background: #aaa;
-    font-size: 0;
-  }
-  &:before {
-    .transform(translate3d(-.5px,0,0) rotate(45deg));
-  }
-  &:after {
-    .transform(translate3d(-.5px,0,0) rotate(-45deg));
-  }
-  &:hover {
-    background: #e8e8e8;
-  }
-  &:active {
-    background: #d8d8d8;
-  }
-  &:focus {
-    outline-color: #ccc;
-  }
-}
-.reset-password-title {
-  padding: 20px 0 10px;
-  line-height: 32px;
-  font-size: 28px;
-  font-weight: 300;
-  -webkit-font-smoothing: antialiased;
-  color: @dialog-text-color;
-}
-.reset-password-text {
-  margin: 0;
-  line-height: 19px;
-  font-size: 15px;
-  font-weight: 300;
-  color: @dialog-text-color;
-}
 .reset-password-email {
   width: 300px;
 }
@@ -1089,8 +1089,8 @@ footer {
   width: 100%;
   .translate(80%);
   visibility: hidden;
-  &>.reset-password-text {
-    margin: 30px 0 42px;
+  &>.dialog-text {
+    margin: 16px 0 0;
   }
 }
 .reset-password-sent {
@@ -1105,7 +1105,16 @@ footer {
     .transition(visibility 0, transform .2s ease-in-out);
   }
 }
-
+.reset-password-addresses {
+  margin: 10px 0 20px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 19px;
+  list-style: none;
+}
+.reset-password-address:only-child {
+  padding: 8px 0 10px;
+}
 
 // social signup 2
 .social-info,
@@ -1175,6 +1184,12 @@ input.social-email {
     .transition(opacity .2s linear, visibility 0s .2s)
   }
 }
+.social-claim-account:link {
+  margin-left: 4px;
+  color: inherit;
+  font-weight: bolder;
+  text-decoration: underline;
+}
 .form-creds {
   margin: 24px auto 16px;
 }
@@ -1205,6 +1220,34 @@ input.social-email {
   line-height: 15px;
   font-size: 13px;
   font-weight: normal;
+}
+
+// claim account dialog
+.claim-account .dialog-box {
+  width: 480px;
+  text-align: center;
+  overflow: hidden;
+}
+.claim-account-form>.form-email-addr {
+  width: 270px;
+  margin: 16px auto 0;
+}
+.claim-account-form>.password-label {
+  width: 270px;
+  margin: 0 auto 20px;
+}
+.claim-account-buttons {
+  padding: 2px 0 20px;
+}
+.claim-account-cancel,
+.claim-account-submit {
+  display: inline-block;
+  margin: 0 4px;
+  border: none;
+  padding: 10px 30px;
+  font-size: 16px;
+  line-height: 19px;
+  -webkit-font-smoothing: antialiased;
 }
 
 // retina image overrides

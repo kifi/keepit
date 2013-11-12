@@ -1,15 +1,18 @@
 package com.keepit.heimdal
 
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.common.akka.SafeFuture
-
-
-import reactivemongo.bson.BSONDocument
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson._
 import reactivemongo.core.commands.{PipelineOperator, Aggregate, LastError}
 
-import scala.concurrent.{Promise, Future, future}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext //Might want to change this to a custom play one
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import reactivemongo.bson.BSONDouble
+import reactivemongo.bson.BSONString
+import reactivemongo.api.collections.default.BSONCollection
+import com.keepit.serializer.Companion
+import play.api.libs.json.JsArray
+
+//Might want to change this to a custom play one
 import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
 
 import play.modules.statsd.api.Statsd
@@ -89,13 +92,3 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
   }
 
 }
-
-
-
-
-
-
-
-
-
-
