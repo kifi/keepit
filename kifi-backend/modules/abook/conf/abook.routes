@@ -4,7 +4,6 @@
 
 GET     /internal/abook/:userId/importContacts                 @com.keepit.abook.ABookController.importContacts(userId:Id[User], provider:String, accessToken:String)
 
-#THIS ONE!!
 POST     /internal/abook/:origin/uploadForUser                  @com.keepit.abook.ABookController.upload(userId:Id[User], origin:ABookOriginType) 
 
 POST     /internal/abook/:userId/:origin/upload                 @com.keepit.abook.ABookController.uploadJson(userId:Id[User], origin:ABookOriginType)
