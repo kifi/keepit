@@ -13,4 +13,3 @@ case class FakeSearchServiceClientModule() extends ScalaModule {
   @Provides
   def searchServiceClient(): SearchServiceClient = new FakeSearchServiceClient()
 }
-

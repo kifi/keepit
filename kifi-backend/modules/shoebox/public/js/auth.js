@@ -600,7 +600,10 @@ kifi.form = (function () {
       var email = kifi.form.validateEmailAddress($email);
       if (email) {
         promise = $.postJson(this.action, {email: email})
-        .done(function () {
+        .done(function (data) {
+          $dialog.find('.reset-password-addresses').append($.map(data.addresses, function (addr) {
+            return $('<li class=reset-password-address>').text(addr);
+          }));
           $dialog.addClass('reset-password-sent');
           setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 100);
         })

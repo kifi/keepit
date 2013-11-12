@@ -15,7 +15,7 @@ class Asset(object):
     self.key = name
     (kind, date, time, _, chash) = self.parseAssetName(name)
     self.kind = kind
-    self.hash = chash 
+    self.hash = chash
     self.timestamp = iso8601.parse_date(timestamp)
 
   def __str__(self):
@@ -31,7 +31,6 @@ def getAllAssetsByKind(bucket):
   for key in allKeys:
     asset = Asset(key.name, key.last_modified)
     byKind[asset.kind].append(asset)
-  byKind = dict(byKind)
   for kind in byKind:
     byKind[kind].sort(key=lambda x: x.timestamp)
     byKind[kind].reverse()
@@ -78,8 +77,3 @@ if __name__=="__main__":
       key = Key(bucket)
       key.key = keyname
       key.get_contents_to_filename(target + "/" + keyname)
-
-  
-
-
-

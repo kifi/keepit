@@ -29,15 +29,15 @@ class InviteCommander @Inject() (
       val userSocialAccounts = socialUserRepo.getByUser(userId)
       val cookieInvite = invId.map { inviteExtId =>
         val invite = invitationRepo.get(inviteExtId)
-        val invitedSocial = userSocialAccounts.find(_.id.get == invite.recipientSocialUserId)
+        val invitedSocial = userSocialAccounts.find(_.id.get == invite.recipientSocialUserId.get)
         val detectedInvite = if (invitedSocial.isEmpty && userSocialAccounts.nonEmpty) {
           // User signed up using a different social account than what we know about.
-          invite.copy(recipientSocialUserId = userSocialAccounts.head.id.get)
+          invite.copy(recipientSocialUserId = userSocialAccounts.head.id)
         } else {
           invite
         }
         // todo: When invite.recipientSocialUserId is an Option, check here if it's set. If not, set it on the invite record.
-        socialUserRepo.get(invite.recipientSocialUserId) -> detectedInvite
+        socialUserRepo.get(invite.recipientSocialUserId.get) -> detectedInvite
       }
 
       val existingInvites = userSocialAccounts.map { su =>
@@ -51,7 +51,7 @@ class InviteCommander @Inject() (
           Set(su -> Invitation(
             createdAt = clock.now,
             senderUserId = None,
-            recipientSocialUserId = su.id.get,
+            recipientSocialUserId = su.id,
             state = InvitationStates.ACTIVE
           ))
         }.getOrElse(Set())
