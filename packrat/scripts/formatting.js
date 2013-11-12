@@ -159,7 +159,7 @@ function addParticipantsFormatter(actor, addedUsers) {
 }
 
 function isSessionUser(user) {
-  return Boolean(user && user.id === session.userId);
+  return Boolean(user && user.id === session.user.id);
 }
 
 function bringSessionUserToFront(users) {

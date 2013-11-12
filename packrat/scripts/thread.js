@@ -53,7 +53,7 @@ panes.thread = function () {
 
   function renderThread($container, threadId, messages, session) {
     messages.forEach(function (m) {
-      m.isLoggedInUser = m.user.id === session.userId;
+      m.isLoggedInUser = m.user.id === session.user.id;
     });
     $(render('html/keeper/messages', {
       formatMessage: getTextFormatter,
@@ -95,7 +95,7 @@ panes.thread = function () {
     if (buffer.threadId === threadId && !messages.some(function (m) {return m.id === buffer.message.id})) {
       log('[render] appending buffered message', buffer.message.id)();
       messages.push(buffer.message);
-      var $m = renderMessage(buffer.message, session.userId);
+      var $m = renderMessage(buffer.message, session.user.id);
       $holder.append($m).scrollToBottom();
     }
 
@@ -137,8 +137,8 @@ panes.thread = function () {
       id: '',
       createdAt: new Date().toISOString(),
       text: text,
-      user: {id: session.userId, firstName: session.name, lastName: ''}
-    }, session.userId)
+      user: session.user
+    }, session.user.id)
     .data('text', text);
     $holder.append($m).scrollToBottom();
 
@@ -150,7 +150,6 @@ panes.thread = function () {
         $m.find('.kifi-message-status').text('sending…')
       }
     }, 1000);
-
   }
 
   function renderMessage(m, userId) {
