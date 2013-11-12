@@ -11,10 +11,10 @@
   <!--n-->
   <div class="kifi-who" data-url="{{bookmark.url}}">
     {{#displaySelf}}
-      <img class="kifi-face kifi-self{{^displayUsers}} kifi-only{{/displayUsers}}" src="{{cdnBase}}/users/{{session.userId}}/pics/100/0.jpg" alt="You!" title="You! You look great!">
+      <img class="kifi-face kifi-self{{^displayUsers}} kifi-only{{/displayUsers}}" src="{{cdnBase}}/users/{{self.id}}/pics/100/{{self.pictureName}}" alt="You!" title="You! You look great!">
     {{/displaySelf}}
     {{#displayUsers}}
-      <a class="kifi-face kifi-friend" href="javascript:" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/0.jpg)"></a>
+      <a class="kifi-face kifi-friend" href="javascript:" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"></a>
     {{/displayUsers}}
     {{^displaySelf}}{{^displayUsers}}
       <img class="kifi-globe" src="{{images}}/globe.png">

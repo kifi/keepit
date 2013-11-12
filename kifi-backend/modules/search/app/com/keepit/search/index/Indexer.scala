@@ -97,7 +97,7 @@ abstract class Indexer[T](
       }
     }
     val elapsed = System.currentTimeMillis - startTime
-    log.info(s"warmed up an index directory [${indexDirectory.toString}], took {$elapsed}ms")
+    log.info(s"warmed up an index directory [${indexDirectory.toString}], took ${elapsed}ms")
 
     reader
   }

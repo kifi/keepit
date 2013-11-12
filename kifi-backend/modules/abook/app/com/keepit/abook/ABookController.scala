@@ -111,10 +111,8 @@ class ABookController @Inject() (
     }
   }
 
-  // authenticated upload (used by ios/mobile)
-  def upload(origin:ABookOriginType) = AuthenticatedJsonAction(false, parse.json(maxLength = 1024 * 50000)) { request =>
-    val userId = request.userId
-    val json = request.body
+  def upload(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
+    val json : JsValue = request.body
     val abookRepoEntryF: Future[ABookInfo] = Future {
       processUpload(userId, origin, None, json)
     }

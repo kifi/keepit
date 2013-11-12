@@ -91,9 +91,10 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 ##########################################
 # Mobile V1
 ##########################################
-GET     /m/1/user/friends           @com.keepit.controllers.mobile.MobileUserController.getFriends()
-GET     /m/1/user/networks          @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
-POST    /m/1/page/details           @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
+GET     /m/1/user/friends                   @com.keepit.controllers.mobile.MobileUserController.getFriends()
+GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
+POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
+POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 
 ##########################################
 # Website
@@ -236,9 +237,6 @@ GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIG
 GET     /admin/uriGraph/reindexCollection  @com.keepit.controllers.admin.AdminURIGraphController.reindexCollection
 GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
 
-GET     /admin/commentIndex/reindex @com.keepit.controllers.admin.AdminCommentIndexController.reindex
-GET     /admin/commentIndex/dumpDoc/:commentId  @com.keepit.controllers.admin.AdminCommentIndexController.dumpLuceneDocument(commentId: Id[Comment])
-
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
 POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
 GET     /admin/users/page/:page     @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
@@ -361,6 +359,7 @@ POST     /internal/shoebox/database/getEmailAddressesForUsers                   
 GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])
+POST    /internal/shoebox/database/getExperimentsByUserIds            @com.keepit.controllers.shoebox.ShoeboxController.getExperimentsByUserIds()
 GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedUriUpdates(lowSeq: Long, highSeq: Long)
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])

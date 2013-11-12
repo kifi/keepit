@@ -1,19 +1,18 @@
 package com.keepit.social
 
-import scala.concurrent.duration.Duration
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
-import com.keepit.common.cache.CacheStatistics
-import com.keepit.common.logging.AccessLog
+import com.keepit.common.cache.{CacheStatistics, JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
-import com.keepit.model._
-import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
+import com.keepit.model._
+
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import java.io.ByteArrayOutputStream
-import org.apache.lucene.store.OutputStreamDataOutput
-import org.apache.lucene.store.InputStreamDataInput
-import java.io.ByteArrayInputStream
+
+import org.apache.lucene.store.{InputStreamDataInput, OutputStreamDataOutput}
+
+import scala.concurrent.duration.Duration
 
 case class BasicUser(
   externalId: ExternalId[User],
@@ -38,7 +37,7 @@ object BasicUser {
       pictureName = user.pictureName.map(_+ ".jpg").getOrElse("0.jpg") // need support for default image
     )
   }
-  
+
   def toByteArray(basicUser: BasicUser): Array[Byte] = {
     val bos = new ByteArrayOutputStream();
     val oos = new OutputStreamDataOutput(bos);
@@ -51,7 +50,7 @@ object BasicUser {
     bos.close();
     bos.toByteArray();
   }
-  
+
   def fromByteArray(bytes: Array[Byte], offset: Int, length: Int): BasicUser = {
     val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
 
@@ -59,7 +58,7 @@ object BasicUser {
     if (version != 1 ) {
       throw new Exception(s"invalid data [version=${version}]")
     }
-    
+
     BasicUser(
       externalId = ExternalId[User](in.readString),
       firstName = in.readString,
