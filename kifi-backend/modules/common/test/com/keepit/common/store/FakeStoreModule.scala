@@ -6,7 +6,6 @@ import com.google.inject.{Singleton, Provides}
 import com.keepit.common.db.Id
 import com.keepit.model.{NormalizedURI, SocialUserInfo}
 import com.keepit.search.{InMemoryArticleSearchResultStoreImpl, ArticleSearchResultStore, Article, ArticleStore}
-import com.keepit.common.analytics.{FakeMongoS3EventStore, MongoEventStore}
 import com.keepit.social.{SocialUserRawInfo, SocialUserRawInfoStore}
 
 trait FakeStoreModule extends StoreModule {
