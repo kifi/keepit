@@ -33,24 +33,24 @@ $(function() {
   $("#log-out").click(function(e) {
     e.preventDefault();
     main.deauthenticate();
-    showSession();
+    showUser();
   });
   $("#log-in").click(function(e) {
     e.preventDefault();
-    main.authenticate(showSession);
+    main.authenticate(showUser);
   });
 
-  function showSession() {
-    var s = main.session;
-    console.log("[showSession] session:", s);
-    if (s) {
+  function showUser() {
+    var user = (main.session || {}).user;
+    console.log("[showUser] user:", user);
+    if (user) {
       var cdnBase = env == "development" ?
         "dev.ezkeep.com:9000" : //d1scct5mnc9d9m.cloudfront.net
         "djty7jcqog9qu.cloudfront.net";
-      $("#name").text(s.name);
-      $("#identity").css("backgroundImage", "url(http://" + cdnBase + "/users/" + s.userId + "/pics/100/0.jpg)");
+      $("#name").text(user.firstName + ' ' + user.lastName);
+      $("#identity").css("backgroundImage", "url(http://" + cdnBase + "/users/" + user.id + "/pics/100/" + user.pictureName + ")");
     }
-    $("#session").attr("class", s ? "valid" : "none");
+    $("#session").attr("class", user ? "valid" : "none");
   }
-  showSession();
+  showUser();
 });

@@ -423,8 +423,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       var $pic = $(this);
       var friend = keepers.filter(hasId($pic.data('id')))[0];
       render('html/friend_card', {
-        name: friend.firstName + ' ' + friend.lastName,
-        id: friend.id,
+        friend: friend,
         iconsUrl: api.url('images/social_icons.png'),
         includeTri: true
       }, function (html) {
@@ -540,7 +539,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         api.require("styles/keeper/pane.css", function () {
           render("html/keeper/pane", $.extend(params, {
             site: location.hostname,
-            session: session
+            user: session.user
           }), {
             pane: "pane_" + pane
           },
