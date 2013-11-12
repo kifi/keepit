@@ -79,6 +79,15 @@ class MainSearcherFactory @Inject() (
     )
   }
 
+  def warmUp(userId: Id[User]): Seq[Future[Any]] = {
+    val searchFriendsFuture = shoeboxClient.getSearchFriends(userId)
+    val friendsFuture = shoeboxClient.getFriends(userId)
+    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
+    val clickHistoryFuture = getClickHistoryFuture(userId)
+
+    Seq(searchFriendsFuture, friendsFuture, browsingHistoryFuture, clickHistoryFuture) // returning futures to pin them in the heap
+  }
+
   def clear(): Unit = {
     consolidateURIGraphSearcherReq.clear()
     consolidateCollectionSearcherReq.clear()
