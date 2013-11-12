@@ -816,6 +816,29 @@ $(function() {
 				if (!obj.status) {
 					obj.status = '';
 				}
+				var val = obj.value;
+				var network = obj.network = val && val.substring(0, val.indexOf('/')),
+					isEmail = network === 'email';
+
+				obj.email = isEmail && val.substring(val.indexOf('/') + 1);
+
+				var description;
+				switch (obj.status) {
+					case 'joined':
+						description = 'Joined Kifi';
+					break;
+					case 'invited':
+						description = 'Invited';
+					break;
+					default:
+						if (isEmail) {
+							description = 'Invite via email';
+						}
+						else {
+							description = 'A friend on ' + network;
+						}
+				}
+				obj.description = description;
 			});
 			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
 			var filter = $('.invite-filter').val() || undefined;
