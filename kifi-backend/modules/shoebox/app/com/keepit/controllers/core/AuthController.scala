@@ -174,8 +174,11 @@ class AuthController @Inject() (
 
   private case class EmailPassword(email: String, password: String)
 
-  // TODO: something different if already logged in?
-  def loginPage() = HtmlAction(allowPending = true)(authenticatedAction = doLoginPage(_), unauthenticatedAction = doLoginPage(_))
+  def loginPage() = HtmlAction(allowPending = true)(authenticatedAction = { request =>
+    Redirect("/")
+  }, unauthenticatedAction = { request =>
+    Ok(views.html.auth.auth("login"))
+  })
 
   // Finalize account
   def signupPage() = HtmlAction(allowPending = true)(authenticatedAction = doSignupPage(_), unauthenticatedAction = doSignupPage(_))
@@ -255,10 +258,6 @@ class AuthController @Inject() (
         }
       }
     )
-  }
-
-  private def doLoginPage(implicit request: Request[_]): Result = {
-    Ok(views.html.auth.auth("login"))
   }
 
   private def doSignupPage(implicit request: Request[_]): Result = {
