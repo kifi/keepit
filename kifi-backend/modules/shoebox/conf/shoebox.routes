@@ -93,9 +93,10 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 ##########################################
 # Mobile V1
 ##########################################
-GET     /m/1/user/friends           @com.keepit.controllers.mobile.MobileUserController.getFriends()
-GET     /m/1/user/networks          @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
-POST    /m/1/page/details           @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
+GET     /m/1/user/friends                   @com.keepit.controllers.mobile.MobileUserController.getFriends()
+GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
+POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
+POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 
 ##########################################
 # Website
@@ -360,6 +361,7 @@ POST     /internal/shoebox/database/getEmailAddressesForUsers                   
 GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])
+POST    /internal/shoebox/database/getExperimentsByUserIds            @com.keepit.controllers.shoebox.ShoeboxController.getExperimentsByUserIds()
 GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedUriUpdates(lowSeq: Long, highSeq: Long)
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])

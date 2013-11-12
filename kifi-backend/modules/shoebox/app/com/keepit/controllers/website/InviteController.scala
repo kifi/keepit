@@ -17,6 +17,7 @@ import com.keepit.model._
 import com.keepit.social.{SocialGraphPlugin, SocialNetworks, SocialNetworkType, SocialId}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilderFactory, UserEvent, EventType}
+import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Play.current
@@ -131,19 +132,27 @@ class InviteController @Inject() (db: Database,
     Redirect("/friends/invite")
   }
 
-  def acceptInvite(id: ExternalId[Invitation]) = Action { implicit request =>
+  def acceptInvite(id: ExternalId[Invitation]) = HtmlAction(allowPending = true)(authenticatedAction = { implicit request =>
+    Redirect(com.keepit.controllers.core.routes.AuthController.signupPage)
+  }, unauthenticatedAction = { implicit request =>
     db.readOnly { implicit session =>
       val invitation = invitationRepo.getOpt(id)
       invitation match {
         case Some(invite) if (invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE) =>
           val socialUser = socialUserInfoRepo.get(invitation.get.recipientSocialUserId.get)
-          Redirect(com.keepit.controllers.core.routes.AuthController.signupPage).withCookies(Cookie("inv", invite.externalId.id))
-          //Ok(views.html.website.welcome(Some(id), Some(socialUser)))
+          (invite.senderUserId, request.identityOpt) match {
+            case (Some(senderId), None) =>
+              val inviterUser = userRepo.get(senderId)
+              Ok(views.html.auth.auth("signup", titleText = s"${socialUser.fullName}, join ${inviterUser.firstName} on Kifi!", titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUser.firstName}'s invite."))
+            case _ =>
+              Redirect(com.keepit.controllers.core.routes.AuthController.signupPage).withCookies(Cookie("inv", invite.externalId.id))
+          }
         case _ =>
-          Redirect(routes.HomeController.home)
+          Redirect(com.keepit.controllers.core.routes.AuthController.signupPage)
       }
     }
-  }
+  })
+
 
   def confirmInvite(id: ExternalId[Invitation], errorMsg: Option[String], errorCode: Option[Int]) = Action {
     db.readWrite { implicit session =>

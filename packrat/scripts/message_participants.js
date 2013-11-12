@@ -224,7 +224,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 				},
 				zindex: 999999999992,
 				resultsFormatter: function (f) {
-					return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/0.jpg)">' +
+					return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' +
 						Mustache.escape(f.name) + '</li>';
 				},
 				onAdd: function () {
@@ -250,7 +250,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 		/**
 		 * A listener for adding
-		 * 
+		 *
 		 * participants: [{
 		 *   firstName: "Jenny"
 		 *   id: "6f21b520-87e7-4053-9676-85762e96970a"

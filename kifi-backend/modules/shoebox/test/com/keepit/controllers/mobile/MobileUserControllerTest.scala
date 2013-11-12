@@ -23,6 +23,7 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
+import com.keepit.abook.TestABookServiceClientModule
 
 class MobileUserControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -35,7 +36,8 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     TestActorSystemModule(),
     TestSearchServiceClientModule(),
     FakeAirbrakeModule(),
-    FakeActionAuthenticatorModule()
+    FakeActionAuthenticatorModule(),
+    TestABookServiceClientModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

@@ -10,7 +10,7 @@ import com.keepit.common.time._
 import com.keepit.commanders.{UserCommander, BasicSocialUser}
 
 import play.api.Play.current
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsObject, Json, JsValue}
 
 import com.google.inject.Inject
 import com.keepit.common.net.URI
@@ -19,6 +19,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
 import com.keepit.common.analytics.{Event, EventFamilies, Events}
 import play.api.libs.concurrent.Akka
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class MobileUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -31,5 +32,12 @@ class MobileUserController @Inject() (
 
   def socialNetworkInfo() = AuthenticatedJsonAction { request =>
     Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
+  }
+
+  def uploadContacts(origin: ABookOriginType) = AuthenticatedJsonAction(parse.json(maxLength = 1024 * 50000)) { request =>
+    val json : JsValue = request.body
+    Async{
+      userCommander.uploadContactsProxy(request.userId, origin, json).map(Ok(_))
+    }
   }
 }

@@ -21,6 +21,7 @@ trait UserExperimentRepo extends Repo[UserExperiment] {
 class UserExperimentRepoImpl @Inject()(
     val db: DataBaseComponent,
     val clock: Clock,
+    val userRepo: UserRepo,
     userExperimentCache: UserExperimentCache)
   extends DbRepo[UserExperiment] with UserExperimentRepo {
 
@@ -33,6 +34,12 @@ class UserExperimentRepoImpl @Inject()(
     def experimentType = column[ExperimentType]("experiment_type", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ experimentType ~ state <> (UserExperiment,
       UserExperiment.unapply _)
+  }
+
+  override def save(model: UserExperiment)(implicit session: RWSession): UserExperiment = {
+    val saved = super.save(model)
+    userRepo.save(userRepo.get(model.userId))   // just to bump up user seqNum
+    saved
   }
 
   def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType] = {
