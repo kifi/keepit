@@ -20,9 +20,17 @@ class UserQueryParser(
 
   override val fields: Set[String] = Set.empty[String]
 
-  override def parse(queryText: CharSequence): Option[Query] = {
+  def parseWithUserExperimentConstrains(queryText: CharSequence, exps: Seq[String]): Option[Query] = {
 
-    def maybeEmailAddress(queryText: CharSequence) = queryText.toString().contains('@')
+    if (queryText == null) None
+    else {
+      val bq = if (maybeEmailAddress(queryText)) genEmailQuery(queryText) else genNameQuery(queryText)
+      bq.foreach( q => addUserExperimentConstrains(q, exps))
+      bq
+    }
+  }
+
+  override def parse(queryText: CharSequence): Option[Query] = {
 
     if (queryText == null) None
     else {
@@ -31,7 +39,9 @@ class UserQueryParser(
     }
   }
 
-  private def genEmailQuery(queryText: CharSequence): Option[Query] = {
+  private def maybeEmailAddress(queryText: CharSequence) = queryText.toString().contains('@')
+
+  private def genEmailQuery(queryText: CharSequence): Option[BooleanQuery] = {
     if (queryText == null) None
     else {
       val bq = new BooleanQuery
@@ -42,10 +52,7 @@ class UserQueryParser(
 
   }
 
-  private def genNameQuery(queryText: CharSequence): Option[Query] = {
-    if (queryText.toString.trim == "") {
-      return Some(new WildcardQuery(new Term(UserIndexer.FULLNAME_FIELD, "*")))
-    }
+  private def genNameQuery(queryText: CharSequence): Option[BooleanQuery] = {
 
     val ts = analyzer.tokenStream(UserIndexer.FULLNAME_FIELD, new StringReader(queryText.toString))
     ts.reset()
@@ -59,6 +66,13 @@ class UserQueryParser(
     }
 
     if (bq.clauses.size > 0) Some(bq) else None
+  }
+
+  private def addUserExperimentConstrains(bq: BooleanQuery, exps: Seq[String]) = {
+    exps.foreach{ exp =>
+      val tq = new TermQuery(new Term(UserIndexer.USER_EXPERIMENTS, exp))
+      bq.add(tq, Occur.MUST_NOT)
+    }
   }
 
   override protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query] = ???

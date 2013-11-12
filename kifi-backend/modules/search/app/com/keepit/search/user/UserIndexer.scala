@@ -22,6 +22,7 @@ object UserIndexer {
   val FULLNAME_FIELD = "u_fullname"
   val EMAILS_FIELD = "u_emails"
   val BASIC_USER_FIELD = "u_basic_user"
+  val USER_EXPERIMENTS = "u_experiments"
 
   val toBeDeletedStates = Set[State[User]](INACTIVE, PENDING, BLOCKED, INCOMPLETE_SIGNUP)
 }
