@@ -44,13 +44,13 @@ class ExtUserSearchController @Inject()(
     val requestedUsers = Await.result(friendRequests, 5 seconds).filter(_.state == FriendRequestStates.ACTIVE).map{_.recipientId}.toSet
 
     val jsVals = res.hits.map{ case UserHit(id, basicUser, isFriend) =>
-      val connectionStatus = {
+      val status = {
         if (isFriend) "friend"
         else if (requestedUsers.contains(id)) "requested"
         else ""
       }
 
-      Json.obj("basicUser" -> Json.toJson(basicUser), "connectionStatus" -> connectionStatus)
+      Json.obj("user" -> Json.toJson(basicUser), "status" -> status)
     }
 
     Ok(JsArray(jsVals))
