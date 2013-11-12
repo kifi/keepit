@@ -1,6 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
@@ -9,7 +10,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net._
 import com.keepit.model._
 import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilderFactory, UserEvent, EventType}
-import com.keepit.common.akka.SafeFuture
+import com.keepit.social.BasicUser
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -78,8 +79,9 @@ class ExtAuthController @Inject() (
     }
 
     Ok(Json.obj(
-      "name" -> s"${user.firstName} ${user.lastName}",
-      "userId" -> user.externalId.id,
+      "user" -> BasicUser.fromUser(user),
+      "name" -> s"${user.firstName} ${user.lastName}",  // deprecated, remove after all extensions at 2.6.38 or later
+      "userId" -> user.externalId.id,                   // deprecated, remove after all extensions at 2.6.38 or later
       "installationId" -> installation.externalId.id,
       "experiments" -> request.experiments.map(_.value),
       "rules" -> sliderRuleGroup.compactJson,
