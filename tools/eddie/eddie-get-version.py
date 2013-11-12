@@ -31,7 +31,6 @@ def getAllAssetsByKind(bucket):
   for key in allKeys:
     asset = Asset(key.name, key.last_modified)
     byKind[asset.kind].append(asset)
-  byKind = dict(byKind)
   for kind in byKind:
     byKind[kind].sort(key=lambda x: x.timestamp)
     byKind[kind].reverse()

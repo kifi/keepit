@@ -24,6 +24,11 @@ class ServiceController @Inject() (
         Ok(serviceDiscovery.toString)
     }
 
+    def up = Action { implicit request =>
+      if(serviceDiscovery.amIUp) Ok("")
+      else InternalServerError("")
+    }
+
 
     def threadDetails(name: String = "", state: String = "", stack: String = "", sort: String = "") = Action { request =>
       if (request.queryString.get("help").nonEmpty) {
