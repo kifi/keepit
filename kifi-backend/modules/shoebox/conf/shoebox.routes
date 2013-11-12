@@ -26,7 +26,7 @@ POST    /authenticate/:provider     securesocial.controllers.ProviderController.
 
 GET     /login/after                @com.keepit.controllers.core.AuthController.afterLogin()
 GET     /login/:provider            @com.keepit.controllers.core.AuthController.loginSocial(provider)
-POST    /auth/log-in                @com.keepit.controllers.core.AuthController.loginWithUserPass(link: String ?= "")
+POST    /auth/log-in                @com.keepit.controllers.core.AuthController.logInWithUserPass(link: String ?= "")
 
 GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
 GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)

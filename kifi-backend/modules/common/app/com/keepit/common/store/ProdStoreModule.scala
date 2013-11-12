@@ -7,7 +7,6 @@ import com.keepit.search._
 import play.api.Play._
 import com.keepit.common.analytics._
 import com.amazonaws.auth.BasicAWSCredentials
-import com.mongodb.casbah.MongoConnection
 import com.keepit.learning.topicmodel._
 
 trait StoreModule extends ScalaModule {

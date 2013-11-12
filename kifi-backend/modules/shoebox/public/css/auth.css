@@ -1005,6 +1005,64 @@ footer {
   -o-transition-timing-function: ease-out;
   transition-timing-function: ease-out;
 }
+.dialog-x {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  height: 24px;
+  width: 24px;
+  z-index: 2;
+  border-radius: 50%;
+}
+.dialog-x:before,
+.dialog-x:after {
+  content: ' ';
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 50%;
+  width: 1px;
+  background: #aaa;
+  font-size: 0;
+}
+.dialog-x:before {
+  -webkit-transform: translate3d(-0.5px, 0, 0) rotate(45deg);
+  -moz-transform: translate3d(-0.5px, 0, 0) rotate(45deg);
+  -o-transform: translate3d(-0.5px, 0, 0) rotate(45deg);
+  -ms-transform: translate3d(-0.5px, 0, 0) rotate(45deg);
+  transform: translate3d(-0.5px, 0, 0) rotate(45deg);
+}
+.dialog-x:after {
+  -webkit-transform: translate3d(-0.5px, 0, 0) rotate(-45deg);
+  -moz-transform: translate3d(-0.5px, 0, 0) rotate(-45deg);
+  -o-transform: translate3d(-0.5px, 0, 0) rotate(-45deg);
+  -ms-transform: translate3d(-0.5px, 0, 0) rotate(-45deg);
+  transform: translate3d(-0.5px, 0, 0) rotate(-45deg);
+}
+.dialog-x:hover {
+  background: #e8e8e8;
+}
+.dialog-x:active {
+  background: #d8d8d8;
+}
+.dialog-x:focus {
+  outline-color: #ccc;
+}
+.dialog-title {
+  padding: 20px 0 10px;
+  line-height: 32px;
+  font-size: 28px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  color: #515051;
+}
+.dialog-text {
+  margin: 0;
+  line-height: 19px;
+  font-size: 15px;
+  font-weight: 300;
+  color: #515051;
+}
 .photo-dialog .dialog-box {
   width: 304px;
 }
@@ -1161,64 +1219,6 @@ footer {
   background-image: -o-linear-gradient(right, #ffffff, transparent);
   background-image: linear-gradient(to left, #ffffff, transparent);
 }
-.reset-password-x {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-  height: 24px;
-  width: 24px;
-  z-index: 2;
-  border-radius: 50%;
-}
-.reset-password-x:before,
-.reset-password-x:after {
-  content: ' ';
-  position: absolute;
-  top: 5px;
-  bottom: 5px;
-  left: 50%;
-  width: 1px;
-  background: #aaa;
-  font-size: 0;
-}
-.reset-password-x:before {
-  -webkit-transform: translate3d(-0.5px, 0, 0) rotate(45deg);
-  -moz-transform: translate3d(-0.5px, 0, 0) rotate(45deg);
-  -o-transform: translate3d(-0.5px, 0, 0) rotate(45deg);
-  -ms-transform: translate3d(-0.5px, 0, 0) rotate(45deg);
-  transform: translate3d(-0.5px, 0, 0) rotate(45deg);
-}
-.reset-password-x:after {
-  -webkit-transform: translate3d(-0.5px, 0, 0) rotate(-45deg);
-  -moz-transform: translate3d(-0.5px, 0, 0) rotate(-45deg);
-  -o-transform: translate3d(-0.5px, 0, 0) rotate(-45deg);
-  -ms-transform: translate3d(-0.5px, 0, 0) rotate(-45deg);
-  transform: translate3d(-0.5px, 0, 0) rotate(-45deg);
-}
-.reset-password-x:hover {
-  background: #e8e8e8;
-}
-.reset-password-x:active {
-  background: #d8d8d8;
-}
-.reset-password-x:focus {
-  outline-color: #ccc;
-}
-.reset-password-title {
-  padding: 20px 0 10px;
-  line-height: 32px;
-  font-size: 28px;
-  font-weight: 300;
-  -webkit-font-smoothing: antialiased;
-  color: #515051;
-}
-.reset-password-text {
-  margin: 0;
-  line-height: 19px;
-  font-size: 15px;
-  font-weight: 300;
-  color: #515051;
-}
 .reset-password-email {
   width: 300px;
 }
@@ -1245,7 +1245,7 @@ footer {
   transform: translate(80%, 0);
   visibility: hidden;
 }
-.reset-password-success > .reset-password-text {
+.reset-password-success > .dialog-text {
   margin: 16px 0 0;
 }
 .reset-password-sent .reset-password-form {
@@ -1282,7 +1282,7 @@ footer {
   list-style: none;
 }
 .reset-password-address:only-child {
-  padding: 8px 0 11px;
+  padding: 8px 0 10px;
 }
 .social-info,
 .form-creds {
@@ -1355,6 +1355,12 @@ input.social-email[disabled] {
   -ms-transition: opacity 0.2s linear, visibility 0s 0.2s;
   transition: opacity 0.2s linear, visibility 0s 0.2s;
 }
+.social-claim-account:link {
+  margin-left: 4px;
+  color: inherit;
+  font-weight: bolder;
+  text-decoration: underline;
+}
 .form-creds {
   margin: 24px auto 16px;
 }
@@ -1384,6 +1390,32 @@ input.social-email[disabled] {
   line-height: 15px;
   font-size: 13px;
   font-weight: normal;
+}
+.claim-account .dialog-box {
+  width: 480px;
+  text-align: center;
+  overflow: hidden;
+}
+.claim-account-form > .form-email-addr {
+  width: 270px;
+  margin: 16px auto 0;
+}
+.claim-account-form > .password-label {
+  width: 270px;
+  margin: 0 auto 20px;
+}
+.claim-account-buttons {
+  padding: 2px 0 20px;
+}
+.claim-account-cancel,
+.claim-account-submit {
+  display: inline-block;
+  margin: 0 4px;
+  border: none;
+  padding: 10px 30px;
+  font-size: 16px;
+  line-height: 19px;
+  -webkit-font-smoothing: antialiased;
 }
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .curtain-logo-l,

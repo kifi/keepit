@@ -54,6 +54,7 @@ class ShoeboxController @Inject() (
   keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
+  socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
@@ -361,6 +362,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(collectionIds))
   }
 
+  // on kifi
   def getConnectedUsers(id : Id[User]) = Action { request =>
     val ids = db.readOnly { implicit s =>
       userConnectionRepo.getConnectedUsers(id).toSeq

@@ -50,7 +50,6 @@ object ApplicationBuild extends Build {
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
-      "org.mongodb" %% "casbah" % "2.5.0",
       "com.typesafe.slick" %% "slick" % "1.0.1",
       "net.sf.uadetector" % "uadetector-resources" % "2013.02",
       "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
