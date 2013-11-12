@@ -130,8 +130,10 @@ kifi.form = (function () {
       return false;
     }
     $('.form-error').remove();
-    var email = kifi.form.validateEmailAddress($form.find('.form-email-addr'));
-    var password = email && kifi.form.validateNewPassword($form.find('.form-password'));
+    var $email = $form.find('.form-email-addr');
+    var $password = $form.find('.form-password');
+    var email = kifi.form.validateEmailAddress($email);
+    var password = email && kifi.form.validateNewPassword($password);
     if (email && password) {
       $form.data('promise', $.postJson(this.action, {
         email: email,
@@ -142,6 +144,11 @@ kifi.form = (function () {
           $signup2EmailForm.css('display', 'block').layout();
           $('body').addClass('finalizing droppable');
           setTimeout($.fn.focus.bind($('.form-first-name')), 100);
+        }
+      }).fail(function (xhr) {
+        var o = xhr.responseJSON;
+        if (o && o.error === 'user_exists_failed_auth') {
+          kifi.form.showError($password, 'Account exists, incorrect password');
         }
       }));
     }
