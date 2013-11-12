@@ -36,10 +36,10 @@ class UserSearchFilterFactory @Inject()(client: ShoeboxServiceClient) {
     case Some(uid) => client.getFriends(uid).map{uids => uids.map{_.id}}
   }
 
-  def default(userId: Option[Id[User]], context: Option[String] = None) = new UserSearchFilter(userId, context){
+  def default(userId: Option[Id[User]], context: Option[String] = None, excludeSelf: Boolean = false) = new UserSearchFilter(userId, context){
     override val kifiFriendsFuture = getFriends(userId)
     override def filterType = UserSearchFilterType.DEFAULT
-    override def accept(id: Long) = !idFilter.contains(id)
+    override def accept(id: Long) = !idFilter.contains(id) && !(excludeSelf && userId.isDefined && userId.get.id == id)
   }
 
   def friendsOnly(userId: Id[User], context: Option[String] = None) = new UserSearchFilter(Some(userId), context){

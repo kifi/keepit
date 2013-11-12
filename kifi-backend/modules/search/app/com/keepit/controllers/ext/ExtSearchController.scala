@@ -60,7 +60,7 @@ class ExtSearchController @Inject() (
     val noSearchExperiments = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
     // fetch user data in background
-    val prefetcher = fetchUserDataInBackground(shoeboxClient, userId)
+    val prefetcher = fetchUserDataInBackground(userId)
 
     log.info(s"""User ${userId} searched ${query.length} characters""")
 
@@ -149,6 +149,13 @@ class ExtSearchController @Inject() (
     Ok(Json.toJson(res)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
+  def warmUp() = AuthenticatedJsonAction { request =>
+    SafeFuture {
+      mainSearcherFactory.warmUp(request.userId)
+    }
+    Ok
+  }
+
   private def getLangsPriorProbabilities(acceptLangs: Seq[String]): Map[Lang, Double] = {
     val majorLangs = acceptLangs.toSet.flatMap{ code: String =>
       val lang = code.substring(0,2)
@@ -199,19 +206,12 @@ class ExtSearchController @Inject() (
     }
   }
 
-  private[this] def fetchUserDataInBackground(shoeboxClient: ShoeboxServiceClient, userId: Id[User]): Prefetcher = new Prefetcher(shoeboxClient, userId)
+  private[this] def fetchUserDataInBackground(userId: Id[User]): Prefetcher = new Prefetcher(userId)
 
-  private class Prefetcher(shoeboxClient: ShoeboxServiceClient, userId: Id[User]) {
+  private class Prefetcher(userId: Id[User]) {
     var futures: Seq[Future[Any]] = null // pin futures in a jvm heap
-    future {
-      // following request must have request consolidation enabled, otherwise no use.
-      // have a head start on every other requests that search will make in order, then submit skipped requests backwards
-      futures = Seq(
-        // skip every other
-        shoeboxClient.getSearchFriends(userId),
-        // then, backwards
-        shoeboxClient.getFriends(userId)
-      )
+    SafeFuture{
+      futures = mainSearcherFactory.warmUp(userId)
     }
   }
 

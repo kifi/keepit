@@ -26,7 +26,7 @@ class ExtUserSearchController @Inject()(
     filter match {
       case Some("f") => filterFactory.friendsOnly(userId.get, context)
       case Some("non-f") => filterFactory.nonFriendsOnly(userId.get, context)
-      case _ => filterFactory.default(userId, context)
+      case _ => filterFactory.default(userId, context, excludeSelf = true)      // may change this later
     }
   }
 

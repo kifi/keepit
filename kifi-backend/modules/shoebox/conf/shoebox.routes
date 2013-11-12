@@ -91,9 +91,10 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 ##########################################
 # Mobile V1
 ##########################################
-GET     /m/1/user/friends           @com.keepit.controllers.mobile.MobileUserController.getFriends()
-GET     /m/1/user/networks          @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
-POST    /m/1/page/details           @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
+GET     /m/1/user/friends                   @com.keepit.controllers.mobile.MobileUserController.getFriends()
+GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
+POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
+POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 
 ##########################################
 # Website
@@ -235,9 +236,6 @@ GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGra
 GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIGraphController.dumpLuceneDocument(userId: Id[User])
 GET     /admin/uriGraph/reindexCollection  @com.keepit.controllers.admin.AdminURIGraphController.reindexCollection
 GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
-
-GET     /admin/commentIndex/reindex @com.keepit.controllers.admin.AdminCommentIndexController.reindex
-GET     /admin/commentIndex/dumpDoc/:commentId  @com.keepit.controllers.admin.AdminCommentIndexController.dumpLuceneDocument(commentId: Id[Comment])
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
 POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
