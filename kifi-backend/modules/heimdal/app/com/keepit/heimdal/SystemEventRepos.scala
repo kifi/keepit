@@ -25,3 +25,7 @@ class DevSystemEventLoggingRepo(val collection: BSONCollection, protected val ai
     ).future
   }
 }
+
+trait SystemEventDescriptorRepo extends EventDescriptorRepo[SystemEvent]
+class ProdSystemEventDescriptorRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends ProdEventDescriptorRepo[SystemEvent] with SystemEventDescriptorRepo
+class DevSystemEventDescriptorRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends DevEventDescriptorRepo[SystemEvent] with SystemEventDescriptorRepo

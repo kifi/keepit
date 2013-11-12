@@ -2,29 +2,23 @@ package com.keepit.heimdal
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
-import reactivemongo.core.commands.PipelineOperator
+import reactivemongo.core.commands.{LastError, PipelineOperator}
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.{BSONDocument, BSONArray, BSONDateTime, Macros, BSONHandler}
+import reactivemongo.bson.{BSONDocument, BSONArray, Macros}
+import CustomBSONHandlers._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-import org.joda.time.DateTime
-
 import scala.concurrent.{Future, Promise}
+import com.keepit.common.akka.SafeFuture
 
 trait MetricDescriptorRepo extends MongoRepo[MetricDescriptor] {
-
-  implicit object BSONDateTimeHandler extends BSONHandler[BSONDateTime, DateTime] {
-    def read(time: BSONDateTime) = new DateTime(time.value)
-    def write(jdtime: DateTime) = BSONDateTime(jdtime.getMillis)
-  }
 
   val bsonHandler = Macros.handler[MetricDescriptor]
 
   def toBSON(obj: MetricDescriptor): BSONDocument = bsonHandler.write(obj)
   def fromBSON(doc: BSONDocument): MetricDescriptor = bsonHandler.read(doc)
 
-  def upsert(obj: MetricDescriptor) : Unit
+  def upsert(obj: MetricDescriptor) : Future[LastError]
 
   def getByName(name: String): Future[Option[MetricDescriptor]] = {
     collection.find(BSONDocument("name" -> name)).one.map{
@@ -34,18 +28,18 @@ trait MetricDescriptorRepo extends MongoRepo[MetricDescriptor] {
 }
 
 class ProdMetricDescriptorRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends MetricDescriptorRepo {
-  def upsert(obj: MetricDescriptor) : Unit = {
-    collection.uncheckedUpdate(
-      BSONDocument("name" -> obj.name),
-      toBSON(obj),
-      true,
-      false
+  def upsert(obj: MetricDescriptor) : Future[LastError] = new SafeFuture(
+    collection.update(
+      selector = BSONDocument("name" -> obj.name),
+      update = toBSON(obj),
+      upsert = true,
+      multi = false
     )
-  }
+  )
 }
 
 class DevMetricDescriptorRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends MetricDescriptorRepo {
-  def upsert(obj: MetricDescriptor) : Unit = {}
+  def upsert(obj: MetricDescriptor) : Future[LastError] = Future.failed(new NotImplementedError)
   override def insert(obj: MetricDescriptor, dropDups: Boolean = false) : Unit = {}
   override def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
     Promise.successful(

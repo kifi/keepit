@@ -35,3 +35,7 @@ class DevUserEventLoggingRepo(val collection: BSONCollection, protected val airb
     ).future
   }
 }
+
+trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]
+class ProdUserEventDescriptorRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends ProdEventDescriptorRepo[UserEvent] with UserEventDescriptorRepo
+class DevUserEventDescriptorRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends DevEventDescriptorRepo[UserEvent] with UserEventDescriptorRepo
