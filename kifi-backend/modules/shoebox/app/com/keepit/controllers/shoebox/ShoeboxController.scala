@@ -63,7 +63,8 @@ class ShoeboxController @Inject() (
   emailAddressRepo: EmailAddressRepo,
   changedUriRepo: ChangedURIRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
-  scrapeInfoRepo:ScrapeInfoRepo
+  scrapeInfoRepo:ScrapeInfoRepo,
+  friendRequestRepo: FriendRequestRepo
 )
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
@@ -474,5 +475,12 @@ class ShoeboxController @Inject() (
       else keepers.foreach { extId => userBookmarkClicksRepo.increaseCounts(userRepo.get(extId).id.get, uriId, false) }
     }
     Ok
+  }
+
+  def getFriendRequestsBySender(senderId: Id[User]) = Action { request =>
+    val requests = db.readOnly{ implicit s =>
+      friendRequestRepo.getBySender(senderId)
+    }
+    Ok(JsArray(requests.map{ x => Json.toJson(x) }))
   }
 }
