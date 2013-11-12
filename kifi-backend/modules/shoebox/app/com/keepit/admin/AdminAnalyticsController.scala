@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.heimdal.{UserEvent, HeimdalServiceClient}
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -145,10 +145,10 @@ class AdminAnalyticsController @Inject() (
     "messagerFraction" -> messagerFraction
   )
 
-  private def metricData : Future[Map[String, JsArray]] = {
+  private def userMetricData : Future[Map[String, JsArray]] = {
     val innerFutures = metrics.mapValues{ groupMap =>
       Future.sequence(groupMap.toSeq.map{ case (metricName, auxInfo) =>
-        heimdal.getMetricData(metricName).map{MetricAuxInfo.augmentMetricData(_, auxInfo)}
+        heimdal.getMetricData[UserEvent](metricName).map{MetricAuxInfo.augmentMetricData(_, auxInfo)}
       })
     }
     val keys: Seq[String] = innerFutures.keys.toSeq
@@ -167,7 +167,7 @@ class AdminAnalyticsController @Inject() (
 
   def index() = AdminHtmlAction { request =>
     heimdal.updateMetrics()
-    Async(metricData.map{ dataMap =>
+    Async(userMetricData.map{ dataMap =>
       Ok(html.admin.analyticsDashboardView(dataMap.mapValues(Json.stringify(_))))
     })
   }

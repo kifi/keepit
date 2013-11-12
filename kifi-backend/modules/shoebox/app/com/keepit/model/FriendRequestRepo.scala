@@ -79,7 +79,4 @@ class FriendRequestRepoImpl @Inject() (
   }
 }
 
-object FriendRequestStates extends States[FriendRequest] {
-  val ACCEPTED = State[FriendRequest]("accepted")
-  val IGNORED = State[FriendRequest]("ignored")
-}
+

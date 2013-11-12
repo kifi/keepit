@@ -5,15 +5,15 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
 
-import play.api.libs.json.{JsObject, JsNull, JsArray, Json}
+import play.api.libs.json.{JsArray, Json}
 import play.modules.reactivemongo.json.ImplicitBSONHandlers._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.duration._
-import scala.concurrent.{Future, future, Await}
+import scala.concurrent.{Future, Await}
 
 
-import reactivemongo.bson.{BSONDocument, BSONArray, BSONString, BSONDouble}
+import reactivemongo.bson.BSONDocument
 import reactivemongo.api.indexes.{Index, IndexType}
 
 import com.google.inject.Inject
@@ -26,8 +26,8 @@ object MetricDescriptor {
 }
 
 class MetricManager @Inject() (
-    userEventLoggingRepo: UserEventLoggingRepo, 
-    metricDescriptorRepo: MetricDescriptorRepo, 
+    userEventLoggingRepo: UserEventLoggingRepo,
+    metricDescriptorRepo: MetricDescriptorRepo,
     metricRepoFactory: MetricRepoFactory,
     serviceDiscovery: ServiceDiscovery
   ){
@@ -58,22 +58,6 @@ class MetricManager @Inject() (
         JsObjectReader.read(bson)
       })
     }
-  } 
-
-  def getLatestRawEvents(eventsToConsider: EventSet, number: Int) : Future[JsArray] = {
-    val eventSelector = eventsToConsider match {
-      case SpecificEventSet(events) =>
-        BSONDocument(
-          "event_type" -> BSONDocument(
-            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
-          )
-        )
-      case AllEvents => BSONDocument()
-    }
-    val sortOrder = BSONDocument("time" -> BSONDouble(-1.0))
-    userEventLoggingRepo.collection.find(eventSelector).sort(sortOrder).cursor.collect[Seq](number).map{ events =>
-      JsArray(events)
-    }
   }
 
   def createMetric(descriptor: MetricDescriptor): Unit = {
@@ -84,7 +68,7 @@ class MetricManager @Inject() (
   def updateMetricOnce(desc: MetricDescriptor): MetricDescriptor = {
     val tStart = desc.lastUpdate.minusHours(desc.window).plusHours(desc.step)
     val tEnd = desc.lastUpdate.plusHours(desc.step)
-    val eventsToConsider = if (desc.events.isEmpty) AllEvents else SpecificEventSet(desc.events.toSet.map( (s: String) => UserEventType(s)) )
+    val eventsToConsider = if (desc.events.isEmpty) AllEvents else SpecificEventSet(desc.events.toSet.map( (s: String) => EventType(s)) )
     val contextRestriction = definedRestrictions(desc.filter)
 
     val definition = desc.mode match {
@@ -112,7 +96,7 @@ class MetricManager @Inject() (
 
   def updateMetricFully(descriptor: MetricDescriptor): Unit = {
     val now = currentDateTime
-    var desc = descriptor 
+    var desc = descriptor
     while(now.isAfter(desc.start.plusHours(desc.window)) && now.isAfter(desc.lastUpdate.plusHours(desc.step))){
       try {
         desc = updateMetricOnce(desc)

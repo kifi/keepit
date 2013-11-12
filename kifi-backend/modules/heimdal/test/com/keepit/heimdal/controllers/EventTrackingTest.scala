@@ -19,43 +19,54 @@ class EventTrackingTest extends Specification with TestInjector {
   def setup()(implicit injector: Injector) = {
     val eventTrackingController = inject[EventTrackingController]
 
-    val testContext = UserEventContext(Map(
+    val testContext = EventContext(Map(
       "testField" -> Seq(ContextStringData("Yay!"))
     ))
-    val eventRepo = inject[UserEventLoggingRepo].asInstanceOf[TestUserEventLoggingRepo]
+    val userEventRepo = inject[UserEventLoggingRepo].asInstanceOf[TestUserEventLoggingRepo]
+    val systemEventRepo = inject[SystemEventLoggingRepo].asInstanceOf[TestSystemEventLoggingRepo]
 
-    (eventTrackingController, eventRepo, testContext)
+    (eventTrackingController, userEventRepo, systemEventRepo, testContext)
   }
 
   "Event Tracking Controller" should {
 
     "store correctly" in {
       withInjector(TestMongoModule(), StandaloneTestActorSystemModule()) { implicit injector =>
-        val (eventTrackingController, eventRepo, testContext) = setup()
-        val event = UserEvent(1, testContext, UserEventType("test_event"))
-        eventRepo.eventCount() === 0
-        eventTrackingController.trackInternalEvent(Json.toJson(event))
-        eventRepo.eventCount() === 1
-        eventRepo.lastEvent.context.data("testField")(0).asInstanceOf[ContextStringData].value === "Yay!"
+        val (eventTrackingController, userEventRepo, systemEventRepo, testContext) = setup()
+        val userEvent: HeimdalEvent = UserEvent(1, testContext, EventType("user_test_event"))
+        userEventRepo.eventCount() === 0
+        eventTrackingController.trackInternalEvent(Json.toJson(userEvent))
+        userEventRepo.eventCount() === 1
+        userEventRepo.lastEvent.context.data("testField")(0).asInstanceOf[ContextStringData].value === "Yay!"
 
+        val systemEvent: HeimdalEvent = SystemEvent(testContext, EventType("system_test_event"))
+        systemEventRepo.eventCount() === 0
+        eventTrackingController.trackInternalEvent(Json.toJson(systemEvent))
+        systemEventRepo.eventCount() === 1
+        systemEventRepo.lastEvent.context.data("testField")(0).asInstanceOf[ContextStringData].value === "Yay!"
       }
     }
 
     "store array" in {
       withInjector(TestMongoModule(), StandaloneTestActorSystemModule()) { implicit injector =>
-        val (eventTrackingController, eventRepo, testContext) = setup()
-        val events = Array( UserEvent(1, testContext, UserEventType("test_event")),
-                            UserEvent(2, testContext, UserEventType("test_event")),
-                            UserEvent(3, testContext, UserEventType("test_event")),
-                            UserEvent(4, testContext, UserEventType("test_event")))
-        eventRepo.eventCount() === 0
+        val (eventTrackingController, userEventRepo, systemEventRepo, testContext) = setup()
+        val events: Array[HeimdalEvent] = Array( UserEvent(1, testContext, EventType("test_event")),
+                            UserEvent(2, testContext, EventType("user_test_event")),
+                            UserEvent(3, testContext, EventType("user_test_event")),
+                            UserEvent(4, testContext, EventType("user_test_event")),
+                            SystemEvent(testContext, EventType("system_test_event")))
+        userEventRepo.eventCount() === 0
+        systemEventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvents(Json.toJson(events))
-        eventRepo.eventCount() === 4
-        eventRepo.events(0).userId === 1
-        eventRepo.events(1).userId === 2
-        eventRepo.events(2).userId === 3
-        eventRepo.events(3).userId === 4
 
+        userEventRepo.eventCount() === 4
+        userEventRepo.events(0).userId === 1
+        userEventRepo.events(1).userId === 2
+        userEventRepo.events(2).userId === 3
+        userEventRepo.events(3).userId === 4
+
+        systemEventRepo.eventCount() === 1
+        systemEventRepo.events(0).eventType === EventType("system_test_event")
       }
     }
 

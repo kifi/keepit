@@ -11,45 +11,41 @@ import java.util.{Set => JSet}
 
 trait BoostQuery extends Query {
   val textQuery: Query
-  val boosterQueries: Array[Query]
+  val boosterQuery: Query
 
   protected val name: String
 
-  protected def recreate(rewrittenTextQuery: Query, rewrittenBoosterQueries: Array[Query]): Query
+  protected def recreate(rewrittenTextQuery: Query, rewrittenBoosterQuery: Query): Query
 
   override def rewrite(reader: IndexReader): Query = {
     val rewrittenTextQuery = textQuery.rewrite(reader)
-    val rewrittenBoosterQueries = boosterQueries.map{ q => q.rewrite(reader) }
+    val rewrittenBoosterQuery = boosterQuery.rewrite(reader)
 
-    val textQueryUnchanged = (rewrittenTextQuery eq textQuery)
-    val boosterQueriesUnchanged = rewrittenBoosterQueries.zip(boosterQueries).forall{ case (r, q) => r eq q }
-
-    if (textQueryUnchanged && boosterQueriesUnchanged) this
-    else recreate(rewrittenTextQuery, rewrittenBoosterQueries)
+    if ((rewrittenTextQuery eq textQuery) && (rewrittenBoosterQuery eq boosterQuery)) this
+    else recreate(rewrittenTextQuery, rewrittenBoosterQuery)
   }
 
   override def extractTerms(out: JSet[Term]): Unit = {
     textQuery.extractTerms(out)
-    boosterQueries.foreach(_.extractTerms(out))
+    boosterQuery.extractTerms(out)
   }
 
   override def toString(s: String) = {
     "%s(%s, %s)".format(
       name,
       textQuery.toString(s),
-      boosterQueries.map(_.toString(s)).mkString("(",",",")"))
+      boosterQuery.toString(s))
   }
 
   override def equals(obj: Any): Boolean = obj match {
     case query: BoostQuery =>
       name == query.name &&
       textQuery == query.textQuery &&
-      boosterQueries.length == query.boosterQueries.length &&
-      (boosterQueries.length == 0 || boosterQueries.zip(query.boosterQueries).forall{ case (a, b) => a.equals(b) })
+      boosterQuery == query.boosterQuery
     case _ => false
   }
 
-  override def hashCode(): Int = name.hashCode() + textQuery.hashCode() + boosterQueries.foldLeft(0){ (sum, q) => sum + q.hashCode() }
+  override def hashCode(): Int = name.hashCode() + textQuery.hashCode() + boosterQuery.hashCode()
 }
 
 trait BoostWeight extends Weight {
@@ -58,7 +54,7 @@ trait BoostWeight extends Weight {
   val searcher: IndexSearcher
 
   protected val textWeight: Weight = query.textQuery.createWeight(searcher)
-  protected val boosterWeights: Array[Weight] = query.boosterQueries.map(_.createWeight(searcher))
+  protected val boosterWeight: Weight = query.boosterQuery.createWeight(searcher)
 
   override def getQuery() = query
   override def scoresDocsOutOfOrder() = false

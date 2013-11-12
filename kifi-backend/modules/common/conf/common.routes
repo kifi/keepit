@@ -9,6 +9,9 @@ GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHe
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
+#check if a service is up (for loadbalancer and deploy)
+GET     /up                                   @com.keepit.common.admin.ServiceController.up
+
 # INTERNAL ROUTES/GLOBAL
 GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()
 GET     /internal/version                     @com.keepit.common.healthcheck.CommonBenchmarkController.version()

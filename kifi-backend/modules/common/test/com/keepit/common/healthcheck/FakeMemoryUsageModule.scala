@@ -13,4 +13,5 @@ case class FakeMemoryUsageModule() extends MemoryUsageModule {
 
 class FakeMemoryUsageMonitor() extends MemoryUsageMonitor {
   def start() {}
+  override val monitoredPools = Seq.empty[MemoryUsageMonitor.MemoryPool]
 }

@@ -16,6 +16,13 @@
   function forceLayout() {
     this.offsetHeight;
   }
+
+  $.fn.reset = function () {
+    return this.each(reset);
+  };
+  function reset() {
+    this.reset();
+  }
 }());
 
 var kifi = {};
@@ -30,6 +37,7 @@ kifi.form = (function () {
         .delay(opts && opts.ms || 1000).fadeOut(300, removeError);
       $in.blur();  // closes browser autocomplete suggestion list
       $in.focus().select().on('input blur', removeError);
+      return $err;
       function removeError() {
         $err.remove();
         $in.off('input blur', removeError);
@@ -96,8 +104,8 @@ kifi.form = (function () {
   });
   $('.curtain-back').on('mousedown click', function (e) {
     if (e.which !== 1 || e.type === 'click' && (e.pageX || e.pageY)) return;
-    $signup1Form[0].reset();
-    $loginForm[0].reset();
+    $signup1Form.reset();
+    $loginForm.reset();
     var $body = $('body');
     if (!$body.hasClass('finalizing')) {
       $('.page-title').removeClass('returned');
@@ -115,17 +123,17 @@ kifi.form = (function () {
     }
   });
 
-  var signup1Promise;
   var $signup1Form = $('.signup-1').submit(function (e) {
-    if (signup1Promise && signup1Promise.state() === 'pending') {
+    var $form = $(this);
+    var promise = $form.data('promise');
+    if (promise && promise.state() === 'pending') {
       return false;
     }
     $('.form-error').remove();
-    var $form = $(this);
     var email = kifi.form.validateEmailAddress($form.find('.form-email-addr'));
     var password = email && kifi.form.validateNewPassword($form.find('.form-password'));
     if (email && password) {
-      signup1Promise = $.postJson($form.data('uri'), {
+      $form.data('promise', $.postJson(this.action, {
         email: email,
         password: password
       }).done(function (data) {
@@ -135,9 +143,7 @@ kifi.form = (function () {
           $('body').addClass('finalizing droppable');
           setTimeout($.fn.focus.bind($('.form-first-name')), 100);
         }
-      }).fail(function (xhr) {
-        signup1Promise = null;
-      });
+      }));
     }
     return false;
   });
@@ -161,19 +167,19 @@ kifi.form = (function () {
     }
   }
 
-  var signup2Promise;
   var $signup2EmailForm = $('.signup-2-email').submit(function (e) {
-    if (signup2Promise && signup2Promise.state() === 'pending') {
+    var $form = $(this);
+    var promise = $form.data('promise');
+    if (promise && promise.state() === 'pending') {
       return false;
     }
     $('.form-error').remove();
-    var $form = $(this);
     var first = kifi.form.validateName($form.find('.form-first-name'));
     var last = first && kifi.form.validateName($form.find('.form-last-name'));
     if (first && last) {
       var pic = $photo.data();
-      signup2Promise = $.when(pic.uploadPromise).always(function (upload) {
-         signup2Promise = $.postJson($form.data('uri'), {
+      $form.data('promise', $.when(pic.uploadPromise).always(function (upload) {
+         $form.data('promise', $.postJson($form.attr('action'), {
           firstName: first,
           lastName: last,
           picToken: upload && upload.token,
@@ -183,24 +189,23 @@ kifi.form = (function () {
           cropY: pic.y,
           cropSize: pic.size
         })
-        .done(navigate)
-        .fail(function (xhr) {
-          signup2Promise = null;
-        });
-      });
+        .done(navigate));
+      }));
     }
     return false;
   });
   var $signup2SocialForm = $('.signup-2-social').submit(function (e) {
-    if (signup2Promise && signup2Promise.state() === 'pending') {
+    var $form = $(this);
+    var promise = $form.data('promise');
+    if (promise && promise.state() === 'pending') {
       return false;
     }
     $('.form-error').remove();
-    var $form = $(this);
-    var email = kifi.form.validateEmailAddress($form.find('.social-email'));
+    var $email = $form.find('.social-email');
+    var email = kifi.form.validateEmailAddress($email);
     var password = kifi.form.validateNewPassword($form.find('.form-password'));
     if (password) {
-      signup2Promise = $.postJson($form.data('uri'), {
+      $form.data('promise', $.postJson(this.action, {
         firstName: $form.data('first'),
         lastName: $form.data('last'),
         email: email,
@@ -208,37 +213,53 @@ kifi.form = (function () {
       })
       .done(navigate)
       .fail(function (xhr) {
-        signup2Promise = null;
-      });
+        var o = xhr.responseJSON;
+        if (o && o.error === 'known_email_address') {
+          $form.data('email', email);
+          kifi.form.showError(
+            $email,
+            'A Kifi account already uses<br>this email address. <a href=javascript: class=social-claim-account>Claim it</a>',
+            {ms: 10000})
+          .on('mousedown', onClaimAccountClick.bind(null, email));
+        }
+      }));
     }
     return false;
   }).on('click', '.social-change-email', function (e) {
     if (e.which !== 1) return;
     $('.social-email').removeAttr('disabled').focus().select();
     $(this).addClass('clicked');
-  });
+  })
+  function onClaimAccountClick(emailAddr, e) {
+    if (e.which !== 1) return;
+    claimAccountDialog.show(emailAddr);
+  }
 
-  var loginPromise;
-  var $loginForm = $('.login').submit(function (e) {
-    if (loginPromise && loginPromise === 'pending') {
+  var $loginForm = $('.login').submit(onLoginFormSubmit)
+  .on('click', '.password-forgot', function (e) {
+    if (e.which !== 1) return;
+    resetPasswordDialog.show($(this).closest('form').find('.form-email-addr').val());
+  });
+  function onLoginFormSubmit(e) {
+    var $form = $(this);
+    var promise = $form.data('promise');
+    if (promise && promise.state() === 'pending') {
       return false;
     }
     $('.form-error').remove();
-    var $form = $(this);
     var $email = $form.find('.form-email-addr');
     var $password = $form.find('.form-password');
     var email = kifi.form.validateEmailAddress($email);
     var password = email && kifi.form.validatePassword($password);
     if (email && password) {
-      loginPromise = $.postJson($form.data('uri'), {
+      $form.data('promise', $.postJson(this.action, {
         username: email,
         password: password
       })
       .done(navigate)
       .fail(function (xhr) {
-        loginPromise = null;
         if (xhr.status === 403) {
-          var o = JSON.parse(xhr.responseText);
+          var o = xhr.responseJSON;
           if (o.error === 'no_such_user') {
             kifi.form.showError($email, 'No account with this email address', {ms: 1500});
           } else {
@@ -247,13 +268,10 @@ kifi.form = (function () {
         } else {
           // TODO: offline? 500?
         }
-      });
+      }));
     }
     return false;
-  }).on('click', '.password-forgot', function (e) {
-    if (e.which !== 1) return;
-    resetPasswordDialog.show($(this).closest('form').find('.form-email-addr').val());
-  });
+  }
 
   var URL = window.URL || window.webkitURL;
   var $photo = $('.form-photo');
@@ -577,7 +595,9 @@ kifi.form = (function () {
         clearTimeout(hideTimer), hideTimer = null;
 
         $dialog.appendTo('body').layout().addClass('dialog-showing');
-        $dialog.find('.reset-password-email').val(emailAddr).focus().select();
+        setTimeout(function () {
+          $dialog.find('.reset-password-email').val(emailAddr).focus().select();
+        }, 10);
         onEsc(hide);
       }
     };
@@ -600,7 +620,10 @@ kifi.form = (function () {
       var email = kifi.form.validateEmailAddress($email);
       if (email) {
         promise = $.postJson(this.action, {email: email})
-        .done(function () {
+        .done(function (data) {
+          $dialog.find('.reset-password-addresses').append($.map(data.addresses, function (addr) {
+            return $('<li class=reset-password-address>').text(addr);
+          }));
           $dialog.addClass('reset-password-sent');
           setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 100);
         })
@@ -621,7 +644,47 @@ kifi.form = (function () {
         var $el = $(e.target);
         if ($el.hasClass('reset-password-submit')) {
           $form.submit();
-        } else if ($el.is('.reset-password-cancel,.reset-password-x,.dialog-cell')) {
+        } else if ($el.is('.reset-password-cancel,.dialog-x,.dialog-cell')) {
+          hide();
+        }
+      }
+    }
+  }());
+
+
+  var claimAccountDialog = (function () {
+    var $dialog, $form, hideTimer;
+    return {
+      show: function (emailAddr) {
+        $dialog = $dialog || $('.claim-account').remove().css('display', '');
+        $dialog.click(onDialogClick);
+        $form = $dialog.find('form').submit(onLoginFormSubmit).reset();
+        clearTimeout(hideTimer), hideTimer = null;
+
+        $dialog.appendTo('body').layout().addClass('dialog-showing');
+        $dialog.find('.form-email-addr').val(emailAddr);
+        setTimeout(function () {
+          $dialog.find('.form-password').focus().select();
+        }, 10);
+        onEsc(hide);
+      }
+    };
+
+    function hide() {
+      offEsc(hide);
+      $dialog.removeClass('dialog-showing');
+      hideTimer = setTimeout(function () {
+        $dialog.remove();
+        $form = null;
+      }, 500);
+    }
+
+    function onDialogClick(e) {
+      if (e.which === 1) {
+        var $el = $(e.target);
+        if ($el.hasClass('claim-account-submit')) {
+          $form.submit();
+        } else if ($el.is('.claim-account-cancel,.dialog-x,.dialog-cell')) {
           hide();
         }
       }

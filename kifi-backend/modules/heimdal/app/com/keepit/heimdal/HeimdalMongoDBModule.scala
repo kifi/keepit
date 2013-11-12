@@ -38,6 +38,21 @@ case class ProdMongoModule() extends MongoModule {
 
   @Singleton
   @Provides
+  def systemEventLoggingRepo(airbrake: AirbrakeNotifier): SystemEventLoggingRepo = {
+    val nodeA = current.configuration.getString("mongodb.heimdal.nodeA").get
+    val nodeB = current.configuration.getString("mongodb.heimdal.nodeB").get
+    val username = current.configuration.getString("mongodb.heimdal.username").get
+    val password = current.configuration.getString("mongodb.heimdal.password").get
+    val auth = Authenticate("heimdal", username, password)
+    val driver = new MongoDriver
+    val connection = driver.connection(List(nodeA), List(auth), 2, Some("SystemEventLoggingMongoActorSystem"))
+    val db = connection("heimdal")
+    val collection = db("system_events")
+    new ProdSystemEventLoggingRepo(collection, airbrake)
+  }
+
+  @Singleton
+  @Provides
   def metricDescriptorRepo(airbrake: AirbrakeNotifier): MetricDescriptorRepo = {
     val nodeA = current.configuration.getString("mongodb.heimdal.nodeA").get
     val nodeB = current.configuration.getString("mongodb.heimdal.nodeB").get
@@ -75,6 +90,12 @@ case class DevMongoModule() extends MongoModule {
   @Provides
   def userEventLoggingRepo(airbrake: AirbrakeNotifier): UserEventLoggingRepo = {
     new DevUserEventLoggingRepo(null, airbrake)
+  }
+
+  @Singleton
+  @Provides
+  def systemEventLoggingRepo(airbrake: AirbrakeNotifier): SystemEventLoggingRepo = {
+    new DevSystemEventLoggingRepo(null, airbrake)
   }
 
   @Singleton

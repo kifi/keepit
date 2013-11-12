@@ -40,7 +40,7 @@ class UserSearchFilterTest extends Specification with ApplicationInjector {
         filter.accept(1) === true
 
         val context = IdFilterCompressor.fromSetToBase64(Set(1))
-        filter = factory.default(Some(context))
+        filter = factory.default(None, Some(context))
         filter.accept(1) === false
       }
     }
