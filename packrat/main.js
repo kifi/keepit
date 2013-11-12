@@ -813,13 +813,13 @@ api.port.on({
       width: 1020,
       height: 530}, {
       navigate: function(url) {
-        var window = this;
+        var popup = this;
         if (url == baseUri + "/#_=_" || url == baseUri + "/") {
           ajax("GET", "/ext/authed", function (loggedIn) {
             if (loggedIn !== false) {
               startSession(function() {
                 log("[open_login_popup] closing popup")();
-                window.close();
+                popup.close();
               });
             }
           });
