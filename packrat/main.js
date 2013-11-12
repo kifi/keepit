@@ -1743,7 +1743,7 @@ function openLogin(callback, retryMs) {
   var baseUri = webBaseUri();
   api.popup.open({
     name: "kifi-authenticate",
-    url: baseUri + "/login",
+    url: baseUri + '/ss/login',
     width: 1020,
     height: 530}, {
     navigate: function(url) {
