@@ -355,7 +355,7 @@
           <div class="found-user-list">
             <div class="antiscroll-inner">
               <ul>
-				  <li class="found-user" data-template data-id="{{user.id}}" data-value="{{value}}" data-status="{{status}}">
+				  <li class="found-user {{status}}" data-template data-id="{{user.id}}" data-value="{{value}}" data-status="{{status}}">
                   <img class="user-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image && /^linkedin/.test(value) %}assets/img/ghost-linkedin.100.png{% endif %}">
 				  <a class="friend-nw friend-nw-kifi"></a>
 				  <div class="user-name">{{user.firstName}} {{user.lastName}}</div>
@@ -364,9 +364,11 @@
                 </li>
               </ul>
               <img class="found-user-list-loading" src="assets/img/wait.gif">
-              <div class="no-results"></div>
-            </div>
-          </div>
+              <div class="no-results" style="display:none">
+				  <h2>We couldn’t find any users matching ‘<span class="no-result-filter"></span>’</h2>
+			  </div>
+		  </div>
+	  </div>
         </div>
 			</div>
 			<div class="friends-page" data-href="friends/requests">

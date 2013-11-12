@@ -917,6 +917,7 @@ $(function() {
 	function filterUsers() {
 		clearTimeout(usersTimeout);
 		$foundUsers.find('ul').empty();
+		$foundUsers.find('.no-results').hide();
 		usersTimeout = setTimeout(prepFindTab, 200);
 	}
 
@@ -941,55 +942,48 @@ $(function() {
 			//case '':
 			default:
 				xhr = $.post(xhrBase + '/user/' + o.id + '/friend', function(data) {
-					o.status = data.acceptedRequest ? '' : 'requested';
+					o.status = data.acceptedRequest ? 'friend' : 'requested';
 				});
 				break;
 		}
 		xhr.always(function() {
-			$a.closest('.found-user').data('status', o.status);
+			$a.closest('.found-user').data('status', o.status).removeClass('friend requested').addClass(o.status);
 		});
 	});
 
 	const usersToShow = 40;
 	const usersShowing = [];
+	var userPageIndex = 0;
 	var moreUsers = true;
+
+	function getUserFilterInput() {
+		return $('.user-filter').val() || '';
+	}
   function prepFindTab(moreToShow) {
 	  console.log('prepFindTab', moreToShow);
 	  if (moreToShow && !moreUsers) return;
 	  moreUsers = true;
-	  var search = $('.user-filter').val() || undefined;
+	  var search = getUserFilterInput();
 	  $('.found-user-list-loading').show();
-	  var opts = {
-		  pageNum: moreToShow ? Math.floor(usersShowing[usersShowing.length - 1].value / usersToShow) : 0,
-		  pageSize: moreToShow || usersToShow,
+	  var pageNum = userPageIndex = moreToShow ? userPageIndex : 0,
+		  pageSize = usersToShow,
+		  opts = {
+		  pageNum: pageNum,
+		  pageSize: pageSize,
 		  query: search
 	  };
-	  $.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
-	  //$.getJSON(searchDomain + '/search/users/page', opts, function(friends) {
+	  //$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
+	  $.getJSON(searchDomain + '/search/users/page', opts, function(friends) {
+		  if (search != getUserFilterInput()) {
+			  return;
+		  }
+		  userPageIndex++;
 		  console.log('[prepFindTab] friends:', friends.length, friends);
 		  friends && friends.forEach(function(obj, i) {
-			  //formatPicUrl(userId, pictureName, size)
-			  obj.status = obj.status || obj.connectionStatus || '';
-			  //TODO: dev
-			  if (!obj.user) {
-				  obj.user = {
-					  id: obj.id,
-					  firstName: obj.firstName,
-					  lastName: obj.lastName,
-					  pictureName: obj.pictureName
-				  };
-			  }
+			  obj.status = obj.status || '';
 			  obj.image = formatPicUrl(obj.user.id, obj.user.pictureName, 200);
-			  if (i === 0) {
-				  obj.status = 'requested';
-			  }
-			  if (i === 1) {
-				  obj.status = 'friend';
-			  }
 		  });
-		  var filter = $('.user-filter').val() || undefined;
-		  if (filter != search) return;
-		  if (friends.length < moreToShow) {
+		  if (friends.length < pageSize) {
 			  moreUsers = false;
 		  }
 		  if (!moreToShow) {
@@ -997,13 +991,10 @@ $(function() {
 			  usersShowing.length = 0;
 		  }
 		  usersShowing.push.apply(usersShowing, friends);
-		  var $noResults = $foundUsers.find('.no-results').empty().hide();
+		  var $noResults = $foundUsers.find('.no-results').hide();
 		  if (!usersShowing.length) {
-			  $noResults.html(noResultsTmpl({ filter: search })).show();
-			  $noResults.find('.refresh-friends').click(function () {
-				  $('<form method="post">').attr('action', wwwDomain + '/friends/invite/refresh').appendTo('body').submit();
-			  });
-			  $noResults.find('.tell-us').click(sendFeedback);
+			  $noResults.find('.no-result-filter').text(search);
+			  $noResults.show();
 		  }
 		  usersTmpl.append(friends);
 		  //inviteFilterTmpl.render({results: usersShowing.length, filter: filter});

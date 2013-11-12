@@ -331,8 +331,8 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-friend[data-status=invited] { background: #629eed; }
 .invite-friend[data-status=joined] { background: #dfedc2; }
 .invite-friend[data-status=invited] div { color: white; }
-.found-user[data-status] { border-color: transparent; }
-.found-user[data-status=friend] { background-color: white; border-color: #dfedc2; }
+.found-user { border-color: transparent; }
+.found-user.friend { background-color: white; border-color: #dfedc2; }
 .invite-pic,
 .user-pic {float: left; width: 64px; height: 64px; border-radius: 2px; margin-right: 12px}
 .invite-friend::before { border: 2px solid #eff2f7; display: block; content: " "; position: absolute; top: 55px; left: 55px; width: 20px; height: 20px; background-image: url(../img/networks.png); background-repeat: no-repeat; background-size: 400%;}
@@ -345,17 +345,17 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-friend[data-value^=email]::before { background-color: #e36767; background-position: -60px top; }
 .invite-status {font-size: 13px; font-weight: 300; color: #96a9bd; letter-spacing: .5px; margin-top: 2px; margin-right: 42px}
 .user-connected {display:none; color: #acc377; font-size: 12px; font-weight: 300; letter-spacing: 1px; margin-top: 2px}
-.found-user[data-status=friend] .user-connected {display: block}
+.found-user.friend .user-connected {display: block}
 .connect-button {position: absolute; top: 30px; right: 24px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
 .connect-button::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background: url(../img/friend-actions.png) -70px; background-size: auto 16px; width: 20px; position: relative; left: 1px}
-.found-user[data-status=friend] .connect-button {background-color: #dfedc2}
-.found-user[data-status=friend] .connect-button::before {background-position: -34px 0; width: 16px; left: 0}
-.found-user[data-status=requested] .connect-button {background-color: #b8c5d2}
-.found-user[data-status=requested] .connect-button::before {background-position: -90px 0; width: 20px; left: 2px}
-.found-user[data-status=friend] .connect-button:hover,
-.found-user[data-status=requested] .connect-button:hover {background-color: #E78881}
-.found-user[data-status=friend] .connect-button:hover::before,
-.found-user[data-status=requested] .connect-button:hover::before {background-position: -50px 0; width: 20px; left: 2px}
+.found-user.friend .connect-button {background-color: #dfedc2}
+.found-user.friend .connect-button::before {background-position: -34px 0; width: 16px; left: 0}
+.found-user.requested .connect-button {background-color: #b8c5d2}
+.found-user.requested .connect-button::before {background-position: -90px 0; width: 20px; left: 2px}
+.found-user.friend .connect-button:hover,
+.found-user.requested .connect-button:hover {background-color: #E78881}
+.found-user.friend .connect-button:hover::before,
+.found-user.requested .connect-button:hover::before {background-position: -50px 0; width: 20px; left: 2px}
 a.invite-button {position: absolute; bottom: 10px; right: 10px; font-size: 13px; font-weight: 300; letter-spacing: .5px; background: #b8c4d8; color: white; padding: 4px 14px; border-radius:2px}
 .invite-friends-loading,
 .found-user-list-loading {margin: 12px auto; display: block;}
