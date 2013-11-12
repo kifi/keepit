@@ -12,7 +12,7 @@ import com.keepit.search._
 
 import play.api.libs.json._
 import views.html
-import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.heimdal.{UserEvent, HeimdalServiceClient}
 import scala.Predef._
 
 class AdminSearchConfigController @Inject() (
@@ -99,8 +99,8 @@ class AdminSearchConfigController @Inject() (
   }
 
   private def kifiVsGoogle(experiments: Seq[Id[SearchConfigExperiment]]): Future[Map[Option[Id[SearchConfigExperiment]], JsArray]] = {
-    val totalResultsClickedFuture = heimdal.getMetricData("total_results_clicked_with_kifi_result_by_search_experiment")
-    val kifiResultsClickedFuture = heimdal.getMetricData("kifi_results_clicked_by_search_experiment")
+    val totalResultsClickedFuture = heimdal.getMetricData[UserEvent]("total_results_clicked_with_kifi_result_by_search_experiment")
+    val kifiResultsClickedFuture = heimdal.getMetricData[UserEvent]("kifi_results_clicked_by_search_experiment")
 
     for {
       totalResultsClicked <- totalResultsClickedFuture
@@ -127,8 +127,8 @@ class AdminSearchConfigController @Inject() (
   }
 
   private def searchesWithKifiResults(experiments: Seq[Id[SearchConfigExperiment]]): Future[Map[Option[Id[SearchConfigExperiment]], JsArray]] = {
-    val totalSearchesFuture = heimdal.getMetricData("total_unique_searches_by_search_experiment")
-    val searchesWithKifiResultsFuture = heimdal.getMetricData("unique_searches_with_kifi_result_by_search_experiment")
+    val totalSearchesFuture = heimdal.getMetricData[UserEvent]("total_unique_searches_by_search_experiment")
+    val searchesWithKifiResultsFuture = heimdal.getMetricData[UserEvent]("unique_searches_with_kifi_result_by_search_experiment")
 
     for {
       totalSearches <- totalSearchesFuture

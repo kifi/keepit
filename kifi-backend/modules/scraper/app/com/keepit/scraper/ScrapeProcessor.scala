@@ -28,7 +28,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @ImplementedBy(classOf[ScrapeProcessorPluginImpl])
 trait ScrapeProcessorPlugin extends Plugin {
-  def fetchBasicArticle(url:String):Future[Option[BasicArticle]]
+  def fetchBasicArticle(url:String, proxyOpt:Option[HttpProxy]):Future[Option[BasicArticle]]
   def scrapeArticle(uri:NormalizedURI, info:ScrapeInfo):Future[(NormalizedURI, Option[Article])]
   def asyncScrape(uri:NormalizedURI, info:ScrapeInfo): Unit
 }
@@ -40,8 +40,8 @@ class ScrapeProcessorPluginImpl @Inject() (sysProvider: Provider[ActorSystem], p
 
   implicit val timeout = Timeout(5 seconds)
 
-  def fetchBasicArticle(url: String): Future[Option[BasicArticle]] = {
-    (actor ? FetchBasicArticle(url)).mapTo[Option[BasicArticle]]
+  def fetchBasicArticle(url: String, proxyOpt:Option[HttpProxy]): Future[Option[BasicArticle]] = {
+    (actor ? FetchBasicArticle(url, proxyOpt)).mapTo[Option[BasicArticle]]
   }
 
   def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo): Future[(NormalizedURI, Option[Article])] = {
@@ -54,7 +54,7 @@ class ScrapeProcessorPluginImpl @Inject() (sysProvider: Provider[ActorSystem], p
 }
 
 case class AsyncScrape(uri:NormalizedURI, info:ScrapeInfo)
-case class FetchBasicArticle(url:String)
+case class FetchBasicArticle(url:String, proxyOpt:Option[HttpProxy])
 case class ScrapeArticle(uri:NormalizedURI, info:ScrapeInfo)
 
 class ScrapeProcessor @Inject() (
@@ -74,11 +74,11 @@ class ScrapeProcessor @Inject() (
 
   def receive = {
 
-    case FetchBasicArticle(url) => {
+    case FetchBasicArticle(url, proxyOpt) => {
       log.info(s"[FetchArticle] message received; url=$url")
       val ts = System.currentTimeMillis
       val extractor = extractorFactory(url)
-      val fetchStatus = httpFetcher.fetch(url, proxy = syncGetProxyP(url))(input => extractor.process(input))
+      val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
       val res = fetchStatus.statusCode match {
         case HttpStatus.SC_OK if !(isUnscrapableP(url, fetchStatus.destinationUrl)) => Some(basicArticle(url, extractor))
         case _ => None

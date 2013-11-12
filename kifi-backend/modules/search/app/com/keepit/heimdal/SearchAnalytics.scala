@@ -24,7 +24,7 @@ object SearchEngine {
 @Singleton
 class SearchAnalytics @Inject() (
   articleSearchResultStore: ArticleSearchResultStore,
-  userEventContextBuilder: UserEventContextBuilderFactory,
+  userEventContextBuilder: EventContextBuilderFactory,
   heimdal: HeimdalServiceClient) {
 
   def searchPerformed(
@@ -63,7 +63,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("filterByTimeRange", searchFilter.timeRange.isDefined)
     contextBuilder += ("filterByCollections", searchFilter.collections.isDefined)
 
-    heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventType("search_performed"), articleSearchResult.time))
+    heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("search_performed"), articleSearchResult.time))
   }
 
   def searchResultClicked(
@@ -84,7 +84,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("kifiResults", kifiResults)
     kifiCollapsed.foreach { collapsed => contextBuilder += ("kifiCollapsed", collapsed) }
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("search_result_clicked"), time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("search_result_clicked"), time))
   }
 
   def kifiResultClicked(
@@ -111,7 +111,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("kifiResults", kifiResults)
     kifiCollapsed.foreach { collapsed => contextBuilder += ("kifiCollapsed", collapsed) }
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("kifi_result_clicked"), time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("kifi_result_clicked"), time))
   }
 
   def searchEnded(
@@ -134,7 +134,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("searchEngine", searchEngine.toString)
     contextBuilder += ("searchResultsClicked", searchResultsClicked)
     kifiCollapsed.foreach { collapsed => contextBuilder += ("kifiCollapsed", collapsed) }
-    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("search_ended"), time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("search_ended"), time))
   }
 
   private def obfuscate(searchId: ExternalId[ArticleSearchResult], userId: Id[User]): String = {

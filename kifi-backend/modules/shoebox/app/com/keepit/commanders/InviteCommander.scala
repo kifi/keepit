@@ -11,6 +11,10 @@ import com.keepit.social.SocialNetworks
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.RWSession
+import scala.util.Try
+import com.keepit.eliza.ElizaServiceClient
+import play.api.libs.json.Json
+import com.keepit.common.social.BasicUserRepo
 
 class InviteCommander @Inject() (
   db: Database,
@@ -22,22 +26,27 @@ class InviteCommander @Inject() (
   postOffice: LocalPostOffice,
   emailAddressRepo: EmailAddressRepo,
   socialConnectionRepo: SocialConnectionRepo,
+  eliza: ElizaServiceClient,
+  basicUserRepo: BasicUserRepo,
   clock: Clock) {
 
   def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
     db.readOnly { implicit s =>
       val userSocialAccounts = socialUserRepo.getByUser(userId)
-      val cookieInvite = invId.map { inviteExtId =>
-        val invite = invitationRepo.get(inviteExtId)
-        val invitedSocial = userSocialAccounts.find(_.id.get == invite.recipientSocialUserId)
-        val detectedInvite = if (invitedSocial.isEmpty && userSocialAccounts.nonEmpty) {
-          // User signed up using a different social account than what we know about.
-          invite.copy(recipientSocialUserId = userSocialAccounts.head.id.get)
-        } else {
-          invite
-        }
-        // todo: When invite.recipientSocialUserId is an Option, check here if it's set. If not, set it on the invite record.
-        socialUserRepo.get(invite.recipientSocialUserId) -> detectedInvite
+      val cookieInvite = invId.flatMap { inviteExtId =>
+        Try(invitationRepo.get(inviteExtId)).map { invite =>
+          val invitedSocial = userSocialAccounts.find(_.id == invite.recipientSocialUserId)
+          val detectedInvite = if (invitedSocial.isEmpty && userSocialAccounts.nonEmpty) {
+            // User signed up using a different social account than what we know about.
+            invite.copy(recipientSocialUserId = userSocialAccounts.head.id)
+          } else {
+            invite
+          }
+          invite.recipientSocialUserId match {
+            case Some(rsui) => socialUserRepo.get(rsui) -> detectedInvite
+            case None => socialUserRepo.get(userSocialAccounts.head.id.get) -> detectedInvite
+          }
+        }.toOption
       }
 
       val existingInvites = userSocialAccounts.map { su =>
@@ -51,7 +60,7 @@ class InviteCommander @Inject() (
           Set(su -> Invitation(
             createdAt = clock.now,
             senderUserId = None,
-            recipientSocialUserId = su.id.get,
+            recipientSocialUserId = su.id,
             state = InvitationStates.ACTIVE
           ))
         }.getOrElse(Set())
@@ -92,6 +101,10 @@ class InviteCommander @Inject() (
             socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
         }
       }
+
+      eliza.sendToUser(userId, Json.arr("new_friends", Set(basicUserRepo.load(senderUserId))))
+      eliza.sendToUser(senderUserId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
+
       userConnectionRepo.addConnections(userId, Set(senderUserId), requested = true)
     }
   }

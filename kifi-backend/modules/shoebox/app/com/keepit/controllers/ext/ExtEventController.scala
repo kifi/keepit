@@ -9,7 +9,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.db.slick.{Database}
 import com.keepit.common.akka.SafeFuture
-import com.keepit.heimdal.{HeimdalServiceClient, UserEventContextBuilder, UserEvent, UserEventType}
+import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilder, UserEvent, EventType}
 
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -21,7 +21,6 @@ import java.math.BigDecimal
 
 class ExtEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  eventPersister: EventPersister,
   db: Database,
   userRepo: UserRepo,
   heimdal: HeimdalServiceClient,
@@ -46,16 +45,14 @@ class ExtEventController @Inject() (
       val user = db.readOnly { implicit s => userRepo.get(userId) }
       val event = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
       log.debug(s"Created new event: $event")
-      eventPersister.persist(event)
 
-      //Mirroring to heimdal (temporary, will be the only destination soon without going through shoebox)
-      val contextBuilder = new UserEventContextBuilder()
+      val contextBuilder = new EventContextBuilder()
       experiments.foreach{ experiment =>
         contextBuilder += ("experiment", experiment.toString)
       }
-      metaData.fields.foreach{ 
+      metaData.fields.foreach{
         case (key, jsonValue) => {
-          val jsonString = jsonValue match { 
+          val jsonString = jsonValue match {
             case JsString(s) => s
             case json => Json.stringify(json)
           }
@@ -69,11 +66,11 @@ class ExtEventController @Inject() (
                 contextBuilder += (key,parsedValue)
               } catch {
                 case _ => contextBuilder += (key,jsonString)
-              } 
+              }
           }
         }
       }
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType(s"old_${eventFamily}_${eventName}")))
+      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType(s"old_${eventFamily}_${eventName}")))
 
     }
     Ok("")

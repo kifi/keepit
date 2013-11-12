@@ -98,6 +98,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getProxyP(url:String):Future[Option[HttpProxy]]
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
   def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
+  def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -577,6 +578,12 @@ class ShoeboxServiceClientImpl @Inject() (
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = {
     call(Shoebox.internal.isUnscrapableP, JsArray(Seq(Json.toJson(url), Json.toJson(destinationUrl)))).map { r =>
       r.json.as[Boolean]
+    }
+  }
+
+  def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = {
+    call(Shoebox.internal.getFriendRequestBySender(senderId)).map{ r =>
+      r.json.as[JsArray].value.map{ x => Json.fromJson[FriendRequest](x).get}
     }
   }
 }

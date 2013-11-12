@@ -19,18 +19,13 @@ import java.util.Random
 
 import com.google.inject.Inject
 import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.sns.model.NotFoundException
-
-
 
 case class ProbablisticLRUName(name: String)
-
 
 trait MultiChunkBuffer {
   def getChunk(key: Long) : IntBufferWrapper
   def chunkSize : Int
 }
-
 
 trait IntBufferWrapper {
   def get(pos: Int): Int

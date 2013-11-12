@@ -18,6 +18,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.akka.TestKitScope
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.heimdal.TestHeimdalServiceClientModule
 
 class DomainClassifierTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
@@ -25,6 +26,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
     FakeMailModule(),
     TestAnalyticsModule(),
     ShoeboxFakeStoreModule(),
+    TestHeimdalServiceClientModule(),
     FakeDomainTagImporterModule(),
     TestActorSystemModule(Some(system)),
     FakeShoeboxServiceModule(),

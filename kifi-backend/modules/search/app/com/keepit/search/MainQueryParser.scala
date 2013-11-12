@@ -76,9 +76,6 @@ class MainQueryParser(
           }
         }
 
-        val auxQueries = ArrayBuffer.empty[Query]
-        val auxStrengths = ArrayBuffer.empty[Float]
-
         if (semanticBoost > 0.0f) {
           textQueries.foreach{ textQuery =>
             textQuery.setSemanticBoost(semanticBoost)
@@ -92,12 +89,7 @@ class MainQueryParser(
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost))
           proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost))
           proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), phrases, phraseBoost))
-          auxQueries += proxQ
-          auxStrengths += proximityBoost
-        }
-
-        if (!auxQueries.isEmpty) {
-          new MultiplicativeBoostQuery(query, auxQueries.toArray, auxStrengths.toArray)
+          new MultiplicativeBoostQuery(query, proxQ, proximityBoost)
         } else {
           query
         }

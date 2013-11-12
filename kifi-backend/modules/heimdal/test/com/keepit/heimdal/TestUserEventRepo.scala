@@ -29,3 +29,22 @@ class TestUserEventLoggingRepo(val collection: BSONCollection, protected val air
     ).future
   }
 }
+
+class TestSystemEventLoggingRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends SystemEventLoggingRepo {
+
+  var events: Vector[SystemEvent] = Vector()
+
+  def eventCount(): Int = events.length
+
+  def lastEvent(): SystemEvent = events.head
+
+  override def insert(obj: SystemEvent, dropDups: Boolean = false) : Unit = synchronized {
+    events = events :+ obj
+  }
+
+  override def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
+    Promise.successful(
+      Stream(BSONDocument("command" -> BSONArray(command.map(_.makePipe))))
+    ).future
+  }
+}

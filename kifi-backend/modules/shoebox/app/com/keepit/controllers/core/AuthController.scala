@@ -414,7 +414,7 @@ class AuthController @Inject() (
           s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
         }
 
-        inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.name)))
+        inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
 
         val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == emailAddress.trim)
 

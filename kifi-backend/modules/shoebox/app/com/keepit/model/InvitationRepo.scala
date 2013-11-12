@@ -31,9 +31,9 @@ class InvitationRepoImpl @Inject() (
 
   override lazy val table = new RepoTable[Invitation](db, "invitation") with ExternalIdColumn[Invitation] {
     def senderUserId = column[Id[User]]("sender_user_id", O.Nullable)
-    def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.NotNull)
+    def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.Nullable)
 
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ recipientSocialUserId ~ state <> (Invitation, Invitation.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ recipientSocialUserId.? ~ state <> (Invitation, Invitation.unapply _)
   }
 
   private implicit val userIdTypeMapper = userRepo.idMapper
