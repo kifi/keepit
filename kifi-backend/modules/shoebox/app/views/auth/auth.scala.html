@@ -1,6 +1,13 @@
-@(view: String = "", emailAddress: String = "", firstName: String = "", lastName: String = "", picturePath: String = "", network: Option[com.keepit.social.SocialNetworkType] = None)
+@(view: String = "", emailAddress: String = "", firstName: String = "", lastName: String = "", picturePath: String = "", network: Option[com.keepit.social.SocialNetworkType] = None, titleText: String = "", titleDesc: String = "")
 
 @import com.keepit.controllers.core.routes.{AuthController => routes}
+
+@headScripts = {
+    <meta property="og:image" content="https://www.kifi.com/assets/images/logo_square.png">
+    <meta property="og:title" content="@if(titleText==""){kifi.com}else{@titleText}">
+    <meta property="og:description" content="@if(titleDesc==""){}else{@titleDesc}">
+    <meta property="og:site_name" content="Kifi">
+}
 
 @curtains = {
 <div class="curtain-l">
@@ -170,4 +177,4 @@
 
 @helper.page(
   bodyClass = if (view == "") "" else if (view == "signup2Email" || view == "signup2Social") "curtains-drawn finalizing" else "curtains-drawn",
-  curtains = curtains, content = content, scripts = scripts)
+  curtains = curtains, content = content, scripts = scripts, headScripts = headScripts)
