@@ -9,7 +9,6 @@ import com.keepit.search.index._
 import play.api.Play._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
-import com.keepit.search.comment.{CommentIndexerPluginImpl, CommentIndexerPlugin, CommentIndexer, CommentStore}
 import com.keepit.search.message.{MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl}
 import com.keepit.search.phrasedetector.{PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer}
 import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
@@ -52,7 +51,6 @@ trait IndexModule extends ScalaModule with Logging {
     bind[PhraseIndexerPlugin].to[PhraseIndexerPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
-    bind[CommentIndexerPlugin].to[CommentIndexerPluginImpl].in[AppScoped]
     bind[MessageIndexerPlugin].to[MessageIndexerPluginImpl].in[AppScoped]
     bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
   }
@@ -109,24 +107,6 @@ trait IndexModule extends ScalaModule with Logging {
     log.info(s"storing collection index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     new CollectionIndexer(dir, config, collectionNameIndexer, airbrake, shoeboxClient)
-  }
-
-  @Singleton
-  @Provides
-  def commentStore(backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): CommentStore = {
-    val dir = getIndexDirectory(current.configuration.getString("index.commentStore.directory"), backup)
-    log.info(s"storing CommentStore in $dir")
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new CommentStore(dir, config, airbrake, shoeboxClient)
-  }
-
-  @Singleton
-  @Provides
-  def commentIndexer(commentStore: CommentStore, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): CommentIndexer = {
-    val dir = getIndexDirectory(current.configuration.getString("index.comment.directory"), backup)
-    log.info(s"storing comment index in $dir")
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new CommentIndexer(dir, config, commentStore, airbrake, shoeboxClient)
   }
 
   @Singleton
