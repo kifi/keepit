@@ -611,6 +611,8 @@ $(function() {
 		  $filters.removeAttr('data-nw-selected');
 	  }
 
+	  $('.invite-filter').attr('placeholder', 'Type a name' + (network === 'email' ? ' or email' : ''));
+
 	  $filters.children('a').each(function() {
 		  var $this = $(this),
 		  nw = $this.data('nw');
@@ -966,13 +968,18 @@ $(function() {
 	  //$.getJSON(searchDomain + '/search/users/page', opts, function(friends) {
 		  console.log('[prepFindTab] friends:', friends.length, friends);
 		  friends && friends.forEach(function(obj, i) {
-			  if (!obj.image) {
-				  obj.image = '';
-			  }
-			  if (!obj.status) {
-				  obj.status = '';
-			  }
+			  //formatPicUrl(userId, pictureName, size)
+			  obj.status = obj.status || obj.connectionStatus || '';
 			  //TODO: dev
+			  if (!obj.user) {
+				  obj.user = {
+					  id: obj.id,
+					  firstName: obj.firstName,
+					  lastName: obj.lastName,
+					  pictureName: obj.pictureName
+				  };
+			  }
+			  obj.image = formatPicUrl(obj.user.id, obj.user.pictureName, 200);
 			  if (i === 0) {
 				  obj.status = 'requested';
 			  }

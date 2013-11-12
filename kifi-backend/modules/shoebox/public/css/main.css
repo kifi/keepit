@@ -298,7 +298,7 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-filters>a[data-nw=facebook] {background-color: #637ab8}
 .invite-filters>a[data-nw=linkedin] {background-color: #4f83c3; background-position: -36px top}
 .invite-filters>a[data-nw=twitter] {background-color: #55acee; background-position: -72px top}
-.invite-filters>a[data-nw=email] {background-color: #e36767; background-position: -108px top}
+.invite-filters>a[data-nw=email] {background-color: #e36767; background-image: url(../img/networks-19.png); background-position: -113px top}
 
 .invite-filters>a:not([data-href]) {background-color: #edeff1}
 
@@ -333,7 +333,6 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-friend[data-status=invited] div { color: white; }
 .found-user[data-status] { border-color: transparent; }
 .found-user[data-status=friend] { background-color: white; border-color: #dfedc2; }
-.found-user[data-status=requested] { border-color: #629eed; }
 .invite-pic,
 .user-pic {float: left; width: 64px; height: 64px; border-radius: 2px; margin-right: 12px}
 .invite-friend::before { border: 2px solid #eff2f7; display: block; content: " "; position: absolute; top: 55px; left: 55px; width: 20px; height: 20px; background-image: url(../img/networks.png); background-repeat: no-repeat; background-size: 400%;}
@@ -370,11 +369,11 @@ a.invite-button {position: absolute; bottom: 10px; right: 10px; font-size: 13px;
 }
 .invite-message-dialog>.dialog-content { height: 280px; margin-top: -140px; width: 440px; margin-left: -220px; }
 .invite-message-dialog>.dialog-content>p { margin: 12px 15px; }
-.invite-message-header { font-size: 16px; padding: 14px 16px 10px; border-bottom: 1px solid #e7eced; color: #3a495b; }
+.invite-message-header { font-size: 16px; padding: 14px 16px 10px; border-bottom: 1px solid #e7eced; color: #3a495b; overflow: hidden; text-overflow: ellipsis }
 a.invite-cancel { position: absolute; color: #b1b8c1; font-weight: bold; padding: 8px 12px; right: 0; top: 0; font-size: 20px; text-decoration: none; }
 input.invite-subject { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; }
 textarea.invite-message { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; min-height: 80px;}
-button.invite-send { position: absolute; right: 12px; bottom: 12px; font-size: 14px; border: none; outline: none; border-radius: 5px; padding: 8px 12px; background: #6fa6ef; color: white; cursor: pointer; }
+button.invite-send { position: absolute; right: 12px; bottom: 12px; font-size: 14px; border: none; outline: none; border-radius: 5px; padding: 8px 12px; background: #6fa6ef; color: white; cursor: pointer; overflow: hidden; text-overflow: ellipsis; max-width: 200px; white-space: nowrap }
 
 .no-invites-dialog>.dialog-content { height: 200px; margin-top: -100px; width: 400px; margin-left: -200px; padding: 20px 30px; color: #66829b }
 .no-invites-dialog>.dialog-content>p { margin: 12px 0; }

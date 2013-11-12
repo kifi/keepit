@@ -355,10 +355,10 @@
           <div class="found-user-list">
             <div class="antiscroll-inner">
               <ul>
-				  <li class="found-user" data-template data-id="{{id}}" data-value="{{value}}" data-status="{{status}}">
+				  <li class="found-user" data-template data-id="{{user.id}}" data-value="{{value}}" data-status="{{status}}">
                   <img class="user-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image && /^linkedin/.test(value) %}assets/img/ghost-linkedin.100.png{% endif %}">
 				  <a class="friend-nw friend-nw-kifi"></a>
-                  <div class="user-name">{{label}}</div>
+				  <div class="user-name">{{user.firstName}} {{user.lastName}}</div>
                   <div class="user-connected">Connected</div>
 				  <a class="connect-button" href="javascript:">Connect</a>
                 </li>
