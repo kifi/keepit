@@ -91,7 +91,6 @@ class MainSearcher(
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
   private[this] val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
-  private[this] val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
   private[this] val svWeightClickHistory = config.asInt("svWeightClickHistory")
   private[this] val similarity = Similarity(config.asString("similarity"))
   private[this] val phraseBoost = config.asFloat("phraseBoost")
@@ -99,6 +98,7 @@ class MainSearcher(
   private[this] val concatBoost = config.asFloat("concatBoost")
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
+  private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
@@ -106,6 +106,8 @@ class MainSearcher(
   // social graph info
   private[this] lazy val socialGraphInfo = monitoredAwait.result(socialGraphInfoFuture, 5 seconds, s"getting SocialGraphInfo for user Id $userId")
   lazy val uriGraphSearcher = socialGraphInfo.uriGraphSearcher
+
+  private[this] lazy val browsingFilter = monitoredAwait.result(browsingHistoryFuture, 40 millisecond, s"getting browsing history for user $userId", MultiHashFilter.emptyFilter[BrowsedURI])
 
   @inline private[this] def findSharingUsers(id: Long, friendEdgeSet: UserToUserEdgeSet ): UserToUserEdgeSet = {
     uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
@@ -124,7 +126,7 @@ class MainSearcher(
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, collectionSearcher, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
+    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 
   def searchText(maxTextHitsPerCategory: Int) = {
@@ -177,7 +179,7 @@ class MainSearcher(
 
       val tLucene = currentDateTime.getMillis()
       if (!warped) {
-        hotDocs.set(personalizedSearcher.browsingFilter, clickBoosts)
+        hotDocs.set(browsingFilter, clickBoosts)
         personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
           val visibility = new ArticleVisibility(reader)
           val mapper = reader.getIdMapper
@@ -236,6 +238,7 @@ class MainSearcher(
     val friendStats = FriendStats(relevantFriendEdgeSet.destIdSet)
     var numCollectStats = 20
 
+    val usefulPages = browsingFilter
     if (myHits.size > 0) {
       myHits.toRankedIterator.forall{ case (h, rank) =>
 
@@ -259,8 +262,8 @@ class MainSearcher(
 
         if (score > (threshold * (1.0f - recencyScoreVal))) {
           h.users = sharingUsers.destIdSet
-          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal)
-          h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
+          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal, usefulPages.mayContain(h.id, 2))
+          h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost, usefulPageBoost)
           hits.insert(h)
           true
         } else {
@@ -294,15 +297,15 @@ class MainSearcher(
         val score = h.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
         if (score > threshold) {
           h.users = sharingUsers.destIdSet
-          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal)
-          h.score = h.scoring.score(1.0f, sharingBoostInNetwork, newContentBoost)
+          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal, usefulPages.mayContain(h.id, 2))
+          h.score = h.scoring.score(1.0f, sharingBoostInNetwork, newContentBoost, usefulPageBoost)
           queue.insert(h)
           true
         } else {
           if (recencyScoreVal > newContentScore) {
             h.users = sharingUsers.destIdSet
-            h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal)
-            h.score = h.scoring.score(1.0f, sharingBoostInNetwork, newContentBoost)
+            h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal, usefulPages.mayContain(h.id, 2))
+            h.score = h.scoring.score(1.0f, sharingBoostInNetwork, newContentBoost, usefulPageBoost)
             newContent = Some(h)
             newContentScore = recencyScoreVal
           }
@@ -321,8 +324,8 @@ class MainSearcher(
         if (score > othersThreshold) {
           h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
           if (h.bookmarkCount > 0) {
-            h.scoring = new Scoring(score, score / highScore, bookmarkScore(h.bookmarkCount.toFloat), 0.0f)
-            h.score = h.scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost)
+            h.scoring = new Scoring(score, score / highScore, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
+            h.score = h.scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost, usefulPageBoost)
             queue.insert(h)
           }
           true
@@ -419,7 +422,7 @@ class MainSearcher(
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
-      hotDocs.set(personalizedSearcher.browsingFilter, clickBoosts)
+      hotDocs.set(browsingFilter, clickBoosts)
 
       (query, personalizedSearcher.explain(query, uriId.id))
     }
