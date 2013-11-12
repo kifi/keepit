@@ -24,9 +24,9 @@ class ExtUserSearchController @Inject()(
 
   private def createFilter(userId: Option[Id[User]], filter: Option[String], context: Option[String]) = {
     filter match {
-      case Some("f") if userId.isDefined => filterFactory.friendsOnly(userId.get, context)
-      case Some("non-f") if userId.isDefined => filterFactory.nonFriendsOnly(userId.get, context)
-      case _ => filterFactory.default(context)
+      case Some("f") => filterFactory.friendsOnly(userId.get, context)
+      case Some("non-f") => filterFactory.nonFriendsOnly(userId.get, context)
+      case _ => filterFactory.default(userId, context)
     }
   }
 

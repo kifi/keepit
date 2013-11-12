@@ -36,8 +36,7 @@ class UserSearchFilterFactory @Inject()(client: ShoeboxServiceClient) {
     case Some(uid) => client.getFriends(uid).map{uids => uids.map{_.id}}
   }
 
-  // can omit userId, especially for to-be-signed-up users.
-  def default(context: Option[String] = None) = new UserSearchFilter(userId = None, context){
+  def default(userId: Option[Id[User]], context: Option[String] = None) = new UserSearchFilter(userId, context){
     override val kifiFriendsFuture = getFriends(userId)
     override def filterType = UserSearchFilterType.DEFAULT
     override def accept(id: Long) = !idFilter.contains(id)
