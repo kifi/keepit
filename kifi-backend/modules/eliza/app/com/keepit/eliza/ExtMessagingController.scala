@@ -264,7 +264,7 @@ class ExtMessagingController @Inject() (
         val contextBuilder = userEventContextBuilder()
         contextBuilder += ("messageExternalId", messageId)
         contextBuilder += ("global", false)
-        heimdal.trackEvent(UserEvent(socket.userId.id, contextBuilder.build, UserEventType("notification_read")))
+        heimdal.trackEvent(UserEvent(socket.userId.id, contextBuilder.build, EventType("notification_read")))
       }
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
@@ -274,7 +274,7 @@ class ExtMessagingController @Inject() (
         val contextBuilder = userEventContextBuilder()
         contextBuilder += ("messageExternalId", messageId)
         contextBuilder += ("global", true)
-        heimdal.trackEvent(UserEvent(socket.userId.id, contextBuilder.build, UserEventType("notification_read")))
+        heimdal.trackEvent(UserEvent(socket.userId.id, contextBuilder.build, EventType("notification_read")))
       }
     },
     "get_threads_by_url" -> { case JsString(url) +: _ =>  // deprecated in favor of "get_threads"
