@@ -1211,7 +1211,7 @@ function kifify(tab) {
   }
 
   if (!session) {
-    if (!getStored("user_logout")) { // user did not explicitly log out
+    if (!getStored('logout')) { // user did not explicitly log out
       ajax("GET", "/ext/authed", function() {
         // user is logged in; need to fetch session data
         startSession(function() {
@@ -1607,6 +1607,10 @@ function store(key, value) {
   }
 }
 
+function unstore(key) {
+  delete api.storage[getFullyQualifiedKey(key)];
+}
+
 api.on.install.add(function() {
   logEvent("extension", "install");
 });
@@ -1680,6 +1684,7 @@ function startSession(callback, retryMs) {
   function done(data) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
     logEvent("extension", "authenticated");
+    unstore('logout');
 
     session = data;
     session.prefs = {}; // to come via socket
@@ -1767,6 +1772,7 @@ function clearSession() {
 function deauthenticate() {
   log("[deauthenticate]")();
   clearSession();
+  store('logout', Date.now());
   api.popup.open({
     name: "kifi-deauthenticate",
     url: webBaseUri() + "/logout#_=_",
