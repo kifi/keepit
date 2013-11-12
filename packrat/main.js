@@ -817,7 +817,7 @@ api.port.on({
         if (url == baseUri + "/#_=_" || url == baseUri + "/") {
           ajax("GET", "/ext/authed", function userIsLoggedIn() {
             // user is now logged in
-            authenticate(function() {
+            startSession(function() {
               log("[open_login_popup] closing popup")();
               window.close();
             });
@@ -1214,7 +1214,7 @@ function kifify(tab) {
     if (!getStored("user_logout")) { // user did not explicitly log out
       ajax("GET", "/ext/authed", function() {
         // user is logged in; need to fetch session data
-        authenticate(function() {
+        startSession(function() {
           if (api.tabs.get(tab.id) === tab) {  // tab still at same page
             kifify(tab);
           }
