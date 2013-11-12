@@ -10,6 +10,10 @@ import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.user._
 import play.api.libs.json.Json
 import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import com.keepit.model.FriendRequestStates
+import play.api.libs.json.JsArray
 
 class ExtUserSearchController @Inject()(
   searcherFactory: MainSearcherFactory,
@@ -28,6 +32,7 @@ class ExtUserSearchController @Inject()(
 
   def page(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = AuthenticatedJsonAction { request =>
     val userId = request.userId
+    val friendRequests = shoeboxClient.getFriendRequestsBySender(userId)
     val searchFilter = createFilter(Some(userId), filter, None)
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
@@ -35,7 +40,20 @@ class ExtUserSearchController @Inject()(
       case None => UserSearchResult(Array.empty[UserHit], context = "")
       case Some(q) => searcher.searchPagingWithFilter(q, searchFilter, pageNum, pageSize)
     }
-    Ok(Json.toJson(res))
+
+    val requestedUsers = Await.result(friendRequests, 5 seconds).filter(_.state == FriendRequestStates.ACTIVE).map{_.recipientId}.toSet
+
+    val jsVals = res.hits.map{ case UserHit(id, basicUser, isFriend) =>
+      val connectionState = {
+        if (isFriend) "connected"
+        else if (requestedUsers.contains(id)) "friend requested"
+        else "not connected"
+      }
+
+      Json.obj("basicUser" -> Json.toJson(basicUser), "connectionState" -> connectionState)
+    }
+
+    Ok(JsArray(jsVals))
   }
 
   def search(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = AuthenticatedJsonAction { request =>
