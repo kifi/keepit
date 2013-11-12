@@ -417,5 +417,6 @@ GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.sh
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.shoebox.ShoeboxController.getProxyP()
 GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])
 POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapableP
+GET     /internal/shoebox/database/getFriendRequestBySender @com.keepit.controllers.shoebox.ShoeboxController.getFriendRequestsBySender(senderId: Id[User])
 
 ->  / common.Routes
