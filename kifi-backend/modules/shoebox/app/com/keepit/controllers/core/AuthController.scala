@@ -81,7 +81,7 @@ class AuthController @Inject() (
   }
 
   def loginSocial(provider: String) = ProviderController.authenticate(provider)
-  def loginWithUserPass(link: String) = Action { implicit request =>
+  def logInWithUserPass(link: String) = Action { implicit request =>
     ProviderController.authenticate("userpass")(request) match {
       case res: SimpleResult[_] if res.header.status == 303 =>
         val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
@@ -308,7 +308,8 @@ class AuthController @Inject() (
           firstName = User.sanitizeName(identity.firstName),
           lastName = User.sanitizeName(identity.lastName),
           emailAddress = identity.email.getOrElse(""),
-          picturePath = identityPicture(identity)
+          picturePath = identityPicture(identity),
+          network = Some(SocialNetworkType(identity.identityId.providerId))
         ))
       case (None, None) =>
         Ok(views.html.auth.auth("signup"))
@@ -380,7 +381,7 @@ class AuthController @Inject() (
     cropSize: Option[Int])
   private val socialFinalizeAccountForm = Form[SocialFinalizeInfo](
     mapping(
-      "email" -> email.verifying("email_exists_for_other_user", email => db.readOnly { implicit s =>
+      "email" -> email.verifying("known_email_address", email => db.readOnly { implicit s =>
         userCredRepo.findByEmailOpt(email).isEmpty
       }),
       "firstName" -> nonEmptyText,
