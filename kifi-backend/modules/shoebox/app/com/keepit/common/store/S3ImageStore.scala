@@ -102,6 +102,7 @@ class S3ImageStoreImpl @Inject() (
               avatarUrlByExternalId(width, user.externalId, res.head._1)
             }
           } else {
+            uploadPictureFromSocialNetwork(sui, user.externalId)
             Promise.successful(avatarUrlFromSocialNetwork(sui, width.map(_.toString).getOrElse("original"))).future
           }
         case Some(userPicId) =>
