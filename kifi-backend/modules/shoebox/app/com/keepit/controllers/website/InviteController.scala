@@ -38,7 +38,7 @@ class InviteController @Inject() (db: Database,
   socialGraphPlugin: SocialGraphPlugin,
   actionAuthenticator: ActionAuthenticator,
   httpClient: HttpClient,
-  userEventContextBuilder: EventContextBuilderFactory,
+  eventContextBuilder: EventContextBuilderFactory,
   heimdal: HeimdalServiceClient)
     extends WebsiteController(actionAuthenticator) {
 
@@ -55,7 +55,7 @@ class InviteController @Inject() (db: Database,
   private val url = current.configuration.getString("application.baseUrl").get
   private val appId = current.configuration.getString("securesocial.facebook.clientId").get
   private def fbInviteUrl(invite: Invitation)(implicit session: RSession): String = {
-    val identity = socialUserInfoRepo.get(invite.recipientSocialUserId)
+    val identity = socialUserInfoRepo.get(invite.recipientSocialUserId.get)
     val link = URLEncoder.encode(s"$url${routes.InviteController.acceptInvite(invite.externalId)}", "UTF-8")
     val confirmUri = URLEncoder.encode(
       s"$url${routes.InviteController.confirmInvite(invite.externalId, None, None)}", "UTF-8")
@@ -103,14 +103,14 @@ class InviteController @Inject() (db: Database,
             val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
             val currentInvitations = invitationRepo.getByUser(request.user.id.get).collect {
               case s if s.state != InvitationStates.INACTIVE =>
-                Some(createBasicUserInvitation(socialUserRepo.get(s.recipientSocialUserId), s.state))
+                Some(createBasicUserInvitation(socialUserRepo.get(s.recipientSocialUserId.get), s.state))
             }
             if (currentInvitations.length < totalAllowedInvites) {
               val invite = inactiveOpt map {
                 _.copy(senderUserId = Some(request.user.id.get))
               } getOrElse Invitation(
                 senderUserId = Some(request.user.id.get),
-                recipientSocialUserId = socialUserInfo.id.get,
+                recipientSocialUserId = socialUserInfo.id,
                 state = InvitationStates.INACTIVE
               )
               sendInvitation(socialUserInfo, invite)
@@ -136,7 +136,7 @@ class InviteController @Inject() (db: Database,
       val invitation = invitationRepo.getOpt(id)
       invitation match {
         case Some(invite) if (invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE) =>
-          val socialUser = socialUserInfoRepo.get(invitation.get.recipientSocialUserId)
+          val socialUser = socialUserInfoRepo.get(invitation.get.recipientSocialUserId.get)
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage).withCookies(Cookie("inv", invite.externalId.id))
           //Ok(views.html.website.welcome(Some(id), Some(socialUser)))
         case _ =>
@@ -153,8 +153,8 @@ class InviteController @Inject() (db: Database,
           if (errorCode.isEmpty) {
             invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE))
             SafeFuture{
-              val contextBuilder = userEventContextBuilder()
-              contextBuilder += ("invitee", invite.recipientSocialUserId.id)
+              val contextBuilder = eventContextBuilder()
+              contextBuilder += ("invitee", invite.recipientSocialUserId.get.id)
               heimdal.trackEvent(UserEvent(invite.senderUserId.map(_.id).getOrElse(-1), contextBuilder.build, EventType("invite_sent")))
             }
           }

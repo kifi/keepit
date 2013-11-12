@@ -15,7 +15,7 @@ class Asset(object):
     self.key = name
     (kind, date, time, _, chash) = self.parseAssetName(name)
     self.kind = kind
-    self.hash = chash 
+    self.hash = chash
     self.timestamp = iso8601.parse_date(timestamp)
 
   def __str__(self):
@@ -78,8 +78,3 @@ if __name__=="__main__":
       key = Key(bucket)
       key.key = keyname
       key.get_contents_to_filename(target + "/" + keyname)
-
-  
-
-
-

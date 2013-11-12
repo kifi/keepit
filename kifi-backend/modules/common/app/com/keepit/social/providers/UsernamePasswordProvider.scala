@@ -19,15 +19,11 @@ class UsernamePasswordProvider(application: Application)
         UserService.find(IdentityId(credentials._1, id)) match {
           case Some(identity) =>
             val result = for {
-              pinfo <- identity.passwordInfo
-              hasher <- Registry.hashers.get(pinfo.hasher) if hasher.matches(pinfo, credentials._2)
+              pInfo <- identity.passwordInfo
+              hasher <- Registry.hashers.get(pInfo.hasher) if hasher.matches(pInfo, credentials._2)
             } yield Right(SocialUser(identity))
             result getOrElse Left(error("wrong_password"))
           case None =>
-            // TODO
-            // if (emailAddressRepo.getByAddressOpt(...).isDefined) {
-            //   Left(error("wrong_password"))
-            // } else
             Left(error("no_such_user"))
         }
       }

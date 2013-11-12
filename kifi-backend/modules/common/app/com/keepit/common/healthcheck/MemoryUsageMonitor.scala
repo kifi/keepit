@@ -16,46 +16,44 @@ object MemoryUsageMonitor {
   val poolsToBeMonitored = Set("CMS Old Gen")
   val percentThreshold = 0.8d
 
+  case class MemoryPool(bean: MemoryPoolMXBean, threshold: Long, maxHeapSize: Long)
+
   def apply(warn: (MemoryPoolMXBean, Long, Long, Int) => Unit): MemoryUsageMonitor = new MemoryUsageMonitorImpl(warn)
 
   def apply(airbrakeNotifier: AirbrakeNotifier): MemoryUsageMonitor = {
-    apply{ (pool, threshold, maxHeapSize, count) =>
+    val monitor = apply{ (pool, threshold, maxHeapSize, count) =>
       if (count > 1) { // at least two incidents in a row
         airbrakeNotifier.notify(s"LOW MEMORY!!! - pool=[${pool.getName}] threshold=$threshold maxHeapSize=$maxHeapSize count=$count")
       }
     }
+    if (monitor.monitoredPools.isEmpty) airbrakeNotifier.notify(s"found no memory pool to monitor")
+    monitor
   }
 }
 
 trait MemoryUsageMonitor {
   def start(): Unit
+  val monitoredPools: Seq[MemoryUsageMonitor.MemoryPool]
 }
 
 class MemoryUsageMonitorImpl(warn: (MemoryPoolMXBean, Long, Long, Int) => Unit) extends MemoryUsageMonitor with Logging {
+  import MemoryUsageMonitor._
 
-  case class MemoryPool(bean: MemoryPoolMXBean, threshold: Long, maxHeapSize: Long)
-
-  val monitoredPools = ManagementFactory.getMemoryPoolMXBeans.flatMap{ pool =>
-    if (pool.getType == MemoryType.HEAP && MemoryUsageMonitor.poolsToBeMonitored.contains(pool.getName)) {
+  override val monitoredPools = ManagementFactory.getMemoryPoolMXBeans.flatMap{ pool =>
+    if (pool.getType == MemoryType.HEAP && poolsToBeMonitored.contains(pool.getName)) {
       val maxHeapSize = pool.getUsage.getMax
-      val threshold = (maxHeapSize.toDouble * MemoryUsageMonitor.percentThreshold).toInt
-      var supported = false
+      val threshold = (maxHeapSize.toDouble * percentThreshold).toInt
 
-      if (pool.isUsageThresholdSupported) {
+      if (pool.isUsageThresholdSupported && pool.isCollectionUsageThresholdSupported) {
         pool.setUsageThreshold(threshold)
-        supported = true
-      } else {
-        log.warn(s"${pool.getName} does not support a usage threshold")
-      }
-
-      if (pool.isCollectionUsageThresholdSupported) {
         pool.setCollectionUsageThreshold(threshold)
-        supported = true
-      } else {
-        log.warn(s"${pool.getName} does not support a collection usage threshold")
-      }
 
-      if(supported) Some(MemoryPool(pool, threshold, maxHeapSize)) else None
+        Some(MemoryPool(pool, threshold, maxHeapSize))
+      } else {
+        log.warn(s"${pool.getName} does not support either usage threshold or collection usage threshold")
+
+        None
+      }
     } else {
       None
     }

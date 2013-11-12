@@ -21,11 +21,26 @@ class ScraperController @Inject() (
 ) extends WebsiteController(actionAuthenticator) with ScraperServiceController with Logging {
 
   def getBasicArticle(url:String) = Action { request =>
-    val resF = scrapeProcessor.fetchBasicArticle(url)
+    val resF = scrapeProcessor.fetchBasicArticle(url, None)
     Async {
       resF.map { res =>
         val json = Json.toJson(res)
         log.info(s"[getBasicArticle($url)] result: ${json}")
+        Ok(json)
+      }
+    }
+  }
+
+  def getBasicArticleP() = Action(parse.json) { request =>
+    log.info(s"getBasicArticleP body=${request.body}")
+    val json = request.body
+    val url = (json \ "url").as[String]
+    val proxyOpt = (json \ "proxy").asOpt[HttpProxy]
+    val resF = scrapeProcessor.fetchBasicArticle(url, proxyOpt)
+    Async {
+      resF.map { res =>
+        val json = Json.toJson(res)
+        log.info(s"[getBasicArticleP($url)] result: ${json}")
         Ok(json)
       }
     }
