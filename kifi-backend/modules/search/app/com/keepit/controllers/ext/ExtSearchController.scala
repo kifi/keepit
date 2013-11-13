@@ -159,14 +159,6 @@ class ExtSearchController @Inject() (
     Ok
   }
 
-  //internal (from eliza/shoebox)
-  def warmUpUser(userId: Id[User]) = Action { request =>
-    SafeFuture {
-      mainSearcherFactory.warmUp(userId)
-    }
-    Ok
-  }
-
   private def getLangsPriorProbabilities(acceptLangs: Seq[String]): Map[Lang, Double] = {
     val majorLangs = acceptLangs.toSet.flatMap{ code: String =>
       val lang = code.substring(0,2)
