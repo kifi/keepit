@@ -81,7 +81,7 @@ class EventContextBuilder {
 
 @Singleton
 class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) {
-  def apply(request: Option[RequestHeader] = None): EventContextBuilder = {
+  def apply(request: Option[RequestHeader] = None, ipOpt : Option[String] = None): EventContextBuilder = {
     val contextBuilder = new EventContextBuilder()
     contextBuilder += ("serviceVersion", serviceDiscovery.myVersion.value)
     serviceDiscovery.thisInstance.map { instance =>
@@ -90,7 +90,7 @@ class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) 
     }
 
     request.map { req =>
-      contextBuilder += ("remoteAddress", req.headers.get("X-Forwarded-For").getOrElse(req.remoteAddress))
+      contextBuilder += ("remoteAddress", ipOpt.getOrElse(req.headers.get("X-Forwarded-For").getOrElse(req.remoteAddress)))
       contextBuilder += ("userAgent", req.headers.get("User-Agent").getOrElse(""))
       contextBuilder += ("requestScheme", req.headers.get("X-Scheme").getOrElse(""))
 

@@ -29,24 +29,18 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		kifiUtil = win.kifiUtil,
 		OVERFLOW_LENGTH = 8;
 
-	api.port.on({
+	var portHandlers = {
 		participants: function (participants) {
-			if (messageParticipants.initialized) {
-				messageParticipants.setParticipants(participants);
-			}
+			messageParticipants.setParticipants(participants);
 		},
-		'add_participants': function (users) {
-			if (messageParticipants.initialized) {
-				messageParticipants.addParticipant.apply(messageParticipants, users);
-			}
+		add_participants: function (users) {
+			messageParticipants.addParticipant.apply(messageParticipants, users);
 		}
-	});
+	};
 
 	api.onEnd.push(function () {
-		if (messageParticipants.initialized) {
-			messageParticipants.destroy('api:onEnd');
-			messageParticipants = win.messageParticipants = null;
-		}
+		messageParticipants.destroy();
+		messageParticipants = win.messageParticipants = null;
 	});
 
 	return {
@@ -65,24 +59,18 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 */
 		parent: null,
 
-		prevEscHandler: null,
+		escHandler: null,
 
 		onDocClick: null,
-
-		/**
-		 * A constructor of Message Participants
-		 *
-		 * @constructor
-		 *
-		 * @param {string} trigger - A triggering user action
-		 */
-		construct: function (trigger) {},
 
 		/**
 		 * Initializes a Message Participants.
 		 */
 		init: function () {
 			this.initialized = true;
+
+			api.port.on(portHandlers);
+
 			this.initEvents();
 			this.initScroll();
 			this.initInput();
@@ -117,9 +105,8 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 			function addDocListeners() {
 				if (this.initialized) {
-					var $doc = $(document);
-					this.prevEscHandler = $doc.data('esc');
-					$doc.data('esc', this.handleEsc.bind(this));
+					this.escHandler = this.handleEsc.bind(this);
+					$(document).data('esc').add(this.escHandler);
 
 					var onDocClick = this.onDocClick = onClick.bind(this);
 					document.addEventListener('click', onDocClick, true);
@@ -587,53 +574,38 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		handleEsc: function (e) {
-			var handled = false;
 			if (this.isExpanded()) {
-				handled = true;
 				this.collapseParticipants();
+				return false;
 			}
 			else if (this.isDialogOpened()) {
-				handled = true;
 				this.hideAddDialog();
-			}
-			else if (this.prevEscHandler) {
-				this.prevEscHandler.call(e.target, e);
-			}
-
-			if (handled) {
-				e.preventDefault();
-				e.stopPropagation();
-				e.stopImmediatePropagation();
+				return false;
 			}
 		},
 
 		/**
-		 * Destroys a tag box.
 		 * It removes all event listeners and caches to elements.
 		 */
 		destroy: function () {
-			if (this.initialized) {
-				this.initialized = false;
+			this.initialized = false;
+			this.parent = null;
 
-				this.parent = null;
+			$(document).data('esc').remove(this.escHandler);
+			this.escHandler = null;
 
-				$(document).data('esc', this.prevEscHandler);
-				this.prevEscHandler = null;
-
-				var onDocClick = this.onDocClick;
-				if (onDocClick) {
-					document.removeEventListener('click', onDocClick, true);
-					this.onDocClick = null;
-				}
-
-				['$input', '$list', '$el'].forEach(function (name) {
-					var $el = this[name];
-					if ($el) {
-						$el.remove();
-						this[name] = null;
-					}
-				}, this);
+			var onDocClick = this.onDocClick;
+			if (onDocClick) {
+				document.removeEventListener('click', onDocClick, true);
+				this.onDocClick = null;
 			}
+
+			api.port.off(portHandlers);
+
+			// .remove() not called on jQuery elements because it would disrupt a farewell transition
+			// an ancestor should call it later (e.g. by being removed itself)
+
+			this.$input = this.$list = this.$el = null;
 		}
 	};
 
