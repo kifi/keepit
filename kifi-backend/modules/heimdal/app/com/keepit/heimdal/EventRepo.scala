@@ -1,21 +1,35 @@
 package com.keepit.heimdal
 
-import scala.concurrent.Future
+import scala.concurrent.{Promise, Future}
 import reactivemongo.bson._
 import play.modules.reactivemongo.json.ImplicitBSONHandlers.JsValueReader
-import com.keepit.serializer.Companion
-import play.api.libs.json.JsArray
+import com.keepit.serializer.TypeCode
+import play.api.libs.json.{Json, JsArray}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import reactivemongo.core.commands.PipelineOperator
 
-trait EventRepo {
-  type T <: HeimdalEvent
-  def getEventCompanion: Companion[T]
+trait EventRepo[E <: HeimdalEvent] {
+  def persist(event: E) : Unit
+  def getEventTypeCode: TypeCode[E]
   def getLatestRawEvents(eventsToConsider: EventSet, number: Int) : Future[JsArray]
+  def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]]
 }
 
-abstract class MongoEventRepo[E <: HeimdalEvent: Companion] extends BufferedMongoRepo[E] with EventRepo {
-  type T = E
-  val getEventCompanion = implicitly[Companion[E]]
+abstract class MongoEventRepo[E <: HeimdalEvent: TypeCode] extends BufferedMongoRepo[E] with EventRepo[E] {
+  val getEventTypeCode = implicitly[TypeCode[E]]
+
+  val descriptorRepo: EventDescriptorRepo[E]
+  val mixpanel: MixpanelClient
+
+  def persist(event: E): Unit = {
+    insert(event)
+    mixpanel.send(event)
+/*    descriptorRepo.getByName(event.eventType) map {
+      case None => descriptorRepo.upsert(EventDescriptor(event.eventType))
+      case Some(description) if description.sendToMixpanel => mixpanel.send(event)
+    }*/
+  }
+
   def getLatestRawEvents(eventsToConsider: EventSet, number: Int) : Future[JsArray] = {
     val eventSelector = eventsToConsider match {
       case SpecificEventSet(events) =>
@@ -30,6 +44,17 @@ abstract class MongoEventRepo[E <: HeimdalEvent: Companion] extends BufferedMong
     collection.find(eventSelector).sort(sortOrder).cursor.collect[Seq](number).map { events =>
       JsArray(events.map(JsValueReader.read))
     }
+  }
+}
+
+abstract class DevEventRepo[E <: HeimdalEvent: TypeCode] extends EventRepo[E] {
+  val getEventTypeCode = implicitly[TypeCode[E]]
+  def persist(event: E): Unit = {}
+  def getLatestRawEvents(eventsToConsider: EventSet, number: Int) : Future[JsArray] = Future.successful(Json.arr())
+  def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
+    Promise.successful(
+      Stream(BSONDocument("command" -> BSONArray(command.map(_.makePipe))))
+    ).future
   }
 }
 
@@ -54,6 +79,6 @@ object EventRepo {
     "time" -> BSONDateTime(event.time.getMillis)
   )
 
-  def findByEventTypeCode(availableRepos: EventRepo*)(typeCode: String): Option[EventRepo] = availableRepos.find(_.getEventCompanion == HeimdalEvent.getCompanion(typeCode))
+  def findByEventTypeCode(availableRepos: EventRepo[_ <: HeimdalEvent]*)(typeCode: String): Option[EventRepo[_]] = availableRepos.find(_.getEventTypeCode.code == typeCode)
 }
 
