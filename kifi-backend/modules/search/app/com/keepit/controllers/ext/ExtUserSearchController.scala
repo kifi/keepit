@@ -42,7 +42,7 @@ class ExtUserSearchController @Inject()(
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
     val res = parser.parseWithUserExperimentConstrains(queryText, excludedExperiments) match {
       case None => UserSearchResult(Array.empty[UserHit], context = "")
-      case Some(q) => searcher.searchPagingWithFilter(q, searchFilter, pageNum, pageSize)
+      case Some(q) => searcher.searchPaging(q, searchFilter, pageNum, pageSize)
     }
 
     val requestedUsers = Await.result(friendRequests, 5 seconds).filter(_.state == FriendRequestStates.ACTIVE).map{_.recipientId}.toSet
@@ -68,7 +68,7 @@ class ExtUserSearchController @Inject()(
 
     val res = parser.parse(queryText) match {
       case None => UserSearchResult(Array.empty[UserHit], context.getOrElse(""))
-      case Some(q) => searcher.searchWithFilter(q, maxHits, searchFilter)
+      case Some(q) => searcher.search(q, maxHits, searchFilter)
     }
 
     Ok(Json.toJson(res))

@@ -137,8 +137,7 @@ object Search extends Service {
     def refreshPhrases() = ServiceRoute(POST, "/internal/search/index/refreshPhrases")
     def searchDumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}")
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
-    def searchUsers(query: String, maxHits: Int = 10, context: String = "") = ServiceRoute(GET, "/internal/search/search/users", Param("query", query), Param("maxHits", maxHits), Param("context", context))
-    def searchUsers2() = ServiceRoute(POST, "/internal/search/search/users2")
+    def searchUsers() = ServiceRoute(POST, "/internal/search/search/users")
     def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String) =
       ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("lang", lang))
     def causeError() = ServiceRoute(GET, "/internal/search/search/causeError")
