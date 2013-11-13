@@ -42,8 +42,6 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		status: null,
 
-		$pane: null,
-
 		participants: null,
 
 		prevEscHandler: null,
@@ -51,47 +49,27 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		onDocClick: null,
 
 		/**
-		 * A constructor of Message Header
-		 *
 		 * Renders and initializes a message header box if not already.
-		 *
-		 * @constructor
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		construct: function (trigger) {
+		construct: function ($parent, participants) {
 			if (!this.initialized) {
+				this.participants = participants;
 				this.constructPlugins();
-				this.init(trigger);
+				this.init($parent);
 			}
 		},
 
 		/**
 		 * Renders and initializes a Message Header.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		init: function (trigger) {
+		init: function ($parent) {
 			this.initialized = true;
 			this.status = {};
-			this.initMessageHeader();
+			this.$el = $(this.render()).appendTo($parent);
 			this.initPlugins();
 			this.initEvents();
 
-			this.logEvent('init', {
-				trigger: trigger
-			});
-		},
-
-		/**
-		 * Finds, initializes, and caches a container.
-		 *
-		 * @return {jQuery} A jQuery object for the container
-		 */
-		initMessageHeader: function () {
-			var $el = $(this.render()).appendTo(this.$pane.find('.kifi-thread-who'));
-			this.$el = $el;
-			return $el;
+			this.logEvent('init');
 		},
 
 		/**
