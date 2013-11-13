@@ -50,7 +50,7 @@ class InviteCommander @Inject() (
       }
 
       val existingInvites = userSocialAccounts.map { su =>
-        invitationRepo.getByRecipient(su.id.get).map { inv =>
+        invitationRepo.getByRecipientSocialUserId(su.id.get).map { inv =>
           su -> inv
         }
       }.flatten.toSet.++(cookieInvite)
