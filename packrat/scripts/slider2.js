@@ -34,12 +34,29 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
   'use strict';
   var $slider, $pane, paneHistory, lastShownAt;
 
+  // We detect and handle the Esc key during keydown capture phase to try to beat page.
+  // Subsequently loaded code should attach/detach Esc key handlers using
+  // $(document).data('esc').add(handler) and .remove(handler).
+  $(document).data('esc', function(arr) {
+    arr.add = arr.push;
+    arr.remove = function(f) {
+      for (var i; ~(i = this.indexOf(f));) {
+        this.splice(i, 1);
+      }
+    };
+    return arr;
+  }([]));
   document.addEventListener('keydown', onKeyDown, true);
   function onKeyDown(e) {
-    if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {  // esc
-      var escHandler = $(document).data('esc');
-      if (escHandler && escHandler(e) === false) {
-        return false;
+    if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+      var handlers = $(document).data('esc');
+      for (var i = handlers.length; i--;) {
+        if (handlers[i](e) === false) {
+          return false;
+        }
+        if (e.defaultPrevented) {
+          return;
+        }
       }
       if (!e.defaultPrevented) {
         if ($pane) {
@@ -481,9 +498,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     log("[showPane]", locator, back ? "back" : "")();
     if (locator !== (paneHistory && paneHistory[0])) {
       var pane = toPaneName(locator);
-      if (window.messageHeader) {
-        window.messageHeader.destroy();
-      }
       (createPaneParams[pane] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
         params.redirected = redirected;
         showPane2(locator, back, pane, params);

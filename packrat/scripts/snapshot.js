@@ -154,7 +154,7 @@ var snapshot = function () {
           .draggable({cursor: "move", distance: 10, handle: ".kifi-snapshot-bar", scroll: false})
           .on("click", ".kifi-snapshot-cancel", exitSnapshotMode)
           .add($shades).css("opacity", 0).animate({opacity: 1}, 300);
-        $(document).data("esc", exitSnapshotMode);
+        $(document).data('esc').add(exitSnapshotMode);
       });
     });
     $(window).scroll(function() {
@@ -169,7 +169,7 @@ var snapshot = function () {
         $(this).remove();
         document.body.classList.remove("kifi-snapshot-root");
       });
-      $(document).removeData("esc");
+      $(document).data('esc').remove(exitSnapshotMode);
       setTimeout(onExit.bind(null, selector));
     }
     function updateSelection(clientX, clientY, scrollLeft, scrollTop) {
