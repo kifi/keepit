@@ -88,7 +88,7 @@ class SearchServiceClientImpl(
   }
 
   def warmUpUser(userId: Id[User]): Unit = {
-    call(Search.internal.updateBrowsingHistory(userId))
+    call(Search.internal.warmUpUser(userId))
   }
 
   def updateURIGraph(): Unit = {
