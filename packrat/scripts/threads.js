@@ -24,11 +24,11 @@ panes.threads = function () {
   return {
     render: function ($container) {
       api.port.emit('threads', function (threads) {
-          renderThreads($container, threads, session.prefs);
-          api.port.on(handlers);
-          threads.forEach(function (th) {
-            api.port.emit('thread', {id: th.id});  // preloading
-          });
+        renderThreads($container, threads, session.prefs);
+        api.port.on(handlers);
+        threads.forEach(function (th) {
+          api.port.emit('thread', {id: th.id});  // preloading
+        });
       });
     }};
 
