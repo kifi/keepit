@@ -59,7 +59,7 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
 
   override def searchUsers(query: String, maxHits: Int = 10, context: String = ""): Future[UserSearchResult] = ???
 
-  override def searchUsers2(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = ???
+  override def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = ???
 
   override def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = ???
 
