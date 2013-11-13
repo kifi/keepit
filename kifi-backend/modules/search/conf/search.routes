@@ -11,7 +11,7 @@ GET     /search/users/page          @com.keepit.controllers.ext.ExtUserSearchCon
 GET     /search/users/search        @com.keepit.controllers.ext.ExtUserSearchController.search(query: String, filter: Option[String], context: Option[String], maxHits: Int)
 
 # INTERNAL ROUTES/Search
-GET     /internal/search/warmUp                @com.keepit.controllers.ext.ExtSearchController.warmUp(userId: Id[User])
+GET     /internal/search/warmUp                @com.keepit.controllers.ext.ExtSearchController.warmUpUser(userId: Id[User])
 
 POST    /internal/search/events/resultClicked  @com.keepit.controllers.search.SearchEventController.logResultClicked()
 POST    /internal/search/events/searchEnded    @com.keepit.controllers.search.SearchEventController.logSearchEnded()
