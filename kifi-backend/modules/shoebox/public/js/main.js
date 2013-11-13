@@ -2260,12 +2260,23 @@ $(function() {
 		$(".my-name").text(data.firstName + ' ' + data.lastName);
 		$(".my-description").text(data.description || '\u00A0'); // nbsp
 		$friendsTabs.filter('[data-href="friends/invite"]').toggle(canInvite());
+		updateGmailTab();
 	}
 
 	function canInvite() {
 		//TODO dev
 		return true || me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('can invite') >= 0;
+	}
+
+	function canInviteViaGmail() {
+		//TODO dev
+		return true || me.experiments.indexOf('admin') >= 0 ||
+			me.experiments.indexOf('gmail_invite') >= 0;
+	}
+
+	function updateGmailTab() {
+		$('a[data-href="friends/invite/email"]').toggle(canInviteViaGmail());
 	}
 
 	function updateFriendRequests(n) {
@@ -2294,6 +2305,7 @@ $(function() {
 		}).promise()};
 	$.when(promise.me).done(function () {
 		$('#invite-friends-link').toggle(canInvite());
+		updateGmailTab();
 	});
 	updateCollections();
 	$.getJSON(xhrBase + '/user/friends/count', function(data) {
