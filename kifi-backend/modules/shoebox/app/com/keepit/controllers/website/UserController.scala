@@ -340,7 +340,7 @@ class UserController @Inject() (
 
     def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) =
       sci -> sci.userId.map(_ => "joined").getOrElse {
-        invitationRepo.getByRecipient(sci.id) collect {
+        invitationRepo.getByRecipientSocialUserId(sci.id) collect {
           case inv if inv.state != InvitationStates.INACTIVE => "invited"
         } getOrElse ""
       }

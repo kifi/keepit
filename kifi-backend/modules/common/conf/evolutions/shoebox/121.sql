@@ -1,9 +1,10 @@
 # SHOEBOX
 
--- ALTER TABLE invitation DROP INDEX invitation_i_recipient_social_user_id;
--- ALTER TABLE invitation DROP FOREIGN KEY invitation_recipient_social_user_id;
-ALTER TABLE invitation MODIFY recipient_social_user_id bigint(20);
+# --- !Ups
 
-INSERT INTO evolutions (name, description) VALUES ('121.sql', 'make recipient_social_user_id optional');
+ALTER TABLE invitation ADD COLUMN recipient_econtact_id bigint(20);
+ALTER TABLE econtact   ADD COLUMN state varchar(20) DEFAULT 'active';
 
-# -- !Downs
+INSERT INTO evolutions (name, description) VALUES ('121.sql', 'add recipient_econtact_id to invitation and state to econtact');
+
+# --- !Downs

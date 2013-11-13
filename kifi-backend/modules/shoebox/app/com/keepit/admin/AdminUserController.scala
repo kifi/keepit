@@ -78,7 +78,7 @@ class AdminUserController @Inject() (
         emailRepo.save(email.copy(userId = toUserId))
       }
       val socialUsers = socialUserInfoRepo.getByUser(fromUserId)
-      for (su <- socialUsers; invitation <- invitationRepo.getByRecipient(su.id.get)) {
+      for (su <- socialUsers; invitation <- invitationRepo.getByRecipientSocialUserId(su.id.get)) {
         invitationRepo.save(invitation.withState(InvitationStates.INACTIVE))
       }
       for (su <- socialUsers) {

@@ -45,7 +45,7 @@ class AdminInvitationController @Inject() (
     val result = db.readWrite { implicit session =>
       val socialUser = socialUserRepo.get(id)
       for (user <- socialUser.userId.map(userRepo.get)) yield {
-        val invite = invitationRepo.getByRecipient(id).getOrElse(invitationRepo.save(Invitation(
+        val invite = invitationRepo.getByRecipientSocialUserId(id).getOrElse(invitationRepo.save(Invitation(
           createdAt = user.createdAt,
           senderUserId = None,
           recipientSocialUserId = socialUser.id
@@ -67,7 +67,7 @@ class AdminInvitationController @Inject() (
     val result = db.readWrite { implicit session =>
       val socialUser = socialUserRepo.get(id)
       for (user <- socialUser.userId.map(userRepo.get)) yield {
-        val invite = invitationRepo.getByRecipient(id).getOrElse(invitationRepo.save(Invitation(
+        val invite = invitationRepo.getByRecipientSocialUserId(id).getOrElse(invitationRepo.save(Invitation(
           createdAt = user.createdAt,
           senderUserId = None,
           recipientSocialUserId = socialUser.id

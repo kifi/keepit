@@ -24,6 +24,11 @@ import play.api.Play.current
 import play.api._
 import play.api.mvc._
 import play.api.templates.Html
+import com.keepit.common.mail._
+import com.keepit.abook.ABookServiceClient
+import play.api.mvc.Cookie
+import com.keepit.social.SocialId
+import com.keepit.model.Invitation
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -40,7 +45,9 @@ class InviteController @Inject() (db: Database,
   actionAuthenticator: ActionAuthenticator,
   httpClient: HttpClient,
   eventContextBuilder: EventContextBuilderFactory,
-  heimdal: HeimdalServiceClient)
+  heimdal: HeimdalServiceClient,
+  abookServiceClient: ABookServiceClient,
+  postOffice: LocalPostOffice)
     extends WebsiteController(actionAuthenticator) {
 
   private def createBasicUserInvitation(socialUser: SocialUserInfo, state: State[Invitation]): BasicUserInvitation = {
@@ -89,11 +96,65 @@ class InviteController @Inject() (db: Database,
         }
       }
 
+      def sendEmailInvitation(c: EContact, subject: String, message: String) {
+        val electronicMail = ElectronicMail(
+          senderUserId = None,
+          from = EmailAddresses.INVITATION,
+          fromName = Some("Kifi Team"),
+          to = List(new EmailAddressHolder {
+            override val address = c.email
+          }),
+          subject = subject,
+          htmlBody = message,
+          category = PostOffice.Categories.User.INVITATION)
+        postOffice.sendMail(electronicMail)
+        log.info(s"[inviteConnection-email] sent invitation to $c")
+      }
+
       if(fullSocialId.size != 2) {
         CloseWindow()
+      } else if (fullSocialId(0) == "email") {
+        log.info(s"[inviteConnection-email] inviting: ${fullSocialId(1)}")
+        val econtactOptF = abookServiceClient.getEContactByEmail(request.userId, fullSocialId(1))
+        Async {
+          econtactOptF.map { econtactOpt =>
+            econtactOpt match {
+              case Some(c) => {
+                val inviteOpt = invitationRepo.getBySenderIdAndRecipientEContactId(request.userId, c.id.get)
+                log.info(s"[inviteConnection-email] inviteOpt=$inviteOpt")
+                inviteOpt match {
+                  case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE => {
+                    sendEmailInvitation(c, subject.get, message.get)
+                  }
+                  case inactiveOpt => {
+                    val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
+                    val currentInvitations = invitationRepo.getByUser(request.user.id.get).filter(_.state != InvitationStates.INACTIVE)
+                    if (currentInvitations.length < totalAllowedInvites) {
+                      val invite = inactiveOpt map { _.copy(senderUserId = Some(request.user.id.get)) } getOrElse {
+                        Invitation(
+                          senderUserId = request.user.id,
+                          recipientSocialUserId = None,
+                          recipientEContactId = c.id,
+                          state = InvitationStates.INACTIVE
+                        )
+                      }
+                      sendEmailInvitation(c, subject.get, message.get)
+                      invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
+                    }
+                  }
+                }
+                sendEmailInvitation(c, subject.get, message.get)
+              }
+              case None => {
+                log.warn(s"[inviteConnection-email] cannot locate econtact entry for ${fullSocialId(1)}")
+              }
+            }
+            CloseWindow()
+          }
+        }
       } else {
         val socialUserInfo = socialUserInfoRepo.get(SocialId(fullSocialId(1)), SocialNetworkType(fullSocialId(0)))
-        invitationRepo.getByRecipient(socialUserInfo.id.get) match {
+        invitationRepo.getByRecipientSocialUserId(socialUserInfo.id.get) match {
           case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE =>
             if(alreadyInvited.senderUserId == request.user.id) {
               sendInvitation(socialUserInfo, alreadyInvited)

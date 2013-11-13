@@ -8,12 +8,13 @@ import com.keepit.common.db.Id
 import scala.collection.mutable
 import com.keepit.abook.store.ABookRawInfoStore
 import play.api.libs.json.{JsValue, Json}
-import ABookRawInfo._
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
 import play.api.Plugin
 import scala.ref.WeakReference
 import com.keepit.common.actor.ActorInstance
+import scala.util.{Failure, Success}
+
 
 
 @ImplementedBy(classOf[ContactsUpdaterPluginImpl])
@@ -36,6 +37,7 @@ case class ProcessABookUpload(userId:Id[User], origin:ABookOriginType, abookRepo
 class ContactsUpdater @Inject() (
   db: Database,
   s3:ABookRawInfoStore,
+  abookInfoRepo:ABookInfoRepo,
   contactInfoRepo:ContactInfoRepo, // not used -- may remove later
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
@@ -83,9 +85,16 @@ class ContactsUpdater @Inject() (
           )
           emails.foreach { email =>
             val name = mkName(sOpt((contact \ "name").asOpt[String]), fName, lName, email)
-            db.readWrite { implicit s =>
-              val e: EContact = EContact(userId = userId, email = email, name = name, firstName = fName, lastName = lName)
-              econtactRepo.insertOnDupUpdate(userId, e)
+            val parseResult = EmailParser.parseAll(EmailParser.email, email)
+            if (parseResult.successful) {
+              val parsedEmail:Email = parseResult.get
+              log.info(s"[upload] successfully parsed $email; result=${parsedEmail.toDbgString}")
+              db.readWrite { implicit s =>
+                val e = EContact(userId = userId, email = parsedEmail.toString, name = name, firstName = fName, lastName = lName)
+                econtactRepo.insertOnDupUpdate(userId, e)
+              }
+            } else {
+              log.warn(s"[upload($userId, $origin)] cannot parse $email. discarded") // todo: revisit
             }
           }
           for (email <- emails.headOption) {
@@ -101,6 +110,7 @@ class ContactsUpdater @Inject() (
           contactRepo.deleteAndInsertAll(userId, abookInfo.id.get, origin, contacts)
         }
       }
+
       log.info(s"[upload($userId,$origin)] time-lapsed: ${System.currentTimeMillis - ts}")
     }
     case m => throw new UnsupportedActorMessage(m)
