@@ -33,7 +33,7 @@ panes.thread = function () {
           renderThread($container, th.id, th.messages, session);
           api.port.emit('participants', th.id, function (participants) {
             var $who = $container.closest('.kifi-pane-box').find('.kifi-thread-who');
-            window.messageHeader.construct($who, participants);
+            window.messageHeader.construct($who, th.id, participants);
             $container.css('margin-top', $who.outerHeight());
           });
           api.port.on(handlers);

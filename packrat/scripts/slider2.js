@@ -837,10 +837,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
     getLocator: function () {
       return $pane && $pane[0].dataset.locator || null;
     },
-    getThreadId: function () {
-      var locator = this.getLocator();
-      return locator && locator.split('/')[2];
-    },
     showKeepers: function (keepers, otherKeeps) {
       if (lastShownAt) return;
       var $tile = $(tile).hoverfu(function (configureHover) {
