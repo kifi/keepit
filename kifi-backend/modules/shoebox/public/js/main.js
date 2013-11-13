@@ -1,7 +1,8 @@
 var xhrDomain = 'https://api.kifi.com';
 var wwwDomain = 'https://www.kifi.com';
 var searchDomain = 'https://search.kifi.com';
-//xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
+//TODO dev
+xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 var xhrBaseSearch = xhrDomain.replace('api', 'search') + '/search';
@@ -585,8 +586,7 @@ $(function() {
 	  var match = path.match(/^friends\/invite(\/\w*)?$/);
       if (match) {
 		var network = (match[1] || '').replace(/\//g, '');
-		chooseNetworkFilterDOM(network);
-        prepInviteTab();
+		filterFriendsByNetwork(network);
       }
       else {
         prepFindTab();
@@ -645,7 +645,7 @@ $(function() {
 			  .remove();
 		  }
 		  else {
-			  filterFriends();
+			  emptyAndPrepInvite();
 		  }
 	  });
 	}
@@ -657,19 +657,24 @@ $(function() {
 		  });
 		  if (shouldConnect) {
 			  var url = wwwDomain + '/link/' + network;
-			  $('<form method="post" action="' + url + '">')
+			  $('<form method="GET" action="' + url + '">')
 			  .appendTo('body')
 			  .submit()
 			  .remove();
 		  }
 		  else {
-			  filterFriends();
+			  emptyAndPrepInvite();
 		  }
 	  });
 	}
 	else {
-		filterFriends();
+		emptyAndPrepInvite();
 	}
+  }
+
+  function emptyAndPrepInvite() {
+	  $nwFriends.find('ul').empty();
+	  prepInviteTab();
   }
 
 	// All kifi Friends
@@ -818,6 +823,7 @@ $(function() {
 	var moreFriends = true;
 	var invitesLeft;
 	function prepInviteTab(moreToShow) {
+		console.log('[prepInviteTab]', moreToShow);
 		if (moreToShow && !moreFriends) return;
 		moreFriends = true;
 		var network = $('.invite-filters').attr('data-nw-selected') || undefined;
@@ -830,6 +836,7 @@ $(function() {
 			network: network,
 			updatedAt: invitesUpdatedAt
 		};
+		console.log('[prepInviteTab]', opts);
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
 			console.log('[prepInviteTab] friends:', friends.length, friends);
 			friends && friends.forEach(function(obj) {
@@ -890,13 +897,6 @@ $(function() {
 			$('.num-invites').text(invitesLeft).parent().show();
 		});
 	}
-	$('.invite-filters a').click(function (e) {
-		var $this = $(this);
-		if ($this.attr('href')) {
-			e.preventDefault();
-			filterFriendsByNetwork($(this).data('nw'));
-		}
-	});
 	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
 	.on('click', '.more-invites', function(e) {
 		e.preventDefault();
@@ -1006,13 +1006,21 @@ $(function() {
 	var moreUsers = true;
 
 	function getUserFilterInput() {
-		return $('.user-filter').val() || '';
+		return $.trim($('.user-filter').val() || '');
 	}
   function prepFindTab(moreToShow) {
 	  console.log('prepFindTab', moreToShow);
 	  if (moreToShow && !moreUsers) return;
 	  moreUsers = true;
 	  var search = getUserFilterInput();
+	  if (!search) {
+		  moreUsers = false;
+		  usersTmpl.clear();
+		  usersShowing.length = 0;
+		  $foundUsers.find('.no-results').hide();
+		  $('.found-user-list-loading').hide();
+		  return;
+	  }
 	  $('.found-user-list-loading').show();
 	  var pageNum = userPageIndex = moreToShow ? userPageIndex : 0,
 		  pageSize = usersToShow,
@@ -2255,7 +2263,8 @@ $(function() {
 	}
 
 	function canInvite() {
-		return me.experiments.indexOf('admin') >= 0 ||
+		//TODO dev
+		return true || me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('can invite') >= 0;
 	}
 
