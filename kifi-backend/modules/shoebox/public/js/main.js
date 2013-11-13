@@ -2267,19 +2267,19 @@ $(function() {
 
 	function canInvite() {
 		//TODO dev
-		return true || me.experiments.indexOf('admin') >= 0 ||
+		return me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('can invite') >= 0;
 	}
 
 	function canInviteViaGmail() {
 		//TODO dev
-		return true || me.experiments.indexOf('admin') >= 0 ||
+		return me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('gmail_invite') >= 0;
 	}
 
 	function canConnect() {
 		//TODO dev
-		return true || me.experiments.indexOf('admin') >= 0 ||
+		return me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('can_connect') >= 0;
 	}
 
