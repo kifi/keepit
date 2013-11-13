@@ -622,6 +622,7 @@ $(function() {
 			  $this.attr('href', $this.data('href'));
 		  }
 	  });
+	  updateGmailTab();
 
 	  $nwFriends.find('ul').empty();
   }
@@ -2276,7 +2277,24 @@ $(function() {
 	}
 
 	function updateGmailTab() {
-		$('a[data-href="friends/invite/email"]').toggle(canInviteViaGmail());
+		var $button = $('a[data-nw="email"]'),
+			enabled = canInviteViaGmail();
+		if (enabled) {
+			$button.attr('href', 'friends/invite/email');
+			$button.data('href', 'friends/invite/email');
+			var dataset = $button[0].dataset;
+			if (dataset) {
+				dataset.href = 'friends/invite/email';
+			}
+		}
+		else {
+			$button.removeAttr('href', '');
+			$.removeData($button[0], 'href');
+			var dataset = $button[0].dataset;
+			if (dataset) {
+				delete dataset.href;
+			}
+		}
 	}
 
 	function updateFriendRequests(n) {
