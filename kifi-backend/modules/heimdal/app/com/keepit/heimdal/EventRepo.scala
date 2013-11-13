@@ -23,7 +23,7 @@ abstract class MongoEventRepo[E <: HeimdalEvent: TypeCode] extends BufferedMongo
 
   def persist(event: E): Unit = {
     insert(event)
-    //mixpanel.send(event)
+    mixpanel.send(event)
 /*    descriptorRepo.getByName(event.eventType) map {
       case None => descriptorRepo.upsert(EventDescriptor(event.eventType))
       case Some(description) if description.sendToMixpanel => mixpanel.send(event)
