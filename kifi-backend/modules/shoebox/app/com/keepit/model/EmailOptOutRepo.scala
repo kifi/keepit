@@ -42,7 +42,7 @@ class EmailOptOutRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock
     val q = if (category == PostOffice.Categories.ALL) {
       for(f <- table if f.address === address && f.state =!= EmailOptOutStates.INACTIVE) yield f
     } else {
-      for(f <- table if f.address === address && f.state =!= EmailOptOutStates.INACTIVE && f.category === category) yield f
+      for(f <- table if f.address === address && f.state =!= EmailOptOutStates.INACTIVE && (f.category === category || f.category === PostOffice.Categories.ALL)) yield f
     }
     q.firstOption.exists(_ => true)
   }
