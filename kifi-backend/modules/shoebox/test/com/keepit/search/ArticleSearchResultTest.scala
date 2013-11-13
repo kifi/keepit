@@ -21,7 +21,7 @@ class ArticleSearchResultTest extends Specification with ShoeboxTestInjector {
               myTotal = 4242,
               friendsTotal = 3232,
               mayHaveMoreHits = true,
-              scorings = Seq(new Scoring(.2F, .3F, .4F, .5F)),
+              scorings = Seq(new Scoring(.2F, .3F, .4F, .5F, true)),
               filter = Set(100L, 200L, 300L),
               uuid = ExternalId[ArticleSearchResult](),
               pageNumber = 3,

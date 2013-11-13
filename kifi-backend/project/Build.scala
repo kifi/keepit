@@ -77,7 +77,7 @@ object ApplicationBuild extends Build {
 
     val sqldbDependencies = Seq(
       "mysql" % "mysql-connector-java" % "5.1.25",
-      "com.jolbox" % "bonecp" % "0.8.0.RELEASE"
+      "com.jolbox" % "bonecp" % "0.8.1-SNAPSHOT"
     )
 
     val shoeboxDependencies = Seq(

@@ -67,13 +67,14 @@ class ExtSearchEventController @Inject() (
         val searchResultUrl = (json \ "searchResultUrl").as[String]
 
         getDestinationUrl(searchResultUrl, theOtherGuys).foreach { url =>
-          shoeboxClient.getNormalizedURIByURL(url).onSuccess { case uriOption => {
-            uriOption.foreach { uri =>
+          shoeboxClient.getNormalizedURIByURL(url).onSuccess {
+            case Some(uri) =>
               val uriId = uri.id.get
               clickHistoryTracker.add(userId, ClickedURI(uri.id.get))
-              resultClickedTracker.add(userId, query, uriId, resultPosition, false) // Should we do this for a Google result?
-            }
-          }}
+              resultClickedTracker.add(userId, query, uriId, resultPosition, false) // We do this for a Google result, too.
+            case None =>
+              resultClickedTracker.moderate(userId, query)
+          }
         }
         searchAnalytics.searchResultClicked(userId, queryUUID, searchExperiment, theOtherGuys, resultPosition, kifiResults, Some(kifiCollapsed), time)
       }

@@ -83,10 +83,10 @@ class HomeController @Inject() (
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
     val user = request.user
 
-    inviteCommander.markPendingInvitesAsAccepted(user.id.get, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.name)))
+    inviteCommander.markPendingInvitesAsAccepted(user.id.get, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
 
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
-      val email = emailRepo.getByUser(user.id.get).sortBy(a => a.verifiedAt.getOrElse(a.createdAt.minusYears(10)).getMillis).lastOption.map(_.address)
+      val email = emailRepo.getAllByUser(user.id.get).sortBy(a => a.id.get.id).lastOption.map(_.address)
       val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
         val user = userRepo.get(u)
         if(user.state == UserStates.ACTIVE) Some(user.externalId)
@@ -98,18 +98,18 @@ class HomeController @Inject() (
     Ok(views.html.website.onboarding.userRequestReceived2(
       user = user,
       email = email,
-      justVerified = request.queryString.get("m").map(_.headOption == Some("1")).getOrElse(false),
+      justVerified = request.queryString.get("m").exists(_.headOption == Some("1")),
       friendsOnKifi = friendsOnKifi)).discardingCookies(DiscardingCookie("inv"))
   }
 
   def install = AuthenticatedHtmlAction { implicit request =>
     db.readWrite { implicit session =>
       socialUserRepo.getByUser(request.user.id.get) map { su =>
-        invitationRepo.getByRecipient(su.id.get).map { invite =>
+        invitationRepo.getByRecipientSocialUserId(su.id.get).map { invite =>
           if (invite.state != InvitationStates.JOINED) {
             invitationRepo.save(invite.withState(InvitationStates.JOINED))
             invite.senderUserId.map { senderUserId =>
-              for (address <- emailAddressRepo.getByUser(senderUserId)) {
+              for (address <- emailAddressRepo.getAllByUser(senderUserId)) {
                 postOffice.sendMail(ElectronicMail(
                   senderUserId = None,
                   from = EmailAddresses.CONGRATS,
@@ -117,7 +117,7 @@ class HomeController @Inject() (
                   to = List(address),
                   subject = s"${request.user.firstName} ${request.user.lastName} joined KiFi!",
                   htmlBody = views.html.email.invitationFriendJoined(request.user).body,
-                  category = PostOffice.Categories.INVITATION))
+                  category = PostOffice.Categories.User.INVITATION))
               }
             }
           }

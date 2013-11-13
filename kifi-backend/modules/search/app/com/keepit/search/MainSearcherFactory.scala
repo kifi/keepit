@@ -20,6 +20,7 @@ import scala.concurrent.duration._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserSearcher
+import play.modules.statsd.api.Statsd
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -77,6 +78,17 @@ class MainSearcherFactory @Inject() (
         spellCorrector,
         monitoredAwait
     )
+  }
+
+  def warmUp(userId: Id[User]): Seq[Future[Any]] = {
+    log.info(s"warming up $userId")
+    Statsd.increment(s"warmup.$userId")
+    val searchFriendsFuture = shoeboxClient.getSearchFriends(userId)
+    val friendsFuture = shoeboxClient.getFriends(userId)
+    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
+    val clickHistoryFuture = getClickHistoryFuture(userId)
+
+    Seq(searchFriendsFuture, friendsFuture, browsingHistoryFuture, clickHistoryFuture) // returning futures to pin them in the heap
   }
 
   def clear(): Unit = {

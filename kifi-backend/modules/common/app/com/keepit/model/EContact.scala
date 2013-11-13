@@ -6,6 +6,10 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
+object EContactStates extends States[EContact] {
+  val PARSE_FAILURE = State[EContact]("parse_failure")
+}
+
 case class EContact(
   id: Option[Id[EContact]] = None,
   createdAt: DateTime = currentDateTime,
@@ -14,7 +18,8 @@ case class EContact(
   email:     String,
   name:      String,
   firstName: Option[String] = None,
-  lastName:  Option[String] = None
+  lastName:  Option[String] = None,
+  state:     State[EContact] = EContactStates.ACTIVE
 ) extends Model[EContact] {
   def withId(id: Id[EContact]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -29,6 +34,7 @@ object EContact {
       (__ \ 'email).format[String] and
       (__ \ 'name).format[String] and
       (__ \ 'firstName).formatNullable[String] and
-      (__ \ 'lastName).formatNullable[String]
+      (__ \ 'lastName).formatNullable[String] and
+      (__ \ 'state).format(State.format[EContact])
     )(EContact.apply, unlift(EContact.unapply))
 }

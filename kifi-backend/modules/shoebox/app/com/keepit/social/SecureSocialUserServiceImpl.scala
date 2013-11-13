@@ -93,7 +93,7 @@ class SecureSocialUserPluginImpl @Inject() (
         socialGraphPlugin.asyncFetch(socialUserInfo)
       log.info(s"[save] persisting $socialUser into $socialUserInfo")
       socialUserInfo.userId.map { userId =>
-        emailRepo.getByUser(userId) map { email =>
+        emailRepo.getAllByUser(userId) map { email =>
           updateExperimentIfTestUser(userId, email)
         }
       }

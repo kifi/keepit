@@ -92,7 +92,7 @@ ThreadData.prototype = {
       return o;
     }, {}) : {};
     threads.forEach(function(th) {
-      th.participants = th.participants.filter(idIsNot(session.userId));
+      th.participants = th.participants.filter(idIsNot(session.user.id));
       // avoid overwriting newer read-state information
       var oldTimeStr = oldReadTimes[th.id];
       if (oldTimeStr && new Date(oldTimeStr) > new Date(th.lastMessageRead || 0)) {
@@ -106,7 +106,7 @@ ThreadData.prototype = {
     return this.threads.filter(hasId(threadId))[0];
   },
   addThread: function (th) {
-    th.participants = th.participants.filter(idIsNot(session.userId));
+    th.participants = th.participants.filter(idIsNot(session.user.id));
     var old = insertUpdateChronologically(this.threads, th, 'lastCommentedAt');
     if (old && old.lastMessageRead && new Date(old.lastMessageRead) > new Date(th.lastMessageRead || 0)) {
       th.lastMessageRead = old.lastMessageRead;
@@ -284,7 +284,7 @@ var socketHandlers = {
   remove_tag: onTagChangeFromServer.bind(null, 'remove'),
   thread_participants: function(threadId, participants) {
     log("[socket:thread_participants]", threadId, participants)();
-    participants = participants.filter(idIsNot(session.userId));
+    participants = participants.filter(idIsNot(session.user.id));
     forEachTabWithThreadId(threadId, function (tab, thread) {
       thread.participants = participants;
       api.tabs.emit(tab, 'participants', participants);
@@ -380,7 +380,7 @@ var socketHandlers = {
   message: function(threadId, message) {
     log("[socket:message]", threadId, message, message.nUrl)();
     forEachTabAtLocator("/messages/" + threadId, function(tab) {
-      api.tabs.emit(tab, "message", {threadId: threadId, message: message, userId: session.userId});
+      api.tabs.emit(tab, "message", {threadId: threadId, message: message, userId: session.user.id});
     });
     var messages = messageData[threadId];
     if (messages) {
@@ -397,7 +397,7 @@ var socketHandlers = {
         thread.lastCommentedAt = m.createdAt;
         thread.messageCount = messages ? messages.length : (thread.messageCount + 1);
         thread.messageTimes[message.id] = message.createdAt;
-        //thread.participants = lastMessage.participants.filter(idIsNot(session.userId)); // not yet needed
+        //thread.participants = lastMessage.participants.filter(idIsNot(session.user.id)); // not yet needed
         withThread(thread);
       } else if (td) {
         // this is probably the first message of a new thread
@@ -406,7 +406,7 @@ var socketHandlers = {
     }
     function withThread(th) {
       td.addThread(th);
-      if (message.user.id === session.userId) {
+      if (message.user.id === session.user.id) {
         td.markRead(th.id, message.createdAt);
       }
       forEachTabAtUriAndLocator(message.url, message.nUrl, "/messages", function(tab) {
@@ -675,7 +675,7 @@ api.port.on({
       }
     }
     function reply(th) {
-      respond(th.messages[0].participants.filter(idIsNot(session.userId)));
+      respond(th.messages[0].participants.filter(idIsNot(session.user.id)));
     }
   },
   set_global_read: function(o, _, tab) {
@@ -813,14 +813,15 @@ api.port.on({
       width: 1020,
       height: 530}, {
       navigate: function(url) {
-        var window = this;
+        var popup = this;
         if (url == baseUri + "/#_=_" || url == baseUri + "/") {
-          ajax("GET", "/ext/authed", function userIsLoggedIn() {
-            // user is now logged in
-            authenticate(function() {
-              log("[open_login_popup] closing popup")();
-              window.close();
-            });
+          ajax("GET", "/ext/authed", function (loggedIn) {
+            if (loggedIn !== false) {
+              startSession(function() {
+                log("[open_login_popup] closing popup")();
+                popup.close();
+              });
+            }
           });
         }
       }
@@ -925,7 +926,7 @@ function removeNotificationPopups(associatedId) {
 function standardizeNotification(n) {
   n.category = (n.category || "message").toLowerCase();
   for (var i = n.participants ? n.participants.length : 0; i--;) {
-    if (n.participants[i].id == session.userId) {
+    if (n.participants[i].id == session.user.id) {
       n.participants.splice(i, 1);
     }
   }
@@ -1211,14 +1212,15 @@ function kifify(tab) {
   }
 
   if (!session) {
-    if (!getStored("user_logout")) { // user did not explicitly log out
-      ajax("GET", "/ext/authed", function() {
-        // user is logged in; need to fetch session data
-        authenticate(function() {
-          if (api.tabs.get(tab.id) === tab) {  // tab still at same page
-            kifify(tab);
-          }
-        });
+    if (!getStored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
+      ajax("GET", "/ext/authed", function(loggedIn) {
+        if (loggedIn !== false) {
+          startSession(function() {
+            if (api.tabs.get(tab.id) === tab) {  // tab still at same page
+              kifify(tab);
+            }
+          });
+        }
       });
     }
     return;
@@ -1384,9 +1386,9 @@ function gotThreadDataFor(url, tab, threads, nUri) {
             api.tabs.emit(tab, 'message', {
               threadId: o.id,
               message: o.messages[o.messages.length - 1],
-              userId: session.userId});
+              userId: session.user.id});
           } else {
-            api.tabs.emit(tab, 'thread', {id: o.id, messages: o.messages, userId: session.userId});
+            api.tabs.emit(tab, 'thread', {id: o.id, messages: o.messages, userId: session.user.id});
           }
         });
       }
@@ -1607,6 +1609,10 @@ function store(key, value) {
   }
 }
 
+function unstore(key) {
+  delete api.storage[getFullyQualifiedKey(key)];
+}
+
 api.on.install.add(function() {
   logEvent("extension", "install");
 });
@@ -1680,6 +1686,7 @@ function startSession(callback, retryMs) {
   function done(data) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
     logEvent("extension", "authenticated");
+    unstore('logout');
 
     session = data;
     session.prefs = {}; // to come via socket
@@ -1743,7 +1750,7 @@ function openLogin(callback, retryMs) {
   var baseUri = webBaseUri();
   api.popup.open({
     name: "kifi-authenticate",
-    url: baseUri + "/login",
+    url: baseUri + '/login',
     width: 1020,
     height: 530}, {
     navigate: function(url) {
@@ -1767,6 +1774,7 @@ function clearSession() {
 function deauthenticate() {
   log("[deauthenticate]")();
   clearSession();
+  store('logout', Date.now());
   api.popup.open({
     name: "kifi-deauthenticate",
     url: webBaseUri() + "/logout#_=_",

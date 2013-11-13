@@ -64,7 +64,7 @@ private[mail] class InvitationMailActor @Inject() (
   private def sendNotification(userId: Id[User], subject: String, body: User => String) {
     db.readWrite { implicit session =>
       val user = userRepo.get(userId)
-      for (address <- emailAddressRepo.getByUser(userId)) {
+      for (address <- emailAddressRepo.getAllByUser(userId)) {
         postOffice.sendMail(ElectronicMail(
           senderUserId = None,
           from = EmailAddresses.CONGRATS,
@@ -72,7 +72,7 @@ private[mail] class InvitationMailActor @Inject() (
           to = List(address),
           subject = subject,
           htmlBody = body(user),
-          category = PostOffice.Categories.INVITATION))
+          category = PostOffice.Categories.User.INVITATION))
       }
     }
   }

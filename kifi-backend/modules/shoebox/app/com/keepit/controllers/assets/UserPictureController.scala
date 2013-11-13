@@ -5,7 +5,7 @@ import scala.util.Try
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.store.{S3UserPictureConfig, S3ImageStore}
 import com.keepit.model._
@@ -50,16 +50,20 @@ class UserPictureController @Inject() (
     }
   }
 
-  def update() = Action { request =>
-    Async {
-      Future.sequence(for {
-        user <- db.readOnly { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
-      } yield {
-        val socialUser = db.readOnly { implicit s => suiRepo.getByUser(user.id.get) }.head
-        imageStore.uploadPictureFromSocialNetwork(socialUser, user.externalId).map(_ => socialUser.socialId)
-      }).map { results =>
-        Ok(results.mkString(","))
+  def update() = AuthenticatedHtmlAction { request =>
+    if (request.experiments.contains(ExperimentType.ADMIN)) {
+      Async {
+        Future.sequence(for {
+          user <- db.readOnly { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
+        } yield {
+          val socialUser = db.readOnly { implicit s => suiRepo.getByUser(user.id.get) }.head
+          imageStore.uploadPictureFromSocialNetwork(socialUser, user.externalId).map(_ => socialUser.socialId)
+        }).map { results =>
+          Ok(results.mkString(","))
+        }
       }
+    } else {
+      Forbidden
     }
   }
 }

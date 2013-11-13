@@ -59,20 +59,14 @@ var messageMuter = this.messageMuter = (function ($, win) {
 
 		/**
 		 * Initializes a Message Muter.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		init: function (trigger) {
+		init: function () {
 			this.initialized = true;
 
 			this.initEvents();
 
 			this.requestIsMuted()
 				.then(this.updateMuted.bind(this));
-
-			this.logEvent('init', {
-				trigger: trigger
-			});
 		},
 
 		/**
@@ -105,7 +99,7 @@ var messageMuter = this.messageMuter = (function ($, win) {
 
 		/**
 		 * Whether the conversation is muted or not.
-		 * 
+		 *
 		 * @return {boolean} Whether the conversation is muted or not
 		 */
 		isMuted: function () {
@@ -136,16 +130,12 @@ var messageMuter = this.messageMuter = (function ($, win) {
 			this.parent.setStatus('muted', muted);
 		},
 
-		getThreadId: function () {
-			return this.parent.getThreadId();
-		},
-
 		requestIsMuted: function () {
-			return kifiUtil.request('is_muted', this.getThreadId(), 'Could get is_muted');
+			return kifiUtil.request('is_muted', this.parent.threadId, 'Could not get is_muted');
 		},
 
 		sendMuted: function (muted) {
-			var threadId = this.getThreadId();
+			var threadId = this.parent.threadId;
 			if (muted) {
 				return kifiUtil.request('mute_thread', threadId, 'Could not mute');
 			}
@@ -193,10 +183,8 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		/**
 		 * Destroys a tag box.
 		 * It removes all event listeners and caches to elements.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		destroy: function (trigger) {
+		destroy: function () {
 			if (this.initialized) {
 				this.initialized = false;
 				this.parent = null;
@@ -212,30 +200,8 @@ var messageMuter = this.messageMuter = (function ($, win) {
 						this[name] = null;
 					}
 				}, this);
-
-				this.logEvent('destroy', {
-					trigger: trigger
-				});
 			}
-		},
-
-		/**
-		 * Logs a user event to the server.
-		 *
-		 * @param {string} name - A event type name
-		 * @param {Object} obj - A event data
-		 * @param {boolean} withUrls - Whether to include url
-		 */
-		logEvent: function (name, obj, withUrls) {
-			if (obj) {
-				if (!withUrls) {
-					obj = win.withUrls(obj);
-				}
-			}
-			log(name, obj)();
-			win.logEvent('slider', 'message_mute.' + name, obj || null);
 		}
-
 	};
 
 })(jQuery, this);

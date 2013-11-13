@@ -28,21 +28,21 @@ case class ArticleSearchResult(
   lang: Lang = Lang("en"))
 
 
-class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float) extends Equals {
+class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float, val usefulPage: Boolean) extends Equals {
   var boostedTextScore: Float = Float.NaN
   var boostedBookmarkScore: Float = Float.NaN
   var boostedRecencyScore: Float = Float.NaN
 
-  def score(textBoost: Float, bookmarkBoost: Float, recencyBoost: Float) = {
+  def score(textBoost: Float, bookmarkBoost: Float, recencyBoost: Float, usefulPageBoost: Float) = {
     boostedTextScore = normalizedTextScore * textBoost
     boostedBookmarkScore = bookmarkScore * bookmarkBoost
     boostedRecencyScore = recencyScore * recencyBoost
 
-    boostedTextScore + boostedBookmarkScore + boostedRecencyScore
+    (boostedTextScore + boostedBookmarkScore + boostedRecencyScore) * (if (usefulPage) usefulPageBoost else 1.0f)
   }
 
   override def toString() = {
-    "Scoring(%f, %f, %f, %f, %f, %f, %f)".format(textScore, normalizedTextScore, bookmarkScore, recencyScore, boostedTextScore, boostedBookmarkScore, boostedRecencyScore)
+    s"Scoring($textScore, $normalizedTextScore, $bookmarkScore, $recencyScore, $usefulPage, $boostedTextScore, $boostedBookmarkScore, $boostedRecencyScore)"
   }
 
   def canEqual(other: Any) = {

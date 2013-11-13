@@ -73,6 +73,15 @@ class UserController @Inject() (
     Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
 
+  def abookInfo() = AuthenticatedJsonAction { request =>
+    val abookF = abookServiceClient.getABookInfos(request.userId)
+    Async {
+      abookF.map { abooks =>
+        Ok(Json.toJson(abooks))
+      }
+    }
+  }
+
   def friendNetworkInfo(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
     Ok(toJson(networkInfoLoader.load(request.userId, id)))
   }
@@ -197,7 +206,7 @@ class UserController @Inject() (
           ))
         }
         for (emails <- userData.emails) {
-          val (existing, toRemove) = emailRepo.getByUser(request.user.id.get).partition(emails contains _.address)
+          val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(emails contains _.address)
           for (email <- toRemove) {
             emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
           }
@@ -217,7 +226,7 @@ class UserController @Inject() (
     val info = db.readOnly { implicit s =>
       UpdatableUserInfo(
         description = Some(userValueRepo.getValue(request.userId, "user_description").getOrElse("")),
-        emails = Some(emailRepo.getByUser(request.userId).map(_.address))
+        emails = Some(emailRepo.getAllByUser(request.userId).map(_.address))
       )
     }
     Ok(toJson(basicUser).as[JsObject] ++ toJson(info).as[JsObject] ++ Json.obj("experiments" -> request.experiments.map(_.value)))
@@ -265,7 +274,7 @@ class UserController @Inject() (
         to = Seq(EmailAddresses.EFFI),
         subject = s"${request.user.firstName} ${request.user.lastName} wants more invites.",
         htmlBody = s"Go to https://admin.kifi.com/admin/user/${request.userId} to give more invites.",
-        category = PostOffice.Categories.INVITATION))
+        category = PostOffice.Categories.User.INVITATION))
     }
     Ok
   }
@@ -331,7 +340,7 @@ class UserController @Inject() (
 
     def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) =
       sci -> sci.userId.map(_ => "joined").getOrElse {
-        invitationRepo.getByRecipient(sci.id) collect {
+        invitationRepo.getByRecipientSocialUserId(sci.id) collect {
           case inv if inv.state != InvitationStates.INACTIVE => "invited"
         } getOrElse ""
       }

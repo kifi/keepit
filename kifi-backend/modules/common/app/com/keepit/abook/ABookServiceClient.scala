@@ -27,10 +27,12 @@ trait ABookServiceClient extends ServiceClient {
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
   def getContacts(userId:Id[User], maxRows:Int):Future[Seq[Contact]]
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
+  def getEContactByEmail(userId:Id[User], email:String):Future[Option[EContact]]
   def getContactInfos(userId:Id[User], maxRows:Int):Future[Seq[ContactInfo]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getContactsRawInfo(userId:Id[User], origin:ABookOriginType):Future[Seq[ContactInfo]]
   def getMergedContactInfos(userId:Id[User], maxRows:Int):Future[JsArray]
+  def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[JsValue]
 }
 
 
@@ -75,6 +77,12 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
+  def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = {
+    call(ABook.internal.getEContactByEmail(userId, email)).map { r =>
+      Json.fromJson[Option[EContact]](r.json).get
+    }
+  }
+
   def getContactInfos(userId: Id[User], maxRows: Int): Future[Seq[ContactInfo]] = {
     call(ABook.internal.getContactInfos(userId, maxRows)).map { r =>
       Json.fromJson[Seq[ContactInfo]](r.json).get
@@ -96,6 +104,12 @@ class ABookServiceClientImpl @Inject() (
   def getMergedContactInfos(userId: Id[User], maxRows: Int): Future[JsArray] = {
     call(ABook.internal.getMergedContactInfo(userId, maxRows)).map { r =>
       Json.fromJson[JsArray](r.json).get
+    }
+  }
+
+  def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue): Future[JsValue] = {
+    call(ABook.internal.uploadForUser(userId, origin), data).map{ r =>
+      r.json
     }
   }
 }
@@ -120,6 +134,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
 
   def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = ???
 
+  def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = ???
+
   def getContactInfos(userId: Id[User], maxRows:Int): Future[Seq[ContactInfo]] = ???
 
   def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
@@ -127,4 +143,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   def getContactsRawInfo(userId: Id[User], origin: ABookOriginType): Future[Seq[ContactInfo]] = ???
 
   def getMergedContactInfos(userId: Id[User], maxRows: Int): Future[JsArray] = ???
+
+  def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue): Future[JsValue] = ???
+
 }

@@ -111,10 +111,8 @@ class ABookController @Inject() (
     }
   }
 
-  // authenticated upload (used by ios/mobile)
-  def upload(origin:ABookOriginType) = AuthenticatedJsonAction(false, parse.json(maxLength = 1024 * 50000)) { request =>
-    val userId = request.userId
-    val json = request.body
+  def upload(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
+    val json : JsValue = request.body
     val abookRepoEntryF: Future[ABookInfo] = Future {
       processUpload(userId, origin, None, json)
     }
@@ -222,6 +220,29 @@ class ABookController @Inject() (
     val contacts = jsonBuilder.result
     log.info(s"[getContacts($userId, $maxRows)] # of contacts returned: ${contacts.length} time-lapsed: ${System.currentTimeMillis - ts}")
     JsArray(contacts)
+  }
+
+  def getEContactByEmail(userId:Id[User], email:String) = Action { request =>
+    // todo: parse email
+    val resF:Future[Option[JsValue]] = Future {
+      getEContactByEmailDirect(userId, email)
+    }
+    Async {
+      resF.map{ jsOpt =>
+        jsOpt match {
+          case Some(js) => Ok(js)
+          case _ => Ok(JsNull)
+        }
+      }
+    }
+  }
+
+  def getEContactByEmailDirect(userId:Id[User], email:String):Option[JsValue] = {
+    val econtactOpt = db.readOnly { implicit s =>
+      econtactRepo.getByUserIdAndEmail(userId, email)
+    }
+    log.info(s"[getEContactDirect($userId,$email)] res=$econtactOpt")
+    econtactOpt map { Json.toJson(_) }
   }
 
   def getEContacts(userId:Id[User], maxRows:Int) = Action { request =>

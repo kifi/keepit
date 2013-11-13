@@ -15,7 +15,8 @@ class ScoringSerializer extends Format[Scoring] with Logging {
         "recencyScore" -> JsNumber(res.recencyScore),
         "boostedTextScore" -> (if (res.boostedTextScore.isNaN()) JsNull else JsNumber(res.boostedTextScore)),
         "boostedBookmarkScore" -> (if (res.boostedBookmarkScore.isNaN()) JsNull else JsNumber(res.boostedBookmarkScore)),
-        "boostedRecencyScore" -> (if (res.boostedRecencyScore.isNaN()) JsNull else JsNumber(res.boostedRecencyScore))
+        "boostedRecencyScore" -> (if (res.boostedRecencyScore.isNaN()) JsNull else JsNumber(res.boostedRecencyScore)),
+        "usefulPage" -> (if (!res.usefulPage) JsNull else JsBoolean(res.usefulPage))
       ))
     } catch {
       case e: Throwable =>
@@ -28,7 +29,8 @@ class ScoringSerializer extends Format[Scoring] with Logging {
       textScore  = (json \ "textScore").as[Float],
       normalizedTextScore  = (json \ "normalizedTextScore").as[Float],
       bookmarkScore  = (json \ "bookmarkScore").as[Float],
-      recencyScore  = (json \ "recencyScore").as[Float]
+      recencyScore  = (json \ "recencyScore").as[Float],
+      usefulPage  = (json \ "usefulPage").asOpt[Boolean].getOrElse(false)
     )
     score.boostedTextScore = (json \ "boostedTextScore").asOpt[Float].getOrElse(Float.NaN)
     score.boostedBookmarkScore  = (json \ "boostedBookmarkScore").asOpt[Float].getOrElse(Float.NaN)

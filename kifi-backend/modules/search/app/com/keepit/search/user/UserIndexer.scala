@@ -14,6 +14,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.common.db.State
 import com.keepit.model.UserStates._
+import com.keepit.model.ExperimentType
 
 
 object UserIndexer {
@@ -22,6 +23,7 @@ object UserIndexer {
   val FULLNAME_FIELD = "u_fullname"
   val EMAILS_FIELD = "u_emails"
   val BASIC_USER_FIELD = "u_basic_user"
+  val USER_EXPERIMENTS = "u_experiments"
 
   val toBeDeletedStates = Set[State[User]](INACTIVE, PENDING, BLOCKED, INCOMPLETE_SIGNUP)
 }
@@ -49,7 +51,7 @@ class UserIndexer(
       val info = getUsersInfo(fetchSize)
       log.info(s"${info.size} users to be indexed")
       var cnt = successCount
-      indexDocuments(info.toIterator.map{x => buildIndexable(x.user, x.basicUser, x.emails)}, commitBatchSize)
+      indexDocuments(info.toIterator.map{x => buildIndexable(x.user, x.basicUser, x.emails, x.experiments)}, commitBatchSize)
       log.info("this round of user indexing finished")
       successCount - cnt
     } catch {
@@ -59,23 +61,25 @@ class UserIndexer(
     }
   }
 
-  case class UserInfo(user: User, basicUser: BasicUser, emails: Seq[String])
+  case class UserInfo(user: User, basicUser: BasicUser, emails: Seq[String], experiments: Seq[ExperimentType])
 
   private def getUsersInfo(fetchSize: Int): Seq[UserInfo] = {
     val usersFuture = shoeboxClient.getUserIndexable(sequenceNumber.value, fetchSize)
     val userIdsFuture = usersFuture.map{users => users.map(_.id.get)}
     val basicUsersFuture = userIdsFuture.flatMap{ ids => shoeboxClient.getBasicUsers(ids) }
     val emailsFuture = userIdsFuture.flatMap{ ids => shoeboxClient.getEmailAddressesForUsers(ids) }
+    val experimentsFuture = userIdsFuture.flatMap{ ids => shoeboxClient.getExperimentsByUserIds(ids) }
 
     val infoFuture = for {
       users <- usersFuture
       userIds <- userIdsFuture
       basicUsers <- basicUsersFuture
       emails <- emailsFuture
+      experiments <- experimentsFuture
     } yield {
       userIds.zipWithIndex.flatMap{ case (id, idx) =>
-        (basicUsers.get(id), emails.get(id)) match {
-          case (Some(basicUser), Some(emails)) => Some(UserInfo(users(idx), basicUser, emails))
+        (basicUsers.get(id), emails.get(id), experiments.get(id)) match {
+          case (Some(basicUser), Some(emails), Some(exps)) => Some(UserInfo(users(idx), basicUser, emails, exps.toSeq))
           case _ => None
         }
       }
@@ -84,14 +88,15 @@ class UserIndexer(
     Await.result(infoFuture, 180 seconds)
   }
 
-  def buildIndexable(user: User, basicUser: BasicUser, emails: Seq[String]): UserIndexable = {
+  def buildIndexable(user: User, basicUser: BasicUser, emails: Seq[String], experiments: Seq[ExperimentType]): UserIndexable = {
     new UserIndexable(
       id = user.id.get,
       sequenceNumber = user.seq,
       isDeleted = toBeDeletedStates.contains(user.state),
       user = user,
       basicUser = basicUser,
-      emails = emails
+      emails = emails,
+      experiments = experiments
     )
   }
 
@@ -103,7 +108,8 @@ class UserIndexer(
     override val isDeleted: Boolean,
     val user: User,
     val basicUser: BasicUser,
-    val emails: Seq[String]) extends Indexable[User] {
+    val emails: Seq[String],
+    val experiments: Seq[ExperimentType]) extends Indexable[User] {
 
     override def buildDocument = {
       val doc = super.buildDocument
@@ -113,6 +119,9 @@ class UserIndexer(
 
       val emailField = buildIteratorField[String](EMAILS_FIELD, emails.map{_.toLowerCase}.toIterator)(x => x)
       doc.add(emailField)
+
+      val expField = buildIteratorField[String](USER_EXPERIMENTS, experiments.map{_.value}.toIterator)(x => x)
+      doc.add(expField)
 
       val basicUserField = buildBinaryDocValuesField(BASIC_USER_FIELD, BasicUser.toByteArray(basicUser))
       doc.add(basicUserField)

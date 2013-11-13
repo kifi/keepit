@@ -19,9 +19,12 @@ class SearchEventController @Inject() (
 
   def logResultClicked = Action(parse.json) { request =>
     val resultClicked = Json.fromJson[ResultClicked](request.body).get
-    resultClicked.keptUri.map { uriId =>
-      clickHistoryTracker.add(resultClicked.userId, ClickedURI(uriId))
-      resultClickedTracker.add(resultClicked.userId, resultClicked.query, uriId, resultClicked.resultPosition, resultClicked.isUserKeep)
+    resultClicked.keptUri match {
+      case Some(uriId) =>
+        clickHistoryTracker.add(resultClicked.userId, ClickedURI(uriId))
+        resultClickedTracker.add(resultClicked.userId, resultClicked.query, uriId, resultClicked.resultPosition, resultClicked.isUserKeep)
+      case None =>
+        resultClickedTracker.moderate(resultClicked.userId, resultClicked.query)
     }
     val (userId, queryUUID, searchExperiment, resultPosition, kifiResults, time) =
       (resultClicked.userId, resultClicked.queryUUID, resultClicked.searchExperiment, resultClicked.resultPosition, resultClicked.kifiResults, resultClicked.time)

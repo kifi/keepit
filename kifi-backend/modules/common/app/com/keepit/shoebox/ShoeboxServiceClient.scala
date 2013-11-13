@@ -47,7 +47,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
-  def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]]
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
@@ -76,6 +75,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment]
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment]
   def getUserExperiments(userId: Id[User]): Future[Seq[ExperimentType]]
+  def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
   def userChannelFanout(userId: Id[User], msg: JsArray): Seq[Future[Int]]
@@ -270,15 +270,6 @@ class ShoeboxServiceClientImpl @Inject() (
     }.map{ m => m.map{ case (k, v) => (k.userId, v) } }
   }
 
-  def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
-    implicit val idFormat = Id.format[User]
-    val payload = JsArray(userIds.map{ x => Json.toJson(x)})
-    call(Shoebox.internal.getEmailsForUsers(), payload).map{ res =>
-      res.json.as[Map[String, Seq[String]]]
-      .map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
-    }
-  }
-
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
@@ -391,6 +382,15 @@ class ShoeboxServiceClientImpl @Inject() (
       case None => call(Shoebox.internal.getUserExperiments(userId)).map { r =>
         r.json.as[Set[String]].map(ExperimentType(_)).toSeq
       }
+    }
+  }
+
+  def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]] = {
+    implicit val idFormat = Id.format[User]
+    val payload = JsArray(userIds.map{ x => Json.toJson(x)})
+    call(Shoebox.internal.getExperimentsByUserIds(), payload).map{ res =>
+      res.json.as[Map[String, Set[ExperimentType]]]
+      .map{ case (id, exps) => Id[User](id.toLong) -> exps }.toMap
     }
   }
 

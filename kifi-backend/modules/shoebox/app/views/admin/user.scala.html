@@ -67,7 +67,7 @@
           @for(exp <- Seq(ExperimentType.ADMIN, ExperimentType.BLOCK,
               ExperimentType.NO_SEARCH_EXPERIMENTS, ExperimentType.FAKE, ExperimentType.INACTIVE,
               ExperimentType.CAN_INVITE, ExperimentType.CAN_MESSAGE_ALL_USERS, ExperimentType.NOT_SENSITIVE,
-              ExperimentType.PASSWORD_LOGIN, ExperimentType.TAGGING)) {
+              ExperimentType.INBOX)) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(experiments.contains(exp)) {checked}>@exp.value
             </label>
@@ -152,9 +152,20 @@
     <h3>EContacts (up to 500)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
-            <tr><th>EContactId</th><th>Name</th><th>Email</th></tr>
+            <tr><th>EContactId</th><th>Name</th><th>Email</th><th>State</th></tr>
             @for(contact <- econtacts) {
-            <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td></tr>
+            <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td><td>@contact.state</td>
+              <!--
+              <td>
+                <form class="form-inline" style="display:inline" action="/invite" method="POST">
+                  <input type="hidden" name="fullSocialId" value="email/@contact.email">
+                  <input type="hidden" name="subject" value="You've been invited to join Kifi!">
+                  <input type="hidden" name="message" value="Come join us!">
+                  <button type="submit" class="btn">Invite</button>
+                </form>
+              </td>
+              -->
+            </tr>
             }
         </table>
     </div>

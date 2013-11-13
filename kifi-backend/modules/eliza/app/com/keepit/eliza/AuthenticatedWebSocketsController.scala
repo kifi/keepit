@@ -11,6 +11,9 @@ import com.keepit.common.time._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.search.SearchServiceClient
+import com.keepit.common.crypto.SimpleDESCrypt
+
 
 import scala.concurrent.stm.{Ref, atomic}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -42,6 +45,7 @@ case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedA
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   protected val shoebox: ShoeboxServiceClient
+  protected val search: SearchServiceClient
   protected val impersonateCookie: ImpersonateCookie
   protected val actorSystem: ActorSystem
   protected val clock: Clock
@@ -52,6 +56,9 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected def onConnect(socket: SocketInfo) : Unit
   protected def onDisconnect(socket: SocketInfo) : Unit
   protected def websocketHandlers(socket: SocketInfo) : Map[String, Seq[JsValue] => Unit]
+
+  private val crypt = new SimpleDESCrypt
+  private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
 
 
@@ -146,20 +153,26 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   }
 
 
-  def websocket(versionOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
+  def websocket(versionOpt: Option[String], connIdOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
     authenticate(request) match {
       case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
         implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
         val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt)
         val handlers = websocketHandlers(socketInfo)
         val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
+        val ipOpt : Option[String] = connIdOpt.flatMap{ connId =>
+          crypt.decrypt(ipkey, connId).toOption
+        }
 
         onConnect(socketInfo)
 
         val tStart = currentDateTime
+        SafeFuture {
+          search.warmUpUser(streamSession.userId)
+        }
         //Analytics
         SafeFuture {
-          val contextBuilder = userEventContextBuilder(Some(request))
+          val contextBuilder = userEventContextBuilder(Some(request), ipOpt)
           streamSession.experiments.foreach{ experiment =>
             contextBuilder += ("experiment", experiment.toString)
           }
@@ -178,7 +191,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           onDisconnect(socketInfo)
           //Analytics
           SafeFuture {
-            val contextBuilder = userEventContextBuilder(Some(request))
+            val contextBuilder = userEventContextBuilder(Some(request), ipOpt)
             streamSession.experiments.foreach{ experiment =>
               contextBuilder += ("experiment", experiment.toString)
             }

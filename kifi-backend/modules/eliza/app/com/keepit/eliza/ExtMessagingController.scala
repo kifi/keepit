@@ -11,9 +11,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
+import com.keepit.search.SearchServiceClient
 
 import scala.util.{Success, Failure}
-
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -37,6 +37,7 @@ class ExtMessagingController @Inject() (
     threadRepo: MessageThreadRepo,
     db: Database,
     protected val shoebox: ShoeboxServiceClient,
+    protected val search: SearchServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
     protected val clock: Clock,
@@ -260,10 +261,22 @@ class ExtMessagingController @Inject() (
       val msgExtId = ExternalId[Message](messageId)
       messagingController.setNotificationReadForMessage(socket.userId, msgExtId)
       messagingController.setLastSeen(socket.userId, msgExtId)
+      SafeFuture {
+        val contextBuilder = userEventContextBuilder()
+        contextBuilder += ("messageExternalId", messageId)
+        contextBuilder += ("global", false)
+        heimdal.trackEvent(UserEvent(socket.userId.id, contextBuilder.build, EventType("notification_read")))
+      }
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
       messagingController.setNotificationReadForMessage(socket.userId, ExternalId[Message](messageId))
       messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
+      SafeFuture {
+        val contextBuilder = userEventContextBuilder()
+        contextBuilder += ("messageExternalId", messageId)
+        contextBuilder += ("global", true)
+        heimdal.trackEvent(UserEvent(socket.userId.id, contextBuilder.build, EventType("notification_read")))
+      }
     },
     "get_threads_by_url" -> { case JsString(url) +: _ =>  // deprecated in favor of "get_threads"
       val (_, threadInfos) = messagingController.getThreadInfos(socket.userId, url)

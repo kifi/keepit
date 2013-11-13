@@ -6,7 +6,6 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, BenchmarkResults}
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
-import com.keepit.model.Comment
 import com.keepit.model.Collection
 import play.api.libs.json.{JsValue, Json}
 import play.api.templates.Html
@@ -29,6 +28,7 @@ trait SearchServiceClient extends ServiceClient {
   def logResultClicked(resultClicked: ResultClicked): Unit
   def logSearchEnded(searchEnded: SearchEnded): Unit
   def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit
+  def warmUpUser(userId: Id[User]): Unit
 
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
@@ -40,16 +40,12 @@ trait SearchServiceClient extends ServiceClient {
   def articleIndexInfo(): Future[IndexInfo]
   def articleIndexerSequenceNumber(): Future[Int]
 
-  def commentIndexInfo(): Future[Seq[IndexInfo]]
-  def reindexComment(): Unit
-
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo]
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]]
   def refreshSearcher(): Unit
   def refreshPhrases(): Unit
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
-  def searchUsers(query: String, maxHits: Int = 10, context: String = ""): Future[UserSearchResult]
-  def searchUsers2(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
+  def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
   def buildSpellCorrectorDictionary(): Unit
@@ -62,7 +58,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html]
-  def dumpLuceneComment(commentId: Id[Comment]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
 
   def benchmarks(): Future[BenchmarkResults]
@@ -91,6 +86,10 @@ class SearchServiceClientImpl(
     call(Search.internal.updateBrowsingHistory(userId), json)
   }
 
+  def warmUpUser(userId: Id[User]): Unit = {
+    call(Search.internal.warmUpUser(userId))
+  }
+
   def updateURIGraph(): Unit = {
     broadcast(Search.internal.updateURIGraph())
   }
@@ -103,10 +102,6 @@ class SearchServiceClientImpl(
     broadcast(Search.internal.collectionReindex())
   }
 
-  def reindexComment(): Unit = {
-    broadcast(Search.internal.commentReindex())
-  }
-
   def index(): Unit = {
     broadcast(Search.internal.searchUpdate())
   }
@@ -117,10 +112,6 @@ class SearchServiceClientImpl(
 
   def articleIndexInfo(): Future[IndexInfo] = {
     call(Search.internal.indexInfo()).map(r => Json.fromJson[IndexInfo](r.json).get)
-  }
-
-  def commentIndexInfo(): Future[Seq[IndexInfo]] = {
-    call(Search.internal.commentIndexInfo()).map(r => Json.fromJson[Seq[IndexInfo]](r.json).get)
   }
 
   def uriGraphIndexInfo(): Future[Seq[IndexInfo]] = {
@@ -161,15 +152,9 @@ class SearchServiceClientImpl(
     }
   }
 
-  def searchUsers(query: String, maxHits: Int = 10, context: String = ""): Future[UserSearchResult] = {
-    call(Search.internal.searchUsers(query, maxHits, context)).map{ r =>
-      Json.fromJson[UserSearchResult](r.json).get
-    }
-  }
-
-  def searchUsers2(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = {
+  def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = {
     val payload = Json.toJson(UserSearchRequest(userId, query, maxHits, context, filter))
-    call(Search.internal.searchUsers2(), payload).map{ r =>
+    call(Search.internal.searchUsers(), payload).map{ r =>
       Json.fromJson[UserSearchResult](r.json).get
     }
   }
@@ -188,10 +173,6 @@ class SearchServiceClientImpl(
 
   def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html] = {
     call(Search.internal.collectionDumpLuceneDocument(colId, userId)).map(r => Html(r.body))
-  }
-
-  def dumpLuceneComment(commentId: Id[Comment]): Future[Html] = {
-    call(Search.internal.commentDumpLuceneDocument(commentId)).map(r => Html(r.body))
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = {

@@ -22,35 +22,39 @@ class ExtUserSearchController @Inject()(
   actionAuthenticator: ActionAuthenticator
 ) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
+  val EXCLUDED_EXPERIMENTS = Seq("fake")
+
   private def createFilter(userId: Option[Id[User]], filter: Option[String], context: Option[String]) = {
     filter match {
       case Some("f") => filterFactory.friendsOnly(userId.get, context)
       case Some("non-f") => filterFactory.nonFriendsOnly(userId.get, context)
-      case _ => filterFactory.default(userId, context)
+      case _ => filterFactory.default(userId, context, excludeSelf = true)      // may change this later
     }
   }
 
   def page(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = AuthenticatedJsonAction { request =>
     val userId = request.userId
+    val userExps = request.experiments.map{_.value}
+    val excludedExperiments = if (userExps.contains("admin")) Seq() else EXCLUDED_EXPERIMENTS
     val friendRequests = shoeboxClient.getFriendRequestsBySender(userId)
     val searchFilter = createFilter(Some(userId), filter, None)
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
-    val res = parser.parse(queryText) match {
+    val res = parser.parseWithUserExperimentConstrains(queryText, excludedExperiments) match {
       case None => UserSearchResult(Array.empty[UserHit], context = "")
-      case Some(q) => searcher.searchPagingWithFilter(q, searchFilter, pageNum, pageSize)
+      case Some(q) => searcher.searchPaging(q, searchFilter, pageNum, pageSize)
     }
 
     val requestedUsers = Await.result(friendRequests, 5 seconds).filter(_.state == FriendRequestStates.ACTIVE).map{_.recipientId}.toSet
 
     val jsVals = res.hits.map{ case UserHit(id, basicUser, isFriend) =>
-      val connectionStatus = {
+      val status = {
         if (isFriend) "friend"
         else if (requestedUsers.contains(id)) "requested"
         else ""
       }
 
-      Json.obj("basicUser" -> Json.toJson(basicUser), "connectionStatus" -> connectionStatus)
+      Json.obj("user" -> Json.toJson(basicUser), "status" -> status)
     }
 
     Ok(JsArray(jsVals))
@@ -64,7 +68,7 @@ class ExtUserSearchController @Inject()(
 
     val res = parser.parse(queryText) match {
       case None => UserSearchResult(Array.empty[UserHit], context.getOrElse(""))
-      case Some(q) => searcher.searchWithFilter(q, maxHits, searchFilter)
+      case Some(q) => searcher.search(q, maxHits, searchFilter)
     }
 
     Ok(Json.toJson(res))

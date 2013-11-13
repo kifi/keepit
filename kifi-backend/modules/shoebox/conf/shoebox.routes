@@ -44,6 +44,10 @@ POST    /password/set               @com.keepit.controllers.core.AuthController.
 
 POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
+GET     /unsubscribe/*token         @com.keepit.controllers.website.EmailOptOutController.optOut(token: String)
+POST    /unsubscribe/*token         @com.keepit.controllers.website.EmailOptOutController.optOutAction(token: String)
+GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutController.getToken(email: String)
+
 ##########################################
 # Extension API
 ##########################################
@@ -91,9 +95,10 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 ##########################################
 # Mobile V1
 ##########################################
-GET     /m/1/user/friends           @com.keepit.controllers.mobile.MobileUserController.getFriends()
-GET     /m/1/user/networks          @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
-POST    /m/1/page/details           @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
+GET     /m/1/user/friends                   @com.keepit.controllers.mobile.MobileUserController.getFriends()
+GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
+POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
+POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 
 ##########################################
 # Website
@@ -150,6 +155,7 @@ POST    /site/user/me               @com.keepit.controllers.website.UserControll
 GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
 POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
+GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
 GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
 POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
 POST    /site/user/:id/friend       @com.keepit.controllers.website.UserController.friend(id: ExternalId[User])
@@ -236,14 +242,10 @@ GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIG
 GET     /admin/uriGraph/reindexCollection  @com.keepit.controllers.admin.AdminURIGraphController.reindexCollection
 GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
 
-GET     /admin/commentIndex/reindex @com.keepit.controllers.admin.AdminCommentIndexController.reindex
-GET     /admin/commentIndex/dumpDoc/:commentId  @com.keepit.controllers.admin.AdminCommentIndexController.dumpLuceneDocument(commentId: Id[Comment])
-
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
 POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
 GET     /admin/users/page/:page     @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
 POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
-GET     /admin/users/search_basic_users  @com.keepit.controllers.admin.AdminUserController.searchBasicUsers(queryText: String, maxHits: Int ?= 10)
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User])
@@ -258,7 +260,7 @@ POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthContr
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
-GET    /admin/users/initSeq          @com.keepit.controllers.admin.AdminUserController.initUserSeq()
+GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserController.bumpUserSeq()
 
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
@@ -357,11 +359,11 @@ POST    /internal/shoebox/database/internNormalizedURI                 @com.keep
 GET     /internal/shoebox/database/getUsers                            @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
 POST     /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers()
-POST     /internal/shoebox/database/getEmailsForUsers                   @com.keepit.controllers.shoebox.ShoeboxController.getEmailsForUsers()
 POST     /internal/shoebox/database/getEmailAddressesForUsers                   @com.keepit.controllers.shoebox.ShoeboxController.getEmailAddressesForUsers()
 GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])
+POST    /internal/shoebox/database/getExperimentsByUserIds            @com.keepit.controllers.shoebox.ShoeboxController.getExperimentsByUserIds()
 GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedUriUpdates(lowSeq: Long, highSeq: Long)
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])

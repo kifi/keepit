@@ -6,7 +6,6 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, BenchmarkResults}
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
-import com.keepit.model.Comment
 import com.keepit.model.Collection
 import play.api.libs.json.{JsValue, Json}
 import play.api.templates.Html
@@ -37,15 +36,11 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
 
   override def reindexCollection(): Unit = ???
 
-  override def reindexComment(): Unit = ???
-
   override def index(): Unit = ???
 
   override def reindex(): Unit = ???
 
   override def articleIndexInfo(): Future[IndexInfo] = ???
-
-  override def commentIndexInfo(): Future[Seq[IndexInfo]] = ???
 
   override def uriGraphIndexInfo(): Future[Seq[IndexInfo]] = ???
 
@@ -62,9 +57,7 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
 
   override def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]] = ???
 
-  override def searchUsers(query: String, maxHits: Int = 10, context: String = ""): Future[UserSearchResult] = ???
-
-  override def searchUsers2(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = ???
+  override def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = ???
 
   override def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = ???
 
@@ -73,8 +66,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
   override def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = ???
 
   override def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html] = ???
-
-  override def dumpLuceneComment(commentId: Id[Comment]): Future[Html] = ???
 
   override def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = ???
 

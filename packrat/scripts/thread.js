@@ -29,19 +29,13 @@ panes.thread = function () {
       var threadId = locator.split('/')[2];
       log('[panes.thread.render]', threadId)();
       api.port.emit('thread', {id: threadId, respond: true}, function (th) {
-        api.port.emit('session', function (session) {
-          renderThread($container, th.id, th.messages, session);
-          api.port.emit('participants', th.id, function (participants) {
-            var messageHeader = window.messageHeader,
-              $pane = window.slider2.getPane();
-            messageHeader.$pane = $pane;
-            messageHeader.participants = participants;
-            messageHeader.construct();
-            var $box = $pane.find('.kifi-pane-box');
-            $box.find('.kifi-pane-tall').css('margin-top', $box.find('.kifi-thread-who').outerHeight());
-          });
-          api.port.on(handlers);
+        renderThread($container, th.id, th.messages, session);
+        api.port.emit('participants', th.id, function (participants) {
+          var $who = $container.closest('.kifi-pane-box').find('.kifi-thread-who');
+          window.messageHeader.construct($who, th.id, participants);
+          $container.css('margin-top', $who.outerHeight());
         });
+        api.port.on(handlers);
       });
       var $redirected = $container.find('.kifi-thread-redirected').click(function () {
         $redirected.fadeOut(800, $.fn.remove.bind($redirected));
@@ -53,7 +47,7 @@ panes.thread = function () {
 
   function renderThread($container, threadId, messages, session) {
     messages.forEach(function (m) {
-      m.isLoggedInUser = m.user.id === session.userId;
+      m.isLoggedInUser = m.user.id === session.user.id;
     });
     $(render('html/keeper/messages', {
       formatMessage: getTextFormatter,
@@ -95,7 +89,7 @@ panes.thread = function () {
     if (buffer.threadId === threadId && !messages.some(function (m) {return m.id === buffer.message.id})) {
       log('[render] appending buffered message', buffer.message.id)();
       messages.push(buffer.message);
-      var $m = renderMessage(buffer.message, session.userId);
+      var $m = renderMessage(buffer.message, session.user.id);
       $holder.append($m).scrollToBottom();
     }
 
@@ -137,8 +131,8 @@ panes.thread = function () {
       id: '',
       createdAt: new Date().toISOString(),
       text: text,
-      user: {id: session.userId, firstName: session.name, lastName: ''}
-    }, session.userId)
+      user: session.user
+    }, session.user.id)
     .data('text', text);
     $holder.append($m).scrollToBottom();
 
@@ -150,7 +144,6 @@ panes.thread = function () {
         $m.find('.kifi-message-status').text('sending…')
       }
     }, 1000);
-
   }
 
   function renderMessage(m, userId) {

@@ -74,11 +74,11 @@ class AdminUserController @Inject() (
     db.readWrite { implicit s =>
       val fromUser = userRepo.get(fromUserId)
       val toUser = userRepo.get(toUserId)
-      for (email <- emailAddressRepo.getByUser(fromUserId)) {
+      for (email <- emailAddressRepo.getAllByUser(fromUserId)) {
         emailRepo.save(email.copy(userId = toUserId))
       }
       val socialUsers = socialUserInfoRepo.getByUser(fromUserId)
-      for (su <- socialUsers; invitation <- invitationRepo.getByRecipient(su.id.get)) {
+      for (su <- socialUsers; invitation <- invitationRepo.getByRecipientSocialUserId(su.id.get)) {
         invitationRepo.save(invitation.withState(InvitationStates.INACTIVE))
       }
       for (su <- socialUsers) {
@@ -163,7 +163,7 @@ class AdminUserController @Inject() (
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       val allowedInvites = userValueRepo.getValue(user.id.get, "availableInvites").getOrElse("6").toInt
-      val emails = emailRepo.getByUser(user.id.get)
+      val emails = emailRepo.getAllByUser(user.id.get)
       (user, (bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
     }
 
@@ -231,17 +231,12 @@ class AdminUserController @Inject() (
     searchTerm match {
       case None => Redirect(routes.AdminUserController.usersView(0))
       case Some(queryText) =>
-        val userIds = Await.result(searchClient.searchUsers(queryText, 100, ""), 15 seconds).hits.map{_.id}
+        val userIds = Await.result(searchClient.searchUsers(userId = None, query = queryText, maxHits = 100), 15 seconds).hits.map{_.id}
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
         Ok(html.admin.users(users, 0, users.size, 1, searchTerm))
     }
-  }
-
-  def searchBasicUsers(queryText: String, maxHits: Int = 10) = AdminHtmlAction { implicit request =>
-    val users = Await.result(searchClient.searchUsers(queryText, maxHits, ""), 15 seconds).hits
-    Ok(JsArray(users.map{x => Json.toJson(x)}))
   }
 
   def updateUser(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -257,7 +252,7 @@ class AdminUserController @Inject() (
     }).flatten
 
     db.readWrite{ implicit session =>
-      val oldEmails = emailRepo.getByUser(userId).toSet
+      val oldEmails = emailRepo.getAllByUser(userId).toSet
       val newEmails = (emailList map { address =>
         val email = emailRepo.getByAddressOpt(address)
         email match {
@@ -374,10 +369,10 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.notification())
   }
 
-  def initUserSeq() = AdminHtmlAction { implicit request =>
+  def bumpUserSeq() = AdminHtmlAction { implicit request =>
     db.readWrite{ implicit s =>
       userRepo.all.sortBy(_.id.get.id).foreach{ u => userRepo.save(u) }
     }
-    Ok("OK. Assigning user sequence numbers")
+    Ok("OK. Bumping up user sequence numbers")
   }
 }

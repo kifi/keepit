@@ -90,7 +90,7 @@ private[classify] class DomainTagImportActor @Inject() (
           db.readWrite { implicit s =>
             postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
               subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
-              category = PostOffice.Categories.ADMIN))
+              category = PostOffice.Categories.System.ADMIN))
           }
           val s = new FileOutputStream(outputPath)
           try {
@@ -132,7 +132,7 @@ private[classify] class DomainTagImportActor @Inject() (
                   s"Domain import started at $startTime and completed successfully at $endTime " +
                   s"with $added domain-tag pairs added, $removed domain-tag pairs removed, " +
                   s"and $total total domain-tag pairs.",
-              category = PostOffice.Categories.ADMIN))
+              category = PostOffice.Categories.System.ADMIN))
           }
         }
       } catch {

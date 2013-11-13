@@ -52,7 +52,7 @@ section {
   </p>
   <p class="copy-2">Please enter your Kifi password to connect @network.displayName.</p>
 
-  <form class="login" data-uri="@routes.logInWithUserPass(network.name)" novalidate>
+  <form class="login" action="@routes.logInWithUserPass(network.name)" novalidate>
     <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address" required tabindex="1" value="@emailAddress">
     <label class="password-label">
       <input class="form-password" type="password" name="login-password" placeholder="Your password" required autofocus tabindex="1">

@@ -110,8 +110,8 @@ class ShoeboxController @Inject() (
     val userId = Id[User]((request.body \ "user").as[Long])
     val email = (request.body \ "email").as[ElectronicMail]
 
-    val addrs = db.readOnly{ implicit session => emailAddressRepo.getByUser(userId) }
-    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
+    val addrs = db.readOnly{ implicit session => emailAddressRepo.getAllByUser(userId) }
+    for (addr <- addrs.find(_.verifiedAt.isDefined).orElse(addrs.headOption)) {
       db.readWrite{ implicit session => postOffice.sendMail(email.copy(to=List(addr))) }
     }
     Ok("true")
@@ -338,18 +338,10 @@ class ShoeboxController @Inject() (
     Ok(JsArray(users.map{ u => Json.toJson(u)}))
   }
 
-  def getEmailsForUsers() = Action(parse.json) { request =>
-    val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
-    val emails = db.readOnly{ implicit s =>
-      userIds.map{userId => userId.id.toString -> emailAddressRepo.getByUser(userId).map{_.address}}.toMap
-    }
-    Ok(Json.toJson(emails))
-  }
-
   def getEmailAddressesForUsers() = Action(parse.json) { request =>
     val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val emails = db.readOnly{ implicit s =>
-      userIds.map{userId => userId.id.toString -> emailAddressRepo.getByUser(userId).map{_.address}}.toMap
+      userIds.map{userId => userId.id.toString -> emailAddressRepo.getAllByUser(userId).map{_.address}}.toMap
     }
     Ok(Json.toJson(emails))
   }
@@ -397,6 +389,16 @@ class ShoeboxController @Inject() (
       userExperimentRepo.getUserExperiments(userId).map(_.value)
     }
     Ok(Json.toJson(experiments))
+  }
+
+  def getExperimentsByUserIds() = Action(parse.json) { request =>
+    val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
+    val exps = db.readOnly { implicit s =>
+      userIds.map{ uid =>
+        uid.id.toString -> userExperimentRepo.getUserExperiments(uid)
+      }.toMap
+    }
+    Ok(Json.toJson(exps))
   }
 
   def getPhrasesChanged(seqNum: Long, fetchSize: Int) = Action { request =>

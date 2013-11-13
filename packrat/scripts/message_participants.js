@@ -80,41 +80,12 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 		/**
 		 * Initializes a Message Participants.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		init: function (trigger) {
+		init: function () {
 			this.initialized = true;
-
-			/*
-			this.requestParticipants()
-				.then(this.setParticipants.bind(this));
-        */
-
 			this.initEvents();
 			this.initScroll();
 			this.initInput();
-
-			this.logEvent('init', {
-				trigger: trigger
-			});
-		},
-
-		getThreadId: function () {
-			return this.parent.getThreadId();
-		},
-
-		/**
-		 * Request a list of all of participants.
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		requestParticipants: function () {
-			var id = this.getThreadId();
-			if (id) {
-				return kifiUtil.request('participants', id, 'Could not load participants.');
-			}
-			return null;
 		},
 
 		/**
@@ -224,7 +195,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 				},
 				zindex: 999999999992,
 				resultsFormatter: function (f) {
-					return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/0.jpg)">' +
+					return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' +
 						Mustache.escape(f.name) + '</li>';
 				},
 				onAdd: function () {
@@ -250,7 +221,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 		/**
 		 * A listener for adding
-		 * 
+		 *
 		 * participants: [{
 		 *   firstName: "Jenny"
 		 *   id: "6f21b520-87e7-4053-9676-85762e96970a"
@@ -504,7 +475,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 		sendAddParticipants: function (users) {
 			return kifiUtil.request('add_participants', {
-				threadId: this.getThreadId(),
+				threadId: this.parent.threadId,
 				userIds: util.pluck(users, 'id')
 			}, 'Could not add participants.');
 		},
@@ -639,10 +610,8 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		/**
 		 * Destroys a tag box.
 		 * It removes all event listeners and caches to elements.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		destroy: function (trigger) {
+		destroy: function () {
 			if (this.initialized) {
 				this.initialized = false;
 
@@ -664,30 +633,8 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 						this[name] = null;
 					}
 				}, this);
-
-				this.logEvent('destroy', {
-					trigger: trigger
-				});
 			}
-		},
-
-		/**
-		 * Logs a user event to the server.
-		 *
-		 * @param {string} name - A event type name
-		 * @param {Object} obj - A event data
-		 * @param {boolean} withUrls - Whether to include url
-		 */
-		logEvent: function (name, obj, withUrls) {
-			if (obj) {
-				if (!withUrls) {
-					obj = win.withUrls(obj);
-				}
-			}
-			log(name, obj)();
-			win.logEvent('slider', 'message_participants.' + name, obj || null);
 		}
-
 	};
 
 })(jQuery, this);
