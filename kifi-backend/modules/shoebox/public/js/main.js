@@ -2262,6 +2262,7 @@ $(function() {
 		$(".my-description").text(data.description || '\u00A0'); // nbsp
 		$friendsTabs.filter('[data-href="friends/invite"]').toggle(canInvite());
 		updateGmailTab();
+		updateConnectTab();
 	}
 
 	function canInvite() {
@@ -2274,6 +2275,12 @@ $(function() {
 		//TODO dev
 		return true || me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('gmail_invite') >= 0;
+	}
+
+	function canConnect() {
+		//TODO dev
+		return true || me.experiments.indexOf('admin') >= 0 ||
+			me.experiments.indexOf('can_connect') >= 0;
 	}
 
 	function updateGmailTab() {
@@ -2294,6 +2301,17 @@ $(function() {
 			if (dataset) {
 				delete dataset.href;
 			}
+		}
+	}
+
+	function updateConnectTab() {
+		var $button = $('a[data-href="friends/find"]'),
+			enabled = canConnect();
+		if (enabled) {
+			$button.show();
+		}
+		else {
+			$button.hide();
 		}
 	}
 
@@ -2324,6 +2342,7 @@ $(function() {
 	$.when(promise.me).done(function () {
 		$('#invite-friends-link').toggle(canInvite());
 		updateGmailTab();
+		updateConnectTab();
 	});
 	updateCollections();
 	$.getJSON(xhrBase + '/user/friends/count', function(data) {

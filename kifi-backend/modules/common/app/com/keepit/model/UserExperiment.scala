@@ -42,6 +42,7 @@ object ExperimentType {
   val NOT_SENSITIVE = ExperimentType("not sensitive")
   val CAN_INVITE = ExperimentType("can invite")
   val GMAIL_INVITE = ExperimentType("gmail_invite")
+  val CAN_CONNECT = ExperimentType("can_connect")
   val CAN_MESSAGE_ALL_USERS = ExperimentType("can message all users")
   val INBOX = ExperimentType("inbox")
 
@@ -57,6 +58,7 @@ object ExperimentType {
     case NO_SEARCH_EXPERIMENTS.value => NO_SEARCH_EXPERIMENTS
     case CAN_INVITE.value => CAN_INVITE
     case GMAIL_INVITE.value => GMAIL_INVITE
+    case CAN_CONNECT.value => CAN_CONNECT
     case CAN_MESSAGE_ALL_USERS.value => CAN_MESSAGE_ALL_USERS
     case INBOX.value => INBOX
   }
