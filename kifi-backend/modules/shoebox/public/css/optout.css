@@ -8,7 +8,6 @@ section {
   font-size: 16px;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
-  text-align: center;
 }
 section > h2 {
   margin: 0;
@@ -19,27 +18,42 @@ section > h2 {
   font-weight: 300;
 }
 section > h3 {
+  font-weight: bold;
   margin: 0 0 16px;
   padding: 0 0 6px;
   text-align: left;
   line-height: 24px;
   font-size: 18px;
-  font-weight: 300;
   border-bottom: 5px solid #e5e5e5;
 }
+section > p {
+  text-align: left;
+}
+
+form > label {
+  display: block;
+  padding: 5px 0px;
+  text-align: left;
+}
+
 
 span.optout {
-    border: 0px none rgb(255, 255, 255);
-    color: rgb(255, 255, 255);
-    display: table-cell;
-    font: normal normal 300 16px/22px 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    height: 68px;
-    line-height: 22px;
-    outline: rgb(255, 255, 255) none 0px;
-    padding: 0px 16px 0px 0px;
-    text-align: left;
-    vertical-align: middle;
-    width: 206px;
+  background: #85a4ea;
+  border: 0px none rgb(255, 255, 255);
+  color: rgb(255, 255, 255);
+  display: inline-block;
+  font: normal normal 300 16px/22px 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  height: 40px;
+  line-height: 40px;
+  margin-top: 20px;
+  padding: 0px 16px 0px 16px;
+  vertical-align: middle;
+  width: 206px;
+  cursor: pointer;
+}
+
+span.optout:active {
+  background: #75b4da;
 }
 
 

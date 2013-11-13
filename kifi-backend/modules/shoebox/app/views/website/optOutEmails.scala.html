@@ -1,4 +1,9 @@
-@()
+@(email: String, opts: Seq[com.keepit.common.mail.ElectronicMailCategory], msg: Option[String])
+
+@import com.keepit.common.mail.PostOffice.Categories
+@invite = @{ !opts.contains(Categories.ALL) && !opts.contains(Categories.User.INVITATION) }
+@message = @{ !opts.contains(Categories.ALL) && !opts.contains(Categories.User.MESSAGE) }
+@all = @{ !opts.contains(Categories.ALL) }
 
 @styles = {
 <link rel="stylesheet" href="/assets/css/optout.css">
@@ -9,19 +14,40 @@
   <h2 class="page-title">Opt-out of Kifi Emails</h2>
 
   <section>
-    <p>Uncheck any email types you do not want to recieve, or opt-out of all Kifi emails by clicking the “Opt-out of all emails” button.</p>
-    <form>
-      <label for="message">
-        <input type="checkbox" name="message" value="true"> Kifi Messages from friends
+    <h3>@email@if(msg.isDefined){ — @msg }</h3>
+    <p>Uncheck any email types you do not want to recieve, or opt-out of all Kifi emails.</p>
+    <p>You current may recieve emails about:</p>
+    <form id="optout" method="POST">
+
+      <label>
+        <input type="checkbox" name="message" value="true" @if(message){checked}> Kifi Messages from friends
       </label>
-      <label for="invite">
-        <input type="checkbox" name="invite" value="true"> Invitations to join Kifi from friends
+      <label>
+        <input type="checkbox" name="invite" value="true" @if(invite){checked}> Invitations to join Kifi from friends
       </label>
-      <span class="optout">Opt-out from selected emails</span>
-      <span class="optout">Opt-out of all emails</span>
+      <input type="hidden" name="all" value="if(all){true}else{false}" id="can-recieve-emails">
+
+      <span class="optout" id="update">Update email preferences</span>
+      <span class="optout" id="all">Opt-out of all emails</span>
     </form>
   </section>
 }
 
+@scripts = {
+  <script>
+    $(function() {
+      $form = $("#optout");
+      $("#update").click(function() {
+        $("#can-recieve-emails").val("true");
+        $form.submit();
+      });
+      $("#all").click(function() {
+        $("#can-recieve-emails").val("false");
+        $form.submit();
+      });
+    });
+  </script>
+}
 
-@views.html.auth.helper.page(title = "kifi.com • Opt-out of emails", content = content)
+
+@views.html.auth.helper.page(title = "kifi.com • Opt-out of emails", content = content, styles = styles, scripts = scripts)

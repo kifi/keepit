@@ -44,7 +44,9 @@ POST    /password/set               @com.keepit.controllers.core.AuthController.
 
 POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
-GET     /unsubscribe/:token         @com.keepit.controllers.website.EmailOptOutController.optOut(token: String)
+GET     /unsubscribe/*token         @com.keepit.controllers.website.EmailOptOutController.optOut(token: String)
+POST    /unsubscribe/*token         @com.keepit.controllers.website.EmailOptOutController.optOutAction(token: String)
+GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutController.getToken(email: String)
 
 ##########################################
 # Extension API
