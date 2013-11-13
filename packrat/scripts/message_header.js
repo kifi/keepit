@@ -25,7 +25,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
   */
 
 	api.onEnd.push(function () {
-		messageHeader.destroy('api:onEnd');
+		messageHeader.destroy();
 		messageHeader = win.messageHeader = null;
 	});
 
@@ -68,8 +68,6 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			this.$el = $(this.render()).appendTo($parent);
 			this.initPlugins();
 			this.initEvents();
-
-			this.logEvent('init');
 		},
 
 		/**
@@ -159,10 +157,8 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		/**
 		 * Destroys a message header.
 		 * It removes all event listeners and caches to elements.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		destroy: function (trigger) {
+		destroy: function () {
 			if (this.initialized) {
 				this.initialized = false;
 
@@ -192,10 +188,6 @@ var messageHeader = this.messageHeader = (function ($, win) {
 				this.status = null;
 				this.$pane = null;
 				this.participants = null;
-
-				this.logEvent('destroy', {
-					trigger: trigger
-				});
 			}
 		},
 
@@ -281,34 +273,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			this.plugins.forEach(function (plugin) {
 				return plugin.destroy();
 			}, this);
-		},
-
-		/**
-		 * Logs a user event to the server.
-		 *
-		 * @param {string} name - A event type name
-		 * @param {Object} obj - A event data
-		 * @param {boolean} withUrls - Whether to include url
-		 */
-		logEvent: function (name, obj, withUrls) {
-			if (obj) {
-				if (!withUrls) {
-					obj = win.withUrls(obj);
-				}
-			}
-			log(name, obj)();
-			win.logEvent('slider', 'message_header.' + name, obj || null);
-		},
-
-		/**
-		 * Logs error.
-		 *
-		 * @param {Error} err - An error object
-		 */
-		logError: function (err) {
-			log('Error', err, err.message, err.stack)();
 		}
-
 	};
 
 })(jQuery, this);
