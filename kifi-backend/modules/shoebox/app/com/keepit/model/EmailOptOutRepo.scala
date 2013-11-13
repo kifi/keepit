@@ -16,7 +16,7 @@ import com.keepit.common.mail.ElectronicMailCategory
 
 @ImplementedBy(classOf[EmailOptOutRepoImpl])
 trait EmailOptOutRepo extends Repo[EmailOptOut] {
-  def getByEmailAddress(address: EmailAddressHolder)(implicit session: RSession): Seq[EmailOptOut]
+  def getByEmailAddress(address: EmailAddressHolder, excludeState: Option[State[EmailOptOut]] = Some(EmailOptOutStates.INACTIVE))(implicit session: RSession): Seq[EmailOptOut]
   def hasOptedOut(address: EmailAddressHolder, category: ElectronicMailCategory = PostOffice.Categories.ALL)(implicit session: RSession): Boolean
   def optOut(address: EmailAddressHolder, category: ElectronicMailCategory)(implicit session: RWSession): Unit
   def optIn(address: EmailAddressHolder, category: ElectronicMailCategory)(implicit session: RWSession): Unit
@@ -34,8 +34,8 @@ class EmailOptOutRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock
     def * = id.? ~ createdAt ~ updatedAt ~ address ~ category ~ state <> (EmailOptOut, EmailOptOut.unapply _)
   }
 
-  def getByEmailAddress(address: EmailAddressHolder)(implicit session: RSession): Seq[EmailOptOut] = {
-    (for(f <- table if f.address === address) yield f).list
+  def getByEmailAddress(address: EmailAddressHolder, excludeState: Option[State[EmailOptOut]] = Some(EmailOptOutStates.INACTIVE))(implicit session: RSession): Seq[EmailOptOut] = {
+    (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).list
   }
 
   def hasOptedOut(address: EmailAddressHolder, category: ElectronicMailCategory = PostOffice.Categories.ALL)(implicit session: RSession): Boolean = {

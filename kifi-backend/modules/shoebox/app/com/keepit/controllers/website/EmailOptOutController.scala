@@ -27,10 +27,8 @@ class EmailOptOutController @Inject() (
     email match {
       case Success(addr) =>
         val opts = db.readOnly { implicit session =>
-          emailOptOutRepo.getByEmailAddress(addr).collect { case c if c.state == EmailOptOutStates.ACTIVE => c.category }
+          emailOptOutRepo.getByEmailAddress(addr).collect { case c => c.category }
         }
-
-        println(opts.toString)
 
         Ok(views.html.website.optOutEmails(addr.address, opts, flash.get("msg")))
       case Failure(ex) => BadRequest(ex.toString)
@@ -50,19 +48,20 @@ class EmailOptOutController @Inject() (
 
     email.map { emailAddress =>
       optOutForm.bindFromRequest.fold(
-      formWithErrors => BadRequest,
-      { case (all, invite, message) =>
-        // Checkbox unchecked == unsubscribe
-        db.readWrite { implicit session =>
-          all.collect { case s if s == "true" => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.ALL) }
-            .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.ALL) }
-          invite.map { _ => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.User.INVITATION) }
-            .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.User.INVITATION) }
-          message.map { _ => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.User.MESSAGE) }
-            .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.User.MESSAGE) }
+        formWithErrors => BadRequest,
+        { case (all, invite, message) =>
+          // Checkbox unchecked == unsubscribe
+          db.readWrite { implicit session =>
+            all.collect { case s if s == "true" => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.ALL) }
+              .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.ALL) }
+            invite.map { _ => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.User.INVITATION) }
+              .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.User.INVITATION) }
+            message.map { _ => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.User.MESSAGE) }
+              .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.User.MESSAGE) }
+          }
+          Redirect(routes.EmailOptOutController.optOut(optOutToken)).flashing("msg" -> "Your preferences have been updated.")
         }
-        Redirect(routes.EmailOptOutController.optOut(optOutToken)).flashing("msg" -> "Your preferences have been updated.")
-      })
+      )
     }.getOrElse(BadRequest)
   }
 

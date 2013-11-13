@@ -42,7 +42,7 @@ span.optout {
   border: 0px none rgb(255, 255, 255);
   color: rgb(255, 255, 255);
   display: inline-block;
-  font: normal normal 300 16px/22px 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font: normal normal 300 16px/22px;
   height: 40px;
   line-height: 40px;
   margin-top: 20px;
