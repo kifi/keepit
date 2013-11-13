@@ -15,7 +15,7 @@ import com.keepit.test._
 import org.specs2.mutable._
 import play.api.test.Helpers._
 import scala.math._
-import com.keepit.search.query.parser.FakeSpellCorrector
+import com.keepit.search.spellcheck.FakeSpellCorrector
 import com.keepit.common.service.FortyTwoServices
 import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.search.graph.{URIGraphImpl, URIGraphIndexer}

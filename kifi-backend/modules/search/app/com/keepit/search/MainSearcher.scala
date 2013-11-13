@@ -16,10 +16,10 @@ import com.keepit.search.index.ArticleRecord
 import com.keepit.search.index.ArticleVisibility
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.PersonalizedSearcher
+import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.TextQuery
-import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.search.query.LuceneExplanationExtractor
 import com.keepit.search.query.LuceneScoreNames
 import com.keepit.shoebox.ShoeboxServiceClient

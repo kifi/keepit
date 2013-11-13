@@ -41,10 +41,6 @@ GET     /internal/search/search/explainResult  @com.keepit.controllers.search.Se
 GET     /internal/search/search/causeError     @com.keepit.controllers.search.SearchController.causeError()
 GET     /internal/search/search/causeHandbrakeError  @com.keepit.controllers.search.SearchController.causeHandbrakeError()
 
-POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.SpellCorrectorController.buildDictionary()
-GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()
-GET     /internal/search/spell/make-correction @com.keepit.controllers.search.SpellCorrectorController.correctSpelling(query: String)
-
 GET     /internal/search/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
 POST    /internal/search/searchConfig/:id/set    @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
 GET     /internal/search/searchConfig/:id/reset  @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
