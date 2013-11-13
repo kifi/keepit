@@ -32,7 +32,7 @@ panes.thread = function () {
         renderThread($container, th.id, th.messages, session);
         api.port.emit('participants', th.id, function (participants) {
           var $who = $container.closest('.kifi-pane-box').find('.kifi-thread-who');
-          window.messageHeader.construct($who, th.id, participants);
+          window.messageHeader.init($who, th.id, participants);
           $container.css('margin-top', $who.outerHeight());
         });
         api.port.on(handlers);
@@ -78,6 +78,7 @@ panes.thread = function () {
 
     $container.closest('.kifi-pane-box').on('kifi:remove', function () {
       if ($holder.length && this.contains($holder[0])) {
+        window.messageHeader.destroy();
         $holder = $();
         $(window).off('resize.thread');
         api.port.off(handlers);
