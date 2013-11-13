@@ -50,7 +50,7 @@ class InviteCommander @Inject() (
       }
 
       val existingInvites = userSocialAccounts.map { su =>
-        invitationRepo.getByRecipient(su.id.get).map { inv =>
+        invitationRepo.getByRecipientSocialUserId(su.id.get).map { inv =>
           su -> inv
         }
       }.flatten.toSet.++(cookieInvite)
@@ -76,10 +76,15 @@ class InviteCommander @Inject() (
     }
     db.readWrite { implicit s =>
       for ((su, invite) <- anyPendingInvites) {
-        connectInvitedUsers(userId, invite)
-        if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
-          invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-          notifyAdminsAboutNewSignupRequest(userId, su.fullName)
+        // Swallow exceptions currently because we have a constraint that we user can only be invited once
+        // However, this can get violated if the user signs up with a different social network than we were expecting
+        // and we change the recipientSocialUserId. When the constraint is removed, this Try{} can be too.
+        Try {
+          connectInvitedUsers(userId, invite)
+          if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
+            invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
+            notifyAdminsAboutNewSignupRequest(userId, su.fullName)
+          }
         }
       }
       socialConnectionRepo
@@ -118,7 +123,7 @@ class InviteCommander @Inject() (
       subject = s"""${name} wants to be let in!""",
       htmlBody = s"""<a href="https://admin.kifi.com/admin/user/${userId}">${name}</a> wants to be let in!\n<br/>
                            Go to the <a href="https://admin.kifi.com/admin/invites?show=accepted">admin invitation page</a> to accept or reject this user.""",
-      category = PostOffice.Categories.ADMIN))
+      category = PostOffice.Categories.System.ADMIN))
 
   }
 }

@@ -110,8 +110,8 @@ class ShoeboxController @Inject() (
     val userId = Id[User]((request.body \ "user").as[Long])
     val email = (request.body \ "email").as[ElectronicMail]
 
-    val addrs = db.readOnly{ implicit session => emailAddressRepo.getByUser(userId) }
-    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
+    val addrs = db.readOnly{ implicit session => emailAddressRepo.getAllByUser(userId) }
+    for (addr <- addrs.find(_.verifiedAt.isDefined).orElse(addrs.headOption)) {
       db.readWrite{ implicit session => postOffice.sendMail(email.copy(to=List(addr))) }
     }
     Ok("true")
@@ -341,7 +341,7 @@ class ShoeboxController @Inject() (
   def getEmailAddressesForUsers() = Action(parse.json) { request =>
     val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val emails = db.readOnly{ implicit s =>
-      userIds.map{userId => userId.id.toString -> emailAddressRepo.getByUser(userId).map{_.address}}.toMap
+      userIds.map{userId => userId.id.toString -> emailAddressRepo.getAllByUser(userId).map{_.address}}.toMap
     }
     Ok(Json.toJson(emails))
   }

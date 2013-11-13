@@ -11,14 +11,14 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
         to = List(EmailAddresses.ENG),
         subject = new StringBuilder("foo") * 500,
         htmlBody = "body",
-        category = PostOffice.Categories.HEALTHCHECK) must throwA[IllegalArgumentException]
+        category = PostOffice.Categories.System.HEALTHCHECK) must throwA[IllegalArgumentException]
     }
     "user filters" in {
       withDb(FakeMailModule()) { implicit injector =>
         val mails = db.readWrite { implicit s =>
-          val mails = ElectronicMail(from = EmailAddresses.TEAM, to = List(EmailAddresses.ENG), subject = "foo 1", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK) ::
-                      ElectronicMail(from = EmailAddresses.TEAM, to = List(EmailAddresses.TEAM), cc = EmailAddresses.EISHAY :: EmailAddresses.JARED :: Nil, subject = "foo 2", htmlBody = "body 2", textBody = Some("other"), category = PostOffice.Categories.HEALTHCHECK) ::
-                      ElectronicMail(from = EmailAddresses.TEAM, to = List(EmailAddresses.EISHAY), subject = "foo 3", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK) ::
+          val mails = ElectronicMail(from = EmailAddresses.TEAM, to = List(EmailAddresses.ENG), subject = "foo 1", htmlBody = "body", category = PostOffice.Categories.System.HEALTHCHECK) ::
+                      ElectronicMail(from = EmailAddresses.TEAM, to = List(EmailAddresses.TEAM), cc = EmailAddresses.EISHAY :: EmailAddresses.JARED :: Nil, subject = "foo 2", htmlBody = "body 2", textBody = Some("other"), category = PostOffice.Categories.System.HEALTHCHECK) ::
+                      ElectronicMail(from = EmailAddresses.TEAM, to = List(EmailAddresses.EISHAY), subject = "foo 3", htmlBody = "body", category = PostOffice.Categories.System.HEALTHCHECK) ::
                       Nil
           mails map {mail => electronicMailRepo.save(mail) }
         }

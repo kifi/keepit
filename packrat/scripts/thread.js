@@ -29,15 +29,13 @@ panes.thread = function () {
       var threadId = locator.split('/')[2];
       log('[panes.thread.render]', threadId)();
       api.port.emit('thread', {id: threadId, respond: true}, function (th) {
-        api.port.emit('session', function (session) {
-          renderThread($container, th.id, th.messages, session);
-          api.port.emit('participants', th.id, function (participants) {
-            var $who = $container.closest('.kifi-pane-box').find('.kifi-thread-who');
-            window.messageHeader.construct($who, participants);
-            $container.css('margin-top', $who.outerHeight());
-          });
-          api.port.on(handlers);
+        renderThread($container, th.id, th.messages, session);
+        api.port.emit('participants', th.id, function (participants) {
+          var $who = $container.closest('.kifi-pane-box').find('.kifi-thread-who');
+          window.messageHeader.construct($who, th.id, participants);
+          $container.css('margin-top', $who.outerHeight());
         });
+        api.port.on(handlers);
       });
       var $redirected = $container.find('.kifi-thread-redirected').click(function () {
         $redirected.fadeOut(800, $.fn.remove.bind($redirected));

@@ -222,6 +222,29 @@ class ABookController @Inject() (
     JsArray(contacts)
   }
 
+  def getEContactByEmail(userId:Id[User], email:String) = Action { request =>
+    // todo: parse email
+    val resF:Future[Option[JsValue]] = Future {
+      getEContactByEmailDirect(userId, email)
+    }
+    Async {
+      resF.map{ jsOpt =>
+        jsOpt match {
+          case Some(js) => Ok(js)
+          case _ => Ok(JsNull)
+        }
+      }
+    }
+  }
+
+  def getEContactByEmailDirect(userId:Id[User], email:String):Option[JsValue] = {
+    val econtactOpt = db.readOnly { implicit s =>
+      econtactRepo.getByUserIdAndEmail(userId, email)
+    }
+    log.info(s"[getEContactDirect($userId,$email)] res=$econtactOpt")
+    econtactOpt map { Json.toJson(_) }
+  }
+
   def getEContacts(userId:Id[User], maxRows:Int) = Action { request =>
     val resF:Future[JsValue] = Future {
       getEContactsDirect(userId, maxRows)

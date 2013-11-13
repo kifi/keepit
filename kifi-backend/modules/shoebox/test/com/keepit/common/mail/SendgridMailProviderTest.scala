@@ -17,7 +17,7 @@ class SendgridMailProviderTest extends Specification with ShoeboxTestInjector {
               to = List(EmailAddresses.ENG),
               subject = "Email from test case",
               htmlBody = views.html.main("KiFi")(Html("<b>thanks</b>")).body,
-              category = PostOffice.Categories.HEALTHCHECK))
+              category = PostOffice.Categories.System.HEALTHCHECK))
         }
         mail.htmlBody.trim === """<!DOCTYPE html>
 

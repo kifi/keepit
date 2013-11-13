@@ -21,13 +21,19 @@ trait RemotePostOffice {
 
 object PostOffice {
   object Categories {
-    val HEALTHCHECK = ElectronicMailCategory("HEALTHCHECK")
-    val ASANA_HEALTHCHECK = ElectronicMailCategory("ASANA_HEALTHCHECK")
-    val COMMENT = ElectronicMailCategory("COMMENT")
-    val MESSAGE = ElectronicMailCategory("MESSAGE")
-    val ADMIN = ElectronicMailCategory("ADMIN")
-    val EMAIL_KEEP = ElectronicMailCategory("EMAIL_KEEP")
-    val INVITATION = ElectronicMailCategory("INVITATION")
+    val ALL = ElectronicMailCategory("ALL")
+    object User {
+      val MESSAGE = ElectronicMailCategory("MESSAGE")
+      val EMAIL_KEEP = ElectronicMailCategory("EMAIL_KEEP")
+      val INVITATION = ElectronicMailCategory("INVITATION")
+    }
+
+    object System {
+      val HEALTHCHECK = ElectronicMailCategory("HEALTHCHECK")
+      val ASANA_HEALTHCHECK = ElectronicMailCategory("ASANA_HEALTHCHECK")
+      val ADMIN = ElectronicMailCategory("ADMIN")
+      val PLAY = ElectronicMailCategory("PLAY")
+    }
   }
 
   val BODY_MAX_SIZE = 1048576
