@@ -32,6 +32,7 @@ var ruleSet = {};
 var urlPatterns = [];
 var tags;  // [] means user has none
 var tagsById;
+var connId; // token, from the server, representing this connection
 
 function clearDataCache() {
   log("[clearDataCache]")();
@@ -1647,6 +1648,7 @@ function getPrefs() {
   ajax("GET", "/ext/prefs", function(o) {
     log("[getPrefs]", o)();
     session.prefs = o[1];
+    connId = o[2];
   });
 }
 
@@ -1690,7 +1692,7 @@ function startSession(callback, retryMs) {
 
     session = data;
     session.prefs = {}; // to come via socket
-    socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws?version=" + api.version, socketHandlers, function onConnect() {
+    socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws?version=" + api.version + "&connId=" + (connId || ""), socketHandlers, function onConnect() {
       for (var uri in pageThreadData) {
         pageThreadData[uri].stale = true;
       }
