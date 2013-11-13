@@ -149,9 +149,18 @@ class ExtSearchController @Inject() (
     Ok(Json.toJson(res)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
+  //external (from the extension/website)
   def warmUp() = AuthenticatedJsonAction { request =>
     SafeFuture {
       mainSearcherFactory.warmUp(request.userId)
+    }
+    Ok
+  }
+
+  //internal (from eliza/shoebox)
+  def warmUpUser(userId: Id[User]) = Action { request =>
+    SafeFuture {
+      mainSearcherFactory.warmUp(userId)
     }
     Ok
   }

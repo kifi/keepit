@@ -27,7 +27,7 @@ trait SearchServiceClient extends ServiceClient {
 
   def logResultClicked(resultClicked: ResultClicked): Unit
   def logSearchEnded(searchEnded: SearchEnded): Unit
-  def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit
+    def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit
 
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
