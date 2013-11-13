@@ -73,6 +73,15 @@ class UserController @Inject() (
     Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
 
+  def abookInfo() = AuthenticatedJsonAction { request =>
+    val abookF = abookServiceClient.getABookInfos(request.userId)
+    Async {
+      abookF.map { abooks =>
+        Ok(Json.toJson(abooks))
+      }
+    }
+  }
+
   def friendNetworkInfo(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
     Ok(toJson(networkInfoLoader.load(request.userId, id)))
   }
@@ -331,7 +340,7 @@ class UserController @Inject() (
 
     def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) =
       sci -> sci.userId.map(_ => "joined").getOrElse {
-        invitationRepo.getByRecipient(sci.id) collect {
+        invitationRepo.getByRecipientSocialUserId(sci.id) collect {
           case inv if inv.state != InvitationStates.INACTIVE => "invited"
         } getOrElse ""
       }
