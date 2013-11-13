@@ -80,10 +80,8 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 		/**
 		 * Initializes a Message Participants.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		init: function (trigger) {
+		init: function () {
 			this.initialized = true;
 
 			/*
@@ -94,10 +92,6 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			this.initEvents();
 			this.initScroll();
 			this.initInput();
-
-			this.logEvent('init', {
-				trigger: trigger
-			});
 		},
 
 		getThreadId: function () {
@@ -639,10 +633,8 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		/**
 		 * Destroys a tag box.
 		 * It removes all event listeners and caches to elements.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		destroy: function (trigger) {
+		destroy: function () {
 			if (this.initialized) {
 				this.initialized = false;
 
@@ -664,30 +656,8 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 						this[name] = null;
 					}
 				}, this);
-
-				this.logEvent('destroy', {
-					trigger: trigger
-				});
 			}
-		},
-
-		/**
-		 * Logs a user event to the server.
-		 *
-		 * @param {string} name - A event type name
-		 * @param {Object} obj - A event data
-		 * @param {boolean} withUrls - Whether to include url
-		 */
-		logEvent: function (name, obj, withUrls) {
-			if (obj) {
-				if (!withUrls) {
-					obj = win.withUrls(obj);
-				}
-			}
-			log(name, obj)();
-			win.logEvent('slider', 'message_participants.' + name, obj || null);
 		}
-
 	};
 
 })(jQuery, this);

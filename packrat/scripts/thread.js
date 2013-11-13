@@ -32,13 +32,9 @@ panes.thread = function () {
         api.port.emit('session', function (session) {
           renderThread($container, th.id, th.messages, session);
           api.port.emit('participants', th.id, function (participants) {
-            var messageHeader = window.messageHeader,
-              $pane = window.slider2.getPane();
-            messageHeader.$pane = $pane;
-            messageHeader.participants = participants;
-            messageHeader.construct();
-            var $box = $pane.find('.kifi-pane-box');
-            $box.find('.kifi-pane-tall').css('margin-top', $box.find('.kifi-thread-who').outerHeight());
+            var $who = $container.closest('.kifi-pane-box').find('.kifi-thread-who');
+            window.messageHeader.construct($who, participants);
+            $container.css('margin-top', $who.outerHeight());
           });
           api.port.on(handlers);
         });

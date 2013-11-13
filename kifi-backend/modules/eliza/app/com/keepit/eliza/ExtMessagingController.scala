@@ -11,9 +11,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
+import com.keepit.search.SearchServiceClient
 
 import scala.util.{Success, Failure}
-
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -37,6 +37,7 @@ class ExtMessagingController @Inject() (
     threadRepo: MessageThreadRepo,
     db: Database,
     protected val shoebox: ShoeboxServiceClient,
+    protected val search: SearchServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
     protected val clock: Clock,
