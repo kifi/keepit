@@ -207,7 +207,7 @@ a.undo-link[href]:hover {text-decoration: underline}
 .profile>.networks::before { position: absolute; display: block; content: "."; top: 24px; left: 54px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 2; }
 .profile>.networks::after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
 .profile>.networks>ul>li { display: block; float: left; margin: 0 5px; width: 60px; height: auto; font-size: 0; }
-.profile-nw { position: relative; display: block; width: 100%; height: 60px; background-image: url(../img/networks.png); background-size: 240px 60px; }
+.profile-nw { position: relative; display: block; width: 100%; height: 60px; background-image: url(../img/networks2.png); background-size: auto 60px; }
 .profile-nw.nw-facebook { background-color: #637ab8; }
 .profile-nw.nw-linkedin { background-color: #4f83c3; background-position: -60px 0; }
 .profile-nw.nw-twitter { background-color: #dbdee3; /*0da2d9*/ background-position: -120px 0; }
@@ -294,11 +294,11 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-filters>a {display: inline-block; width: 36px; height: 36px; margin-right: 5px; vertical-align: top; -webkit-transition: height .1s; transition: height .1s}
 .invite-filters>a:not([data-nw]) {background-color: #b7ce84; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
 
-.invite-filters>a[data-nw] { background-image: url(../img/networks.png); background-repeat: no-repeat; background-size: 400%; }
+.invite-filters>a[data-nw] { background-image: url(../img/networks2.png); background-repeat: no-repeat; background-size: auto 36px }
 .invite-filters>a[data-nw=facebook] {background-color: #637ab8}
 .invite-filters>a[data-nw=linkedin] {background-color: #4f83c3; background-position: -36px top}
 .invite-filters>a[data-nw=twitter] {background-color: #55acee; background-position: -72px top}
-.invite-filters>a[data-nw=email] {background-color: #e36767; background-image: url(../img/networks-19.png); background-position: -113px top}
+.invite-filters>a[data-nw=email] {background-color: #e36767; background-position: -144px top}
 
 .invite-filters>a:not([data-href]) {background-color: #edeff1}
 
@@ -328,24 +328,26 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .found-user {display: block; background-color: #eff2f7; padding: 10px; border:1px solid transparent; margin-bottom: 12px; -moz-box-sizing: border-box; box-sizing: border-box; position: relative}
 .invite-friend::after,
 .found-user::after {content: " "; display: block; clear: both}
-.invite-friend[data-status=invited] { background: #629eed; }
-.invite-friend[data-status=joined] { background: #dfedc2; }
-.invite-friend[data-status=invited] div { color: white; }
+.invite-friend.invited { background: #629eed; }
+.invite-friend.joined { background: #dfedc2; }
+.invite-friend.invited div { color: white; }
 .found-user { border-color: transparent; }
 .found-user.friend { background-color: white; border-color: #dfedc2; }
 .invite-pic,
 .user-pic {float: left; width: 64px; height: 64px; border-radius: 2px; margin-right: 12px}
-.invite-friend::before { border: 2px solid #eff2f7; display: block; content: " "; position: absolute; top: 55px; left: 55px; width: 20px; height: 20px; background-image: url(../img/networks.png); background-repeat: no-repeat; background-size: 400%;}
+.invite-friend::before { border: 2px solid #eff2f7; display: block; content: " "; position: absolute; top: 55px; left: 55px; width: 20px; height: 20px; background-image: url(../img/networks2.png); background-repeat: no-repeat; background-size: auto 20px}
 .found-user a.friend-nw-kifi {position: absolute; top: 54px; left: 54px; border: 3px solid white}
-.invite-friend[data-status=invited]::before { border-color: #629eed; }
-.invite-friend[data-status=joined]::before { border-color: #dfedc2; }
+.invite-friend.invited::before { border-color: #629eed; }
+.invite-friend.joined::before { border-color: #dfedc2; }
+.invite-friend.invited .invite-button,
+.invite-friend.joined .invite-button {display: none}
 .invite-friend[data-value^=facebook]::before { background-color: #637ab8; background-position: 0 top;  }
 .invite-friend[data-value^=linkedin]::before { background-color: #4f83c3; background-position: -20px top; }
 .invite-friend[data-value^=twitter]::before { background-color: #55acee; background-position: -40px top; }
-.invite-friend[data-value^=email]::before { background-color: #e36767; background-position: -60px top; }
+.invite-friend[data-value^=email]::before { background-color: #e36767; background-position: -79px top; }
 .invite-status {font-size: 13px; font-weight: 300; color: #96a9bd; letter-spacing: .5px; margin-top: 2px; margin-right: 42px}
 .user-connected {display:none; color: #acc377; font-size: 12px; font-weight: 300; letter-spacing: 1px; margin-top: 2px}
-.user-requested {display:none; color: #acc377; font-size: 12px; font-weight: 300; letter-spacing: 1px; margin-top: 2px}
+.user-requested {display:none; color: #999999; font-size: 12px; font-weight: 300; letter-spacing: 1px; margin-top: 2px}
 .found-user.friend .user-connected {display: block}
 .found-user.requested .user-requested {display: block}
 .connect-button {position: absolute; top: 30px; right: 24px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
@@ -371,7 +373,7 @@ a.invite-button {position: absolute; bottom: 10px; right: 10px; font-size: 13px;
 }
 .invite-message-dialog>.dialog-content { height: 280px; margin-top: -140px; width: 440px; margin-left: -220px; }
 .invite-message-dialog>.dialog-content>p { margin: 12px 15px; }
-.invite-message-header { font-size: 16px; padding: 14px 16px 10px; border-bottom: 1px solid #e7eced; color: #3a495b; overflow: hidden; text-overflow: ellipsis }
+.invite-message-header { font-size: 16px; padding: 14px 16px 10px; border-bottom: 1px solid #e7eced; color: #3a495b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 a.invite-cancel { position: absolute; color: #b1b8c1; font-weight: bold; padding: 8px 12px; right: 0; top: 0; font-size: 20px; text-decoration: none; }
 input.invite-subject { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; }
 textarea.invite-message { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; min-height: 80px;}
@@ -722,7 +724,7 @@ span.long-text, a.long-text {display: inline-block}
 .fr-card-interests {color: #aaa}
 
 .friend-networks {font-size: 0; line-height: 0}
-a.friend-nw {width: 18px; height: 18px; display: inline-block; background: #ddd url(../img/networks-18.png) 0; background-size: auto 18px; border-radius: 2px; margin-right: 2px}
+a.friend-nw {width: 18px; height: 18px; display: inline-block; background: #ddd url(../img/networks-19.png) 0; background-size: auto 18px; border-radius: 2px; margin-right: 2px}
 a.friend-nw:not([href]):not(.friend-nw-kifi) {display: none}
 a.friend-nw-kifi {background-color: #74a2d7; border-radius: 50%}
 a.friend-nw-facebook {background-position: -18px}
@@ -758,11 +760,11 @@ a.friend-nw-google[href] {background-color: #e9644b}
   [data-kept^=p]>*>.page-keep[href]::before,
   .page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
   .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
-  .invite-filters>a[data-nw] {background-image: url(../img/networks.2x.png)}
-  .profile-nw {background-image: url(../img/networks.2x.png)}
+  .invite-filters>a[data-nw] {background-image: url(../img/networks2.2x.png)}
+  .profile-nw {background-image: url(../img/networks2.2x.png)}
   .friend-actions>*>a::before,
   .connect-button::before {background-image: url(../img/friend-actions.2x.png)}
-  a.friend-nw {background-image: url(../img/networks-18.2x.png)}
+  a.friend-nw {background-image: url(../img/networks-19.2x.png)}
   .my-pic::before {background-image: url(../img/pencil.2x.png)}
   .blog>header {background-image: url(../img/news.2x.png)}
 }

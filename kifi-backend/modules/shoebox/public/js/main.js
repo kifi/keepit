@@ -302,6 +302,7 @@ $(function() {
 
 	var me;
 	var myNetworks;
+	var abooks;
 	var myPrefs;
 	var myKeepsCount;
 	var collections;
@@ -573,8 +574,6 @@ $(function() {
 	}
 	var $tab = $addFriendsTabs.filter('[data-href="' + pPath + '"]');
     console.log('[showAddFriends]', path, pPath, $tab);
-    console.log('[showAddFriends]', path, pPath, $tab);
-    console.log('[showAddFriends]', path, pPath, $tab);
     if ($tab.length) {
       $tab.removeAttr('href');
       $addFriendsTabs.not($tab).filter(':not([href])').each(function() {
@@ -631,9 +630,29 @@ $(function() {
 	  if (!network) {
 		  network = '';
 	  }
+	  console.log('[filterFriendsByNetwork]', network);
 	  chooseNetworkFilterDOM(network);
+	  var isEmail = network === 'email',
+		  isSocial = /^facebook|linkedin$/.test(network);
+	if (isEmail) {
+	  promise.abooks.always(function(data) {
+		  var shouldConnect = !(data && data.length);
+		  if (shouldConnect) {
+			  var url = wwwDomain + '/importContacts';
+			  $('<form method="GET" action="' + url + '">')
+			  .appendTo('body')
+			  .submit()
+			  .remove();
+		  }
+		  else {
+			  filterFriends();
+		  }
+	  });
+	}
+	else if (isSocial) {
 	  promise.myNetworks.done(function(data) {
-		  var shouldConnect = /^facebook|linkedin$/.test(network) && data.every(function(nObj) {
+		  var shouldConnect = data.every(function(nObj) {
+			  console.log('[myNetworks]', nObj.network, network);
 			  return nObj.network !== network;
 		  });
 		  if (shouldConnect) {
@@ -647,6 +666,10 @@ $(function() {
 			  filterFriends();
 		  }
 	  });
+	}
+	else {
+		filterFriends();
+	}
   }
 
 	// All kifi Friends
@@ -867,9 +890,12 @@ $(function() {
 			$('.num-invites').text(invitesLeft).parent().show();
 		});
 	}
-	$('.invite-filters>a[href]').click(function (e) {
-		e.preventDefault();
-		filterFriendsByNetwork($(this).data('nw'));
+	$('.invite-filters a').click(function (e) {
+		var $this = $(this);
+		if ($this.attr('href')) {
+			e.preventDefault();
+			filterFriendsByNetwork($(this).data('nw'));
+		}
 	});
 	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
 	.on('click', '.more-invites', function(e) {
@@ -2247,6 +2273,9 @@ $(function() {
 		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function(data) {
 			myNetworks = data;
+		}).promise(),
+		abooks: $.getJSON(xhrBase + '/user/abooks', function(data) {
+			abooks = data;
 		}).promise(),
 		myPrefs: $.getJSON(xhrBase + '/user/prefs', function(data) {
 			myPrefs = data;

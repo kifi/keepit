@@ -330,13 +330,11 @@
           <div class="invite-friends" data-href="friends/invite">
             <div class="antiscroll-inner">
               <ul>
-                <li class="invite-friend" data-template data-value="{{value}}" data-status="{{status}}">
+				  <li class="invite-friend {{status}}" data-template data-value="{{value}}" data-status="{{status}}">
                   <img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image %}assets/img/ghost-linkedin.100.png{% endif %}">
 				  <div class="invite-name">{{label}}{% if email %} <{{email}}>{% endif %}</div>
 				  <div class="invite-status">{{description}}</div>
-                  {% if !status %}
-                    <a class="invite-button" href="javascript:">Invite</a>
-                  {% endif %}
+				  <a class="invite-button" href="javascript:">Invite</a>
                 </li>
               </ul>
               <img class="invite-friends-loading" src="assets/img/wait.gif">
