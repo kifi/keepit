@@ -86,7 +86,7 @@ class HomeController @Inject() (
     inviteCommander.markPendingInvitesAsAccepted(user.id.get, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
 
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
-      val email = emailRepo.getAllByUser(user.id.get).sortBy(a => a.verifiedAt.getOrElse(a.createdAt.minusYears(10)).getMillis).lastOption.map(_.address)
+      val email = emailRepo.getAllByUser(user.id.get).sortBy(a => a.id.get.id).lastOption.map(_.address)
       val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
         val user = userRepo.get(u)
         if(user.state == UserStates.ACTIVE) Some(user.externalId)
