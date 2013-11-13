@@ -42,13 +42,13 @@ case class ProdMongoModule() extends MongoModule {
   }
 
   @Provides @Singleton
-  def userEventDescriptorRepo(airbrake: AirbrakeNotifier): UserEventDescriptorRepo = {
+  def userEventDescriptorRepo(cache: UserEventDescriptorNameCache, airbrake: AirbrakeNotifier): UserEventDescriptorRepo = {
     val (nodeA, nodeB, auth) = getHeimdalCredentials()
     val driver = new MongoDriver
     val connection = driver.connection(List(nodeA), List(auth), 2, Some("UserEventDescriptorMongoActorSystem"))
     val db = connection("heimdal")
     val collection = db("user_event_descriptors")
-    new ProdUserEventDescriptorRepo(collection, airbrake)
+    new ProdUserEventDescriptorRepo(collection, cache, airbrake)
   }
 
   @Singleton
@@ -64,13 +64,13 @@ case class ProdMongoModule() extends MongoModule {
 
 
   @Provides @Singleton
-  def systemEventDescriptorRepo(airbrake: AirbrakeNotifier): SystemEventDescriptorRepo = {
+  def systemEventDescriptorRepo(cache: SystemEventDescriptorNameCache, airbrake: AirbrakeNotifier): SystemEventDescriptorRepo = {
     val (nodeA, nodeB, auth) = getHeimdalCredentials()
     val driver = new MongoDriver
     val connection = driver.connection(List(nodeA), List(auth), 2, Some("SystemEventDescriptorMongoActorSystem"))
     val db = connection("heimdal")
     val collection = db("system_event_descriptors")
-    new ProdSystemEventDescriptorRepo(collection, airbrake)
+    new ProdSystemEventDescriptorRepo(collection, cache, airbrake)
   }
 
   @Singleton

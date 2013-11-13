@@ -1,7 +1,5 @@
 package com.keepit.heimdal
 
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
-
 import reactivemongo.core.commands.{LastError, PipelineOperator}
 import reactivemongo.bson.{BSONDocument, BSONArray, Macros}
 
@@ -11,7 +9,6 @@ import scala.concurrent.{Future, Promise}
 import com.keepit.common.db._
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import reactivemongo.api.collections.default.BSONCollection
 import CustomBSONHandlers._
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.json._
@@ -32,7 +29,7 @@ object MixpanelStates extends States[HeimdalEvent] {
 
 object EventDescriptor {
   implicit def bsonHandler[E <: HeimdalEvent] = Macros.handler[EventDescriptor[E]]
-  implicit def format[E <: HeimdalEvent] = (
+  implicit def format[E <: HeimdalEvent]: Format[EventDescriptor[E]] = (
     (__ \ 'name).format[EventType] and
     (__ \ 'description).format[String] and
     (__ \ 'mixpanel).format(State.format[HeimdalEvent]) and
@@ -49,6 +46,7 @@ trait EventDescriptorRepo[E <: HeimdalEvent] extends MongoRepo[EventDescriptor[E
   def fromBSON(doc: BSONDocument): EventDescriptor[E] = EventDescriptor.bsonHandler.read(doc)
 
   def upsert(obj: EventDescriptor[E]) : Future[LastError]
+  override def insert(obj: EventDescriptor[E], dropDups: Boolean = false) : Unit = { upsert(obj) } // Do not allow unchecked inserts of descriptors
 
   def getByName(name: EventType): Future[Option[EventDescriptor[E]]] = {
     collection.find(BSONDocument("name" -> name)).one.map{
@@ -70,7 +68,6 @@ trait ProdEventDescriptorRepo[E <: HeimdalEvent] extends EventDescriptorRepo[E] 
 
 trait DevEventDescriptorRepo[E <: HeimdalEvent] extends EventDescriptorRepo[E] {
   def upsert(obj: EventDescriptor[E]) : Future[LastError] = Future.failed(new NotImplementedError)
-  override def insert(obj: EventDescriptor[E], dropDups: Boolean = false) : Unit = {}
   override def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
     Promise.successful(
       Stream(BSONDocument("command" -> BSONArray(command.map(_.makePipe))))
