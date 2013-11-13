@@ -83,32 +83,9 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 */
 		init: function () {
 			this.initialized = true;
-
-			/*
-			this.requestParticipants()
-				.then(this.setParticipants.bind(this));
-        */
-
 			this.initEvents();
 			this.initScroll();
 			this.initInput();
-		},
-
-		getThreadId: function () {
-			return this.parent.getThreadId();
-		},
-
-		/**
-		 * Request a list of all of participants.
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		requestParticipants: function () {
-			var id = this.getThreadId();
-			if (id) {
-				return kifiUtil.request('participants', id, 'Could not load participants.');
-			}
-			return null;
 		},
 
 		/**
@@ -498,7 +475,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 		sendAddParticipants: function (users) {
 			return kifiUtil.request('add_participants', {
-				threadId: this.getThreadId(),
+				threadId: this.parent.threadId,
 				userIds: util.pluck(users, 'id')
 			}, 'Could not add participants.');
 		},

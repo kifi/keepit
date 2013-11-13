@@ -130,16 +130,12 @@ var messageMuter = this.messageMuter = (function ($, win) {
 			this.parent.setStatus('muted', muted);
 		},
 
-		getThreadId: function () {
-			return this.parent.getThreadId();
-		},
-
 		requestIsMuted: function () {
-			return kifiUtil.request('is_muted', this.getThreadId(), 'Could get is_muted');
+			return kifiUtil.request('is_muted', this.parent.threadId, 'Could not get is_muted');
 		},
 
 		sendMuted: function (muted) {
-			var threadId = this.getThreadId();
+			var threadId = this.parent.threadId;
 			if (muted) {
 				return kifiUtil.request('mute_thread', threadId, 'Could not mute');
 			}

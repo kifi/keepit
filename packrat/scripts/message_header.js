@@ -42,6 +42,8 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		status: null,
 
+		threadId: null,
+
 		participants: null,
 
 		prevEscHandler: null,
@@ -51,8 +53,9 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		/**
 		 * Renders and initializes a message header box if not already.
 		 */
-		construct: function ($parent, participants) {
+		construct: function ($parent, threadId, participants) {
 			if (!this.initialized) {
+				this.threadId = threadId;
 				this.participants = participants;
 				this.constructPlugins();
 				this.init($parent);
@@ -124,10 +127,6 @@ var messageHeader = this.messageHeader = (function ($, win) {
 				this.$el.closest('.kifi-thread-who').removeClass('kifi-active');
 				win.slider2.unshadePane();
 			}
-		},
-
-		getThreadId: function () {
-			return win.slider2 && win.slider2.getThreadId() || null;
 		},
 
 		toggleOptions: function (e) {
