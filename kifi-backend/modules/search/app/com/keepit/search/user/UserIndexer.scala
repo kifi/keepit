@@ -121,7 +121,7 @@ class UserIndexer(
       doc.add(emailField)
 
       val expField = buildIteratorField[String](USER_EXPERIMENTS, experiments.map{_.value}.toIterator)(x => x)
-      doc.add((expField))
+      doc.add(expField)
 
       val basicUserField = buildBinaryDocValuesField(BASIC_USER_FIELD, BasicUser.toByteArray(basicUser))
       doc.add(basicUserField)
