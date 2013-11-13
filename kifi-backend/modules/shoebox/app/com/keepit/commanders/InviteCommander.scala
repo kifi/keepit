@@ -76,10 +76,15 @@ class InviteCommander @Inject() (
     }
     db.readWrite { implicit s =>
       for ((su, invite) <- anyPendingInvites) {
-        connectInvitedUsers(userId, invite)
-        if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
-          invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-          notifyAdminsAboutNewSignupRequest(userId, su.fullName)
+        // Swallow exceptions currently because we have a constraint that we user can only be invited once
+        // However, this can get violated if the user signs up with a different social network than we were expecting
+        // and we change the recipientSocialUserId. When the constraint is removed, this Try{} can be too.
+        Try {
+          connectInvitedUsers(userId, invite)
+          if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
+            invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
+            notifyAdminsAboutNewSignupRequest(userId, su.fullName)
+          }
         }
       }
       socialConnectionRepo
