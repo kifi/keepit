@@ -109,16 +109,16 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		},
 
 		shadePane: function () {
-			if (win.slider2) {
+			if (win.pane) {
 				this.$el.closest('.kifi-thread-who').addClass('kifi-active');
-				win.slider2.shadePane();
+				win.pane.shade();
 			}
 		},
 
 		unshadePane: function () {
-			if (win.slider2) {
+			if (win.pane) {
 				this.$el.closest('.kifi-thread-who').removeClass('kifi-active');
-				win.slider2.unshadePane();
+				win.pane.unshade();
 			}
 		},
 

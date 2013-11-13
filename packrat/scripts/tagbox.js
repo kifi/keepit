@@ -462,7 +462,9 @@ this.tagbox = (function ($, win) {
 			if (this.active) {
 				this.active = false;
 
-				win.slider2.unshadePane();
+				if (win.pane) {
+					win.pane.unshade();
+				}
 				$(win.tile).css('transform', '');
 
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
@@ -763,7 +765,9 @@ this.tagbox = (function ($, win) {
 		 */
 		setLoaded: function () {
 			this.removeClass('kifi-loading');
-			win.slider2.shadePane();
+			if (win.pane) {
+				win.pane.shade();
+			}
 		},
 
 		/**

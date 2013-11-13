@@ -7,6 +7,7 @@
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
+// @require scripts/html/keeper/slider2.js
 
 $.fn.layout = function () {
   'use strict';
@@ -14,25 +15,12 @@ $.fn.layout = function () {
     this.clientHeight;  // forces layout
   });
 };
-$.fn.scrollToBottom = function () {
-  'use strict';
-  return this.each(function () {
-    var cH = this.clientHeight, sH = this.scrollHeight;
-    if (cH < sH) {
-      var sT = this.scrollTop, d = sH - sT - cH;
-      if (d > 0) {
-        $(this).animate({scrollTop: sT + d}, 40 * Math.log(d));
-      }
-    }
-  });
-};
 
 var CO_KEY = /^Mac/.test(navigator.platform) ? '⌘' : 'Ctrl';
-var panes = panes || {};  // idempotent for Chrome
 
 var slider2 = slider2 || function () {  // idempotent for Chrome
   'use strict';
-  var $slider, $pane, paneHistory, lastShownAt;
+  var $slider, lastShownAt;
 
   // We detect and handle the Esc key during keydown capture phase to try to beat page.
   // Subsequently loaded code should attach/detach Esc key handlers using
@@ -58,45 +46,41 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
           return;
         }
       }
-      if (!e.defaultPrevented) {
-        if ($pane) {
-          hidePane();
-        } else if ($slider) {
-          hideSlider('esc');
-        } else {
-          return;
-        }
+      if ($slider) {
+        hideSlider('esc');
+        e.preventDefault();
+        e.stopPropagation();
       }
-      e.preventDefault();
-      e.stopPropagation();
     }
   }
 
   document.addEventListener('click', onClick, true);
   function onClick(e) {
     var target = e.target;
-    if ($slider && !($pane || $slider[0].contains(target) || isInsideTagbox(target))) {
+    if ($slider && !(paneShowing() || $slider[0].contains(target) || isInsideTagbox(target))) {
       hideSlider('clickout');
     }
   }
 
   api.onEnd.push(function () {
     log('[slider2:onEnd]')();
-    $pane && $pane.remove();
     $slider && $slider.remove();
     $(tile).remove();
     $('.kifi-root').remove();
-    $('html').removeClass('kifi-with-pane kifi-pane-parent');
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('click', onClick, true);
   });
 
-  function createSlider(callback, locator) {
+  function paneShowing() {
+    return window.pane && pane.showing();
+  }
+
+  function createSlider(locator) {
     var kept = tile && tile.dataset.kept;
     var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"m":0}');
     log('[createSlider] kept: %s counts: %o', kept || 'no', counts)();
 
-    render('html/keeper/slider2', {
+    $slider = $(render('html/keeper/slider2', {
       'bgDir': api.url('images/keeper'),
       'isKept': kept,
       'isPrivate': kept === 'private',
@@ -105,14 +89,14 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       'atNotices': '/notices' === locator,
       'atMessages': /^\/messages/.test(locator),
       'isTagged': tags.length
-    }, function (html) {
+    }));
+      // TODO: unindent below
       // attach event bindings
-      $slider = $(html);
       var data = $slider.data();
       $slider.mouseout(function (e) {
         if (data.dragTimer) {
           startDrag(data);
-        } else if (!$pane && !data.dragStarting && !data.$dragGlass) {
+        } else if (!paneShowing() && !data.dragStarting && !data.$dragGlass) {
           if (e.relatedTarget) {
             if (!this.contains(e.relatedTarget)) {
               log('[slider.mouseout] hiding')();
@@ -120,7 +104,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
             }
           } else {  // out of window
             log('[slider.mouseout] out of window')();
-            document.documentElement.addEventListener('mouseover', function f(e) {
+            document.addEventListener('mouseover', function f(e) {
               this.removeEventListener('mouseover', f, true);
               log('[document.mouseover]', e.target)();
               if ($slider && !$slider[0].contains(e.target)) {
@@ -130,7 +114,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
           }
         }
       }).mousedown(function (e) {
-        if (e.which !== 1 || $pane || $(e.target).closest('.kifi-slider2-tip').length) return;
+        if (e.which !== 1 || paneShowing() || $(e.target).closest('.kifi-slider2-tip').length) return;
         e.preventDefault();  // prevents selection and selection scrolling
         data.dragTimer = setTimeout(startDrag.bind(null, data), 900);
         data.mousedownEvent = e.originalEvent;
@@ -267,9 +251,7 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
           position: {my: 'right bottom-13', at: 'right top', of: this, collision: 'none'}
         });
       }).on("click", ".kifi-slider2-x", function () {
-        if ($pane) {
-          hidePane(true);
-        }
+        pane.hide(true);
       }).hoverfu('.kifi-slider2-dock-btn', function(configureHover) {
         var $a = $(this);
         var tip = {
@@ -289,34 +271,21 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         e.preventDefault();
       }).on("click", ".kifi-slider2-dock-btn", function () {
         var locator = this.dataset.loc;
-        if ($pane) {
-          if (locator == paneHistory[0]) {
-            hidePane(true);
-          } else {
-            showPane(locator);
-          }
-        } else if (!$("html").hasClass("kifi-pane-parent")) { // ensure it's finished hiding
-          showPane(locator);
-        }
+        api.require('scripts/pane.js', function () {
+          pane.toggle('keeper', locator);
+        });
       });
-      callback();
-    });
   }
 
-  function showSlider(trigger, callback) {
+  function showSlider(trigger) {
     log("[showSlider]", trigger)();
-
     lastShownAt = Date.now();
-    $slider = $();  // creation in progress (prevents multiple)
 
-    createSlider(function () {
-      $slider.prependTo(tile);
+    createSlider();
+    $slider.prependTo(tile);
 
-      logEvent("slider", "sliderShown", withUrls({trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0)}));
-      api.port.emit("keeper_shown");
-
-      callback && callback();
-    });
+    logEvent("slider", "sliderShown", withUrls({trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0)}));
+    api.port.emit("keeper_shown");
   }
 
   function growSlider(fromClass, toClass) {
@@ -330,12 +299,12 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
 
   function isTagboxActive() {
     var tagbox = window.tagbox;
-    return tagbox != null && tagbox.active;
+    return tagbox && tagbox.active;
   }
 
   function isInsideTagbox(el) {
     var tagbox = window.tagbox;
-    return tagbox != null && tagbox.contains(el);
+    return tagbox && tagbox.contains(el);
   }
 
   // trigger is for the event log (e.g. "key", "icon")
@@ -431,8 +400,9 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
   }
 
   function updateKeptDom(how) {
-    if ($slider) $slider.find(".kifi-slider2-keep-card").removeClass("kifi-unkept kifi-private kifi-public").addClass("kifi-" + (how || "unkept"));
-    if ($pane) $pane.find(".kifi-pane-kept").toggleClass("kifi-kept", !!how);
+    if ($slider) {
+      $slider.find(".kifi-slider2-keep-card").removeClass("kifi-unkept kifi-private kifi-public").addClass("kifi-" + (how || "unkept"));
+    }
   }
 
   function hoverfuFriends($tip, keepers) {
@@ -467,288 +437,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       });
     });
   }
-
-  // ===== Pane Stuff
-
-  function toPaneName(locator) {
-    var name = locator.match(/[a-z]+\/?/)[0];
-    return {messages: "threads", "messages/": "thread"}[name] || name;
-  }
-
-  var paneIdxs = ["notices","threads","thread"];
-  function toPaneIdx(name) {
-    return paneIdxs.indexOf(name);
-  }
-
-  var createPaneParams = {
-    thread: function (cb, locator, participants) {
-      if (participants) {
-        respond(participants);
-      } else {
-        var id = locator.substr(10);
-        log("[createPaneParams.thread] need participants", id)();
-        api.port.emit("participants", id, respond);
-      }
-      function respond(p) {
-        cb({participants: p, numParticipants: p.length > 1 ? p.length : null});
-      }
-    }};
-
-  function showPane(locator, back, paramsArg, redirected) {
-    log("[showPane]", locator, back ? "back" : "")();
-    if (locator !== (paneHistory && paneHistory[0])) {
-      var pane = toPaneName(locator);
-      (createPaneParams[pane] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
-        params.redirected = redirected;
-        showPane2(locator, back, pane, params);
-      }, locator, paramsArg);
-    }
-  }
-
-  function showPane2(locator, back, pane, params) {  // only called by showPane
-    log("[showPane2]", locator, pane)();
-    if ($pane) {
-      var left = back || toPaneIdx(pane) < toPaneIdx(toPaneName(paneHistory[0]));
-      $slider.find(".kifi-at").removeClass("kifi-at").end()
-        .find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
-      render("html/keeper/pane_" + pane, params, function (html) {
-        var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden");
-        var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
-        var $old = $cart.find(".kifi-pane-box");
-        var $new = $(html)[left ? "prependTo" : "appendTo"]($cart).layout();
-        $cart.addClass("kifi-animated").layout().addClass("kifi-roll")
-        .on("transitionend", function end(e) {
-          if (e.target !== this) return;
-          if (!left) $cart.removeClass("kifi-animated kifi-back kifi-forward");
-          $old.triggerHandler("kifi:remove");
-          $old.remove();
-          $new.data("shown", true).triggerHandler("kifi:shown");
-          $cart.removeClass("kifi-roll kifi-animated kifi-back kifi-forward")
-            .off("transitionend", end);
-          $cubby.css("overflow", "");
-          window.dispatchEvent(new Event("resize"));  // for other page scripts
-        });
-        if (back) {
-          paneHistory.shift();
-          paneHistory[0] = locator;  // usually unnecessary (already the same)
-        } else {
-          paneHistory.unshift(locator);
-        }
-        api.port.emit("pane", {old: $pane[0].dataset.locator, new: locator});
-        $pane[0].dataset.locator = locator;
-        populatePane($new, pane, locator);
-      });
-    } else {
-      paneHistory = [locator];
-      var bringSlider = !$slider;
-      if (bringSlider) {
-        createSlider(function () {
-          $slider.addClass("kifi-wide");
-        }, locator);
-      } else {
-        idleTimer.kill();
-        $slider.find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
-      }
-      api.port.emit("session", function (session) {
-        api.require("styles/keeper/pane.css", function () {
-          render("html/keeper/pane", $.extend(params, {
-            site: location.hostname,
-            user: session.user
-          }), {
-            pane: "pane_" + pane
-          },
-          function (html) {
-            $("html").addClass("kifi-pane-parent");
-            $pane = $(html);
-            $pane[0].dataset.locator = locator;
-            api.port.emit("pane", {new: locator});
-            if (bringSlider) {
-              $pane.append($slider).appendTo(tile.parentNode);
-            } else {
-              $pane.insertBefore(tile);
-              $(tile).css("transform", "translate(0," + (window.innerHeight - tile.getBoundingClientRect().bottom) + "px)");
-            }
-            $pane.layout()
-            .on("transitionend", function onPaneShown(e) {
-              if (e.target !== this) return;
-              $pane.off("transitionend", onPaneShown);
-              if (bringSlider) {
-                tile.style.display = "block"; // in case sensitive
-              } else {
-                $pane.before(tile);
-                $slider.appendTo($pane);
-              }
-              $box.data("shown", true).triggerHandler("kifi:shown");
-            })
-            .hoverfu('.kifi-pane-head-logo', function(configureHover) {
-              configureHover({
-                mustHoverFor: 700, hideAfter: 2500, click: 'hide',
-                position: {my: 'center top+10', at: 'center bottom', of: this, collision: 'none'}
-              });
-            })
-            .hoverfu(".kifi-pane-head-feedback", function (configureHover) {
-              var btn = this;
-              render("html/keeper/titled_tip", {
-                dir: "below",
-                title: "Give Us Feedback",
-                html: "Tell us your ideas for Kifi<br>or report an issue."
-              }, function (html) {
-                configureHover(html, {
-                  mustHoverFor: 700, hideAfter: 4000, click: "hide",
-                  position: {my: 'center top+16', at: 'center bottom', of: btn, collision: 'none'}
-                });
-              });
-            })
-            .on("click", ".kifi-pane-head-feedback", function (e) {
-              e.preventDefault();
-              var width = 700;
-              var height = 400;
-              var left = (screen.width - width) / 2;
-              var top = (screen.height - height) / 2;
-              window.open(
-                "https://www.kifi.com/feedback/form",
-                "kifi-feedback",
-                "width="+width+",height="+height+",resizable,top="+top+",left="+left);
-            })
-            .hoverfu('.kifi-pane-head-settings:not(.kifi-active)', function (configureHover) {
-              var btn = this;
-              render("html/keeper/titled_tip", {
-                dir: "below",
-                cssClass: 'kifi-pane-head-settings-tip',
-                title: "Settings",
-                html: "Customize your Kifi<br>experience."
-              }, function (html) {
-                configureHover(html, {
-                  mustHoverFor: 700, hideAfter: 3000, click: "hide",
-                  position: {my: 'right top+10', at: 'right bottom', of: btn, collision: 'none'}
-                });
-              });
-            })
-            .on("mousedown", ".kifi-pane-head-settings", function (e) {
-              e.preventDefault();
-              var $sett = $(this).addClass("kifi-active");
-              var $menu = $sett.next(".kifi-pane-head-settings-menu").fadeIn(50);
-              var $hide = $menu.find(".kifi-pane-settings-hide")
-                .on("mouseenter", enterItem)
-                .on("mouseleave", leaveItem);
-              document.addEventListener("mousedown", docMouseDown, true);
-              $menu.on("kifi:hide", hide);
-              // .kifi-hover class needed because :hover does not work during drag
-              function enterItem() { $(this).addClass("kifi-hover"); }
-              function leaveItem() { $(this).removeClass("kifi-hover"); }
-              function docMouseDown(e) {
-                if (!$menu[0].contains(e.target)) {
-                  $menu.triggerHandler("kifi:hide");
-                  if ($sett[0] === e.target) {
-                    e.stopPropagation();
-                  }
-                }
-              }
-              function hide() {
-                document.removeEventListener("mousedown", docMouseDown, true);
-                $sett.removeClass("kifi-active");
-                $hide.off("mouseenter", enterItem)
-                    .off("mouseleave", leaveItem);
-                $menu.off("kifi:hide", hide).fadeOut(50, function () {
-                  $menu.find(".kifi-hover").removeClass("kifi-hover");
-                });
-              }
-              api.port.emit("get_suppressed", function (suppressed) {
-                $hide.toggleClass("kifi-checked", !!suppressed);
-              });
-            })
-            .on("mouseup", ".kifi-pane-settings-hide", function (e) {
-              e.preventDefault();
-              var $hide = $(this).toggleClass("kifi-checked");
-              var checked = $hide.hasClass("kifi-checked");
-              $(tile).toggle(!checked);
-              api.port.emit("suppress_on_site", checked);
-              setTimeout(function () {
-                if (checked) {
-                  hidePane();
-                } else {
-                  $hide.closest(".kifi-pane-head-settings-menu").triggerHandler("kifi:hide");
-                }
-              }, 150);
-            })
-            .on("mouseup", ".kifi-pane-settings-sign-out", function (e) {
-              e.preventDefault();
-              api.port.emit("deauthenticate");
-              $(tile).hide();
-              setTimeout(function () {
-                hidePane();
-                $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/keep.faint.png') + '"> button above.</kifi>')
-                  .appendTo('body').delay(6000).fadeOut(1000, function () { $(this).remove(); });
-              }, 150);
-              return;
-            })
-            .on("keydown", ".kifi-pane-search", function (e) {
-              var q, el = this;
-              if (e.which == 13 && (q = el.value.trim())) {
-                api.port.emit("session", function (session) {
-                  var uri = session ? "https://www.kifi.com/find?q=" : "https://www.google.com/search?q=";
-                  window.open(uri + encodeURIComponent(q).replace(/%20/g, "+"));
-                  el.value = "";
-                });
-              }
-            })
-            .on("click", ".kifi-pane-back", function () {
-              var loc = paneHistory[1] || this.dataset.loc;
-              if (loc) {
-                showPane(loc, true);
-              }
-            })
-            .on("kifi:show-pane", function (e, loc, paramsArg) {
-              showPane(loc, false, paramsArg);
-            })
-            .on("mousedown click keydown keypress keyup", function (e) {
-              e.stopPropagation();
-            });
-            $("html").addClass("kifi-with-pane");
-            var $box = $pane.find(".kifi-pane-box");
-            populatePane($box, pane, locator);
-          });
-        });
-      });
-    }
-  }
-
-  function hidePane(leaveSlider) {
-    log("[hidePane]")();
-    if (leaveSlider) {
-      $(tile).css({top: "", bottom: "", transform: ""}).insertAfter($pane);
-      $slider.prependTo(tile).layout();
-      $slider.find(".kifi-at").removeClass("kifi-at");
-      $slider.find(".kifi-slider2-x").css("overflow", "");
-    } else {
-      $(tile).css("transform", "");
-      $slider = null;
-    }
-    $pane
-    .off("transitionend") // onPaneShown
-    .on("transitionend", function (e) {
-      if (e.target === this) {
-        var $pane = $(this);
-        $pane.find(".kifi-pane-box").triggerHandler("kifi:remove");
-        $pane.remove();
-        $("html").removeClass("kifi-pane-parent");
-        window.dispatchEvent(new Event("resize"));  // for other page scripts
-      }
-    });
-    api.port.emit("pane", {old: $pane[0].dataset.locator});
-    $pane = paneHistory = null;
-    $("html").removeClass("kifi-with-pane");
-  }
-
-  function populatePane($box, name, locator) {
-    var $tall = $box.find(".kifi-pane-tall");
-    if (name == "thread") {
-      $tall.css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-    }
-    api.require("scripts/" + name + ".js", function () {
-      panes[name].render($tall, locator);
-    });
-  };
 
   function formatCountHtml(kept, numFriends, numOthers) {
     return [
@@ -804,49 +492,34 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
 
   // the keeper API
   return {
+    showing: function() {
+      return !!$slider;
+    },
     show: function (trigger) {  // trigger is for the event log (e.g. "tile", "auto", "scroll")
       $(tile).hoverfu('destroy');
       if ($slider) {
         log("[show] already showing")();
       } else {
         log("[show]", trigger)();
-        if (trigger == "tile") {
-          showSlider(trigger, growSlider.bind(null, "", "kifi-wide"));
+        if (trigger === 'tile') {
+          showSlider(trigger);
+          growSlider('', 'kifi-wide');
         } else if (!lastShownAt) { // auto-show only if not already shown
-          showSlider(trigger, function () {
-            growSlider("kifi-tiny", "kifi-auto");
-            idleTimer.start(5000);
-          });
+          showSlider(trigger);
+          growSlider('kifi-tiny', 'kifi-auto');
+          idleTimer.start(5000);
         }
       }
     },
-    showPane: function (trigger, locator, redirected) {
-      log("[showPane]", trigger, locator)();
-      showPane(locator, false, null, redirected);
+    create: function(locator) {
+      createSlider(locator);
+      return $slider.addClass('kifi-wide');
     },
-    togglePane: function (trigger, locator) {
-      if ($pane && (!locator || paneHistory[0] == locator)) {
-        log("[togglePane] hiding", locator || "")();
-        hidePane();
-      } else {
-        log("[togglePane] showing", locator || "")();
-        showPane(locator || "/notices");
-      }
+    discard: function() {
+      $slider = null;
     },
-    hidePane: function (leaveSlider) {
-      if ($pane) {
-        hidePane(leaveSlider);
-      }
-    },
-    shadePane: function () {
-      if ($pane) {
-        $pane.addClass('kifi-shaded');
-      }
-    },
-    unshadePane: function () {
-      if ($pane) {
-        $pane.removeClass('kifi-shaded');
-      }
+    appendTo: function(parent) {
+      $slider.appendTo(parent);
     },
     showKeepers: function (keepers, otherKeeps) {
       if (lastShownAt) return;
@@ -871,5 +544,14 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
       });
       $tile.hoverfu('show');
       setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000);
+    },
+    onPaneChange: function (locator) {
+      $slider.find('.kifi-at').removeClass('kifi-at');
+      if (locator) {
+        $slider.find('.kifi-slider2-' + locator.split('/')[1]).addClass('kifi-at');
+        idleTimer.kill();
+      } else {  // dislodge from pane and prepare for x transition
+        $slider.prependTo(tile).layout();
+      }
     }};
 }();
