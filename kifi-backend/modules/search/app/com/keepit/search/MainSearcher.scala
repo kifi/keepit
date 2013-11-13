@@ -377,10 +377,10 @@ class MainSearcher(
   private[this] def checkScoreValues(hitList: List[MutableArticleHit]): Unit = {
     hitList.foreach{ h =>
       if (h.score.isInfinity) {
-        log.error(s"the score value is infinity textScore=${h.luceneScore} clickBoost=${h.clickBoost}")
+        log.error(s"the score value is infinity textScore=${h.luceneScore} clickBoost=${h.clickBoost} scoring=${h.scoring}")
         h.score = Float.MaxValue
       } else if (h.score.isNaN) {
-        log.error(s"the score value is Nan textScore=${h.luceneScore} clickBoost=${h.clickBoost}")
+        log.error(s"the score value is NaN textScore=${h.luceneScore} clickBoost=${h.clickBoost} scoring=${h.scoring}")
         h.score = -1.0f
       }
     }
