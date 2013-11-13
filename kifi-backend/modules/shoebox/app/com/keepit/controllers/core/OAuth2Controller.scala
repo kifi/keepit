@@ -159,8 +159,8 @@ class OAuth2Controller @Inject() (
           case "google" => {
             val res = Await.result(abookServiceClient.importContacts(request.userId, provider, tokenResp.accessToken), 5 seconds) // TODO: state-directed
             log.info(s"[google] abook import $res")
-            // Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // TODO: REMOVEME
-            Redirect(com.keepit.controllers.website.routes.HomeController.home) // TODO: REMOVEME (just to unblock joon)
+            // Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // todo: for admin page
+            Redirect("/friends/invite") // @see InviteController.invite
           }
           case "facebook" => { // testing only
             val friendsUrl = s"https://graph.facebook.com/me/friends?access_token=${tokenResp.accessToken}&fields=id,name,first_name,last_name,username,picture,email"
@@ -168,10 +168,10 @@ class OAuth2Controller @Inject() (
             log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
             Ok(friends)
           }
-          case _ => Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // homepage?
+          case _ => Redirect(com.keepit.controllers.website.routes.HomeController.home)
         }
       }
-      case None => Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId))
+      case None => Redirect(com.keepit.controllers.website.routes.HomeController.home)
     }
   }
 

@@ -806,9 +806,6 @@ var slider2 = slider2 || function () {  // idempotent for Chrome
         }
       }
     },
-    getPane: function() {
-      return $pane || null;
-    },
     showPane: function (trigger, locator, redirected) {
       log("[showPane]", trigger, locator)();
       showPane(locator, false, null, redirected);
