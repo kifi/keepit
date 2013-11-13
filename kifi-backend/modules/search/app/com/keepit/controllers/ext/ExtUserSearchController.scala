@@ -22,6 +22,8 @@ class ExtUserSearchController @Inject()(
   actionAuthenticator: ActionAuthenticator
 ) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
+  val EXCLUDED_EXPERIMENTS = Seq("fake")
+
   private def createFilter(userId: Option[Id[User]], filter: Option[String], context: Option[String]) = {
     filter match {
       case Some("f") => filterFactory.friendsOnly(userId.get, context)
@@ -32,11 +34,13 @@ class ExtUserSearchController @Inject()(
 
   def page(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = AuthenticatedJsonAction { request =>
     val userId = request.userId
+    val userExps = request.experiments.map{_.value}
+    val excludedExperiments = if (userExps.contains("admin")) Seq() else EXCLUDED_EXPERIMENTS
     val friendRequests = shoeboxClient.getFriendRequestsBySender(userId)
     val searchFilter = createFilter(Some(userId), filter, None)
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
-    val res = parser.parse(queryText) match {
+    val res = parser.parseWithUserExperimentConstrains(queryText, excludedExperiments) match {
       case None => UserSearchResult(Array.empty[UserHit], context = "")
       case Some(q) => searcher.searchPagingWithFilter(q, searchFilter, pageNum, pageSize)
     }
