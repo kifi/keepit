@@ -74,7 +74,7 @@ class AdminUserController @Inject() (
     db.readWrite { implicit s =>
       val fromUser = userRepo.get(fromUserId)
       val toUser = userRepo.get(toUserId)
-      for (email <- emailAddressRepo.getByUser(fromUserId)) {
+      for (email <- emailAddressRepo.getAllByUser(fromUserId)) {
         emailRepo.save(email.copy(userId = toUserId))
       }
       val socialUsers = socialUserInfoRepo.getByUser(fromUserId)
@@ -163,7 +163,7 @@ class AdminUserController @Inject() (
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       val allowedInvites = userValueRepo.getValue(user.id.get, "availableInvites").getOrElse("6").toInt
-      val emails = emailRepo.getByUser(user.id.get)
+      val emails = emailRepo.getAllByUser(user.id.get)
       (user, (bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
     }
 
@@ -252,7 +252,7 @@ class AdminUserController @Inject() (
     }).flatten
 
     db.readWrite{ implicit session =>
-      val oldEmails = emailRepo.getByUser(userId).toSet
+      val oldEmails = emailRepo.getAllByUser(userId).toSet
       val newEmails = (emailList map { address =>
         val email = emailRepo.getByAddressOpt(address)
         email match {

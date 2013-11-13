@@ -611,7 +611,7 @@ class AuthController @Inject() (
           (userId, None)
         } getOrElse {
           // TODO: use user's primary email address once hooked up
-          (userId, emailAddressRepo.getByUser(userId).filter(_.verified).headOption)
+          (userId, emailAddressRepo.getAllByUser(userId).find(_.verified))
         }
       }
     }

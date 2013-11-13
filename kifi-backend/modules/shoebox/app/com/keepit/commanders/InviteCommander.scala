@@ -118,7 +118,7 @@ class InviteCommander @Inject() (
       subject = s"""${name} wants to be let in!""",
       htmlBody = s"""<a href="https://admin.kifi.com/admin/user/${userId}">${name}</a> wants to be let in!\n<br/>
                            Go to the <a href="https://admin.kifi.com/admin/invites?show=accepted">admin invitation page</a> to accept or reject this user.""",
-      category = PostOffice.Categories.ADMIN))
+      category = PostOffice.Categories.System.ADMIN))
 
   }
 }

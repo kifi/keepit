@@ -92,7 +92,7 @@ class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, 
     val subject = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.rootException}".abbreviate(512)
     val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString, host.host).body
     sender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-      subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
+      subject = subject, htmlBody = body, category = PostOffice.Categories.System.HEALTHCHECK))
   }
 }
 
@@ -187,7 +187,7 @@ class HealthcheckPluginImpl @Inject() (
     val message = Html(s"Service version ${services.currentVersion} started at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
-        category = PostOffice.Categories.HEALTHCHECK))
+        category = PostOffice.Categories.System.HEALTHCHECK))
     actor.ref ! email
     email
   }
@@ -197,7 +197,7 @@ class HealthcheckPluginImpl @Inject() (
     val message = Html(s"Service version ${services.currentVersion} stopped at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
-        category = PostOffice.Categories.HEALTHCHECK))
+        category = PostOffice.Categories.System.HEALTHCHECK))
     actor.ref ! email
     email
   }

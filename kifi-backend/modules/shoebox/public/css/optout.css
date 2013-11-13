@@ -1,0 +1,59 @@
+section {
+  width: 96%;
+  max-width: 540px;
+  margin: -10px auto 0;
+  padding-bottom: 40px;
+  color: #515051;
+  line-height: 20px;
+  font-size: 16px;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+section > h2 {
+  margin: 0;
+  padding: 19px 0 0;
+  text-align: left;
+  line-height: 34px;
+  font-size: 26px;
+  font-weight: 300;
+}
+section > h3 {
+  font-weight: bold;
+  margin: 0 0 16px;
+  padding: 0 0 6px;
+  text-align: left;
+  line-height: 24px;
+  font-size: 18px;
+  border-bottom: 5px solid #e5e5e5;
+}
+section > p {
+  text-align: left;
+}
+
+form > label {
+  display: block;
+  padding: 5px 0px;
+  text-align: left;
+}
+
+
+span.optout {
+  background: #85a4ea;
+  border: 0px none rgb(255, 255, 255);
+  color: rgb(255, 255, 255);
+  display: inline-block;
+  font: normal normal 300 16px/22px;
+  height: 40px;
+  line-height: 40px;
+  margin-top: 20px;
+  padding: 0px 16px 0px 16px;
+  vertical-align: middle;
+  width: 206px;
+  cursor: pointer;
+}
+
+span.optout:active {
+  background: #75b4da;
+}
+
+
