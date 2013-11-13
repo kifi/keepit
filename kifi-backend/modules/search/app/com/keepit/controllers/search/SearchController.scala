@@ -57,7 +57,7 @@ class SearchController @Inject()(
     }
     val res = parser.parse(queryText) match {
       case None => UserSearchResult(Array.empty[UserHit], context)
-      case Some(q) => searcher.searchWithFilter(q, maxHits, userFilter)
+      case Some(q) => searcher.search(q, maxHits, userFilter)
     }
     Ok(Json.toJson(res))
   }
