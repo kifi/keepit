@@ -1,5 +1,11 @@
 package com.keepit.search
 
+import com.keepit.common.akka.{SafeFuture, MonitoredAwait}
+import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.logging.Logging
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.time._
+import com.keepit.model._
 import com.keepit.search.graph.BookmarkRecord
 import com.keepit.search.graph.EdgeAccessor
 import com.keepit.search.graph.CollectionSearcherWithUser
@@ -10,33 +16,25 @@ import com.keepit.search.index.ArticleRecord
 import com.keepit.search.index.ArticleVisibility
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.PersonalizedSearcher
-import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.logging.Logging
-import com.keepit.common.time._
-import com.keepit.model._
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.Explanation
-import org.apache.lucene.util.PriorityQueue
 import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.TextQuery
 import com.keepit.search.query.parser.SpellCorrector
-import com.keepit.common.time._
-import com.keepit.common.service.FortyTwoServices
-import play.api.libs.json._
-import java.util.UUID
-import scala.math._
-import org.joda.time.DateTime
 import com.keepit.search.query.LuceneExplanationExtractor
 import com.keepit.search.query.LuceneScoreNames
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.concurrent.duration._
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.search.Query
+import org.apache.lucene.search.Explanation
+import org.apache.lucene.util.PriorityQueue
+import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Future
-import scala.concurrent.future
-import com.keepit.common.akka.MonitoredAwait
+import play.api.libs.json._
 import play.modules.statsd.api.Statsd
+import scala.math._
+import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.duration._
+import scala.concurrent.future
 
 
 class MainSearcher(
@@ -129,7 +127,37 @@ class MainSearcher(
     PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 
-  def searchText(maxTextHitsPerCategory: Int) = {
+  private def warpOrSearchText(maxTextHitsPerCategory: Int): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
+    val promise = Promise[(ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher])]
+    tryWarp(promise)
+    future{ trySearchText(maxTextHitsPerCategory, promise) }
+    Await.result(promise.future, 10 seconds)
+  }
+
+  private def tryWarp(promise: Promise[(ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher])]): Unit = {
+    clickBoostsFuture.onSuccess{ case clickBoosts =>
+      val warpThreshold = config.asFloat("maxResultClickBoost") * 0.8
+      val myUris = socialGraphInfo.myUris
+      myUris.find{ id =>
+        val clickBoost = clickBoosts(id)
+        if (clickBoost > warpThreshold) {
+          val myHits = createQueue(1)
+          val friendsHits = createQueue(1)
+          val othersHits = createQueue(1)
+
+          val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
+          myUriEdgeAccessor.seek(id)
+          myHits.insert(id, clickBoost, 1.0f, clickBoost, true, !myUriEdgeAccessor.isPublic)
+          promise.trySuccess((myHits, friendsHits, othersHits, None)) // complete the promise if not completed yet
+          true
+        } else {
+          false
+        }
+      }
+    }
+  }
+
+  private def trySearchText(maxTextHitsPerCategory: Int, promise: Promise[(ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher])]): Unit = try {
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
@@ -156,6 +184,8 @@ class MainSearcher(
       val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
       val friendlyUris = socialGraphInfo.friendlyUris
 
+      if (promise.isCompleted) return
+
       val tPersonalSearcher = currentDateTime.getMillis()
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
       personalizedSearcher.setSimilarity(similarity)
@@ -165,53 +195,57 @@ class MainSearcher(
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
       timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
 
-      val warped = if (enableWarp && isInitialSearch && filter.isDefault) {
-        val warpThreshold = config.asFloat("maxResultClickBoost") * 0.8
-        socialGraphInfo.myUris.find{ id => clickBoosts(id) > warpThreshold } match {
-          case Some(id) =>
-            val clickBoost = clickBoosts(id)
-            myUriEdgeAccessor.seek(id)
-            myHits.insert(id, clickBoost, 1.0f, clickBoost, true, !myUriEdgeAccessor.isPublic)
-            true
-          case _ => false
-        }
-      } else false
+      if (promise.isCompleted) return
 
       val tLucene = currentDateTime.getMillis()
-      if (!warped) {
-        hotDocs.set(browsingFilter, clickBoosts)
-        personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
-          val visibility = new ArticleVisibility(reader)
-          val mapper = reader.getIdMapper
-          var doc = scorer.nextDoc()
-          while (doc != NO_MORE_DOCS) {
-            val id = mapper.getId(doc)
-            if (!idFilter.contains(id)) {
-              val clickBoost = clickBoosts(id)
-              val score = scorer.score()
-              if (friendlyUris.contains(id)) {
-                if (myUriEdgeAccessor.seek(id)) {
-                  myHits.insert(id, score * clickBoost, score, clickBoost, true, !myUriEdgeAccessor.isPublic)
-                } else {
-                  if (visibility.isVisible(doc)) friendsHits.insert(id, score * clickBoost, score, clickBoost, false, false)
-                }
-              } else if (filter.includeOthers) {
-                if (visibility.isVisible(doc)) othersHits.insert(id, score * clickBoost, score, clickBoost, false, false)
+      hotDocs.set(browsingFilter, clickBoosts)
+      personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
+
+        if (promise.isCompleted) return
+
+        val visibility = new ArticleVisibility(reader)
+        val mapper = reader.getIdMapper
+        var doc = scorer.nextDoc()
+        while (doc != NO_MORE_DOCS) {
+          val id = mapper.getId(doc)
+          if (!idFilter.contains(id)) {
+            val clickBoost = clickBoosts(id)
+            val score = scorer.score()
+            if (friendlyUris.contains(id)) {
+              if (myUriEdgeAccessor.seek(id)) {
+                myHits.insert(id, score * clickBoost, score, clickBoost, true, !myUriEdgeAccessor.isPublic)
+              } else {
+                if (visibility.isVisible(doc)) friendsHits.insert(id, score * clickBoost, score, clickBoost, false, false)
               }
+            } else if (filter.includeOthers) {
+              if (visibility.isVisible(doc)) othersHits.insert(id, score * clickBoost, score, clickBoost, false, false)
             }
-            doc = scorer.nextDoc()
           }
+          doc = scorer.nextDoc()
         }
       }
       timeLogs.search = currentDateTime.getMillis() - tLucene
       personalizedSearcher
     }
-    (myHits, friendsHits, othersHits, personalizedSearcher)
+    promise.trySuccess((myHits, friendsHits, othersHits, personalizedSearcher))
+  } catch {
+    case t: Throwable => promise.tryFailure(t)
+  }
+
+  def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
+    val promise = Promise[(ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher])]
+    trySearchText(maxTextHitsPerCategory, promise)
+    Await.result(promise.future, 10 seconds)
   }
 
   def search(): ArticleSearchResult = {
     val now = currentDateTime
-    val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
+    val (myHits, friendsHits, othersHits, personalizedSearcher) =
+      if (enableWarp && isInitialSearch && filter.isDefault) {
+        warpOrSearchText(maxTextHitsPerCategory = numHitsToReturn * 5)
+      } else {
+        searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
+      }
 
     val tProcessHits = currentDateTime.getMillis()
 
