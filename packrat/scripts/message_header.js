@@ -165,8 +165,6 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 				this.destroyPlugins();
 
-				$(win.tile).css('transform', '');
-
 				$(document).data('esc', this.prevEscHandler);
 				this.prevEscHandler = null;
 
