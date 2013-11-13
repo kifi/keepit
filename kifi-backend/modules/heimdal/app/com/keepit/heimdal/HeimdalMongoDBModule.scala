@@ -32,13 +32,13 @@ case class ProdMongoModule() extends MongoModule {
 
   @Singleton
   @Provides
-  def userEventLoggingRepo(airbrake: AirbrakeNotifier): UserEventLoggingRepo = {
+  def userEventLoggingRepo(descriptorRepo: UserEventDescriptorRepo, mixpanel: MixpanelClient, airbrake: AirbrakeNotifier): UserEventLoggingRepo = {
     val (nodeA, nodeB, auth) = getHeimdalCredentials()
     val driver = new MongoDriver
     val connection = driver.connection(List(nodeA), List(auth), 2, Some("UserEventLoggingMongoActorSystem"))
     val db = connection("heimdal")
     val collection = db("user_events")
-    new ProdUserEventLoggingRepo(collection, airbrake)
+    new ProdUserEventLoggingRepo(collection, mixpanel, descriptorRepo, airbrake)
   }
 
   @Provides @Singleton
@@ -53,13 +53,13 @@ case class ProdMongoModule() extends MongoModule {
 
   @Singleton
   @Provides
-  def systemEventLoggingRepo(airbrake: AirbrakeNotifier): SystemEventLoggingRepo = {
+  def systemEventLoggingRepo(descriptorRepo: SystemEventDescriptorRepo, mixpanel: MixpanelClient, airbrake: AirbrakeNotifier): SystemEventLoggingRepo = {
     val (nodeA, nodeB, auth) = getHeimdalCredentials()
     val driver = new MongoDriver
     val connection = driver.connection(List(nodeA), List(auth), 2, Some("SystemEventLoggingMongoActorSystem"))
     val db = connection("heimdal")
     val collection = db("system_events")
-    new ProdSystemEventLoggingRepo(collection, airbrake)
+    new ProdSystemEventLoggingRepo(collection, mixpanel, descriptorRepo, airbrake)
   }
 
 
@@ -93,6 +93,12 @@ case class ProdMongoModule() extends MongoModule {
     val db = connection("heimdal")
     new ProdMetricRepoFactory(db, airbrake)
   }
+
+  @Provides @Singleton
+  def mixpanel: MixpanelClient = {
+    val projectToken: String = current.configuration.getString("mixpanel.token").get
+    new MixpanelClient(projectToken)
+  }
 }
 
 case class DevMongoModule() extends MongoModule {
@@ -101,25 +107,11 @@ case class DevMongoModule() extends MongoModule {
 
   @Singleton
   @Provides
-  def userEventLoggingRepo(airbrake: AirbrakeNotifier): UserEventLoggingRepo = {
-    new DevUserEventLoggingRepo(null, airbrake)
-  }
-
-  @Provides @Singleton
-  def userEventDescriptorRepo(airbrake: AirbrakeNotifier): UserEventDescriptorRepo = {
-    new DevUserEventDescriptorRepo(null, airbrake)
-  }
+  def userEventLoggingRepo: UserEventLoggingRepo = new DevUserEventLoggingRepo
 
   @Singleton
   @Provides
-  def systemEventLoggingRepo(airbrake: AirbrakeNotifier): SystemEventLoggingRepo = {
-    new DevSystemEventLoggingRepo(null, airbrake)
-  }
-
-  @Provides @Singleton
-  def systemEventDescriptorRepo(airbrake: AirbrakeNotifier): SystemEventDescriptorRepo = {
-    new DevSystemEventDescriptorRepo(null, airbrake)
-  }
+  def systemEventLoggingRepo: SystemEventLoggingRepo = new DevSystemEventLoggingRepo
 
   @Singleton
   @Provides
@@ -132,5 +124,4 @@ case class DevMongoModule() extends MongoModule {
   def metricRepoFactory(): MetricRepoFactory = {
     new DevMetricRepoFactory()
   }
-
 }

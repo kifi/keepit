@@ -16,8 +16,8 @@ class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingR
 
   private[controllers] def trackInternalEvent(eventJs: JsValue) = {
     eventJs.as[HeimdalEvent] match {
-      case systemEvent: SystemEvent => systemEventLoggingRepo.insert(systemEvent)
-      case userEvent: UserEvent => userEventLoggingRepo.insert(userEvent)
+      case systemEvent: SystemEvent => systemEventLoggingRepo.persist(systemEvent)
+      case userEvent: UserEvent => userEventLoggingRepo.persist(userEvent)
     }
   }
 
@@ -36,5 +36,4 @@ class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingR
     }(SlowRunningExecutionContext.ec)
     Status(ACCEPTED)
   }
-
 }
