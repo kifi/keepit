@@ -80,6 +80,7 @@ class MainSearcherFactory @Inject() (
   }
 
   def warmUp(userId: Id[User]): Seq[Future[Any]] = {
+    log.info(s"warning up $userId")
     val searchFriendsFuture = shoeboxClient.getSearchFriends(userId)
     val friendsFuture = shoeboxClient.getFriends(userId)
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
