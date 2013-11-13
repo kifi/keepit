@@ -15,6 +15,8 @@ import com.keepit.abook.ABookServiceClient
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.concurrent.duration._
+import java.security.SecureRandom
+import java.math.BigInteger
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 
@@ -157,7 +159,8 @@ class OAuth2Controller @Inject() (
           case "google" => {
             val res = Await.result(abookServiceClient.importContacts(request.userId, provider, tokenResp.accessToken), 5 seconds) // TODO: state-directed
             log.info(s"[google] abook import $res")
-            Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // TODO: REMOVEME
+            // Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // TODO: REMOVEME
+            Redirect(com.keepit.controllers.website.routes.HomeController.home) // TODO: REMOVEME (just to unblock joon)
           }
           case "facebook" => { // testing only
             val friendsUrl = s"https://graph.facebook.com/me/friends?access_token=${tokenResp.accessToken}&fields=id,name,first_name,last_name,username,picture,email"
@@ -183,11 +186,12 @@ class OAuth2Controller @Inject() (
 
   // TODO: move out
   def importContacts(provider:Option[String]) = AuthenticatedHtmlAction { implicit request =>
-    // val stateToken = "abk$" + new BigInteger(130, new SecureRandom()).toString(32)
-    val stateToken = request.session.get("stateToken")
-    val route = routes.OAuth2Controller.start(provider.getOrElse("google"), stateToken)
+    val stateToken = request.session.get("stateToken").getOrElse {
+      "/friends/invite$" + new BigInteger(130, new SecureRandom()).toString(32)
+    }
+    val route = routes.OAuth2Controller.start(provider.getOrElse("google"), Some(stateToken))
     log.info(s"[importContacts($provider)] redirect to $route")
-    Redirect(route)
+    Redirect(route).withSession(session + ("stateToken" -> stateToken))
   }
 
 }
