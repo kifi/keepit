@@ -839,8 +839,8 @@ $(function() {
 		};
 		console.log('[prepInviteTab]', opts);
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
-			console.log('[prepInviteTab] friends:', friends.length, friends);
-			friends && friends.forEach(function(obj) {
+			console.log('[prepInviteTab] friends:', friends && friends.length, friends);
+			friends.forEach(function(obj) {
 				if (!obj.image) {
 					obj.image = '';
 				}
@@ -1036,8 +1036,8 @@ $(function() {
 			  return;
 		  }
 		  userPageIndex++;
-		  console.log('[prepFindTab] friends:', friends.length, friends);
-		  friends && friends.forEach(function(obj, i) {
+		  console.log('[prepFindTab] friends:', friends && friends.length, friends);
+		  friends.forEach(function(obj, i) {
 			  obj.status = obj.status || '';
 			  obj.image = formatPicUrl(obj.user.id, obj.user.pictureName, 200);
 		  });
@@ -2288,31 +2288,16 @@ $(function() {
 			enabled = canInviteViaGmail();
 		if (enabled) {
 			$button.attr('href', 'friends/invite/email');
-			$button.data('href', 'friends/invite/email');
-			var dataset = $button[0].dataset;
-			if (dataset) {
-				dataset.href = 'friends/invite/email';
-			}
+			$button.attr('data-href', 'friends/invite/email');
 		}
 		else {
-			$button.removeAttr('href', '');
-			$.removeData($button[0], 'href');
-			var dataset = $button[0].dataset;
-			if (dataset) {
-				delete dataset.href;
-			}
+			$button.removeAttr('href');
+			$button.removeAttr('data-href');
 		}
 	}
 
 	function updateConnectTab() {
-		var $button = $('a[data-href="friends/find"]'),
-			enabled = canConnect();
-		if (enabled) {
-			$button.show();
-		}
-		else {
-			$button.hide();
-		}
+		$('a[data-href="friends/find"]').toggle(canConnect());
 	}
 
 	function updateFriendRequests(n) {
