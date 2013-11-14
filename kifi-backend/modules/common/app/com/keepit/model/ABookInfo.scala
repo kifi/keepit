@@ -64,7 +64,7 @@ case class ABookInfo(
     id: Option[Id[ABookInfo]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    state: State[ABookInfo] = ABookStates.ACTIVE,
+    state: State[ABookInfo] = ABookInfoStates.ACTIVE,
     userId: Id[User],
     origin: ABookOriginType,
     ownerId: Option[String] = None, // iOS
@@ -74,9 +74,13 @@ case class ABookInfo(
   def withId(id: Id[ABookInfo]): ABookInfo = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): ABookInfo = this.copy(updatedAt = now)
   def withOwnerInfo(ownerId: Option[String], ownerEmail: Option[String]): ABookInfo = this.copy(ownerId = ownerId, ownerEmail = ownerEmail)
+  def withState(state: State[ABookInfo]): ABookInfo = this.copy(state = state)
 }
 
-object ABookStates extends States[ABookInfo]
+object ABookInfoStates extends States[ABookInfo] {
+  val PENDING = State[ABookInfo]("pending")
+  val UPLOAD_FAILURE = State[ABookInfo]("upload_failure")
+}
 
 object ABookInfo {
   import play.api.libs.functional.syntax._
