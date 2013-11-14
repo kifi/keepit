@@ -13,18 +13,17 @@ trait EventRepo[E <: HeimdalEvent] {
   def getEventTypeCode: TypeCode[E]
   def getLatestRawEvents(eventsToConsider: EventSet, number: Int) : Future[JsArray]
   def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]]
+  def descriptors: EventDescriptorRepo[E]
 }
 
 abstract class MongoEventRepo[E <: HeimdalEvent: TypeCode] extends BufferedMongoRepo[E] with EventRepo[E] {
   val getEventTypeCode = implicitly[TypeCode[E]]
-
-  val descriptorRepo: EventDescriptorRepo[E]
   val mixpanel: MixpanelClient
 
   def persist(event: E): Unit = {
     insert(event)
-  descriptorRepo.getByName(event.eventType) map {
-      case None => descriptorRepo.upsert(EventDescriptor(event.eventType))
+    descriptors.getByName(event.eventType) map {
+      case None => descriptors.upsert(EventDescriptor(event.eventType))
       case Some(description) if description.mixpanel => mixpanel.send(event)
     }
   }
@@ -55,6 +54,7 @@ abstract class DevEventRepo[E <: HeimdalEvent: TypeCode] extends EventRepo[E] {
       Stream(BSONDocument("command" -> BSONArray(command.map(_.makePipe))))
     ).future
   }
+  lazy val descriptors: EventDescriptorRepo[E] = new DevEventDescriptorRepo[E] {}
 }
 
 object EventRepo {

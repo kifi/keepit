@@ -4,12 +4,14 @@ import com.keepit.common.time._
 
 import org.joda.time.DateTime
 
-import play.api.libs.json.{Json, Format, JsResult, JsError, JsSuccess, JsObject, JsValue, JsArray, JsNumber, JsString}
-import com.keepit.common.controller.AuthenticatedRequest
 import play.api.mvc.RequestHeader
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.serializer.{Companion, TypeCode}
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import com.keepit.common.controller.AuthenticatedRequest
+
 
 case class EventType(name: String)
 
@@ -146,4 +148,22 @@ case class SystemEvent(context: EventContext, eventType: EventType, time: DateTi
 object SystemEvent extends Companion[SystemEvent] {
   implicit val format = Json.format[SystemEvent]
   implicit val typeCode = TypeCode("system")
+}
+
+case class EventDescriptor(
+  name: EventType,
+  description: Option[String] = None,
+  mixpanel: Boolean = false,
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime
+  )
+
+object EventDescriptor {
+  implicit val format: Format[EventDescriptor] = (
+    (__ \ 'name).format[EventType] and
+      (__ \ 'description).formatNullable[String] and
+      (__ \ 'mixpanel).format[Boolean] and
+      (__ \ 'createdAt).format(DateTimeJsonFormat) and
+      (__ \ 'updatedAt).format(DateTimeJsonFormat)
+    )(EventDescriptor.apply, unlift(EventDescriptor.unapply))
 }

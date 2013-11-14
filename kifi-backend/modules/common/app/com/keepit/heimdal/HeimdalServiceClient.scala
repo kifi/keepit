@@ -36,6 +36,10 @@ trait HeimdalServiceClient extends ServiceClient with Plugin {
   def updateMetrics(): Unit
 
   def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray]
+
+  def getEventDescriptors[E <: HeimdalEvent: TypeCode]: Future[Seq[EventDescriptor]]
+
+  def updateEventDescriptors[E <: HeimdalEvent: TypeCode](eventDescriptors: EventDescriptor*): Unit
 }
 
 object FlushEventQueue
@@ -158,4 +162,12 @@ class HeimdalServiceClientImpl @Inject() (
       Json.parse(response.body).as[JsArray]
     }
   }
+
+  def getEventDescriptors[E <: HeimdalEvent: TypeCode]: Future[Seq[EventDescriptor]] =
+    call(Heimdal.internal.getEventDescriptors(implicitly[TypeCode[E]].code)).map { response =>
+      Json.parse(response.body).as[JsArray].value.map(EventDescriptor.format.reads(_).get)
+    }
+
+  def updateEventDescriptors[E <: HeimdalEvent: TypeCode](eventDescriptors: EventDescriptor*): Unit =
+    call(Heimdal.internal.updateEventDescriptor(implicitly[TypeCode[E]].code), Json.toJson(eventDescriptors))
 }

@@ -22,6 +22,10 @@ GET  /internal/heimdal/:repo/getMetric           @com.keepit.heimdal.controllers
 
 GET  /internal/heimdal/:repo/getMetricData       @com.keepit.heimdal.controllers.AnalyticsController.getMetricData(repo: String, name: String)
 
+GET  /internal/heimdal/:repo/eventDescriptors    @com.keepit.heimdal.controllers.AnalyticsController.getEventDescriptors(repo: String)
+
+POST /internal/heimdal/:repo/eventDescriptors    @com.keepit.heimdal.controllers.AnalyticsController.updateEventDescriptors(repo: String)
+
 ->  / common.Routes
 
 
