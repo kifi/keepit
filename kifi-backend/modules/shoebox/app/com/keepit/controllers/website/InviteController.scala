@@ -204,7 +204,11 @@ class InviteController @Inject() (db: Database,
           (invite.senderUserId, request.identityOpt) match {
             case (Some(senderId), None) =>
               val inviterUser = userRepo.get(senderId)
-              Ok(views.html.auth.auth("signup", titleText = s"${socialUser.fullName}, join ${inviterUser.firstName} on Kifi!", titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUser.firstName}'s invite."))
+              Ok(views.html.auth.auth(
+                "signup",
+                titleText = s"${socialUser.fullName}, join ${inviterUser.firstName} on Kifi!",
+                titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUser.firstName}'s invite.")
+              ).withCookies(Cookie("inv", invite.externalId.id))
             case _ =>
               Redirect(com.keepit.controllers.core.routes.AuthController.signupPage).withCookies(Cookie("inv", invite.externalId.id))
           }
