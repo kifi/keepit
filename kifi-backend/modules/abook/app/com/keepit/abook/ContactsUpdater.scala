@@ -1,6 +1,6 @@
 package com.keepit.abook
 
-import com.google.inject.{Provider, ImplementedBy, Inject}
+import com.google.inject.{Provider, ImplementedBy, Inject, Singleton}
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
@@ -15,6 +15,7 @@ import scala.ref.WeakReference
 import akka.actor.{Props, ActorSystem}
 import play.api.Play.current
 import com.keepit.common.actor.ActorInstance
+import akka.routing.RoundRobinRouter
 
 
 @ImplementedBy(classOf[ContactsUpdaterPluginImpl])
@@ -22,12 +23,13 @@ trait ContactsUpdaterPlugin extends Plugin {
   def asyncProcessContacts(userId:Id[User], origin:ABookOriginType, aBookInfo:ABookInfo, s3Key:String, rawJsonRef:WeakReference[JsValue])
 }
 
+@Singleton
 class ContactsUpdaterPluginImpl @Inject() (actorInstance:ActorInstance[ContactsUpdater], sysProvider:Provider[ActorSystem], updaterProvider:Provider[ContactsUpdater]) extends ContactsUpdaterPlugin with Logging {
 
   lazy val system = sysProvider.get
-  def actor = {
-    if (Play.maybeApplication.isDefined && Play.isProd)
-      system.actorOf(Props { updaterProvider.get })
+  lazy val actor = {
+    if (Play.maybeApplication.isDefined && (!Play.isTest))
+      system.actorOf(Props(updaterProvider.get).withRouter(RoundRobinRouter(Runtime.getRuntime.availableProcessors)))
     else
       actorInstance.ref
   }

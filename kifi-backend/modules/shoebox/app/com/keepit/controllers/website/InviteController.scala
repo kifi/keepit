@@ -248,7 +248,7 @@ class InviteController @Inject() (db: Database,
             invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE))
             SafeFuture{
               val contextBuilder = eventContextBuilder()
-              contextBuilder += ("invitee", invite.recipientSocialUserId.get.id)
+              contextBuilder += ("invitee", invite.recipientSocialUserId.get.id) //todo
               heimdal.trackEvent(UserEvent(invite.senderUserId.map(_.id).getOrElse(-1), contextBuilder.build, EventType("invite_sent")))
             }
           }
