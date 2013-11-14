@@ -13,7 +13,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
+import com.keepit.social.{SocialNetworkType, SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data.Forms._
 import play.api.data._
@@ -372,6 +372,19 @@ class AdminUserController @Inject() (
 
 
     Redirect(routes.AdminUserController.notification())
+  }
+
+  def disconnectSocialUser(suiId: Id[SocialUserInfo], revoke: Boolean = false) = AdminHtmlAction { implicit request =>
+    val sui = db.readOnly(socialUserInfoRepo.get(suiId)(_))
+    if (revoke) {
+      socialGraphPlugin.asyncRevokePermissions(sui)
+    }
+    db.readWrite { implicit s =>
+      socialConnectionRepo.deactivateAllConnections(sui.id.get)
+      socialUserInfoRepo.invalidateCache(sui)
+      socialUserInfoRepo.save(sui.copy(credentials = None, userId = None))
+    }
+    Ok
   }
 
   def initUserSeq() = AdminHtmlAction { implicit request =>
