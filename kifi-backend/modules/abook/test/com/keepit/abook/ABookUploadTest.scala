@@ -58,6 +58,8 @@ class ABookUploadTest extends Specification with DbTestInjector {
   )
 
   "ABook Controller" should {
+    // re-enable after adding status monitoring
+    /*
     "handle imports from IOS and gmail" in {
       withDb(
         FakeABookRawInfoStoreModule(),
@@ -168,7 +170,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
         gBookRawInfoSeq2.length mustEqual 2
       }
     }
-
+    */
   }
 }
 
