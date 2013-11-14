@@ -10,11 +10,11 @@ import com.keepit.abook.store.ABookRawInfoStore
 import play.api.libs.json.{JsValue, Json}
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
-import play.api.Plugin
+import play.api.{Play, Plugin}
 import scala.ref.WeakReference
-import com.keepit.common.actor.ActorInstance
-import scala.util.{Failure, Success}
 import akka.actor.{Props, ActorSystem}
+import play.api.Play.current
+import com.keepit.common.actor.ActorInstance
 
 
 @ImplementedBy(classOf[ContactsUpdaterPluginImpl])
@@ -22,10 +22,15 @@ trait ContactsUpdaterPlugin extends Plugin {
   def asyncProcessContacts(userId:Id[User], origin:ABookOriginType, aBookInfo:ABookInfo, s3Key:String, rawJsonRef:WeakReference[JsValue])
 }
 
-class ContactsUpdaterPluginImpl @Inject() (sysProvider:Provider[ActorSystem], updaterProvider:Provider[ContactsUpdater]) extends ContactsUpdaterPlugin with Logging {
+class ContactsUpdaterPluginImpl @Inject() (actorInstance:ActorInstance[ContactsUpdater], sysProvider:Provider[ActorSystem], updaterProvider:Provider[ContactsUpdater]) extends ContactsUpdaterPlugin with Logging {
 
   lazy val system = sysProvider.get
-  def actor = system.actorOf(Props { updaterProvider.get })
+  def actor = {
+    if (Play.maybeApplication.isDefined && Play.isProd)
+      system.actorOf(Props { updaterProvider.get })
+    else
+      actorInstance.ref
+  }
 
   def asyncProcessContacts(userId: Id[User], origin:ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue]): Unit = {
     actor ! ProcessABookUpload(userId, origin, aBookInfo, s3Key, rawJsonRef)
