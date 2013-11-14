@@ -156,14 +156,16 @@
             <tr><th>EContactId</th><th>Name</th><th>Email</th><th>State</th></tr>
             @for(contact <- econtacts) {
             <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td><td>@contact.state</td>
-              <td>
-                <form class="form-inline" style="display:inline" action="/invite" method="POST">
-                  <input type="hidden" name="fullSocialId" value="email/@contact.email">
-                  <input type="hidden" name="subject" value="You've been invited to join Kifi!">
-                  <input type="hidden" name="message" value="Come join us!">
-                  <button type="submit" class="btn">Invite</button>
-                </form>
-              </td>
+              @if(experiments.contains(ExperimentType.GMAIL_INVITE)) {
+                <td>
+                    <form class="form-inline" style="display:inline" action="/invite" method="POST">
+                        <input type="hidden" name="fullSocialId" value="email/@contact.email">
+                        <input type="hidden" name="subject" value="You've been invited to join Kifi!">
+                        <input type="hidden" name="message" value="Come join us!">
+                        <button type="submit" class="btn">Invite</button>
+                    </form>
+                </td>
+              }
             </tr>
             }
         </table>
