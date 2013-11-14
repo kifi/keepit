@@ -86,6 +86,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
       'isPrivate': kept === 'private',
       'noticesCount': Math.max(0, counts.n - counts.m),
       'messageCount': counts.m,
+      'inboxCount': counts.n,
+      'showInbox': ~session.experiments.indexOf('inbox'),
       'atNotices': '/notices' === locator,
       'atMessages': /^\/messages/.test(locator),
       'isTagged': tags.length
@@ -256,8 +258,10 @@ var keeper = keeper || function () {  // idempotent for Chrome
         var $a = $(this);
         var tip = {
           n: ['Notifications (' + CO_KEY + '+Shift+O)', 'View all of your notifications.<br>Any new ones are highlighted.'],
-          m: ['Private Messages (' + CO_KEY + '+Shift+M)', 'Send this page to friends<br>and start a discussion.']
-        }[this.dataset.loc.substr(1,1)];
+          m: ['Private Messages (' + CO_KEY + '+Shift+M)', 'Send this page to friends<br>and start a discussion.'],
+          i: ['Message Box (' + CO_KEY + '+Shift+M)', 'View all of your messages.<br>New ones are highlighted.'],
+          c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to friends<br>and start a discussion.']
+        }[this.dataset.tip];
         render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
           var px = $a.find('.kifi-count').text() > 0 ? 24 : 13;
           configureHover(html, {
@@ -272,7 +276,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }).on('click', '.kifi-dock-btn', function () {
         var locator = this.dataset.loc;
         api.require('scripts/pane.js', function () {
-          pane.toggle('keeper', locator);
+          if (locator) {
+            pane.toggle('keeper', locator);
+          } else {
+            pane.compose('keeper');
+          }
         });
       });
   }
@@ -476,7 +484,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
     counts: function (o) {
       if (!$slider) return;
       var $btns = $slider.find('.kifi-dock-btn');
-      [['.kifi-dock-notices', Math.max(0, o.n - o.m)],
+      [['.kifi-dock-inbox', o.n],
+       ['.kifi-dock-notices', Math.max(0, o.n - o.m)],
        ['.kifi-dock-messages', o.m]].forEach(function (a) {
         $btns.filter(a[0]).find('.kifi-count')
           .text(a[1] || '')

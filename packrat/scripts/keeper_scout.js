@@ -114,6 +114,12 @@ var tile = tile || function() {  // idempotent for Chrome
         loadAndDo('pane', 'toggle', 'key', '/notices');
         e.preventDefault();
         break;
+      case 83: // s
+        if (session && ~session.experiments.indexOf('inbox')) {
+          loadAndDo('pane', 'compose', 'key');
+          e.preventDefault();
+        }
+        break;
       }
     }
   }

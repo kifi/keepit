@@ -312,7 +312,9 @@ var pane = pane || function () {  // idempotent for Chrome
       }
     },
     toggle: function (trigger, locator) {
-      locator = locator || '/notices';
+      if (!locator || (locator === '/messages' && ~session.experiments.indexOf('inbox'))) {
+        locator = '/notices';
+      }
       if ($pane) {
         if (locator == paneHistory[0]) {
           hidePane(trigger === 'keeper');
@@ -321,6 +323,19 @@ var pane = pane || function () {  // idempotent for Chrome
         }
       } else if (!$('html').hasClass('kifi-pane-parent')) { // ensure it's finished hiding
         showPane(locator);
+      }
+    },
+    compose: function(trigger) {
+      log('[pane:compose]', trigger)();
+      // TODO: show compose overlay (inbox experiment) instead of code below
+      if ($pane) {
+        if ('/messages' == paneHistory[0]) {
+          hidePane(trigger === 'keeper');
+        } else {
+          showPane('/messages');
+        }
+      } else if (!$('html').hasClass('kifi-pane-parent')) { // ensure it's finished hiding
+        showPane('/messages');
       }
     },
     shade: function () {
