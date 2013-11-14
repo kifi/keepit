@@ -987,6 +987,7 @@ $(function() {
 		clearTimeout(usersTimeout);
 		$foundUsers.find('ul').empty();
 		$foundUsers.find('.no-results').hide();
+		toggleFindHelp();
 		usersTimeout = setTimeout(prepFindTab, 200);
 	}
 
@@ -1028,11 +1029,17 @@ $(function() {
 	function getUserFilterInput() {
 		return $.trim($('.user-filter').val() || '');
 	}
+
+	function toggleFindHelp() {
+		$('.search-users-help').toggle(!getUserFilterInput());
+	}
+
   function prepFindTab(moreToShow) {
 	  console.log('prepFindTab', moreToShow);
 	  if (moreToShow && !moreUsers) return;
 	  moreUsers = true;
 	  var search = getUserFilterInput();
+	  toggleFindHelp();
 	  if (!search) {
 		  moreUsers = false;
 		  usersTmpl.clear();
