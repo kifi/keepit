@@ -149,21 +149,14 @@ case class ProdIndexModule() extends IndexModule {
 }
 
 case class DevIndexModule() extends IndexModule {
-
-  var volatileDirMap = Map.empty[String, IndexDirectory]
+  var volatileDirMap = Map.empty[String, IndexDirectory]  // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
   protected def getIndexDirectory(dir: String, indexStore: IndexStore): IndexDirectory =
     getPersistentIndexDirectory(current.configuration.getString(dir), indexStore).getOrElse{
       volatileDirMap.getOrElse(dir, {
         val newdir = new VolatileIndexDirectoryImpl()
-        log.info("\n\n ================= \n adding entry to volatile dir map: " + (dir , newdir))
         volatileDirMap += dir -> newdir
-        log.info("\n\n ================ \n current volatileDirMap: " + volatileDirMap)
         newdir
       })
     }
-
-//  @Singleton
-//  @Provides
-//  def spellCorrector: SpellCorrector = new FakeSpellCorrector()
 }

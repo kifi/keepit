@@ -1,13 +1,14 @@
 package com.keepit.search.spellcheck
 
-import org.apache.lucene.store.Directory
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.search.spell.SpellChecker
-import com.keepit.common.logging.Logging
-import org.apache.lucene.search.spell.HighFrequencyDictionary
 import org.apache.lucene.index.DirectoryReader
-import com.keepit.search.index.DefaultAnalyzer
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.search.spell.HighFrequencyDictionary
+import org.apache.lucene.search.spell.SpellChecker
+import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
+
+import com.keepit.common.logging.Logging
+import com.keepit.search.index.DefaultAnalyzer
 
 trait SpellIndexer {
   def buildDictionary(): Unit
