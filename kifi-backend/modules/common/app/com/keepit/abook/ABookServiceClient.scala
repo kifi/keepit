@@ -25,6 +25,7 @@ trait ABookServiceClient extends ServiceClient {
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
+  def getABookInfo(id:Id[ABookInfo]):Future[Option[ABookInfo]]
   def getContacts(userId:Id[User], maxRows:Int):Future[Seq[Contact]]
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
   def getEContactById(contactId:Id[EContact]):Future[Option[EContact]]
@@ -58,6 +59,12 @@ class ABookServiceClientImpl @Inject() (
 
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {
     call(ABook.internal.upload(userId, origin), Json.toJson(contacts))
+  }
+
+  def getABookInfo(id: Id[ABookInfo]): Future[Option[ABookInfo]] = {
+    call(ABook.internal.getABookInfo(id)).map { r =>
+      Json.fromJson[Option[ABookInfo]](r.json).get
+    }
   }
 
   def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = {
@@ -134,6 +141,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   def uploadDirect(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
 
   def upload(userId: Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {}
+
+  def getABookInfo(id: Id[ABookInfo]): Future[Option[ABookInfo]] = ???
 
   def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = ???
 

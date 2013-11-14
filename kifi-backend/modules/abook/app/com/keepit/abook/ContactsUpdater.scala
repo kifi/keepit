@@ -58,15 +58,11 @@ class ContactsUpdater @Inject() (
   }
 
   private def mkName(name:Option[String], firstName:Option[String], lastName:Option[String], email:String) = sOpt(name).getOrElse(
-    firstName match {
-      case Some(fName) => lastName match {
-        case Some(lName) => s"$fName $lName"
-        case None => fName
-      }
-      case None => lastName match {
-        case Some(lName) => lName
-        case None => (email.split('@'))(0) // may need a parser
-      }
+    (firstName, lastName) match {
+      case (Some(f), Some(l)) => s"$f $l"
+      case (Some(f), None) => f
+      case (None, Some(l)) => l
+      case _ => email
     }
   )
 

@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 
 @ImplementedBy(classOf[ABookInfoRepoImpl])
 trait ABookInfoRepo extends Repo[ABookInfo] {
+  def getById(id:Id[ABookInfo])(implicit session:RSession):Option[ABookInfo]
   def findByUserIdOriginAndOwnerId(userId:Id[User], origin:ABookOriginType, ownerId:Option[String])(implicit session:RSession):Option[ABookInfo]
   def findByUserIdAndOrigin(userId:Id[User], origin:ABookOriginType)(implicit session:RSession):Seq[ABookInfo]
   def findByUserId(userId:Id[User])(implicit session:RSession):Seq[ABookInfo]
@@ -28,6 +29,10 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
     def ownerEmail = column[String]("owner_email")
     def rawInfoLoc = column[String]("raw_info_loc")
     def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ origin ~ ownerId.? ~ ownerEmail.? ~ rawInfoLoc.? <> (ABookInfo.apply _, ABookInfo.unapply _)
+  }
+
+  def getById(id: Id[ABookInfo])(implicit session: RSession): Option[ABookInfo] = {
+    (for { c <- table if c.id === id } yield c).firstOption
   }
 
   def findByUserIdOriginAndOwnerId(userId: Id[User], origin: ABookOriginType, ownerId:Option[String])(implicit session:RSession): Option[ABookInfo] = {
