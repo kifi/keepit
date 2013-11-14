@@ -13,8 +13,6 @@ CREATE TABLE invitation (
     
     PRIMARY KEY (id),
 
-    UNIQUE invitation_i_recipient_social_user_id (recipient_social_user_id),
-
     CONSTRAINT invitation_sender_user_id FOREIGN KEY (sender_user_id) REFERENCES user(id),
     -- CONSTRAINT invitation_recipient_social_user_id FOREIGN KEY (recipient_social_user_id) REFERENCES social_user_info(id)
 );
