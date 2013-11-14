@@ -369,6 +369,19 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.notification())
   }
 
+  def disconnectSocialUser(suiId: Id[SocialUserInfo], revoke: Boolean = false) = AdminHtmlAction { implicit request =>
+    val sui = db.readOnly(socialUserInfoRepo.get(suiId)(_))
+    if (revoke) {
+      socialGraphPlugin.asyncRevokePermissions(sui)
+    }
+    db.readWrite { implicit s =>
+      socialConnectionRepo.deactivateAllConnections(sui.id.get)
+      socialUserInfoRepo.invalidateCache(sui)
+      socialUserInfoRepo.save(sui.copy(credentials = None, userId = None))
+    }
+    Ok
+  }
+
   def bumpUserSeq() = AdminHtmlAction { implicit request =>
     db.readWrite{ implicit s =>
       userRepo.all.sortBy(_.id.get.id).foreach{ u => userRepo.save(u) }
