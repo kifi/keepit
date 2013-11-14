@@ -25,7 +25,7 @@ var tile = tile || function() {  // idempotent for Chrome
       loadAndDo('pane', 'show', o.trigger, o.locator, o.redirected);
     },
     button_click: loadAndDo.bind(null, 'pane', 'toggle', 'button'),
-    auto_show: loadAndDo.bind(null, 'slider2', 'show', 'auto'),
+    auto_show: loadAndDo.bind(null, 'keeper', 'show', 'auto'),
     init: function(o) {
       var pos = o.position;
       if (pos) {
@@ -58,13 +58,13 @@ var tile = tile || function() {  // idempotent for Chrome
       }
     },
     keepers: function(o) {
-      setTimeout(loadAndDo.bind(null, 'slider2', 'showKeepers', o.keepers, o.otherKeeps), 3000);
+      setTimeout(loadAndDo.bind(null, 'keeper', 'showKeepers', o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
       tile && updateCounts(counts);
     },
     scroll_rule: function(r) {
-      if (!onScroll && !window.slider2) {
+      if (!onScroll && !window.keeper) {
         var lastScrollTime = 0;
         document.addEventListener("scroll", onScroll = function(e) {
           var t = e.timeStamp || Date.now();
@@ -76,7 +76,7 @@ var tile = tile || function() {  // idempotent for Chrome
             log("[onScroll]", Math.round(hSeen / hPage * 10000) / 100, ">", r[1], "% and", hPage, ">", r[0] * hViewport, "?")();
             if (hPage > r[0] * hViewport && hSeen > (r[1] / 100) * hPage) {
               log("[onScroll] showing")();
-              loadAndDo('slider2', 'show', 'scroll');
+              loadAndDo('keeper', 'show', 'scroll');
             }
           }
         });
@@ -114,6 +114,12 @@ var tile = tile || function() {  // idempotent for Chrome
         loadAndDo('pane', 'toggle', 'key', '/notices');
         e.preventDefault();
         break;
+      case 83: // s
+        if (session && ~session.experiments.indexOf('inbox')) {
+          loadAndDo('pane', 'compose', 'key');
+          e.preventDefault();
+        }
+        break;
       }
     }
   }
@@ -135,7 +141,7 @@ var tile = tile || function() {  // idempotent for Chrome
     });
   }
 
-  function loadAndDo(name, methodName) {  // gateway to slider2.js
+  function loadAndDo(name, methodName) {  // gateway to keeper.js or pane.js
     if (session === undefined) {  // not yet initialized
       var args = Array.prototype.slice.call(arguments);
       args.unshift(null);
@@ -185,7 +191,7 @@ var tile = tile || function() {  // idempotent for Chrome
   tile["kifi:position"] = positionTile;
   tile.addEventListener("mouseover", function(e) {
     if (e.target === tileCount || tileCard.contains(e.target)) {
-      loadAndDo('slider2', 'show', 'tile');
+      loadAndDo('keeper', 'show', 'tile');
     }
   });
 

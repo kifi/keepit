@@ -13,6 +13,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import akka.pattern.ask
 import com.keepit.social.{SocialNetworkType, SocialGraphPlugin, SocialGraph, SocialUserRawInfoStore}
+import scala.util.Try
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -77,8 +78,10 @@ private[social] class SocialGraphActor @Inject() (
       }
     } catch {
       case ex: Exception =>
-        db.readWrite { implicit c =>
-          socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
+        Try {
+          db.readWrite { implicit c =>
+            socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
+          }
         }
         throw new Exception(s"Error updating SocialUserInfo: ${socialUserInfo.id}, ${socialUserInfo.fullName}", ex)
     }
