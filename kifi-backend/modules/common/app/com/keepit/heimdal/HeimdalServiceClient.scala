@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import java.util.concurrent.atomic.AtomicInteger
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
@@ -41,12 +42,13 @@ trait HeimdalServiceClient extends ServiceClient with Plugin {
 object FlushEventQueue
 object FlushEventQueueAndClose
 
-object EventQueueConsts extends Logging {
+private[heimdal] object EventQueueConsts extends Logging {
   val MaxBatchSize = 100
   val LowWatermarkBatchSize = 10
   val BatchFlushTiming = 10 //seconds
   val StaleEventAddTime = 40000 //milli
   val StaleEventFlushTime = (BatchFlushTiming * 1000) + StaleEventAddTime + 2000 //milli
+  val batchId = new AtomicInteger(0)
 
   def verifyEventStaleTime(airbrakeNotifier: AirbrakeNotifier, clock: Clock, event: HeimdalEvent, timeout: Long, message: String): Unit = {
     val timeSinceEventStarted = clock.getMillis - event.time.getMillis
@@ -97,18 +99,19 @@ class HeimdalClientActor @Inject() (
   }
 
   def flush() = {
+    val batchId = EventQueueConsts.batchId.incrementAndGet
     events.size match {
       case 0 =>
         //ignore
       case 1 =>
         val event = events(0)
         log.info(s"Sending a single event to Heimdal: $event")
-        EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventAddTime, "flush")
+        EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventAddTime, s"flush(1/1) #$batchId")
         call(Heimdal.internal.trackEvent, Json.toJson(event))
         events = Vector()
       case more =>
         log.info(s"Sending ${events.size} events to Heimdal: ${events}")
-        events map { event => EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventFlushTime, "flush") }
+        events.zipWithIndex map { case (event, i) => EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventFlushTime, s"flush($i/${events.size} #$batchId)") }
         call(Heimdal.internal.trackEvents, Json.toJson(events))
         events = Vector()
     }
