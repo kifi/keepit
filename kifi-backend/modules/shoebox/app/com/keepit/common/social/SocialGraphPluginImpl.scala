@@ -77,6 +77,7 @@ private[social] class SocialGraphActor @Inject() (
       }
     } catch {
       case ex: Exception =>
+        log.error(s"Could not fetch user info for ${socialUserInfo.toString}", ex)
         db.readWrite { implicit c =>
           socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
         }
