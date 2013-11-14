@@ -297,6 +297,15 @@ class UserController @Inject() (
         }
       }
     }
+    @inline def getEInviteStatus(contactIdOpt:Option[Id[EContact]]):String = { // todo: batch
+      contactIdOpt flatMap { contactId =>
+        db.readOnly { implicit s =>
+          invitationRepo.getBySenderIdAndRecipientEContactId(userId, contactId) map { inv =>
+            if (inv.state != InvitationStates.INACTIVE) "invited" else ""
+          }
+        }
+      } getOrElse ""
+    }
 
     val res = abookServiceClient.getEContacts(userId, 40000000).map { contacts =>
       val filtered = contacts.filter(e => ((searchScore(e.name) > 0) || (searchScore(e.email) > 0)))
@@ -308,7 +317,7 @@ class UserController @Inject() (
         case None => filtered
       }
       val objs = paged.take(limit).map { e =>
-        Json.obj("label" -> e.name, "value" -> mkId(e.email))
+        Json.obj("label" -> e.name, "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
       }
       log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
       objs

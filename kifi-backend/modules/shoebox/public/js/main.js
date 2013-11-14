@@ -627,6 +627,25 @@ $(function() {
 	  $nwFriends.find('ul').empty();
   }
 
+  function getOpt(opts, name, def) {
+	  var val = opts && opts[name];
+	  return val == null ? def : val;
+  }
+
+  function openPopup(url, name, opts) {
+	  var w = getOpt(opts, 'width', 880),
+		  h = getOpt(opts, 'height', 460),
+		  top = getOpt(opts, 'top', (window.screenTop || window.screenY || 0) + Math.round(.5 * (window.innerHeight - h))),
+		  left = getOpt(opts, 'left', (window.screenLeft || window.screenX || 0) + Math.round(.5 * (window.innerWidth - w))),
+		  dialog = getOpt(opts, 'dialog', true) ? 'yes' : 'no',
+		  menubar = getOpt(opts, 'menubar', false) ? 'yes' : 'no',
+		  resizable = getOpt(opts, 'resizable', true) ? 'yes' : 'no',
+		  scrollbars = getOpt(opts, 'scrollbars', false) ? 'yes' : 'no',
+		  status = getOpt(opts, 'status', false) ? 'yes' : 'no';
+
+	  window.open(url, name, 'width=' + w + ',height=' + h + ',top=' + top + ',left=' + left + ',dialog=' + dialog + ',menubar=' + menubar + ',resizable=' + resizable + ',scrollbars=' + scrollbars + ',status=' + status);
+  }
+
   function filterFriendsByNetwork(network) {
 	  if (!network) {
 		  network = '';
@@ -968,6 +987,7 @@ $(function() {
 		clearTimeout(usersTimeout);
 		$foundUsers.find('ul').empty();
 		$foundUsers.find('.no-results').hide();
+		toggleFindHelp();
 		usersTimeout = setTimeout(prepFindTab, 200);
 	}
 
@@ -1009,11 +1029,17 @@ $(function() {
 	function getUserFilterInput() {
 		return $.trim($('.user-filter').val() || '');
 	}
+
+	function toggleFindHelp() {
+		$('.search-users-help').toggle(!getUserFilterInput());
+	}
+
   function prepFindTab(moreToShow) {
 	  console.log('prepFindTab', moreToShow);
 	  if (moreToShow && !moreUsers) return;
 	  moreUsers = true;
 	  var search = getUserFilterInput();
+	  toggleFindHelp();
 	  if (!search) {
 		  moreUsers = false;
 		  usersTmpl.clear();

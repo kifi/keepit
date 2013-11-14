@@ -1,6 +1,6 @@
 package com.keepit.abook
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{Provider, ImplementedBy, Inject, Singleton}
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
@@ -10,11 +10,12 @@ import com.keepit.abook.store.ABookRawInfoStore
 import play.api.libs.json.{JsValue, Json}
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
-import play.api.Plugin
+import play.api.{Play, Plugin}
 import scala.ref.WeakReference
+import akka.actor.{Props, ActorSystem}
+import play.api.Play.current
 import com.keepit.common.actor.ActorInstance
-import scala.util.{Failure, Success}
-
+import akka.routing.RoundRobinRouter
 
 
 @ImplementedBy(classOf[ContactsUpdaterPluginImpl])
@@ -22,12 +23,19 @@ trait ContactsUpdaterPlugin extends Plugin {
   def asyncProcessContacts(userId:Id[User], origin:ABookOriginType, aBookInfo:ABookInfo, s3Key:String, rawJsonRef:WeakReference[JsValue])
 }
 
-class ContactsUpdaterPluginImpl @Inject() (
-  actor:ActorInstance[ContactsUpdater]
-) extends ContactsUpdaterPlugin with Logging {
+@Singleton
+class ContactsUpdaterPluginImpl @Inject() (actorInstance:ActorInstance[ContactsUpdater], sysProvider:Provider[ActorSystem], updaterProvider:Provider[ContactsUpdater]) extends ContactsUpdaterPlugin with Logging {
+
+  lazy val system = sysProvider.get
+  lazy val actor = {
+    if (Play.maybeApplication.isDefined && (!Play.isTest))
+      system.actorOf(Props(updaterProvider.get).withRouter(RoundRobinRouter(Runtime.getRuntime.availableProcessors)))
+    else
+      actorInstance.ref
+  }
 
   def asyncProcessContacts(userId: Id[User], origin:ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue]): Unit = {
-    actor.ref ! ProcessABookUpload(userId, origin, aBookInfo, s3Key, rawJsonRef)
+    actor ! ProcessABookUpload(userId, origin, aBookInfo, s3Key, rawJsonRef)
   }
 
 }
@@ -50,15 +58,11 @@ class ContactsUpdater @Inject() (
   }
 
   private def mkName(name:Option[String], firstName:Option[String], lastName:Option[String], email:String) = sOpt(name).getOrElse(
-    firstName match {
-      case Some(fName) => lastName match {
-        case Some(lName) => s"$fName $lName"
-        case None => fName
-      }
-      case None => lastName match {
-        case Some(lName) => lName
-        case None => (email.split('@'))(0) // may need a parser
-      }
+    (firstName, lastName) match {
+      case (Some(f), Some(l)) => s"$f $l"
+      case (Some(f), None) => f
+      case (None, Some(l)) => l
+      case _ => email
     }
   )
 
@@ -110,7 +114,9 @@ class ContactsUpdater @Inject() (
           contactRepo.deleteAndInsertAll(userId, abookInfo.id.get, origin, contacts)
         }
       }
-
+      db.readWrite { implicit s =>
+        abookInfoRepo.save(abookInfo.withState(ABookInfoStates.ACTIVE))
+      }
       log.info(s"[upload($userId,$origin)] time-lapsed: ${System.currentTimeMillis - ts}")
     }
     case m => throw new UnsupportedActorMessage(m)

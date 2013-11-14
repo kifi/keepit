@@ -25,8 +25,10 @@ trait ABookServiceClient extends ServiceClient {
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
+  def getABookInfo(id:Id[ABookInfo]):Future[Option[ABookInfo]]
   def getContacts(userId:Id[User], maxRows:Int):Future[Seq[Contact]]
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
+  def getEContactById(contactId:Id[EContact]):Future[Option[EContact]]
   def getEContactByEmail(userId:Id[User], email:String):Future[Option[EContact]]
   def getContactInfos(userId:Id[User], maxRows:Int):Future[Seq[ContactInfo]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
@@ -59,6 +61,12 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.upload(userId, origin), Json.toJson(contacts))
   }
 
+  def getABookInfo(id: Id[ABookInfo]): Future[Option[ABookInfo]] = {
+    call(ABook.internal.getABookInfo(id)).map { r =>
+      Json.fromJson[Option[ABookInfo]](r.json).get
+    }
+  }
+
   def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = {
     call(ABook.internal.getABookInfos(userId)).map { r =>
       Json.fromJson[Seq[ABookInfo]](r.json).get
@@ -74,6 +82,12 @@ class ABookServiceClientImpl @Inject() (
   def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = {
     call(ABook.internal.getEContacts(userId, maxRows)).map { r =>
       Json.fromJson[Seq[EContact]](r.json).get
+    }
+  }
+
+  def getEContactById(contactId: Id[EContact]): Future[Option[EContact]] = {
+    call(ABook.internal.getEContactById(contactId)).map { r =>
+      Json.fromJson[Option[EContact]](r.json).get
     }
   }
 
@@ -128,11 +142,15 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
 
   def upload(userId: Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {}
 
+  def getABookInfo(id: Id[ABookInfo]): Future[Option[ABookInfo]] = ???
+
   def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = ???
 
   def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = ???
 
   def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = ???
+
+  def getEContactById(contactId: Id[EContact]): Future[Option[EContact]] = ???
 
   def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = ???
 

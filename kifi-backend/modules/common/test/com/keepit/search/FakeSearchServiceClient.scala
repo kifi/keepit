@@ -73,10 +73,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
 
   override def version(): Future[String] = ???
 
-  override def buildSpellCorrectorDictionary(): Unit = ???
-
-  override def getSpellCorrectorStatus(): Future[Boolean] = ???
-
   override def correctSpelling(text: String): Future[String] = ???
 
   override def showUserConfig(id: Id[User]): Future[SearchConfig] = ???
