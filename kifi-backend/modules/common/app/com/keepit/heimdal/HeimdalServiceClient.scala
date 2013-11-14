@@ -45,15 +45,15 @@ object EventQueueConsts extends Logging {
   val MaxBatchSize = 100
   val LowWatermarkBatchSize = 10
   val BatchFlushTiming = 10 //seconds
-  val StaleEventAddTime = 10000 //milli
+  val StaleEventAddTime = 30000 //milli
   val StaleEventFlushTime = (BatchFlushTiming * 1000) + StaleEventAddTime + 2000 //milli
 
-  def verifyEventStaleTime(clock: Clock, event: HeimdalEvent, timeout: Long, message: String): Unit = {
+  def verifyEventStaleTime(airbrakeNotifier: AirbrakeNotifier, clock: Clock, event: HeimdalEvent, timeout: Long, message: String): Unit = {
     val timeSinceEventStarted = clock.getMillis - event.time.getMillis
     if (timeSinceEventStarted > timeout) {
       val msg = s"Event started ${timeSinceEventStarted}ms ago but was $message only now (timeout: ${timeout}ms): $event"
       log.error(msg, new Exception(msg))
-      //airbrakeNotifier.notify(message)
+      airbrakeNotifier.notify(message)
     }
   }
 }
@@ -73,7 +73,7 @@ class HeimdalClientActor @Inject() (
   def receive = {
     case event: HeimdalEvent =>
       log.info(s"Event added to queue: $event")
-      EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventAddTime, "added")
+      EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventAddTime, "added")
       events = events :+ event
       if (closing) {
         flush()
@@ -103,12 +103,12 @@ class HeimdalClientActor @Inject() (
       case 1 =>
         val event = events(0)
         log.info(s"Sending a single event to Heimdal: $event")
-        EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventAddTime, "flush")
+        EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventAddTime, "flush")
         call(Heimdal.internal.trackEvent, Json.toJson(event))
         events = Vector()
       case more =>
         log.info(s"Sending ${events.size} events to Heimdal: ${events}")
-        events map { event => EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventFlushTime, "flush") }
+        events map { event => EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventFlushTime, "flush") }
         call(Heimdal.internal.trackEvents, Json.toJson(events))
         events = Vector()
     }
@@ -139,7 +139,7 @@ class HeimdalServiceClientImpl @Inject() (
 
   def trackEvent(event: HeimdalEvent) : Unit = {
     actor.ref ! event
-    EventQueueConsts.verifyEventStaleTime(clock, event, EventQueueConsts.StaleEventAddTime, "post to actor")
+    EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventAddTime, "post to actor")
   }
 
   def getMetricData[E <: HeimdalEvent: TypeCode](name: String): Future[JsObject] = {
