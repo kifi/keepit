@@ -18,23 +18,17 @@ import com.keepit.common.db.States
 case class EventDescriptor[E <: HeimdalEvent](
   name: EventType,
   description: Option[String] = None,
-  mixpanel: State[HeimdalEvent] = MixpanelStates.PENDING,
+  mixpanel: Boolean = false,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime
-) {
-  def sendToMixpanel: Boolean = mixpanel == MixpanelStates.ACTIVE || (mixpanel == MixpanelStates.PENDING && createdAt.isBefore(currentDateTime.minusDays(7)))
-}
-
-object MixpanelStates extends States[HeimdalEvent] {
-  val PENDING = State[HeimdalEvent]("pending")
-}
+)
 
 object EventDescriptor {
   implicit def bsonHandler[E <: HeimdalEvent] = Macros.handler[EventDescriptor[E]]
   implicit def format[E <: HeimdalEvent]: Format[EventDescriptor[E]] = (
     (__ \ 'name).format[EventType] and
     (__ \ 'description).formatNullable[String] and
-    (__ \ 'mixpanel).format(State.format[HeimdalEvent]) and
+    (__ \ 'mixpanel).format[Boolean] and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat)
   )(EventDescriptor.apply[E], unlift(EventDescriptor.unapply[E]))
