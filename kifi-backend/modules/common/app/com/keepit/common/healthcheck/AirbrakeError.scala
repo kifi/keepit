@@ -53,7 +53,8 @@ case class AirbrakeError(
       causeStacktraceHead(4).getOrElse(message.map(_.take(Max8M)).getOrElse("")) +
         url.getOrElse("") +
         method.getOrElse("")
-    val binaryHash = MessageDigest.getInstance("MD5").digest(permText)
+    val cleanText = permText.replaceAll("[0-9]", "")
+    val binaryHash = MessageDigest.getInstance("MD5").digest(cleanText)
     AirbrakeErrorSignature(new String(new Base64().encode(binaryHash), UTF8))
   }
 

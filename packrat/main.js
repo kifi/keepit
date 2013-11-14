@@ -1647,8 +1647,8 @@ function getPrefs() {
   ajax("GET", "/ext/prefs", function(o) {
     log("[getPrefs]", o)();
     session.prefs = o[1];
-    session.connId = o[2];
-    socket && socket.send(["connId", session.connId]);
+    session.eip = o[2];
+    socket && socket.send(["eip", session.eip]);
   });
 }
 
@@ -1692,7 +1692,7 @@ function startSession(callback, retryMs) {
 
     session = data;
     session.prefs = {}; // to come via socket
-    socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws?version=" + api.version + "&connId=" + (session.connId || ""), socketHandlers, function onConnect() {
+    socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws?version=" + api.version + "&eip=" + (session.eip || ""), socketHandlers, function onConnect() {
       for (var uri in pageThreadData) {
         pageThreadData[uri].stale = true;
       }

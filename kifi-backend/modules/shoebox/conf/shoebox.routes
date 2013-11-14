@@ -264,6 +264,7 @@ GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserCont
 
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
+POST     /admin/social_user/:id/disconnect      @com.keepit.controllers.admin.AdminUserController.disconnectSocialUser(id: Id[SocialUserInfo], revoke: Boolean ?= false)
 GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
