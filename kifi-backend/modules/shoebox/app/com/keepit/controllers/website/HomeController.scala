@@ -11,7 +11,7 @@ import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.controllers.core.AuthController
 import com.keepit.model._
-import com.keepit.social.{SocialNetworkType, SocialGraphPlugin}
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
 
 import ActionAuthenticator.MaybeAuthenticatedRequest
 import play.api.Play.current
@@ -20,6 +20,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import com.keepit.commanders.InviteCommander
 import com.keepit.common.db.ExternalId
+import securesocial.core.{SecureSocial, Authenticator}
 
 class HomeController @Inject() (
   db: Database,
@@ -135,7 +136,7 @@ class HomeController @Inject() (
     }
     if (otherNetworks.isEmpty) {
       BadRequest("You must have at least one other network connected.")
-    } else if (thisNetwork.isEmpty) {
+    } else if (thisNetwork.isEmpty || thisNetwork.head.networkType == SocialNetworks.FORTYTWO) {
       BadRequest(s"You are not connected to ${network.displayName}.")
     } else {
       val sui = thisNetwork.head
@@ -144,9 +145,20 @@ class HomeController @Inject() (
         socialConnectionRepo.deactivateAllConnections(sui.id.get)
         socialUserRepo.invalidateCache(sui)
         socialUserRepo.save(sui.copy(credentials = None, userId = None))
+        socialUserRepo.getByUser(request.userId).map(socialUserRepo.invalidateCache)
       }
-      otherNetworks map socialGraphPlugin.asyncFetch
-      Redirect(com.keepit.controllers.website.routes.HomeController.home())
+      otherNetworks.map(socialGraphPlugin.asyncFetch)
+
+      val newLoginUser = otherNetworks.find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(otherNetworks.head)
+      val identity = newLoginUser.credentials.get
+      Authenticator.create(identity).fold(
+        error => Status(INTERNAL_SERVER_ERROR)("0"),
+        authenticator => {
+          Redirect("/profile") // hard coded because reverse router donesn't let us go there. todo: fix
+            .withSession(session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> sui.userId.get.toString))
+            .withCookies(authenticator.toCookie)
+        }
+      )
     }
   }
 

@@ -48,6 +48,20 @@ class AdminSocialUserController @Inject() (
     }
   }
 
+  def disconnectSocialUser(suiId: Id[SocialUserInfo], revoke: Boolean = false) = AdminHtmlAction { implicit request =>
+    val sui = db.readOnly(socialUserInfoRepo.get(suiId)(_))
+    if (revoke) {
+      socialGraphPlugin.asyncRevokePermissions(sui)
+    }
+    db.readWrite { implicit s =>
+      socialConnectionRepo.deactivateAllConnections(sui.id.get)
+      socialUserInfoRepo.invalidateCache(sui)
+      socialUserInfoRepo.save(sui.copy(credentials = None, userId = None))
+      socialUserInfoRepo.getByUser(request.userId).map(socialUserInfoRepo.invalidateCache)
+    }
+    Ok
+  }
+
   def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
     val socialUserInfo = db.readOnly { implicit s => socialUserInfoRepo.get(socialUserInfoId) }
     if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
