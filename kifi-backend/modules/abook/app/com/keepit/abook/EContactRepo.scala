@@ -15,6 +15,7 @@ import play.api.Play
 
 @ImplementedBy(classOf[EContactRepoImpl])
 trait EContactRepo extends Repo[EContact] {
+  def getById(econtactId:Id[EContact])(implicit session:RSession): Option[EContact]
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact]
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
@@ -42,6 +43,9 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
       {(c:EContact) => Some((c.createdAt, c.updatedAt, c.userId, c.email, c.name, c.firstName, c.lastName, c.state))})
   }
 
+  def getById(econtactId:Id[EContact])(implicit session:RSession):Option[EContact] = {
+    (for(f <- table if f.id === econtactId) yield f).firstOption
+  }
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact] = {
     (for(f <- table if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).firstOption
   }
