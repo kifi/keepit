@@ -1,5 +1,5 @@
 // @require styles/keeper/pane.css
-// @require scripts/slider2.js
+// @require scripts/keeper.js
 // @require scripts/html/keeper/pane.js
 // @require scripts/html/keeper/pane_notices.js
 // @require scripts/html/keeper/pane_threads.js
@@ -76,7 +76,7 @@ var pane = pane || function () {  // idempotent for Chrome
     log("[showPane2]", locator, name)();
     if ($pane) {
       var left = back || toPaneIdx(name) < toPaneIdx(toPaneName(paneHistory[0]));
-      slider2.onPaneChange(locator);
+      keeper.onPaneChange(locator);
       var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden");
       var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
       var $old = $cart.find(".kifi-pane-box");
@@ -114,11 +114,11 @@ var pane = pane || function () {  // idempotent for Chrome
         }));
       $pane[0].dataset.locator = locator;
       api.port.emit("pane", {new: locator});
-      var bringSlider = !slider2.showing();
+      var bringSlider = !keeper.showing();
       if (bringSlider) {
-        $pane.append(slider2.create(locator)).appendTo(tile.parentNode);
+        $pane.append(keeper.create(locator)).appendTo(tile.parentNode);
       } else {
-        slider2.onPaneChange(locator);
+        keeper.onPaneChange(locator);
         $pane.insertBefore(tile);
         $(tile).css("transform", "translate(0," + (window.innerHeight - tile.getBoundingClientRect().bottom) + "px)");
       }
@@ -129,7 +129,7 @@ var pane = pane || function () {  // idempotent for Chrome
         if (bringSlider) {
           tile.style.display = "block"; // in case sensitive
         } else {
-          slider2.appendTo($pane);
+          keeper.appendTo($pane);
           $pane.before(tile);
         }
         $box.data("shown", true).triggerHandler("kifi:shown");
@@ -265,11 +265,11 @@ var pane = pane || function () {  // idempotent for Chrome
     log('[hidePane]', leaveSlider ? 'leaving slider' : '')();
     if (leaveSlider) {
       $(tile).css({top: "", bottom: "", transform: ""}).insertAfter($pane);
-      slider2.onPaneChange();
-      // $slider.find(".kifi-slider2-x").css("overflow", "");
+      keeper.onPaneChange();
+      // $slider.find(".kifi-keeper-x").css("overflow", "");
     } else {
       $(tile).css("transform", "");
-      slider2.discard();
+      keeper.discard();
     }
     $pane
     .off("transitionend") // onPaneShown
