@@ -28,6 +28,7 @@ trait SearchServiceClient extends ServiceClient {
   def logResultClicked(resultClicked: ResultClicked): Unit
   def logSearchEnded(searchEnded: SearchEnded): Unit
   def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit
+  def warmUpUser(userId: Id[User]): Unit
 
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
@@ -44,8 +45,7 @@ trait SearchServiceClient extends ServiceClient {
   def refreshSearcher(): Unit
   def refreshPhrases(): Unit
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
-  def searchUsers(query: String, maxHits: Int = 10, context: String = ""): Future[UserSearchResult]
-  def searchUsers2(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
+  def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
   def buildSpellCorrectorDictionary(): Unit
@@ -84,6 +84,10 @@ class SearchServiceClientImpl(
   def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = {
     val json = JsArray(uriIds.map(Id.format[NormalizedURI].writes))
     call(Search.internal.updateBrowsingHistory(userId), json)
+  }
+
+  def warmUpUser(userId: Id[User]): Unit = {
+    call(Search.internal.warmUpUser(userId))
   }
 
   def updateURIGraph(): Unit = {
@@ -148,15 +152,9 @@ class SearchServiceClientImpl(
     }
   }
 
-  def searchUsers(query: String, maxHits: Int = 10, context: String = ""): Future[UserSearchResult] = {
-    call(Search.internal.searchUsers(query, maxHits, context)).map{ r =>
-      Json.fromJson[UserSearchResult](r.json).get
-    }
-  }
-
-  def searchUsers2(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = {
+  def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = {
     val payload = Json.toJson(UserSearchRequest(userId, query, maxHits, context, filter))
-    call(Search.internal.searchUsers2(), payload).map{ r =>
+    call(Search.internal.searchUsers(), payload).map{ r =>
       Json.fromJson[UserSearchResult](r.json).get
     }
   }

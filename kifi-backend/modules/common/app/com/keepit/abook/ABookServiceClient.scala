@@ -27,6 +27,7 @@ trait ABookServiceClient extends ServiceClient {
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
   def getContacts(userId:Id[User], maxRows:Int):Future[Seq[Contact]]
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
+  def getEContactByEmail(userId:Id[User], email:String):Future[Option[EContact]]
   def getContactInfos(userId:Id[User], maxRows:Int):Future[Seq[ContactInfo]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getContactsRawInfo(userId:Id[User], origin:ABookOriginType):Future[Seq[ContactInfo]]
@@ -73,6 +74,12 @@ class ABookServiceClientImpl @Inject() (
   def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = {
     call(ABook.internal.getEContacts(userId, maxRows)).map { r =>
       Json.fromJson[Seq[EContact]](r.json).get
+    }
+  }
+
+  def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = {
+    call(ABook.internal.getEContactByEmail(userId, email)).map { r =>
+      Json.fromJson[Option[EContact]](r.json).get
     }
   }
 
@@ -126,6 +133,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = ???
 
   def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = ???
+
+  def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = ???
 
   def getContactInfos(userId: Id[User], maxRows:Int): Future[Seq[ContactInfo]] = ???
 

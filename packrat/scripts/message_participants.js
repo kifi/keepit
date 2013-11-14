@@ -29,24 +29,18 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		kifiUtil = win.kifiUtil,
 		OVERFLOW_LENGTH = 8;
 
-	api.port.on({
+	var portHandlers = {
 		participants: function (participants) {
-			if (messageParticipants.initialized) {
-				messageParticipants.setParticipants(participants);
-			}
+			messageParticipants.setParticipants(participants);
 		},
-		'add_participants': function (users) {
-			if (messageParticipants.initialized) {
-				messageParticipants.addParticipant.apply(messageParticipants, users);
-			}
+		add_participants: function (users) {
+			messageParticipants.addParticipant.apply(messageParticipants, users);
 		}
-	});
+	};
 
 	api.onEnd.push(function () {
-		if (messageParticipants.initialized) {
-			messageParticipants.destroy('api:onEnd');
-			messageParticipants = win.messageParticipants = null;
-		}
+		messageParticipants.destroy();
+		messageParticipants = win.messageParticipants = null;
 	});
 
 	return {
@@ -65,56 +59,21 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 */
 		parent: null,
 
-		prevEscHandler: null,
+		escHandler: null,
 
 		onDocClick: null,
 
 		/**
-		 * A constructor of Message Participants
-		 *
-		 * @constructor
-		 *
-		 * @param {string} trigger - A triggering user action
-		 */
-		construct: function (trigger) {},
-
-		/**
 		 * Initializes a Message Participants.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		init: function (trigger) {
+		init: function () {
 			this.initialized = true;
 
-			/*
-			this.requestParticipants()
-				.then(this.setParticipants.bind(this));
-        */
+			api.port.on(portHandlers);
 
 			this.initEvents();
 			this.initScroll();
 			this.initInput();
-
-			this.logEvent('init', {
-				trigger: trigger
-			});
-		},
-
-		getThreadId: function () {
-			return this.parent.getThreadId();
-		},
-
-		/**
-		 * Request a list of all of participants.
-		 *
-		 * @return {Object} A deferred promise object
-		 */
-		requestParticipants: function () {
-			var id = this.getThreadId();
-			if (id) {
-				return kifiUtil.request('participants', id, 'Could not load participants.');
-			}
-			return null;
 		},
 
 		/**
@@ -146,9 +105,8 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 			function addDocListeners() {
 				if (this.initialized) {
-					var $doc = $(document);
-					this.prevEscHandler = $doc.data('esc');
-					$doc.data('esc', this.handleEsc.bind(this));
+					this.escHandler = this.handleEsc.bind(this);
+					$(document).data('esc').add(this.escHandler);
 
 					var onDocClick = this.onDocClick = onClick.bind(this);
 					document.addEventListener('click', onDocClick, true);
@@ -504,7 +462,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 		sendAddParticipants: function (users) {
 			return kifiUtil.request('add_participants', {
-				threadId: this.getThreadId(),
+				threadId: this.parent.threadId,
 				userIds: util.pluck(users, 'id')
 			}, 'Could not add participants.');
 		},
@@ -616,78 +574,39 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		handleEsc: function (e) {
-			var handled = false;
 			if (this.isExpanded()) {
-				handled = true;
 				this.collapseParticipants();
+				return false;
 			}
 			else if (this.isDialogOpened()) {
-				handled = true;
 				this.hideAddDialog();
-			}
-			else if (this.prevEscHandler) {
-				this.prevEscHandler.call(e.target, e);
-			}
-
-			if (handled) {
-				e.preventDefault();
-				e.stopPropagation();
-				e.stopImmediatePropagation();
+				return false;
 			}
 		},
 
 		/**
-		 * Destroys a tag box.
 		 * It removes all event listeners and caches to elements.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		destroy: function (trigger) {
-			if (this.initialized) {
-				this.initialized = false;
+		destroy: function () {
+			this.initialized = false;
+			this.parent = null;
 
-				this.parent = null;
+			$(document).data('esc').remove(this.escHandler);
+			this.escHandler = null;
 
-				$(document).data('esc', this.prevEscHandler);
-				this.prevEscHandler = null;
-
-				var onDocClick = this.onDocClick;
-				if (onDocClick) {
-					document.removeEventListener('click', onDocClick, true);
-					this.onDocClick = null;
-				}
-
-				['$input', '$list', '$el'].forEach(function (name) {
-					var $el = this[name];
-					if ($el) {
-						$el.remove();
-						this[name] = null;
-					}
-				}, this);
-
-				this.logEvent('destroy', {
-					trigger: trigger
-				});
+			var onDocClick = this.onDocClick;
+			if (onDocClick) {
+				document.removeEventListener('click', onDocClick, true);
+				this.onDocClick = null;
 			}
-		},
 
-		/**
-		 * Logs a user event to the server.
-		 *
-		 * @param {string} name - A event type name
-		 * @param {Object} obj - A event data
-		 * @param {boolean} withUrls - Whether to include url
-		 */
-		logEvent: function (name, obj, withUrls) {
-			if (obj) {
-				if (!withUrls) {
-					obj = win.withUrls(obj);
-				}
-			}
-			log(name, obj)();
-			win.logEvent('slider', 'message_participants.' + name, obj || null);
+			api.port.off(portHandlers);
+
+			// .remove() not called on jQuery elements because it would disrupt a farewell transition
+			// an ancestor should call it later (e.g. by being removed itself)
+
+			this.$input = this.$list = this.$el = null;
 		}
-
 	};
 
 })(jQuery, this);

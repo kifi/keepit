@@ -1,4 +1,4 @@
-/* a weak blank-slate (insulation) attempt, continued from slider2.css */
+/* a weak blank-slate (insulation) attempt, continued from keeper.css */
 .kifi-pane input:not([type]),
 .kifi-pane input[type=text] {
   background: #fff !important;
@@ -445,7 +445,7 @@ div.kifi-pane-empty>img {
   bottom: 54px;
   transition-delay: 0s;
 }
-.kifi-pane .kifi-slider2,
+.kifi-pane .kifi-keeper,
 .kifi-pane .kifi-tagbox {
   z-index: 3;
 }

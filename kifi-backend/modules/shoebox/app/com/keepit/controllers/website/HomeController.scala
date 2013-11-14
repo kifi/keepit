@@ -105,7 +105,7 @@ class HomeController @Inject() (
   def install = AuthenticatedHtmlAction { implicit request =>
     db.readWrite { implicit session =>
       socialUserRepo.getByUser(request.user.id.get) map { su =>
-        invitationRepo.getByRecipient(su.id.get).map { invite =>
+        invitationRepo.getByRecipientSocialUserId(su.id.get).map { invite =>
           if (invite.state != InvitationStates.JOINED) {
             invitationRepo.save(invite.withState(InvitationStates.JOINED))
             invite.senderUserId.map { senderUserId =>

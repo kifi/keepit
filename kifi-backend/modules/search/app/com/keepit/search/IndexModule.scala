@@ -11,7 +11,7 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.search.message.{MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl}
 import com.keepit.search.phrasedetector.{PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer}
-import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
+import com.keepit.search.spellcheck.{FakeSpellCorrector, SpellCorrector}
 import com.keepit.inject.AppScoped
 import java.io.File
 import com.keepit.common.logging.Logging

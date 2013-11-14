@@ -1,5 +1,7 @@
 var xhrDomain = 'https://api.kifi.com';
 var wwwDomain = 'https://www.kifi.com';
+var searchDomain = 'https://search.kifi.com';
+//TODO dev
 //xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
@@ -301,6 +303,7 @@ $(function() {
 
 	var me;
 	var myNetworks;
+	var abooks;
 	var myPrefs;
 	var myKeepsCount;
 	var collections;
@@ -508,18 +511,172 @@ $(function() {
 	var $friendsTabPages = $friends.find('.friends-page');
 
 	function showFriends(path) {
+		path = normalizePath(path);
 		$('body').attr('data-view', 'friends');
 		$('.left-col .active').removeClass('active');
 		$('.my-friends').addClass('active');
-		var $tab = $friendsTabs.filter('[data-href="' + path + '"]').removeAttr('href');
-		if ($tab.length) {
-			$friendsTabs.not($tab).filter(':not([href])').each(function() {this.href = $(this).data('href')});
-			[prepFriendsTab, prepInviteTab, prepRequestsTab][$tab.index()]();
-			$friendsTabPages.hide().filter('[data-href="' + path + '"]').show().find('input').focus();
-		} else {
-			navigate('friends', {replace: true});
-		}
+		selectFriendsTab(path);
 	}
+
+	function normalizePath(path) {
+		if (path) {
+			return path.replace(/^[\s\/]+|[\s\/]+$/g, '');
+		}
+		return '';
+	}
+
+  var FRIENDS_PARENT_PATHS = {
+    'friends/find': 'friends/invite',
+    'friends/invite/facebook': 'friends/invite',
+    'friends/invite/linkedin': 'friends/invite',
+    'friends/invite/email': 'friends/invite'
+  };
+
+  var FRIENDS_PREPS = {
+    'friends': prepFriendsTab,
+    'friends/invite': showAddFriends,
+    'friends/invite/facebook': showAddFriends,
+    'friends/invite/linkedin': showAddFriends,
+    'friends/invite/email': showAddFriends,
+    'friends/find': showAddFriends,
+    'friends/requests': prepRequestsTab
+  };
+
+  function selectFriendsTab(path) {
+    var pPath = FRIENDS_PARENT_PATHS[path] || path,
+      $tab = $friendsTabs.filter('[data-href="' + pPath + '"]');
+      console.log('[selectFriendsTab]', path, pPath, $tab);
+    if ($tab.length) {
+      $tab.removeAttr('href');
+      $friendsTabs.not($tab).filter(':not([href])').each(function() {
+        this.href = $(this).data('href');
+      });
+
+      $friendsTabPages.hide();
+      $friendsTabPages.filter('[data-href="' + pPath + '"]').show().find('input').focus();
+
+      FRIENDS_PREPS[path](path);
+    }
+    else {
+      navigate('friends', {replace: true});
+    }
+  }
+
+	var $addFriendsTabs = $friends.find('.add-friends-tabs>a');
+	var $addFriendsTabPages = $friends.find('.add-friends-page');
+
+  function showAddFriends(path) {
+  var pPath;
+	if (/^friends\/invite/.test(path)) {
+		pPath = 'friends/invite';
+	}
+	else {
+		pPath = path;
+	}
+	var $tab = $addFriendsTabs.filter('[data-href="' + pPath + '"]');
+    console.log('[showAddFriends]', path, pPath, $tab);
+    if ($tab.length) {
+      $tab.removeAttr('href');
+      $addFriendsTabs.not($tab).filter(':not([href])').each(function() {
+        this.href = $(this).data('href');
+      });
+      $addFriendsTabPages.hide();
+      $addFriendsTabPages.filter('[data-href="' + pPath + '"]').show().find('input').focus();
+
+	  var match = path.match(/^friends\/invite(\/\w*)?$/);
+      if (match) {
+		var network = (match[1] || '').replace(/\//g, '');
+		filterFriendsByNetwork(network);
+      }
+      else {
+        prepFindTab();
+      }
+    }
+    else {
+      navigate('friends', {replace: true});
+    }
+  }
+
+  function chooseNetworkFilterDOM(network) {
+	  if (!network) {
+		  network = '';
+	  }
+
+	  var $filters = $('.invite-filters');
+	  if (network) {
+		  $filters.attr('data-nw-selected', network);
+	  }
+	  else {
+		  $filters.removeAttr('data-nw-selected');
+	  }
+
+	  $('.invite-filter').attr('placeholder', 'Type a name' + (network === 'email' ? ' or email' : ''));
+
+	  $filters.children('a').each(function() {
+		  var $this = $(this),
+		  nw = $this.data('nw');
+		  if (nw === network || (!nw && !network)) {
+			  $this.removeAttr('href');
+		  }
+		  else {
+			  $this.attr('href', $this.data('href'));
+		  }
+	  });
+	  updateGmailTab();
+
+	  $nwFriends.find('ul').empty();
+  }
+
+  function filterFriendsByNetwork(network) {
+	  if (!network) {
+		  network = '';
+	  }
+	  console.log('[filterFriendsByNetwork]', network);
+	  chooseNetworkFilterDOM(network);
+	  var isEmail = network === 'email',
+		  isSocial = /^facebook|linkedin$/.test(network);
+	if (isEmail) {
+	  promise.abooks.always(function(data) {
+		  var shouldConnect = !(data && data.length);
+		  if (shouldConnect) {
+			  var url = wwwDomain + '/importContacts';
+			  $('<form method="GET" action="' + url + '">')
+			  .appendTo('body')
+			  .submit()
+			  .remove();
+		  }
+		  else {
+			  emptyAndPrepInvite();
+		  }
+	  });
+	}
+	else if (isSocial) {
+	  promise.myNetworks.done(function(data) {
+		  var shouldConnect = data.every(function(nObj) {
+			  console.log('[myNetworks]', nObj.network, network);
+			  return nObj.network !== network;
+		  });
+		  if (shouldConnect) {
+			  var url = wwwDomain + '/link/' + network;
+			  $('<form method="GET" action="' + url + '">')
+			  .appendTo('body')
+			  .submit()
+			  .remove();
+		  }
+		  else {
+			  emptyAndPrepInvite();
+		  }
+	  });
+	}
+	else {
+		emptyAndPrepInvite();
+	}
+  }
+
+  function emptyAndPrepInvite() {
+	  $nwFriends.find('ul').empty();
+	  prepInviteTab();
+  }
 
 	// All kifi Friends
 
@@ -566,6 +723,7 @@ $(function() {
 		}
 		xhr.always(function() {
 			$a.removeAttr('href').closest('.friend-actions').removeClass('requested unfriended').addClass(o.state);
+			$a.closest('.friend').removeClass('requested unfriended').addClass(o.state);
 			$a.nextAll('.friend-action-desc').text('');
 		});
 	}).on('mouseover', '.friend-mute', function() {
@@ -633,7 +791,7 @@ $(function() {
 	$nwFriends.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var sT = this.scrollTop, sH = this.scrollHeight;
 		// tweak these values as desired
-		const offset = sH / 3, toFetch = 40;
+		var offset = sH / 3, toFetch = 40;
 		if (!$nwFriendsLoading.is(':visible') && this.clientHeight + sT > sH - offset) {
 			console.log('loading more friends');
 			prepInviteTab(toFetch);
@@ -661,11 +819,12 @@ $(function() {
 	}
 	updateInviteCache();
 
-	const friendsToShow = 40;
-	const friendsShowing = [];
+	var friendsToShow = 40;
+	var friendsShowing = [];
 	var moreFriends = true;
 	var invitesLeft;
 	function prepInviteTab(moreToShow) {
+		console.log('[prepInviteTab]', moreToShow);
 		if (moreToShow && !moreFriends) return;
 		moreFriends = true;
 		var network = $('.invite-filters').attr('data-nw-selected') || undefined;
@@ -678,8 +837,40 @@ $(function() {
 			network: network,
 			updatedAt: invitesUpdatedAt
 		};
+		console.log('[prepInviteTab]', opts);
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
-			console.log('[prepInviteTab] friends:', friends.length);
+			console.log('[prepInviteTab] friends:', friends && friends.length, friends);
+			friends.forEach(function(obj) {
+				if (!obj.image) {
+					obj.image = '';
+				}
+				if (!obj.status) {
+					obj.status = '';
+				}
+				var val = obj.value;
+				var network = obj.network = val && val.substring(0, val.indexOf('/')),
+					isEmail = network === 'email';
+
+				obj.email = isEmail && val.substring(val.indexOf('/') + 1);
+
+				var description;
+				switch (obj.status) {
+					case 'joined':
+						description = 'Joined Kifi';
+					break;
+					case 'invited':
+						description = 'Invited';
+					break;
+					default:
+						if (isEmail) {
+							description = 'Invite via email';
+						}
+						else {
+							description = 'A friend on ' + network;
+						}
+				}
+				obj.description = description;
+			});
 			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
 			var filter = $('.invite-filter').val() || undefined;
 			if (filter != search || nw != network) return;
@@ -707,10 +898,6 @@ $(function() {
 			$('.num-invites').text(invitesLeft).parent().show();
 		});
 	}
-	$('.invite-filters>a').click(function () {
-		$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
-		filterFriends();
-	});
 	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
 	.on('click', '.more-invites', function(e) {
 		e.preventDefault();
@@ -750,11 +937,127 @@ $(function() {
 			$('<form method=POST action=/invite target="' + fullSocialId + '" style="position:fixed;height:0;width:0;left:-99px">')
 			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">')
 			.appendTo('body').submit().remove();
-		} else if (/^linkedin/.test(fullSocialId)) {
+		} else if (/^linkedin|email/.test(fullSocialId)) {
 			inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: $friend.find('.invite-name').text()});
 			$inviteMessageDialog.dialog('show');
 		}
 	});
+
+  // Friend Find
+
+	var $foundUsers = $('.found-user-list').antiscroll({x: false, width: '100%'});
+	$foundUsers.find(".antiscroll-inner").scroll(function() { // infinite scroll
+		var sT = this.scrollTop, sH = this.scrollHeight;
+		// tweak these values as desired
+		var offset = sH / 3, toFetch = 40;
+		if (!$('.found-user-list-loading').is(':visible') && this.clientHeight + sT > sH - offset) {
+			console.log('loading more users');
+			prepFindTab(toFetch);
+		}
+	});
+	var foundUsersScroller = $foundUsers.data("antiscroll");
+	$(window).resize(foundUsersScroller.refresh.bind(foundUsersScroller));  // TODO: throttle, and only bind while visible
+	var usersTmpl = Tempo.prepare($foundUsers).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$('.found-user-list-loading').hide();
+		foundUsersScroller.refresh();
+	});
+
+
+	var usersTimeout;
+	function filterUsers() {
+		clearTimeout(usersTimeout);
+		$foundUsers.find('ul').empty();
+		$foundUsers.find('.no-results').hide();
+		usersTimeout = setTimeout(prepFindTab, 200);
+	}
+
+	$('.user-filter').on('input', filterUsers);
+	$('.found-user-list').on('click', '.connect-button', function() {
+		var $a = $(this), o = $a.closest('.found-user').data(), xhr;
+		switch (o.status) {
+			case 'friend':
+				xhr = $.post(xhrBase + '/user/' + o.id + '/unfriend', function(data) {
+					o.status = '';
+				});
+				break;
+			case 'requested':
+				xhr = $.post(xhrBase + '/user/' + o.id + '/cancelRequest', function(data) {
+					o.status = '';
+				}).error(function() {
+					if (xhr && xhr.responseText && JSON.parse(xhr.responseText).alreadyAccepted) {
+						o.status = 'friend';
+					}
+				});
+				break;
+			//case '':
+			default:
+				xhr = $.post(xhrBase + '/user/' + o.id + '/friend', function(data) {
+					o.status = data.acceptedRequest ? 'friend' : 'requested';
+				});
+				break;
+		}
+		xhr.always(function() {
+			$a.closest('.found-user').data('status', o.status).removeClass('friend requested').addClass(o.status);
+		});
+	});
+
+	var usersToShow = 40;
+	var usersShowing = [];
+	var userPageIndex = 0;
+	var moreUsers = true;
+
+	function getUserFilterInput() {
+		return $.trim($('.user-filter').val() || '');
+	}
+  function prepFindTab(moreToShow) {
+	  console.log('prepFindTab', moreToShow);
+	  if (moreToShow && !moreUsers) return;
+	  moreUsers = true;
+	  var search = getUserFilterInput();
+	  if (!search) {
+		  moreUsers = false;
+		  usersTmpl.clear();
+		  usersShowing.length = 0;
+		  $foundUsers.find('.no-results').hide();
+		  $('.found-user-list-loading').hide();
+		  return;
+	  }
+	  $('.found-user-list-loading').show();
+	  var pageNum = userPageIndex = moreToShow ? userPageIndex : 0,
+		  pageSize = usersToShow,
+		  opts = {
+		  pageNum: pageNum,
+		  pageSize: pageSize,
+		  query: search
+	  };
+	  //$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
+	  $.getJSON(searchDomain + '/search/users/page', opts, function(friends) {
+		  if (search != getUserFilterInput()) {
+			  return;
+		  }
+		  userPageIndex++;
+		  console.log('[prepFindTab] friends:', friends && friends.length, friends);
+		  friends.forEach(function(obj, i) {
+			  obj.status = obj.status || '';
+			  obj.image = formatPicUrl(obj.user.id, obj.user.pictureName, 200);
+		  });
+		  if (friends.length < pageSize) {
+			  moreUsers = false;
+		  }
+		  if (!moreToShow) {
+			  usersTmpl.clear();
+			  usersShowing.length = 0;
+		  }
+		  usersShowing.push.apply(usersShowing, friends);
+		  var $noResults = $foundUsers.find('.no-results').hide();
+		  if (!usersShowing.length) {
+			  $noResults.find('.no-result-filter').text(search);
+			  $noResults.show();
+		  }
+		  usersTmpl.append(friends);
+		  //inviteFilterTmpl.render({results: usersShowing.length, filter: filter});
+	  });
+  }
 
 	// Friend Requests
 
@@ -1379,7 +1682,12 @@ $(function() {
 				title = 'Profile';
 				break;
 			case 'friends':
-				title = {friends: 'Friends', 'friends/invite': 'Invite Friends', 'friends/requests': 'Friend Requests'}[uri];
+				title = {
+          friends: 'Friends',
+          'friends/invite': 'Invite Friends',
+          'friends/find': 'Find Friends',
+          'friends/requests': 'Friend Requests'
+        }[uri];
 				break;
 			case 'blog':
 			  title = 'Updates and Features'
@@ -1953,17 +2261,49 @@ $(function() {
 		$(".my-name").text(data.firstName + ' ' + data.lastName);
 		$(".my-description").text(data.description || '\u00A0'); // nbsp
 		$friendsTabs.filter('[data-href="friends/invite"]').toggle(canInvite());
+		updateGmailTab();
+		updateConnectTab();
 	}
 
 	function canInvite() {
+		//TODO dev
 		return me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('can invite') >= 0;
+	}
+
+	function canInviteViaGmail() {
+		//TODO dev
+		return me.experiments.indexOf('admin') >= 0 ||
+			me.experiments.indexOf('gmail_invite') >= 0;
+	}
+
+	function canConnect() {
+		//TODO dev
+		return me.experiments.indexOf('admin') >= 0 ||
+			me.experiments.indexOf('can_connect') >= 0;
+	}
+
+	function updateGmailTab() {
+		var $button = $('a[data-nw="email"]'),
+			enabled = canInviteViaGmail();
+		if (enabled) {
+			$button.attr('href', 'friends/invite/email');
+			$button.attr('data-href', 'friends/invite/email');
+		}
+		else {
+			$button.removeAttr('href');
+			$button.removeAttr('data-href');
+		}
+	}
+
+	function updateConnectTab() {
+		$('a[data-href="friends/find"]').toggle(canConnect());
 	}
 
 	function updateFriendRequests(n) {
 		var $a = $('h3.my-friends>a'), $count = $a.find('.nav-count');
 		if (n < 0) {
-			n += +$count.text();
+			n = Math.max(Number($count.text() || 0) + n, 0);
 		}
 		$count.add('.friend-req-count').text(n || '');
 		$a[0].href = n ? 'friends/requests' : 'friends';
@@ -1975,6 +2315,9 @@ $(function() {
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function(data) {
 			myNetworks = data;
 		}).promise(),
+		abooks: $.getJSON(xhrBase + '/user/abooks', function(data) {
+			abooks = data;
+		}).promise(),
 		myPrefs: $.getJSON(xhrBase + '/user/prefs', function(data) {
 			myPrefs = data;
 			if (myPrefs.site_left_col_width) {
@@ -1983,6 +2326,8 @@ $(function() {
 		}).promise()};
 	$.when(promise.me).done(function () {
 		$('#invite-friends-link').toggle(canInvite());
+		updateGmailTab();
+		updateConnectTab();
 	});
 	updateCollections();
 	$.getJSON(xhrBase + '/user/friends/count', function(data) {

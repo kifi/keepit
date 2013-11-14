@@ -24,6 +24,7 @@ class ExtEventController @Inject() (
   db: Database,
   userRepo: UserRepo,
   heimdal: HeimdalServiceClient,
+  eventHelper: EventHelper,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
@@ -70,8 +71,8 @@ class ExtEventController @Inject() (
           }
         }
       }
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType(s"old_${eventFamily}_${eventName}")))
-
+      eventHelper.newEvent(event) // Forwards to listeners
+      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType(s"old_${eventFamily}_${eventName}"))) // forwards to Heimdal
     }
     Ok("")
   }

@@ -11,6 +11,8 @@ import reactivemongo.bson.BSONString
 import reactivemongo.api.collections.default.BSONCollection
 import com.keepit.serializer.Companion
 import play.api.libs.json.JsArray
+import org.joda.time.DateTime
+import com.keepit.common.db.State
 
 //Might want to change this to a custom play one
 import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
@@ -90,5 +92,41 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
     }
 
   }
+}
 
+object CustomBSONHandlers {
+  implicit object BSONDateTimeHandler extends BSONHandler[BSONDateTime, DateTime] {
+    def read(time: BSONDateTime) = new DateTime(time.value)
+    def write(jdtime: DateTime) = BSONDateTime(jdtime.getMillis)
+  }
+
+  implicit object BSONEventTypeHandler extends BSONHandler[BSONString, EventType] {
+    def read(name: BSONString) = EventType(name.value)
+    def write(eventType: EventType) = BSONString(eventType.name)
+  }
+
+  implicit object BSONEventContextHandler extends BSONHandler[BSONDocument, EventContext] {
+    def write(context: EventContext) = BSONDocument(
+      context.data.mapValues{ seq =>
+        BSONArray(
+          seq.map{ _ match {
+            case ContextStringData(s)  => BSONString(s)
+            case ContextDoubleData(x) => BSONDouble(x)
+          }}
+        )
+      }
+    )
+    def read(doc: BSONDocument): EventContext = ???
+  }
+
+  def eventToBSONFields(event: HeimdalEvent): Seq[(String, BSONValue)] = Seq(
+    "context" -> BSONEventContextHandler.write(event.context),
+    "event_type" -> BSONEventTypeHandler.write(event.eventType),
+    "time" -> BSONDateTimeHandler.write(event.time)
+  )
+
+  implicit def stateHandler[T]: BSONHandler[BSONString, State[T]] = new BSONHandler[BSONString, State[T]] {
+    def read(name: BSONString) = State[T](name.value)
+    def write(state: State[T]) = BSONString(state.value)
+  }
 }

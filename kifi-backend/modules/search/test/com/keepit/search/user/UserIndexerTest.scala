@@ -28,9 +28,19 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     } ++ Seq(EmailAddress(userId = usersWithId(4).id.get, address = "woody@fox.com"),
      EmailAddress(userId = usersWithId(4).id.get, address = "Woody.Allen@GMAIL.com"))
 
+    val exps = Seq( UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("admin")),
+        UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can invite")),
+        UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can message all users")),
+        UserExperiment(userId = usersWithId(1).id.get, experimentType = ExperimentType("fake")),
+        UserExperiment(userId = usersWithId(2).id.get, experimentType = ExperimentType("admin"))
+    )
+    exps.foreach{client.saveUserExperiment(_)}
+
     client.saveEmails(emails: _*)
     usersWithId
   }
+
+  def filterFactory = inject[UserSearchFilterFactory]
 
   def mkUserIndexer(dir: IndexDirectory = new VolatileIndexDirectoryImpl): UserIndexer = {
     new UserIndexer(dir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
@@ -73,8 +83,6 @@ class UserIndexerTest extends Specification with ApplicationInjector {
       query = parser.parse("firstNaM")
       searcher.search(query.get).seq.size === 4
 
-      query = parser.parse("")
-      searcher.search(query.get).seq.size === 5     // wildcard query used. match all
     }
   }
 
@@ -106,13 +114,13 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val analyzer = DefaultAnalyzer.defaultAnalyzer
         val parser = new UserQueryParser(analyzer)
         val query = parser.parse("woody.allen@gmail.com")
-
-        val hits = searcher.search(query.get, maxHit = 5).hits
+        val filter = filterFactory.default(None)
+        val hits = searcher.search(query.get, maxHit = 5, filter).hits
         hits.size === 1
         hits(0).basicUser.firstName === "Woody"
 
         val query2 = parser.parse("firstNa")
-        val hits2 = searcher.search(query2.get, 5).hits
+        val hits2 = searcher.search(query2.get, 5, filter).hits
         hits2.size === 4
         hits2.map{_.basicUser.firstName} === (0 to 3).map{ i => s"firstName${i}"}.toArray
         hits2.map{_.id.id}.seq === (1 to 4)
@@ -133,13 +141,16 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val query = parser.parse("firstNa")
 
         var context = ""
-        var filter = IdFilterCompressor.fromBase64ToSet(context)
-        var res = searcher.search(query.get, maxHit = 2, idFilter = filter)
+        var idfilter = IdFilterCompressor.fromBase64ToSet(context)
+        var filter = filterFactory.default(None, Some(context), excludeSelf = false)
+        var res = searcher.search(query.get, maxHit = 2, filter)
         res.hits.size === 2
         res.hits.map(_.id.id).seq === (1 to 2)
+
         context = res.context
-        filter = IdFilterCompressor.fromBase64ToSet(context)
-        res = searcher.search(query.get, maxHit = 10, idFilter = filter)
+        idfilter = IdFilterCompressor.fromBase64ToSet(context)
+        filter = filterFactory.default(None, Some(context), excludeSelf = false)
+        res = searcher.search(query.get, maxHit = 10, filter)
         res.hits.size === 2
         res.hits.map(_.id.id).seq === (3 to 4)
       }
@@ -160,11 +171,37 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val analyzer = DefaultAnalyzer.defaultAnalyzer
         val parser = new UserQueryParser(analyzer)
         val query = parser.parse("firstNa")
-
-        val hits = searcher.search(query.get, maxHit = 10).hits
+        val filter = filterFactory.default(None)
+        val hits = searcher.search(query.get, maxHit = 10, filter).hits
         hits.size === 3
       }
     }
+
+    "filter by user experiments" in {
+      running(new TestApplication(FakeShoeboxServiceModule())) {
+        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        setup(client)
+        val indexer = mkUserIndexer()
+        indexer.run()
+
+        val searcher = indexer.getSearcher
+        val analyzer = DefaultAnalyzer.defaultAnalyzer
+        val parser = new UserQueryParser(analyzer)
+        var query = parser.parseWithUserExperimentConstrains("firstNa", Seq())
+
+        searcher.search(query.get).seq.size === 4
+
+        query = parser.parseWithUserExperimentConstrains("firstNa", Seq("admin"))
+        searcher.search(query.get).seq.size === 2
+
+        query = parser.parseWithUserExperimentConstrains("firstNa", Seq("can invite"))
+        searcher.search(query.get).seq.size === 3
+
+        query = parser.parseWithUserExperimentConstrains("firstNa", Seq("fake"))
+        searcher.search(query.get).seq.size === 3
+      }
+    }
+
   }
 
 }

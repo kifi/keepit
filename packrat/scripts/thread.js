@@ -29,19 +29,13 @@ panes.thread = function () {
       var threadId = locator.split('/')[2];
       log('[panes.thread.render]', threadId)();
       api.port.emit('thread', {id: threadId, respond: true}, function (th) {
-        api.port.emit('session', function (session) {
-          renderThread($container, th.id, th.messages, session);
-          api.port.emit('participants', th.id, function (participants) {
-            var messageHeader = window.messageHeader,
-              $pane = window.slider2.getPane();
-            messageHeader.$pane = $pane;
-            messageHeader.participants = participants;
-            messageHeader.construct();
-            var $box = $pane.find('.kifi-pane-box');
-            $box.find('.kifi-pane-tall').css('margin-top', $box.find('.kifi-thread-who').outerHeight());
-          });
-          api.port.on(handlers);
+        renderThread($container, th.id, th.messages, session);
+        api.port.emit('participants', th.id, function (participants) {
+          var $who = $container.closest('.kifi-pane-box').find('.kifi-thread-who');
+          window.messageHeader.init($who, th.id, participants);
+          $container.css('margin-top', $who.outerHeight());
         });
+        api.port.on(handlers);
       });
       var $redirected = $container.find('.kifi-thread-redirected').click(function () {
         $redirected.fadeOut(800, $.fn.remove.bind($redirected));
@@ -84,6 +78,7 @@ panes.thread = function () {
 
     $container.closest('.kifi-pane-box').on('kifi:remove', function () {
       if ($holder.length && this.contains($holder[0])) {
+        window.messageHeader.destroy();
         $holder = $();
         $(window).off('resize.thread');
         api.port.off(handlers);

@@ -1,4 +1,4 @@
-package com.keepit.search.query.parser
+package com.keepit.search.spellcheck
 
 import org.apache.lucene.search
 import org.apache.lucene.store.FSDirectory

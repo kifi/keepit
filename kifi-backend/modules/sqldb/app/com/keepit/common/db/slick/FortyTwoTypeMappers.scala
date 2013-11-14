@@ -109,6 +109,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[SocialUserInfo](profile)
   }
 
+  implicit object EContactIdTypeMapper extends BaseTypeMapper[Id[EContact]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[EContact](profile)
+  }
+
   implicit object FollowIdTypeMapper extends BaseTypeMapper[Id[Follow]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Follow](profile)
   }
@@ -246,6 +250,8 @@ object FortyTwoTypeMappers {
   implicit object ABookOriginTypeMapper extends BaseTypeMapper[ABookOriginType] {
     def apply(profile: BasicProfile) = new ABookOriginTypeMapperDelegate(profile)
   }
+
+
 
   implicit object SocialIdHistoryTypeMapper extends BaseTypeMapper[SocialId] {
     def apply(profile: BasicProfile) = new SocialIdMapperDelegate(profile)

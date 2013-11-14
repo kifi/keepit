@@ -1212,7 +1212,7 @@ function kifify(tab) {
   }
 
   if (!session) {
-    if (!getStored('logout')) { // user did not explicitly log out
+    if (!getStored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
       ajax("GET", "/ext/authed", function(loggedIn) {
         if (loggedIn !== false) {
           startSession(function() {

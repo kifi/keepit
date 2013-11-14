@@ -19,16 +19,14 @@ var messageMuter = this.messageMuter = (function ($, win) {
 
 	var kifiUtil = win.kifiUtil;
 
-	api.port.on({
+	var portHandlers = {
 		muted: function (muted) {
-			if (messageMuter.initialized) {
-				messageMuter.updateMuted(muted);
-			}
+			messageMuter.updateMuted(muted);
 		}
-	});
+	};
 
 	api.onEnd.push(function () {
-		messageMuter.destroy('api:onEnd');
+		messageMuter.destroy();
 		messageMuter = win.messageMuter = null;
 	});
 
@@ -49,41 +47,27 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		parent: null,
 
 		/**
-		 * A constructor of Message Muter
-		 *
-		 * @constructor
-		 *
-		 * @param {string} trigger - A triggering user action
-		 */
-		construct: function (trigger) {},
-
-		/**
 		 * Initializes a Message Muter.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		init: function (trigger) {
+		init: function () {
 			this.initialized = true;
+
+			api.port.on(portHandlers);
 
 			this.initEvents();
 
 			this.requestIsMuted()
 				.then(this.updateMuted.bind(this));
-
-			this.logEvent('init', {
-				trigger: trigger
-			});
 		},
 
 		/**
 		 * Initializes event listeners.
 		 */
 		initEvents: function () {
-			var $parent = this.getParent$();
-			$parent.on('click', '.kifi-message-header-unmute-button', this.unmute.bind(this));
-
-			$parent.on('click', '.kifi-message-mute-option-mute', this.mute.bind(this));
-			$parent.on('click', '.kifi-message-mute-option-unmute', this.unmute.bind(this));
+			this.parent.$el
+				.on('click', '.kifi-message-header-unmute-button', this.unmute.bind(this))
+				.on('click', '.kifi-message-mute-option-mute', this.mute.bind(this))
+				.on('click', '.kifi-message-mute-option-unmute', this.unmute.bind(this));
 		},
 
 		/**
@@ -105,7 +89,7 @@ var messageMuter = this.messageMuter = (function ($, win) {
 
 		/**
 		 * Whether the conversation is muted or not.
-		 * 
+		 *
 		 * @return {boolean} Whether the conversation is muted or not
 		 */
 		isMuted: function () {
@@ -136,16 +120,12 @@ var messageMuter = this.messageMuter = (function ($, win) {
 			this.parent.setStatus('muted', muted);
 		},
 
-		getThreadId: function () {
-			return this.parent.getThreadId();
-		},
-
 		requestIsMuted: function () {
-			return kifiUtil.request('is_muted', this.getThreadId(), 'Could get is_muted');
+			return kifiUtil.request('is_muted', this.parent.threadId, 'Could not get is_muted');
 		},
 
 		sendMuted: function (muted) {
-			var threadId = this.getThreadId();
+			var threadId = this.parent.threadId;
 			if (muted) {
 				return kifiUtil.request('mute_thread', threadId, 'Could not mute');
 			}
@@ -182,60 +162,13 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		},
 
 		/**
-		 * Returns a jQuery wrapper object for the parent module.
-		 *
-		 * @return {jQuery} A jQuery wrapper object
-		 */
-		getParent$: function () {
-			return this.parent.$el;
-		},
-
-		/**
-		 * Destroys a tag box.
 		 * It removes all event listeners and caches to elements.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		destroy: function (trigger) {
-			if (this.initialized) {
-				this.initialized = false;
-				this.parent = null;
-
-				if (win.slider2) {
-					win.slider2.unshadePane();
-				}
-
-				['$input', '$list', '$el'].forEach(function (name) {
-					var $el = this[name];
-					if ($el) {
-						$el.remove();
-						this[name] = null;
-					}
-				}, this);
-
-				this.logEvent('destroy', {
-					trigger: trigger
-				});
-			}
-		},
-
-		/**
-		 * Logs a user event to the server.
-		 *
-		 * @param {string} name - A event type name
-		 * @param {Object} obj - A event data
-		 * @param {boolean} withUrls - Whether to include url
-		 */
-		logEvent: function (name, obj, withUrls) {
-			if (obj) {
-				if (!withUrls) {
-					obj = win.withUrls(obj);
-				}
-			}
-			log(name, obj)();
-			win.logEvent('slider', 'message_mute.' + name, obj || null);
+		destroy: function () {
+			this.initialized = false;
+			this.parent = null;
+			api.port.off(portHandlers);
 		}
-
 	};
 
 })(jQuery, this);

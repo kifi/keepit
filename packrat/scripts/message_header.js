@@ -25,7 +25,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
   */
 
 	api.onEnd.push(function () {
-		messageHeader.destroy('api:onEnd');
+		messageHeader.destroy();
 		messageHeader = win.messageHeader = null;
 	});
 
@@ -42,56 +42,29 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		status: null,
 
-		$pane: null,
+		threadId: null,
 
 		participants: null,
 
-		prevEscHandler: null,
+		escHandler: null,
 
 		onDocClick: null,
 
 		/**
-		 * A constructor of Message Header
-		 *
-		 * Renders and initializes a message header box if not already.
-		 *
-		 * @constructor
-		 *
-		 * @param {string} trigger - A triggering user action
+		 * Renders and initializes a message header box.
 		 */
-		construct: function (trigger) {
-			if (!this.initialized) {
-				this.constructPlugins();
-				this.init(trigger);
+		init: function ($parent, threadId, participants) {
+			if (this.initialized) {
+				this.destroy();
 			}
-		},
-
-		/**
-		 * Renders and initializes a Message Header.
-		 *
-		 * @param {string} trigger - A triggering user action
-		 */
-		init: function (trigger) {
+			this.threadId = threadId;
+			this.participants = participants;
 			this.initialized = true;
 			this.status = {};
-			this.initMessageHeader();
+			this.claimPlugins();
+			this.$el = $(this.render()).appendTo($parent);
 			this.initPlugins();
 			this.initEvents();
-
-			this.logEvent('init', {
-				trigger: trigger
-			});
-		},
-
-		/**
-		 * Finds, initializes, and caches a container.
-		 *
-		 * @return {jQuery} A jQuery object for the container
-		 */
-		initMessageHeader: function () {
-			var $el = $(this.render()).appendTo(this.$pane.find('.kifi-thread-who'));
-			this.$el = $el;
-			return $el;
 		},
 
 		/**
@@ -107,9 +80,8 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 			function addDocListeners() {
 				if (this.initialized) {
-					var $doc = $(document);
-					this.prevEscHandler = $doc.data('esc');
-					$doc.data('esc', this.handleEsc.bind(this));
+					this.escHandler = this.handleEsc.bind(this);
+					$(document).data('esc').add(this.escHandler);
 
 					var onDocClick = this.onDocClick = onClick.bind(this);
 					document.addEventListener('click', onDocClick, true);
@@ -137,21 +109,17 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		},
 
 		shadePane: function () {
-			if (win.slider2) {
+			if (win.pane) {
 				this.$el.closest('.kifi-thread-who').addClass('kifi-active');
-				win.slider2.shadePane();
+				win.pane.shade();
 			}
 		},
 
 		unshadePane: function () {
-			if (win.slider2) {
+			if (win.pane) {
 				this.$el.closest('.kifi-thread-who').removeClass('kifi-active');
-				win.slider2.unshadePane();
+				win.pane.unshade();
 			}
-		},
-
-		getThreadId: function () {
-			return win.slider2 && win.slider2.getThreadId() || null;
 		},
 
 		toggleOptions: function (e) {
@@ -168,34 +136,27 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		handleEsc: function (e) {
 			if (this.isOptionExpanded()) {
-				e.preventDefault();
-				e.stopPropagation();
-				e.stopImmediatePropagation();
 				this.hideOptions();
-			}
-			else if (this.prevEscHandler) {
-				this.prevEscHandler.call(e.target, e);
+				return false;
 			}
 		},
 
 		/**
 		 * Destroys a message header.
 		 * It removes all event listeners and caches to elements.
-		 *
-		 * @param {string} trigger - A triggering user action
 		 */
-		destroy: function (trigger) {
+		destroy: function () {
+			log('[message_header:destroy]', this.initialized, this.threadId)();
 			if (this.initialized) {
 				this.initialized = false;
+				this.threadId = null;
 
 				this.unshadePane();
 
 				this.destroyPlugins();
 
-				$(win.tile).css('transform', '');
-
-				$(document).data('esc', this.prevEscHandler);
-				this.prevEscHandler = null;
+				$(document).data('esc').remove(this.escHandler);
+				this.escHandler = null;
 
 				var onDocClick = this.onDocClick;
 				if (onDocClick) {
@@ -203,21 +164,12 @@ var messageHeader = this.messageHeader = (function ($, win) {
 					this.onDocClick = null;
 				}
 
-				'$el'.split(',').forEach(function (name) {
-					var $el = this[name];
-					if ($el) {
-						$el.remove();
-						this[name] = null;
-					}
-				}, this);
+				// this.$el.remove() not called because it would disrupt a farewell transition
+				// parent should call it later (e.g. by being removed itself)
 
 				this.status = null;
-				this.$pane = null;
+				this.$el = null;
 				this.participants = null;
-
-				this.logEvent('destroy', {
-					trigger: trigger
-				});
 			}
 		},
 
@@ -279,10 +231,9 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			});
 		},
 
-		constructPlugins: function () {
+		claimPlugins: function () {
 			this.plugins.forEach(function (plugin) {
 				plugin.parent = this;
-				plugin.construct();
 			}, this);
 		},
 
@@ -294,43 +245,16 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		},
 
 		initPlugins: function () {
-			return this.plugins.map(function (plugin) {
+			this.plugins.forEach(function (plugin) {
 				plugin.init();
 			});
 		},
 
 		destroyPlugins: function () {
 			this.plugins.forEach(function (plugin) {
-				return plugin.destroy();
-			}, this);
-		},
-
-		/**
-		 * Logs a user event to the server.
-		 *
-		 * @param {string} name - A event type name
-		 * @param {Object} obj - A event data
-		 * @param {boolean} withUrls - Whether to include url
-		 */
-		logEvent: function (name, obj, withUrls) {
-			if (obj) {
-				if (!withUrls) {
-					obj = win.withUrls(obj);
-				}
-			}
-			log(name, obj)();
-			win.logEvent('slider', 'message_header.' + name, obj || null);
-		},
-
-		/**
-		 * Logs error.
-		 *
-		 * @param {Error} err - An error object
-		 */
-		logError: function (err) {
-			log('Error', err, err.message, err.stack)();
+				plugin.destroy();
+			});
 		}
-
 	};
 
 })(jQuery, this);

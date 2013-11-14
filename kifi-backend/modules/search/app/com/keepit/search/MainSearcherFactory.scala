@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model._
 import com.google.inject.{Inject, Singleton}
-import com.keepit.search.query.parser.SpellCorrector
+import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -20,6 +20,7 @@ import scala.concurrent.duration._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserSearcher
+import play.modules.statsd.api.Statsd
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -80,6 +81,8 @@ class MainSearcherFactory @Inject() (
   }
 
   def warmUp(userId: Id[User]): Seq[Future[Any]] = {
+    log.info(s"warming up $userId")
+    Statsd.increment(s"warmup.$userId")
     val searchFriendsFuture = shoeboxClient.getSearchFriends(userId)
     val friendsFuture = shoeboxClient.getFriends(userId)
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
