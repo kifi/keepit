@@ -11,7 +11,7 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.search.message.{MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl}
 import com.keepit.search.phrasedetector.{PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer}
-import com.keepit.search.spellcheck.{FakeSpellCorrector, SpellCorrector}
+import com.keepit.search.spellcheck.{FakeSpellCorrector, SpellCorrector, SpellIndexerPlugin, SpellIndexerPluginImpl, SpellIndexer}
 import com.keepit.inject.AppScoped
 import java.io.File
 import com.keepit.common.logging.Logging
@@ -53,6 +53,7 @@ trait IndexModule extends ScalaModule with Logging {
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[MessageIndexerPlugin].to[MessageIndexerPluginImpl].in[AppScoped]
     bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
+    bind[SpellIndexerPlugin].to[SpellIndexerPluginImpl].in[AppScoped]
   }
 
   @Singleton
@@ -130,12 +131,6 @@ trait IndexModule extends ScalaModule with Logging {
     val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
     new PhraseIndexerImpl(dir, config, airbrake, shoeboxClient)
   }
-}
-
-case class ProdIndexModule() extends IndexModule {
-
-  protected def getIndexDirectory(maybeDir: Option[String], indexStore: IndexStore): IndexDirectory =
-    getPersistentIndexDirectory(maybeDir, indexStore).get
 
   @Singleton
   @Provides
@@ -144,22 +139,24 @@ case class ProdIndexModule() extends IndexModule {
     val articleDir = getIndexDirectory(current.configuration.getString("index.article.directory"), backup)
     SpellCorrector(spellDir, articleDir)
   }
+
+  @Singleton
+  @Provides
+  def spellIndexer(backup: IndexStore): SpellIndexer = {
+    val spellDir = getIndexDirectory(current.configuration.getString("index.spell.directory"), backup)
+    val articleDir = getIndexDirectory(current.configuration.getString("index.article.directory"), backup)
+    SpellIndexer(spellDir, articleDir)
+  }
+}
+
+case class ProdIndexModule() extends IndexModule {
+
+  protected def getIndexDirectory(maybeDir: Option[String], indexStore: IndexStore): IndexDirectory =
+    getPersistentIndexDirectory(maybeDir, indexStore).get
 }
 
 case class DevIndexModule() extends IndexModule {
 
   protected def getIndexDirectory(maybeDir: Option[String], indexStore: IndexStore): IndexDirectory =
     getPersistentIndexDirectory(maybeDir, indexStore).getOrElse(new VolatileIndexDirectoryImpl())
-
-  @Singleton
-  @Provides
-  def spellCorrector(backup: IndexStore): SpellCorrector = {
-    val spellDirOpt = getPersistentIndexDirectory(current.configuration.getString("index.spell.directory"), backup)
-    val articleDirOpt = getPersistentIndexDirectory(current.configuration.getString("index.article.directory"), backup)
-
-    (spellDirOpt, articleDirOpt) match {
-      case (Some(sDir), Some(aDir)) => SpellCorrector(sDir, aDir)
-      case _ => new FakeSpellCorrector
-    }
-  }
 }

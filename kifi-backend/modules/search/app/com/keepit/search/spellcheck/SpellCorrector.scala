@@ -21,8 +21,6 @@ import org.apache.lucene.search.spell.HighFrequencyDictionary
 
 trait SpellCorrector {
   def getAlternativeQuery(input: String): String
-  def buildDictionary()
-  def getBuildingStatus(): Boolean
 }
 
 object SpellCorrector {
@@ -35,24 +33,6 @@ object SpellCorrector {
 
 class SpellCorrectorImpl(spellIndexDirectory: Directory, articleIndexDirectory: Directory, config: IndexWriterConfig) extends SpellCorrector with Logging {
   val spellChecker = new SpellChecker(spellIndexDirectory)
-  val threshold = 0.001f
-  private[this] var isBuilding = false
-  def buildDictionary() = {
-    if ( !isBuilding ) {
-      val reader = DirectoryReader.open(articleIndexDirectory)
-      try {
-        log.info("spell-checker is building dictionary ... ")
-        isBuilding = true
-        spellChecker.indexDictionary(new HighFrequencyDictionary(reader, "c", threshold), config, false) // fullMerge = false
-        log.info("spell-checker has built the dictionary ... ")
-      } finally {
-        reader.close()
-        isBuilding = false
-      }
-    }
-  }
-
-  def getBuildingStatus = isBuilding
 
   def getAlternativeQuery(queryText: String) = {
     val terms = queryText.split(" ")
@@ -73,6 +53,4 @@ class SpellCorrectorImpl(spellIndexDirectory: Directory, articleIndexDirectory: 
 
 class FakeSpellCorrector() extends SpellCorrector {
   def getAlternativeQuery(input: String) = "fake correction: " + input
-  def buildDictionary() = {}
-  def getBuildingStatus = false
 }
