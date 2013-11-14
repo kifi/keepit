@@ -839,7 +839,7 @@ $(function() {
 		};
 		console.log('[prepInviteTab]', opts);
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
-			console.log('[prepInviteTab] friends:', friends.length, friends);
+			console.log('[prepInviteTab] friends:', friends && friends.length, friends);
 			friends.forEach(function(obj) {
 				if (!obj.image) {
 					obj.image = '';
@@ -1036,7 +1036,7 @@ $(function() {
 			  return;
 		  }
 		  userPageIndex++;
-		  console.log('[prepFindTab] friends:', friends.length, friends);
+		  console.log('[prepFindTab] friends:', friends && friends.length, friends);
 		  friends.forEach(function(obj, i) {
 			  obj.status = obj.status || '';
 			  obj.image = formatPicUrl(obj.user.id, obj.user.pictureName, 200);
