@@ -2,7 +2,6 @@ package com.keepit.search.spellcheck
 
 import org.apache.lucene.search
 import org.apache.lucene.store.FSDirectory
-import java.io.File
 import org.apache.lucene.search.spell.SpellChecker
 import org.apache.lucene.search.spell.PlainTextDictionary
 import org.apache.lucene.index.IndexWriterConfig
@@ -18,21 +17,17 @@ import com.keepit.common.logging.Logging
 import com.google.inject.{Singleton}
 import org.apache.lucene.search.spell.HighFrequencyDictionary
 
+import java.io.File
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 
+@ImplementedBy(classOf[SpellCorrectorImpl])
 trait SpellCorrector {
   def getAlternativeQuery(input: String): String
 }
 
-object SpellCorrector {
-  def apply(spellIndexDirectory: Directory, articleIndexDirectory: Directory) = {
-    val analyzer = DefaultAnalyzer.forIndexing
-    val config = new IndexWriterConfig(Version.LUCENE_42, analyzer)
-    new SpellCorrectorImpl(spellIndexDirectory, articleIndexDirectory, config)
-  }
-}
-
-class SpellCorrectorImpl(spellIndexDirectory: Directory, articleIndexDirectory: Directory, config: IndexWriterConfig) extends SpellCorrector with Logging {
-  val spellChecker = new SpellChecker(spellIndexDirectory)
+@Singleton
+class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer) extends SpellCorrector{
+  val spellChecker = spellIndexer.getSpellChecker
 
   def getAlternativeQuery(queryText: String) = {
     val terms = queryText.split(" ")
@@ -51,6 +46,6 @@ class SpellCorrectorImpl(spellIndexDirectory: Directory, articleIndexDirectory: 
   }
 }
 
-class FakeSpellCorrector() extends SpellCorrector {
-  def getAlternativeQuery(input: String) = "fake correction: " + input
-}
+//class FakeSpellCorrector() extends SpellCorrector {
+//  def getAlternativeQuery(input: String) = "fake correction: " + input
+//}

@@ -30,7 +30,7 @@ class SpellIndexerPluginImpl @Inject()(
   override def enabled: Boolean = true
 
   override def onStart() {
-    scheduleTask(actor.system, 30 seconds, 12 hour, actor.ref, BuildDict)
+    scheduleTask(actor.system, 2 minute, 12 hour, actor.ref, BuildDict)
     log.info("starting SpellDictionaryPluginImpl")
   }
   override def onStop() {
