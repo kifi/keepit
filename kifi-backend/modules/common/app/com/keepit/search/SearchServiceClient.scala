@@ -48,8 +48,6 @@ trait SearchServiceClient extends ServiceClient {
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
-  def buildSpellCorrectorDictionary(): Unit
-  def getSpellCorrectorStatus(): Future[Boolean]
   def correctSpelling(text: String): Future[String]
   def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
@@ -185,14 +183,6 @@ class SearchServiceClientImpl(
 
   def version(): Future[String] = {
     call(Common.internal.version()).map(r => r.body)
-  }
-
-  def buildSpellCorrectorDictionary(): Unit = {
-    broadcast(Search.internal.buildDictionary())
-  }
-
-  def getSpellCorrectorStatus(): Future[Boolean] = {
-    call(Search.internal.getBuildStatus()).map(r => r.body.toBoolean)
   }
 
   def correctSpelling(text: String): Future[String] = {
