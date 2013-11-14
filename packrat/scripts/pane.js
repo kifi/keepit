@@ -1,6 +1,7 @@
 // @require styles/keeper/pane.css
 // @require scripts/keeper.js
 // @require scripts/html/keeper/pane.js
+// @require scripts/html/keeper/pane_settings.js
 // @require scripts/html/keeper/pane_notices.js
 // @require scripts/html/keeper/pane_threads.js
 // @require scripts/html/keeper/pane_thread.js
@@ -62,18 +63,19 @@ var pane = pane || function () {  // idempotent for Chrome
     }};
 
   function showPane(locator, back, paramsArg, redirected) {
-    log("[showPane]", locator, back ? "back" : "")();
+    log('[showPane]', locator, back ? 'back' : '')();
     if (locator !== (paneHistory && paneHistory[0])) {
       var name = toPaneName(locator);
       (createPaneParams[name] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
         params.redirected = redirected;
-        showPane2(locator, back, name, params);
+        params.inbox = ~session.experiments.indexOf('inbox');
+        showPaneContinued(locator, back, name, params);
       }, locator, paramsArg);
     }
   }
 
-  function showPane2(locator, back, name, params) {  // only called by showPane
-    log("[showPane2]", locator, name)();
+  function showPaneContinued(locator, back, name, params) {  // only called by showPane
+    log("[showPaneContinued]", locator, name)();
     if ($pane) {
       var left = back || toPaneIdx(name) < toPaneIdx(toPaneName(paneHistory[0]));
       keeper.onPaneChange(locator);
@@ -110,6 +112,7 @@ var pane = pane || function () {  // idempotent for Chrome
           site: location.hostname,
           user: session.user
         }), {
+          pane_settings: 'pane_settings',
           pane: 'pane_' + name
         }));
       $pane[0].dataset.locator = locator;
@@ -164,11 +167,11 @@ var pane = pane || function () {  // idempotent for Chrome
           "kifi-feedback",
           "width="+width+",height="+height+",resizable,top="+top+",left="+left);
       })
-      .hoverfu('.kifi-pane-head-settings:not(.kifi-active)', function (configureHover) {
+      .hoverfu('.kifi-pane-settings:not(.kifi-active)', function (configureHover) {
         var btn = this;
         render("html/keeper/titled_tip", {
           dir: "below",
-          cssClass: 'kifi-pane-head-settings-tip',
+          cssClass: 'kifi-pane-settings-tip' + (~session.experiments.indexOf('inbox') ? ' kifi-pane-v2-settings-tip' : ''),
           title: "Settings",
           html: "Customize your Kifi<br>experience."
         }, function (html) {
@@ -178,10 +181,10 @@ var pane = pane || function () {  // idempotent for Chrome
           });
         });
       })
-      .on("mousedown", ".kifi-pane-head-settings", function (e) {
+      .on("mousedown", ".kifi-pane-settings", function (e) {
         e.preventDefault();
         var $sett = $(this).addClass("kifi-active");
-        var $menu = $sett.next(".kifi-pane-head-settings-menu").fadeIn(50);
+        var $menu = $sett.next(".kifi-pane-settings-menu").fadeIn(50);
         var $hide = $menu.find(".kifi-pane-settings-hide")
           .on("mouseenter", enterItem)
           .on("mouseleave", leaveItem);
@@ -221,7 +224,7 @@ var pane = pane || function () {  // idempotent for Chrome
           if (checked) {
             hidePane();
           } else {
-            $hide.closest(".kifi-pane-head-settings-menu").triggerHandler("kifi:hide");
+            $hide.closest(".kifi-pane-settings-menu").triggerHandler("kifi:hide");
           }
         }, 150);
       })
