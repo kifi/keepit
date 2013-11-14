@@ -30,11 +30,10 @@ object EventContext {
       val map = json match {
         case obj: JsObject => obj.value.mapValues{ value =>
           val seq : Seq[ContextData] = value match {
-            case arr: JsArray => arr.value.map{ _ match{
-                case JsNumber(x) => ContextDoubleData(x.doubleValue)
-                case JsString(s) => ContextStringData(s)
-                case _ => return JsError()
-              }
+            case arr: JsArray => arr.value.map{
+              case JsNumber(x) => ContextDoubleData(x.doubleValue)
+              case JsString(s) => ContextStringData(s)
+              case _ => return JsError()
             }
             case _ => return JsError()
           }
@@ -47,10 +46,10 @@ object EventContext {
 
     def writes(obj: EventContext) : JsValue = {
       JsObject(obj.data.mapValues{ seq =>
-        JsArray(seq.map{ _ match {
+        JsArray(seq.map {
           case ContextStringData(s) => JsString(s)
           case ContextDoubleData(x) => JsNumber(x)
-        }})
+        })
       }.toSeq)
     }
 
