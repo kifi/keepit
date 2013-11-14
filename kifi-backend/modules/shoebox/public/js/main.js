@@ -791,7 +791,7 @@ $(function() {
 	$nwFriends.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var sT = this.scrollTop, sH = this.scrollHeight;
 		// tweak these values as desired
-		const offset = sH / 3, toFetch = 40;
+		var offset = sH / 3, toFetch = 40;
 		if (!$nwFriendsLoading.is(':visible') && this.clientHeight + sT > sH - offset) {
 			console.log('loading more friends');
 			prepInviteTab(toFetch);
@@ -819,8 +819,8 @@ $(function() {
 	}
 	updateInviteCache();
 
-	const friendsToShow = 40;
-	const friendsShowing = [];
+	var friendsToShow = 40;
+	var friendsShowing = [];
 	var moreFriends = true;
 	var invitesLeft;
 	function prepInviteTab(moreToShow) {
@@ -949,7 +949,7 @@ $(function() {
 	$foundUsers.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var sT = this.scrollTop, sH = this.scrollHeight;
 		// tweak these values as desired
-		const offset = sH / 3, toFetch = 40;
+		var offset = sH / 3, toFetch = 40;
 		if (!$('.found-user-list-loading').is(':visible') && this.clientHeight + sT > sH - offset) {
 			console.log('loading more users');
 			prepFindTab(toFetch);
@@ -1001,8 +1001,8 @@ $(function() {
 		});
 	});
 
-	const usersToShow = 40;
-	const usersShowing = [];
+	var usersToShow = 40;
+	var usersShowing = [];
 	var userPageIndex = 0;
 	var moreUsers = true;
 
