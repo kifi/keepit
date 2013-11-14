@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{WebsiteController, ABookServiceController, ActionAuthenticator}
 import com.keepit.model._
-import com.keepit.common.db.Id
+import com.keepit.common.db.{Id}
 import play.api.mvc.{AsyncResult, Action}
 import com.keepit.abook.store.{ABookRawInfoStore}
 import scala.Some
@@ -314,6 +314,19 @@ class ABookController @Inject() (
     }
     Async {
       resF.map(js => Ok(js))
+    }
+  }
+
+  def getABookInfo(id:Id[ABookInfo]) = Action { request =>
+    val resF = Future {
+      db.readOnly { implicit s =>
+        abookInfoRepo.getById(id)
+      }
+    }
+    Async {
+      resF.map { info =>
+        Ok(Json.toJson(info))
+      }
     }
   }
 
