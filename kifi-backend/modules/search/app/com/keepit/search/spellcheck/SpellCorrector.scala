@@ -1,7 +1,5 @@
 package com.keepit.search.spellcheck
 
-import scala.Array.canBuildFrom
-
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 
 @ImplementedBy(classOf[SpellCorrectorImpl])
