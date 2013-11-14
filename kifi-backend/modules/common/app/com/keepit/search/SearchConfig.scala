@@ -37,9 +37,9 @@ object SearchConfig {
       "tailCutting" -> "0.25",
       "proximityBoost" -> "0.95",
       "semanticBoost" -> "0.8",
-      "dampingHalfDecayMine" -> "7.0",
-      "dampingHalfDecayFriends" -> "5.0",
-      "dampingHalfDecayOthers" -> "2.0",
+      "dampingHalfDecayMine" -> "5.0",
+      "dampingHalfDecayFriends" -> "3.0",
+      "dampingHalfDecayOthers" -> "1.5",
       "useS3FlowerFilter" -> "true",
       "showExperts" -> "false"
     )

@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.akka.{SafeFuture, MonitoredAwait}
+import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
@@ -154,7 +155,7 @@ class MainSearcher(
           false
         }
       }
-    }
+    }(ExecutionContext.immediate)
   }
 
   private def trySearchText(maxTextHitsPerCategory: Int, promise: Promise[(ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher])]): Unit = try {
