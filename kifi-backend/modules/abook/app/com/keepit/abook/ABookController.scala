@@ -59,48 +59,47 @@ class ABookController @Inject() (
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
-  def importContacts(userId:Id[User], provider:String, accessToken:String) = Action { request =>
+  def importContacts(userId:Id[User], provider:String, accessToken:String) = Action { request =>  // todo: move to commander
     provider match {
       case "google" => {
         val userInfoUrl = "https://www.googleapis.com/oauth2/v2/userinfo"
+        val contactsUrl = "https://www.google.com/m8/feeds/contacts/default/full" // TODO: paging (alt=json ignored)
+
         Async {
-          WS.url(userInfoUrl).withQueryString(("access_token", accessToken)).get map { resp =>
+          WS.url(userInfoUrl).withQueryString(("access_token", accessToken)).get flatMap { resp =>
             resp.status match {
               case OK => {
                 val userInfoJson = resp.json
                 val gUserInfo = userInfoJson.as[GmailABookOwnerInfo]
                 log.info(s"[g-contacts] userInfoResp=${userInfoJson} googleUserInfo=${gUserInfo}")
 
-                val contactsUrl = "https://www.google.com/m8/feeds/contacts/default/full" // TODO: paging (alt=json ignored)
-                Async {
-                  WS.url(contactsUrl).withQueryString(("access_token", accessToken),("max-results", Int.MaxValue.toString)).get map { contactsResp =>
-                    if (contactsResp.status == OK) {
-                      val contacts = contactsResp.xml // TODO: optimize; hand-off
-                      log.info(s"[g-contacts] $contacts")
-                      val jsArrays: immutable.Seq[JsArray] = (contacts \\ "feed").map { feed =>
-                        val gId = (feed \ "id").text
-                        log.info(s"[g-contacts] id=$gId")
-                        val entries: Seq[JsObject] = (feed \ "entry").map { entry =>
-                          val title = (entry \ "title").text
-                          val emails = (entry \ "email").map(_ \ "@address")
-                          log.info(s"[g-contacts] title=$title email=$emails")
-                          Json.obj("name" -> title, "emails" -> Json.toJson(emails.seq.map(_.toString)))
-                        }
-                        JsArray(entries)
+                WS.url(contactsUrl).withQueryString(("access_token", accessToken),("max-results", Int.MaxValue.toString)).get map { contactsResp =>
+                  if (contactsResp.status == OK) {
+                    val contacts = contactsResp.xml // TODO: optimize; hand-off
+                    log.info(s"[g-contacts] $contacts")
+                    val jsArrays: immutable.Seq[JsArray] = (contacts \\ "feed").map { feed =>
+                      val gId = (feed \ "id").text
+                      log.info(s"[g-contacts] id=$gId")
+                      val entries: Seq[JsObject] = (feed \ "entry").map { entry =>
+                        val title = (entry \ "title").text
+                        val emails = (entry \ "email").map(_ \ "@address")
+                        log.info(s"[g-contacts] title=$title email=$emails")
+                        Json.obj("name" -> title, "emails" -> Json.toJson(emails.seq.map(_.toString)))
                       }
-
-                      val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "contacts" -> jsArrays(0))
-                      log.info(Json.prettyPrint(abookUpload))
-                      val abookInfo = abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), abookUpload)
-                      Ok(Json.toJson(abookInfo))
-                    } else {
-                      BadRequest(s"Failed to retrieve gmail contacts") // todo: try later
+                      JsArray(entries)
                     }
+
+                    val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "contacts" -> jsArrays(0))
+                    log.info(Json.prettyPrint(abookUpload))
+                    val abookInfo = abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), abookUpload)
+                    Ok(Json.toJson(abookInfo))
+                  } else {
+                    BadRequest(s"Failed to retrieve gmail contacts") // todo: try later
                   }
                 }
               }
               case _  => {
-                BadRequest("Failed to authenticate against gmail")
+                Future { BadRequest("Failed to authenticate against gmail") }
               }
             }
           }
