@@ -211,14 +211,16 @@ class InviteController @Inject() (db: Database,
             Redirect(com.keepit.controllers.core.routes.AuthController.signupPage).withCookies(Cookie("inv", invite.externalId.id))
           } else {
             Async {
-              invite.recipientSocialUserId.map { recipientSocialUserId =>
-                val name = db.readOnly(socialUserInfoRepo.get(invitation.get.recipientSocialUserId.get)(_).fullName)
-                Promise.successful(Option(name)).future
-              }.getOrElse {
-                invite.recipientEContactId.map { econtactId =>
-                  abookServiceClient.getEContactById(econtactId).map { cOpt => cOpt.map(_.name) }
-                }.getOrElse(Promise.successful(None).future)
-              }.map {
+              val nameOpt = (invite.recipientSocialUserId, invite.recipientEContactId) match {
+                case (Some(socialUserId), _) =>
+                  val name = db.readOnly(socialUserInfoRepo.get(socialUserId)(_).fullName)
+                  Promise.successful(Option(name)).future
+                case (_, Some(eContactId)) =>
+                  abookServiceClient.getEContactById(eContactId).map { cOpt => cOpt.map(_.name) }
+                case _ =>
+                  Promise.successful(None).future
+              }
+              nameOpt.map {
                 case Some(name) =>
                   Ok(views.html.auth.auth(
                     "signup",
