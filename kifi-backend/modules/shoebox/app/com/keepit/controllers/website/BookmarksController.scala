@@ -28,7 +28,7 @@ import scala.Some
 import com.keepit.model.KeepToCollection
 import play.api.libs.json.JsObject
 
-private case class KeepInfo(id: Option[ExternalId[Bookmark]], title: Option[String], url: String, isPrivate: Boolean)
+case class KeepInfo(id: Option[ExternalId[Bookmark]], title: Option[String], url: String, isPrivate: Boolean)
 
 private object KeepInfo {
   implicit val format = (
@@ -43,7 +43,7 @@ private object KeepInfo {
   }
 }
 
-private case class KeepInfosWithCollection(
+case class KeepInfosWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[KeepInfo])
 
 private object KeepInfosWithCollection {

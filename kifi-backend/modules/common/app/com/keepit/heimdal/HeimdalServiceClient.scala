@@ -58,44 +58,26 @@ private[heimdal] object EventQueueConsts extends Logging {
       airbrakeNotifier.notify(msg)
     }
   }
-}
 
-class HeimdalClientActor @Inject() (
-    val airbrakeNotifier: AirbrakeNotifier,
-    val httpClient: HttpClient,
-    serviceDiscovery: ServiceDiscovery,
-    clock: Clock
-  ) extends FortyTwoActor(airbrakeNotifier) with ServiceClient with Logging {
+  object FlushEventQueue
+  object FlushEventQueueAndClose
 
-  private final val serviceType = ServiceType.HEIMDAL
-  val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
-  private var events: Vector[HeimdalEvent] = Vector()
-  private var closing = false
+  private[heimdal] object EventQueueConsts extends Logging {
+    val MaxBatchSize = 100
+    val LowWatermarkBatchSize = 10
+    val BatchFlushTiming = 10 //seconds
+    val StaleEventAddTime = 40000 //milli
+    val StaleEventFlushTime = (BatchFlushTiming * 1000) + StaleEventAddTime + 2000 //milli
+    val batchId = new AtomicInteger(0)
 
-  def receive = {
-    case event: HeimdalEvent =>
-      log.info(s"Event added to queue: $event")
-      EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventAddTime, "added")
-      events = events :+ event
-      if (closing) {
-        flush()
-      } else {
-        events.size match {
-          case s if(s >= EventQueueConsts.LowWatermarkBatchSize) =>
-            self ! FlushEventQueue //flush with the events in the actor mailbox
-          case s if(s >= EventQueueConsts.MaxBatchSize) =>
-            flush() //flushing without taking in account events in the mailbox
-          case _ =>
-            //ignore
-        }
+    def verifyEventStaleTime(airbrakeNotifier: AirbrakeNotifier, clock: Clock, event: HeimdalEvent, timeout: Long, message: String): Unit = {
+      val timeSinceEventStarted = clock.getMillis - event.time.getMillis
+      if (timeSinceEventStarted > timeout) {
+        val msg = s"Event started ${timeSinceEventStarted}ms ago but was $message only now (timeout: ${timeout}ms): $event"
+        log.error(msg, new Exception(msg))
+        airbrakeNotifier.notify(msg)
       }
-    case FlushEventQueueAndClose =>
-      closing = true
-      flush()
-    case FlushEventQueue =>
-      flush()
-    case m =>
-      throw new UnsupportedActorMessage(m)
+    }
   }
 
   def flush() = {
