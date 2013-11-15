@@ -2,8 +2,7 @@ package com.keepit.search.spellcheck
 
 import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.search.spell.HighFrequencyDictionary
-import org.apache.lucene.search.spell.SpellChecker
+import org.apache.lucene.search.spell.{SpellChecker, HighFrequencyDictionary, NGramDistance}
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 
@@ -34,10 +33,11 @@ class SpellIndexerImpl(
   spellConfig: SpellIndexerConfig
 ) extends SpellIndexer with Logging{
 
-  var spellChecker = new SpellChecker(spellIndexDirectory)
+  var spellChecker = createChecker()
 
   def getSpellChecker(): SpellChecker = spellChecker
-  private def refreshSpellChecker = { spellChecker = new SpellChecker(spellIndexDirectory) }
+  private  def createChecker() =  new SpellChecker(spellIndexDirectory, new NGramDistance())
+  private def refreshSpellChecker = { spellChecker = createChecker() }
 
   def buildDictionary() = {
 
