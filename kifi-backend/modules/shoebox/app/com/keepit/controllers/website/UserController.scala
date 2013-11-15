@@ -291,7 +291,8 @@ class UserController @Inject() (
     @inline def mkId(email:String) = s"email/$email"
     val searchTerms = search.toSeq.map(_.split("[@\\s+]")).flatten.filterNot(_.isEmpty).map(normalize)
     @inline def searchScore(s: String): Int = {
-      if (searchTerms.isEmpty) 1
+      if (s.isEmpty) 0
+      else if (searchTerms.isEmpty) 1
       else {
         val name = normalize(s)
         if (searchTerms.exists(!name.contains(_))) 0
@@ -314,7 +315,7 @@ class UserController @Inject() (
     }
 
     val res = abookServiceClient.getEContacts(userId, 40000000).map { contacts =>
-      val filtered = contacts.filter(e => ((searchScore(e.name) > 0) || (searchScore(e.email) > 0)))
+      val filtered = contacts.filter(e => ((searchScore(e.name.getOrElse("")) > 0) || (searchScore(e.email) > 0)))
       val paged = after match {
         case Some(a) => filtered.dropWhile(e => (mkId(e.email) != a)) match {
           case hd +: tl => tl
@@ -323,7 +324,7 @@ class UserController @Inject() (
         case None => filtered
       }
       val objs = paged.take(limit).map { e =>
-        Json.obj("label" -> e.name, "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
+        Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
       }
       log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
       objs
