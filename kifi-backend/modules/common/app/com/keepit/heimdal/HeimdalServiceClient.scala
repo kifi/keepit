@@ -21,7 +21,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 
 import play.api.Plugin
-import play.api.libs.json.{JsArray, Json, JsObject}
+import play.api.libs.json.{JsNumber, JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
@@ -37,6 +37,10 @@ trait HeimdalServiceClient extends ServiceClient with Plugin {
   def updateMetrics(): Unit
 
   def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray]
+
+  def getEventDescriptors(repo: TypeCode[HeimdalEvent]): Future[Seq[EventDescriptor]]
+
+  def updateEventDescriptors(repo: TypeCode[HeimdalEvent], eventDescriptors: Seq[EventDescriptor]): Future[Int]
 }
 
 object FlushEventQueue
@@ -161,4 +165,14 @@ class HeimdalServiceClientImpl @Inject() (
       Json.parse(response.body).as[JsArray]
     }
   }
+
+  def getEventDescriptors(repo: TypeCode[HeimdalEvent]): Future[Seq[EventDescriptor]] =
+    call(Heimdal.internal.getEventDescriptors(repo.code)).map { response =>
+      Json.parse(response.body).as[JsArray].value.map(EventDescriptor.format.reads(_).get)
+    }
+
+  def updateEventDescriptors(repo: TypeCode[HeimdalEvent], eventDescriptors: Seq[EventDescriptor]): Future[Int] =
+    call(Heimdal.internal.updateEventDescriptor(repo.code), Json.toJson(eventDescriptors)).map { response =>
+      Json.parse(response.body).as[JsNumber].value.toInt
+    }
 }
