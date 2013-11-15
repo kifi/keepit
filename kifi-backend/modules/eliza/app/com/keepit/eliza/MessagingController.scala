@@ -459,16 +459,19 @@ class MessagingController @Inject() (
     log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session =>
       messageRepo.save(Message(
-      id = None,
-      from = Some(from),
-      thread = thread.id.get,
-      threadExtId = thread.externalId,
-      messageText = messageText,
-      sentOnUrl = urlOpt.map(Some(_)).getOrElse(thread.url),
-      sentOnUriId = thread.uriId
+        id = None,
+        from = Some(from),
+        thread = thread.id.get,
+        threadExtId = thread.externalId,
+        messageText = messageText,
+        sentOnUrl = urlOpt.map(Some(_)).getOrElse(thread.url),
+        sentOnUriId = thread.uriId
       ))
     }
-    SafeFuture { setLastSeen(from, thread.id.get, Some(message.createdAt)) }
+    SafeFuture { 
+      setLastSeen(from, thread.id.get, Some(message.createdAt))
+      db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) }
+    }
 
     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
@@ -609,6 +612,7 @@ class MessagingController @Inject() (
             sentOnUrl = None,
             sentOnUriId = None
           ))
+          SafeFuture { db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) } }
           Some((actuallyNewParticipantUserIds, message, thread))
         }
       }
