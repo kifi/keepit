@@ -24,6 +24,6 @@ class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer) extends SpellCorr
 
   // TODO: return more suggestions. Choose best suggestion based on surrounding text
   def getSimilarTerm(termText: String) = {
-    spellChecker.suggestSimilar(termText, 1, 0.8f)
+    spellChecker.suggestSimilar(termText, 1)
   }
 }

@@ -130,9 +130,9 @@
     <br/>
     <h3>Address Book(s)</h3>
     <table class="table table-condensed table-striped">
-        <tr><th>ABookId</th><th>Origin</th><th>State</th><th>OwnerId</th><th>OwnerEmail</th><th>RawInfoLoc</th></tr>
-        @for(abookInfo <- abookInfos) {
-            <tr><td>@abookInfo.id</td><td>@abookInfo.origin</td><td>@abookInfo.state</td><td>@abookInfo.ownerId</td><td>@abookInfo.ownerEmail</td><td>@abookInfo.rawInfoLoc</td></tr>
+        <tr><th>ABookId</th><th>Origin</th><th>State</th><th>OwnerId</th><th>OwnerEmail</th><th>RawInfoLoc</th><th># Contacts</th><th># Processed</th></tr>
+        @for(abook <- abookInfos) {
+            <tr><td>@abook.id</td><td>@abook.origin</td><td>@abook.state</td><td>@abook.ownerId</td><td>@abook.ownerEmail</td><td>@abook.rawInfoLoc</td><td>@abook.numContacts</td><td>@abook.numProcessed</td></tr>
         }
     </table>
   }

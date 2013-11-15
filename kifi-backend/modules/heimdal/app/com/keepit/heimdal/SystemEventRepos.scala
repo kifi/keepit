@@ -12,7 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait SystemEventLoggingRepo extends EventRepo[SystemEvent]
 
-class ProdSystemEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptorRepo: SystemEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
+class ProdSystemEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptors: SystemEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
   extends MongoEventRepo[SystemEvent] with SystemEventLoggingRepo {
   val warnBufferSize = 500
   val maxBufferSize = 10000
@@ -24,14 +24,14 @@ class ProdSystemEventLoggingRepo(val collection: BSONCollection, val mixpanel: M
 trait SystemEventDescriptorRepo extends EventDescriptorRepo[SystemEvent]
 
 class ProdSystemEventDescriptorRepo(val collection: BSONCollection, cache: SystemEventDescriptorNameCache, protected val airbrake: AirbrakeNotifier) extends ProdEventDescriptorRepo[SystemEvent] with SystemEventDescriptorRepo {
-  override def upsert(obj: EventDescriptor[SystemEvent]) = super.upsert(obj) map { _ tap { _ => cache.set(SystemEventDescriptorNameKey(obj.name), obj) } }
+  override def upsert(obj: EventDescriptor) = super.upsert(obj) map { _ tap { _ => cache.set(SystemEventDescriptorNameKey(obj.name), obj) } }
   override def getByName(name: EventType) = cache.getOrElseFutureOpt(SystemEventDescriptorNameKey(name)) { super.getByName(name) }
 }
 
 class SystemEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SystemEventDescriptorNameKey, EventDescriptor[SystemEvent]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[SystemEventDescriptorNameKey, EventDescriptor](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
-case class SystemEventDescriptorNameKey(name: EventType) extends Key[EventDescriptor[SystemEvent]] {
+case class SystemEventDescriptorNameKey(name: EventType) extends Key[EventDescriptor] {
   override val version = 1
   val namespace = "system_event_descriptor"
   def toKey(): String = name.name

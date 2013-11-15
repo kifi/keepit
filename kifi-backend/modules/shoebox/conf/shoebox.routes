@@ -173,6 +173,7 @@ GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/friends      @com.keepit.controllers.website.UserController.friends()
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 GET     /site/user/socialConnections  @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
+GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
@@ -195,6 +196,8 @@ GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboard
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
 
 GET     /admin/analytics            @com.keepit.controllers.admin.AdminAnalyticsController.index()
+GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.getEventDescriptors()
+POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
 
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])

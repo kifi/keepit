@@ -16,9 +16,10 @@ import scala.concurrent.duration._
 import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
 import scala.concurrent.{Promise, Await, Future}
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import scala.collection.mutable
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WS
 import play.api.libs.concurrent.{Promise => PlayPromise}
@@ -27,6 +28,9 @@ import play.api.libs.Comet
 import com.keepit.social.SocialNetworkType
 import com.keepit.common.time._
 import play.api.templates.Html
+import play.api.libs.iteratee.Enumerator
+import java.util.concurrent.CountDownLatch
+
 import java.util.concurrent.atomic.AtomicBoolean
 
 class UserController @Inject() (
@@ -395,6 +399,7 @@ class UserController @Inject() (
     Ok(jsArray).withHeaders("Cache-Control" -> "private, max-age=300")
   }
 
+  // todo: Combine this and next (abook import)
   def checkIfImporting(network: String, callback: String) = AuthenticatedHtmlAction { implicit request =>
     val startTime = clock.now
     var importHasHappened = new AtomicBoolean(false)
@@ -438,4 +443,37 @@ class UserController @Inject() (
     }
   }
 
+  // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
+  def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = AuthenticatedHtmlAction { request =>
+    val callback = callbackOpt.getOrElse("parent.updateABookProgress")
+    val done = new AtomicBoolean(false)
+    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 200)
+    def reqF = abookServiceClient.getABookInfo(request.userId, id) map { abookInfoOpt =>
+      abookInfoOpt match {
+        case Some(abookInfo) if abookInfo.state == ABookInfoStates.ACTIVE => {
+          if (done.get) None else {
+            log.info(s"[getABookUploadStatus($id)] available!")
+            done.set(true)
+            Some(s"<script>$callback($id,'${abookInfo.state}',${abookInfo.numContacts.getOrElse(-1)},${abookInfo.numProcessed.getOrElse(-1)})</script>")
+          }
+        }
+        case waitingOpt => waitingOpt match {
+          case Some(processing) => {
+            log.info(s"[getABookUploadStatus($id)] waiting ... '${processing.state}'")
+            Some(s"<script>$callback($id,'${processing.state}',${processing.numContacts.getOrElse(-1)},${processing.numProcessed.getOrElse(-1)})</script>")
+          }
+          case None => {
+            log.info(s"[getABookUploadStatus($id)] waiting ... 'notAvail'") // can be an error
+            Some(s"<script>$callback($id,'notAvail',-1,-1)</script>")
+          }
+        }
+      }
+    }
+    val returnEnumerator = Enumerator.generateM {
+      Future.sequence(Seq(timeoutF, reqF)).map { res =>
+         res.collect { case Some(s:String) => s }.headOption
+      }
+    }
+    Ok.stream(returnEnumerator.andThen(Enumerator.eof))
+  }
 }
