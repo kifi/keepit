@@ -317,10 +317,10 @@ class ABookController @Inject() (
     }
   }
 
-  def getABookInfo(id:Id[ABookInfo]) = Action { request =>
+  def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = Action { request =>
     val resF = Future {
       db.readOnly { implicit s =>
-        abookInfoRepo.getById(id)
+        abookInfoRepo.getByUserIdAndABookId(userId, id)
       }
     }
     Async {
