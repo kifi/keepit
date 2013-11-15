@@ -68,7 +68,7 @@ kifi.form = (function () {
       if (!s) {
         kifi.form.showError($in, 'Please enter your password');
       } else if (s.length < 7) {
-        kifi.form.showError($in, 'Incorrect password', {ms: 1500});
+        kifi.form.showError($in, 'Password too short', {ms: 1500});
       } else {
         return s;
       }
@@ -271,7 +271,7 @@ kifi.form = (function () {
           if (o.error === 'no_such_user') {
             kifi.form.showError($email, 'No account with this email address', {ms: 1500});
           } else {
-            kifi.form.showError($password, 'Incorrect password');
+            kifi.form.showError($password, '<b>Account exists but password is incorrect</b><br>If you want to reset your password,<br>or never had one, click “I forgot”.', {ms: 3500});
           }
         } else {
           // TODO: offline? 500?

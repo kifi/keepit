@@ -42,7 +42,7 @@ object ABookOrigins {
   val ALL:Seq[ABookOriginType] = Seq(IOS, GMAIL)
 }
 
-case class ABookRawInfo(userId:Option[Id[User]], origin:ABookOriginType, ownerId:Option[String] = None, ownerEmail:Option[String] = None, contacts:JsArray) // ios ownerId may not be present
+case class ABookRawInfo(userId:Option[Id[User]], origin:ABookOriginType, ownerId:Option[String] = None, ownerEmail:Option[String] = None, numContacts:Option[Int] = None, contacts:JsArray) // ios ownerId may not be present
 
 object ABookRawInfo {
   import play.api.libs.functional.syntax._
@@ -54,10 +54,11 @@ object ABookRawInfo {
       (__ \ 'origin).format[String].inmap(ABookOriginType.apply _, unlift(ABookOriginType.unapply)) and
       (__ \ 'ownerId).formatNullable[String] and
       (__ \ 'ownerEmail).formatNullable[String] and
+      (__ \ 'numContacts).formatNullable[Int] and
       (__ \ 'contacts).format[JsArray]
     )(ABookRawInfo.apply _, unlift(ABookRawInfo.unapply))
 
-  val EMPTY = ABookRawInfo(None, ABookOrigins.IOS, None, None, JsArray())
+  val EMPTY = ABookRawInfo(None, ABookOrigins.IOS, None, None, None, JsArray())
 }
 
 case class ABookInfo(
@@ -69,12 +70,16 @@ case class ABookInfo(
     origin: ABookOriginType,
     ownerId: Option[String] = None, // iOS
     ownerEmail: Option[String] = None,
-    rawInfoLoc: Option[String] = None
+    rawInfoLoc: Option[String] = None,
+    numContacts: Option[Int] = None,
+    numProcessed: Option[Int] = None
   ) extends Model[ABookInfo] {
   def withId(id: Id[ABookInfo]): ABookInfo = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): ABookInfo = this.copy(updatedAt = now)
   def withOwnerInfo(ownerId: Option[String], ownerEmail: Option[String]): ABookInfo = this.copy(ownerId = ownerId, ownerEmail = ownerEmail)
   def withState(state: State[ABookInfo]): ABookInfo = this.copy(state = state)
+  def withNumContacts(nContacts:Option[Int]): ABookInfo = this.copy(numContacts = nContacts)
+  def withNumProcessed(nProcessed:Option[Int]): ABookInfo = this.copy(numProcessed = nProcessed)
 }
 
 object ABookInfoStates extends States[ABookInfo] {
@@ -96,6 +101,8 @@ object ABookInfo {
       (__ \ 'origin).format[ABookOriginType] and
       (__ \ 'ownerId).formatNullable[String] and
       (__ \ 'ownerEmail).formatNullable[String] and
-      (__ \ 'rawInfoLoc).formatNullable[String]
+      (__ \ 'rawInfoLoc).formatNullable[String] and
+      (__ \ 'numContacts).formatNullable[Int] and
+      (__ \ 'numProcessed).formatNullable[Int]
     )(ABookInfo.apply, unlift(ABookInfo.unapply))
 }

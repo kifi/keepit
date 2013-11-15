@@ -22,11 +22,14 @@ class MixpanelClient(projectToken: String) {
 
   private def getProperties(context: EventContext) : Seq[(String, JsValue)] = context.data.map {
       case ("remoteAddress", Seq(ContextStringData(ip))) => "ip" -> JsString(ip)
+      case ("experiment", experiments) => "experiment" -> toJsArray(experiments)
       case (key, Seq(ContextStringData(s))) => key -> JsString(s)
       case (key, Seq(ContextDoubleData(x))) => key -> JsNumber(x)
-      case (key, seq) => key -> JsArray(seq.map{ _ match {
-        case ContextStringData(s) => JsString(s)
-        case ContextDoubleData(x) => JsNumber(x)
-      }})
+      case (key, seq) => key -> toJsArray(seq)
   }.toSeq
+
+  private def toJsArray(seq: Seq[ContextData]): JsArray = JsArray(seq.map {
+    case ContextStringData(s) => JsString(s)
+    case ContextDoubleData(x) => JsNumber(x)
+  })
 }

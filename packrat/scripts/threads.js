@@ -11,6 +11,7 @@
 // @require scripts/compose.js
 // @require scripts/snapshot.js
 // @require scripts/lib/antiscroll.min.js
+// @require scripts/maintain_height.js
 // @require scripts/prevent_ancestor_scroll.js
 
 panes.threads = function () {
@@ -68,17 +69,27 @@ panes.threads = function () {
     .on('kifi:compose-submit', sendMessage.bind(null, $container))
     .find('time').timeago();
 
-    attachComposeBindings($container, 'message', prefs.enterToSend);
-
     $list = $container.find('.kifi-threads-list').preventAncestorScroll();
-    var scroller = $list.parent().antiscroll({x: false}).data('antiscroll');
+    var $scroll = $list.parent();
+    var compose = initCompose($container, prefs.enterToSend);
+    var heighter = maintainHeight($scroll[0], $list[0], $container[0], [compose.form()]);
+
+    $scroll.antiscroll({x: false});
+    var scroller = $scroll.data('antiscroll');
     $(window).on('resize.threads', scroller.refresh.bind(scroller));
 
-    $container.closest('.kifi-pane-box').on('kifi:remove', function () {
+    var $box = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
       $list.length = 0;
       $(window).off('resize.threads');
+      compose.destroy();
+      heighter.destroy();
       api.port.off(handlers);
     });
+    if ($box.data('shown')) {
+      compose.focus();
+    } else {
+      $box.on('kifi:shown', compose.focus);
+    }
   }
 
   function update(thread) {
