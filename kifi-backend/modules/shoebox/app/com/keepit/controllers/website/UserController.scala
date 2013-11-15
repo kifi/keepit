@@ -16,10 +16,13 @@ import scala.concurrent.duration._
 import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
 import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import scala.collection.mutable
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicBoolean
 
 class UserController @Inject() (
   db: Database,
@@ -384,5 +387,38 @@ class UserController @Inject() (
     log.info(s"[getAllConnections(${request.userId})] jsContacts(sz=${jsContacts.size}) jsConns(sz=${jsConns.size})")
     val jsArray = JsArray(jsCombined)
     Ok(jsArray).withHeaders("Cache-Control" -> "private, max-age=300")
+  }
+
+  // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
+  def getABookUploadStatus(id:Id[ABookInfo]) = AuthenticatedHtmlAction { request =>
+    val done = new AtomicBoolean(false)
+    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 200)
+    def reqF = abookServiceClient.getABookInfo(request.userId, id) map { abookInfoOpt =>
+      abookInfoOpt match {
+        case Some(abookInfo) if abookInfo.state == ABookInfoStates.ACTIVE => {
+          if (done.get) None else {
+            log.info(s"[getABookUploadStatus($id)] available!")
+            done.set(true)
+            Some(s"<script>updateABookProgress($id,'${abookInfo.state}')</script>")
+          }
+        }
+        case waitingOpt => waitingOpt match {
+          case Some(pending) => {
+            log.info(s"[getABookUploadStatus($id)] waiting ... '${pending.state}'")
+            Some(s"<script>updateABookProgress($id,'${pending.state}')</script>")
+          }
+          case None => {
+            log.info(s"[getABookUploadStatus($id)] waiting ... 'notAvail'") // can be an error
+            Some(s"<script>updateABookProgress($id,'notAvail')</script>")
+          }
+        }
+      }
+    }
+    val returnEnumerator = Enumerator.generateM {
+      Future.sequence(Seq(timeoutF, reqF)).map { res =>
+         res.collect { case Some(s:String) => s }.headOption
+      }
+    }
+    Ok.stream(returnEnumerator.andThen(Enumerator.eof))
   }
 }
