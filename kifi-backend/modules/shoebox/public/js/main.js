@@ -2,7 +2,7 @@ var xhrDomain = 'https://api.kifi.com';
 var wwwDomain = 'https://www.kifi.com';
 var searchDomain = 'https://search.kifi.com';
 //TODO dev
-//xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
+xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 var xhrBaseSearch = xhrDomain.replace('api', 'search') + '/search';
@@ -898,12 +898,10 @@ $(function() {
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
 			console.log('[prepInviteTab] friends:', friends && friends.length, friends);
 			friends.forEach(function(obj) {
-				if (!obj.image) {
-					obj.image = '';
-				}
-				if (!obj.status) {
-					obj.status = '';
-				}
+				obj.label = obj.label || '';
+				obj.image = obj.image || '';
+				obj.status = obj.status || '';
+
 				var val = obj.value;
 				var network = obj.network = val && val.substring(0, val.indexOf('/')),
 					isEmail = network === 'email';
