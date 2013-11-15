@@ -207,4 +207,10 @@ class AdminAnalyticsController @Inject() (
       ).map(_ => Redirect(routes.AdminAnalyticsController.getEventDescriptors()))
     )
   }
+
+  def getEvents(repo:String, events: Option[String], limit: Int) = AdminHtmlAction { request =>
+    val eventTypeCode = HeimdalEvent.getTypeCode(repo)
+    val eventNames= events.map(_.split(",")).getOrElse(Array.empty).map(EventType.apply)
+    Async(heimdal.getRawEvents(limit, eventNames: _*)(eventTypeCode).map(Ok(_)))
+  }
 }
