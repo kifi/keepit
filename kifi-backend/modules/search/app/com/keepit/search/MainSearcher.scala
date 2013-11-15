@@ -402,8 +402,8 @@ class MainSearcher(
     checkScoreValues(hitList)
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
-        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
-        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
+        myTotal, friendsTotal, othersTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
+        (idFilter.size / numHitsToReturn), idFilter.size, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
         timeLogs = Some(timeLogs.toSearchTimeLogs),
         collections = parser.collectionIds,
         lang = lang)
