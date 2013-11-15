@@ -167,17 +167,7 @@ class S3BackedResultClickTrackerBuffer @Inject() (cache: ProbablisticLRUChunkCac
 
 class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEvery : Int)(slaveBuffer: Option[MultiChunkBuffer] = None) {
 
-  class Likeliness(key: Long, positions: Array[Int], values: Array[Int], norm: Float) {
-    def apply(value: Long) = {
-      var count = 0.0f
-      var i = 0
-      while (i < positions.length) {
-        if (values(i) == valueHash(value, positions(i))) count += 1.0f
-        i += 1
-      }
-      count/norm
-    }
-
+  class Probe(key: Long, positions: Array[Int], values: Array[Int], val norm: Float) {
     def count(value: Long) = {
       var count = 0
       var i = 0
@@ -211,13 +201,13 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
 
   def get(key: Long, useSlaveAsPrimary: Boolean) = {
     val (p, h) = getValueHashes(key, useSlaveAsPrimary)
-    new Likeliness(key, p, h, numHashFuncs.toFloat)
+    new Probe(key, p, h, numHashFuncs.toFloat)
   }
 
   def get(key: Long, values: Seq[Long], useSlaveAsPrimary: Boolean = false): Map[Long, Int] = {
-    val likeliness = get(key, useSlaveAsPrimary)
+    val probe = get(key, useSlaveAsPrimary)
     values.foldLeft(Map.empty[Long, Int]){ (m, value) =>
-      val c = likeliness.count(value)
+      val c = probe.count(value)
       if (c > 0)  m + (value -> c) else m
     }
   }
