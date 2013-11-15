@@ -29,7 +29,9 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
     def ownerId = column[String]("owner_id")
     def ownerEmail = column[String]("owner_email")
     def rawInfoLoc = column[String]("raw_info_loc")
-    def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ origin ~ ownerId.? ~ ownerEmail.? ~ rawInfoLoc.? <> (ABookInfo.apply _, ABookInfo.unapply _)
+    def numContacts = column[Int]("num_contacts", O.Nullable)
+    def numProcessed = column[Int]("num_processed", O.Nullable)
+    def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ origin ~ ownerId.? ~ ownerEmail.? ~ rawInfoLoc.? ~ numContacts.? ~ numProcessed.? <> (ABookInfo.apply _, ABookInfo.unapply _)
   }
 
   def getById(id: Id[ABookInfo])(implicit session: RSession): Option[ABookInfo] = {
