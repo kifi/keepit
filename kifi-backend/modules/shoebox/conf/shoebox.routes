@@ -112,6 +112,7 @@ GET     /friends/invite             @com.keepit.controllers.website.HomeControll
 GET     /friends/invite/facebook    @com.keepit.controllers.website.HomeController.home
 GET     /friends/invite/linkedin    @com.keepit.controllers.website.HomeController.home
 GET     /friends/invite/email       @com.keepit.controllers.website.HomeController.home
+GET     /friends/find               @com.keepit.controllers.website.HomeController.home
 POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo
 GET     /friends/requests           @com.keepit.controllers.website.HomeController.home
 GET     /profile                    @com.keepit.controllers.website.HomeController.home
