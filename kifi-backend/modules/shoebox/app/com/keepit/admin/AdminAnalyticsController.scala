@@ -202,7 +202,7 @@ class AdminAnalyticsController @Inject() (
     Async(
       Future.sequence(
         descriptorsWithCode.groupBy(_._1).mapValues(_.map(_._2)).map {
-          case (code, descriptors) => heimdal.updateEventDescriptors(HeimdalEvent.getTypeCode(code), descriptors.toSeq)
+          case (code, descriptors) => heimdal.updateEventDescriptors(descriptors.toSeq)(HeimdalEvent.getTypeCode(code))
         }
       ).map(_ => Redirect(routes.AdminAnalyticsController.getEventDescriptors()))
     )
