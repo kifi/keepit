@@ -55,7 +55,7 @@ private[heimdal] object EventQueueConsts extends Logging {
     if (timeSinceEventStarted > timeout) {
       val msg = s"Event started ${timeSinceEventStarted}ms ago but was $message only now (timeout: ${timeout}ms): $event"
       log.error(msg, new Exception(msg))
-      airbrakeNotifier.notify(msg)
+      //airbrakeNotifier.notify(msg)
     }
   }
 }
