@@ -12,24 +12,17 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders.UserCommander
 import com.keepit.model._
-import scala.concurrent.duration._
 import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
-import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.WS
 import play.api.libs.concurrent.{Promise => PlayPromise}
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.Comet
-import com.keepit.social.SocialNetworkType
 import com.keepit.common.time._
 import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
-import java.util.concurrent.CountDownLatch
 
 import java.util.concurrent.atomic.AtomicBoolean
 
