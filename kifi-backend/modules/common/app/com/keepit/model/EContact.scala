@@ -16,12 +16,14 @@ case class EContact(
   updatedAt: DateTime = currentDateTime,
   userId:    Id[User],
   email:     String,
-  name:      String,
+  name:      Option[String] = None,
   firstName: Option[String] = None,
   lastName:  Option[String] = None,
   state:     State[EContact] = EContactStates.ACTIVE
 ) extends Model[EContact] {
   def withId(id: Id[EContact]) = this.copy(id = Some(id))
+  def withName(name: Option[String]) = this.copy(name = name)
+  def withEmail(email: String) = this.copy(email = email)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
 
@@ -32,7 +34,7 @@ object EContact {
       (__ \ 'updatedAt).format[DateTime] and
       (__ \ 'userId).format(Id.format[User]) and
       (__ \ 'email).format[String] and
-      (__ \ 'name).format[String] and
+      (__ \ 'name).formatNullable[String] and
       (__ \ 'firstName).formatNullable[String] and
       (__ \ 'lastName).formatNullable[String] and
       (__ \ 'state).format(State.format[EContact])
