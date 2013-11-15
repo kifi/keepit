@@ -7,6 +7,8 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.time.Clock
+import com.keepit.inject.AppScoped
+
 
 import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
@@ -16,8 +18,8 @@ trait HeimdalServiceClientModule extends ScalaModule
 case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
   def configure() {}
 
-  @Singleton
   @Provides
+  @AppScoped
   def heimdalServiceClient (
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
