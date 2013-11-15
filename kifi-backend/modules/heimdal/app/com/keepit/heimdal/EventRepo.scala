@@ -7,11 +7,12 @@ import com.keepit.serializer.TypeCode
 import play.api.libs.json.{Json, JsArray}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.core.commands.PipelineOperator
+import com.keepit.common.time._
 
 trait EventRepo[E <: HeimdalEvent] {
   def persist(event: E) : Unit
   def getEventTypeCode: TypeCode[E]
-  def getLatestRawEvents(eventsToConsider: EventSet, number: Int) : Future[JsArray]
+  def getLatestRawEvents(eventsToConsider: EventSet, number: Int, window: Int) : Future[JsArray]
   def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]]
   def descriptors: EventDescriptorRepo[E]
 }
@@ -28,10 +29,11 @@ abstract class MongoEventRepo[E <: HeimdalEvent: TypeCode] extends BufferedMongo
     }
   }
 
-  def getLatestRawEvents(eventsToConsider: EventSet, number: Int) : Future[JsArray] = {
+  def getLatestRawEvents(eventsToConsider: EventSet, number: Int, window: Int) : Future[JsArray] = {
     val eventSelector = eventsToConsider match {
       case SpecificEventSet(events) =>
         BSONDocument(
+          "time" -> BSONDocument("$gt" -> BSONDateTime(currentDateTime.minusHours(window).getMillis)),
           "event_type" -> BSONDocument(
             "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
           )
@@ -48,7 +50,7 @@ abstract class MongoEventRepo[E <: HeimdalEvent: TypeCode] extends BufferedMongo
 abstract class DevEventRepo[E <: HeimdalEvent: TypeCode] extends EventRepo[E] {
   val getEventTypeCode = implicitly[TypeCode[E]]
   def persist(event: E): Unit = {}
-  def getLatestRawEvents(eventsToConsider: EventSet, number: Int) : Future[JsArray] = Future.successful(Json.arr())
+  def getLatestRawEvents(eventsToConsider: EventSet, number: Int, window: Int) : Future[JsArray] = Future.successful(Json.arr())
   def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
     Promise.successful(
       Stream(BSONDocument("command" -> BSONArray(command.map(_.makePipe))))

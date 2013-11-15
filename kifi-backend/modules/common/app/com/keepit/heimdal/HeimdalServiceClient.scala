@@ -36,7 +36,7 @@ trait HeimdalServiceClient extends ServiceClient with Plugin {
 
   def updateMetrics(): Unit
 
-  def getRawEvents[E <: HeimdalEvent](limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray]
+  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray]
 
   def getEventDescriptors[E <: HeimdalEvent](implicit code: TypeCode[E]): Future[Seq[EventDescriptor]]
 
@@ -159,9 +159,9 @@ class HeimdalServiceClientImpl @Inject() (
     broadcast(Heimdal.internal.updateMetrics())
   }
 
-  def getRawEvents[E <: HeimdalEvent](limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray] = {
+  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray] = {
     val eventNames = if (events.isEmpty) Seq("all") else events.map(_.name)
-    call(Heimdal.internal.getRawEvents(code.code, eventNames, limit)).map { response =>
+    call(Heimdal.internal.getRawEvents(code.code, eventNames, limit, window)).map { response =>
       Json.parse(response.body).as[JsArray]
     }
   }

@@ -34,7 +34,7 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def updateMetrics(): Unit = {}
 
-  def getRawEvents[E <: HeimdalEvent](limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray] = Future.successful(Json.arr())
+  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray] = Future.successful(Json.arr())
 
   def getEventDescriptors[E <: HeimdalEvent](implicit code: TypeCode[E]): Future[Seq[EventDescriptor]] = Future.successful(Seq.empty)
 
