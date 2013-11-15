@@ -16,7 +16,6 @@ class ABookCommander @Inject() (
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
-  contactInfoRepo:ContactInfoRepo,
   contactsUpdater:ContactsUpdaterPlugin
 ) extends Logging {
 

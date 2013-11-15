@@ -11,6 +11,7 @@
 // @require scripts/snapshot.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/prevent_ancestor_scroll.js
+// @require scripts/maintain_height.js
 // @require scripts/message_header.js
 
 panes.thread = function () {
@@ -29,11 +30,11 @@ panes.thread = function () {
       var threadId = locator.split('/')[2];
       log('[panes.thread.render]', threadId)();
       api.port.emit('thread', {id: threadId, respond: true}, function (th) {
-        renderThread($container, th.id, th.messages, session);
+        var $box = $container.closest('.kifi-pane-box');
+        var $who = $box.find('.kifi-thread-who');
+        renderThread($container, $box, $who, th.id, th.messages, session);
         api.port.emit('participants', th.id, function (participants) {
-          var $who = $container.closest('.kifi-pane-box').find('.kifi-thread-who');
           window.messageHeader.init($who, th.id, participants);
-          $container.css('margin-top', $who.outerHeight());
         });
         api.port.on(handlers);
       });
@@ -45,7 +46,7 @@ panes.thread = function () {
       }
     }};
 
-  function renderThread($container, threadId, messages, session) {
+  function renderThread($container, $box, $who, threadId, messages, session) {
     messages.forEach(function (m) {
       m.isLoggedInUser = m.user.id === session.user.id;
     });
@@ -70,20 +71,30 @@ panes.thread = function () {
     .on('kifi:compose-submit', sendReply.bind(null, $container, threadId, session))
     .find('time').timeago();
 
-    attachComposeBindings($container, 'message', session.prefs.enterToSend);
+    $holder = $container.find('.kifi-scroll-inner').preventAncestorScroll().data('threadId', threadId);
+    var $scroll = $container.find('.kifi-scroll-wrap');
+    var compose = initCompose($container, session.prefs.enterToSend);
+    var heighter = maintainHeight($scroll[0], $holder[0], $container[0], [$who[0], compose.form()]);
 
-    $holder = $container.find('.kifi-messages-sent-inner').preventAncestorScroll().data('threadId', threadId);
-    var scroller = $container.find('.kifi-scroll-wrap').antiscroll({x: false}).data('antiscroll');
+    $scroll.antiscroll({x: false});
+    var scroller = $scroll.data('antiscroll');
     $(window).on('resize.thread', scroller.refresh.bind(scroller));
 
-    $container.closest('.kifi-pane-box').on('kifi:remove', function () {
+    $box.on('kifi:remove', function () {
       if ($holder.length && this.contains($holder[0])) {
         window.messageHeader.destroy();
         $holder = $();
         $(window).off('resize.thread');
+        compose.destroy();
+        heighter.destroy();
         api.port.off(handlers);
       }
     });
+    if ($box.data('shown')) {
+      compose.focus();
+    } else {
+      $box.on('kifi:shown', compose.focus);
+    }
 
     // It's important that we check the buffer after rendering the messages, to avoid creating a window
     // of time during which we might miss an incoming message on this thread.

@@ -36,11 +36,11 @@ trait HeimdalServiceClient extends ServiceClient with Plugin {
 
   def updateMetrics(): Unit
 
-  def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray]
+  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray]
 
-  def getEventDescriptors(repo: TypeCode[HeimdalEvent]): Future[Seq[EventDescriptor]]
+  def getEventDescriptors[E <: HeimdalEvent](implicit code: TypeCode[E]): Future[Seq[EventDescriptor]]
 
-  def updateEventDescriptors(repo: TypeCode[HeimdalEvent], eventDescriptors: Seq[EventDescriptor]): Future[Int]
+  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int]
 }
 
 object FlushEventQueue
@@ -159,20 +159,20 @@ class HeimdalServiceClientImpl @Inject() (
     broadcast(Heimdal.internal.updateMetrics())
   }
 
-  def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray] = {
+  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray] = {
     val eventNames = if (events.isEmpty) Seq("all") else events.map(_.name)
-    call(Heimdal.internal.getRawEvents(implicitly[TypeCode[E]].code, eventNames, limit)).map { response =>
+    call(Heimdal.internal.getRawEvents(code.code, eventNames, limit, window)).map { response =>
       Json.parse(response.body).as[JsArray]
     }
   }
 
-  def getEventDescriptors(repo: TypeCode[HeimdalEvent]): Future[Seq[EventDescriptor]] =
-    call(Heimdal.internal.getEventDescriptors(repo.code)).map { response =>
+  def getEventDescriptors[E <: HeimdalEvent](implicit code: TypeCode[E]): Future[Seq[EventDescriptor]] =
+    call(Heimdal.internal.getEventDescriptors(code.code)).map { response =>
       Json.parse(response.body).as[JsArray].value.map(EventDescriptor.format.reads(_).get)
     }
 
-  def updateEventDescriptors(repo: TypeCode[HeimdalEvent], eventDescriptors: Seq[EventDescriptor]): Future[Int] =
-    call(Heimdal.internal.updateEventDescriptor(repo.code), Json.toJson(eventDescriptors)).map { response =>
+  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int] =
+    call(Heimdal.internal.updateEventDescriptor(code.code), Json.toJson(eventDescriptors)).map { response =>
       Json.parse(response.body).as[JsNumber].value.toInt
     }
 }

@@ -1,4 +1,4 @@
-// @require scripts/lib/q.min.js
+// @require scripts/lib/p.min.js
 
 /**
  * ---------------
@@ -22,7 +22,7 @@ this.kifiUtil = (function () {
 		 * @return {Object} A deferred promise object
 		 */
 		request: function (name, data, errorMsg) {
-			var deferred = Q.defer();
+			var deferred = P.defer();
 			api.port.emit(name, data, function (result) {
 				log(name + '.result', result);
 				if (result && result.success) {

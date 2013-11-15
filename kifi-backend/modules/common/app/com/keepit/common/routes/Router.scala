@@ -168,7 +168,7 @@ object Heimdal extends Service {
     def trackEvents() = ServiceRoute(POST, "/internal/heimdal/trackEvents")
     def getMetricData(repo: String, name: String) = ServiceRoute(GET, s"/internal/heimdal/$repo/getMetricData", Param("name", name))
     def updateMetrics() = ServiceRoute(GET, "/internal/heimdal/updateMetrics")
-    def getRawEvents(repo: String, eventTypes: Seq[String], limit: Int) = ServiceRoute(GET, s"/internal/heimdal/$repo/rawEvents", Param("events", eventTypes.mkString(",")), Param("limit", limit))
+    def getRawEvents(repo: String, eventTypes: Seq[String], limit: Int, window: Int) = ServiceRoute(GET, s"/internal/heimdal/$repo/rawEvents", Param("events", eventTypes.mkString(",")), Param("limit", limit), Param("window", window))
     def getEventDescriptors(repo: String) = ServiceRoute(GET, s"/internal/heimdal/$repo/eventDescriptors")
     def updateEventDescriptor(repo: String) = ServiceRoute(POST, s"/internal/heimdal/$repo/eventDescriptors")
   }
@@ -186,10 +186,7 @@ object ABook extends Service {
     def getEContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContacts", Param("maxRows", maxRows))
     def getEContactById(contactId:Id[EContact]) = ServiceRoute(GET, s"/internal/abook/getEContactById", Param("contactId", contactId))
     def getEContactByEmail(userId:Id[User], email:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactByEmail", Param("email", email))
-    def getContactInfos(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getContactInfos", Param("maxRows", maxRows))
     def getABookRawInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
-    def getContactsRawInfo(userId:Id[User], origin:ABookOriginType) = ServiceRoute(GET, s"/internal/abook/${userId.id}/${origin.name}/getContactsRawInfo")
-    def getMergedContactInfo(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getMergedContactInfos", Param("maxRows", maxRows))
   }
 }
 

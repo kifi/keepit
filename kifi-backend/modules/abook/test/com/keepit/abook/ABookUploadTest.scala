@@ -23,12 +23,11 @@ class ABookUploadTest extends Specification with DbTestInjector {
   def setup()(implicit injector:Injector) = {
     val db = inject[Database]
     val abookInfoRepo = inject[ABookInfoRepo]
-    val contactInfoRepo = inject[ContactInfoRepo]
     val contactRepo = inject[ContactRepo]
     val econtactRepo = inject[EContactRepo]
     val contactsUpdater = inject[ContactsUpdaterPlugin]
     val s3 = inject[ABookRawInfoStore]
-    val commander = new ABookCommander(db, s3, abookInfoRepo, contactRepo, econtactRepo, contactInfoRepo, contactsUpdater)
+    val commander = new ABookCommander(db, s3, abookInfoRepo, contactRepo, econtactRepo, contactsUpdater)
     commander
   }
 

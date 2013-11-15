@@ -201,11 +201,11 @@ class AnalyticsController @Inject() (
     }
   }
 
-  def rawEvents(repo: String, events: String, limit: Int) = Action { request =>
+  def rawEvents(repo: String, events: String, limit: Int, window: Int) = Action { request =>
     if (request.queryString.get("help").nonEmpty) Ok(rawHelp)
     else {
       val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(EventType(_)).toSet)
-      Async(getRepo(repo).getLatestRawEvents(eventsToConsider, limit).map(Ok(_)))
+      Async(getRepo(repo).getLatestRawEvents(eventsToConsider, limit, window).map(Ok(_)))
     }
   }
 

@@ -13,6 +13,7 @@
         <th>Event Name
         <th>Description
         <th>Send to Mixpanel
+        <th>Latest Events
     </thead>
       @for(descriptor <- descriptors) {
         <tr>
@@ -20,6 +21,7 @@
           <td> @descriptor.name.name
           <td><input type="text" name="@code.code:@descriptor.name.name:description" placeholder="Add a description for this event" value="@descriptor.description.getOrElse("")">
           <td><input type="checkbox" class="checkbox" name="@code.code:@descriptor.name.name:mixpanel" @if(descriptor.mixpanel) {checked}>
+          <td><a href="@com.keepit.controllers.admin.routes.AdminAnalyticsController.getEvents(code.code, Some(descriptor.name.name))">See Events</a>
       }
   </table>
     }

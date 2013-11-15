@@ -10,7 +10,7 @@ POST  /internal/heimdal/trackEvents       @com.keepit.heimdal.controllers.EventT
 
 GET   /internal/heimdal/:repo/adhocMetric       @com.keepit.heimdal.controllers.AnalyticsController.adhocMetric(repo: String, from: String ?= "", to: String ?= "now", events: String ?="all", groupBy: String ?="_", breakDown : String ?= "false", mode: String ?= "count", filter: String ?="none", as: String?="pie")
 
-GET   /internal/heimdal/:repo/rawEvents         @com.keepit.heimdal.controllers.AnalyticsController.rawEvents(repo:String, events: String ?="all", limit: Int ?= 10)
+GET   /internal/heimdal/:repo/rawEvents         @com.keepit.heimdal.controllers.AnalyticsController.rawEvents(repo:String, events: String ?="all", limit: Int ?= 10, window: Int ?= 24)
 
 GET   /internal/heimdal/:repo/createMetric      @com.keepit.heimdal.controllers.AnalyticsController.createMetric(repo: String, name: String ?= "default", start: String ?= "2013-10-1", window: Int ?= 24, step: Int ?=24, description: String ?= "No Description Given.", events: String ?= "all", groupBy: String ?="_", breakDown: String ?="false", mode: String ?= "count", filter: String ?= "none", uniqueField: String ?= "_")
 

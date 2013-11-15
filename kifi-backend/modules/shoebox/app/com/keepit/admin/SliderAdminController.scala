@@ -184,7 +184,7 @@ class SliderAdminController @Inject() (
   def getImportEvents = AdminHtmlAction { implicit request =>
     import com.keepit.classify.DomainTagImportEvents._
 
-    val eventsFuture = heimdal.getRawEvents[UserEvent](50, DOMAIN_TAG_IMPORT).map { rawEvents =>
+    val eventsFuture = heimdal.getRawEvents[UserEvent](50, 42000, DOMAIN_TAG_IMPORT).map { rawEvents =>
       rawEvents.value.map { event =>
         val createdAt = DateTimeJsonFormat.reads(event \ "time").get
         val context = (event \ "context")
