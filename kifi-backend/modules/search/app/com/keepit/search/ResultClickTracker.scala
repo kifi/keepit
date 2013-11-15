@@ -21,7 +21,7 @@ class ResultClickTracker(lru: ProbablisticLRU) {
 
   def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean): Unit = {
     val hash = QueryHash(userId, query, analyzer)
-    val probe = lru.get(hash, false) // use master
+    val probe = lru.get(hash, true)
     val norm = probe.norm.toDouble
     val count = probe.count(uriId.id)
 
