@@ -390,7 +390,8 @@ class UserController @Inject() (
   }
 
   // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
-  def getABookUploadStatus(id:Id[ABookInfo]) = AuthenticatedHtmlAction { request =>
+  def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = AuthenticatedHtmlAction { request =>
+    val callback = callbackOpt.getOrElse("parent.updateABookProgress")
     val done = new AtomicBoolean(false)
     def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 200)
     def reqF = abookServiceClient.getABookInfo(request.userId, id) map { abookInfoOpt =>
@@ -399,17 +400,17 @@ class UserController @Inject() (
           if (done.get) None else {
             log.info(s"[getABookUploadStatus($id)] available!")
             done.set(true)
-            Some(s"<script>updateABookProgress($id,'${abookInfo.state}')</script>")
+            Some(s"<script>$callback($id,'${abookInfo.state}')</script>")
           }
         }
         case waitingOpt => waitingOpt match {
           case Some(pending) => {
             log.info(s"[getABookUploadStatus($id)] waiting ... '${pending.state}'")
-            Some(s"<script>updateABookProgress($id,'${pending.state}')</script>")
+            Some(s"<script>$callback($id,'${pending.state}')</script>")
           }
           case None => {
             log.info(s"[getABookUploadStatus($id)] waiting ... 'notAvail'") // can be an error
-            Some(s"<script>updateABookProgress($id,'notAvail')</script>")
+            Some(s"<script>$callback($id,'notAvail')</script>")
           }
         }
       }
