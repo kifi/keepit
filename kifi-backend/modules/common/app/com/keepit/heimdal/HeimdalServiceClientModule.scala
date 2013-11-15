@@ -25,10 +25,19 @@ case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
     actor: ActorInstance[HeimdalClientActor],
     clock: Clock): HeimdalServiceClient = {
 
-    new HeimdalServiceClientImpl(
+    val heimdal = new HeimdalServiceClientImpl(
       airbrakeNotifier,
       client,
       serviceDiscovery.serviceCluster(ServiceType.HEIMDAL),
-      actor, clock)
+      actor, 
+      clock
+    )
+
+    if (!heimdal.enabled){
+      heimdal.onStart()
+    }
+
+    heimdal
+
   }
 }

@@ -242,6 +242,9 @@ a.undo-link[href]:hover {text-decoration: underline}
 input.friends-filter,
 input.invite-filter,
 input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 1px solid #c5d0da; height: 36px; width: 48%; width: -webkit-calc(50% - 6px); width: calc(50% - 6px); min-width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
+.search-users-help {position: relative; font-size: 21px; font-weight: 200; letter-spacing: 0.75px; background-color: #eff2f7; color: #8e92a2; padding: 50px 66px; padding-left: 120px; border-radius: 10px; max-width: 359px; margin: 42px auto 0; }
+.search-users-arrow {position: absolute; top: -35px; left: 80px; width: 33px; height: 35px }
+.search-users-icon {position: absolute; top: 39px; left: 35px; width: 67.5px; height: 69px }
 #friends-list {position: absolute; top: 128px; left: 20px; right: -1px; bottom: 0; overflow-y: auto; overflow-x: hidden}
 #friends-list>.antiscroll-inner,
 .invite-friends>.antiscroll-inner,
