@@ -1668,11 +1668,7 @@ $(function() {
 				break;
 			case 'friends':
 				$.when(promise.me).done(function() {
-					if (parts[1] === 'invites' && !canInvite()) {
-						navigate('friends', {replace: true});
-					} else {
-						showFriends(hash);
-					}
+					showFriends(hash);
 				});
 				break;
 			case 'blog':
@@ -2286,15 +2282,9 @@ $(function() {
 		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
 		$(".my-name").text(data.firstName + ' ' + data.lastName);
 		$(".my-description").text(data.description || '\u00A0'); // nbsp
-		$friendsTabs.filter('[data-href="friends/invite"]').toggle(canInvite());
+		$friendsTabs.filter('[data-href="friends/invite"]').toggle(true);
 		updateGmailTab();
 		updateConnectTab();
-	}
-
-	function canInvite() {
-		//TODO dev
-		return me.experiments.indexOf('admin') >= 0 ||
-			me.experiments.indexOf('can invite') >= 0;
 	}
 
 	function canInviteViaGmail() {
@@ -2351,7 +2341,7 @@ $(function() {
 			}
 		}).promise()};
 	$.when(promise.me).done(function () {
-		$('#invite-friends-link').toggle(canInvite());
+		$('#invite-friends-link').toggle(true);
 		updateGmailTab();
 		updateConnectTab();
 	});
