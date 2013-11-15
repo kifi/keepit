@@ -5,7 +5,6 @@ import reactivemongo.bson.{BSONDocument, Macros}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
-import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
 import CustomBSONHandlers._
 
@@ -26,7 +25,7 @@ trait ProdEventDescriptorRepo[E <: HeimdalEvent] extends MongoRepo[EventDescript
   def upsert(obj: EventDescriptor) : Future[Int] = new SafeFuture(
       collection.update(
         selector = BSONDocument("name" -> obj.name),
-        update = toBSON(obj.copy(updatedAt = currentDateTime)),
+        update = toBSON(obj),
         upsert = true,
         multi = false
       ) map { lastError => if (lastError.inError) throw lastError.getCause else lastError.updated }

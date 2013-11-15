@@ -78,6 +78,6 @@ object EventRepo {
     "time" -> BSONDateTime(event.time.getMillis)
   )
 
-  def findByEventTypeCode(availableRepos: EventRepo[_ <: HeimdalEvent]*)(typeCode: String): Option[EventRepo[_]] = availableRepos.find(_.getEventTypeCode.code == typeCode)
+  def findByEventTypeCode(availableRepos: EventRepo[_ <: HeimdalEvent]*)(code: String): Option[EventRepo[_ <: HeimdalEvent]] = availableRepos.find(_.getEventTypeCode == HeimdalEvent.getTypeCode(code))
 }
 

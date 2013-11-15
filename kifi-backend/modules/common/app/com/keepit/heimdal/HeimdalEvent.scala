@@ -114,8 +114,8 @@ sealed trait HeimdalEvent {
 }
 
 object HeimdalEvent {
-  private val companionByTypeCode = Companion.companionByTypeCode(UserEvent, SystemEvent)
-  def getCompanion(typeCode: String) = companionByTypeCode(typeCode.toLowerCase)
+  private val typeCodeMap = TypeCode.typeCodeMap[HeimdalEvent](UserEvent.typeCode, SystemEvent.typeCode)
+  def getTypeCode(code: String) = typeCodeMap(code.toLowerCase)
 
   implicit val format = new Format[HeimdalEvent] {
     def writes(event: HeimdalEvent) = event match {
@@ -153,17 +153,13 @@ object SystemEvent extends Companion[SystemEvent] {
 case class EventDescriptor(
   name: EventType,
   description: Option[String] = None,
-  mixpanel: Boolean = false,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime
-  )
+  mixpanel: Boolean = false
+)
 
 object EventDescriptor {
   implicit val format: Format[EventDescriptor] = (
     (__ \ 'name).format[EventType] and
       (__ \ 'description).formatNullable[String] and
-      (__ \ 'mixpanel).format[Boolean] and
-      (__ \ 'createdAt).format(DateTimeJsonFormat) and
-      (__ \ 'updatedAt).format(DateTimeJsonFormat)
+      (__ \ 'mixpanel).format[Boolean]
     )(EventDescriptor.apply, unlift(EventDescriptor.unapply))
 }

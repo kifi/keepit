@@ -20,7 +20,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 
 import play.api.Plugin
-import play.api.libs.json.{JsArray, Json, JsObject}
+import play.api.libs.json.{JsNumber, JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
@@ -37,9 +37,9 @@ trait HeimdalServiceClient extends ServiceClient with Plugin {
 
   def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray]
 
-  def getEventDescriptors[E <: HeimdalEvent: TypeCode]: Future[Seq[EventDescriptor]]
+  def getEventDescriptors(repo: TypeCode[HeimdalEvent]): Future[Seq[EventDescriptor]]
 
-  def updateEventDescriptors[E <: HeimdalEvent: TypeCode](eventDescriptors: EventDescriptor*): Unit
+  def updateEventDescriptors(repo: TypeCode[HeimdalEvent], eventDescriptors: Seq[EventDescriptor]): Future[Int]
 }
 
 object FlushEventQueue
@@ -163,11 +163,13 @@ class HeimdalServiceClientImpl @Inject() (
     }
   }
 
-  def getEventDescriptors[E <: HeimdalEvent: TypeCode]: Future[Seq[EventDescriptor]] =
-    call(Heimdal.internal.getEventDescriptors(implicitly[TypeCode[E]].code)).map { response =>
+  def getEventDescriptors(repo: TypeCode[HeimdalEvent]): Future[Seq[EventDescriptor]] =
+    call(Heimdal.internal.getEventDescriptors(repo.code)).map { response =>
       Json.parse(response.body).as[JsArray].value.map(EventDescriptor.format.reads(_).get)
     }
 
-  def updateEventDescriptors[E <: HeimdalEvent: TypeCode](eventDescriptors: EventDescriptor*): Unit =
-    call(Heimdal.internal.updateEventDescriptor(implicitly[TypeCode[E]].code), Json.toJson(eventDescriptors))
+  def updateEventDescriptors(repo: TypeCode[HeimdalEvent], eventDescriptors: Seq[EventDescriptor]): Future[Int] =
+    call(Heimdal.internal.updateEventDescriptor(repo.code), Json.toJson(eventDescriptors)).map { response =>
+      Json.parse(response.body).as[JsNumber].value.toInt
+    }
 }
