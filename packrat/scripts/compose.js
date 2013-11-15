@@ -1,4 +1,3 @@
-// @require scripts/scrollable.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
 
@@ -260,10 +259,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
   });
 
   var hOld, elAbove = $f[0].previousElementSibling;
-  var elScroll = $(elAbove).find(".kifi-scroll-inner").scrollable({
-    $above: $c.closest(".kifi-pane-box").find(".kifi-pane-title,.kifi-thread-who").last(),
-    $below: $f
-  })[0];
+  var elScroll = $(elAbove).find(".kifi-scroll-inner")[0];
   $(elAbove).layout();
   updateMaxHeight();
 
