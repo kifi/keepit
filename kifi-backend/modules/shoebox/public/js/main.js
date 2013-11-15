@@ -642,7 +642,13 @@ $(function() {
 	  window.open(url, name, 'width=' + w + ',height=' + h + ',top=' + top + ',left=' + left + ',dialog=' + dialog + ',menubar=' + menubar + ',resizable=' + resizable + ',scrollbars=' + scrollbars + ',status=' + status);
   }
 
-  var friendsHelpTmpl = Handlebars.compile($('#invite-friends-help').html());
+  function submitForm(url, method) {
+	  $('<form method="' + (method || 'get') + '" action="' + url + '">')
+	  .appendTo('body')
+	  .submit()
+	  .remove();
+  }
+
   var VENDOR_NAMES = {
 	  facebook: 'Facebook',
 	  linkedin: 'LinkedIn',
@@ -656,12 +662,8 @@ $(function() {
 	  email: 'contact'
   };
 
-  function submitForm(url, method) {
-	  $('<form method="' + (method || 'get') + '" action="' + url + '">')
-	  .appendTo('body')
-	  .submit()
-	  .remove();
-  }
+  var friendsHelpTmpl = Handlebars.compile($('#invite-friends-help').html());
+  var friendsImportingTmpl = Handlebars.compile($('#friends-importing').html());
 
   function updateInviteHelp(network, show) {
 	  var $cont = $('.invite-friends-help-container');
@@ -678,8 +680,26 @@ $(function() {
 	  }
   }
 
+  function updateImporting(network, show) {
+	  var $cont = $('.invite-friends-importing');
+	  if (show && /^facebook|linkedin|email|gmail$/.test(network)) {
+		  $cont.html(friendsImportingTmpl({
+			  network_class: network,
+			  network: VENDOR_NAMES[network],
+			  friends: VENDOR_FRIEND_NAME[network] + 's'
+		  }));
+		  $cont.show();
+	  }
+	  else {
+		  $cont.hide();
+	  }
+  }
+
   $('.invite-friends-help-container').on('click', '.invite-friends-help-connect', function() {
-	  connectSocial($(this).data('network'));
+	  var network = $(this).data('network');
+	  updateImporting(network, true);
+	  updateInviteHelp(network, false);
+	  connectSocial(network);
   });
 
   function connectSocial(network) {
