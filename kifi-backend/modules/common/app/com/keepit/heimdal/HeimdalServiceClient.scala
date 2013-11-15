@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import java.util.concurrent.atomic.AtomicInteger
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
@@ -20,7 +21,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 
 import play.api.Plugin
-import play.api.libs.json.{JsArray, Json, JsObject}
+import play.api.libs.json.{JsNumber, JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
@@ -35,25 +36,30 @@ trait HeimdalServiceClient extends ServiceClient with Plugin {
 
   def updateMetrics(): Unit
 
-  def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray]
+  def getRawEvents[E <: HeimdalEvent](limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray]
+
+  def getEventDescriptors[E <: HeimdalEvent](implicit code: TypeCode[E]): Future[Seq[EventDescriptor]]
+
+  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int]
 }
 
 object FlushEventQueue
 object FlushEventQueueAndClose
 
-object EventQueueConsts extends Logging {
+private[heimdal] object EventQueueConsts extends Logging {
   val MaxBatchSize = 100
   val LowWatermarkBatchSize = 10
   val BatchFlushTiming = 10 //seconds
   val StaleEventAddTime = 40000 //milli
   val StaleEventFlushTime = (BatchFlushTiming * 1000) + StaleEventAddTime + 2000 //milli
+  val batchId = new AtomicInteger(0)
 
   def verifyEventStaleTime(airbrakeNotifier: AirbrakeNotifier, clock: Clock, event: HeimdalEvent, timeout: Long, message: String): Unit = {
     val timeSinceEventStarted = clock.getMillis - event.time.getMillis
     if (timeSinceEventStarted > timeout) {
       val msg = s"Event started ${timeSinceEventStarted}ms ago but was $message only now (timeout: ${timeout}ms): $event"
       log.error(msg, new Exception(msg))
-      airbrakeNotifier.notify(msg)
+      //airbrakeNotifier.notify(msg)
     }
   }
 }
@@ -97,18 +103,19 @@ class HeimdalClientActor @Inject() (
   }
 
   def flush() = {
+    val batchId = EventQueueConsts.batchId.incrementAndGet
     events.size match {
       case 0 =>
         //ignore
       case 1 =>
         val event = events(0)
         log.info(s"Sending a single event to Heimdal: $event")
-        EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventAddTime, "flush")
+        EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventAddTime, s"flush(1/1) #$batchId")
         call(Heimdal.internal.trackEvent, Json.toJson(event))
         events = Vector()
       case more =>
         log.info(s"Sending ${events.size} events to Heimdal: ${events}")
-        events map { event => EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventFlushTime, "flush") }
+        events.zipWithIndex map { case (event, i) => EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventFlushTime, s"flush($i/${events.size} #$batchId)") }
         call(Heimdal.internal.trackEvents, Json.toJson(events))
         events = Vector()
     }
@@ -152,10 +159,20 @@ class HeimdalServiceClientImpl @Inject() (
     broadcast(Heimdal.internal.updateMetrics())
   }
 
-  def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray] = {
+  def getRawEvents[E <: HeimdalEvent](limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray] = {
     val eventNames = if (events.isEmpty) Seq("all") else events.map(_.name)
-    call(Heimdal.internal.getRawEvents(implicitly[TypeCode[E]].code, eventNames, limit)).map { response =>
+    call(Heimdal.internal.getRawEvents(code.code, eventNames, limit)).map { response =>
       Json.parse(response.body).as[JsArray]
     }
   }
+
+  def getEventDescriptors[E <: HeimdalEvent](implicit code: TypeCode[E]): Future[Seq[EventDescriptor]] =
+    call(Heimdal.internal.getEventDescriptors(code.code)).map { response =>
+      Json.parse(response.body).as[JsArray].value.map(EventDescriptor.format.reads(_).get)
+    }
+
+  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int] =
+    call(Heimdal.internal.updateEventDescriptor(code.code), Json.toJson(eventDescriptors)).map { response =>
+      Json.parse(response.body).as[JsNumber].value.toInt
+    }
 }

@@ -13,7 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait UserEventLoggingRepo extends EventRepo[UserEvent]
 
-class ProdUserEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptorRepo: UserEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
+class ProdUserEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptors: UserEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
   extends MongoEventRepo[UserEvent] with UserEventLoggingRepo {
 
   val warnBufferSize = 500
@@ -34,14 +34,14 @@ class ProdUserEventLoggingRepo(val collection: BSONCollection, val mixpanel: Mix
 trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]
 
 class ProdUserEventDescriptorRepo(val collection: BSONCollection, cache: UserEventDescriptorNameCache, protected val airbrake: AirbrakeNotifier) extends ProdEventDescriptorRepo[UserEvent] with UserEventDescriptorRepo {
-  override def upsert(obj: EventDescriptor[UserEvent]) = super.upsert(obj) map { _ tap { _ => cache.set(UserEventDescriptorNameKey(obj.name), obj) } }
+  override def upsert(obj: EventDescriptor) = super.upsert(obj) map { _ tap { _ => cache.set(UserEventDescriptorNameKey(obj.name), obj) } }
   override def getByName(name: EventType) = cache.getOrElseFutureOpt(UserEventDescriptorNameKey(name)) { super.getByName(name) }
 }
 
 class UserEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UserEventDescriptorNameKey, EventDescriptor[UserEvent]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[UserEventDescriptorNameKey, EventDescriptor](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
-case class UserEventDescriptorNameKey(name: EventType) extends Key[EventDescriptor[UserEvent]] {
+case class UserEventDescriptorNameKey(name: EventType) extends Key[EventDescriptor] {
   override val version = 1
   val namespace = "user_event_descriptor"
   def toKey(): String = name.name

@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
 
 import java.net.URLEncoder
@@ -15,7 +15,7 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.social.{SocialGraphPlugin, SocialNetworks, SocialNetworkType, SocialId}
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.akka.{TimeoutFuture, SafeFuture}
 import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilderFactory, UserEvent, EventType}
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 
@@ -186,56 +186,59 @@ class InviteController @Inject() (db: Database,
   }
 
   def refreshAllSocialInfo() = AuthenticatedHtmlAction { implicit request =>
-    for (info <- db.readOnly { implicit s =>
+    val info = db.readOnly { implicit s =>
       socialUserInfoRepo.getByUser(request.userId)
-    }) {
-      Await.result(socialGraphPlugin.asyncFetch(info), 5 minutes)
     }
-    Redirect("/friends/invite")
+    Async {
+      implicit val duration = 5.minutes
+      TimeoutFuture(Future.sequence(info.map(socialGraphPlugin.asyncFetch))).map { res =>
+        Redirect("/friends/invite")
+      }
+    }
   }
 
   def acceptInvite(id: ExternalId[Invitation]) = HtmlAction(allowPending = true)(authenticatedAction = { implicit request =>
     Redirect(com.keepit.controllers.core.routes.AuthController.signupPage)
   }, unauthenticatedAction = { implicit request =>
-    db.readOnly { implicit session =>
-      val invitation = invitationRepo.getOpt(id)
+      val (invitation, inviterUserOpt) = db.readOnly { implicit session =>
+        invitationRepo.getOpt(id).map {
+          case invite if invite.senderUserId.isDefined =>
+            (Some(invite), Some(userRepo.get(invite.senderUserId.get)))
+          case invite =>
+            (Some(invite), None)
+        }.getOrElse((None, None))
+      }
       invitation match {
-        case Some(invite) if (invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE) =>
-          invite.recipientSocialUserId match {
-            case Some(recipientSocialUserId) => {
-              val socialUser = socialUserInfoRepo.get(invitation.get.recipientSocialUserId.get)
-              (invite.senderUserId, request.identityOpt) match {
-                case (Some(senderId), None) =>
-                  val inviterUser = userRepo.get(senderId)
-                  Ok(views.html.auth.auth("signup", titleText = s"${socialUser.fullName}, join ${inviterUser.firstName} on Kifi!", titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUser.firstName}'s invite."))
+        case Some(invite) if invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE =>
+          if (request.identityOpt.isDefined || invite.senderUserId.isEmpty) {
+            Redirect(com.keepit.controllers.core.routes.AuthController.signupPage).withCookies(Cookie("inv", invite.externalId.id))
+          } else {
+            Async {
+              val nameOpt = (invite.recipientSocialUserId, invite.recipientEContactId) match {
+                case (Some(socialUserId), _) =>
+                  val name = db.readOnly(socialUserInfoRepo.get(socialUserId)(_).fullName)
+                  Promise.successful(Option(name)).future
+                case (_, Some(eContactId)) =>
+                  abookServiceClient.getEContactById(eContactId).map { cOpt => cOpt.map(_.name) }
                 case _ =>
-                  Redirect(com.keepit.controllers.core.routes.AuthController.signupPage).withCookies(Cookie("inv", invite.externalId.id))
+                  Promise.successful(None).future
               }
-            }
-            case None => invite.recipientEContactId match {
-              case Some(econtactId) => {
-                Async {
-                  abookServiceClient.getEContactById(econtactId).map { econtactOpt =>
-                    (econtactOpt, invite.senderUserId, request.identityOpt) match {
-                      case (Some(econtact), Some(senderId), None) =>
-                        val inviterUser = userRepo.get(senderId)
-                        Ok(views.html.auth.auth("signup", titleText = s"${econtact.name}, join ${inviterUser.firstName} on Kifi!", titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUser.firstName}'s invite."))
-                      case _ =>
-                        Redirect(com.keepit.controllers.core.routes.AuthController.signupPage).withCookies(Cookie("inv", invite.externalId.id))
-                    }
-                  }
-                }
-              }
-              case None => {
-                log.warn("[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
-                Redirect(com.keepit.controllers.core.routes.AuthController.signupPage)
+              nameOpt.map {
+                case Some(name) =>
+                  Ok(views.html.auth.auth(
+                    "signup",
+                    titleText = s"${name}, join ${inviterUserOpt.get.firstName} on Kifi!",
+                    titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUserOpt.get.firstName}'s invite."
+                  )).withCookies(Cookie("inv", invite.externalId.id))
+                case None =>
+                  log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
+                  Redirect(com.keepit.controllers.core.routes.AuthController.signupPage)
               }
             }
           }
         case _ =>
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage)
       }
-    }
   })
 
 

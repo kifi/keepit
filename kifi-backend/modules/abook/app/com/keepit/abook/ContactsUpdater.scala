@@ -46,7 +46,6 @@ class ContactsUpdater @Inject() (
   db: Database,
   s3:ABookRawInfoStore,
   abookInfoRepo:ABookInfoRepo,
-  contactInfoRepo:ContactInfoRepo, // not used -- may remove later
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
   airbrake:AirbrakeNotifier
@@ -58,21 +57,18 @@ class ContactsUpdater @Inject() (
   }
 
   private def mkName(name:Option[String], firstName:Option[String], lastName:Option[String], email:String) = sOpt(name).getOrElse(
-    firstName match {
-      case Some(fName) => lastName match {
-        case Some(lName) => s"$fName $lName"
-        case None => fName
-      }
-      case None => lastName match {
-        case Some(lName) => lName
-        case None => (email.split('@'))(0) // may need a parser
-      }
+    (firstName, lastName) match {
+      case (Some(f), Some(l)) => s"$f $l"
+      case (Some(f), None) => f
+      case (None, Some(l)) => l
+      case _ => email
     }
   )
 
   def receive() = {
     case ProcessABookUpload(userId, origin, abookInfo, s3Key, rawJsonRef) => {
       log.info(s"[upload($userId, $origin, $abookInfo, $s3Key): Begin processing ...")
+      var abookEntry = abookInfo
       val ts = System.currentTimeMillis
       val rawInfoJson = rawJsonRef.get getOrElse {
           val rawInfo = s3.get(s3Key).getOrElse(throw new IllegalStateException(s"[upload] s3Key=$s3Key is not set")) // notify user?
@@ -80,8 +76,9 @@ class ContactsUpdater @Inject() (
       }
       val abookRawInfo = Json.fromJson[ABookRawInfo](rawInfoJson).getOrElse(throw new IllegalArgumentException(s"[upload] Cannot parse $rawInfoJson")) // notify user?
       val cBuilder = mutable.ArrayBuilder.make[Contact]
-      abookRawInfo.contacts.value.foreach {
-        contact =>
+      var processed = 0
+      abookRawInfo.contacts.value.grouped(500).foreach { g =>
+        g.foreach { contact =>
           val fName = sOpt((contact \ "firstName").asOpt[String])
           val lName = sOpt((contact \ "lastName").asOpt[String])
           val emails = (contact \ "emails").validate[Seq[String]].fold(
@@ -111,6 +108,11 @@ class ContactsUpdater @Inject() (
             log.info(s"[upload($userId,$origin)] $c")
             cBuilder += c
           }
+        }
+        processed += g.length
+        abookEntry = db.readWrite { implicit s =>
+          abookInfoRepo.save(abookEntry.withNumProcessed(Some(processed))) // status update
+        }
       }
       val contacts = cBuilder.result
       if (!contacts.isEmpty) {
@@ -118,8 +120,8 @@ class ContactsUpdater @Inject() (
           contactRepo.deleteAndInsertAll(userId, abookInfo.id.get, origin, contacts)
         }
       }
-      db.readWrite { implicit s =>
-        abookInfoRepo.save(abookInfo.withState(ABookInfoStates.ACTIVE))
+      abookEntry = db.readWrite { implicit s =>
+        abookInfoRepo.save(abookEntry.withState(ABookInfoStates.ACTIVE))
       }
       log.info(s"[upload($userId,$origin)] time-lapsed: ${System.currentTimeMillis - ts}")
     }

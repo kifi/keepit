@@ -282,6 +282,7 @@ class BookmarksController @Inject() (
               collectionRepo.getByUserAndExternalId(request.userId, id) map { coll =>
                 val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
                 collectionCommander.updateCollectionOrdering(request.userId)
+                searchClient.updateURIGraph()
                 Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
               } getOrElse {
                 NotFound(Json.obj("error" -> s"Collection not found for id $id"))
@@ -291,6 +292,7 @@ class BookmarksController @Inject() (
                   map { _.copy(name = name, state = CollectionStates.ACTIVE) }
                   getOrElse Collection(userId = request.userId, name = name))
               collectionCommander.updateCollectionOrdering(request.userId)
+              searchClient.updateURIGraph()
               Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
             }
           } else {
@@ -311,6 +313,7 @@ class BookmarksController @Inject() (
         collectionRepo.save(coll.copy(state = CollectionStates.INACTIVE))
         collectionCommander.updateCollectionOrdering(request.userId)
       }
+      searchClient.updateURIGraph()
       Ok(Json.obj())
     } getOrElse {
       NotFound(Json.obj("error" -> s"Collection not found for id $id"))
@@ -328,6 +331,7 @@ class BookmarksController @Inject() (
               keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
           }
         }
+        searchClient.updateURIGraph()
         Ok(Json.obj("removed" -> removed.size))
       } getOrElse {
         BadRequest(Json.obj("error" -> "Could not parse JSON keep ids from body"))
@@ -344,6 +348,7 @@ class BookmarksController @Inject() (
     } map { collection =>
       request.body.asJson.flatMap(Json.fromJson[Set[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
         val (added, removed) = addToCollection(keepExtIds, collection, removeOthers)
+        searchClient.updateURIGraph()
         Ok(Json.obj("added" -> added.size, "removed" -> removed.size))
       } getOrElse {
         BadRequest(Json.obj("error" -> "Could not parse JSON keep ids from body"))

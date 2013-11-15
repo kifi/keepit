@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{WebsiteController, ABookServiceController, ActionAuthenticator}
 import com.keepit.model._
-import com.keepit.common.db.Id
+import com.keepit.common.db.{Id}
 import play.api.mvc.{AsyncResult, Action}
 import com.keepit.abook.store.{ABookRawInfoStore}
 import scala.Some
@@ -54,7 +54,6 @@ class ABookController @Inject() (
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
-  contactInfoRepo:ContactInfoRepo,
   abookCommander:ABookCommander,
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
@@ -89,7 +88,7 @@ class ABookController @Inject() (
                       JsArray(entries)
                     }
 
-                    val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "contacts" -> jsArrays(0))
+                    val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "numContacts" -> jsArrays(0).value.length, "contacts" -> jsArrays(0))
                     log.info(Json.prettyPrint(abookUpload))
                     val abookInfo = abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), abookUpload)
                     Ok(Json.toJson(abookInfo))
@@ -212,23 +211,6 @@ class ABookController @Inject() (
     async
   }
 
-  def getContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
-    val resF:Future[JsValue] = Future {
-      val ts = System.currentTimeMillis
-      val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-      db.readOnly { implicit session =>
-        contactInfoRepo.getByUserIdIter(userId, maxRows).foreach { jsonBuilder += Json.toJson(_) } // TODO: paging & caching
-      }
-      val contacts = jsonBuilder.result
-      log.info(s"[getContactInfos($userId, $maxRows)] # of contacts returned: ${contacts.length} time-lapsed: ${System.currentTimeMillis - ts}")
-      JsArray(contacts)
-    }
-    val async: AsyncResult = Async {
-      resF.map { js => Ok(js) }
-    }
-    async
-  }
-
   def getSimpleContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
     val resF:Future[JsValue] = Future {
       val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
@@ -314,6 +296,19 @@ class ABookController @Inject() (
     }
     Async {
       resF.map(js => Ok(js))
+    }
+  }
+
+  def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = Action { request =>
+    val resF = Future {
+      db.readOnly { implicit s =>
+        abookInfoRepo.getByUserIdAndABookId(userId, id)
+      }
+    }
+    Async {
+      resF.map { info =>
+        Ok(Json.toJson(info))
+      }
     }
   }
 

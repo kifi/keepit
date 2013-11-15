@@ -11,7 +11,7 @@ import com.keepit.heimdal.SpecificEventSet
 //Might want to change this to a custom play one
 
 import play.api.mvc.Action
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{JsNumber, JsArray, Json, JsObject}
 
 import com.google.inject.Inject
 
@@ -27,7 +27,7 @@ class AnalyticsController @Inject() (
   metricManager: MetricManager)
   extends HeimdalServiceController {
 
-  private def getRepo(eventTypeCode: String) = EventRepo.findByEventTypeCode(userEventLoggingRepo, systemEventLoggingRepo)(eventTypeCode).get
+  private def getRepo(repoEventTypeCode: String) = EventRepo.findByEventTypeCode(userEventLoggingRepo, systemEventLoggingRepo)(repoEventTypeCode).get
 
   val adhocHelp = """
     | Returns simple event statistics
@@ -206,6 +206,18 @@ class AnalyticsController @Inject() (
     else {
       val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(EventType(_)).toSet)
       Async(getRepo(repo).getLatestRawEvents(eventsToConsider, limit).map(Ok(_)))
+    }
+  }
+
+  def getEventDescriptors(repo: String) = Action { request =>
+    Async(getRepo(repo).descriptors.getAll().map(descriptors => Ok(Json.toJson(descriptors))))
+  }
+
+  def updateEventDescriptors(repo: String) = Action { request =>
+    val updatedDescriptors = Json.fromJson[Seq[EventDescriptor]](request.body.asJson.get).get
+    Async {
+      val descriptors = getRepo(repo).descriptors
+      Future.sequence(updatedDescriptors.map(descriptors.upsert)).map(counts => Ok(JsNumber(counts.sum)))
     }
   }
 }
