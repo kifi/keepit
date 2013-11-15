@@ -54,7 +54,6 @@ class ABookController @Inject() (
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
-  contactInfoRepo:ContactInfoRepo,
   abookCommander:ABookCommander,
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
@@ -205,23 +204,6 @@ class ABookController @Inject() (
   def getEContacts(userId:Id[User], maxRows:Int) = Action { request =>
     val resF:Future[JsValue] = Future {
       abookCommander.getEContactsDirect(userId, maxRows)
-    }
-    val async: AsyncResult = Async {
-      resF.map { js => Ok(js) }
-    }
-    async
-  }
-
-  def getContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
-    val resF:Future[JsValue] = Future {
-      val ts = System.currentTimeMillis
-      val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-      db.readOnly { implicit session =>
-        contactInfoRepo.getByUserIdIter(userId, maxRows).foreach { jsonBuilder += Json.toJson(_) } // TODO: paging & caching
-      }
-      val contacts = jsonBuilder.result
-      log.info(s"[getContactInfos($userId, $maxRows)] # of contacts returned: ${contacts.length} time-lapsed: ${System.currentTimeMillis - ts}")
-      JsArray(contacts)
     }
     val async: AsyncResult = Async {
       resF.map { js => Ok(js) }

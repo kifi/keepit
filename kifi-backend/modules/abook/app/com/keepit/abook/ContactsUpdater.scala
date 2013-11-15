@@ -46,7 +46,6 @@ class ContactsUpdater @Inject() (
   db: Database,
   s3:ABookRawInfoStore,
   abookInfoRepo:ABookInfoRepo,
-  contactInfoRepo:ContactInfoRepo, // not used -- may remove later
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
   airbrake:AirbrakeNotifier
