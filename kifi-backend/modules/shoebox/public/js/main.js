@@ -477,12 +477,7 @@ $(function() {
 				})[0];
 				var postLink = function (e) {
 					e.preventDefault();
-					$('<form>')
-						.attr('action', wwwDomain + $(this).data('action'))
-						.attr('method', 'post')
-						.appendTo('body')
-						.submit()
-						.remove();
+					submitForm(wwwDomain + $(this).data('action'), 'post');
 				};
 				if (networkInfo) {
 					$a.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
@@ -575,6 +570,7 @@ $(function() {
 	}
 	var $tab = $addFriendsTabs.filter('[data-href="' + pPath + '"]');
     console.log('[showAddFriends]', path, pPath, $tab);
+	$nwFriendsLoading.hide();
     if ($tab.length) {
       $tab.removeAttr('href');
       $addFriendsTabs.not($tab).filter(':not([href])').each(function() {
@@ -646,6 +642,56 @@ $(function() {
 	  window.open(url, name, 'width=' + w + ',height=' + h + ',top=' + top + ',left=' + left + ',dialog=' + dialog + ',menubar=' + menubar + ',resizable=' + resizable + ',scrollbars=' + scrollbars + ',status=' + status);
   }
 
+  var friendsHelpTmpl = Handlebars.compile($('#invite-friends-help').html());
+  var VENDOR_NAMES = {
+	  facebook: 'Facebook',
+	  linkedin: 'LinkedIn',
+	  gmail: 'Gmail',
+	  email: 'Gmail'
+  };
+  var VENDOR_FRIEND_NAME = {
+	  facebook: 'friend',
+	  linkedin: 'connection',
+	  gmail: 'contact',
+	  email: 'contact'
+  };
+
+  function submitForm(url, method) {
+	  $('<form method="' + (method || 'get') + '" action="' + url + '">')
+	  .appendTo('body')
+	  .submit()
+	  .remove();
+  }
+
+  function updateInviteHelp(network, show) {
+	  var $cont = $('.invite-friends-help-container');
+	  if (show && /^facebook|linkedin|email|gmail$/.test(network)) {
+		  $cont.html(friendsHelpTmpl({
+			  network_class: network,
+			  network: VENDOR_NAMES[network],
+			  friends: VENDOR_FRIEND_NAME[network] + 's'
+		  }));
+		  $cont.show();
+	  }
+	  else {
+		  $cont.hide();
+	  }
+  }
+
+  $('.invite-friends-help-container').on('click', '.invite-friends-help-connect', function() {
+	  connectSocial($(this).data('network'));
+  });
+
+  function connectSocial(network) {
+	  console.log('[connectSocial]', network);
+	  if (network === 'email') {
+		  submitForm(wwwDomain + '/importContacts');
+	  }
+	  else {
+		  submitForm(wwwDomain + '/link/' + network);
+	  }
+  }
+
   function filterFriendsByNetwork(network) {
 	  if (!network) {
 		  network = '';
@@ -654,19 +700,14 @@ $(function() {
 	  chooseNetworkFilterDOM(network);
 	  var isEmail = network === 'email',
 		  isSocial = /^facebook|linkedin$/.test(network);
+
 	if (isEmail) {
 	  promise.abooks.always(function(data) {
 		  var shouldConnect = !(data && data.length);
-		  if (shouldConnect) {
-			  var url = wwwDomain + '/importContacts';
-			  $('<form method="GET" action="' + url + '">')
-			  .appendTo('body')
-			  .submit()
-			  .remove();
-		  }
-		  else {
+		  if (!shouldConnect) {
 			  emptyAndPrepInvite();
 		  }
+		  updateInviteHelp(network, shouldConnect);
 	  });
 	}
 	else if (isSocial) {
@@ -675,16 +716,10 @@ $(function() {
 			  console.log('[myNetworks]', nObj.network, network);
 			  return nObj.network !== network;
 		  });
-		  if (shouldConnect) {
-			  var url = wwwDomain + '/link/' + network;
-			  $('<form method="GET" action="' + url + '">')
-			  .appendTo('body')
-			  .submit()
-			  .remove();
-		  }
-		  else {
+		  if (!shouldConnect) {
 			  emptyAndPrepInvite();
 		  }
+		  updateInviteHelp(network, shouldConnect);
 	  });
 	}
 	else {
@@ -801,6 +836,9 @@ $(function() {
 				       f1.id.localeCompare(f2.id, undefined, compareSort);
 			});
 			friendsTmpl.render(friends);
+		})
+		.always(function() {
+			$friendsLoading.hide();
 		});
 	}
 
@@ -905,12 +943,15 @@ $(function() {
 			if (!friendsShowing.length) {
 				$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
 				$noResults.find('.refresh-friends').click(function () {
-					$('<form method="post">').attr('action', wwwDomain + '/friends/invite/refresh').appendTo('body').submit();
+					submitForm(wwwDomain + '/friends/invite/refresh', 'post');
 				});
 				$noResults.find('.tell-us').click(sendFeedback);
 			}
 			nwFriendsTmpl.append(friends);
 			inviteFilterTmpl.render({results: friendsShowing.length, filter: filter});
+		})
+		.always(function() {
+			$nwFriendsLoading.hide();
 		});
 		$.getJSON(xhrBase + '/user/inviteCounts', { updatedAt: invitesUpdatedAt }, function (invites) {
 			invitesLeft = invites.left;
