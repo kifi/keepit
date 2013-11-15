@@ -89,7 +89,7 @@ class ABookController @Inject() (
                       JsArray(entries)
                     }
 
-                    val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "contacts" -> jsArrays(0))
+                    val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "numContacts" -> jsArrays(0).value.length, "contacts" -> jsArrays(0))
                     log.info(Json.prettyPrint(abookUpload))
                     val abookInfo = abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), abookUpload)
                     Ok(Json.toJson(abookInfo))

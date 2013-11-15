@@ -400,17 +400,17 @@ class UserController @Inject() (
           if (done.get) None else {
             log.info(s"[getABookUploadStatus($id)] available!")
             done.set(true)
-            Some(s"<script>$callback($id,'${abookInfo.state}')</script>")
+            Some(s"<script>$callback($id,'${abookInfo.state}',${abookInfo.numContacts.getOrElse(-1)},${abookInfo.numProcessed.getOrElse(-1)})</script>")
           }
         }
         case waitingOpt => waitingOpt match {
-          case Some(pending) => {
-            log.info(s"[getABookUploadStatus($id)] waiting ... '${pending.state}'")
-            Some(s"<script>$callback($id,'${pending.state}')</script>")
+          case Some(processing) => {
+            log.info(s"[getABookUploadStatus($id)] waiting ... '${processing.state}'")
+            Some(s"<script>$callback($id,'${processing.state}',${processing.numContacts.getOrElse(-1)},${processing.numProcessed.getOrElse(-1)})</script>")
           }
           case None => {
             log.info(s"[getABookUploadStatus($id)] waiting ... 'notAvail'") // can be an error
-            Some(s"<script>$callback($id,'notAvail')</script>")
+            Some(s"<script>$callback($id,'notAvail',-1,-1)</script>")
           }
         }
       }
