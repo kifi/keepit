@@ -202,9 +202,15 @@ class AdminAnalyticsController @Inject() (
     Async(
       Future.sequence(
         descriptorsWithCode.groupBy(_._1).mapValues(_.map(_._2)).map {
-          case (code, descriptors) => heimdal.updateEventDescriptors(HeimdalEvent.getTypeCode(code), descriptors.toSeq)
+          case (code, descriptors) => heimdal.updateEventDescriptors(descriptors.toSeq)(HeimdalEvent.getTypeCode(code))
         }
       ).map(_ => Redirect(routes.AdminAnalyticsController.getEventDescriptors()))
     )
+  }
+
+  def getEvents(repo:String, events: Option[String], limit: Int) = AdminHtmlAction { request =>
+    val eventTypeCode = HeimdalEvent.getTypeCode(repo)
+    val eventNames= events.map(_.split(",")).getOrElse(Array.empty).map(EventType.apply)
+    Async(heimdal.getRawEvents(limit, eventNames: _*)(eventTypeCode).map(Ok(_)))
   }
 }
