@@ -257,7 +257,10 @@ body.kifi-snapshot-root {
   -moz-transition: none;
   transition: none;
 }
-form.kifi-compose input[type=text]::-moz-placeholder {
+.kifi-compose input[type=text]::-moz-placeholder {
+  color: #a9a9a9 !important;
+}
+.kifi-compose input[type=text]::-webkit-input-placeholder {
   color: #a9a9a9 !important;
 }
 .kifi-ti-list {
