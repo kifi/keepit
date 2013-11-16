@@ -100,7 +100,7 @@ class ExtSearchController @Inject() (
     } else {
       log.warn("maxHits is zero")
       val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue)
+      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue, 0)
     }
 
     val experts = if (filter.isEmpty && config.asBoolean("showExperts")) {
