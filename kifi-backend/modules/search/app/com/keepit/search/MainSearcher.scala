@@ -396,14 +396,14 @@ class MainSearcher(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResult]()
-
+    val mayHaveMoreHits = if (isInitialSearch) hitList.nonEmpty else hitList.length == numHitsToReturn
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
 
     checkScoreValues(hitList)
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
-        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
-        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
+        myTotal, friendsTotal, othersTotal, mayHaveMoreHits, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
+        (idFilter.size / numHitsToReturn), idFilter.size, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
         timeLogs = Some(timeLogs.toSearchTimeLogs),
         collections = parser.collectionIds,
         lang = lang)
