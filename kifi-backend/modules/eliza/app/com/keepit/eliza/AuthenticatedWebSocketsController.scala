@@ -153,15 +153,15 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   }
 
 
-  def websocket(versionOpt: Option[String], connIdOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
+  def websocket(versionOpt: Option[String], eipOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
     authenticate(request) match {
       case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
         implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
         val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt)
         val handlers = websocketHandlers(socketInfo)
         val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
-        val ipOpt : Option[String] = connIdOpt.flatMap{ connId =>
-          crypt.decrypt(ipkey, connId).toOption
+        val ipOpt : Option[String] = eipOpt.flatMap{ eip =>
+          crypt.decrypt(ipkey, eip).toOption
         }
 
         onConnect(socketInfo)
