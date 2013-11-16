@@ -47,32 +47,5 @@ class SpellCheckerTest extends Specification {
       spellIndexer.getSpellChecker.exist("xyz") === true
       corrector.getSuggestions("abcd deh", 2).toSet === Set("abc def", "abd def", "abc deg", "abd deg")
     }
-
-    "get access to term stats" in {
-      val articleIndexDir = new VolatileIndexDirectoryImpl()
-      val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
-
-      val indexWriter = new IndexWriter(articleIndexDir, config)
-      articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
-      indexWriter.close()
-
-      val reader = new SlowCompositeReaderWrapper(DirectoryReader.open(articleIndexDir))
-      val fields = reader.fields()
-      fields.size() === 1
-      val terms = fields.terms("c")
-      val termsEnum = terms.iterator(null)
-      val found = termsEnum.seekExact(new BytesRef("abc"), true)
-      found === true
-      termsEnum.docFreq() === 3
-      val docs = termsEnum.docs(null, null)
-      var docid = docs.nextDoc()
-      while (docid != DocIdSetIterator.NO_MORE_DOCS){
-        println("\n======\n")
-        println(s"docid = ${docid}")
-        println(s"freq = ${docs.freq}")
-        docid = docs.nextDoc()
-      }
-
-    }
   }
 }
