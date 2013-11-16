@@ -87,3 +87,7 @@ span.kifi-thread-msg-count {
   -webkit-transform: scale(1,1.4) rotate(90deg);
   transform: scale(1,1.4) rotate(90deg);
 }
+.kifi-pane-threads .kifi-compose-to,
+.kifi-pane-threads .kifi-ti-list {
+  border-radius: 3px 3px 0 0;
+}
