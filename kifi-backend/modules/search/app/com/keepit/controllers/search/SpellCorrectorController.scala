@@ -13,6 +13,6 @@ class SpellCorrectorController @Inject() (corrector: SpellCorrector) extends Sea
 
   def correct(input: String) =  Action { request =>
     val suggest = corrector.getSuggestions(input, numSug = 5)
-    Ok(Json.obj("correction" -> suggest))
+    Ok(Json.obj("correction" -> suggest.mkString("\n")))
   }
 }

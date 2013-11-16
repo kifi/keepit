@@ -19,7 +19,7 @@ import org.apache.lucene.search.DocIdSetIterator
 
 class SpellCheckerTest extends Specification {
 
-  val articles = Seq("abc abc abc", "abc def", "abc abd deg xyz")
+  val articles = Seq("abc abc abc def", "abc def", "abc abd deg xyz")
   val analyzer = DefaultAnalyzer.forIndexing
 
   def mkDoc(content: String) = {
@@ -30,7 +30,7 @@ class SpellCheckerTest extends Specification {
   }
 
   "spell correcter" should {
-    "build dict from exisiting Lucene index" in {
+    "work" in {
       val articleIndexDir = new VolatileIndexDirectoryImpl()
       val spellIndexDir = new VolatileIndexDirectoryImpl()
       val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
@@ -46,6 +46,28 @@ class SpellCheckerTest extends Specification {
       spellIndexer.getSpellChecker.exist("abc") === true
       spellIndexer.getSpellChecker.exist("xyz") === true
       corrector.getSuggestions("abcd deh", 2).toSet === Set("abc def", "abd def", "abc deg", "abd deg")
+
+      corrector.getScoredSuggestions("abcd deh", 2).head.value === "abc def"      // win by occurrence rate
+    }
+
+  }
+
+  "SuggestionScorer" should {
+    "work" in {
+      val articleIndexDir = new VolatileIndexDirectoryImpl()
+      val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+
+      val indexWriter = new IndexWriter(articleIndexDir, config)
+      articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
+      indexWriter.close()
+
+      val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
+      val scorer = new SuggestionScorer(statsReader)
+      var s = Suggest("abc")
+      scorer.score(s).score === 3f
+      s = Suggest("def deg")
+      scorer.score(s).score === 1f          // zero intersection, smoothed to 1
     }
   }
+
 }
