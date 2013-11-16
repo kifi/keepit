@@ -11,26 +11,36 @@ import scala.concurrent.duration.Duration
 import com.keepit.common.store.S3Bucket
 
 trait ArticleSearchResultStore extends ObjectStore[ExternalId[ArticleSearchResult], ArticleSearchResult] {
-  def getSearchId(articleSearchResult: ArticleSearchResult): ExternalId[ArticleSearchResult] =
-    articleSearchResult.last.map(getSearchId) getOrElse articleSearchResult.uuid
+  def getInitialSearchId(articleSearchResult: ArticleSearchResult): ExternalId[ArticleSearchResult] =
+    articleSearchResult.last.map(getInitialSearchId) getOrElse articleSearchResult.uuid
 
-  def getSearchId(uuid: ExternalId[ArticleSearchResult]): ExternalId[ArticleSearchResult] =
-    get(uuid).map(article => getSearchId(article)) getOrElse uuid
+  def getInitialSearchId(uuid: ExternalId[ArticleSearchResult]): ExternalId[ArticleSearchResult] =
+    get(uuid).map(article => getInitialSearchId(article)) getOrElse uuid
 }
 
-class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, searchIdCache: SearchIdCache, val formatter: Format[ArticleSearchResult] = new ArticleSearchResultSerializer())
+class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache, val formatter: Format[ArticleSearchResult] = new ArticleSearchResultSerializer())
   extends S3JsonStore[ExternalId[ArticleSearchResult], ArticleSearchResult] with ArticleSearchResultStore {
 
-  override def getSearchId(uuid: ExternalId[ArticleSearchResult]): ExternalId[ArticleSearchResult] = searchIdCache.getOrElse(SearchIdArticleIdKey(uuid)) { super.getSearchId(uuid) }
+  override def getInitialSearchId(uuid: ExternalId[ArticleSearchResult]): ExternalId[ArticleSearchResult] = initialSearchIdCache.getOrElse(InitialSearchIdSearchIdKey(uuid)) { super.getInitialSearchId(uuid) }
+  override def get(uuid : ExternalId[ArticleSearchResult]): Option[ArticleSearchResult] =  articleCache.getOrElseOpt(ArticleSearchResultIdKey(uuid)) { super.get(uuid) }
 }
 
 class InMemoryArticleSearchResultStoreImpl extends InMemoryObjectStore[ExternalId[ArticleSearchResult], ArticleSearchResult] with ArticleSearchResultStore
 
-case class SearchIdArticleIdKey(uuid: ExternalId[ArticleSearchResult]) extends Key[ExternalId[ArticleSearchResult]] {
+case class InitialSearchIdSearchIdKey(uuid: ExternalId[ArticleSearchResult]) extends Key[ExternalId[ArticleSearchResult]] {
   override val version = 1
-  val namespace = "search_id_by_article_id"
+  val namespace = "initial_search_id_by_search_id"
   def toKey(): String = uuid.id
 }
 
-class SearchIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SearchIdArticleIdKey, ExternalId[ArticleSearchResult]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(ExternalId.format[ArticleSearchResult])
+class InitialSearchIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[InitialSearchIdSearchIdKey, ExternalId[ArticleSearchResult]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(ExternalId.format[ArticleSearchResult])
+
+case class ArticleSearchResultIdKey(uuid: ExternalId[ArticleSearchResult]) extends Key[ArticleSearchResult] {
+  override val version = 1
+  val namespace = "article_search_result_by_id"
+  def toKey(): String = uuid.id
+}
+
+class ArticleSearchResultCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[ArticleSearchResultIdKey, ArticleSearchResult](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(ArticleSearchResultSerializer.articleSearchResultSerializer)
