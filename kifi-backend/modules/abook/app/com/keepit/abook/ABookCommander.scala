@@ -16,7 +16,6 @@ class ABookCommander @Inject() (
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
-  contactInfoRepo:ContactInfoRepo,
   contactsUpdater:ContactsUpdaterPlugin
 ) extends Logging {
 
@@ -39,8 +38,11 @@ class ABookCommander @Inject() (
 
     val abookInfoEntry = db.readWrite { implicit session =>
       val (abookInfo, entryOpt) = origin match {
-        case ABookOrigins.IOS => { // no ownerInfo -- revisit later
-        val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key), state = ABookInfoStates.PENDING)
+        case ABookOrigins.IOS => { // no ownerInfo or numContacts -- revisit later
+          val numContacts = abookRawInfo.numContacts orElse {
+            (json \ "contacts").asOpt[JsArray] map { _.value.length }
+          }
+          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key), numContacts = numContacts, state = ABookInfoStates.PENDING)
           val entryOpt = {
             val s = abookInfoRepo.findByUserIdAndOrigin(userId, origin)
             if (s.isEmpty) None else Some(s(0))
@@ -49,7 +51,7 @@ class ABookCommander @Inject() (
         }
         case ABookOrigins.GMAIL => {
           val ownerInfo = ownerInfoOpt.getOrElse(throw new IllegalArgumentException("Owner info not set for $userId and $origin"))
-          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), state = ABookInfoStates.PENDING)
+          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), numContacts = abookRawInfo.numContacts, state = ABookInfoStates.PENDING)
           val entryOpt = abookInfoRepo.findByUserIdOriginAndOwnerId(userId, origin, abookInfo.ownerId)
           (abookInfo, entryOpt)
         }

@@ -54,7 +54,6 @@ class ABookController @Inject() (
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
-  contactInfoRepo:ContactInfoRepo,
   abookCommander:ABookCommander,
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
@@ -77,6 +76,7 @@ class ABookController @Inject() (
                   if (contactsResp.status == OK) {
                     val contacts = contactsResp.xml // TODO: optimize; hand-off
                     log.info(s"[g-contacts] $contacts")
+                    log.debug(new scala.xml.PrettyPrinter(300, 2).format(contacts))
                     val jsArrays: immutable.Seq[JsArray] = (contacts \\ "feed").map { feed =>
                       val gId = (feed \ "id").text
                       log.info(s"[g-contacts] id=$gId")
@@ -89,7 +89,7 @@ class ABookController @Inject() (
                       JsArray(entries)
                     }
 
-                    val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "contacts" -> jsArrays(0))
+                    val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "numContacts" -> jsArrays(0).value.length, "contacts" -> jsArrays(0))
                     log.info(Json.prettyPrint(abookUpload))
                     val abookInfo = abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), abookUpload)
                     Ok(Json.toJson(abookInfo))
@@ -212,23 +212,6 @@ class ABookController @Inject() (
     async
   }
 
-  def getContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
-    val resF:Future[JsValue] = Future {
-      val ts = System.currentTimeMillis
-      val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-      db.readOnly { implicit session =>
-        contactInfoRepo.getByUserIdIter(userId, maxRows).foreach { jsonBuilder += Json.toJson(_) } // TODO: paging & caching
-      }
-      val contacts = jsonBuilder.result
-      log.info(s"[getContactInfos($userId, $maxRows)] # of contacts returned: ${contacts.length} time-lapsed: ${System.currentTimeMillis - ts}")
-      JsArray(contacts)
-    }
-    val async: AsyncResult = Async {
-      resF.map { js => Ok(js) }
-    }
-    async
-  }
-
   def getSimpleContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
     val resF:Future[JsValue] = Future {
       val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
@@ -317,10 +300,10 @@ class ABookController @Inject() (
     }
   }
 
-  def getABookInfo(id:Id[ABookInfo]) = Action { request =>
+  def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = Action { request =>
     val resF = Future {
       db.readOnly { implicit s =>
-        abookInfoRepo.getById(id)
+        abookInfoRepo.getByUserIdAndABookId(userId, id)
       }
     }
     Async {

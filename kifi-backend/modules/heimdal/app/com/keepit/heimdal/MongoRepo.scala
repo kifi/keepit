@@ -124,9 +124,4 @@ object CustomBSONHandlers {
     "event_type" -> BSONEventTypeHandler.write(event.eventType),
     "time" -> BSONDateTimeHandler.write(event.time)
   )
-
-  implicit def stateHandler[T]: BSONHandler[BSONString, State[T]] = new BSONHandler[BSONString, State[T]] {
-    def read(name: BSONString) = State[T](name.value)
-    def write(state: State[T]) = BSONString(state.value)
-  }
 }

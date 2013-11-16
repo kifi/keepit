@@ -93,7 +93,7 @@
     "util": true,
 
     // 3rd Party Libraries
-    "Q": true,
+    "P": true,
     "_": true
   }
 }

@@ -21,7 +21,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 
 import play.api.Plugin
-import play.api.libs.json.{JsArray, Json, JsObject}
+import play.api.libs.json.{JsNumber, JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
@@ -36,7 +36,11 @@ trait HeimdalServiceClient extends ServiceClient with Plugin {
 
   def updateMetrics(): Unit
 
-  def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray]
+  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray]
+
+  def getEventDescriptors[E <: HeimdalEvent](implicit code: TypeCode[E]): Future[Seq[EventDescriptor]]
+
+  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int]
 }
 
 object FlushEventQueue
@@ -55,7 +59,7 @@ private[heimdal] object EventQueueConsts extends Logging {
     if (timeSinceEventStarted > timeout) {
       val msg = s"Event started ${timeSinceEventStarted}ms ago but was $message only now (timeout: ${timeout}ms): $event"
       log.error(msg, new Exception(msg))
-      airbrakeNotifier.notify(msg)
+      //airbrakeNotifier.notify(msg)
     }
   }
 
@@ -137,10 +141,20 @@ class HeimdalServiceClientImpl @Inject() (
     broadcast(Heimdal.internal.updateMetrics())
   }
 
-  def getRawEvents[E <: HeimdalEvent: TypeCode](limit: Int, events: EventType*): Future[JsArray] = {
+  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray] = {
     val eventNames = if (events.isEmpty) Seq("all") else events.map(_.name)
-    call(Heimdal.internal.getRawEvents(implicitly[TypeCode[E]].code, eventNames, limit)).map { response =>
+    call(Heimdal.internal.getRawEvents(code.code, eventNames, limit, window)).map { response =>
       Json.parse(response.body).as[JsArray]
     }
   }
+
+  def getEventDescriptors[E <: HeimdalEvent](implicit code: TypeCode[E]): Future[Seq[EventDescriptor]] =
+    call(Heimdal.internal.getEventDescriptors(code.code)).map { response =>
+      Json.parse(response.body).as[JsArray].value.map(EventDescriptor.format.reads(_).get)
+    }
+
+  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int] =
+    call(Heimdal.internal.updateEventDescriptor(code.code), Json.toJson(eventDescriptors)).map { response =>
+      Json.parse(response.body).as[JsNumber].value.toInt
+    }
 }

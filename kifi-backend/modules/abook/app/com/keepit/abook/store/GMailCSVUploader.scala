@@ -1,7 +1,7 @@
 package com.keepit.abook.store
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ABookOrigins, ABookInfo, ContactInfo, User}
+import com.keepit.model.{ABookOrigins, ABookInfo, Contact, User}
 import java.io.File
 import scala.collection.mutable
 import scala.io.Source
@@ -20,7 +20,6 @@ class GMailCSVUploader @Inject() (actionAuthenticator:ActionAuthenticator,
   abookInfoRepo: ABookInfoRepo,
   contactRepo: ContactRepo,
   econtactRepo: EContactRepo,
-  contactInfoRepo: ContactInfoRepo,
   contactsUpdater: ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with Logging {
 
@@ -50,7 +49,7 @@ class GMailCSVUploader @Inject() (actionAuthenticator:ActionAuthenticator,
 
     var headers:Seq[String] = Seq.empty[String]
     var fieldLocations:Map[String, Int] = Map.empty[String, Int]
-    val contactInfoBuilder = mutable.ArrayBuilder.make[ContactInfo]
+    val builder = mutable.ArrayBuilder.make[Contact]
 
     val savedABookInfo = db.readWrite { implicit session =>
       val abookInfo = ABookInfo(userId = userId, origin = ABookOrigins.GMAIL)
@@ -78,7 +77,7 @@ class GMailCSVUploader @Inject() (actionAuthenticator:ActionAuthenticator,
         val email = f(EMAIL1)
 
         if (!email.isEmpty) {
-          val cInfo = ContactInfo(
+          val cInfo = Contact(
             userId = userId,
             origin = ABookOrigins.GMAIL,
             abookId = savedABookInfo.id.get,
@@ -87,28 +86,29 @@ class GMailCSVUploader @Inject() (actionAuthenticator:ActionAuthenticator,
             lastName = Some(lastName),
             email = email)
           log.info(s"[uploadGmailCSV] cInfo=${cInfo}")
-          contactInfoBuilder += cInfo
+          builder += cInfo
 
-          val optFields = Seq(EMAIL2, EMAIL3)
-          for (opt <- optFields) {
-            val e = f(opt)
-            if (!e.isEmpty) {
-              val optInfo = cInfo.withEmail(e)
-              log.info(s"[uploadGmailCSV] optInfo=${optInfo}")
-              contactInfoBuilder += optInfo // TODO: parentId
-            }
-          }
+          // broken but will likely remove this class anyway
+//          val optFields = Seq(EMAIL2, EMAIL3)
+//          for (opt <- optFields) {
+//            val e = f(opt)
+//            if (!e.isEmpty) {
+//              val optInfo = cInfo.withEmail(e)
+//              log.info(s"[uploadGmailCSV] optInfo=${optInfo}")
+//              builder += optInfo // TODO: parentId
+//            }
+//          }
         }
       }
     }
-    val contactInfos = contactInfoBuilder.result
-    if (!contactInfos.isEmpty) {
+    val contacts = builder.result
+    if (!contacts.isEmpty) {
       // TODO: optimize
       db.readWrite { implicit session =>
-        contactInfos.foreach { contactInfoRepo.save(_) }
+        contacts.foreach { contactRepo.save(_) }
       }
     }
-    log.info(s"[uploadGmailCSV] # contacts saved = ${contactInfos.length}")
+    log.info(s"[uploadGmailCSV] # contacts saved = ${contacts.length}")
 
     Ok("Contacts uploaded")
   }

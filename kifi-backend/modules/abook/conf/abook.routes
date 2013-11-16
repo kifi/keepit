@@ -9,16 +9,13 @@ POST     /internal/abook/:origin/uploadForUser                  @com.keepit.aboo
 POST     /internal/abook/:userId/:origin/upload                 @com.keepit.abook.ABookController.uploadJson(userId:Id[User], origin:ABookOriginType)
 POST     /internal/abook/:userId/:origin/uploadDirect           @com.keepit.abook.ABookController.uploadJsonDirect(userId:Id[User], origin:ABookOriginType)
 GET      /internal/abook/:userId/getABookInfos                  @com.keepit.abook.ABookController.getABookInfos(userId:Id[User])
-GET      /internal/abook/getABookInfo                           @com.keepit.abook.ABookController.getABookInfo(id:Id[ABookInfo])
+GET      /internal/abook/:userId/getABookInfo                   @com.keepit.abook.ABookController.getABookInfo(userId:Id[User], id:Id[ABookInfo])
 GET      /internal/abook/:userId/getContacts                    @com.keepit.abook.ABookController.getContacts(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getEContacts                   @com.keepit.abook.ABookController.getEContacts(userId:Id[User], maxRows:Int)
 GET      /internal/abook/getEContactById                        @com.keepit.abook.ABookController.getEContactById(contactId:Id[EContact])
 GET      /internal/abook/:userId/getEContactByEmail             @com.keepit.abook.ABookController.getEContactByEmail(userId:Id[User], email:String)
-GET      /internal/abook/:userId/getContactInfos                @com.keepit.abook.ABookController.getContactInfos(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getSimpleContactInfos          @com.keepit.abook.ABookController.getSimpleContactInfos(userId:Id[User], maxRows:Int)
-GET      /internal/abook/:userId/getMergedContactInfos          @com.keepit.abook.ABookController.getMergedContactInfos(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.ABookController.getABookRawInfos(userId:Id[User])
-GET      /internal/abook/:userId/:origin/getContactsRawInfo     @com.keepit.abook.ABookController.getContactsRawInfo(userId:Id[User], origin:ABookOriginType)
 
 ->  / common.Routes
 
