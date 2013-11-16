@@ -270,8 +270,8 @@ function initCompose($c, enterToSend, opts) {
     },
     focus: function () {
       log('[compose.focus]')();
-      if ($t.length) {  // timeout avoids Chrome transition displacement glitch
-        setTimeout($.fn.focus.bind($f.find('#token-input-kifi-compose-to')));
+      if ($t.length) {
+        $f.find('#token-input-kifi-compose-to').focus();
       } else {
         $d.focus();
       }
