@@ -92,6 +92,8 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit
 
+  def refreshCache(thread: Id[MessageThread])(implicit session: RSession): Unit
+
   def get(thread: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession)  : Seq[Message]
 
   def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[Message]
@@ -137,8 +139,17 @@ class MessageRepoImpl @Inject() (
     (for (row <- table if row.id===message.id) yield row.sentOnUriId).update(uriId)
   }
 
+  def refreshCache(threadId: Id[MessageThread])(implicit session: RSession): Unit = {
+    val key = MessagesForThreadIdKey(threadId)
+    val messages = (for (row <- table if row.thread === threadId) yield row).sortBy(row => row.createdAt desc).list
+    try {
+      messagesForThreadIdCache.set(key, new MessagesForThread(threadId, messages))
+    } catch {
+      case c:CacheSizeLimitExceededException => // already reported in FortyTwoCache
+    }
+  }
 
-  def get(threadId: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession) : Seq[Message] = {
+  def get(threadId: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession) : Seq[Message] = { //Note: Cache does not honor pagination!! -Stephen
     val key = MessagesForThreadIdKey(threadId)
     messagesForThreadIdCache.get(key) match {
       case Some(v) => {

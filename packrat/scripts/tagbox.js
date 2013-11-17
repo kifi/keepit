@@ -1,7 +1,7 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/underscore.js
 // @require scripts/lib/antiscroll.min.js
-// @require scripts/lib/q.min.js
+// @require scripts/lib/p.min.js
 // @require scripts/render.js
 // @require scripts/util.js
 // @require scripts/kifi_util.js
@@ -27,7 +27,7 @@ this.tagbox = (function ($, win) {
 
 	var util = win.util,
 		kifiUtil = win.kifiUtil,
-		Q = win.Q,
+		P = win.P,
 		_ = win._;
 
 	function log(name) {
@@ -746,7 +746,7 @@ this.tagbox = (function ($, win) {
 
 			$tile.css('transform', 'translate(0,' + dy + 'px)');
 
-			var deferred = Q.defer();
+			var deferred = P.defer();
 
 			$tile.on('transitionend', function onTransitionend(e) {
 				if (e.target === this) {

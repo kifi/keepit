@@ -6,11 +6,18 @@ import scala.util.parsing.combinator.RegexParsers
 case class Email(local:LocalPart, host:Host) {
   val DOT = "."
   override val toString = s"$local@${host.domain.mkString(DOT)}"
+  def toStrictString = s"${local.toStrictString}@${host.domain.mkString(DOT)}"
   def toDbgString = s"[Email(${local.toDbgString} host=${host})]"
   override def hashCode = toString.hashCode
   override def equals(o: Any) = {
     o match {
       case e:Email => (toString == e.toString)
+      case _ => false
+    }
+  }
+  def strictEquals(o:Any) = {
+    o match {
+      case e:Email => (toStrictString == e.toStrictString)
       case _ => false
     }
   }
@@ -29,10 +36,16 @@ case class ETag(t:String) {
   override val toString = s"+$t"
 }
 case class LocalPart(p:Option[EComment], s:String, tag:Option[ETag], t:Option[EComment]) {
-  override val toString = s.trim
+  override val toString = tag match {
+    case Some(t) => s"${s.trim}${t.toString}" // todo: revisit default for tag handling
+    case None => s.trim
+  }
   def unparse = (p.getOrElse("") + s + tag.getOrElse("") + t.getOrElse("")).trim
+  def toStrictString = s.trim // todo: revisit
   def toDbgString = s"[LocalPart($p,$s,$tag,$t)]"
 }
+
+case class EmailParserConfig(ignoreTags:Boolean = false, ignoreComments:Boolean = true) // todo: uptake config
 
 object EmailParser extends RegexParsers { // rudimentary; also see @URIParser
   override def skipWhitespace = false

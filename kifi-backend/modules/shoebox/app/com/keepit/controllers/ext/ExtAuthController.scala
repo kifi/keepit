@@ -11,6 +11,7 @@ import com.keepit.common.net._
 import com.keepit.model._
 import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilderFactory, UserEvent, EventType}
 import com.keepit.social.BasicUser
+import com.keepit.common.crypto.SimpleDESCrypt
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -27,6 +28,9 @@ class ExtAuthController @Inject() (
   userEventContextBuilder: EventContextBuilderFactory,
   heimdal: HeimdalServiceClient)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+
+  private val crypt = new SimpleDESCrypt
+  private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   def start = AuthenticatedJsonToJsonAction { implicit request =>
     val userId = request.userId
@@ -78,6 +82,9 @@ class ExtAuthController @Inject() (
       }
     }
 
+    val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
+    val encryptedIp: String = crypt.crypt(ipkey, ip)
+
     Ok(Json.obj(
       "user" -> BasicUser.fromUser(user),
       "name" -> s"${user.firstName} ${user.lastName}",  // deprecated, remove after all extensions at 2.6.38 or later
@@ -85,7 +92,8 @@ class ExtAuthController @Inject() (
       "installationId" -> installation.externalId.id,
       "experiments" -> request.experiments.map(_.value),
       "rules" -> sliderRuleGroup.compactJson,
-      "patterns" -> urlPatterns
+      "patterns" -> urlPatterns,
+      "eip" -> encryptedIp
     )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 

@@ -19,6 +19,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
         "hits" -> JsArray(res.hits map writeHit),
         "myTotal" -> JsNumber(res.myTotal),
         "friendsTotal" -> JsNumber(res.friendsTotal),
+        "othersTotal" -> JsNumber(res.othersTotal),
         "mayHaveMoreHits" -> JsBoolean(res.mayHaveMoreHits),
         "scorings" -> JsArray(res.scorings map ScoringSerializer.scoringSerializer.writes),
         "filter" -> JsArray(res.filter.map(id => JsNumber(id)).toSeq),
@@ -26,6 +27,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
         "time" -> Json.toJson(res.time),
         "millisPassed" -> JsNumber(res.millisPassed),
         "pageNumber" -> JsNumber(res.pageNumber),
+        "previousHits" -> JsNumber(res.previousHits),
         "collections" -> JsArray(res.collections.map(id => JsNumber(id)).toSeq),
         "svVariance" ->  JsNumber(res.svVariance),
         "svExistenceVar" -> JsNumber(res.svExistenceVar)
@@ -61,6 +63,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       hits = readHits((json \ "hits").asInstanceOf[JsArray]),
       myTotal = (json \ "myTotal").as[Int],
       friendsTotal = (json \ "friendsTotal").as[Int],
+      othersTotal = (json \ "othersTotal").as[Int],
       mayHaveMoreHits = (json \ "mayHaveMoreHits").as[Boolean],
       scorings = (json \ "scorings").asInstanceOf[JsArray].value map (s => ScoringSerializer.scoringSerializer.reads(s).get),
       filter = (json \ "filter").asOpt[Seq[Long]].map(_.toSet).getOrElse(Set.empty[Long]),
@@ -68,6 +71,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       time = (json \ "time").as[DateTime],
       millisPassed = (json \ "millisPassed").as[Int],
       pageNumber = (json \ "pageNumber").as[Int],
+      previousHits = (json \ "previousHits").as[Int],
       collections = (json \ "collections").asOpt[Seq[Long]].getOrElse(Seq.empty[Long]).toSet,
       svVariance = (json \ "svVariance").asOpt[Float].getOrElse(-1.0f),
       svExistenceVar = (json \ "svExistenceVar").asOpt[Float].getOrElse(-1.0f)

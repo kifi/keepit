@@ -76,6 +76,7 @@ class ABookController @Inject() (
                   if (contactsResp.status == OK) {
                     val contacts = contactsResp.xml // TODO: optimize; hand-off
                     log.info(s"[g-contacts] $contacts")
+                    log.debug(new scala.xml.PrettyPrinter(300, 2).format(contacts))
                     val jsArrays: immutable.Seq[JsArray] = (contacts \\ "feed").map { feed =>
                       val gId = (feed \ "id").text
                       log.info(s"[g-contacts] id=$gId")

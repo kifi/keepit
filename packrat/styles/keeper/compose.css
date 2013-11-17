@@ -1,7 +1,9 @@
 form.kifi-compose {
   display: block;
   margin: 0;
-  padding: 10px 6px 10px;
+  padding: 10px 6px;
+  font-size: 12px;
+  line-height: 14px;
 }
 .kifi-compose-draft {
   -webkit-user-modify: read-write;
@@ -227,7 +229,7 @@ body.kifi-snapshot-root {
   box-sizing: border-box;
 }
 
-form.kifi-compose input[type=text] { /* either input */
+.kifi-compose input[type=text] { /* either input */
   height: auto;
   min-height: 0;
   margin: 0;
@@ -236,19 +238,18 @@ form.kifi-compose input[type=text] { /* either input */
   font: inherit;
   box-shadow: none !important;
 }
-form.kifi-compose input[type=text].kifi-compose-to, /* initial input */
+.kifi-compose input.kifi-compose-to, /* initial input */
 .kifi-ti-list {
   width: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   border: 1px solid #d2d2d2 !important;
-  border-radius: 3px 3px 0 0;
   margin: 0 0 -1px !important;
 }
-form.kifi-compose input[type=text].kifi-compose-to { /* initial input */
+.kifi-compose input.kifi-compose-to { /* initial input */
   padding: 5px;
 }
-form.kifi-compose input[type=text]#token-input-kifi-compose-to { /* token input */
+.kifi-compose input#token-input-kifi-compose-to { /* token input */
   width: 100px;
   padding: 2px 0;
   -moz-box-sizing: border-box;
@@ -256,7 +257,10 @@ form.kifi-compose input[type=text]#token-input-kifi-compose-to { /* token input 
   -moz-transition: none;
   transition: none;
 }
-form.kifi-compose input[type=text]::-moz-placeholder {
+.kifi-compose input[type=text]::-moz-placeholder {
+  color: #a9a9a9 !important;
+}
+.kifi-compose input[type=text]::-webkit-input-placeholder {
   color: #a9a9a9 !important;
 }
 .kifi-ti-list {
