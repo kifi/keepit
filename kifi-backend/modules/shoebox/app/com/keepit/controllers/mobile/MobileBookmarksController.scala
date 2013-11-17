@@ -46,4 +46,15 @@ class MobileBookmarksController @Inject() (
     }
   }
 
+  def unkeepMultiple() = AuthenticatedJsonAction { request =>
+    request.body.asJson.flatMap(Json.fromJson[Seq[KeepInfo]](_).asOpt) map { keepInfos =>
+      val deactivatedKeepInfos = bookmarksCommander.unkeepMultiple(keepInfos, request.userId)
+      Ok(Json.obj(
+        "removedKeeps" -> deactivatedKeepInfos
+      ))
+    } getOrElse {
+      BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))
+    }
+  }
+
 }
