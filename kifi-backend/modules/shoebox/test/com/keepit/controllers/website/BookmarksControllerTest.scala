@@ -152,10 +152,10 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
-        // stateForTitle("title 31") === "active"
+        stateForTitle("title 31") === "active"
 
-        // stateForTitle("title 11") === "inactive"
-        // stateForTitle("title 21") === "inactive"
+        stateForTitle("title 11") === "inactive"
+        stateForTitle("title 21") === "inactive"
 
         val expected = Json.parse(s"""
           {"removedKeeps":[

@@ -113,5 +113,58 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
     }
+
+    "unkeepMultiple" in  {
+      running(new ShoeboxApplication(controllerTestModules:_*)) {
+        val user = inject[Database].readWrite { implicit session =>
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
+        }
+        val withCollection =
+          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", false) ::
+          KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", true) ::
+          KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", false) ::
+          Nil
+
+        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+
+        inject[FakeActionAuthenticator].setUser(user)
+        val controller = inject[MobileBookmarksController]
+        val keepJson = Json.obj(
+          "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
+          "keeps" -> JsArray(keepsAndCollections.keeps map {k => Json.toJson(k)})
+        )
+        val keepReq = FakeRequest("POST", com.keepit.controllers.mobile.routes.MobileBookmarksController.keepMultiple().toString).withJsonBody(keepJson)
+        val keepRes = route(keepReq).get
+        status(keepRes) must equalTo(OK);
+        contentType(keepRes) must beSome("application/json");
+
+        sourceForTitle("title 11") === "MOBILE"
+        sourceForTitle("title 21") === "MOBILE"
+        sourceForTitle("title 31") === "MOBILE"
+
+        val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.unkeepMultiple().toString
+        path === "/m/1/keeps/remove"
+
+        val json = JsArray(withCollection.take(2) map {k => Json.toJson(k)})
+        val request = FakeRequest("POST", path).withJsonBody(json)
+
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        stateForTitle("title 31") === "active"
+
+        stateForTitle("title 11") === "inactive"
+        stateForTitle("title 21") === "inactive"
+
+        val expected = Json.parse(s"""
+          {"removedKeeps":[
+            {"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false},
+            {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":true}
+          ]}
+        """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
   }
 }
