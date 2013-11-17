@@ -53,15 +53,17 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
     TestHeimdalServiceClientModule()
   )
 
-  def externalIdForTitle(title: String): String = {
-    inject[Database].readWrite { implicit session =>
-      inject[BookmarkRepo].getByTitle(title).head.externalId.id
-    }
-  }
+  def externalIdForTitle(title: String): String = forTitle(title).externalId.id
 
-  def sourceForTitle(title: String): String = {
+  def sourceForTitle(title: String): String = forTitle(title).source.value
+
+  def stateForTitle(title: String): String = forTitle(title).state.value
+
+  def forTitle(title: String): Bookmark = {
     inject[Database].readWrite { implicit session =>
-      inject[BookmarkRepo].getByTitle(title).head.source.value
+      val bookmarks = inject[BookmarkRepo].getByTitle(title)
+      bookmarks.size === 1
+      bookmarks.head
     }
   }
 
@@ -95,6 +97,10 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         sourceForTitle("title 11") === "MOBILE"
         sourceForTitle("title 21") === "MOBILE"
         sourceForTitle("title 31") === "MOBILE"
+
+        stateForTitle("title 11") === "active"
+        stateForTitle("title 21") === "active"
+        stateForTitle("title 31") === "active"
 
         val expected = Json.parse(s"""
           {
