@@ -94,8 +94,9 @@ class BookmarksController @Inject() (
   def keepMultiple() = AuthenticatedJsonAction { request =>
     request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
       val contextBuilder = userEventContextBuilder(Some(request))
-      contextBuilder += ("source", "SITE")
-      val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.user, request.experiments, contextBuilder)
+      val source = "SITE"
+      contextBuilder += ("source", source)
+      val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.user, request.experiments, contextBuilder, source)
       Ok(Json.obj(
         "keeps" -> keeps,
         "addedToCollection" -> addedToCollection

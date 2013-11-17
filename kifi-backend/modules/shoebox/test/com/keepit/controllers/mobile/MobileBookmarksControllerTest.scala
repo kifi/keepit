@@ -1,4 +1,4 @@
-package com.keepit.controllers.website
+package com.keepit.controllers.mobile
 
 import org.specs2.mutable.Specification
 
@@ -41,7 +41,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
 
-class BookmarksControllerTest extends Specification with ApplicationInjector {
+class MobileBookmarksControllerTest extends Specification with ApplicationInjector {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
@@ -65,7 +65,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
     }
   }
 
-  "BookmarksController" should {
+  "MobileBookmarksController" should {
     "keepMultiple" in  {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val user = inject[Database].readWrite { implicit session =>
@@ -78,23 +78,23 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
           Nil
         val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
 
-        val path = com.keepit.controllers.website.routes.BookmarksController.keepMultiple().toString
-        path === "/site/keeps/add"
+        val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.keepMultiple().toString
+        path === "/m/1/keeps/add"
 
         val json = Json.obj(
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
           "keeps" -> JsArray(keepsAndCollections.keeps map {k => Json.toJson(k)})
         )
         inject[FakeActionAuthenticator].setUser(user)
-        val controller = inject[BookmarksController]
+        val controller = inject[MobileBookmarksController]
         val request = FakeRequest("POST", path).withJsonBody(json)
         val result = route(request).get
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
-        sourceForTitle("title 11") === "SITE"
-        sourceForTitle("title 21") === "SITE"
-        sourceForTitle("title 31") === "SITE"
+        sourceForTitle("title 11") === "MOBILE"
+        sourceForTitle("title 21") === "MOBILE"
+        sourceForTitle("title 31") === "MOBILE"
 
         val expected = Json.parse(s"""
           {

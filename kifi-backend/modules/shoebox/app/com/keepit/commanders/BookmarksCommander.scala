@@ -67,11 +67,11 @@ class BookmarksCommander @Inject() (
     collectionRepo: CollectionRepo
  ) extends Logging {
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], contextBuilder: EventContextBuilder):
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], contextBuilder: EventContextBuilder, source: String):
                   (List[KeepInfo], Option[Int]) = {
     val tStart = currentDateTime
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val keeps = bookmarkInterner.internBookmarks(Json.toJson(keepInfos), user, experiments, "SITE").map(KeepInfo.fromBookmark)
+    val keeps = bookmarkInterner.internBookmarks(Json.toJson(keepInfos), user, experiments, source).map(KeepInfo.fromBookmark)
 
     //Analytics
     SafeFuture{ keeps.foreach { bookmark =>
