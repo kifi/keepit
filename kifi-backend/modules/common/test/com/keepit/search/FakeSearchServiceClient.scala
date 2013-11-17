@@ -24,21 +24,21 @@ import com.keepit.search.user.UserSearchRequest
 
 class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, null) {
 
-  override def logResultClicked(resultClicked: ResultClicked): Unit = ???
+  override def logResultClicked(resultClicked: ResultClicked): Unit = {}
 
-  override def logSearchEnded(searchEnded: SearchEnded): Unit = ???
+  override def logSearchEnded(searchEnded: SearchEnded): Unit = {}
 
-  override def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = ???
+  override def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = {}
 
-  override def updateURIGraph(): Unit = ???
+  override def updateURIGraph(): Unit = {}
 
-  override def reindexURIGraph(): Unit = ???
+  override def reindexURIGraph(): Unit = {}
 
-  override def reindexCollection(): Unit = ???
+  override def reindexCollection(): Unit = {}
 
-  override def index(): Unit = ???
+  override def index(): Unit = {}
 
-  override def reindex(): Unit = ???
+  override def reindex(): Unit = {}
 
   override def articleIndexInfo(): Future[IndexInfo] = ???
 
@@ -51,9 +51,9 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
 
   override def articleIndexerSequenceNumber(): Future[Int] = ???
 
-  override def refreshSearcher(): Unit = ???
+  override def refreshSearcher(): Unit = {}
 
-  override def refreshPhrases(): Unit = ???
+  override def refreshPhrases(): Unit = {}
 
   override def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]] = ???
 
@@ -77,9 +77,9 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
 
   override def showUserConfig(id: Id[User]): Future[SearchConfig] = ???
 
-  override def setUserConfig(id: Id[User], params: Map[String, String]): Unit = ???
+  override def setUserConfig(id: Id[User], params: Map[String, String]): Unit = {}
 
-  override def resetUserConfig(id: Id[User]): Unit = ???
+  override def resetUserConfig(id: Id[User]): Unit = {}
 
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
 }

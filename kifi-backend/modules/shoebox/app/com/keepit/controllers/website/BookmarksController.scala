@@ -92,18 +92,25 @@ class BookmarksController @Inject() (
   }
 
   def keepMultiple() = AuthenticatedJsonAction { request =>
-    request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
-      val contextBuilder = userEventContextBuilder(Some(request))
-      val source = "SITE"
-      contextBuilder += ("source", source)
-      val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.user, request.experiments, contextBuilder, source)
-      Ok(Json.obj(
-        "keeps" -> keeps,
-        "addedToCollection" -> addedToCollection
-      ))
-    } getOrElse {
-      log.error(s"can't parse object from request ${request.body} for user ${request.user}")
-      BadRequest(Json.obj("error" -> "Could not parse object from request body"))
+    try {
+      request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
+        val contextBuilder = userEventContextBuilder(Some(request))
+        val source = "SITE"
+        contextBuilder += ("source", source)
+        val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.user, request.experiments, contextBuilder, source)
+        log.info(s"kept ${keeps.size} new keeps")
+        Ok(Json.obj(
+          "keeps" -> keeps,
+          "addedToCollection" -> addedToCollection
+        ))
+      } getOrElse {
+        log.error(s"can't parse object from request ${request.body} for user ${request.user}")
+        BadRequest(Json.obj("error" -> "Could not parse object from request body"))
+      }
+    } catch {
+      case e: Throwable =>
+      log.error(s"error keeping ${request.body}", e)
+      throw e
     }
   }
 
