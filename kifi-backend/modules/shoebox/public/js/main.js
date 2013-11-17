@@ -2,7 +2,10 @@ var xhrDomain = 'https://api.kifi.com';
 var wwwDomain = 'https://www.kifi.com';
 var searchDomain = 'https://search.kifi.com';
 //TODO dev
-xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
+var DEV = true;
+if (DEV) {
+	xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
+}
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 var xhrBaseSearch = xhrDomain.replace('api', 'search') + '/search';
@@ -303,7 +306,6 @@ $(function() {
 
 	var me;
 	var myNetworks;
-	var abooks;
 	var myPrefs;
 	var myKeepsCount;
 	var collections;
@@ -665,7 +667,7 @@ $(function() {
   var friendsHelpTmpl = Handlebars.compile($('#invite-friends-help').html());
   var friendsImportingTmpl = Handlebars.compile($('#friends-importing').html());
 
-  function updateInviteHelp(network, show) {
+  function toggleInviteHelp(network, show) {
 	  var $cont = $('.invite-friends-help-container');
 	  if (show && /^facebook|linkedin|email|gmail$/.test(network)) {
 		  $cont.html(friendsHelpTmpl({
@@ -680,7 +682,7 @@ $(function() {
 	  }
   }
 
-  function updateImporting(network, show) {
+  function toggleImporting(network, show) {
 	  var $cont = $('.invite-friends-importing');
 	  if (show && /^facebook|linkedin|email|gmail$/.test(network)) {
 		  $cont.html(friendsImportingTmpl({
@@ -696,14 +698,14 @@ $(function() {
   }
 
   $('.invite-friends-help-container').on('click', '.invite-friends-help-connect', function() {
-	  var network = $(this).data('network');
-	  updateImporting(network, true);
-	  updateInviteHelp(network, false);
-	  connectSocial(network);
+	  connectSocial($(this).data('network'));
   });
 
   function connectSocial(network) {
 	  console.log('[connectSocial]', network);
+	  toggleImporting(network, true);
+	  toggleInviteHelp(network, false);
+
 	  if (network === 'email') {
 		  submitForm(wwwDomain + '/importContacts');
 	  }
@@ -712,35 +714,228 @@ $(function() {
 	  }
   }
 
+  var ABOOK_ID_TO_CALLBACK = {};
+
+  function updateABookProgress(id, status, total, progress) {
+	  // notAvail, pending, processing, active
+	  if (ABOOK_ID_TO_CALLBACK[id]) {
+		  ABOOK_ID_TO_CALLBACK[id].apply(this, arguments);
+	  }
+  }
+  window.updateABookProgress = updateABookProgress;
+
+  function getAbookProgressUpdates(id, callback, opts) {
+	  var url = xhrBase + '/user/abookUploadStatus?id=' + id + (opts || '');
+	  var $iframe = $('<iframe src="' + url + '" style="display:none"></iframe>').appendTo('body');
+	  var frameWin = $iframe[0].contentWindow;
+
+	  var deferred = $.Deferred();
+
+	  ABOOK_ID_TO_CALLBACK[id] = function(id, status, total, progress) {
+		  ABOOK_ID_TO_CALLBACK[id] = callback;
+		  deferred.resolve(id, status, total, progress);
+		  callback.call(this, id, status, total, progress);
+	  };
+
+	  if (DEV) {
+		  'notAvail,pending,processing,active'.split(',').forEach(function(data, i) {
+			  setTimeout(function() {
+				  if (deferred) {
+					  deferred.resolve(data);
+					  deferred = null;
+				  }
+				  if (callback) {
+					  callback(data);
+				  }
+			  }, 500 * (i + 1));
+			  ABOOK_ID_TO_CALLBACK[id] = null;
+		  })
+	  }
+
+	  function end() {
+		  if (frameWin) {
+			  ABOOK_ID_TO_CALLBACK[id] = null;
+			  $iframe.remove();
+			  deferred = callback = id = opts = $iframe = url = frameWin = null;
+		  }
+	  }
+
+	  return {
+		  promise: deferred.promise(),
+		  end: end
+	  };
+  }
+
+  function getNetworkImportUpdates(network, callback) {
+	  var callbackName = 'updateImportStatus';
+	  var url = xhrBase + '/user/import-check/' + network + '?callback=' + callbackName;
+	  var $iframe = $('<iframe src="' + url + '" style="display:none"></iframe>').appendTo('body');
+	  var frameWin = $iframe[0].contentWindow;
+
+	  var deferred = $.Deferred();
+
+      frameWin[callbackName] = function(data) {
+		  frameWin[callbackName] = callback;
+		  deferred.resolve(data);
+		  callback.call(this, data);
+	  };
+
+	  /*
+	  if (DEV) {
+		  'fetching,import_connections,finished,end'.split(',').forEach(function(data, i) {
+		  //'false'.split(',').forEach(function(data, i) {
+			  setTimeout(function() {
+				  if (deferred) {
+					  deferred.resolve(data);
+					  deferred = null;
+				  }
+				  if (callback) {
+					  callback(data);
+				  }
+			  }, 500 * (i + 1));
+		  })
+		  frameWin[callbackName] = null;
+	  }
+	  */
+
+	  function end() {
+		  if (frameWin) {
+			  frameWin[callbackName] = null;
+			  $iframe.remove();
+			  deferred = callback = network = $iframe = callbackName = url = frameWin = null;
+		  }
+	  }
+
+	  return {
+		  promise: deferred.promise(),
+		  end: end
+	  };
+  }
+
+  function isConnected(networks, network) {
+	  return networks.some(function(netw) {
+		  return netw.network === network;
+	  });
+  }
+
+  /*
+  function updateNetworkImportStatus(network, status, end) {
+	  var importing = false;
+	  switch (status) {
+		  case false:
+			  toggleImporting(network, false);
+		  break;
+		  case 'fetching':
+			  toggleImporting(network, true);
+			  importing = true;
+		  break;
+		  case 'import_connections':
+			  toggleImporting(network, true);
+			  importing = true;
+		  break;
+		  case 'network_not_connected':
+			  toggleImporting(network, false);
+		  break;
+		  case 'finished':
+		  case 'end':
+		  break;
+	  }
+	  if (!importing) {
+		  end();
+	  }
+	  return importing;
+  }
+  */
+
+  function isImporting(status) {
+	  return status === 'fetching' || status === 'import_connections';
+  }
+
+  var IMPORT_UPDATE = null;
+
+  function endImportUpdate(importUpdate) {
+	  if (importUpdate) {
+		  if (IMPORT_UPDATE === importUpdate) {
+			  IMPORT_UPDATE = null;
+		  }
+		  importUpdate.end();
+	  }
+	  else if (IMPORT_UPDATE) {
+		  IMPORT_UPDATE = null;
+		  IMPORT_UPDATE.end();
+	  }
+  }
+
   function filterFriendsByNetwork(network) {
 	  if (!network) {
 		  network = '';
 	  }
+
+	  endImportUpdate();
+
+	  $nwFriendsLoading.hide();
+
 	  console.log('[filterFriendsByNetwork]', network);
 	  chooseNetworkFilterDOM(network);
 	  var isEmail = network === 'email',
 		  isSocial = /^facebook|linkedin$/.test(network);
 
 	if (isEmail) {
-	  promise.abooks.always(function(data) {
-		  var shouldConnect = !(data && data.length);
-		  if (!shouldConnect) {
-			  emptyAndPrepInvite();
-		  }
-		  updateInviteHelp(network, shouldConnect);
-	  });
+		$.getJSON(xhrBase + '/user/abooks').done(function(abooks) {
+			console.log(this, arguments);
+			var hasAbook = Boolean(abooks && abooks.length);
+			var id;
+			var importing = hasAbook && abooks.some(function(abook) {
+				if (abook.status !== 'active') {
+					id = abook.id;
+					return true;
+				}
+			});
+				getAbookProgressUpdates(id, function(id, status, total, progress) {
+					console.log('getAbookProgressUpdates', this, arguments);
+					if (status === 'active') {
+						toggleImporting(network, false);
+						emptyAndPrepInvite();
+						endImportUpdate(importUpdate);
+					}
+				});
+			toggleInviteHelp(network, !hasAbook);
+			toggleImporting(network, importing);
+			if (hasAbook && !importing) {
+				emptyAndPrepInvite();
+			}
+			if (!importing) {
+				endImportUpdate(importUpdate);
+			}
+		});
 	}
 	else if (isSocial) {
-	  promise.myNetworks.done(function(data) {
-		  var shouldConnect = data.every(function(nObj) {
-			  console.log('[myNetworks]', nObj.network, network);
-			  return nObj.network !== network;
-		  });
-		  if (!shouldConnect) {
-			  emptyAndPrepInvite();
-		  }
-		  updateInviteHelp(network, shouldConnect);
-	  });
+		var importUpdate = getNetworkImportUpdates(network, function(status) {
+			console.log('getNetworkImportUpdates', network, status);
+			if (status === 'finished' || status === 'end') {
+				toggleImporting(network, false);
+				emptyAndPrepInvite();
+				endImportUpdate(importUpdate);
+			}
+		});
+
+		IMPORT_UPDATE = importUpdate;
+		$nwFriendsLoading.show();
+		$.when($.getJSON(xhrBase + '/user/networks'), importUpdate.promise).done(function(networkResult, status) {
+			$nwFriendsLoading.hide();
+			var networks = networkResult[0];
+			var connected = isConnected(networks, network);
+			var importing = isImporting(status);
+			console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing);
+			  toggleInviteHelp(network, !(connected || importing));
+			  toggleImporting(network, importing);
+			  if (connected && !importing) {
+				  emptyAndPrepInvite();
+			  }
+			  if (!importing) {
+				  endImportUpdate(importUpdate);
+			  }
+		})
 	}
 	else {
 		emptyAndPrepInvite();
@@ -2351,20 +2546,17 @@ $(function() {
 	}
 
 	function canInvite() {
-		//TODO dev
-		return me.experiments.indexOf('admin') >= 0 ||
+		return DEV || me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('can invite') >= 0;
 	}
 
 	function canInviteViaGmail() {
-		//TODO dev
-		return me.experiments.indexOf('admin') >= 0 ||
+		return DEV || me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('gmail_invite') >= 0;
 	}
 
 	function canConnect() {
-		//TODO dev
-		return me.experiments.indexOf('admin') >= 0 ||
+		return DEV || me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('can_connect') >= 0;
 	}
 
@@ -2399,9 +2591,6 @@ $(function() {
 		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function(data) {
 			myNetworks = data;
-		}).promise(),
-		abooks: $.getJSON(xhrBase + '/user/abooks', function(data) {
-			abooks = data;
 		}).promise(),
 		myPrefs: $.getJSON(xhrBase + '/user/prefs', function(data) {
 			myPrefs = data;
