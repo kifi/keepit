@@ -595,7 +595,7 @@ api.port.on({
     logEvent.apply(null, data);
   },
   log_search_event: function(data) {
-    var doNotTrack = (false || navigator.doNotTrack==='yes' || navigator.doNotTrack==='1');
+    var doNotTrack = (navigator.doNotTrack==='yes' || navigator.doNotTrack==='1');
     if (!doNotTrack) {
       var whichEvent = data[0]; 
       ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
