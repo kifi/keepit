@@ -246,6 +246,30 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .search-users-arrow {position: absolute; top: -35px; left: 80px; width: 33px; height: 35px }
 .search-users-icon {position: absolute; top: 39px; left: 35px; width: 67.5px; height: 69px }
 #friends-list {position: absolute; top: 128px; left: 20px; right: -1px; bottom: 0; overflow-y: auto; overflow-x: hidden}
+
+.invite-friends-help-container {display: none}
+.invite-friends-help { position: relative; font-size: 19px; font-weight: 300; letter-spacing: 1px; color: #878787; margin: 40px auto 0; text-align: center}
+.invite-friends-help .invite-friends-help-connect { display: inline-block; font-size: 16px; font-weight: 300; line-height: 40px; color: white; padding: 14px 55px 14px 25px;; background-color: #cccccc; margin-top: 15px }
+.invite-friends-help.facebook .invite-friends-help-connect { background-color: #597ab1 }
+.invite-friends-help.linkedin .invite-friends-help-connect { background-color: #2886c5 }
+.invite-friends-help.email .invite-friends-help-connect { background-color: #df696c }
+.invite-friends-help.gmail .invite-friends-help-connect { background-color: #df696c }
+.invite-friends-help-logo { display: inline-block; float:left; background-image: url(../img/networks2.png); width: 40px; height: 40px; background-size: auto 60px; margin-right: 18px }
+.invite-friends-help.facebook .invite-friends-help-logo { background-position: -10px }
+.invite-friends-help.linkedin .invite-friends-help-logo { background-position: -70px; position: relative; top: -2px; }
+.invite-friends-help.email .invite-friends-help-logo { background-position: -250px }
+.invite-friends-help.gmail .invite-friends-help-logo { background-position: -250px }
+
+.invite-friends-importing {display: none}
+.friends-importing { position: relative; font-size: 22px; font-weight: 100; letter-spacing: 1px; color: #878787; margin: 40px auto 0; text-align: center}
+.friends-importing-progress { font-size: 18px }
+/* 435 x 115 */
+.friends-importing-logo { display: inline-block; background-image: url(../img/networks-color-large.2x.png); width: 60px; height: 50px; background-size: auto 57.5px }
+.friends-importing.facebook .friends-importing-logo { background-position: -85px }
+.friends-importing.linkedin .friends-importing-logo { background-position: -154px }
+.friends-importing.email .friends-importing-logo { background-position: -13px }
+.friends-importing.gmail .friends-importing-logo { background-position: -13px }
+
 #friends-list>.antiscroll-inner,
 .invite-friends>.antiscroll-inner,
 .found-user-list>.antiscroll-inner {position: absolute; left: 0; right: 1px; top: 0; bottom: 0; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
@@ -324,7 +348,6 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-name,
 .user-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 .user-name {margin-top: 5px}
-.social-connect-request {font-size: 18px; padding: 10px; font-weight: 300; -webkit-font-smoothing: antialiased;}
 .invite-friends,
 .found-user-list {position: absolute; top: 236px; bottom: 0; right: -1px; left: 20px; overflow: hidden}
 .found-user-list {top: 179px}
