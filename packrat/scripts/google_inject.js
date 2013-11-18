@@ -289,7 +289,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "resultPosition": resIdx,
           "resultSource": isKifi ? "Kifi" : "Google", 
           "resultUrl": href,
-          "query": query
+          "query": response.query
         }
       ]);
     }
