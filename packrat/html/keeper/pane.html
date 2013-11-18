@@ -1,14 +1,19 @@
-<kifi class="kifi-root kifi-pane">
-  <div class="kifi-pane-head">
-    <a class="kifi-pane-head-settings" href="javascript:" style="background-image:url({{cdnBase}}/users/{{user.id}}/pics/100/{{user.pictureName}})"></a>
-    <div class="kifi-pane-head-settings-menu">
-      <div class="kifi-pane-settings-hide kifi-pane-settings-menu-item">Hide Kifi on {{site}}</div>
-      <div class="kifi-pane-settings-sign-out kifi-pane-settings-menu-item">Sign out, {{user.firstName}} {{user.lastName}}…</div>
-    </div>
+<kifi class="kifi-root kifi-pane{{#inbox}} kifi-pane-v2{{/inbox}}">
+  {{^inbox}}
+  <div class="kifi-pane-head-v1">
+    <a class="kifi-pane-head-logo" href="https://www.kifi.com" target="_blank" data-tip-html="Go to Kifi.com" data-tip-class="kifi-root kifi-tip kifi-tip-below"></a>
     <a class="kifi-pane-head-feedback" href="https://www.kifi.com/feedback/form">Feedback</a>
-    <a class="kifi-pane-head-logo" href="https://www.kifi.com" target="_blank" data-tip-html="Go to Kifi.com" data-tip-class="kifi-root kifi-slider2-tip kifi-slider2-tip-below"></a>
+    {{>pane_settings}}
   </div>
   <input class="kifi-pane-search" type="text" placeholder="Find on Kifi...">
+  {{/inbox}}
+  {{#inbox}}
+  <div class="kifi-pane-head-v2">
+    <a class="kifi-pane-head-logo" href="https://www.kifi.com" target="_blank" data-tip-html="Go to Kifi.com" data-tip-class="kifi-root kifi-tip kifi-tip-below"></a>
+    <div class="kifi-pane-head-title">{{title}}</div>
+    {{>pane_settings}}
+  </div>
+  {{/inbox}}
   <div class="kifi-pane-cubby">
     <div class="kifi-pane-box-cart">
       {{>pane}}

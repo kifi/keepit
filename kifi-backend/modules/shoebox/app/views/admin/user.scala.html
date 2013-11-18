@@ -67,6 +67,7 @@
           @for(exp <- Seq(ExperimentType.ADMIN, ExperimentType.BLOCK,
               ExperimentType.NO_SEARCH_EXPERIMENTS, ExperimentType.FAKE, ExperimentType.INACTIVE,
               ExperimentType.CAN_INVITE, ExperimentType.CAN_MESSAGE_ALL_USERS, ExperimentType.NOT_SENSITIVE,
+              ExperimentType.GMAIL_INVITE, ExperimentType.CAN_CONNECT, 
               ExperimentType.INBOX)) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(experiments.contains(exp)) {checked}>@exp.value
@@ -129,9 +130,9 @@
     <br/>
     <h3>Address Book(s)</h3>
     <table class="table table-condensed table-striped">
-        <tr><th>ABookId</th><th>Origin</th><th>State</th><th>OwnerId</th><th>OwnerEmail</th><th>RawInfoLoc</th></tr>
-        @for(abookInfo <- abookInfos) {
-            <tr><td>@abookInfo.id</td><td>@abookInfo.origin</td><td>@abookInfo.state</td><td>@abookInfo.ownerId</td><td>@abookInfo.ownerEmail</td><td>@abookInfo.rawInfoLoc</td></tr>
+        <tr><th>ABookId</th><th>Origin</th><th>State</th><th>OwnerId</th><th>OwnerEmail</th><th>RawInfoLoc</th><th># Contacts</th><th># Processed</th></tr>
+        @for(abook <- abookInfos) {
+            <tr><td>@abook.id</td><td>@abook.origin</td><td>@abook.state</td><td>@abook.ownerId</td><td>@abook.ownerEmail</td><td>@abook.rawInfoLoc</td><td>@abook.numContacts</td><td>@abook.numProcessed</td></tr>
         }
     </table>
   }
@@ -155,16 +156,16 @@
             <tr><th>EContactId</th><th>Name</th><th>Email</th><th>State</th></tr>
             @for(contact <- econtacts) {
             <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td><td>@contact.state</td>
-              <!--
-              <td>
-                <form class="form-inline" style="display:inline" action="/invite" method="POST">
-                  <input type="hidden" name="fullSocialId" value="email/@contact.email">
-                  <input type="hidden" name="subject" value="You've been invited to join Kifi!">
-                  <input type="hidden" name="message" value="Come join us!">
-                  <button type="submit" class="btn">Invite</button>
-                </form>
-              </td>
-              -->
+              @if(experiments.contains(ExperimentType.GMAIL_INVITE)) {
+                <td>
+                    <form class="form-inline" style="display:inline" action="/invite" method="POST">
+                        <input type="hidden" name="fullSocialId" value="email/@contact.email">
+                        <input type="hidden" name="subject" value="You've been invited to join Kifi!">
+                        <input type="hidden" name="message" value="Come join us!">
+                        <button type="submit" class="btn">Invite</button>
+                    </form>
+                </td>
+              }
             </tr>
             }
         </table>

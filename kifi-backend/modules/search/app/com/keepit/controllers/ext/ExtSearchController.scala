@@ -100,7 +100,7 @@ class ExtSearchController @Inject() (
     } else {
       log.warn("maxHits is zero")
       val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue)
+      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue, 0)
     }
 
     val experts = if (filter.isEmpty && config.asBoolean("showExperts")) {
@@ -155,14 +155,6 @@ class ExtSearchController @Inject() (
   def warmUp() = AuthenticatedJsonAction { request =>
     SafeFuture {
       mainSearcherFactory.warmUp(request.userId)
-    }
-    Ok
-  }
-
-  //internal (from eliza/shoebox)
-  def warmUpUser(userId: Id[User]) = Action { request =>
-    SafeFuture {
-      mainSearcherFactory.warmUp(userId)
     }
     Ok
   }

@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.akka.{SafeFuture, MonitoredAwait}
+import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
@@ -16,10 +17,10 @@ import com.keepit.search.index.ArticleRecord
 import com.keepit.search.index.ArticleVisibility
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.PersonalizedSearcher
+import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.TextQuery
-import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.search.query.LuceneExplanationExtractor
 import com.keepit.search.query.LuceneScoreNames
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -154,7 +155,7 @@ class MainSearcher(
           false
         }
       }
-    }
+    }(ExecutionContext.immediate)
   }
 
   private def trySearchText(maxTextHitsPerCategory: Int, promise: Promise[(ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher])]): Unit = try {
@@ -395,14 +396,14 @@ class MainSearcher(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResult]()
-
+    val mayHaveMoreHits = if (isInitialSearch) hitList.nonEmpty else hitList.length == numHitsToReturn
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
 
     checkScoreValues(hitList)
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
-        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
-        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
+        myTotal, friendsTotal, othersTotal, mayHaveMoreHits, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
+        (idFilter.size / numHitsToReturn), idFilter.size, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
         timeLogs = Some(timeLogs.toSearchTimeLogs),
         collections = parser.collectionIds,
         lang = lang)

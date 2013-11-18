@@ -170,8 +170,11 @@ class SocialConnectionRepoImpl @Inject() (
   }
 
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int = {
-    (for {
+    val conns = for {
       t <- table if (t.socialUser1 === id || t.socialUser2 === id) && t.state === SocialConnectionStates.ACTIVE
-    } yield t.state).update(SocialConnectionStates.INACTIVE)
+    } yield t
+    val updatedRows = conns.map(_.state).update(SocialConnectionStates.INACTIVE)
+    conns.list.map(invalidateCache)
+    updatedRows
   }
 }

@@ -132,8 +132,8 @@ trait QueryExpansion extends QueryParser {
 
   override protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query] = {
     val emptyQuery = new TextQuery
-    var prevTextQuery: TextQuery = null
     val clauses = ArrayBuffer.empty[BooleanClause]
+    val queries = ArrayBuffer.empty[(QuerySpec, TextQuery)]
 
     querySpecList.foreach{ spec =>
       val query = getFieldQuery(spec.field, spec.term, spec.quoted)
@@ -141,26 +141,36 @@ trait QueryExpansion extends QueryParser {
         case Some(query) =>
           clauses += new BooleanClause(query, spec.occur)
           query match {
-            case currTextQuery: TextQuery if (spec.occur == SHOULD && !spec.quoted && concatBoost > 0.0f) =>
-              // concat phrase in the current query
-              if (currTextQuery.terms.length > 1) {
-                val c = concat(emptyQuery, currTextQuery)
-                addConcatQuery(currTextQuery, c)
-              }
-              // concat with the previous query
-              if (prevTextQuery != null) {
-                val c = concat(prevTextQuery, currTextQuery)
-                addConcatQuery(prevTextQuery, c)
-                addConcatQuery(currTextQuery, c)
-              }
-              prevTextQuery = currTextQuery
-            case _ =>
-              prevTextQuery = null
+            case textQuery: TextQuery => queries += ((spec, textQuery))
+            case _ => queries += ((spec, null))
           }
         case _ =>
-          prevTextQuery = null
+          queries += ((spec, null))
       }
     }
+
+    if (concatBoost > 0.0f && clauses.size <= 42) { // if we have too many terms, don't concat terms
+      var prevTextQuery: TextQuery = null
+      queries.foreach{ case (spec, currTextQuery) =>
+        if (currTextQuery != null && !spec.quoted && spec.occur == SHOULD) {
+          // concat phrase in the current query
+          if (currTextQuery.terms.length > 1) {
+            val c = concat(emptyQuery, currTextQuery)
+            addConcatQuery(currTextQuery, c)
+          }
+          // concat with the previous query
+          if (prevTextQuery != null) {
+            val c = concat(prevTextQuery, currTextQuery)
+            addConcatQuery(prevTextQuery, c)
+            addConcatQuery(currTextQuery, c)
+          }
+          prevTextQuery = currTextQuery
+        } else {
+          prevTextQuery = null
+        }
+      }
+    }
+
     getBooleanQuery(clauses)
   }
 }

@@ -1,6 +1,7 @@
 package com.keepit.controllers.search
 
 import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.db.Id
@@ -30,6 +31,7 @@ import com.keepit.search.user.UserSearchResult
 import com.keepit.search.IdFilterCompressor
 import com.keepit.search.user.UserSearchFilterFactory
 import com.keepit.search.user.UserSearchRequest
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 class SearchController @Inject()(
@@ -39,6 +41,14 @@ class SearchController @Inject()(
     shoeboxClient: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier
   ) extends SearchServiceController {
+
+  //internal (from eliza/shoebox)
+  def warmUpUser(userId: Id[User]) = Action { request =>
+    SafeFuture {
+      searcherFactory.warmUp(userId)
+    }
+    Ok
+  }
 
   def searchKeeps(userId: Id[User], query: String) = Action { request =>
     val searcher = searcherFactory.bookmarkSearcher(userId)

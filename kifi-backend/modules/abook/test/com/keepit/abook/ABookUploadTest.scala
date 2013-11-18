@@ -23,13 +23,12 @@ class ABookUploadTest extends Specification with DbTestInjector {
   def setup()(implicit injector:Injector) = {
     val db = inject[Database]
     val abookInfoRepo = inject[ABookInfoRepo]
-    val contactInfoRepo = inject[ContactInfoRepo]
     val contactRepo = inject[ContactRepo]
     val econtactRepo = inject[EContactRepo]
     val contactsUpdater = inject[ContactsUpdaterPlugin]
     val s3 = inject[ABookRawInfoStore]
-    val abookController = new ABookController(null, db, s3, abookInfoRepo, contactRepo, econtactRepo, contactInfoRepo, contactsUpdater)
-    abookController
+    val commander = new ABookCommander(db, s3, abookInfoRepo, contactRepo, econtactRepo, contactsUpdater)
+    commander
   }
 
   implicit def strSeqToJsArray(s:Seq[String]):JsArray = JsArray(s.map(JsString(_)))
@@ -58,6 +57,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
   )
 
   "ABook Controller" should {
+    // re-enable after adding status monitoring
     "handle imports from IOS and gmail" in {
       withDb(
         FakeABookRawInfoStoreModule(),
@@ -66,18 +66,18 @@ class ABookUploadTest extends Specification with DbTestInjector {
         StandaloneTestActorSystemModule(),
         FakeAirbrakeModule(),
         ABookCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
-        val (abookController) = setup()
+        val (commander) = setup()
         val iosUploadJson = Json.obj(
           "origin" -> "ios",
           "contacts" -> c42
         )
 
-        val abookInfo:ABookInfo = abookController.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson)
+        val abookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson)
         abookInfo.id.get mustEqual Id[ABookInfo](1)
         abookInfo.origin mustEqual ABookOrigins.IOS
         abookInfo.userId mustEqual u42
 
-        val abookInfos = abookController.getABookRawInfosDirect(u42)
+        val abookInfos = commander.getABookRawInfosDirect(u42)
         val abookInfoSeqOpt = abookInfos.validate[Seq[ABookRawInfo]].asOpt
         abookInfoSeqOpt.isEmpty mustEqual false
         val aBookRawInfoSeq = abookInfoSeqOpt.get
@@ -89,7 +89,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
         (contacts(1) \ "name").as[String] mustEqual "forty two"
         (contacts(1) \ "emails").as[Seq[String]].length mustEqual 3
 
-        val contactsJsArr = abookController.getContactsDirect(u42, 500)
+        val contactsJsArr = commander.getContactsDirect(u42, 500)
         val contactsSeqOpt = contactsJsArr.validate[Seq[Contact]].asOpt
         val contactsSeq = contactsSeqOpt.get
         contactsSeq.isEmpty mustEqual false
@@ -102,18 +102,18 @@ class ABookUploadTest extends Specification with DbTestInjector {
           "ownerEmail"  -> gmailOwner.email.get,
           "contacts"    -> c42
         )
-        val gbookInfo:ABookInfo = abookController.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), gmailUploadJson)
+        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), gmailUploadJson)
         gbookInfo.id.get mustEqual Id[ABookInfo](2)
         gbookInfo.origin mustEqual ABookOrigins.GMAIL
         gbookInfo.userId mustEqual u42
 
-        val gbookInfos = abookController.getABookRawInfosDirect(u42)
+        val gbookInfos = commander.getABookRawInfosDirect(u42)
         val gbookInfoSeqOpt = gbookInfos.validate[Seq[ABookRawInfo]].asOpt
         gbookInfoSeqOpt.isEmpty mustEqual false
         val gBookRawInfoSeq = gbookInfoSeqOpt.get
         gBookRawInfoSeq.length mustEqual 2
 
-        val econtactsJsArr = abookController.getEContactsDirect(u42, 500)
+        val econtactsJsArr = commander.getEContactsDirect(u42, 500)
         val econtactsSeqOpt = econtactsJsArr.validate[Seq[EContact]].asOpt
         econtactsSeqOpt.isEmpty mustEqual false
         val econtactsSeq = econtactsSeqOpt.get
@@ -168,7 +168,6 @@ class ABookUploadTest extends Specification with DbTestInjector {
         gBookRawInfoSeq2.length mustEqual 2
       }
     }
-
   }
 }
 

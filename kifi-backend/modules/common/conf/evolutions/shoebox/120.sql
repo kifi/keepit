@@ -8,8 +8,8 @@ CREATE TABLE econtact (
 	updated_at datetime NOT NULL,
 
 	user_id    bigint(20)    NOT NULL,
-	email      varchar(512) NOT NULL,
-	name       varchar(1024) NOT NULL,
+	email      varchar(512)  NOT NULL,
+	name       varchar(1024),
 	first_name varchar(512),
 	last_name  varchar(512),
 

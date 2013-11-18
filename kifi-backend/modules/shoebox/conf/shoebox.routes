@@ -99,6 +99,8 @@ GET     /m/1/user/friends                   @com.keepit.controllers.mobile.Mobil
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
+POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.keepMultiple()
+POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepMultiple()
 
 ##########################################
 # Website
@@ -109,6 +111,10 @@ GET     /collection/:id             @com.keepit.controllers.website.HomeControll
 GET     /tag/:id                    @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
 GET     /friends                    @com.keepit.controllers.website.HomeController.home
 GET     /friends/invite             @com.keepit.controllers.website.HomeController.home
+GET     /friends/invite/facebook    @com.keepit.controllers.website.HomeController.home
+GET     /friends/invite/linkedin    @com.keepit.controllers.website.HomeController.home
+GET     /friends/invite/email       @com.keepit.controllers.website.HomeController.home
+GET     /friends/find               @com.keepit.controllers.website.HomeController.home
 POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo
 GET     /friends/requests           @com.keepit.controllers.website.HomeController.home
 GET     /profile                    @com.keepit.controllers.website.HomeController.home
@@ -154,6 +160,7 @@ GET     /site/user/me               @com.keepit.controllers.website.UserControll
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
 POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
+GET     /site/user/import-check/:network  @com.keepit.controllers.website.UserController.checkIfImporting(network: String, callback: String)
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
 GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
@@ -168,6 +175,7 @@ GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/friends      @com.keepit.controllers.website.UserController.friends()
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 GET     /site/user/socialConnections  @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
+GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
@@ -233,9 +241,6 @@ GET     /admin/article/indexInfo    @com.keepit.controllers.admin.AdminArticleIn
 GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticleIndexerController.refreshSearcher
 GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
 
-POST     /admin/search/spell/buildDict         @com.keepit.controllers.admin.AdminSpellCorrectorController.buildDictionary
-GET     /admin/search/spell         @com.keepit.controllers.admin.AdminSpellCorrectorController.spellController
-GET     /admin/search/spell/test-correct  @com.keepit.controllers.admin.AdminSpellCorrectorController.correctSpelling(query: String)
 GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.AdminSearchPerformanceController.viewSearchPerformance
 
 GET     /admin/uriGraph/reindex     @com.keepit.controllers.admin.AdminURIGraphController.reindex
@@ -268,6 +273,7 @@ GET    /admin/users/mixpanel        @com.keepit.controllers.admin.AdminUserContr
 
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
+POST     /admin/social_user/:id/disconnect      @com.keepit.controllers.admin.AdminSocialUserController.disconnectSocialUser(id: Id[SocialUserInfo], revoke: Boolean ?= false)
 GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
@@ -308,6 +314,8 @@ GET     /admin/phrases              @com.keepit.controllers.admin.PhraseControll
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
 POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseController.refreshPhrases
 POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
+
+GET     /admin/spell/suggest        @com.keepit.controllers.admin.AdminSpellCorrectorController.suggest(input: String)
 
 GET     /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.displayInvitations(page: Int ?= 0, show: String ?= "all")
 POST    /admin/invites/accept       @com.keepit.controllers.admin.AdminInvitationController.acceptUser(id: Id[SocialUserInfo])

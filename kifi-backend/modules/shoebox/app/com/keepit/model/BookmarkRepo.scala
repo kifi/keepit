@@ -29,6 +29,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
   def removeFromCache(bookmark: Bookmark)(implicit session: RSession): Unit
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark]
+  def getByTitle(title: String)(implicit session: RSession): Seq[Bookmark]
 }
 
 @Singleton
@@ -63,7 +64,7 @@ class BookmarkRepoImpl @Inject() (
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~
       userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark.apply _, Bookmark.unapply _)
   }
-  
+
   def removeFromCache(bookmark: Bookmark)(implicit session: RSession): Unit = {
     bookmarkUriUserCache.remove(BookmarkUriUserKey(bookmark.uriId, bookmark.userId))
     countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
@@ -90,6 +91,9 @@ class BookmarkRepoImpl @Inject() (
       assert(bookmarks.length <= 1, s"${bookmarks.length} bookmarks found for (uri, user) pair ${(uriId, userId)}")
       bookmarks.headOption
     }.filter { b => excludeState.map(_ != b.state).getOrElse(true) }
+
+  def getByTitle(title: String)(implicit session: RSession): Seq[Bookmark] =
+    (for(b <- table if b.title === title) yield b).list
 
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).list
@@ -156,7 +160,7 @@ class BookmarkRepoImpl @Inject() (
     q.firstOption.map{ bm => removeFromCache(bm) }
     q.delete
   }
-  
+
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])] = {
     val q = for {
       r <- table

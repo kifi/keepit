@@ -1,33 +1,18 @@
 package com.keepit.controllers.admin
 
-import com.google.inject.Inject
-import play.api.Play.current
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.search.SearchServiceClient
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.concurrent.Akka
-import play.api.libs.json.Json
+import com.keepit.common.controller.{ActionAuthenticator, AdminController}
+import com.google.inject.Inject
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class AdminSpellCorrectorController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
-  searchClient: SearchServiceClient) extends AdminController(actionAuthenticator) {
-  def buildDictionary() = AdminHtmlAction { implicit request =>
-    Akka.future {
-      searchClient.buildSpellCorrectorDictionary()
-    }
-    Redirect(routes.AdminSpellCorrectorController.spellController())
-  }
+  searchClient: SearchServiceClient,
+  actionAuthenticator: ActionAuthenticator
+) extends AdminController(actionAuthenticator) {
+  def suggest(input: String) = AdminHtmlAction { request =>
 
-  def correctSpelling(text: String) = AdminJsonAction{ implicit request =>
-    Async {
-      searchClient.correctSpelling(text).map( r => Ok(Json.obj("correction" -> r )))
-    }
-  }
-
-  def spellController() = AdminHtmlAction { implicit request =>
-    Async {
-      val response = searchClient.getSpellCorrectorStatus
-      response.map(r => Ok(views.html.admin.spellCorrector(r)))
-    }
+    val suggest = Await.result(searchClient.correctSpelling(input), 5 seconds)
+    Ok(s"input: ${input}, suggestion: \n${suggest}")
   }
 }

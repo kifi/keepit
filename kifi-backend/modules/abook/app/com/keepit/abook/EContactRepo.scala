@@ -15,6 +15,7 @@ import play.api.Play
 
 @ImplementedBy(classOf[EContactRepoImpl])
 trait EContactRepo extends Repo[EContact] {
+  def getById(econtactId:Id[EContact])(implicit session:RSession): Option[EContact]
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact]
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
@@ -36,12 +37,15 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
     def name       = column[String]("name", O.Nullable)
     def firstName  = column[String]("first_name", O.Nullable)
     def lastName   = column[String]("last_name", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ email ~ name ~ firstName.? ~ lastName.? ~ state <> (EContact.apply _, EContact.unapply _)
-    def forInsert = createdAt ~ updatedAt ~ userId ~ email ~ name ~ firstName.? ~ lastName.? ~ state <> (
+    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ email ~ name.? ~ firstName.? ~ lastName.? ~ state <> (EContact.apply _, EContact.unapply _)
+    def forInsert = createdAt ~ updatedAt ~ userId ~ email ~ name.? ~ firstName.? ~ lastName.? ~ state <> (
       {t => EContact(None, t._1, t._2, t._3, t._4, t._5, t._6, t._7, t._8)},
       {(c:EContact) => Some((c.createdAt, c.updatedAt, c.userId, c.email, c.name, c.firstName, c.lastName, c.state))})
   }
 
+  def getById(econtactId:Id[EContact])(implicit session:RSession):Option[EContact] = {
+    (for(f <- table if f.id === econtactId) yield f).firstOption
+  }
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact] = {
     (for(f <- table if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).firstOption
   }

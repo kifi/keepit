@@ -135,7 +135,7 @@ var snapshot = function () {
     return null;
   },
 
-  take: function(composeTypeName, onExit) {
+  take: function(onExit) {
     document.documentElement.classList.add("kifi-snapshot-mode");
     document.body.classList.add("kifi-snapshot-root");
 
@@ -148,13 +148,13 @@ var snapshot = function () {
     var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
       updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
     });
-    render("html/snapshot_bar", {"type": composeTypeName}, function(html) {
+    render("html/snapshot_bar", function(html) {
       api.require("scripts/lib/jquery-ui-draggable.min.js", function() {  // for draggable
         $(html).appendTo("body")
           .draggable({cursor: "move", distance: 10, handle: ".kifi-snapshot-bar", scroll: false})
           .on("click", ".kifi-snapshot-cancel", exitSnapshotMode)
           .add($shades).css("opacity", 0).animate({opacity: 1}, 300);
-        $(document).data("esc", exitSnapshotMode);
+        $(document).data('esc').add(exitSnapshotMode);
       });
     });
     $(window).scroll(function() {
@@ -169,7 +169,7 @@ var snapshot = function () {
         $(this).remove();
         document.body.classList.remove("kifi-snapshot-root");
       });
-      $(document).removeData("esc");
+      $(document).data('esc').remove(exitSnapshotMode);
       setTimeout(onExit.bind(null, selector));
     }
     function updateSelection(clientX, clientY, scrollLeft, scrollTop) {

@@ -46,28 +46,22 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		participants: null,
 
-		prevEscHandler: null,
+		escHandler: null,
 
 		onDocClick: null,
 
 		/**
-		 * Renders and initializes a message header box if not already.
+		 * Renders and initializes a message header box.
 		 */
-		construct: function ($parent, threadId, participants) {
-			if (!this.initialized) {
-				this.threadId = threadId;
-				this.participants = participants;
-				this.constructPlugins();
-				this.init($parent);
+		init: function ($parent, threadId, participants) {
+			if (this.initialized) {
+				this.destroy();
 			}
-		},
-
-		/**
-		 * Renders and initializes a Message Header.
-		 */
-		init: function ($parent) {
+			this.threadId = threadId;
+			this.participants = participants;
 			this.initialized = true;
 			this.status = {};
+			this.claimPlugins();
 			this.$el = $(this.render()).appendTo($parent);
 			this.initPlugins();
 			this.initEvents();
@@ -86,9 +80,8 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 			function addDocListeners() {
 				if (this.initialized) {
-					var $doc = $(document);
-					this.prevEscHandler = $doc.data('esc');
-					$doc.data('esc', this.handleEsc.bind(this));
+					this.escHandler = this.handleEsc.bind(this);
+					$(document).data('esc').add(this.escHandler);
 
 					var onDocClick = this.onDocClick = onClick.bind(this);
 					document.addEventListener('click', onDocClick, true);
@@ -116,16 +109,16 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		},
 
 		shadePane: function () {
-			if (win.slider2) {
+			if (win.pane) {
 				this.$el.closest('.kifi-thread-who').addClass('kifi-active');
-				win.slider2.shadePane();
+				win.pane.shade();
 			}
 		},
 
 		unshadePane: function () {
-			if (win.slider2) {
+			if (win.pane) {
 				this.$el.closest('.kifi-thread-who').removeClass('kifi-active');
-				win.slider2.unshadePane();
+				win.pane.unshade();
 			}
 		},
 
@@ -143,13 +136,8 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		handleEsc: function (e) {
 			if (this.isOptionExpanded()) {
-				e.preventDefault();
-				e.stopPropagation();
-				e.stopImmediatePropagation();
 				this.hideOptions();
-			}
-			else if (this.prevEscHandler) {
-				this.prevEscHandler.call(e.target, e);
+				return false;
 			}
 		},
 
@@ -158,15 +146,17 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		 * It removes all event listeners and caches to elements.
 		 */
 		destroy: function () {
+			log('[message_header:destroy]', this.initialized, this.threadId)();
 			if (this.initialized) {
 				this.initialized = false;
+				this.threadId = null;
 
 				this.unshadePane();
 
 				this.destroyPlugins();
 
-				$(document).data('esc', this.prevEscHandler);
-				this.prevEscHandler = null;
+				$(document).data('esc').remove(this.escHandler);
+				this.escHandler = null;
 
 				var onDocClick = this.onDocClick;
 				if (onDocClick) {
@@ -174,16 +164,11 @@ var messageHeader = this.messageHeader = (function ($, win) {
 					this.onDocClick = null;
 				}
 
-				'$el'.split(',').forEach(function (name) {
-					var $el = this[name];
-					if ($el) {
-						$el.remove();
-						this[name] = null;
-					}
-				}, this);
+				// this.$el.remove() not called because it would disrupt a farewell transition
+				// parent should call it later (e.g. by being removed itself)
 
 				this.status = null;
-				this.$pane = null;
+				this.$el = null;
 				this.participants = null;
 			}
 		},
@@ -246,10 +231,9 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			});
 		},
 
-		constructPlugins: function () {
+		claimPlugins: function () {
 			this.plugins.forEach(function (plugin) {
 				plugin.parent = this;
-				plugin.construct();
 			}, this);
 		},
 
@@ -261,15 +245,15 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		},
 
 		initPlugins: function () {
-			return this.plugins.map(function (plugin) {
+			this.plugins.forEach(function (plugin) {
 				plugin.init();
 			});
 		},
 
 		destroyPlugins: function () {
 			this.plugins.forEach(function (plugin) {
-				return plugin.destroy();
-			}, this);
+				plugin.destroy();
+			});
 		}
 	};
 
