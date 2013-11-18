@@ -380,7 +380,10 @@ class AdminUserController @Inject() (
 
   def sendAllToMixpanel() = AdminHtmlAction { implicit request =>
     db.readOnly { implicit s =>
-      userRepo.all.foreach{ u => heimdal.engageUser(u) }
+      userRepo.allExcluding(UserStates.INCOMPLETE_SIGNUP, UserStates.INACTIVE, UserStates.BLOCKED).foreach{
+        Thread.sleep(100)
+        u => heimdal.engageUser(u)
+      }
     }
     Ok("OK. Sending all users to Mixpanel")
   }

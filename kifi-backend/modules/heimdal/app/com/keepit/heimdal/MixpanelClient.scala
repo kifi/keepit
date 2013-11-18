@@ -54,7 +54,10 @@ class MixpanelClient(projectToken: String) {
   private def sendData(url: String, data: JsObject) = {
     val request = WS.url(url).withQueryString(("data", Base64.encodeBase64String(Json.stringify(data).getBytes)))
     new SafeFuture(
-      request.get().collect { case response if response.body == "0\n" => throw new Exception(s"Mixpanel endpoint $url refused data: $data") }
+      request.get().map {
+        case response if response.body == "0\n" => throw new Exception(s"Mixpanel endpoint $url refused data: $data")
+        case response => response
+      }
     )
   }
 
