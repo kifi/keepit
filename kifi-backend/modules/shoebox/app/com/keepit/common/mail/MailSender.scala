@@ -11,6 +11,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import play.api.Plugin
 import com.keepit.model.{EmailAddressRepo, UserNotifyPreferenceRepo, EmailOptOutRepo}
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 
 trait MailSenderPlugin extends Plugin {
   def processMail(mail: ElectronicMail)
@@ -94,7 +95,7 @@ private[mail] class MailSenderActor @Inject() (
     } else mail
   }
 
-  def addressHasOptedOut(address: EmailAddressHolder, category: ElectronicMailCategory) = {
+  def addressHasOptedOut(address: EmailAddressHolder, category: ElectronicMailCategory)(implicit session: RSession) = {
     emailOptOutRepo.hasOptedOut(address, category) || {
       emailAddressRepo.getByAddressOpt(address.address).map(_.userId) match {
         case None => // Email isn't owned by any user, send away!
