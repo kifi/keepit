@@ -7,6 +7,7 @@ import com.keepit.common.akka.SafeFuture
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.heimdal.SpecificEventSet
+import com.keepit.model.User
 
 //Might want to change this to a custom play one
 
@@ -219,5 +220,13 @@ class AnalyticsController @Inject() (
       val descriptors = getRepo(repo).descriptors
       Future.sequence(updatedDescriptors.map(descriptors.upsert)).map(counts => Ok(JsNumber(counts.sum)))
     }
+  }
+
+  def engageUser = Action { request =>
+    val user = Json.fromJson[User](request.body.asJson.get).get
+    Async { SafeFuture {
+      userEventLoggingRepo.engage(user)
+      Ok
+    }}
   }
 }

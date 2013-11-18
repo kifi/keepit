@@ -26,6 +26,8 @@ GET  /internal/heimdal/:repo/eventDescriptors    @com.keepit.heimdal.controllers
 
 POST /internal/heimdal/:repo/eventDescriptors    @com.keepit.heimdal.controllers.AnalyticsController.updateEventDescriptors(repo: String)
 
+POST /internal/heimdal/user/engage               @com.keepit.heimdal.controllers.AnalyticsController.engageUser
+
 ->  / common.Routes
 
 

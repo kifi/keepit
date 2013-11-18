@@ -25,7 +25,7 @@ abstract class MongoEventRepo[E <: HeimdalEvent: TypeCode] extends BufferedMongo
     insert(event)
     descriptors.getByName(event.eventType) map {
       case None => descriptors.upsert(EventDescriptor(event.eventType))
-      case Some(description) if description.mixpanel => mixpanel.send(event)
+      case Some(description) if description.mixpanel => mixpanel.track(event)
     }
   }
 
