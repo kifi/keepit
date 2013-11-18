@@ -13,6 +13,6 @@ class AdminSpellCorrectorController @Inject() (
   def suggest(input: String) = AdminHtmlAction { request =>
 
     val suggest = Await.result(searchClient.correctSpelling(input), 5 seconds)
-    Ok(s"input: ${input}, suggestion: ${suggest}")
+    Ok(s"input: ${input}, suggestion: \n${suggest}")
   }
 }

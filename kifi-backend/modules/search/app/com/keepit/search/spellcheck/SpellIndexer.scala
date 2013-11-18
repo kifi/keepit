@@ -16,6 +16,7 @@ case class SpellIndexerConfig(
 trait SpellIndexer {
   def buildDictionary(): Unit
   def getSpellChecker(): SpellChecker
+  def getTermStatsReader(): TermStatsReader
 }
 
 object SpellIndexer {
@@ -33,13 +34,16 @@ class SpellIndexerImpl(
   spellConfig: SpellIndexerConfig
 ) extends SpellIndexer with Logging{
 
+  val termStatsReader = new TermStatsReaderImpl(articleIndexDirectory, "c")
   var spellChecker = createChecker()
 
-  def getSpellChecker(): SpellChecker = spellChecker
+  override def getSpellChecker(): SpellChecker = spellChecker
   private  def createChecker() =  new SpellChecker(spellIndexDirectory, new NGramDistance())
   private def refreshSpellChecker = { spellChecker = createChecker() }
 
-  def buildDictionary() = {
+  override def getTermStatsReader() = termStatsReader
+
+  override def buildDictionary() = {
 
     val reader = DirectoryReader.open(articleIndexDirectory)
     try {
@@ -54,4 +58,5 @@ class SpellIndexerImpl(
       refreshSpellChecker
     }
   }
+
 }
