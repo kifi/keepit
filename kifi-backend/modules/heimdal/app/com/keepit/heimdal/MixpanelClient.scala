@@ -4,8 +4,7 @@ import com.keepit.serializer.TypeCode
 import play.api.libs.json._
 import org.apache.commons.codec.binary.Base64
 import play.api.libs.ws.WS
-import com.keepit.model.{EmailAddress, User}
-import org.joda.time.format.DateTimeFormat
+import com.keepit.model.User
 
 class MixpanelClient(projectToken: String) {
 
@@ -40,12 +39,7 @@ class MixpanelClient(projectToken: String) {
     val data = Json.obj(
       "$token" -> JsString(projectToken),
       "$distinct_id" -> JsString(s"${UserEvent.typeCode.code}_${user.id.get}"),
-      "$ip" -> JsNumber(0),
-      "$set" -> Json.obj(
-        "$first_name" -> JsString(user.firstName),
-        "$last_name" -> JsString(user.lastName),
-        "$created" -> JsString(user.createdAt.toString)
-      )
+      "$delete" -> JsString("")
     )
     sendData("http://api.mixpanel.com/engage", data)
   }
