@@ -34,7 +34,7 @@ class SpellCheckerTest extends Specification {
       val articleIndexDir = new VolatileIndexDirectoryImpl()
       val spellIndexDir = new VolatileIndexDirectoryImpl()
       val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
-      val spellIndexer = SpellIndexer(spellIndexDir, articleIndexDir, SpellIndexerConfig(0f))
+      val spellIndexer = SpellIndexer(spellIndexDir, articleIndexDir, SpellCheckerConfig(0f, "lev"))
       val corrector = new SpellCorrectorImpl(spellIndexer)
 
       val indexWriter = new IndexWriter(articleIndexDir, config)
@@ -47,7 +47,7 @@ class SpellCheckerTest extends Specification {
       spellIndexer.getSpellChecker.exist("xyz") === true
       corrector.getSuggestions("abcd deh", 2).toSet === Set("abc def", "abd def", "abc deg", "abd deg")
 
-      corrector.getScoredSuggestions("abcd deh", 2).head.value === "abc def"      // win by occurrence rate
+      corrector.getScoredSuggestions("abcd deh", 2).head.value === "abc def"      // win by co-occurrence rate
     }
 
   }
@@ -67,6 +67,14 @@ class SpellCheckerTest extends Specification {
       scorer.score(s).score === 3f
       s = Suggest("def deg")
       scorer.score(s).score === 1f          // zero intersection, smoothed to 1
+    }
+  }
+
+  "MetaphoneDistance" should {
+    "work" in {
+      val mp = new MetaphoneDistance()
+      mp.getDistance("apple", "aple") === 1f
+      (mp.getDistance("aple", "able") - 2/3f).max(1e-5f) === 1e-5f
     }
   }
 
