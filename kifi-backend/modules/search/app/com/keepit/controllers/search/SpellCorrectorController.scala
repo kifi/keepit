@@ -12,7 +12,9 @@ import play.api.libs.json._
 class SpellCorrectorController @Inject() (corrector: SpellCorrector) extends SearchServiceController {
 
   def correct(input: String) =  Action { request =>
-    val suggest = corrector.getSuggestions(input, numSug = 5)
-    Ok(Json.obj("correction" -> suggest.mkString("\n")))
+    //val suggest = corrector.getSuggestions(input, numSug = 5)
+    val suggests = corrector.getScoredSuggestions(input, numSug = 5)
+    // Ok(Json.obj("correction" -> suggest.mkString("\n")))
+    Ok(JsArray(suggests.map{ s => Json.toJson(s) }))
   }
 }

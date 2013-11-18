@@ -2,8 +2,6 @@ package com.keepit.search.spellcheck
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 
-case class Suggest(value: String)
-case class ScoredSuggest(value: String, score: Float)
 
 @ImplementedBy(classOf[SpellCorrectorImpl])
 trait SpellCorrector {
@@ -48,7 +46,7 @@ class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer) extends SpellCorr
 
   def getSimilarTerms(term: String, numSug: Int): Array[String] = {
     val similar = spellChecker.suggestSimilar(term, numSug)       // this never includes the original term
-    if (spellChecker.exist(term) || similar.isEmpty) Array(term) ++ similar.drop(1)
+    if (spellChecker.exist(term) || similar.isEmpty) Array(term) // ++ similar.drop(1)
     else similar
   }
 }
