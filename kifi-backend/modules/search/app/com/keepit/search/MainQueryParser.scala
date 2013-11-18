@@ -10,6 +10,7 @@ import com.keepit.search.query.parser.DefaultSyntax
 import com.keepit.search.query.parser.PercentMatch
 import com.keepit.search.query.parser.QueryExpansion
 import com.keepit.search.query.parser.QueryParserException
+import com.keepit.search.query.ExistenceBoostQuery
 import com.keepit.search.query.MultiplicativeBoostQuery
 import com.keepit.search.query.NamedQueryContext
 import com.keepit.search.query.NamedQuery
@@ -91,6 +92,16 @@ class MainQueryParser(
           proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), phrases, phraseBoost))
           new MultiplicativeBoostQuery(query, proxQ, proximityBoost)
         } else {
+          if (numTextQueries == 1 && phTerms.nonEmpty) {
+            val homePageQuery = if (phTerms.size == 1) {
+              new TermQuery(new Term("home_page", phTerms(0).text))
+            } else {
+              val hpQ = new PhraseQuery()
+              phTerms.foreach{ t => hpQ.add(new Term("home_page", t.text)) }
+              hpQ
+            }
+            new ExistenceBoostQuery(query, homePageQuery, 0.9f)
+          }
           query
         }
       }
