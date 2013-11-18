@@ -82,7 +82,7 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription("semantic vector (%s):".format(query.term))
+      result.setDescription("semantic vector (%s)".format(query.term))
       result.setValue(sc.score)
       result.setMatch(true)
     } else {

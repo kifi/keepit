@@ -128,9 +128,10 @@ class ArticleIndexer @Inject() (
           val contentAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(contentLang)
 
           val content = (Seq(article.content) ++ article.description ++ article.keywords).mkString("\n\n")
+          val titleAndUrl = article.title + " " + urlToIndexableString(uri.url)
 
-          doc.add(buildTextField("t", article.title, titleAnalyzer))
-          doc.add(buildTextField("ts", article.title, titleAnalyzerWithStemmer))
+          doc.add(buildTextField("t", titleAndUrl, titleAnalyzer))
+          doc.add(buildTextField("ts", titleAndUrl, titleAnalyzerWithStemmer))
 
           doc.add(buildTextField("c", content, contentAnalyzer))
           doc.add(buildTextField("cs", content, contentAnalyzerWithStemmer))
@@ -146,8 +147,6 @@ class ArticleIndexer @Inject() (
               if (domain.nonEmpty) {
                 // index domain name
                 doc.add(buildIteratorField("site", (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
-                // keywords in domain
-                doc.add(buildTokenizedDomainField("site_keywords", domain))
               }
             }
           }
