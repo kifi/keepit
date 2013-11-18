@@ -10,8 +10,11 @@ import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.KestrelCombinator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.model.User
 
-trait UserEventLoggingRepo extends EventRepo[UserEvent]
+trait UserEventLoggingRepo extends EventRepo[UserEvent] {
+  def engage(user: User): Unit
+}
 
 class ProdUserEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptors: UserEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
   extends MongoEventRepo[UserEvent] with UserEventLoggingRepo {
@@ -29,6 +32,7 @@ class ProdUserEventLoggingRepo(val collection: BSONCollection, val mixpanel: Mix
   }
 
   def fromBSON(bson: BSONDocument): UserEvent = ???
+  def engage(user: User) = mixpanel.engage(user)
 }
 
 trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]
@@ -47,4 +51,6 @@ case class UserEventDescriptorNameKey(name: EventType) extends Key[EventDescript
   def toKey(): String = name.name
 }
 
-class DevUserEventLoggingRepo extends DevEventRepo[UserEvent] with UserEventLoggingRepo
+class DevUserEventLoggingRepo extends DevEventRepo[UserEvent] with UserEventLoggingRepo {
+  def engage(user: User) = {}
+}
