@@ -21,13 +21,13 @@ class UserNotifyPreferenceRepoImpl @Inject() (val db: DataBaseComponent, val clo
   import db.Driver.Implicit._
   import DBSession._
 
-  override val table = new RepoTable[UserNotifyPreference](db, "email_opt_out") {
+  override val table = new RepoTable[UserNotifyPreference](db, "user_notify_preference") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def name = column[String]("name", O.NotNull)
     def canSend = column[Boolean]("can_send", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ name ~ canSend ~ state <> (UserNotifyPreference, UserNotifyPreference.unapply _)
   }
-  
+
   def getByUser(userId: Id[User], excludeState: Option[State[UserNotifyPreference]] = Some(UserNotifyPreferenceStates.INACTIVE))(implicit session: RSession): Seq[UserNotifyPreference] = {
     (for(f <- table if f.userId === userId && f.state =!= excludeState.orNull) yield f).list
   }
