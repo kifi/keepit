@@ -198,7 +198,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       api.port.emit("log_search_event", [
         "searchEnded",
         {
-          "origin": "Google",
+          "origin": window.location.origin,
           "searchUUID": response.uuid,
           "experimentId": response.experimentId,
           "kifiResults": response.hits.length, 
@@ -279,7 +279,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       api.port.emit("log_search_event", [
         "resultClicked",
         {
-          "origin": "Google",
+          "origin": window.location.origin,
           "searchUUID": response.uuid,
           "experimentId": response.experimentId,
           "kifiResults": response.hits.length, 
