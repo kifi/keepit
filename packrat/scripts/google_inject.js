@@ -193,7 +193,22 @@ if (searchUrlRe.test(document.URL)) !function() {
         "googleResultsClicked": clicks.google.length,
         "kifiShownURIs": response.expanded ? response.hits.map(function(hit) {return hit.bookmark.url}) : [],
         "kifiClickedURIs": clicks.kifi,
-        "googleClickedURIs": clicks.google});
+        "googleClickedURIs": clicks.google}
+      );
+      api.port.emit("log_search_event", [
+        "searchEnded",
+        {
+          "origin": "Google",
+          "searchUUID": response.uuid,
+          "experimentId": response.experimentId,
+          "kifiResults": response.hits.length, 
+          "kifiCollapsed": !response.expanded,
+          "kifiTime": tKifiResultsShown - tQuery,
+          "referenceTime": tGoogleResultsShown - tQuery,
+          "kifiResultsClicked": clicks.kifi.length,
+          "searchResultsClicked": clicks.google.length,
+        }
+      ]);
     }
   });
 
@@ -261,6 +276,22 @@ if (searchUrlRe.test(document.URL)) !function() {
     if (href && resIdx >= 0) {
       logEvent("search", isKifi ? "kifiResultClicked" : "googleResultClicked",
         {"url": href, "whichResult": resIdx, "query": response.query, "experimentId": response.experimentId, "kifiResultsCount": $kifiLi.length});
+      api.port.emit("log_search_event", [
+        "resultClicked",
+        {
+          "origin": "Google",
+          "searchUUID": response.uuid,
+          "experimentId": response.experimentId,
+          "kifiResults": response.hits.length, 
+          "kifiCollapsed": !response.expanded,
+          "kifiTime": tKifiResultsShown - tQuery,
+          "referenceTime": tGoogleResultsShown - tQuery,
+          "resultPosition": resIdx,
+          "resultSource": isKifi ? "Kifi" : "Google", 
+          "resultUrl": href,
+          "query": query
+        }
+      ]);
     }
   });
 
