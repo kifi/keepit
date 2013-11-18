@@ -7,7 +7,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 trait SpellCorrector {
   def getSuggestion(input: String): String
   def getSuggestions(input: String, numSug: Int): Array[String]
-  def getScoredSuggestions(input: String, numSug: Int, boostScore: Boolean): Array[ScoredSuggest]
+  def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest]
 }
 
 @Singleton
@@ -26,10 +26,10 @@ class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer) extends SpellCorr
     paths.map{path => path.mkString(" ")}
   }
 
-  override def getScoredSuggestions(input: String, numSug: Int, boostScore: Boolean): Array[ScoredSuggest] = {
+  override def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest] = {
     val suggestions = getSuggestions(input, numSug.min(10)).map{Suggest(_)}
     val scorer = new SuggestionScorer(spellIndexer.getTermStatsReader)
-    scorer.rank(input, suggestions, boostScore)
+    scorer.rank(input, suggestions, enableBoost)
   }
 
   // exponential. Use Viterbi-like algorithm later. (Need to support k-best paths)
@@ -105,9 +105,9 @@ class SuggestionScorer(statsReader: TermStatsReader) {
     }
   }
 
-  def rank(input: String, suggests: Array[Suggest], boostScore: Boolean): Array[ScoredSuggest] = {
+  def rank(input: String, suggests: Array[Suggest], enableBoost: Boolean): Array[ScoredSuggest] = {
     val scored = {
-      if (!boostScore) suggests.map{score(_)}
+      if (!enableBoost) suggests.map{score(_)}
       else {
         val deco = new ScoreDecorator(input)
         suggests.map{score(_)}.map{deco.decorate(_)}
