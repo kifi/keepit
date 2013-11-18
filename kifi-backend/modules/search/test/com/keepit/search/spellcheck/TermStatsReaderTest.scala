@@ -41,5 +41,30 @@ class TermStatsReaderTest extends Specification {
       stats.docFreq === 1
       stats.docIds === Set(2)
     }
+
+    "retrieve docs and positions for liveDocs" in {
+
+      val articleIndexDir = new VolatileIndexDirectoryImpl()
+      val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+
+      val indexWriter = new IndexWriter(articleIndexDir, config)
+      articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
+      indexWriter.close()
+
+      val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
+
+      var docsAndPos = statsReader.getDocsAndPositions("abc", null)
+      docsAndPos.size === 3
+      docsAndPos(0) === Array(0, 1, 2)
+      docsAndPos(1) === Array(0)
+      docsAndPos(2) === Array(0)
+
+      val liveDocs = TermStatsReader.genBits(Set(0, 2))
+      docsAndPos = statsReader.getDocsAndPositions("abc", liveDocs)
+      docsAndPos.size === 2
+      docsAndPos(0) === Array(0, 1, 2)
+      docsAndPos(2) === Array(0)
+
+    }
   }
 }
