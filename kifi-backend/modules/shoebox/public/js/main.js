@@ -2,7 +2,7 @@ var xhrDomain = 'https://api.kifi.com';
 var wwwDomain = 'https://www.kifi.com';
 var searchDomain = 'https://search.kifi.com';
 //TODO dev
-var DEV = true;
+var DEV = false;
 if (DEV) {
 	xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 }
@@ -682,13 +682,14 @@ $(function() {
 	  }
   }
 
-  function toggleImporting(network, show) {
+  function toggleImporting(network, show, progress, from) {
 	  var $cont = $('.invite-friends-importing');
 	  if (show && /^facebook|linkedin|email|gmail$/.test(network)) {
 		  $cont.html(friendsImportingTmpl({
 			  network_class: network,
-			  network: VENDOR_NAMES[network],
-			  friends: VENDOR_FRIEND_NAME[network] + 's'
+			  network: from || VENDOR_NAMES[network],
+			  friends: VENDOR_FRIEND_NAME[network] + 's',
+			  progress: progress || ''
 		  }));
 		  $cont.show();
 	  }
@@ -783,14 +784,13 @@ $(function() {
 
   function getNetworkImportUpdates(network, callback) {
 	  var callbackName = 'updateImportStatus';
-	  var url = xhrBase + '/user/import-check/' + network + '?callback=' + callbackName;
+	  var parentCallbackName = 'parent.' + callbackName;
+	  var url = xhrBase + '/user/import-check/' + network + '?callback=' + parentCallbackName;
 	  var $iframe = $('<iframe src="' + url + '" style="display:none"></iframe>').appendTo('body');
-	  var frameWin = $iframe[0].contentWindow;
-
 	  var deferred = $.Deferred();
 
-      frameWin[callbackName] = function(data) {
-		  frameWin[callbackName] = callback;
+      window[callbackName] = function(data) {
+		  window[callbackName] = callback;
 		  deferred.resolve(data);
 		  callback(data);
 	  };
@@ -800,27 +800,20 @@ $(function() {
 		  'fetching,import_connections,finished,end'.split(',').forEach(function(data, i) {
 		  //'false'.split(',').forEach(function(data, i) {
 			  setTimeout(function() {
-				  if (!frameWin) {
+				  if (!$iframe) {
 					  return;
 				  }
-				  if (deferred) {
-					  deferred.resolve(data);
-					  deferred = null;
-				  }
-				  if (callback) {
-					  callback(data);
-				  }
+				  $iframe[0].contentWindow.document.writeln('<script>' + parentCallbackName + '("' + data + '")</script>')
 			  }, 500 * (i + 1));
 		  })
-		  frameWin[callbackName] = null;
 	  }
 	  */
 
 	  function end() {
-		  if (frameWin) {
-			  frameWin[callbackName] = null;
+		  if ($iframe) {
+			  window[callbackName] = null;
 			  $iframe.remove();
-			  deferred = callback = network = $iframe = callbackName = url = frameWin = null;
+			  deferred = callback = network = $iframe = parentCallbackName = callbackName = url = null;
 		  }
 	  }
 
@@ -907,16 +900,18 @@ $(function() {
 
 			  console.log(this, arguments);
 			  var hasAbook = Boolean(abooks && abooks.length);
-			  var id;
-			  var importing = DEV || hasAbook && abooks.some(function(abook) {
-				  if (abook.status !== 'active') {
+			  var id, email;
+			  var importing = hasAbook && abooks.some(function(abook) {
+				  if (abook.state !== 'active') {
+					  console.log('not active abook', abook, JSON.stringify(abook, null, '\t'));
 					  id = abook.id;
+					  email = abook.ownerEmail;
 					  return true;
 				  }
 			  });
 
 			  toggleInviteHelp(network, !(hasAbook || importing));
-			  toggleImporting(network, importing);
+			  toggleImporting(network, importing, null, email);
 
 			  console.log('[email import status] network=' + network + ', hasAbook=' + hasAbook + ', importing=' + importing);
 
@@ -924,16 +919,24 @@ $(function() {
 				  var importUpdate = getAbookProgressUpdates(id, function(id, status, total, progress) {
 					  console.log('getAbookProgressUpdates', id, status, total, progress);
 					  if (status === 'active') {
-						  toggleImporting(network, false);
-						  emptyAndPrepInvite();
+						  toggleImporting(network, false, null, email);
+						  emptyAndPrepInvite(network);
 						  endImportUpdate(importUpdate);
+					  }
+					  else {
+						  var text = '';
+						  text += progress > 0 ? progress : '0';
+						  if (total > 0) {
+							  text += ' out of ' + total;
+						  }
+						  toggleImporting(network, true, text, email);
 					  }
 				  });
 				  IMPORT_UPDATE = importUpdate;
 			  }
 			  else {
 				  if (hasAbook) {
-					  emptyAndPrepInvite();
+					  emptyAndPrepInvite(network);
 				  }
 				  endImportUpdate(importUpdate);
 			  }
@@ -944,7 +947,7 @@ $(function() {
 			  console.log('getNetworkImportUpdates', network, status);
 			  if (status === 'finished' || status === 'end') {
 				  toggleImporting(network, false);
-				  emptyAndPrepInvite();
+				  emptyAndPrepInvite(network);
 				  endImportUpdate(importUpdate);
 			  }
 		  });
@@ -968,19 +971,20 @@ $(function() {
 
 			  if (!importing) {
 				  if (connected) {
-					  emptyAndPrepInvite();
+					  emptyAndPrepInvite(network);
 				  }
 				  endImportUpdate(importUpdate);
 			  }
 		  })
 	  }
 	  else {
-		  emptyAndPrepInvite();
+		  emptyAndPrepInvite(network);
 	  }
   }
 
   function emptyAndPrepInvite(network) {
-	  if (network === $('.invite-filters').attr('data-nw-selected') || undefined) {
+	  var curNetwork = $('.invite-filters').attr('data-nw-selected') || '';
+	  if ((network || '') === (curNetwork || '')) {
 		  $nwFriends.find('ul').empty();
 		  $nwFriends.find('.no-results').empty().hide();
 		  prepInviteTab();
@@ -1141,6 +1145,7 @@ $(function() {
 		moreFriends = true;
 		var network = $('.invite-filters').attr('data-nw-selected') || undefined;
 		var search = $('.invite-filter').val() || undefined;
+		toggleImporting(network, false);
 		$nwFriendsLoading.show();
 		var opts = {
 			limit: moreToShow || friendsToShow,

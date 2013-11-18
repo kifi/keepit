@@ -261,7 +261,8 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-friends-help.gmail .invite-friends-help-logo { background-position: -250px }
 
 .invite-friends-importing {display: none}
-.friends-importing { position: relative; font-size: 19px; font-weight: 300; letter-spacing: 1px; color: #878787; margin: 40px auto 0; text-align: center}
+.friends-importing { position: relative; font-size: 22px; font-weight: 100; letter-spacing: 1px; color: #878787; margin: 40px auto 0; text-align: center}
+.friends-importing-progress { font-size: 18px }
 /* 435 x 115 */
 .friends-importing-logo { display: inline-block; background-image: url(../img/networks-color-large.2x.png); width: 60px; height: 50px; background-size: auto 57.5px }
 .friends-importing.facebook .friends-importing-logo { background-position: -85px }

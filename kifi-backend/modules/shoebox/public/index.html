@@ -577,7 +577,9 @@
 		  <div>Importing your {{friends}}</div>
 		  <div>from {{network}}</div>
 		  <img class="keeps-loading" src="assets/img/wait.gif">
-		  <div class="friends-importing-progress"></div>
+		  {{#if progress}}
+		  <div class="friends-importing-progress">{{progress}} {{friends}} imported</div>
+		  {{/if}}
 	  </div>
 	</script>
 
