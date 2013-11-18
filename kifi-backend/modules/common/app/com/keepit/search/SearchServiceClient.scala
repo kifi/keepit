@@ -49,7 +49,7 @@ trait SearchServiceClient extends ServiceClient {
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
-  def correctSpelling(text: String): Future[String]
+  def correctSpelling(text: String, boostScore: Boolean): Future[String]
   def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
   def resetUserConfig(id: Id[User]): Unit
@@ -186,8 +186,8 @@ class SearchServiceClientImpl(
     call(Common.internal.version()).map(r => r.body)
   }
 
-  def correctSpelling(text: String): Future[String] = {
-    call(Search.internal.correctSpelling(text)).map{ r =>
+  def correctSpelling(text: String, boostScore: Boolean): Future[String] = {
+    call(Search.internal.correctSpelling(text, boostScore)).map{ r =>
       val suggests = r.json.as[JsArray].value.map{ x => Json.fromJson[ScoredSuggest](x).get}
       suggests.map{x => x.value + ", " + x.score}.mkString("\n")
     }
