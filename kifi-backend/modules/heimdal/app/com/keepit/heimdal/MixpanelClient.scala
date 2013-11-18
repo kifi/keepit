@@ -45,7 +45,8 @@ class MixpanelClient(projectToken: String) {
       "$set" -> Json.obj(
         "$first_name" -> JsString(user.firstName),
         "$last_name" -> JsString(user.lastName),
-        "$created" -> JsString(user.createdAt.toString)
+        "$created" -> JsString(user.createdAt.toString),
+        "state" -> JsString(user.state.value)
       )
     )
     sendData("http://api.mixpanel.com/engage", data)

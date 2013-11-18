@@ -60,7 +60,6 @@ class UserControllerTest extends Specification with ApplicationInjector {
 
   private class WithUserController extends WithApplication(new ShoeboxApplication(new ScalaModule {
     def configure() {
-      install(TestHeimdalServiceClientModule())
       install(FakeMailModule())
       install(FakeAirbrakeModule())
       install(TestABookServiceClientModule())

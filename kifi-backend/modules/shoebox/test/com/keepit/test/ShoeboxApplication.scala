@@ -22,6 +22,7 @@ import com.keepit.scraper.{ProdScraperServiceClientModule, TestScraperServiceCli
 import com.keepit.normalizer.TestNormalizationServiceModule
 import com.keepit.eliza.TestElizaServiceClientModule
 import com.keepit.common.net.ProdHttpClientModule
+import com.keepit.heimdal.TestHeimdalServiceClientModule
 
 class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Module])
   extends TestGlobal(defaultModules, overridingModules) {
@@ -37,6 +38,7 @@ class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Modul
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
     Seq(
+      TestHeimdalServiceClientModule(),
       TestElizaServiceClientModule(),
       FakeAirbrakeModule(),
       FakeMemoryUsageModule(),
@@ -56,6 +58,7 @@ trait ShoeboxApplicationInjector extends ApplicationInjector with DbInjectionHel
 trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
   val mode = Mode.Test
   val module = Modules.combine(
+    TestHeimdalServiceClientModule(),
     TestElizaServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
