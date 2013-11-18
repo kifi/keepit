@@ -7,7 +7,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 trait SpellCorrector {
   def getSuggestion(input: String): String
   def getSuggestions(input: String, numSug: Int): Array[String]
-  def getScoredSuggestions(input: String, numSug: Int): Array[ScoredSuggest]
+  def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest]
 }
 
 @Singleton
@@ -26,10 +26,10 @@ class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer) extends SpellCorr
     paths.map{path => path.mkString(" ")}
   }
 
-  override def getScoredSuggestions(input: String, numSug: Int): Array[ScoredSuggest] = {
+  override def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest] = {
     val suggestions = getSuggestions(input, numSug.min(10)).map{Suggest(_)}
     val scorer = new SuggestionScorer(spellIndexer.getTermStatsReader)
-    scorer.rank(suggestions)
+    scorer.rank(input, suggestions, enableBoost)
   }
 
   // exponential. Use Viterbi-like algorithm later. (Need to support k-best paths)
@@ -48,6 +48,22 @@ class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer) extends SpellCorr
     val similar = spellChecker.suggestSimilar(term, numSug)       // this never includes the original term
     if (spellChecker.exist(term) || similar.isEmpty) Array(term) // ++ similar.drop(1)
     else similar
+  }
+}
+
+class MetaphoneBooster {
+  val mdist = new MetaphoneDistance()
+  def similarity(a: Array[String], b: Array[String]): Float = {
+    (a zip b).map{ case (x, y) => mdist.getDistance(x, y) }.foldLeft(1f)(_*_)
+  }
+}
+
+class ScoreDecorator(originalQuery: String) {
+  val booster = new MetaphoneBooster
+  val originalTerms = originalQuery.split(" ")
+  def decorate(scoredSuggest: ScoredSuggest): ScoredSuggest = {
+    val boost = booster.similarity(originalTerms, scoredSuggest.value.split(" "))
+    ScoredSuggest(value = scoredSuggest.value, score = boost * scoredSuggest.score)
   }
 }
 
@@ -89,8 +105,14 @@ class SuggestionScorer(statsReader: TermStatsReader) {
     }
   }
 
-  def rank(suggests: Array[Suggest]): Array[ScoredSuggest] = {
-    val scored = suggests.map{score(_)}
+  def rank(input: String, suggests: Array[Suggest], enableBoost: Boolean): Array[ScoredSuggest] = {
+    val scored = {
+      if (!enableBoost) suggests.map{score(_)}
+      else {
+        val deco = new ScoreDecorator(input)
+        suggests.map{score(_)}.map{deco.decorate(_)}
+      }
+    }
     scored.sortBy(_.score*(-1.0))
   }
 }

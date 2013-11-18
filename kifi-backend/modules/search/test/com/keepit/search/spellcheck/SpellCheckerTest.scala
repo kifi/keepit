@@ -47,7 +47,7 @@ class SpellCheckerTest extends Specification {
       spellIndexer.getSpellChecker.exist("xyz") === true
       corrector.getSuggestions("abcd deh", 2).toSet === Set("abc def", "abd def", "abc deg", "abd deg")
 
-      corrector.getScoredSuggestions("abcd deh", 2).head.value === "abc def"      // win by co-occurrence rate
+      corrector.getScoredSuggestions("abcd deh", 2, enableBoost = false).head.value === "abc def"      // win by co-occurrence rate
     }
 
   }
