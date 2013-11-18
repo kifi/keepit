@@ -21,6 +21,7 @@ import com.keepit.social.BasicUser
 import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
+import com.keepit.search.spellcheck.ScoredSuggest
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -186,7 +187,10 @@ class SearchServiceClientImpl(
   }
 
   def correctSpelling(text: String): Future[String] = {
-    call(Search.internal.correctSpelling(text)).map(r => (r.json \ "correction").asOpt[String].getOrElse(text))
+    call(Search.internal.correctSpelling(text)).map{ r =>
+      val suggests = r.json.as[JsArray].value.map{ x => Json.fromJson[ScoredSuggest](x).get}
+      suggests.map{x => x.value + ", " + x.score}.mkString("\n")
+    }
   }
 
   def showUserConfig(id: Id[User]): Future[SearchConfig] = {

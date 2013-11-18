@@ -20,11 +20,13 @@ class ArticleSearchResultTest extends Specification with ShoeboxTestInjector {
               hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, true, false, Seq(Id[User](33)), 42)),
               myTotal = 4242,
               friendsTotal = 3232,
+              othersTotal = 5252,
               mayHaveMoreHits = true,
               scorings = Seq(new Scoring(.2F, .3F, .4F, .5F, true)),
               filter = Set(100L, 200L, 300L),
               uuid = ExternalId[ArticleSearchResult](),
               pageNumber = 3,
+              previousHits = 13,
               millisPassed = 23,
               collections = Set(1L,10L,100L),
               svVariance = 1.0f)

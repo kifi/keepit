@@ -25,6 +25,7 @@ import com.keepit.common.service.ServiceType
 import java.math.BigInteger
 import java.security.SecureRandom
 import com.keepit.common.store.S3ImageStore
+import com.keepit.heimdal.{HeimdalServiceClient}
 
 case class UserStatistics(
     user: User,
@@ -61,6 +62,7 @@ class AdminUserController @Inject() (
     clock: Clock,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
+    heimdal: HeimdalServiceClient,
     serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
   implicit val dbMasterSlave = Database.Slave
@@ -374,5 +376,12 @@ class AdminUserController @Inject() (
       userRepo.all.sortBy(_.id.get.id).foreach{ u => userRepo.save(u) }
     }
     Ok("OK. Bumping up user sequence numbers")
+  }
+
+  def sendAllToMixpanel() = AdminHtmlAction { implicit request =>
+    db.readOnly { implicit s =>
+      userRepo.all.foreach{ u => heimdal.engageUser(u) }
+    }
+    Ok("OK. Sending all users to Mixpanel")
   }
 }

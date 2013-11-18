@@ -40,6 +40,11 @@ class DefaultAnalyzerTest extends Specification {
              Token("<ALPHANUM>", "dot", 1),
              Token("<ALPHANUM>", "compound", 1),
              Token("<ALPHANUM>", "name", 1))
+
+      toTokenList(analyzer.tokenStream("b", "www.yahoo.com")) ===
+        List(Token("<ALPHANUM>", "www", 1),
+             Token("<ALPHANUM>", "yahoo", 1),
+             Token("<ALPHANUM>", "com", 1))
     }
 
     "preserve dots in acronyms" in { // lucene drops the last . in a token

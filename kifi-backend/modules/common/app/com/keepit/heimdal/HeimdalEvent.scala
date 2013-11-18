@@ -94,6 +94,7 @@ class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) 
       contextBuilder += ("remoteAddress", ipOpt.getOrElse(req.headers.get("X-Forwarded-For").getOrElse(req.remoteAddress)))
       contextBuilder += ("userAgent", req.headers.get("User-Agent").getOrElse(""))
       contextBuilder += ("requestScheme", req.headers.get("X-Scheme").getOrElse(""))
+      contextBuilder += ("doNotTrack", req.headers.get("do-not-track").map(_=="1").getOrElse(false))
 
       req match {
         case authRequest: AuthenticatedRequest[_] =>

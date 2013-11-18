@@ -51,17 +51,16 @@ class ContactsUpdater @Inject() (
   airbrake:AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
-  private def sOpt(o:Option[String]) = o match {
-    case Some(x) => if (x.isEmpty) None else Some(x)
-    case None => None
+  implicit class RichOptString(o:Option[String]) {
+    def trimOpt = o collect { case s:String if (s!= null && !s.trim.isEmpty) => s }
   }
 
-  private def mkName(name:Option[String], firstName:Option[String], lastName:Option[String], email:String) = sOpt(name).getOrElse(
+  private def mkName(name:Option[String], firstName:Option[String], lastName:Option[String], email:String) = name orElse (
     (firstName, lastName) match {
-      case (Some(f), Some(l)) => s"$f $l"
-      case (Some(f), None) => f
-      case (None, Some(l)) => l
-      case _ => email
+      case (Some(f), Some(l)) => Some(s"$f $l")
+      case (Some(f), None) => Some(f)
+      case (None, Some(l)) => Some(l)
+      case (None, None) => None
     }
   )
 
@@ -79,8 +78,8 @@ class ContactsUpdater @Inject() (
       var processed = 0
       abookRawInfo.contacts.value.grouped(500).foreach { g =>
         g.foreach { contact =>
-          val fName = sOpt((contact \ "firstName").asOpt[String])
-          val lName = sOpt((contact \ "lastName").asOpt[String])
+          val fName = (contact \ "firstName").asOpt[String] trimOpt
+          val lName = (contact \ "lastName").asOpt[String] trimOpt
           val emails = (contact \ "emails").validate[Seq[String]].fold(
             valid = ( res => res),
             invalid = ( e => {
@@ -89,13 +88,13 @@ class ContactsUpdater @Inject() (
             })
           )
           emails.foreach { email =>
-            val name = mkName(sOpt((contact \ "name").asOpt[String]), fName, lName, email)
+            val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
             val parseResult = EmailParser.parseAll(EmailParser.email, email)
             if (parseResult.successful) {
               val parsedEmail:Email = parseResult.get
               log.info(s"[upload] successfully parsed $email; result=${parsedEmail.toDbgString}")
               db.readWrite { implicit s =>
-                val e = EContact(userId = userId, email = parsedEmail.toString, name = name, firstName = fName, lastName = lName)
+                val e = EContact(userId = userId, email = parsedEmail.toString, name = nameOpt, firstName = fName, lastName = lName)
                 econtactRepo.insertOnDupUpdate(userId, e)
               }
             } else {
@@ -103,8 +102,8 @@ class ContactsUpdater @Inject() (
             }
           }
           for (email <- emails.headOption) {
-            val name = mkName(sOpt((contact \ "name").asOpt[String]), fName, lName, email)
-            val c = Contact.newInstance(userId, abookInfo.id.get, email, emails.tail, origin, Some(name), fName, lName, None)
+            val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
+            val c = Contact.newInstance(userId, abookInfo.id.get, email, emails.tail, origin, nameOpt, fName, lName, None)
             log.info(s"[upload($userId,$origin)] $c")
             cBuilder += c
           }

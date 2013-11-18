@@ -28,7 +28,6 @@ object URIGraphFields {
   val titleField = "title"
   val stemmedField = "title_stemmed"
   val siteField = "site"
-  val siteKeywordField = "site_keywords"
 
   def decoders() = Map(
     userField -> DocUtil.URIListDecoder,
@@ -36,8 +35,7 @@ object URIGraphFields {
     privateListField -> DocUtil.URIListDecoder,
     titleField -> DocUtil.LineFieldDecoder,
     stemmedField -> DocUtil.LineFieldDecoder,
-    siteField -> DocUtil.LineFieldDecoder,
-    siteKeywordField -> DocUtil.LineFieldDecoder
+    siteField -> DocUtil.LineFieldDecoder
   )
 }
 
@@ -177,29 +175,7 @@ class URIGraphIndexer(
       }
       doc.add(siteField)
 
-      val siteKeywordField = buildLineField(URIGraphFields.siteKeywordField, bookmarkURLs){ (fieldName, url, lang) =>
-        URI.parse(url).toOption.flatMap(_.host) match {
-          case Some(Host(domain @ _*)) =>
-            new IteratorTokenStream((0 until domain.size).iterator, (n:Int) => domain(n))
-         case _ => LineField.emptyTokenStream
-        }
-      }
-      doc.add(siteKeywordField)
-
       doc
-    }
-
-    private def urlToIndexableString(url: String): Option[String] = {
-      URI.parse(url).toOption.map{ u =>
-        val host = u.host match {
-          case Some(Host(domain @ _*)) => domain.mkString(" ")
-          case _ => ""
-        }
-        val path = u.path.map{ p =>
-          URIParserUtil.pathReservedChars.foldLeft(URIParserUtil.decodePercentEncode(p)){ (s, c) => s.replace(c.toString, " ") }
-        }
-        host + " " + path
-      }
     }
 
     private def buildURIListField(field: String, uriListBytes: Array[Byte]) = {

@@ -201,6 +201,10 @@ class TextWeight(
         val exp = regularWeight.explain(context, doc)
         if (exp.getValue() > 0.0f) result.addDetail(regularWeight.explain(context, doc))
       }
+      if (semanticWeight != null) {
+        val exp = semanticWeight.explain(context, doc)
+        if (exp.getValue() > 0.0f) result.addDetail(semanticWeight.explain(context, doc))
+      }
     } else {
       result.setDescription("TextQuery, doesn't match id %d".format(doc))
       result.setValue(0.0f)

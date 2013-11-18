@@ -13,11 +13,13 @@ case class ArticleSearchResult(
   hits: Seq[ArticleHit],
   myTotal: Int,
   friendsTotal: Int,
+  othersTotal: Int,
   mayHaveMoreHits: Boolean,
   scorings: Seq[Scoring],
   filter: Set[Long],
   millisPassed: Int,
   pageNumber: Int,
+  previousHits: Int,
   uuid: ExternalId[ArticleSearchResult] = ExternalId(),
   time: DateTime = currentDateTime,
   svVariance: Float = -1.0f,			// semantic vector variance
