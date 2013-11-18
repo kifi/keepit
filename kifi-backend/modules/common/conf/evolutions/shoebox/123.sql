@@ -12,7 +12,7 @@ CREATE TABLE user_notify_preference (
     state VARCHAR(20) NOT NULL,
     PRIMARY KEY (id),
 
-    INDEX email_opt_out_i_address (address)
+    CONSTRAINT user_notify_preference_f_user_id FOREIGN KEY (user_id) REFERENCES user(id)
 );
 
 insert into evolutions (name, description) values('123.sql', 'adding user_notify_preference table');
