@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import com.google.inject.{Provider, Inject, ImplementedBy}
-import play.api.Plugin
+import play.api.{Play, Plugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -19,12 +19,14 @@ import com.keepit.common.net.URI
 import org.apache.http.HttpStatus
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.common.db.Id
-import scala.Some
-import scala.util.Success
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.actor.ActorInstance
+import scala.util.Success
+import akka.routing.RoundRobinRouter
+import play.api.Play.current
 
 @ImplementedBy(classOf[ScrapeProcessorPluginImpl])
 trait ScrapeProcessorPlugin extends Plugin {
@@ -33,10 +35,15 @@ trait ScrapeProcessorPlugin extends Plugin {
   def asyncScrape(uri:NormalizedURI, info:ScrapeInfo): Unit
 }
 
-class ScrapeProcessorPluginImpl @Inject() (sysProvider: Provider[ActorSystem], procProvider: Provider[ScrapeProcessor]) extends ScrapeProcessorPlugin with Logging {
+class ScrapeProcessorPluginImpl @Inject() (actorInstance:ActorInstance[ScrapeProcessor], sysProvider: Provider[ActorSystem], procProvider: Provider[ScrapeProcessor]) extends ScrapeProcessorPlugin with Logging {
 
   lazy val system = sysProvider.get
-  def actor = system.actorOf(Props { procProvider.get })
+  lazy val actor = {
+    if (Play.maybeApplication.isDefined && (!Play.isTest))
+      system.actorOf(Props(procProvider.get).withRouter(RoundRobinRouter(Runtime.getRuntime.availableProcessors)))
+    else
+      actorInstance.ref
+  }
 
   implicit val timeout = Timeout(5 seconds)
 
@@ -60,9 +67,9 @@ case class ScrapeArticle(uri:NormalizedURI, info:ScrapeInfo)
 class ScrapeProcessor @Inject() (
   airbrake:AirbrakeNotifier,
   config: ScraperConfig,
+  helper: SyncScraper,
   httpFetcher: HttpFetcher,
   extractorFactory: ExtractorFactory,
-  scraperConfig: ScraperConfig,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
   shoeboxServiceClient: ShoeboxServiceClient
@@ -70,7 +77,7 @@ class ScrapeProcessor @Inject() (
 
   log.info(s"[ScraperProcessor-actor] created $this")
 
-  implicit val myConfig = scraperConfig
+  implicit val myConfig = config
 
   def receive = {
 
@@ -80,7 +87,7 @@ class ScrapeProcessor @Inject() (
       val extractor = extractorFactory(url)
       val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
       val res = fetchStatus.statusCode match {
-        case HttpStatus.SC_OK if !(isUnscrapableP(url, fetchStatus.destinationUrl)) => Some(basicArticle(url, extractor))
+        case HttpStatus.SC_OK if !(helper.isUnscrapableP(url, fetchStatus.destinationUrl)) => Some(helper.basicArticle(url, extractor))
         case _ => None
       }
       log.info(s"[FetchArticle] time-lapsed:${System.currentTimeMillis - ts} url=$url result=$res")
@@ -90,17 +97,32 @@ class ScrapeProcessor @Inject() (
     case ScrapeArticle(uri, info) => {
       log.info(s"[ScrapeArticle] message received; url=${uri.url}")
       val ts = System.currentTimeMillis
-      val res = safeProcessURI(uri, info)
+      val res = helper.safeProcessURI(uri, info)
       log.info(s"[ScrapeArticle] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=${res._1.state}")
       sender ! res
     }
     case AsyncScrape(nuri, info) => {
       log.info(s"[AsyncScrape] message received; url=${nuri.url}")
       val ts = System.currentTimeMillis
-      val (uri, a) = safeProcessURI(nuri, info)
+      val (uri, a) = helper.safeProcessURI(nuri, info)
       log.info(s"[AsyncScrape] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=(${uri.id}, ${uri.state})")
     }
   }
+
+}
+
+// straight port from original (local) code
+class SyncScraper @Inject() (
+  airbrake: AirbrakeNotifier,
+  config: ScraperConfig,
+  httpFetcher: HttpFetcher,
+  extractorFactory: ExtractorFactory,
+  articleStore: ArticleStore,
+  s3ScreenshotStore: S3ScreenshotStore,
+  shoeboxServiceClient: ShoeboxServiceClient
+) extends Logging {
+
+  implicit val myConfig = config
 
   private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
     processURI(uri, info)
@@ -304,7 +326,7 @@ class ScrapeProcessor @Inject() (
 
   private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
-  private[this] def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
+  def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
     title = getTitle(extractor),
     content = extractor.getContent,
     description = getDescription(extractor),
@@ -378,7 +400,7 @@ class ScrapeProcessor @Inject() (
 
   private[scraper] def asyncIsUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxServiceClient.isUnscrapableP(url, destinationUrl)
 
-  protected def isUnscrapableP(url: String, destinationUrl: Option[String]) = Await.result(asyncIsUnscrapableP(url, destinationUrl), 5 seconds)
+  def isUnscrapableP(url: String, destinationUrl: Option[String]) = Await.result(asyncIsUnscrapableP(url, destinationUrl), 5 seconds)
 
 
 }
