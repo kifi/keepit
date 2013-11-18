@@ -25,6 +25,8 @@ import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
 
 import java.util.concurrent.atomic.AtomicBoolean
+import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.common.akka.SafeFuture
 
 class UserController @Inject() (
   db: Database,
@@ -43,6 +45,7 @@ class UserController @Inject() (
   postOffice: LocalPostOffice,
   userCommander: UserCommander,
   clock: Clock,
+  heimdal: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient
 ) extends WebsiteController(actionAuthenticator) {
 
@@ -206,10 +209,9 @@ class UserController @Inject() (
           val user = userRepo.get(request.userId)
           val cleanFirst = User.sanitizeName(userData.firstName getOrElse user.firstName)
           val cleanLast = User.sanitizeName(userData.lastName getOrElse user.lastName)
-          userRepo.save(user.copy(
-            firstName = cleanFirst,
-            lastName = cleanLast
-          ))
+          val updatedUser = user.copy(firstName = cleanFirst, lastName = cleanLast)
+          userRepo.save(updatedUser)
+          SafeFuture { heimdal.engageUser(updatedUser) }
         }
         for (emails <- userData.emails) {
           val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(emails contains _.address)

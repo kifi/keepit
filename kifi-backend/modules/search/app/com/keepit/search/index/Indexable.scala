@@ -1,6 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.common.db.{Id,SequenceNumber}
+import com.keepit.common.net._
 import com.keepit.search.SemanticVectorBuilder
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
@@ -143,6 +144,19 @@ trait Indexable[T] {
   def buildTokenizedDomainField(fieldName: String, host: Seq[String], analyzer: Analyzer = DefaultAnalyzer.defaultAnalyzer): Field = {
     val text = host.map{ name => "-_".foldLeft(name){ (n, c) => n.replace(c, ' ') }}.mkString(" ")
     buildTextField(fieldName, text)
+  }
+
+  def urlToIndexableString(url: String): Option[String] = {
+    URI.parse(url).toOption.map{ u =>
+      val host = u.host match {
+        case Some(Host(domain @ _*)) => domain.mkString(" ")
+        case _ => ""
+      }
+      val path = u.path.map{ p =>
+      URIParserUtil.pathReservedChars.foldLeft(URIParserUtil.decodePercentEncode(p)){ (s, c) => s.replace(c.toString, " ") }
+      }
+      host + " " + path
+    }
   }
 }
 
