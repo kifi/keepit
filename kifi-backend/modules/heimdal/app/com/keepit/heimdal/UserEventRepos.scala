@@ -10,13 +10,19 @@ import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.KestrelCombinator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.model.User
+import com.keepit.model.{ExperimentType, User}
+import com.keepit.shoebox.ShoeboxServiceClient
 
 trait UserEventLoggingRepo extends EventRepo[UserEvent] {
   def engage(user: User): Unit
 }
 
-class ProdUserEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptors: UserEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
+class ProdUserEventLoggingRepo(
+  val collection: BSONCollection,
+  val mixpanel: MixpanelClient,
+  val descriptors: UserEventDescriptorRepo,
+  shoebox: ShoeboxServiceClient,
+  protected val airbrake: AirbrakeNotifier)
   extends MongoEventRepo[UserEvent] with UserEventLoggingRepo {
 
   val warnBufferSize = 500
@@ -32,7 +38,9 @@ class ProdUserEventLoggingRepo(val collection: BSONCollection, val mixpanel: Mix
   }
 
   def fromBSON(bson: BSONDocument): UserEvent = ???
-  def engage(user: User) = mixpanel.engage(user)
+  def engage(user: User) = shoebox.getUserExperiments(user.id.get).foreach { experiments =>
+    if (!experiments.exists(_ == ExperimentType.FAKE)) mixpanel.engage(user)
+  }
 }
 
 trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]
