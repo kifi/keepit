@@ -40,9 +40,12 @@ class MixpanelClient(projectToken: String) {
     val data = Json.obj(
       "$token" -> JsString(projectToken),
       "$distinct_id" -> JsString(s"${UserEvent.typeCode.code}_${user.id.get}"),
-      "$first_name" -> JsString(user.firstName),
-      "$last_name" -> JsString(user.lastName),
-      "$created" -> JsString(user.createdAt.toString)
+      "$ip" -> JsNumber(0),
+      "$set" -> Json.obj(
+        "$first_name" -> JsString(user.firstName),
+        "$last_name" -> JsString(user.lastName),
+        "$created" -> JsString(user.createdAt.toString)
+      )
     )
     sendData("http://api.mixpanel.com/engage", data)
   }
