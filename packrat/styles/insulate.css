@@ -286,3 +286,6 @@
   color: -moz-html-CellHighlightText;
   text-shadow: initial;
 }
+@media print {
+  .kifi-root.kifi-root.kifi-root {display: none !important}
+}
