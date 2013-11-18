@@ -23,8 +23,6 @@ panes.notices = function () {
   'use strict';
 
   var PIXELS_FROM_BOTTOM = 40; // load more notifications when this many pixels from the bottom
-  var NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
-  var NEW_FADE_DURATION = 3000; // length of the fade
 
   var handlers = {
     new_notification: function (n) {
@@ -57,17 +55,15 @@ panes.notices = function () {
   return {
     render: function ($container) {
       api.port.emit('notifications', function (o) {
-        renderNotices($container, o.notifications, o.timeLastSeen, o.numNotVisited);
+        renderNotices($container, o.notifications, o.numNotVisited);
         api.port.on(handlers);
       });
     }};
 
-  function renderNotices($container, notices, timeLastSeen, numNotVisited) {
-    timeLastSeen = new Date(+new Date(timeLastSeen) + 1000); // hack for old data that did not have millis presision
-
+  function renderNotices($container, notices, numNotVisited) {
     $notices = $(render('html/keeper/notices', {}))
       .append(notices.map(function (n) {
-        return renderNotice(n, n.unread && new Date(n.time) > timeLastSeen);
+        return renderNotice(n);
       }).join(''))
       .appendTo($container)
       .preventAncestorScroll();
@@ -101,8 +97,6 @@ panes.notices = function () {
       return false;
     }).scroll(onScroll);
 
-    fadeOutNew($notices.find('.kifi-notice-new'));
-
     var $box = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
       $notices = $markAll = null;
       $(window).off('resize.notices');
@@ -117,14 +111,9 @@ panes.notices = function () {
       api.port.emit('all_notifications_visited', o);
       // not updating DOM until response received due to bulk nature of action
     }).toggle(numNotVisited > 0);
-
-    if (notices.length && new Date(notices[0].time) > timeLastSeen) {
-      api.port.emit('notifications_read', notices[0].time);
-    }
   }
 
-  function renderNotice(notice, isNew) {
-    notice.isNew = isNew;
+  function renderNotice(notice) {
     notice.isVisited = !notice.unread;
     notice.formatMessage = getSnippetFormatter;
     notice.formatLocalDate = getLocalDateFormatter;
@@ -150,10 +139,9 @@ panes.notices = function () {
       $notices.find('.kifi-notice[data-id="' + n.id + '"]').remove();
       $notices.find('.kifi-notice[data-thread="' + n.thread + '"]').remove();
     });
-    var $n = $(notices.map(function (n) {return renderNotice(n, true)}).join(''))
+    $(notices.map(function (n) {return renderNotice(n, true)}).join(''))
       .find('time').timeago().end()
       .prependTo($notices);
-    fadeOutNew($n);
     api.port.emit('notifications_read', notices[0].time);
   }
 
@@ -176,16 +164,6 @@ panes.notices = function () {
         this.classList.add('kifi-notice-visited');
       }
     });
-  }
-
-  function fadeOutNew($new) {
-    $new.css('transition', 'background ' + NEW_FADE_DURATION + 'ms ease');
-    setTimeout(function () {
-      $new.removeClass('kifi-notice-new');
-      setTimeout(function () {
-        $new.css('transition', '');
-      }, NEW_FADE_DURATION);
-    }, NEW_FADE_TIMEOUT);
   }
 
   function onScroll() {

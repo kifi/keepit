@@ -7,6 +7,7 @@ import com.keepit.common.db._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net._
 import com.keepit.model._
+import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index._
 import com.keepit.search.index.Indexable.IteratorTokenStream
@@ -16,8 +17,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.Some
-import com.keepit.search.Lang
+import scala.util.Success
 
 object URIGraphFields {
   val userField = "usr"
@@ -28,6 +28,7 @@ object URIGraphFields {
   val titleField = "title"
   val stemmedField = "title_stemmed"
   val siteField = "site"
+  val homePageField = "home_page"
 
   def decoders() = Map(
     userField -> DocUtil.URIListDecoder,
@@ -174,6 +175,16 @@ class URIGraphIndexer(
         }
       }
       doc.add(siteField)
+
+      val hostNameAnalyzer = DefaultAnalyzer.defaultAnalyzer
+      val homePageField = buildLineField(URIGraphFields.homePageField, bookmarkURLs){ (fieldName, url, lang) =>
+        URI.parse(url) match {
+          case Success(URI(_, _, Some(Host(domain @ _*)), _, path, None, None)) if (!path.isDefined || path == Some("/")) =>
+            hostNameAnalyzer.tokenStream(fieldName, new StringReader(domain.mkString(" ")))
+          case _ => LineField.emptyTokenStream
+        }
+      }
+      doc.add(homePageField)
 
       doc
     }
