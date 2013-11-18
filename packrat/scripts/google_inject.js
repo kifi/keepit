@@ -206,7 +206,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "kifiTime": tKifiResultsShown - tQuery,
           "referenceTime": tGoogleResultsShown - tQuery,
           "kifiResultsClicked": clicks.kifi.length,
-          "searchResultsClicked": clicks.google.length,
+          "searchResultsClicked": clicks.google.length
         }
       ]);
     }

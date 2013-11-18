@@ -603,12 +603,12 @@ api.port.on({
   log_event: function(data) {
     logEvent.apply(null, data);
   },
-  log_search_event: function(data){
+  log_search_event: function(data) {
     var doNotTrack = (false || navigator.doNotTrack==='yes' || navigator.doNotTrack==='1');
-    if (!doNotTrack){
+    if (!doNotTrack) {
       var whichEvent = data[0]; 
       ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
-    };
+    }
   },
   send_message: function(data, respond, tab) {
     var nUri = tab.nUri || data.url;
