@@ -22,6 +22,7 @@ import play.api.test._
 import securesocial.core._
 import securesocial.core.providers.Token
 import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.heimdal.TestHeimdalServiceClientModule
 
 class UserControllerTest extends Specification with ApplicationInjector {
 
@@ -59,6 +60,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
 
   private class WithUserController extends WithApplication(new ShoeboxApplication(new ScalaModule {
     def configure() {
+      install(TestHeimdalServiceClientModule())
       install(FakeMailModule())
       install(FakeAirbrakeModule())
       install(TestABookServiceClientModule())

@@ -26,6 +26,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
 import com.keepit.serializer.TypeCode
+import com.keepit.model.User
 
 trait HeimdalServiceClient extends ServiceClient with Plugin {
   final val serviceType = ServiceType.HEIMDAL
@@ -41,6 +42,8 @@ trait HeimdalServiceClient extends ServiceClient with Plugin {
   def getEventDescriptors[E <: HeimdalEvent](implicit code: TypeCode[E]): Future[Seq[EventDescriptor]]
 
   def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int]
+
+  def engageUser(user: User): Unit
 }
 
 object FlushEventQueue
@@ -175,4 +178,6 @@ class HeimdalServiceClientImpl @Inject() (
     call(Heimdal.internal.updateEventDescriptor(code.code), Json.toJson(eventDescriptors)).map { response =>
       Json.parse(response.body).as[JsNumber].value.toInt
     }
+
+  def engageUser(user: User): Unit = call(Heimdal.internal.engageUser(), Json.toJson(user))
 }
