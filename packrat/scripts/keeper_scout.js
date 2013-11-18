@@ -21,9 +21,7 @@ var tile = tile || function() {  // idempotent for Chrome
   api.port.emit("session", onSessionChange);
   api.port.on({
     session_change: onSessionChange,
-    open_to: function(o) {
-      loadAndDo('pane', 'show', o.trigger, o.locator, o.redirected);
-    },
+    open_to: loadAndDo.bind(null, 'pane', 'show'),
     button_click: loadAndDo.bind(null, 'pane', 'toggle', 'button'),
     auto_show: loadAndDo.bind(null, 'keeper', 'show', 'auto'),
     init: function(o) {

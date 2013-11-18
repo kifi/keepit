@@ -68,12 +68,11 @@ panes.thread = function () {
     .on('click', 'a[href^="x-kifi-sel:"]', function (e) {
       e.preventDefault();
     })
-    .on('kifi:compose-submit', sendReply.bind(null, $container, threadId, session))
     .find('time').timeago();
 
     $holder = $container.find('.kifi-scroll-inner').preventAncestorScroll().data('threadId', threadId);
     var $scroll = $container.find('.kifi-scroll-wrap');
-    var compose = initCompose($container, session.prefs.enterToSend);
+    var compose = initCompose($container, session.prefs.enterToSend, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
     var heighter = maintainHeight($scroll[0], $holder[0], $container[0], [$who[0], compose.form()]);
 
     $scroll.antiscroll({x: false});
@@ -138,7 +137,7 @@ panes.thread = function () {
     }
   }
 
-  function sendReply($container, threadId, session, e, text) {
+  function sendReply(threadId, text) {
     var $m = renderMessage({
       id: '',
       createdAt: new Date().toISOString(),

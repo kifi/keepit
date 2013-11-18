@@ -1,4 +1,5 @@
 // @require styles/keeper/pane.css
+// @require scripts/lib/p.min.js
 // @require scripts/keeper.js
 // @require scripts/html/keeper/pane.js
 // @require scripts/html/keeper/pane_settings.js
@@ -64,14 +65,19 @@ var pane = pane || function () {  // idempotent for Chrome
 
   function showPane(locator, back, paramsArg, redirected) {
     log('[showPane]', locator, back ? 'back' : '')();
+    var deferred = P.defer();
     if (locator !== (paneHistory && paneHistory[0])) {
       var name = toPaneName(locator);
       (createPaneParams[name] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
         params.redirected = redirected;
         params.inbox = ~session.experiments.indexOf('inbox');
         showPaneContinued(locator, back, name, params);
+        deferred.resolve();
       }, locator, paramsArg);
+    } else {
+      deferred.resolve();
     }
+    return deferred.promise;
   }
 
   function showPaneContinued(locator, back, name, params) {  // only called by showPane
@@ -305,9 +311,9 @@ var pane = pane || function () {  // idempotent for Chrome
     showing: function () {
       return !!$pane;
     },
-    show: function (trigger, locator, redirected) {
-      log("[pane.show]", trigger, locator, redirected || '')();
-      showPane(locator, false, null, redirected);
+    show: function (o) {
+      log('[pane.show]', o.locator, o.trigger || '', o.paramsArg || '', o.redirected || '')();
+      showPane(o.locator, false, o.paramsArg, o.redirected);
     },
     hide: function (leaveSlider) {
       if ($pane) {
@@ -330,16 +336,18 @@ var pane = pane || function () {  // idempotent for Chrome
     },
     compose: function(trigger) {
       log('[pane:compose]', trigger)();
-      // TODO: show compose overlay (inbox experiment) instead of code below
-      if ($pane) {
-        if ('/messages' == paneHistory[0]) {
-          hidePane(trigger === 'keeper');
+      api.require('scripts/compose_toaster.js', function () {
+        if ($pane) {
+          showToaster();
         } else {
-          showPane('/messages');
+          showPane('/notices').then(showToaster);
         }
-      } else if (!$('html').hasClass('kifi-pane-parent')) { // ensure it's finished hiding
-        showPane('/messages');
-      }
+        function showToaster() {
+          toaster.showNewIn($pane).done(function (compose) {
+            compose.focus();
+          });
+        }
+      });
     },
     shade: function () {
       if ($pane) {

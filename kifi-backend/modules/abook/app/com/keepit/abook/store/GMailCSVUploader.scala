@@ -49,7 +49,7 @@ class GMailCSVUploader @Inject() (actionAuthenticator:ActionAuthenticator,
 
     var headers:Seq[String] = Seq.empty[String]
     var fieldLocations:Map[String, Int] = Map.empty[String, Int]
-    val ContactBuilder = mutable.ArrayBuilder.make[Contact]
+    val builder = mutable.ArrayBuilder.make[Contact]
 
     val savedABookInfo = db.readWrite { implicit session =>
       val abookInfo = ABookInfo(userId = userId, origin = ABookOrigins.GMAIL)
@@ -86,7 +86,7 @@ class GMailCSVUploader @Inject() (actionAuthenticator:ActionAuthenticator,
             lastName = Some(lastName),
             email = email)
           log.info(s"[uploadGmailCSV] cInfo=${cInfo}")
-          ContactBuilder += cInfo
+          builder += cInfo
 
           // broken but will likely remove this class anyway
 //          val optFields = Seq(EMAIL2, EMAIL3)
@@ -95,20 +95,20 @@ class GMailCSVUploader @Inject() (actionAuthenticator:ActionAuthenticator,
 //            if (!e.isEmpty) {
 //              val optInfo = cInfo.withEmail(e)
 //              log.info(s"[uploadGmailCSV] optInfo=${optInfo}")
-//              ContactBuilder += optInfo // TODO: parentId
+//              builder += optInfo // TODO: parentId
 //            }
 //          }
         }
       }
     }
-    val Contacts = ContactBuilder.result
-    if (!Contacts.isEmpty) {
+    val contacts = builder.result
+    if (!contacts.isEmpty) {
       // TODO: optimize
       db.readWrite { implicit session =>
-        Contacts.foreach { contactRepo.save(_) }
+        contacts.foreach { contactRepo.save(_) }
       }
     }
-    log.info(s"[uploadGmailCSV] # contacts saved = ${Contacts.length}")
+    log.info(s"[uploadGmailCSV] # contacts saved = ${contacts.length}")
 
     Ok("Contacts uploaded")
   }

@@ -35,7 +35,7 @@ class SearchAnalytics @Inject() (
     searchExperiment: Option[Id[SearchConfigExperiment]],
     articleSearchResult: ArticleSearchResult) = {
 
-    val obfuscatedSearchId = obfuscate(articleSearchResultStore.getSearchId(articleSearchResult), request.userId)
+    val obfuscatedSearchId = obfuscate(articleSearchResultStore.getInitialSearchId(articleSearchResult), request.userId)
     val contextBuilder = userEventContextBuilder(Some(request))
 
     kifiVersion.foreach { version => contextBuilder += ("extVersion", version.toString) }
@@ -76,7 +76,7 @@ class SearchAnalytics @Inject() (
     kifiCollapsed: Option[Boolean],
     time: DateTime) = {
 
-    val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, userId))
+    val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getInitialSearchId).map(obfuscate(_, userId))
     val contextBuilder = userEventContextBuilder()
     obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
     contextBuilder += ("searchEngine", resultSource.toString)
@@ -100,7 +100,7 @@ class SearchAnalytics @Inject() (
     kifiCollapsed: Option[Boolean],
     time: DateTime) = {
 
-    val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, userId))
+    val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getInitialSearchId).map(obfuscate(_, userId))
     val contextBuilder = userEventContextBuilder()
     obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
     contextBuilder += ("resultPosition", resultPosition)
@@ -125,7 +125,7 @@ class SearchAnalytics @Inject() (
     kifiCollapsed: Option[Boolean],
     time: DateTime) = {
 
-    val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getSearchId).map(obfuscate(_, userId))
+    val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getInitialSearchId).map(obfuscate(_, userId))
     val contextBuilder = userEventContextBuilder()
     obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }

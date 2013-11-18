@@ -219,7 +219,7 @@ class InviteController @Inject() (db: Database,
                   val name = db.readOnly(socialUserInfoRepo.get(socialUserId)(_).fullName)
                   Promise.successful(Option(name)).future
                 case (_, Some(eContactId)) =>
-                  abookServiceClient.getEContactById(eContactId).map { cOpt => cOpt.map(_.name) }
+                  abookServiceClient.getEContactById(eContactId).map { cOpt => cOpt.map(_.name.getOrElse("")) }
                 case _ =>
                   Promise.successful(None).future
               }
