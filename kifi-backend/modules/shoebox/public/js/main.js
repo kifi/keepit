@@ -743,7 +743,7 @@ $(function() {
 		  ABOOK_ID_TO_CALLBACK[id] = callback;
 		  deferred.resolve({
 			  id: id,
-			  status: data,
+			  status: status,
 			  total: total,
 			  progress: progress
 		  });
@@ -881,16 +881,20 @@ $(function() {
 			  $nwFriendsLoading.hide();
 
 			  console.log(this, arguments);
-			  var hasAbook = DEV || Boolean(abooks && abooks.length);
+			  var hasAbook = Boolean(abooks && abooks.length);
 			  var id, email;
-			  var importing = DEV || hasAbook && abooks.some(function(abook) {
+			  var importing = hasAbook && abooks.some(function(abook) {
+				  if (DEV) {
+					  id = abook.id;
+					  email = abook.ownerEmail;
+				  }
 				  if (abook.state !== 'active') {
 					  console.log('not active abook', abook, JSON.stringify(abook, null, '\t'));
 					  id = abook.id;
 					  email = abook.ownerEmail;
 					  return true;
 				  }
-			  });
+			  }) || DEV;
 
 			  toggleInviteHelp(network, !(hasAbook || importing));
 			  toggleImporting(network, importing, null, email);
