@@ -10,7 +10,8 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import play.api.Plugin
-import com.keepit.model.EmailOptOutRepo
+import com.keepit.model.{EmailAddressRepo, UserNotifyPreferenceRepo, EmailOptOutRepo}
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 
 trait MailSenderPlugin extends Plugin {
   def processMail(mail: ElectronicMail)
@@ -40,6 +41,8 @@ private[mail] class MailSenderActor @Inject() (
     db: Database,
     mailRepo: ElectronicMailRepo,
     emailOptOutRepo: EmailOptOutRepo,
+    userNotifyPreferenceRepo: UserNotifyPreferenceRepo,
+    emailAddressRepo: EmailAddressRepo,
     airbrake: AirbrakeNotifier,
     mailProvider: MailProvider)
   extends FortyTwoActor(airbrake) with Logging {
@@ -63,27 +66,7 @@ private[mail] class MailSenderActor @Inject() (
       }
     case ProcessMail(mail) =>
       log.info(s"Processing email to send: ${mail.id.getOrElse(mail.externalId)}")
-      val (newTo, newCC) = db.readOnly { implicit session =>
-        val newTo = mail.to.filterNot { toAddr =>
-          emailOptOutRepo.hasOptedOut(toAddr, mail.category)
-        }
-        val newCC = mail.cc.filterNot { toAddr =>
-          emailOptOutRepo.hasOptedOut(toAddr, mail.category)
-        }
-        (newTo, newCC)
-      }
-      val newMail = if (newTo.toSet != mail.to.toSet || newCC.toSet != mail.cc.toSet) {
-        if (newTo.isEmpty) {
-          db.readWrite { implicit session =>
-            mailRepo.save(mail.copy(state = ElectronicMailStates.OPT_OUT))
-          }
-        } else {
-          db.readWrite { implicit session =>
-            mailRepo.save(mail.copy(to = newTo, cc = newCC))
-          }
-        }
-      } else mail
-
+      val newMail = takeOutOptOuts(mail)
       if (newMail.state != ElectronicMailStates.OPT_OUT) {
         log.info(s"Sending email: ${newMail.id.getOrElse(newMail.externalId)}")
         mailProvider.sendMail(newMail)
@@ -91,5 +74,35 @@ private[mail] class MailSenderActor @Inject() (
         log.info(s"Not sending email due to opt-out: ${newMail.id.getOrElse(newMail.externalId)}")
       }
     case m => throw new UnsupportedActorMessage(m)
+  }
+
+  def takeOutOptOuts(mail: ElectronicMail) = { // say that 3 times fast
+    val (newTo, newCC) = db.readOnly { implicit session =>
+      val newTo = mail.to.filterNot(addressHasOptedOut(_, mail.category))
+      val newCC = mail.cc.filterNot(addressHasOptedOut(_, mail.category))
+      (newTo, newCC)
+    }
+    if (newTo.toSet != mail.to.toSet || newCC.toSet != mail.cc.toSet) {
+      if (newTo.isEmpty) {
+        db.readWrite { implicit session =>
+          mailRepo.save(mail.copy(state = ElectronicMailStates.OPT_OUT))
+        }
+      } else {
+        db.readWrite { implicit session =>
+          mailRepo.save(mail.copy(to = newTo, cc = newCC))
+        }
+      }
+    } else mail
+  }
+
+  def addressHasOptedOut(address: EmailAddressHolder, category: ElectronicMailCategory)(implicit session: RSession) = {
+    emailOptOutRepo.hasOptedOut(address, category) || {
+      emailAddressRepo.getByAddressOpt(address.address).map(_.userId) match {
+        case None => // Email isn't owned by any user, send away!
+          false
+        case Some(userId) =>
+          !userNotifyPreferenceRepo.canNotify(userId, category)
+      }
+    }
   }
 }

@@ -14,7 +14,6 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer.NormalizationService
 import com.keepit.controllers.core.BookmarkInterner
-import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.SafeFuture

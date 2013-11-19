@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.google.inject.{Provider, Inject, ImplementedBy}
+import com.google.inject.{ProvidedBy, Provider, Inject, ImplementedBy}
 import play.api.{Play, Plugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.FortyTwoActor
@@ -28,11 +28,25 @@ import scala.util.Success
 import akka.routing.RoundRobinRouter
 import play.api.Play.current
 
-@ImplementedBy(classOf[ScrapeProcessorPluginImpl])
+@ProvidedBy(classOf[ScrapeProcessorPluginProvider])
 trait ScrapeProcessorPlugin extends Plugin {
   def fetchBasicArticle(url:String, proxyOpt:Option[HttpProxy]):Future[Option[BasicArticle]]
-  def scrapeArticle(uri:NormalizedURI, info:ScrapeInfo):Future[(NormalizedURI, Option[Article])]
-  def asyncScrape(uri:NormalizedURI, info:ScrapeInfo): Unit
+  def scrapeArticle(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy]):Future[(NormalizedURI, Option[Article])]
+  def asyncScrape(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy]): Unit
+}
+
+class ScrapeProcessorPluginProvider @Inject() (
+  asyncScrapeProcessor:AsyncScrapeProcessorPlugin,
+  syncScrapeProcessor:ScrapeProcessorPluginImpl
+) extends Provider[ScrapeProcessorPlugin] {
+
+  def get(): ScrapeProcessorPlugin = {
+    if (sys.props.getOrElse("scraper.plugin.async", "true").toBoolean) { // scraper-instance config
+      asyncScrapeProcessor
+    } else {
+      syncScrapeProcessor
+    }
+  }
 }
 
 class ScrapeProcessorPluginImpl @Inject() (actorInstance:ActorInstance[ScrapeProcessor], sysProvider: Provider[ActorSystem], procProvider: Provider[ScrapeProcessor]) extends ScrapeProcessorPlugin with Logging {
@@ -51,18 +65,18 @@ class ScrapeProcessorPluginImpl @Inject() (actorInstance:ActorInstance[ScrapePro
     (actor ? FetchBasicArticle(url, proxyOpt)).mapTo[Option[BasicArticle]]
   }
 
-  def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo): Future[(NormalizedURI, Option[Article])] = {
-    (actor ? ScrapeArticle(uri, info)).mapTo[(NormalizedURI, Option[Article])]
+  def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
+    (actor ? ScrapeArticle(uri, info, proxyOpt)).mapTo[(NormalizedURI, Option[Article])]
   }
 
-  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo): Unit = {
-    actor ! AsyncScrape(uri, info)
+  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): Unit = {
+    actor ! AsyncScrape(uri, info, proxyOpt)
   }
 }
 
-case class AsyncScrape(uri:NormalizedURI, info:ScrapeInfo)
+case class AsyncScrape(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy])
 case class FetchBasicArticle(url:String, proxyOpt:Option[HttpProxy])
-case class ScrapeArticle(uri:NormalizedURI, info:ScrapeInfo)
+case class ScrapeArticle(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy])
 
 class ScrapeProcessor @Inject() (
   airbrake:AirbrakeNotifier,
@@ -94,17 +108,17 @@ class ScrapeProcessor @Inject() (
       sender ! res
     }
 
-    case ScrapeArticle(uri, info) => {
+    case ScrapeArticle(uri, info, proxyOpt) => {
       log.info(s"[ScrapeArticle] message received; url=${uri.url}")
       val ts = System.currentTimeMillis
-      val res = helper.safeProcessURI(uri, info)
+      val res = helper.safeProcessURI(uri, info, proxyOpt)
       log.info(s"[ScrapeArticle] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=${res._1.state}")
       sender ! res
     }
-    case AsyncScrape(nuri, info) => {
+    case AsyncScrape(nuri, info, proxyOpt) => {
       log.info(s"[AsyncScrape] message received; url=${nuri.url}")
       val ts = System.currentTimeMillis
-      val (uri, a) = helper.safeProcessURI(nuri, info)
+      val (uri, a) = helper.safeProcessURI(nuri, info, proxyOpt)
       log.info(s"[AsyncScrape] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=(${uri.id}, ${uri.state})")
     }
   }
@@ -124,8 +138,8 @@ class SyncScraper @Inject() (
 
   implicit val myConfig = config
 
-  private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
-    processURI(uri, info)
+  private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = try {
+    processURI(uri, info, proxyOpt)
   } catch {
     case t: Throwable => {
       log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
@@ -143,9 +157,9 @@ class SyncScraper @Inject() (
     }
   }
 
-  private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
+  private def processURI(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = {
     log.info(s"[processURI] scraping ${uri.url} $info")
-    val fetchedArticle = fetchArticle(uri, info)
+    val fetchedArticle = fetchArticle(uri, info, proxyOpt)
     val latestUri = syncGetNormalizedUri(uri).get
     if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
     else fetchedArticle match {
@@ -230,20 +244,20 @@ class SyncScraper @Inject() (
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo): ScraperResult = {
+  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): ScraperResult = {
     try {
       URI.parse(normalizedUri.url) match {
         case Success(uri) =>
           uri.scheme match {
             case Some("file") => Error(-1, "forbidden scheme: %s".format("file"))
-            case _ => fetchArticle(normalizedUri, httpFetcher, info)
+            case _ => fetchArticle(normalizedUri, httpFetcher, info, proxyOpt)
           }
-        case _ => fetchArticle(normalizedUri, httpFetcher, info)
+        case _ => fetchArticle(normalizedUri, httpFetcher, info, proxyOpt)
       }
     } catch {
       case t: Throwable => {
         log.error(s"[fetchArticle] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
-        fetchArticle(normalizedUri, httpFetcher, info)
+        fetchArticle(normalizedUri, httpFetcher, info, proxyOpt)
       }
     }
   }
@@ -259,14 +273,14 @@ class SyncScraper @Inject() (
     }
   }
 
-  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo): ScraperResult = {
+  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): ScraperResult = {
     val url = normalizedUri.url
     val extractor = extractorFactory(url)
     log.info(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
     try {
-      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, proxy = syncGetProxyP(url)){ input => extractor.process(input) }
+      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, proxy = proxyOpt){ input => extractor.process(input) }
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
@@ -394,9 +408,9 @@ class SyncScraper @Inject() (
 
   private[scraper] def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = Await.result(recordPermanentRedirect(uri, redirect), 5 seconds)
 
-  private[scraper] def getProxyP(url: String):Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
+//  private[scraper] def getProxyP(url: String):Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
 
-  private[scraper] def syncGetProxyP(url: String):Option[HttpProxy] = Await.result(getProxyP(url), 5 seconds)
+//  private[scraper] def syncGetProxyP(url: String):Option[HttpProxy] = Await.result(getProxyP(url), 5 seconds)
 
   private[scraper] def asyncIsUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxServiceClient.isUnscrapableP(url, destinationUrl)
 

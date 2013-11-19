@@ -35,7 +35,7 @@ class SpellCheckerTest extends Specification {
       val spellIndexDir = new VolatileIndexDirectoryImpl()
       val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
       val spellIndexer = SpellIndexer(spellIndexDir, articleIndexDir, SpellCheckerConfig(0f, "lev"))
-      val corrector = new SpellCorrectorImpl(spellIndexer)
+      val corrector = new SpellCorrectorImpl(spellIndexer, enableAdjScore = false)
 
       val indexWriter = new IndexWriter(articleIndexDir, config)
       articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
@@ -49,7 +49,6 @@ class SpellCheckerTest extends Specification {
 
       corrector.getScoredSuggestions("abcd deh", 2, enableBoost = false).head.value === "abc def"      // win by co-occurrence rate
     }
-
   }
 
   "SuggestionScorer" should {
@@ -62,11 +61,31 @@ class SpellCheckerTest extends Specification {
       indexWriter.close()
 
       val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
-      val scorer = new SuggestionScorer(statsReader)
+      val scorer = new SuggestionScorer(statsReader, enableAdjScore = false)
       var s = Suggest("abc")
       scorer.score(s).score === 3f
       s = Suggest("def deg")
       scorer.score(s).score === 1f          // zero intersection, smoothed to 1
+    }
+
+    "adjScore should work" in {
+      val articleIndexDir = new VolatileIndexDirectoryImpl()
+      val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+      val indexWriter = new IndexWriter(articleIndexDir, config)
+      val texts = Seq("ab x1 x2 x3 x4 cd", "ab x1 x2 x3 x4 x5 x6 cd", "ab ab y1 y2 ab ab")
+      texts.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
+      indexWriter.close()
+
+      val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
+      val scorer = new SuggestionScorer(statsReader, enableAdjScore = true)
+
+      var score = scorer.score(Suggest("ab cd")).score
+      var numInter = 2
+      var avgDist = (4 + 6)/2
+      (score - numInter * scorer.gaussianScore(avgDist)).max(1e-5) === 1e-5
+      score = scorer.score(Suggest("cd y1")).score
+      score === 0.001f       // zero intersection. smoothed to 0.001
+
     }
   }
 

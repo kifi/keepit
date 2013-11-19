@@ -113,7 +113,7 @@ class AirbrakeNotifierImpl (
   def notify(errorMessage: String): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage)))
 
   def notify(error: AirbrakeError): AirbrakeError = {
-    actor.ref ! AirbrakeErrorNotice(error)
+    actor.ref ! AirbrakeErrorNotice(error.cleanError)
     log.error(error.toString())
     error
   }

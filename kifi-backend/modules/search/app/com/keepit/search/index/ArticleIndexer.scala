@@ -34,7 +34,7 @@ class ArticleIndexer @Inject() (
 
   override val indexWarmer = Some(new IndexWarmer(Seq("t", "ts", "c", "cs")))
 
-  val commitBatchSize = 500
+  val commitBatchSize = 1000
   val fetchSize = 2000
 
   override def onFailure(indexable: Indexable[NormalizedURI], e: Throwable) {
@@ -156,7 +156,7 @@ class ArticleIndexer @Inject() (
           // home page
           parsedURI match {
             case Success(URI(_, _, Some(Host(domain @ _*)), _, path, None, None)) if (!path.isDefined || path == Some("/")) =>
-              doc.add(buildTextField("media", domain.reverse.mkString(" "), DefaultAnalyzer.defaultAnalyzer))
+              doc.add(buildTextField("home_page", domain.reverse.mkString(" "), DefaultAnalyzer.defaultAnalyzer))
             case _ =>
           }
 

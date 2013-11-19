@@ -23,10 +23,12 @@ import play.api.libs.Comet
 import com.keepit.common.time._
 import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
+import play.api.Play.current
 
 import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.common.akka.SafeFuture
+import play.api.Play
 
 class UserController @Inject() (
   db: Database,
@@ -333,10 +335,9 @@ class UserController @Inject() (
   }
 
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
-    val contactsF = network match { // revisit
-      case Some(n) => if (n == "email") queryContacts(request.userId, search, after, limit) else Future.successful(Seq.empty[JsObject])
-      case None => Future.successful(Seq.empty[JsObject])
-    }
+    val contactsF = if (network.isEmpty || network.get == "email") { // todo: revisit
+      queryContacts(request.userId, search, after, limit)
+    } else Future.successful(Seq.empty[JsObject])
     @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
     val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
     @inline def searchScore(sci: SocialConnectionInfo): Int = {
@@ -393,12 +394,15 @@ class UserController @Inject() (
     Ok(jsArray).withHeaders("Cache-Control" -> "private, max-age=300")
   }
 
+  private val domainName = if (Play.isDev) "dev.ezkeep.com" else "kifi.com"
+  private val domain = Html(s"<script>document.domain='$domainName';</script>")
+
   // todo: Combine this and next (abook import)
   def checkIfImporting(network: String, callback: String) = AuthenticatedHtmlAction { implicit request =>
     val startTime = clock.now
     var importHasHappened = new AtomicBoolean(false)
     var finishedImportAnnounced = new AtomicBoolean(false)
-    def poller(): Future[Option[JsValue]] = PlayPromise.timeout({
+    def check(): Option[JsValue] = {
       val v = db.readOnly { implicit session =>
         userValueRepo.getValue(request.userId, s"import_in_progress_${network}")
       }
@@ -421,19 +425,19 @@ class UserController @Inject() (
       } else {
         Some(JsBoolean(false))
       }
-    }, 2 seconds)
-    def script(msg: JsValue) = Html(s"<script>$callback(${msg.toString})</script>")
+    }
+    def poller(): Future[Option[JsValue]] = PlayPromise.timeout(check, 2 seconds)
+    def script(msg: JsValue) = Html(s"<script>$callback(${msg.toString});</script>")
 
     db.readOnly { implicit session =>
       socialUserRepo.getByUser(request.userId).find(_.networkType.name == network)
     } match {
       case Some(sui) =>
-        val returnEnumerator = Enumerator.generateM {
-          poller()
-        }
-        Ok.stream( returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
+        val firstResponse = Enumerator.enumerate(domain +: check().map(script).toSeq)
+        val returnEnumerator = Enumerator.generateM(poller)
+        Ok.stream(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
       case None =>
-        Ok(script(JsString("network_not_connected")))
+        Ok(domain + script(JsString("network_not_connected")))
     }
   }
 
@@ -463,11 +467,12 @@ class UserController @Inject() (
         }
       }
     }
+    val firstResponse = Enumerator(domain.body)
     val returnEnumerator = Enumerator.generateM {
       Future.sequence(Seq(timeoutF, reqF)).map { res =>
          res.collect { case Some(s:String) => s }.headOption
       }
     }
-    Ok.stream(returnEnumerator.andThen(Enumerator.eof))
+    Ok.stream(firstResponse andThen returnEnumerator.andThen(Enumerator.eof))
   }
 }

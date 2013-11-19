@@ -98,13 +98,15 @@ class Scraper @Inject() (
     } else {
       tasks.grouped(scraperConfig.batchSize).foreach { g => // revisit rate-limit
         val futures = g.map { case (uri, info) =>
-          val saved = db.readWrite { implicit s =>
-            scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // TODO: batch
+          val (saved, proxyOpt) = db.readWrite { implicit s =>
+            val savedInfo = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // TODO: batch
+            val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
+            (savedInfo, proxyOpt)
           }
-          (uri.url, scraperServiceClient.scheduleScrape(uri, saved))
+          (uri.url, scraperServiceClient.scheduleScrapeWithRequest(ScrapeRequest(uri, saved, proxyOpt)))
         }
         val res = futures.map(f => (f._1, Await.result(f._2, 5 seconds))) // revisit artificial wait/delay
-        log.info(s"[schedule] (remote) results=${res.mkString(System.lineSeparator())}")
+        log.info(s"[schedule-WithRequest] (remote) results=${res.mkString(System.lineSeparator())}")
       }
     }
     log.info(s"[schedule] finished scheduling ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")

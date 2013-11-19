@@ -377,13 +377,4 @@ class AdminUserController @Inject() (
     }
     Ok("OK. Bumping up user sequence numbers")
   }
-
-  def sendAllToMixpanel() = AdminHtmlAction { implicit request =>
-    db.readOnly { implicit s =>
-      userRepo.allExcluding(UserStates.INCOMPLETE_SIGNUP, UserStates.INACTIVE, UserStates.BLOCKED).foreach{
-        u => heimdal.engageUser(u)
-      }
-    }
-    Ok("OK. Sending all users to Mixpanel")
-  }
 }

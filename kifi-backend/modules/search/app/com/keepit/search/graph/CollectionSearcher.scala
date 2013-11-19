@@ -56,7 +56,7 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
 class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNameIndexSearcher: Searcher, userId: Id[User]) extends CollectionSearcher(collectionIndexSearcher) {
   lazy val myCollectionEdgeSet: UserToCollectionEdgeSet = getUserToCollectionEdgeSet(userId)
 
-  def detectCollectionNames(terms: IndexedSeq[Term], stemmedTerms: IndexedSeq[Term]): Set[(Int, Int, Long)] = {
+  def detectCollectionNames(stems: IndexedSeq[Term]): Set[(Int, Int, Long)] = {
     collectionNameIndexSearcher.findDocIdAndAtomicReaderContext(userId.id) match {
       case Some((doc, context)) =>
         val reader = context.reader
@@ -71,8 +71,7 @@ class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNa
           }
         }
         if (collectionIdList != null && collectionIdList.size > 0) {
-          detectCollectionNames(terms, CollectionNameFields.nameField, doc, collectionIdList.ids, reader) ++
-          detectCollectionNames(stemmedTerms, CollectionNameFields.stemmedNameField, doc, collectionIdList.ids, reader)
+          detectCollectionNames(stems, CollectionNameFields.stemmedNameField, doc, collectionIdList.ids, reader)
         } else {
           Set.empty[(Int, Int, Long)]
         }
@@ -81,8 +80,8 @@ class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNa
     }
   }
 
-  private[this] def detectCollectionNames(qterms: IndexedSeq[Term], field: String, doc: Int, collectionIdList: Array[Long], reader: AtomicReader): Set[(Int, Int, Long)] = {
-    val terms = qterms.map{ t => new Term(field, t.text()) }
+  private[this] def detectCollectionNames(stems: IndexedSeq[Term], field: String, doc: Int, collectionIdList: Array[Long], reader: AtomicReader): Set[(Int, Int, Long)] = {
+    val terms = stems.map{ t => new Term(field, t.text()) }
     val r = LineIndexReader(reader, doc, terms.toSet, collectionIdList.length, None)
     val detector = new CollectionNameDetector(r, collectionIdList)
     detector.detectAll(terms)

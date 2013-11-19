@@ -20,6 +20,22 @@ import scala.concurrent.duration._
 import scala.concurrent._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+class AsyncScrapeProcessorPlugin @Inject() (asyncScraper:AsyncScraper) extends ScrapeProcessorPlugin with Logging {
+
+  def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy]): Future[Option[BasicArticle]] = {
+    asyncScraper.asyncFetchBasicArticle(url, proxyOpt)
+  }
+
+  def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
+    asyncScraper.asyncProcessURI(uri, info, proxyOpt)
+  }
+
+  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Unit =  { // todo: consolidate
+    asyncScraper.asyncProcessURI(uri, info, proxyOpt)
+  }
+
+}
+
 // ported from original (local) sync version
 class AsyncScraper @Inject() (
   airbrake: AirbrakeNotifier,
@@ -33,10 +49,23 @@ class AsyncScraper @Inject() (
 
   implicit val myConfig = config
 
+  def asyncFetchBasicArticle(url:String, proxyOpt:Option[HttpProxy]):Future[Option[BasicArticle]] = {
+    val extractor = extractorFactory(url)
+    val isUnscrapableF = for {
+      fetchStatus <- future { httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input)) }
+      isUnscrapable <- asyncIsUnscrapableP(url, fetchStatus.destinationUrl) if fetchStatus.statusCode == HttpStatus.SC_OK
+    } yield isUnscrapable
+
+    isUnscrapableF map { isUnscrapable =>
+      if (!isUnscrapable) Some(basicArticle(url, extractor))
+      else None
+    }
+  }
+
   // def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = Await.result(asyncSafeProcessURI(uri, info), 5 seconds)
-  def asyncSafeProcessURI(uri: NormalizedURI, info: ScrapeInfo): Future[(NormalizedURI, Option[Article])] = {
+  def asyncSafeProcessURI(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
     try {
-      asyncProcessURI(uri, info)
+      asyncProcessURI(uri, info, proxyOpt)
     } catch {
       case t: Throwable => { // todo: revisit
         log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
@@ -63,21 +92,21 @@ class AsyncScraper @Inject() (
   }
 
   // def processURI(uri: NormalizedURI, info: ScrapeInfo) = Await.result(asyncProcessURI(uri, info), 5 seconds)
-  def asyncProcessURI(uri: NormalizedURI, info: ScrapeInfo): Future[(NormalizedURI, Option[Article])] = {
+  def asyncProcessURI(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
     log.info(s"[asyncProcessURI] scraping ${uri.url} $info")
     getNormalizedUri(uri) flatMap { latestUriOpt =>
       latestUriOpt match {
         case None => future { (uri, None) }
         case Some(latestUri) => latestUri.state match {
           case NormalizedURIStates.INACTIVE => future { (latestUri, None) }
-          case _ => asyncProcessArticle(uri, info, latestUri)
+          case _ => asyncProcessArticle(uri, info, latestUri, proxyOpt)
         }
       }
     }
   }
 
-  def asyncProcessArticle(uri: NormalizedURI, info: ScrapeInfo, latestUri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
-    asyncFetchArticle(uri, info) flatMap { fetchResult =>
+  def asyncProcessArticle(uri: NormalizedURI, info: ScrapeInfo, latestUri: NormalizedURI, proxyOpt:Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
+    asyncFetchArticle(uri, info, proxyOpt) flatMap { fetchResult =>
       fetchResult match {
         case Scraped(article, signature, redirects) => asyncProcessScrapedArticle(latestUri, redirects, article, signature, info, uri)
         case NotScrapable(destinationUrl, redirects) => asyncProcessUnscrapableURI(info, destinationUrl, latestUri, redirects, uri)
@@ -200,14 +229,14 @@ class AsyncScraper @Inject() (
 
 //  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo) = Await.result(asyncFetchArticle(normalizedUri, info), 5 seconds)
 
-  def asyncFetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo): Future[ScraperResult] = {
+  def asyncFetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): Future[ScraperResult] = {
     URI.parse(normalizedUri.url) match {
       case Success(uri) =>
         uri.scheme match {
           case Some("file") => future { Error(-1, "forbidden scheme: %s".format("file")) }
-          case _ => asyncFetchArticle(normalizedUri, httpFetcher, info)
+          case _ => asyncFetchArticle(normalizedUri, httpFetcher, info, proxyOpt)
         }
-      case _ => asyncFetchArticle(normalizedUri, httpFetcher, info)
+      case _ => asyncFetchArticle(normalizedUri, httpFetcher, info, proxyOpt)
     }
   }
 
@@ -224,13 +253,13 @@ class AsyncScraper @Inject() (
 
 //  def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo) = Await.result(asyncFetchArticle(normalizedUri, httpFetcher, info), 5 seconds)
 
-  def asyncFetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo): Future[ScraperResult] = {
+  def asyncFetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): Future[ScraperResult] = {
     val url = normalizedUri.url
     val extractor = extractorFactory(url)
     log.info(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
-    getProxyP(url) map { proxyOpt => // todo: remove this
+    future {
       httpFetcher.fetch(url, ifModifiedSince, proxy = proxyOpt){ input => extractor.process(input) }
     } flatMap { fetchStatus =>
       fetchStatus.statusCode match {
@@ -357,7 +386,7 @@ class AsyncScraper @Inject() (
 
   // private[scraper] def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = Await.result(recordPermanentRedirect(uri, redirect), 5 seconds)
 
-  private[scraper] def getProxyP(url: String):Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
+  // private[scraper] def getProxyP(url: String):Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
 
   // private[scraper] def syncGetProxyP(url: String):Option[HttpProxy] = Await.result(getProxyP(url), 5 seconds)
 
