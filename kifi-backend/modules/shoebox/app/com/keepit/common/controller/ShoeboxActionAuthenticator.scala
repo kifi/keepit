@@ -35,7 +35,7 @@ class ShoeboxActionAuthenticator @Inject() (
         socialUser.userId
       case Some(userId) =>
         val socialUser = socialUserInfoRepo.get(socialId, socialNetworkType)
-        if (socialUser.userId.get != userId) {
+        if (socialUser.userId.isDefined && socialUser.userId.get != userId) {
           log.error(s"Social user id $socialUser does not match session user id $userId")
         }
         Some(userId)

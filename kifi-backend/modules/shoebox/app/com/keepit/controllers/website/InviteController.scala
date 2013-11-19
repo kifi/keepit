@@ -164,10 +164,7 @@ class InviteController @Inject() (db: Database,
             }
           case inactiveOpt =>
             val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
-            val currentInvitations = invitationRepo.getByUser(request.user.id.get).collect {
-              case s if s.state != InvitationStates.INACTIVE =>
-                Some(createBasicUserInvitation(socialUserRepo.get(s.recipientSocialUserId.get), s.state))
-            }
+            val currentInvitations = invitationRepo.getByUser(request.user.id.get).filter(_.state != InvitationStates.INACTIVE)
             if (currentInvitations.length < totalAllowedInvites) {
               val invite = inactiveOpt map {
                 _.copy(senderUserId = Some(request.user.id.get))

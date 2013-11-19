@@ -36,6 +36,7 @@ class HomeController @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   socialGraphPlugin: SocialGraphPlugin,
   fortyTwoServices: FortyTwoServices,
+  userCache: SocialUserInfoUserCache,
   inviteCommander: InviteCommander)
   extends WebsiteController(actionAuthenticator) with Logging {
 
@@ -130,6 +131,7 @@ class HomeController @Inject() (
   }
 
   def disconnect(networkString: String) = AuthenticatedHtmlAction { implicit request =>
+    userCache.remove(SocialUserInfoUserKey(request.userId))
     val network = SocialNetworkType(networkString)
     val (thisNetwork, otherNetworks) = db.readOnly { implicit s =>
       socialUserRepo.getByUser(request.userId).partition(_.networkType == network)
@@ -147,14 +149,14 @@ class HomeController @Inject() (
         socialUserRepo.save(sui.copy(credentials = None, userId = None))
         socialUserRepo.getByUser(request.userId).map(socialUserRepo.invalidateCache)
       }
-      otherNetworks.map(socialGraphPlugin.asyncFetch)
+      userCache.remove(SocialUserInfoUserKey(request.userId))
 
       val newLoginUser = otherNetworks.find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(otherNetworks.head)
       val identity = newLoginUser.credentials.get
       Authenticator.create(identity).fold(
         error => Status(INTERNAL_SERVER_ERROR)("0"),
         authenticator => {
-          Redirect("/profile") // hard coded because reverse router donesn't let us go there. todo: fix
+          Redirect("/profile") // hard coded because reverse router doesn't let us go there. todo: fix
             .withSession(session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> sui.userId.get.toString))
             .withCookies(authenticator.toCookie)
         }
