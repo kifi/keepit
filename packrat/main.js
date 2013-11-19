@@ -606,7 +606,7 @@ api.port.on({
   log_search_event: function(data) {
     var doNotTrack = (navigator.doNotTrack==='yes' || navigator.doNotTrack==='1');
     if (!doNotTrack) {
-      var whichEvent = data[0]; 
+      var whichEvent = data[0];
       ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
     }
   },
@@ -932,6 +932,7 @@ function removeNotificationPopups(associatedId) {
 
 function standardizeNotification(n) {
   n.category = (n.category || "message").toLowerCase();
+  n.unread = n.unread || (n.unreadAuthors > 0);
   for (var i = n.participants ? n.participants.length : 0; i--;) {
     if (n.participants[i].id == session.user.id) {
       n.participants.splice(i, 1);
@@ -979,6 +980,7 @@ function insertNewNotification(n) {
         (th = td.getThread(n.locator.substr(10))) &&
         new Date(th.lastMessageRead || 0) > new Date(n.time)) {
       n.unread = false;
+      n.unreadAuthors = 0;
     } else {
       numNotificationsNotVisited++;
     }
@@ -1019,6 +1021,7 @@ function markNoticesVisited(category, id, timeStr, locator) {
         (n.id == id || new Date(n.time) <= time)) {
       if (n.unread) {
         n.unread = false;
+        n.unreadAuthors = 0;
         decrementNumNotificationsNotVisited(n);
       }
     }
@@ -1039,6 +1042,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
     var n = notifications[i];
     if (n.unread && (n.id === id || new Date(n.time) <= time)) {
       n.unread = false;
+      n.unreadAuthors = 0;
       if (n.category === 'message') {
         var td = pageThreadData[n.url];
         if (td && td.markRead(n.locator.substr(10), n.time)) {
