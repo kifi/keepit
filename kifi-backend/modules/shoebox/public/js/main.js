@@ -896,7 +896,7 @@ $(function() {
 					  email = abook.ownerEmail;
 					  return true;
 				  }
-			  }) || DEV;
+			  }) || !!(id && DEV);
 
 			  toggleInviteHelp(network, !(hasAbook || importing));
 			  toggleImporting(network, importing, null, email);
