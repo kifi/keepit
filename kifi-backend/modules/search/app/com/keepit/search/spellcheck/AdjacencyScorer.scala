@@ -23,14 +23,20 @@ class AdjacencyScorer {
   }
 
   // distance between two sorted integer sets X and Y, defined by min(abs(x - y)) for all x in X, y in Y
-  def distance(pos1: Array[Int], pos2: Array[Int]): Int = {
+  def distance(pos1: Array[Int], pos2: Array[Int], earlyStopValue: Int): Int = {
     assume(pos1.length != 0 && pos2.length != 0)
 
     val mixed = merge(pos1.map{ p => LabeledInteger("a", p)}, pos2.map{ p => LabeledInteger("b", p)})
-    mixed.toArray.sliding(2, 1)
+    val filtered = mixed.toArray.sliding(2, 1)
     .filter{ case Array(a, b) => a.label != b.label }
-    .map{ case Array(a, b) => b.value - a.value }
-    .foldLeft(Int.MaxValue)(_ min _)
+
+    var m = Int.MaxValue
+    filtered.foreach{ case Array(a, b) =>
+      val x = b.value - a.value
+      if ( x < m ) m = x
+      if (m == earlyStopValue) return m
+    }
+    return m
   }
 
 }

@@ -11,7 +11,7 @@ import com.keepit.search.index.DefaultAnalyzer
 
 case class SpellCheckerConfig(
   wordFreqThreshold: Float = 0.001f,
-  distance: String = "composite"
+  distance: String = "ngram"
 )
 
 object SpellCheckerFactory {

@@ -19,7 +19,7 @@ class AdjacencyScorerTest extends Specification {
     "computes distance between two sorted integer seq" in {
       val (s1, s2) = (Array(1, 1, 5, 9, 100), Array(4, 7, 60))
       val scorer = new AdjacencyScorer
-      scorer.distance(s1, s2) === 1
+      scorer.distance(s1, s2, earlyStopValue = 1) === 1
     }
   }
 }
