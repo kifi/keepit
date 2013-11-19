@@ -136,7 +136,6 @@ class SecureSocialUserPluginImpl @Inject() (
       SafeFuture{
         val contextBuilder = eventContextBuilder()
         heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, EventType("signup")))
-        heimdal.engageUser(userOpt.get)
       }
       userOpt
     } else None
@@ -179,8 +178,7 @@ class SecureSocialUserPluginImpl @Inject() (
         } else {
           val user = userRepo.get(socialUserInfo.userId.get)
           if (user.state == UserStates.INCOMPLETE_SIGNUP && isComplete) {
-            val updatedUser = userRepo.save(user.withName(socialUser.firstName, socialUser.lastName).withState(newUserState))
-            SafeFuture { heimdal.engageUser(updatedUser) }
+            userRepo.save(user.withName(socialUser.firstName, socialUser.lastName).withState(newUserState))
           }
           socialUserInfoRepo.save(socialUserInfo)
         }
