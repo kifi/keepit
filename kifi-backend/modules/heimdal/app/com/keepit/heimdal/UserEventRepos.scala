@@ -40,6 +40,7 @@ class ProdUserEventLoggingRepo(
   def fromBSON(bson: BSONDocument): UserEvent = ???
   def engage(user: User) = shoebox.getUserExperiments(user.id.get).foreach { experiments =>
     if (!experiments.exists(_ == ExperimentType.FAKE)) mixpanel.engage(user)
+    else mixpanel.delete(user)
   }
 }
 
