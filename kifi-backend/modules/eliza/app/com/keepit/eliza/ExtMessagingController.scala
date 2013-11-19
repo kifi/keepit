@@ -217,16 +217,10 @@ class ExtMessagingController @Inject() (
       val lastModified = messagingController.setAllNotificationsReadBefore(socket.userId, messageId)
       socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
     },
-    "get_last_notify_read_time" -> { _ =>
-      val tOpt = messagingController.getNotificationLastSeen(socket.userId)
-      tOpt.map { t =>
-        socket.channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
-      }
+    "get_last_notify_read_time" -> { _ =>  // DEPRECATED remove after all extensions reach 2.6.42 or later
+      socket.channel.push(Json.arr("last_notify_read_time", clock.get.toStandardTimeString))
     },
-    "set_last_notify_read_time" -> { case JsString(time) +: _ =>
-      val t = parseStandardTime(time)
-      messagingController.setNotificationLastSeen(socket.userId, t)
-      socket.channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
+    "set_last_notify_read_time" -> { case JsString(time) +: _ =>  // DEPRECATED no longer called by 2.6.42 or later
     },
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
       val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)

@@ -96,7 +96,6 @@ class MessagingController @Inject() (
       userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson, false)
       userThreadRepo.clearNotification(userId)
       userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime)
-      userThreadRepo.setNotificationLastSeen(userId, currentDateTime)
     }
   }
 
@@ -468,7 +467,7 @@ class MessagingController @Inject() (
         sentOnUriId = thread.uriId
       ))
     }
-    SafeFuture { 
+    SafeFuture {
       setLastSeen(from, thread.id.get, Some(message.createdAt))
       db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) }
     }
@@ -750,18 +749,6 @@ class MessagingController @Inject() (
   def getPendingNotifications(userId: Id[User]) : Seq[Notification] = {
     db.readOnly{ implicit session =>
       userThreadRepo.getPendingNotifications(userId)
-    }
-  }
-
-  def setNotificationLastSeen(userId: Id[User], timestamp: DateTime) : Unit = {
-    db.readWrite(attempts=2){ implicit session =>
-      userThreadRepo.setNotificationLastSeen(userId, timestamp)
-    }
-  }
-
-  def getNotificationLastSeen(userId: Id[User]): Option[DateTime] = {
-    db.readOnly{ implicit session =>
-      userThreadRepo.getNotificationLastSeen(userId)
     }
   }
 

@@ -29,7 +29,6 @@ case class UserThread(
     lastMsgFromOther: Option[Id[Message]],
     lastNotification: JsValue,
     notificationUpdatedAt: DateTime = currentDateTime,
-    notificationLastSeen: Option[DateTime] = None,
     notoficationEmailed: Boolean = false,
     replyable: Boolean = true
   )
@@ -56,10 +55,6 @@ trait UserThreadRepo extends Repo[UserThread] {
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit
 
   def getPendingNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification]
-
-  def setNotificationLastSeen(userId: Id[User], timestamp: DateTime, threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit
-
-  def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime]
 
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Int
 
@@ -119,10 +114,9 @@ class UserThreadRepoImpl @Inject() (
     def lastMsgFromOther = column[Id[Message]]("last_msg_from_other", O.Nullable)
     def lastNotification = column[JsValue]("last_notification", O.NotNull)
     def notificationUpdatedAt = column[DateTime]("notification_updated_at", O.NotNull)
-    def notificationLastSeen = column[DateTime]("notification_last_seen", O.Nullable)
     def notificationEmailed = column[Boolean]("notification_emailed", O.NotNull)
     def replyable = column[Boolean]("replyable", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ user ~ thread ~ uriId.? ~ lastSeen.? ~ notificationPending ~ muted ~ lastMsgFromOther.? ~ lastNotification ~ notificationUpdatedAt ~ notificationLastSeen.? ~ notificationEmailed ~ replyable <> (UserThread.apply _, UserThread.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ user ~ thread ~ uriId.? ~ lastSeen.? ~ notificationPending ~ muted ~ lastMsgFromOther.? ~ lastNotification ~ notificationUpdatedAt ~ notificationEmailed ~ replyable <> (UserThread.apply _, UserThread.unapply _)
 
     def userThreadIndex = index("user_thread", (user,thread), unique=true)
   }
@@ -196,24 +190,8 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def setNotificationLastSeen(userId: Id[User], timestamp: DateTime, threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession): Unit = {
-    threadIdOpt.map{ threadId =>
-      (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationLastSeen).update(timestamp)
-    } getOrElse {
-      (for (row <- table if row.user===userId) yield row.notificationLastSeen).update(timestamp)
-    }
-  }
-
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession) = {
     (for (row <- table if row.id === userThreadId) yield row.muted).update(muted)
-  }
-
-  def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime] = {
-    threadIdOpt.map{ threadId =>
-      (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationLastSeen.?).firstOption flatten
-    } getOrElse {
-      (for (row <- table if row.user===userId) yield row.notificationLastSeen.?).firstOption flatten
-    }
   }
 
   def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
@@ -280,7 +258,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread] = {
-    (for (row <- table if row.replyable===true && row.notificationPending===true && row.notificationEmailed===false && (row.notificationLastSeen.isNull || row.notificationLastSeen < row.notificationUpdatedAt) && row.notificationUpdatedAt < before) yield row).list
+    (for (row <- table if row.replyable===true && row.notificationPending===true && row.notificationEmailed===false && row.notificationUpdatedAt < before) yield row).list
   }
 
   def setNotificationEmailed(id: Id[UserThread], relevantMessageOpt: Option[Id[Message]])(implicit session: RWSession) : Unit = {

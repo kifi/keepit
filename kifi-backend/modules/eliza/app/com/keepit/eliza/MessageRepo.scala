@@ -54,8 +54,7 @@ object Message {
     )(Message.apply, unlift(Message.unapply))
 }
 
-case class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message])
-{
+case class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message]) {
   override def equals(other:Any):Boolean = other match {
     case mft: MessagesForThread => (thread.id == mft.thread.id && messages.size == mft.messages.size)
     case _ => false
@@ -112,8 +111,7 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 class MessageRepoImpl @Inject() (
     val clock: Clock,
     val db: DataBaseComponent,
-    val messagesForThreadIdCache: MessagesForThreadIdCache
-  )
+    val messagesForThreadIdCache: MessagesForThreadIdCache)
   extends DbRepo[Message] with MessageRepo with ExternalIdColumnDbFunction[Message] with Logging {
 
   import db.Driver.Implicit._
@@ -176,17 +174,17 @@ class MessageRepoImpl @Inject() (
   }
 
   def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[Message] = {
-    (for (row <- table if row.thread===threadId && row.createdAt>after) yield row).sortBy(row => row.createdAt desc).list
+    (for (row <- table if row.thread === threadId && row.createdAt > after) yield row).sortBy(row => row.createdAt desc).list
   }
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit = { //Note: There is potentially a race condition here with updateUriId. Need to investigate.
-    updates.foreach{ case (oldId, newId) =>
-      (for (row <- table if row.sentOnUriId===oldId) yield row.sentOnUriId).update(newId)
+    updates.foreach { case (oldId, newId) =>
+      (for (row <- table if row.sentOnUriId === oldId) yield row.sentOnUriId).update(newId)
     }
   }
 
   def getFromIdToId(fromId: Id[Message], toId: Id[Message])(implicit session: RSession): Seq[Message] = {
-    (for (row <- table if row.id>=fromId && row.id<=toId) yield row).list
+    (for (row <- table if row.id >= fromId && row.id <= toId) yield row).list
   }
 
   def getMaxId()(implicit session: RSession): Id[Message] = {
@@ -203,10 +201,4 @@ class MessageRepoImpl @Inject() (
     results
   }
 
-
-
 }
-
-
-
-
