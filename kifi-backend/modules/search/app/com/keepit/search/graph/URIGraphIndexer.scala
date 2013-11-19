@@ -180,7 +180,7 @@ class URIGraphIndexer(
       val homePageField = buildLineField(URIGraphFields.homePageField, bookmarkURLs){ (fieldName, uri, lang) =>
         uri match {
           case Success(URI(_, _, Some(Host(domain @ _*)), _, path, None, None)) if (!path.isDefined || path == Some("/")) =>
-            hostNameAnalyzer.tokenStream(fieldName, new StringReader(domain.mkString(" ")))
+            hostNameAnalyzer.tokenStream(fieldName, new StringReader(domain.reverse.mkString(" ")))
           case _ => LineField.emptyTokenStream
         }
       }
