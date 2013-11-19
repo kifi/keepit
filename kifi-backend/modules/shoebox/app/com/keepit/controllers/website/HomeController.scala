@@ -154,7 +154,7 @@ class HomeController @Inject() (
       Authenticator.create(identity).fold(
         error => Status(INTERNAL_SERVER_ERROR)("0"),
         authenticator => {
-          Redirect("/profile") // hard coded because reverse router donesn't let us go there. todo: fix
+          Redirect("/profile") // hard coded because reverse router doesn't let us go there. todo: fix
             .withSession(session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> sui.userId.get.toString))
             .withCookies(authenticator.toCookie)
         }
