@@ -66,13 +66,14 @@ class MainQueryParser(
 
         // detect collection names and augment TextQueries
         collectionSearcher.foreach{ cs =>
-          cs.detectCollectionNames(phTerms, phStemmedTerms).foreach{ case (index, length, collectionId) =>
+          val indexToTextQuery: IndexedSeq[TextQuery] = textQueries.flatMap{ t => t.stems.map{ s => t } }
+          cs.detectCollectionNames(phStemmedTerms).foreach{ case (index, length, collectionId) =>
             collectionIds += collectionId
             var i = index
             val end = index + length
             while (i < end) {
               indexToTextQuery(i).addCollectionQuery(collectionId, 1.5f)
-             i += 1
+              i += 1
             }
           }
         }
@@ -112,9 +113,6 @@ class MainQueryParser(
   }
   private[this] lazy val phStemmedTerms: IndexedSeq[Term] = {
     textQueries.flatMap{ _.stems }
-  }
-  private[this] lazy val indexToTextQuery: IndexedSeq[TextQuery] = {
-    textQueries.flatMap{ t => t.stems.map{ s => t } }
   }
 
   private[this] def proxTermsFor(field: String): Seq[Seq[Term]] = {
