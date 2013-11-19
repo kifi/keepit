@@ -2,13 +2,12 @@ var domain = 'kifi.com';
 var xhrDomain = 'https://api.kifi.com';
 var wwwDomain = 'https://www.kifi.com';
 //TODO dev
-var DEV = false;
+var DEV = true;
 if (DEV) {
+	domain = 'dev.ezkeep.com';
 	xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 }
-else {
-	document.domain = domain;
-}
+document.domain = domain;
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 var xhrBaseSearch = xhrDomain.replace('api', 'search') + '/search';
@@ -733,9 +732,7 @@ $(function() {
 	  var url = xhrBase + '/user/abookUploadStatus?id=' + id + (opts || '');
 	  var $iframe = $('<iframe src="' + url + '" style="display:none"></iframe>').appendTo('body');
 	  var frameWin = $iframe[0].contentWindow;
-	  if (!DEV) {
-		  frameWin.document.domain = domain;
-	  }
+	  frameWin.document.domain = domain;
 
 	  var deferred = $.Deferred();
 
@@ -790,44 +787,27 @@ $(function() {
   }
 
   function getNetworkImportUpdates(network, callback) {
-	  var callbackName = 'updateImportStatus';
-	  var parentCallbackName = 'parent.' + callbackName;
-	  var url = xhrBase + '/user/import-check/' + network + '?callback=' + parentCallbackName;
-	  var iframe = document.createElement('iframe');
-	  document.body.appendChild(iframe);
-	  if (!DEV) {
-		  iframe.contentDocument.domain = domain;
-	  }
-	  console.log(document.domain, iframe.contentDocument.domain);
-	  iframe.src = url;
+	  var iframe = document.body.appendChild(document.createElement('iframe'));
 
-	  var deferred = $.Deferred();
-
-      window[callbackName] = function(data) {
-		  window[callbackName] = callback;
+      window.updateImport = function(data) {
+		  console.log('[updateImport]', data);
+		  window.updateImport = callback;
 		  deferred.resolve(data);
 		  callback(data);
 	  };
 
-	  /*
-	  if (DEV) {
-		  'fetching,import_connections,finished,end'.split(',').forEach(function(data, i) {
-		  //'false'.split(',').forEach(function(data, i) {
-			  setTimeout(function() {
-				  if (!$iframe) {
-					  return;
-				  }
-				  $iframe[0].contentWindow.document.writeln('<script>' + parentCallbackName + '("' + data + '")</script>')
-			  }, 500 * (i + 1));
-		  })
-	  }
-	  */
+	  iframe.contentWindow.location.href = xhrBase + '/user/import-check/' + network + '?callback=document.domain="' + domain + '",parent.updateImport';
+
+	  var iframeDoc = iframe.contentDocument;
+	  iframeDoc.domain = domain;
+
+	  var deferred = $.Deferred();
 
 	  function end() {
 		  if (iframe) {
-			  window[callbackName] = null;
+			  window.updateImport = null;
 			  $(iframe).remove();
-			  deferred = callback = network = iframe = parentCallbackName = callbackName = url = null;
+			  deferred = callback = network = iframe = url = null;
 		  }
 	  }
 
@@ -930,7 +910,7 @@ $(function() {
 	  }
 	  else if (isSocial) {
 		  var importUpdate = getNetworkImportUpdates(network, function(status) {
-			  console.log('getNetworkImportUpdates', network, status);
+			  console.log('getNetworkImportUpdates', status);
 			  if (status === 'finished' || status === 'end') {
 				  toggleImporting(network, false);
 				  emptyAndPrepInvite(network);
@@ -966,6 +946,8 @@ $(function() {
 
 		  $.when($.getJSON(xhrBase + '/user/networks'), importUpdate.promise).done(function(networkResult, status) {
 			  $nwFriendsLoading.hide();
+
+			  console.log('[networks status]', networkResult, status);
 
 			  var networks = networkResult[0];
 			  var connected = isConnected(networks, network);
