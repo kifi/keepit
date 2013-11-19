@@ -737,8 +737,8 @@ $(function() {
 		  deferred.resolve({
 			  id: id,
 			  status: data,
-			  total: 1000,
-			  progress: Math.floor(Math.random() * 1000)
+			  total: total,
+			  progress: progress
 		  });
 		  callback(id, status, total, progress);
 	  };
@@ -829,51 +829,22 @@ $(function() {
 	  });
   }
 
-  /*
-  function updateNetworkImportStatus(network, status, end) {
-	  var importing = false;
-	  switch (status) {
-		  case false:
-			  toggleImporting(network, false);
-		  break;
-		  case 'fetching':
-			  toggleImporting(network, true);
-			  importing = true;
-		  break;
-		  case 'import_connections':
-			  toggleImporting(network, true);
-			  importing = true;
-		  break;
-		  case 'network_not_connected':
-			  toggleImporting(network, false);
-		  break;
-		  case 'finished':
-		  case 'end':
-		  break;
-	  }
-	  if (!importing) {
-		  end();
-	  }
-	  return importing;
-  }
-  */
-
   function isImporting(status) {
 	  return status === 'fetching' || status === 'import_connections';
   }
 
-  var IMPORT_UPDATE = null;
+  var prevImportUpdate = null;
 
   function endImportUpdate(importUpdate) {
 	  if (importUpdate) {
-		  if (IMPORT_UPDATE === importUpdate) {
-			  IMPORT_UPDATE = null;
+		  if (prevImportUpdate === importUpdate) {
+			  prevImportUpdate = null;
 		  }
 		  importUpdate.end();
 	  }
-	  else if (IMPORT_UPDATE) {
-		  IMPORT_UPDATE.end();
-		  IMPORT_UPDATE = null;
+	  else if (prevImportUpdate) {
+		  prevImportUpdate.end();
+		  prevImportUpdate = null;
 	  }
   }
 
@@ -932,7 +903,7 @@ $(function() {
 						  toggleImporting(network, true, text, email);
 					  }
 				  });
-				  IMPORT_UPDATE = importUpdate;
+				  prevImportUpdate = importUpdate;
 			  }
 			  else {
 				  if (hasAbook) {
@@ -953,7 +924,7 @@ $(function() {
 			  }
 		  });
 
-		  IMPORT_UPDATE = importUpdate;
+		  prevImportUpdate = importUpdate;
 		  */
 		  toggleImporting(network, false);
 		  toggleInviteHelp(network, false);
