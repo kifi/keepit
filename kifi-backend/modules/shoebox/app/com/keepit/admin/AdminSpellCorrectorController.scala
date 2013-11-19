@@ -18,6 +18,7 @@ class AdminSpellCorrectorController @Inject() (
     Ok(s"time elpased: ${(t2 - t1)/1000.0} seconds\ninput: ${input}, suggestion: \n${suggest}")
   }
 
+  val Home = Redirect(routes.AdminSpellCorrectorController.spellChecker())
 
   def correct() = AdminHtmlAction { request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
@@ -25,10 +26,10 @@ class AdminSpellCorrectorController @Inject() (
     val t1 = System.currentTimeMillis
     val suggest = Await.result(searchClient.correctSpelling(query, enableBoost = true), 5 seconds)
     val t2 = System.currentTimeMillis
-    Ok(s"time elpased: ${(t2 - t1)/1000.0} seconds\ninput: ${query}, suggestion: \n${suggest}")
+    Home.flashing("success" -> suggest)
   }
 
-  def spellChecker() = AdminHtmlAction { request =>
+  def spellChecker() = AdminHtmlAction { implicit request =>
     Ok(html.admin.spellchecker())
   }
 }
