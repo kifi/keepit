@@ -133,7 +133,6 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
         }
 
         PersonalSearchHit(
-          r.uriId,
           Some(r.title),
           r.url,
           r.isPrivate,
@@ -145,7 +144,6 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
       } else {
         val r = searcher.getArticleRecord(h.uriId).getOrElse(throw new Exception(s"missing article record: uri id = ${h.uriId}"))
         PersonalSearchHit(
-          r.id,
           Some(r.title),
           r.url,
           false,

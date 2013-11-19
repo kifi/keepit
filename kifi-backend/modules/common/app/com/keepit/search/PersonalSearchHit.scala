@@ -6,7 +6,6 @@ import com.keepit.social.BasicUser
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(
-    id: Id[NormalizedURI],
     title: Option[String],
     url: String,
     isPrivate: Boolean,
