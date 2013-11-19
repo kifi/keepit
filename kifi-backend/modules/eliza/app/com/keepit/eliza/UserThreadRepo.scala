@@ -30,7 +30,7 @@ case class UserThread(
     lastNotification: JsValue,
     notificationUpdatedAt: DateTime = currentDateTime,
     notificationLastSeen: Option[DateTime] = None,
-    notoficationEmailed: Boolean = false,
+    notificationEmailed: Boolean = false,
     replyable: Boolean = true
   )
   extends Model[UserThread] {
