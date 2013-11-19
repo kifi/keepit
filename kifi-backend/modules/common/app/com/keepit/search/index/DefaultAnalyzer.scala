@@ -41,6 +41,7 @@ import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.TokenFilter
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.Tokenizer
+import org.apache.lucene.analysis.util.CharArraySet
 import org.apache.lucene.analysis.util.TokenizerFactory
 import org.apache.lucene.util.Version
 import com.keepit.common.logging.Logging
@@ -185,6 +186,8 @@ class Analyzer(tokenizerFactory: TokenizerFactory,
   }
 
   def createLazyTokenStream(field: String, text: String) = new LazyTokenStream(field, text, this)
+
+  def getStopWords: Option[CharArraySet] = factories.collectFirst{ case sf: StopFilterFactory => sf.stopWords }
 }
 
 class LazyTokenStream(field: String, text: String, analyzer: Analyzer) extends TokenStream {
