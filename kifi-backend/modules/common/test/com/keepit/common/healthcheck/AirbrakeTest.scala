@@ -111,8 +111,10 @@ class AirbrakeTest extends Specification with TestInjector {
         new ReportedException(ExternalId[AirbrakeError](),
           new IllegalArgumentException("foo error",
             new RuntimeException("cause is bar"))))
-      error !== error.cleanError
+      val clean = error.cleanError
+      error !== clean
       error.exception.getClass.toString === "class com.keepit.common.controller.ReportedException"
+      clean.exception.getClass.toString === "class java.lang.IllegalArgumentException"
     }
 
     "create signature" in {
