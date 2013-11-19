@@ -114,6 +114,37 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
       }
     }
 
+    "saveCollection create mode" in  {
+      running(new ShoeboxApplication(controllerTestModules:_*)) {
+        val user = inject[Database].readWrite { implicit session =>
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
+        }
+
+        val path = com.keepit.controllers.website.routes.BookmarksController.saveCollection("").toString
+        path === "/site/collections/create"
+
+        val json = Json.obj("name" -> JsString("my tag"))
+        inject[FakeActionAuthenticator].setUser(user)
+        val controller = inject[BookmarksController]
+        val request = FakeRequest("POST", path).withJsonBody(json)
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        val collection = inject[Database].readWrite { implicit session =>
+          val collections = inject[CollectionRepo].getByUser(user.id.get)
+          collections.size === 1
+          collections.head
+        }
+        collection.name === "my tag"
+
+        val expected = Json.parse(s"""
+          {"id":"${collection.externalId}","name":"my tag"}
+        """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
     "unkeepMultiple" in  {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val user = inject[Database].readWrite { implicit session =>
