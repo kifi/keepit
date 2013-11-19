@@ -229,6 +229,7 @@ class SearchAnalytics @Inject() (
     initialSearchResult.foreach { article => contextBuilder += ("kifiLate", kifiCollapsed && article.toShow) }
     contextBuilder += ("kifiDeliveryTime", kifiTime)
     contextBuilder += ("3rdPartyDeliveryTime", referenceTime)
+    contextBuilder += ("isInitialSearch", uuid == initialSearchId)
 
     contextBuilder
   }
