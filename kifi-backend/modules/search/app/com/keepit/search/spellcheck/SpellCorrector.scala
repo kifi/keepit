@@ -1,7 +1,7 @@
 package com.keepit.search.spellcheck
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-
+import org.apache.lucene.analysis.standard.StandardAnalyzer
 
 @ImplementedBy(classOf[SpellCorrectorImpl])
 trait SpellCorrector {
@@ -13,6 +13,7 @@ trait SpellCorrector {
 @Singleton
 class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer) extends SpellCorrector{
   val spellChecker = spellIndexer.getSpellChecker
+  val stopwords = StandardAnalyzer.STOP_WORDS_SET
 
   override def getSuggestion(input: String): String = {
     val terms = input.trim().split(" ")
@@ -46,7 +47,7 @@ class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer) extends SpellCorr
 
   def getSimilarTerms(term: String, numSug: Int): Array[String] = {
     val similar = spellChecker.suggestSimilar(term, numSug)       // this never includes the original term
-    if (spellChecker.exist(term) || similar.isEmpty) Array(term) // ++ similar.drop(1)
+    if (spellChecker.exist(term) || stopwords.contains(term) || similar.isEmpty) Array(term) ++ similar.take(2)   // add 2 just in case misspelling words were indexed
     else similar
   }
 }
