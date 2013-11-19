@@ -124,6 +124,7 @@ panes.notices = function () {
     notice.cdnBase = cdnBase;
     switch (notice.category) {
     case 'message':
+      notice.author = notice.author || notice.participants[0];
       var nParticipants = notice.participants.length;
       notice.oneParticipant = nParticipants === 1;
       notice.twoParticipants = nParticipants === 2;
