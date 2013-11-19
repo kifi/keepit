@@ -26,7 +26,7 @@ class ExistenceBoostQuery(override val textQuery: Query, override val boosterQue
 
 class ExistenceBoostWeight(override val query: ExistenceBoostQuery, override val searcher: IndexSearcher) extends BoostWeight with Logging {
 
-  val boosterStrength = query.boosterStrength
+  private[this] val mismatchWeight = (1.0f - query.boosterStrength)
 
   override def getValueForNormalization() = textWeight.getValueForNormalization
 
@@ -73,7 +73,7 @@ class ExistenceBoostWeight(override val query: ExistenceBoostQuery, override val
           case true =>
             new Explanation(1.0f, s"boosting (strength=1.0)")
           case false =>
-            new Explanation((1.0f - boosterStrength), "no match in (" + boosterWeight.getQuery.toString() + ")")
+            new Explanation(mismatchWeight, "no match in (" + boosterWeight.getQuery.toString() + ")")
         }
         r.addDetail(e)
         result.addDetail(r)
@@ -85,12 +85,12 @@ class ExistenceBoostWeight(override val query: ExistenceBoostQuery, override val
     val textScorer = textWeight.scorer(context, true, false, liveDocs)
     if (textScorer == null) null
     else {
-      new ExistenceBoostScorer(this, textScorer, boosterWeight.scorer(context, true, false, liveDocs), boosterStrength)
+      new ExistenceBoostScorer(this, textScorer, boosterWeight.scorer(context, true, false, liveDocs), mismatchWeight)
     }
   }
 }
 
-class ExistenceBoostScorer(weight: ExistenceBoostWeight, textScorer: Scorer, boosterScorer: Scorer, boosterStrength: Float)
+class ExistenceBoostScorer(weight: ExistenceBoostWeight, textScorer: Scorer, boosterScorer: Scorer, mismatchWeight: Float)
 extends Scorer(weight) with Logging {
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -111,13 +111,11 @@ extends Scorer(weight) with Logging {
         var score = textScorer.score()
         if (boosterScorer != null) {
           if (boosterScorer.docID() < doc) boosterScorer.advance(doc)
-          if (boosterScorer.docID() == doc) {
-            score *= 1.0f
-          } else {
-            score *= boosterStrength
+          if (boosterScorer.docID() > doc) {
+            score *= mismatchWeight
           }
         } else {
-            score *= boosterStrength
+          score *= mismatchWeight
         }
         scr = score
       } catch {

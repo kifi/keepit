@@ -156,7 +156,7 @@ class ArticleIndexer @Inject() (
           // home page
           parsedURI match {
             case Success(URI(_, _, Some(Host(domain @ _*)), _, path, None, None)) if (!path.isDefined || path == Some("/")) =>
-              doc.add(buildTextField("media", domain.reverse.mkString(" "), DefaultAnalyzer.defaultAnalyzer))
+              doc.add(buildTextField("home_page", domain.reverse.mkString(" "), DefaultAnalyzer.defaultAnalyzer))
             case _ =>
           }
 
