@@ -117,6 +117,16 @@ class AirbrakeTest extends Specification with TestInjector {
       clean.exception.getClass.toString === "class java.lang.IllegalArgumentException"
     }
 
+    "cleanError cleans null:null" in {
+      val error = AirbrakeError(
+        new Exception("Execution exception in null:null",
+          new IllegalArgumentException("foo error",
+            new RuntimeException("cause is bar"))))
+      val clean = error.cleanError
+      error !== clean
+      clean.exception.getClass.toString === "class java.lang.IllegalArgumentException"
+    }
+
     "create signature" in {
       def troubleMaker() =
         for (i <- 1 to 2)
