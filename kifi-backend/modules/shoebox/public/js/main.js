@@ -7,6 +7,7 @@ if (DEV) {
 	domain = 'dev.ezkeep.com';
 	xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 }
+// iframe tunnel CROSS ORIGIN issue fix
 document.domain = domain;
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
