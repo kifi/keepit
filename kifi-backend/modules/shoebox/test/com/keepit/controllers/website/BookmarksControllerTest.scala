@@ -145,6 +145,23 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
       }
     }
 
+    "saveCollection create mode with long name" in  {
+      running(new ShoeboxApplication(controllerTestModules:_*)) {
+        val user = inject[Database].readWrite { implicit session =>
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
+        }
+
+        val path = com.keepit.controllers.website.routes.BookmarksController.saveCollection("").toString
+
+        val json = Json.obj("name" -> JsString("my tag is very very very very very very very very very very very very very very very very very long"))
+        inject[FakeActionAuthenticator].setUser(user)
+        val controller = inject[BookmarksController]
+        val request = FakeRequest("POST", path).withJsonBody(json)
+        val result = route(request).get
+        status(result) must equalTo(400);
+      }
+    }
+
     "unkeepMultiple" in  {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val user = inject[Database].readWrite { implicit session =>
