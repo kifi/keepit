@@ -41,6 +41,14 @@ trait TokenFilterFactory {
   def apply(tokenSteam: TokenStream): TokenStream
 }
 
+class StopFilterFactory(val stopWords: CharArraySet) extends TokenFilterFactory {
+  def apply(tokenStream: TokenStream) = {
+    val stopFilter = new StopFilter(version, tokenStream, stopWords)
+    stopFilter.setEnablePositionIncrements(false)
+    stopFilter
+  }
+}
+
 object TokenFilterFactories {
   val stopFilter = new StopFilterFactories
   val stemFilter = new StemFilterFactories
@@ -108,14 +116,9 @@ class StopFilterFactories {
     }
   }
 
-  private def load(stopSet: CharArraySet) = {
-    new TokenFilterFactory {
-      def apply(tokenStream: TokenStream) = {
-        val stopFilter = new StopFilter(version, tokenStream, stopSet)
-        stopFilter.setEnablePositionIncrements(false)
-        stopFilter
-      }
-    }
+  private def load(stopSet: CharArraySet): TokenFilterFactory = {
+    val unmodifiable = CharArraySet.unmodifiableSet(stopSet)
+    new StopFilterFactory(unmodifiable)
   }
 }
 
