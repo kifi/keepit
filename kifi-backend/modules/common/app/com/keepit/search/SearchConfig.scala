@@ -27,7 +27,7 @@ object SearchConfig {
       "myBookmarkBoost" -> "1.5",
       "usefulPageBoost" -> "1.1",
       "sharingBoostInNetwork" -> "0.5",
-      "sharingBoostOutOfNetwork" -> "0.1",
+      "sharingBoostOutOfNetwork" -> "0.01",
       "percentMatch" -> "75",
       "percentMatchForHotDocs" -> "60",
       "halfDecayHours" -> "24",
