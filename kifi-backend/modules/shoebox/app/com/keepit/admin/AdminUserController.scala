@@ -25,6 +25,7 @@ import com.keepit.common.service.ServiceType
 import java.math.BigInteger
 import java.security.SecureRandom
 import com.keepit.common.store.S3ImageStore
+import com.keepit.heimdal.{HeimdalServiceClient}
 
 case class UserStatistics(
     user: User,
@@ -61,6 +62,7 @@ class AdminUserController @Inject() (
     clock: Clock,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
+    heimdal: HeimdalServiceClient,
     serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
   implicit val dbMasterSlave = Database.Slave

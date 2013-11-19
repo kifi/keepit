@@ -25,6 +25,8 @@ import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
 
 import java.util.concurrent.atomic.AtomicBoolean
+import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.common.akka.SafeFuture
 
 class UserController @Inject() (
   db: Database,
@@ -206,10 +208,8 @@ class UserController @Inject() (
           val user = userRepo.get(request.userId)
           val cleanFirst = User.sanitizeName(userData.firstName getOrElse user.firstName)
           val cleanLast = User.sanitizeName(userData.lastName getOrElse user.lastName)
-          userRepo.save(user.copy(
-            firstName = cleanFirst,
-            lastName = cleanLast
-          ))
+          val updatedUser = user.copy(firstName = cleanFirst, lastName = cleanLast)
+          userRepo.save(updatedUser)
         }
         for (emails <- userData.emails) {
           val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(emails contains _.address)
@@ -333,10 +333,9 @@ class UserController @Inject() (
   }
 
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
-    val contactsF = network match { // revisit
-      case Some(n) => if (n == "email") queryContacts(request.userId, search, after, limit) else Future.successful(Seq.empty[JsObject])
-      case None => Future.successful(Seq.empty[JsObject])
-    }
+    val contactsF = if (network.isEmpty || network.get == "email") { // todo: revisit
+      queryContacts(request.userId, search, after, limit)
+    } else Future.successful(Seq.empty[JsObject])
     @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
     val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
     @inline def searchScore(sci: SocialConnectionInfo): Int = {

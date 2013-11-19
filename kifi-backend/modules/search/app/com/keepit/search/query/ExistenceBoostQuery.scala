@@ -13,18 +13,18 @@ import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.util.Bits
 
-class MultiplicativeBoostQuery(override val textQuery: Query, override val boosterQuery: Query, val boosterStrength: Float) extends BoostQuery {
+class ExistenceBoostQuery(override val textQuery: Query, override val boosterQuery: Query, val boosterStrength: Float) extends BoostQuery {
 
-  override def createWeight(searcher: IndexSearcher): Weight = new MultiplicativeBoostWeight(this, searcher)
+  override def createWeight(searcher: IndexSearcher): Weight = new ExistenceBoostWeight(this, searcher)
 
-  override protected val name = "MultiplicativeBoost"
+  override protected val name = "ExistenceBoost"
 
   override def recreate(rewrittenTextQuery: Query, rewrittenBoosterQuery: Query): Query = {
-    new MultiplicativeBoostQuery(rewrittenTextQuery, rewrittenBoosterQuery, boosterStrength)
+    new ExistenceBoostQuery(rewrittenTextQuery, rewrittenBoosterQuery, boosterStrength)
   }
 }
 
-class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, override val searcher: IndexSearcher) extends BoostWeight with Logging {
+class ExistenceBoostWeight(override val query: ExistenceBoostQuery, override val searcher: IndexSearcher) extends BoostWeight with Logging {
 
   val boosterStrength = query.boosterStrength
 
@@ -48,11 +48,11 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
       val score = sc.score
 
       val ret = new ComplexExplanation()
-      result.setDescription("multiplicative boost, product of:")
+      result.setDescription("existence boost, product of:")
       result.setValue(score)
       result.setMatch(true)
     } else {
-      result.setDescription("multiplicative boost, doesn't match id %d".format(doc))
+      result.setDescription("existence boost, doesn't match id %d".format(doc))
       result.setValue(0)
       result.setMatch(false)
     }
@@ -71,7 +71,7 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
         val e = boosterWeight.explain(context, doc)
         val r = e.isMatch() match {
           case true =>
-            new Explanation((e.getValue * boosterStrength + (1.0f - boosterStrength)), s"boosting (strength=${boosterStrength})")
+            new Explanation(1.0f, s"boosting (strength=1.0)")
           case false =>
             new Explanation((1.0f - boosterStrength), "no match in (" + boosterWeight.getQuery.toString() + ")")
         }
@@ -85,12 +85,12 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
     val textScorer = textWeight.scorer(context, true, false, liveDocs)
     if (textScorer == null) null
     else {
-      new MultiplicativeBoostScorer(this, textScorer, boosterWeight.scorer(context, true, false, liveDocs), boosterStrength)
+      new ExistenceBoostScorer(this, textScorer, boosterWeight.scorer(context, true, false, liveDocs), boosterStrength)
     }
   }
 }
 
-class MultiplicativeBoostScorer(weight: MultiplicativeBoostWeight, textScorer: Scorer, boosterScorer: Scorer, boosterStrength: Float)
+class ExistenceBoostScorer(weight: ExistenceBoostWeight, textScorer: Scorer, boosterScorer: Scorer, boosterStrength: Float)
 extends Scorer(weight) with Logging {
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -112,12 +112,12 @@ extends Scorer(weight) with Logging {
         if (boosterScorer != null) {
           if (boosterScorer.docID() < doc) boosterScorer.advance(doc)
           if (boosterScorer.docID() == doc) {
-            score *= (boosterScorer.score() * boosterStrength + (1.0f - boosterStrength))
+            score *= 1.0f
           } else {
-            score *= (1.0f - boosterStrength)
+            score *= boosterStrength
           }
         } else {
-          score *= (1.0f - boosterStrength)
+            score *= boosterStrength
         }
         scr = score
       } catch {

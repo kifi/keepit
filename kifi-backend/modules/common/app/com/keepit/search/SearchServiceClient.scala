@@ -21,6 +21,7 @@ import com.keepit.social.BasicUser
 import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
+import com.keepit.search.spellcheck.ScoredSuggest
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -48,7 +49,7 @@ trait SearchServiceClient extends ServiceClient {
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
-  def correctSpelling(text: String): Future[String]
+  def correctSpelling(text: String, enableBoost: Boolean): Future[String]
   def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
   def resetUserConfig(id: Id[User]): Unit
@@ -185,8 +186,11 @@ class SearchServiceClientImpl(
     call(Common.internal.version()).map(r => r.body)
   }
 
-  def correctSpelling(text: String): Future[String] = {
-    call(Search.internal.correctSpelling(text)).map(r => (r.json \ "correction").asOpt[String].getOrElse(text))
+  def correctSpelling(text: String, enableBoost: Boolean): Future[String] = {
+    call(Search.internal.correctSpelling(text, enableBoost)).map{ r =>
+      val suggests = r.json.as[JsArray].value.map{ x => Json.fromJson[ScoredSuggest](x).get}
+      suggests.map{x => x.value + ", " + x.score}.mkString("\n")
+    }
   }
 
   def showUserConfig(id: Id[User]): Future[SearchConfig] = {

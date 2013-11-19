@@ -41,15 +41,8 @@ trait QueryExpansion extends QueryParser {
       }
     }
 
-    def addSiteQuery(baseQuery: TextQuery, queryText: String, query: Query) {
-      (if (Domain.isValid(queryText)) Option(SiteQuery(queryText)) else None).orElse{
-        query match {
-          case query: TermQuery => Option(copyFieldQuery(query, "site_keywords"))
-          case _ => None
-        }
-      }.foreach{ q =>
-        baseQuery.addRegularQuery(q, siteBoost)
-      }
+    def addSiteQuery(baseQuery: TextQuery, queryText: String) {
+      if (Domain.isValid(queryText)) baseQuery.addRegularQuery(SiteQuery(queryText), siteBoost)
     }
 
     def isNumericTermQuery(query: Query): Boolean = query match {
@@ -65,7 +58,7 @@ trait QueryExpansion extends QueryParser {
       textQuery.addRegularQuery(query)
       textQuery.addRegularQuery(copyFieldQuery(query, "c"))
       textQuery.addPersonalQuery(copyFieldQuery(query, "title"))
-      addSiteQuery(textQuery, queryText, query)
+      addSiteQuery(textQuery, queryText)
       if (isNumericTermQuery(query) && textQuery.getBoost() >= 1.0f) textQuery.setBoost(0.5f)
     }
 
@@ -95,7 +88,6 @@ trait QueryExpansion extends QueryParser {
 
     textQuery.addRegularQuery(new TermQuery(new Term("t", t1)), concatBoost)
     textQuery.addRegularQuery(new TermQuery(new Term("c", t1)), concatBoost)
-    textQuery.addRegularQuery(new TermQuery(new Term("site_keywords", t1)), concatBoost)
     textQuery.addPersonalQuery(new TermQuery(new Term("title", t1)), concatBoost)
 
     textQuery.addRegularQuery(new TermQuery(new Term("ts", t2)), concatBoost)

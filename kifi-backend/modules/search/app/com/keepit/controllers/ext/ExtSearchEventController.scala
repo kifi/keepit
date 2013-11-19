@@ -97,7 +97,7 @@ class ExtSearchEventController @Inject() (
     val searchResultsClicked = (json \ "searchResultsClicked").as[Int]
     val initialKifiSearchDeliveryTime = (json \ "kifiTime").as[Int]
     val initialReferenceDeliveryTime = (json \ "referenceTime").as[Int]
-    val origin = SearchEngine.get((json \ "origin").as[String])
+    val origin = (json \ "origin").as[String]
     searchAnalytics.searchEnded(userId, queryUUID, searchExperiment, kifiResults, kifiResultsClicked, origin, searchResultsClicked, Some(kifiCollapsed), time)
     Ok
   }
