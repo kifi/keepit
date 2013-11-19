@@ -1,7 +1,6 @@
 package com.keepit.model
 
-import scala.concurrent._
-import com.google.inject.{Inject, Singleton, ImplementedBy, Provider}
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ExternalId, Id, State, SequenceNumber, NotFoundException}
@@ -9,6 +8,9 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.KestrelCombinator
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
@@ -26,7 +28,8 @@ class UserRepoImpl @Inject() (
     val clock: Clock,
     val externalIdCache: UserExternalIdCache,
     val idCache: UserIdCache,
-    basicUserCache: BasicUserUserIdCache)
+    basicUserCache: BasicUserUserIdCache,
+    heimdal: HeimdalServiceClient)
   extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
@@ -49,7 +52,7 @@ class UserRepoImpl @Inject() (
 
   override def save(user: User)(implicit session: RWSession): User = {
     val toSave = user.copy(seq = sequence.incrementAndGet())
-    super.save(toSave)
+    super.save(toSave) tap { saved => SafeFuture { heimdal.engageUser(saved) }}
   }
 
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User] =

@@ -208,9 +208,8 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
           collections.find(_.name == name).get.id.get.id
         }
         def detect(text: String) = {
-          val termSeq = new TermIterator("", text, DefaultAnalyzer.forParsing).toIndexedSeq
           val stemmedTermSeq = new TermIterator("", text, DefaultAnalyzer.forParsingWithStemmer).toIndexedSeq
-          searcher.detectCollectionNames(termSeq, stemmedTermSeq)
+          searcher.detectCollectionNames(stemmedTermSeq)
         }
         detect("design") === Set((0, 1, getCollectionId("Design")))
 

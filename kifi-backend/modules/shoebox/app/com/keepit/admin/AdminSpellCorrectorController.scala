@@ -10,9 +10,10 @@ class AdminSpellCorrectorController @Inject() (
   searchClient: SearchServiceClient,
   actionAuthenticator: ActionAuthenticator
 ) extends AdminController(actionAuthenticator) {
-  def suggest(input: String) = AdminHtmlAction { request =>
-
-    val suggest = Await.result(searchClient.correctSpelling(input), 5 seconds)
-    Ok(s"input: ${input}, suggestion: \n${suggest}")
+  def suggest(input: String, enableBoost: Boolean = true) = AdminHtmlAction { request =>
+    val t1 = System.currentTimeMillis
+    val suggest = Await.result(searchClient.correctSpelling(input, enableBoost), 5 seconds)
+    val t2 = System.currentTimeMillis
+    Ok(s"time elpased: ${(t2 - t1)/1000.0} seconds\ninput: ${input}, suggestion: \n${suggest}")
   }
 }

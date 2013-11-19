@@ -135,6 +135,8 @@ class UrbanAirshipImpl @Inject()(
   }
 
   def notifyUser(userId: Id[User], notification: PushNotification): Unit = {
+    // todo: Check shoebox if user has a notification preference
+    // UserNotifyPreferenceRepo.canSend(userId, someIdentifierRepresentingMobileNotificationType)
     log.info(s"Notifying user: $userId")
     for {
       d <- db.readOnly { implicit s => deviceRepo.getByUserId(userId) }

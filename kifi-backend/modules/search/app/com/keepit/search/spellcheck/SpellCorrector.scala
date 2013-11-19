@@ -1,18 +1,19 @@
 package com.keepit.search.spellcheck
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-
+import org.apache.lucene.analysis.standard.StandardAnalyzer
 
 @ImplementedBy(classOf[SpellCorrectorImpl])
 trait SpellCorrector {
   def getSuggestion(input: String): String
   def getSuggestions(input: String, numSug: Int): Array[String]
-  def getScoredSuggestions(input: String, numSug: Int): Array[ScoredSuggest]
+  def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest]
 }
 
 @Singleton
 class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer) extends SpellCorrector{
   val spellChecker = spellIndexer.getSpellChecker
+  val stopwords = StandardAnalyzer.STOP_WORDS_SET
 
   override def getSuggestion(input: String): String = {
     val terms = input.trim().split(" ")
@@ -26,10 +27,10 @@ class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer) extends SpellCorr
     paths.map{path => path.mkString(" ")}
   }
 
-  override def getScoredSuggestions(input: String, numSug: Int): Array[ScoredSuggest] = {
+  override def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest] = {
     val suggestions = getSuggestions(input, numSug.min(10)).map{Suggest(_)}
     val scorer = new SuggestionScorer(spellIndexer.getTermStatsReader)
-    scorer.rank(suggestions)
+    scorer.rank(input, suggestions, enableBoost)
   }
 
   // exponential. Use Viterbi-like algorithm later. (Need to support k-best paths)
@@ -46,8 +47,24 @@ class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer) extends SpellCorr
 
   def getSimilarTerms(term: String, numSug: Int): Array[String] = {
     val similar = spellChecker.suggestSimilar(term, numSug)       // this never includes the original term
-    if (spellChecker.exist(term) || similar.isEmpty) Array(term) // ++ similar.drop(1)
+    if (spellChecker.exist(term) || stopwords.contains(term) || similar.isEmpty) Array(term) ++ similar.take(2)   // add 2 just in case misspelling words were indexed
     else similar
+  }
+}
+
+class MetaphoneBooster {
+  val mdist = new MetaphoneDistance()
+  def similarity(a: Array[String], b: Array[String]): Float = {
+    (a zip b).map{ case (x, y) => mdist.getDistance(x, y) }.foldLeft(1f)(_*_)
+  }
+}
+
+class ScoreDecorator(originalQuery: String) {
+  val booster = new MetaphoneBooster
+  val originalTerms = originalQuery.split(" ")
+  def decorate(scoredSuggest: ScoredSuggest): ScoredSuggest = {
+    val boost = booster.similarity(originalTerms, scoredSuggest.value.split(" "))
+    ScoredSuggest(value = scoredSuggest.value, score = boost * scoredSuggest.score)
   }
 }
 
@@ -89,8 +106,14 @@ class SuggestionScorer(statsReader: TermStatsReader) {
     }
   }
 
-  def rank(suggests: Array[Suggest]): Array[ScoredSuggest] = {
-    val scored = suggests.map{score(_)}
+  def rank(input: String, suggests: Array[Suggest], enableBoost: Boolean): Array[ScoredSuggest] = {
+    val scored = {
+      if (!enableBoost) suggests.map{score(_)}
+      else {
+        val deco = new ScoreDecorator(input)
+        suggests.map{score(_)}.map{deco.decorate(_)}
+      }
+    }
     scored.sortBy(_.score*(-1.0))
   }
 }

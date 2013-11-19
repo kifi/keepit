@@ -23,7 +23,6 @@ var pageData = {}; // keyed by normalized url
 var pageThreadData = {}; // keyed by normalized url
 var messageData = {}; // keyed by thread id; todo: evict old threads from memory
 var notifications;  // [] would mean user has none
-var timeNotificationsLastSeen = new Date(0);
 var numNotificationsNotVisited = 0;  // may include some not yet loaded
 var haveAllNotifications;  // inferred
 var friends = [];
@@ -39,7 +38,6 @@ function clearDataCache() {
   pageThreadData = {};
   messageData = {};
   notifications = null;
-  timeNotificationsLastSeen = new Date(0);
   numNotificationsNotVisited = 0;
   haveAllNotifications = false;
   friends = [];
@@ -358,13 +356,6 @@ var socketHandlers = {
       }
     }
   },
-  last_notify_read_time: function(t) {
-    log("[socket:last_notify_read_time]", t)();
-    var time = new Date(t);
-    if (time > timeNotificationsLastSeen) {
-      timeNotificationsLastSeen = time;
-    }
-  },
   all_notifications_visited: function(id, time) {
     log("[socket:all_notifications_visited]", id, time)();
     markAllNoticesVisited(id, time);
@@ -603,6 +594,13 @@ api.port.on({
   log_event: function(data) {
     logEvent.apply(null, data);
   },
+  log_search_event: function(data) {
+    var doNotTrack = (navigator.doNotTrack==='yes' || navigator.doNotTrack==='1');
+    if (!doNotTrack) {
+      var whichEvent = data[0]; 
+      ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
+    }
+  },
   send_message: function(data, respond, tab) {
     var nUri = tab.nUri || data.url;
     data.extVersion = api.version;
@@ -722,7 +720,6 @@ api.port.on({
       syncNumNotificationsNotVisited(); // sanity checking
       respond({
         notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
-        timeLastSeen: timeNotificationsLastSeen.toISOString(),
         numNotVisited: numNotificationsNotVisited});
     }
   },
@@ -768,13 +765,6 @@ api.port.on({
         arr.push(tab);
       }
       tabsByLocator[o.new] = arr || [tab];
-    }
-  },
-  notifications_read: function(t) {
-    var time = new Date(t);
-    if (time > timeNotificationsLastSeen) {
-      timeNotificationsLastSeen = time;
-      socket.send(["set_last_notify_read_time", t]);
     }
   },
   all_notifications_visited: function(o) {
@@ -1191,6 +1181,9 @@ function searchOnServer(request, respond) {
       resp.session = session;
       resp.admBaseUri = admBaseUri();
       resp.showScores = api.prefs.get("showScores");
+      resp.hits.forEach(function(hit){
+        hit.uuid = resp.uuid;
+      });
       respond(resp);
     });
   return true;
@@ -1696,7 +1689,6 @@ function startSession(callback, retryMs) {
       for (var uri in pageThreadData) {
         pageThreadData[uri].stale = true;
       }
-      socket.send(["get_last_notify_read_time"]);
       connectSync();
       if (!notifications) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
