@@ -1181,6 +1181,9 @@ function searchOnServer(request, respond) {
       resp.session = session;
       resp.admBaseUri = admBaseUri();
       resp.showScores = api.prefs.get("showScores");
+      resp.hits.forEach(function(hit){
+        hit.uuid = resp.uuid;
+      });
       respond(resp);
     });
   return true;

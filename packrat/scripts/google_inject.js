@@ -199,7 +199,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         "searchEnded",
         {
           "origin": window.location.origin,
-          "searchUUID": response.uuid,
+          "uuid": response.uuid,
           "experimentId": response.experimentId,
           "kifiResults": response.hits.length, 
           "kifiCollapsed": !response.expanded,
@@ -280,7 +280,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         "resultClicked",
         {
           "origin": window.location.origin,
-          "searchUUID": response.uuid,
+          "uuid": isKifi ? response.hits[resIdx].uuid : response.uuid,
           "experimentId": response.experimentId,
           "kifiResults": response.hits.length, 
           "kifiCollapsed": !response.expanded,
