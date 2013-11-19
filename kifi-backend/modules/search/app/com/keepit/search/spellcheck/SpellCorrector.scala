@@ -78,6 +78,7 @@ class SuggestionScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
   val rand = new Random()
   val SIGMA = 3
   val MIN_ADJ_SCORE = 0.001f
+  val SAMPLE_SIZE = 10
 
   def gaussianScore(x: Float) = {
     exp(-x*x/(2*SIGMA*SIGMA)) max MIN_ADJ_SCORE      // with sigma =3, this close to 0 when x > 10. Add a smoother
@@ -107,7 +108,7 @@ class SuggestionScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
 
   private def adjacencyScore(a: String, b: String, inter: Set[Int]): Float = {
     if (inter.isEmpty) return MIN_ADJ_SCORE
-    val subset = if (inter.size <= 5 ) inter else rand.shuffle(inter).take(5)     // sample
+    val subset = if (inter.size <= SAMPLE_SIZE) inter else rand.shuffle(inter).take(SAMPLE_SIZE)
     val liveDocs = TermStatsReader.genBits(subset)
     val (aMap, bMap) = (statsReader.getDocsAndPositions(a, liveDocs), statsReader.getDocsAndPositions(b, liveDocs))
     assume (aMap.keySet == bMap.keySet)
