@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.google.inject.{Provider, Inject, ImplementedBy}
+import com.google.inject.{ProvidedBy, Provider, Inject, ImplementedBy}
 import play.api.{Play, Plugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.FortyTwoActor
@@ -28,11 +28,25 @@ import scala.util.Success
 import akka.routing.RoundRobinRouter
 import play.api.Play.current
 
-@ImplementedBy(classOf[ScrapeProcessorPluginImpl])
+@ProvidedBy(classOf[ScrapeProcessorPluginProvider])
 trait ScrapeProcessorPlugin extends Plugin {
   def fetchBasicArticle(url:String, proxyOpt:Option[HttpProxy]):Future[Option[BasicArticle]]
   def scrapeArticle(uri:NormalizedURI, info:ScrapeInfo):Future[(NormalizedURI, Option[Article])]
   def asyncScrape(uri:NormalizedURI, info:ScrapeInfo): Unit
+}
+
+class ScrapeProcessorPluginProvider @Inject() (
+  asyncScrapeProcessor:AsyncScrapeProcessorPlugin,
+  syncScrapeProcessor:ScrapeProcessorPluginImpl
+) extends Provider[ScrapeProcessorPlugin] {
+
+  def get(): ScrapeProcessorPlugin = {
+    if (sys.props.getOrElse("scraper.plugin.async", "true").toBoolean) { // scraper-instance config
+      asyncScrapeProcessor
+    } else {
+      syncScrapeProcessor
+    }
+  }
 }
 
 class ScrapeProcessorPluginImpl @Inject() (actorInstance:ActorInstance[ScrapeProcessor], sysProvider: Provider[ActorSystem], procProvider: Provider[ScrapeProcessor]) extends ScrapeProcessorPlugin with Logging {

@@ -52,6 +52,15 @@ class MixpanelClient(projectToken: String) {
     sendData("http://api.mixpanel.com/engage", data)
   }
 
+  def delete(user: User) = {
+    val data = Json.obj(
+      "$token" -> JsString(projectToken),
+      "$distinct_id" -> JsString(s"${UserEvent.typeCode.code}_${user.id.get}"),
+      "$delete" -> JsString("")
+    )
+    sendData("http://api.mixpanel.com/engage", data)
+  }
+
   private def sendData(url: String, data: JsObject) = {
     val request = WS.url(url).withQueryString(("data", Base64.encodeBase64String(Json.stringify(data).getBytes)))
     new SafeFuture(

@@ -1,16 +1,8 @@
 package com.keepit.model
 
-import scala.concurrent.duration._
-
 import org.joda.time.DateTime
-
-import com.keepit.common.cache._
-import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
-
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
 import com.keepit.common.mail.{ElectronicMailCategory, EmailAddressHolder}
 
 case class EmailOptOut(

@@ -9,6 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
+import scala.concurrent._
 
 import scala.concurrent.{Future, Promise}
 
@@ -120,7 +121,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
 
   def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = ???
 
-  def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = ???
+  def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = Future.successful(Seq.empty[EContact])
 
   def getEContactById(contactId: Id[EContact]): Future[Option[EContact]] = ???
 
