@@ -76,11 +76,11 @@ class SuggestionScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
   private var adjScoreMap = Map.empty[(String, String), Float]
 
   val rand = new Random()
-  val SIGMA = 5
-  val MIN_ADJ_SCORE = 0.01f
+  val SIGMA = 3
+  val MIN_ADJ_SCORE = 0.001f
 
   def gaussianScore(x: Float) = {
-    exp(-x*x/(2*SIGMA*SIGMA)) max MIN_ADJ_SCORE      // with sigma = 5, this close to 0 when x > 10. Add a smoother
+    exp(-x*x/(2*SIGMA*SIGMA)) max MIN_ADJ_SCORE      // with sigma =3, this close to 0 when x > 10. Add a smoother
   }
 
   def warmUpStatsMap(words: Set[String]) = words.foreach{getOrUpdateStats(_)}
@@ -107,12 +107,12 @@ class SuggestionScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
 
   private def adjacencyScore(a: String, b: String, inter: Set[Int]): Float = {
     if (inter.isEmpty) return MIN_ADJ_SCORE
-    val subset = if (inter.size <= 10 ) inter else rand.shuffle(inter).take(10)     // sample
+    val subset = if (inter.size <= 5 ) inter else rand.shuffle(inter).take(5)     // sample
     val liveDocs = TermStatsReader.genBits(subset)
     val (aMap, bMap) = (statsReader.getDocsAndPositions(a, liveDocs), statsReader.getDocsAndPositions(b, liveDocs))
     assume (aMap.keySet == bMap.keySet)
     val scorer = new AdjacencyScorer
-    val dists = aMap.keySet.map{k => scorer.distance(aMap(k), bMap(k))}
+    val dists = aMap.keySet.map{k => scorer.distance(aMap(k), bMap(k), earlyStopValue = 1)}
     val avgDist = dists.foldLeft(0)(_+_)/(dists.size).toFloat       // take average ( or median? )
     gaussianScore(avgDist).toFloat
   }
