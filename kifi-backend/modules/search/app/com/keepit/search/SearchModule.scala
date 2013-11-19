@@ -7,6 +7,7 @@ import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
+import com.keepit.search.spellcheck.SpellCorrectorModule
 
 abstract class SearchModule(
 
@@ -16,7 +17,8 @@ abstract class SearchModule(
 
   // Search Functional Modules
   val indexModule: IndexModule,
-  val trackingModule: TrackingModule
+  val trackingModule: TrackingModule,
+  val spellModule: SpellCorrectorModule
 
 ) extends ConfigurationModule with CommonServiceModule {
   // Service clients

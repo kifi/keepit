@@ -12,8 +12,7 @@ trait SpellCorrector {
   def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest]
 }
 
-@Singleton
-class SpellCorrectorImpl @Inject()(spellIndexer: SpellIndexer, enableAdjScore: Boolean = true) extends SpellCorrector{
+class SpellCorrectorImpl(spellIndexer: SpellIndexer, enableAdjScore: Boolean) extends SpellCorrector{
   val spellChecker = spellIndexer.getSpellChecker
   val stopwords = StandardAnalyzer.STOP_WORDS_SET
 
