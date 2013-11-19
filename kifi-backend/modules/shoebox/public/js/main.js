@@ -737,8 +737,8 @@ $(function() {
 		  deferred.resolve({
 			  id: id,
 			  status: data,
-			  total: 1000,
-			  progress: Math.floor(Math.random() * 1000)
+			  total: total,
+			  progress: progress
 		  });
 		  callback(id, status, total, progress);
 	  };
@@ -828,35 +828,6 @@ $(function() {
 		  return netw.network === network;
 	  });
   }
-
-  /*
-  function updateNetworkImportStatus(network, status, end) {
-	  var importing = false;
-	  switch (status) {
-		  case false:
-			  toggleImporting(network, false);
-		  break;
-		  case 'fetching':
-			  toggleImporting(network, true);
-			  importing = true;
-		  break;
-		  case 'import_connections':
-			  toggleImporting(network, true);
-			  importing = true;
-		  break;
-		  case 'network_not_connected':
-			  toggleImporting(network, false);
-		  break;
-		  case 'finished':
-		  case 'end':
-		  break;
-	  }
-	  if (!importing) {
-		  end();
-	  }
-	  return importing;
-  }
-  */
 
   function isImporting(status) {
 	  return status === 'fetching' || status === 'import_connections';
