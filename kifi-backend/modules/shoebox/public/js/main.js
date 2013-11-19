@@ -943,6 +943,7 @@ $(function() {
 		  });
 	  }
 	  else if (isSocial) {
+		  /*
 		  var importUpdate = getNetworkImportUpdates(network, function(status) {
 			  console.log('getNetworkImportUpdates', network, status);
 			  if (status === 'finished' || status === 'end') {
@@ -953,10 +954,31 @@ $(function() {
 		  });
 
 		  IMPORT_UPDATE = importUpdate;
+		  */
 		  toggleImporting(network, false);
 		  toggleInviteHelp(network, false);
 		  $nwFriendsLoading.show();
 
+		  $.when($.getJSON(xhrBase + '/user/networks')).done(function(networks, status) {
+			  $nwFriendsLoading.hide();
+
+			  var connected = isConnected(networks, network);
+			  var importing = false && isImporting(status);
+
+			  console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing);
+
+			  toggleInviteHelp(network, !(connected || importing));
+			  toggleImporting(network, importing);
+
+			  if (!importing) {
+				  if (connected) {
+					  emptyAndPrepInvite(network);
+				  }
+				  //endImportUpdate(importUpdate);
+			  }
+		  })
+
+		  /*
 		  $.when($.getJSON(xhrBase + '/user/networks'), importUpdate.promise).done(function(networkResult, status) {
 			  $nwFriendsLoading.hide();
 
@@ -976,6 +998,7 @@ $(function() {
 				  endImportUpdate(importUpdate);
 			  }
 		  })
+		  */
 	  }
 	  else {
 		  emptyAndPrepInvite(network);
