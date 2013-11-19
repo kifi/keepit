@@ -433,7 +433,7 @@ class UserController @Inject() (
       socialUserRepo.getByUser(request.userId).find(_.networkType.name == network)
     } match {
       case Some(sui) =>
-        val firstResponse = Enumerator.enumerate(check().map(script).toSeq :+ domain)
+        val firstResponse = Enumerator.enumerate(domain +: check().map(script).toSeq)
         val returnEnumerator = Enumerator.generateM(poller)
         Ok.stream(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
       case None =>
