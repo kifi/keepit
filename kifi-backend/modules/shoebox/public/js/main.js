@@ -1,14 +1,18 @@
+var domain = 'kifi.com';
 var xhrDomain = 'https://api.kifi.com';
 var wwwDomain = 'https://www.kifi.com';
-var searchDomain = 'https://search.kifi.com';
 //TODO dev
 var DEV = false;
 if (DEV) {
 	xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
 }
+else {
+	document.domain = domain;
+}
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 var xhrBaseSearch = xhrDomain.replace('api', 'search') + '/search';
+
 
 var compareSearch = {usage: "search", sensitivity: "base"};
 var compareSort = {numeric: true};
@@ -704,8 +708,8 @@ $(function() {
 
   function connectSocial(network) {
 	  console.log('[connectSocial]', network);
-	  toggleImporting(network, true);
 	  toggleInviteHelp(network, false);
+	  toggleImporting(network, true);
 
 	  if (network === 'email') {
 		  submitForm(wwwDomain + '/importContacts');
@@ -729,6 +733,9 @@ $(function() {
 	  var url = xhrBase + '/user/abookUploadStatus?id=' + id + (opts || '');
 	  var $iframe = $('<iframe src="' + url + '" style="display:none"></iframe>').appendTo('body');
 	  var frameWin = $iframe[0].contentWindow;
+	  if (!DEV) {
+		  frameWin.document.domain = domain;
+	  }
 
 	  var deferred = $.Deferred();
 
@@ -786,7 +793,14 @@ $(function() {
 	  var callbackName = 'updateImportStatus';
 	  var parentCallbackName = 'parent.' + callbackName;
 	  var url = xhrBase + '/user/import-check/' + network + '?callback=' + parentCallbackName;
-	  var $iframe = $('<iframe src="' + url + '" style="display:none"></iframe>').appendTo('body');
+	  var iframe = document.createElement('iframe');
+	  document.body.appendChild(iframe);
+	  if (!DEV) {
+		  iframe.contentDocument.domain = domain;
+	  }
+	  console.log(document.domain, iframe.contentDocument.domain);
+	  iframe.src = url;
+
 	  var deferred = $.Deferred();
 
       window[callbackName] = function(data) {
@@ -810,10 +824,10 @@ $(function() {
 	  */
 
 	  function end() {
-		  if ($iframe) {
+		  if (iframe) {
 			  window[callbackName] = null;
-			  $iframe.remove();
-			  deferred = callback = network = $iframe = parentCallbackName = callbackName = url = null;
+			  $(iframe).remove();
+			  deferred = callback = network = iframe = parentCallbackName = callbackName = url = null;
 		  }
 	  }
 
@@ -825,6 +839,7 @@ $(function() {
 
   function isConnected(networks, network) {
 	  return networks.some(function(netw) {
+		  console.log(netw);
 		  return netw.network === network;
 	  });
   }
@@ -914,7 +929,6 @@ $(function() {
 		  });
 	  }
 	  else if (isSocial) {
-		  /*
 		  var importUpdate = getNetworkImportUpdates(network, function(status) {
 			  console.log('getNetworkImportUpdates', network, status);
 			  if (status === 'finished' || status === 'end') {
@@ -925,16 +939,16 @@ $(function() {
 		  });
 
 		  prevImportUpdate = importUpdate;
-		  */
 		  toggleImporting(network, false);
 		  toggleInviteHelp(network, false);
 		  $nwFriendsLoading.show();
 
+		  /*
 		  $.when($.getJSON(xhrBase + '/user/networks')).done(function(networks, status) {
 			  $nwFriendsLoading.hide();
 
 			  var connected = isConnected(networks, network);
-			  var importing = false && isImporting(status);
+			  var importing = isImporting(status);
 
 			  console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing);
 
@@ -945,11 +959,11 @@ $(function() {
 				  if (connected) {
 					  emptyAndPrepInvite(network);
 				  }
-				  //endImportUpdate(importUpdate);
+				  endImportUpdate(importUpdate);
 			  }
 		  })
+		  */
 
-		  /*
 		  $.when($.getJSON(xhrBase + '/user/networks'), importUpdate.promise).done(function(networkResult, status) {
 			  $nwFriendsLoading.hide();
 
@@ -969,7 +983,6 @@ $(function() {
 				  endImportUpdate(importUpdate);
 			  }
 		  })
-		  */
 	  }
 	  else {
 		  emptyAndPrepInvite(network);
@@ -1139,6 +1152,7 @@ $(function() {
 		moreFriends = true;
 		var network = $('.invite-filters').attr('data-nw-selected') || undefined;
 		var search = $('.invite-filter').val() || undefined;
+		toggleInviteHelp(network, false);
 		toggleImporting(network, false);
 		$nwFriendsLoading.show();
 		var opts = {
@@ -1351,7 +1365,7 @@ $(function() {
 		  query: search
 	  };
 	  //$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
-	  $.getJSON(searchDomain + '/search/users/page', opts, function(friends) {
+	  $.getJSON(xhrBaseSearch + '/users/page', opts, function(friends) {
 		  if (search != getUserFilterInput()) {
 			  return;
 		  }
