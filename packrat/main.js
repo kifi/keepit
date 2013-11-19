@@ -23,6 +23,7 @@ var pageData = {}; // keyed by normalized url
 var pageThreadData = {}; // keyed by normalized url
 var messageData = {}; // keyed by thread id; todo: evict old threads from memory
 var notifications;  // [] would mean user has none
+var timeNotificationsLastSeen = new Date(0);
 var numNotificationsNotVisited = 0;  // may include some not yet loaded
 var haveAllNotifications;  // inferred
 var friends = [];
@@ -38,6 +39,7 @@ function clearDataCache() {
   pageThreadData = {};
   messageData = {};
   notifications = null;
+  timeNotificationsLastSeen = new Date(0);
   numNotificationsNotVisited = 0;
   haveAllNotifications = false;
   friends = [];
@@ -356,6 +358,13 @@ var socketHandlers = {
       }
     }
   },
+  last_notify_read_time: function(t) {
+    log("[socket:last_notify_read_time]", t)();
+    var time = new Date(t);
+    if (time > timeNotificationsLastSeen) {
+      timeNotificationsLastSeen = time;
+    }
+  },
   all_notifications_visited: function(id, time) {
     log("[socket:all_notifications_visited]", id, time)();
     markAllNoticesVisited(id, time);
@@ -597,7 +606,7 @@ api.port.on({
   log_search_event: function(data) {
     var doNotTrack = (navigator.doNotTrack==='yes' || navigator.doNotTrack==='1');
     if (!doNotTrack) {
-      var whichEvent = data[0]; 
+      var whichEvent = data[0];
       ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
     }
   },
@@ -720,6 +729,7 @@ api.port.on({
       syncNumNotificationsNotVisited(); // sanity checking
       respond({
         notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
+        timeLastSeen: timeNotificationsLastSeen.toISOString(),
         numNotVisited: numNotificationsNotVisited});
     }
   },
@@ -765,6 +775,13 @@ api.port.on({
         arr.push(tab);
       }
       tabsByLocator[o.new] = arr || [tab];
+    }
+  },
+  notifications_read: function(t) {
+    var time = new Date(t);
+    if (time > timeNotificationsLastSeen) {
+      timeNotificationsLastSeen = time;
+      socket.send(["set_last_notify_read_time", t]);
     }
   },
   all_notifications_visited: function(o) {
@@ -915,6 +932,7 @@ function removeNotificationPopups(associatedId) {
 
 function standardizeNotification(n) {
   n.category = (n.category || "message").toLowerCase();
+  n.unread = n.unread || (n.unreadAuthors > 0);
   for (var i = n.participants ? n.participants.length : 0; i--;) {
     if (n.participants[i].id == session.user.id) {
       n.participants.splice(i, 1);
@@ -962,6 +980,7 @@ function insertNewNotification(n) {
         (th = td.getThread(n.locator.substr(10))) &&
         new Date(th.lastMessageRead || 0) > new Date(n.time)) {
       n.unread = false;
+      n.unreadAuthors = 0;
     } else {
       numNotificationsNotVisited++;
     }
@@ -1002,6 +1021,7 @@ function markNoticesVisited(category, id, timeStr, locator) {
         (n.id == id || new Date(n.time) <= time)) {
       if (n.unread) {
         n.unread = false;
+        n.unreadAuthors = 0;
         decrementNumNotificationsNotVisited(n);
       }
     }
@@ -1022,6 +1042,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
     var n = notifications[i];
     if (n.unread && (n.id === id || new Date(n.time) <= time)) {
       n.unread = false;
+      n.unreadAuthors = 0;
       if (n.category === 'message') {
         var td = pageThreadData[n.url];
         if (td && td.markRead(n.locator.substr(10), n.time)) {
@@ -1690,6 +1711,7 @@ function startSession(callback, retryMs) {
         pageThreadData[uri].stale = true;
       }
       connectSync();
+      socket.send(["get_last_notify_read_time"]);
       if (!notifications) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {

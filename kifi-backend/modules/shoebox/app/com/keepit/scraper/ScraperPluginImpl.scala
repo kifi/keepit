@@ -86,11 +86,11 @@ class ScraperPluginImpl @Inject() (
     if (scraperConfig.disableScraperService) {
       actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
     } else {
-      log.info(s"[scheduleScrape] invoke (remote) Scraper service; uri=(${uri.id}, ${uri.state}, ${uri.url})")
-
       val uriId = uri.id.get
-      val info = db.readOnly { implicit s =>
-        scrapeInfoRepo.getByUriId(uriId)
+      val (info, proxyOpt) = db.readOnly { implicit s =>
+        val info = scrapeInfoRepo.getByUriId(uriId)
+        val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
+        (info, proxyOpt)
       }
       val toSave = info match {
         case Some(s) => s.withState(ScrapeInfoStates.PENDING)
@@ -99,7 +99,8 @@ class ScraperPluginImpl @Inject() (
       val saved = db.readWrite { implicit s =>
         scrapeInfoRepo.save(toSave)
       }
-      val f = scraperClient.scheduleScrape(uri, saved)
+      log.info(s"[scheduleScrape-WithRequest] invoke (remote) Scraper service; uri=(${uri.id}, ${uri.state}, ${uri.url}, proxy=$proxyOpt)")
+      val f = scraperClient.scheduleScrapeWithRequest(ScrapeRequest(uri, saved, proxyOpt))
       Await.result(f, 5 seconds) // should be really quick
     }
   }

@@ -55,12 +55,12 @@ panes.notices = function () {
   return {
     render: function ($container) {
       api.port.emit('notifications', function (o) {
-        renderNotices($container, o.notifications, o.numNotVisited);
+        renderNotices($container, o.notifications, o.timeLastSeen, o.numNotVisited);
         api.port.on(handlers);
       });
     }};
 
-  function renderNotices($container, notices, numNotVisited) {
+  function renderNotices($container, notices, timeLastSeen, numNotVisited) {
     $notices = $(render('html/keeper/notices', {}))
       .append(notices.map(function (n) {
         return renderNotice(n);
@@ -111,6 +111,10 @@ panes.notices = function () {
       api.port.emit('all_notifications_visited', o);
       // not updating DOM until response received due to bulk nature of action
     }).toggle(numNotVisited > 0);
+
+    if (notices.length && new Date(notices[0].time) > new Date(timeLastSeen)) {
+      api.port.emit('notifications_read', notices[0].time);
+    }
   }
 
   function renderNotice(notice) {
@@ -120,6 +124,7 @@ panes.notices = function () {
     notice.cdnBase = cdnBase;
     switch (notice.category) {
     case 'message':
+      notice.author = notice.author || notice.participants[0];
       var nParticipants = notice.participants.length;
       notice.oneParticipant = nParticipants === 1;
       notice.twoParticipants = nParticipants === 2;
