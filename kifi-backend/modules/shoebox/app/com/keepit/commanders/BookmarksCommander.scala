@@ -67,6 +67,45 @@ class BookmarksCommander @Inject() (
     collectionRepo: CollectionRepo
  ) extends Logging {
 
+  def saveCollection(id: String, collectionOpt: Option[BasicCollection]): Either[BasicCollection, String] = {
+    collectionOpt map { bc =>
+      bc.copy(id = ExternalId.asOpt(id))
+    } map { bc =>
+      val name = bc.name.trim.replaceAll("""\s+""", " ")
+      if (name.length <= Collection.MaxNameLength) {
+        db.readWrite { implicit s =>
+          val existingCollection = collectionRepo.getByUserAndName(request.userId, name, None)
+          val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
+          if (existingExternalId.isEmpty || existingExternalId == bc.id) {
+            bc.id map { id =>
+              collectionRepo.getByUserAndExternalId(request.userId, id) map { coll =>
+                val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
+                collectionCommander.updateCollectionOrdering(request.userId)
+                searchClient.updateURIGraph()
+                Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
+              } getOrElse {
+                NotFound(Json.obj("error" -> s"Collection not found for id $id"))
+              }
+            } getOrElse {
+              val newColl = collectionRepo.save(existingCollection
+                  map { _.copy(name = name, state = CollectionStates.ACTIVE) }
+                  getOrElse Collection(userId = request.userId, name = name))
+              collectionCommander.updateCollectionOrdering(request.userId)
+              searchClient.updateURIGraph()
+              Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
+            }
+          } else {
+            BadRequest(Json.obj("error" -> s"Collection '$name' already exists with id ${existingExternalId.get}"))
+          }
+        }
+      } else {
+        BadRequest(Json.obj("error" -> s"Name '$name' is too long (maximum ${Collection.MaxNameLength} chars)"))
+      }
+    } getOrElse {
+      BadRequest(Json.obj("error" -> "Could not parse collection from body"))
+    }
+  }
+
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], contextBuilder: EventContextBuilder, source: String):
                   (List[KeepInfo], Option[Int]) = {
     val tStart = currentDateTime
