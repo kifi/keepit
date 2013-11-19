@@ -20,6 +20,22 @@ import scala.concurrent.duration._
 import scala.concurrent._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+class AsyncScrapeProcessorPlugin @Inject() (asyncScraper:AsyncScraper) extends ScrapeProcessorPlugin with Logging {
+
+  def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy]): Future[Option[BasicArticle]] = {
+    asyncScraper.asyncFetchBasicArticle(url, proxyOpt)
+  }
+
+  def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo): Future[(NormalizedURI, Option[Article])] = {
+    asyncScraper.asyncProcessURI(uri, info)
+  }
+
+  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo): Unit =  { // todo: consolidate
+    asyncScraper.asyncProcessURI(uri, info)
+  }
+
+}
+
 // ported from original (local) sync version
 class AsyncScraper @Inject() (
   airbrake: AirbrakeNotifier,
@@ -32,6 +48,19 @@ class AsyncScraper @Inject() (
 ) extends Logging {
 
   implicit val myConfig = config
+
+  def asyncFetchBasicArticle(url:String, proxyOpt:Option[HttpProxy]):Future[Option[BasicArticle]] = {
+    val extractor = extractorFactory(url)
+    val isUnscrapableF = for {
+      fetchStatus <- future { httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input)) }
+      isUnscrapable <- asyncIsUnscrapableP(url, fetchStatus.destinationUrl) if fetchStatus.statusCode == HttpStatus.SC_OK
+    } yield isUnscrapable
+
+    isUnscrapableF map { isUnscrapable =>
+      if (!isUnscrapable) Some(basicArticle(url, extractor))
+      else None
+    }
+  }
 
   // def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = Await.result(asyncSafeProcessURI(uri, info), 5 seconds)
   def asyncSafeProcessURI(uri: NormalizedURI, info: ScrapeInfo): Future[(NormalizedURI, Option[Article])] = {

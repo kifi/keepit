@@ -37,7 +37,7 @@ class SearchEventController @Inject() (
 
   def logSearchEnded = Action(parse.json) { request =>
     val searchEnded = Json.fromJson[SearchEnded](request.body).get
-    searchAnalytics.searchEnded(searchEnded.userId, searchEnded.queryUUID, searchEnded.searchExperiment, searchEnded.kifiResults, searchEnded.kifiResultsClicked, SearchEngine.Google, searchEnded.googleResultsClicked, None, searchEnded.time)
+    searchAnalytics.searchEnded(searchEnded.userId, searchEnded.queryUUID, searchEnded.searchExperiment, searchEnded.kifiResults, searchEnded.kifiResultsClicked, SearchEngine.Google.toString, searchEnded.googleResultsClicked, None, searchEnded.time)
     Ok
   }
 

@@ -16,6 +16,7 @@ import com.keepit.search.SemanticVectorBuilder
 import com.google.inject.Inject
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.util.Success
 import ArticleRecordSerializer._
 
 object ArticleIndexer {
@@ -34,7 +35,7 @@ class ArticleIndexer @Inject() (
   override val indexWarmer = Some(new IndexWarmer(Seq("t", "ts", "c", "cs")))
 
   val commitBatchSize = 500
-  val fetchSize = 10000
+  val fetchSize = 2000
 
   override def onFailure(indexable: Indexable[NormalizedURI], e: Throwable) {
     airbrake.notify(e)
@@ -142,13 +143,21 @@ class ArticleIndexer @Inject() (
           doc.add(buildDocSemanticVectorField("docSv", builder))
           doc.add(buildSemanticVectorField("sv", builder))
 
-          URI.parse(uri.url).foreach{ uri =>
+          val parsedURI = URI.parse(uri.url)
+          parsedURI.foreach{ uri =>
             uri.host.foreach{ case Host(domain @ _*) =>
               if (domain.nonEmpty) {
                 // index domain name
                 doc.add(buildIteratorField("site", (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
               }
             }
+          }
+
+          // home page
+          parsedURI match {
+            case Success(URI(_, _, Some(Host(domain @ _*)), _, path, None, None)) if (!path.isDefined || path == Some("/")) =>
+              doc.add(buildTextField("media", domain.reverse.mkString(" "), DefaultAnalyzer.defaultAnalyzer))
+            case _ =>
           }
 
           // media keyword field

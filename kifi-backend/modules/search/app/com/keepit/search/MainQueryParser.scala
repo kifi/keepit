@@ -66,13 +66,14 @@ class MainQueryParser(
 
         // detect collection names and augment TextQueries
         collectionSearcher.foreach{ cs =>
-          cs.detectCollectionNames(phTerms, phStemmedTerms).foreach{ case (index, length, collectionId) =>
+          val indexToTextQuery: IndexedSeq[TextQuery] = textQueries.flatMap{ t => t.stems.map{ s => t } }
+          cs.detectCollectionNames(phStemmedTerms).foreach{ case (index, length, collectionId) =>
             collectionIds += collectionId
             var i = index
             val end = index + length
             while (i < end) {
               indexToTextQuery(i).addCollectionQuery(collectionId, 1.5f)
-             i += 1
+              i += 1
             }
           }
         }
@@ -91,17 +92,16 @@ class MainQueryParser(
           proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost))
           proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), phrases, phraseBoost))
           new MultiplicativeBoostQuery(query, proxQ, proximityBoost)
-        } else {
-          if (numTextQueries == 1 && phTerms.nonEmpty) {
-            val homePageQuery = if (phTerms.size == 1) {
-              new TermQuery(new Term("home_page", phTerms(0).text))
-            } else {
-              val hpQ = new PhraseQuery()
-              phTerms.foreach{ t => hpQ.add(new Term("home_page", t.text)) }
-              hpQ
-            }
-            new ExistenceBoostQuery(query, homePageQuery, 0.9f)
+        } else if (numTextQueries == 1 && phTerms.nonEmpty) {
+          val homePageQuery = if (phTerms.size == 1) {
+            new TermQuery(new Term("home_page", phTerms(0).text))
+          } else {
+            val hpQ = new PhraseQuery()
+            phTerms.foreach{ t => hpQ.add(new Term("home_page", t.text)) }
+            hpQ
           }
+          new ExistenceBoostQuery(query, homePageQuery, 0.2f)
+        } else {
           query
         }
       }
@@ -113,9 +113,6 @@ class MainQueryParser(
   }
   private[this] lazy val phStemmedTerms: IndexedSeq[Term] = {
     textQueries.flatMap{ _.stems }
-  }
-  private[this] lazy val indexToTextQuery: IndexedSeq[TextQuery] = {
-    textQueries.flatMap{ t => t.stems.map{ s => t } }
   }
 
   private[this] def proxTermsFor(field: String): Seq[Seq[Term]] = {

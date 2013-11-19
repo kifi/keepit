@@ -42,7 +42,7 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[EmailAddress] = {
     val allAddresses = getByAddress(address, excludeState)
-    allAddresses.find(_.state == EmailAddressStates.VERIFIED).orElse(allAddresses.headOption)
+    allAddresses.find(_.state == EmailAddressStates.VERIFIED).orElse(allAddresses.find(_.state == EmailAddressStates.UNVERIFIED).headOption)
   }
 
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =

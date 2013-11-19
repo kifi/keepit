@@ -45,8 +45,18 @@ class MixpanelClient(projectToken: String) {
       "$set" -> Json.obj(
         "$first_name" -> JsString(user.firstName),
         "$last_name" -> JsString(user.lastName),
-        "$created" -> JsString(user.createdAt.toString)
+        "$created" -> JsString(user.createdAt.toString),
+        "state" -> JsString(user.state.value)
       )
+    )
+    sendData("http://api.mixpanel.com/engage", data)
+  }
+
+  def delete(user: User) = {
+    val data = Json.obj(
+      "$token" -> JsString(projectToken),
+      "$distinct_id" -> JsString(s"${UserEvent.typeCode.code}_${user.id.get}"),
+      "$delete" -> JsString("")
     )
     sendData("http://api.mixpanel.com/engage", data)
   }
@@ -54,7 +64,10 @@ class MixpanelClient(projectToken: String) {
   private def sendData(url: String, data: JsObject) = {
     val request = WS.url(url).withQueryString(("data", Base64.encodeBase64String(Json.stringify(data).getBytes)))
     new SafeFuture(
-      request.get().collect { case response if response.body == "0\n" => throw new Exception(s"Mixpanel endpoint $url refused data: $data") }
+      request.get().map {
+        case response if response.body == "0\n" => throw new Exception(s"Mixpanel endpoint $url refused data: $data")
+        case response => response
+      }
     )
   }
 
