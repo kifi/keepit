@@ -34,7 +34,7 @@ class ArticleIndexer @Inject() (
 
   override val indexWarmer = Some(new IndexWarmer(Seq("t", "ts", "c", "cs")))
 
-  val commitBatchSize = 500
+  val commitBatchSize = 1000
   val fetchSize = 2000
 
   override def onFailure(indexable: Indexable[NormalizedURI], e: Throwable) {
