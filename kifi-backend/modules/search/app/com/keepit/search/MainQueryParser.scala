@@ -42,6 +42,7 @@ class MainQueryParser(
   phraseBoost: Float,
   override val siteBoost: Float,
   override val concatBoost: Float,
+  homePageBoost: Float,
   phraseDetector: PhraseDetector,
   phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
   monitoredAwait: MonitoredAwait
@@ -92,7 +93,7 @@ class MainQueryParser(
           proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost))
           proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), phrases, phraseBoost))
           new MultiplicativeBoostQuery(query, proxQ, proximityBoost)
-        } else if (numTextQueries == 1 && phTerms.nonEmpty) {
+        } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
           val homePageQuery = if (phTerms.size == 1) {
             new TermQuery(new Term("home_page", phTerms(0).text))
           } else {
