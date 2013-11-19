@@ -1,5 +1,6 @@
 package com.keepit.common.healthcheck
 
+import com.keepit.common.controller.ReportedException
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
 import com.keepit.common.strings._
@@ -29,6 +30,13 @@ case class AirbrakeError(
     id: ExternalId[AirbrakeError] = ExternalId(),
     createdAt: DateTime = currentDateTime,
     details: Option[String] = None) {
+
+  lazy val cleanError: AirbrakeError = {
+    exception match {
+      case e: ReportedException if (e.getCause != null) => this.copy(exception = e.getCause).cleanError
+      case _ => this
+    }
+  }
 
   lazy val trimmedMessage = message.map(_.toString.abbreviate(AirbrakeError.MaxMessageSize))
   override def toString(): String = {
