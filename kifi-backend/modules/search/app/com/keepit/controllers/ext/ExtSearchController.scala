@@ -227,7 +227,7 @@ class ExtSearchController @Inject() (
     res: ArticleSearchResult) {
 
     articleSearchResultStore += (res.uuid -> res)
-    searchAnalytics.searchPerformed(request, kifiVersion, maxHits, searchFilter, searchExperiment, res)
+    searchAnalytics.performedSearch(request, kifiVersion, maxHits, searchFilter, searchExperiment, res)
   }
 
   class SearchTiming{

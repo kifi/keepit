@@ -32,7 +32,7 @@ class ExtSearchEventController @Inject() (
   extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
 
-  def resultClicked = AuthenticatedJsonToJsonAction { request =>
+  def clickedSearchResult = AuthenticatedJsonToJsonAction { request =>
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
@@ -41,13 +41,14 @@ class ExtSearchEventController @Inject() (
     val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
     val origin = (json \ "origin").as[String]
     val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
-    val initialKifiSearchDeliveryTime = (json \ "kifiTime").as[Int]
-    val initialReferenceDeliveryTime = (json \ "referenceTime").as[Int]
+    val kifiTime = (json \ "kifiTime").as[Int]
+    val referenceTime = (json \ "referenceTime").as[Int]
     val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
     val kifiResults = (json \ "kifiResults").as[Int]
 
     SearchEngine.get(resultSource) match {
+
       case SearchEngine.Kifi => {
         val hit = articleSearchResultStore.get(uuid).map { articleSearchResult =>
           val hitIndex = resultPosition - articleSearchResult.previousHits
@@ -58,12 +59,7 @@ class ExtSearchEventController @Inject() (
           if (hit.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, hit.users: _*)
           hit
         }
-
-        val bookmarkCount = hit.map(_.bookmarkCount)
-        val isUserKeep = hit.map(_.isMyBookmark)
-        val isPrivate = hit.map(_.isPrivate)
-        val keepers = hit.map(_.users.length)
-        searchAnalytics.kifiResultClicked(userId, Some(uuid), searchExperiment, resultPosition, bookmarkCount, keepers, isUserKeep.get, isPrivate, kifiResults, Some(kifiCollapsed), time)
+        searchAnalytics.clickedSearchResult(userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime, SearchEngine.Kifi, resultPosition, hit)
       }
 
       case theOtherGuys => {
@@ -79,26 +75,26 @@ class ExtSearchEventController @Inject() (
               resultClickedTracker.moderate(userId, query)
           }
         }
-        searchAnalytics.searchResultClicked(userId, Some(uuid), searchExperiment, theOtherGuys, resultPosition, kifiResults, Some(kifiCollapsed), time)
+        searchAnalytics.clickedSearchResult(userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime, theOtherGuys, resultPosition, None)
       }
     }
     Ok
   }
 
-  def searchEnded = AuthenticatedJsonToJsonAction { request =>
+  def endedSearch = AuthenticatedJsonToJsonAction { request =>
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
-    val uuid = ExternalId.asOpt[ArticleSearchResult]((json \ "uuid").asOpt[String].getOrElse(""))
+    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").as[String])
     val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
     val kifiResults = (json \ "kifiResults").as[Int]
     val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
     val kifiResultsClicked = (json \ "kifiResultsClicked").as[Int]
-    val searchResultsClicked = (json \ "searchResultsClicked").as[Int]
-    val initialKifiSearchDeliveryTime = (json \ "kifiTime").as[Int]
-    val initialReferenceDeliveryTime = (json \ "referenceTime").as[Int]
+    val otherResultsClicked = (json \ "searchResultsClicked").as[Int]
+    val kifiTime = (json \ "kifiTime").as[Int]
+    val referenceTime = (json \ "referenceTime").as[Int]
     val origin = (json \ "origin").as[String]
-    searchAnalytics.searchEnded(userId, uuid, searchExperiment, kifiResults, kifiResultsClicked, origin, searchResultsClicked, Some(kifiCollapsed), time)
+    searchAnalytics.endedSearch(userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime, otherResultsClicked, kifiResultsClicked)
     Ok
   }
 
