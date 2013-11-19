@@ -4,6 +4,7 @@ import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, SearchCacheModule}
 import com.keepit.common.store.SearchProdStoreModule
 import com.keepit.inject.CommonProdModule
+import com.keepit.search.spellcheck.SpellCorrectorModule
 
 case class SearchProdModule() extends SearchModule(
   // Common Functional Modules
@@ -12,5 +13,6 @@ case class SearchProdModule() extends SearchModule(
 
   // Search Functional Modules
   indexModule = ProdIndexModule(),
-  trackingModule = ProdTrackingModule()
+  trackingModule = ProdTrackingModule(),
+  spellModule = SpellCorrectorModule()
 )with CommonProdModule
