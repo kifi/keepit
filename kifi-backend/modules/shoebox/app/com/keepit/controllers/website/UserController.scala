@@ -333,10 +333,9 @@ class UserController @Inject() (
   }
 
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
-    val contactsF = network match { // revisit
-      case Some(n) => if (n == "email") queryContacts(request.userId, search, after, limit) else Future.successful(Seq.empty[JsObject])
-      case None => Future.successful(Seq.empty[JsObject])
-    }
+    val contactsF = if (network.isEmpty || network.get == "email") { // todo: revisit
+      queryContacts(request.userId, search, after, limit)
+    } else Future.successful(Seq.empty[JsObject])
     @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
     val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
     @inline def searchScore(sci: SocialConnectionInfo): Int = {
