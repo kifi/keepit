@@ -833,18 +833,18 @@ $(function() {
 	  return status === 'fetching' || status === 'import_connections';
   }
 
-  var IMPORT_UPDATE = null;
+  var prevImportUpdate = null;
 
   function endImportUpdate(importUpdate) {
 	  if (importUpdate) {
-		  if (IMPORT_UPDATE === importUpdate) {
-			  IMPORT_UPDATE = null;
+		  if (prevImportUpdate === importUpdate) {
+			  prevImportUpdate = null;
 		  }
 		  importUpdate.end();
 	  }
-	  else if (IMPORT_UPDATE) {
-		  IMPORT_UPDATE.end();
-		  IMPORT_UPDATE = null;
+	  else if (prevImportUpdate) {
+		  prevImportUpdate.end();
+		  prevImportUpdate = null;
 	  }
   }
 
@@ -903,7 +903,7 @@ $(function() {
 						  toggleImporting(network, true, text, email);
 					  }
 				  });
-				  IMPORT_UPDATE = importUpdate;
+				  prevImportUpdate = importUpdate;
 			  }
 			  else {
 				  if (hasAbook) {
@@ -924,7 +924,7 @@ $(function() {
 			  }
 		  });
 
-		  IMPORT_UPDATE = importUpdate;
+		  prevImportUpdate = importUpdate;
 		  */
 		  toggleImporting(network, false);
 		  toggleInviteHelp(network, false);
