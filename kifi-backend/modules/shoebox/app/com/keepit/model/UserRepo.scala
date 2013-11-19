@@ -10,6 +10,7 @@ import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.KestrelCombinator
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
@@ -51,8 +52,7 @@ class UserRepoImpl @Inject() (
 
   override def save(user: User)(implicit session: RWSession): User = {
     val toSave = user.copy(seq = sequence.incrementAndGet())
-    SafeFuture { heimdal.engageUser(toSave) }
-    super.save(toSave)
+    super.save(toSave) tap { saved => SafeFuture { heimdal.engageUser(saved) }}
   }
 
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User] =
