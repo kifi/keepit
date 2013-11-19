@@ -2,7 +2,7 @@ var domain = 'kifi.com';
 var xhrDomain = 'https://api.kifi.com';
 var wwwDomain = 'https://www.kifi.com';
 //TODO dev
-var DEV = false;
+var DEV = !(/kifi.com/.test(location.hostname));
 if (DEV) {
 	domain = 'ezkeep.com';
 	xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
