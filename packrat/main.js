@@ -23,6 +23,7 @@ var pageData = {}; // keyed by normalized url
 var pageThreadData = {}; // keyed by normalized url
 var messageData = {}; // keyed by thread id; todo: evict old threads from memory
 var notifications;  // [] would mean user has none
+var timeNotificationsLastSeen = new Date(0);
 var numNotificationsNotVisited = 0;  // may include some not yet loaded
 var haveAllNotifications;  // inferred
 var friends = [];
@@ -38,6 +39,7 @@ function clearDataCache() {
   pageThreadData = {};
   messageData = {};
   notifications = null;
+  timeNotificationsLastSeen = new Date(0);
   numNotificationsNotVisited = 0;
   haveAllNotifications = false;
   friends = [];
@@ -354,6 +356,13 @@ var socketHandlers = {
         socket.send(["get_thread", id]);  // TODO: "get_thread_since" (don't need messages already loaded)
         threadCallbacks[id] = [];  // TODO: add callback that updates open views
       }
+    }
+  },
+  last_notify_read_time: function(t) {
+    log("[socket:last_notify_read_time]", t)();
+    var time = new Date(t);
+    if (time > timeNotificationsLastSeen) {
+      timeNotificationsLastSeen = time;
     }
   },
   all_notifications_visited: function(id, time) {
@@ -720,6 +729,7 @@ api.port.on({
       syncNumNotificationsNotVisited(); // sanity checking
       respond({
         notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
+        timeLastSeen: timeNotificationsLastSeen.toISOString(),
         numNotVisited: numNotificationsNotVisited});
     }
   },
@@ -765,6 +775,13 @@ api.port.on({
         arr.push(tab);
       }
       tabsByLocator[o.new] = arr || [tab];
+    }
+  },
+  notifications_read: function(t) {
+    var time = new Date(t);
+    if (time > timeNotificationsLastSeen) {
+      timeNotificationsLastSeen = time;
+      socket.send(["set_last_notify_read_time", t]);
     }
   },
   all_notifications_visited: function(o) {
@@ -1690,6 +1707,7 @@ function startSession(callback, retryMs) {
         pageThreadData[uri].stale = true;
       }
       connectSync();
+      socket.send(["get_last_notify_read_time"]);
       if (!notifications) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {
