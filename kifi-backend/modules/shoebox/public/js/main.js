@@ -752,30 +752,31 @@ $(function() {
 
 	  var iframe = createHiddenIframe(xhrBase + '/user/abookUploadStatus?id=' + id + (opts || ''));
 
-	  /*
-	  if (DEV) {
-		  ABOOK_ID_TO_CALLBACK[id] = null;
-		  'notAvail,pending,processing,active'.split(',').forEach(function(data, i) {
-			  setTimeout(function() {
-				  if (!iframe) {
-					  return;
-				  }
-				  if (deferred) {
-					  deferred.resolve({
-						  id: id,
-						  status: data,
-						  total: 1000,
-						  progress: Math.floor(Math.random() * 1000)
-					  });
-					  deferred = null;
-				  }
-				  if (callback) {
-					  callback(id, data, 1000, Math.floor(Math.random() * 1000));
-				  }
-			  }, 1000 * (i + 1));
-		  })
-	  }
-	  */
+	/*
+	// these are needed for testing
+	if (DEV) {
+		ABOOK_ID_TO_CALLBACK[id] = null;
+		'notAvail,pending,processing,active'.split(',').forEach(function(data, i) {
+			setTimeout(function() {
+				if (!iframe) {
+					return;
+				}
+				if (deferred) {
+					deferred.resolve({
+						id: id,
+						status: data,
+						total: 1000,
+						progress: Math.floor(Math.random() * 1000)
+					});
+					deferred = null;
+				}
+				if (callback) {
+					callback(id, data, 1000, Math.floor(Math.random() * 1000));
+				}
+			}, 1000 * (i + 1));
+		})
+	}
+	*/
 
 	  return {
 		  promise: deferred.promise(),
@@ -802,22 +803,23 @@ $(function() {
 		var iframe = createHiddenIframe(xhrBase + '/user/import-check/' + network + '?callback=parent.' + IMPORT_CHECK);
 
 		/*
+		// these are needed for testing
 		if (DEV) {
-		window[IMPORT_CHECK] = null;
-		'fetching,import_connections,finished,end'.split(',').forEach(function(data, i) {
-		setTimeout(function() {
-		if (!iframe) {
-		return;
-		}
-		if (deferred) {
-		deferred.resolve(data);
-		deferred = null;
-		}
-		if (callback) {
-		callback(data);
-		}
-		}, 1000 * (i + 1));
-		})
+			window[IMPORT_CHECK] = null;
+			'fetching,import_connections,finished,end'.split(',').forEach(function(data, i) {
+				setTimeout(function() {
+					if (!iframe) {
+						return;
+					}
+					if (deferred) {
+						deferred.resolve(data);
+						deferred = null;
+					}
+					if (callback) {
+						callback(data);
+					}
+				}, 1000 * (i + 1));
+			})
 		}
 		*/
 
