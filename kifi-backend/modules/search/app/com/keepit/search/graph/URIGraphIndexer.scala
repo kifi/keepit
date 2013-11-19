@@ -7,6 +7,7 @@ import com.keepit.common.db._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net._
 import com.keepit.model._
+import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index._
 import com.keepit.search.index.Indexable.IteratorTokenStream
@@ -16,8 +17,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.Some
-import com.keepit.search.Lang
+import scala.util.{Success, Try}
 
 object URIGraphFields {
   val userField = "usr"
@@ -28,6 +28,7 @@ object URIGraphFields {
   val titleField = "title"
   val stemmedField = "title_stemmed"
   val siteField = "site"
+  val homePageField = "home_page"
 
   def decoders() = Map(
     userField -> DocUtil.URIListDecoder,
@@ -166,14 +167,24 @@ class URIGraphIndexer(
 
       val bookmarkURLs = buildBookmarkURLList(publicBookmarks.toSeq, privateBookmarks.toSeq)
 
-      val siteField = buildLineField(URIGraphFields.siteField, bookmarkURLs){ (fieldName, url, lang) =>
-        URI.parse(url).toOption.flatMap(_.host) match {
+      val siteField = buildLineField(URIGraphFields.siteField, bookmarkURLs){ (fieldName, uri, lang) =>
+        uri.toOption.flatMap(_.host) match {
           case Some(Host(domain @ _*)) =>
             new IteratorTokenStream((1 to domain.size).iterator, (n: Int) => domain.take(n).reverse.mkString("."))
           case _ => LineField.emptyTokenStream
         }
       }
       doc.add(siteField)
+
+      val hostNameAnalyzer = DefaultAnalyzer.defaultAnalyzer
+      val homePageField = buildLineField(URIGraphFields.homePageField, bookmarkURLs){ (fieldName, uri, lang) =>
+        uri match {
+          case Success(URI(_, _, Some(Host(domain @ _*)), _, path, None, None)) if (!path.isDefined || path == Some("/")) =>
+            hostNameAnalyzer.tokenStream(fieldName, new StringReader(domain.reverse.mkString(" ")))
+          case _ => LineField.emptyTokenStream
+        }
+      }
+      doc.add(homePageField)
 
       doc
     }
@@ -206,18 +217,18 @@ class URIGraphIndexer(
       titles
     }
 
-    private def buildBookmarkURLList(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark]): ArrayBuffer[(Int, String, Lang)] = {
+    private def buildBookmarkURLList(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark]): ArrayBuffer[(Int, Try[URI], Lang)] = {
       val urlMap = bookmarks.foldLeft(Map.empty[Long, String]){ (m, b) => m + (b.uriId.id -> b.url) }
 
       var lineNo = 0
-      var sites = new ArrayBuffer[(Int, String, Lang)]
+      var sites = new ArrayBuffer[(Int, Try[URI], Lang)]
       val en = LangDetector.en
       publicBookmarks.foreach{ b =>
-        sites += ((lineNo, b.url, en))
+        sites += ((lineNo, URI.parse(b.url), en))
         lineNo += 1
       }
       privateBookmarks.foreach{ b =>
-        sites += ((lineNo, b.url, en))
+        sites += ((lineNo, URI.parse(b.url), en))
         lineNo += 1
       }
 

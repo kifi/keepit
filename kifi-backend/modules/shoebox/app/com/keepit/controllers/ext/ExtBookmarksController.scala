@@ -168,7 +168,9 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def addBookmarks() = AuthenticatedJsonToJsonAction { request =>
+  private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
+
+  def addBookmarks() = AuthenticatedJsonAction(parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
     val tStart = currentDateTime
     val userId = request.userId
     val installationId = request.kifiInstallationId

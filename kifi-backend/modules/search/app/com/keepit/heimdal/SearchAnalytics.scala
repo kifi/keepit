@@ -120,7 +120,7 @@ class SearchAnalytics @Inject() (
     searchExperiment: Option[Id[SearchConfigExperiment]],
     kifiResults: Int,
     kifiResultsClicked: Int,
-    searchEngine: SearchEngine,
+    origin: String,
     searchResultsClicked: Int,
     kifiCollapsed: Option[Boolean],
     time: DateTime) = {
@@ -131,7 +131,7 @@ class SearchAnalytics @Inject() (
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
     contextBuilder += ("kifiResults", kifiResults)
     contextBuilder += ("kifiResultsClicked", kifiResultsClicked)
-    contextBuilder += ("searchEngine", searchEngine.toString)
+    contextBuilder += ("origin", origin)
     contextBuilder += ("searchResultsClicked", searchResultsClicked)
     kifiCollapsed.foreach { collapsed => contextBuilder += ("kifiCollapsed", collapsed) }
     heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("search_ended"), time))

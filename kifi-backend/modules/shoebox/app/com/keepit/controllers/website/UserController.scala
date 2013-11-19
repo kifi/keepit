@@ -45,7 +45,6 @@ class UserController @Inject() (
   postOffice: LocalPostOffice,
   userCommander: UserCommander,
   clock: Clock,
-  heimdal: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient
 ) extends WebsiteController(actionAuthenticator) {
 
@@ -211,7 +210,6 @@ class UserController @Inject() (
           val cleanLast = User.sanitizeName(userData.lastName getOrElse user.lastName)
           val updatedUser = user.copy(firstName = cleanFirst, lastName = cleanLast)
           userRepo.save(updatedUser)
-          SafeFuture { heimdal.engageUser(updatedUser) }
         }
         for (emails <- userData.emails) {
           val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(emails contains _.address)
@@ -335,10 +333,9 @@ class UserController @Inject() (
   }
 
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
-    val contactsF = network match { // revisit
-      case Some(n) => if (n == "email") queryContacts(request.userId, search, after, limit) else Future.successful(Seq.empty[JsObject])
-      case None => Future.successful(Seq.empty[JsObject])
-    }
+    val contactsF = if (network.isEmpty || network.get == "email") { // todo: revisit
+      queryContacts(request.userId, search, after, limit)
+    } else Future.successful(Seq.empty[JsObject])
     @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
     val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
     @inline def searchScore(sci: SocialConnectionInfo): Int = {

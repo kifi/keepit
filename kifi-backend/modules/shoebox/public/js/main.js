@@ -2,7 +2,10 @@ var xhrDomain = 'https://api.kifi.com';
 var wwwDomain = 'https://www.kifi.com';
 var searchDomain = 'https://search.kifi.com';
 //TODO dev
-//xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
+var DEV = false;
+if (DEV) {
+	xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
+}
 var xhrBase = xhrDomain + '/site';
 var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
 var xhrBaseSearch = xhrDomain.replace('api', 'search') + '/search';
@@ -303,7 +306,6 @@ $(function() {
 
 	var me;
 	var myNetworks;
-	var abooks;
 	var myPrefs;
 	var myKeepsCount;
 	var collections;
@@ -477,12 +479,7 @@ $(function() {
 				})[0];
 				var postLink = function (e) {
 					e.preventDefault();
-					$('<form>')
-						.attr('action', wwwDomain + $(this).data('action'))
-						.attr('method', 'post')
-						.appendTo('body')
-						.submit()
-						.remove();
+					submitForm(wwwDomain + $(this).data('action'), 'post');
 				};
 				if (networkInfo) {
 					$a.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
@@ -575,6 +572,7 @@ $(function() {
 	}
 	var $tab = $addFriendsTabs.filter('[data-href="' + pPath + '"]');
     console.log('[showAddFriends]', path, pPath, $tab);
+	$nwFriendsLoading.hide();
     if ($tab.length) {
       $tab.removeAttr('href');
       $addFriendsTabs.not($tab).filter(':not([href])').each(function() {
@@ -646,55 +644,345 @@ $(function() {
 	  window.open(url, name, 'width=' + w + ',height=' + h + ',top=' + top + ',left=' + left + ',dialog=' + dialog + ',menubar=' + menubar + ',resizable=' + resizable + ',scrollbars=' + scrollbars + ',status=' + status);
   }
 
+  function submitForm(url, method) {
+	  $('<form method="' + (method || 'get') + '" action="' + url + '">')
+	  .appendTo('body')
+	  .submit()
+	  .remove();
+  }
+
+  var VENDOR_NAMES = {
+	  facebook: 'Facebook',
+	  linkedin: 'LinkedIn',
+	  gmail: 'Gmail',
+	  email: 'Gmail'
+  };
+  var VENDOR_FRIEND_NAME = {
+	  facebook: 'friend',
+	  linkedin: 'connection',
+	  gmail: 'contact',
+	  email: 'contact'
+  };
+
+  var friendsHelpTmpl = Handlebars.compile($('#invite-friends-help').html());
+  var friendsImportingTmpl = Handlebars.compile($('#friends-importing').html());
+
+  function toggleInviteHelp(network, show) {
+	  var $cont = $('.invite-friends-help-container');
+	  if (show && /^facebook|linkedin|email|gmail$/.test(network)) {
+		  $cont.html(friendsHelpTmpl({
+			  network_class: network,
+			  network: VENDOR_NAMES[network],
+			  friends: VENDOR_FRIEND_NAME[network] + 's'
+		  }));
+		  $cont.show();
+	  }
+	  else {
+		  $cont.hide();
+	  }
+  }
+
+  function toggleImporting(network, show, progress, from) {
+	  var $cont = $('.invite-friends-importing');
+	  if (show && /^facebook|linkedin|email|gmail$/.test(network)) {
+		  $cont.html(friendsImportingTmpl({
+			  network_class: network,
+			  network: from || VENDOR_NAMES[network],
+			  friends: VENDOR_FRIEND_NAME[network] + 's',
+			  progress: progress || ''
+		  }));
+		  $cont.show();
+	  }
+	  else {
+		  $cont.hide();
+	  }
+  }
+
+  $('.invite-friends-help-container').on('click', '.invite-friends-help-connect', function() {
+	  connectSocial($(this).data('network'));
+  });
+
+  function connectSocial(network) {
+	  console.log('[connectSocial]', network);
+	  toggleImporting(network, true);
+	  toggleInviteHelp(network, false);
+
+	  if (network === 'email') {
+		  submitForm(wwwDomain + '/importContacts');
+	  }
+	  else {
+		  submitForm(wwwDomain + '/link/' + network);
+	  }
+  }
+
+  var ABOOK_ID_TO_CALLBACK = {};
+
+  function updateABookProgress(id, status, total, progress) {
+	  // notAvail, pending, processing, active
+	  if (ABOOK_ID_TO_CALLBACK[id]) {
+		  ABOOK_ID_TO_CALLBACK[id].apply(this, arguments);
+	  }
+  }
+  window.updateABookProgress = updateABookProgress;
+
+  function getAbookProgressUpdates(id, callback, opts) {
+	  var url = xhrBase + '/user/abookUploadStatus?id=' + id + (opts || '');
+	  var $iframe = $('<iframe src="' + url + '" style="display:none"></iframe>').appendTo('body');
+	  var frameWin = $iframe[0].contentWindow;
+
+	  var deferred = $.Deferred();
+
+	  ABOOK_ID_TO_CALLBACK[id] = function(id, status, total, progress) {
+		  ABOOK_ID_TO_CALLBACK[id] = callback;
+		  deferred.resolve({
+			  id: id,
+			  status: data,
+			  total: total,
+			  progress: progress
+		  });
+		  callback(id, status, total, progress);
+	  };
+
+	  /*
+	  if (DEV) {
+		  ABOOK_ID_TO_CALLBACK[id] = null;
+		  'notAvail,pending,processing,active'.split(',').forEach(function(data, i) {
+			  setTimeout(function() {
+				  if (!frameWin) {
+					  return;
+				  }
+				  if (deferred) {
+					  deferred.resolve({
+						  id: id,
+						  status: data,
+						  total: 1000,
+						  progress: Math.floor(Math.random() * 1000)
+					  });
+					  deferred = null;
+				  }
+				  if (callback) {
+					  callback(id, data, 1000, Math.floor(Math.random() * 1000));
+				  }
+			  }, 1000 * (i + 1));
+		  })
+	  }
+	  */
+
+	  function end() {
+		  if (frameWin) {
+			  ABOOK_ID_TO_CALLBACK[id] = null;
+			  $iframe.remove();
+			  deferred = callback = id = opts = $iframe = url = frameWin = null;
+		  }
+	  }
+
+	  return {
+		  promise: deferred.promise(),
+		  end: end
+	  };
+  }
+
+  function getNetworkImportUpdates(network, callback) {
+	  var callbackName = 'updateImportStatus';
+	  var parentCallbackName = 'parent.' + callbackName;
+	  var url = xhrBase + '/user/import-check/' + network + '?callback=' + parentCallbackName;
+	  var $iframe = $('<iframe src="' + url + '" style="display:none"></iframe>').appendTo('body');
+	  var deferred = $.Deferred();
+
+      window[callbackName] = function(data) {
+		  window[callbackName] = callback;
+		  deferred.resolve(data);
+		  callback(data);
+	  };
+
+	  /*
+	  if (DEV) {
+		  'fetching,import_connections,finished,end'.split(',').forEach(function(data, i) {
+		  //'false'.split(',').forEach(function(data, i) {
+			  setTimeout(function() {
+				  if (!$iframe) {
+					  return;
+				  }
+				  $iframe[0].contentWindow.document.writeln('<script>' + parentCallbackName + '("' + data + '")</script>')
+			  }, 500 * (i + 1));
+		  })
+	  }
+	  */
+
+	  function end() {
+		  if ($iframe) {
+			  window[callbackName] = null;
+			  $iframe.remove();
+			  deferred = callback = network = $iframe = parentCallbackName = callbackName = url = null;
+		  }
+	  }
+
+	  return {
+		  promise: deferred.promise(),
+		  end: end
+	  };
+  }
+
+  function isConnected(networks, network) {
+	  return networks.some(function(netw) {
+		  return netw.network === network;
+	  });
+  }
+
+  function isImporting(status) {
+	  return status === 'fetching' || status === 'import_connections';
+  }
+
+  var prevImportUpdate = null;
+
+  function endImportUpdate(importUpdate) {
+	  if (importUpdate) {
+		  if (prevImportUpdate === importUpdate) {
+			  prevImportUpdate = null;
+		  }
+		  importUpdate.end();
+	  }
+	  else if (prevImportUpdate) {
+		  prevImportUpdate.end();
+		  prevImportUpdate = null;
+	  }
+  }
+
   function filterFriendsByNetwork(network) {
 	  if (!network) {
 		  network = '';
 	  }
+
+	  endImportUpdate();
+
+	  $nwFriendsLoading.hide();
+	  $nwFriends.find('.no-results').empty().hide();
+
 	  console.log('[filterFriendsByNetwork]', network);
 	  chooseNetworkFilterDOM(network);
 	  var isEmail = network === 'email',
-		  isSocial = /^facebook|linkedin$/.test(network);
-	if (isEmail) {
-	  promise.abooks.always(function(data) {
-		  var shouldConnect = !(data && data.length);
-		  if (shouldConnect) {
-			  var url = wwwDomain + '/importContacts';
-			  $('<form method="GET" action="' + url + '">')
-			  .appendTo('body')
-			  .submit()
-			  .remove();
-		  }
-		  else {
-			  emptyAndPrepInvite();
-		  }
-	  });
-	}
-	else if (isSocial) {
-	  promise.myNetworks.done(function(data) {
-		  var shouldConnect = data.every(function(nObj) {
-			  console.log('[myNetworks]', nObj.network, network);
-			  return nObj.network !== network;
+	  isSocial = /^facebook|linkedin$/.test(network);
+
+	  if (isEmail) {
+		  $nwFriendsLoading.show();
+
+		  $.getJSON(xhrBase + '/user/abooks').done(function(abooks) {
+			  $nwFriendsLoading.hide();
+
+			  console.log(this, arguments);
+			  var hasAbook = Boolean(abooks && abooks.length);
+			  var id, email;
+			  var importing = hasAbook && abooks.some(function(abook) {
+				  if (abook.state !== 'active') {
+					  console.log('not active abook', abook, JSON.stringify(abook, null, '\t'));
+					  id = abook.id;
+					  email = abook.ownerEmail;
+					  return true;
+				  }
+			  });
+
+			  toggleInviteHelp(network, !(hasAbook || importing));
+			  toggleImporting(network, importing, null, email);
+
+			  console.log('[email import status] network=' + network + ', hasAbook=' + hasAbook + ', importing=' + importing);
+
+			  if (importing) {
+				  var importUpdate = getAbookProgressUpdates(id, function(id, status, total, progress) {
+					  console.log('getAbookProgressUpdates', id, status, total, progress);
+					  if (status === 'active') {
+						  toggleImporting(network, false, null, email);
+						  emptyAndPrepInvite(network);
+						  endImportUpdate(importUpdate);
+					  }
+					  else {
+						  var text = '';
+						  text += progress > 0 ? progress : '0';
+						  if (total > 0) {
+							  text += ' out of ' + total;
+						  }
+						  toggleImporting(network, true, text, email);
+					  }
+				  });
+				  prevImportUpdate = importUpdate;
+			  }
+			  else {
+				  if (hasAbook) {
+					  emptyAndPrepInvite(network);
+				  }
+				  endImportUpdate(importUpdate);
+			  }
 		  });
-		  if (shouldConnect) {
-			  var url = wwwDomain + '/link/' + network;
-			  $('<form method="GET" action="' + url + '">')
-			  .appendTo('body')
-			  .submit()
-			  .remove();
-		  }
-		  else {
-			  emptyAndPrepInvite();
-		  }
-	  });
-	}
-	else {
-		emptyAndPrepInvite();
-	}
+	  }
+	  else if (isSocial) {
+		  /*
+		  var importUpdate = getNetworkImportUpdates(network, function(status) {
+			  console.log('getNetworkImportUpdates', network, status);
+			  if (status === 'finished' || status === 'end') {
+				  toggleImporting(network, false);
+				  emptyAndPrepInvite(network);
+				  endImportUpdate(importUpdate);
+			  }
+		  });
+
+		  prevImportUpdate = importUpdate;
+		  */
+		  toggleImporting(network, false);
+		  toggleInviteHelp(network, false);
+		  $nwFriendsLoading.show();
+
+		  $.when($.getJSON(xhrBase + '/user/networks')).done(function(networks, status) {
+			  $nwFriendsLoading.hide();
+
+			  var connected = isConnected(networks, network);
+			  var importing = false && isImporting(status);
+
+			  console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing);
+
+			  toggleInviteHelp(network, !(connected || importing));
+			  toggleImporting(network, importing);
+
+			  if (!importing) {
+				  if (connected) {
+					  emptyAndPrepInvite(network);
+				  }
+				  //endImportUpdate(importUpdate);
+			  }
+		  })
+
+		  /*
+		  $.when($.getJSON(xhrBase + '/user/networks'), importUpdate.promise).done(function(networkResult, status) {
+			  $nwFriendsLoading.hide();
+
+			  var networks = networkResult[0];
+			  var connected = isConnected(networks, network);
+			  var importing = isImporting(status);
+
+			  console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing);
+
+			  toggleInviteHelp(network, !(connected || importing));
+			  toggleImporting(network, importing);
+
+			  if (!importing) {
+				  if (connected) {
+					  emptyAndPrepInvite(network);
+				  }
+				  endImportUpdate(importUpdate);
+			  }
+		  })
+		  */
+	  }
+	  else {
+		  emptyAndPrepInvite(network);
+	  }
   }
 
-  function emptyAndPrepInvite() {
-	  $nwFriends.find('ul').empty();
-	  prepInviteTab();
+  function emptyAndPrepInvite(network) {
+	  var curNetwork = $('.invite-filters').attr('data-nw-selected') || '';
+	  if ((network || '') === (curNetwork || '')) {
+		  $nwFriends.find('ul').empty();
+		  $nwFriends.find('.no-results').empty().hide();
+		  prepInviteTab();
+	  }
   }
 
 	// All kifi Friends
@@ -801,6 +1089,9 @@ $(function() {
 				       f1.id.localeCompare(f2.id, undefined, compareSort);
 			});
 			friendsTmpl.render(friends);
+		})
+		.always(function() {
+			$friendsLoading.hide();
 		});
 	}
 
@@ -848,6 +1139,7 @@ $(function() {
 		moreFriends = true;
 		var network = $('.invite-filters').attr('data-nw-selected') || undefined;
 		var search = $('.invite-filter').val() || undefined;
+		toggleImporting(network, false);
 		$nwFriendsLoading.show();
 		var opts = {
 			limit: moreToShow || friendsToShow,
@@ -860,12 +1152,10 @@ $(function() {
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function(friends) {
 			console.log('[prepInviteTab] friends:', friends && friends.length, friends);
 			friends.forEach(function(obj) {
-				if (!obj.image) {
-					obj.image = '';
-				}
-				if (!obj.status) {
-					obj.status = '';
-				}
+				obj.label = obj.label || '';
+				obj.image = obj.image || '';
+				obj.status = obj.status || '';
+
 				var val = obj.value;
 				var network = obj.network = val && val.substring(0, val.indexOf('/')),
 					isEmail = network === 'email';
@@ -892,6 +1182,7 @@ $(function() {
 			});
 			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
 			var filter = $('.invite-filter').val() || undefined;
+			console.log(filter, search, nw, network);
 			if (filter != search || nw != network) return;
 			if (friends.length < moreToShow) {
 				moreFriends = false;
@@ -905,12 +1196,15 @@ $(function() {
 			if (!friendsShowing.length) {
 				$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
 				$noResults.find('.refresh-friends').click(function () {
-					$('<form method="post">').attr('action', wwwDomain + '/friends/invite/refresh').appendTo('body').submit();
+					submitForm(wwwDomain + '/friends/invite/refresh', 'post');
 				});
 				$noResults.find('.tell-us').click(sendFeedback);
 			}
 			nwFriendsTmpl.append(friends);
 			inviteFilterTmpl.render({results: friendsShowing.length, filter: filter});
+		})
+		.always(function() {
+			$nwFriendsLoading.hide();
 		});
 		$.getJSON(xhrBase + '/user/inviteCounts', { updatedAt: invitesUpdatedAt }, function (invites) {
 			invitesLeft = invites.left;
@@ -2292,20 +2586,17 @@ $(function() {
 	}
 
 	function canInvite() {
-		//TODO dev
-		return me.experiments.indexOf('admin') >= 0 ||
+		return DEV || me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('can invite') >= 0;
 	}
 
 	function canInviteViaGmail() {
-		//TODO dev
-		return me.experiments.indexOf('admin') >= 0 ||
+		return DEV || me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('gmail_invite') >= 0;
 	}
 
 	function canConnect() {
-		//TODO dev
-		return me.experiments.indexOf('admin') >= 0 ||
+		return DEV || me.experiments.indexOf('admin') >= 0 ||
 			me.experiments.indexOf('can_connect') >= 0;
 	}
 
@@ -2340,9 +2631,6 @@ $(function() {
 		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function(data) {
 			myNetworks = data;
-		}).promise(),
-		abooks: $.getJSON(xhrBase + '/user/abooks', function(data) {
-			abooks = data;
 		}).promise(),
 		myPrefs: $.getJSON(xhrBase + '/user/prefs', function(data) {
 			myPrefs = data;

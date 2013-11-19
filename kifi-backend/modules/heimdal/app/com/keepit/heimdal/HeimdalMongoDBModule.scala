@@ -12,6 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{Provides, Singleton}
 
 import play.api.Play.current
+import com.keepit.shoebox.ShoeboxServiceClient
 
 
 trait MongoModule extends ScalaModule
@@ -32,13 +33,13 @@ case class ProdMongoModule() extends MongoModule {
 
   @Singleton
   @Provides
-  def userEventLoggingRepo(descriptorRepo: UserEventDescriptorRepo, mixpanel: MixpanelClient, airbrake: AirbrakeNotifier): UserEventLoggingRepo = {
+  def userEventLoggingRepo(descriptorRepo: UserEventDescriptorRepo, mixpanel: MixpanelClient, shoebox: ShoeboxServiceClient, airbrake: AirbrakeNotifier): UserEventLoggingRepo = {
     val (nodeA, nodeB, auth) = getHeimdalCredentials()
     val driver = new MongoDriver
     val connection = driver.connection(List(nodeA), List(auth), 2, Some("UserEventLoggingMongoActorSystem"))
     val db = connection("heimdal")
     val collection = db("user_events")
-    new ProdUserEventLoggingRepo(collection, mixpanel, descriptorRepo, airbrake)
+    new ProdUserEventLoggingRepo(collection, mixpanel, descriptorRepo, shoebox, airbrake)
   }
 
   @Provides @Singleton

@@ -9,6 +9,9 @@
   color: #fff !important;
   display: none;
 }
+.kifi-pane-v2 .kifi-pane-mark-notices-read {
+  display: none !important;
+}
 a.kifi-pane-mark-notices-read:hover {
   text-decoration: none;
   background-color: #67829c;

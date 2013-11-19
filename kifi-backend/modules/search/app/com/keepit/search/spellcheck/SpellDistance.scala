@@ -7,7 +7,7 @@ import org.apache.lucene.search.spell.StringDistance
 class MetaphoneDistance {
   val mp = new Metaphone()
   val lev = new  LevensteinDistance()
-  def getDistance(a: String, b: String): Float = lev.getDistance(mp.metaphone(a), mp.metaphone(b))
+  def getDistance(a: String, b: String, smoothFactor: Float = 0.1f): Float = lev.getDistance(mp.metaphone(a), mp.metaphone(b)) max smoothFactor
   def getMultipliedDistance(a: String, b: String): Float = lev.getDistance(a, b) * getDistance(a, b)
 }
 
