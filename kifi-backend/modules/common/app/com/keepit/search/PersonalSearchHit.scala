@@ -18,7 +18,7 @@ case class PersonalSearchHit(
     collections: Option[Seq[ExternalId[Collection]]]
 )
 
-case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float, isNew: Boolean)
+case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float)
 
 case class PersonalSearchResultPacket(
   uuid: ExternalId[ArticleSearchResult],
@@ -67,7 +67,7 @@ object PersonalSearchResult extends Logging {
         ))
       } catch {
         case e: Throwable =>
-          log.error("can't serialize %s".format(res))
+          log.error("can't serialize PersonalSearchResult %s".format(res))
           throw e
       }
 
@@ -80,12 +80,11 @@ object PersonalSearchResult extends Logging {
           isMyBookmark = (json \ "isMyBookmark").as[Boolean],
           isPrivate = isPrivate,
           users = TraversableFormat.seq[BasicUser].reads(json \ "users").get,
-          score = (json \ "score").as[Float],
-          isNew = (json \ "isNew").as[Boolean]
+          score = (json \ "score").as[Float]
         ))
       } catch {
         case e: Throwable =>
-          log.error("can't deserialize %s".format(json))
+          log.error("can't deserialize PersonalSearchResult %s".format(json))
           throw e
       }
   }
