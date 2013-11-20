@@ -489,8 +489,6 @@ class MessagingController @Inject() (
       ))
     }
     SafeFuture { 
-      setLastSeen(from, thread.id.get, Some(message.createdAt))
-      db.readWrite { implicit session => userThreadRepo.setLastActive(from, thread.id.get, message.createdAt) }
       db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) }
     }
 
@@ -514,6 +512,9 @@ class MessagingController @Inject() (
         Json.arr("message", message.threadExtId.id, messageWithBasicUser)
       )
     })
+
+    setLastSeen(from, thread.id.get, Some(message.createdAt))
+    db.readWrite { implicit session => userThreadRepo.setLastActive(from, thread.id.get, message.createdAt) }
 
     val threadActivity = db.readOnly{ implicit session => 
       userThreadRepo.getThreadActivity(thread.id.get) 
