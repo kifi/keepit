@@ -120,7 +120,7 @@ POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteContro
 GET     /friends/requests           @com.keepit.controllers.website.HomeController.home
 GET     /profile                    @com.keepit.controllers.website.HomeController.home
 GET     /find                       @com.keepit.controllers.website.HomeController.home
-GET     /blog                       @com.keepit.controllers.website.HomeController.home
+GET     /blog                       @com.keepit.controllers.website.HomeController.blog
 
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
