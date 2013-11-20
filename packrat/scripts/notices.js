@@ -51,10 +51,11 @@ panes.notices = function () {
     }
   };
 
-  var $notices, $markAll;
+  var $notices, $markAll, inbox;
   return {
     render: function ($container) {
       api.port.emit('notifications', function (o) {
+        inbox = ~session.experiments.indexOf('inbox');
         renderNotices($container, o.notifications, o.timeLastSeen, o.numNotVisited);
         api.port.on(handlers);
       });
@@ -62,9 +63,7 @@ panes.notices = function () {
 
   function renderNotices($container, notices, timeLastSeen, numNotVisited) {
     $notices = $(render('html/keeper/notices', {}))
-      .append(notices.map(function (n) {
-        return renderNotice(n);
-      }).join(''))
+      .append(notices.map(renderNotice).join(''))
       .appendTo($container)
       .preventAncestorScroll();
     $notices.find('time').timeago();
@@ -122,14 +121,52 @@ panes.notices = function () {
     notice.formatMessage = getSnippetFormatter;
     notice.formatLocalDate = getLocalDateFormatter;
     notice.cdnBase = cdnBase;
+    notice.inbox = inbox;
     switch (notice.category) {
     case 'message':
+      var participants = notice.participants;
+      var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
-      var nParticipants = notice.participants.length;
-      notice.oneParticipant = nParticipants === 1;
-      notice.twoParticipants = nParticipants === 2;
-      notice.threeParticipants = nParticipants === 3;
-      notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
+      if (!inbox) {
+        notice.oneParticipant = nParticipants === 1;
+        notice.twoParticipants = nParticipants === 2;
+        notice.threeParticipants = nParticipants === 3;
+        notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
+      } else {
+        notice.isSent = notice.authors === 1 && notice.author.id === session.user.id;
+        notice.isReceived = notice.authors === 1 && notice.author.id !== session.user.id;
+        if (notice.firstAuthor > 1) {
+          participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
+        }
+        var nPicsMax = notice.isSent ? 4 : 3;
+        notice.picturedParticipants = nParticipants <= nPicsMax ?
+          notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
+          participants.slice(0, nPicsMax);
+        notice.picIndex = notice.picturedParticipants.length === 1 ? 0 : counter();
+        var nNamesMax = 4;
+        if (notice.isReceived) {
+          notice.namedParticipant = notice.author;
+        } else if (notice.isSent) {
+          if (nParticipants === 2) {
+            notice.namedParticipant = participants[1];
+          } else if (nParticipants - 1 <= nNamesMax) {
+            notice.namedParticipants = participants.slice(1, 1 + nNamesMax);
+          } else {
+            notice.namedParticipants = participants.slice(1, nNamesMax);
+            notice.otherParticipants = participants.slice(nNamesMax);
+          }
+        } else {
+          if (nParticipants === 2) {
+            notice.namedParticipant = participants.filter(idIsNot(session.user.id))[0];
+          } else if (nParticipants <= nNamesMax) {
+            notice.namedParticipants = participants.map(makeFirstNameYou(session.user.id));
+          } else {
+            notice.namedParticipants = participants.slice(0, nNamesMax).map(makeFirstNameYou(session.user.id));
+            notice.otherParticipants = participants.slice(nNamesMax);
+          }
+          notice.nameIndex = counter();
+        }
+      }
       return render('html/keeper/notice_message', notice);
     case 'global':
       return render('html/keeper/notice_global', notice);
@@ -144,7 +181,7 @@ panes.notices = function () {
       $notices.find('.kifi-notice[data-id="' + n.id + '"]').remove();
       $notices.find('.kifi-notice[data-thread="' + n.thread + '"]').remove();
     });
-    $(notices.map(function (n) {return renderNotice(n, true)}).join(''))
+    $(notices.map(renderNotice).join(''))
       .find('time').timeago().end()
       .prependTo($notices);
     api.port.emit('notifications_read', notices[0].time);
@@ -179,7 +216,7 @@ panes.notices = function () {
         api.port.emit('old_notifications', $oldest.find('time').attr('datetime'), function (notices) {
           if ($notices) {
             if (notices.length) {
-              $(notices.map(function (n) {return renderNotice(n, false)}).join(''))
+              $(notices.map(renderNotice).join(''))
                 .find('time').timeago().end()
                 .appendTo($notices);
             } else {
@@ -191,10 +228,32 @@ panes.notices = function () {
     }
   }
 
+  function counter() {
+    var i = 0;
+    return function() {
+      return i++;
+    };
+  }
+
   function dateWithoutMs(t) { // until db has ms precision
     var d = new Date(t);
     d.setMilliseconds(0);
     return d;
+  }
+
+  function idIsNot(id) {
+    return function (o) {
+      return o.id !== id;
+    };
+  }
+
+  function makeFirstNameYou(id) {
+    return function (o) {
+      if (o.id === id) {
+        o.firstName = 'You';
+      }
+      return o;
+    };
   }
 }();
 

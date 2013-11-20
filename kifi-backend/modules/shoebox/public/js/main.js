@@ -960,8 +960,10 @@ $(function () {
 				if (!isImporting(status)) {
 					console.log('getNetworkImportUpdates:end');
 					toggleImporting(network, false);
-					emptyAndPrepInvite(network);
 					endImportUpdate(importUpdate);
+					if (status === 'finished' || status === 'end') {
+						emptyAndPrepInvite(network);
+					}
 				}
 			});
 
@@ -981,7 +983,7 @@ $(function () {
 				var connected = isConnected(networks, network);
 				var importing = isImporting(status);
 
-				console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing);
+				console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing, !(connected || importing), !importing && connected);
 
 				toggleInviteHelp(network, !(connected || importing));
 				toggleImporting(network, importing);
@@ -1278,7 +1280,14 @@ $(function () {
 			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">')
 			.appendTo('body').submit().remove();
 		} else if (/^linkedin|email/.test(fullSocialId)) {
-			inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: $friend.find('.invite-name').text()});
+			var name = $friend.find('.invite-name').text();
+			if (/^email/.test(fullSocialId)) {
+				var match = name.match(/^\s*<(.*)>$/);
+				if (match) {
+					name = match[1];
+				}
+			}
+			inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name});
 			$inviteMessageDialog.dialog('show');
 		}
 	});

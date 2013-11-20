@@ -18,6 +18,7 @@ trait EContactRepo extends Repo[EContact] {
   def getById(econtactId:Id[EContact])(implicit session:RSession): Option[EContact]
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact]
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
+  def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
   def deleteByUserId(userId:Id[User])(implicit session:RWSession):Int
   def deleteAndInsertAll(userId:Id[User], contactInfos:Seq[EContact])(implicit session:RWSession):Int
@@ -53,6 +54,9 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
   def getByUserIdIter(userId: Id[User], maxRows:Int)(implicit session: RSession): CloseableIterator[EContact] =
     (for(f <- table if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).elementsTo(maxRows)
 
+  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact] =
+    (for(f <- table if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).list
+
   def getEContactCount(userId: Id[User])(implicit session: RSession): Int = {
     Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
   }
@@ -84,7 +88,7 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
   def insertOnDupUpdate(userId: Id[User], c: EContact)(implicit session: RWSession): Unit = {
     val cdt = currentDateTime
     val res = if (Play.maybeApplication.isDefined && Play.isProd) {
-      sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName}) on duplicate key update name=values(name)".first
+      sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName}) on duplicate key update id=id".first
     } else {
       getByUserIdAndEmail(userId, c.email) match {
         case Some(e) => 0

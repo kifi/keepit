@@ -604,11 +604,8 @@ api.port.on({
     logEvent.apply(null, data);
   },
   log_search_event: function(data) {
-    var doNotTrack = (navigator.doNotTrack==='yes' || navigator.doNotTrack==='1');
-    if (!doNotTrack) {
-      var whichEvent = data[0];
-      ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
-    }
+    var whichEvent = data[0];
+    ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
   },
   send_message: function(data, respond, tab) {
     var nUri = tab.nUri || data.url;
@@ -933,9 +930,11 @@ function removeNotificationPopups(associatedId) {
 function standardizeNotification(n) {
   n.category = (n.category || "message").toLowerCase();
   n.unread = n.unread || (n.unreadAuthors > 0);
-  for (var i = n.participants ? n.participants.length : 0; i--;) {
-    if (n.participants[i].id == session.user.id) {
-      n.participants.splice(i, 1);
+  if (!session || session.experiments.indexOf('inbox') < 0) {
+    for (var i = n.participants ? n.participants.length : 0; i--;) {
+      if (n.participants[i].id == session.user.id) {
+        n.participants.splice(i, 1);
+      }
     }
   }
 }

@@ -59,8 +59,9 @@ class ExtMessagingController @Inject() (
       (o \ "extVersion").asOpt[String])
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
-    val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).flatMap { recipientSet =>
-      val (thread, message) = messagingController.sendNewMessage(request.user.id.get, recipientSet, urls, title, text)
+
+    val responseFuture = messagingController.constructRecipientSeq(recipients.distinct.map(ExternalId[User](_))).flatMap { recipientSeq =>
+      val (thread, message) = messagingController.sendNewMessage(request.user.id.get, recipientSeq, urls, title, text)
       val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(thread, None)
       val threadInfoOpt = (o \ "url").asOpt[String].map { url =>
         messagingController.buildThreadInfos(request.user.id.get, Seq(thread), Some(url)).headOption
@@ -73,7 +74,7 @@ class ExtMessagingController @Inject() (
         //Analytics
         SafeFuture {
           val contextBuilder = userEventContextBuilder(Some(request))
-          recipientSet.foreach { recipient =>
+          recipientSeq.foreach { recipient =>
             contextBuilder += ("recipient", recipient.id)
           }
           contextBuilder += ("threadId", thread.id.get.id)

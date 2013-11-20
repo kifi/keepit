@@ -166,7 +166,7 @@ class OAuth2Controller @Inject() (
                 resF map { res =>
                   log.info(s"[google] abook import $res")
                   // Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // todo: for admin page
-                  Redirect("/friends/invite") // @see InviteController.invite
+                  Redirect("/friends/invite/email") // @see InviteController.invite
                 }
               }
               case "facebook" => {
