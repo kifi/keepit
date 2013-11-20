@@ -91,7 +91,7 @@ class MessagingController @Inject() (
         participantSet.toSeq.map(id2BasicUser(_))
       )
 
-      val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator, false, 0, 0)
+      val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator, false, 0, 0, 0)
 
       userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson, false)
       userThreadRepo.clearNotification(userId)
@@ -321,7 +321,8 @@ class MessagingController @Inject() (
       locator: String, 
       unread: Boolean,
       originalAuthorIdx: Int,
-      unseenAuthors: Int
+      unseenAuthors: Int,
+      numAuthors: Int
     ) : JsValue = {
     Json.obj(
       "id"            -> message.externalId.id,
@@ -336,6 +337,7 @@ class MessagingController @Inject() (
       "unread"        -> unread,
       "category"      -> "message",
       "firstAuthor"   -> originalAuthorIdx,
+      "authors"       -> numAuthors, //number of people who have sent messages in this conversation
       "unreadAuthors" -> unseenAuthors //number of people in 'particiapnts' who's messages you haven't seen yet
     )
   }
@@ -364,8 +366,9 @@ class MessagingController @Inject() (
         case None => orderedActivityInfo.length
       }
       val originalAuthor = orderedActivityInfo.filter(_.started).zipWithIndex.head._2
+      val numAuthors = orderedActivityInfo.filter(_.lastActive.isDefined).length
 
-      val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator, !muted, originalAuthor, unseenAuthors)
+      val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator, !muted, originalAuthor, unseenAuthors, numAuthors)
 
       db.readWrite(attempts=2){ implicit session =>
         userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
@@ -522,6 +525,7 @@ class MessagingController @Inject() (
 
 
     val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
+    val numAuthors = threadActivity.filter(_.lastActive.isDefined).length
 
     val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants=threadActivity.map{ ta => id2BasicUser(ta.userId)})
 
@@ -532,7 +536,7 @@ class MessagingController @Inject() (
     //set notification json for message sender (if there isn't another yet) 
     //ZZZ should be the same for the sender as everyone else, except that pending will be false
     //ZZZ experiment
-    val notifJson = buildMessageNotificationJson(message, thread, orderedMessageWithBasicUser, "/messages/" + thread.externalId, false, originalAuthor, 0)
+    val notifJson = buildMessageNotificationJson(message, thread, orderedMessageWithBasicUser, "/messages/" + thread.externalId, false, originalAuthor, 0, numAuthors)
 
     db.readWrite(attempts=2){ implicit session =>
       userThreadRepo.setNotificationJsonIfNotPresent(from, thread.id.get, notifJson, message)
