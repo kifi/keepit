@@ -39,7 +39,7 @@ object SearchConfig {
       "proximityBoost" -> "0.95",
       "semanticBoost" -> "0.8",
       "dampingHalfDecayMine" -> "5.0",
-      "dampingHalfDecayFriends" -> "3.0",
+      "dampingHalfDecayFriends" -> "4.0",
       "dampingHalfDecayOthers" -> "1.5",
       "useS3FlowerFilter" -> "true",
       "showExperts" -> "false"
