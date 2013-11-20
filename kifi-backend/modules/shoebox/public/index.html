@@ -319,10 +319,10 @@
 									<a href="javascript:" class="invite-cancel">×</a>
 									<input type="hidden" name="fullSocialId" value="{{fullSocialId}}">
 									<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
-									<textarea class="invite-message" name="message">Hi {{label | replace ' .*', '' }},
-I would like to invite you to the private beta of Kifi.com.
-									</textarea>
-									<p>An invitation link will be attached to this message</p>
+									<textarea class="invite-message" name="message">Hi{% if label %} {{label | replace ' .*', '' }}{% endif %},
+
+I would like to invite you to the private beta of Kifi.com.</textarea>
+									<p>An invitation link will be attached to this message.</p>
 									<button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
 								</form>
 							</div>
