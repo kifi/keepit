@@ -36,9 +36,9 @@ class MessagingTest extends Specification with DbTestInjector {
     val user1 = Id[User](42)
     val user2 = Id[User](43)
     val user3 = Id[User](44)
-    val user2n3Set = Set[Id[User]](user2, user3)
+    val user2n3Seq = Seq[Id[User]](user2, user3)
 
-    (messagingController, user1, user2, user3, user2n3Set, notificationRouter)
+    (messagingController, user1, user2, user3, user2n3Seq, notificationRouter)
   }
 
   "Messaging Contoller" should {
