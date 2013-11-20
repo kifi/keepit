@@ -167,4 +167,8 @@ class HomeController @Inject() (
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
     Ok(views.html.website.gettingStarted2(request.user))
   }
+
+  def redditPreview = Action { implicit request =>
+    Ok(views.html.website.redditPreview())
+  }
 }

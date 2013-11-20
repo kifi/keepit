@@ -1,0 +1,21 @@
+@()
+
+@styles = {
+<link rel="stylesheet" href="/assets/css/getting-started.css">
+}
+
+@content = {
+  <h1 class="main-logo">kifi</h1>
+  <h2 class="page-title">Learn how Kifi works</h2>
+
+  <a href="//fast.wistia.net/embed/iframe/arn4nh8il4?popover=true" class="wistia-popover[height=540,playerColor=7b796a,width=960] video-still"></a>
+  <div class="skip-wrap">
+    <h4>We’re launching publicly in early January. We’ve been working hard for the past year to build the solution to losing bookmarks. If this sounds interesting, you can sign up for the private beta <a href="@com.keepit.controllers.core.routes.AuthController.signupPage">here</a>.</h4>
+  </div>
+}
+
+@scripts = {
+<script charset="ISO-8859-1" src="https://fast.wistia.com/assets/external/popover-v1.js"></script>
+}
+
+@views.html.auth.helper.page(title = "kifi.com • Reddit Preview", styles = styles, content = content, scripts = scripts)

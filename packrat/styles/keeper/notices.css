@@ -39,19 +39,26 @@ div.kifi-notices-none:only-child {
   cursor: pointer;
   background: #e5ebf1;
 }
+.kifi-pane-v2 .kifi-notice {
+  padding: 10px 12px 10px 71px;
+  min-height: 53px;
+  background: #f0f2f6;
+}
 .kifi-notice:hover {
   background: #dfe7ef;
 }
 .kifi-notice-visited {
   background: #fefefe;
 }
-.kifi-notice-visited:hover {
+.kifi-pane-v2 .kifi-notice-visited {
+  background: #fff;
+}
+.kifi-notice-visited:hover,
+.kifi-pane-v2 .kifi-notice:hover {
   background: #f8fafd;
 }
-.kifi-notice-new,
-.kifi-notice-new:hover {
-  background: #f7f0d0;
-}
+
+/* v1 */
 .kifi-notice time {
   margin: 4px 0 0 0;
   font-size: 11px;
@@ -110,4 +117,88 @@ div.kifi-notices-none:only-child {
   font-size: 13px;
   color: #3a3c3d;
   word-wrap: break-word;
+}
+
+/* v2 */
+.kifi-notice-mosaic {
+  position: absolute;
+  top: 11px;
+  left: 9px;
+  height: 53px;
+  width: 53px;
+}
+.kifi-notice-pic {
+  position: absolute;
+  background-position: center;
+  background-size: cover;
+}
+.kifi-notice-pic-0 {
+  top: 0;
+  left: 0;
+  height: 53px;
+  width: 53px;
+}
+.kifi-notice-mosiac-2>.kifi-notice-pic-0,
+.kifi-notice-mosiac-3>.kifi-notice-pic-0 {
+  left: 27px;
+  width: 26px;
+}
+.kifi-notice-mosiac-4>.kifi-notice-pic-0 {
+  top: 27px;
+  left: 27px;
+  width: 26px;
+  height: 26px;
+}
+.kifi-notice-sent .kifi-notice-pic-0 {
+  top: 26px;
+  left: 26px;
+  height: 26px;
+  width: 26px;
+  /* for 2x2 layout
+  top: 32px;
+  left: 31px;
+  height: 33px;
+  width: 33px; */
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+.kifi-notice-pic-1 {
+  top: 0;
+  left: 0;
+  width: 26px;
+  height: 53px;
+}
+.kifi-notice-mosaic-2>.kifi-notice-pic-1,
+.kifi-notice-mosaic-3>.kifi-notice-pic-1 {
+  height: 26px;
+}
+.kifi-notice-sent>.kifi-notice-mosaic-2>.kifi-notice-pic-1 {
+  width: 53px;
+  height: 53px;
+}
+
+.kifi-notice-pic-1 {
+  height: 26px;
+  width: 26px;
+}
+.kifi-notice-pic-tr {
+  left: 36px;
+  height: 26px;
+  width: 26px;
+}
+.kifi-notice-pic-bl {
+  top: 38px;
+  height: 26px;
+  width: 26px;
+}
+.kifi-notice-pic-br {
+  top: 38px;
+  left: 36px;
+  height: 26px;
+  width: 26px;
+}
+.kifi-notice-p-names {
+  font-size: 12px;
+  margin: 0 0 2px;
+  color: #333;
 }

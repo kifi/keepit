@@ -51,6 +51,8 @@ class ContactsUpdater @Inject() (
   airbrake:AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
+  val batchSize = sys.props.getOrElse("abook.upload.batch.size", "50").toInt
+
   implicit class RichOptString(o:Option[String]) {
     def trimOpt = o collect { case s:String if (s!= null && !s.trim.isEmpty) => s }
   }
@@ -76,7 +78,7 @@ class ContactsUpdater @Inject() (
       val abookRawInfo = Json.fromJson[ABookRawInfo](rawInfoJson).getOrElse(throw new IllegalArgumentException(s"[upload] Cannot parse $rawInfoJson")) // notify user?
       val cBuilder = mutable.ArrayBuilder.make[Contact]
       var processed = 0
-      abookRawInfo.contacts.value.grouped(500).foreach { g =>
+      abookRawInfo.contacts.value.grouped(batchSize).foreach { g =>
         g.foreach { contact =>
           val fName = (contact \ "firstName").asOpt[String] trimOpt
           val lName = (contact \ "lastName").asOpt[String] trimOpt

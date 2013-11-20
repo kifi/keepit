@@ -32,8 +32,8 @@ case class NonOKResponseException(url: HttpUri, response: ClientResponse, reques
   override def toString(): String = getMessage
 }
 
-case class LongWaitException(url: HttpUri, response: Response, waitTime: Int)
-    extends Exception(s"[${url.service}] Long Wait Error on ${url.summary} status:${response.status} wait-time:${waitTime}ms"){
+case class LongWaitException(url: HttpUri, response: Response, waitTime: Int, duration: Int, remoteTime: Int)
+    extends Exception(s"[${url.service}] Long Wait on ${url.summary} total-time:${duration}ms remote-time:${remoteTime}ms wait-time:${waitTime}ms status:${response.status}"){
   override def toString(): String = getMessage
 }
 
@@ -193,9 +193,9 @@ case class HttpClientImpl(
         trackingId = request.trackingId,
         statusCode = res.res.status))
 
-    e.waitTime map {waitTime =>
+    e.waitTime map { waitTime =>
       if (waitTime > 1000) {//ms
-        val exception = request.tracer.withCause(LongWaitException(request.httpUri, res.res, waitTime))
+        val exception = request.tracer.withCause(LongWaitException(request.httpUri, res.res, waitTime, e.duration, remoteTime))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
@@ -279,3 +279,4 @@ class ClientResponseImpl(val request: Request, val res: Response) extends Client
     }
   }
 }
+
