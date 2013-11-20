@@ -14,7 +14,6 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search._
-import com.keepit.serializer.PersonalSearchResultPacketSerializer.resSerializer
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -227,7 +226,7 @@ class ExtSearchController @Inject() (
     res: ArticleSearchResult) {
 
     articleSearchResultStore += (res.uuid -> res)
-    searchAnalytics.searchPerformed(request, kifiVersion, maxHits, searchFilter, searchExperiment, res)
+    searchAnalytics.performedSearch(request, kifiVersion, maxHits, searchFilter, searchExperiment, res)
   }
 
   class SearchTiming{

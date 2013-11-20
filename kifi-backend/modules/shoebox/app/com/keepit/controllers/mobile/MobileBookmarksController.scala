@@ -27,6 +27,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 class MobileBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   bookmarksCommander: BookmarksCommander,
+  collectionCommander: CollectionCommander,
   userEventContextBuilder: EventContextBuilderFactory)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
@@ -54,6 +55,13 @@ class MobileBookmarksController @Inject() (
       ))
     } getOrElse {
       BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))
+    }
+  }
+
+  def saveCollection() = AuthenticatedJsonAction { request =>
+    collectionCommander.saveCollection("", request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
+      case Left(newColl) => Ok(Json.toJson(newColl))
+      case Right(CollectionSaveFail(message)) => BadRequest(Json.obj("error" -> message))
     }
   }
 

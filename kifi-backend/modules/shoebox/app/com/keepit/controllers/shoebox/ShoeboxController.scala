@@ -463,10 +463,10 @@ class ShoeboxController @Inject() (
     val json = request.body
     val clicker = Id.format[User].reads(json \ "clicker").get
     val uriId = Id.format[NormalizedURI].reads(json \ "uriId").get
-    val keepers = (json \ "keepers").as[JsArray].value.map(Id.format[User].reads(_).get)
+    val keepers = (json \ "keepers").as[JsArray].value.map(ExternalId.format[User].reads(_).get)
     db.readWrite { implicit session =>
       if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, uriId, true)
-      else keepers.foreach { keeper => userBookmarkClicksRepo.increaseCounts(keeper, uriId, false) }
+      else keepers.foreach { extId => userBookmarkClicksRepo.increaseCounts(userRepo.get(extId).id.get, uriId, false) }
     }
     Ok
   }

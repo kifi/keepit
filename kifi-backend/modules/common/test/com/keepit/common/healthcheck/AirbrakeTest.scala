@@ -117,6 +117,38 @@ class AirbrakeTest extends Specification with TestInjector {
       clean.exception.getClass.toString === "class java.lang.IllegalArgumentException"
     }
 
+    "cleanError cleans null:null" in {
+      val error = AirbrakeError(
+        new Exception("Execution exception in null:null",
+          new IllegalArgumentException("foo error",
+            new RuntimeException("cause is bar"))))
+      val clean = error.cleanError
+      error !== clean
+      clean.exception.getClass.toString === "class java.lang.IllegalArgumentException"
+    }
+
+    "cleanError cleans Option" in {
+      withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
+        val formatter = inject[AirbrakeFormatter]
+        def method1() = try {
+            Option(null).get
+          } catch {
+            case e => throw new IllegalArgumentException("me iae", e)
+          }
+        try {
+          method1()
+          1 === 2
+        } catch {
+          case error =>
+            val xml = formatter.noticeError(ErrorWithStack(error), None)
+            val lines = (xml \\ "line").toVector
+            lines.head === <line method="java.lang.IllegalArgumentException: me iae" file="InjectorProvider.scala" number="39"/>
+            lines(1) === <line method="com.keepit.inject.InjectorProvider#withInjector" file="InjectorProvider.scala" number="39"/>
+            lines.size === 125
+        }
+      }
+    }
+
     "create signature" in {
       def troubleMaker() =
         for (i <- 1 to 2)

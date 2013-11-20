@@ -101,6 +101,7 @@ POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.Mobil
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.keepMultiple()
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepMultiple()
+POST    /m/1/collections/create             @com.keepit.controllers.mobile.MobileBookmarksController.saveCollection()
 
 ##########################################
 # Website
@@ -315,6 +316,8 @@ POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseControll
 POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
 
 GET     /admin/spell/suggest        @com.keepit.controllers.admin.AdminSpellCorrectorController.suggest(input: String, enableBoost: Boolean ?= true)
+GET     /admin/spell/spellchecker   @com.keepit.controllers.admin.AdminSpellCorrectorController.spellChecker()
+POST     /admin/spell/correct        @com.keepit.controllers.admin.AdminSpellCorrectorController.correct()
 
 GET     /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.displayInvitations(page: Int ?= 0, show: String ?= "all")
 POST    /admin/invites/accept       @com.keepit.controllers.admin.AdminInvitationController.acceptUser(id: Id[SocialUserInfo])

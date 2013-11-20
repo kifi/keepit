@@ -29,6 +29,7 @@ var notifier = function() {
     switch (o.category) {
       case "message":
         removeByAssociatedId(o.thread, {fade: false});
+        o.author = o.author || o.participants[0];
         add({
           title: o.author.firstName + " " + o.author.lastName,
           subtitle: "Sent you a new Kifi Message",

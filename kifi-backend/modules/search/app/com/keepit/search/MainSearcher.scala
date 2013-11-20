@@ -98,6 +98,7 @@ class MainSearcher(
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
+  private[this] val homePageBoost = config.asFloat("homePageBoost")
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
@@ -169,7 +170,7 @@ class MainSearcher(
     lang = LangDetector.detectShortText(queryString, langProbabilities)
 
     val hotDocs = new HotDocSetFilter()
-    parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost, concatBoost)
+    parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost, concatBoost, homePageBoost)
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
@@ -449,7 +450,7 @@ class MainSearcher(
     // TODO: use user profile info as a bias
     lang = LangDetector.detectShortText(queryString, langProbabilities)
     val hotDocs = new HotDocSetFilter()
-    parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost, concatBoost)
+    parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost, concatBoost, homePageBoost)
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 

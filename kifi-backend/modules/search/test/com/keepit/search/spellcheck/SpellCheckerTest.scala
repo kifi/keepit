@@ -84,7 +84,7 @@ class SpellCheckerTest extends Specification {
       var avgDist = (4 + 6)/2
       (score - numInter * scorer.gaussianScore(avgDist)).max(1e-5) === 1e-5
       score = scorer.score(Suggest("cd y1")).score
-      score === 0.01f       // zero intersection. smoothed to 0.01
+      score === 0.001f       // zero intersection. smoothed to 0.001
 
     }
   }
