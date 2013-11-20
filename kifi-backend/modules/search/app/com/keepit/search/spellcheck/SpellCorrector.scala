@@ -48,7 +48,7 @@ class SpellCorrectorImpl(spellIndexer: SpellIndexer, enableAdjScore: Boolean) ex
 
   def getSimilarTerms(term: String, numSug: Int): Array[String] = {
     val similar = spellChecker.suggestSimilar(term, numSug)       // this never includes the original term
-    if (spellChecker.exist(term) || stopwords.contains(term) || similar.isEmpty) Array(term) ++ similar.take(2)   // add 2 just in case misspelling words were indexed
+    if (spellChecker.exist(term) || stopwords.contains(term) || similar.isEmpty) Array(term) // ++ similar.take(2)   // add 2 just in case misspelling words were indexed
     else similar
   }
 }
