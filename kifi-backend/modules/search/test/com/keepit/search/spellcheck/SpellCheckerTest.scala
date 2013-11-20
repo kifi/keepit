@@ -16,6 +16,7 @@ import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.SlowCompositeReaderWrapper
 import org.apache.lucene.util.BytesRef
 import org.apache.lucene.search.DocIdSetIterator
+import scala.math.log
 
 class SpellCheckerTest extends Specification {
 
@@ -60,12 +61,14 @@ class SpellCheckerTest extends Specification {
       articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
       indexWriter.close()
 
+      def log2(x: Double) = log(x)/log(2)
+
       val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
       val scorer = new SuggestionScorer(statsReader, enableAdjScore = false)
       var s = Suggest("abc")
-      scorer.score(s).score === 3f
+      (scorer.score(s).score - log2(1 + 3f)).max(1e-5) === 1e-5          // 3 intersections
       s = Suggest("def deg")
-      scorer.score(s).score === 1f          // zero intersection, smoothed to 1
+      (scorer.score(s).score - scorer.minPairTermsScore).max(1e-5f) === 1e-5f          // zero intersection, smoothed to min score
     }
 
     "adjScore should work" in {
@@ -84,8 +87,7 @@ class SpellCheckerTest extends Specification {
       var avgDist = (4 + 6)/2
       (score - numInter * scorer.gaussianScore(avgDist)).max(1e-5) === 1e-5
       score = scorer.score(Suggest("cd y1")).score
-      score === 0.001f       // zero intersection. smoothed to 0.001
-
+      (score - scorer.minPairTermsScore).max(1e-5f) === 1e-5f       // zero intersection. smoothed to min score
     }
   }
 
