@@ -437,7 +437,7 @@ class UserController @Inject() (
         val returnEnumerator = Enumerator.generateM(poller)
         Ok.stream(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
       case None =>
-        Ok(domain + script(JsString("network_not_connected")))
+        Ok(domain += script(JsString("network_not_connected")))
     }
   }
 
