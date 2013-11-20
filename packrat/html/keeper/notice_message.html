@@ -1,4 +1,5 @@
-<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-locator="{{locator}}" data-created-at="{{time}}">
+<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isSent}} kifi-notice-sent{{/isSent}}{{#isReceived}} kifi-notice-received{{/isReceived}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-locator="{{locator}}" data-created-at="{{time}}">
+{{^inbox}}
   <img class="kifi-notice-avatar" src="{{cdnBase}}/users/{{author.id}}/pics/200/{{author.pictureName}}">
   <div class="kifi-notice-name">
     {{#oneParticipant}}
@@ -19,11 +20,30 @@
     {{/moreParticipants}}
   </div>
   <div class="kifi-notice-action">
-  	 Message
+    Message
   </div>
   <div class="kifi-notice-page">
-  	<a href="{{url}}" class="kifi-link" target="_blank">{{title}}</a>
+    <a href="{{url}}" class="kifi-link" target="_blank">{{title}}</a>
   </div>
   <div class="kifi-notice-text">{{#formatMessage}}{{{text}}}{{/formatMessage}}</div>
   <time datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
+{{/inbox}}
+{{#inbox}}
+  <div class="kifi-notice-mosaic kifi-notice-mosaic-{{picturedParticipants.length}}">
+  {{#picturedParticipants}}
+    <div class="kifi-notice-pic kifi-notice-pic-{{picIndex}}" style="background-image:url({{cdnBase}}/users/{{id}}/pics/200/{{pictureName}})"></div>
+  {{/picturedParticipants}}
+  </div>
+  <div class="kifi-notice-names kifi-notice-names-{{namedParticipants.length}}">
+    {{#namedParticipant}}
+      <span class="kifi-notice-name">{{firstName}} {{lastName}}</span>
+    {{/namedParticipant}}
+    {{#namedParticipants}}
+      <span class="kifi-notice-name kifi-notice-name-{{nameIndex}}">{{firstName}}</span>
+    {{/namedParticipants}}
+    {{#otherParticipants}}
+      and <a class="kifi-notice-n-others" href="javascript:">{{otherParticipants}} others</a>
+    {{/otherParticipants}}
+  </div>
+{{/inbox}}
 </div>
