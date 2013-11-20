@@ -26,6 +26,7 @@ import java.math.BigInteger
 import java.security.SecureRandom
 import com.keepit.common.store.S3ImageStore
 import com.keepit.heimdal.{HeimdalServiceClient}
+import play.api.libs.concurrent.Execution.Implicits._
 
 case class UserStatistics(
     user: User,
@@ -151,7 +152,7 @@ class AdminUserController @Inject() (
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
-    val contactsF = abookClient.getContacts(userId, 500)
+    val econtactCountF = abookClient.getEContactCount(userId)
     val econtactsF = abookClient.getEContacts(userId, 500)
 
     val (user, bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
@@ -194,16 +195,20 @@ class AdminUserController @Inject() (
     val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
-    val abookInfos:Seq[ABookInfo] = Await.result(abookInfoF, 5 seconds)
-    val contacts:Seq[Contact] = Await.result(contactsF, 5 seconds)
-    val econtacts:Seq[EContact] = Await.result(econtactsF, 5 seconds)
-    val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService()
-    val abookEP = for (s <- abookServiceOpt) yield s"http://${s.instanceInfo.publicIp.ip}:9000/internal/abook/"
+    val abookEP = com.keepit.common.routes.ABook.internal.upload(userId, ABookOrigins.IOS).url
     val state = new BigInteger(130, new SecureRandom()).toString(32)
 
-    Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-      fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, econtacts, abookEP,
-      collections, collectionFilter, state)).withSession(session + ("stateToken" -> state ))
+    Async {
+      for {
+        abookInfos <- abookInfoF
+        econtactCount <- econtactCountF
+        econtacts <- econtactsF
+      } yield {
+        Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
+          fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount, econtacts, abookEP,
+          collections, collectionFilter, state)).withSession(session + ("stateToken" -> state ))
+      }
+    }
   }
 
   def allUsersView = usersView(0)
