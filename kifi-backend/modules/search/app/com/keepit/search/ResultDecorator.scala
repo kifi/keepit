@@ -133,7 +133,6 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
         }
 
         PersonalSearchHit(
-          r.uriId,
           Some(r.title),
           r.url,
           r.isPrivate,
@@ -145,7 +144,6 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
       } else {
         val r = searcher.getArticleRecord(h.uriId).getOrElse(throw new Exception(s"missing article record: uri id = ${h.uriId}"))
         PersonalSearchHit(
-          r.id,
           Some(r.title),
           r.url,
           false,
@@ -163,15 +161,13 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
       basicUserMap,
       (hits, resultSet.scorings, personalSearchHits).zipped.toSeq.map { case (hit, score, personalHit) =>
         val users = hit.users.map(basicUserMap)
-        val isNew = (!hit.isMyBookmark && score.recencyScore > 0.5f)
         PersonalSearchResult(
           personalHit,
           hit.bookmarkCount,
           hit.isMyBookmark,
           personalHit.isPrivate,
           users,
-          hit.score,
-          isNew)
+          hit.score)
       },
       resultSet.collections.iterator.map{ id => getCollectionExternalId(id) }.toSeq
     )
