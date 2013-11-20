@@ -933,9 +933,11 @@ function removeNotificationPopups(associatedId) {
 function standardizeNotification(n) {
   n.category = (n.category || "message").toLowerCase();
   n.unread = n.unread || (n.unreadAuthors > 0);
-  for (var i = n.participants ? n.participants.length : 0; i--;) {
-    if (n.participants[i].id == session.user.id) {
-      n.participants.splice(i, 1);
+  if (!session || session.experiments.indexOf('inbox') < 0) {
+    for (var i = n.participants ? n.participants.length : 0; i--;) {
+      if (n.participants[i].id == session.user.id) {
+        n.participants.splice(i, 1);
+      }
     }
   }
 }
