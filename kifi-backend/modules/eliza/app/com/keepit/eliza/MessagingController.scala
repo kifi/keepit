@@ -398,7 +398,7 @@ class MessagingController @Inject() (
     "6f21b520-87e7-4053-9676-85762e96970a"  // jenny
   )
 
-  def constructRecipientSet(userExtIds: Seq[ExternalId[User]]) : Future[Set[Id[User]]] = {
+  def constructRecipientSet(userExtIds: Seq[ExternalId[User]]) : Future[Seq[Id[User]]] = {
     val loadedUser = userExtIds.map { userExtId =>
       userExtId match {
         case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
@@ -410,12 +410,12 @@ class MessagingController @Inject() (
         case notAGroup => Seq(notAGroup)
       }
     }
-    shoebox.getUserIdsByExternalIds(loadedUser.flatten).map(_.toSet)
+    shoebox.getUserIdsByExternalIds(loadedUser.flatten)
   }
 
 
-  def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urls: JsObject, titleOpt: Option[String], messageText: String) : (MessageThread, Message) = {
-    val participants = recipients + from
+  def sendNewMessage(from: Id[User], recipients: Seq[Id[User]], urls: JsObject, titleOpt: Option[String], messageText: String) : (MessageThread, Message) = {
+    val participants = (recipients :+ from).distinct
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
     val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(urls), 10 seconds)} // todo: Remove Await
