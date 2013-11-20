@@ -15,6 +15,8 @@ import MessagingTypeMappers._
 
 case class Notification(thread: Id[MessageThread], message: Id[Message])
 
+case class UserThreadActivity(id: Id[UserThread], threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
+
 
 case class UserThread(
     id: Option[Id[UserThread]] = None,
@@ -32,7 +34,7 @@ case class UserThread(
     notificationLastSeen: Option[DateTime] = None,
     notificationEmailed: Boolean = false,
     replyable: Boolean = true,
-    lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user send on this thread
+    lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
     started: Boolean = false //Wether or not this thread was started by this user
   )
   extends Model[UserThread] {
@@ -101,6 +103,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession) : Unit
 
+  def getThreadActivity(theadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity]
+
 }
 
 
@@ -135,7 +139,9 @@ class UserThreadRepoImpl @Inject() (
 
   private def updateSendableNotification(data: JsValue, pending: Boolean): Option[JsObject] = {
     data match {
-      case x:JsObject => Some(x.deepMerge(Json.obj("unread"->pending)))
+      case x:JsObject => Some(x.deepMerge(
+        if (pending) Json.obj("unread"->pending) else Json.obj("unread"->pending, "unreadAuthors" -> 0)
+      ))
       case _ => None
     }
   }
@@ -182,7 +188,7 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.user===userId && row.notificationUpdatedAt<=timeCutoff) yield row.notificationPending).update(false)
   }
 
-  def setNotification(userId: Id[User], threadId: Id[MessageThread], message: Message, notifJson: JsValue, pending: Boolean)(implicit session: RWSession) : Unit = {
+  def setNotification(userId: Id[User], threadId: Id[MessageThread], message: Message, notifJson: JsValue, pending: Boolean)(implicit session: RWSession) : Unit = { //ZZZ have pending passed in here!
     Query(table).filter(row => (row.user===userId && row.thread===threadId) && (row.lastMsgFromOther.isNull || row.lastMsgFromOther < message.id.get))
       .map(row => row.lastNotification ~ row.lastMsgFromOther ~ row.notificationPending ~ row.notificationUpdatedAt ~ row.notificationEmailed)
       .update((notifJson, message.id.get, pending, message.createdAt, false))
@@ -326,6 +332,11 @@ class UserThreadRepoImpl @Inject() (
 
   def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession) : Unit = {
     (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastActive).update(lastActive)
+  }
+
+  def getThreadActivity(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity] = {
+    val rawData = (for (row <- table if row.thread===threadId) yield row.id ~ row.thread ~ row.user ~ row.lastActive.? ~ row.started ~ row.lastSeen.?).list
+    rawData.map{tuple => (UserThreadActivity.apply _).tupled(tuple) }
   }
 
 
