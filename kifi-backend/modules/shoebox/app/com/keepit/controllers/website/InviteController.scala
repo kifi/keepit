@@ -258,8 +258,4 @@ class InviteController @Inject() (db: Database,
       }
     }
   }
-
-  def userCanInvite(experiments: Set[ExperimentType]) = {
-    Play.isDev || (experiments & Set(ExperimentType.ADMIN, ExperimentType.CAN_INVITE) nonEmpty)
-  }
 }
