@@ -512,8 +512,6 @@ class MessagingController @Inject() (
       )
     })
 
-    //=== BEGIN //ZZZ experiment
- 
     val threadActivity = db.readOnly{ implicit session => 
       userThreadRepo.getThreadActivity(thread.id.get) 
     } sortWith { case (first, second) =>
@@ -533,6 +531,7 @@ class MessagingController @Inject() (
 
     //set notification json for message sender (if there isn't another yet) 
     //ZZZ should be the same for the sender as everyone else, except that pending will be false
+    //ZZZ experiment
     val notifJson = buildMessageNotificationJson(message, thread, orderedMessageWithBasicUser, "/messages/" + thread.externalId, false, originalAuthor, 0)
 
     db.readWrite(attempts=2){ implicit session =>
@@ -540,7 +539,6 @@ class MessagingController @Inject() (
     }
     notificationRouter.sendToUser(from, Json.arr("notification", notifJson))
 
-    //=== END
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>

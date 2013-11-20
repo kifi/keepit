@@ -34,7 +34,7 @@ case class UserThread(
     notificationLastSeen: Option[DateTime] = None,
     notificationEmailed: Boolean = false,
     replyable: Boolean = true,
-    lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user send on this thread
+    lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
     started: Boolean = false //Wether or not this thread was started by this user
   )
   extends Model[UserThread] {
@@ -139,7 +139,9 @@ class UserThreadRepoImpl @Inject() (
 
   private def updateSendableNotification(data: JsValue, pending: Boolean): Option[JsObject] = {
     data match {
-      case x:JsObject => Some(x.deepMerge(Json.obj("unread"->pending)))
+      case x:JsObject => Some(x.deepMerge(
+        if (pending) Json.obj("unread"->pending) else Json.obj("unread"->pending, "unreadAuthors" -> 0)
+      ))
       case _ => None
     }
   }
