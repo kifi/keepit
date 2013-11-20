@@ -73,7 +73,12 @@ class ABookUploadTest extends Specification with DbTestInjector {
         )
 
         var abookInfo:ABookInfo = try {
-          commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson)
+          val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson)
+          val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson) // should have no impact
+          info1.state mustEqual ABookInfoStates.PENDING
+          info1.state mustEqual info2.state
+          info1.updatedAt mustEqual info2.updatedAt // should be skipped
+          info1
         } catch {
           case e:Exception => {
             e.printStackTrace(System.out)
