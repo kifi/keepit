@@ -793,9 +793,12 @@ $(function() {
 
 	function getNetworkImportUpdates(network, callback) {
 		var deferred = $.Deferred();
-		window[IMPORT_CHECK] = function(data) {
+		window[IMPORT_CHECK] = function (data) {
 			console.log('[' + IMPORT_CHECK + ']', data);
-			window[IMPORT_CHECK] = callback;
+			window[IMPORT_CHECK] = function (data) {
+				callback(String(data));
+			};
+			data = String(data);
 			deferred.resolve(data);
 			callback(data);
 		};
@@ -811,6 +814,7 @@ $(function() {
 					if (!iframe) {
 						return;
 					}
+					data = 'false';
 					if (deferred) {
 						deferred.resolve(data);
 						deferred = null;
@@ -933,7 +937,8 @@ $(function() {
 	  else if (isSocial) {
 		  var importUpdate = getNetworkImportUpdates(network, function(status) {
 			  console.log('getNetworkImportUpdates', status);
-			  if (status === 'finished' || status === 'end') {
+			  if (!isImporting(status)) {
+				  console.log('getNetworkImportUpdates:end');
 				  toggleImporting(network, false);
 				  emptyAndPrepInvite(network);
 				  endImportUpdate(importUpdate);
@@ -946,6 +951,8 @@ $(function() {
 		  $nwFriendsLoading.show();
 
 		  $.when($.getJSON(xhrBase + '/user/networks'), importUpdate.promise).done(function(networkResult, status) {
+			  console.log('networks promise', networkResult, status);
+
 			  $nwFriendsLoading.hide();
 
 			  console.log('[networks status]', networkResult, status);
