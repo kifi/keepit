@@ -335,7 +335,7 @@ class UserController @Inject() (
   }
 
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
-    val contactsF = if (network.isEmpty || network.get == "email") { // todo: revisit
+    val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
       queryContacts(request.userId, search, after, limit)
     } else Future.successful(Seq.empty[JsObject])
     @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
