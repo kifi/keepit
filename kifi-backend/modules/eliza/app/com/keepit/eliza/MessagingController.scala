@@ -398,7 +398,7 @@ class MessagingController @Inject() (
     "6f21b520-87e7-4053-9676-85762e96970a"  // jenny
   )
 
-  def constructRecipientSet(userExtIds: Seq[ExternalId[User]]) : Future[Seq[Id[User]]] = {
+  def constructRecipientSeq(userExtIds: Seq[ExternalId[User]]) : Future[Seq[Id[User]]] = {
     val loadedUser = userExtIds.map { userExtId =>
       userExtId match {
         case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
@@ -410,7 +410,7 @@ class MessagingController @Inject() (
         case notAGroup => Seq(notAGroup)
       }
     }
-    shoebox.getUserIdsByExternalIds(loadedUser.flatten)
+    shoebox.getUserIdsByExternalIds(loadedUser.flatten) //ZZZ does this preserve order?
   }
 
 
@@ -499,7 +499,7 @@ class MessagingController @Inject() (
       sendNotificationForMessage(userId, message, thread, messageWithBasicUser)
     }
 
-    //set notification json for message sender (if there isn't another yet)
+    //set notification json for message sender (if there isn't another yet) //ZZZ should be the same for the sender as everyone else, except that it will be leaving the "pending" field unchanged
     val isMuted = db.readOnly { implicit session => userThreadRepo.isMuted(from, thread.id.get) }
     val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, "/messages/" + thread.externalId, false)
 

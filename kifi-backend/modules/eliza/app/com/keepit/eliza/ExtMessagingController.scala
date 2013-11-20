@@ -60,7 +60,7 @@ class ExtMessagingController @Inject() (
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
 
-    val responseFuture = messagingController.constructRecipientSet(recipients.distinct.map(ExternalId[User](_))).flatMap { recipientSeq =>
+    val responseFuture = messagingController.constructRecipientSeq(recipients.distinct.map(ExternalId[User](_))).flatMap { recipientSeq =>
       val (thread, message) = messagingController.sendNewMessage(request.user.id.get, recipientSeq, urls, title, text)
       val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(thread, None)
       val threadInfoOpt = (o \ "url").asOpt[String].map { url =>
