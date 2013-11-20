@@ -960,8 +960,10 @@ $(function () {
 				if (!isImporting(status)) {
 					console.log('getNetworkImportUpdates:end');
 					toggleImporting(network, false);
-					emptyAndPrepInvite(network);
 					endImportUpdate(importUpdate);
+					if (status === 'finished' || status === 'end') {
+						emptyAndPrepInvite(network);
+					}
 				}
 			});
 
@@ -981,7 +983,7 @@ $(function () {
 				var connected = isConnected(networks, network);
 				var importing = isImporting(status);
 
-				console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing);
+				console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing, !(connected || importing), !importing && connected);
 
 				toggleInviteHelp(network, !(connected || importing));
 				toggleImporting(network, importing);
