@@ -244,18 +244,21 @@ class ShoeboxServiceClientImpl @Inject() (
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
     val (cachedUsers, needToGetUsers) = userIds.map({ u =>
       u -> cacheProvider.externalUserIdCache.get(ExternalUserIdKey(u))
-    }).foldRight((Seq[Id[User]](), Seq[ExternalId[User]]())) { (uOpt, res) =>
+    }).foldRight((Map[ExternalId[User], Id[User]](), Seq[ExternalId[User]]())) { (uOpt, res) =>
       uOpt._2 match {
-        case Some(uid) => (res._1 :+ uid, res._2)
+        case Some(uid) => (res._1 + (uOpt._1 -> uid), res._2)
         case None => (res._1, res._2 :+ uOpt._1)
       }
     }
-    needToGetUsers match {
+    (needToGetUsers match {
       case Seq() => Promise.successful(cachedUsers).future
       case users => call(Shoebox.internal.getUserIdsByExternalIds(needToGetUsers.mkString(","))).map { r =>
-        cachedUsers ++ r.json.as[Seq[Long]].map(Id[User](_))
+        cachedUsers ++ users.zip(r.json.as[Seq[Long]].map(Id[User](_)))
       }
+    }) map { extId2Id =>
+      userIds.map(extId2Id(_))
     }
+
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
