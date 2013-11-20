@@ -426,7 +426,7 @@ class MessagingController @Inject() (
       if (isNew){
         log.info(s"This is a new thread. Creating User Threads.")
         participants.par.foreach{ userId =>
-          userThreadRepo.create(userId, thread.id.get, uriIdOpt)
+          userThreadRepo.create(userId, thread.id.get, uriIdOpt, userId==from)
         }
       }
       else{
@@ -470,6 +470,7 @@ class MessagingController @Inject() (
     }
     SafeFuture { 
       setLastSeen(from, thread.id.get, Some(message.createdAt))
+      db.readWrite { implicit session => userThreadRepo.setLastActive(from, thread.id.get, message.createdAt) }
       db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) }
     }
 
