@@ -31,7 +31,9 @@ case class UserThread(
     notificationUpdatedAt: DateTime = currentDateTime,
     notificationLastSeen: Option[DateTime] = None,
     notificationEmailed: Boolean = false,
-    replyable: Boolean = true
+    replyable: Boolean = true,
+    lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user send on this thread
+    started: Boolean = false //Wether or not this thread was started by this user
   )
   extends Model[UserThread] {
 
@@ -43,7 +45,7 @@ case class UserThread(
 @ImplementedBy(classOf[UserThreadRepoImpl])
 trait UserThreadRepo extends Repo[UserThread] {
 
-  def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : UserThread
+  def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]], started: Boolean=false)(implicit session: RWSession) : UserThread
 
   def getThreads(user: Id[User], uriId: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]]
 
@@ -93,9 +95,11 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession) : Seq[UserThread]
 
-  def isMuted(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Boolean
+  def isMuted(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession) : Boolean
 
   def setNotificationJsonIfNotPresent(userId: Id[User], threadId: Id[MessageThread], notifJson: JsValue, message: Message)(implicit session: RWSession) : Unit
+
+  def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession) : Unit
 
 }
 
@@ -122,7 +126,9 @@ class UserThreadRepoImpl @Inject() (
     def notificationLastSeen = column[DateTime]("notification_last_seen", O.Nullable)
     def notificationEmailed = column[Boolean]("notification_emailed", O.NotNull)
     def replyable = column[Boolean]("replyable", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ user ~ thread ~ uriId.? ~ lastSeen.? ~ notificationPending ~ muted ~ lastMsgFromOther.? ~ lastNotification ~ notificationUpdatedAt ~ notificationLastSeen.? ~ notificationEmailed ~ replyable <> (UserThread.apply _, UserThread.unapply _)
+    def lastActive = column[DateTime]("last_active", O.Nullable)
+    def started = column[Boolean]("started", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ user ~ thread ~ uriId.? ~ lastSeen.? ~ notificationPending ~ muted ~ lastMsgFromOther.? ~ lastNotification ~ notificationUpdatedAt ~ notificationLastSeen.? ~ notificationEmailed ~ replyable ~ lastActive.? ~ started <> (UserThread.apply _, UserThread.unapply _)
 
     def userThreadIndex = index("user_thread", (user,thread), unique=true)
   }
@@ -150,7 +156,7 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : UserThread = {
+  def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]], started: Boolean = false)(implicit session: RWSession) : UserThread = {
     val userThread = UserThread(
         id=None,
         user=user,
@@ -158,7 +164,8 @@ class UserThreadRepoImpl @Inject() (
         uriId=uriIdOpt,
         lastSeen=None,
         lastMsgFromOther=None,
-        lastNotification=JsNull
+        lastNotification=JsNull,
+        started=started
       )
     save(userThread)
   }
@@ -316,5 +323,10 @@ class UserThreadRepoImpl @Inject() (
   def setNotificationJsonIfNotPresent(userId: Id[User], threadId: Id[MessageThread], notifJson: JsValue, message: Message)(implicit session: RWSession) : Unit = {
     (for (row <- table if row.user===userId && row.thread===threadId && row.lastMsgFromOther.isNull) yield row.lastNotification ~ row.notificationUpdatedAt).update((notifJson, message.createdAt))
   }
+
+  def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession) : Unit = {
+    (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastActive).update(lastActive)
+  }
+
 
 }
