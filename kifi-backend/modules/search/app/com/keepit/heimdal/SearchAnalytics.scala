@@ -4,8 +4,7 @@ import com.keepit.model.{User, KifiVersion}
 import com.keepit.search._
 import com.google.inject.{Singleton, Inject}
 import com.keepit.common.db.{ExternalId, Id}
-import play.api.mvc.AnyContent
-import com.keepit.common.controller.AuthenticatedRequest
+import play.api.mvc.RequestHeader
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
@@ -28,7 +27,7 @@ class SearchAnalytics @Inject() (
   heimdal: HeimdalServiceClient) {
 
   def performedSearch(
-    request: AuthenticatedRequest[AnyContent],
+    request: RequestHeader,
     kifiVersion: Option[KifiVersion],
     maxHits: Int,
     searchFilter: SearchFilter,
@@ -140,6 +139,7 @@ class SearchAnalytics @Inject() (
   }
 
   def endedSearch(
+    request: RequestHeader,
     userId: Id[User],
     time: DateTime,
     origin: String,
@@ -153,7 +153,7 @@ class SearchAnalytics @Inject() (
     kifiResultsClicked: Int
     ) = {
 
-    val contextBuilder = searchContextBuilder(userId, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime)
+    val contextBuilder = searchContextBuilder(request, userId, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime)
 
     // Click Summary
 
@@ -164,6 +164,7 @@ class SearchAnalytics @Inject() (
   }
 
   def clickedSearchResult(
+    request: RequestHeader,
     userId: Id[User],
     time: DateTime,
     origin: String,
@@ -178,7 +179,7 @@ class SearchAnalytics @Inject() (
     resultPosition: Int,
     result: Option[PersonalSearchResult]) = {
 
-    val contextBuilder = searchContextBuilder(userId, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime)
+    val contextBuilder = searchContextBuilder(request, userId, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime)
 
     // Click Information
 
@@ -211,6 +212,7 @@ class SearchAnalytics @Inject() (
   }
 
   private def searchContextBuilder(
+    request: RequestHeader,
     userId: Id[User],
     origin: String,
     uuid: ExternalId[ArticleSearchResult],
@@ -224,7 +226,7 @@ class SearchAnalytics @Inject() (
     val initialSearchId = articleSearchResultStore.getInitialSearchId(uuid)
     val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
 
-    val contextBuilder = userEventContextBuilder()
+    val contextBuilder = userEventContextBuilder(Some(request))
 
     // Search Context
     contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
