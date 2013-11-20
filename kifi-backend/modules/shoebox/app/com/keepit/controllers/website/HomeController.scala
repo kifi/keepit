@@ -16,6 +16,7 @@ import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
 import ActionAuthenticator.MaybeAuthenticatedRequest
 import play.api.Play.current
 import play.api._
+import play.api.http.HeaderNames.USER_AGENT
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import com.keepit.commanders.InviteCommander
@@ -52,7 +53,9 @@ class HomeController @Inject() (
     Ok(fortyTwoServices.currentVersion.toString)
   }
 
-  def home = HtmlAction(true)(authenticatedAction = { implicit request =>
+  def home = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
+
+  private def homeAuthed(implicit request: AuthenticatedRequest[_]): Result = {
     val linkWith = request.session.get(AuthController.LinkWithKey)
     if (linkWith.isDefined) {
       Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
@@ -66,23 +69,33 @@ class HomeController @Inject() (
     } else {
       Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
-  }, unauthenticatedAction = { implicit request =>
+  }
+
+  private def homeNotAuthed(implicit request: Request[_]): Result = {
     if (request.identityOpt.isDefined) {
       // User needs to sign up or (social) finalize
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else {
+      // TODO: Redirect to /login if the path is not /
       // Non-user landing page
       Ok(views.html.auth.auth())
     }
-  })
+  }
+
+  def homeWithParam(id: String) = home
+
+  def blog = HtmlAction(true)(authenticatedAction = { request =>
+      request.headers.get(USER_AGENT) match {
+        case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
+        case _ => homeAuthed(request)
+      }
+    }, unauthenticatedAction = homeNotAuthed(_))
 
   def kifiSiteRedirect(path: String) = Action {
     MovedPermanently(s"/$path")
   }
 
-  def homeWithParam(id: String) = home
-
-  def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
+  def pendingHome()(implicit request: AuthenticatedRequest[_]) = {
     val user = request.user
 
     inviteCommander.markPendingInvitesAsAccepted(user.id.get, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
