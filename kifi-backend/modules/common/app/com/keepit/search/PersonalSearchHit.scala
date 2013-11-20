@@ -138,7 +138,7 @@ object PersonalSearchHit extends Writes[PersonalSearchHit] with Logging {
     isPrivate = isPrivate,
     titleMatches = readMatches(json \ "matches" \ "title"),
     urlMatches = readMatches(json \ "matches" \ "url"),
-    bookmarkId = ExternalId.asOpt[Bookmark]((json \ "id").as[String]),
+    bookmarkId = (json \ "id").asOpt[String].flatMap(ExternalId.asOpt[Bookmark]),
     collections = (json \ "collections").asOpt[JsArray].map { case JsArray(ids) => ids.map(id => ExternalId[Collection](id.as[String])) }
   )
 

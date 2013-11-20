@@ -1532,6 +1532,7 @@ this.tagbox = (function ($, win) {
 		onClickSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion'),
 				tagId = this.getData($suggestion, 'id');
+			this.setInputValue();
 			this.addTagById(tagId, $suggestion, this.getClickInfo('autocomplete'));
 		},
 
@@ -1543,6 +1544,7 @@ this.tagbox = (function ($, win) {
 		onClickNewSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-new'),
 				tagName = this.getData($suggestion, 'name');
+			this.setInputValue();
 			this.createTag(tagName, this.getClickInfo('new'));
 		},
 
