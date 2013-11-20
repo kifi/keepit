@@ -89,7 +89,12 @@ class HomeController @Inject() (
         case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
         case _ => homeAuthed(request)
       }
-    }, unauthenticatedAction = homeNotAuthed(_))
+    }, unauthenticatedAction = { request =>
+      request.headers.get(USER_AGENT) match {
+        case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
+        case _ => homeNotAuthed(request)
+      }
+    })
 
   def kifiSiteRedirect(path: String) = Action {
     MovedPermanently(s"/$path")
