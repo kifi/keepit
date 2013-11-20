@@ -111,7 +111,9 @@ class ContactsUpdater @Inject() (
               if (parseResult.successful) {
                 val parsedEmail:Email = parseResult.get
                 log.info(s"[upload] successfully parsed $email; result=${parsedEmail.toDbgString}")
-                if (set.contains(parsedEmail.toString)) {
+                if (parsedEmail.host.domain.length <= 1) {
+                  log.warn(s"[upload] $email domain=${parsedEmail.host.domain} not supported; discarded")
+                } else if (set.contains(parsedEmail.toString)) {
                   log.info(s"[upload($userId, $origin, ${abookInfo.id}] DUP $email; discarded")
                 } else {
                   val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
@@ -133,7 +135,7 @@ class ContactsUpdater @Inject() (
                   }
                 }
               } else {
-                log.warn(s"[upload($userId, $origin)] cannot parse $email. discarded") // todo: revisit
+                log.warn(s"[upload($userId, $origin)] cannot parse $email; discarded") // todo: revisit
               }
             }
 
