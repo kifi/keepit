@@ -266,7 +266,7 @@ class UserController @Inject() (
 
   def getInviteCounts() = AuthenticatedJsonAction { request =>
     db.readOnly { implicit s =>
-      val availableInvites = userValueRepo.getValue(request.userId, "availableInvites").map(_.toInt).getOrElse(6)
+      val availableInvites = userValueRepo.getValue(request.userId, "availableInvites").map(_.toInt).getOrElse(20)
       val invitesLeft = availableInvites - invitationRepo.getByUser(request.userId).length
       Ok(Json.obj(
         "total" -> availableInvites,

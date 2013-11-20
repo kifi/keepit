@@ -129,7 +129,7 @@ class InviteController @Inject() (db: Database,
                     sendEmailInvitation(c, alreadyInvited)
                   }
                   case inactiveOpt => {
-                    val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
+                    val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(20)
                     val currentInvitations = invitationRepo.getByUser(request.user.id.get).filter(_.state != InvitationStates.INACTIVE)
                     if (currentInvitations.length < totalAllowedInvites) {
                       val invite = inactiveOpt map { _.copy(senderUserId = Some(request.user.id.get)) } getOrElse {
@@ -163,7 +163,7 @@ class InviteController @Inject() (db: Database,
               CloseWindow()
             }
           case inactiveOpt =>
-            val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
+            val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(20)
             val currentInvitations = invitationRepo.getByUser(request.user.id.get).filter(_.state != InvitationStates.INACTIVE)
             if (currentInvitations.length < totalAllowedInvites) {
               val invite = inactiveOpt map {
