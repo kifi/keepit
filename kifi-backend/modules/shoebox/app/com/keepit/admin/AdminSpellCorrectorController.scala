@@ -24,7 +24,7 @@ class AdminSpellCorrectorController @Inject() (
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val query = body.get("query").get
     val t1 = System.currentTimeMillis
-    val suggest = "fake"//Await.result(searchClient.correctSpelling(query, enableBoost = true), 5 seconds)
+    val suggest = Await.result(searchClient.correctSpelling(query, enableBoost = true), 5 seconds)
     val t2 = System.currentTimeMillis
     val message = s"time elpased: ${(t2 - t1)/1000.0} seconds\ninput: ${query}, suggestions: \n${suggest}"
     Home.flashing("success" -> message)
