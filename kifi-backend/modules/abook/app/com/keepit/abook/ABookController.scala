@@ -12,10 +12,10 @@ import java.io.File
 import scala.collection.{immutable, mutable}
 import scala.io.Source
 import scala.ref.WeakReference
-import scala.concurrent.{Await, Future}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.{WS, Response}
 import scala.xml.PrettyPrinter
+import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -301,14 +301,11 @@ class ABookController @Inject() (
   }
 
   def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = Action { request =>
-    val resF = Future {
-      db.readOnly { implicit s =>
-        abookInfoRepo.getByUserIdAndABookId(userId, id)
-      }
-    }
     Async {
-      resF.map { info =>
-        Ok(Json.toJson(info))
+      future {
+        abookCommander.getABookInfo(userId, id)
+      } map { infoOpt =>
+        Ok(Json.toJson(infoOpt))
       }
     }
   }
@@ -333,6 +330,13 @@ class ABookController @Inject() (
         }
       }.map(js => Ok(JsArray(js)))
     }
+  }
+
+  def getEContactCount(userId:Id[User]) = Action { request =>
+    val count = db.readOnly { implicit s =>
+      econtactRepo.getEContactCount(userId)
+    }
+    Ok(JsNumber(count))
   }
 
 }

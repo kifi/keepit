@@ -37,7 +37,7 @@ class ExtSearchEventController @Inject() (
     val userId = request.userId
     val json = request.body
     val query = (json \ "query").as[String]
-    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").as[String])
+    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").asOpt[String].getOrElse((json \ "queryUUID").as[String]))
     val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
     val origin = (json \ "origin").as[String]
     val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
@@ -57,7 +57,7 @@ class ExtSearchEventController @Inject() (
           resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark)
           if (personalSearchResult.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, personalSearchResult.users.map(_.externalId): _*)
         }
-        searchAnalytics.clickedSearchResult(userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
+        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
       }
 
       case theOtherGuys => {
@@ -73,7 +73,7 @@ class ExtSearchEventController @Inject() (
               resultClickedTracker.moderate(userId, query)
           }
         }
-        searchAnalytics.clickedSearchResult(userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, theOtherGuys, resultPosition, None)
+        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, theOtherGuys, resultPosition, None)
       }
     }
     Ok
@@ -83,7 +83,7 @@ class ExtSearchEventController @Inject() (
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
-    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").as[String])
+    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").asOpt[String].getOrElse((json \ "queryUUID").as[String]))
     val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
     val kifiResults = (json \ "kifiResults").as[Int]
     val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
@@ -92,7 +92,7 @@ class ExtSearchEventController @Inject() (
     val kifiTime = (json \ "kifiTime").as[Int]
     val referenceTime = (json \ "referenceTime").as[Int]
     val origin = (json \ "origin").as[String]
-    searchAnalytics.endedSearch(userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime, otherResultsClicked, kifiResultsClicked)
+    searchAnalytics.endedSearch(request, userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime, otherResultsClicked, kifiResultsClicked)
     Ok
   }
 

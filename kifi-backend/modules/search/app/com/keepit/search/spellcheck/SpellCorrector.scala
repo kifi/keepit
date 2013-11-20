@@ -3,7 +3,7 @@ package com.keepit.search.spellcheck
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import scala.util.Random
-import scala.math.exp
+import scala.math.{exp, log}
 
 @ImplementedBy(classOf[SpellCorrectorImpl])
 trait SpellCorrector {
@@ -48,7 +48,7 @@ class SpellCorrectorImpl(spellIndexer: SpellIndexer, enableAdjScore: Boolean) ex
 
   def getSimilarTerms(term: String, numSug: Int): Array[String] = {
     val similar = spellChecker.suggestSimilar(term, numSug)       // this never includes the original term
-    if (spellChecker.exist(term) || stopwords.contains(term) || similar.isEmpty) Array(term) ++ similar.take(2)   // add 2 just in case misspelling words were indexed
+    if (spellChecker.exist(term) || stopwords.contains(term) || similar.isEmpty) Array(term) // ++ similar.take(2)   // add 2 just in case misspelling words were indexed
     else similar
   }
 }
@@ -76,12 +76,16 @@ class SuggestionScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
   private var adjScoreMap = Map.empty[(String, String), Float]
 
   val rand = new Random()
-  val SIGMA = 3
+  val SIGMA = 2
   val MIN_ADJ_SCORE = 0.001f
   val SAMPLE_SIZE = 10
 
+  def minPairTermsScore: Float = if (!enableAdjScore) 1f else MIN_ADJ_SCORE
+
+  def log2(x: Double) = log(x)/log(2)
+
   def gaussianScore(x: Float) = {
-    exp(-x*x/(2*SIGMA*SIGMA)) max MIN_ADJ_SCORE      // with sigma =3, this close to 0 when x > 10. Add a smoother
+    exp(-x*x/(2*SIGMA*SIGMA)) max MIN_ADJ_SCORE      // this close to 0 when x > 3*SIGMA. Add a smoother
   }
 
   def warmUpStatsMap(words: Set[String]) = words.foreach{getOrUpdateStats(_)}
@@ -118,24 +122,29 @@ class SuggestionScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
     gaussianScore(avgDist).toFloat
   }
 
+  private def scoreSingleTerm(term: String): Float = {
+    log2(1.0 + getOrUpdateStats(term).docFreq).toFloat
+  }
+
+  private def scorePairTerms(a: String, b: String, enableAdjScore: Boolean): Float = {
+    val key = if (a <= b) (a,b) else (b, a)
+    val inter = getOrUpdateJoint(key)
+    val pairScore = log2(1.0 + inter.size.max(1)).toFloat   // smooth
+    val adjBoost = if (enableAdjScore) {
+      getOrUpdateAdjScore(key, inter)
+    } else 1f
+    pairScore * adjBoost
+  }
+
   def score(suggest: Suggest): ScoredSuggest = {
     if (suggest.value.trim == "") return ScoredSuggest("", 0)
     val words = suggest.value.split(" ")
     if (words.size == 1) {
-      val score = getOrUpdateStats(words.head).docFreq
+      val score = scoreSingleTerm(words.head)
       ScoredSuggest(suggest.value, score)
     } else {
       val pairs = words.sliding(2, 1)
-      var score = 1f
-      pairs.foreach{ case Array(a, b) =>
-        val key = if (a <= b) (a,b) else (b, a)
-        val inter = getOrUpdateJoint(key)
-        val pairScore = inter.size.max(1)   // smooth
-        val adjBoost = if (enableAdjScore) {
-          getOrUpdateAdjScore(key, inter)
-        } else 1f
-        score *= pairScore * adjBoost
-      }
+      val score = pairs.map{ case Array(a, b) => scorePairTerms(a, b, enableAdjScore) }.foldLeft(1f)(_*_)
       ScoredSuggest(suggest.value, score)
     }
   }

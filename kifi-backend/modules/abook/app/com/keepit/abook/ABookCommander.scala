@@ -9,6 +9,7 @@ import play.api.libs.json.{JsArray, Json, JsValue}
 import scala.ref.WeakReference
 import com.keepit.common.logging.Logging
 import scala.collection.mutable
+import scala.concurrent._
 
 class ABookCommander @Inject() (
   db:Database,
@@ -27,6 +28,13 @@ class ABookCommander @Inject() (
       case None => k
     }
   }
+
+  def getABookInfo(userId:Id[User], id:Id[ABookInfo]):Option[ABookInfo] = {
+    db.readOnly { implicit s =>
+      abookInfoRepo.getByUserIdAndABookId(userId, id)
+    }
+  }
+
 
   def processUpload(userId: Id[User], origin: ABookOriginType, ownerInfoOpt:Option[ABookOwnerInfo], json: JsValue): ABookInfo = {
     val abookRawInfoRes = Json.fromJson[ABookRawInfo](json)
