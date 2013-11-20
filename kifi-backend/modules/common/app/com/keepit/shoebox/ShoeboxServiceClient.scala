@@ -19,11 +19,9 @@ import com.keepit.model._
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
 import com.keepit.search.SearchConfigExperiment
-import play.api.libs.json._
 import com.keepit.social._
 import com.keepit.model.UserExperimentUserIdKey
 import com.keepit.model.ExperimentType
-import play.api.libs.json.JsArray
 import com.keepit.model.ExternalUserIdKey
 import com.keepit.model.SocialUserInfoUserKey
 import com.keepit.model.BookmarkUriUserKey
@@ -32,12 +30,13 @@ import com.keepit.social.SocialId
 import com.keepit.model.NormalizedURIKey
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.UserConnectionIdKey
-import play.api.libs.json.{JsObject, JsValue}
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.scraper.HttpRedirect
+import play.api.libs.json._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -124,9 +123,6 @@ class ShoeboxServiceClientImpl @Inject() (
   val airbrakeNotifier: AirbrakeNotifier,
   cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient with Logging{
-
-  // ExecutionContext
-  implicit private[this] val executionContext = ExecutionContext.immediate
 
   // request consolidation
   private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 30 seconds)
