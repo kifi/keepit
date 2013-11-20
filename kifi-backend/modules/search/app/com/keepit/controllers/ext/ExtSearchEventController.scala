@@ -50,16 +50,14 @@ class ExtSearchEventController @Inject() (
     SearchEngine.get(resultSource) match {
 
       case SearchEngine.Kifi => {
-        val hit = articleSearchResultStore.get(uuid).map { articleSearchResult =>
-          val hitIndex = resultPosition - articleSearchResult.previousHits
-          val hit = articleSearchResult.hits(hitIndex)
-          val uriId = hit.uriId
+        val personalSearchResult = (json \ "hit").as[PersonalSearchResult]
+        shoeboxClient.getNormalizedURIByURL(personalSearchResult.hit.url).onSuccess { case Some(uri) =>
+          val uriId = uri.id.get
           clickHistoryTracker.add(userId, ClickedURI(uriId))
-          resultClickedTracker.add(userId, query, uriId, resultPosition, hit.isMyBookmark)
-          if (hit.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, hit.users: _*)
-          hit
+          resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark)
+          if (personalSearchResult.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, personalSearchResult.users.map(_.externalId): _*)
         }
-        searchAnalytics.clickedSearchResult(userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime, SearchEngine.Kifi, resultPosition, hit)
+        searchAnalytics.clickedSearchResult(userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
       }
 
       case theOtherGuys => {
@@ -75,7 +73,7 @@ class ExtSearchEventController @Inject() (
               resultClickedTracker.moderate(userId, query)
           }
         }
-        searchAnalytics.clickedSearchResult(userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime, theOtherGuys, resultPosition, None)
+        searchAnalytics.clickedSearchResult(userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, theOtherGuys, resultPosition, None)
       }
     }
     Ok

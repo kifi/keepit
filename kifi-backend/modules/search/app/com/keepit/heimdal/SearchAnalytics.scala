@@ -41,8 +41,7 @@ class SearchAnalytics @Inject() (
     kifiVersion.foreach { version => contextBuilder += ("extVersion", version.toString) }
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
 
-    contextBuilder += ("queryCharacters", articleSearchResult.query.length)
-    contextBuilder += ("queryWords", articleSearchResult.query.split("""\b""").length)
+    contextBuilder += ("queryTerms", articleSearchResult.query.split("""\b""").length)
     contextBuilder += ("lang", articleSearchResult.lang.lang)
 
     contextBuilder += ("searchId", obfuscatedSearchId)
@@ -170,24 +169,34 @@ class SearchAnalytics @Inject() (
     origin: String,
     uuid: ExternalId[ArticleSearchResult],
     searchExperiment: Option[Id[SearchConfigExperiment]],
+    query: String,
     kifiResults: Int,
     kifiCollapsed: Boolean,
     kifiTime: Int,
     referenceTime: Int,
     resultSource: SearchEngine,
     resultPosition: Int,
-    hit: Option[ArticleHit]) = {
+    result: Option[PersonalSearchResult]) = {
 
     val contextBuilder = searchContextBuilder(userId, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime)
 
     // Click Information
+
     contextBuilder += ("resultSource", resultSource.toString)
     contextBuilder += ("resultPosition", resultPosition)
-    hit.map { hit =>
-      contextBuilder += ("bookmarkCount", hit.bookmarkCount)
-      contextBuilder += ("usersShown", hit.users.length)
-      contextBuilder += ("isUserKeep", hit.isMyBookmark)
-      contextBuilder += ("isPrivate", hit.isPrivate)
+    result.map { result =>
+      contextBuilder += ("bookmarkCount", result.count)
+      contextBuilder += ("usersShown", result.users.length)
+      contextBuilder += ("isUserKeep", result.isMyBookmark)
+      contextBuilder += ("isPrivate", result.isPrivate)
+      contextBuilder += ("collectionCount", result.hit.collections.map(_.length).getOrElse(0))
+      contextBuilder += ("hasTitle", result.hit.title.isDefined)
+
+      val queryTerms = query.split("""\b""").length
+      contextBuilder += ("titleMatches", result.hit.titleMatches.length)
+      contextBuilder += ("urlMatches", result.hit.urlMatches.length)
+      contextBuilder += ("titleMatchQueryRatio", result.hit.titleMatches.length.toDouble / queryTerms)
+      contextBuilder += ("urlMatchQueryRatio", result.hit.urlMatches.length.toDouble / queryTerms)
     }
 
     heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("clicked_search_result"), time))
@@ -213,7 +222,7 @@ class SearchAnalytics @Inject() (
   ): EventContextBuilder = {
 
     val initialSearchId = articleSearchResultStore.getInitialSearchId(uuid)
-    val initialSearchResult = articleSearchResultStore.get(initialSearchId)
+    val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
 
     val contextBuilder = userEventContextBuilder()
 
@@ -221,17 +230,17 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
     contextBuilder += ("origin", origin)
+    ("queryTerms", initialSearchResult.query.split("""\b""").length)
 
     // Kifi Performances
     contextBuilder += ("kifiResults", kifiResults)
     contextBuilder += ("kifiCollapsed", kifiCollapsed)
-    initialSearchResult.foreach { article => contextBuilder += ("kifiRelevant", article.toShow) }
-    initialSearchResult.foreach { article => contextBuilder += ("kifiLate", kifiCollapsed && article.toShow) }
+    contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
+    contextBuilder += ("kifiLate", kifiCollapsed && initialSearchResult.toShow)
     contextBuilder += ("kifiDeliveryTime", kifiTime)
     contextBuilder += ("3rdPartyDeliveryTime", referenceTime)
     contextBuilder += ("isInitialSearch", uuid == initialSearchId)
 
     contextBuilder
   }
-
 }
