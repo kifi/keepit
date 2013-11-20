@@ -15,6 +15,8 @@ import MessagingTypeMappers._
 
 case class Notification(thread: Id[MessageThread], message: Id[Message])
 
+case class UserThreadActivity(threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean)
+
 
 case class UserThread(
     id: Option[Id[UserThread]] = None,
@@ -100,6 +102,8 @@ trait UserThreadRepo extends Repo[UserThread] {
   def setNotificationJsonIfNotPresent(userId: Id[User], threadId: Id[MessageThread], notifJson: JsValue, message: Message)(implicit session: RWSession) : Unit
 
   def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession) : Unit
+
+  def getThreadActivity(theadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity]
 
 }
 
@@ -326,6 +330,11 @@ class UserThreadRepoImpl @Inject() (
 
   def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession) : Unit = {
     (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastActive).update(lastActive)
+  }
+
+  def getThreadActivity(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity] = {
+    val rawData : Seq[(Id[MessageThread], Id[User], Option[DateTime], Boolean)] = (for (row <- table if row.thread===threadId) yield row.thread ~ row.user ~ row.lastActive.? ~ row.started).list
+    rawData.map{tuple => (UserThreadActivity.apply _).tupled(tuple) }
   }
 
 
