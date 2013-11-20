@@ -15,7 +15,7 @@ import MessagingTypeMappers._
 
 case class Notification(thread: Id[MessageThread], message: Id[Message])
 
-case class UserThreadActivity(threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean)
+case class UserThreadActivity(id: Id[UserThread], threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
 
 
 case class UserThread(
@@ -144,7 +144,7 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  private def updateSendableNotifications(rawNotifications: Seq[(JsValue, Boolean)]): Seq[JsObject] = {
+  private def updateSendableNotifications(rawNotifications: Seq[(JsValue, Boolean)]): Seq[JsObject] = { //ZZZ set unseen authors to zero if not pending
     rawNotifications.map{ data_pending =>
       val (data, pending) : (JsValue, Boolean) = data_pending
       updateSendableNotification(data, pending)
@@ -186,7 +186,7 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.user===userId && row.notificationUpdatedAt<=timeCutoff) yield row.notificationPending).update(false)
   }
 
-  def setNotification(userId: Id[User], threadId: Id[MessageThread], message: Message, notifJson: JsValue, pending: Boolean)(implicit session: RWSession) : Unit = {
+  def setNotification(userId: Id[User], threadId: Id[MessageThread], message: Message, notifJson: JsValue, pending: Boolean)(implicit session: RWSession) : Unit = { //ZZZ have pending passed in here!
     Query(table).filter(row => (row.user===userId && row.thread===threadId) && (row.lastMsgFromOther.isNull || row.lastMsgFromOther < message.id.get))
       .map(row => row.lastNotification ~ row.lastMsgFromOther ~ row.notificationPending ~ row.notificationUpdatedAt ~ row.notificationEmailed)
       .update((notifJson, message.id.get, pending, message.createdAt, false))
@@ -333,7 +333,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getThreadActivity(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity] = {
-    val rawData : Seq[(Id[MessageThread], Id[User], Option[DateTime], Boolean)] = (for (row <- table if row.thread===threadId) yield row.thread ~ row.user ~ row.lastActive.? ~ row.started).list
+    val rawData = (for (row <- table if row.thread===threadId) yield row.id ~ row.thread ~ row.user ~ row.lastActive.? ~ row.started ~ row.lastSeen.?).list
     rawData.map{tuple => (UserThreadActivity.apply _).tupled(tuple) }
   }
 
