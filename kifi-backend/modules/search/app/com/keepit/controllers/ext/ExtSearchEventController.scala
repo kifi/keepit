@@ -37,7 +37,7 @@ class ExtSearchEventController @Inject() (
     val userId = request.userId
     val json = request.body
     val query = (json \ "query").as[String]
-    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").as[String])
+    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").asOpt[String].getOrElse((json \ "queryUUID").as[String]))
     val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
     val origin = (json \ "origin").as[String]
     val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
@@ -83,7 +83,7 @@ class ExtSearchEventController @Inject() (
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
-    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").as[String])
+    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").asOpt[String].getOrElse((json \ "queryUUID").as[String]))
     val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
     val kifiResults = (json \ "kifiResults").as[Int]
     val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
