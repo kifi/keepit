@@ -4,7 +4,8 @@ import com.keepit.model.{User, KifiVersion}
 import com.keepit.search._
 import com.google.inject.{Singleton, Inject}
 import com.keepit.common.db.{ExternalId, Id}
-import play.api.mvc.RequestHeader
+import play.api.mvc.{RequestHeader, AnyContent}
+import com.keepit.common.controller.AuthenticatedRequest
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
@@ -27,7 +28,7 @@ class SearchAnalytics @Inject() (
   heimdal: HeimdalServiceClient) {
 
   def performedSearch(
-    request: RequestHeader,
+    request: AuthenticatedRequest[AnyContent],
     kifiVersion: Option[KifiVersion],
     maxHits: Int,
     searchFilter: SearchFilter,
