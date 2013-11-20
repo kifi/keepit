@@ -225,6 +225,7 @@ input[type=password] {
 .curtain-note:before {
   content: 'PLEASE NOTE:';
   display: block;
+  font-size: 12px;
   margin-bottom: 3px;
 }
 .curtain-panel {
