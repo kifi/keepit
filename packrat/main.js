@@ -604,11 +604,8 @@ api.port.on({
     logEvent.apply(null, data);
   },
   log_search_event: function(data) {
-    var doNotTrack = (navigator.doNotTrack==='yes' || navigator.doNotTrack==='1');
-    if (!doNotTrack) {
-      var whichEvent = data[0];
-      ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
-    }
+    var whichEvent = data[0];
+    ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
   },
   send_message: function(data, respond, tab) {
     var nUri = tab.nUri || data.url;
