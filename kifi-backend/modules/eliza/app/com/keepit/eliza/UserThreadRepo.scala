@@ -146,7 +146,7 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  private def updateSendableNotifications(rawNotifications: Seq[(JsValue, Boolean)]): Seq[JsObject] = { //ZZZ set unseen authors to zero if not pending
+  private def updateSendableNotifications(rawNotifications: Seq[(JsValue, Boolean)]): Seq[JsObject] = {
     rawNotifications.map{ data_pending =>
       val (data, pending) : (JsValue, Boolean) = data_pending
       updateSendableNotification(data, pending)
