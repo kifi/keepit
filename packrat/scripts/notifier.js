@@ -29,12 +29,13 @@ var notifier = function() {
     switch (o.category) {
       case "message":
         removeByAssociatedId(o.thread, {fade: false});
+        o.author = o.author || o.participants[0];
         add({
           title: o.author.firstName + " " + o.author.lastName,
           subtitle: "Sent you a new Kifi Message",
           contentHtml: o.text,
           link: o.title,
-          image: cdnBase + "/users/" + o.author.id + "/pics/100/0.jpg",
+          image: cdnBase + '/users/' + o.author.id + '/pics/100/' + o.author.pictureName,
           sticky: false,
           showForMs: 60000,
           clickAction: function(e) {

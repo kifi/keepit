@@ -22,6 +22,7 @@ import play.api.test._
 import securesocial.core._
 import securesocial.core.providers.Token
 import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.heimdal.TestHeimdalServiceClientModule
 
 class UserControllerTest extends Specification with ApplicationInjector {
 

@@ -7,7 +7,6 @@ import org.jsoup.Jsoup
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -49,7 +48,6 @@ class MailToKeepActor @Inject() (
     airbrake: AirbrakeNotifier,
     settings: MailToKeepServerSettings,
     bookmarkInterner: BookmarkInterner,
-    EventPersister: EventPersister,
     postOffice: LocalPostOffice,
     messageParser: MailToKeepMessageParser,
     db: Database,
@@ -107,11 +105,6 @@ class MailToKeepActor @Inject() (
                     "isPrivate" -> (keepType == KeepType.Private)
                   ), user, Set(), "EMAIL").head
                   log.info(s"created bookmark from email with id ${bookmark.id.get}")
-                  val event = Events.serverEvent(EventFamilies.GENERIC_SERVER, "email_keep", Json.obj(
-                    "user_id" -> user.id.get.id,
-                    "bookmark_id" -> bookmark.id.get.id
-                  ))
-                  EventPersister.persist(event)
                   sendReply(
                     message = message,
                     htmlBody =
@@ -143,7 +136,7 @@ class MailToKeepActor @Inject() (
         subject = Option(newMessage.getSubject).getOrElse(""),
         htmlBody = htmlBody,
         inReplyTo = newMessage.getHeader("In-Reply-To").headOption.map(ElectronicMailMessageId.fromEmailHeader),
-        category = PostOffice.Categories.EMAIL_KEEP
+        category = PostOffice.Categories.User.EMAIL_KEEP
       ))
     }
   }

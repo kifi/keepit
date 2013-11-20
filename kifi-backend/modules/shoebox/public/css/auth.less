@@ -26,6 +26,7 @@ body {
 main {
   height: 100%;
   overflow: auto;
+  overflow-x: hidden;
   margin: 0 16.5%;
   position: relative;
 }
@@ -109,7 +110,7 @@ input[type=password] {
 }
 .curtain-welcome {
   position: absolute;
-  top: 224px;
+  top: 222px;
   left: 0;
   width: 100%;
   z-index: 10;
@@ -117,13 +118,14 @@ input[type=password] {
   table-layout: fixed;
   border-collapse: collapse;
   overflow: hidden;
+  margin: 0;
 }
 .curtain-welcome-l,
 .curtain-welcome-r {
   display: table-cell;
   width: 50%;
-  font-size: 32px;
-  line-height: 32px;
+  font-size: 24px;
+  line-height: 28px;
   color: #fff;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
@@ -151,22 +153,38 @@ input[type=password] {
 .curtains-drawn .curtain-welcome-r {
   .translate(180%);
 }
-.curtain-action {
+.curtain-panel {
   position: absolute;
   top: 20%;
   margin-top: 220px;
-  padding: 32px 0 38px;
-  width: 284px;
-  text-align: center;
-  -webkit-font-smoothing: antialiased;
   color: #fff;
-  font-size: 18px;
+  width: 300px;
 }
-.curtain-signup {
+.curtain-l>.curtain-panel {
   right: 8%;
 }
-.curtain-login {
+.curtain-r>.curtain-panel {
   left: 8%;
+}
+.curtain-question {
+  margin: 0 0 16px;
+  line-height: 36px;
+  font-size: 30px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.curtain-action {
+  display: block;
+  margin: 0 auto;
+  padding: 12px 0;
+  width: 130px;
+  border-radius: 6px;
+  text-align: center;
+  -webkit-font-smoothing: antialiased;
+  font-size: 18px;
+  color: #fff;
 }
 .curtain-action:hover {
   background-color: rgba(0, 0, 0, .16);
@@ -176,31 +194,29 @@ input[type=password] {
 .curtains-drawn .curtain-action:hover {
   background-color: rgba(0, 0, 0, .08);
 }
-.curtain-a-title {
-  font-size: 32px;
-  line-height: 42px;
-  font-weight: 300;
-  text-transform: uppercase;
-  margin-bottom: 5px;
-}
 .curtain-note {
-  position: absolute;
-  top: 20%;
-  margin-top: 372px;
-  width: 284px;
-  right: 8%;
-  color: #fff;
-  font-size: 14px;
+  display: inline-block;
+  margin-top: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 6px 2px 0;
   line-height: 17px;
+  font-size: 14px;
+  font-weight: 300;
   -webkit-font-smoothing: antialiased;
-  text-align: center;
+  color: #fff;
+  text-align: left;
+  white-space: nowrap;
 }
-.curtain-action,
-.curtain-note {
+.curtain-note:before {
+  content: 'PLEASE NOTE:';
+  display: block;
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+.curtain-panel {
   .transition(opacity @curtain-time, visibility @curtain-time);
 }
-.curtains-drawn .curtain-action,
-.curtains-drawn .curtain-note {
+.curtains-drawn .curtain-panel {
   .transition(opacity @curtain-time, visibility 0s @curtain-time);
   opacity: 0;
   visibility: hidden;
@@ -265,9 +281,9 @@ input[type=password] {
 // right-side footer
 footer {
   position: absolute;
-  top: 56px;
-  right: -65px;
-  margin-right: 8.25%;
+  top: 30px;
+  right: -40px;
+  margin-right: 6%;
   z-index: 10;
   text-align: right;
   font-size: 14px;
@@ -296,10 +312,15 @@ footer {
 }
 .copyright {
   line-height: 30px;
+  font-size: 13px;
+  font-weight: 300;
+  padding-left: 6px;
   border-bottom: 1px solid rgba(255, 255, 255, .5);
-  margin-bottom: 5px;
+  margin-bottom: 12px;
 }
 .contact-us {
+  font-size: 16px;
+  font-weight: 300;
   color: inherit;
 }
 .contact-us:hover {
@@ -541,6 +562,9 @@ footer {
   line-height: 14px;
   font-size: 13px;
   font-weight: 300;
+}
+.password-forgot:hover {
+  text-decoration: underline;
 }
 .form-submit {
   display: block;
@@ -837,8 +861,9 @@ footer {
   .transition(opacity (@finalize-time / 2) linear, visibility 0s @finalize-time, transform 0s @finalize-time);
 }
 
-// dialogs
+// dialogs (reusable stuff)
 @dialog-time: .25s;
+@dialog-text-color: #515051;
 .dialog {
   display: table;
   position: fixed;
@@ -871,6 +896,56 @@ footer {
     .transform(none);
     .transition-timing-function(ease-out);
   }
+}
+.dialog-x {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  height: 24px;
+  width: 24px;
+  z-index: 2;
+  border-radius: 50%;
+  &:before,
+  &:after {
+    content: ' ';
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    left: 50%;
+    width: 1px;
+    background: #aaa;
+    font-size: 0;
+  }
+  &:before {
+    .transform(translate3d(-.5px,0,0) rotate(45deg));
+  }
+  &:after {
+    .transform(translate3d(-.5px,0,0) rotate(-45deg));
+  }
+  &:hover {
+    background: #e8e8e8;
+  }
+  &:active {
+    background: #d8d8d8;
+  }
+  &:focus {
+    outline-color: #ccc;
+  }
+}
+.dialog-title {
+  padding: 20px 0 10px;
+  line-height: 32px;
+  font-size: 28px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  color: @dialog-text-color;
+}
+.dialog-text {
+  margin: 0;
+  line-height: 19px;
+  font-size: 15px;
+  font-weight: 300;
+  color: @dialog-text-color;
 }
 
 // photo dialog
@@ -991,7 +1066,6 @@ footer {
 }
 
 // reset password dialog
-@dialog-text-color: #515051;
 .reset-password .dialog-box {
   width: 480px;
   text-align: center;
@@ -1015,56 +1089,6 @@ footer {
   right: 0;
   .background-image(linear-gradient(to left, #fff, transparent));
 }
-.reset-password-x {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-  height: 24px;
-  width: 24px;
-  z-index: 2;
-  border-radius: 50%;
-  &:before,
-  &:after {
-    content: ' ';
-    position: absolute;
-    top: 5px;
-    bottom: 5px;
-    left: 50%;
-    width: 1px;
-    background: #aaa;
-    font-size: 0;
-  }
-  &:before {
-    .transform(translate3d(-.5px,0,0) rotate(45deg));
-  }
-  &:after {
-    .transform(translate3d(-.5px,0,0) rotate(-45deg));
-  }
-  &:hover {
-    background: #e8e8e8;
-  }
-  &:active {
-    background: #d8d8d8;
-  }
-  &:focus {
-    outline-color: #ccc;
-  }
-}
-.reset-password-title {
-  padding: 20px 0 10px;
-  line-height: 32px;
-  font-size: 28px;
-  font-weight: 300;
-  -webkit-font-smoothing: antialiased;
-  color: @dialog-text-color;
-}
-.reset-password-text {
-  margin: 0;
-  line-height: 19px;
-  font-size: 15px;
-  font-weight: 300;
-  color: @dialog-text-color;
-}
 .reset-password-email {
   width: 300px;
 }
@@ -1086,8 +1110,8 @@ footer {
   width: 100%;
   .translate(80%);
   visibility: hidden;
-  &>.reset-password-text {
-    margin: 30px 0 42px;
+  &>.dialog-text {
+    margin: 16px 0 0;
   }
 }
 .reset-password-sent {
@@ -1102,7 +1126,16 @@ footer {
     .transition(visibility 0, transform .2s ease-in-out);
   }
 }
-
+.reset-password-addresses {
+  margin: 10px 0 20px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 19px;
+  list-style: none;
+}
+.reset-password-address:only-child {
+  padding: 8px 0 10px;
+}
 
 // social signup 2
 .social-info,
@@ -1172,6 +1205,12 @@ input.social-email {
     .transition(opacity .2s linear, visibility 0s .2s)
   }
 }
+.social-claim-account:link {
+  margin-left: 4px;
+  color: inherit;
+  font-weight: bolder;
+  text-decoration: underline;
+}
 .form-creds {
   margin: 24px auto 16px;
 }
@@ -1202,6 +1241,34 @@ input.social-email {
   line-height: 15px;
   font-size: 13px;
   font-weight: normal;
+}
+
+// claim account dialog
+.claim-account .dialog-box {
+  width: 480px;
+  text-align: center;
+  overflow: hidden;
+}
+.claim-account-form>.form-email-addr {
+  width: 270px;
+  margin: 16px auto 0;
+}
+.claim-account-form>.password-label {
+  width: 270px;
+  margin: 0 auto 20px;
+}
+.claim-account-buttons {
+  padding: 2px 0 20px;
+}
+.claim-account-cancel,
+.claim-account-submit {
+  display: inline-block;
+  margin: 0 4px;
+  border: none;
+  padding: 10px 30px;
+  font-size: 16px;
+  line-height: 19px;
+  -webkit-font-smoothing: antialiased;
 }
 
 // retina image overrides

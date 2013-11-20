@@ -83,7 +83,7 @@ class ElizaEmailNotifierActor @Inject() (
             subject = s"""New messages on "${formattedTitle}" with $authorFirst""",
             htmlBody = emailBody,
             textBody = Some(textBody),
-            category = PostOffice.Categories.COMMENT
+            category = PostOffice.Categories.User.MESSAGE
           )
 
           val userIsActive = Await.result(userIsActiveFuture, 5 seconds)

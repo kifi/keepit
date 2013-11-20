@@ -6,23 +6,22 @@ import scala.concurrent.promise
 import org.joda.time._
 import com.google.inject.Inject
 import com.keepit.classify._
-import com.keepit.common.analytics.{MongoEventStore, EventFamilies, MongoSelector}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.model.{SliderRuleRepo, SliderRuleStates}
-import com.keepit.model.{URLPattern, URLPatternRepo, URLPatternStates}
-import com.mongodb.casbah.Imports._
+import com.keepit.model.{URLPatternRepo, URLPatternStates}
 import com.keepit.eliza.ElizaServiceClient
-import play.api.libs.json.{JsBoolean, JsArray, JsObject, Json}
+import play.api.libs.json.Json
 import play.api.mvc.Action
 import views.html
-import play.api.data.Forms._
-import play.api.data._
-import play.api.data.format.Formats._
-import com.keepit.model.Normalization
-
+import com.keepit.heimdal.{UserEvent, HeimdalServiceClient}
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsBoolean
+import com.keepit.classify.DomainTag
+import com.keepit.model.URLPattern
+import play.api.libs.json.JsObject
 
 
 class SliderAdminController @Inject() (
@@ -36,7 +35,7 @@ class SliderAdminController @Inject() (
   domainToTagRepo: DomainToTagRepo,
   domainRepo: DomainRepo,
   domainTagImporter: DomainTagImporter,
-  mongoEventStore: MongoEventStore,
+  heimdal: HeimdalServiceClient,
   eliza: ElizaServiceClient)
     extends AdminController(actionAuthenticator) {
 
@@ -185,34 +184,30 @@ class SliderAdminController @Inject() (
   def getImportEvents = AdminHtmlAction { implicit request =>
     import com.keepit.classify.DomainTagImportEvents._
 
-    val selector = MongoSelector(EventFamilies.DOMAIN_TAG_IMPORT)
-        .withMinDate(currentDateTime.minus(Period.months(1)))
-    val failureSelector = MongoSelector(EventFamilies.EXCEPTION).withEventName(IMPORT_FAILURE)
-        .withMinDate(currentDateTime.minus(Period.months(1)))
-    val dbObjects = mongoEventStore.find("server", selector).toList
-    val failureDbObjects = mongoEventStore.find("server", failureSelector).toList
-    val events = (dbObjects ++ failureDbObjects).map { obj =>
-      val meta = obj.getAs[DBObject]("metaData").get
-      val createdAt = obj.getAs[DateTime]("createdAt").get
-      val eventName = meta.getAs[String]("eventName").get
-      val metaData = meta.getAs[DBObject]("metaData").orNull
-      val description = eventName match {
-        case IMPORT_START => "Full import started"
-        case IMPORT_TAG_SUCCESS => "Tag %s imported (%d added, %d removed, %d total domains)".format(
-          metaData.getAs[String]("tagName").get,
-          metaData.getAs[Double]("numDomainsAdded").get.toInt,
-          metaData.getAs[Double]("numDomainsRemoved").get.toInt,
-          metaData.getAs[Double]("totalDomains").get.toInt)
-        case IMPORT_SUCCESS => "Domains imported (%d added, %d removed, %d total domains)".format(
-          metaData.getAs[Double]("numDomainsAdded").get.toInt,
-          metaData.getAs[Double]("numDomainsRemoved").get.toInt,
-          metaData.getAs[Double]("totalDomains").get.toInt)
-        case REMOVE_TAG_SUCCESS => "Tag %s removed".format(metaData.getAs[String]("tagName").get)
-        case IMPORT_FAILURE => metaData.getAs[String]("message").get
-      }
-      ImportEvent(createdAt, eventName, description)
-    }.sortBy(_.createdAt).reverse
-    Ok(html.admin.domainImportEvents(events))
+    val eventsFuture = heimdal.getRawEvents[UserEvent](50, 42000, DOMAIN_TAG_IMPORT).map { rawEvents =>
+      rawEvents.value.map { event =>
+        val createdAt = DateTimeJsonFormat.reads(event \ "time").get
+        val context = (event \ "context")
+        val eventName = (context \ "eventName").as[String]
+        val description = eventName match {
+          case IMPORT_START => "Full import started"
+          case IMPORT_TAG_SUCCESS => "Tag %s imported (%d added, %d removed, %d total domains)".format(
+            (context \ "tagName").as[String],
+            (context \ "numDomainsAdded").as[Int],
+            (context \ "numDomainsRemoved").as[Int],
+            (context \ "totalDomains").as[Int])
+          case IMPORT_SUCCESS => "Domains imported (%d added, %d removed, %d total domains)".format(
+            (context \ "numDomainsAdded").as[Int],
+            (context \ "numDomainsRemoved").as[Int],
+            (context \ "totalDomains").as[Int])
+          case REMOVE_TAG_SUCCESS => "Tag %s removed".format((context \ "tagName").as[String])
+          case IMPORT_FAILURE => (context \ "message").as[String]
+        }
+        ImportEvent(createdAt, eventName, description)
+      }.sortBy(_.createdAt).reverse
+    }
+
+    Async(eventsFuture.map { events => Ok(html.admin.domainImportEvents(events)) })
   }
 
   def getVersionForm = AdminHtmlAction { implicit request =>

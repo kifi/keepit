@@ -35,13 +35,17 @@ class UserSearchFilterTest extends Specification with ApplicationInjector {
     "work" in {
       running(new TestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-        setup(client)
+        val users = setup(client)
         var filter = factory.default(None)
         filter.accept(1) === true
 
         val context = IdFilterCompressor.fromSetToBase64(Set(1))
-        filter = factory.default(Some(context))
+        filter = factory.default(None, Some(context))
         filter.accept(1) === false
+
+        filter = factory.default(users(0).id, context = None, excludeSelf = true)
+        filter.accept(1) === false
+        filter.accept(2) === true
       }
     }
   }

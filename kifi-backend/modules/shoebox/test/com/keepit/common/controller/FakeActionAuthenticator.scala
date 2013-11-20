@@ -16,7 +16,7 @@ import securesocial.core._
 import net.codingwell.scalaguice.ScalaModule
 
 case class FakeActionAuthenticatorModule() extends ScalaModule {
-
+  println(">>>>>using new FakeActionAuthenticatorModule")
   def configure(): Unit = {}
 
   @Singleton
@@ -25,7 +25,9 @@ case class FakeActionAuthenticatorModule() extends ScalaModule {
 
   @Singleton
   @Provides
-  def fakeActionAuthenticator: FakeActionAuthenticator = new FakeActionAuthenticator
+  def fakeActionAuthenticator: FakeActionAuthenticator = authenticator
+
+  lazy val authenticator = new FakeActionAuthenticator
 }
 
 case class FakeIdentity(user: User) extends Identity {
@@ -41,12 +43,13 @@ case class FakeIdentity(user: User) extends Identity {
   def passwordInfo: Option[PasswordInfo] = None
 }
 
-class FakeActionAuthenticator @Inject() ()
-  extends ActionAuthenticator with SecureSocial with Logging {
+class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with Logging {
+  println(">>>>>using new FakeActionAuthenticator")
 
   var fixedUser: Option[User] = None
   def setUser(user: User): FakeActionAuthenticator = {
     fixedUser = Some(user)
+    println(s">>>>using fixed user: $user")
     this
   }
 
@@ -54,9 +57,17 @@ class FakeActionAuthenticator @Inject() ()
     onAuthenticated: AuthenticatedRequest[T] => Result,
     onSocialAuthenticated: SecuredRequest[T] => Result,
     onUnauthenticated: Request[T] => Result): Action[T] = Action(bodyParser) { request =>
-      val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent"))
-      log.info(s"running action with fake auth of user $user")
-      onAuthenticated(AuthenticatedRequest[T](FakeIdentity(user), user.id.get, user, request, Set[ExperimentType](), None, None))
+      try {
+        val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent"))
+        println(s">>>>running action with fake auth of user $user, request on path ${request.path} api: $apiClient")
+        val res = onAuthenticated(AuthenticatedRequest[T](FakeIdentity(user), user.id.get, user, request, Set[ExperimentType](), None, None))
+        println(s">>>>executed action with res: $res")
+        res
+      } catch {
+        case t: Throwable =>
+          log.error("action fail!", t)
+          throw t
+      }
   }
 
   private[controller] def isAdmin(experiments: Set[ExperimentType]) = false

@@ -25,7 +25,7 @@ case class ScrapeInfo(
   def withId(id: Id[ScrapeInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this
   def withState(state: State[ScrapeInfo]) = {
-    log.info(s"[withState($id, $uriId, $destinationUrl)] ${this.state} => ${state.toString.toUpperCase}; nextScrape(not set)=${this.nextScrape}")
+    log.debug(s"[withState($id, $uriId, $destinationUrl)] ${this.state} => ${state.toString.toUpperCase}; nextScrape(not set)=${this.nextScrape}")
     this.copy(state = state)
   }
 
@@ -36,7 +36,7 @@ case class ScrapeInfo(
       case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
       case ScrapeInfoStates.PENDING => copy(state = state, nextScrape = currentDateTime) // TODO: add & use updatedAt
     }
-    log.info(s"[withStateAndNextScrape($id, $uriId, $destinationUrl)] ${curState} => ${res.state.toString.toUpperCase}; ${curNS} => ${res.nextScrape}")
+    log.debug(s"[withStateAndNextScrape($id, $uriId, $destinationUrl)] ${curState} => ${res.state.toString.toUpperCase}; ${curNS} => ${res.nextScrape}")
     res
   }
 

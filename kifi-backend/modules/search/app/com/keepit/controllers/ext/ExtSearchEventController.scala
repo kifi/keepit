@@ -25,74 +25,74 @@ class ExtSearchEventController @Inject() (
   clickHistoryTracker: ClickHistoryTracker,
   browsingHistoryTracker: BrowsingHistoryTracker,
   resultClickedTracker: ResultClickTracker,
+  articleSearchResultStore: ArticleSearchResultStore,
   searchAnalytics: SearchAnalytics)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
   extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
 
-  def resultClicked = AuthenticatedJsonToJsonAction { request =>
+  def clickedSearchResult = AuthenticatedJsonToJsonAction { request =>
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
     val query = (json \ "query").as[String]
-    val queryUUID = ExternalId.asOpt[ArticleSearchResult]((json \ "queryUUID").asOpt[String].getOrElse(""))
+    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").asOpt[String].getOrElse((json \ "queryUUID").as[String]))
     val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
-    val resultSource = (json \ "searchEngine").as[String]
+    val origin = (json \ "origin").as[String]
+    val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
+    val kifiTime = (json \ "kifiTime").as[Int]
+    val referenceTime = (json \ "referenceTime").as[Int]
+    val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
     val kifiResults = (json \ "kifiResults").as[Int]
-    val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
 
     SearchEngine.get(resultSource) match {
-      case SearchEngine.Kifi => {
-        val personalSearchResult = (json \ "personalSearchResult")
 
-        val bookmarkCount = (personalSearchResult \ "count").as[Int]
-        val isUserKeep = (personalSearchResult \ "isMyBookmark").as[Boolean]
-        val isPrivate = (personalSearchResult \ "isPrivate").as[Boolean]
-        val url = ((personalSearchResult \ "bookmark") \ "url").as[String]
-        val keepers = (personalSearchResult \ "users").as[Seq[BasicUser]].map(_.externalId)
-        shoeboxClient.getNormalizedURIByURL(url).onSuccess { case uriOption => {
-          uriOption.foreach { uri =>
-            val uriId = uri.id.get
-            clickHistoryTracker.add(userId, ClickedURI(uriId))
-            resultClickedTracker.add(userId, query, uriId, resultPosition, isUserKeep)
-            if (isUserKeep) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, keepers: _*)
-          }
-        }}
-        searchAnalytics.kifiResultClicked(userId, queryUUID, searchExperiment, resultPosition, Some(bookmarkCount), Some(keepers.length), isUserKeep, Some(isPrivate), kifiResults, Some(kifiCollapsed), time)
+      case SearchEngine.Kifi => {
+        val personalSearchResult = (json \ "hit").as[PersonalSearchResult]
+        shoeboxClient.getNormalizedURIByURL(personalSearchResult.hit.url).onSuccess { case Some(uri) =>
+          val uriId = uri.id.get
+          clickHistoryTracker.add(userId, ClickedURI(uriId))
+          resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark)
+          if (personalSearchResult.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, personalSearchResult.users.map(_.externalId): _*)
+        }
+        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
       }
 
       case theOtherGuys => {
-        val searchResultUrl = (json \ "searchResultUrl").as[String]
+        val searchResultUrl = (json \ "resultUrl").as[String]
 
         getDestinationUrl(searchResultUrl, theOtherGuys).foreach { url =>
-          shoeboxClient.getNormalizedURIByURL(url).onSuccess { case uriOption => {
-            uriOption.foreach { uri =>
+          shoeboxClient.getNormalizedURIByURL(url).onSuccess {
+            case Some(uri) =>
               val uriId = uri.id.get
               clickHistoryTracker.add(userId, ClickedURI(uri.id.get))
-              resultClickedTracker.add(userId, query, uriId, resultPosition, false) // Should we do this for a Google result?
-            }
-          }}
+              resultClickedTracker.add(userId, query, uriId, resultPosition, false) // We do this for a Google result, too.
+            case None =>
+              resultClickedTracker.moderate(userId, query)
+          }
         }
-        searchAnalytics.searchResultClicked(userId, queryUUID, searchExperiment, theOtherGuys, resultPosition, kifiResults, Some(kifiCollapsed), time)
+        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, theOtherGuys, resultPosition, None)
       }
     }
     Ok
   }
 
-  def searchEnded = AuthenticatedJsonToJsonAction { request =>
+  def endedSearch = AuthenticatedJsonToJsonAction { request =>
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
-    val queryUUID = ExternalId.asOpt[ArticleSearchResult]((json \ "queryUUID").asOpt[String].getOrElse(""))
+    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").asOpt[String].getOrElse((json \ "queryUUID").as[String]))
     val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
     val kifiResults = (json \ "kifiResults").as[Int]
     val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
     val kifiResultsClicked = (json \ "kifiResultsClicked").as[Int]
-    val searchResultsClicked = (json \ "searchResultsClicked").as[Int]
-    val searchEngine = SearchEngine.get((json \ "searchEngine").as[String])
-    searchAnalytics.searchEnded(userId, queryUUID, searchExperiment, kifiResults, kifiResultsClicked, searchEngine, searchResultsClicked, Some(kifiCollapsed), time)
+    val otherResultsClicked = (json \ "searchResultsClicked").as[Int]
+    val kifiTime = (json \ "kifiTime").as[Int]
+    val referenceTime = (json \ "referenceTime").as[Int]
+    val origin = (json \ "origin").as[String]
+    searchAnalytics.endedSearch(request, userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime, otherResultsClicked, kifiResultsClicked)
     Ok
   }
 

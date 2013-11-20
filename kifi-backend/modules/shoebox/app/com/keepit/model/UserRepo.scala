@@ -1,15 +1,16 @@
 package com.keepit.model
 
-import scala.concurrent._
-import com.google.inject.{Inject, Singleton, ImplementedBy, Provider}
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ExternalId, Id, State}
+import com.keepit.common.db.{ExternalId, Id, State, SequenceNumber, NotFoundException}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.common.db.SequenceNumber
+import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.KestrelCombinator
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
@@ -27,14 +28,15 @@ class UserRepoImpl @Inject() (
     val clock: Clock,
     val externalIdCache: UserExternalIdCache,
     val idCache: UserIdCache,
-    basicUserCache: BasicUserUserIdCache)
+    basicUserCache: BasicUserUserIdCache,
+    heimdal: HeimdalServiceClient)
   extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
   import FortyTwoTypeMappers._
-  
+
   private val sequence = db.getSequence("user_sequence")
 
 
@@ -47,10 +49,10 @@ class UserRepoImpl @Inject() (
     def primaryEmailId = column[Id[EmailAddress]]("primary_email_id", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state ~ pictureName.? ~ userPictureId.? ~ seq  ~ primaryEmailId.? <> (User.apply _, User.unapply _)
   }
-  
+
   override def save(user: User)(implicit session: RWSession): User = {
     val toSave = user.copy(seq = sequence.incrementAndGet())
-    super.save(toSave)
+    super.save(toSave) tap { saved => SafeFuture { heimdal.engageUser(saved) }}
   }
 
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User] =
@@ -79,12 +81,15 @@ class UserRepoImpl @Inject() (
 
   override def get(id: Id[User])(implicit session: RSession): User = {
     idCache.getOrElse(UserIdKey(id)) {
-      (for(f <- table if f.id is id) yield f).first
+      (for(f <- table if f.id is id) yield f).firstOption.getOrElse(throw NotFoundException(id))
     }
   }
 
-  def getOpt(id: Id[User])(implicit session: RSession): Option[User] =
-    idCache.getOrElseOpt(UserIdKey(id)) { (for(f <- table if f.id is id) yield f).firstOption }
+  def getOpt(id: Id[User])(implicit session: RSession): Option[User] = {
+    idCache.getOrElseOpt(UserIdKey(id)) {
+      (for(f <- table if f.id is id) yield f).firstOption
+    }
+  }
 
   override def getOpt(id: ExternalId[User])(implicit session: RSession): Option[User] = {
     externalIdCache.getOrElseOpt(UserExternalIdKey(id)) {
@@ -95,7 +100,7 @@ class UserRepoImpl @Inject() (
   def getAllIds()(implicit session: RSession): Set[Id[User]] = { //Note: Need to revisit when we have >50k users.
     (for (row <- table) yield row.id).list.toSet
   }
-  
+
   def getUsersSince(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[User] = {
     (for (r <- table if r.seq > seq) yield r).sortBy(_.seq).take(fetchSize).list
   }

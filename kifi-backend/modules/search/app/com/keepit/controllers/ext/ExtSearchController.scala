@@ -1,6 +1,8 @@
 package com.keepit.controllers.ext
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc.Action
+
 import scala.concurrent.duration._
 import scala.concurrent.future
 import scala.concurrent.Future
@@ -12,7 +14,6 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search._
-import com.keepit.serializer.PersonalSearchResultPacketSerializer.resSerializer
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -60,7 +61,7 @@ class ExtSearchController @Inject() (
     val noSearchExperiments = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
     // fetch user data in background
-    val prefetcher = fetchUserDataInBackground(shoeboxClient, userId)
+    val prefetcher = fetchUserDataInBackground(userId)
 
     log.info(s"""User ${userId} searched ${query.length} characters""")
 
@@ -98,7 +99,7 @@ class ExtSearchController @Inject() (
     } else {
       log.warn("maxHits is zero")
       val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue)
+      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue, 0)
     }
 
     val experts = if (filter.isEmpty && config.asBoolean("showExperts")) {
@@ -147,6 +148,14 @@ class ExtSearchController @Inject() (
     }
 
     Ok(Json.toJson(res)).withHeaders("Cache-Control" -> "private, max-age=10")
+  }
+
+  //external (from the extension/website)
+  def warmUp() = AuthenticatedJsonAction { request =>
+    SafeFuture {
+      mainSearcherFactory.warmUp(request.userId)
+    }
+    Ok
   }
 
   private def getLangsPriorProbabilities(acceptLangs: Seq[String]): Map[Lang, Double] = {
@@ -199,19 +208,12 @@ class ExtSearchController @Inject() (
     }
   }
 
-  private[this] def fetchUserDataInBackground(shoeboxClient: ShoeboxServiceClient, userId: Id[User]): Prefetcher = new Prefetcher(shoeboxClient, userId)
+  private[this] def fetchUserDataInBackground(userId: Id[User]): Prefetcher = new Prefetcher(userId)
 
-  private class Prefetcher(shoeboxClient: ShoeboxServiceClient, userId: Id[User]) {
+  private class Prefetcher(userId: Id[User]) {
     var futures: Seq[Future[Any]] = null // pin futures in a jvm heap
-    future {
-      // following request must have request consolidation enabled, otherwise no use.
-      // have a head start on every other requests that search will make in order, then submit skipped requests backwards
-      futures = Seq(
-        // skip every other
-        shoeboxClient.getSearchFriends(userId),
-        // then, backwards
-        shoeboxClient.getFriends(userId)
-      )
+    SafeFuture{
+      futures = mainSearcherFactory.warmUp(userId)
     }
   }
 
@@ -224,7 +226,7 @@ class ExtSearchController @Inject() (
     res: ArticleSearchResult) {
 
     articleSearchResultStore += (res.uuid -> res)
-    searchAnalytics.searchPerformed(request, kifiVersion, maxHits, searchFilter, searchExperiment, res)
+    searchAnalytics.performedSearch(request, kifiVersion, maxHits, searchFilter, searchExperiment, res)
   }
 
   class SearchTiming{

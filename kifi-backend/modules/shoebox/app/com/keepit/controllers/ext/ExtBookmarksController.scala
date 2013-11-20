@@ -50,7 +50,7 @@ class ExtBookmarksController @Inject() (
   searchClient: SearchServiceClient,
   healthcheck: HealthcheckPlugin,
   heimdal: HeimdalServiceClient,
-  userEventContextBuilder: UserEventContextBuilderFactory)
+  userEventContextBuilder: EventContextBuilderFactory)
     extends BrowserExtensionController(actionAuthenticator) {
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
@@ -168,7 +168,9 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def addBookmarks() = AuthenticatedJsonToJsonAction { request =>
+  private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
+
+  def addBookmarks() = AuthenticatedJsonAction(parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
     val tStart = currentDateTime
     val userId = request.userId
     val installationId = request.kifiInstallationId
@@ -195,7 +197,7 @@ class ExtBookmarksController @Inject() (
             contextBuilder += ("source", bookmarkSource.getOrElse("UNKNOWN"))
             contextBuilder += ("hasTitle", bookmark.title.isDefined)
 
-            heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventType("keep"), tStart))
+            heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("keep"), tStart))
           }}
 
         }

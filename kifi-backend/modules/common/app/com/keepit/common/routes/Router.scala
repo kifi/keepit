@@ -8,7 +8,6 @@ import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
 
-
 trait Service
 
 case class ServiceRoute(method: Method, path: String, params: Param*) {
@@ -26,6 +25,7 @@ case class ParamValue(value: String)
 object ParamValue {
   implicit def stringToParam(i: String) = ParamValue(i)
   implicit def longToParam(i: Long) = ParamValue(i.toString)
+  implicit def booleanToParam(b: Boolean) = ParamValue(b.toString)
   implicit def intToParam(i: Int) = ParamValue(i.toString)
   implicit def stateToParam[T](i: State[T]) = ParamValue(i.value)
   implicit def externalIdToParam[T](i: ExternalId[T]) = ParamValue(i.id)
@@ -58,11 +58,11 @@ object Shoebox extends Service {
     def getUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getUsers", Param("ids", ids))
     def getUserIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/userIdsByExternalIds", Param("ids", ids))
     def getBasicUsers() = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsers")
-    def getEmailsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailsForUsers")
     def getEmailAddressesForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailAddressesForUsers")
     def getCollectionIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/collectionIdsByExternalIds", Param("ids", ids))
     def getUserOpt(id: ExternalId[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserOpt", Param("id", id))
     def getUserExperiments(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserExperiments", Param("id", id))
+    def getExperimentsByUserIds() = ServiceRoute(POST, "/internal/shoebox/database/getExperimentsByUserIds")
     def getConnectedUsers(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getConnectedUsers", Param("userId", userId))
     def getBrowsingHistoryFilter(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/tracker/browsingHistory", Param("userId", userId))
     def getClickHistoryFilter(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/tracker/clickHistory", Param("userId", userId))
@@ -109,6 +109,7 @@ object Shoebox extends Service {
     def getProxyP() = ServiceRoute(POST, "/internal/shoebox/database/getProxyP")
     def isUnscrapable(url: String, destinationUrl: Option[String]) = ServiceRoute(GET, "/internal/shoebox/database/isUnscrapable", Param("url", url), Param("destinationUrl", destinationUrl))
     def isUnscrapableP() = ServiceRoute(POST, "/internal/shoebox/database/isUnscrapableP")
+    def getFriendRequestBySender(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getFriendRequestBySender", Param("senderId", senderId) )
   }
 }
 
@@ -117,6 +118,7 @@ object Search extends Service {
     def logResultClicked() = ServiceRoute(POST, "/internal/search/events/resultClicked")
     def logSearchEnded() = ServiceRoute(POST, "/internal/search/events/searchEnded")
     def updateBrowsingHistory(id: Id[User]) = ServiceRoute(POST, s"/internal/search/events/browsed/${id.id}")
+    def warmUpUser(id: Id[User]) = ServiceRoute(GET, s"/internal/search/warmUp/${id.id}")
     def commentIndexInfo() = ServiceRoute(GET, "/internal/search/comment/info")
     def commentReindex() = ServiceRoute(GET, "/internal/search/comment/reindex")
     def commentDumpLuceneDocument(id: Id[Comment]) = ServiceRoute(POST, "/internal/search/comment/dumpDoc", Param("id", id))
@@ -135,15 +137,12 @@ object Search extends Service {
     def refreshPhrases() = ServiceRoute(POST, "/internal/search/index/refreshPhrases")
     def searchDumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}")
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
-    def searchUsers(query: String, maxHits: Int = 10, context: String = "") = ServiceRoute(GET, "/internal/search/search/users", Param("query", query), Param("maxHits", maxHits), Param("context", context))
-    def searchUsers2() = ServiceRoute(POST, "/internal/search/search/users2")
+    def searchUsers() = ServiceRoute(POST, "/internal/search/search/users")
     def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String) =
       ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("lang", lang))
     def causeError() = ServiceRoute(GET, "/internal/search/search/causeError")
     def causeHandbrakeError() = ServiceRoute(GET, "/internal/search/search/causeHandbrakeError")
-    def buildDictionary() = ServiceRoute(POST, "/internal/search/spell/buildDict")
-    def getBuildStatus() = ServiceRoute(GET, "/internal/search/spell/buildStatus")
-    def correctSpelling(query: String) = ServiceRoute(GET, "/internal/search/spell/make-correction", Param("query", query))
+    def correctSpelling(input: String, enableBoost: Boolean) = ServiceRoute(GET, "/internal/search/spell/suggest", Param("input", input), Param("enableBoost", enableBoost))
     def showUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}")
     def setUserConfig(id: Id[User]) = ServiceRoute(POST, s"/internal/search/searchConfig/${id.id}/set")
     def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")
@@ -168,24 +167,29 @@ object Heimdal extends Service {
   object internal {
     def trackEvent() = ServiceRoute(POST, "/internal/heimdal/trackEvent")
     def trackEvents() = ServiceRoute(POST, "/internal/heimdal/trackEvents")
-    def getMetricData(name: String) = ServiceRoute(GET, s"/internal/heimdal/getMetricData?name=${name}")
+    def getMetricData(repo: String, name: String) = ServiceRoute(GET, s"/internal/heimdal/$repo/getMetricData", Param("name", name))
     def updateMetrics() = ServiceRoute(GET, "/internal/heimdal/updateMetrics")
+    def getRawEvents(repo: String, eventTypes: Seq[String], limit: Int, window: Int) = ServiceRoute(GET, s"/internal/heimdal/$repo/rawEvents", Param("events", eventTypes.mkString(",")), Param("limit", limit), Param("window", window))
+    def getEventDescriptors(repo: String) = ServiceRoute(GET, s"/internal/heimdal/$repo/eventDescriptors")
+    def updateEventDescriptor(repo: String) = ServiceRoute(POST, s"/internal/heimdal/$repo/eventDescriptors")
+    def engageUser() = ServiceRoute(POST, s"/internal/heimdal/user/engage")
   }
 }
 
 object ABook extends Service {
   object internal {
     def importContacts(userId:Id[User], provider:String, accessToken:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/importContacts", Param("provider", provider), Param("accessToken", accessToken))
-    def upload(origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${origin.name}/upload")
+    def uploadForUser(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${origin.name}/uploadForUser?userId=${userId.id}")
     def upload(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/upload")
     def uploadDirect(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/uploadDirect")
     def getABookInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookInfos")
+    def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookInfo", Param("userId", userId), Param("id", id))
     def getContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getContacts", Param("maxRows", maxRows))
     def getEContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContacts", Param("maxRows", maxRows))
-    def getContactInfos(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getContactInfos", Param("maxRows", maxRows))
+    def getEContactCount(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactCount")
+    def getEContactById(contactId:Id[EContact]) = ServiceRoute(GET, s"/internal/abook/getEContactById", Param("contactId", contactId))
+    def getEContactByEmail(userId:Id[User], email:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactByEmail", Param("email", email))
     def getABookRawInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
-    def getContactsRawInfo(userId:Id[User], origin:ABookOriginType) = ServiceRoute(GET, s"/internal/abook/${userId.id}/${origin.name}/getContactsRawInfo")
-    def getMergedContactInfo(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getMergedContactInfos", Param("maxRows", maxRows))
   }
 }
 
@@ -193,8 +197,11 @@ object Scraper extends Service {
   object internal {
     def asyncScrapeArticle() = ServiceRoute(POST, s"/internal/scraper/asyncScrape")
     def asyncScrapeArticleWithInfo() = ServiceRoute(POST, s"/internal/scraper/asyncScrapeWithInfo")
+    def asyncScrapeArticleWithRequest() = ServiceRoute(POST, s"/internal/scraper/asyncScrapeWithRequest")
     def scheduleScrape() = ServiceRoute(POST, s"/internal/scraper/scheduleScrape")
+    def scheduleScrapeWithRequest() = ServiceRoute(POST, s"/internal/scraper/scheduleScrapeWithRequest")
     def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
+    def getBasicArticleP() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
   }
 }
 

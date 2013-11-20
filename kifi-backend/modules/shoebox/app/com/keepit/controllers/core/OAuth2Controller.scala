@@ -1,12 +1,12 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
 import com.keepit.common.logging.Logging
 import java.net.URLEncoder
 import play.api.mvc.{Action, Results}
 import play.api.libs.ws.WS
-import scala.concurrent.Await
+import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.db.slick.Database
 import play.api.Play
@@ -14,7 +14,8 @@ import play.api.Play.current
 import com.keepit.abook.ABookServiceClient
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import scala.concurrent.duration._
+import java.security.SecureRandom
+import java.math.BigInteger
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 
@@ -125,7 +126,9 @@ class OAuth2Controller @Inject() (
     val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
     log.info(s"[oauth2.callback($provider)] POST to: ${providerConfig.accessTokenUrl} with params: $params")
 
-    val tokenRespOpt = Await.result(call.map { resp =>
+    val redirectHomeF = Future { Redirect(com.keepit.controllers.website.routes.HomeController.home) }
+
+    val tokenRespOptF = call.map { resp =>
       log.info(s"[oauth2.callback] body=${resp.body}")
       provider match {
         case "google" => {
@@ -141,34 +144,48 @@ class OAuth2Controller @Inject() (
           }
         }
         case "facebook" => {
-          val splitted = resp.body.split("=")
-          log.info(s"[oauth2.callback] splitted=${splitted.mkString}")
-          if (splitted.length > 1)
-            Some(OAuth2AccessTokenResponse(splitted(1)))
-          else
-            None
+          if (Play.maybeApplication.isDefined && !Play.isProd) { // not supported in prod
+            val splitted = resp.body.split("=")
+            log.info(s"[oauth2.callback] splitted=${splitted.mkString}")
+            if (splitted.length > 1)
+              Some(OAuth2AccessTokenResponse(splitted(1)))
+            else
+              None
+          } else None
         }
       }
-    }, 5 seconds)
+    }
 
-    tokenRespOpt match {
-      case Some(tokenResp) => {
-        provider match {
-          case "google" => {
-            val res = Await.result(abookServiceClient.importContacts(request.userId, provider, tokenResp.accessToken), 5 seconds) // TODO: state-directed
-            log.info(s"[google] abook import $res")
-            Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // TODO: REMOVEME
+    Async {
+      tokenRespOptF flatMap { tokenRespOpt =>
+        tokenRespOpt match {
+          case Some(tokenResp) => {
+            provider match {
+              case "google" => {
+                val resF = abookServiceClient.importContacts(request.userId, provider, tokenResp.accessToken) // TODO: state-directed
+                resF map { res =>
+                  log.info(s"[google] abook import $res")
+                  // Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // todo: for admin page
+                  Redirect("/friends/invite/email") // @see InviteController.invite
+                }
+              }
+              case "facebook" => {
+                if (Play.maybeApplication.isDefined && !Play.isProd) {
+                  val friendsUrl = "https://graph.facebook.com/me/friends"
+                  val friendsF = WS.url(friendsUrl).withQueryString(("access_token", tokenResp.accessToken),("fields","id,name,first_name,last_name,username,picture,email")).get
+                  friendsF.map { friendsResp =>
+                    val friends = friendsResp.json
+                    log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
+                    Ok(friends)
+                  }
+                } else redirectHomeF
+              }
+              case _ => redirectHomeF
+            }
           }
-          case "facebook" => { // testing only
-            val friendsUrl = s"https://graph.facebook.com/me/friends?access_token=${tokenResp.accessToken}&fields=id,name,first_name,last_name,username,picture,email"
-            val friends = Await.result(WS.url(friendsUrl).get, 5 seconds).json
-            log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
-            Ok(friends)
-          }
-          case _ => Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // homepage?
+          case None => redirectHomeF
         }
       }
-      case None => Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId))
     }
   }
 
@@ -183,11 +200,12 @@ class OAuth2Controller @Inject() (
 
   // TODO: move out
   def importContacts(provider:Option[String]) = AuthenticatedHtmlAction { implicit request =>
-    // val stateToken = "abk$" + new BigInteger(130, new SecureRandom()).toString(32)
-    val stateToken = request.session.get("stateToken")
-    val route = routes.OAuth2Controller.start(provider.getOrElse("google"), stateToken)
+    val stateToken = request.session.get("stateToken").getOrElse {
+      "/friends/invite$" + new BigInteger(130, new SecureRandom()).toString(32)
+    }
+    val route = routes.OAuth2Controller.start(provider.getOrElse("google"), Some(stateToken))
     log.info(s"[importContacts($provider)] redirect to $route")
-    Redirect(route)
+    Redirect(route).withSession(session + ("stateToken" -> stateToken))
   }
 
 }

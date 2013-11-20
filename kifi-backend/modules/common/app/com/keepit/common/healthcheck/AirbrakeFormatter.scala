@@ -32,7 +32,24 @@ case class ErrorWithStack(error: Throwable, stack: Seq[StackTraceElement]) {
 object ErrorWithStack {
   def apply(error: Throwable): ErrorWithStack =
     ErrorWithStack(error,
-      error.getStackTrace.filter(e => e != null && e.getFileName != null && !e.getFileName.contains("Airbrake")))
+      error.getStackTrace.filter(
+        e => e != null &&
+        e.getFileName != null &&
+        !e.getClassName.startsWith("org.jboss.netty") &&
+        !e.getClassName.startsWith("com.ning.http") &&
+        !e.getClassName.startsWith("scala.collection.IterableLike") &&
+        !e.getClassName.startsWith("scala.collection.AbstractIterable") &&
+        !e.getClassName.startsWith("scala.collection.TraversableLike") &&
+        !e.getClassName.startsWith("scala.collection.AbstractTraversable") &&
+        !e.getFileName.contains("Airbrake") &&
+        e.getFileName != "Option.scala" &&
+        e.getFileName != "Action.scala" &&
+        e.getFileName != "ForkJoinTask.java" &&
+        e.getFileName != "ForkJoinPool.java" &&
+        e.getFileName != "ForkJoinWorkerThread.java" &&
+        e.getFileName != "Threads.scala" &&
+        e.getFileName != "Promise.scala" &&
+        e.getFileName != "AbstractDispatcher.scala"))
 }
 
 class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery) {

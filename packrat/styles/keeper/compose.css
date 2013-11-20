@@ -1,10 +1,9 @@
 form.kifi-compose {
   display: block;
   margin: 0;
-  padding: 10px 6px 10px;
-}
-form.kifi-compose.kifi-scrollable-below {
-  position: relative;
+  padding: 10px 6px;
+  font-size: 12px;
+  line-height: 14px;
 }
 .kifi-compose-draft {
   -webkit-user-modify: read-write;
@@ -19,14 +18,29 @@ form.kifi-compose.kifi-scrollable-below {
   outline: none;
   box-shadow: none;
   cursor: text; /* ff */
-  transition: 160ms cubic-bezier(.405,-.375,.630,1.260) min-height;
+}
+.kifi-compose.kifi-empty .kifi-compose-draft:focus {
+  -webkit-animation: paddingLeft10 .16s ease-out;
+  animation: paddingLeft10 .16s ease-out;
+}
+@-webkit-keyframes paddingLeft10 {
+  50% {padding-left: 10px}
+}
+@keyframes paddingLeft10 {
+  50% {padding-left: 10px}
+}
+.kifi-ti-token-input:only-child>#token-input-kifi-compose-to:focus {
+  -webkit-animation: paddingLeft5 .16s ease-out;
+  animation: paddingLeft5 .16s ease-out;
+}
+@-webkit-keyframes paddingLeft5 {
+  50% {padding-left: 5px}
+}
+@keyframes paddingLeft5 {
+  50% {padding-left: 5px}
 }
 .kifi-compose-draft:first-child {
   border-radius: 3px 3px 0 0;
-}
-.kifi-compose-draft:focus,
-.kifi-compose:not(.kifi-empty) .kifi-compose-draft {
-  min-height: 40px;
 }
 .kifi-compose.kifi-empty .kifi-compose-draft::after {
   content: attr(data-placeholder);
@@ -37,8 +51,9 @@ form.kifi-compose.kifi-scrollable-below {
 }
 .kifi-compose-bar {
   border: 1px solid #d2d2d2;
+  border-top: none;
   border-radius: 0 0 3px 3px;
-  background: #fafafa;
+  background: #f2f4f7;
   text-align: right;
   position: relative;
 }
@@ -48,7 +63,6 @@ a.kifi-compose-snapshot[href] {
   box-sizing: border-box;
   width: 35px;
   height: 28px;
-  border-right: 1px solid #d2d2d2;
   padding: 4px 7px;
   background-clip: content-box;
   background-origin: content-box;
@@ -74,7 +88,7 @@ a.kifi-compose-snapshot:active {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   font-size: 11px;
-  line-height: 28px;
+  line-height: 27px;
   color: #999;
   cursor: pointer;
 }
@@ -123,11 +137,12 @@ span.kifi-compose-tip-alt {
 }
 .kifi-compose a.kifi-compose-submit[href] {
   display: inline-block;
-  margin: -1px;
+  margin: 0 -1px -1px 0;
   padding: 0 18px;
   color: #fff !important;
   background-color: #6fa6ef;
   border: 1px solid #6fa6ef;
+  border-top: none;
   border-bottom-right-radius: inherit;
   line-height: 28px;
 }
@@ -214,7 +229,7 @@ body.kifi-snapshot-root {
   box-sizing: border-box;
 }
 
-form.kifi-compose input[type=text] { /* either input */
+.kifi-compose input[type=text] { /* either input */
   height: auto;
   min-height: 0;
   margin: 0;
@@ -223,19 +238,18 @@ form.kifi-compose input[type=text] { /* either input */
   font: inherit;
   box-shadow: none !important;
 }
-form.kifi-compose input[type=text].kifi-compose-to, /* initial input */
+.kifi-compose input.kifi-compose-to, /* initial input */
 .kifi-ti-list {
   width: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   border: 1px solid #d2d2d2 !important;
-  border-radius: 3px 3px 0 0;
   margin: 0 0 -1px !important;
 }
-form.kifi-compose input[type=text].kifi-compose-to { /* initial input */
+.kifi-compose input.kifi-compose-to { /* initial input */
   padding: 5px;
 }
-form.kifi-compose input[type=text]#token-input-kifi-compose-to { /* token input */
+.kifi-compose input#token-input-kifi-compose-to { /* token input */
   width: 100px;
   padding: 2px 0;
   -moz-box-sizing: border-box;
@@ -243,7 +257,10 @@ form.kifi-compose input[type=text]#token-input-kifi-compose-to { /* token input 
   -moz-transition: none;
   transition: none;
 }
-form.kifi-compose input[type=text]::-moz-placeholder {
+.kifi-compose input[type=text]::-moz-placeholder {
+  color: #a9a9a9 !important;
+}
+.kifi-compose input[type=text]::-webkit-input-placeholder {
   color: #a9a9a9 !important;
 }
 .kifi-ti-list {

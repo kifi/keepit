@@ -33,6 +33,7 @@ trait ServiceDiscovery {
   def myStatus: Option[ServiceStatus]
   def myVersion: ServiceVersion
   def thisInstance: Option[ServiceInstance]
+  def amIUp: Boolean
 }
 
 @Singleton
@@ -176,6 +177,12 @@ class ServiceDiscoveryImpl @Inject() (
       selfCheckFutureOpt = Some(selfCheckPromise.future)
     }
     selfCheckFutureOpt.get //this option must be defined when we are in this case
+  }
+
+  def amIUp: Boolean = {
+    myStatus.map{ status =>
+      myHealthyStatus.map(_==status).getOrElse(false)
+    } getOrElse(false)
   }
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]

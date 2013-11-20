@@ -45,10 +45,10 @@ class AdminInvitationController @Inject() (
     val result = db.readWrite { implicit session =>
       val socialUser = socialUserRepo.get(id)
       for (user <- socialUser.userId.map(userRepo.get)) yield {
-        val invite = invitationRepo.getByRecipient(id).getOrElse(invitationRepo.save(Invitation(
+        val invite = invitationRepo.getByRecipientSocialUserId(id).getOrElse(invitationRepo.save(Invitation(
           createdAt = user.createdAt,
           senderUserId = None,
-          recipientSocialUserId = socialUser.id.get
+          recipientSocialUserId = socialUser.id
         )))
         (userRepo.save(user.withState(UserStates.ACTIVE)),
           invitationRepo.save(invite.withState(InvitationStates.ADMIN_ACCEPTED)))
@@ -67,10 +67,10 @@ class AdminInvitationController @Inject() (
     val result = db.readWrite { implicit session =>
       val socialUser = socialUserRepo.get(id)
       for (user <- socialUser.userId.map(userRepo.get)) yield {
-        val invite = invitationRepo.getByRecipient(id).getOrElse(invitationRepo.save(Invitation(
+        val invite = invitationRepo.getByRecipientSocialUserId(id).getOrElse(invitationRepo.save(Invitation(
           createdAt = user.createdAt,
           senderUserId = None,
-          recipientSocialUserId = socialUser.id.get
+          recipientSocialUserId = socialUser.id
         )))
         (user, invitationRepo.save(invite.withState(InvitationStates.ADMIN_REJECTED)))
       }

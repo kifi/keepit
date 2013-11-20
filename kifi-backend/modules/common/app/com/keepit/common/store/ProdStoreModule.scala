@@ -7,7 +7,6 @@ import com.keepit.search._
 import play.api.Play._
 import com.keepit.common.analytics._
 import com.amazonaws.auth.BasicAWSCredentials
-import com.mongodb.casbah.MongoConnection
 import com.keepit.learning.topicmodel._
 
 trait StoreModule extends ScalaModule {
@@ -35,9 +34,9 @@ trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
-  def articleSearchResultStore(amazonS3Client: AmazonS3, searchIdCache: SearchIdCache): ArticleSearchResultStore = {
+  def articleSearchResultStore(amazonS3Client: AmazonS3, initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache): ArticleSearchResultStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.articleSearch.bucket").get)
-    new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client, searchIdCache)
+    new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client, initialSearchIdCache, articleCache)
   }
 
   @Singleton
@@ -74,16 +73,6 @@ trait ProdStoreModule extends StoreModule {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
     new S3TopicWordsStoreImpl(bucketName, amazonS3Client)
   }
-
-  @Singleton
-  @Provides
-  def mongoEventStore(): MongoEventStore = {
-    current.configuration.getString("mongo.events.server").map { server =>
-      val mongoConn = MongoConnection(server)
-      val mongoDB = mongoConn(current.configuration.getString("mongo.events.database").getOrElse("events"))
-      new MongoS3EventStoreImpl(mongoDB)
-    }.get
-  }
 }
 
 abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) extends StoreModule {
@@ -100,9 +89,9 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
 
   @Singleton
   @Provides
-  def articleSearchResultStore(amazonS3ClientProvider: Provider[AmazonS3], searchIdCache: SearchIdCache): ArticleSearchResultStore =
+  def articleSearchResultStore(amazonS3ClientProvider: Provider[AmazonS3], initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache): ArticleSearchResultStore =
     whenConfigured("amazon.s3.articleSearch.bucket")(
-      prodStoreModule.articleSearchResultStore(amazonS3ClientProvider.get, searchIdCache)
+      prodStoreModule.articleSearchResultStore(amazonS3ClientProvider.get, initialSearchIdCache, articleCache)
     ).getOrElse(new InMemoryArticleSearchResultStoreImpl())
 
   @Singleton
@@ -139,12 +128,4 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
     whenConfigured("amazon.s3.wordTopic.bucket")(
       prodStoreModule.topicWordsStore(amazonS3ClientProvider.get)
     ).getOrElse(new InMemoryTopicWordsStoreImpl())
-
-
-  @Singleton
-  @Provides
-  def mongoEventStore(): MongoEventStore =
-    whenConfigured("mongo.events.server")(
-      prodStoreModule.mongoEventStore()
-    ).getOrElse(new FakeMongoS3EventStore())
 }

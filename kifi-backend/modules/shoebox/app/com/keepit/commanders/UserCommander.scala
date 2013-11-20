@@ -7,17 +7,19 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.common.time._
+import com.keepit.abook.ABookServiceClient
 
 import play.api.Play.current
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsObject, Json, JsValue}
 
 import com.google.inject.Inject
 import com.keepit.common.net.URI
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
-import com.keepit.common.analytics.{EventPersister, Event, EventFamilies, Events}
 import play.api.libs.concurrent.Akka
+
+import scala.concurrent.Future
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 
@@ -33,7 +35,8 @@ class UserCommander @Inject() (
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
   userExperimentRepo: UserExperimentRepo,
-  socialUserInfoRepo: SocialUserInfoRepo) {
+  socialUserInfoRepo: SocialUserInfoRepo,
+  abook: ABookServiceClient) {
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
     val basicUsers = db.readOnly { implicit s =>
@@ -65,5 +68,9 @@ class UserCommander @Inject() (
 
   def socialNetworkInfo(userId: Id[User]) = db.readOnly { implicit s =>
     socialUserInfoRepo.getByUser(userId).map(BasicSocialUser from _)
+  }
+
+  def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[JsValue] = {
+    abook.uploadContacts(userId, origin, payload)
   }
 }

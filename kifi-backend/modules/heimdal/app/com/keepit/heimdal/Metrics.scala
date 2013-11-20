@@ -5,8 +5,7 @@ import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
 import reactivemongo.bson.{BSONValue, BSONDouble, BSONString, BSONDocument, BSONArray, BSONDateTime, BSONLong}
-import reactivemongo.core.commands.{PipelineOperator, Match, GroupField, SumValue, Unwind, Project, Sort, Descending, AddToSet}
-
+import reactivemongo.core.commands.{PipelineOperator, Match, GroupField, SumValue, Unwind, Sort, Descending, AddToSet}
 
 sealed trait ComparisonOperator {
   def toBSONMatchFragment: BSONValue
@@ -71,10 +70,36 @@ case object NoContextRestriction extends ContextRestriction {
   def toBSONMatchDocument: BSONDocument = BSONDocument()
 }
 
-sealed trait EventSet
+case class ConditionalContextRestriction(restriction: ContextRestriction, events: EventType*) extends ContextRestriction {
+  def toBSONMatchDocument: BSONDocument = BSONDocument("$or" -> BSONArray(
+    ComplementEventSet(events.toSet).toBSONMatchDocument,
+    BSONDocument("$and" -> BSONArray(SpecificEventSet(events.toSet).toBSONMatchDocument, restriction.toBSONMatchDocument))
+  ))
+}
 
-case class SpecificEventSet(events: Set[UserEventType]) extends EventSet
-case object AllEvents extends EventSet
+sealed trait EventSet {
+  def toBSONMatchDocument: BSONDocument
+}
+
+case class SpecificEventSet(events: Set[EventType]) extends EventSet {
+  def toBSONMatchDocument = BSONDocument(
+    "event_type" -> BSONDocument(
+      "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
+    )
+  )
+}
+
+case class ComplementEventSet(events: Set[EventType]) extends EventSet {
+  def toBSONMatchDocument = BSONDocument(
+    "event_type" -> BSONDocument(
+      "$nin" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
+    )
+  )
+}
+
+case object AllEvents extends EventSet {
+  def toBSONMatchDocument = BSONDocument()
+}
 
 
 sealed trait EventGrouping {
@@ -100,14 +125,14 @@ case class NaturalGrouping(val fieldName: String) extends EventGrouping {
   val allowBreakdown = true;
 }
 
-sealed trait DerivedGrouping extends EventGrouping 
+sealed trait DerivedGrouping extends EventGrouping
 
 
 //location (country), weekday, hour of day, local hour of day, OS, browser
 object DerivedGrouping {
   def apply(name: String): DerivedGrouping = {
     null
-  } 
+  }
 }
 
 
@@ -132,15 +157,7 @@ class GroupedEventCountMetricDefinition(eventsToConsider: EventSet, contextRestr
         "$lt"  -> BSONDateTime(startTime.getMillis + timeWindowSize.toMillis)
       )
     ))
-    val eventSelector = eventsToConsider match {
-      case SpecificEventSet(events) =>
-        Match(BSONDocument(
-          "event_type" -> BSONDocument(
-            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
-          )
-        ))
-      case AllEvents =>Match(BSONDocument())
-    }
+    val eventSelector = Match(eventsToConsider.toBSONMatchDocument)
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
     val grouping = GroupField(groupField.fieldName)("count" -> SumValue(1))
@@ -155,12 +172,12 @@ class GroupedEventCountMetricDefinition(eventsToConsider: EventSet, contextRestr
     else pipeline = pipeline :+ Sort(Seq(Descending("count")))
 
     val postprocess = (x: Stream[BSONDocument]) => x.toSeq
-    
+
     (pipeline, postprocess)
   }
 }
 
-class SimpleEventCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction) 
+class SimpleEventCountMetricDefinition(eventsToConsider: EventSet, contextRestriction: ContextRestriction)
   extends GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, NaturalGrouping("_")) //This is bit of a hack to keep it dry. Could be done more efficiently with "find(...).count()". (-Stephen)
 
 
@@ -196,7 +213,7 @@ class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestri
     else pipeline = pipeline :+ Sort(Seq(Descending("count")))
 
     val postprocess = (x: Stream[BSONDocument]) => x.toSeq
-    
+
     (pipeline, postprocess)
   }
 }
@@ -232,8 +249,8 @@ class GroupedUniqueFieldCountMetricDefinition(eventsToConsider: EventSet, contex
     pipeline = pipeline :+ Sort(Seq(Descending("count")))
 
     val postprocess = (x: Stream[BSONDocument]) => x.toSeq
-    
-    (pipeline, postprocess)    
+
+    (pipeline, postprocess)
   }
 }
 

@@ -1,7 +1,7 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/underscore.js
 // @require scripts/lib/antiscroll.min.js
-// @require scripts/lib/q.min.js
+// @require scripts/lib/p.min.js
 // @require scripts/render.js
 // @require scripts/util.js
 // @require scripts/kifi_util.js
@@ -27,7 +27,7 @@ this.tagbox = (function ($, win) {
 
 	var util = win.util,
 		kifiUtil = win.kifiUtil,
-		Q = win.Q,
+		P = win.P,
 		_ = win._;
 
 	function log(name) {
@@ -223,9 +223,8 @@ this.tagbox = (function ($, win) {
 
 			function addDocListeners() {
 				if (this.active) {
-					var $doc = $(document);
-					this.prevEscHandler = $doc.data('esc');
-					$doc.data('esc', this.handleEsc.bind(this));
+					this.escHandler = this.handleEsc.bind(this);
+					$(document).data('esc').add(this.escHandler);
 
 					var onDocClick = this.onDocClick = onClick.bind(this);
 					document.addEventListener('click', onDocClick, true);
@@ -278,7 +277,6 @@ this.tagbox = (function ($, win) {
 			var KEY_UP = 38,
 				KEY_DOWN = 40,
 				KEY_ENTER = 13,
-				KEY_ESC = 27,
 				KEY_TAB = 9;
 
 			function onInput(e) {
@@ -294,34 +292,25 @@ this.tagbox = (function ($, win) {
 			}
 
 			function onKeydown(e) {
-				var preventDefault = false;
 				if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
-					// not handling any special keys
 					return;
 				}
 
 				switch (e.which) {
 				case KEY_UP:
 					this.navigate('up');
-					preventDefault = true;
+					e.preventDefault();
 					break;
 				case KEY_DOWN:
 					this.navigate('down');
-					preventDefault = true;
+					e.preventDefault();
 					break;
 				case KEY_ENTER:
 				case KEY_TAB:
 					this.select(null, 'key:' + (e.which === KEY_ENTER ? 'enter' : 'tab'));
 					this.setInputValue();
-					preventDefault = true;
-					break;
-				case KEY_ESC:
-					this.handleEsc(e);
-					return;
-				}
-
-				if (preventDefault) {
 					e.preventDefault();
+					break;
 				}
 			}
 
@@ -334,10 +323,7 @@ this.tagbox = (function ($, win) {
 			};
 		})(),
 
-		handleEsc: function (e) {
-			e.preventDefault();
-			e.stopPropagation();
-			e.stopImmediatePropagation();
+		handleEsc: function () {
 			log('esc');
 
 			if (this.currentSuggestion) {
@@ -346,6 +332,7 @@ this.tagbox = (function ($, win) {
 			else {
 				this.hide('key:esc');
 			}
+			return false;
 		},
 
 		/**
@@ -475,7 +462,9 @@ this.tagbox = (function ($, win) {
 			if (this.active) {
 				this.active = false;
 
-				win.slider2.unshadePane();
+				if (win.pane) {
+					win.pane.unshade();
+				}
 				$(win.tile).css('transform', '');
 
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
@@ -488,8 +477,8 @@ this.tagbox = (function ($, win) {
 					}
 				}, this);
 
-				$(document).data('esc', this.prevEscHandler);
-				this.prevEscHandler = null;
+				$(document).data('esc').remove(this.escHandler);
+				this.escHandler = null;
 
 				var onDocClick = this.onDocClick;
 				if (onDocClick) {
@@ -757,7 +746,7 @@ this.tagbox = (function ($, win) {
 
 			$tile.css('transform', 'translate(0,' + dy + 'px)');
 
-			var deferred = Q.defer();
+			var deferred = P.defer();
 
 			$tile.on('transitionend', function onTransitionend(e) {
 				if (e.target === this) {
@@ -776,7 +765,9 @@ this.tagbox = (function ($, win) {
 		 */
 		setLoaded: function () {
 			this.removeClass('kifi-loading');
-			win.slider2.shadePane();
+			if (win.pane) {
+				win.pane.shade();
+			}
 		},
 
 		/**
@@ -1541,6 +1532,7 @@ this.tagbox = (function ($, win) {
 		onClickSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion'),
 				tagId = this.getData($suggestion, 'id');
+			this.setInputValue();
 			this.addTagById(tagId, $suggestion, this.getClickInfo('autocomplete'));
 		},
 
@@ -1552,6 +1544,7 @@ this.tagbox = (function ($, win) {
 		onClickNewSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-new'),
 				tagName = this.getData($suggestion, 'name');
+			this.setInputValue();
 			this.createTag(tagName, this.getClickInfo('new'));
 		},
 

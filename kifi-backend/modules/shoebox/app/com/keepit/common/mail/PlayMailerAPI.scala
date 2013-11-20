@@ -16,7 +16,7 @@ class PlayMailerAPI @Inject()(
     from = EmailAddresses.NOTIFICATIONS,
     subject = "",
     htmlBody = "",
-    category = ElectronicMailCategory("play")))
+    category = PostOffice.Categories.System.PLAY))
 
   private def reportErrors[A](block: => A): A = try block catch {
     case e: Throwable =>

@@ -394,6 +394,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(states)
   }
 
+  def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]] = {
+    val exps = userIds.map{ id =>
+      val exps = allUserExperiments.getOrElse(id, Set.empty).filter(_.state == UserExperimentStates.ACTIVE).map(_.experimentType)
+      id -> exps
+    }.toMap
+    Future.successful(exps)
+  }
+
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = {
     Future.successful(allUserConnections.getOrElse(userId, Set.empty))
   }
@@ -423,4 +431,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
 
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
+
+  def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = ???
 }

@@ -36,16 +36,6 @@ object SemanticVariance {
   }
 
   /**
-   *  measure the randomness of the existence of a term in the hits
-   *  existCnt: each cnt in the List is the number of hits that contain a term
-   *  totalCnt: total number of hits
-   */
-  def existenceVariance(existCnt: List[Int], totalCnt: Int) = {
-    if (totalCnt == 0) -1.0f
-    else existCnt.foldLeft(0.0f)( (sum, cnt) => { val p = cnt*1.0f/totalCnt; sum + p * (1-p) } )
-  }
-
-  /**
    * Given a hitList, find the variance of the semantic vectors.
    */
   def svVariance(textQueries: Seq[TextQuery], hitList: List[MutableArticleHit], personalizedSearcher: Option[PersonalizedSearcher]): Float = {
@@ -55,13 +45,12 @@ object SemanticVariance {
   def svVariance(textQueries: Seq[TextQuery], ids: Set[Long], personalizedSearcher: Option[PersonalizedSearcher]): Float = {
     val uriIdFilter = new IdSetFilter(ids)
     val hitSize = uriIdFilter.ids.size
-    var existCnt = List.empty[Int] // for each sv, we count how many docs contain it
     var composers = Map.empty[Term, SemanticVectorComposer]
 
-    textQueries.foreach{ q =>
-      val extractorQuery = q.getSemanticVectorExtractorQuery()
-      personalizedSearcher.map{ searcher =>
-        searcher.doSearch(extractorQuery, uriIdFilter){ (scorer, iterator, reader) =>
+    personalizedSearcher.map{ searcher =>
+      textQueries.foreach{ q =>
+        val extractorQuery = q.getSemanticVectorExtractorQuery()
+          searcher.doSearch(extractorQuery, uriIdFilter){ (scorer, iterator, reader) =>
           if (scorer != null && iterator != null) {
             val extractor = scorer.asInstanceOf[SemanticVectorExtractorScorer]
             while (iterator.nextDoc() < NO_MORE_DOCS) {

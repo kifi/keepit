@@ -10,9 +10,9 @@
   allowedInvites: Int,
   emails: Seq[EmailAddress],
   abookInfos: Seq[ABookInfo],
-  contacts: Seq[Contact],
+  econtactCount: Int,
   econtacts: Seq[EContact],
-  abookEP: Option[String],
+  abookEP: String,
   collections: Seq[Collection],
   collectionFilter: Option[Id[Collection]],
   stateToken: String
@@ -67,7 +67,8 @@
           @for(exp <- Seq(ExperimentType.ADMIN, ExperimentType.BLOCK,
               ExperimentType.NO_SEARCH_EXPERIMENTS, ExperimentType.FAKE, ExperimentType.INACTIVE,
               ExperimentType.CAN_INVITE, ExperimentType.CAN_MESSAGE_ALL_USERS, ExperimentType.NOT_SENSITIVE,
-              ExperimentType.PASSWORD_LOGIN, ExperimentType.TAGGING)) {
+              ExperimentType.GMAIL_INVITE, ExperimentType.CAN_CONNECT, 
+              ExperimentType.INBOX)) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(experiments.contains(exp)) {checked}>@exp.value
             </label>
@@ -129,32 +130,31 @@
     <br/>
     <h3>Address Book(s)</h3>
     <table class="table table-condensed table-striped">
-        <tr><th>ABookId</th><th>Origin</th><th>State</th><th>OwnerId</th><th>OwnerEmail</th><th>RawInfoLoc</th></tr>
-        @for(abookInfo <- abookInfos) {
-            <tr><td>@abookInfo.id</td><td>@abookInfo.origin</td><td>@abookInfo.state</td><td>@abookInfo.ownerId</td><td>@abookInfo.ownerEmail</td><td>@abookInfo.rawInfoLoc</td></tr>
+        <tr><th>ABookId</th><th>Origin</th><th>State</th><th>OwnerId</th><th>OwnerEmail</th><th>RawInfoLoc</th><th># Contacts</th><th># Processed</th></tr>
+        @for(abook <- abookInfos) {
+            <tr><td>@abook.id</td><td>@abook.origin</td><td>@abook.state</td><td>@abook.ownerId</td><td>@abook.ownerEmail</td><td>@abook.rawInfoLoc</td><td>@abook.numContacts</td><td>@abook.numProcessed</td></tr>
         }
     </table>
   }
-  @if(contacts.size > 0) {
+  @if(econtactCount > 0) {
     <br/>
-    <h3>Contacts (up to 500)</h3>
+    <h3>EContacts (total=@econtactCount; display up to 500)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
-            <tr><th>ContactId</th><th>Origin</th><th>ABookId</th><th>Name</th><th>Email</th><th>Alt Emails</th></tr>
-            @for(contact <- contacts) {
-            <tr><td>@contact.id</td><td>@contact.origin</td><td>@contact.abookId</td><td>@contact.name</td><td>@contact.email</td><td>@contact.altEmails</td></tr>
-            }
-        </table>
-    </div>
-  }
-  @if(econtacts.size > 0) {
-    <br/>
-    <h3>EContacts (up to 500)</h3>
-    <div class="scrollArea">
-        <table class="table table-condensed table-striped">
-            <tr><th>EContactId</th><th>Name</th><th>Email</th></tr>
+            <tr><th>EContactId</th><th>Name</th><th>Email</th><th>State</th></tr>
             @for(contact <- econtacts) {
-            <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td></tr>
+            <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td><td>@contact.state</td>
+              @if(experiments.contains(ExperimentType.GMAIL_INVITE)) {
+                <td>
+                    <form class="form-inline" style="display:inline" action="/invite" method="POST">
+                        <input type="hidden" name="fullSocialId" value="email/@contact.email">
+                        <input type="hidden" name="subject" value="You've been invited to join Kifi!">
+                        <input type="hidden" name="message" value="Come join us!">
+                        <button type="submit" class="btn">Invite</button>
+                    </form>
+                </td>
+              }
+            </tr>
             }
         </table>
     </div>
@@ -167,10 +167,10 @@
           <input type=submit value="Import"> contacts from your GMail account
       </form>
   </div>
-  @if(abookEP.isDefined) {
+  @if(abookEP != null) {
     <b>File-based uploads -- 42-internal testing only!</b>
     <b>IOS JSON file upload (UTF-8)</b>
-    <form class="form-inline" action=@{abookEP.get + user.id.get + "/ios/upload"} enctype="multipart/form-data" method="POST">
+    <form class="form-inline" action=@{abookEP} enctype="multipart/form-data" method="POST">
     IOS JSON file to upload: <input type=file name="abook_json">
     <input type=submit value="Upload">
     </form>

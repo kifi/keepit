@@ -1,5 +1,6 @@
 package com.keepit.common.mail
 
+// TODO: refactor to EmailAddress AnyVal type and rename EmailAddress model to UserEmailAddress
 trait EmailAddressHolder {
   val address: String
   override def equals(obj: Any) = obj.isInstanceOf[EmailAddressHolder] && obj.asInstanceOf[EmailAddressHolder].address == address
@@ -16,7 +17,7 @@ object EmailAddresses {
   case object NOTIFICATIONS extends SystemEmailAddress("notifications@kifi.com")
   case object ENG extends SystemEmailAddress("eng@42go.com")
   case object EISHAY extends SystemEmailAddress("eishay@42go.com")
-  case object INVITATION extends SystemEmailAddress("invitation@42go.com")
+  case object INVITATION extends SystemEmailAddress("invitation@kifi.com")
   case object YASUHIRO extends SystemEmailAddress("yasuhiro@42go.com")
   case object ANDREW extends SystemEmailAddress("andrew@42go.com")
   case object JARED extends SystemEmailAddress("jared@42go.com")
@@ -39,5 +40,4 @@ object EmailAddresses {
 
   def apply(email: String): SystemEmailAddress =
     ALL_EMAILS.find(_.address == email).getOrElse(throw new IllegalArgumentException(s"No system email for $email"))
-
 }

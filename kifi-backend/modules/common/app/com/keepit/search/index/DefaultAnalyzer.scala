@@ -41,6 +41,7 @@ import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.TokenFilter
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.Tokenizer
+import org.apache.lucene.analysis.util.CharArraySet
 import org.apache.lucene.analysis.util.TokenizerFactory
 import org.apache.lucene.util.Version
 import com.keepit.common.logging.Logging
@@ -61,7 +62,7 @@ object DefaultAnalyzer {
 
   val defaultAnalyzer: Analyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
 
-  private[this] val baseAnalyzers = Map[String, Analyzer](
+  val langAnalyzers = Map[String, Analyzer](
     "ar" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Arabic).withFilter[ArabicNormalizationFilter],
     "bg" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Bulgarian),
     "cs" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Czech),
@@ -86,34 +87,32 @@ object DefaultAnalyzer {
     "sv" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Swedish),
     "th" -> stdAnalyzer.withFilter[LowerCaseFilter].withFilter[ThaiWordFilter].withStopFilter(_.Thai),
     "tr" -> stdAnalyzer.withFilter[TurkishLowerCaseFilter].withStopFilter(_.Turkish)
-  )
-
-  val langAnalyzers = baseAnalyzers.mapValues(_.withFilter[SymbolDecompounder])
+  ).mapValues(_.withFilter[SymbolDecompounder])
 
   val langAnalyzerWithStemmer = Map[String, Analyzer](
-    "ar" -> baseAnalyzers("ar").withFilter[ArabicStemFilter],
-    "bg" -> baseAnalyzers("bg").withFilter[BulgarianStemFilter],
-    "cs" -> baseAnalyzers("cs").withFilter[CzechStemFilter],
-    "da" -> baseAnalyzers("da").withStemFilter(_.Danish),
-    "de" -> baseAnalyzers("de").withFilter[GermanLightStemFilter],
-    "el" -> baseAnalyzers("el").withFilter[GreekStemFilter],
-    "en" -> baseAnalyzers("en").withFilter[KStemFilter].withFilter[EnglishMinimalStemFilter].withFilter[ApostropheFilter],
-    "es" -> baseAnalyzers("es").withFilter[SpanishLightStemFilter],
-    "fi" -> baseAnalyzers("fi").withFilter[FinnishLightStemFilter],
-    "fr" -> baseAnalyzers("fr").withFilter[FrenchLightStemFilter],
-    "hi" -> baseAnalyzers("hi").withFilter[HindiStemFilter],
-    "hu" -> baseAnalyzers("hu").withFilter[HungarianLightStemFilter],
-    "id" -> baseAnalyzers("id").withFilter[IndonesianStemFilter],
-    "it" -> baseAnalyzers("it").withFilter[ItalianLightStemFilter],
-    "lv" -> baseAnalyzers("lv").withFilter[LatvianStemFilter],
-    "nl" -> baseAnalyzers("nl").withStemFilter(_.Dutch),
-    "no" -> baseAnalyzers("no").withFilter[NorwegianLightStemFilter],
-    "pt" -> baseAnalyzers("pt").withFilter[PortugueseLightStemFilter],
-    "ro" -> baseAnalyzers("ro").withStemFilter(_.Romanian),
-    "ru" -> baseAnalyzers("ru").withFilter[RussianLightStemFilter],
-    "sv" -> baseAnalyzers("sv").withFilter[SwedishLightStemFilter],
-    "tr" -> baseAnalyzers("tr").withStemFilter(_.Turkish)
-  ).mapValues(_.withFilter[SymbolDecompounder])
+    "ar" -> langAnalyzers("ar").withFilter[ArabicStemFilter],
+    "bg" -> langAnalyzers("bg").withFilter[BulgarianStemFilter],
+    "cs" -> langAnalyzers("cs").withFilter[CzechStemFilter],
+    "da" -> langAnalyzers("da").withStemFilter(_.Danish),
+    "de" -> langAnalyzers("de").withFilter[GermanLightStemFilter],
+    "el" -> langAnalyzers("el").withFilter[GreekStemFilter],
+    "en" -> langAnalyzers("en").withFilter[KStemFilter].withFilter[EnglishMinimalStemFilter].withFilter[ApostropheFilter],
+    "es" -> langAnalyzers("es").withFilter[SpanishLightStemFilter],
+    "fi" -> langAnalyzers("fi").withFilter[FinnishLightStemFilter],
+    "fr" -> langAnalyzers("fr").withFilter[FrenchLightStemFilter],
+    "hi" -> langAnalyzers("hi").withFilter[HindiStemFilter],
+    "hu" -> langAnalyzers("hu").withFilter[HungarianLightStemFilter],
+    "id" -> langAnalyzers("id").withFilter[IndonesianStemFilter],
+    "it" -> langAnalyzers("it").withFilter[ItalianLightStemFilter],
+    "lv" -> langAnalyzers("lv").withFilter[LatvianStemFilter],
+    "nl" -> langAnalyzers("nl").withStemFilter(_.Dutch),
+    "no" -> langAnalyzers("no").withFilter[NorwegianLightStemFilter],
+    "pt" -> langAnalyzers("pt").withFilter[PortugueseLightStemFilter],
+    "ro" -> langAnalyzers("ro").withStemFilter(_.Romanian),
+    "ru" -> langAnalyzers("ru").withFilter[RussianLightStemFilter],
+    "sv" -> langAnalyzers("sv").withFilter[SwedishLightStemFilter],
+    "tr" -> langAnalyzers("tr").withStemFilter(_.Turkish)
+  )
 
   private def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
   private def getAnalyzerWithStemmer(lang: Lang): Option[Analyzer] = langAnalyzerWithStemmer.get(lang.lang)
@@ -185,6 +184,8 @@ class Analyzer(tokenizerFactory: TokenizerFactory,
   }
 
   def createLazyTokenStream(field: String, text: String) = new LazyTokenStream(field, text, this)
+
+  def getStopWords: Option[CharArraySet] = factories.collectFirst{ case sf: StopFilterFactory => sf.stopWords }
 }
 
 class LazyTokenStream(field: String, text: String, analyzer: Analyzer) extends TokenStream {

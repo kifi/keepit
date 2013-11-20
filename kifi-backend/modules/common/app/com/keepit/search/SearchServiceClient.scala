@@ -6,7 +6,6 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, BenchmarkResults}
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
-import com.keepit.model.Comment
 import com.keepit.model.Collection
 import play.api.libs.json.{JsValue, Json}
 import play.api.templates.Html
@@ -22,6 +21,7 @@ import com.keepit.social.BasicUser
 import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
+import com.keepit.search.spellcheck.ScoredSuggest
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -29,6 +29,7 @@ trait SearchServiceClient extends ServiceClient {
   def logResultClicked(resultClicked: ResultClicked): Unit
   def logSearchEnded(searchEnded: SearchEnded): Unit
   def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit
+  def warmUpUser(userId: Id[User]): Unit
 
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
@@ -40,21 +41,15 @@ trait SearchServiceClient extends ServiceClient {
   def articleIndexInfo(): Future[IndexInfo]
   def articleIndexerSequenceNumber(): Future[Int]
 
-  def commentIndexInfo(): Future[Seq[IndexInfo]]
-  def reindexComment(): Unit
-
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo]
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]]
   def refreshSearcher(): Unit
   def refreshPhrases(): Unit
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
-  def searchUsers(query: String, maxHits: Int = 10, context: String = ""): Future[UserSearchResult]
-  def searchUsers2(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
+  def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
-  def buildSpellCorrectorDictionary(): Unit
-  def getSpellCorrectorStatus(): Future[Boolean]
-  def correctSpelling(text: String): Future[String]
+  def correctSpelling(text: String, enableBoost: Boolean): Future[String]
   def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
   def resetUserConfig(id: Id[User]): Unit
@@ -62,7 +57,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html]
-  def dumpLuceneComment(commentId: Id[Comment]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
 
   def benchmarks(): Future[BenchmarkResults]
@@ -91,6 +85,10 @@ class SearchServiceClientImpl(
     call(Search.internal.updateBrowsingHistory(userId), json)
   }
 
+  def warmUpUser(userId: Id[User]): Unit = {
+    call(Search.internal.warmUpUser(userId))
+  }
+
   def updateURIGraph(): Unit = {
     broadcast(Search.internal.updateURIGraph())
   }
@@ -103,10 +101,6 @@ class SearchServiceClientImpl(
     broadcast(Search.internal.collectionReindex())
   }
 
-  def reindexComment(): Unit = {
-    broadcast(Search.internal.commentReindex())
-  }
-
   def index(): Unit = {
     broadcast(Search.internal.searchUpdate())
   }
@@ -117,10 +111,6 @@ class SearchServiceClientImpl(
 
   def articleIndexInfo(): Future[IndexInfo] = {
     call(Search.internal.indexInfo()).map(r => Json.fromJson[IndexInfo](r.json).get)
-  }
-
-  def commentIndexInfo(): Future[Seq[IndexInfo]] = {
-    call(Search.internal.commentIndexInfo()).map(r => Json.fromJson[Seq[IndexInfo]](r.json).get)
   }
 
   def uriGraphIndexInfo(): Future[Seq[IndexInfo]] = {
@@ -161,15 +151,9 @@ class SearchServiceClientImpl(
     }
   }
 
-  def searchUsers(query: String, maxHits: Int = 10, context: String = ""): Future[UserSearchResult] = {
-    call(Search.internal.searchUsers(query, maxHits, context)).map{ r =>
-      Json.fromJson[UserSearchResult](r.json).get
-    }
-  }
-
-  def searchUsers2(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = {
+  def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = {
     val payload = Json.toJson(UserSearchRequest(userId, query, maxHits, context, filter))
-    call(Search.internal.searchUsers2(), payload).map{ r =>
+    call(Search.internal.searchUsers(), payload).map{ r =>
       Json.fromJson[UserSearchResult](r.json).get
     }
   }
@@ -190,10 +174,6 @@ class SearchServiceClientImpl(
     call(Search.internal.collectionDumpLuceneDocument(colId, userId)).map(r => Html(r.body))
   }
 
-  def dumpLuceneComment(commentId: Id[Comment]): Future[Html] = {
-    call(Search.internal.commentDumpLuceneDocument(commentId)).map(r => Html(r.body))
-  }
-
   def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = {
     call(Search.internal.searchDumpLuceneDocument(id)).map(r => Html(r.body))
   }
@@ -206,16 +186,11 @@ class SearchServiceClientImpl(
     call(Common.internal.version()).map(r => r.body)
   }
 
-  def buildSpellCorrectorDictionary(): Unit = {
-    broadcast(Search.internal.buildDictionary())
-  }
-
-  def getSpellCorrectorStatus(): Future[Boolean] = {
-    call(Search.internal.getBuildStatus()).map(r => r.body.toBoolean)
-  }
-
-  def correctSpelling(text: String): Future[String] = {
-    call(Search.internal.correctSpelling(text)).map(r => (r.json \ "correction").asOpt[String].getOrElse(text))
+  def correctSpelling(text: String, enableBoost: Boolean): Future[String] = {
+    call(Search.internal.correctSpelling(text, enableBoost)).map{ r =>
+      val suggests = r.json.as[JsArray].value.map{ x => Json.fromJson[ScoredSuggest](x).get}
+      suggests.map{x => x.value + ", " + x.score}.mkString("\n")
+    }
   }
 
   def showUserConfig(id: Id[User]): Future[SearchConfig] = {

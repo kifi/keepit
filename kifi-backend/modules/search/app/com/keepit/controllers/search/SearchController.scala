@@ -1,6 +1,7 @@
 package com.keepit.controllers.search
 
 import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.db.Id
@@ -30,6 +31,7 @@ import com.keepit.search.user.UserSearchResult
 import com.keepit.search.IdFilterCompressor
 import com.keepit.search.user.UserSearchFilterFactory
 import com.keepit.search.user.UserSearchRequest
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 class SearchController @Inject()(
@@ -40,36 +42,32 @@ class SearchController @Inject()(
     airbrake: AirbrakeNotifier
   ) extends SearchServiceController {
 
+  //internal (from eliza/shoebox)
+  def warmUpUser(userId: Id[User]) = Action { request =>
+    SafeFuture {
+      searcherFactory.warmUp(userId)
+    }
+    Ok
+  }
+
   def searchKeeps(userId: Id[User], query: String) = Action { request =>
     val searcher = searcherFactory.bookmarkSearcher(userId)
     val uris = searcher.search(query, Lang("en"))
     Ok(JsArray(uris.toSeq.map(JsNumber(_))))
   }
 
-  def searchUsers(queryText: String, maxHits: Int = 10, context: String = "") = Action{ request =>
-    log.info(s"search user: queryText = ${queryText}")
-    val searcher = searcherFactory.getUserSearcher
-    val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
-    val res = parser.parse(queryText) match {
-      case None => UserSearchResult(Array.empty[UserHit], context)
-      case Some(q) => searcher.search(q, maxHits, IdFilterCompressor.fromBase64ToSet(context))
-    }
-    log.info(s"search user: result = " + res.hits.mkString("\n"))
-    Ok(Json.toJson(res))
-  }
-
-  def searchUsers2() = Action(parse.json){ request =>
+  def searchUsers() = Action(parse.json){ request =>
     val UserSearchRequest(userId, queryText, maxHits, context, filter) = Json.fromJson[UserSearchRequest](request.body).get
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
     val userFilter = filter match {
       case "f" if userId.isDefined => userSearchFilterFactory.friendsOnly(userId.get, Some(context))
       case "nf"if userId.isDefined => userSearchFilterFactory.nonFriendsOnly(userId.get, Some(context))
-      case _ => userSearchFilterFactory.default(Some(context))
+      case _ => userSearchFilterFactory.default(userId, Some(context))
     }
     val res = parser.parse(queryText) match {
       case None => UserSearchResult(Array.empty[UserHit], context)
-      case Some(q) => searcher.searchWithFilter(q, maxHits, userFilter)
+      case Some(q) => searcher.search(q, maxHits, userFilter)
     }
     Ok(Json.toJson(res))
   }

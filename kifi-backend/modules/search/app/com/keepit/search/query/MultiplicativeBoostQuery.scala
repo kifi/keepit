@@ -13,20 +13,20 @@ import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.util.Bits
 
-class MultiplicativeBoostQuery(override val textQuery: Query, override val boosterQueries: Array[Query], val boosterStrengths: Array[Float]) extends BoostQuery {
+class MultiplicativeBoostQuery(override val textQuery: Query, override val boosterQuery: Query, val boosterStrength: Float) extends BoostQuery {
 
   override def createWeight(searcher: IndexSearcher): Weight = new MultiplicativeBoostWeight(this, searcher)
 
   override protected val name = "MultiplicativeBoost"
 
-  override def recreate(rewrittenTextQuery: Query, rewrittenBoosterQueries: Array[Query]): Query = {
-    new MultiplicativeBoostQuery(rewrittenTextQuery, rewrittenBoosterQueries, boosterStrengths)
+  override def recreate(rewrittenTextQuery: Query, rewrittenBoosterQuery: Query): Query = {
+    new MultiplicativeBoostQuery(rewrittenTextQuery, rewrittenBoosterQuery, boosterStrength)
   }
 }
 
 class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, override val searcher: IndexSearcher) extends BoostWeight with Logging {
 
-  val boosterStrengths = query.boosterStrengths
+  val boosterStrength = query.boosterStrength
 
   override def getValueForNormalization() = textWeight.getValueForNormalization
 
@@ -34,11 +34,9 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
     val boost = topLevelBoost * query.getBoost
     textWeight.normalize(norm, boost)
 
-    // normalize each boost weight individually
-    boosterWeights.foreach{ w =>
-      val boosterNorm = queryNorm(w.getValueForNormalization)
-      w.normalize(boosterNorm, 1.0f)
-    }
+    // normalize the boost weight
+    val boosterNorm = queryNorm(boosterWeight.getValueForNormalization)
+    boosterWeight.normalize(boosterNorm, 1.0f)
   }
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
@@ -70,18 +68,15 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
         result.setDescription("Failure to meet condition of textQuery")
       case true =>
         result.addDetail(eTxt)
-
-        boosterWeights.zip(boosterStrengths).map{ case (w, s) =>
-          val e = w.explain(context, doc)
-          val r = e.isMatch() match {
-            case true =>
-              new Explanation((e.getValue * s + (1.0f - s)), s"boosting (strength=${s})")
-            case false =>
-              new Explanation(0.0f, "no match in (" + w.getQuery.toString() + ")")
-          }
-          r.addDetail(e)
-          result.addDetail(r)
+        val e = boosterWeight.explain(context, doc)
+        val r = e.isMatch() match {
+          case true =>
+            new Explanation((e.getValue * boosterStrength + (1.0f - boosterStrength)), s"boosting (strength=${boosterStrength})")
+          case false =>
+            new Explanation((1.0f - boosterStrength), "no match in (" + boosterWeight.getQuery.toString() + ")")
         }
+        r.addDetail(e)
+        result.addDetail(r)
     }
     result
   }
@@ -90,13 +85,12 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
     val textScorer = textWeight.scorer(context, true, false, liveDocs)
     if (textScorer == null) null
     else {
-      new MultiplicativeBoostScorer(this, textScorer,
-        boosterWeights.map{ w => w.scorer(context, true, false, liveDocs) }, boosterStrengths)
+      new MultiplicativeBoostScorer(this, textScorer, boosterWeight.scorer(context, true, false, liveDocs), boosterStrength)
     }
   }
 }
 
-class MultiplicativeBoostScorer(weight: MultiplicativeBoostWeight, textScorer: Scorer, boosterScorers: Array[Scorer], boosterStrengths: Array[Float])
+class MultiplicativeBoostScorer(weight: MultiplicativeBoostWeight, textScorer: Scorer, boosterScorer: Scorer, boosterStrength: Float)
 extends Scorer(weight) with Logging {
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -115,21 +109,15 @@ extends Scorer(weight) with Logging {
     if (doc != scoredDoc) {
       try {
         var score = textScorer.score()
-        var i = 0
-        while (i < boosterScorers.length) {
-          val s = boosterStrengths(i)
-          val boosterScorer = boosterScorers(i)
-          if (boosterScorer != null) {
-            if (boosterScorer.docID() < doc) boosterScorer.advance(doc)
-            if (boosterScorer.docID() == doc) {
-              score *= (boosterScorer.score() * s + (1.0f - s))
-            } else {
-              score *= (1.0f - s)
-            }
+        if (boosterScorer != null) {
+          if (boosterScorer.docID() < doc) boosterScorer.advance(doc)
+          if (boosterScorer.docID() == doc) {
+            score *= (boosterScorer.score() * boosterStrength + (1.0f - boosterStrength))
           } else {
-            score *= (1.0f - s)
+            score *= (1.0f - boosterStrength)
           }
-          i += 1
+        } else {
+          score *= (1.0f - boosterStrength)
         }
         scr = score
       } catch {

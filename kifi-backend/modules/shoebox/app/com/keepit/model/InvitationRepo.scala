@@ -14,7 +14,8 @@ trait InvitationRepo extends Repo[Invitation] with ExternalIdColumnFunction[Invi
   def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)
                      (implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)]
   def getByUser(urlId: Id[User])(implicit session: RSession): Seq[Invitation]
-  def getByRecipient(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation]
+  def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation]
+  def getBySenderIdAndRecipientEContactId(senderId:Id[User], econtactId: Id[EContact])(implicit session: RSession):Option[Invitation]
 }
 
 @Singleton
@@ -31,14 +32,16 @@ class InvitationRepoImpl @Inject() (
 
   override lazy val table = new RepoTable[Invitation](db, "invitation") with ExternalIdColumn[Invitation] {
     def senderUserId = column[Id[User]]("sender_user_id", O.Nullable)
-    def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.NotNull)
+    def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.Nullable)
+    def recipientEContactId   = column[Id[EContact]]("recipient_econtact_id", O.Nullable)
 
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ recipientSocialUserId ~ state <> (Invitation, Invitation.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ recipientSocialUserId.? ~ recipientEContactId.? ~ state <> (Invitation, Invitation.unapply _)
   }
 
   private implicit val userIdTypeMapper = userRepo.idMapper
   private implicit val userStateMapper = userRepo.stateTypeMapper
 
+  // TODO: add support for econtactId
   def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)
                      (implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)] = {
     val showPending = !showState.exists(_ != InvitationStates.ACCEPTED)
@@ -76,8 +79,12 @@ class InvitationRepoImpl @Inject() (
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Invitation] =
     (for(b <- table if b.senderUserId === userId && b.state =!= InvitationStates.INACTIVE) yield b).list
 
-  def getByRecipient(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation] = {
+  def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation] = {
     (for(b <- table if b.recipientSocialUserId === socialUserInfoId) yield b).take(1).firstOption
+  }
+
+  def getBySenderIdAndRecipientEContactId(senderId: Id[User], econtactId: Id[EContact])(implicit session: RSession): Option[Invitation] = {
+    (for(b <- table if b.senderUserId === senderId && b.recipientEContactId === econtactId) yield b).firstOption
   }
 
 }

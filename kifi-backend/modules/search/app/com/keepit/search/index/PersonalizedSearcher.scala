@@ -18,10 +18,8 @@ object PersonalizedSearcher {
             indexReader: WrappedIndexReader,
             myUris: Set[Long],
             collectionSearcher: CollectionSearcherWithUser,
-            browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
             clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
             svWeightMyBookMarks: Int,
-            svWeightBrowsingHistory: Int,
             svWeightClickHistory: Int,
             shoeboxServiceClient: ShoeboxServiceClient,
             monitoredAwait: MonitoredAwait) = {
@@ -30,15 +28,13 @@ object PersonalizedSearcher {
       indexReader,
       myUris,
       collectionSearcher,
-      monitoredAwait.result(browsingHistoryFuture, 40 millisecond, s"getting browsing history for user $userId", MultiHashFilter.emptyFilter[BrowsedURI]),
       monitoredAwait.result(clickHistoryFuture, 40 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI]),
       svWeightMyBookMarks * scale,
-      svWeightBrowsingHistory * scale,
       svWeightClickHistory * scale)
   }
 
   def apply(searcher: Searcher, ids: Set[Long]) = {
-    new PersonalizedSearcher(searcher.indexReader, ids, null, MultiHashFilter.emptyFilter, MultiHashFilter.emptyFilter, 1, 0, 0)
+    new PersonalizedSearcher(searcher.indexReader, ids, null, MultiHashFilter.emptyFilter, 1, 0)
   }
 }
 
@@ -46,16 +42,13 @@ class PersonalizedSearcher(
   override val indexReader: WrappedIndexReader,
   myUris: Set[Long],
   val collectionSearcher: CollectionSearcherWithUser,
-  brosingFilterFunc: => MultiHashFilter[BrowsedURI],
   clickFilterFunc: => MultiHashFilter[ClickedURI],
   scaledWeightMyBookMarks: Int,
-  scaledWeightBrowsingHistory: Int,
   scaledWeightClickHistory: Int
 )
 extends Searcher(indexReader) with Logging {
   import PersonalizedSearcher._
 
-  lazy val browsingFilter: MultiHashFilter[BrowsedURI] = brosingFilterFunc
   lazy val clickFilter: MultiHashFilter[ClickedURI] = clickFilterFunc
 
   override protected def getSemanticVectorComposer(term: Term) = {
@@ -70,9 +63,7 @@ extends Searcher(indexReader) with Logging {
         while (tp.nextDoc() < NO_MORE_DOCS) {
           val id = idMapper.getId(tp.docID())
           val weight = {
-            if (browsingFilter.mayContain(id)){
-              scaledWeightBrowsingHistory
-            } else if (clickFilter.mayContain(id)) {
+            if (clickFilter.mayContain(id, 2)) {
               scaledWeightClickHistory
             } else if (myUris.contains(id)) {
               scaledWeightMyBookMarks

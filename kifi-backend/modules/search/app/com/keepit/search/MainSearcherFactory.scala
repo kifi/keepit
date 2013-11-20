@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model._
 import com.google.inject.{Inject, Singleton}
-import com.keepit.search.query.parser.SpellCorrector
+import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -20,6 +20,7 @@ import scala.concurrent.duration._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserSearcher
+import play.modules.statsd.api.Statsd
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -39,7 +40,7 @@ class MainSearcherFactory @Inject() (
 
   private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[Id[User], URIGraphSearcherWithUser](3 seconds)
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[Id[User], CollectionSearcherWithUser](3 seconds)
-  private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[BrowsedURI]](3 seconds)
+  private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[BrowsedURI]](10 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](3 seconds)
 
   def apply(
@@ -79,11 +80,22 @@ class MainSearcherFactory @Inject() (
     )
   }
 
+  def warmUp(userId: Id[User]): Seq[Future[Any]] = {
+    log.info(s"warming up $userId")
+    Statsd.increment(s"warmup.$userId")
+    val searchFriendsFuture = shoeboxClient.getSearchFriends(userId)
+    val friendsFuture = shoeboxClient.getFriends(userId)
+    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
+    val clickHistoryFuture = getClickHistoryFuture(userId)
+
+    Seq(searchFriendsFuture, friendsFuture, browsingHistoryFuture, clickHistoryFuture) // returning futures to pin them in the heap
+  }
+
   def clear(): Unit = {
     consolidateURIGraphSearcherReq.clear()
     consolidateCollectionSearcherReq.clear()
   }
-  
+
   def getUserSearcher = new UserSearcher(userIndexer.getSearcher)
 
   def getSocialGraphInfoFuture(userId: Id[User], filter: SearchFilter): Future[SocialGraphInfo] = {

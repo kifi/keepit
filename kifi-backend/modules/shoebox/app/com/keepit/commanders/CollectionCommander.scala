@@ -1,23 +1,17 @@
 package com.keepit.commanders
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.common.time._
+import com.keepit.search.SearchServiceClient
 
 import play.api.Play.current
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.Json
 
 import com.google.inject.Inject
-import com.keepit.common.net.URI
-import com.keepit.controllers.core.NetworkInfoLoader
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.social.BasicUser
-import com.keepit.common.analytics.{EventPersister, Event, EventFamilies, Events}
-import play.api.libs.concurrent.Akka
 
 case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
@@ -28,10 +22,13 @@ object BasicCollection {
     BasicCollection(Some(c.externalId), c.name, keeps)
 }
 
+case class CollectionSaveFail(message: String) extends AnyVal
+
 class CollectionCommander @Inject() (
   db: Database,
   collectionRepo: CollectionRepo,
   userValueRepo: UserValueRepo,
+  searchClient: SearchServiceClient,
   keepToCollectionRepo: KeepToCollectionRepo) extends Logging {
 
   val CollectionOrderingKey = "user_collection_ordering"
@@ -78,5 +75,46 @@ class CollectionCommander @Inject() (
     val newCollectionIds = allCollectionIds.sortBy(order.indexOf(_))
     userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(newCollectionIds)))
     newCollectionIds
+  }
+
+  def saveCollection(id: String, userId: Id[User], collectionOpt: Option[BasicCollection]): Either[BasicCollection, CollectionSaveFail] = {
+    val saved: Option[Either[BasicCollection, CollectionSaveFail]] = collectionOpt map { basicCollection =>
+      basicCollection.copy(id = ExternalId.asOpt(id))
+    } map { basicCollection =>
+      val name = basicCollection.name.trim.replaceAll("""\s+""", " ")
+      if (name.length <= Collection.MaxNameLength) {
+        db.readWrite { implicit s =>
+          val existingCollection = collectionRepo.getByUserAndName(userId, name, None)
+          val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
+          if (existingExternalId.isEmpty || existingExternalId == basicCollection.id) {
+            basicCollection.id map { id =>
+              //
+              collectionRepo.getByUserAndExternalId(userId, id) map { coll =>
+                val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
+                updateCollectionOrdering(userId)
+                searchClient.updateURIGraph()
+                Left(BasicCollection.fromCollection(newColl))
+              } getOrElse {
+                Right(CollectionSaveFail(s"Collection not found for id $id"))
+              }
+            } getOrElse {
+              val newColl = collectionRepo.save(existingCollection
+                  map { _.copy(name = name, state = CollectionStates.ACTIVE) }
+                  getOrElse Collection(userId = userId, name = name))
+              updateCollectionOrdering(userId)
+              searchClient.updateURIGraph()
+              Left(BasicCollection.fromCollection(newColl))
+            }
+          } else {
+            Right(CollectionSaveFail(s"Collection '$name' already exists with id ${existingExternalId.get}"))
+          }
+        }
+      } else {
+        Right(CollectionSaveFail(s"Name '$name' is too long (maximum ${Collection.MaxNameLength} chars)"))
+      }
+    }
+    saved.getOrElse {
+      Right(CollectionSaveFail("Could not parse collection from body"))
+    }
   }
 }

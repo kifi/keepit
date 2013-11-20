@@ -89,10 +89,11 @@ class MailSender @Inject() (sender: HealthcheckMailSender) {
 class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, sender: MailSender, services: FortyTwoServices) {
   def sendMail() {
     val last = history.lastError
-    val subject = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.rootException}".abbreviate(512)
+    val subjectWithNumerics = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.rootException}"
+    val subject = "([0-9]+)".r.replaceAllIn(subjectWithNumerics, "*").abbreviate(512)
     val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString, host.host).body
     sender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-      subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
+      subject = subject, htmlBody = body, category = PostOffice.Categories.System.HEALTHCHECK))
   }
 }
 
@@ -165,7 +166,7 @@ class HealthcheckPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 0 seconds, 10 minutes, actor.ref, ReportErrorsAction)
+    scheduleTask(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
   }
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
@@ -187,7 +188,7 @@ class HealthcheckPluginImpl @Inject() (
     val message = Html(s"Service version ${services.currentVersion} started at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
-        category = PostOffice.Categories.HEALTHCHECK))
+        category = PostOffice.Categories.System.HEALTHCHECK))
     actor.ref ! email
     email
   }
@@ -197,7 +198,7 @@ class HealthcheckPluginImpl @Inject() (
     val message = Html(s"Service version ${services.currentVersion} stopped at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
-        category = PostOffice.Categories.HEALTHCHECK))
+        category = PostOffice.Categories.System.HEALTHCHECK))
     actor.ref ! email
     email
   }

@@ -1,33 +1,36 @@
 package com.keepit.controllers.admin
 
-import com.google.inject.Inject
-import play.api.Play.current
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.search.SearchServiceClient
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.concurrent.Akka
-import play.api.libs.json.Json
+import com.keepit.common.controller.{ActionAuthenticator, AdminController}
+import com.google.inject.Inject
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import views.html
 
 class AdminSpellCorrectorController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
-  searchClient: SearchServiceClient) extends AdminController(actionAuthenticator) {
-  def buildDictionary() = AdminHtmlAction { implicit request =>
-    Akka.future {
-      searchClient.buildSpellCorrectorDictionary()
-    }
-    Redirect(routes.AdminSpellCorrectorController.spellController())
+  searchClient: SearchServiceClient,
+  actionAuthenticator: ActionAuthenticator
+) extends AdminController(actionAuthenticator) {
+  def suggest(input: String, enableBoost: Boolean = true) = AdminHtmlAction { request =>
+    val t1 = System.currentTimeMillis
+    val suggest = Await.result(searchClient.correctSpelling(input, enableBoost), 5 seconds)
+    val t2 = System.currentTimeMillis
+    Ok(s"time elpased: ${(t2 - t1)/1000.0} seconds\ninput: ${input}, suggestion: \n${suggest}")
   }
 
-  def correctSpelling(text: String) = AdminJsonAction{ implicit request =>
-    Async {
-      searchClient.correctSpelling(text).map( r => Ok(Json.obj("correction" -> r )))
-    }
+  val Home = Redirect(routes.AdminSpellCorrectorController.spellChecker())
+
+  def correct() = AdminHtmlAction { request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val query = body.get("query").get
+    val t1 = System.currentTimeMillis
+    val suggest = Await.result(searchClient.correctSpelling(query, enableBoost = true), 5 seconds)
+    val t2 = System.currentTimeMillis
+    val message = s"time elpased: ${(t2 - t1)/1000.0} seconds\ninput: ${query}, suggestions: \n${suggest}"
+    Home.flashing("success" -> message)
   }
 
-  def spellController() = AdminHtmlAction { implicit request =>
-    Async {
-      val response = searchClient.getSpellCorrectorStatus
-      response.map(r => Ok(views.html.admin.spellCorrector(r)))
-    }
+  def spellChecker() = AdminHtmlAction { implicit request =>
+    Ok(html.admin.spellchecker())
   }
 }

@@ -10,12 +10,14 @@ case class Invitation(
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[Invitation] = ExternalId(),
   senderUserId: Option[Id[User]],
-  recipientSocialUserId: Id[SocialUserInfo],
+  recipientSocialUserId: Option[Id[SocialUserInfo]],
+  recipientEContactId: Option[Id[EContact]] = None,
   state: State[Invitation] = InvitationStates.ACTIVE
 ) extends ModelWithExternalId[Invitation] {
   def withId(id: Id[Invitation]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[Invitation]) = copy(state = state)
+  def withRecipientSocialUserId(recipientSocialUserId: Option[Id[SocialUserInfo]]) = copy(recipientSocialUserId = recipientSocialUserId)
 }
 
 object InvitationStates extends States[Invitation] {

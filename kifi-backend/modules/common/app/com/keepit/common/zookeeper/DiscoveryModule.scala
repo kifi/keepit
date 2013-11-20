@@ -108,6 +108,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def forceUpdate(): Unit = {}
       def myStatus: Option[ServiceStatus] = Some(ServiceStatus.UP)
       def myVersion: ServiceVersion = services.currentVersion
+      def amIUp: Boolean = true
     }
 
   @Singleton

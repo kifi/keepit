@@ -13,11 +13,13 @@ case class ArticleSearchResult(
   hits: Seq[ArticleHit],
   myTotal: Int,
   friendsTotal: Int,
+  othersTotal: Int,
   mayHaveMoreHits: Boolean,
   scorings: Seq[Scoring],
   filter: Set[Long],
   millisPassed: Int,
   pageNumber: Int,
+  previousHits: Int,
   uuid: ExternalId[ArticleSearchResult] = ExternalId(),
   time: DateTime = currentDateTime,
   svVariance: Float = -1.0f,			// semantic vector variance
@@ -28,21 +30,21 @@ case class ArticleSearchResult(
   lang: Lang = Lang("en"))
 
 
-class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float) extends Equals {
+class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float, val usefulPage: Boolean) extends Equals {
   var boostedTextScore: Float = Float.NaN
   var boostedBookmarkScore: Float = Float.NaN
   var boostedRecencyScore: Float = Float.NaN
 
-  def score(textBoost: Float, bookmarkBoost: Float, recencyBoost: Float) = {
+  def score(textBoost: Float, bookmarkBoost: Float, recencyBoost: Float, usefulPageBoost: Float) = {
     boostedTextScore = normalizedTextScore * textBoost
     boostedBookmarkScore = bookmarkScore * bookmarkBoost
     boostedRecencyScore = recencyScore * recencyBoost
 
-    boostedTextScore + boostedBookmarkScore + boostedRecencyScore
+    (boostedTextScore + boostedBookmarkScore + boostedRecencyScore) * (if (usefulPage) usefulPageBoost else 1.0f)
   }
 
   override def toString() = {
-    "Scoring(%f, %f, %f, %f, %f, %f, %f)".format(textScore, normalizedTextScore, bookmarkScore, recencyScore, boostedTextScore, boostedBookmarkScore, boostedRecencyScore)
+    s"Scoring($textScore, $normalizedTextScore, $bookmarkScore, $recencyScore, $usefulPage, $boostedTextScore, $boostedBookmarkScore, $boostedRecencyScore)"
   }
 
   def canEqual(other: Any) = {

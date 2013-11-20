@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.heimdal._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -12,8 +12,14 @@ import scala.concurrent.{Future, Promise}
 import com.google.inject.Inject
 import com.keepit.common.db.Id
 import scala.collection.mutable.{ListBuffer, Map => MutableMap}
+import play.api.libs.json.JsArray
 import scala.util.Failure
+import play.api.libs.json.JsString
+import scala.Some
+import play.api.libs.json.JsNumber
 import scala.util.Success
+import play.api.libs.json.JsObject
+import com.keepit.serializer.TypeCode
 
 
 case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int](), totalable : Boolean = true, resolution: Int = 1)
@@ -145,10 +151,10 @@ class AdminAnalyticsController @Inject() (
     "messagerFraction" -> messagerFraction
   )
 
-  private def metricData : Future[Map[String, JsArray]] = {
+  private def userMetricData : Future[Map[String, JsArray]] = {
     val innerFutures = metrics.mapValues{ groupMap =>
       Future.sequence(groupMap.toSeq.map{ case (metricName, auxInfo) =>
-        heimdal.getMetricData(metricName).map{MetricAuxInfo.augmentMetricData(_, auxInfo)}
+        heimdal.getMetricData[UserEvent](metricName).map{MetricAuxInfo.augmentMetricData(_, auxInfo)}
       })
     }
     val keys: Seq[String] = innerFutures.keys.toSeq
@@ -167,8 +173,44 @@ class AdminAnalyticsController @Inject() (
 
   def index() = AdminHtmlAction { request =>
     heimdal.updateMetrics()
-    Async(metricData.map{ dataMap =>
+    Async(userMetricData.map{ dataMap =>
       Ok(html.admin.analyticsDashboardView(dataMap.mapValues(Json.stringify(_))))
     })
+  }
+
+  def getEventDescriptors() = AdminHtmlAction { request =>
+    val eventCodes: Seq[TypeCode[HeimdalEvent]] = Seq(UserEvent, SystemEvent).map(_.typeCode)
+    Async(
+      Future.sequence(eventCodes.map { code =>
+        heimdal.getEventDescriptors(code).map { descriptors =>
+          code -> descriptors
+        }
+      }).map { descriptorsByRepo => Ok(html.admin.eventDescriptors(descriptorsByRepo: _*)) }
+    )
+  }
+
+  def updateEventDescriptors() = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
+    val descriptorsWithCode = body.keys.collect { case key if key.endsWith(":description") =>
+      val Seq(code, name, _): Seq[String] = key.split(":")
+      val description = Some(body(s"$code:$name:description")).filter(_.nonEmpty)
+      val mixpanel = body.contains(s"$code:$name:mixpanel")
+      val eventName = EventType(name)
+      code -> EventDescriptor(eventName, description, mixpanel)
+    }
+
+    Async(
+      Future.sequence(
+        descriptorsWithCode.groupBy(_._1).mapValues(_.map(_._2)).map {
+          case (code, descriptors) => heimdal.updateEventDescriptors(descriptors.toSeq)(HeimdalEvent.getTypeCode(code))
+        }
+      ).map(_ => Redirect(routes.AdminAnalyticsController.getEventDescriptors()))
+    )
+  }
+
+  def getEvents(repo:String, events: Option[String], limit: Int, window: Int) = AdminHtmlAction { request =>
+    val eventTypeCode = HeimdalEvent.getTypeCode(repo)
+    val eventNames= events.map(_.split(",")).getOrElse(Array.empty).map(EventType.apply)
+    Async(heimdal.getRawEvents(window, limit, eventNames: _*)(eventTypeCode).map(Ok(_)))
   }
 }

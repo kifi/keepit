@@ -16,12 +16,14 @@ import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.TestElizaServiceClientModule
+import com.keepit.heimdal.TestHeimdalServiceClientModule
 
 class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
   val domainTagImporterTestModules = Seq(
     FakeMailModule(),
     TestAnalyticsModule(),
+    TestHeimdalServiceClientModule(),
     ShoeboxFakeStoreModule(),
     FakeDomainTagImporterModule(),
     TestActorSystemModule(Some(system)),

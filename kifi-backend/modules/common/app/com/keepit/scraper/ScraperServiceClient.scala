@@ -15,15 +15,25 @@ import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.routes.Scraper
 import com.keepit.search.Article
 import play.api.libs.json.JsArray
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 case class ScrapeTuple(uri:NormalizedURI, articleOpt:Option[Article])
 object ScrapeTuple {
-  import play.api.libs.functional.syntax._
-  import play.api.libs.json._
   implicit val format = (
     (__ \ 'normalizedUri).format[NormalizedURI] and
     (__ \ 'article).formatNullable[Article]
   )(ScrapeTuple.apply _, unlift(ScrapeTuple.unapply))
+}
+
+
+case class ScrapeRequest(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy])
+object ScrapeRequest {
+  implicit val format = (
+    (__ \ 'normalizedUri).format[NormalizedURI] and
+    (__ \ 'scrapeInfo).format[ScrapeInfo] and
+    (__ \ 'proxy).formatNullable[HttpProxy]
+  )(ScrapeRequest.apply _, unlift(ScrapeRequest.unapply))
 }
 
 trait ScraperServiceClient extends ServiceClient {
@@ -31,8 +41,11 @@ trait ScraperServiceClient extends ServiceClient {
 
   def asyncScrape(uri:NormalizedURI):Future[(NormalizedURI, Option[Article])] // pass in simple url? not sure if Tuple2
   def asyncScrapeWithInfo(uri:NormalizedURI, info:ScrapeInfo):Future[(NormalizedURI, Option[Article])]
+  def asyncScrapeWithRequest(request:ScrapeRequest):Future[(NormalizedURI, Option[Article])]
   def scheduleScrape(uri:NormalizedURI, info:ScrapeInfo):Future[Boolean] // ack
+  def scheduleScrapeWithRequest(request:ScrapeRequest):Future[Boolean] // ack
   def getBasicArticle(url:String):Future[Option[BasicArticle]]
+  def getBasicArticleP(url:String, proxy:Option[HttpProxy]):Future[Option[BasicArticle]]
 }
 
 class ScraperServiceClientImpl @Inject() (
@@ -55,8 +68,21 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
+  def asyncScrapeWithRequest(request: ScrapeRequest): Future[(NormalizedURI, Option[Article])] = {
+    call(Scraper.internal.asyncScrapeArticleWithRequest, Json.toJson(request)).map { r =>
+      val t = r.json.as[ScrapeTuple]
+      (t.uri, t.articleOpt)
+    }
+  }
+
   def scheduleScrape(uri: NormalizedURI, info: ScrapeInfo): Future[Boolean] = {
     call(Scraper.internal.scheduleScrape, JsArray(Seq(Json.toJson(uri), Json.toJson(info)))).map { r =>
+      r.json.as[JsBoolean].value
+    }
+  }
+
+  def scheduleScrapeWithRequest(request: ScrapeRequest): Future[Boolean] = {
+    call(Scraper.internal.scheduleScrapeWithRequest, Json.toJson(request)).map { r =>
       r.json.as[JsBoolean].value
     }
   }
@@ -67,6 +93,11 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
+  def getBasicArticleP(url: String, proxy: Option[HttpProxy]): Future[Option[BasicArticle]] = {
+    call(Scraper.internal.getBasicArticleP, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy))).map{ r =>
+      r.json.validate[BasicArticle].asOpt
+    }
+  }
 }
 
 class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ScraperServiceClient {
@@ -79,8 +110,13 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def asyncScrapeWithInfo(uri: NormalizedURI, info: ScrapeInfo): Future[(NormalizedURI, Option[Article])] = ???
 
+  def asyncScrapeWithRequest(request: ScrapeRequest): Future[(NormalizedURI, Option[Article])] = ???
+
   def scheduleScrape(uri: NormalizedURI, info: ScrapeInfo): Future[Boolean] = ???
+
+  def scheduleScrapeWithRequest(request: ScrapeRequest): Future[Boolean] = ???
 
   def getBasicArticle(url: String): Future[Option[BasicArticle]] = ???
 
+  def getBasicArticleP(url: String, proxy: Option[HttpProxy]): Future[Option[BasicArticle]] = ???
 }

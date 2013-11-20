@@ -6,8 +6,7 @@ function logEvent() {  // parameters defined in main.js
   api.port.emit("log_event", Array.prototype.slice.call(arguments));
 }
 
-var session,
-  tags = [];
+var session, tags = [];
 var tile = tile || function() {  // idempotent for Chrome
   'use strict';
   log("[keeper_scout]", location.hostname)();
@@ -22,11 +21,9 @@ var tile = tile || function() {  // idempotent for Chrome
   api.port.emit("session", onSessionChange);
   api.port.on({
     session_change: onSessionChange,
-    open_to: function(o) {
-      keeper("showPane", o.trigger, o.locator, o.redirected);
-    },
-    button_click: keeper.bind(null, "togglePane", "button"),
-    auto_show: keeper.bind(null, "show", "auto"),
+    open_to: loadAndDo.bind(null, 'pane', 'show'),
+    button_click: loadAndDo.bind(null, 'pane', 'toggle', 'button'),
+    auto_show: loadAndDo.bind(null, 'keeper', 'show', 'auto'),
     init: function(o) {
       var pos = o.position;
       if (pos) {
@@ -59,13 +56,13 @@ var tile = tile || function() {  // idempotent for Chrome
       }
     },
     keepers: function(o) {
-      setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
+      setTimeout(loadAndDo.bind(null, 'keeper', 'showKeepers', o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
       tile && updateCounts(counts);
     },
     scroll_rule: function(r) {
-      if (!onScroll && !window.slider2) {
+      if (!onScroll && !window.keeper) {
         var lastScrollTime = 0;
         document.addEventListener("scroll", onScroll = function(e) {
           var t = e.timeStamp || Date.now();
@@ -77,7 +74,7 @@ var tile = tile || function() {  // idempotent for Chrome
             log("[onScroll]", Math.round(hSeen / hPage * 10000) / 100, ">", r[1], "% and", hPage, ">", r[0] * hViewport, "?")();
             if (hPage > r[0] * hViewport && hSeen > (r[1] / 100) * hPage) {
               log("[onScroll] showing")();
-              keeper("show", "scroll");
+              loadAndDo('keeper', 'show', 'scroll');
             }
           }
         });
@@ -108,12 +105,18 @@ var tile = tile || function() {  // idempotent for Chrome
         e.preventDefault();
         break;
       case 77: // m
-        keeper("togglePane", "key", "/messages");
+        loadAndDo('pane', 'toggle', 'key', '/messages');
         e.preventDefault();
         break;
       case 79: // o
-        keeper("togglePane", "key", "/notices");
+        loadAndDo('pane', 'toggle', 'key', '/notices');
         e.preventDefault();
+        break;
+      case 83: // s
+        if (session && ~session.experiments.indexOf('inbox')) {
+          loadAndDo('pane', 'compose', 'key');
+          e.preventDefault();
+        }
         break;
       }
     }
@@ -136,20 +139,22 @@ var tile = tile || function() {  // idempotent for Chrome
     });
   }
 
-  function keeper() {  // gateway to slider2.js
-    var args = Array.prototype.slice.apply(arguments);
+  function loadAndDo(name, methodName) {  // gateway to keeper.js or pane.js
     if (session === undefined) {  // not yet initialized
+      var args = Array.prototype.slice.call(arguments);
       args.unshift(null);
-      whenSessionKnown.push(Function.bind.apply(keeper, args));
+      whenSessionKnown.push(Function.bind.apply(loadAndDo, args));
     } else if (!session) {
       toggleLoginDialog();
     } else {
-      api.require("scripts/slider2.js", function() {
-        if (onScroll && name != "showKeepers") {
-          document.removeEventListener("scroll", onScroll);
+      var args = Array.prototype.slice.call(arguments, 2);
+      api.require('scripts/' + name + '.js', function() {
+        if (onScroll && name !== 'showKeepers') {
+          document.removeEventListener('scroll', onScroll);
           onScroll = null;
         }
-        slider2[args.shift()].apply(slider2, args);
+        var o = window[name];
+        o[methodName].apply(o, args);
       });
     }
   }
@@ -184,7 +189,7 @@ var tile = tile || function() {  // idempotent for Chrome
   tile["kifi:position"] = positionTile;
   tile.addEventListener("mouseover", function(e) {
     if (e.target === tileCount || tileCard.contains(e.target)) {
-      keeper("show", "tile");
+      loadAndDo('keeper', 'show', 'tile');
     }
   });
 
@@ -194,7 +199,7 @@ var tile = tile || function() {  // idempotent for Chrome
   document.addEventListener("keydown", onKeyDown, true);
 
   function onResize() {
-    if (document.documentElement.classList.contains("kifi-with-pane")) return;
+    if (paneCall('showing')) return;
     clearTimeout(onResize.t);  // throttling tile repositioning
     onResize.t = setTimeout(positionTile, 50);
   }
@@ -228,8 +233,13 @@ var tile = tile || function() {  // idempotent for Chrome
         tile.remove();
       }
     }
-    if (window.slider2) {
-      slider2.hidePane();
+    paneCall('hide');
+  }
+
+  function paneCall(methodName) {
+    var pane = window.pane;
+    if (pane) {
+      return pane[methodName]();
     }
   }
 

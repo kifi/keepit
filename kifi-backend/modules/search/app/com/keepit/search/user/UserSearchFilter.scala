@@ -6,7 +6,9 @@ import com.keepit.model.User
 import com.google.inject.{Inject, Singleton}
 import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.concurrent.Await
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration._
 
 abstract case class UserSearchFilter(
@@ -14,42 +16,43 @@ abstract case class UserSearchFilter(
   context: Option[String]
 ) {
   val idFilter: Set[Long] = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-  val friends: Set[Long]
+  val kifiFriendsFuture: Future[Set[Long]]
   def filterType(): UserSearchFilterType.Value
   def accept(id: Long): Boolean
+  def getKifiFriends(): Set[Long] = Await.result(kifiFriendsFuture, 5 seconds)
 }
 
 object UserSearchFilterType extends Enumeration {
   val DEFAULT = Value("default")
-  val FRIENDS_ONLY = Value("friends_only")
+  val FRIENDS_ONLY = Value("friends_only")                                            // kifi friends
   val NON_FRIENDS_ONLY = Value("non_friends_only")
 }
 
 @Singleton
 class UserSearchFilterFactory @Inject()(client: ShoeboxServiceClient) {
 
-  private def getFriends(userId: Option[Id[User]]): Set[Long] = userId match {
-    case None => Set.empty[Long]
-    case Some(uid) => Await.result(client.getFriends(uid), 5 seconds).map{_.id}
+  private def getFriends(userId: Option[Id[User]]): Future[Set[Long]] = userId match {
+    case None => Promise.successful(Set.empty[Long]).future
+    case Some(uid) => client.getFriends(uid).map{uids => uids.map{_.id}}
   }
 
-  // can omit userId, especially for to-be-signed-up users.
-  def default(context: Option[String] = None) = new UserSearchFilter(userId = None, context){
-    override val friends = getFriends(userId)
+  def default(userId: Option[Id[User]], context: Option[String] = None, excludeSelf: Boolean = false) = new UserSearchFilter(userId, context){
+    override val kifiFriendsFuture = getFriends(userId)
     override def filterType = UserSearchFilterType.DEFAULT
-    override def accept(id: Long) = !idFilter.contains(id)
+    override def accept(id: Long) = !idFilter.contains(id) && !(excludeSelf && userId.isDefined && userId.get.id == id)
   }
 
   def friendsOnly(userId: Id[User], context: Option[String] = None) = new UserSearchFilter(Some(userId), context){
-    override val friends = getFriends(userId)
-    val filteredFriends = friends -- idFilter
+    override val kifiFriendsFuture = getFriends(userId)
+    lazy val filteredFriends = getKifiFriends -- idFilter
     override def filterType = UserSearchFilterType.FRIENDS_ONLY
     override def accept(id: Long) = filteredFriends.contains(id)
   }
 
   def nonFriendsOnly(userId: Id[User], context: Option[String] = None) = new UserSearchFilter(Some(userId), context){
-    override val friends = getFriends(userId)
+    override val kifiFriendsFuture = getFriends(userId)
     override def filterType = UserSearchFilterType.NON_FRIENDS_ONLY
-    override def accept(id: Long) = !friends.contains(id) && !idFilter.contains(id) && (userId.get.id != id)
+    override def accept(id: Long) = !getKifiFriends.contains(id) && !idFilter.contains(id) && (userId.get.id != id)
   }
+
 }

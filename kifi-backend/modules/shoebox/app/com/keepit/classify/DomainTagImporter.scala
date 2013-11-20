@@ -12,15 +12,13 @@ import java.util.Locale
 import java.util.zip.ZipFile
 
 import org.apache.poi.util.IOUtils
-import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
-import com.google.inject.{Provides, ImplementedBy, Inject, Singleton}
+import com.google.inject.{ImplementedBy, Inject}
 
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
@@ -28,21 +26,21 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail, LocalPostOffice, PostOffice}
 import com.keepit.common.time._
 
-import akka.actor.Status.Failure
-import akka.actor.{ActorSystem, Props}
 import akka.pattern.ask
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsNumber, JsString, JsObject}
 import play.api.libs.ws.WS
-import net.codingwell.scalaguice.ScalaModule
-import com.google.common.io.Files
+import com.keepit.heimdal._
+import akka.actor.Status.Failure
 
 private case object RefetchAll
 private case class ApplyTag(tagName: DomainTagName, domainNames: Seq[String])
 private case class RemoveTag(tagName: DomainTagName)
 
 object DomainTagImportEvents {
+  // heimdal event type
+  val DOMAIN_TAG_IMPORT = EventType("domain_tag_import")
+
   // success
   val IMPORT_START = "importStart"
   val IMPORT_TAG_SUCCESS = "importTagSuccess"
@@ -63,10 +61,10 @@ private[classify] class DomainTagImportActor @Inject() (
   domainRepo: DomainRepo,
   tagRepo: DomainTagRepo,
   domainToTagRepo: DomainToTagRepo,
-  EventPersister: EventPersister,
   settings: DomainTagImportSettings,
   postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
+  heimdal: HeimdalServiceClient,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends FortyTwoActor(airbrake) with Logging {
 
@@ -87,12 +85,12 @@ private[classify] class DomainTagImportActor @Inject() (
         val outputPath = new URI(s"${settings.localDir}/$outputFilename").normalize.getPath
         log.info(s"refetching all domains to $outputPath")
         WS.url(settings.url).get().onSuccess { case res =>
-          persistEvent(IMPORT_START, JsObject(Seq()))
+          persistEvent(IMPORT_START, new EventContextBuilder)
           val startTime = currentDateTime
           db.readWrite { implicit s =>
             postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
               subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
-              category = PostOffice.Categories.ADMIN))
+              category = PostOffice.Categories.System.ADMIN))
           }
           val s = new FileOutputStream(outputPath)
           try {
@@ -119,11 +117,13 @@ private[classify] class DomainTagImportActor @Inject() (
           }
           val (added, removed, total) =
             (results.map(_.added).sum, results.map(_.removed).sum, results.map(_.total).sum)
-          persistEvent(IMPORT_SUCCESS, JsObject(Seq(
-            "numDomainsAdded" -> JsNumber(added),
-            "numDomainsRemoved" -> JsNumber(removed),
-            "totalDomains" -> JsNumber(total)
-          )))
+
+          val context = new EventContextBuilder
+          context += ("numDomainsAdded", added)
+          context += ("numDomainsRemoved", removed)
+          context += ("totalDomains", total)
+          persistEvent(IMPORT_SUCCESS, context)
+
           val endTime = currentDateTime
           db.readWrite { implicit s =>
             postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
@@ -132,7 +132,7 @@ private[classify] class DomainTagImportActor @Inject() (
                   s"Domain import started at $startTime and completed successfully at $endTime " +
                   s"with $added domain-tag pairs added, $removed domain-tag pairs removed, " +
                   s"and $total total domain-tag pairs.",
-              category = PostOffice.Categories.ADMIN))
+              category = PostOffice.Categories.System.ADMIN))
           }
         }
       } catch {
@@ -159,10 +159,10 @@ private[classify] class DomainTagImportActor @Inject() (
           }
         }
         result.foreach { tag =>
-          persistEvent(REMOVE_TAG_SUCCESS, JsObject(Seq(
-            "tagId" -> JsNumber(tag.id.get.id),
-            "tagName" -> JsString(tag.name.name)
-          )))
+          val context = new EventContextBuilder
+          context += ("tagId", tag.id.get.id)
+          context += ("tagName", tag.name.name)
+          persistEvent(REMOVE_TAG_SUCCESS, context)
         }
         sender ! result
       } catch {
@@ -171,20 +171,20 @@ private[classify] class DomainTagImportActor @Inject() (
     case m => throw new UnsupportedActorMessage(m)
   }
 
-  private def persistEvent(eventName: String, metaData: JsObject) {
-    EventPersister.persist(Events.serverEvent(EventFamilies.DOMAIN_TAG_IMPORT, eventName, metaData))
+  private def persistEvent(eventName: String, contextBuilder: EventContextBuilder) = {
+    contextBuilder += ("eventName", eventName)
+    heimdal.trackEvent(SystemEvent(contextBuilder.build, DOMAIN_TAG_IMPORT, currentDateTime))
   }
 
   private def failWithException(eventName: String, e: Exception) {
     log.error(s"fail on event $eventName", e)
     airbrake.notify(AirbrakeError(exception = e, message = Some(s"on event $eventName")))
-    EventPersister.persist(Events.serverEvent(
-      EventFamilies.EXCEPTION,
-      eventName,
-      JsObject(Seq(
-        "message" -> JsString(e.getMessage),
-        "stackTrace" -> JsString(e.getStackTraceString))
-    )))
+
+    val context = new EventContextBuilder
+    context += ("message", e.getMessage)
+    context += ("stackTrace", e.getStackTraceString)
+    persistEvent(eventName, context)
+
     sender ! Failure(e)
   }
 
@@ -288,13 +288,13 @@ private[classify] class DomainTagImportActor @Inject() (
     findRelationshipsToUpdate()
     addNewRelationships()
 
-    persistEvent(IMPORT_TAG_SUCCESS, JsObject(Seq(
-      "tagId" -> JsNumber(tag.id.get.id),
-      "tagName" -> JsString(tag.name.name),
-      "numDomainsAdded" -> JsNumber(added),
-      "numDomainsRemoved" -> JsNumber(removed),
-      "totalDomains" -> JsNumber(total)
-    )))
+    val context = new EventContextBuilder
+    context += ("tagId", tag.id.get.id)
+    context += ("tagName", tag.name.name)
+    context += ("numDomainsAdded", added)
+    context += ("numDomainsRemoved", removed)
+    context += ("totalDomains", total)
+    persistEvent(IMPORT_TAG_SUCCESS, context)
 
     TagApplyResult(tag, added, removed, total)
   }

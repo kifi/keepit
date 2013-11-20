@@ -193,7 +193,22 @@ if (searchUrlRe.test(document.URL)) !function() {
         "googleResultsClicked": clicks.google.length,
         "kifiShownURIs": response.expanded ? response.hits.map(function(hit) {return hit.bookmark.url}) : [],
         "kifiClickedURIs": clicks.kifi,
-        "googleClickedURIs": clicks.google});
+        "googleClickedURIs": clicks.google}
+      );
+      api.port.emit("log_search_event", [
+        "searchEnded",
+        {
+          "origin": window.location.origin,
+          "uuid": response.uuid,
+          "experimentId": response.experimentId,
+          "kifiResults": response.hits.length, 
+          "kifiCollapsed": !response.expanded,
+          "kifiTime": tKifiResultsShown - tQuery,
+          "referenceTime": tGoogleResultsShown - tQuery,
+          "kifiResultsClicked": clicks.kifi.length,
+          "searchResultsClicked": clicks.google.length
+        }
+      ]);
     }
   });
 
@@ -261,6 +276,23 @@ if (searchUrlRe.test(document.URL)) !function() {
     if (href && resIdx >= 0) {
       logEvent("search", isKifi ? "kifiResultClicked" : "googleResultClicked",
         {"url": href, "whichResult": resIdx, "query": response.query, "experimentId": response.experimentId, "kifiResultsCount": $kifiLi.length});
+      api.port.emit("log_search_event", [
+        "resultClicked",
+        {
+          "origin": window.location.origin,
+          "uuid": isKifi ? response.hits[resIdx].uuid : response.uuid,
+          "experimentId": response.experimentId,
+          "kifiResults": response.hits.length, 
+          "kifiCollapsed": !response.expanded,
+          "kifiTime": tKifiResultsShown - tQuery,
+          "referenceTime": tGoogleResultsShown - tQuery,
+          "resultPosition": resIdx,
+          "resultSource": isKifi ? "Kifi" : "Google", 
+          "resultUrl": href,
+          "query": response.query,
+          "hit": isKifi ? response.hits[resIdx] : null
+        }
+      ]);
     }
   });
 
@@ -436,8 +468,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       var j = $a.prevAll(".kifi-friend").length;
       var friend = response.hits[i].users[j];
       render("html/friend_card", {
-        name: friend.firstName + " " + friend.lastName,
-        id: friend.id,
+        friend: friend,
         iconsUrl: api.url("images/social_icons.png")
       }, function(html) {
         var $el = $(html);
@@ -472,7 +503,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         show: !!expanded,
         results: response.hits,
         anyResults: response.hits.length > 0,
-        session: response.session,
+        self: response.session.user,
         images: api.url("images"),
         filter: response.filter,
         mayHaveMore: response.mayHaveMore},
@@ -519,7 +550,7 @@ if (searchUrlRe.test(document.URL)) !function() {
 
     var hitHtml = [];
     for (var i = 0; i < hits.length; i++) {
-      hitHtml.push(render("html/search/google_hit", $.extend({session: response.session, images: api.url("images")}, hits[i])));
+      hitHtml.push(render("html/search/google_hit", $.extend({self: response.session.user, images: api.url("images")}, hits[i])));
     }
     var $list = $("#kifi-res-list");
     $(hitHtml.join("")).hide().insertAfter($list.children("li.g").last()).slideDown(200, function() {
@@ -617,11 +648,11 @@ if (searchUrlRe.test(document.URL)) !function() {
             theme: "googly",
             prePopulate: ids && friends.filter(function(f) {return ids.indexOf(f.id) >= 0}),
             resultsFormatter: function(f) {
-              return "<li style='background-image:url(//" + cdnBase + "/users/" + f.id + "/pics/100/0.jpg)'>" +
+              return "<li style='background-image:url(//" + cdnBase + "/users/" + f.id + "/pics/100/" + f.pictureName + ")'>" +
                 Mustache.escape(f.name) + "</li>";
             },
             tokenFormatter: function(f) {
-              return"<li style='background-image:url(//" + cdnBase + "/users/" + f.id + "/pics/100/0.jpg)'><p>" +
+              return "<li style='background-image:url(//" + cdnBase + "/users/" + f.id + "/pics/100/" + f.pictureName + ")'><p>" +
                 Mustache.escape(f.name) + "</p></li>";
             },
             onReady: function() {

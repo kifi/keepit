@@ -25,6 +25,8 @@ import com.keepit.common.service.ServiceType
 import java.math.BigInteger
 import java.security.SecureRandom
 import com.keepit.common.store.S3ImageStore
+import com.keepit.heimdal.{HeimdalServiceClient}
+import play.api.libs.concurrent.Execution.Implicits._
 
 case class UserStatistics(
     user: User,
@@ -61,6 +63,7 @@ class AdminUserController @Inject() (
     clock: Clock,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
+    heimdal: HeimdalServiceClient,
     serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
   implicit val dbMasterSlave = Database.Slave
@@ -74,11 +77,11 @@ class AdminUserController @Inject() (
     db.readWrite { implicit s =>
       val fromUser = userRepo.get(fromUserId)
       val toUser = userRepo.get(toUserId)
-      for (email <- emailAddressRepo.getByUser(fromUserId)) {
+      for (email <- emailAddressRepo.getAllByUser(fromUserId)) {
         emailRepo.save(email.copy(userId = toUserId))
       }
       val socialUsers = socialUserInfoRepo.getByUser(fromUserId)
-      for (su <- socialUsers; invitation <- invitationRepo.getByRecipient(su.id.get)) {
+      for (su <- socialUsers; invitation <- invitationRepo.getByRecipientSocialUserId(su.id.get)) {
         invitationRepo.save(invitation.withState(InvitationStates.INACTIVE))
       }
       for (su <- socialUsers) {
@@ -149,7 +152,7 @@ class AdminUserController @Inject() (
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
-    val contactsF = abookClient.getContacts(userId, 500)
+    val econtactCountF = abookClient.getEContactCount(userId)
     val econtactsF = abookClient.getEContacts(userId, 500)
 
     val (user, bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
@@ -162,8 +165,8 @@ class AdminUserController @Inject() (
         userRepo.get(userId)
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
-      val allowedInvites = userValueRepo.getValue(user.id.get, "availableInvites").getOrElse("6").toInt
-      val emails = emailRepo.getByUser(user.id.get)
+      val allowedInvites = userValueRepo.getValue(user.id.get, "availableInvites").getOrElse("20").toInt
+      val emails = emailRepo.getAllByUser(user.id.get)
       (user, (bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
     }
 
@@ -192,16 +195,20 @@ class AdminUserController @Inject() (
     val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
-    val abookInfos:Seq[ABookInfo] = Await.result(abookInfoF, 5 seconds)
-    val contacts:Seq[Contact] = Await.result(contactsF, 5 seconds)
-    val econtacts:Seq[EContact] = Await.result(econtactsF, 5 seconds)
-    val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService()
-    val abookEP = for (s <- abookServiceOpt) yield s"http://${s.instanceInfo.publicIp.ip}:9000/internal/abook/"
+    val abookEP = com.keepit.common.routes.ABook.internal.upload(userId, ABookOrigins.IOS).url
     val state = new BigInteger(130, new SecureRandom()).toString(32)
 
-    Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-      fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, econtacts, abookEP,
-      collections, collectionFilter, state)).withSession(session + ("stateToken" -> state ))
+    Async {
+      for {
+        abookInfos <- abookInfoF
+        econtactCount <- econtactCountF
+        econtacts <- econtactsF
+      } yield {
+        Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
+          fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount, econtacts, abookEP,
+          collections, collectionFilter, state)).withSession(session + ("stateToken" -> state ))
+      }
+    }
   }
 
   def allUsersView = usersView(0)
@@ -231,17 +238,12 @@ class AdminUserController @Inject() (
     searchTerm match {
       case None => Redirect(routes.AdminUserController.usersView(0))
       case Some(queryText) =>
-        val userIds = Await.result(searchClient.searchUsers(queryText, 100, ""), 15 seconds).hits.map{_.id}
+        val userIds = Await.result(searchClient.searchUsers(userId = None, query = queryText, maxHits = 100), 15 seconds).hits.map{_.id}
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
         Ok(html.admin.users(users, 0, users.size, 1, searchTerm))
     }
-  }
-
-  def searchBasicUsers(queryText: String, maxHits: Int = 10) = AdminHtmlAction { implicit request =>
-    val users = Await.result(searchClient.searchUsers(queryText, maxHits, ""), 15 seconds).hits
-    Ok(JsArray(users.map{x => Json.toJson(x)}))
   }
 
   def updateUser(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -257,7 +259,7 @@ class AdminUserController @Inject() (
     }).flatten
 
     db.readWrite{ implicit session =>
-      val oldEmails = emailRepo.getByUser(userId).toSet
+      val oldEmails = emailRepo.getAllByUser(userId).toSet
       val newEmails = (emailList map { address =>
         val email = emailRepo.getByAddressOpt(address)
         email match {
@@ -279,7 +281,7 @@ class AdminUserController @Inject() (
   }
 
   def setInvitesCount(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("6")
+    val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("20")
     db.readWrite{ implicit session =>
       userValueRepo.setValue(userId, "availableInvites", count)
     }
@@ -374,10 +376,10 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.notification())
   }
 
-  def initUserSeq() = AdminHtmlAction { implicit request =>
+  def bumpUserSeq() = AdminHtmlAction { implicit request =>
     db.readWrite{ implicit s =>
       userRepo.all.sortBy(_.id.get.id).foreach{ u => userRepo.save(u) }
     }
-    Ok("OK. Assigning user sequence numbers")
+    Ok("OK. Bumping up user sequence numbers")
   }
 }
