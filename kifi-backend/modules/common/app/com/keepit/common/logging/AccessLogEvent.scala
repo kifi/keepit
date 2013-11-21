@@ -57,7 +57,8 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
           body: String = null,
           key: String = null,
           space: String = null,
-          url: String = null) = {
+          url: String = null,
+          dataSize: Int = NoIntValue) = {
     val now = clock.now()
     AccessLogEvent(
       time = now,
@@ -76,7 +77,8 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       body = Option(body),
       key = Option(key),
       space = Option(space),
-      url = Option(url))
+      url = Option(url),
+      dataSize = intOption(dataSize))
   }
 }
 
@@ -97,7 +99,8 @@ case class AccessLogEvent(
   body: Option[String],
   key: Option[String],
   space: Option[String],
-  url: Option[String]) {
+  url: Option[String],
+  dataSize: Option[Int]) {
 
   def waitTime: Option[Int] = remoteTime.map(t => duration - t)
 
@@ -137,6 +140,7 @@ class AccessLog @Inject() (clock: Clock) {
       e.query.map("query:" + _) ::
       e.url.map("url:" + _) ::
       e.body.map("body:" + _) ::
+      e.dataSize.map("dataSize:" + _) ::
       e.error.map("error:" + _) ::
       Nil
     line.flatten.mkString("\t")

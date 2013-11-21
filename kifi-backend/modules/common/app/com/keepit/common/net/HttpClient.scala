@@ -1,7 +1,6 @@
 package com.keepit.common.net
 
 import com.google.inject.Provider
-
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -13,6 +12,7 @@ import play.api.libs.json._
 import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
+import com.keepit.common._
 import com.keepit.common.strings._
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
@@ -23,9 +23,7 @@ import com.keepit.common.controller.CommonHeaders
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
-import play.modules.statsd.api.Statsd
-
-import play.api.Logger
+import com.ning.http.util.AsyncHttpProviderUtils
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] Bad Http Status on ${url.summary} body:[${requestBody.map(_.toString.abbreviate(30)).getOrElse("")}] status:${response.status} res [${response.body.toString.abbreviate(30)}]"){
@@ -34,6 +32,11 @@ case class NonOKResponseException(url: HttpUri, response: ClientResponse, reques
 
 case class LongWaitException(url: HttpUri, response: Response, waitTime: Int, duration: Int, remoteTime: Int)
     extends Exception(s"[${url.service}] Long Wait on ${url.summary} total-time:${duration}ms remote-time:${remoteTime}ms wait-time:${waitTime}ms status:${response.status}"){
+  override def toString(): String = getMessage
+}
+
+case class SlowJsonParsingException(url: HttpUri, response: ClientResponse, time: Int)
+    extends Exception(s"[${url.service}] Slow JSON parsing on ${url.summary} time:${time}ms data-size:${response.bytes.length}"){
   override def toString(): String = getMessage
 }
 
@@ -156,7 +159,7 @@ case class HttpClientImpl(
   private def req(url: HttpUri): Request = new Request(WS.url(url.url).withTimeout(timeout), url, headers, accessLog, serviceDiscovery)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
-    val clientResponse = new ClientResponseImpl(request, response)
+    val clientResponse = new ClientResponseImpl(request, response, airbrake)
     if (response.status / 100 != validResponseClass) {
       val exception = new NonOKResponseException(request.httpUri, clientResponse, requestBody)
       if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
@@ -167,8 +170,8 @@ case class HttpClientImpl(
 
   def withTimeout(timeout: Int): HttpClient = copy(timeout = timeout)
 
-  private def report(reqRes: (Request, Future[Response]), onFailure: => FailureHandler = defaultFailureHandler):
-      Future[ClientResponse] = reqRes match { case (request, responseFuture) =>
+  private def report(reqRes: (Request, Future[Response]), onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = {
+    val (request, responseFuture) = reqRes
     responseFuture.map(r => res(request, r))(immediate) tap { f =>
       f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (immediate)
       f.onSuccess {
@@ -191,7 +194,8 @@ case class HttpClientImpl(
         remoteServiceId = remoteInstance.map(_.id.id.toString).getOrElse(null),
         url = request.url,
         trackingId = request.trackingId,
-        statusCode = res.res.status))
+        statusCode = res.res.status,
+        dataSize = res.bytes.length))
 
     e.waitTime map { waitTime =>
       if (waitTime > 1000) {//ms
@@ -245,26 +249,58 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
 
 trait ClientResponse {
   def res: Response
+  def bytes: Array[Byte]
   def body: String
   def json: JsValue
   def xml: NodeSeq
   def status: Int
 }
 
-class ClientResponseImpl(val request: Request, val res: Response) extends ClientResponse {
+class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier]) extends ClientResponse {
 
   override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 
   def status: Int = res.status
 
-  def body: String = res.body
+  lazy val bytes: Array[Byte] = res.ahcResponse.getResponseBodyAsBytes()
 
-  def json: JsValue = {
+  lazy val body: String = {
+    val ahcResponse = res.ahcResponse
+
+    //+ the following is copied from play.api.libs.ws.WS
+    // RFC-2616#3.7.1 states that any text/* mime type should default to ISO-8859-1 charset if not
+    // explicitly set, while Plays default encoding is UTF-8.  So, use UTF-8 if charset is not explicitly
+    // set and content type is not text/*, otherwise default to ISO-8859-1
+    val contentType = Option(ahcResponse.getContentType).getOrElse("application/octet-stream")
+    val charset = Option(AsyncHttpProviderUtils.parseCharset(contentType)).getOrElse {
+      if (contentType.startsWith("text/"))
+        AsyncHttpProviderUtils.DEFAULT_CHARSET
+      else
+        "utf-8"
+    }
+    //-
+    new String(bytes, charset)
+  }
+
+  lazy val json: JsValue = {
     try {
-      res.json
+      val startTime = System.currentTimeMillis
+      val json = Json.parse(bytes)
+      val jsonTime = System.currentTimeMillis - startTime
+
+      if (jsonTime > 1000) {//ms
+        val exception = request.tracer.withCause(SlowJsonParsingException(request.httpUri, this, jsonTime.toInt))
+        airbrake.get.notify(
+          AirbrakeError.outgoing(
+            request = request.req,
+            exception = exception
+          )
+        )
+      }
+      json
     } catch {
       case e: Throwable =>
-        println("bad res: %s".format(res.body.toString()))
+        println("bad res: %s".format(body))
         throw e
     }
   }
@@ -274,7 +310,7 @@ class ClientResponseImpl(val request: Request, val res: Response) extends Client
       res.xml
     } catch {
       case e: Throwable =>
-        println("bad res: %s".format(res.body.toString()))
+        println("bad res: %s".format(body))
         throw e
     }
   }
