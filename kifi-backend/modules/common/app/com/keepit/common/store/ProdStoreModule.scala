@@ -49,13 +49,6 @@ trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
-  def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
-      airbrake: AirbrakeNotifier, clock: Clock, config: S3ImageConfig): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, config)
-  }
-
-  @Singleton
-  @Provides
   def articleStore(amazonS3Client: AmazonS3): ArticleStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.article.bucket").get)
     new S3ArticleStoreImpl(bucketName, amazonS3Client)
