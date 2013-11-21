@@ -9,11 +9,8 @@
 	</form>
 
 	@flash.get("success").map { message =>
-        
-      @message.split("\n").map{ line =>
+    @message.split("\n").map{ line =>
         <div><strong>@line</strong></div>
     }
-        
-    }
-     
+  }
 }
