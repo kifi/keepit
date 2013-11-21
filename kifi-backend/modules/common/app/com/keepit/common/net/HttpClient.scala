@@ -164,8 +164,8 @@ case class HttpClientImpl(
 
   def withTimeout(timeout: Int): HttpClient = copy(timeout = timeout)
 
-  private def report(reqRes: (Request, Future[Response]), onFailure: => FailureHandler = defaultFailureHandler):
-      Future[ClientResponse] = reqRes match { case (request, responseFuture) =>
+  private def report(reqRes: (Request, Future[Response]), onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = {
+    val (request, responseFuture) = reqRes
     responseFuture.map(r => res(request, r))(immediate) tap { f =>
       f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (immediate)
       f.onSuccess {
@@ -189,7 +189,7 @@ case class HttpClientImpl(
         url = request.url,
         trackingId = request.trackingId,
         statusCode = res.res.status,
-        dataSize = res.res.ahcResponse.getResponseBodyAsBytes.size))
+        dataSize = res.bytes.length))
 
     e.waitTime map { waitTime =>
       if (waitTime > 1000) {//ms
