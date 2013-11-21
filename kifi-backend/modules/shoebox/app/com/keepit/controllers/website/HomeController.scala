@@ -190,8 +190,4 @@ class HomeController @Inject() (
     Ok(views.html.website.redditPreview())
   }
 
-  def blank = Action {  // initially for the extension’s login iframe, but feel free to reuse
-    Ok("<!doctype html>").as(HTML)
-  }
-
 }
