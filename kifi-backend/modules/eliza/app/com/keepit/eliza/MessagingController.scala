@@ -92,7 +92,7 @@ class MessagingController @Inject() (
         participantSet.toSeq.map(id2BasicUser(_))
       )
 
-      val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator, false, 0, 0, 0)
+      val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator, false, 0, 0, 0, 0)
 
       userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson, false)
       userThreadRepo.clearNotification(userId)
@@ -323,7 +323,8 @@ class MessagingController @Inject() (
       unread: Boolean,
       originalAuthorIdx: Int,
       unseenAuthors: Int,
-      numAuthors: Int
+      numAuthors: Int,
+      numUnread: Int
     ) : JsValue = {
     Json.obj(
       "id"            -> message.externalId.id,
@@ -339,7 +340,8 @@ class MessagingController @Inject() (
       "category"      -> "message",
       "firstAuthor"   -> originalAuthorIdx,
       "authors"       -> numAuthors, //number of people who have sent messages in this conversation
-      "unreadAuthors" -> unseenAuthors //number of people in 'particiapnts' who's messages you haven't seen yet
+      "unreadAuthors" -> unseenAuthors, //number of people in 'particiapnts' who's messages you haven't seen yet
+      "unreadMessages"-> numUnread
     )
   }
 
@@ -368,8 +370,9 @@ class MessagingController @Inject() (
       }
       val originalAuthor = orderedActivityInfo.filter(_.started).zipWithIndex.head._2
       val numAuthors = orderedActivityInfo.filter(_.lastActive.isDefined).length
+      val numUnread = db.readOnly{ implicit session => messageRepo.getNumMessagesAfter(thread.id.get,lastSeenOpt) }
 
-      val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator, !muted, originalAuthor, unseenAuthors, numAuthors)
+      val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator, !muted, originalAuthor, unseenAuthors, numAuthors, numUnread)
 
       db.readWrite(attempts=2){ implicit session =>
         userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
@@ -537,7 +540,7 @@ class MessagingController @Inject() (
 
     //=== BEGIN
     (new SafeFuture(shoebox.getUserExperiments(from))).map{ userExperiments =>
-      val notifJson = buildMessageNotificationJson(message, thread, orderedMessageWithBasicUser, "/messages/" + thread.externalId, false, originalAuthor, 0, numAuthors)
+      val notifJson = buildMessageNotificationJson(message, thread, orderedMessageWithBasicUser, "/messages/" + thread.externalId, false, originalAuthor, 0, numAuthors, 0)
       if (userExperiments.contains(ExperimentType.INBOX)){
         db.readWrite(attempts=2){ implicit session =>
           userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)

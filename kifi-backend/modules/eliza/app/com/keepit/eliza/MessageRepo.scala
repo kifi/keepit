@@ -104,6 +104,8 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def getMaxId()(implicit session: RSession): Id[Message]
 
+  def getNumMessagesAfter(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): Int
+
 }
 
 @Singleton
@@ -189,6 +191,14 @@ class MessageRepoImpl @Inject() (
 
   def getMaxId()(implicit session: RSession): Id[Message] = {
     Query(table.map(_.id).max).first.getOrElse(Id[Message](0))
+  }
+
+  def getNumMessagesAfter(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): Int = {
+    afterOpt.map{ after => 
+      Query(table.filter(row => row.thread===threadId && row.createdAt > after).length).first
+    } getOrElse {
+      Query(table.filter(row => row.thread===threadId).length).first
+    }
   }
 
 }
