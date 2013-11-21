@@ -70,15 +70,11 @@ case object NoContextRestriction extends ContextRestriction {
   def toBSONMatchDocument: BSONDocument = BSONDocument()
 }
 
-case class ConditionalContextRestriction(restriction: ContextRestriction, events: EventSet) extends ContextRestriction {
+case class ConditionalContextRestriction(restriction: ContextRestriction, events: EventType*) extends ContextRestriction {
   def toBSONMatchDocument: BSONDocument = BSONDocument("$or" -> BSONArray(
-    BSONDocument("$not" -> events.toBSONMatchDocument),
-    BSONDocument("and" -> BSONArray(events.toBSONMatchDocument, restriction.toBSONMatchDocument))
+    ComplementEventSet(events.toSet).toBSONMatchDocument,
+    BSONDocument("$and" -> BSONArray(SpecificEventSet(events.toSet).toBSONMatchDocument, restriction.toBSONMatchDocument))
   ))
-}
-
-object ConditionalContextRestriction {
-  def apply(restriction: ContextRestriction, events: EventType*): ConditionalContextRestriction = ConditionalContextRestriction(restriction, SpecificEventSet(events.toSet))
 }
 
 sealed trait EventSet {
@@ -89,6 +85,14 @@ case class SpecificEventSet(events: Set[EventType]) extends EventSet {
   def toBSONMatchDocument = BSONDocument(
     "event_type" -> BSONDocument(
       "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
+    )
+  )
+}
+
+case class ComplementEventSet(events: Set[EventType]) extends EventSet {
+  def toBSONMatchDocument = BSONDocument(
+    "event_type" -> BSONDocument(
+      "$nin" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
     )
   )
 }
@@ -186,15 +190,7 @@ class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestri
         "$lt"  -> BSONDateTime(startTime.getMillis + timeWindowSize.toMillis)
       )
     ))
-    val eventSelector = eventsToConsider match {
-      case SpecificEventSet(events) =>
-        Match(BSONDocument(
-          "event_type" -> BSONDocument(
-            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
-          )
-        ))
-      case AllEvents => Match(BSONDocument())
-    }
+    val eventSelector = Match(eventsToConsider.toBSONMatchDocument)
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
     val grouping = GroupField(groupField.fieldName)("users" -> AddToSet("$user_id"))
@@ -223,15 +219,7 @@ class GroupedUniqueFieldCountMetricDefinition(eventsToConsider: EventSet, contex
         "$lt"  -> BSONDateTime(startTime.getMillis + timeWindowSize.toMillis)
       )
     ))
-    val eventSelector = eventsToConsider match {
-      case SpecificEventSet(events) =>
-        Match(BSONDocument(
-          "event_type" -> BSONDocument(
-            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
-          )
-        ))
-      case AllEvents =>Match(BSONDocument())
-    }
+    val eventSelector = Match(eventsToConsider.toBSONMatchDocument)
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
     val grouping = GroupField(groupField.fieldName)(sanitizedFieldName -> AddToSet("$" + fieldToCount))

@@ -259,6 +259,9 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-friends-help.linkedin .invite-friends-help-logo { background-position: -70px; position: relative; top: -2px; }
 .invite-friends-help.email .invite-friends-help-logo { background-position: -250px }
 .invite-friends-help.gmail .invite-friends-help-logo { background-position: -250px }
+.invite-friends-help-container.error .no-error { display: none }
+.invite-friends-help-container .error-message { display: none }
+.invite-friends-help-container.error .error-message { display: block }
 
 .invite-friends-importing {display: none}
 .friends-importing { position: relative; font-size: 22px; font-weight: 100; letter-spacing: 1px; color: #878787; margin: 40px auto 0; text-align: center}
@@ -400,14 +403,25 @@ a.invite-button {position: absolute; bottom: 10px; right: 10px; font-size: 13px;
 }
 .invite-message-dialog>.dialog-content { height: 290px; margin-top: -140px; width: 440px; margin-left: -220px; }
 .invite-message-dialog>.dialog-content>p { margin: 12px 15px; }
-.invite-message-header { font-size: 18px; font-weight: 300; padding: 19px 6px 8px; border-bottom: 2px solid #ecf0f1; margin: 0 11px; color: #3a495b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-a.invite-cancel { position: absolute; color: #bcc1c7; font-weight: normal; padding: 15px 20px; right: 0; top: 0; font-size: 16px; text-decoration: none; }
+.invite-message-header,
+.unfriend-dialog-header { font-size: 18px; font-weight: 300; padding: 19px 6px 8px; border-bottom: 2px solid #ecf0f1; margin: 0 11px; color: #3a495b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+a.invite-cancel,
+a.unfriend-cancel { position: absolute; color: #bcc1c7; font-weight: normal; padding: 15px 20px; right: 0; top: 0; font-size: 16px; text-decoration: none; }
 input.invite-subject { display: block; font-size: 13px; margin: 8px 12px; margin-top: 15px; padding: 6px 8px; border: 1px solid #e7eced; width: 397px; }
 textarea.invite-message { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; min-height: 80px; resize: none}
 button.invite-send { position: absolute; right: 12px; bottom: 12px; font-size: 14px; border: none; outline: none; border-radius: 5px; padding: 8px 12px; background: #6fa6ef; color: white; cursor: pointer; overflow: hidden; text-overflow: ellipsis; max-width: 200px; white-space: nowrap }
 
 .no-invites-dialog>.dialog-content { height: 200px; margin-top: -100px; width: 400px; margin-left: -200px; padding: 20px 30px; color: #66829b }
 .no-invites-dialog>.dialog-content>p { margin: 12px 0; }
+.unfriend-dialog>.dialog-content {width: 380px; height: 227px; margin-top: -113px; margin-left: -190px }
+.unfriend-dialog-content { padding: 5px 40px 28px; }
+.unfriend-dialog-content p { margin: 0; margin-top: 15px; }
+.unfriend-dialog-content ul { list-style: disc; padding-left: 16px; margin-top: 5px; margin-bottom: 20px; }
+.unfriend-dialog-buttons { text-align: center; margin: 0 auto }
+.unfriend-dialog-content .unfriend-send,
+.unfriend-dialog-content .unfriend-cancel { color: white; border: 0; padding: 11px 15px; border-radius: 5px; font-size: 14px; width: 115px; font-weight: 100; text-align: center; cursor: pointer }
+.unfriend-dialog-content .unfriend-send { background: #ce6159 }
+.unfriend-dialog-content .unfriend-cancel { background: #b8c5d2 }
 button.more-invites { display: block; font-size: 14px; border: none; outline: none; border-radius: 5px; padding: 8px 12px; margin: 24px auto; background: #6fa6ef; color: white; cursor: pointer; }
 
 .no-results { font-size: 18px; padding: 10px; font-weight: 300; -webkit-font-smoothing: antialiased;}

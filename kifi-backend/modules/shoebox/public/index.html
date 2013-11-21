@@ -370,6 +370,23 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 									</div>
 								</div>
 							</div>
+							<div class="dialog unfriend-dialog" style="display:none">
+								<form method="POST" action="{{url}}" class="dialog-content" data-template>
+									<div class="unfriend-dialog-header">Unfriend {{name}}?</div>
+									<a href="javascript:" class="unfriend-cancel">×</a>
+									<div class="unfriend-dialog-content">
+										<p>Are you sure you want to unfriend this user?</p>
+										<ul>
+											<li>You will not see each other's results</li>
+											<li>You will not be able to send messages to each other</li>
+										</ul>
+										<div class="unfriend-dialog-buttons">
+											<button class="unfriend-send" type="submit">Unfriend</button>
+											<button class="unfriend-cancel">Cancel</button>
+										</div>
+									</div>
+								</form>
+							</div>
 						</div>
 					</div>
 					<div class="friends-page" data-href="friends/requests">
@@ -560,8 +577,9 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 
 	<script type="text/x-handlebars" id="invite-friends-help">
 	  <div class="invite-friends-help {{network_class}}">
-		  <div>To invite your {{network}} {{friends}} to Kifi,</div>
-		  <div>please connect to {{network}}</div>
+		  <div class="no-error">To invite your {{network}} {{friends}} to Kifi,</div>
+		  <div class="no-error">please connect to {{network}}</div>
+		  <div class="error-message">Import failed. Try again.</div>
 		  <a class="invite-friends-help-connect" href="javascript:void(0)" data-network="{{network_class}}">
 			  <span class="invite-friends-help-logo"></span>
 			  <span>Connect {{network}}</span>

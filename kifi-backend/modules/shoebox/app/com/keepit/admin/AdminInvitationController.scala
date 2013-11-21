@@ -45,18 +45,29 @@ class AdminInvitationController @Inject() (
     val result = db.readWrite { implicit session =>
       val socialUser = socialUserRepo.get(id)
       for (user <- socialUser.userId.map(userRepo.get)) yield {
-        val invite = invitationRepo.getByRecipientSocialUserId(id).getOrElse(invitationRepo.save(Invitation(
-          createdAt = user.createdAt,
-          senderUserId = None,
-          recipientSocialUserId = socialUser.id
-        )))
-        (userRepo.save(user.withState(UserStates.ACTIVE)),
-          invitationRepo.save(invite.withState(InvitationStates.ADMIN_ACCEPTED)))
+        userRepo.save(user.withState(UserStates.ACTIVE))
+
+        val existingInvites = socialUserRepo.getByUser(user.id.get).map { sui =>
+          invitationRepo.getByRecipientSocialUserId(sui.id.get) map { invite =>
+            invitationRepo.save(invite.withState(InvitationStates.ADMIN_ACCEPTED))
+          }
+        }.flatten
+
+        val newInvite = if (existingInvites.isEmpty) {
+          Seq(invitationRepo.save(Invitation(
+            createdAt = user.createdAt,
+            senderUserId = None,
+            recipientSocialUserId = socialUser.id,
+            state = InvitationStates.ADMIN_ACCEPTED
+          )))
+        } else Nil
+
+        user
       }
     }
 
     if(result.isDefined) {
-      notifyAcceptedUser(result.get._1.id.get)
+      notifyAcceptedUser(result.get.id.get)
       Redirect(routes.AdminInvitationController.displayInvitations())
     } else {
       Redirect(routes.AdminInvitationController.displayInvitations()).flashing("error" -> "Invalid!")

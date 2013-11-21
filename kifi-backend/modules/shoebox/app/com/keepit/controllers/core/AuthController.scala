@@ -97,6 +97,7 @@ class AuthController @Inject() (
 
   def afterLogin() = HtmlAction(allowPending = true)(authenticatedAction = { implicit request =>
     if (request.user.state == UserStates.PENDING) {
+      inviteCommander.markPendingInvitesAsAccepted(request.user.id.get, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
       Redirect("/")
     } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
@@ -365,6 +366,10 @@ class AuthController @Inject() (
       val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize) tap (r => log.info(s"Cropped attributes for ${request.user.id.get}: " + r))
       picToken.map { token =>
         s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token, cropAttributes)
+      }.orElse {
+        val user = db.readOnly(userRepo.get(userId)(_))
+        s3ImageStore.getPictureUrl(None, user, "0")
+        None
       }
 
       inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))

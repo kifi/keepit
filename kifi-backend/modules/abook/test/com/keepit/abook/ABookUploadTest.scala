@@ -57,7 +57,6 @@ class ABookUploadTest extends Specification with DbTestInjector {
   )
 
   "ABook Controller" should {
-    // re-enable after adding status monitoring
     "handle imports from IOS and gmail" in {
       withDb(
         FakeABookRawInfoStoreModule(),
@@ -75,9 +74,8 @@ class ABookUploadTest extends Specification with DbTestInjector {
         var abookInfo:ABookInfo = try {
           val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson)
           val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson) // should have no impact
-          info1.state mustEqual ABookInfoStates.PENDING
-          info1.state mustEqual info2.state
-          info1.updatedAt mustEqual info2.updatedAt // should be skipped
+          info1.state mustNotEqual ABookInfoStates.UPLOAD_FAILURE
+          info2.state mustNotEqual ABookInfoStates.UPLOAD_FAILURE
           info1
         } catch {
           case e:Exception => {
@@ -89,10 +87,10 @@ class ABookUploadTest extends Specification with DbTestInjector {
         abookInfo.origin mustEqual ABookOrigins.IOS
         abookInfo.userId mustEqual u42
         var nWait = 0
-        while (abookInfo.state != ABookInfoStates.ACTIVE && nWait < 5) {
+        while (abookInfo.state != ABookInfoStates.ACTIVE && nWait < 10) {
           nWait += 1
           abookInfo = commander.getABookInfo(u42, abookInfo.id.get).get
-          Thread.sleep(500)
+          Thread.sleep(1000)
         }
         abookInfo.state mustEqual ABookInfoStates.ACTIVE
 
