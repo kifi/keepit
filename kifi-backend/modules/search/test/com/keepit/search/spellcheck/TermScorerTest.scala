@@ -56,7 +56,7 @@ class TermScorerTest extends Specification {
       var score = scorer.scorePairTerms("ab", "cd")
       var numInter = 2
       var minDist = 4
-      (score - numInter * scorer.gaussianScore(minDist)).max(1e-5) === 1e-5
+      (score - numInter * scorer.gaussianScore(minDist - 1)).max(1e-5) === 1e-5
       score = scorer.scorePairTerms("cd", "y1")
       (score - scorer.minPairTermsScore).max(1e-5f) === 1e-5f       // zero intersection. smoothed to min score
     }
