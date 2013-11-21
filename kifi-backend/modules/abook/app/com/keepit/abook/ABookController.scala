@@ -192,7 +192,7 @@ class ABookController @Inject() (
   def getSimpleContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
     val res = {
       val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-      db.readOnly { implicit session =>
+      db.readOnly(attempts = 2) { implicit session =>
         contactRepo.getByUserIdIter(userId, maxRows).foreach { c =>
           jsonBuilder += {
             Json.obj("name" -> c.name, "emails" -> {
@@ -222,7 +222,7 @@ class ABookController @Inject() (
   def getMergedContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
     val res = {
       val m = new mutable.HashMap[String, Set[String]]()
-      val iter = db.readOnly { implicit session =>
+      val iter = db.readOnly(attempts = 2) { implicit session =>
         contactRepo.getByUserIdIter(userId, maxRows)
       }
       iter.foreach { c => // assume c.name exists (fix import)
@@ -256,7 +256,7 @@ class ABookController @Inject() (
   }
 
   def getABookInfos(userId:Id[User]) = Action { request =>
-    val abookInfos = db.readOnly { implicit session =>
+    val abookInfos = db.readOnly(attempts = 2) { implicit session =>
       abookInfoRepo.findByUserId(userId)
     }
     Ok(Json.toJson(abookInfos))
@@ -270,7 +270,7 @@ class ABookController @Inject() (
   // retrieve from S3
   def getContactsRawInfo(userId:Id[User],origin:ABookOriginType) = Action { request =>
     val abookInfos = {
-      val abooks = db.readOnly { implicit session =>
+      val abooks = db.readOnly(attempts = 2) { implicit session =>
         abookInfoRepo.findByUserIdAndOrigin(userId, origin)
       }
       abooks.map{ abookInfo =>
@@ -289,7 +289,7 @@ class ABookController @Inject() (
   }
 
   def getEContactCount(userId:Id[User]) = Action { request =>
-    val count = db.readOnly { implicit s =>
+    val count = db.readOnly(attempts = 2) { implicit s =>
       econtactRepo.getEContactCount(userId)
     }
     Ok(JsNumber(count))

@@ -103,6 +103,22 @@ class Database @Inject() (
     try f(ro) finally ro.close()
   }
 
+  def readOnly[T](attempts: Int, dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = enteringSession { // retry by default with implicit override?
+    1 to attempts - 1 foreach { attempt =>
+      try {
+        return readOnly(f)
+      } catch {
+        case ex: MySQLIntegrityConstraintViolationException =>
+          throw ex
+        case t: SQLException =>
+          val throwableName = t.getClass.getSimpleName
+          log.warn(s"Failed ($throwableName) readOnly transaction attempt $attempt of $attempts")
+          Statsd.increment(s"db.fail.attempt.$attempt.$throwableName")
+      }
+    }
+    readOnly(f)
+  }
+
   def readWrite[T](f: RWSession => T): T = enteringSession {
     val rw = new RWSession(Master, {
       Statsd.increment("db.write.Master")
