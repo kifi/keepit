@@ -61,7 +61,8 @@ class ShoeboxController @Inject() (
   changedUriRepo: ChangedURIRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
   scrapeInfoRepo:ScrapeInfoRepo,
-  friendRequestRepo: FriendRequestRepo
+  friendRequestRepo: FriendRequestRepo,
+  userValueRepo: UserValueRepo
 )
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
@@ -476,5 +477,16 @@ class ShoeboxController @Inject() (
       friendRequestRepo.getBySender(senderId)
     }
     Ok(JsArray(requests.map{ x => Json.toJson(x) }))
+  }
+
+  def setUserValue(userId: Id[User], key: String) = SafeAsyncAction(parse.json) { request =>
+    val value = request.body.as[String]
+    db.readWrite { implicit session => userValueRepo.setValue(userId, key, value) }
+    Ok
+  }
+
+  def getUserValue(userId: Id[User], key: String) = SafeAsyncAction { request =>
+    val value = db.readWrite { implicit session => userValueRepo.getValue(userId, key) }
+    Ok(Json.toJson(value))
   }
 }

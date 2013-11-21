@@ -99,4 +99,8 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def searchArticleCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ArticleSearchResultCache(stats, accessLog, (outerRepo, 1 hour))
+
+  @Provides @Singleton
+  def userValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new UserValueCache(stats, accessLog, (outerRepo, 7 days))
 }

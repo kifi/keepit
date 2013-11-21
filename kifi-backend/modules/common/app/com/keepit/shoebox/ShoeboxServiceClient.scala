@@ -99,6 +99,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
   def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
+  def getUserValue(userId: Id[User], key: String): Future[Option[String]]
+  def setUserValue(userId: Id[User], key: String, value: String): Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -115,7 +117,8 @@ case class ShoeboxCacheProvider @Inject() (
     userSessionExternalIdCache: UserSessionExternalIdCache,
     userConnectionsCache: UserConnectionIdCache,
     searchFriendsCache: SearchFriendsCache,
-    uriByUrlhashCache: NormalizedURIUrlHashCache)
+    uriByUrlhashCache: NormalizedURIUrlHashCache,
+    userValueCache: UserValueCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -586,4 +589,12 @@ class ShoeboxServiceClientImpl @Inject() (
       r.json.as[JsArray].value.map{ x => Json.fromJson[FriendRequest](x).get}
     }
   }
+
+  def getUserValue(userId: Id[User], key: String): Future[Option[String]] = {
+    cacheProvider.userValueCache.getOrElseFutureOpt(UserValueKey(userId, key)) {
+      call(Shoebox.internal.getUserValue(userId, key)).map(_.json.asOpt[String])
+    }
+  }
+
+  def setUserValue(userId: Id[User], key: String, value: String): Unit = { call(Shoebox.internal.setUserValue(userId, key), JsString(value)) }
 }
