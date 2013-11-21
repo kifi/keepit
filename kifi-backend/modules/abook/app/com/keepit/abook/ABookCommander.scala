@@ -49,12 +49,13 @@ class ABookCommander @Inject() (
     s3 += (s3Key -> abookRawInfo)
     log.info(s"[upload($userId,$origin)] s3Key=$s3Key rawInfo=$abookRawInfo}")
 
+    val numContacts = abookRawInfo.numContacts orElse {
+      (json \ "contacts").asOpt[JsArray] map { _.value.length }
+    }
     val savedABookInfo = db.readWrite(attempts = 2) { implicit session =>
       val (abookInfo, dbEntryOpt) = origin match {
         case ABookOrigins.IOS => { // no ownerInfo or numContacts -- revisit later
-          val numContacts = abookRawInfo.numContacts orElse {
-            (json \ "contacts").asOpt[JsArray] map { _.value.length }
-          }
+
           val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key), numContacts = numContacts, state = ABookInfoStates.INACTIVE)
           val dbEntryOpt = {
             val s = abookInfoRepo.findByUserIdAndOrigin(userId, origin)
@@ -64,7 +65,7 @@ class ABookCommander @Inject() (
         }
         case ABookOrigins.GMAIL => {
           val ownerInfo = ownerInfoOpt.getOrElse(throw new IllegalArgumentException("Owner info not set for $userId and $origin"))
-          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), numContacts = abookRawInfo.numContacts, state = ABookInfoStates.INACTIVE)
+          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), numContacts = numContacts, state = ABookInfoStates.INACTIVE)
           val dbEntryOpt = abookInfoRepo.findByUserIdOriginAndOwnerId(userId, origin, abookInfo.ownerId)
           (abookInfo, dbEntryOpt)
         }
@@ -72,7 +73,7 @@ class ABookCommander @Inject() (
       val savedEntry = dbEntryOpt match {
         case Some(currEntry) => {
           log.info(s"[upload($userId,$origin)] current entry: $currEntry")
-          currEntry
+          abookInfoRepo.save(currEntry.withNumContacts(numContacts))
         }
         case None => abookInfoRepo.save(abookInfo)
       }

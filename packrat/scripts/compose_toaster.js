@@ -1,6 +1,6 @@
 // @require styles/keeper/compose.css
 // @require styles/keeper/compose_toaster.css
-// @require scripts/lib/p.min.js
+// @require scripts/lib/q.min.js
 // @require scripts/html/keeper/compose.js
 // @require scripts/html/keeper/compose_toaster.js
 // @require scripts/lib/jquery-tokeninput.js
@@ -32,7 +32,7 @@ var toaster = (function () {
 
     $toaster.data('compose', initCompose($toaster, session.prefs.enterToSend, {onSubmit: send.bind(null, $toaster)}));
 
-    var deferred = P.defer();
+    var deferred = Q.defer();
 
     $toaster.layout()
     .on('transitionend', $.proxy(onShown, null, deferred))

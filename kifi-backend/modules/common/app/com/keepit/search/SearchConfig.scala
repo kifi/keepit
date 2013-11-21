@@ -19,7 +19,7 @@ object SearchConfig {
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
       "concatBoost" -> "0.8",
-      "homePageBoost" -> "0.0",
+      "homePageBoost" -> "0.1",
       "similarity" -> "default",
       "svWeightMyBookMarks" -> "2",
       "svWeightClickHistory" -> "1",

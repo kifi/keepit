@@ -19,6 +19,7 @@ import akka.routing.RoundRobinRouter
 import scala.concurrent._
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import java.sql.SQLException
 
 
 @ImplementedBy(classOf[ContactsUpdaterPluginImpl])
@@ -72,111 +73,134 @@ class ContactsUpdater @Inject() (
   def receive() = {
     case ProcessABookUpload(userId, origin, abookInfo, s3Key, rawJsonRef) => {
       log.info(s"[upload($userId, $origin, $abookInfo, $s3Key): Begin processing ...")
-      var abookEntry = abookInfo
       val ts = System.currentTimeMillis
-      val rawInfoJson = rawJsonRef.get getOrElse {
-          val rawInfo = s3.get(s3Key).getOrElse(throw new IllegalStateException(s"[upload] s3Key=$s3Key is not set")) // notify user?
-          Json.toJson(rawInfo)
-      }
-      val abookRawInfoF = future { Json.fromJson[ABookRawInfo](rawInfoJson).getOrElse(throw new IllegalArgumentException(s"[upload] Cannot parse $rawInfoJson")) }
-      val existingContacts = db.readOnly { implicit s =>
-        econtactRepo.getByUserId(userId) // optimistic; gc; h2-iter issue
-      }
-      val set = new mutable.TreeSet[String] // todo: use parsed email
-      existingContacts foreach { e =>
-        set += e.email
-      }
-      log.info(s"[upload($userId, $origin, ${abookInfo.id})] existing contacts(sz=${set.size}): ${set.mkString}")
+      var abookEntry = abookInfo
+      var processed = 0
+      var batchNum = 0
+      try {
+        val rawInfoJson = rawJsonRef.get getOrElse {
+            val rawInfo = s3.get(s3Key).getOrElse(throw new IllegalStateException(s"[upload] s3Key=$s3Key is not set")) // notify user?
+            Json.toJson(rawInfo)
+        }
+        val abookRawInfoF = future { Json.fromJson[ABookRawInfo](rawInfoJson).getOrElse(throw new IllegalArgumentException(s"[upload] Cannot parse $rawInfoJson")) }
+        val existingContacts = db.readOnly(attempts = 2) { implicit s =>
+          econtactRepo.getByUserId(userId) // optimistic; gc; h2-iter issue
+        }
+        val set = new mutable.TreeSet[String] // todo: use parsed email
+        existingContacts foreach { e =>
+          set += e.email
+        }
+        log.info(s"[upload($userId, $origin, ${abookInfo.id})] existing contacts(sz=${set.size}): ${set.mkString}")
 
-      val insertOnDupUpdate = sys.props.getOrElse("abook.db.insertOnDupUpdate", "false").toBoolean // todo: removeme
-      abookRawInfoF map { abookRawInfo =>
-        val cBuilder = mutable.ArrayBuilder.make[Contact]
-        var processed = 0
-        var batchNum = 0
-        abookRawInfo.contacts.value.grouped(batchSize).foreach { g =>
-          val econtactsToAddBuilder = mutable.ArrayBuilder.make[EContact]
-          batchNum += 1
-          g.foreach { contact =>
-            val fName = (contact \ "firstName").asOpt[String] trimOpt
-            val lName = (contact \ "lastName").asOpt[String] trimOpt
-            val emails = (contact \ "emails").validate[Seq[String]].fold(
-              valid = ( res => res),
-              invalid = ( e => {
-                log.warn(s"[upload($userId,$origin)] Cannot parse $e")
-                Seq.empty[String]
-              })
-            )
-            emails.foreach { email =>
-              val parseResult = EmailParser.parseAll(EmailParser.email, email)
-              if (parseResult.successful) {
-                val parsedEmail:Email = parseResult.get
-                log.info(s"[upload] successfully parsed $email; result=${parsedEmail.toDbgString}")
-                if (parsedEmail.host.domain.length <= 1) {
-                  log.warn(s"[upload] $email domain=${parsedEmail.host.domain} not supported; discarded")
-                } else if (set.contains(parsedEmail.toString)) {
-                  log.info(s"[upload($userId, $origin, ${abookInfo.id}] DUP $email; discarded")
-                } else {
-                  val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
-                  val e = EContact(userId = userId, email = parsedEmail.toString, name = nameOpt, firstName = fName, lastName = lName)
-                  if (insertOnDupUpdate) { // mysql too slow -- can try tuning but likely to be removed
-                    db.readWrite(attempts = 2) { implicit s =>
-                      try {
-                        econtactRepo.insertOnDupUpdate(userId, e)
-                      } catch {
-                        case ex:MySQLIntegrityConstraintViolationException => {
-                          log.warn(s"[insertOnDupUpd($userId,$e)] ex: $ex; ${ex.getCause}") // ignore
+        val insertOnDupUpdate = sys.props.getOrElse("abook.db.insertOnDupUpdate", "false").toBoolean // todo: removeme
+        abookRawInfoF map { abookRawInfo =>
+          val cBuilder = mutable.ArrayBuilder.make[Contact]
+          abookRawInfo.contacts.value.grouped(batchSize).foreach { g =>
+            val econtactsToAddBuilder = mutable.ArrayBuilder.make[EContact]
+            batchNum += 1
+            g.foreach { contact =>
+              val fName = (contact \ "firstName").asOpt[String] trimOpt
+              val lName = (contact \ "lastName").asOpt[String] trimOpt
+              val emails = (contact \ "emails").validate[Seq[String]].fold(
+                valid = ( res => res),
+                invalid = ( e => {
+                  log.warn(s"[upload($userId,$origin)] Cannot parse $e")
+                  Seq.empty[String]
+                })
+              )
+              emails.foreach { email =>
+                val parseResult = EmailParser.parseAll(EmailParser.email, email)
+                if (parseResult.successful) {
+                  val parsedEmail:Email = parseResult.get
+                  if (parsedEmail.host.domain.length <= 1) {
+                    log.warn(s"[upload] $email domain=${parsedEmail.host.domain} not supported; discarded")
+                  } else if (set.contains(parsedEmail.toString)) {
+                    log.info(s"[upload($userId, $origin, ${abookInfo.id}] DUP $email; discarded")
+                  } else {
+                    val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
+                    val e = EContact(userId = userId, email = parsedEmail.toString, name = nameOpt, firstName = fName, lastName = lName)
+                    if (insertOnDupUpdate) { // mysql too slow -- can try tuning but likely to be removed
+                      db.readWrite(attempts = 2) { implicit s =>
+                        try {
+                          econtactRepo.insertOnDupUpdate(userId, e)
+                        } catch {
+                          case ex:MySQLIntegrityConstraintViolationException => {
+                            log.warn(s"[insertOnDupUpd($userId,$e)] ex: $ex; ${ex.getCause}") // ignore
+                            throw ex; // readWrite will retry
+                          }
+                          case t:Throwable => {
+                            log.error(s"[insertOnDupUpd($userId,$e)] Unhandled: ex: $t; ${t.getCause}; sttack trace ${t.getStackTraceString}}")
+                            throw t // this will fail
+                          }
                         }
-                        case t:Throwable => throw t
                       }
+                    } else {
+                      set += parsedEmail.toString
+                      econtactsToAddBuilder += e
                     }
-                  } else { // todo: extra check for 'obvious typos'
-                    set += parsedEmail.toString
-                    econtactsToAddBuilder += e
+                  }
+                } else {
+                  log.warn(s"[upload($userId, $origin)] cannot parse $email; discarded") // todo: revisit
+                }
+              }
+
+              for (email <- emails.headOption) {
+                val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
+                val c = Contact.newInstance(userId, abookInfo.id.get, email, emails.tail, origin, nameOpt, fName, lName, None)
+                log.info(s"[upload($userId,$origin)] $c")
+                cBuilder += c
+              }
+            }
+            val econtactsToAdd = econtactsToAddBuilder.result
+
+            processed += g.length
+            abookEntry = db.readWrite(attempts = 2) { implicit s =>
+              if (!insertOnDupUpdate) {
+                try {
+                  econtactRepo.insertAll(userId, econtactsToAdd.toSeq)
+                  log.info(s"[insertAll($userId)] added batch#${batchNum}(sz=${econtactsToAdd.length}) to econtacts: ${econtactsToAdd.map(_.email).mkString}")
+                } catch {
+                  case ex:MySQLIntegrityConstraintViolationException => {
+                    log.warn(s"[insertAll($userId)] ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}") // ignore
+                    throw ex // underlying retry
+                  }
+                  case t:Throwable => {
+                    log.error(s"[insertAll($userId)] Unhandled ex: $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
+                    throw t // this will fail
                   }
                 }
-              } else {
-                log.warn(s"[upload($userId, $origin)] cannot parse $email; discarded") // todo: revisit
               }
-            }
-
-            for (email <- emails.headOption) {
-              val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
-              val c = Contact.newInstance(userId, abookInfo.id.get, email, emails.tail, origin, nameOpt, fName, lName, None)
-              log.info(s"[upload($userId,$origin)] $c")
-              cBuilder += c
+              abookInfoRepo.save(abookEntry.withNumProcessed(Some(processed))) // status update
             }
           }
-          val econtactsToAdd = econtactsToAddBuilder.result
+          abookEntry = db.readWrite(attempts = 2) { implicit s => // don't wait for contact table
+            val saved = abookInfoRepo.save(abookEntry.withState(ABookInfoStates.ACTIVE))
+            log.info(s"[upload($userId,${saved.id})] abook is ACTIVE! $saved")
+            saved
+          }
 
-          processed += g.length
-          abookEntry = db.readWrite(attempts = 2) { implicit s =>
-            if (!insertOnDupUpdate) {
-              try {
-                econtactRepo.insertAll(userId, econtactsToAdd.toSeq)
-                log.info(s"[insertAll($userId)] added batch#${batchNum}(sz=${econtactsToAdd.length}) to econtacts: ${econtactsToAdd.map(_.email).mkString}")
-              } catch {
-                case ex:MySQLIntegrityConstraintViolationException => {
-                  log.warn(s"[insertAll($userId)] ex: $ex; ${ex.getCause}") // ignore
-                }
-                case t:Throwable => throw t
-              }
+          val contacts = cBuilder.result
+          if (!contacts.isEmpty) {
+            db.readWrite(attempts = 2) { implicit session =>
+              contactRepo.deleteAndInsertAll(userId, abookInfo.id.get, origin, contacts)
             }
-            abookInfoRepo.save(abookEntry.withNumProcessed(Some(processed))) // status update
+          }
+          log.info(s"[upload($userId,$origin)] time-lapsed: ${System.currentTimeMillis - ts}")
+        }
+      } catch {
+        case ex:SQLException => {
+          log.warn(s"[ContactsUpdater.upload($userId, $abookInfo)] Caught SQLException $ex; code=${ex.getErrorCode}; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
+        }
+        case t:Throwable => {
+          log.warn(s"[ContactsUpdater.upload($userId, $abookInfo)] Caught unhandled exception $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
+        }
+      } finally {
+        if (abookEntry.state != ABookInfoStates.ACTIVE) {
+          log.warn(s"[ContactsUpdater.upload($userId, $abookInfo)] UPLOAD_FAILURE")
+          db.readWrite(attempts = 2) { implicit s =>  // could still fail
+            abookInfoRepo.save(abookEntry.withState(ABookInfoStates.UPLOAD_FAILURE))
           }
         }
-        abookEntry = db.readWrite(attempts = 2) { implicit s => // don't wait for contact table
-          val saved = abookInfoRepo.save(abookEntry.withState(ABookInfoStates.ACTIVE))
-          log.info(s"[upload($userId,${saved.id})] abook is ACTIVE! $saved")
-          saved
-        }
-
-        val contacts = cBuilder.result
-        if (!contacts.isEmpty) {
-          db.readWrite(attempts = 2) { implicit session =>
-            contactRepo.deleteAndInsertAll(userId, abookInfo.id.get, origin, contacts)
-          }
-        }
-        log.info(s"[upload($userId,$origin)] time-lapsed: ${System.currentTimeMillis - ts}")
       }
     }
     case m => throw new UnsupportedActorMessage(m)

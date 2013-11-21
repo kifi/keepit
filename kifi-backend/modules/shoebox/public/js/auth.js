@@ -743,3 +743,23 @@ kifi.form = (function () {
     };
   };
 }());
+
+function fbAsyncInit() {
+  FB.Event.subscribe('auth.authResponseChange', function (o) {
+    var id = o && o.authResponse && o.authResponse.userID;
+    if (id) {
+      var url = 'https://graph.facebook.com/' + id + '/picture?return_ssl_resources=1&width=50&height=50'
+      $('.form-network.facebook>.form-network-icon').html('<img src="' + url + '" class="form-network-pic">');
+    }
+  });
+  FB.init({appId: $('#facebook-jssdk').data('appId')});
+}
+
+function onLoadLinkedInApi() {
+  IN.User.isAuthorized() && IN.API.Profile('me').fields('picture-url;secure=true').result(function (o) {
+    var url = o && o.values && o.values[0] && o.values[0].pictureUrl;
+    if (url) {
+      $('.form-network.linkedin>.form-network-icon').html('<img src="' + url + '" class="form-network-pic">');
+    }
+  });
+}
