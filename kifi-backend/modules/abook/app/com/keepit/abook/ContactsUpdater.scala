@@ -119,7 +119,7 @@ class ContactsUpdater @Inject() (
                   val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
                   val e = EContact(userId = userId, email = parsedEmail.toString, name = nameOpt, firstName = fName, lastName = lName)
                   if (insertOnDupUpdate) { // mysql too slow -- can try tuning but likely to be removed
-                    db.readWrite { implicit s =>
+                    db.readWrite(attempts = 2) { implicit s =>
                       try {
                         econtactRepo.insertOnDupUpdate(userId, e)
                       } catch {
@@ -149,7 +149,7 @@ class ContactsUpdater @Inject() (
           val econtactsToAdd = econtactsToAddBuilder.result
 
           processed += g.length
-          abookEntry = db.readWrite { implicit s =>
+          abookEntry = db.readWrite(attempts = 2) { implicit s =>
             if (!insertOnDupUpdate) {
               try {
                 econtactRepo.insertAll(userId, econtactsToAdd.toSeq)
@@ -164,7 +164,7 @@ class ContactsUpdater @Inject() (
             abookInfoRepo.save(abookEntry.withNumProcessed(Some(processed))) // status update
           }
         }
-        abookEntry = db.readWrite { implicit s => // don't wait for contact table
+        abookEntry = db.readWrite(attempts = 2) { implicit s => // don't wait for contact table
           val saved = abookInfoRepo.save(abookEntry.withState(ABookInfoStates.ACTIVE))
           log.info(s"[upload($userId,${saved.id})] abook is ACTIVE! $saved")
           saved
@@ -172,7 +172,7 @@ class ContactsUpdater @Inject() (
 
         val contacts = cBuilder.result
         if (!contacts.isEmpty) {
-          db.readWrite { implicit session =>
+          db.readWrite(attempts = 2) { implicit session =>
             contactRepo.deleteAndInsertAll(userId, abookInfo.id.get, origin, contacts)
           }
         }

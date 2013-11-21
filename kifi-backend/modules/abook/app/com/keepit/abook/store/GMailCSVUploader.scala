@@ -51,7 +51,7 @@ class GMailCSVUploader @Inject() (actionAuthenticator:ActionAuthenticator,
     var fieldLocations:Map[String, Int] = Map.empty[String, Int]
     val builder = mutable.ArrayBuilder.make[Contact]
 
-    val savedABookInfo = db.readWrite { implicit session =>
+    val savedABookInfo = db.readWrite(attempts = 2) { implicit session =>
       val abookInfo = ABookInfo(userId = userId, origin = ABookOrigins.GMAIL)
       val savedABookInfo = abookInfoRepo.save(abookInfo)
       savedABookInfo
@@ -104,7 +104,7 @@ class GMailCSVUploader @Inject() (actionAuthenticator:ActionAuthenticator,
     val contacts = builder.result
     if (!contacts.isEmpty) {
       // TODO: optimize
-      db.readWrite { implicit session =>
+      db.readWrite(attempts = 2) { implicit session =>
         contacts.foreach { contactRepo.save(_) }
       }
     }

@@ -49,6 +49,7 @@ object ErrorWithStack {
         e.getFileName != "ForkJoinWorkerThread.java" &&
         e.getFileName != "Threads.scala" &&
         e.getFileName != "Promise.scala" &&
+        e.getFileName != "Future.scala" &&
         e.getFileName != "AbstractDispatcher.scala"))
 }
 
