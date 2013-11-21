@@ -190,15 +190,7 @@ class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestri
         "$lt"  -> BSONDateTime(startTime.getMillis + timeWindowSize.toMillis)
       )
     ))
-    val eventSelector = eventsToConsider match {
-      case SpecificEventSet(events) =>
-        Match(BSONDocument(
-          "event_type" -> BSONDocument(
-            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
-          )
-        ))
-      case AllEvents => Match(BSONDocument())
-    }
+    val eventSelector = Match(eventsToConsider.toBSONMatchDocument)
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
     val grouping = GroupField(groupField.fieldName)("users" -> AddToSet("$user_id"))
@@ -227,15 +219,7 @@ class GroupedUniqueFieldCountMetricDefinition(eventsToConsider: EventSet, contex
         "$lt"  -> BSONDateTime(startTime.getMillis + timeWindowSize.toMillis)
       )
     ))
-    val eventSelector = eventsToConsider match {
-      case SpecificEventSet(events) =>
-        Match(BSONDocument(
-          "event_type" -> BSONDocument(
-            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
-          )
-        ))
-      case AllEvents =>Match(BSONDocument())
-    }
+    val eventSelector = Match(eventsToConsider.toBSONMatchDocument)
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
     val grouping = GroupField(groupField.fieldName)(sanitizedFieldName -> AddToSet("$" + fieldToCount))
