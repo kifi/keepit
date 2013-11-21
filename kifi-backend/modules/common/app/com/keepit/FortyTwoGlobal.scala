@@ -135,6 +135,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     }
     finally {
       serviceDiscovery.unRegister()
+      if (app.mode != Mode.Test && app.mode != Mode.Dev) Thread.sleep(10000)
     }
   }
 
