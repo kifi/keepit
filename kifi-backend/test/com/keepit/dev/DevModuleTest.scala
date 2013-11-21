@@ -1,5 +1,6 @@
 package com.keepit.dev
 
+import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.test._
@@ -15,7 +16,7 @@ class DevModuleTest extends Specification with Logging with ApplicationInjector 
 
   "Module" should {
     "instantiate controllers" in {
-      running(new DevApplication(FakeMailModule(), DevAirbrakeModule(), FakeMemoryUsageModule())) {
+      running(new DevApplication(FakeMailModule(), DevAirbrakeModule(), FakeMemoryUsageModule(), ShoeboxFakeStoreModule())) {
         val ClassRoute = "@(.+)@.+".r
         log.info("xxxxxx\n\n" + current.configuration.getString("application.router").map(_ + "$").getOrElse("Routes$"))
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
