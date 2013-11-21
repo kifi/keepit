@@ -12,7 +12,7 @@ var kifiDialog = function() {
   'use strict';
   return {toggleLoginDialog: toggleLoginDialog};
   function toggleLoginDialog() {
-    render("html/login_dialog", {
+    render('html/login_dialog', {
       logo: api.url("images/kifi_logo.2x.png")
     }, function(html) {
       if ($('.kifi-message-dialog-wrapper').length) {
@@ -29,7 +29,7 @@ var kifiDialog = function() {
 
       function removeDialog() {
         $wrapper = $('.kifi-message-dialog-wrapper');
-        $wrapper.removeClass("kifi-dialog-show");
+        $wrapper.removeClass('kifi-dialog-show');
         document.removeEventListener("keydown", onKeyDown, true);
         setTimeout(function() {
           $('.kifi-message-dialog-wrapper').remove();
@@ -43,7 +43,7 @@ var kifiDialog = function() {
       });
       $dialog.on('click', '.kifi-facebook', function() {
         api.port.emit("open_login_popup", {
-          id: "kifi-authenticate",
+          id: 'kifi-authenticate',
           url: "https://www.kifi.com/login/facebook"
         });
         removeDialog();
@@ -51,7 +51,7 @@ var kifiDialog = function() {
       });
       $dialog.on('click', '.kifi-linkedin', function() {
         api.port.emit("open_login_popup", {
-          id: "kifi-authenticate",
+          id: 'kifi-authenticate',
           url: "https://www.kifi.com/login/linkedin"
         });
         removeDialog();
@@ -59,7 +59,7 @@ var kifiDialog = function() {
       });
       $overlay.on('click', removeDialog);
 
-      document.addEventListener("keydown", onKeyDown, true);
+      document.addEventListener('keydown', onKeyDown, true);
       function onKeyDown(e) {
         if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
           removeDialog();
