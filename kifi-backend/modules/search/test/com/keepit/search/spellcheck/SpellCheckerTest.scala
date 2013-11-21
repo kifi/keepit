@@ -30,7 +30,7 @@ class SpellCheckerTest extends Specification {
       val spellIndexDir = new VolatileIndexDirectoryImpl()
       val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
       val spellIndexer = SpellIndexer(spellIndexDir, articleIndexDir, SpellCheckerConfig(0f, "lev"))
-      val corrector = new SpellCorrectorImpl(spellIndexer, enableAdjScore = false)
+      var corrector = new SpellCorrectorImpl(spellIndexer, "slow", enableAdjScore = false)
 
       val indexWriter = new IndexWriter(articleIndexDir, config)
       articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
@@ -42,6 +42,9 @@ class SpellCheckerTest extends Specification {
       spellIndexer.getSpellChecker.exist("xyz") === true
       corrector.getScoredSuggestions("abcd deh", 2, enableBoost = false).map{_.value}.toSet === Set("abc def", "abd def", "abc deg", "abd deg")
       corrector.getScoredSuggestions("abcd deh", 2, enableBoost = false).head.value === "abc def"      // win by co-occurrence rate
+
+      corrector = new SpellCorrectorImpl(spellIndexer, "viterbi", enableAdjScore = false)
+      corrector.getScoredSuggestions("abcd deh", 2, enableBoost = false).head.value === "abc def"
     }
   }
 

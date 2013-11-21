@@ -2,19 +2,20 @@ package com.keepit.search.spellcheck
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import org.apache.lucene.analysis.standard.StandardAnalyzer
-import scala.util.Random
-import scala.math.{exp, log}
 
 @ImplementedBy(classOf[SpellCorrectorImpl])
 trait SpellCorrector {
   def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest]
 }
 
-class SpellCorrectorImpl(spellIndexer: SpellIndexer, enableAdjScore: Boolean) extends SpellCorrector{
+class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: String, enableAdjScore: Boolean) extends SpellCorrector{
   val spellChecker = spellIndexer.getSpellChecker
   val stopwords = StandardAnalyzer.STOP_WORDS_SET
   val termScorer = new TermScorer(spellIndexer.getTermStatsReader, enableAdjScore)
-  val suggestionProvider = new SlowSuggestionProvider(termScorer)
+  val suggestionProvider = suggestionProviderFlag match {
+    case "viterbi" => new ViterbiSuggestionProvider(termScorer)
+    case _ => new SlowSuggestionProvider(termScorer)
+  }
 
   override def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest] = {
     val variations = makeVariations(input, numSug)
@@ -29,7 +30,7 @@ class SpellCorrectorImpl(spellIndexer: SpellIndexer, enableAdjScore: Boolean) ex
 
   private def makeVariations(input: String, numSug: Int): SpellVariations = {
     val terms = input.trim().split(" ")
-    val variations = terms.map{ getSimilarTerms(_, numSug.min(10))}.toList        // need a limit here
+    val variations = terms.map{ getSimilarTerms(_, numSug.min(5))}.toList        // need a limit here
     SpellVariations(variations)
   }
 
