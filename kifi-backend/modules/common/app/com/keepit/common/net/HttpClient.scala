@@ -12,6 +12,7 @@ import play.api.libs.json._
 import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
+import com.keepit.common._
 import com.keepit.common.strings._
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
@@ -31,6 +32,11 @@ case class NonOKResponseException(url: HttpUri, response: ClientResponse, reques
 
 case class LongWaitException(url: HttpUri, response: Response, waitTime: Int, duration: Int, remoteTime: Int)
     extends Exception(s"[${url.service}] Long Wait on ${url.summary} total-time:${duration}ms remote-time:${remoteTime}ms wait-time:${waitTime}ms status:${response.status}"){
+  override def toString(): String = getMessage
+}
+
+case class SlowJsonParsingException(url: HttpUri, response: ClientResponse, time: Int)
+    extends Exception(s"[${url.service}] Slow JSON parsing on ${url.summary} time:${time}ms data-size:${response.bytes.length}"){
   override def toString(): String = getMessage
 }
 
@@ -153,7 +159,7 @@ case class HttpClientImpl(
   private def req(url: HttpUri): Request = new Request(WS.url(url.url).withTimeout(timeout), url, headers, accessLog, serviceDiscovery)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
-    val clientResponse = new ClientResponseImpl(request, response)
+    val clientResponse = new ClientResponseImpl(request, response, airbrake)
     if (response.status / 100 != validResponseClass) {
       val exception = new NonOKResponseException(request.httpUri, clientResponse, requestBody)
       if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
@@ -250,7 +256,7 @@ trait ClientResponse {
   def status: Int
 }
 
-class ClientResponseImpl(val request: Request, val res: Response) extends ClientResponse {
+class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier]) extends ClientResponse {
 
   override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 
@@ -278,7 +284,20 @@ class ClientResponseImpl(val request: Request, val res: Response) extends Client
 
   lazy val json: JsValue = {
     try {
-      Json.parse(bytes)
+      val startTime = System.currentTimeMillis
+      val json = Json.parse(bytes)
+      val jsonTime = System.currentTimeMillis - startTime
+
+      if (jsonTime > 1000) {//ms
+        val exception = request.tracer.withCause(SlowJsonParsingException(request.httpUri, this, jsonTime.toInt))
+        airbrake.get.notify(
+          AirbrakeError.outgoing(
+            request = request.req,
+            exception = exception
+          )
+        )
+      }
+      json
     } catch {
       case e: Throwable =>
         println("bad res: %s".format(body))
