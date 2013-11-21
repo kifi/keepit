@@ -2,6 +2,27 @@
 
 @styles = {
 <style>
+.log-out {
+  position: absolute;
+  top: 30px;
+  left: 8.25%;
+  margin-left: -50px;
+  width: 100px;
+  line-height: 36px;
+  font-size: 16px;
+  font-weight: 300;
+  z-index: 10;
+  color: #fff;
+  background-color: rgba(0, 0, 0, .08);
+  border-radius: 3px;
+}
+.log-out:hover,
+.log-out:focus {
+  background-color: rgba(0,0,0,.12);
+}
+.log-out:active {
+  background-color: rgba(0,0,0,.16);
+}
 h3 {
   margin: -10px auto 20px;
   max-width: 90%;
@@ -194,6 +215,7 @@ span.email-address {
 }
 
 @scripts = {
+<a class="log-out" href="/logout">Log out</a>
 <script src="/assets/js/jquery-ui-position.min.js"></script>
 <script src="/assets/js/auth.js"></script>
 <script>
