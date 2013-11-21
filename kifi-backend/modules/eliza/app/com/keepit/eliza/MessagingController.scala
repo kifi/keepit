@@ -9,6 +9,7 @@ import com.keepit.common.time._
 import com.keepit.social.BasicUser
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.akka.SafeFuture
+import com.keepit.model.ExperimentType
 
 import scala.concurrent.{Promise, future, Await, Future}
 import scala.concurrent.duration._
@@ -534,15 +535,21 @@ class MessagingController @Inject() (
       sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
     }
 
-    //set notification json for message sender (if there isn't another yet) 
-    //ZZZ should be the same for the sender as everyone else, except that pending will be false
-    //ZZZ experiment
-    val notifJson = buildMessageNotificationJson(message, thread, orderedMessageWithBasicUser, "/messages/" + thread.externalId, false, originalAuthor, 0, numAuthors)
-
-    db.readWrite(attempts=2){ implicit session =>
-      userThreadRepo.setNotificationJsonIfNotPresent(from, thread.id.get, notifJson, message)
+    //=== BEGIN
+    (new SafeFuture(shoebox.getUserExperiments(from))).map{ userExperiments =>
+      val notifJson = buildMessageNotificationJson(message, thread, orderedMessageWithBasicUser, "/messages/" + thread.externalId, false, originalAuthor, 0, numAuthors)
+      if (userExperiments.contains(ExperimentType.INBOX)){
+        db.readWrite(attempts=2){ implicit session =>
+          userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
+        }
+        notificationRouter.sendToUser(from, Json.arr("notification", notifJson))
+      } else {
+        db.readWrite(attempts=2){ implicit session =>
+          userThreadRepo.setNotificationJsonIfNotPresent(from, thread.id.get, notifJson, message)
+        }
+      }
     }
-    notificationRouter.sendToUser(from, Json.arr("notification", notifJson))
+    //=== END
 
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
