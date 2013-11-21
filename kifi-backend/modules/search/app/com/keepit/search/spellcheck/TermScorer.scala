@@ -57,7 +57,7 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) extends 
     log.info(s"adjScore: ${a}, ${b}, distances: ${dists.mkString(" ")}")
     val minDist = dists.foldLeft(Float.MaxValue)(_ min _)
     log.info(s"adjScore: ${a}, ${b}, min dist: ${minDist}")
-    gaussianScore(minDist).toFloat
+    gaussianScore(minDist - 1).toFloat
   }
 
   def scoreSingleTerm(term: String): Float = {
