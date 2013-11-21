@@ -822,9 +822,8 @@ class MessagingController @Inject() (
     }
   }
 
-  def getLatestSentNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = { //ZZZ Need to backpolutate the json on threads with only one active user
-    val activeThreads : Seq[Id[MessageThread]] = getActiveThreadsForUser(userId)
-    val notifJson : Seq[JsObject] = db.readOnly{ implicit session => userThreadRepo.getLatestSendableNotificationsForThreads(userId, activeThreads, howMany) }
+  def getLatestSentNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
+    val notifJson : Seq[JsObject] = db.readOnly{ implicit session => userThreadRepo.getLatestSendableNotificationsForStartedThreads(userId, howMany) }
     notifJson
   }
 
@@ -942,9 +941,6 @@ class MessagingController @Inject() (
     notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getPendingNotificationCount(userId)))
   }
 
-  def getActiveThreadsForUser(userId: Id[User]): Seq[Id[MessageThread]] = {
-    db.readOnly{ implicit session => messageRepo.getActiveThreadsForUser(userId) }
-  }
 
   def getSendableNotificationsForUrl(userId: Id[User], url: String) : Future[(String, Seq[JsObject])] = {
     shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
