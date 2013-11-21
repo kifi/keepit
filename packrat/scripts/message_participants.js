@@ -1,13 +1,14 @@
 // @require scripts/lib/jquery.js
+// @require scripts/lib/jquery-tokeninput.js
+// @require scripts/lib/antiscroll.min.js
 // @require scripts/render.js
 // @require scripts/util.js
 // @require scripts/kifi_util.js
-// @require scripts/lib/antiscroll.min.js
+// @require scripts/prevent_ancestor_scroll.js
 // @require scripts/html/keeper/message_participants.js
 // @require scripts/html/keeper/message_participant.js
 // @require scripts/html/keeper/message_participant_icon.js
 // @require scripts/html/keeper/message_avatar.js
-// @require scripts/lib/jquery-tokeninput.js
 // @require styles/keeper/message_participants.css
 // @require styles/keeper/compose.css
 
@@ -84,7 +85,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			this.$list = $list;
 			$list.antiscroll({
 				x: false
-			});
+			}).children().preventAncestorScroll();
 		},
 
 		/**
