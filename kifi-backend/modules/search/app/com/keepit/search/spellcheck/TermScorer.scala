@@ -13,7 +13,7 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) extends 
   val rand = new Random()
   val SIGMA = 2
   val MIN_ADJ_SCORE = 0.001f
-  val SAMPLE_SIZE = 10
+  val SAMPLE_SIZE = 50
 
   def minPairTermsScore: Float = if (!enableAdjScore) 1f else MIN_ADJ_SCORE
 
@@ -47,13 +47,16 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) extends 
 
   private def adjacencyScore(a: String, b: String, inter: Set[Int]): Float = {
     if (inter.isEmpty) return MIN_ADJ_SCORE
+    log.info(s"adjScore: ${a}, ${b}, inter size: ${inter.size}")
     val subset = if (inter.size <= SAMPLE_SIZE) inter else rand.shuffle(inter).take(SAMPLE_SIZE)
     val liveDocs = TermStatsReader.genBits(subset)
     val (aMap, bMap) = (statsReader.getDocsAndPositions(a, liveDocs), statsReader.getDocsAndPositions(b, liveDocs))
     assume (aMap.keySet == bMap.keySet)
     val scorer = new AdjacencyScorer
     val dists = aMap.keySet.map{k => scorer.distance(aMap(k), bMap(k), earlyStopValue = 1)}
+    log.info(s"adjScore: ${a}, ${b}, distances: ${dists.mkString(" ")}")
     val avgDist = dists.foldLeft(0)(_+_)/(dists.size).toFloat       // take average ( or median? )
+    log.info(s"adjScore: ${a}, ${b}, avg dist: ${avgDist}")
     gaussianScore(avgDist).toFloat
   }
 
