@@ -1,9 +1,10 @@
 package com.keepit.search.spellcheck
 
 import scala.util.Random
-import scala.math.{exp, log}
+import scala.math.{exp, log => logE}
+import com.keepit.common.logging.Logging
 
-class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
+class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) extends Logging {
 
   private var statsMap = Map.empty[String, SimpleTermStats]
   private var jointMap = Map.empty[(String, String), Set[Int]]
@@ -16,7 +17,7 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
 
   def minPairTermsScore: Float = if (!enableAdjScore) 1f else MIN_ADJ_SCORE
 
-  private def log2(x: Double) = log(x)/log(2)
+  private def log2(x: Double) = logE(x)/logE(2)
 
   def gaussianScore(x: Float) = {
     exp(-x*x/(2*SIGMA*SIGMA)) max MIN_ADJ_SCORE      // this close to 0 when x > 3*SIGMA. Add a smoother
@@ -57,7 +58,9 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
   }
 
   def scoreSingleTerm(term: String): Float = {
-    log2(1.0 + getOrUpdateStats(term).docFreq).toFloat
+    val s = log2(1.0 + getOrUpdateStats(term).docFreq).toFloat
+    log.info(s"TermScorer: ${term} ${s}")
+    s
   }
 
   def scorePairTerms(a: String, b: String): Float = {
@@ -67,6 +70,7 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
     val adjBoost = if (enableAdjScore) {
       getOrUpdateAdjScore(key, inter)
     } else 1f
+    log.info(s"TermScorer: ${a}, ${b}, pairFreqScore = ${pairScore}, adjBoost = ${adjBoost}")
     pairScore * adjBoost
   }
 }
