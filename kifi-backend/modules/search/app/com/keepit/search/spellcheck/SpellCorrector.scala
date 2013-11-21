@@ -11,10 +11,12 @@ trait SpellCorrector {
 class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: String, enableAdjScore: Boolean) extends SpellCorrector{
   val spellChecker = spellIndexer.getSpellChecker
   val stopwords = StandardAnalyzer.STOP_WORDS_SET
-  val termScorer = new TermScorer(spellIndexer.getTermStatsReader, enableAdjScore)
-  val suggestionProvider = suggestionProviderFlag match {
-    case "viterbi" => new ViterbiSuggestionProvider(termScorer)
-    case _ => new SlowSuggestionProvider(termScorer)
+  def suggestionProvider = {
+    val termScorer = new TermScorer(spellIndexer.getTermStatsReader, enableAdjScore)
+    suggestionProviderFlag match {
+      case "viterbi" => new ViterbiSuggestionProvider(termScorer)
+      case _ => new SlowSuggestionProvider(termScorer)
+    }
   }
 
   override def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest] = {
