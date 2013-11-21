@@ -79,7 +79,9 @@ private[social] class SocialGraphActor @Inject() (
             val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
             val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
             db.readWrite { implicit c =>
-              latestUserValues.foreach { case (key, value) => userValueRepo.setValue(userId, key, value) }
+              latestUserValues.collect { case (key, value) if userValueRepo.getValue(userId, key) != Some(value) =>
+                userValueRepo.setValue(userId, key, value)
+              }
               socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
             }
             connections
