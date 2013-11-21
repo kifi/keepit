@@ -10,7 +10,7 @@ import play.api.libs.json._
 class SpellCorrectorController @Inject() (corrector: SpellCorrector) extends SearchServiceController {
 
   def correct(input: String, enableBoost: Boolean) =  Action { request =>
-    val suggests = corrector.getScoredSuggestions(input, numSug = 10, enableBoost)
+    val suggests = corrector.getScoredSuggestions(input, numSug = 5, enableBoost)
     Ok(JsArray(suggests.map{ s => Json.toJson(s) }))
   }
 }
