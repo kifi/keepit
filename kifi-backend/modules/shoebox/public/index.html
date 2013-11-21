@@ -577,8 +577,9 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 
 	<script type="text/x-handlebars" id="invite-friends-help">
 	  <div class="invite-friends-help {{network_class}}">
-		  <div>To invite your {{network}} {{friends}} to Kifi,</div>
-		  <div>please connect to {{network}}</div>
+		  <div class="no-error">To invite your {{network}} {{friends}} to Kifi,</div>
+		  <div class="no-error">please connect to {{network}}</div>
+		  <div class="error-message">Import failed. Try again.</div>
 		  <a class="invite-friends-help-connect" href="javascript:void(0)" data-network="{{network_class}}">
 			  <span class="invite-friends-help-logo"></span>
 			  <span>Connect {{network}}</span>
