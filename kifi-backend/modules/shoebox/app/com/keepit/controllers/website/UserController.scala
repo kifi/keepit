@@ -445,7 +445,7 @@ class UserController @Inject() (
   def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = AuthenticatedHtmlAction { request =>
     val callback = callbackOpt.getOrElse("parent.updateABookProgress")
     val done = new AtomicBoolean(false)
-    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 200)
+    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 500)
     def reqF = abookServiceClient.getABookInfo(request.userId, id) map { abookInfoOpt =>
       abookInfoOpt match {
         case Some(abookInfo) if abookInfo.state == ABookInfoStates.ACTIVE => {
