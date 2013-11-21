@@ -74,7 +74,7 @@ POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportCo
 GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
 GET     /users/:id/pics/:size/:name @com.keepit.controllers.assets.UserPictureController.getPic(size: String, id: ExternalId[User], name: String)
 
-POST    /users/pics/update      @com.keepit.controllers.assets.UserPictureController.update()
+POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureController.update()
 
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
 GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
@@ -125,6 +125,7 @@ GET     /blog                       @com.keepit.controllers.website.HomeControll
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /reddit                     @com.keepit.controllers.website.HomeController.redditPreview
+GET     /blank                      @com.keepit.controllers.website.HomeController.blank
 
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection

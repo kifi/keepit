@@ -19,7 +19,7 @@ import com.keepit.heimdal.TestHeimdalServiceClientModule
 class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
   val imageDataIntegrityTestPluginModule =
-    new FakeStoreModule() {
+    new ShoeboxFakeStoreModule() {
       override def configure() {
         bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
         bind[S3ImageConfig].toInstance(S3ImageConfig("test-bucket", "//cloudfront", isLocal = false))

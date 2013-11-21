@@ -511,13 +511,15 @@ footer {
 }
 .form-network-icon {
   display: table-cell;
+  height: 68px;
+  width: 72px;
+  padding: 0;
   vertical-align: middle;
-  text-align: right;
-  .box-sizing(border-box);
-  width: 30%;
-  padding: 0 8%;
+  text-align: center;
+  background-color: rgba(0,0,0,.1);
+  line-height: 0;
 }
-.form-network-icon:before {
+.form-network-icon:empty:before {
   content: ' ';
   display: inline-block;
   font-size: 0;
@@ -525,17 +527,23 @@ footer {
   width: 32px;
   background-image: url(../img/auth.png);
 }
-.facebook>.form-network-icon:before {
+.facebook>.form-network-icon:empty:before {
   background-position: -187px -294px;
 }
-.linkedin>.form-network-icon:before {
+.linkedin>.form-network-icon:empty:before {
   background-position: -221px -294px;
+}
+.form-network-pic {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
 }
 .form-network-text {
   display: table-cell;
   height: 68px;
+  padding: 0 5px;
   vertical-align: middle;
-  text-align: left;
+  text-align: center;
   color: #fff;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
@@ -1285,7 +1293,7 @@ input.social-email {
   .curtain-back:before,
   .us-on,
   .main-logo,
-  .form-network-icon:before,
+  .form-network-icon:empty:before,
   .password-label:after,
   .form-photo-a:before {
     background-image: url(../img/auth.2x.png);

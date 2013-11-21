@@ -55,9 +55,9 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) extends 
     val scorer = new AdjacencyScorer
     val dists = aMap.keySet.map{k => scorer.distance(aMap(k), bMap(k), earlyStopValue = 1)}
     log.info(s"adjScore: ${a}, ${b}, distances: ${dists.mkString(" ")}")
-    val avgDist = dists.foldLeft(0)(_+_)/(dists.size).toFloat       // take average ( or median? )
-    log.info(s"adjScore: ${a}, ${b}, avg dist: ${avgDist}")
-    gaussianScore(avgDist).toFloat
+    val minDist = dists.foldLeft(Float.MaxValue)(_ min _)
+    log.info(s"adjScore: ${a}, ${b}, min dist: ${minDist}")
+    gaussianScore(minDist - 1).toFloat
   }
 
   def scoreSingleTerm(term: String): Float = {
