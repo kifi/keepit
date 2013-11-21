@@ -1,7 +1,7 @@
 package com.keepit.eliza.model
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
+import com.keepit.common.db.slick.{StringMapperDelegate, Repo, DbRepo, DataBaseComponent}
 import com.keepit.common.db.slick.FortyTwoTypeMappers._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
@@ -10,13 +10,14 @@ import com.keepit.common.time._
 import com.keepit.common.db.{Model, Id}
 import com.keepit.model.{EContact, User, NormalizedURI}
 import play.api.libs.json._
-import scala.slick.lifted.Query
+import scala.slick.lifted.{BaseTypeMapper, Query}
 import com.keepit.eliza._
 import play.api.libs.functional.syntax._
-import scala.Some
 import com.keepit.eliza.Notification
 import play.api.libs.json.JsObject
 import com.keepit.common.mail.EmailAddressHolder
+import scala.slick.driver.BasicProfile
+import MessagingTypeMappers._
 
 case class NonUserKind(name: String)
 
@@ -32,22 +33,23 @@ case class NonUserThread(
   notifiedCount: Int,
   lastNotifiedAt: Option[DateTime],
   threadUpdatedAt: Option[DateTime],
+  emailSentForMostRecentUpdate: Boolean,
   muted: Boolean
 ) extends Model[NonUserThread] {
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime)
 }
 
-case class BasicNonUser(`type`: NonUserKind, id: String, firstName: Option[String], lastName: Option[String])
+case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String], lastName: Option[String])
 
 object BasicNonUser {
   implicit val nonUserTypeFormat = Json.format[NonUserKind]
   implicit val basicNonUserFormat = (
-    (__ \ 'type).format[NonUserKind] and
-      (__ \ 'id).format[String] and
-      (__ \ 'firstName).formatNullable[String] and
-      (__ \ 'lastName).formatNullable[String]
-    )(BasicNonUser.apply, unlift(BasicNonUser.unapply))
+    (__ \ 'kind).format[NonUserKind] and
+    (__ \ 'id).format[String] and
+    (__ \ 'firstName).formatNullable[String] and
+    (__ \ 'lastName).formatNullable[String]
+  )(BasicNonUser.apply, unlift(BasicNonUser.unapply))
 
 }
 
@@ -61,9 +63,11 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 
   def getNonUserThreadsForEmailing(before: DateTime)(implicit session: RSession): Seq[NonUserThread]
 
+  def getByMessageThreadId(messageThreadId: Id[MessageThread])(implicit session: RSession): Seq[NonUserThread]
+
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
 
-  def setMuteState(nonUserThreadId: Id[NonUserThread], muted: Boolean)(implicit session: RWSession): Int
+  def setMuteState(nonUserThreadId: Id[NonUserThread], muted: Boolean)(implicit session: RWSession): Boolean
 
 }
 
@@ -77,6 +81,15 @@ class NonUserThreadRepoImpl @Inject() (
 
   import db.Driver.Implicit._
 
+  implicit object NonUserKindTypeMapper extends BaseTypeMapper[NonUserKind] {
+    def apply(profile: BasicProfile) = new NonUserKindTypeMapperDelegate(profile)
+  }
+  class NonUserKindTypeMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[NonUserKind](profile) {
+    def zero = NonUserKind("")
+    def sourceToDest(nonUserKind: NonUserKind) = NonUserKind.unapply(nonUserKind).get
+    def safeDestToSource(str: String) = NonUserKind(str)
+  }
+
   override val table = new RepoTable[NonUserThread](db, "user_thread") {
 
     def kind = column[NonUserKind]("kind", O.NotNull)
@@ -85,10 +98,12 @@ class NonUserThreadRepoImpl @Inject() (
     def threadId = column[Id[MessageThread]]("thread_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.Nullable)
     def notifiedCount = column[Int]("notified_count", O.NotNull)
-    def lastNotified = column[DateTime]("last_notified", O.Nullable)
+    def lastNotifiedAt = column[DateTime]("last_notified_at", O.Nullable)
+    def threadUpdatedAt = column[DateTime]("thread_updated_at", O.Nullable)
+    def emailSentForMostRecentUpdate = column[Boolean]("email_sent", O.NotNull)
     def muted = column[Boolean]("muted", O.NotNull)
 
-    def * = id.? ~ createdAt ~ updatedAt ~ kind ~ emailAddress.? ~ econtactId.? ~ threadId ~ uriId.? ~ notifiedCount ~ lastNotified.? ~ muted <> (NonUserThread.apply _, NonUserThread.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ kind ~ emailAddress.? ~ econtactId.? ~ threadId ~ uriId.? ~ notifiedCount ~ lastNotifiedAt.? ~ threadUpdatedAt.? ~ emailSentForMostRecentUpdate ~ muted <> (NonUserThread.apply _, NonUserThread.unapply _)
 
   }
 
@@ -99,14 +114,19 @@ class NonUserThreadRepoImpl @Inject() (
     (for (row <- table if row.econtactId === econtactId) yield row.threadId).list
 
   def getNonUserThreadsForEmailing(before: DateTime)(implicit session: RSession): Seq[NonUserThread] =
-    (for (row <- table if row.notificationPending===true && row.notificationEmailed===false && (row.notificationLastSeen.isNull || row.notificationLastSeen < row.notificationUpdatedAt) && row.notificationUpdatedAt < before) yield row).list
+    (for (row <- table if row.emailSentForMostRecentUpdate === false && (row.lastNotifiedAt.isNull || row.lastNotifiedAt < row.threadUpdatedAt) && row.lastNotifiedAt < before) yield row).list
+
+  def getByMessageThreadId(messageThreadId: Id[MessageThread])(implicit session: RSession): Seq[NonUserThread] =
+    (for (row <- table if row.threadId === messageThreadId) yield row).list
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit =
     updates.foreach{ case (oldId, newId) =>
-      (for (row <- table if row.uriId===oldId) yield row.uriId).update(newId)
+      (for (row <- table if row.uriId === oldId) yield row.uriId).update(newId)
     }
 
   def setMuteState(nonUserThreadId: Id[NonUserThread], muted: Boolean)(implicit session: RWSession): Boolean =
     (for (row <- table if row.id === nonUserThreadId) yield row.muted).update(muted) > 0
+
+  private def muteTokenToNonUserThreadId(muteToken: String): Option[Id[NonUserThread]]
 
 }
