@@ -15,8 +15,6 @@ import akka.pattern.ask
 import com.keepit.social.{SocialNetworkType, SocialGraphPlugin, SocialGraph, SocialUserRawInfoStore}
 import scala.util.Try
 import com.keepit.model.SocialConnection
-import com.keepit.common.social.FetchUserInfo
-import com.keepit.common.social.FetchUserInfoQuietly
 import com.keepit.common.db.Id
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
