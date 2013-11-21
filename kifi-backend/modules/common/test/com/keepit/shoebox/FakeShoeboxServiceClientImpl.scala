@@ -433,4 +433,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
 
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = ???
+
+  def getUserValue(userId: Id[User], key: String): Future[Option[String]] = Future.successful(None)
+
+  def setUserValue(userId: Id[User], key: String, value: String): Unit = {}
 }

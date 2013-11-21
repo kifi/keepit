@@ -1280,7 +1280,14 @@ $(function () {
 			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">')
 			.appendTo('body').submit().remove();
 		} else if (/^linkedin|email/.test(fullSocialId)) {
-			inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: $friend.find('.invite-name').text()});
+			var name = $friend.find('.invite-name').text();
+			if (/^email/.test(fullSocialId)) {
+				var match = name.match(/^\s*<(.*)>$/);
+				if (match) {
+					name = match[1];
+				}
+			}
+			inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name});
 			$inviteMessageDialog.dialog('show');
 		}
 	});

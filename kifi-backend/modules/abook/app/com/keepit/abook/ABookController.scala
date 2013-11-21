@@ -12,10 +12,10 @@ import java.io.File
 import scala.collection.{immutable, mutable}
 import scala.io.Source
 import scala.ref.WeakReference
-import scala.concurrent.{Await, Future}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.{WS, Response}
 import scala.xml.PrettyPrinter
+import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -161,59 +161,36 @@ class ABookController @Inject() (
   }
 
   def getContacts(userId:Id[User], maxRows:Int) = Action { request =>
-    val resF:Future[JsValue] = Future {
-      abookCommander.getContactsDirect(userId, maxRows)
-    }
-    val async: AsyncResult = Async {
-      resF.map { js => Ok(js) }
-    }
-    async
+    Ok(abookCommander.getContactsDirect(userId, maxRows))
   }
 
   def getEContactById(contactId:Id[EContact]) = Action { request =>
-  // todo: parse email
-    val resF:Future[Option[JsValue]] = Future {
-      abookCommander.getEContactByIdDirect(contactId)
-    }
-    Async {
-      resF.map{ jsOpt =>
-        jsOpt match {
-          case Some(js) => Ok(js)
-          case _ => Ok(JsNull)
-        }
-      }
+    // todo: parse email
+    abookCommander.getEContactByIdDirect(contactId) match {
+      case Some(js) => Ok(js)
+      case _ => Ok(JsNull)
     }
   }
 
 
   def getEContactByEmail(userId:Id[User], email:String) = Action { request =>
     // todo: parse email
-    val resF:Future[Option[JsValue]] = Future {
-      abookCommander.getEContactByEmailDirect(userId, email)
-    }
-    Async {
-      resF.map{ jsOpt =>
-        jsOpt match {
-          case Some(js) => Ok(js)
-          case _ => Ok(JsNull)
-        }
-      }
+    abookCommander.getEContactByEmailDirect(userId, email) match {
+      case Some(js) => Ok(js)
+      case _ => Ok(JsNull)
     }
   }
 
 
   def getEContacts(userId:Id[User], maxRows:Int) = Action { request =>
-    val resF:Future[JsValue] = Future {
+    val res = {
       abookCommander.getEContactsDirect(userId, maxRows)
     }
-    val async: AsyncResult = Async {
-      resF.map { js => Ok(js) }
-    }
-    async
+    Ok(res)
   }
 
   def getSimpleContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
-    val resF:Future[JsValue] = Future {
+    val res = {
       val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
       db.readOnly { implicit session =>
         contactRepo.getByUserIdIter(userId, maxRows).foreach { c =>
@@ -238,15 +215,12 @@ class ABookController @Inject() (
       val contacts = jsonBuilder.result
       JsArray(contacts)
     }
-    val res = Async {
-      resF.map { js => Ok(js) }
-    }
-    res
+    Ok(res)
   }
 
   // cache
   def getMergedContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
-    val resF:Future[JsValue] = Future {
+    val res = {
       val m = new mutable.HashMap[String, Set[String]]()
       val iter = db.readOnly { implicit session =>
         contactRepo.getByUserIdIter(userId, maxRows)
@@ -273,66 +247,52 @@ class ABookController @Inject() (
       val contacts = jsonBuilder.result
       JsArray(contacts)
     }
-    val res = Async {
-      resF.map { js => Ok(js) }
-    }
-    res
+    Ok(res)
   }
 
   def getABookRawInfos(userId:Id[User]) = Action { request =>
-    val resF:Future[JsValue] = Future {
-      abookCommander.getABookRawInfosDirect(userId)
-    }
-    Async {
-      resF.map(js => Ok(js))
-    }
+    val rawInfos = abookCommander.getABookRawInfosDirect(userId)
+    Ok(rawInfos)
   }
 
   def getABookInfos(userId:Id[User]) = Action { request =>
-    val resF:Future[JsValue] = Future {
-      val abookInfos = db.readOnly { implicit session =>
-        abookInfoRepo.findByUserId(userId)
-      }
-      Json.toJson(abookInfos)
+    val abookInfos = db.readOnly { implicit session =>
+      abookInfoRepo.findByUserId(userId)
     }
-    Async {
-      resF.map(js => Ok(js))
-    }
+    Ok(Json.toJson(abookInfos))
   }
 
   def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = Action { request =>
-    val resF = Future {
-      db.readOnly { implicit s =>
-        abookInfoRepo.getByUserIdAndABookId(userId, id)
-      }
-    }
-    Async {
-      resF.map { info =>
-        Ok(Json.toJson(info))
-      }
-    }
+    val infoOpt = abookCommander.getABookInfo(userId, id)
+    Ok(Json.toJson(infoOpt))
   }
 
   // retrieve from S3
   def getContactsRawInfo(userId:Id[User],origin:ABookOriginType) = Action { request =>
-    Async {
-      Future {
-        val abooks = db.readOnly { implicit session =>
-          abookInfoRepo.findByUserIdAndOrigin(userId, origin)
-        }
-        abooks.map{ abookInfo =>
-          val key = abookInfo.rawInfoLoc.getOrElse(
-            origin match {
-              case ABookOrigins.IOS => abookCommander.toS3Key(userId, origin, None) // only ok for IOS
-              case _ => throw new IllegalStateException(s"[getContactsRawInfo($userId, $origin)] rawInfoLoc not set for $abookInfo")
-            }
-          )
-          val stored = s3.get(key)
-          log.info(s"userId=$userId origin=$origin stored=$stored")
-          Json.toJson[ABookRawInfo](stored.getOrElse(ABookRawInfo.EMPTY))
-        }
-      }.map(js => Ok(JsArray(js)))
+    val abookInfos = {
+      val abooks = db.readOnly { implicit session =>
+        abookInfoRepo.findByUserIdAndOrigin(userId, origin)
+      }
+      abooks.map{ abookInfo =>
+        val key = abookInfo.rawInfoLoc.getOrElse(
+          origin match {
+            case ABookOrigins.IOS => abookCommander.toS3Key(userId, origin, None) // only ok for IOS
+            case _ => throw new IllegalStateException(s"[getContactsRawInfo($userId, $origin)] rawInfoLoc not set for $abookInfo")
+          }
+        )
+        val stored = s3.get(key)
+        log.info(s"userId=$userId origin=$origin stored=$stored")
+        Json.toJson[ABookRawInfo](stored.getOrElse(ABookRawInfo.EMPTY))
+      }
     }
+    Ok(JsArray(abookInfos))
+  }
+
+  def getEContactCount(userId:Id[User]) = Action { request =>
+    val count = db.readOnly { implicit s =>
+      econtactRepo.getEContactCount(userId)
+    }
+    Ok(JsNumber(count))
   }
 
 }

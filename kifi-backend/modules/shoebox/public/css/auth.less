@@ -43,6 +43,7 @@ input[type=password] {
   margin-bottom: 16px;
   height: 40px;
   border: 2px solid #e5e5e5;
+  border-radius: 5px;
   padding: 0 @input-hor-padding;
   font-size: 16px;
   line-height: 130%;
@@ -110,7 +111,7 @@ input[type=password] {
 }
 .curtain-welcome {
   position: absolute;
-  top: 224px;
+  top: 222px;
   left: 0;
   width: 100%;
   z-index: 10;
@@ -118,13 +119,14 @@ input[type=password] {
   table-layout: fixed;
   border-collapse: collapse;
   overflow: hidden;
+  margin: 0;
 }
 .curtain-welcome-l,
 .curtain-welcome-r {
   display: table-cell;
   width: 50%;
-  font-size: 32px;
-  line-height: 32px;
+  font-size: 24px;
+  line-height: 28px;
   color: #fff;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
@@ -152,22 +154,38 @@ input[type=password] {
 .curtains-drawn .curtain-welcome-r {
   .translate(180%);
 }
-.curtain-action {
+.curtain-panel {
   position: absolute;
   top: 20%;
   margin-top: 220px;
-  padding: 32px 0 38px;
-  width: 284px;
-  text-align: center;
-  -webkit-font-smoothing: antialiased;
   color: #fff;
-  font-size: 18px;
+  width: 300px;
 }
-.curtain-signup {
+.curtain-l>.curtain-panel {
   right: 8%;
 }
-.curtain-login {
+.curtain-r>.curtain-panel {
   left: 8%;
+}
+.curtain-question {
+  margin: 0 0 16px;
+  line-height: 36px;
+  font-size: 30px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.curtain-action {
+  display: block;
+  margin: 0 auto;
+  padding: 12px 0;
+  width: 130px;
+  border-radius: 3px;
+  text-align: center;
+  -webkit-font-smoothing: antialiased;
+  font-size: 18px;
+  color: #fff;
 }
 .curtain-action:hover {
   background-color: rgba(0, 0, 0, .16);
@@ -177,31 +195,29 @@ input[type=password] {
 .curtains-drawn .curtain-action:hover {
   background-color: rgba(0, 0, 0, .08);
 }
-.curtain-a-title {
-  font-size: 32px;
-  line-height: 42px;
-  font-weight: 300;
-  text-transform: uppercase;
-  margin-bottom: 5px;
-}
 .curtain-note {
-  position: absolute;
-  top: 20%;
-  margin-top: 372px;
-  width: 284px;
-  right: 8%;
-  color: #fff;
-  font-size: 14px;
+  display: inline-block;
+  margin-top: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 6px 2px 0;
   line-height: 17px;
+  font-size: 14px;
+  font-weight: 300;
   -webkit-font-smoothing: antialiased;
-  text-align: center;
+  color: #fff;
+  text-align: left;
+  white-space: nowrap;
 }
-.curtain-action,
-.curtain-note {
+.curtain-note:before {
+  content: 'PLEASE NOTE:';
+  display: block;
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+.curtain-panel {
   .transition(opacity @curtain-time, visibility @curtain-time);
 }
-.curtains-drawn .curtain-action,
-.curtains-drawn .curtain-note {
+.curtains-drawn .curtain-panel {
   .transition(opacity @curtain-time, visibility 0s @curtain-time);
   opacity: 0;
   visibility: hidden;
@@ -266,9 +282,9 @@ input[type=password] {
 // right-side footer
 footer {
   position: absolute;
-  top: 56px;
-  right: -65px;
-  margin-right: 8.25%;
+  top: 30px;
+  right: -40px;
+  margin-right: 6%;
   z-index: 10;
   text-align: right;
   font-size: 14px;
@@ -297,10 +313,15 @@ footer {
 }
 .copyright {
   line-height: 30px;
+  font-size: 13px;
+  font-weight: 300;
+  padding-left: 6px;
   border-bottom: 1px solid rgba(255, 255, 255, .5);
-  margin-bottom: 5px;
+  margin-bottom: 12px;
 }
 .contact-us {
+  font-size: 16px;
+  font-weight: 300;
   color: inherit;
 }
 .contact-us:hover {
@@ -344,6 +365,7 @@ footer {
   white-space: nowrap;
   color: #fff;
   background: @bg-color;
+  border-radius: 3px;
   &:hover,
   &:focus {
     background: tint(@bg-color, 10%);
@@ -361,6 +383,7 @@ footer {
   white-space: nowrap;
   color: #fff;
   background: @bg-color;
+  border-radius: 3px;
   &:hover,
   &:focus {
     background: tint(@bg-color, 10%);
@@ -378,6 +401,7 @@ footer {
   white-space: nowrap;
   color: #888;
   background: @bg-color;
+  border-radius: 3px;
   &:hover,
   &:focus {
     background: tint(@bg-color, 20%);
@@ -463,6 +487,7 @@ footer {
   display: table;
   width: 100%;
   margin-top: 16px;
+  border-radius: 3px;
 }
 @facebook-color: #597ab1;
 @linkedin-color: #2786c5;
@@ -633,6 +658,7 @@ footer {
 .form-photo-box {
   padding: 8px 10px;
   background: @signup-box-color;
+  border-radius: 3px;
   position: relative;
   .clearfix;
 }
@@ -679,6 +705,7 @@ footer {
   width: 48px;
   position: relative;
   margin-right: 6px;
+  border-radius: 2px;
 }
 .form-photo-a.facebook {
   background-color: @facebook-color;
