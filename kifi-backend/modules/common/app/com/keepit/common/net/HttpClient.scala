@@ -1,7 +1,6 @@
 package com.keepit.common.net
 
 import com.google.inject.Provider
-
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -23,9 +22,7 @@ import com.keepit.common.controller.CommonHeaders
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
-import play.modules.statsd.api.Statsd
-
-import play.api.Logger
+import com.ning.http.util.AsyncHttpProviderUtils
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] Bad Http Status on ${url.summary} body:[${requestBody.map(_.toString.abbreviate(30)).getOrElse("")}] status:${response.status} res [${response.body.toString.abbreviate(30)}]"){
@@ -191,7 +188,8 @@ case class HttpClientImpl(
         remoteServiceId = remoteInstance.map(_.id.id.toString).getOrElse(null),
         url = request.url,
         trackingId = request.trackingId,
-        statusCode = res.res.status))
+        statusCode = res.res.status,
+        dataSize = res.res.ahcResponse.getResponseBodyAsBytes.size))
 
     e.waitTime map { waitTime =>
       if (waitTime > 1000) {//ms
@@ -245,6 +243,7 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
 
 trait ClientResponse {
   def res: Response
+  def bytes: Array[Byte]
   def body: String
   def json: JsValue
   def xml: NodeSeq
@@ -257,14 +256,32 @@ class ClientResponseImpl(val request: Request, val res: Response) extends Client
 
   def status: Int = res.status
 
-  def body: String = res.body
+  lazy val bytes: Array[Byte] = res.ahcResponse.getResponseBodyAsBytes()
 
-  def json: JsValue = {
+  lazy val body: String = {
+    val ahcResponse = res.ahcResponse
+
+    //+ the following is copied from play.api.libs.ws.WS
+    // RFC-2616#3.7.1 states that any text/* mime type should default to ISO-8859-1 charset if not
+    // explicitly set, while Plays default encoding is UTF-8.  So, use UTF-8 if charset is not explicitly
+    // set and content type is not text/*, otherwise default to ISO-8859-1
+    val contentType = Option(ahcResponse.getContentType).getOrElse("application/octet-stream")
+    val charset = Option(AsyncHttpProviderUtils.parseCharset(contentType)).getOrElse {
+      if (contentType.startsWith("text/"))
+        AsyncHttpProviderUtils.DEFAULT_CHARSET
+      else
+        "utf-8"
+    }
+    //-
+    new String(bytes, charset)
+  }
+
+  lazy val json: JsValue = {
     try {
-      res.json
+      Json.parse(bytes)
     } catch {
       case e: Throwable =>
-        println("bad res: %s".format(res.body.toString()))
+        println("bad res: %s".format(body))
         throw e
     }
   }
@@ -274,7 +291,7 @@ class ClientResponseImpl(val request: Request, val res: Response) extends Client
       res.xml
     } catch {
       case e: Throwable =>
-        println("bad res: %s".format(res.body.toString()))
+        println("bad res: %s".format(body))
         throw e
     }
   }
