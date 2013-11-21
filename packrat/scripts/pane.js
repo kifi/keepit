@@ -1,5 +1,5 @@
 // @require styles/keeper/pane.css
-// @require scripts/lib/p.min.js
+// @require scripts/lib/q.min.js
 // @require scripts/keeper.js
 // @require scripts/html/keeper/pane.js
 // @require scripts/html/keeper/pane_settings.js
@@ -65,7 +65,7 @@ var pane = pane || function () {  // idempotent for Chrome
 
   function showPane(locator, back, paramsArg, redirected) {
     log('[showPane]', locator, back ? 'back' : '')();
-    var deferred = P.defer();
+    var deferred = Q.defer();
     if (locator !== (paneHistory && paneHistory[0])) {
       var name = toPaneName(locator);
       (createPaneParams[name] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {

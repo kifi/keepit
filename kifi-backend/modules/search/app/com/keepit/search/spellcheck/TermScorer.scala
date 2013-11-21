@@ -1,9 +1,10 @@
 package com.keepit.search.spellcheck
 
 import scala.util.Random
-import scala.math.{exp, log}
+import scala.math.{exp, log => logE}
+import com.keepit.common.logging.Logging
 
-class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
+class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) extends Logging {
 
   private var statsMap = Map.empty[String, SimpleTermStats]
   private var jointMap = Map.empty[(String, String), Set[Int]]
@@ -12,11 +13,11 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
   val rand = new Random()
   val SIGMA = 2
   val MIN_ADJ_SCORE = 0.001f
-  val SAMPLE_SIZE = 10
+  val SAMPLE_SIZE = 50
 
   def minPairTermsScore: Float = if (!enableAdjScore) 1f else MIN_ADJ_SCORE
 
-  private def log2(x: Double) = log(x)/log(2)
+  private def log2(x: Double) = logE(x)/logE(2)
 
   def gaussianScore(x: Float) = {
     exp(-x*x/(2*SIGMA*SIGMA)) max MIN_ADJ_SCORE      // this close to 0 when x > 3*SIGMA. Add a smoother
@@ -46,18 +47,23 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
 
   private def adjacencyScore(a: String, b: String, inter: Set[Int]): Float = {
     if (inter.isEmpty) return MIN_ADJ_SCORE
+    log.info(s"adjScore: ${a}, ${b}, inter size: ${inter.size}")
     val subset = if (inter.size <= SAMPLE_SIZE) inter else rand.shuffle(inter).take(SAMPLE_SIZE)
     val liveDocs = TermStatsReader.genBits(subset)
     val (aMap, bMap) = (statsReader.getDocsAndPositions(a, liveDocs), statsReader.getDocsAndPositions(b, liveDocs))
     assume (aMap.keySet == bMap.keySet)
     val scorer = new AdjacencyScorer
     val dists = aMap.keySet.map{k => scorer.distance(aMap(k), bMap(k), earlyStopValue = 1)}
-    val avgDist = dists.foldLeft(0)(_+_)/(dists.size).toFloat       // take average ( or median? )
-    gaussianScore(avgDist).toFloat
+    log.info(s"adjScore: ${a}, ${b}, distances: ${dists.mkString(" ")}")
+    val minDist = dists.foldLeft(Float.MaxValue)(_ min _)
+    log.info(s"adjScore: ${a}, ${b}, min dist: ${minDist}")
+    gaussianScore(minDist).toFloat
   }
 
   def scoreSingleTerm(term: String): Float = {
-    log2(1.0 + getOrUpdateStats(term).docFreq).toFloat
+    val s = log2(1.0 + getOrUpdateStats(term).docFreq).toFloat
+    log.info(s"TermScorer: ${term} ${s}")
+    s
   }
 
   def scorePairTerms(a: String, b: String): Float = {
@@ -67,6 +73,7 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) {
     val adjBoost = if (enableAdjScore) {
       getOrUpdateAdjScore(key, inter)
     } else 1f
+    log.info(s"TermScorer: ${a}, ${b}, pairFreqScore = ${pairScore}, adjBoost = ${adjBoost}")
     pairScore * adjBoost
   }
 }

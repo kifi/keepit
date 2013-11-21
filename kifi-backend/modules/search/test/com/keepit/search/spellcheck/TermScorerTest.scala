@@ -55,8 +55,8 @@ class TermScorerTest extends Specification {
       val scorer = new TermScorer(statsReader, true)
       var score = scorer.scorePairTerms("ab", "cd")
       var numInter = 2
-      var avgDist = (4 + 6)/2
-      (score - numInter * scorer.gaussianScore(avgDist)).max(1e-5) === 1e-5
+      var minDist = 4
+      (score - numInter * scorer.gaussianScore(minDist)).max(1e-5) === 1e-5
       score = scorer.scorePairTerms("cd", "y1")
       (score - scorer.minPairTermsScore).max(1e-5f) === 1e-5f       // zero intersection. smoothed to min score
     }

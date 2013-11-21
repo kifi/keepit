@@ -32,7 +32,7 @@ class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: Str
 
   private def makeVariations(input: String, numSug: Int): SpellVariations = {
     val terms = input.trim().split(" ")
-    val variations = terms.map{ getSimilarTerms(_, numSug.min(5))}.toList        // need a limit here
+    val variations = terms.map{ getSimilarTerms(_, numSug.min(10))}.toList        // need a limit here
     SpellVariations(variations)
   }
 

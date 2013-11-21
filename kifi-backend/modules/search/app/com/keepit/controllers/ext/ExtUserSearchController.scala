@@ -35,6 +35,7 @@ class ExtUserSearchController @Inject()(
   def page(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = AuthenticatedJsonAction { request =>
     val userId = request.userId
     val userExps = request.experiments.map{_.value}
+    log.info(s"user search: userId = ${userId}, userExps = ${userExps.mkString(" ")}")
     val excludedExperiments = if (userExps.contains("admin")) Seq() else EXCLUDED_EXPERIMENTS
     val friendRequests = shoeboxClient.getFriendRequestsBySender(userId)
     val searchFilter = createFilter(Some(userId), filter, None)

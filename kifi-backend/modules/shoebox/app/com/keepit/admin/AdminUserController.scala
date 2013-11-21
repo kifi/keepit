@@ -13,7 +13,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
+import com.keepit.social.{SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data.Forms._
 import play.api.data._
@@ -27,6 +27,7 @@ import java.security.SecureRandom
 import com.keepit.common.store.S3ImageStore
 import com.keepit.heimdal.{HeimdalServiceClient}
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.social.BasicUserRepo
 
 case class UserStatistics(
     user: User,
@@ -61,6 +62,7 @@ class AdminUserController @Inject() (
     userSessionRepo: UserSessionRepo,
     imageStore: S3ImageStore,
     clock: Clock,
+    basicUserRepo: BasicUserRepo,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
@@ -286,6 +288,31 @@ class AdminUserController @Inject() (
       userValueRepo.setValue(userId, "availableInvites", count)
     }
     Redirect(routes.AdminUserController.userView(userId))
+  }
+
+  def connectUsers(user1: Id[User]) = AdminHtmlAction { implicit request =>
+    val user2 = Id[User](request.body.asFormUrlEncoded.get.apply("user2").head.toLong)
+    db.readWrite { implicit session =>
+      val socialUser1 = socialUserInfoRepo.getByUser(user1).find(_.networkType == SocialNetworks.FORTYTWO)
+      val socialUser2 = socialUserInfoRepo.getByUser(user2).find(_.networkType == SocialNetworks.FORTYTWO)
+      for {
+        su1 <- socialUser1
+        su2 <- socialUser2
+      } yield {
+        socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
+          case Some(sc) =>
+            socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
+          case None =>
+            socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
+        }
+      }
+
+      eliza.sendToUser(user1, Json.arr("new_friends", Set(basicUserRepo.load(user2))))
+      eliza.sendToUser(user2, Json.arr("new_friends", Set(basicUserRepo.load(user1))))
+
+      userConnectionRepo.addConnections(user1, Set(user2), requested = true)
+    }
+    Redirect(routes.AdminUserController.userView(user1))
   }
 
   def addExperiment(userId: Id[User], experiment: String) = AdminJsonAction { request =>

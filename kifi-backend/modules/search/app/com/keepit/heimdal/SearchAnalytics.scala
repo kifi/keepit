@@ -149,7 +149,7 @@ class SearchAnalytics @Inject() (
     kifiResults: Int,
     kifiCollapsed: Boolean,
     kifiTime: Int,
-    referenceTime: Int,
+    referenceTime: Option[Int],
     otherResultsClicked: Int,
     kifiResultsClicked: Int
     ) = {
@@ -175,7 +175,7 @@ class SearchAnalytics @Inject() (
     kifiResults: Int,
     kifiCollapsed: Boolean,
     kifiTime: Int,
-    referenceTime: Int,
+    referenceTime: Option[Int],
     resultSource: SearchEngine,
     resultPosition: Int,
     result: Option[PersonalSearchResult]) = {
@@ -221,7 +221,7 @@ class SearchAnalytics @Inject() (
     kifiResults: Int,
     kifiCollapsed: Boolean,
     kifiTime: Int,
-    referenceTime: Int
+    referenceTime: Option[Int]
   ): EventContextBuilder = {
 
     val initialSearchId = articleSearchResultStore.getInitialSearchId(uuid)
@@ -241,7 +241,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
     contextBuilder += ("kifiLate", kifiCollapsed && initialSearchResult.toShow)
     contextBuilder += ("kifiDeliveryTime", kifiTime)
-    contextBuilder += ("3rdPartyDeliveryTime", referenceTime)
+    referenceTime.foreach { refTime => contextBuilder += ("3rdPartyDeliveryTime", refTime) }
     contextBuilder += ("isInitialSearch", uuid == initialSearchId)
 
     contextBuilder
