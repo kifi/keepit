@@ -98,6 +98,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
   def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
+  def getUserValue(userId: Id[User], key: String): Future[Option[String]]
+  def setUserValue(userId: Id[User], key: String, value: String): Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -114,7 +116,8 @@ case class ShoeboxCacheProvider @Inject() (
     userSessionExternalIdCache: UserSessionExternalIdCache,
     userConnectionsCache: UserConnectionIdCache,
     searchFriendsCache: SearchFriendsCache,
-    uriByUrlhashCache: NormalizedURIUrlHashCache)
+    uriByUrlhashCache: NormalizedURIUrlHashCache,
+    userValueCache: UserValueCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -240,18 +243,21 @@ class ShoeboxServiceClientImpl @Inject() (
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
     val (cachedUsers, needToGetUsers) = userIds.map({ u =>
       u -> cacheProvider.externalUserIdCache.get(ExternalUserIdKey(u))
-    }).foldRight((Seq[Id[User]](), Seq[ExternalId[User]]())) { (uOpt, res) =>
+    }).foldRight((Map[ExternalId[User], Id[User]](), Seq[ExternalId[User]]())) { (uOpt, res) =>
       uOpt._2 match {
-        case Some(uid) => (res._1 :+ uid, res._2)
+        case Some(uid) => (res._1 + (uOpt._1 -> uid), res._2)
         case None => (res._1, res._2 :+ uOpt._1)
       }
     }
-    needToGetUsers match {
+    (needToGetUsers match {
       case Seq() => Promise.successful(cachedUsers).future
       case users => call(Shoebox.internal.getUserIdsByExternalIds(needToGetUsers.mkString(","))).map { r =>
-        cachedUsers ++ r.json.as[Seq[Long]].map(Id[User](_))
+        cachedUsers ++ users.zip(r.json.as[Seq[Long]].map(Id[User](_)))
       }
+    }) map { extId2Id =>
+      userIds.map(extId2Id(_))
     }
+
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
@@ -582,4 +588,12 @@ class ShoeboxServiceClientImpl @Inject() (
       r.json.as[JsArray].value.map{ x => Json.fromJson[FriendRequest](x).get}
     }
   }
+
+  def getUserValue(userId: Id[User], key: String): Future[Option[String]] = {
+    cacheProvider.userValueCache.getOrElseFutureOpt(UserValueKey(userId, key)) {
+      call(Shoebox.internal.getUserValue(userId, key)).map(_.json.asOpt[String])
+    }
+  }
+
+  def setUserValue(userId: Id[User], key: String, value: String): Unit = { call(Shoebox.internal.setUserValue(userId, key), JsString(value)) }
 }

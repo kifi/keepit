@@ -316,7 +316,6 @@ POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseControll
 POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseController.refreshPhrases
 POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
 
-GET     /admin/spell/suggest        @com.keepit.controllers.admin.AdminSpellCorrectorController.suggest(input: String, enableBoost: Boolean ?= true)
 GET     /admin/spell/spellchecker   @com.keepit.controllers.admin.AdminSpellCorrectorController.spellChecker()
 POST     /admin/spell/correct        @com.keepit.controllers.admin.AdminSpellCorrectorController.correct()
 
@@ -426,5 +425,7 @@ POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.sh
 GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])
 POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapableP
 GET     /internal/shoebox/database/getFriendRequestBySender @com.keepit.controllers.shoebox.ShoeboxController.getFriendRequestsBySender(senderId: Id[User])
+GET      /internal/shoebox/database/userValue         @com.keepit.controllers.shoebox.ShoeboxController.getUserValue(userId: Id[User], key: String)
+POST     /internal/shoebox/database/userValue         @com.keepit.controllers.shoebox.ShoeboxController.setUserValue(userId: Id[User], key: String)
 
 ->  / common.Routes

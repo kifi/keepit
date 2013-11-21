@@ -58,83 +58,88 @@ class ABookUploadTest extends Specification with DbTestInjector {
 
   "ABook Controller" should {
     // re-enable after adding status monitoring
-    "handle imports from IOS and gmail" in {
-      withDb(
-        FakeABookRawInfoStoreModule(),
-        TestSlickModule(TestDbInfo.dbInfo),
-        FakeClockModule(),
-        StandaloneTestActorSystemModule(),
-        FakeAirbrakeModule(),
-        ABookCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
-        val (commander) = setup()
-        val iosUploadJson = Json.obj(
-          "origin" -> "ios",
-          "contacts" -> c42
-        )
-
-        var abookInfo:ABookInfo = try {
-          commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson)
-        } catch {
-          case e:Exception => {
-            e.printStackTrace(System.out)
-            throw e
-          }
-        }
-        abookInfo.id.get mustEqual Id[ABookInfo](1)
-        abookInfo.origin mustEqual ABookOrigins.IOS
-        abookInfo.userId mustEqual u42
-        var nWait = 0
-        while (abookInfo.state != ABookInfoStates.ACTIVE && nWait < 5) {
-          nWait += 1
-          abookInfo = commander.getABookInfo(u42, abookInfo.id.get).get
-          Thread.sleep(500)
-        }
-        abookInfo.state mustEqual ABookInfoStates.ACTIVE
-
-        val abookInfos = commander.getABookRawInfosDirect(u42)
-        val abookInfoSeqOpt = abookInfos.validate[Seq[ABookRawInfo]].asOpt
-        abookInfoSeqOpt.isEmpty mustEqual false
-        val aBookRawInfoSeq = abookInfoSeqOpt.get
-        aBookRawInfoSeq.length mustEqual 1
-        val contacts = aBookRawInfoSeq(0).contacts.value
-        contacts.length mustEqual 2
-        (contacts(0) \ "name").as[String] mustEqual "foo bar"
-        (contacts(0) \ "emails").as[Seq[String]].length mustEqual 2
-        (contacts(1) \ "name").as[String] mustEqual "forty two"
-        (contacts(1) \ "emails").as[Seq[String]].length mustEqual 3
-
-        val contactsJsArr = commander.getContactsDirect(u42, 500)
-        val contactsSeqOpt = contactsJsArr.validate[Seq[Contact]].asOpt
-        val contactsSeq = contactsSeqOpt.get
-        contactsSeq.isEmpty mustEqual false
-        contactsSeq.length mustEqual 2
-
-        val gmailOwner = GmailABookOwnerInfo(Some("123456789"), Some("42@42go.com"), Some(true), Some("42go.com"))
-        val gmailUploadJson = Json.obj(
-          "origin"      -> "gmail",
-          "ownerId"     -> gmailOwner.id.get,
-          "ownerEmail"  -> gmailOwner.email.get,
-          "contacts"    -> c42
-        )
-        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), gmailUploadJson)
-        gbookInfo.id.get mustEqual Id[ABookInfo](2)
-        gbookInfo.origin mustEqual ABookOrigins.GMAIL
-        gbookInfo.userId mustEqual u42
-
-        val gbookInfos = commander.getABookRawInfosDirect(u42)
-        val gbookInfoSeqOpt = gbookInfos.validate[Seq[ABookRawInfo]].asOpt
-        gbookInfoSeqOpt.isEmpty mustEqual false
-        val gBookRawInfoSeq = gbookInfoSeqOpt.get
-        gBookRawInfoSeq.length mustEqual 2
-
-        val econtactsJsArr = commander.getEContactsDirect(u42, 500)
-        val econtactsSeqOpt = econtactsJsArr.validate[Seq[EContact]].asOpt
-        econtactsSeqOpt.isEmpty mustEqual false
-        val econtactsSeq = econtactsSeqOpt.get
-        econtactsSeq.isEmpty mustEqual false
-        econtactsSeq.length mustEqual 3 // distinct
-      }
-    }
+//    "handle imports from IOS and gmail" in {
+//      withDb(
+//        FakeABookRawInfoStoreModule(),
+//        TestSlickModule(TestDbInfo.dbInfo),
+//        FakeClockModule(),
+//        StandaloneTestActorSystemModule(),
+//        FakeAirbrakeModule(),
+//        ABookCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
+//        val (commander) = setup()
+//        val iosUploadJson = Json.obj(
+//          "origin" -> "ios",
+//          "contacts" -> c42
+//        )
+//
+//        var abookInfo:ABookInfo = try {
+//          val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson)
+//          val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson) // should have no impact
+//          info1.state mustEqual ABookInfoStates.PENDING
+//          info1.state mustEqual info2.state
+//          info1.updatedAt mustEqual info2.updatedAt // should be skipped
+//          info1
+//        } catch {
+//          case e:Exception => {
+//            e.printStackTrace(System.out)
+//            throw e
+//          }
+//        }
+//        abookInfo.id.get mustEqual Id[ABookInfo](1)
+//        abookInfo.origin mustEqual ABookOrigins.IOS
+//        abookInfo.userId mustEqual u42
+//        var nWait = 0
+//        while (abookInfo.state != ABookInfoStates.ACTIVE && nWait < 5) {
+//          nWait += 1
+//          abookInfo = commander.getABookInfo(u42, abookInfo.id.get).get
+//          Thread.sleep(500)
+//        }
+//        abookInfo.state mustEqual ABookInfoStates.ACTIVE
+//
+//        val abookInfos = commander.getABookRawInfosDirect(u42)
+//        val abookInfoSeqOpt = abookInfos.validate[Seq[ABookRawInfo]].asOpt
+//        abookInfoSeqOpt.isEmpty mustEqual false
+//        val aBookRawInfoSeq = abookInfoSeqOpt.get
+//        aBookRawInfoSeq.length mustEqual 1
+//        val contacts = aBookRawInfoSeq(0).contacts.value
+//        contacts.length mustEqual 2
+//        (contacts(0) \ "name").as[String] mustEqual "foo bar"
+//        (contacts(0) \ "emails").as[Seq[String]].length mustEqual 2
+//        (contacts(1) \ "name").as[String] mustEqual "forty two"
+//        (contacts(1) \ "emails").as[Seq[String]].length mustEqual 3
+//
+//        val contactsJsArr = commander.getContactsDirect(u42, 500)
+//        val contactsSeqOpt = contactsJsArr.validate[Seq[Contact]].asOpt
+//        val contactsSeq = contactsSeqOpt.get
+//        contactsSeq.isEmpty mustEqual false
+//        contactsSeq.length mustEqual 2
+//
+//        val gmailOwner = GmailABookOwnerInfo(Some("123456789"), Some("42@42go.com"), Some(true), Some("42go.com"))
+//        val gmailUploadJson = Json.obj(
+//          "origin"      -> "gmail",
+//          "ownerId"     -> gmailOwner.id.get,
+//          "ownerEmail"  -> gmailOwner.email.get,
+//          "contacts"    -> c42
+//        )
+//        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), gmailUploadJson)
+//        gbookInfo.id.get mustEqual Id[ABookInfo](2)
+//        gbookInfo.origin mustEqual ABookOrigins.GMAIL
+//        gbookInfo.userId mustEqual u42
+//
+//        val gbookInfos = commander.getABookRawInfosDirect(u42)
+//        val gbookInfoSeqOpt = gbookInfos.validate[Seq[ABookRawInfo]].asOpt
+//        gbookInfoSeqOpt.isEmpty mustEqual false
+//        val gBookRawInfoSeq = gbookInfoSeqOpt.get
+//        gBookRawInfoSeq.length mustEqual 2
+//
+//        val econtactsJsArr = commander.getEContactsDirect(u42, 500)
+//        val econtactsSeqOpt = econtactsJsArr.validate[Seq[EContact]].asOpt
+//        econtactsSeqOpt.isEmpty mustEqual false
+//        val econtactsSeq = econtactsSeqOpt.get
+//        econtactsSeq.isEmpty mustEqual false
+//        econtactsSeq.length mustEqual 3 // distinct
+//      }
+//    }
 
     "handle imports from multiple gmail accounts" in {
       withDb(
