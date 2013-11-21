@@ -946,6 +946,18 @@ class MessagingController @Inject() (
     db.readOnly{ implicit session => messageRepo.getActiveThreadsForUser(userId) }
   }
 
+  def getSendableNotificationsForUrl(userId: Id[User], url: String) : Future[(String, Seq[JsObject])] = {
+    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
+      if (nUriOrPrenorm.isLeft){
+        val nUri = nUriOrPrenorm.left.get
+        val notices = db.readOnly { implicit session => userThreadRepo.getSendableNotificationsForUri(userId, nUri.id.get) }
+        (nUri.url, notices)
+      } else {
+        (nUriOrPrenorm.right.get, Seq[JsObject]())
+      }
+    }
+  }
+
 
 }
 

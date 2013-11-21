@@ -234,6 +234,11 @@ class ExtMessagingController @Inject() (
       val unvisited = messagingController.getPendingNotificationCount(socket.userId)
       socket.channel.push(Json.arr("notifications", notices, unvisited))
     },
+    "get_notifications_by_url" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
+      messagingController.getSendableNotificationsForUrl(socket.userId, url).map { case (nUriStr, notices) => 
+        socket.channel.push(Json.arr(requestId.toLong, notices, nUriStr))
+      }
+    },
     "get_unread_notifications" -> { case JsNumber(howMany) +: _ =>
       val notices = messagingController.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt)
       socket.channel.push(Json.arr("unread_notifications", notices))
