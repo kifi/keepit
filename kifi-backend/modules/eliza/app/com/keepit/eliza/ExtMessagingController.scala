@@ -59,8 +59,9 @@ class ExtMessagingController @Inject() (
       (o \ "extVersion").asOpt[String])
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
-    val responseFuture = messagingController.constructRecipientSet(recipients.map(ExternalId[User](_))).flatMap { recipientSet =>
-      val (thread, message) = messagingController.sendNewMessage(request.user.id.get, recipientSet, urls, title, text)
+
+    val responseFuture = messagingController.constructRecipientSeq(recipients.distinct.map(ExternalId[User](_))).flatMap { recipientSeq =>
+      val (thread, message) = messagingController.sendNewMessage(request.user.id.get, recipientSeq, urls, title, text)
       val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(thread, None)
       val threadInfoOpt = (o \ "url").asOpt[String].map { url =>
         messagingController.buildThreadInfos(request.user.id.get, Seq(thread), Some(url)).headOption
@@ -73,7 +74,7 @@ class ExtMessagingController @Inject() (
         //Analytics
         SafeFuture {
           val contextBuilder = userEventContextBuilder(Some(request))
-          recipientSet.foreach { recipient =>
+          recipientSeq.foreach { recipient =>
             contextBuilder += ("recipient", recipient.id)
           }
           contextBuilder += ("threadId", thread.id.get.id)
@@ -232,6 +233,11 @@ class ExtMessagingController @Inject() (
       val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
       val unvisited = messagingController.getPendingNotificationCount(socket.userId)
       socket.channel.push(Json.arr("notifications", notices, unvisited))
+    },
+    "get_notifications_by_url" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
+      messagingController.getSendableNotificationsForUrl(socket.userId, url).map { case (nUriStr, notices) => 
+        socket.channel.push(Json.arr(requestId.toLong, notices, nUriStr))
+      }
     },
     "get_unread_notifications" -> { case JsNumber(howMany) +: _ =>
       val notices = messagingController.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt)

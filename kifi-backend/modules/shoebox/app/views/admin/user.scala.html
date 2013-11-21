@@ -10,9 +10,9 @@
   allowedInvites: Int,
   emails: Seq[EmailAddress],
   abookInfos: Seq[ABookInfo],
-  contacts: Seq[Contact],
+  econtactCount: Int,
   econtacts: Seq[EContact],
-  abookEP: Option[String],
+  abookEP: String,
   collections: Seq[Collection],
   collectionFilter: Option[Id[Collection]],
   stateToken: String
@@ -58,6 +58,15 @@
           <form action="@com.keepit.controllers.admin.routes.AdminUserController.setInvitesCount(user.id.get)" class="form-inline" method="POST">
             <input type="text" name="allowedInvites" value="@allowedInvites">
             <input type="submit" value="Save">
+          </form>
+        </td>
+      </tr>
+      <tr>
+        <th>Connect to other user</th>
+        <td>
+          <form action="@com.keepit.controllers.admin.routes.AdminUserController.connectUsers(user.id.get)" class="form-inline" method="POST">
+            <input type="text" name="user2" value="">
+            <input type="submit" value="Connect to this User ID">
           </form>
         </td>
       </tr>
@@ -135,21 +144,9 @@
         }
     </table>
   }
-  @if(contacts.size > 0) {
+  @if(econtactCount > 0) {
     <br/>
-    <h3>Contacts (up to 500)</h3>
-    <div class="scrollArea">
-        <table class="table table-condensed table-striped">
-            <tr><th>ContactId</th><th>Origin</th><th>ABookId</th><th>Name</th><th>Email</th><th>Alt Emails</th></tr>
-            @for(contact <- contacts) {
-            <tr><td>@contact.id</td><td>@contact.origin</td><td>@contact.abookId</td><td>@contact.name</td><td>@contact.email</td><td>@contact.altEmails</td></tr>
-            }
-        </table>
-    </div>
-  }
-  @if(econtacts.size > 0) {
-    <br/>
-    <h3>EContacts (up to 500)</h3>
+    <h3>EContacts (total=@econtactCount; display up to 500)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
             <tr><th>EContactId</th><th>Name</th><th>Email</th><th>State</th></tr>
@@ -178,10 +175,10 @@
           <input type=submit value="Import"> contacts from your GMail account
       </form>
   </div>
-  @if(abookEP.isDefined) {
+  @if(abookEP != null) {
     <b>File-based uploads -- 42-internal testing only!</b>
     <b>IOS JSON file upload (UTF-8)</b>
-    <form class="form-inline" action=@{abookEP.get + user.id.get + "/ios/upload"} enctype="multipart/form-data" method="POST">
+    <form class="form-inline" action=@{abookEP} enctype="multipart/form-data" method="POST">
     IOS JSON file to upload: <input type=file name="abook_json">
     <input type=submit value="Upload">
     </form>

@@ -35,6 +35,12 @@ object ErrorWithStack {
       error.getStackTrace.filter(
         e => e != null &&
         e.getFileName != null &&
+        !e.getClassName.startsWith("org.jboss.netty") &&
+        !e.getClassName.startsWith("com.ning.http") &&
+        !e.getClassName.startsWith("scala.collection.IterableLike") &&
+        !e.getClassName.startsWith("scala.collection.AbstractIterable") &&
+        !e.getClassName.startsWith("scala.collection.TraversableLike") &&
+        !e.getClassName.startsWith("scala.collection.AbstractTraversable") &&
         !e.getFileName.contains("Airbrake") &&
         e.getFileName != "Option.scala" &&
         e.getFileName != "Action.scala" &&
@@ -42,6 +48,8 @@ object ErrorWithStack {
         e.getFileName != "ForkJoinPool.java" &&
         e.getFileName != "ForkJoinWorkerThread.java" &&
         e.getFileName != "Threads.scala" &&
+        e.getFileName != "Promise.scala" &&
+        e.getFileName != "Future.scala" &&
         e.getFileName != "AbstractDispatcher.scala"))
 }
 

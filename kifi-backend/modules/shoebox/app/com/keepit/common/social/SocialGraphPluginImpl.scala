@@ -15,8 +15,6 @@ import akka.pattern.ask
 import com.keepit.social.{SocialNetworkType, SocialGraphPlugin, SocialGraph, SocialUserRawInfoStore}
 import scala.util.Try
 import com.keepit.model.SocialConnection
-import com.keepit.common.social.FetchUserInfo
-import com.keepit.common.social.FetchUserInfoQuietly
 import com.keepit.common.db.Id
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
@@ -77,7 +75,11 @@ private[social] class SocialGraphActor @Inject() (
               socialUserInfo, friends.map(_._1.socialId), graph.networkType)
 
             val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
+            val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
             db.readWrite { implicit c =>
+              latestUserValues.collect { case (key, value) if userValueRepo.getValue(userId, key) != Some(value) =>
+                userValueRepo.setValue(userId, key, value)
+              }
               socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
             }
             connections

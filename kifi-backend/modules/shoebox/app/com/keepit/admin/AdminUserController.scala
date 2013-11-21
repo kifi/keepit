@@ -13,7 +13,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
+import com.keepit.social.{SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data.Forms._
 import play.api.data._
@@ -26,6 +26,8 @@ import java.math.BigInteger
 import java.security.SecureRandom
 import com.keepit.common.store.S3ImageStore
 import com.keepit.heimdal.{HeimdalServiceClient}
+import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.social.BasicUserRepo
 
 case class UserStatistics(
     user: User,
@@ -60,6 +62,7 @@ class AdminUserController @Inject() (
     userSessionRepo: UserSessionRepo,
     imageStore: S3ImageStore,
     clock: Clock,
+    basicUserRepo: BasicUserRepo,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
@@ -151,7 +154,7 @@ class AdminUserController @Inject() (
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
-    val contactsF = abookClient.getContacts(userId, 500)
+    val econtactCountF = abookClient.getEContactCount(userId)
     val econtactsF = abookClient.getEContacts(userId, 500)
 
     val (user, bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
@@ -164,7 +167,7 @@ class AdminUserController @Inject() (
         userRepo.get(userId)
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
-      val allowedInvites = userValueRepo.getValue(user.id.get, "availableInvites").getOrElse("6").toInt
+      val allowedInvites = userValueRepo.getValue(user.id.get, "availableInvites").getOrElse("20").toInt
       val emails = emailRepo.getAllByUser(user.id.get)
       (user, (bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
     }
@@ -194,16 +197,20 @@ class AdminUserController @Inject() (
     val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
-    val abookInfos:Seq[ABookInfo] = Await.result(abookInfoF, 5 seconds)
-    val contacts:Seq[Contact] = Await.result(contactsF, 5 seconds)
-    val econtacts:Seq[EContact] = Await.result(econtactsF, 5 seconds)
-    val abookServiceOpt = serviceDiscovery.serviceCluster(ServiceType.ABOOK).nextService()
-    val abookEP = for (s <- abookServiceOpt) yield s"http://${s.instanceInfo.publicIp.ip}:9000/internal/abook/"
+    val abookEP = com.keepit.common.routes.ABook.internal.upload(userId, ABookOrigins.IOS).url
     val state = new BigInteger(130, new SecureRandom()).toString(32)
 
-    Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-      fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, contacts, econtacts, abookEP,
-      collections, collectionFilter, state)).withSession(session + ("stateToken" -> state ))
+    Async {
+      for {
+        abookInfos <- abookInfoF
+        econtactCount <- econtactCountF
+        econtacts <- econtactsF
+      } yield {
+        Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
+          fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount, econtacts, abookEP,
+          collections, collectionFilter, state)).withSession(session + ("stateToken" -> state ))
+      }
+    }
   }
 
   def allUsersView = usersView(0)
@@ -276,11 +283,36 @@ class AdminUserController @Inject() (
   }
 
   def setInvitesCount(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("6")
+    val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("20")
     db.readWrite{ implicit session =>
       userValueRepo.setValue(userId, "availableInvites", count)
     }
     Redirect(routes.AdminUserController.userView(userId))
+  }
+
+  def connectUsers(user1: Id[User]) = AdminHtmlAction { implicit request =>
+    val user2 = Id[User](request.body.asFormUrlEncoded.get.apply("user2").head.toLong)
+    db.readWrite { implicit session =>
+      val socialUser1 = socialUserInfoRepo.getByUser(user1).find(_.networkType == SocialNetworks.FORTYTWO)
+      val socialUser2 = socialUserInfoRepo.getByUser(user2).find(_.networkType == SocialNetworks.FORTYTWO)
+      for {
+        su1 <- socialUser1
+        su2 <- socialUser2
+      } yield {
+        socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
+          case Some(sc) =>
+            socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
+          case None =>
+            socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
+        }
+      }
+
+      eliza.sendToUser(user1, Json.arr("new_friends", Set(basicUserRepo.load(user2))))
+      eliza.sendToUser(user2, Json.arr("new_friends", Set(basicUserRepo.load(user1))))
+
+      userConnectionRepo.addConnections(user1, Set(user2), requested = true)
+    }
+    Redirect(routes.AdminUserController.userView(user1))
   }
 
   def addExperiment(userId: Id[User], experiment: String) = AdminJsonAction { request =>

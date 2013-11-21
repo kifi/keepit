@@ -104,7 +104,7 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def getMaxId()(implicit session: RSession): Id[Message]
 
-  def getActiveThreadsForUser(userId: Id[User])(implicit session: RSession): Seq[Id[MessageThread]]
+  def getNumMessagesAfter(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): Int
 
 }
 
@@ -193,17 +193,13 @@ class MessageRepoImpl @Inject() (
     Query(table.map(_.id).max).first.getOrElse(Id[Message](0))
   }
 
-  def getActiveThreadsForUser(userId: Id[User])(implicit session: RSession): Seq[Id[MessageThread]] = { //Freaking slick doesn't support 'distinct' if you can believe it
-    val query = s"SELECT DISTINCT(thread_id) as tid FROM message WHERE sender_id='${userId.id}'"
-    val rs = session.getPreparedStatement(query).executeQuery()
-    val results = new scala.collection.mutable.ArrayBuffer[Id[MessageThread]]
-    while (rs.next()) {
-      results += Id[MessageThread](rs.getLong("tid"))
+  def getNumMessagesAfter(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): Int = {
+    afterOpt.map{ after => 
+      Query(table.filter(row => row.thread===threadId && row.createdAt > after).length).first
+    } getOrElse {
+      Query(table.filter(row => row.thread===threadId).length).first
     }
-    results
   }
-
-
 
 }
 

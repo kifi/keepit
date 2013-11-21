@@ -61,7 +61,8 @@ class ShoeboxController @Inject() (
   changedUriRepo: ChangedURIRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
   scrapeInfoRepo:ScrapeInfoRepo,
-  friendRequestRepo: FriendRequestRepo
+  friendRequestRepo: FriendRequestRepo,
+  userValueRepo: UserValueRepo
 )
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
@@ -463,10 +464,10 @@ class ShoeboxController @Inject() (
     val json = request.body
     val clicker = Id.format[User].reads(json \ "clicker").get
     val uriId = Id.format[NormalizedURI].reads(json \ "uriId").get
-    val keepers = (json \ "keepers").as[JsArray].value.map(Id.format[User].reads(_).get)
+    val keepers = (json \ "keepers").as[JsArray].value.map(ExternalId.format[User].reads(_).get)
     db.readWrite { implicit session =>
       if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, uriId, true)
-      else keepers.foreach { keeper => userBookmarkClicksRepo.increaseCounts(keeper, uriId, false) }
+      else keepers.foreach { extId => userBookmarkClicksRepo.increaseCounts(userRepo.get(extId).id.get, uriId, false) }
     }
     Ok
   }
@@ -476,5 +477,16 @@ class ShoeboxController @Inject() (
       friendRequestRepo.getBySender(senderId)
     }
     Ok(JsArray(requests.map{ x => Json.toJson(x) }))
+  }
+
+  def setUserValue(userId: Id[User], key: String) = SafeAsyncAction(parse.json) { request =>
+    val value = request.body.as[String]
+    db.readWrite { implicit session => userValueRepo.setValue(userId, key, value) }
+    Ok
+  }
+
+  def getUserValue(userId: Id[User], key: String) = SafeAsyncAction { request =>
+    val value = db.readWrite { implicit session => userValueRepo.getValue(userId, key) }
+    Ok(Json.toJson(value))
   }
 }

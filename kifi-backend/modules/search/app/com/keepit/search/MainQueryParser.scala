@@ -101,7 +101,7 @@ class MainQueryParser(
             phTerms.foreach{ t => hpQ.add(new Term("home_page", t.text)) }
             hpQ
           }
-          new ExistenceBoostQuery(query, homePageQuery, 0.2f)
+          new ExistenceBoostQuery(query, homePageQuery, homePageBoost)
         } else {
           query
         }

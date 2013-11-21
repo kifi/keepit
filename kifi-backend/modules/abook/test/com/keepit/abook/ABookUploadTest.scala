@@ -57,7 +57,6 @@ class ABookUploadTest extends Specification with DbTestInjector {
   )
 
   "ABook Controller" should {
-    // re-enable after adding status monitoring
     "handle imports from IOS and gmail" in {
       withDb(
         FakeABookRawInfoStoreModule(),
@@ -72,10 +71,28 @@ class ABookUploadTest extends Specification with DbTestInjector {
           "contacts" -> c42
         )
 
-        val abookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson)
+        var abookInfo:ABookInfo = try {
+          val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson)
+          val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson) // should have no impact
+          info1.state mustNotEqual ABookInfoStates.UPLOAD_FAILURE
+          info2.state mustNotEqual ABookInfoStates.UPLOAD_FAILURE
+          info1
+        } catch {
+          case e:Exception => {
+            e.printStackTrace(System.out)
+            throw e
+          }
+        }
         abookInfo.id.get mustEqual Id[ABookInfo](1)
         abookInfo.origin mustEqual ABookOrigins.IOS
         abookInfo.userId mustEqual u42
+        var nWait = 0
+        while (abookInfo.state != ABookInfoStates.ACTIVE && nWait < 10) {
+          nWait += 1
+          abookInfo = commander.getABookInfo(u42, abookInfo.id.get).get
+          Thread.sleep(1000)
+        }
+        abookInfo.state mustEqual ABookInfoStates.ACTIVE
 
         val abookInfos = commander.getABookRawInfosDirect(u42)
         val abookInfoSeqOpt = abookInfos.validate[Seq[ABookRawInfo]].asOpt
@@ -117,8 +134,8 @@ class ABookUploadTest extends Specification with DbTestInjector {
         val econtactsSeqOpt = econtactsJsArr.validate[Seq[EContact]].asOpt
         econtactsSeqOpt.isEmpty mustEqual false
         val econtactsSeq = econtactsSeqOpt.get
-        // econtactsSeq.isEmpty mustEqual false // todo: re-enable after adding state to abookInfo
-        // econtactsSeq.length mustEqual 3 // distinct
+        econtactsSeq.isEmpty mustEqual false
+        econtactsSeq.length mustEqual 3 // distinct
       }
     }
 

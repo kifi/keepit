@@ -414,7 +414,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}
 
-  def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: Id[User]*): Unit = {}
+  def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit = {}
 
   def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = ???
 
@@ -433,4 +433,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
 
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = ???
+
+  def getUserValue(userId: Id[User], key: String): Future[Option[String]] = Future.successful(None)
+
+  def setUserValue(userId: Id[User], key: String, value: String): Unit = {}
 }

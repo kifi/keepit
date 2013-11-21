@@ -8,7 +8,7 @@ import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{NonOKResponseException, HttpClient, DirectUrl}
-import com.keepit.model.{SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
+import com.keepit.model.{Gender, SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
 import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
 
 import play.api.libs.json._
@@ -110,6 +110,10 @@ class FacebookSocialGraph @Inject() (
     val oAuth2Info = credentials.oAuth2Info.getOrElse(throw new Exception("Can't find oAuth2Info for %s".format(socialUserInfo)))
     oAuth2Info.accessToken
   }
+
+  def extractUserValues(json: JsValue): Map[String, String] = Seq(
+    (json \ "gender").asOpt[String].map(Gender.key -> Gender(_).toString)
+  ).flatten.toMap
 
   private def fetchJsons(url: String): Seq[JsValue] = {
     val jsons = get(url)

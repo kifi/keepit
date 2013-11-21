@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.common.akka.SafeFuture
 import play.api.Play
+import com.keepit.social.SocialNetworks
 
 class UserController @Inject() (
   db: Database,
@@ -266,7 +267,7 @@ class UserController @Inject() (
 
   def getInviteCounts() = AuthenticatedJsonAction { request =>
     db.readOnly { implicit s =>
-      val availableInvites = userValueRepo.getValue(request.userId, "availableInvites").map(_.toInt).getOrElse(6)
+      val availableInvites = userValueRepo.getValue(request.userId, "availableInvites").map(_.toInt).getOrElse(20)
       val invitesLeft = availableInvites - invitationRepo.getByUser(request.userId).length
       Ok(Json.obj(
         "total" -> availableInvites,
@@ -334,8 +335,8 @@ class UserController @Inject() (
     res
   }
 
-  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
-    val contactsF = if (network.isEmpty || network.get == "email") { // todo: revisit
+  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction {  request =>
+    val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
       queryContacts(request.userId, search, after, limit)
     } else Future.successful(Seq.empty[JsObject])
     @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
@@ -363,7 +364,8 @@ class UserController @Inject() (
       }
 
     def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialConnectionInfo] =
-      socialConnectionRepo.getSocialConnectionInfo(sui.id.get) filter (searchScore(_) > 0)
+      if (sui.networkType == SocialNetworks.FORTYTWO) Nil
+      else socialConnectionRepo.getSocialConnectionInfo(sui.id.get) filter (searchScore(_) > 0)
 
     val connections = db.readOnly { implicit s =>
       val filteredConnections = socialUserRepo.getByUser(request.userId)
@@ -437,7 +439,7 @@ class UserController @Inject() (
         val returnEnumerator = Enumerator.generateM(poller)
         Ok.stream(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
       case None =>
-        Ok(domain + script(JsString("network_not_connected")))
+        Ok(domain += script(JsString("network_not_connected")))
     }
   }
 
@@ -445,7 +447,7 @@ class UserController @Inject() (
   def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = AuthenticatedHtmlAction { request =>
     val callback = callbackOpt.getOrElse("parent.updateABookProgress")
     val done = new AtomicBoolean(false)
-    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 200)
+    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 500)
     def reqF = abookServiceClient.getABookInfo(request.userId, id) map { abookInfoOpt =>
       abookInfoOpt match {
         case Some(abookInfo) if abookInfo.state == ABookInfoStates.ACTIVE => {
