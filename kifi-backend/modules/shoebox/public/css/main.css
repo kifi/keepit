@@ -259,6 +259,9 @@ input.user-filter {-moz-box-sizing: border-box; box-sizing: border-box; border: 
 .invite-friends-help.linkedin .invite-friends-help-logo { background-position: -70px; position: relative; top: -2px; }
 .invite-friends-help.email .invite-friends-help-logo { background-position: -250px }
 .invite-friends-help.gmail .invite-friends-help-logo { background-position: -250px }
+.invite-friends-help-container.error .no-error { display: none }
+.invite-friends-help-container .error-message { display: none }
+.invite-friends-help-container.error .error-message { display: block }
 
 .invite-friends-importing {display: none}
 .friends-importing { position: relative; font-size: 22px; font-weight: 100; letter-spacing: 1px; color: #878787; margin: 40px auto 0; text-align: center}

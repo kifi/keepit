@@ -17,6 +17,7 @@ trait SocialGraph {
   def extractFriends(parentJson: JsValue): Seq[(SocialUserInfo, JsValue)]
   def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue): SocialUserInfo
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit]
+  def extractUserValues(json: JsValue): Map[String, String]
 }
 
 trait SocialGraphModule extends ScalaModule

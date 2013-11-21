@@ -35,7 +35,7 @@ class ABookCommander @Inject() (
   }
 
   def getABookInfo(userId:Id[User], id:Id[ABookInfo]):Option[ABookInfo] = {
-    db.readOnly { implicit s =>
+    db.readOnly(attempts = 2) { implicit s =>
       abookInfoRepo.getByUserIdAndABookId(userId, id)
     }
   }
@@ -49,12 +49,13 @@ class ABookCommander @Inject() (
     s3 += (s3Key -> abookRawInfo)
     log.info(s"[upload($userId,$origin)] s3Key=$s3Key rawInfo=$abookRawInfo}")
 
-    val savedABookInfo = db.readWrite { implicit session =>
+    val numContacts = abookRawInfo.numContacts orElse {
+      (json \ "contacts").asOpt[JsArray] map { _.value.length }
+    }
+    val savedABookInfo = db.readWrite(attempts = 2) { implicit session =>
       val (abookInfo, dbEntryOpt) = origin match {
         case ABookOrigins.IOS => { // no ownerInfo or numContacts -- revisit later
-          val numContacts = abookRawInfo.numContacts orElse {
-            (json \ "contacts").asOpt[JsArray] map { _.value.length }
-          }
+
           val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key), numContacts = numContacts, state = ABookInfoStates.INACTIVE)
           val dbEntryOpt = {
             val s = abookInfoRepo.findByUserIdAndOrigin(userId, origin)
@@ -64,7 +65,7 @@ class ABookCommander @Inject() (
         }
         case ABookOrigins.GMAIL => {
           val ownerInfo = ownerInfoOpt.getOrElse(throw new IllegalArgumentException("Owner info not set for $userId and $origin"))
-          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), numContacts = abookRawInfo.numContacts, state = ABookInfoStates.INACTIVE)
+          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), numContacts = numContacts, state = ABookInfoStates.INACTIVE)
           val dbEntryOpt = abookInfoRepo.findByUserIdOriginAndOwnerId(userId, origin, abookInfo.ownerId)
           (abookInfo, dbEntryOpt)
         }
@@ -72,19 +73,19 @@ class ABookCommander @Inject() (
       val savedEntry = dbEntryOpt match {
         case Some(currEntry) => {
           log.info(s"[upload($userId,$origin)] current entry: $currEntry")
-          currEntry
+          abookInfoRepo.save(currEntry.withNumContacts(numContacts))
         }
         case None => abookInfoRepo.save(abookInfo)
       }
       savedEntry
     }
     val (proceed, updatedEntry) = if (savedABookInfo.state != ABookInfoStates.PENDING) {
-      val updated = db.readWrite { implicit s =>
+      val updated = db.readWrite(attempts = 2) { implicit s =>
         abookInfoRepo.save(savedABookInfo.withState(ABookInfoStates.PENDING))
       }
       (true, updated)
     } else {
-      val isOverdue = db.readOnly { implicit s =>
+      val isOverdue = db.readOnly(attempts = 2) { implicit s =>
         abookInfoRepo.isOverdue(savedABookInfo.id.get, currentDateTime.minusMinutes(10))
       }
       log.warn(s"[upload($userId,$origin)] $savedABookInfo already in PENDING state; overdue=$isOverdue")
@@ -101,7 +102,7 @@ class ABookCommander @Inject() (
   def getContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
     val ts = System.currentTimeMillis
     val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-    db.readOnly {
+    db.readOnly(attempts = 2) {
       implicit session =>
         contactRepo.getByUserIdIter(userId, maxRows).foreach {
           jsonBuilder += Json.toJson(_)
@@ -113,7 +114,7 @@ class ABookCommander @Inject() (
   }
 
   def getEContactByIdDirect(contactId:Id[EContact]):Option[JsValue] = {
-    val econtactOpt = db.readOnly { implicit s =>
+    val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
       econtactRepo.getById(contactId)
     }
     log.info(s"[getEContactByIdDirect($contactId)] res=$econtactOpt")
@@ -121,7 +122,7 @@ class ABookCommander @Inject() (
   }
 
   def getEContactByEmailDirect(userId:Id[User], email:String):Option[JsValue] = {
-    val econtactOpt = db.readOnly { implicit s =>
+    val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
       econtactRepo.getByUserIdAndEmail(userId, email)
     }
     log.info(s"[getEContactDirect($userId,$email)] res=$econtactOpt")
@@ -131,7 +132,7 @@ class ABookCommander @Inject() (
   def getEContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
     val ts = System.currentTimeMillis
     val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-    db.readOnly {
+    db.readOnly(attempts = 2) {
       implicit session =>
         econtactRepo.getByUserIdIter(userId, maxRows).foreach {
           jsonBuilder += Json.toJson(_)
@@ -143,7 +144,7 @@ class ABookCommander @Inject() (
   }
 
   def getABookRawInfosDirect(userId: Id[User]): JsValue = {
-    val abookInfos = db.readOnly {
+    val abookInfos = db.readOnly(attempts = 2) {
       implicit session =>
         abookInfoRepo.findByUserId(userId)
     }

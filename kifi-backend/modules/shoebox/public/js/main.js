@@ -692,7 +692,7 @@ $(function () {
 	var friendsHelpTmpl = Handlebars.compile($('#invite-friends-help').html());
 	var friendsImportingTmpl = Handlebars.compile($('#friends-importing').html());
 
-	function toggleInviteHelp(network, show) {
+	function toggleInviteHelp(network, show, error) {
 		var $cont = $('.invite-friends-help-container');
 		if (show && /^facebook|linkedin|email|gmail$/.test(network)) {
 			$cont.html(friendsHelpTmpl({
@@ -700,6 +700,7 @@ $(function () {
 				network: VENDOR_NAMES[network],
 				friends: VENDOR_FRIEND_NAME[network] + 's'
 			}));
+			$cont.toggleClass('error', !!error);
 			$cont.show();
 		}
 		else {
@@ -777,7 +778,7 @@ $(function () {
 	// these are needed for testing
 	if (DEV) {
 		ABOOK_ID_TO_CALLBACK[id] = null;
-		'notAvail,pending,processing,active'.split(',').forEach(function (data, i) {
+		'notAvail,pending,processing,error,active'.split(',').forEach(function (data, i) {
 			setTimeout(function () {
 				if (!iframe) {
 					return;
@@ -830,12 +831,11 @@ $(function () {
 		// these are needed for testing
 		if (DEV) {
 			window[IMPORT_CHECK] = null;
-			'fetching,import_connections,finished,end'.split(',').forEach(function (data, i) {
+			'fetching,import_connections,error,finished,end'.split(',').forEach(function (data, i) {
 				setTimeout(function () {
 					if (!iframe) {
 						return;
 					}
-					data = 'false';
 					if (deferred) {
 						deferred.resolve(data);
 						deferred = null;
@@ -909,13 +909,16 @@ $(function () {
 
 				console.log(this, arguments);
 				var hasAbook = Boolean(abooks && abooks.length);
-				var id, email;
+				var id, email, error;
 				var importing = hasAbook && abooks.some(function (abook) {
 					if (DEV) {
 						id = abook.id;
 						email = abook.ownerEmail;
 					}
-					if (abook.state !== 'active') {
+					if (abook.state === 'error') {
+						error = true;
+					}
+					if (abook.state !== 'error' && abook.state !== 'active') {
 						console.log('not active abook', abook, JSON.stringify(abook, null, '\t'));
 						id = abook.id;
 						email = abook.ownerEmail;
@@ -923,7 +926,7 @@ $(function () {
 					}
 				}) || !!(id && DEV);
 
-				toggleInviteHelp(network, !(hasAbook || importing));
+				toggleInviteHelp(network, !(hasAbook || importing), error);
 				toggleImporting(network, importing, null, email);
 
 				console.log('[email import status] network=' + network + ', hasAbook=' + hasAbook + ', importing=' + importing);
@@ -931,18 +934,25 @@ $(function () {
 				if (importing) {
 					var importUpdate = getAbookProgressUpdates(id, function (id, status, total, progress) {
 						console.log('getAbookProgressUpdates', id, status, total, progress);
-						if (status === 'active') {
+						switch (status) {
+						case 'active':
 							toggleImporting(network, false, null, email);
 							emptyAndPrepInvite(network);
 							endImportUpdate(importUpdate);
-						}
-						else {
+							break;
+						case 'error':
+							toggleImporting(network, false, null, email);
+							toggleInviteHelp(network, true, true);
+							endImportUpdate(importUpdate);
+							break;
+						default:
 							var text = '';
 							text += progress > 0 ? progress : '0';
 							if (total > 0) {
 								text += ' out of ' + total;
 							}
 							toggleImporting(network, true, text, email);
+							break;
 						}
 					});
 					prevImportUpdate = importUpdate;
@@ -964,6 +974,9 @@ $(function () {
 					if (status === 'finished' || status === 'end') {
 						emptyAndPrepInvite(network);
 					}
+					if (status === 'error') {
+						toggleInviteHelp(network, true, true);
+					}
 				}
 			});
 
@@ -983,9 +996,9 @@ $(function () {
 				var connected = isConnected(networks, network);
 				var importing = isImporting(status);
 
-				console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing, !(connected || importing), !importing && connected);
+				console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing, !(connected || importing), !importing && connected, status === 'error');
 
-				toggleInviteHelp(network, !(connected || importing));
+				toggleInviteHelp(network, !(connected || importing), status === 'error');
 				toggleImporting(network, importing);
 
 				if (!importing) {

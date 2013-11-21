@@ -44,7 +44,7 @@ class AnalyticsController @Inject() (
     |                 Note that this caused events with the field missing to be ignored (will otherwise show up under 'null').
     |                 Default: "false".
     |   mode=$        Where $ is either "count" or "users". The former counts number of events, the latter counts (and returns, in json mode) distinct users. Default: "count".
-    |   fitler=$      Where $ specifies a filter name to exclude certain events. Currently supported: "none", "noadmins". Default: "none".
+    |   filters=$      Where $ specifies filter names to exclude certain events. Default: "none".
     |   as=$          Where $ specifies the output format. Currently supported: "pie" (renders a donut chart), "json". Default: "pie".
   """.stripMargin
 
@@ -74,17 +74,17 @@ class AnalyticsController @Inject() (
     |                 Note that this caused events with the field missing to be ignored (will otherwise show up under 'null').
     |                 Default: "false".
     |   mode=$        Where $ is either "count" or "users" or "count_unique". "count" counts number of events, "users" counts (and returns, in json mode) distinct users, "count_unique" counts unique values of the field specified in the "uniqueField" param. Default: "count".
-    |   fitler=$      Where $ specifies a filter name to exclude certain events. Currently supported: "none", "noadmins". Default: "none".
+    |   filters=$      Where $ specifies filter names to exclude certain events. Default: "none".
     |   uniqueField=$ Where $ specifies which fields unique values to count in "count_unique" mode.
   """.stripMargin
 
-  def createMetric(repo: String, name: String, start: String, window: Int, step: Int, description: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, uniqueField: String) = Action { request =>
+  def createMetric(repo: String, name: String, start: String, window: Int, step: Int, description: String, events: String, groupBy: String, breakDown: String, mode: String, filters: String, uniqueField: String) = Action { request =>
     require(repo != SystemEvent.typeCode.code, s"Metrics are not supported yet for system events")
     if (request.queryString.get("help").nonEmpty) Ok(createHelp)
     else {
       assert(window>0)
       val startDT = DateTime.parse(start)
-      metricManager.createMetric(MetricDescriptor(name, startDT, window, step, description, if (events=="all") Seq() else events.split(","), groupBy, breakDown.toBoolean, mode, filter, startDT, uniqueField))
+      metricManager.createMetric(MetricDescriptor(name, startDT, window, step, description, if (events=="all") Seq() else events.split(","), groupBy, breakDown.toBoolean, mode, filters.split(","), startDT, uniqueField))
       Ok("New metric created")
     }
   }
@@ -165,7 +165,7 @@ class AnalyticsController @Inject() (
     })
   }
 
-  def adhocMetric(repo: String, from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filter: String, as: String) = Action{ request =>
+  def adhocMetric(repo: String, from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filters: String, as: String) = Action{ request =>
     require(repo != SystemEvent.typeCode.code, s"Metrics are not supported yet for system events")
     if (request.queryString.get("help").nonEmpty) Ok(adhocHelp)
     else {
@@ -173,8 +173,7 @@ class AnalyticsController @Inject() (
       val fromTime = if (from=="") currentDateTime.minusHours(1) else DateTime.parse(from)
       val toTime = if (to=="now") currentDateTime else DateTime.parse(to)
       val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(EventType(_)).toSet)
-
-      val contextRestriction  = metricManager.definedRestrictions(filter)
+      val contextRestriction = AndContextRestriction(filters.split(",").map(metricManager.definedRestrictions): _*)
 
       val jsonFuture = if (mode=="users") {
         val definition = new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown, as=="hist")
