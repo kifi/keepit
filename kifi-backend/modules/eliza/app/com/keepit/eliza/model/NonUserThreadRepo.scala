@@ -27,7 +27,6 @@ case class NonUserThread(
   uriId: Option[Id[NormalizedURI]],
   notifiedCount: Int = 0,
   muted: Boolean = false,
-  lastNotification: JsValue,
   kind: NonUserKind,
   emailAddress: Option[String],
   econtactId: Option[Id[EContact]]
@@ -91,17 +90,7 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit
 
-  def markPending(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession) : Unit
-
-  def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message], newJson: JsValue)(implicit session: RWSession) : Unit
-
-  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession) : Seq[NonUserThread]
-
   def isMuted(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession) : Boolean
-
-  def setNotificationJsonIfNotPresent(userId: Id[User], threadId: Id[MessageThread], notifJson: JsValue, message: Message)(implicit session: RWSession) : Unit
-
-  def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession) : Unit
 
 }
 
