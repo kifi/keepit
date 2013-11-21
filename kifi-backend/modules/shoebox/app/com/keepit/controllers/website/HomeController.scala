@@ -189,4 +189,9 @@ class HomeController @Inject() (
   def redditPreview = Action { implicit request =>
     Ok(views.html.website.redditPreview())
   }
+
+  def blank = Action {  // initially for the extension’s login iframe, but feel free to reuse
+    Ok("<!doctype html>").as(HTML)
+  }
+
 }
