@@ -73,7 +73,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject]
 
-  def getLatestSendableNotificationsForThreads(userId: Id[User], activeThreads: Seq[Id[MessageThread]], howMany: Int)(implicit session: RSession): Seq[JsObject]
+  def getLatestSendableNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject]
 
   def getSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[JsObject]
 
@@ -255,8 +255,8 @@ class UserThreadRepoImpl @Inject() (
     updateSendableNotifications(rawNotifications)
   }
 
-  def getLatestSendableNotificationsForThreads(userId: Id[User], activeThreads: Seq[Id[MessageThread]], howMany: Int)(implicit session: RSession): Seq[JsObject] = { //Not very efficinet - Stephen
-    val rawNotifications = (for (row <- table if row.user === userId && row.thread.inSet(activeThreads.toSet) && row.lastNotification=!=JsNull.asInstanceOf[JsValue] && row.lastNotification=!=null.asInstanceOf[JsValue]) yield row)
+  def getLatestSendableNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications = (for (row <- table if row.user === userId && row.started===true && row.lastNotification=!=JsNull.asInstanceOf[JsValue] && row.lastNotification=!=null.asInstanceOf[JsValue]) yield row)
                             .sortBy(row => (row.notificationUpdatedAt) desc)
                             .take(howMany).map(row => row.lastNotification ~ row.notificationPending)
                             .list
