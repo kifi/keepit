@@ -62,12 +62,21 @@
         </td>
       </tr>
       <tr>
+        <th>Connect to other user</th>
+        <td>
+          <form action="@com.keepit.controllers.admin.routes.AdminUserController.connectUsers(user.id.get)" class="form-inline" method="POST">
+            <input type="text" name="user2" value="">
+            <input type="submit" value="Connect to this User ID">
+          </form>
+        </td>
+      </tr>
+      <tr>
         <th>Experiments</th>
         <td id="experiments" class="form-inline">
           @for(exp <- Seq(ExperimentType.ADMIN, ExperimentType.BLOCK,
               ExperimentType.NO_SEARCH_EXPERIMENTS, ExperimentType.FAKE, ExperimentType.INACTIVE,
               ExperimentType.CAN_INVITE, ExperimentType.CAN_MESSAGE_ALL_USERS, ExperimentType.NOT_SENSITIVE,
-              ExperimentType.GMAIL_INVITE, ExperimentType.CAN_CONNECT, 
+              ExperimentType.GMAIL_INVITE, ExperimentType.CAN_CONNECT,
               ExperimentType.INBOX)) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(experiments.contains(exp)) {checked}>@exp.value
