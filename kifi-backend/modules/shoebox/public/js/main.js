@@ -1303,7 +1303,7 @@ $(function () {
 	function showUnfriendDialog(user, callback) {
 		unfriendDialogTmpl.render({
 			url: xhrBase + '/user/' + user.id + '/unfriend',
-			firstName: user.name
+			name: user.name
 		});
 		$unfriendDialog.off('submit').on('submit', 'form', function (e) {
 			e.preventDefault();
@@ -1343,12 +1343,14 @@ $(function () {
 
 	$('.user-filter').on('input', filterUsers);
 	$('.found-user-list').on('click', '.connect-button', function () {
-		var $a = $(this), o = $a.closest('.found-user').data(), xhr;
+		var $a = $(this),
+			$user = $a.closest('.found-user'),
+			o = $user.data(), xhr;
 		switch (o.status) {
 		case 'friend':
 			showUnfriendDialog({
 				id: o.id,
-				name: $a.find('.user-name').text()
+				name: $user.find('.user-name').text()
 			}, function (data) {
 				o.status = '';
 				$a.closest('.found-user').data('status', o.status).removeClass('friend requested').addClass(o.status);
