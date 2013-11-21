@@ -1291,6 +1291,26 @@ $(function () {
 			$inviteMessageDialog.dialog('show');
 		}
 	});
+	var $unfriendDialog = $('.unfriend-dialog')
+	.detach()
+	.show()
+	.on('click', '.unfriend-cancel', function (e) {
+		e.preventDefault();
+		$unfriendDialog.dialog('hide');
+	});
+	var unfriendDialogTmpl = Tempo.prepare($unfriendDialog);
+
+	function showUnfriendDialog(user, callback) {
+		unfriendDialogTmpl.render({
+			url: xhrBase + '/user/' + user.id + '/unfriend',
+			firstName: user.name
+		});
+		$unfriendDialog.off('submit').on('submit', 'form', function (e) {
+			e.preventDefault();
+			$.post(this.action, callback);
+			$unfriendDialog.dialog('hide');
+		}).dialog('show');
+	}
 
   // Friend Find
 
@@ -1326,8 +1346,12 @@ $(function () {
 		var $a = $(this), o = $a.closest('.found-user').data(), xhr;
 		switch (o.status) {
 		case 'friend':
-			xhr = $.post(xhrBase + '/user/' + o.id + '/unfriend', function (data) {
+			showUnfriendDialog({
+				id: o.id,
+				name: $a.find('.user-name').text()
+			}, function (data) {
 				o.status = '';
+				$a.closest('.found-user').data('status', o.status).removeClass('friend requested').addClass(o.status);
 			});
 			break;
 		case 'requested':
@@ -1346,9 +1370,11 @@ $(function () {
 			});
 			break;
 		}
-		xhr.always(function () {
-			$a.closest('.found-user').data('status', o.status).removeClass('friend requested').addClass(o.status);
-		});
+		if (xhr) {
+			xhr.always(function () {
+				$a.closest('.found-user').data('status', o.status).removeClass('friend requested').addClass(o.status);
+			});
+		}
 	});
 
 	var usersToShow = 40;
