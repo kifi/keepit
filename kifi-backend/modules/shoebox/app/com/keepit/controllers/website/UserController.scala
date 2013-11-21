@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.common.akka.SafeFuture
 import play.api.Play
+import com.keepit.social.SocialNetworks
 
 class UserController @Inject() (
   db: Database,
@@ -334,7 +335,7 @@ class UserController @Inject() (
     res
   }
 
-  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction {  request =>
     val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
       queryContacts(request.userId, search, after, limit)
     } else Future.successful(Seq.empty[JsObject])
@@ -363,7 +364,8 @@ class UserController @Inject() (
       }
 
     def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialConnectionInfo] =
-      socialConnectionRepo.getSocialConnectionInfo(sui.id.get) filter (searchScore(_) > 0)
+      if (sui.networkType == SocialNetworks.FORTYTWO) Nil
+      else socialConnectionRepo.getSocialConnectionInfo(sui.id.get) filter (searchScore(_) > 0)
 
     val connections = db.readOnly { implicit s =>
       val filteredConnections = socialUserRepo.getByUser(request.userId)

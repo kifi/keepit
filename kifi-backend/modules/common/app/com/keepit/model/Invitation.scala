@@ -21,8 +21,9 @@ case class Invitation(
 }
 
 object InvitationStates extends States[Invitation] {
-  val ACCEPTED = State[Invitation]("accepted")
+  // active means "invitation is active and may be accepted"
+  val ACCEPTED = State[Invitation]("accepted") // the invited person has created a kifi account
   val ADMIN_REJECTED = State[Invitation]("admin_rejected")
   val ADMIN_ACCEPTED = State[Invitation]("admin_accepted")
-  val JOINED = State[Invitation]("joined")
+  val JOINED = State[Invitation]("joined") // the invited person, after approval, has come back to kifi and logged in
 }
