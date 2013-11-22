@@ -887,9 +887,7 @@ $(function () {
 	}
 
 	function filterFriendsByNetwork(network) {
-		if (!network) {
-			network = '';
-		}
+		network = network || '';
 
 		endImportUpdate();
 
@@ -1016,7 +1014,7 @@ $(function () {
 
 	function emptyAndPrepInvite(network) {
 		var curNetwork = $('.invite-filters').attr('data-nw-selected') || '';
-		if ((network || '') === (curNetwork || '')) {
+		if ((network || '') === curNetwork) {
 			$nwFriends.find('ul').empty();
 			$nwFriends.find('.no-results').empty().hide();
 			prepInviteTab();
@@ -1137,12 +1135,13 @@ $(function () {
 	}
 
 	// Friend Invites
+	var FETCH_SIZE = 40;
 
 	var $nwFriends = $('.invite-friends').antiscroll({x: false, width: '100%'});
 	$nwFriends.find('.antiscroll-inner').scroll(function () { // infinite scroll
 		var sT = this.scrollTop, sH = this.scrollHeight;
 		// tweak these values as desired
-		var offset = sH / 3, toFetch = 40;
+		var offset = sH / 3, toFetch = FETCH_SIZE;
 		if (!$nwFriendsLoading.is(':visible') && this.clientHeight + sT > sH - offset) {
 			console.log('loading more friends');
 			prepInviteTab(toFetch);
@@ -1154,7 +1153,6 @@ $(function () {
 		$nwFriendsLoading.hide();
 		nwFriendsScroller.refresh();
 	});
-	var inviteFilterTmpl = Tempo.prepare($('.above-invite-friends'));
 	var $nwFriendsLoading = $('.invite-friends-loading');
 	var noResultsTmpl = Handlebars.compile($('#no-results-template').html());
 	var friendsTimeout;
@@ -1170,80 +1168,96 @@ $(function () {
 	}
 	updateInviteCache();
 
-	var friendsToShow = 40;
+	var friendsToShow = FETCH_SIZE;
 	var friendsShowing = [];
 	var moreFriends = true;
 	var invitesLeft;
 	function prepInviteTab(moreToShow) {
 		console.log('[prepInviteTab]', moreToShow);
-		if (moreToShow && !moreFriends) { return; }
+		if (moreToShow && !moreFriends) {
+			return;
+		}
 		moreFriends = true;
-		var network = $('.invite-filters').attr('data-nw-selected') || undefined;
-		var search = $('.invite-filter').val() || undefined;
+
+		var network = getNetworkFilterSelected();
+		var search = getNetworkFilterText();
+
 		toggleInviteHelp(network, false);
 		toggleImporting(network, false);
+
 		$nwFriendsLoading.show();
+
+		var limit = moreToShow || friendsToShow;
+		var lastValue = getLast(friendsShowing);
+		lastValue = lastValue && lastValue.value;
+
 		var opts = {
-			limit: moreToShow || friendsToShow,
-			after: moreToShow ? friendsShowing[friendsShowing.length - 1].value : undefined,
+			limit: limit,
+			after: moreToShow ? lastValue : void 0,
 			search: search,
 			network: network,
 			updatedAt: invitesUpdatedAt
 		};
+
 		console.log('[prepInviteTab]', opts);
+
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
-			console.log('[prepInviteTab] friends:', friends && friends.length, friends);
-			friends.forEach(function (obj) {
-				obj.label = obj.label || '';
-				obj.image = obj.image || '';
-				obj.status = obj.status || '';
+			console.log('[prepInviteTab] search: ' + search + ', network: ' + network + ', friends: ', friends);
+			friends.forEach(normalizeFriend);
 
-				var val = obj.value;
-				var network = obj.network = val && val.substring(0, val.indexOf('/')),
-					isEmail = network === 'email';
+			var nw = getNetworkFilterSelected();
+			var filter = getNetworkFilterText();
 
-				obj.email = isEmail && val.substring(val.indexOf('/') + 1);
-
-				var description;
-				switch (obj.status) {
-				case 'joined':
-					description = 'Joined Kifi';
-					break;
-				case 'invited':
-					description = 'Invited';
-					break;
-				default:
-					if (isEmail) {
-						description = 'Invite via email';
-					}
-					else {
-						description = 'A friend on ' + network;
-					}
-				}
-				obj.description = description;
-			});
-			var nw = $('.invite-filters').attr('data-nw-selected') || undefined;
-			var filter = $('.invite-filter').val() || undefined;
-			console.log(filter, search, nw, network);
-			if (filter !== search || nw !== network) { return; }
-			if (friends.length < moreToShow) {
-				moreFriends = false;
+			if (filter !== search || nw !== network) {
+				return;
 			}
+
 			if (!moreToShow) {
-				nwFriendsTmpl.clear();
-				friendsShowing.length = 0;
+				clearInviteFriends();
 			}
+
+			if (friends.length < limit) {
+				moreFriends = false;
+
+				if (!network) {
+					opts.network = 'email';
+					opts.after = void 0;
+					$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
+						console.log('[prepInviteTab2] search: ' + search + ', network: ' + network + ', friends: ', friends);
+						friends.forEach(normalizeFriend);
+
+						var nw = getNetworkFilterSelected();
+						var filter = getNetworkFilterText();
+
+						if (filter !== search || nw !== network) {
+							return;
+						}
+
+						if (friends.length < limit) {
+							moreFriends = false;
+						}
+
+						friendsShowing.push.apply(friendsShowing, friends);
+
+						var $noResults = $nwFriends.find('.no-results').empty().hide();
+						if (!friendsShowing.length) {
+							showNoSearchInviteResults($noResults, search, network);
+						}
+
+						nwFriendsTmpl.append(friends);
+
+					});
+				}
+			}
+
 			friendsShowing.push.apply(friendsShowing, friends);
+
 			var $noResults = $nwFriends.find('.no-results').empty().hide();
-			if (!friendsShowing.length) {
-				$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
-				$noResults.find('.refresh-friends').click(function () {
-					submitForm(wwwDomain + '/friends/invite/refresh', 'post');
-				});
-				$noResults.find('.tell-us').click(sendFeedback);
+			if (network && !friendsShowing.length) {
+				showNoSearchInviteResults($noResults, search, network);
 			}
+
 			nwFriendsTmpl.append(friends);
-			inviteFilterTmpl.render({results: friendsShowing.length, filter: filter});
 		})
 		.always(function () {
 			$nwFriendsLoading.hide();
@@ -1253,6 +1267,62 @@ $(function () {
 			$('.num-invites').text(invitesLeft).parent().show();
 		});
 	}
+
+	function getLast(arr, def) {
+		return arr && arr.length ? arr[arr.length - 1] : def;
+	}
+
+	function getNetworkFilterSelected(def) {
+		return $('.invite-filters').attr('data-nw-selected') || def;
+	}
+
+	function getNetworkFilterText(def) {
+		return $('.invite-filter').val() || def;
+	}
+
+	function clearInviteFriends() {
+		nwFriendsTmpl.clear();
+		friendsShowing.length = 0;
+	}
+
+	function normalizeFriend(obj) {
+		obj.label = obj.label || '';
+		obj.image = obj.image || '';
+		obj.status = obj.status || '';
+
+		var val = obj.value;
+		var network = val && val.substring(0, val.indexOf('/'));
+		obj.network = network;
+		var isEmail = network === 'email';
+		obj.email = isEmail && val.substring(val.indexOf('/') + 1);
+
+		var description;
+		switch (obj.status) {
+		case 'joined':
+			description = 'Joined Kifi';
+			break;
+		case 'invited':
+			description = 'Invited';
+			break;
+		default:
+			if (isEmail) {
+				description = 'Invite via email';
+			}
+			else {
+				description = 'A friend on ' + network;
+			}
+		}
+		obj.description = description;
+	}
+
+	function showNoSearchInviteResults($noResults, search, network) {
+		$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
+		$noResults.find('.refresh-friends').click(function () {
+			submitForm(wwwDomain + '/friends/invite/refresh', 'post');
+		});
+		$noResults.find('.tell-us').click(sendFeedback);
+	}
+
 	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
 	.on('click', '.more-invites', function (e) {
 		e.preventDefault();
@@ -1261,6 +1331,7 @@ $(function () {
 			$noInvitesDialog.dialog('hide');
 		});
 	});
+
 	var $inviteMessageDialog = $('.invite-message-dialog').detach().show()
 	.on('submit', 'form', function (e) {
 		e.preventDefault();
@@ -1278,6 +1349,7 @@ $(function () {
 		e.preventDefault();
 		$inviteMessageDialog.dialog('hide');
 	});
+
 	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
 	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
@@ -1304,6 +1376,7 @@ $(function () {
 			$inviteMessageDialog.dialog('show');
 		}
 	});
+
 	var $unfriendDialog = $('.unfriend-dialog')
 	.detach()
 	.show()
@@ -1331,7 +1404,7 @@ $(function () {
 	$foundUsers.find('.antiscroll-inner').scroll(function () { // infinite scroll
 		var sT = this.scrollTop, sH = this.scrollHeight;
 		// tweak these values as desired
-		var offset = sH / 3, toFetch = 40;
+		var offset = sH / 3, toFetch = FETCH_SIZE;
 		if (!$('.found-user-list-loading').is(':visible') && this.clientHeight + sT > sH - offset) {
 			console.log('loading more users');
 			prepFindTab(toFetch);
@@ -1392,7 +1465,7 @@ $(function () {
 		}
 	});
 
-	var usersToShow = 40;
+	var usersToShow = FETCH_SIZE;
 	var usersShowing = [];
 	var userPageIndex = 0;
 	var moreUsers = true;
@@ -1453,7 +1526,6 @@ $(function () {
 				$noResults.show();
 			}
 			usersTmpl.append(friends);
-			//inviteFilterTmpl.render({results: usersShowing.length, filter: filter});
 		});
 	}
 
