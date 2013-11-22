@@ -50,8 +50,15 @@ class MetaphoneBooster {
   }
 }
 
+class CompositeBooster {
+  val comp = new CompositeDistance()
+  def similarity(a: Array[String], b: Array[String]): Float = {
+    (a zip b).map{ case (x, y) => comp.getDistance(x, y) }.foldLeft(1f)(_*_)
+  }
+}
+
 class ScoreDecorator(originalQuery: String) {
-  val booster = new MetaphoneBooster
+  val booster = new CompositeBooster
   val originalTerms = originalQuery.split(" ")
   def decorate(scoredSuggest: ScoredSuggest): ScoredSuggest = {
     val boost = booster.similarity(originalTerms, scoredSuggest.value.split(" "))
