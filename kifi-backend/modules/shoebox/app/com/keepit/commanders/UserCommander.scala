@@ -59,7 +59,11 @@ class UserCommander @Inject() (
     } else {
       Seq()
     }
-    basicUsers ++ iNeededToDoThisIn20Minutes
+
+    // This will eventually be a lot more complex. However, for now, tricking the client is the way to go.
+    // ^^^^^^^^^ Unrelated to the offensive code above ^^^^^^^^^
+    val kifiSupport = BasicUser(ExternalId[User]("742fa97c-c12a-4dcf-bff5-0f33280ef35a"), "Kifi Help", "", "Vjy5S.jpg")
+    basicUsers ++ iNeededToDoThisIn20Minutes + kifiSupport
   }
 
   private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
