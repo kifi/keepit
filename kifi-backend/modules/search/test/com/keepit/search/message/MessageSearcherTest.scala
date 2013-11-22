@@ -32,7 +32,7 @@ class MessageSearcherTest extends Specification with TestInjector{
 
     val thread1 = ThreadContent(
       mode =  FULL,
-      id = Id[ThreadContent](1),
+      id = Id[ThreadContent](44),
       seq = SequenceNumber(1), 
       participants = Seq(user1, user2),
       updatedAt = currentDateTime,
@@ -50,7 +50,7 @@ class MessageSearcherTest extends Specification with TestInjector{
 
     val thread2 = ThreadContent(
       mode =  FULL,
-      id = Id[ThreadContent](2),
+      id = Id[ThreadContent](9),
       seq = SequenceNumber(2),  
       participants = Seq(user1, user2),
       updatedAt = currentDateTime,
@@ -67,7 +67,7 @@ class MessageSearcherTest extends Specification with TestInjector{
 
     val thread3 = ThreadContent(
       mode =  FULL,
-      id = Id[ThreadContent](3),
+      id = Id[ThreadContent](388),
       seq = SequenceNumber(3),  
       participants = Seq(user1, user3),
       updatedAt = currentDateTime,
