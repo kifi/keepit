@@ -67,12 +67,13 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
         val expected = Json.parse("""[
+            {"id":"742fa97c-c12a-4dcf-bff5-0f33280ef35a","firstName":"Kifi Help","lastName":"","pictureName":"Vjy5S.jpg"},
             {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a673","firstName":"Paul","lastName":"Dirac","pictureName":"0.jpg"},
             {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a674","firstName":"James","lastName":"Chadwick","pictureName":"0.jpg"},
             {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a675","firstName":"Arthur","lastName":"Compton","pictureName":"0.jpg"},
             {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a676","firstName":"Albert","lastName":"Einstein","pictureName":"0.jpg"}
           ]""")
-        Json.parse(contentAsString(result)) must equalTo(expected)
+        Json.parse(contentAsString(result)).as[JsArray].value.toSet must equalTo(expected.as[JsArray].value.toSet)
       }
     }
 
