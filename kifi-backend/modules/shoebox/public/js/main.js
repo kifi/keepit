@@ -2765,22 +2765,10 @@ $(function () {
 		updateConnectTab();
 	}
 
-	function canInviteViaGmail() {
-		return DEV || me.experiments.indexOf('admin') >= 0 ||
-			me.experiments.indexOf('gmail_invite') >= 0;
-	}
-
 	function updateGmailTab() {
-		var $button = $('a[data-nw="email"]'),
-			enabled = canInviteViaGmail();
-		if (enabled) {
-			$button.attr('href', 'friends/invite/email');
-			$button.attr('data-href', 'friends/invite/email');
-		}
-		else {
-			$button.removeAttr('href');
-			$button.removeAttr('data-href');
-		}
+		var $button = $('a[data-nw="email"]');
+		$button.attr('href', 'friends/invite/email');
+		$button.attr('data-href', 'friends/invite/email');
 	}
 
 	function updateConnectTab() {
