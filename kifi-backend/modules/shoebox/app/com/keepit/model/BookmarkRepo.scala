@@ -68,7 +68,7 @@ class BookmarkRepoImpl @Inject() (
 
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Bookmark]])(implicit session: RSession): Seq[Bookmark] =  {
     val q = for {
-      t <- table if t.isPrivate === true || includePrivate == true
+      t <- table if t.isPrivate === false || includePrivate == true
     } yield t
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
