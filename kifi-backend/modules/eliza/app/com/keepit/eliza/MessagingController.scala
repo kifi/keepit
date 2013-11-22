@@ -50,7 +50,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 *  -Make notifications not wait for a message ID
 */
 
-case class NotAuthorizedException(msg: String) extends java.lang.Throwable
+case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
 object MessagingController {
   val THREAD_PAGE_SIZE = 20
@@ -316,10 +316,10 @@ class MessagingController @Inject() (
   }
 
   private def buildMessageNotificationJson(
-      message: Message, 
-      thread: MessageThread, 
-      messageWithBasicUser: MessageWithBasicUser, 
-      locator: String, 
+      message: Message,
+      thread: MessageThread,
+      messageWithBasicUser: MessageWithBasicUser,
+      locator: String,
       unread: Boolean,
       originalAuthorIdx: Int,
       unseenAuthors: Int,
@@ -364,7 +364,7 @@ class MessagingController @Inject() (
         userThreadRepo.isMuted(userId, thread.id.get)
       }
       val lastSeenOpt : Option[DateTime] = orderedActivityInfo.filter(_.userId==userId).head.lastSeen
-      val unseenAuthors : Int = lastSeenOpt match { 
+      val unseenAuthors : Int = lastSeenOpt match {
         case Some(lastSeen) => orderedActivityInfo.filter(ta => ta.lastActive.isDefined && ta.lastActive.get.isAfter(lastSeen)).length
         case None => orderedActivityInfo.length
       }
@@ -492,7 +492,7 @@ class MessagingController @Inject() (
         sentOnUriId = thread.uriId
       ))
     }
-    SafeFuture { 
+    SafeFuture {
       db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) }
     }
 
@@ -520,8 +520,8 @@ class MessagingController @Inject() (
     setLastSeen(from, thread.id.get, Some(message.createdAt))
     db.readWrite { implicit session => userThreadRepo.setLastActive(from, thread.id.get, message.createdAt) }
 
-    val threadActivity = db.readOnly{ implicit session => 
-      userThreadRepo.getThreadActivity(thread.id.get) 
+    val threadActivity = db.readOnly{ implicit session =>
+      userThreadRepo.getThreadActivity(thread.id.get)
     } sortWith { case (first, second) =>
       first.id.id < second.id.id
     } sortWith { case (first, second) =>
