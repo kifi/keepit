@@ -30,6 +30,7 @@ import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.common.akka.SafeFuture
 import play.api.Play
 import com.keepit.social.SocialNetworks
+import com.keepit.eliza.ElizaServiceClient
 
 class UserController @Inject() (
   db: Database,
@@ -47,6 +48,7 @@ class UserController @Inject() (
   searchFriendRepo: SearchFriendRepo,
   postOffice: LocalPostOffice,
   userCommander: UserCommander,
+  elizaServiceClient: ElizaServiceClient,
   clock: Clock,
   abookServiceClient: ABookServiceClient
 ) extends WebsiteController(actionAuthenticator) {
@@ -115,8 +117,24 @@ class UserController @Inject() (
           Ok(Json.obj("success" -> true, "alreadySent" -> true))
         } else {
           friendRequestRepo.getBySenderAndRecipient(user.id.get, request.userId) map { friendReq =>
+            val socialUser1 = socialUserRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
+            val socialUser2 = socialUserRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
+            for {
+              su1 <- socialUser1
+              su2 <- socialUser2
+            } yield {
+              socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
+                case Some(sc) =>
+                  socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
+                case None =>
+                  socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
+              }
+            }
             userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
-            // TODO(greg): trigger notification?
+
+            elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
+            elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
+
             Ok(Json.obj("success" -> true, "acceptedRequest" -> true))
           } getOrElse {
             friendRequestRepo.save(FriendRequest(senderId = request.userId, recipientId = user.id.get))
