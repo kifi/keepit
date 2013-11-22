@@ -106,7 +106,6 @@ class AdminUserController @Inject() (
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
-    val contactsF = abookClient.getContacts(userId, 40000000)
     val econtactsF = abookClient.getEContacts(userId, 40000000)
     val (user, socialUserInfos, sentElectronicMails) = db.readOnly { implicit s =>
       val user = userRepo.get(userId)
@@ -117,10 +116,12 @@ class AdminUserController @Inject() (
     val rawInfos = socialUserInfos map {info =>
       socialUserRawInfoStore.get(info.id.get)
     }
-    val abookInfos:Seq[ABookInfo] = Await.result(abookInfoF, 5 seconds)
-    val contacts:Seq[Contact] = Await.result(contactsF, 10 seconds)
-    val econtacts:Seq[EContact] = Await.result(econtactsF, 10 seconds)
-    Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails, abookInfos, contacts, econtacts))
+    Async {
+      for {
+        abookInfos <- abookInfoF
+        econtacts <- econtactsF
+      } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails, abookInfos, econtacts))
+    }
   }
 
   def updateCollectionsForBookmark(id: Id[Bookmark]) = AdminHtmlAction { implicit request =>
