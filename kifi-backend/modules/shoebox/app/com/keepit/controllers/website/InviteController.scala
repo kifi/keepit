@@ -225,7 +225,8 @@ class InviteController @Inject() (db: Database,
                   Ok(views.html.auth.auth(
                     "signup",
                     titleText = s"${name}, join ${inviterUserOpt.get.firstName} on Kifi!",
-                    titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUserOpt.get.firstName}'s invite."
+                    titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUserOpt.get.firstName}'s invite.",
+                    inviteVideo = true
                   )).withCookies(Cookie("inv", invite.externalId.id))
                 case None =>
                   log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
