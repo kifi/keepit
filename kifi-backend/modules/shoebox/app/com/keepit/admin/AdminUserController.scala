@@ -153,14 +153,18 @@ class AdminUserController @Inject() (
     } getOrElse BadRequest
   }
 
-  def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
+  def userView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
     val econtactsF = abookClient.getEContacts(userId, 500)
 
+    if (showPrivates) {
+      log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps")
+    }
+
     val (user, bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
       val user = userRepo.get(userId)
-      val bookmarks = bookmarkRepo.getByUser(userId)
+      val bookmarks = bookmarkRepo.getByUser(userId, Some(BookmarkStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
