@@ -22,6 +22,9 @@ class TermScorerTest extends Specification {
   val EPSILON = 1e-5f
 
   def equals(a: Float, b: Float) = abs(a - b) < EPSILON
+  def log2(x: Double) = log(x)/log(2)
+  def idf(termFreq: Int, numDocs: Int): Float = 1f + log2(numDocs.toFloat/(1f + termFreq)).toFloat
+  def singleTermScore(docFreq: Int, numDocs: Int): Float = log2(1 + docFreq).toFloat * idf(docFreq, numDocs)
 
   def mkDoc(content: String) = {
     val doc = new Document()
@@ -43,7 +46,7 @@ class TermScorerTest extends Specification {
 
       val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
       val scorer = new TermScorer(statsReader, false)
-      equals(scorer.scoreSingleTerm("abc"), log2(1 + 3f).toFloat) === true         // 3 intersections
+      equals(scorer.scoreSingleTerm("abc"), singleTermScore(3, 3)) === true         // 3 intersections
       equals(scorer.scorePairTerms("def", "deg"), scorer.minPairTermsScore) === true          // zero intersection, smoothed to min score
     }
 
