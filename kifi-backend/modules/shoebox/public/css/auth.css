@@ -453,6 +453,55 @@ footer {
 .cancel-button:active {
   background: #d1d1d1;
 }
+.intro-header {
+  margin: 0 0 24px;
+  text-align: center;
+  font-weight: 300;
+  font-size: 20px;
+  line-height: 24px;
+  color: #5a5a5a;
+}
+a.video-frame {
+  border: 8px solid #aaa;
+  border-radius: 10px;
+}
+.video-still {
+  display: block;
+  width: 325px;
+  height: 182px;
+  font-size: 0;
+  line-height: 0;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.1) url(/assets/img/video-still.jpg);
+  background-size: cover;
+  position: relative;
+}
+.video-still:before {
+  content: ' ';
+  position: absolute;
+  top: 59px;
+  left: 125px;
+  height: 68px;
+  width: 68px;
+  background-color: #6fa6ef;
+  border-radius: 4px;
+}
+.video-still:hover:before,
+.video-still:focus:before {
+  background: #7daff1;
+}
+.video-still:active:before {
+  background: #699ee3;
+}
+.video-still:after {
+  content: ' ';
+  position: absolute;
+  top: 76px;
+  left: 145px;
+  border-style: solid;
+  border-color: transparent #fff;
+  border-width: 17px 0 17px 34px;
+}
 .form-error {
   position: absolute;
   z-index: 10;
