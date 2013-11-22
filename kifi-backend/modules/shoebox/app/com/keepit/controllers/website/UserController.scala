@@ -25,7 +25,7 @@ import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.{AtomicInteger, AtomicBoolean}
 import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.common.akka.SafeFuture
 import play.api.Play
@@ -444,7 +444,7 @@ class UserController @Inject() (
   }
 
   // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
-  val abookUploadTimeoutThreshold = sys.props.getOrElse("abook.upload.timeout.threshold", "30").toInt
+  val abookUploadTimeoutThreshold = sys.props.getOrElse("abook.upload.timeout.threshold", "30").toInt * 1000
   def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = AuthenticatedHtmlAction { request =>
     import ABookInfoStates._
     val ts = System.currentTimeMillis
@@ -453,17 +453,22 @@ class UserController @Inject() (
     def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 500)
     def reqF = abookServiceClient.getABookInfo(request.userId, id) map { abookInfoOpt =>
       log.info(s"[getABookUploadStatus($id)] ... ${abookInfoOpt.map(_.state)}")
-      if ((System.currentTimeMillis - ts) > (abookUploadTimeoutThreshold * 1000)) { done.set(true) }
-      abookInfoOpt match {
-        case None =>
-          Some(s"<script>$callback($id,'notAvail',-1,-1)</script>")
-        case Some(abookInfo) =>
-          val resp = Some(s"<script>$callback($id,'${abookInfo.state}',${abookInfo.numContacts.getOrElse(-1)},${abookInfo.numProcessed.getOrElse(-1)})</script>")
-          if (done.get) None else abookInfo.state match {
-            case ACTIVE => { done.set(true); resp }
-            case UPLOAD_FAILURE => { done.set(true); resp }
-            case PENDING => resp
-          }
+      if (done.get) None
+      else {
+        val (state, numContacts, numProcessed) = abookInfoOpt match {
+          case None => ("notAvail", -1, -1)
+          case Some(abookInfo) =>
+            val resp = (abookInfo.state, abookInfo.numContacts.getOrElse(-1), abookInfo.numProcessed.getOrElse(-1))
+            abookInfo.state match {
+              case ACTIVE => { done.set(true); resp }
+              case UPLOAD_FAILURE => { done.set(true); resp }
+              case PENDING => resp
+            }
+        }
+        if ((System.currentTimeMillis - ts) > abookUploadTimeoutThreshold) {
+          done.set(true)
+          Some(s"<script>$callback($id,'timeout',${numContacts},${numProcessed})</script>")
+        } else Some(s"<script>$callback($id,'${state}',${numContacts},${numProcessed})</script>")
       }
     }
     val firstResponse = Enumerator(domain.body)
