@@ -57,12 +57,12 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
       "$token" -> JsString(projectToken),
       "$distinct_id" -> JsString(s"${UserEvent.typeCode.code}_${user.id.get}"),
       "$ip" -> JsNumber(0),
-      "$set" -> JsObject(superProperties) ++ Json.obj(
+      "$set" -> JsObject(superProperties ++ Seq(
         "$first_name" -> JsString(user.firstName),
         "$last_name" -> JsString(user.lastName),
         "$created" -> JsString(user.createdAt.toString),
         "state" -> JsString(user.state.value)
-      )
+      ))
     )
     sendData("http://api.mixpanel.com/engage", data)
   }
