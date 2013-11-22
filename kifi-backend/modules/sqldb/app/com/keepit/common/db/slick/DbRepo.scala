@@ -19,7 +19,7 @@ trait Repo[M <: Model[M]] {
   def all()(implicit session: RSession): Seq[M]
   def save(model: M)(implicit session: RWSession): M
   def count(implicit session: RSession): Int
-  def page(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[M]
+  def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
   def invalidateCache(model: M)(implicit session: RSession): M
 }
 
@@ -76,7 +76,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
 
   def all()(implicit session: RSession): Seq[M] = table.map(t => t).list
 
-  def page(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[M] =  {
+  def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M] =  {
     val q = for {
       t <- table
     } yield t

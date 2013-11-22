@@ -106,7 +106,6 @@ class AdminUserController @Inject() (
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
-    val contactsF = abookClient.getContacts(userId, 40000000)
     val econtactsF = abookClient.getEContacts(userId, 40000000)
     val (user, socialUserInfos, sentElectronicMails) = db.readOnly { implicit s =>
       val user = userRepo.get(userId)
@@ -117,10 +116,12 @@ class AdminUserController @Inject() (
     val rawInfos = socialUserInfos map {info =>
       socialUserRawInfoStore.get(info.id.get)
     }
-    val abookInfos:Seq[ABookInfo] = Await.result(abookInfoF, 5 seconds)
-    val contacts:Seq[Contact] = Await.result(contactsF, 10 seconds)
-    val econtacts:Seq[EContact] = Await.result(econtactsF, 10 seconds)
-    Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails, abookInfos, contacts, econtacts))
+    Async {
+      for {
+        abookInfos <- abookInfoF
+        econtacts <- econtactsF
+      } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails, abookInfos, econtacts))
+    }
   }
 
   def updateCollectionsForBookmark(id: Id[Bookmark]) = AdminHtmlAction { implicit request =>
@@ -152,14 +153,18 @@ class AdminUserController @Inject() (
     } getOrElse BadRequest
   }
 
-  def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
+  def userView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
     val econtactsF = abookClient.getEContacts(userId, 500)
 
+    if (showPrivates) {
+      log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps")
+    }
+
     val (user, bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
       val user = userRepo.get(userId)
-      val bookmarks = bookmarkRepo.getByUser(userId)
+      val bookmarks = bookmarkRepo.getByUser(userId, Some(BookmarkStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)

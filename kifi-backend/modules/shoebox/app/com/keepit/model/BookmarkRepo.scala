@@ -10,6 +10,7 @@ import scala.Some
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] {
+  def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Bookmark]])(implicit session: RSession): Seq[Bookmark]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
                       excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
                      (implicit session: RSession): Option[Bookmark]
@@ -63,6 +64,13 @@ class BookmarkRepoImpl @Inject() (
     def seq = column[SequenceNumber]("seq", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~
       userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark.apply _, Bookmark.unapply _)
+  }
+
+  def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Bookmark]])(implicit session: RSession): Seq[Bookmark] =  {
+    val q = for {
+      t <- table if t.isPrivate === false || includePrivate == true
+    } yield t
+    q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
   def removeFromCache(bookmark: Bookmark)(implicit session: RSession): Unit = {
