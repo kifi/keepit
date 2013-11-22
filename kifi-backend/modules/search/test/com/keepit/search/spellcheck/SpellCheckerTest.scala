@@ -11,6 +11,7 @@ import org.specs2.mutable.Specification
 
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.VolatileIndexDirectoryImpl
+import scala.math.abs
 
 class SpellCheckerTest extends Specification {
 
@@ -52,7 +53,7 @@ class SpellCheckerTest extends Specification {
     "work" in {
       val mp = new MetaphoneDistance()
       mp.getDistance("apple", "aple") === 1f
-      (mp.getDistance("aple", "able") - 2/3f).max(1e-5f) === 1e-5f
+      abs(mp.getDistance("aple", "able") - 2/3f) < (1e-5f) === true
     }
   }
 

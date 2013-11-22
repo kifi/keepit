@@ -4,7 +4,9 @@ import scala.util.Random
 import scala.math.{exp, log => logE}
 import com.keepit.common.logging.Logging
 
-class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) extends Logging {
+// enableAdjScore: terms closer to each other get boosted
+// orderedAdj: term should appear in right order
+class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean, orderedAdj: Boolean = false) extends Logging {
 
   private var statsMap = Map.empty[String, SimpleTermStats]
   private var jointMap = Map.empty[(String, String), Set[Int]]
@@ -53,10 +55,10 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) extends 
     val (aMap, bMap) = (statsReader.getDocsAndPositions(a, liveDocs), statsReader.getDocsAndPositions(b, liveDocs))
     assume (aMap.keySet == bMap.keySet)
     val scorer = new AdjacencyScorer
-    val dists = aMap.keySet.map{k => scorer.distance(aMap(k), bMap(k), earlyStopValue = 1)}
+    val dists = aMap.keySet.map{k => scorer.distance(aMap(k), bMap(k), earlyStopValue = 1, orderedAdj)}
     log.info(s"adjScore: ${a}, ${b}, distances: ${dists.mkString(" ")}")
     val minDist = dists.foldLeft(Float.MaxValue)(_ min _)
-    log.info(s"adjScore: ${a}, ${b}, min dist: ${minDist}")
+    log.info(s"adjScore: ${a}, ${b}, min dist: ${minDist}, orderedAdj: ${orderedAdj}")
     gaussianScore(minDist - 1).toFloat
   }
 
@@ -71,7 +73,7 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean) extends 
     val inter = getOrUpdateJoint(key)
     val pairScore = log2(1.0 + inter.size.max(1)).toFloat   // smooth
     val adjBoost = if (enableAdjScore) {
-      getOrUpdateAdjScore(key, inter)
+      if (!orderedAdj) getOrUpdateAdjScore(key, inter) else getOrUpdateAdjScore((a, b), inter)
     } else 1f
     log.info(s"TermScorer: ${a}, ${b}, pairFreqScore = ${pairScore}, adjBoost = ${adjBoost}")
     pairScore * adjBoost

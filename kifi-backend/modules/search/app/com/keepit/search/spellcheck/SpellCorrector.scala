@@ -8,11 +8,11 @@ trait SpellCorrector {
   def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest]
 }
 
-class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: String, enableAdjScore: Boolean) extends SpellCorrector{
+class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: String, enableAdjScore: Boolean, orderedAdjScore: Boolean = false) extends SpellCorrector{
   val spellChecker = spellIndexer.getSpellChecker
   val stopwords = StandardAnalyzer.STOP_WORDS_SET
   def suggestionProvider = {
-    val termScorer = new TermScorer(spellIndexer.getTermStatsReader, enableAdjScore)
+    val termScorer = new TermScorer(spellIndexer.getTermStatsReader, enableAdjScore, orderedAdjScore)
     suggestionProviderFlag match {
       case "viterbi" => new ViterbiSuggestionProvider(termScorer)
       case _ => new SlowSuggestionProvider(termScorer)
