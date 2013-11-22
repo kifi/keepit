@@ -30,13 +30,13 @@ case class NonOKResponseException(url: HttpUri, response: ClientResponse, reques
   override def toString(): String = getMessage
 }
 
-case class LongWaitException(url: HttpUri, response: Response, waitTime: Int, duration: Int, remoteTime: Int)
-    extends Exception(s"[${url.service}] Long Wait on ${url.summary} total-time:${duration}ms remote-time:${remoteTime}ms wait-time:${waitTime}ms status:${response.status}"){
+case class LongWaitException(request: Request, response: ClientResponse, waitTime: Int, duration: Int, remoteTime: Int)
+    extends Exception(s"[${request.httpUri.service}] Long Wait on ${request.httpUri.summary} tracking-id:${request.trackingId} total-time:${duration}ms remote-time:${remoteTime}ms wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status}"){
   override def toString(): String = getMessage
 }
 
-case class SlowJsonParsingException(url: HttpUri, response: ClientResponse, time: Int)
-    extends Exception(s"[${url.service}] Slow JSON parsing on ${url.summary} time:${time}ms data-size:${response.bytes.length}"){
+case class SlowJsonParsingException(request: Request, response: ClientResponse, time: Int)
+    extends Exception(s"[${request.httpUri.service}] Slow JSON parsing on ${request.httpUri.summary} tracking-id:${request.trackingId} time:${time}ms data-size:${response.bytes.length}"){
   override def toString(): String = getMessage
 }
 
@@ -199,7 +199,7 @@ case class HttpClientImpl(
 
     e.waitTime map { waitTime =>
       if (waitTime > 1000) {//ms
-        val exception = request.tracer.withCause(LongWaitException(request.httpUri, res.res, waitTime, e.duration, remoteTime))
+        val exception = request.tracer.withCause(LongWaitException(request, res, waitTime, e.duration, remoteTime))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
@@ -288,8 +288,8 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
       val json = Json.parse(bytes)
       val jsonTime = System.currentTimeMillis - startTime
 
-      if (jsonTime > 1000) {//ms
-        val exception = request.tracer.withCause(SlowJsonParsingException(request.httpUri, this, jsonTime.toInt))
+      if (jsonTime > 200 && !request.httpUri.url.contains("/internal/shoebox/database/getIndexable")) {//ms
+        val exception = request.tracer.withCause(SlowJsonParsingException(request, this, jsonTime.toInt))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,

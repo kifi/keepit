@@ -444,29 +444,26 @@ class UserController @Inject() (
   }
 
   // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
+  val abookUploadTimeoutThreshold = sys.props.getOrElse("abook.upload.timeout.threshold", "30").toInt
   def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = AuthenticatedHtmlAction { request =>
+    import ABookInfoStates._
+    val ts = System.currentTimeMillis
     val callback = callbackOpt.getOrElse("parent.updateABookProgress")
     val done = new AtomicBoolean(false)
     def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 500)
     def reqF = abookServiceClient.getABookInfo(request.userId, id) map { abookInfoOpt =>
+      log.info(s"[getABookUploadStatus($id)] ... ${abookInfoOpt.map(_.state)}")
+      if ((System.currentTimeMillis - ts) > (abookUploadTimeoutThreshold * 1000)) { done.set(true) }
       abookInfoOpt match {
-        case Some(abookInfo) if abookInfo.state == ABookInfoStates.ACTIVE => {
-          if (done.get) None else {
-            log.info(s"[getABookUploadStatus($id)] available!")
-            done.set(true)
-            Some(s"<script>$callback($id,'${abookInfo.state}',${abookInfo.numContacts.getOrElse(-1)},${abookInfo.numProcessed.getOrElse(-1)})</script>")
+        case None =>
+          Some(s"<script>$callback($id,'notAvail',-1,-1)</script>")
+        case Some(abookInfo) =>
+          val resp = Some(s"<script>$callback($id,'${abookInfo.state}',${abookInfo.numContacts.getOrElse(-1)},${abookInfo.numProcessed.getOrElse(-1)})</script>")
+          if (done.get) None else abookInfo.state match {
+            case ACTIVE => { done.set(true); resp }
+            case UPLOAD_FAILURE => { done.set(true); resp }
+            case PENDING => resp
           }
-        }
-        case waitingOpt => waitingOpt match {
-          case Some(processing) => {
-            log.info(s"[getABookUploadStatus($id)] waiting ... '${processing.state}'")
-            Some(s"<script>$callback($id,'${processing.state}',${processing.numContacts.getOrElse(-1)},${processing.numProcessed.getOrElse(-1)})</script>")
-          }
-          case None => {
-            log.info(s"[getABookUploadStatus($id)] waiting ... 'notAvail'") // can be an error
-            Some(s"<script>$callback($id,'notAvail',-1,-1)</script>")
-          }
-        }
       }
     }
     val firstResponse = Enumerator(domain.body)

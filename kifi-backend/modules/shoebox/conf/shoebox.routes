@@ -125,7 +125,6 @@ GET     /blog                       @com.keepit.controllers.website.HomeControll
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /reddit                     @com.keepit.controllers.website.HomeController.redditPreview
-GET     /blank                      @com.keepit.controllers.website.HomeController.blank
 
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection

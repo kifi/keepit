@@ -12,8 +12,8 @@ var kifiDialog = function() {
   'use strict';
   return {toggleLoginDialog: toggleLoginDialog};
   function toggleLoginDialog() {
-    render("html/login_dialog", {
-      logo: api.url("images/kifi_logo.2x.png")
+    render('html/login_dialog', {
+      logo: api.url('images/kifi_logo.2x.png')
     }, function(html) {
       if ($('.kifi-message-dialog-wrapper').length) {
         removeDialog();
@@ -21,7 +21,7 @@ var kifiDialog = function() {
       }
       var $wrapper = $('<div>').addClass('kifi-message-dialog-wrapper').html(html).appendTo('body');
 
-      var $overlay = $('<div class="kifi-dialog-overlay">');
+      var $overlay = $('<div class=kifi-dialog-overlay>');
       $overlay.appendTo('body');
 
       var $dialog = $('.kifi-message-dialog');
@@ -29,8 +29,8 @@ var kifiDialog = function() {
 
       function removeDialog() {
         $wrapper = $('.kifi-message-dialog-wrapper');
-        $wrapper.removeClass("kifi-dialog-show");
-        document.removeEventListener("keydown", onKeyDown, true);
+        $wrapper.removeClass('kifi-dialog-show');
+        document.removeEventListener('keydown', onKeyDown, true);
         setTimeout(function() {
           $('.kifi-message-dialog-wrapper').remove();
           $('.kifi-dialog-overlay').remove();
@@ -42,24 +42,24 @@ var kifiDialog = function() {
         removeDialog();
       });
       $dialog.on('click', '.kifi-facebook', function() {
-        api.port.emit("open_login_popup", {
-          id: "kifi-authenticate",
-          url: "https://www.kifi.com/login/facebook"
+        api.port.emit('open_login_popup', {
+          id: 'kifi-authenticate',
+          url: 'https://www.kifi.com/login/facebook'
         });
         removeDialog();
         return false;
       });
       $dialog.on('click', '.kifi-linkedin', function() {
-        api.port.emit("open_login_popup", {
-          id: "kifi-authenticate",
-          url: "https://www.kifi.com/login/linkedin"
+        api.port.emit('open_login_popup', {
+          id: 'kifi-authenticate',
+          url: 'https://www.kifi.com/login/linkedin'
         });
         removeDialog();
         return false;
       });
       $overlay.on('click', removeDialog);
 
-      document.addEventListener("keydown", onKeyDown, true);
+      document.addEventListener('keydown', onKeyDown, true);
       function onKeyDown(e) {
         if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
           removeDialog();
