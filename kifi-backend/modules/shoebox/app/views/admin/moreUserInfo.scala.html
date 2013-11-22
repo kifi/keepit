@@ -3,7 +3,6 @@
   socialUserInfos: Seq[SocialUserInfo],
   sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail],
   abookInfos: Seq[ABookInfo],
-  contacts: Seq[Contact],
   econtacts: Seq[EContact]
   )
 
@@ -39,18 +38,6 @@
           }
       </table>
     }
-  @if(contacts.size > 0) {
-    <br/>
-    <h3>Contacts (total = @contacts.size)</h3>
-    <div class="scrollArea">
-        <table class="table table-condensed table-striped">
-            <tr><th>ContactId</th><th>Origin</th><th>ABookId</th><th>Name</th><th>Email</th><td>Alt Emails</td></tr>
-            @for(contact <- contacts) {
-                <tr><td>@contact.id</td><td>@contact.origin</td><td>@contact.abookId</td><td>@contact.name</td><td>@contact.email</td><td>@contact.altEmails</td></tr>
-            }
-        </table>
-    </div>
-  }
   @if(econtacts.size > 0) {
     <br/>
     <h3>EContacts (total = @econtacts.size)</h3>
