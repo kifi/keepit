@@ -65,7 +65,7 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean, orderedA
   def scoreSingleTerm(term: String): Float = {
     val termStats = getOrUpdateStats(term)
     val s = log2(1.0 + termStats.docFreq).toFloat * termStats.idf
-    log.info(s"TermScorer: ${term} ${s}")
+    log.info(s"TermScorer: ${term} ${s}. docFreq = ${termStats.docFreq}, idf = ${termStats.idf}")
     s
   }
 
