@@ -18,6 +18,7 @@ class TermScorerTest extends Specification {
 
   val articles = Seq("abc abc abc def", "abc def", "abc abd deg xyz")
   val analyzer = DefaultAnalyzer.forIndexing
+  val EPSILON = 1e-8f
 
   def mkDoc(content: String) = {
     val doc = new Document()
@@ -39,11 +40,13 @@ class TermScorerTest extends Specification {
 
       val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
       val scorer = new TermScorer(statsReader, false)
-      (scorer.scoreSingleTerm("abc") - log2(1 + 3f)).max(1e-5) === 1e-5          // 3 intersections
-      (scorer.scorePairTerms("def", "deg") - scorer.minPairTermsScore).max(1e-5f) === 1e-5f          // zero intersection, smoothed to min score
+      (scorer.scoreSingleTerm("abc") - log2(1 + 3f)).max(EPSILON) === EPSILON          // 3 intersections
+      (scorer.scorePairTerms("def", "deg") - scorer.minPairTermsScore).max(EPSILON) === EPSILON          // zero intersection, smoothed to min score
     }
 
-    "adjScore should work" in {
+    "adjScore and orderdAdj should work" in {
+      def log2(x: Double) = log(x)/log(2)
+
       val articleIndexDir = new VolatileIndexDirectoryImpl()
       val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
       val indexWriter = new IndexWriter(articleIndexDir, config)
@@ -52,13 +55,18 @@ class TermScorerTest extends Specification {
       indexWriter.close()
 
       val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
-      val scorer = new TermScorer(statsReader, true)
+      var scorer = new TermScorer(statsReader, true, false)
       var score = scorer.scorePairTerms("ab", "cd")
       var numInter = 2
       var minDist = 4
-      (score - numInter * scorer.gaussianScore(minDist - 1)).max(1e-5) === 1e-5
+      (score - log2(1 + numInter.toDouble) * scorer.gaussianScore(minDist - 1)).max(EPSILON) === EPSILON
       score = scorer.scorePairTerms("cd", "y1")
-      (score - scorer.minPairTermsScore).max(1e-5f) === 1e-5f       // zero intersection. smoothed to min score
+      (score - scorer.minPairTermsScore).max(EPSILON) === EPSILON       // zero intersection. smoothed to min score
+
+      scorer = new TermScorer(statsReader, true, true)
+      score = scorer.scorePairTerms("cd", "ab")
+      (score- log2(1 + numInter)*scorer.minPairTermsScore).max(EPSILON) === EPSILON
+
     }
   }
 }

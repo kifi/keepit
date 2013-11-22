@@ -1,7 +1,9 @@
 package com.keepit.search.spellcheck
 
 // e.g. List(Array("math", "myth", "maths"), Array("lean", "learn", "leap") )
-case class SpellVariations(variations: List[Array[String]])
+case class SpellVariations(variations: List[Array[String]]){
+  override def toString(): String = variations.map{_.mkString(" ")}.mkString("\n")
+}
 
 trait SuggestionProvider {
   def makeSuggestions(input: String, spellVariations: SpellVariations): Array[ScoredSuggest]  // ranked
