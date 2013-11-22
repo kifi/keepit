@@ -4,7 +4,9 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.mvc.{PathBindable, QueryStringBindable}
-import play.api.libs.json.JsArray
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import com.keepit.common.db.Id
 
 sealed abstract class ABookOriginType(val name:String) {
   override def toString:String = name
@@ -71,26 +73,26 @@ case class ABookInfo(
     ownerId: Option[String] = None, // iOS
     ownerEmail: Option[String] = None,
     rawInfoLoc: Option[String] = None,
+    oauth2TokenId: Option[Id[OAuth2Token]] = None,
     numContacts: Option[Int] = None,
     numProcessed: Option[Int] = None
   ) extends Model[ABookInfo] {
-  def withId(id: Id[ABookInfo]): ABookInfo = this.copy(id = Some(id))
-  def withUpdateTime(now: DateTime): ABookInfo = this.copy(updatedAt = now)
-  def withOwnerInfo(ownerId: Option[String], ownerEmail: Option[String]): ABookInfo = this.copy(ownerId = ownerId, ownerEmail = ownerEmail)
-  def withState(state: State[ABookInfo]): ABookInfo = this.copy(state = state)
-  def withNumContacts(nContacts:Option[Int]): ABookInfo = this.copy(numContacts = nContacts)
-  def withNumProcessed(nProcessed:Option[Int]): ABookInfo = this.copy(numProcessed = nProcessed)
+  def withId(id: Id[ABookInfo]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withOwnerInfo(ownerId: Option[String], ownerEmail: Option[String]) = this.copy(ownerId = ownerId, ownerEmail = ownerEmail)
+  def withOAuth2TokenId(oauth2TokenId: Option[Id[OAuth2Token]]) = this.copy(oauth2TokenId = oauth2TokenId)
+  def withState(state: State[ABookInfo]) = this.copy(state = state)
+  def withNumContacts(nContacts:Option[Int]) = this.copy(numContacts = nContacts)
+  def withNumProcessed(nProcessed:Option[Int]) = this.copy(numProcessed = nProcessed)
 }
 
 object ABookInfoStates extends States[ABookInfo] {
   val PENDING = State[ABookInfo]("pending")
+  val PROCESSING = State[ABookInfo]("processing")
   val UPLOAD_FAILURE = State[ABookInfo]("upload_failure")
 }
 
 object ABookInfo {
-  import play.api.libs.functional.syntax._
-  import play.api.libs.json._
-  import com.keepit.common.db.Id
 
   implicit val format = (
       (__ \ 'id).formatNullable(Id.format[ABookInfo]) and
@@ -102,7 +104,79 @@ object ABookInfo {
       (__ \ 'ownerId).formatNullable[String] and
       (__ \ 'ownerEmail).formatNullable[String] and
       (__ \ 'rawInfoLoc).formatNullable[String] and
+      (__ \ 'oauth2TokenId).formatNullable(Id.format[OAuth2Token]) and
       (__ \ 'numContacts).formatNullable[Int] and
       (__ \ 'numProcessed).formatNullable[Int]
     )(ABookInfo.apply, unlift(ABookInfo.unapply))
+}
+
+// OAuth2TokenXYZ: experimental -- for internal use/testing only
+
+object OAuth2TokenStates extends States[OAuth2Token]
+
+class OAuth2TokenIssuer(val name:String) {
+  require(name != null)
+  override def toString = name
+  override def hashCode = name.hashCode
+  override def equals(o:Any) = o match {
+    case tk:OAuth2TokenIssuer => name == tk.name
+    case _ => false
+  }
+}
+
+object OAuth2TokenIssuer {
+  def apply(name:String) = new OAuth2TokenIssuer(name)
+  implicit def format = Format(__.read[String].map(OAuth2TokenIssuer(_)), new Writes[OAuth2TokenIssuer] { def writes(o: OAuth2TokenIssuer): JsValue = JsString(o.name) })
+}
+
+object OAuth2TokenIssuers {
+  case object GOOGLE extends OAuth2TokenIssuer("google")
+}
+
+case class OAuth2Token(
+  id: Option[Id[OAuth2Token]] = None,
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
+  state: State[OAuth2Token] = OAuth2TokenStates.ACTIVE,
+  userId: Id[User],
+  issuer: OAuth2TokenIssuer = OAuth2TokenIssuers.GOOGLE,
+  scope: Option[String] = None,
+  tokenType: Option[String] = None,
+  accessToken: String,
+  expiresIn: Option[Int] = None,
+  refreshToken: Option[String] = None,
+  autoRefresh: Boolean = false,
+  lastRefreshedAt: Option[DateTime] = None,
+  idToken: Option[String] = None,
+  rawToken: Option[String] = None
+) extends Model[OAuth2Token] {
+  def withId(id: Id[OAuth2Token]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withState(state: State[OAuth2Token]) = this.copy(state = state)
+  def withAccessToken(accessToken:String) = this.copy(accessToken = accessToken)
+  def withExpiresIn(expiresIn:Option[Int]) = this.copy(expiresIn = expiresIn)
+  def withRefreshToken(refreshToken:Option[String]) = this.copy(refreshToken = refreshToken)
+  def withAutoRefresh(autoRefresh:Boolean) = this.copy(autoRefresh = autoRefresh)
+  def withLastRefresh(lastRefreshedAt:Option[DateTime]) = this.copy(lastRefreshedAt = lastRefreshedAt)
+  def withRawToken(rawToken:Option[String]) = this.copy(rawToken = rawToken)
+}
+
+object OAuth2Token {
+  implicit val format = (
+      (__ \ 'id).formatNullable(Id.format[OAuth2Token]) and
+      (__ \ 'createdAt).format[DateTime] and
+      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'state).format(State.format[OAuth2Token]) and
+      (__ \ 'userId).format(Id.format[User]) and
+      (__ \ 'issuer).format[OAuth2TokenIssuer] and
+      (__ \ 'scope).formatNullable[String] and
+      (__ \ 'tokenType).formatNullable[String] and
+      (__ \ 'accessToken).format[String] and
+      (__ \ 'expiresIn).formatNullable[Int] and
+      (__ \ 'refreshToken).formatNullable[String] and
+      (__ \ 'autoRefresh).format[Boolean] and
+      (__ \ 'lastRefreshedAt).formatNullable[DateTime] and
+      (__ \ 'idToken).formatNullable[String] and
+      (__ \ 'rawToken).formatNullable[String]
+    )(OAuth2Token.apply, unlift(OAuth2Token.unapply))
 }
