@@ -21,6 +21,7 @@ import com.keepit.common.routes.ABook
 trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
+  def importContactsP(userId:Id[User], oauth2Token:OAuth2Token):Future[JsValue]
   def importContacts(userId:Id[User], provider:String, accessToken:String):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
@@ -33,6 +34,7 @@ trait ABookServiceClient extends ServiceClient {
   def getEContactByEmail(userId:Id[User], email:String):Future[Option[EContact]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[JsValue]
+  def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
 }
 
 
@@ -42,6 +44,10 @@ class ABookServiceClientImpl @Inject() (
   val serviceCluster: ServiceCluster
 )
   extends ABookServiceClient with Logging {
+
+  def importContactsP(userId: Id[User], oauth2Token:OAuth2Token): Future[JsValue] = {
+    call(ABook.internal.importContactsP(userId), Json.toJson(oauth2Token)).map { r => r.json }
+  }
 
   def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = {
     call(ABook.internal.importContacts(userId, provider, accessToken)).map { r => r.json }
@@ -108,6 +114,12 @@ class ABookServiceClientImpl @Inject() (
       r.json
     }
   }
+
+  def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = {
+    call(ABook.internal.getOAuth2Token(userId, abookId)).map { r =>
+      r.json.as[Option[OAuth2Token]]
+    }
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ABookServiceClient {
@@ -115,6 +127,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
+
+  def importContactsP(userId: Id[User], oauth2Token: OAuth2Token): Future[JsValue] = ???
 
   def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = ???
 
@@ -140,4 +154,5 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
 
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue): Future[JsValue] = ???
 
+  def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
 }

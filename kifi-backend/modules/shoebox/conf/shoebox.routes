@@ -4,8 +4,9 @@ GET     /login                      @com.keepit.controllers.core.AuthController.
 GET     /ss/login                   securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
-GET     /importContacts             @com.keepit.controllers.core.OAuth2Controller.importContacts(provider:Option[String])
-GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controller.start(provider:String, stateToken:Option[String])
+GET     /importContacts             @com.keepit.controllers.core.OAuth2Controller.importContacts(provider:Option[String], approvalPromptOpt:Option[String])
+GET     /refreshContacts            @com.keepit.controllers.core.OAuth2Controller.refreshContacts(abookId:Id[ABookInfo], provider:Option[String])
+GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controller.start(provider:String, stateToken:Option[String], approvalPromptOpt:Option[String])
 GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
 POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.accessTokenCallback(provider:String)
 
@@ -395,7 +396,6 @@ GET     /internal/shoebox/database/commentRecipientIds  @com.keepit.controllers.
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.shoebox.ShoeboxController.sendMailToUser
 GET     /internal/shoebox/database/getPhrasesChanged   @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesChanged(seqNum: Long, fetchSize: Int)
-GET     /internal/shoebox/database/getCollectionsChanged @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsChangedDeprecated(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/changedCollections @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getBookmarksInCollection @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksInCollection(collectionId: Id[Collection])
 GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsByUser(userId: Id[User])
