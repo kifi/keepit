@@ -13,12 +13,15 @@ import org.specs2.mutable.Specification
 
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.VolatileIndexDirectoryImpl
+import scala.math.abs
 
 class TermScorerTest extends Specification {
 
   val articles = Seq("abc abc abc def", "abc def", "abc abd deg xyz")
   val analyzer = DefaultAnalyzer.forIndexing
-  val EPSILON = 1e-8f
+  val EPSILON = 1e-5f
+
+  def equals(a: Float, b: Float) = abs(a - b) < EPSILON
 
   def mkDoc(content: String) = {
     val doc = new Document()
@@ -40,8 +43,8 @@ class TermScorerTest extends Specification {
 
       val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
       val scorer = new TermScorer(statsReader, false)
-      (scorer.scoreSingleTerm("abc") - log2(1 + 3f)).max(EPSILON) === EPSILON          // 3 intersections
-      (scorer.scorePairTerms("def", "deg") - scorer.minPairTermsScore).max(EPSILON) === EPSILON          // zero intersection, smoothed to min score
+      equals(scorer.scoreSingleTerm("abc"), log2(1 + 3f).toFloat) === true         // 3 intersections
+      equals(scorer.scorePairTerms("def", "deg"), scorer.minPairTermsScore) === true          // zero intersection, smoothed to min score
     }
 
     "adjScore and orderdAdj should work" in {
@@ -61,11 +64,11 @@ class TermScorerTest extends Specification {
       var minDist = 4
       (score - log2(1 + numInter.toDouble) * scorer.gaussianScore(minDist - 1)).max(EPSILON) === EPSILON
       score = scorer.scorePairTerms("cd", "y1")
-      (score - scorer.minPairTermsScore).max(EPSILON) === EPSILON       // zero intersection. smoothed to min score
+      equals(score, scorer.minPairTermsScore) === true       // zero intersection. smoothed to min score
 
       scorer = new TermScorer(statsReader, true, true)
       score = scorer.scorePairTerms("cd", "ab")
-      (score- log2(1 + numInter)*scorer.minPairTermsScore).max(EPSILON) === EPSILON
+      equals(score, log2(1 + numInter).toFloat*scorer.minPairTermsScore) === true
 
     }
   }
