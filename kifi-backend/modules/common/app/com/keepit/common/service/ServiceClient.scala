@@ -52,7 +52,7 @@ trait ServiceClient extends Logging {
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2): Future[ClientResponse] = {
     val respFuture = RetryFuture(attempts, { case t : ConnectException => true }){
-      callUrl(call, url(call.url), body)
+      callUrl(call, url(call.url), body, ignoreFailure=true)
     }
     respFuture.onFailure{
       case ex: Throwable =>
