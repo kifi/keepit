@@ -886,6 +886,10 @@ $(function () {
 		}
 	}
 
+	function isAbookFailed(state) {
+		return /^error|upload_failure$/.test(state);
+	}
+
 	function filterFriendsByNetwork(network) {
 		network = network || '';
 
@@ -913,10 +917,8 @@ $(function () {
 						id = abook.id;
 						email = abook.ownerEmail;
 					}
-					if (abook.state === 'error') {
-						error = true;
-					}
-					if (abook.state !== 'error' && abook.state !== 'active') {
+					error = isAbookFailed(abook.state);
+					if (!error && abook.state !== 'active') {
 						console.log('not active abook', abook, JSON.stringify(abook, null, '\t'));
 						id = abook.id;
 						email = abook.ownerEmail;
@@ -938,6 +940,7 @@ $(function () {
 							emptyAndPrepInvite(network);
 							endImportUpdate(importUpdate);
 							break;
+						case 'upload_failure':
 						case 'error':
 							toggleImporting(network, false, null, email);
 							toggleInviteHelp(network, true, true);
