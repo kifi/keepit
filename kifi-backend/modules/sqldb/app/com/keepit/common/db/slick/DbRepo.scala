@@ -78,7 +78,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
 
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M] =  {
     val q = for {
-      t <- table
+      t <- table if !t.state.inSet(excludeStates)
     } yield t
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
