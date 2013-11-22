@@ -887,7 +887,7 @@ $(function () {
 	}
 
 	function isAbookFailed(state) {
-		return /^error|upload_failure$/.test(state);
+		return (/^error|upload_failure$/).test(state);
 	}
 
 	function filterFriendsByNetwork(network) {
@@ -1040,16 +1040,21 @@ $(function () {
 			$friendsList.find('.no-match').removeClass('no-match');
 		}
 	});
+
 	var $friendsList = $('#friends-list').antiscroll({x: false, width: '100%'})
 	.on('mouseover', '.friend-status', function () {
-		var $a = $(this), o = $a.closest('.friend').data('o');
+		var $a = $(this),
+			o = $a.closest('.friend').data('o');
 		$(this).nextAll('.friend-action-desc').text({
 			unfriended: 'Add ' + o.firstName + ' as a friend',
 			requested: 'Cancel friend request',
 			'': 'Unfriend ' + o.firstName
 		}[o.state]);
 	}).on('click', '.friend-status', function () {
-		var $a = $(this), o = $a.closest('.friend').data('o'), xhr;
+		var $a = $(this),
+			$friend = $a.closest('.friend'),
+			o = $friend.data('o'),
+			xhr;
 		switch (o.state) {
 		case 'unfriended':
 			xhr = $.post(xhrBase + '/user/' + o.id + '/friend', function (data) {
@@ -1066,15 +1071,17 @@ $(function () {
 			});
 			break;
 		default:
-			xhr = $.post(xhrBase + '/user/' + o.id + '/unfriend', function (data) {
+			showUnfriendDialog({
+				id: o.id,
+				name: $friend.find('.friend-name').text()
+			}, function (data) {
 				o.state = 'unfriended';
+				(getAlwaysCallback($a, o))();
 			});
 		}
-		xhr.always(function () {
-			$a.removeAttr('href').closest('.friend-actions').removeClass('requested unfriended').addClass(o.state);
-			$a.closest('.friend').removeClass('requested unfriended').addClass(o.state);
-			$a.nextAll('.friend-action-desc').text('');
-		});
+		if (xhr) {
+			xhr.always(getAlwaysCallback($a, o));
+		}
 	}).on('mouseover', '.friend-mute', function () {
 		var $a = $(this), o = $a.closest('.friend').data('o');
 		$a.nextAll('.friend-action-desc').text(o.searchFriend ?
@@ -1091,11 +1098,23 @@ $(function () {
 	}).on('mouseout', '.friend-status,.friend-mute', function () {
 		$(this).attr('href', 'javascript:').nextAll('.friend-action-desc').empty();
 	});
+
+	function getAlwaysCallback($a, o) {
+		return function () {
+			console.log('getAlwaysCallback', $a, o.state);
+			$a.removeAttr('href').closest('.friend-actions').removeClass('requested unfriended').addClass(o.state);
+			$a.closest('.friend').removeClass('requested unfriended').addClass(o.state);
+			$a.nextAll('.friend-action-desc').text('');
+		};
+	}
+
 	$friendsList.find('.antiscroll-inner').scroll(function () {
 		$friendsList.prev().toggleClass('scrolled', this.scrollTop > 0);
 	});
+
 	var friendsScroller = $friendsList.data('antiscroll');
 	$(window).resize(friendsScroller.refresh.bind(friendsScroller));
+
 	var friendsTmpl = Tempo.prepare($friendsList).when(TempoEvent.Types.ITEM_RENDER_COMPLETE, function (ev) {
 		var o = ev.item, $f = $(ev.element).data('o', o), url;
 		for (var nw in o.networks) {  // TODO: move networks to template (Tempo seems broken)
@@ -1107,6 +1126,7 @@ $(function () {
 		$friendsLoading.hide();
 		friendsScroller.refresh();
 	});
+
 	var $friendsLoading = $('.friends-loading');
 	function prepFriendsTab() {
 		$('.friends-filter').val('');
@@ -1732,7 +1752,7 @@ $(function () {
 			$myKeeps.insertAfter($results);
 		}
 
-		if ($myKeeps.data('collId') != collId || !('collId' in $myKeeps.data())) {
+		if ($myKeeps.data('collId') !== collId || !('collId' in $myKeeps.data())) {
 			$myKeeps.data('collId', collId).empty();
 			lastKeep = null;
 			hideKeepDetails();
@@ -2750,11 +2770,6 @@ $(function () {
 			me.experiments.indexOf('gmail_invite') >= 0;
 	}
 
-	function canConnect() {
-		return DEV || me.experiments.indexOf('admin') >= 0 ||
-			me.experiments.indexOf('can_connect') >= 0;
-	}
-
 	function updateGmailTab() {
 		var $button = $('a[data-nw="email"]'),
 			enabled = canInviteViaGmail();
@@ -2769,7 +2784,7 @@ $(function () {
 	}
 
 	function updateConnectTab() {
-		$('a[data-href="friends/find"]').toggle(canConnect());
+		$('a[data-href="friends/find"]').toggle(true);
 	}
 
 	function updateFriendRequests(n) {
