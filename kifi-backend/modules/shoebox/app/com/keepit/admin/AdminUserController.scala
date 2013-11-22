@@ -62,6 +62,7 @@ class AdminUserController @Inject() (
     userSessionRepo: UserSessionRepo,
     imageStore: S3ImageStore,
     clock: Clock,
+    userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
@@ -332,6 +333,33 @@ class AdminUserController @Inject() (
       }
     }
     Ok(Json.obj(experiment -> true))
+  }
+
+  def changeUsersName(userId: Id[User]) = AdminHtmlAction { request =>
+    db.readWrite { implicit session =>
+      val user = userRepo.get(userId)
+      val first = request.body.asFormUrlEncoded.get.apply("first").headOption.map(_.trim).getOrElse(user.firstName)
+      val last = request.body.asFormUrlEncoded.get.apply("last").headOption.map(_.trim).getOrElse(user.lastName)
+      userRepo.save(user.copy(firstName = first, lastName = last))
+      Ok
+    }
+  }
+
+  def setUserPicture(userId: Id[User], pictureId: Id[UserPicture]) = AdminHtmlAction { request =>
+    db.readWrite { implicit request =>
+      val user = userRepo.get(userId)
+      val pics = userPictureRepo.getByUser(userId)
+      val pic = pics.find(_.id.get == pictureId)
+      if (pic.isEmpty) {
+        Forbidden
+      } else {
+        if (pic.get.state != UserPictureStates.ACTIVE) {
+          userPictureRepo.save(pic.get.withState(UserPictureStates.ACTIVE))
+        }
+        userRepo.save(user.copy(pictureName = Some(pic.get.name), userPictureId = pic.get.id))
+      }
+      Ok
+    }
   }
 
   def changeState(userId: Id[User], state: String) = AdminJsonAction { request =>
