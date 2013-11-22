@@ -96,9 +96,9 @@ case class ProdMongoModule() extends MongoModule {
   }
 
   @Provides @Singleton
-  def mixpanel: MixpanelClient = {
+  def mixpanel(shoebox: ShoeboxServiceClient): MixpanelClient = {
     val projectToken: String = current.configuration.getString("mixpanel.token").get
-    new MixpanelClient(projectToken)
+    new MixpanelClient(projectToken, shoebox)
   }
 }
 
