@@ -7,7 +7,6 @@ import com.keepit.heimdal._
 import com.keepit.commanders._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders.KeepInfo._
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick.DBSession.RWSession

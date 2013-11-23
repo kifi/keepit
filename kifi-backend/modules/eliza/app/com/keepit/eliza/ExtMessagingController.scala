@@ -235,7 +235,7 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr("notifications", notices, unvisited))
     },
     "get_notifications_by_url" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-      messagingController.getSendableNotificationsForUrl(socket.userId, url).map { case (nUriStr, notices) => 
+      messagingController.getSendableNotificationsForUrl(socket.userId, url).map { case (nUriStr, notices) =>
         socket.channel.push(Json.arr(requestId.toLong, notices, nUriStr))
       }
     },
@@ -285,12 +285,14 @@ class ExtMessagingController @Inject() (
       }
     },
     "get_threads_by_url" -> { case JsString(url) +: _ =>  // deprecated in favor of "get_threads"
-      val (_, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
-      socket.channel.push(Json.arr("thread_infos", threadInfos))
+      messagingController.getThreadInfos(socket.userId, url).map{ case (_, threadInfos) =>
+        socket.channel.push(Json.arr("thread_infos", threadInfos))
+      }
     },
     "get_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-      val (nUriStr, threadInfos) = messagingController.getThreadInfos(socket.userId, url)
-      socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriStr))
+      messagingController.getThreadInfos(socket.userId, url).map { case (nUriStr, threadInfos) =>
+        socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriStr))
+      }
     },
     "mute_thread" -> { case JsString(jsThreadId) +: _ =>
       messagingController.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))

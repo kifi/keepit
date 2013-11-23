@@ -8,6 +8,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.model.ExperimentType
 import com.keepit.model.NormalizedURI
 import com.keepit.social.BasicUser
 import play.api.libs.json.JsArray
@@ -46,6 +47,7 @@ class ExtSearchEventController @Inject() (
     val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
     val kifiResults = (json \ "kifiResults").as[Int]
+    val isDemo = request.experiments.contains(ExperimentType.DEMO)
 
     SearchEngine.get(resultSource) match {
 
@@ -54,7 +56,7 @@ class ExtSearchEventController @Inject() (
         shoeboxClient.getNormalizedURIByURL(personalSearchResult.hit.url).onSuccess { case Some(uri) =>
           val uriId = uri.id.get
           clickHistoryTracker.add(userId, ClickedURI(uriId))
-          resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark)
+          resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark, isDemo)
           if (personalSearchResult.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, personalSearchResult.users.map(_.externalId): _*)
         }
         searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
