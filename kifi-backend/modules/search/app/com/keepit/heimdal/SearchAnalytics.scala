@@ -10,6 +10,8 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
+import play.api.mvc.Request
+
 
 case class SearchEngine(name: String) {
   override def toString = name
@@ -28,14 +30,15 @@ class SearchAnalytics @Inject() (
   heimdal: HeimdalServiceClient) {
 
   def performedSearch(
-    request: AuthenticatedRequest[AnyContent],
+    userId: Id[User],
+    request: Request[AnyContent],
     kifiVersion: Option[KifiVersion],
     maxHits: Int,
     searchFilter: SearchFilter,
     searchExperiment: Option[Id[SearchConfigExperiment]],
     articleSearchResult: ArticleSearchResult) = {
 
-    val obfuscatedSearchId = obfuscate(articleSearchResultStore.getInitialSearchId(articleSearchResult), request.userId)
+    val obfuscatedSearchId = obfuscate(articleSearchResultStore.getInitialSearchId(articleSearchResult), userId)
     val contextBuilder = userEventContextBuilder(Some(request))
 
     kifiVersion.foreach { version => contextBuilder += ("extVersion", version.toString) }
@@ -65,7 +68,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("filterByTimeRange", searchFilter.timeRange.isDefined)
     contextBuilder += ("filterByTags", searchFilter.collections.isDefined)
 
-    heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("performed_search"), articleSearchResult.time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("performed_search"), articleSearchResult.time))
   }
 
   def searchResultClicked(
