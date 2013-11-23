@@ -73,6 +73,8 @@ class TermScorerTest extends Specification {
       score = scorer.scorePairTerms("cd", "ab")
       equals(score, log2(1 + numInter).toFloat*scorer.minPairTermsScore) === true
 
+      equals(scorer.scoreTripleTerms("ab", "y1", "y2"), log2(1 + 1).toFloat) === true
+      scorer.scoreTripleTerms("ab", "x1", "y2") === 0.01f
     }
   }
 }

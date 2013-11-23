@@ -40,15 +40,11 @@ class SlowSuggestionProvider(termScorer: TermScorer) extends SuggestionProvider 
       val score = termScorer.scoreSingleTerm(words.head)
       ScoredSuggest(suggest.value, score)
     } else {
-      val pairs = words.sliding(2, 1)
-      val score = pairs.map{ case Array(a, b) => termScorer.scorePairTerms(a, b) }.foldLeft(1f)(_*_)
-
-      // Viterbi doesn't support the following score
-      val oneJumpScore = if (words.size < 3) 1f else {
-        (0 to words.size - 3 ).map{ i => termScorer.scorePairTerms(words(i), words(i + 2))}.foldLeft(1f)(_*_)
+      val pairScore = words.sliding(2, 1).map{ case Array(a, b) => termScorer.scorePairTerms(a, b) }.foldLeft(1f)(_*_)
+      val tripleScore = if (words.size < 3 ) 1f else {
+        words.sliding(3, 1).map{ case Array(a, b, c) => termScorer.scoreTripleTerms(a, b, c)}.foldLeft(1f)(_*_)
       }
-
-      ScoredSuggest(suggest.value, score * oneJumpScore)
+      ScoredSuggest(suggest.value, pairScore * tripleScore)
     }
   }
 
