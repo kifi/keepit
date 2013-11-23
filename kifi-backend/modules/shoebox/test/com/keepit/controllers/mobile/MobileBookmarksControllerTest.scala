@@ -121,7 +121,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         }
 
         val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.allCollections().toString
-        path === "/m/1/collections/keepsAndCollections"
+        path === "/m/1/collections/all"
 
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[MobileBookmarksController]
