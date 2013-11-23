@@ -79,4 +79,11 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean, orderedA
     log.info(s"TermScorer: ${a}, ${b}, pairFreqScore = ${pairScore}, adjBoost = ${adjBoost}")
     pairScore * adjBoost
   }
+
+  def scoreTripleTerms(a: String, b: String, c: String): Float = {
+    val sorted = Array(a, b, c).sortBy(x => x)
+    val (x, y, z) = (sorted(0), sorted(1), sorted(2))
+    val inter = getOrUpdateJoint(x, y) intersect getOrUpdateStats(z).docIds
+    inter.size.toFloat max 0.01f   // smooth
+  }
 }
