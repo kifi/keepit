@@ -7,9 +7,9 @@ import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.BasicUser
-import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
+import com.keepit.common.controller.ElizaServiceController
 
 import scala.concurrent.{Promise, future, Await, Future}
 import scala.concurrent.duration._
@@ -862,22 +862,23 @@ class MessagingController @Inject() (
     buildThreadInfos(userId, Seq(thread), None).head
   }
 
-  def getThreadInfos(userId: Id[User], url: String): (String, Seq[ElizaThreadInfo]) = {
-    val nUriOrPrenorm = Await.result(shoebox.getNormalizedUriByUrlOrPrenormalize(url), 2 seconds) // todo: Remove await
-    val (nUrlStr, unsortedInfos) = if (nUriOrPrenorm.isLeft) {
-      val nUri = nUriOrPrenorm.left.get
-      val threads = db.readOnly { implicit session =>
-        val threadIds = userThreadRepo.getThreads(userId, nUri.id)
-        threadIds.map(threadRepo.get)
-      }.filter(_.replyable)
-      (nUri.url, buildThreadInfos(userId, threads, Some(url)))
-    } else {
-      (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
+  def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])] = {
+    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
+      val (nUrlStr, unsortedInfos) = if (nUriOrPrenorm.isLeft) {
+        val nUri = nUriOrPrenorm.left.get
+        val threads = db.readOnly { implicit session =>
+          val threadIds = userThreadRepo.getThreads(userId, nUri.id)
+          threadIds.map(threadRepo.get)
+        }.filter(_.replyable)
+        (nUri.url, buildThreadInfos(userId, threads, Some(url)))
+      } else {
+        (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
+      }
+      val infos = unsortedInfos sortWith { (a,b) =>
+        a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
+      }
+      (nUrlStr, infos)
     }
-    val infos = unsortedInfos sortWith { (a,b) =>
-      a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
-    }
-    (nUrlStr, infos)
   }
 
   def muteThread(userId: Id[User], threadId: ExternalId[MessageThread]): Boolean = {
