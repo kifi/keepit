@@ -1,6 +1,5 @@
 package com.keepit.normalizer
 
-import com.keepit.common.db.slick.DBSession.RSession
 import scala.concurrent.Future
 import com.keepit.scraper.{ScraperPlugin, ScraperConfig, Signature}
 import com.keepit.model.Normalization
@@ -8,10 +7,10 @@ import com.keepit.scraper.extractor.LinkedInIdExtractor
 import com.keepit.common.logging.Logging
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-trait ContentCheck extends PartialFunction[NormalizationCandidate, RSession => Future[Boolean]] {
+trait ContentCheck extends PartialFunction[NormalizationCandidate, Future[Boolean]] {
   def getFailedAttempts(): Set[(String, String)]
-  def apply(candidate: NormalizationCandidate) = { implicit session: RSession => check(candidate) }
-  protected def check(candidate: NormalizationCandidate)(implicit session: RSession): Future[Boolean]
+  def apply(candidate: NormalizationCandidate) = check(candidate)
+  protected def check(candidate: NormalizationCandidate): Future[Boolean]
 }
 
 case class SignatureCheck(referenceUrl: String, trustedDomain: String)(implicit scraperPlugin: ScraperPlugin) extends ContentCheck with Logging {
@@ -25,7 +24,7 @@ case class SignatureCheck(referenceUrl: String, trustedDomain: String)(implicit 
   private var referenceUrlIsBroken = false
 
   def isDefinedAt(candidate: NormalizationCandidate) = candidate.url.matches(trustedDomain)
-  protected def check(candidate: NormalizationCandidate)(implicit session: RSession): Future[Boolean] = {
+  protected def check(candidate: NormalizationCandidate): Future[Boolean] = {
     val alternateUrl = candidate.url
     if (referenceUrlIsBroken || failedContentChecks.contains(alternateUrl)) Future.successful(false)
     else for {
@@ -51,7 +50,7 @@ case class SignatureCheck(referenceUrl: String, trustedDomain: String)(implicit 
 case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: ScraperPlugin) extends ContentCheck with Logging {
 
   def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInCanonicalPublicProfile.findFirstIn(candidate.url).isDefined
-  protected def check(publicProfileCandidate: NormalizationCandidate)(implicit session: RSession) = {
+  protected def check(publicProfileCandidate: NormalizationCandidate) = {
     val idExtractor = new LinkedInIdExtractor(publicProfileCandidate.url, ScraperConfig.maxContentChars)
 
     for { idArticleOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(idExtractor)) } yield {println(idArticleOption); idArticleOption match {

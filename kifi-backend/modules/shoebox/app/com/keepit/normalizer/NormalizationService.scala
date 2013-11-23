@@ -109,7 +109,7 @@ class NormalizationServiceImpl @Inject() (
               case Check(contentCheck) =>
                 if (currentReference.url == strongerCandidate.url) Future.successful(Some(strongerCandidate), weakerCandidates)
                 else for {
-                  contentCheck <- contentCheck(strongerCandidate)(session)
+                  contentCheck <- contentCheck(strongerCandidate)
                   (successful, weaker) <- {
                     if (contentCheck) Future.successful((Some(strongerCandidate), weakerCandidates))
                     else findCandidate(weakerCandidates)
