@@ -1223,7 +1223,7 @@ function searchOnServer(request, respond) {
   if (Math.random()<0.5) {
     ajax("search", "GET", "/search", params, respHandler);
   } else {
-    ajax("api", "GET", "/search", params, respHandler);
+    ajax("api", "GET", "/tsearch", params, respHandler);
   }
   return true;
 }
