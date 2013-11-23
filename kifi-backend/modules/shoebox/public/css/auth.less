@@ -1098,11 +1098,11 @@ footer {
 }
 .reset-password .dialog-box:before {
   left: 0;
-  .background-image(linear-gradient(to right, #fff, transparent));
+  .background-image(linear-gradient(to right, #fff, rgba(255,255,255,0)));
 }
 .reset-password .dialog-box:after {
   right: 0;
-  .background-image(linear-gradient(to left, #fff, transparent));
+  .background-image(linear-gradient(to left, #fff, rgba(255,255,255,0)));
 }
 .reset-password-email {
   width: 300px;
@@ -1133,12 +1133,12 @@ footer {
   .reset-password-form {
     .translate(-80%);
     visibility: hidden;
-    .transition(visibility 0 .2s, transform .2s ease-in-out);
+    .transition(visibility 0s .2s, transform .2s ease-in-out);
   }
   .reset-password-success {
     .transform(none);
     visibility: visible;
-    .transition(visibility 0, transform .2s ease-in-out);
+    .transition(visibility 0s, transform .2s ease-in-out);
   }
 }
 .reset-password-addresses {
