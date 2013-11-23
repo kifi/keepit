@@ -50,9 +50,9 @@ trait ServiceClient extends Logging {
       if (uris.length == 0) log.warn("Broadcasting to no-one!")
     }
 
-  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2): Future[ClientResponse] = {
+  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2, timeout: Int = 5000): Future[ClientResponse] = {
     val respFuture = RetryFuture(attempts, { case t : ConnectException => true }){
-      callUrl(call, url(call.url), body, ignoreFailure=true)
+      callUrl(call, url(call.url), body, ignoreFailure=true, timeout = timeout)
     }
     respFuture.onFailure{
       case ex: Throwable =>
@@ -65,7 +65,7 @@ trait ServiceClient extends Logging {
     respFuture
   }
 
-  protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false): Future[ClientResponse] = {
+  protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false, timeout: Int = 5000): Future[ClientResponse] = {
     val url = httpUri.url
     if (url.length > ServiceClient.MaxUrlLength) {
       airbrakeNotifier.notify(AirbrakeError(
@@ -75,14 +75,14 @@ trait ServiceClient extends Logging {
     }
     if (ignoreFailure) {
       call match {
-        case c @ ServiceRoute(GET, _, _*) => httpClient.getFuture(httpUri, httpClient.ignoreFailure)
-        case c @ ServiceRoute(POST, _, _*) => httpClient.postFuture(httpUri, body, httpClient.ignoreFailure)
+        case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(timeout).getFuture(httpUri, httpClient.ignoreFailure)
+        case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(timeout).postFuture(httpUri, body, httpClient.ignoreFailure)
       }
     }
     else{
       call match {
-        case c @ ServiceRoute(GET, _, _*) => httpClient.getFuture(httpUri)
-        case c @ ServiceRoute(POST, _, _*) => httpClient.postFuture(httpUri, body)
+        case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(timeout).getFuture(httpUri)
+        case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(timeout).postFuture(httpUri, body)
       }
     }
   }
