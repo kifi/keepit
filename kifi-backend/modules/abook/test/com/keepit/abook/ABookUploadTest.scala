@@ -53,7 +53,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
       "name" -> "forty two",
       "firstName" -> "forty",
       "lastName" -> "two",
-      "emails" -> Seq("fortytwo@42go.com", "foo@42go.com", "bar@42go.com"))
+      "emails" -> Seq("fortytwo@42go.com", "Foo@42go.com", "BAR@42go.com"))
   )
 
   "ABook Controller" should {
@@ -72,8 +72,8 @@ class ABookUploadTest extends Specification with DbTestInjector {
         )
 
         var abookInfo:ABookInfo = try {
-          val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson)
-          val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, iosUploadJson) // should have no impact
+          val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson)
+          val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson) // should have no impact
           info1.state mustNotEqual ABookInfoStates.UPLOAD_FAILURE
           info2.state mustNotEqual ABookInfoStates.UPLOAD_FAILURE
           info1
@@ -119,7 +119,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
           "ownerEmail"  -> gmailOwner.email.get,
           "contacts"    -> c42
         )
-        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), gmailUploadJson)
+        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson)
         gbookInfo.id.get mustEqual Id[ABookInfo](2)
         gbookInfo.origin mustEqual ABookOrigins.GMAIL
         gbookInfo.userId mustEqual u42
@@ -155,7 +155,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
           "ownerEmail"  -> gmailOwner.email.get,
           "contacts"    -> c42
         )
-        val gbookInfo:ABookInfo = abookController.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), gmailUploadJson)
+        val gbookInfo:ABookInfo = abookController.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson)
         gbookInfo.id.get mustEqual Id[ABookInfo](1)
         gbookInfo.origin mustEqual ABookOrigins.GMAIL
         gbookInfo.userId mustEqual u42
@@ -173,7 +173,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
           "ownerEmail"  -> gmailOwner2.email.get,
           "contacts"    -> c53
         )
-        val gbookInfo2:ABookInfo = abookController.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner2), gmailUploadJson2)
+        val gbookInfo2:ABookInfo = abookController.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner2), None, gmailUploadJson2)
         gbookInfo2.id.get mustEqual Id[ABookInfo](2)
         gbookInfo2.origin mustEqual ABookOrigins.GMAIL
         gbookInfo2.userId mustEqual u42
