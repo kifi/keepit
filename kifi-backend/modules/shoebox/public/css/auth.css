@@ -45,6 +45,21 @@ input[type=password] {
 ::-moz-placeholder {
   color: #989898;
 }
+body.still > .curtain-l,
+body.still > .curtain-r,
+body.still .curtain-logo-l,
+body.still .curtain-logo-r,
+body.still .curtain-welcome-l,
+body.still .curtain-welcome-r,
+body.still .curtain-panel,
+body.still > .curtain-back,
+body.still .pate-title {
+  -webkit-transition: none;
+  -moz-transition: none;
+  -o-transition: none;
+  -ms-transition: none;
+  transition: none;
+}
 .curtain-l,
 .curtain-r {
   position: absolute;
