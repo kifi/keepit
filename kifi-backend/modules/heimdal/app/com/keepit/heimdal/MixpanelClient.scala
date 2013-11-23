@@ -35,22 +35,14 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
   }
 
   private def getProperties(context: EventContext) : Seq[(String, JsValue)] = context.data.map {
-      case ("remoteAddress", Seq(ContextStringData(ip))) => "ip" -> JsString(ip)
-      case ("experiment", experiments) => "experiment" -> toJsArray(experiments)
-      case (key, Seq(ContextStringData(s))) => key -> JsString(s)
-      case (key, Seq(ContextDoubleData(x))) => key -> JsNumber(x)
-      case (key, seq) => key -> toJsArray(seq)
+      case ("remoteAddress", ContextStringData(ip)) => "ip" -> JsString(ip)
+      case (key, value) => key -> ContextData.format.writes(value)
   }.toSeq
 
   private def getSuperProperties(userId: Id[User]): Future[Seq[(String, JsValue)]] =
     shoebox.getUserValue(userId, Gender.key).map(_.map { gender =>
       Seq(Gender.key -> JsString(Gender(gender).toString))
     } getOrElse(Seq.empty))
-
-  private def toJsArray(seq: Seq[ContextData]): JsArray = JsArray(seq.map {
-    case ContextStringData(s) => JsString(s)
-    case ContextDoubleData(x) => JsNumber(x)
-  })
 
   def engage(user: User) = getSuperProperties(user.id.get) foreach { superProperties =>
     val data = Json.obj(

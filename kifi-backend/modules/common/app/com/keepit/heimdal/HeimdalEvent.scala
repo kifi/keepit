@@ -20,63 +20,77 @@ object EventType {
 }
 
 sealed trait ContextData
-case class ContextStringData(value: String) extends ContextData
-case class ContextDoubleData(value: Double) extends ContextData
+sealed trait SimpleContextData extends ContextData
+case class ContextStringData(value: String) extends SimpleContextData
+case class ContextDoubleData(value: Double) extends SimpleContextData
+case class ContextBoolean(value: Boolean) extends SimpleContextData
+case class ContextDate(value: DateTime) extends SimpleContextData
+case class ContextList(values: Seq[SimpleContextData]) extends ContextData
 
-case class EventContext(data: Map[String, Seq[ContextData]]) extends AnyVal
+case class EventContext(data: Map[String, ContextData])
+
+object SimpleContextData {
+  implicit val format = new Format[SimpleContextData] {
+    def reads(json: JsValue): JsResult[SimpleContextData] = json match {
+      case string: JsString => JsSuccess(string.asOpt[DateTime].map(ContextDate) getOrElse ContextStringData(string.as[String]))
+      case JsNumber(value) => JsSuccess(ContextDoubleData(value.toDouble))
+      case JsBoolean(bool) => JsSuccess(ContextBoolean(bool))
+      case _ => JsError()
+    }
+
+    def writes(data: SimpleContextData): JsValue = data match {
+      case ContextStringData(value) => JsString(value)
+      case ContextDoubleData(value) => JsNumber(value)
+      case ContextBoolean(value) => JsBoolean(value)
+      case ContextDate(value) => Json.toJson(value)
+    }
+  }
+
+  implicit def toContextStringData(value: String) = ContextStringData(value)
+  implicit def toContextDoubleData(value: Double) = ContextDoubleData(value)
+  implicit def toContextBoolean(value: Boolean) = ContextBoolean(value)
+  implicit def toContextDate(value: DateTime) = ContextDate(value)
+}
+
+object ContextData {
+  implicit val format = new Format[ContextData] {
+    def reads(json: JsValue): JsResult[ContextData] = json match {
+      case list: JsArray => Json.fromJson[Seq[SimpleContextData]](list) map ContextList
+      case _ => Json.fromJson[SimpleContextData](json)
+    }
+
+    def writes(data: ContextData): JsValue = data match {
+      case ContextList(values) => Json.toJson(values)
+      case simpleData: SimpleContextData => Json.toJson(simpleData)
+    }
+  }
+}
 
 object EventContext {
   implicit val format = new Format[EventContext] {
 
     def reads(json: JsValue): JsResult[EventContext] = {
-      val map = json match {
-        case obj: JsObject => obj.value.mapValues{ value =>
-          val seq : Seq[ContextData] = value match {
-            case arr: JsArray => arr.value.map{
-              case JsNumber(x) => ContextDoubleData(x.doubleValue)
-              case JsString(s) => ContextStringData(s)
-              case _ => return JsError()
-            }
-            case _ => return JsError()
-          }
-          seq
-        }
+      val data = json match {
+        case obj: JsObject => Json.fromJson[Map[String, ContextData]](obj)
         case _ => return JsError()
       }
-      JsSuccess(EventContext(Map[String, Seq[ContextData]](map.toSeq :_*)))
+      data.map(EventContext(_))
     }
 
-    def writes(obj: EventContext) : JsValue = {
-      JsObject(obj.data.mapValues{ seq =>
-        JsArray(seq.map {
-          case ContextStringData(s) => JsString(s)
-          case ContextDoubleData(x) => JsNumber(x)
-        })
-      }.toSeq)
-    }
-
+    def writes(context: EventContext) : JsValue = Json.toJson(context.data)
   }
 }
 
 class EventContextBuilder {
-  val data = new scala.collection.mutable.HashMap[String, Seq[ContextData]]()
+  val data = new scala.collection.mutable.HashMap[String, ContextData]()
 
-  def +=(key: String, value: Double) : Unit = {
-    val currentValues = data.getOrElse(key,Seq[ContextData]())
-    data(key) = (currentValues :+ ContextDoubleData(value)).toSet.toSeq
-  }
+  def +=[T <% SimpleContextData](key: String, value: T) : Unit = data(key) = value
+  def +=[T <% SimpleContextData](key: String, values: Seq[T]) : Unit = data(key) = ContextList(values.map(identity[SimpleContextData](_)))
 
-  def +=(key: String, value: Boolean) : Unit = {
-    if (value) +=(key, 1.0) else +=(key, 0.0)
-  }
 
-  def +=(key: String, value: String) : Unit = {
-    val currentValues = data.getOrElse(key,Seq[ContextData]())
-    data(key) = (currentValues :+ ContextStringData(value)).toSet.toSeq
-  }
 
   def build : EventContext = {
-    EventContext(Map(data.toSeq:_*))
+    EventContext(data.toMap)
   }
 }
 
@@ -93,13 +107,12 @@ class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) 
     request.map { req =>
       contextBuilder += ("remoteAddress", ipOpt.getOrElse(req.headers.get("X-Forwarded-For").getOrElse(req.remoteAddress)))
       contextBuilder += ("userAgent", req.headers.get("User-Agent").getOrElse(""))
-      contextBuilder += ("requestScheme", req.headers.get("X-Scheme").getOrElse(""))
-      contextBuilder += ("doNotTrack", req.headers.get("do-not-track").map(_=="1").getOrElse(false))
+      contextBuilder += ("doNotTrack", req.headers.get("do-not-track").exists(_ == "1"))
 
       req match {
         case authRequest: AuthenticatedRequest[_] =>
           authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
-          authRequest.experiments.foreach { experiment => contextBuilder += ("experiment", experiment.toString) }
+          contextBuilder += ("experiment", authRequest.experiments.map(_.value).toSeq)
         case _ =>
       }
     }
