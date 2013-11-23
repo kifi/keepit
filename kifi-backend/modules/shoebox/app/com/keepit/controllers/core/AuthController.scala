@@ -53,7 +53,8 @@ class AuthController @Inject() (
     airbrakeNotifier: AirbrakeNotifier,
     emailAddressRepo: EmailAddressRepo,
     inviteCommander: InviteCommander,
-    passwordResetRepo: PasswordResetRepo
+    passwordResetRepo: PasswordResetRepo,
+    kifiInstallationRepo: KifiInstallationRepo
   ) extends WebsiteController(actionAuthenticator) with Logging {
 
   private val PopupKey = "popup"
@@ -363,18 +364,19 @@ class AuthController @Inject() (
       val (newIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = pinfo,
         firstName = firstName, lastName = lastName, isComplete = true)
 
+      inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
+
+      val user = db.readOnly(userRepo.get(userId)(_))
+
       val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize) tap (r => log.info(s"Cropped attributes for ${request.user.id.get}: " + r))
       picToken.map { token =>
         s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token, cropAttributes)
       }.orElse {
-        val user = db.readOnly(userRepo.get(userId)(_))
         s3ImageStore.getPictureUrl(None, user, "0")
         None
       }
 
-      inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
-
-      finishSignup(newIdentity, emailConfirmedAlready = false)
+      finishSignup(user, newIdentity, emailConfirmedAlready = false)
     })
   }
 
@@ -416,6 +418,8 @@ class AuthController @Inject() (
         val (emailPassIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt,
           email = emailAddress, passwordInfo = pInfo, firstName = firstName, lastName = lastName, isComplete = true)
 
+        inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
+
         val user = db.readOnly { implicit session =>
           userRepo.get(userId)
         }
@@ -425,30 +429,37 @@ class AuthController @Inject() (
           s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
         }
 
-        inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
-
         val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == emailAddress.trim)
 
-        finishSignup(emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
+        finishSignup(user, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
       })
   }
 
-  private def finishSignup(newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
+  private def finishSignup(user: User, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
     if (!emailConfirmedAlready) {
       // todo: Move to user controller/commander
       db.readWrite { implicit s =>
         val emailAddrStr = newIdentity.email.get
-        val emailAddr = emailAddressRepo.save(
-          emailAddressRepo.getByAddressOpt(emailAddrStr).get.withVerificationCode(clock.now))
+        val emailAddr = emailAddressRepo.save(emailAddressRepo.getByAddressOpt(emailAddrStr).get.withVerificationCode(clock.now))
         val verifyUrl = s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
 
-        postOffice.sendMail(ElectronicMail(
-          from = EmailAddresses.NOTIFICATIONS,
-          to = Seq(GenericEmailAddress(emailAddrStr)),
-          subject = "Kifi.com |  Please confirm your email address",
-          htmlBody = views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body,
-          category = ElectronicMailCategory("email_confirmation")
-        ))
+        if (user.state != UserStates.ACTIVE) {
+          postOffice.sendMail(ElectronicMail(
+            from = EmailAddresses.NOTIFICATIONS,
+            to = Seq(GenericEmailAddress(emailAddrStr)),
+            subject = "Kifi.com |  Please confirm your email address",
+            htmlBody = views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body,
+            category = ElectronicMailCategory("email_confirmation")
+          ))
+        } else {
+          postOffice.sendMail(ElectronicMail(
+            from = EmailAddresses.NOTIFICATIONS,
+            to = Seq(GenericEmailAddress(emailAddrStr)),
+            subject = "Welcome to Kifi! Please confirm your email address",
+            htmlBody = views.html.email.verifyAndWelcomeEmail(user, verifyUrl).body,
+            category = ElectronicMailCategory("email_confirmation")
+          ))
+        }
       }
     }
 
@@ -518,22 +529,47 @@ class AuthController @Inject() (
     (newIdentity, user.get)
   }
 
-  def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = doVerifyEmail(code)(_), unauthenticatedAction = requireLoginToVerifyEmail(code)(_))
-  def doVerifyEmail(code: String)(implicit request: AuthenticatedRequest[_]): Result = {
+  def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = doVerifyEmail(code)(_), unauthenticatedAction = doVerifyEmail(code)(_))
+  def doVerifyEmail(code: String)(implicit request: Request[_]): Result = {
     db.readWrite { implicit s =>
-      emailAddressRepo.verify(request.userId, code) match {
-        case true if request.user.state == UserStates.PENDING =>
-          Redirect("/?m=1")
-        case true =>
-          Redirect("/profile?m=1")
-        case _ =>  // TODO: make these links expire and handle "expired" case
-          BadRequest(views.html.website.verifyEmailError(error = "invalid_code"))
+      emailAddressRepo.getByCode(code).map { address =>
+        val user = userRepo.get(address.userId)
+        emailAddressRepo.verify(address.userId, code) match {
+          case (true, _) if user.state == UserStates.PENDING =>
+            Redirect("/?m=1")
+          case (true, true) => // first time being used
+            authenticateUser(user.id.get,
+              error => throw error,
+              authenticator => {
+                val resp = if (kifiInstallationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).isEmpty) {
+                  // user has no installations
+                  Redirect("/install")
+                } else {
+                  Redirect("/profile?m=1")
+                }
+                resp.withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                  .withCookies(authenticator.toCookie)
+              }
+            )
+          case (true, false) => // valid, but already used before
+            Redirect("/profile?m=1")
+        }
+      }.getOrElse {
+        BadRequest(views.html.website.verifyEmailError(error = "invalid_code"))
       }
     }
   }
   def requireLoginToVerifyEmail(code: String)(implicit request: Request[_]): Result = {
     Redirect(routes.AuthController.loginPage())
       .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
+  }
+  private def authenticateUser[T](userId: Id[User], onError: Error => T, onSuccess: Authenticator => T) = {
+    val identity = db.readOnly { implicit session =>
+      val suis = socialRepo.getByUser(userId)
+      val sui = socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(suis.head)
+      sui.credentials.get
+    }
+    Authenticator.create(identity).fold(onError, onSuccess)
   }
 
   def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doForgotPassword(_), unauthenticatedAction = doForgotPassword(_))
