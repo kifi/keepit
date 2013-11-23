@@ -12,6 +12,13 @@ GET     /eliza/ext/ws                     @com.keepit.eliza.ExtMessagingControll
 POST    /eliza/ext/chatter                @com.keepit.eliza.ExtMessagingController.getChatter()
 POST    /eliza/devices/:deviceType        @com.keepit.eliza.ExtDevicesController.registerDevice(deviceType:String)
 
+
+##########################################
+# Mobile V1
+##########################################
+
+GET     /eliza/m/1/notifications          @com.keepit.eliza.controllers.MobileMessagingController.getNotifications(n: Int)
+
 ##########################################
 #INTERNAL ROUTES/Eliza
 ##########################################
