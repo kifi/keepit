@@ -242,6 +242,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
+    assert(userIds.nonEmpty, "User list is empty")
     val (cachedUsers, needToGetUsers) = userIds.map({ u =>
       u -> cacheProvider.externalUserIdCache.get(ExternalUserIdKey(u))
     }).foldRight((Map[ExternalId[User], Id[User]](), Seq[ExternalId[User]]())) { (uOpt, res) =>
@@ -311,6 +312,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
+    assert(uriIds.nonEmpty, "User list is empty")
     val query = uriIds.mkString(",")
     call(Shoebox.internal.getNormalizedURIs(query)).map { r =>
       Json.fromJson[Seq[NormalizedURI]](r.json).get
@@ -407,6 +409,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = {
+    assert(collIds.nonEmpty, "Collection list is empty")
     call(Shoebox.internal.getCollectionIdsByExternalIds(collIds.mkString(","))).map { r =>
       r.json.as[Seq[Long]].map(Id[Collection](_))
     }
@@ -482,6 +485,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]] = {
+    assert(urisAndKeepers.nonEmpty, "urisAndKeepers list is empty")
     val payload = JsArray(urisAndKeepers.map{ case (uri, users) =>
       Json.obj("uri" -> JsNumber(uri.id), "users" -> JsArray(users.map{_.id}.map{JsNumber(_)}) )
     })
