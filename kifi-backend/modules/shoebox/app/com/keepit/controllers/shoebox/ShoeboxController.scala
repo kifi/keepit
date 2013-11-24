@@ -336,7 +336,9 @@ class ShoeboxController @Inject() (
     val emails = db.readOnly{ implicit s =>
       userIds.map{userId => userId.id.toString -> emailAddressRepo.getAllByUser(userId).map{_.address}}.toMap
     }
-    Ok(Json.toJson(emails))
+    val json = Json.toJson(emails)
+    log.info(s"json emails for users [%userids] are $json")
+    Ok(json)
   }
 
   def getCollectionIdsByExternalIds(ids: String) = Action { request =>
