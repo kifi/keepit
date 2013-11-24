@@ -337,7 +337,7 @@ class ShoeboxController @Inject() (
       userIds.map{userId => userId.id.toString -> emailAddressRepo.getAllByUser(userId).map{_.address}}.toMap
     }
     val json = Json.toJson(emails)
-    log.info(s"json emails for users [$userids] are $json")
+    log.info(s"json emails for users [$userIds] are $json")
     Ok(json)
   }
 
