@@ -234,6 +234,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
+    assert(userIds.nonEmpty, "User list is empty")
     val query = userIds.mkString(",")
     call(Shoebox.internal.getUsers(query)).map { r =>
       Json.fromJson[Seq[User]](r.json).get
@@ -261,6 +262,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
+    assert(userIds.nonEmpty, "User list is empty")
     cacheProvider.basicUserCache.bulkGetOrElseFuture(userIds.map{ BasicUserUserIdKey(_) }.toSet){ keys =>
       val payload = JsArray(keys.toSeq.map(x => JsNumber(x.userId.id)))
       call(Shoebox.internal.getBasicUsers(), payload).map{ res =>
@@ -273,6 +275,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
+    assert(userIds.nonEmpty, "User list is empty")
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
     call(Shoebox.internal.getEmailAddressesForUsers(), payload).map{ res =>
@@ -388,6 +391,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]] = {
+    assert(userIds.nonEmpty, "User list is empty")
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
     call(Shoebox.internal.getExperimentsByUserIds(), payload).map{ res =>
