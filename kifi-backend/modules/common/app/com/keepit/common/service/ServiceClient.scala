@@ -1,6 +1,7 @@
 package com.keepit.common.service
 
 import scala.concurrent.Future
+import scala.util.Random
 
 import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
@@ -94,7 +95,7 @@ trait ServiceClient extends Logging {
     }
 
   protected def tee(call: ServiceRoute, body: JsValue = JsNull, teegree: Int = 2): Future[ClientResponse] = {
-    val futures = urls(call.url).take(teegree).map(callUrl(call, _, body))
+    val futures = Random.shuffle(urls(call.url)).take(teegree).map(callUrl(call, _, body)) //need to shuffle
     Future.firstCompletedOf(futures)
   }
 }
