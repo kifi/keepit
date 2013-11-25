@@ -7,9 +7,9 @@ import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.BasicUser
-import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
+import com.keepit.common.controller.ElizaServiceController
 
 import scala.concurrent.{Promise, future, Await, Future}
 import scala.concurrent.duration._
@@ -50,7 +50,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 *  -Make notifications not wait for a message ID
 */
 
-case class NotAuthorizedException(msg: String) extends java.lang.Throwable
+case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
 object MessagingController {
   val THREAD_PAGE_SIZE = 20
@@ -316,10 +316,10 @@ class MessagingController @Inject() (
   }
 
   private def buildMessageNotificationJson(
-      message: Message, 
-      thread: MessageThread, 
-      messageWithBasicUser: MessageWithBasicUser, 
-      locator: String, 
+      message: Message,
+      thread: MessageThread,
+      messageWithBasicUser: MessageWithBasicUser,
+      locator: String,
       unread: Boolean,
       originalAuthorIdx: Int,
       unseenAuthors: Int,
@@ -364,7 +364,7 @@ class MessagingController @Inject() (
         userThreadRepo.isMuted(userId, thread.id.get)
       }
       val lastSeenOpt : Option[DateTime] = orderedActivityInfo.filter(_.userId==userId).head.lastSeen
-      val unseenAuthors : Int = lastSeenOpt match { 
+      val unseenAuthors : Int = lastSeenOpt match {
         case Some(lastSeen) => orderedActivityInfo.filter(ta => ta.lastActive.isDefined && ta.lastActive.get.isAfter(lastSeen)).length
         case None => orderedActivityInfo.length
       }
@@ -492,7 +492,7 @@ class MessagingController @Inject() (
         sentOnUriId = thread.uriId
       ))
     }
-    SafeFuture { 
+    SafeFuture {
       db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) }
     }
 
@@ -520,8 +520,8 @@ class MessagingController @Inject() (
     setLastSeen(from, thread.id.get, Some(message.createdAt))
     db.readWrite { implicit session => userThreadRepo.setLastActive(from, thread.id.get, message.createdAt) }
 
-    val threadActivity = db.readOnly{ implicit session => 
-      userThreadRepo.getThreadActivity(thread.id.get) 
+    val threadActivity = db.readOnly{ implicit session =>
+      userThreadRepo.getThreadActivity(thread.id.get)
     } sortWith { case (first, second) =>
       first.id.id < second.id.id
     } sortWith { case (first, second) =>
@@ -862,22 +862,23 @@ class MessagingController @Inject() (
     buildThreadInfos(userId, Seq(thread), None).head
   }
 
-  def getThreadInfos(userId: Id[User], url: String): (String, Seq[ElizaThreadInfo]) = {
-    val nUriOrPrenorm = Await.result(shoebox.getNormalizedUriByUrlOrPrenormalize(url), 2 seconds) // todo: Remove await
-    val (nUrlStr, unsortedInfos) = if (nUriOrPrenorm.isLeft) {
-      val nUri = nUriOrPrenorm.left.get
-      val threads = db.readOnly { implicit session =>
-        val threadIds = userThreadRepo.getThreads(userId, nUri.id)
-        threadIds.map(threadRepo.get)
-      }.filter(_.replyable)
-      (nUri.url, buildThreadInfos(userId, threads, Some(url)))
-    } else {
-      (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
+  def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])] = {
+    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
+      val (nUrlStr, unsortedInfos) = if (nUriOrPrenorm.isLeft) {
+        val nUri = nUriOrPrenorm.left.get
+        val threads = db.readOnly { implicit session =>
+          val threadIds = userThreadRepo.getThreads(userId, nUri.id)
+          threadIds.map(threadRepo.get)
+        }.filter(_.replyable)
+        (nUri.url, buildThreadInfos(userId, threads, Some(url)))
+      } else {
+        (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
+      }
+      val infos = unsortedInfos sortWith { (a,b) =>
+        a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
+      }
+      (nUrlStr, infos)
     }
-    val infos = unsortedInfos sortWith { (a,b) =>
-      a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
-    }
-    (nUrlStr, infos)
   }
 
   def muteThread(userId: Id[User], threadId: ExternalId[MessageThread]): Boolean = {

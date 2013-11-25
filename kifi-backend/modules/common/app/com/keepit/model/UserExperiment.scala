@@ -45,6 +45,8 @@ object ExperimentType {
   val CAN_CONNECT = ExperimentType("can_connect")
   val CAN_MESSAGE_ALL_USERS = ExperimentType("can message all users")
   val INBOX = ExperimentType("inbox")
+  val DEMO = ExperimentType("demo")
+  val TSEARCH = ExperimentType("tsearch")
 
   val DONT_SHOW_IN_ANALYTICS = List(ADMIN, FAKE, BLOCK, INACTIVE)
   val DONT_SHOW_IN_ANALYTICS_STR = DONT_SHOW_IN_ANALYTICS map {s => s"'$s'"} mkString ","
@@ -61,6 +63,8 @@ object ExperimentType {
     case CAN_CONNECT.value => CAN_CONNECT
     case CAN_MESSAGE_ALL_USERS.value => CAN_MESSAGE_ALL_USERS
     case INBOX.value => INBOX
+    case DEMO.value => DEMO
+    case TSEARCH.value => TSEARCH
   }
 }
 

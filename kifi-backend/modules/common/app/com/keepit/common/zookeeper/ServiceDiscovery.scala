@@ -154,7 +154,7 @@ class ServiceDiscoveryImpl @Inject() (
   def myVersion: ServiceVersion = services.currentVersion
 
   def startSelfCheck(): Future[Boolean] = synchronized {
-    if (!selfCheckIsRunning) {
+    if (!selfCheckIsRunning && (myStatus.isEmpty || myStatus.get != ServiceStatus.STOPPING)) {
       selfCheckIsRunning = true
       log.info("Running self check")
       val selfCheckPromise = Promise[Boolean]

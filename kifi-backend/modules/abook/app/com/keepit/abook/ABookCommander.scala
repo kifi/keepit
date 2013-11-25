@@ -41,7 +41,7 @@ class ABookCommander @Inject() (
   }
 
 
-  def processUpload(userId: Id[User], origin: ABookOriginType, ownerInfoOpt:Option[ABookOwnerInfo], json: JsValue): ABookInfo = {
+  def processUpload(userId: Id[User], origin: ABookOriginType, ownerInfoOpt:Option[ABookOwnerInfo], oauth2TokenOpt: Option[OAuth2Token], json: JsValue): ABookInfo = {
     val abookRawInfoRes = Json.fromJson[ABookRawInfo](json)
     val abookRawInfo = abookRawInfoRes.getOrElse(throw new Exception(s"Cannot parse ${json}"))
 
@@ -55,8 +55,7 @@ class ABookCommander @Inject() (
     val savedABookInfo = db.readWrite(attempts = 2) { implicit session =>
       val (abookInfo, dbEntryOpt) = origin match {
         case ABookOrigins.IOS => { // no ownerInfo or numContacts -- revisit later
-
-          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key), numContacts = numContacts, state = ABookInfoStates.INACTIVE)
+          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key), oauth2TokenId = oauth2TokenOpt.flatMap(_.id), numContacts = numContacts, state = ABookInfoStates.INACTIVE)
           val dbEntryOpt = {
             val s = abookInfoRepo.findByUserIdAndOrigin(userId, origin)
             if (s.isEmpty) None else Some(s(0))
@@ -65,7 +64,7 @@ class ABookCommander @Inject() (
         }
         case ABookOrigins.GMAIL => {
           val ownerInfo = ownerInfoOpt.getOrElse(throw new IllegalArgumentException("Owner info not set for $userId and $origin"))
-          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), numContacts = numContacts, state = ABookInfoStates.INACTIVE)
+          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), oauth2TokenId = oauth2TokenOpt.flatMap(_.id),  numContacts = numContacts, state = ABookInfoStates.INACTIVE)
           val dbEntryOpt = abookInfoRepo.findByUserIdOriginAndOwnerId(userId, origin, abookInfo.ownerId)
           (abookInfo, dbEntryOpt)
         }

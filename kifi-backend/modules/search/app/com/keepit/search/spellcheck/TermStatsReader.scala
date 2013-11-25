@@ -6,8 +6,9 @@ import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.util.{BytesRef, Bits, DocIdBitSet}
 import org.apache.lucene.search.DocIdSetIterator
 import java.util.BitSet
+import scala.math.log
 
-case class SimpleTermStats(docFreq: Int, docIds: Set[Int])
+case class SimpleTermStats(docFreq: Int, docIds: Set[Int], idf: Float)
 
 trait TermStatsReader {
   def numDocs(): Int
@@ -25,6 +26,8 @@ object TermStatsReader {
 
 class TermStatsReaderImpl(indexDir: Directory, field: String) extends TermStatsReader {
 
+  private def log2(x: Double) = log(x)/log(2)
+
   lazy val reader = new SlowCompositeReaderWrapper(DirectoryReader.open(indexDir))
   lazy val termsEnum = {
     val fields = reader.fields()
@@ -32,12 +35,14 @@ class TermStatsReaderImpl(indexDir: Directory, field: String) extends TermStatsR
     terms.iterator(null)
   }
 
+  private def idf(termFreq: Int): Float = 1f + log2(numDocs.toFloat/(1f + termFreq)).toFloat
+
   override def numDocs = reader.numDocs()
 
   override def getSimpleTermStats(term: String): SimpleTermStats  = {
     val found = termsEnum.seekExact(new BytesRef(term), true)
     var ret = Set.empty[Int]
-    if (!found) return SimpleTermStats(0, ret)
+    if (!found) return SimpleTermStats(0, ret, 0f)
 
     val freq = termsEnum.docFreq()
     val docs = termsEnum.docs(null, null)
@@ -46,7 +51,7 @@ class TermStatsReaderImpl(indexDir: Directory, field: String) extends TermStatsR
       ret += docid
       docid = docs.nextDoc()
     }
-    SimpleTermStats(freq, ret)
+    SimpleTermStats(freq, ret, idf(freq))
   }
 
   override def getDocsAndPositions(term: String, liveDocs: Bits = null): Map[Int, Array[Int]] = {

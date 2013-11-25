@@ -28,14 +28,6 @@ import play.api.mvc.Action
 import com.keepit.social.{SocialNetworkType, SocialId}
 import com.keepit.scraper.HttpRedirect
 
-object ShoeboxController {
-  implicit val collectionTupleFormat = (
-    (__ \ 'collId).format(Id.format[Collection]) and
-    (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
-  ).tupled
-}
-
 class ShoeboxController @Inject() (
   db: Database,
   userConnectionRepo: UserConnectionRepo,
@@ -344,7 +336,9 @@ class ShoeboxController @Inject() (
     val emails = db.readOnly{ implicit s =>
       userIds.map{userId => userId.id.toString -> emailAddressRepo.getAllByUser(userId).map{_.address}}.toMap
     }
-    Ok(Json.toJson(emails))
+    val json = Json.toJson(emails)
+    log.info(s"json emails for users [$userIds] are $json")
+    Ok(json)
   }
 
   def getCollectionIdsByExternalIds(ids: String) = Action { request =>
@@ -411,15 +405,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getByUser(userId) }))
   }
 
-  def getCollectionsChangedDeprecated(seqNum: Long, fetchSize: Int) = Action { request =>
-    import ShoeboxController.collectionTupleFormat
-    Ok(Json.toJson(db.readOnly { implicit s =>
-      collectionRepo.getCollectionsChanged(SequenceNumber(seqNum), fetchSize).map{ c => (c.id.get, c.userId, c.seq) }
-    }))
-  }
-
   def getCollectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
-    import ShoeboxController.collectionTupleFormat
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getCollectionsChanged(SequenceNumber(seqNum), fetchSize) }))
   }
 

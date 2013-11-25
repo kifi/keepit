@@ -55,7 +55,7 @@ class ContactsUpdater @Inject() (
   airbrake:AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
-  val batchSize = sys.props.getOrElse("abook.upload.batch.size", "100").toInt
+  val batchSize = sys.props.getOrElse("abook.upload.batch.size", "200").toInt
 
   implicit class RichOptString(o:Option[String]) {
     def trimOpt = o collect { case s:String if (s!= null && !s.trim.isEmpty) => s }

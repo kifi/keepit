@@ -2,7 +2,8 @@
 #INTERNAL ROUTES/ABook
 ##########################################
 
-GET     /internal/abook/:userId/importContacts                 @com.keepit.abook.ABookController.importContacts(userId:Id[User], provider:String, accessToken:String)
+POST    /internal/abook/:userId/importContactsP                 @com.keepit.abook.ABookController.importContactsP(userId:Id[User])
+GET     /internal/abook/:userId/importContacts                  @com.keepit.abook.ABookController.importContacts(userId:Id[User], provider:String, accessToken:String)
 
 POST     /internal/abook/:origin/uploadForUser                  @com.keepit.abook.ABookController.upload(userId:Id[User], origin:ABookOriginType) 
 
@@ -17,6 +18,8 @@ GET      /internal/abook/getEContactById                        @com.keepit.aboo
 GET      /internal/abook/:userId/getEContactByEmail             @com.keepit.abook.ABookController.getEContactByEmail(userId:Id[User], email:String)
 GET      /internal/abook/:userId/getSimpleContactInfos          @com.keepit.abook.ABookController.getSimpleContactInfos(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.ABookController.getABookRawInfos(userId:Id[User])
+
+GET      /internal/abook/:userId/getOAuth2Token                 @com.keepit.abook.ABookController.getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo])
 
 ->  / common.Routes
 

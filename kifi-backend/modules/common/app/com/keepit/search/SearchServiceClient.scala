@@ -17,6 +17,7 @@ import scala.concurrent.Promise
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
+import com.keepit.model.KifiVersion
 import com.keepit.social.BasicUser
 import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
@@ -61,6 +62,21 @@ trait SearchServiceClient extends ServiceClient {
 
   def benchmarks(): Future[BenchmarkResults]
   def version(): Future[String]
+
+  def search(
+    userId: Id[User],
+    noSearchExperiments: Boolean,
+    acceptLangs: Seq[String],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    kifiVersion: Option[KifiVersion] = None,
+    start: Option[String] = None,
+    end: Option[String] = None,
+    tz: Option[String] = None,
+    coll: Option[String] = None): Future[String]
 }
 
 class SearchServiceClientImpl(
@@ -213,5 +229,22 @@ class SearchServiceClientImpl(
       val param = Json.fromJson[Map[String, String]](r.json).get
       new SearchConfig(param)
     }
+  }
+
+  def search(
+    userId: Id[User],
+    noSearchExperiments: Boolean,
+    acceptLangs: Seq[String],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    kifiVersion: Option[KifiVersion] = None,
+    start: Option[String] = None,
+    end: Option[String] = None,
+    tz: Option[String] = None,
+    coll: Option[String] = None): Future[String] = {
+      tee(Search.internal.search(userId,noSearchExperiments,acceptLangs,query,filter,maxHits,lastUUIDStr,context,kifiVersion,start,end,tz,coll)).map(_.body)
   }
 }

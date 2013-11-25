@@ -16,6 +16,7 @@ import com.keepit.commanders.{UserCommander, BasicSocialUser}
 import play.api.Play.current
 import play.api.libs.json.{JsObject, Json, JsValue}
 
+import com.keepit.common.akka.SafeFuture
 import com.google.inject.Inject
 import com.keepit.common.net.URI
 import com.keepit.controllers.core.NetworkInfoLoader
@@ -25,11 +26,27 @@ import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class MobileBookmarksController @Inject() (
+  db: Database,
+  bookmarkRepo: BookmarkRepo,
   actionAuthenticator: ActionAuthenticator,
   bookmarksCommander: BookmarksCommander,
   collectionCommander: CollectionCommander,
   userEventContextBuilder: EventContextBuilderFactory)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
+
+  def allCollections(sort: String) = AuthenticatedJsonAction { request =>
+    Async {
+      for {
+        numKeeps <- SafeFuture { db.readOnly { implicit s => bookmarkRepo.getCountByUser(request.userId) } }
+        collections <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
+      } yield {
+        Ok(Json.obj(
+          "keeps" -> numKeeps,
+          "collections" -> collections
+        ))
+      }
+    }
+  }
 
   def keepMultiple() = AuthenticatedJsonAction { request =>
     request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>

@@ -150,6 +150,35 @@ object Search extends Service {
     def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")
     def getSearchDefaultConfig = ServiceRoute(GET, "/internal/search/defaultSearchConfig/defaultSearchConfig")
     def friendMapJson(userId: Id[User], query: Option[String] = None, minKeeps: Option[Int] = None) = ServiceRoute(GET, "/internal/search/search/friendMapJson", Param("userId", userId), Param("query", query), Param("minKeeps", minKeeps))
+    def search(
+        userId: Id[User],
+        noSearchExperiments: Boolean,
+        acceptLangs: Seq[String],
+        query: String,
+        filter: Option[String],
+        maxHits: Int,
+        lastUUIDStr: Option[String],
+        context: Option[String],
+        kifiVersion: Option[KifiVersion] = None,
+        start: Option[String] = None,
+        end: Option[String] = None,
+        tz: Option[String] = None,
+        coll: Option[String] = None) = {
+        val params = "userId=" + userId.id.toString +
+                     "&nse=" + noSearchExperiments +
+                     "&al=" + acceptLangs.mkString(",") +
+                     "&q=" + query +
+                     filter.map("&f="+_).getOrElse("") +
+                     "&maxHits=" + maxHits.toString +
+                     lastUUIDStr.map("&lastUUIDStr="+_).getOrElse("") +
+                     context.map("&context="+_).getOrElse("") +
+                     kifiVersion.map("&kifiVersion="+_).getOrElse("") +
+                     start.map("&start="+_).getOrElse("") +
+                     end.map("&end="+_).getOrElse("") +
+                     tz.map("&tz"+_).getOrElse("") +
+                     coll.map("&coll="+_)
+        ServiceRoute(GET, "/internal/search?" + params)
+    }
   }
 }
 
@@ -180,6 +209,7 @@ object Heimdal extends Service {
 
 object ABook extends Service {
   object internal {
+    def importContactsP(userId:Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/importContactsP")
     def importContacts(userId:Id[User], provider:String, accessToken:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/importContacts", Param("provider", provider), Param("accessToken", accessToken))
     def uploadForUser(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${origin.name}/uploadForUser?userId=${userId.id}")
     def upload(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/upload")
@@ -192,6 +222,7 @@ object ABook extends Service {
     def getEContactById(contactId:Id[EContact]) = ServiceRoute(GET, s"/internal/abook/getEContactById", Param("contactId", contactId))
     def getEContactByEmail(userId:Id[User], email:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactByEmail", Param("email", email))
     def getABookRawInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
+    def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getOAuth2Token", Param("abookId", abookId))
   }
 }
 

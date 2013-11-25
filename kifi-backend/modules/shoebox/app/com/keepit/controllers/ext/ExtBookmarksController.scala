@@ -185,7 +185,10 @@ class ExtBookmarksController @Inject() (
           val experiments = request.experiments
           val user = db.readOnly { implicit s => userRepo.get(userId) }
           val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
-          searchClient.updateBrowsingHistory(userId, bookmarks.map(_.uriId): _*)
+          //the bookmarks list may be very large!
+          bookmarks.grouped(50) foreach { chunk =>
+            searchClient.updateBrowsingHistory(userId, chunk.map(_.uriId): _*)
+          }
           searchClient.updateURIGraph()
 
           //Analytics

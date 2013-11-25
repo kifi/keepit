@@ -1,7 +1,9 @@
 package com.keepit.search.spellcheck
 
 // e.g. List(Array("math", "myth", "maths"), Array("lean", "learn", "leap") )
-case class SpellVariations(variations: List[Array[String]])
+case class SpellVariations(variations: List[Array[String]]){
+  override def toString(): String = variations.map{_.mkString(" ")}.mkString("\n")
+}
 
 trait SuggestionProvider {
   def makeSuggestions(input: String, spellVariations: SpellVariations): Array[ScoredSuggest]  // ranked
@@ -38,9 +40,11 @@ class SlowSuggestionProvider(termScorer: TermScorer) extends SuggestionProvider 
       val score = termScorer.scoreSingleTerm(words.head)
       ScoredSuggest(suggest.value, score)
     } else {
-      val pairs = words.sliding(2, 1)
-      val score = pairs.map{ case Array(a, b) => termScorer.scorePairTerms(a, b) }.foldLeft(1f)(_*_)
-      ScoredSuggest(suggest.value, score)
+      val pairScore = words.sliding(2, 1).map{ case Array(a, b) => termScorer.scorePairTerms(a, b) }.foldLeft(1f)(_*_)
+      val tripleScore = if (words.size < 3 ) 1f else {
+        words.sliding(3, 1).map{ case Array(a, b, c) => termScorer.scoreTripleTerms(a, b, c)}.foldLeft(1f)(_*_)
+      }
+      ScoredSuggest(suggest.value, pairScore * tripleScore)
     }
   }
 
