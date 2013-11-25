@@ -28,8 +28,7 @@ class SimpleDESCrypt extends CryptoSupport {
     }
   }
   def decrypt(key: SecretKey, encrypted: String): Try[String] = Try {
-    encrypted + ("="*(encrypted.length % 4))
-    val input =  fromBase64(if (encrypted.length % 2 == 1) { encrypted + "=" } else { encrypted })
+    val input =  fromBase64(encrypted)
     val cipher = Cipher.getInstance("DES/CBC/PKCS5Padding")
     cipher.init(Cipher.DECRYPT_MODE, key, ivSpec)
     val decrypted = new Array[Byte](cipher.getOutputSize(input.length))
