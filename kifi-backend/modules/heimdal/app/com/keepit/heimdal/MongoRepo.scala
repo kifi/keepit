@@ -104,12 +104,17 @@ object CustomBSONHandlers {
 
   implicit object BSONContextDataHandler extends BSONHandler[BSONArray, ContextData] {
     def write(data: ContextData) = data match {
-      case ContextStringData(value) => BSONArray(BSONString(value))
-      case ContextDoubleData(value) => BSONArray(BSONDouble(value))
-      case ContextBoolean(value) => BSONArray(BSONBoolean(value))
-      case ContextDate(value) => BSONArray(BSONDateTimeHandler.write(value))
-      case ContextList(values) => BSONArray(values.map(write))
+      case ContextList(values) => BSONArray(values.map(writeSimpleContextData))
+      case data: SimpleContextData => BSONArray(writeSimpleContextData(data))
     }
+
+    private def writeSimpleContextData(data: SimpleContextData) = data match {
+      case ContextStringData(value) => BSONString(value)
+      case ContextDoubleData(value) => BSONDouble(value)
+      case ContextBoolean(value) => BSONBoolean(value)
+      case ContextDate(value) => BSONDateTimeHandler.write(value)
+    }
+
     def read(doc: BSONArray): ContextData = ???
   }
 
