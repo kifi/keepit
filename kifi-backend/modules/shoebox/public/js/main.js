@@ -1384,8 +1384,8 @@ $(function () {
 		// TODO(greg): figure out why this doesn't work cross-domain
 		if (/^facebook/.test(fullSocialId)) {
 			window.open('about:blank', fullSocialId, 'height=640,width=1060,left=200,top=200', false);
-			$('<form method=POST action=/invite target="' + fullSocialId + '" style="position:fixed;height:0;width:0;left:-99px">')
-			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">')
+			$('<form method="POST" action="/invite" target="' + fullSocialId + '" style="position:fixed;height:0;width:0;left:-99px">')
+			.append('<input type="hidden" name="fullSocialId" value="' + fullSocialId + '">')
 			.appendTo('body').submit().remove();
 		} else if (/^linkedin|email/.test(fullSocialId)) {
 			var name = $friend.find('.invite-name').text();
