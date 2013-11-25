@@ -98,6 +98,7 @@ exports.log.error = function(exception, context) {
 exports.noop = function() {};
 
 exports.on = {
+  beforeSearch: new Listeners,  // TODO: dispatch this event!
   search: new Listeners,
   install: new Listeners,
   update: new Listeners,

@@ -1519,6 +1519,8 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
 });
 
+api.on.beforeSearch.add(throttle(ajax.bind(null, 'search', 'GET', '/up'), 50000));
+
 var searchPrefetchCache = {};  // for searching before the results page is ready
 var searchFilterCache = {};    // for restoring filter if user navigates back to results
 api.on.search.add(function prefetchResults(query) {
@@ -1687,6 +1689,36 @@ function getRules() {
     }
   });
 }
+
+function throttle(func, wait, opts) {  // underscore.js
+  var context, args, result;
+  var timeout = null;
+  var previous = 0;
+  opts || (opts = {});
+  var later = function() {
+    previous = opts.leading === false ? 0 : Date.now();
+    timeout = null;
+    result = func.apply(context, args);
+    context = args = null;
+  };
+  return function() {
+    var now = Date.now();
+    if (!previous && opts.leading === false) previous = now;
+    var remaining = wait - (now - previous);
+    context = this;
+    args = arguments;
+    if (remaining <= 0) {
+      api.timers.clearTimeout(timeout);
+      timeout = null;
+      previous = now;
+      result = func.apply(context, args);
+      context = args = null;
+    } else if (!timeout && opts.trailing !== false) {
+      timeout = api.timers.setTimeout(later, remaining);
+    }
+    return result;
+  };
+};
 
 // ===== Session management
 
