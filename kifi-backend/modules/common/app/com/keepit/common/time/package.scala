@@ -45,7 +45,6 @@ package object time {
         DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z").getParser))
     .toFormatter.withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE)
 
-  val UTC_DATETIME_FORMAT = STANDARD_DATETIME_FORMAT.withLocale(Locale.ENGLISH).withZone(zones.UTC)
   val STANDARD_DATE_FORMAT = ISODateTimeFormat.date.withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE)
 
   implicit object DateTimeJsonFormat extends Format[DateTime] {

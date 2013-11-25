@@ -134,8 +134,8 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function toggleLoginDialog() {
-    api.require("scripts/dialog.js", function() {
-      kifiDialog.toggleLoginDialog();
+    api.require('scripts/iframe_dialog.js', function() {
+      iframeDialog.toggle('login');
     });
   }
 

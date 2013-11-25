@@ -26,7 +26,7 @@
     <br/>
     <table class="user-summary table table-bordered">
       <tr>
-        <th>Name</th><td>@user.firstName @user.lastName</td>
+        <th>Name</th><td><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, user.externalId)" height=25 width=25>@user.firstName @user.lastName</td>
       </tr>
       <tr>
         <th>Id</th><td>@user.id</td>
@@ -74,7 +74,7 @@
         <th>Experiments</th>
         <td id="experiments" class="form-inline">
           @for(exp <- Seq(ExperimentType.ADMIN, ExperimentType.BLOCK,
-              ExperimentType.NO_SEARCH_EXPERIMENTS, ExperimentType.FAKE, ExperimentType.INACTIVE,
+              ExperimentType.NO_SEARCH_EXPERIMENTS, ExperimentType.DEMO, ExperimentType.FAKE, ExperimentType.INACTIVE,
               ExperimentType.CAN_INVITE, ExperimentType.CAN_MESSAGE_ALL_USERS, ExperimentType.NOT_SENSITIVE,
               ExperimentType.GMAIL_INVITE, ExperimentType.CAN_CONNECT)) {
             <label class="checkbox">
