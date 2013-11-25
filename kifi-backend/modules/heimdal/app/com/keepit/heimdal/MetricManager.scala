@@ -36,16 +36,16 @@ class MetricManager @Inject() (
 
   val definedRestrictions = Map[String, ContextRestriction](
     "none" -> NoContextRestriction,
-    "noadmins" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("admin"))),
+    "noadmins" -> AnyContextRestriction("context.experiments", NotEqualTo(ContextStringData("admin"))),
     "withkifiresults" -> AnyContextRestriction("context.kifiResults", GreaterThan(ContextDoubleData(0))),
     "clickedkifiresult" -> ConditionalContextRestriction(AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi"))), EventType("clicked_search_result")),
-    "nofakes" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))), //Is this correct?
+    "nofakes" -> AnyContextRestriction("context.experiments", NotEqualTo(ContextStringData("fake"))), //Is this correct?
     "publickeepsonly_nofakes" -> AndContextRestriction(
-      AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))),
+      AnyContextRestriction("context.experiments", NotEqualTo(ContextStringData("fake"))),
       AnyContextRestriction("context.isPrivate", EqualTo(ContextDoubleData(0)))
     ),
     "privatekeepsonly_nofakes" -> AndContextRestriction(
-      AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))),
+      AnyContextRestriction("context.experiments", NotEqualTo(ContextStringData("fake"))),
       AnyContextRestriction("context.isPrivate", EqualTo(ContextDoubleData(1)))
     ),
     "newinstallsonly" -> AnyContextRestriction("context.firstTime", EqualTo(ContextDoubleData(1)))

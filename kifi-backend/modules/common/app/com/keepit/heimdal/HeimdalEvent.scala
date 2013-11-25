@@ -47,7 +47,7 @@ object SimpleContextData {
   }
 
   implicit def toContextStringData(value: String) = ContextStringData(value)
-  implicit def toContextDoubleData(value: Double) = ContextDoubleData(value)
+  implicit def toContextDoubleData[T <% Double](value: T) = ContextDoubleData(value)
   implicit def toContextBoolean(value: Boolean) = ContextBoolean(value)
   implicit def toContextDate(value: DateTime) = ContextDate(value)
 }
@@ -87,11 +87,7 @@ class EventContextBuilder {
   def +=[T <% SimpleContextData](key: String, value: T) : Unit = data(key) = value
   def +=[T <% SimpleContextData](key: String, values: Seq[T]) : Unit = data(key) = ContextList(values.map(identity[SimpleContextData](_)))
 
-
-
-  def build : EventContext = {
-    EventContext(data.toMap)
-  }
+  def build : EventContext = EventContext(data.toMap)
 }
 
 @Singleton
@@ -112,7 +108,7 @@ class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) 
       req match {
         case authRequest: AuthenticatedRequest[_] =>
           authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
-          contextBuilder += ("experiment", authRequest.experiments.map(_.value).toSeq)
+          contextBuilder += ("experiments", authRequest.experiments.map(_.value).toSeq)
         case _ =>
       }
     }
