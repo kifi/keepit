@@ -17,7 +17,6 @@ var notificationsCallbacks = [];
 var threadDataCallbacks = {}; // by normalized url
 var threadCallbacks = {}; // by thread ID
 
-var lastApiCall;
 
 // ===== Cached data from server
 
@@ -162,13 +161,6 @@ function insertUpdateChronologically(arr, o, time) {
 
 // ===== Server requests
 
-function keepApiWarm() {
-  var now = new Date().getTime()
-  if (!lastApiCall || lastApiCall<(now-20000)) {
-    ajax("GET", "/up");
-  }
-}
-
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
   if (service.match(/^(?:GET|POST|HEAD|OPTIONS|PUT)$/)) { // shift args if service is missing
     fail = done, done = data, data = uri, uri = method, method = service, service = "api";
@@ -189,10 +181,6 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
     }
     uri += (~uri.indexOf("?") ? "&" : "?") + a.join("&").replace(/%20/g, "+");
     data = null;
-  }
-
-  if (service==="api"){
-    lastApiCall = new Date().getTime();
   }
 
   api.request(method, serviceNameToUri(service) + uri, data, done, fail);
@@ -1721,11 +1709,6 @@ function startSession(callback, retryMs) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
     logEvent("extension", "authenticated");
     unstore('logout');
-
-    keepApiWarm();
-    setInterval(function(){
-      keepApiWarm();
-    }, 5000);
 
     session = data;
     session.prefs = {}; // to come via socket
