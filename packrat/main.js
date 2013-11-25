@@ -17,7 +17,6 @@ var notificationsCallbacks = [];
 var threadDataCallbacks = {}; // by normalized url
 var threadCallbacks = {}; // by thread ID
 
-
 // ===== Cached data from server
 
 var pageData = {}; // keyed by normalized url
