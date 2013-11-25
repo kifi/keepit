@@ -24,7 +24,7 @@ var pageThreadData = {}; // keyed by normalized url
 var messageData = {}; // keyed by thread id; todo: evict old threads from memory
 var notifications;  // [] would mean user has none
 var timeNotificationsLastSeen = new Date(0);
-var numNotificationsNotVisited = 0;  // may include some not yet loaded
+var numInNotificationsCounter = 0;  // may include some not yet loaded
 var haveAllNotifications;  // inferred
 var friends = [];
 var friendsById = {};
@@ -40,7 +40,7 @@ function clearDataCache() {
   messageData = {};
   notifications = null;
   timeNotificationsLastSeen = new Date(0);
-  numNotificationsNotVisited = 0;
+  numInNotificationsCounter = 0;
   haveAllNotifications = false;
   friends = [];
   friendsById = {};
@@ -301,15 +301,15 @@ var socketHandlers = {
     log("[socket:url_patterns]", patterns)();
     urlPatterns = compilePatterns(patterns);
   },
-  notifications: function(arr, numNotVisited) {  // initial load of notifications
-    log("[socket:notifications]", arr, numNotVisited)();
+  notifications: function(arr, numInCounter) {  // initial load of notifications
+    log("[socket:notifications]", arr, numInCounter)();
     if (!notifications) {
       for (var i = 0; i < arr.length; i++) {
         standardizeNotification(arr[i]);
       }
       notifications = arr;
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
-      numNotificationsNotVisited = numNotVisited;
+      numInNotificationsCounter = numInCounter;
       while (notificationsCallbacks.length) {
         notificationsCallbacks.shift()();
       }
@@ -432,13 +432,13 @@ var socketHandlers = {
     tellVisibleTabsNoticeCountIfChanged();
   },
   unread_notifications_count: function(count) {
-    // see comment in syncNumNotificationsNotVisited() :(
-    if (numNotificationsNotVisited != count) {
+    // see comment in syncNumInNotificationsCounter() :(
+    if (numInNotificationsCounter !== count) {
       if (notifications) {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
-        reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
+        reportError("numInNotificationsCounter count incorrect: " + numInNotificationsCounter + " != " + count);
       }
-      numNotificationsNotVisited = count;
+      numInNotificationsCounter = count;
       tellVisibleTabsNoticeCountIfChanged();
     }
   }
@@ -723,11 +723,11 @@ api.port.on({
       notificationsCallbacks.push(reply);
     }
     function reply() {
-      syncNumNotificationsNotVisited(); // sanity checking
+      syncNumInNotificationsCounter(); // sanity checking
       respond({
         notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
         timeLastSeen: timeNotificationsLastSeen.toISOString(),
-        numNotVisited: numNotificationsNotVisited});
+        numNotVisited: numInNotificationsCounter});
     }
   },
   old_notifications: function(timeStr, respond) {
@@ -946,7 +946,7 @@ function sendNotificationToTabs(n) {
   forEachTabAtLocator('/notices', tellTab);
   tellVisibleTabsNoticeCountIfChanged();
 
-  if (n.unread) {
+  if (n.unread && !n.muted) {
     api.play("media/notification.mp3");
   }
 
@@ -973,7 +973,7 @@ function insertNewNotification(n) {
   }
   notifications.splice(i, 0, n);
 
-  if (n.unread) {  // may have been visited before arrival
+  if (n.unread && !n.muted) {  // may have been visited before arrival
     var td, th;
     if (n.category === 'message' &&
         (td = pageThreadData[n.url]) &&
@@ -982,7 +982,7 @@ function insertNewNotification(n) {
       n.unread = false;
       n.unreadAuthors = 0;
     } else {
-      numNotificationsNotVisited++;
+      numInNotificationsCounter++;
     }
   }
 
@@ -990,8 +990,8 @@ function insertNewNotification(n) {
     var n2 = notifications[i];
     if ((n.thread && n2.thread == n.thread) || (n.id == n2.id)) {
       notifications.splice(i--, 1);
-      if (n2.unread) {
-        decrementNumNotificationsNotVisited(n2);
+      if (n2.unread && !n2.muted) {
+        decrementNumInNotificationsCounter(n2);
       }
     }
   }
@@ -999,8 +999,8 @@ function insertNewNotification(n) {
   return true;
 }
 
-function syncNumNotificationsNotVisited() {
-  // We have an open issue where numNotificationsNotVisited gets off - it goes below 0
+function syncNumInNotificationsCounter() {
+  // We have an open issue where numInNotificationsCounter gets off - it goes below 0
   // So either an incriment is not happening, or a decrement is happening too often.
   // The issue goes back several months (with the -1 notification issue), but has gotten
   // much worse lately. I've had dificulty consistantly reproducing, so am adding this
@@ -1022,7 +1022,7 @@ function markNoticesVisited(category, id, timeStr, locator) {
       if (n.unread) {
         n.unread = false;
         n.unreadAuthors = 0;
-        decrementNumNotificationsNotVisited(n);
+        decrementNumInNotificationsCounter(n);
       }
     }
   });
@@ -1032,7 +1032,7 @@ function markNoticesVisited(category, id, timeStr, locator) {
       time: timeStr,
       locator: locator,
       id: id,
-      numNotVisited: numNotificationsNotVisited});
+      numNotVisited: numInNotificationsCounter});
   });
 }
 
@@ -1051,25 +1051,25 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
       }
     }
   }
-  numNotificationsNotVisited = notifications.filter(function(n) {
-    return n.unread;
+  numInNotificationsCounter = notifications.filter(function(n) {
+    return n.unread && !n.muted;
   }).length;
   forEachTabAtLocator('/notices', function(tab) {
     api.tabs.emit(tab, "all_notifications_visited", {
       id: id,
       time: timeStr,
-      numNotVisited: numNotificationsNotVisited});
+      numNotVisited: numInNotificationsCounter});
   });
 
   tellVisibleTabsNoticeCountIfChanged();
 }
 
-function decrementNumNotificationsNotVisited(n) {
-  if (numNotificationsNotVisited <= 0) {
-    log("#a00", "[decrementNumNotificationsNotVisited] error", numNotificationsNotVisited, n)();
+function decrementNumInNotificationsCounter(n) {
+  if (numInNotificationsCounter <= 0) {
+    log("#a00", "[decrementNumInNotificationsCounter] error", numInNotificationsCounter, n)();
   }
-  if (numNotificationsNotVisited > 0 || ~session.experiments.indexOf("admin")) {  // exposing -1 to admins to help debug
-    numNotificationsNotVisited--;
+  if (numInNotificationsCounter > 0 || ~session.experiments.indexOf("admin")) {  // exposing -1 to admins to help debug
+    numInNotificationsCounter--;
   }
 }
 
@@ -1143,8 +1143,8 @@ function forEachTabAtUriAndLocator() { // (url[, url]..., loc, f)
 
 function tellVisibleTabsNoticeCountIfChanged() {
   api.tabs.eachSelected(function(tab) {
-    if (tab.counts && tab.counts.n !== numNotificationsNotVisited) {
-      tab.counts.n = numNotificationsNotVisited;
+    if (tab.counts && tab.counts.n !== numInNotificationsCounter) {
+      tab.counts.n = numInNotificationsCounter;
       api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
     }
   });
@@ -1156,7 +1156,7 @@ function tellTabsUnreadThreadCountIfChanged(td) { // (td, url[, url]...)
   args.push(function(tab) {
     if (tab.counts.m !== m) {
       tab.counts.m = m;
-      tab.counts.n = numNotificationsNotVisited;
+      tab.counts.n = numInNotificationsCounter;
       api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
     }
   });
@@ -1267,7 +1267,7 @@ function kifify(tab) {
   // thread data
   var td = pageThreadData[uri];
   if (td && !td.stale) {
-    tab.counts = {n: numNotificationsNotVisited, m: td.countUnreadThreads()};
+    tab.counts = {n: numInNotificationsCounter, m: td.countUnreadThreads()};
     api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
   } else {
     socket.send(["get_threads", url], gotThreadDataFor.bind(null, url, tab));
@@ -1365,7 +1365,7 @@ function gotThreadDataFor(url, tab, threads, nUri) {
   if (!tabIsOld) {
     pageThreadData[nUri] = td;
 
-    tab.counts = {n: numNotificationsNotVisited, m: td.countUnreadThreads()};
+    tab.counts = {n: numInNotificationsCounter, m: td.countUnreadThreads()};
     api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
 
     if (ruleSet.rules.message && tab.counts.m) {  // open immediately to unread message(s)
@@ -1767,7 +1767,7 @@ function startSession(callback, retryMs) {
       } else {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
       }
-      syncNumNotificationsNotVisited();
+      syncNumInNotificationsCounter();
       api.tabs.eachSelected(kifify);
     }, function onDisconnect(why) {
       reportError("socket disconnect (" + why + ")");
