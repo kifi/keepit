@@ -1,6 +1,7 @@
 package com.keepit.common.service
 
 import scala.concurrent.Future
+import scala.util.Random
 
 import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
@@ -47,7 +48,7 @@ trait ServiceClient extends Logging {
 
   protected def urls(path: String): Seq[HttpUri] =
     serviceCluster.allServices.filter(!_.thisInstance).map(new ServiceUri(_, protocol, port, path)) tap { uris =>
-      if (uris.length == 0) log.warn("Broadcasting to no-one!")
+      if (uris.length == 0) log.warn("Broadcasting/Teeing to no-one!")
     }
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2, timeout: Int = 5000): Future[ClientResponse] = {
@@ -96,4 +97,9 @@ trait ServiceClient extends Logging {
       log.info(s"[broadcast] Sending to $url: ${body.toString.take(120)}")
       callUrl(call, url, body)
     }
+
+  protected def tee(call: ServiceRoute, body: JsValue = JsNull, teegree: Int = 2): Future[ClientResponse] = {
+    val futures = Random.shuffle(urls(call.url)).take(teegree).map(callUrl(call, _, body)) //need to shuffle
+    Future.firstCompletedOf(futures)
+  }
 }

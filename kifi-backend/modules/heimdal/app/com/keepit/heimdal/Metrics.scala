@@ -6,6 +6,7 @@ import scala.concurrent.duration.Duration
 
 import reactivemongo.bson.{BSONValue, BSONDouble, BSONString, BSONDocument, BSONArray, BSONDateTime, BSONLong}
 import reactivemongo.core.commands.{PipelineOperator, Match, GroupField, SumValue, Unwind, Sort, Descending, AddToSet}
+import com.keepit.heimdal.CustomBSONHandlers.BSONContextDataHandler
 
 sealed trait ComparisonOperator {
   def toBSONMatchFragment: BSONValue
@@ -28,18 +29,12 @@ case class GreaterThanOrEqualTo(value: ContextDoubleData) extends ComparisonOper
 }
 
 case class EqualTo(value: ContextData) extends ComparisonOperator {
-  def toBSONMatchFragment: BSONValue = value match {
-    case ContextDoubleData(x) => BSONDouble(x)
-    case ContextStringData(s) => BSONString(s)
-  }
+  def toBSONMatchFragment: BSONValue = BSONContextDataHandler.write(value)
 }
 
 case class NotEqualTo(value: ContextData) extends ComparisonOperator {
   def toBSONMatchFragment: BSONValue = {
-    val bsonValue : BSONValue = value match {
-      case ContextDoubleData(x) => BSONDouble(x)
-      case ContextStringData(s) => BSONString(s)
-    }
+    val bsonValue : BSONValue = BSONContextDataHandler.write(value)
     BSONDocument("$ne" -> bsonValue)
   }
 }
