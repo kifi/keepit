@@ -9,10 +9,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONDouble
 import reactivemongo.bson.BSONString
 import reactivemongo.api.collections.default.BSONCollection
-import com.keepit.serializer.Companion
-import play.api.libs.json.JsArray
 import org.joda.time.DateTime
-import com.keepit.common.db.State
 
 //Might want to change this to a custom play one
 import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
@@ -105,23 +102,19 @@ object CustomBSONHandlers {
     def write(eventType: EventType) = BSONString(eventType.name)
   }
 
-  implicit object BSONEventContextHandler extends BSONHandler[BSONDocument, EventContext] {
-    def write(context: EventContext) = BSONDocument(
-      context.data.mapValues{ seq =>
-        BSONArray(
-          seq.map{ _ match {
-            case ContextStringData(s)  => BSONString(s)
-            case ContextDoubleData(x) => BSONDouble(x)
-          }}
-        )
-      }
-    )
-    def read(doc: BSONDocument): EventContext = ???
+  implicit object BSONContextDataHandler extends BSONHandler[BSONArray, ContextData] {
+    def write(data: ContextData) = data match {
+      case ContextStringData(value) => BSONArray(BSONString(value))
+      case ContextDoubleData(value) => BSONArray(BSONDouble(value))
+      case ContextBoolean(value) => BSONArray(BSONBoolean(value))
+      case ContextDate(value) => BSONArray(BSONDateTimeHandler.write(value))
+      case ContextList(values) => BSONArray(values.map(write))
+    }
+    def read(doc: BSONArray): ContextData = ???
   }
 
-  def eventToBSONFields(event: HeimdalEvent): Seq[(String, BSONValue)] = Seq(
-    "context" -> BSONEventContextHandler.write(event.context),
-    "event_type" -> BSONEventTypeHandler.write(event.eventType),
-    "time" -> BSONDateTimeHandler.write(event.time)
-  )
+  implicit object BSONEventContextHandler extends BSONHandler[BSONDocument, EventContext] {
+    def write(context: EventContext) = BSONDocument(context.data.mapValues(BSONContextDataHandler.write))
+    def read(doc: BSONDocument): EventContext = ???
+  }
 }

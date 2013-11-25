@@ -74,9 +74,7 @@ class ExtMessagingController @Inject() (
         //Analytics
         SafeFuture {
           val contextBuilder = userEventContextBuilder(Some(request))
-          recipientSeq.foreach { recipient =>
-            contextBuilder += ("recipient", recipient.id)
-          }
+          contextBuilder += ("recipients", recipientSeq.map(_.id).toSeq)
           contextBuilder += ("threadId", thread.id.get.id)
           contextBuilder += ("url", thread.url.getOrElse(""))
           contextBuilder += ("isActuallyNew", messages.length<=1)
@@ -120,9 +118,9 @@ class ExtMessagingController @Inject() (
       contextBuilder += ("threadId", message.thread.id)
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
       contextBuilder += ("extVersion", version.getOrElse(""))
-      thread.participants.foreach{_.allExcept(request.userId).foreach{ recipient =>
-        contextBuilder += ("recipient", recipient.id)
-      }}
+      thread.participants.foreach { participants =>
+        contextBuilder += ("recipients", participants.allExcept(request.userId).map(_.id).toSeq)
+      }
 
       thread.uriId.map{ uriId =>
         shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
