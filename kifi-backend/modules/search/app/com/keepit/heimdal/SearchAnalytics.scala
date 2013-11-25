@@ -148,7 +148,7 @@ class SearchAnalytics @Inject() (
     searchExperiment: Option[Id[SearchConfigExperiment]],
     kifiResults: Int,
     kifiCollapsed: Boolean,
-    kifiTime: Int,
+    kifiTime: Option[Int],
     referenceTime: Option[Int],
     otherResultsClicked: Int,
     kifiResultsClicked: Int
@@ -174,7 +174,7 @@ class SearchAnalytics @Inject() (
     query: String,
     kifiResults: Int,
     kifiCollapsed: Boolean,
-    kifiTime: Int,
+    kifiTime: Option[Int],
     referenceTime: Option[Int],
     resultSource: SearchEngine,
     resultPosition: Int,
@@ -220,7 +220,7 @@ class SearchAnalytics @Inject() (
     searchExperiment: Option[Id[SearchConfigExperiment]],
     kifiResults: Int,
     kifiCollapsed: Boolean,
-    kifiTime: Int,
+    kifiTime: Option[Int],
     referenceTime: Option[Int]
   ): EventContextBuilder = {
 
@@ -240,7 +240,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("kifiCollapsed", kifiCollapsed)
     contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
     contextBuilder += ("kifiLate", kifiCollapsed && initialSearchResult.toShow)
-    contextBuilder += ("kifiDeliveryTime", kifiTime)
+    kifiTime.foreach { kifiDevTime => contextBuilder += ("kifiDeliveryTime", kifiDevTime) }
     referenceTime.foreach { refTime => contextBuilder += ("3rdPartyDeliveryTime", refTime) }
     contextBuilder += ("isInitialSearch", uuid == initialSearchId)
 
