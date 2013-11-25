@@ -1195,8 +1195,8 @@ function searchOnServer(request, respond) {
       params.end = params.start;
     }
   }
-  ajax("search", "GET", "/search", params,
-    function(resp) {
+
+  var respHandler = function(resp) {
       log("[searchOnServer] response:", resp)();
       resp.filter = request.filter;
       resp.session = session;
@@ -1206,7 +1206,13 @@ function searchOnServer(request, respond) {
         hit.uuid = resp.uuid;
       });
       respond(resp);
-    });
+  };
+
+  if (session.experiments.indexOf('tsearch') < 0) {
+    ajax("search", "GET", "/search", params, respHandler);
+  } else {
+    ajax("api", "GET", "/tsearch", params, respHandler);
+  }
   return true;
 }
 
@@ -1481,35 +1487,6 @@ api.tabs.on.loading.add(function(tab) {
   logEvent("extension", "pageLoad");
 });
 
-var searchPrefetchCache = {};  // for searching before the results page is ready
-var searchFilterCache = {};    // for restoring filter if user navigates back to results
-api.on.search.add(function prefetchResults(query) {
-  log('[prefetchResults] prefetching for query:', query)();
-  searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter}, function(response) {
-    var cached = searchPrefetchCache[query];
-    cached.response = response;
-    while (cached.callbacks.length) cached.callbacks.shift()(response);
-    api.timers.setTimeout(function () { delete searchPrefetchCache[query] }, 10000);
-  });
-  searchPrefetchCache[query] = { callbacks: [], response: null };
-});
-
-function getPrefetched(request, cb) {
-  var cached = searchPrefetchCache[request.query];
-  if (cached) {
-    var logAndCb = function(r) {
-      log('[getPrefetched] results:', r)();
-      cb(r);
-    };
-    if (cached.response) {
-      logAndCb(cached.response);
-    } else {
-      cached.callbacks.push(logAndCb);
-    }
-    return true;
-  }
-}
-
 api.tabs.on.unload.add(function(tab, historyApi) {
   log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab)();
   var tabs = tabsByUrl[tab.nUri];
@@ -1547,6 +1524,47 @@ api.tabs.on.unload.add(function(tab, historyApi) {
     api.tabs.emit(tab, "reset");
   }
 });
+
+var searchPrefetchCache = {};  // for searching before the results page is ready
+var searchFilterCache = {};    // for restoring filter if user navigates back to results
+api.on.search.add(function prefetchResults(query) {
+  log('[prefetchResults] prefetching for query:', query)();
+  var entry = searchPrefetchCache[query];
+  if (!entry) {
+    entry = searchPrefetchCache[query] = {callbacks: [], response: null};
+    searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter}, function(response) {
+      entry.response = response;
+      while (entry.callbacks.length) entry.callbacks.shift()(response);
+      api.timers.clearTimeout(entry.expireTimeout);
+      entry.expireTimeout = api.timers.setTimeout(cull, 10000);
+    });
+  } else {
+    api.timers.clearTimeout(entry.expireTimeout);
+  }
+  var cull = cullSearchPrefetchCacheEntry.bind(null, query, entry);
+  entry.expireTimeout = api.timers.setTimeout(cull, 10000);
+});
+function cullSearchPrefetchCacheEntry(key, val) {
+  if (searchPrefetchCache[key] === val) {
+    delete searchPrefetchCache[key];
+  }
+}
+
+function getPrefetched(request, cb) {
+  var cached = searchPrefetchCache[request.query];
+  if (cached) {
+    var logAndCb = function(r) {
+      log('[getPrefetched] results:', r)();
+      cb(r);
+    };
+    if (cached.response) {
+      logAndCb(cached.response);
+    } else {
+      cached.callbacks.push(logAndCb);
+    }
+    return true;
+  }
+}
 
 function scheduleAutoShow(tab) {
   log("[scheduleAutoShow] scheduling tab:", tab.id)();

@@ -186,6 +186,13 @@ POST    /site/user/prefs            @com.keepit.controllers.website.UserControll
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
 
+
+##########################################
+# Search Proxying
+##########################################
+GET    /tsearch                     @com.keepit.controllers.SearchProxyController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
+
+
 ##########################################
 # External Services API
 ##########################################
