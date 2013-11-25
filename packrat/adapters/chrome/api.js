@@ -254,6 +254,22 @@ var api = function() {
         }
       }
     },
+    "api:iframe": function(o, _, page) {
+      var toUrl = chrome.runtime.getURL;
+      chrome.tabs.executeScript(page.id, {
+        allFrames: true,
+        code: [
+          'if (window !== top && document.URL === "', o.url, '") {',
+          " document.head.innerHTML='", o.styles.map(function(path) {return '<link rel="stylesheet" href="' + toUrl(path) + '">'}).join(''), "';",
+          ' ', JSON.stringify(o.scripts.map(function (path) {return toUrl(path)})), '.forEach(function(url) {',
+          '  var s = document.createElement("SCRIPT");',
+          '  s.src = url;',
+          '  document.head.appendChild(s);',
+          ' });',
+          '}'].join(''),
+        runAt: 'document_end'
+      });
+    },
     "api:reload": function() {
       if (!api.isPackaged()) {
         chrome.runtime.reload();

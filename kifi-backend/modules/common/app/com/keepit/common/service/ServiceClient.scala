@@ -56,9 +56,13 @@ trait ServiceClient extends Logging {
     }
     respFuture.onFailure{
       case ex: Throwable =>
+        val stringBody = body.toString
         airbrakeNotifier.notify(AirbrakeError(
           exception = ex,
-          message = Some(s"can't call service with body: ${body.toString.abbreviate(30)} and params: ${call.params.map(_.toString).mkString(",")}"),
+          message = Some(
+            s"can't call [${call.path}] " +
+            s"with body: ${stringBody.abbreviate(30)} (${stringBody.size} chars), " +
+            s"params: ${call.params.map(_.toString).mkString(",")}"),
           method = Some(call.method.toString),
           url = Some(call.path)))
     }

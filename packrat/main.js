@@ -831,6 +831,7 @@ api.port.on({
       }
     });
   },
+  logged_in: startSession.bind(null, api.noop),
   remove_notification: function(o) {
     removeNotificationPopups(o.associatedId);
   },

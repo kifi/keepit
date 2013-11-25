@@ -82,5 +82,11 @@
     "http://*/",
     "https://*/"
   ],
-  "web_accessible_resources": []
+  "web_accessible_resources": [
+    "styles/iframes/login.css",
+    "scripts/html/iframes/login.js",
+    "scripts/iframes/login.js",
+    "scripts/iframes/lib/jquery.js",
+    "scripts/iframes/lib/jquery-ui-position.js"
+  ]
 }

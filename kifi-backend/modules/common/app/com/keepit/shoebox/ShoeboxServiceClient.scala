@@ -276,8 +276,8 @@ class ShoeboxServiceClientImpl @Inject() (
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
     call(Shoebox.internal.getEmailAddressesForUsers(), payload).map{ res =>
-      res.json.as[Map[String, Seq[String]]]
-      .map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
+      log.info(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
+      res.json.as[Map[String, Seq[String]]].map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
   }
 
