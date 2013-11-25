@@ -19,13 +19,13 @@ class ResultClickTracker(lru: ProbablisticLRU) {
 
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
-  def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean): Unit = {
+  def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean, isDemo: Boolean = false): Unit = {
     val hash = QueryHash(userId, query, analyzer)
     val probe = lru.get(hash, true)
     val norm = probe.norm.toDouble
     val count = probe.count(uriId.id)
 
-    if (count == 0) {
+    if (count == 0 && !isDemo) {
       lru.put(hash, uriId.id, 0.01d)
     } else if (isUserKeep) {
       val updateStrength = min(min(0.1d * (rank.toDouble + 3.0d), (count * 2).toDouble/norm.toDouble), 0.7)

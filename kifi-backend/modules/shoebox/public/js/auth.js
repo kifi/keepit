@@ -89,8 +89,8 @@ kifi.form = (function () {
 
 (function () {
   'use strict';
-  var $logoL = $('.curtain-logo-l');
-  var $logoR = $('.curtain-logo-r');
+
+  $('body').removeClass('still');
 
   $('.curtain-action').on('mousedown click', function (e) {
     if (e.which !== 1 || $('body').hasClass('curtains-drawn')) return;

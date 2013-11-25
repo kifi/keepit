@@ -46,11 +46,11 @@ class ABookServiceClientImpl @Inject() (
   extends ABookServiceClient with Logging {
 
   def importContactsP(userId: Id[User], oauth2Token:OAuth2Token): Future[JsValue] = {
-    call(ABook.internal.importContactsP(userId), Json.toJson(oauth2Token)).map { r => r.json }
+    call(ABook.internal.importContactsP(userId), Json.toJson(oauth2Token), timeout = 30000).map { r => r.json }
   }
 
   def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = {
-    call(ABook.internal.importContacts(userId, provider, accessToken)).map { r => r.json }
+    call(ABook.internal.importContacts(userId, provider, accessToken), timeout = 30000).map { r => r.json }
   }
 
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {

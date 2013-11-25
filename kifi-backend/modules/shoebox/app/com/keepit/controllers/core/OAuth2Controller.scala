@@ -98,7 +98,7 @@ class OAuth2Controller @Inject() (
   abookServiceClient:ABookServiceClient
 ) extends WebsiteController(actionAuthenticator) with Logging {
 
-  val approvalPrompt = sys.props.getOrElse("oauth2.approval.prompt", "auto")
+  val approvalPrompt = sys.props.getOrElse("oauth2.approval.prompt", "force")
 
   import OAuth2Providers._
   def start(provider:String, stateTokenOpt:Option[String], approvalPromptOpt:Option[String]) = AuthenticatedJsonAction { implicit request =>
