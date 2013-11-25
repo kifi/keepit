@@ -1,0 +1,58 @@
+<h1>Log in</h1>
+<form class="form-login" action="/auth/log-in" novalidate>
+  <div class="form-sides">
+    <div class="form-l">
+      <h3>Use a social network</h3>
+      <div class="form-fields">
+        <a class="form-network facebook" href="/login/facebook" target="_blank">
+          <span class="form-network-icon"></span>
+          <span class="form-network-text">Facebook</span>
+        </a>
+        <a class="form-network linkedin" href="/login/linkedin" target="_blank">
+          <span class="form-network-icon"></span>
+          <span class="form-network-text">LinkedIn</span>
+        </a>
+      </div>
+    </div>
+    <div class="form-r">
+      <h3>Use your email address</h3>
+      <div class="form-fields">
+        <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address" required autofocus>
+        <label class="password-label">
+          <input class="form-password" type="password" name="login-password" placeholder="Your password" required>
+        </label>
+        <button class="form-submit">Log in</button>
+        <a class="password-forgot" href="javascript:">Forgot password</a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="no-account">Don’t have an account? <a href="/" target="_blank">Sign up</a></div>
+<div id="fb-root"></div>
+
+<div class="dialog reset-password" style="display:none">
+  <div class="dialog-cell">
+    <div class="dialog-box">
+      <a class="dialog-x" href="javascript:"></a>
+      <div class="dialog-title">
+        I forgot my password
+      </div>
+      <form class="reset-password-form" action="/password/forgot" novalidate>
+        <p class="dialog-text">To reset your password, please enter<br>the email address you use to log in.</p>
+        <input class="reset-password-email" type="email" name="reset-password-email" placeholder="Your email address">
+        <div class="reset-password-buttons">
+          <a class="reset-password-cancel cancel-button" href="javascript:">Cancel</a>
+          <a class="reset-password-submit alt-button" href="javascript:">Submit</a>
+        </div>
+      </form>
+      <div class="reset-password-success">
+        <p class="dialog-text">We just sent instructions for resetting your password to:</p>
+        <ul class="reset-password-addresses"></ul>
+        <div class="reset-password-buttons">
+          <a class="reset-password-cancel cancel-button" href="javascript:">Close</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
