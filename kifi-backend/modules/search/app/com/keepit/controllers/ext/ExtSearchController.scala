@@ -172,7 +172,6 @@ class ExtSearchController @Inject() (
   }
 
 
-  @Trace
   def search(
     query: String,
     filter: Option[String],
