@@ -548,7 +548,7 @@ class AuthController @Inject() (
                 } else {
                   Redirect("/profile?m=1")
                 }
-                resp.withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                resp.withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                   .withCookies(authenticator.toCookie)
               }
             )
