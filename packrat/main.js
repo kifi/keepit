@@ -1208,7 +1208,8 @@ function searchOnServer(request, respond) {
       });
       respond(resp);
   };
-  if (Math.random()<0.5) {
+
+  if (session.experiments.indexOf('tsearch') < 0) {
     ajax("search", "GET", "/search", params, respHandler);
   } else {
     ajax("api", "GET", "/tsearch", params, respHandler);
