@@ -79,6 +79,7 @@
     "tabs",
     "bookmarks",
     "webNavigation",
+    "webRequest",
     "http://*/",
     "https://*/"
   ],

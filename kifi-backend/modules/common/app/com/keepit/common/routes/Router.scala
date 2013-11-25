@@ -167,7 +167,7 @@ object Search extends Service {
         val params = "userId=" + userId.id.toString +
                      "&nse=" + noSearchExperiments +
                      "&al=" + acceptLangs.mkString(",") +
-                     "&q=" + query +
+                     "&q=" + query.split(" ").filter(_.length>0).mkString("+") +
                      filter.map("&f="+_).getOrElse("") +
                      "&maxHits=" + maxHits.toString +
                      lastUUIDStr.map("&lastUUIDStr="+_).getOrElse("") +
@@ -176,7 +176,7 @@ object Search extends Service {
                      start.map("&start="+_).getOrElse("") +
                      end.map("&end="+_).getOrElse("") +
                      tz.map("&tz"+_).getOrElse("") +
-                     coll.map("&coll="+_)
+                     coll.map("&coll="+_).getOrElse("")
         ServiceRoute(GET, "/internal/search?" + params)
     }
   }
