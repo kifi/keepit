@@ -64,7 +64,7 @@
 
   // Search Chart
 
-  var searchTargets = baseTargets.concat('alias(summarize(stats.counters.search.extSearch.total.count,"1h"),"Searches per Hour")').concat(['alias(secondYAxis(stats.timers.search.routes.search.get.mean_99),"99% Mean Time (ms) S")', 'alias(stats.timers.shoebox.routes.tsearch.get.mean_99,"99% Mean Time (ms) T")']);
+  var searchTargets = baseTargets.concat('alias(summarize(stats.counters.search.extSearch.total.count,"1h"),"Searches per Hour")').concat(['alias(secondYAxis(stats.timers.search.routes.search.get.mean_99),"99% Mean Time (ms) S")', 'alias(secondYAxis(stats.timers.shoebox.routes.tsearch.get.mean_99),"99% Mean Time (ms) T")']);
   options.target = searchTargets;
   options.title = "Searches per Hour vs 99% Mean Time in Milliseconds";
   options.yMinRight = 0;
@@ -108,7 +108,7 @@
   options.target = messageAndNotificationTargets;
   options.title = "Messaging Latency";
   options.yMin = null;
-  options.yMax = 300;
+  options.yMax = 600;
   $("#message").graphite(options);
 }
 
