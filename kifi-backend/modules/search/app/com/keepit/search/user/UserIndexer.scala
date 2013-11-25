@@ -5,16 +5,20 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.model.User
 import com.keepit.social.BasicUser
 import com.keepit.search.index.{IndexDirectory, Indexable, Indexer, DefaultAnalyzer}
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import com.keepit.common.db.State
 import com.keepit.model.UserStates._
 import com.keepit.model.ExperimentType
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.shoebox.ShoeboxServiceClient
+
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.util.Version
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.concurrent.Future
 
 
 object UserIndexer {
@@ -63,38 +67,32 @@ class UserIndexer(
 
   case class UserInfo(user: User, basicUser: BasicUser, emails: Seq[String], experiments: Seq[ExperimentType])
 
-  private def getUsersInfo(fetchSize: Int): Seq[UserInfo] = {
-    val usersFuture = shoeboxClient.getUserIndexable(sequenceNumber.value, fetchSize)
-    val userIdsFuture = usersFuture.map{users => users.map(_.id.get)}
-    val basicUsersFuture = userIdsFuture.flatMap{ ids =>
-      if (ids.isEmpty) return Seq[UserInfo]()
-      else shoeboxClient.getBasicUsers(ids)
-    }
-    val emailsFuture = userIdsFuture.flatMap{ ids =>
-      if (ids.isEmpty) return Seq[UserInfo]()
-      else shoeboxClient.getEmailAddressesForUsers(ids)
-    }
-    val experimentsFuture = userIdsFuture.flatMap{ ids =>
-      if (ids.isEmpty) return Seq[UserInfo]()
-      else shoeboxClient.getExperimentsByUserIds(ids)
-    }
+  private def getUsersInfo(users: Seq[User]): Future[Seq[UserInfo]] = {
+    val ids = users.map(_.id.get)
+    val basicUsersFuture = shoeboxClient.getBasicUsers(ids)
+    val emailsFuture = shoeboxClient.getEmailAddressesForUsers(ids)
+    val experimentsFuture = shoeboxClient.getExperimentsByUserIds(ids)
 
     val infoFuture = for {
-      users <- usersFuture
-      userIds <- userIdsFuture
       basicUsers <- basicUsersFuture
       emails <- emailsFuture
       experiments <- experimentsFuture
     } yield {
-      userIds.zipWithIndex.flatMap{ case (id, idx) =>
-        (basicUsers.get(id), emails.get(id), experiments.get(id)) match {
-          case (Some(basicUser), Some(emails), Some(exps)) => Some(UserInfo(users(idx), basicUser, emails, exps.toSeq))
+      users map { user =>
+        val userId: Id[UserInfo] = user.id.get
+        (basicUsers.get(userId), emails.get(userId), experiments.get(userId)) match {
+          case (Some(basicUser), Some(emails), Some(exps)) => Some(UserInfo(user, basicUser, emails, exps.toSeq))
           case _ => None
         }
       }
     }
+  }
 
-    Await.result(infoFuture, 180 seconds)
+  private def getUsersInfo(fetchSize: Int): Seq[UserInfo] = {
+    shoeboxClient.getUserIndexable(sequenceNumber.value, fetchSize).get match {
+      case users if(users.isEmpty) => Seq[UserInfo]()
+      case users => Await.result(getUsersInfo(users), 5 seconds)
+    }
   }
 
   def buildIndexable(user: User, basicUser: BasicUser, emails: Seq[String], experiments: Seq[ExperimentType]): UserIndexable = {
