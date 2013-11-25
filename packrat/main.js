@@ -1195,8 +1195,8 @@ function searchOnServer(request, respond) {
       params.end = params.start;
     }
   }
-  ajax("search", "GET", "/search", params,
-    function(resp) {
+
+  var respHandler = function(resp) {
       log("[searchOnServer] response:", resp)();
       resp.filter = request.filter;
       resp.session = session;
@@ -1206,7 +1206,13 @@ function searchOnServer(request, respond) {
         hit.uuid = resp.uuid;
       });
       respond(resp);
-    });
+  };
+
+  if (session.experiments.indexOf('tsearch') < 0) {
+    ajax("search", "GET", "/search", params, respHandler);
+  } else {
+    ajax("api", "GET", "/tsearch", params, respHandler);
+  }
   return true;
 }
 
