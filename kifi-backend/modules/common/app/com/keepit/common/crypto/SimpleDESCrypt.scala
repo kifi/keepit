@@ -22,12 +22,13 @@ class SimpleDESCrypt extends CryptoSupport {
 
     val encoded = toBase64(encrypted)
     if (encoded.endsWith("=")) {
-      encoded.dropRight(1)
+      encoded.takeWhile(_ != '=')
     } else {
       encoded
     }
   }
   def decrypt(key: SecretKey, encrypted: String): Try[String] = Try {
+    encrypted + ("="*(encrypted.length % 4))
     val input =  fromBase64(if (encrypted.length % 2 == 1) { encrypted + "=" } else { encrypted })
     val cipher = Cipher.getInstance("DES/CBC/PKCS5Padding")
     cipher.init(Cipher.DECRYPT_MODE, key, ivSpec)

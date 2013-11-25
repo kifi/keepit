@@ -18,6 +18,7 @@ import play.api.libs.json.JsObject
 import com.keepit.common.mail.EmailAddressHolder
 import scala.slick.driver.BasicProfile
 import MessagingTypeMappers._
+import com.keepit.common.crypto.SimpleDESCrypt
 
 case class NonUserKind(name: String)
 
@@ -68,6 +69,8 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
 
   def setMuteState(nonUserThreadId: Id[NonUserThread], muted: Boolean)(implicit session: RWSession): Boolean
+
+  def setMuteState(muteToken: String, muted: Boolean)(implicit session: RWSession): Boolean
 
 }
 
@@ -124,9 +127,28 @@ class NonUserThreadRepoImpl @Inject() (
       (for (row <- table if row.uriId === oldId) yield row.uriId).update(newId)
     }
 
+  def setMuteState(muteToken: String, muted: Boolean)(implicit session: RWSession): Boolean =
+    muteTokenToNonUserThreadId(muteToken).map { id =>
+      setMuteState(id, muted)
+    }.getOrElse(false)
+
   def setMuteState(nonUserThreadId: Id[NonUserThread], muted: Boolean)(implicit session: RWSession): Boolean =
     (for (row <- table if row.id === nonUserThreadId) yield row.muted).update(muted) > 0
 
-  private def muteTokenToNonUserThreadId(muteToken: String): Option[Id[NonUserThread]]
+  val crypt = new SimpleDESCrypt()
+  val muteKey = crypt.stringToKey("non user thread id to muteKey key, word.")
+  def nonUserThreadIdToMuteToken(id: Id[NonUserThread]) = {
+    val encText = { // DES is a block cypher, so we'd prefer all blocks to be different for similar IDs
+      val _id = id.id.toString
+      _id.reverse.take(4) + " " + (" " * ((12 - _id.length) / 2) + _id).padTo(11, " ").mkString("")
+    }
+    crypt.crypt(muteKey, encText)
+  }
+  def muteTokenToNonUserThreadId(muteToken: String): Option[Id[NonUserThread]] = {
+    val decText = crypt.decrypt(muteKey, muteToken)
+    decText.map { i =>
+      Id[NonUserThread](i.trim.split(" ").tail.dropWhile(_.length == 0).head.toLong)
+    }.toOption
+  }
 
 }
