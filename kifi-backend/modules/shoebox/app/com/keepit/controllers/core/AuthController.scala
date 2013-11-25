@@ -530,14 +530,15 @@ class AuthController @Inject() (
   }
 
   def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = doVerifyEmail(code)(_), unauthenticatedAction = doVerifyEmail(code)(_))
-  def doVerifyEmail(code: String)(implicit request: Request[_]): Result = {
+  def doVerifyEmail(code: String)(implicit request: MaybeAuthenticatedRequest): Result = {
     db.readWrite { implicit s =>
       emailAddressRepo.getByCode(code).map { address =>
         val user = userRepo.get(address.userId)
         emailAddressRepo.verify(address.userId, code) match {
           case (true, _) if user.state == UserStates.PENDING =>
             Redirect("/?m=1")
-          case (true, true) => // first time being used
+          case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id) =>
+            // first time being used, not logged in OR logged in as correct user
             authenticateUser(user.id.get,
               error => throw error,
               authenticator => {
@@ -551,8 +552,8 @@ class AuthController @Inject() (
                   .withCookies(authenticator.toCookie)
               }
             )
-          case (true, false) => // valid, but already used before
-            Redirect("/profile?m=1")
+          case (true, _) =>
+            Ok(views.html.website.verifyEmailThanks(address.address, user.firstName))
         }
       }.getOrElse {
         BadRequest(views.html.website.verifyEmailError(error = "invalid_code"))
