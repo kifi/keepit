@@ -67,16 +67,7 @@ trait SearchServiceClient extends ServiceClient {
     userId: Id[User],
     noSearchExperiments: Boolean,
     acceptLangs: Seq[String],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    kifiVersion: Option[KifiVersion] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None): Future[String]
+    rawQuery: String): Future[String]
 }
 
 class SearchServiceClientImpl(
@@ -235,16 +226,7 @@ class SearchServiceClientImpl(
     userId: Id[User],
     noSearchExperiments: Boolean,
     acceptLangs: Seq[String],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    kifiVersion: Option[KifiVersion] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None): Future[String] = {
-      tee(Search.internal.search(userId,noSearchExperiments,acceptLangs,query,filter,maxHits,lastUUIDStr,context,kifiVersion,start,end,tz,coll)).map(_.body)
+    rawQuery: String): Future[String] = {
+      tee(Search.internal.search(userId,noSearchExperiments,acceptLangs,rawQuery)).map(_.body)
   }
 }
