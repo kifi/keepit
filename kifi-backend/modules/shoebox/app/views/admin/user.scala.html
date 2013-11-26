@@ -19,6 +19,7 @@
 )
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
+    <button class="btn" id="reset_mixpanel" onclick="resetMixpanelProfile()">Reset Mixpanel Profile</button>
     <button class="btn" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>
     <button class="btn" onclick="impersonate()">Impersonate User</button>
     <button class="btn" onclick="unimpersonate()">Stop Impersonating</button>
@@ -259,6 +260,10 @@
   </form>
 
   <script type="text/javascript">
+    function resetMixpanelProfile() {
+      $("#reset_mixpanel").prop("disabled", true).text("Resetting Mixpanel Profile...");
+      location.href="@com.keepit.controllers.admin.routes.AdminUserController.resetMixpanelProfile(user.id.get)"
+    }
     function refreshAllSocialUserInfo() {
       $("#refresh_sui").prop("disabled", true).text("Refreshing Social User Info...");
       location.href="@com.keepit.controllers.admin.routes.AdminUserController.refreshAllSocialInfo(user.id.get)"

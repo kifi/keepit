@@ -10,18 +10,19 @@ import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.KestrelCombinator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.model.{ExperimentType, User}
-import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.model.User
+import com.keepit.common.db.Id
 
 trait UserEventLoggingRepo extends EventRepo[UserEvent] {
-  def engage(user: User): Unit
+  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit
+  def setUserProperties(userId: Id[User], properties: EventContext): Unit
+  def delete(userId: Id[User]): Unit
 }
 
 class ProdUserEventLoggingRepo(
   val collection: BSONCollection,
   val mixpanel: MixpanelClient,
   val descriptors: UserEventDescriptorRepo,
-  shoebox: ShoeboxServiceClient,
   protected val airbrake: AirbrakeNotifier)
   extends MongoEventRepo[UserEvent] with UserEventLoggingRepo {
 
@@ -38,10 +39,10 @@ class ProdUserEventLoggingRepo(
   }
 
   def fromBSON(bson: BSONDocument): UserEvent = ???
-  def engage(user: User) = shoebox.getUserExperiments(user.id.get).foreach { experiments =>
-    if (!experiments.exists(_ == ExperimentType.FAKE)) mixpanel.engage(user)
-    else mixpanel.delete(user)
-  }
+
+  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = mixpanel.incrementUserProperties(userId, increments)
+  def setUserProperties(userId: Id[User], properties: EventContext): Unit = mixpanel.setUserProperties(userId, properties)
+  def delete(userId: Id[User]): Unit = mixpanel.delete(userId)
 }
 
 trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]
@@ -61,5 +62,7 @@ case class UserEventDescriptorNameKey(name: EventType) extends Key[EventDescript
 }
 
 class DevUserEventLoggingRepo extends DevEventRepo[UserEvent] with UserEventLoggingRepo {
-  def engage(user: User) = {}
+  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = {}
+  def setUserProperties(userId: Id[User], properties: EventContext): Unit = {}
+  def delete(userId: Id[User]): Unit = {}
 }
