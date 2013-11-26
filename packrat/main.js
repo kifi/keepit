@@ -788,6 +788,9 @@ api.port.on({
   session: function(_, respond) {
     respond(session);
   },
+  web_base_uri: function(_, respond) {
+    respond(webBaseUri());
+  },
   get_friends: function(_, respond) {
     respond(friends);
   },
