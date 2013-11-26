@@ -122,9 +122,9 @@ class ExtSearchEventController @Inject() (
 
   private def checkForMissingDeliveryTimes(kifiDeliveryTime: Option[Int], otherDeliveryTime: Option[Int], request: AuthenticatedRequest[JsValue], method: String) = {
     if (kifiDeliveryTime.isEmpty)
-      airbrake.notify(AirbrakeError(message = Some(s"[User ${request.userId} - Installation ${request.kifiInstallationId}] Kifi delivery time is missing in json:\n ${request.body}"), method = Some(method)))
+      airbrake.notify(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is missing in json: ${request.body}"))
     if (otherDeliveryTime.isEmpty)
-      airbrake.notify(AirbrakeError(message = Some(s"[User ${request.userId} - Installation ${request.kifiInstallationId}] Google delivery time is missing in json:\n ${request.body}"), method = Some(method)))
+      airbrake.notify(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Google delivery time is missing in json: ${request.body}"))
   }
 }
 
