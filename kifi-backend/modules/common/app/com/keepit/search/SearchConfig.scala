@@ -15,7 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "enableWarp" -> "false",
+      "enableWarp" -> "true",
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
       "concatBoost" -> "0.8",
