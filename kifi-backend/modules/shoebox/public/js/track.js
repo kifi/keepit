@@ -56,10 +56,7 @@
     for (var type in thingsToTrack){
       spec = thingsToTrack[type];
       handler = spec.handler || defaultEventHandler;
-
-      $(document).on(spec.events.join(" "), spec.selector, function (evnt){
-        handler(type, evnt);
-      });
+      $(document).on(spec.events.join(" "), spec.selector, handler.bind(null, type));
     };
   }
 
