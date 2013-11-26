@@ -5,8 +5,8 @@ import scala.util.parsing.combinator.RegexParsers
 
 case class Email(local:LocalPart, host:Host) {
   val DOT = "."
-  override val toString = s"$local@${host.domain.mkString(DOT)}"
-  def toStrictString = s"${local.toStrictString}@${host.domain.mkString(DOT)}"
+  override val toString = s"$local@${host.domain.mkString(DOT).trim}"
+  def toStrictString = s"${local.toStrictString}@${host.domain.mkString(DOT).trim}"
   def toDbgString = s"[Email(${local.toDbgString} host=${host})]"
   override def hashCode = toString.hashCode
   override def equals(o: Any) = {

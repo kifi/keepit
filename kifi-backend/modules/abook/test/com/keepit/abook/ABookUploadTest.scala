@@ -53,7 +53,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
       "name" -> "forty two",
       "firstName" -> "forty",
       "lastName" -> "two",
-      "emails" -> Seq("fortytwo@42go.com", "Foo@42go.com", "BAR@42go.com"))
+      "emails" -> Seq("fortytwo@42go.com", "Foo@42go.com ", "BAR@42go.com  "))
   )
 
   "ABook Controller" should {
