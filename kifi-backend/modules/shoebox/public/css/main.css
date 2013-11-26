@@ -38,7 +38,7 @@ a.my-settings-wrapper { position: relative; top: -10px; display: block; width: 6
 .my-settings-shade { position: absolute; top: 0; left: 0; display: block; width: 100%; height: 100%; border-radius: 50%; transition: background-color .2s ease; }
 .my-settings-wrapper:hover .my-settings-shade {background-color: rgba(103, 130, 156, 0.6)}
 
-.my-settings { position: absolute; top: 3%; left: 3%; width: 94%; height: 94%; background: #ABB8C8; border-radius: 50%; text-align: center; transition: all 0.2s ease; border: 2px solid  box-sizing: border-box; transform: scale(0, 0); -webkit-transform: scale(0, 0); }
+.my-settings { position: absolute; top: 3px; left: 3px; width: 60px; height: 60px; background: #ABB8C8; border-radius: 50%; text-align: center; transition: all 0.2s ease; transform: scale(0, 0); -webkit-transform: scale(0, 0); }
 .my-settings-wrapper:hover .my-settings { transform: none; -webkit-transform: none }
 .my-settings-wrapper:active .my-settings { background: #929FAF }
 
