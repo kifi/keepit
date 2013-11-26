@@ -297,7 +297,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
           )
         )
       }
-      json
+      if (json == null) JsNull else json
     } catch {
       case e: Throwable =>
         println("bad res: %s".format(body))

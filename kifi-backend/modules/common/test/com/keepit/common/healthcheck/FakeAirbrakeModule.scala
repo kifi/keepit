@@ -36,6 +36,7 @@ class FakeAirbrakeNotifier @Inject() (
   def reportDeployment(): Unit = {}
   def notify(errorException: Throwable): AirbrakeError = {println(errorException.toString); notify(AirbrakeError(errorException))}
   def notify(errorMessage: String): AirbrakeError = {println(errorMessage); notify(AirbrakeError(message = Some(errorMessage)))}
+  def notify(errorMessage: String, errorException: Throwable): AirbrakeError = {println(errorMessage); notify(AirbrakeError(message = Some(errorMessage), exception = errorException))}
   def notify(error: AirbrakeError): AirbrakeError = {
     errors = error :: errors
     error

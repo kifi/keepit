@@ -20,11 +20,13 @@
   },
   "content_scripts": [
     {
-      "js": ["scripts/install_redirect.js"],
+      "js": [
+        "scripts/api.js",
+        "scripts/installed.js"
+      ],
       "matches": [
-        "*://www.kifi.com/install",
-        "*://kifi.com/install",
-        "*://dev.ezkeep.com/install"
+        "*://www.kifi.com/*",
+        "*://dev.ezkeep.com/*"
       ],
       "run_at": "document_start"
     },
@@ -35,7 +37,6 @@
       ],
       "matches": [
         "*://www.kifi.com/r/*",
-        "*://kifi.com/r/*",
         "*://dev.ezkeep.com/r/*"
       ],
       "run_at": "document_start"

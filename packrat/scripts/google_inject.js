@@ -201,7 +201,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "origin": window.location.origin,
           "uuid": response.uuid,
           "experimentId": response.experimentId,
-          "kifiResults": response.hits.length, 
+          "kifiResults": response.hits.length,
           "kifiCollapsed": !response.expanded,
           "kifiTime": tKifiResultsShown - tQuery,
           "referenceTime": tGoogleResultsShown - tQuery,
@@ -282,12 +282,12 @@ if (searchUrlRe.test(document.URL)) !function() {
           "origin": window.location.origin,
           "uuid": isKifi ? response.hits[resIdx].uuid : response.uuid,
           "experimentId": response.experimentId,
-          "kifiResults": response.hits.length, 
+          "kifiResults": response.hits.length,
           "kifiCollapsed": !response.expanded,
           "kifiTime": tKifiResultsShown - tQuery,
           "referenceTime": tGoogleResultsShown - tQuery,
           "resultPosition": resIdx,
-          "resultSource": isKifi ? "Kifi" : "Google", 
+          "resultSource": isKifi ? "Kifi" : "Google",
           "resultUrl": href,
           "query": response.query,
           "hit": isKifi ? response.hits[resIdx] : null
@@ -601,7 +601,7 @@ if (searchUrlRe.test(document.URL)) !function() {
   function boldSearchTerms(text, matches) {
     return (matches || []).reduceRight(function (text, match) {
       var start = match[0], len = match[1];
-      return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
+      return start < 0 ? text : text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
     }, text || "");
   }
 

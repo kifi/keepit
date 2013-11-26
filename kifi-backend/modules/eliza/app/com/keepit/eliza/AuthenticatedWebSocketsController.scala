@@ -173,9 +173,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         //Analytics
         SafeFuture {
           val contextBuilder = userEventContextBuilder(Some(request), ipOpt)
-          streamSession.experiments.foreach{ experiment =>
-            contextBuilder += ("experiment", experiment.toString)
-          }
+          contextBuilder += ("experiments", streamSession.experiments.map(_.toString).toSeq)
           versionOpt.foreach{ version => contextBuilder += ("extVersion", version) }
           heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, EventType("ws_connect"), tStart))
         }

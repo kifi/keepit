@@ -29,7 +29,6 @@ import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
 import securesocial.core.providers.Token
-import com.keepit.abook.TestABookServiceClientModule
 
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.net.FakeHttpClientModule
