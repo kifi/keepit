@@ -7,13 +7,23 @@
 
 @headScripts = {
 <script>
-!function () {
+!function (el) {
+  if (el.dataset && el.dataset.kifiExt) {
+    redirect();
+  } else if (el.addEventListener) {
+    document.addEventListener('kifi:installed', redirect);
+  }
+  function redirect() {
+    window.location.href = '@com.keepit.controllers.website.routes.HomeController.gettingStarted';
+  }
+}(document.documentElement);
+!function (el) {
   var isChrome = window.chrome && chrome.webstore && chrome.webstore.install;
-  var isFirefox = !isChrome && ('MozBoxSizing' in document.documentElement.style) || ~navigator.userAgent.indexOf('Firefox');
+  var isFirefox = !isChrome && ('MozBoxSizing' in el.style) || ~navigator.userAgent.indexOf('Firefox');
   var majorVersion = +(navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [,999])[1];
   var supported = isChrome && majorVersion >= 26 || isFirefox && majorVersion >= 20;
-  document.documentElement.className += (supported ? ' supported ' : ' unsupported ') + (isChrome ? 'chrome' : isFirefox ? 'firefox' : 'other');
-}();
+  el.className += (supported ? ' supported ' : ' unsupported ') + (isChrome ? 'chrome' : isFirefox ? 'firefox' : 'other');
+}(document.documentElement);
 </script>
 }
 
