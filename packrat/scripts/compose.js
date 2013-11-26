@@ -147,7 +147,7 @@ function initCompose($c, enterToSend, opts) {
       }
     }
     var $submit = $f.find('.kifi-compose-submit').addClass('kifi-active');
-    setTimeout($.fn.removeClass.bind($submit, "kifi-active"), 10);
+    setTimeout($.fn.removeClass.bind($submit, 'kifi-active'), 10);
     opts.onSubmit(text, recipients);
     if (opts.resetOnSubmit) {
       $d.empty().focus().triggerHandler('input');
@@ -230,9 +230,9 @@ function initCompose($c, enterToSend, opts) {
         $.fn.addClass.bind($alt, 'kifi-hover'),
         $.fn.removeClass.bind($alt, 'kifi-hover'));
     var $menu = $('<span class=kifi-compose-tip-menu>').append($alt).insertAfter($tip);
-    $tip.css("min-width", $alt.outerWidth()).addClass("kifi-active");
+    $tip.css('min-width', $alt.outerWidth()).addClass('kifi-active');
     $alt.css('visibility', '').mouseup(hide.bind(null, true));
-    document.addEventListener("mousedown", docMouseDown, true);
+    document.addEventListener('mousedown', docMouseDown, true);
     function docMouseDown(e) {
       hide($alt[0].contains(e.target));
       if ($tip[0].contains(e.target)) {
@@ -242,12 +242,12 @@ function initCompose($c, enterToSend, opts) {
     }
     function hide(toggle) {
       document.removeEventListener('mousedown', docMouseDown, true);
-      $tip.removeClass("kifi-active");
+      $tip.removeClass('kifi-active');
       $menu.remove();
       if (toggle) {
         enterToSend = !enterToSend;
         log('[enterToSend]', enterToSend)();
-        tipTextNode.nodeValue = enterToSend ? tipTextNode.nodeValue.replace(prefix, "") : prefix + tipTextNode.nodeValue;
+        tipTextNode.nodeValue = enterToSend ? tipTextNode.nodeValue.replace(prefix, '') : prefix + tipTextNode.nodeValue;
         api.port.emit('set_enter_to_send', enterToSend);
       }
     }
