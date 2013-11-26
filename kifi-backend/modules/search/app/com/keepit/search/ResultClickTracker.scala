@@ -19,10 +19,21 @@ class ResultClickTracker(lru: ProbablisticLRU) {
 
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
+  private[this] val boostFactor: Array[Float] = {
+    val n = lru.numHashFuncs
+    val t = new Array[Float](n + 1)
+    var i = 1
+    while (i <= n) {
+      t(i) = sqrt(((i - 1).toDouble/(n - 1).toDouble)).toFloat // trying to stabilize the result when a few keeps are boosted at the same time
+      i += 1
+    }
+    t
+  }
+
   def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean, isDemo: Boolean = false): Unit = {
     val hash = QueryHash(userId, query, analyzer)
     val probe = lru.get(hash, true)
-    val norm = probe.norm.toDouble
+    val norm = lru.numHashFuncs.toDouble
     val count = probe.count(uriId.id)
 
     if (count == 0 && !isDemo) {
@@ -44,10 +55,9 @@ class ResultClickTracker(lru: ProbablisticLRU) {
     val hash = QueryHash(userId, query, analyzer)
     val probe = lru.get(hash, useSlaveAsPrimary)
     new ResultClickBoosts {
-      private[this] val norm: Float = probe.norm
       def apply(value: Long) = {
         val count = probe.count(value)
-        if (count > 1) { 1.0f +  (maxBoost - 1.0f) * count.toFloat/norm } else { 1.0f }
+        if (count > 1) { 1.0f + maxBoost * boostFactor(count) } else { 1.0f }
       }
     }
   }

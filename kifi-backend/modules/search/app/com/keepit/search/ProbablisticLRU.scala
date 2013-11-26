@@ -165,9 +165,9 @@ class S3BackedResultClickTrackerBuffer @Inject() (cache: ProbablisticLRUChunkCac
 
 
 
-class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEvery : Int)(slaveBuffer: Option[MultiChunkBuffer] = None) {
+class ProbablisticLRU(masterBuffer: MultiChunkBuffer, val numHashFuncs : Int, syncEvery : Int)(slaveBuffer: Option[MultiChunkBuffer] = None) {
 
-  class Probe(key: Long, positions: Array[Int], values: Array[Int], val norm: Float) {
+  class Probe(key: Long, positions: Array[Int], values: Array[Int]) {
     def count(value: Long) = {
       var count = 0
       var i = 0
@@ -199,9 +199,9 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
     if ((ins % syncEvery) == 0) sync
   }
 
-  def get(key: Long, useSlaveAsPrimary: Boolean) = {
+  def get(key: Long, useSlaveAsPrimary: Boolean): Probe = {
     val (p, h) = getValueHashes(key, useSlaveAsPrimary)
-    new Probe(key, p, h, numHashFuncs.toFloat)
+    new Probe(key, p, h)
   }
 
   def get(key: Long, values: Seq[Long], useSlaveAsPrimary: Boolean = false): Map[Long, Int] = {
