@@ -386,8 +386,9 @@ class AdminUserController @Inject() (
     db.readWrite { implicit session =>
       userExperimentRepo.get(userId, ExperimentType.get(experiment)).foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
-        eliza.sendToUser(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
-      }
+        val experiments = userExperimentRepo.getUserExperiments(userId)
+        eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
+        heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))      }
     }
     Ok(Json.obj(experiment -> false))
   }
