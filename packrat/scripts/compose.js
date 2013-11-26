@@ -131,6 +131,9 @@ function initCompose($c, enterToSend, opts) {
     }
   }).submit(function (e) {
     e.preventDefault();
+    if ($f.data('submitted')) {
+      return;
+    }
     var text;
     if ($f.hasClass('kifi-empty') || !(text = convertDraftToText($d.html()))) {
       $d.focus();
@@ -148,6 +151,8 @@ function initCompose($c, enterToSend, opts) {
     opts.onSubmit(text, recipients);
     if (opts.resetOnSubmit) {
       $d.empty().focus().triggerHandler('input');
+    } else {
+      $f.data('submitted', true);
     }
   })
   .hoverfu('.kifi-compose-snapshot', function (configureHover) {
