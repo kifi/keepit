@@ -16,20 +16,20 @@ function getTabIdForBrowser(gBrowser, browser) {
   }
 }
 
-function getBrowser(win) {
+function getXpcomWindow(win) {
   for (let w of windows('navigator:browser')) {
     if (BrowserWindow({window: w}) === win) {
-      return w.gBrowser;
+      return w;
     }
   }
 }
 
-function on(gBrowser, callback) {
+function onChange(gBrowser, callback) {
   gBrowser.addTabsProgressListener(
     browserNs(gBrowser).listener = {onLocationChange: change.bind(gBrowser, callback)});
 }
 
-function off(gBrowser) {
+function offChange(gBrowser) {
   gBrowser.removeTabsProgressListener(browserNs(gBrowser).listener);
 }
 
@@ -37,15 +37,38 @@ function change(callback, browser, progress, req, loc, flags) {
   callback(getTabIdForBrowser(this, browser), !(flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT));
 }
 
-exports.onChange = function(callback) {
-  for (let win of windows('navigator:browser')) {
-    on(win.gBrowser, callback);
+function onFocus(win, callback) {
+  for (let id of ['urlbar', 'searchbar']) {
+    win.document.getElementById(id).addEventListener('focus', callback);
   }
+}
 
+function offFocus(win, callback) {
+  for (let id of ['urlbar', 'searchbar']) {
+    win.document.getElementById(id).removeEventListener('focus', callback);
+  }
+}
+
+exports.onChange = function (callback) {
+  for (let win of windows('navigator:browser')) {
+    onChange(win.gBrowser, callback);
+  }
   browserWindows.on('open', function(win) {
-    on(getBrowser(win), callback);
+    onChange(getXpcomWindow(win).gBrowser, callback);
   });
   browserWindows.on('close', function(win) {
-    off(getBrowser(win));
+    offChange(getXpcomWindow(win).gBrowser);
+  });
+};
+
+exports.onFocus = function (callback) {
+  for (let win of windows('navigator:browser')) {
+    onFocus(win, callback);
+  }
+  browserWindows.on('open', function(win) {
+    onFocus(getXpcomWindow(win), callback);
+  });
+  browserWindows.on('close', function(win) {
+    offFocus(getXpcomWindow(win));
   });
 };
