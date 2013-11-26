@@ -14,11 +14,13 @@ import org.apache.lucene.store.{InputStreamDataInput, OutputStreamDataOutput}
 
 import scala.concurrent.duration.Duration
 
+trait BasicUserLikeEntity
+
 case class BasicUser(
   externalId: ExternalId[User],
   firstName: String,
   lastName: String,
-  pictureName: String)
+  pictureName: String) extends BasicUserLikeEntity
 
 object BasicUser {
   implicit val userExternalIdFormat = ExternalId.format[User]
