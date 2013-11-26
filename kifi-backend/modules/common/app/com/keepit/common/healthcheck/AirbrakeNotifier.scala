@@ -99,6 +99,7 @@ trait AirbrakeNotifier {
   def reportDeployment(): Unit
   def notify(error: AirbrakeError): AirbrakeError
   def notify(errorException: Throwable): AirbrakeError
+  def notify(errorMessage: String, errorException: Throwable): AirbrakeError
   def notify(errorMessage: String): AirbrakeError
 }
 
@@ -108,7 +109,9 @@ class AirbrakeNotifierImpl (
 
   def reportDeployment(): Unit = actor.ref ! AirbrakeDeploymentNotice
 
-  def notify(errorException: Throwable): AirbrakeError = notify(AirbrakeError(errorException))
+  def notify(errorException: Throwable): AirbrakeError = notify(AirbrakeError(exception = errorException))
+
+  def notify(errorMessage: String, errorException: Throwable): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage), exception = errorException))
 
   def notify(errorMessage: String): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage)))
 

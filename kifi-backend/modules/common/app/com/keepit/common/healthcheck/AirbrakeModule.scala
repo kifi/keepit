@@ -45,6 +45,7 @@ case class DevAirbrakeModule() extends AirbrakeModule {
       def reportDeployment(): Unit = ()
       def notify(error: AirbrakeError): AirbrakeError = {println(error); error}
       def notify(errorException: Throwable): AirbrakeError = {println(errorException.toString); AirbrakeError(errorException)}
+      def notify(errorMessage: String, errorException: Throwable): AirbrakeError = {println(errorMessage); notify(AirbrakeError(message = Some(errorMessage), exception = errorException))}
       def notify(errorMessage: String): AirbrakeError = {println(errorMessage); AirbrakeError(message = Some(errorMessage))}
       val playMode: Mode = mode
       val service: FortyTwoServices = fortyTwoServices
