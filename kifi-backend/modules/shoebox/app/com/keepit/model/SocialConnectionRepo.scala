@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.social._
+import scala.slick.lifted.Query
 
 import play.api.libs.json._
 
@@ -156,9 +157,13 @@ class SocialConnectionRepoImpl @Inject() (
   def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int = {
     socialRepo.getByUser(id).map(_.id.get) match {
       case ids if ids.nonEmpty => {
-        for (t <- table if ((t.socialUser1 inSet ids) || (t.socialUser2 inSet ids)) && t.state === SocialConnectionStates.ACTIVE)
-        yield t.length
-      }.first()
+        val q = Query(
+          (for {
+            t <- table if ((t.socialUser1 inSet ids) || (t.socialUser2 inSet ids)) && t.state === SocialConnectionStates.ACTIVE
+          } yield t).length
+        )
+        q.first()
+      }
       case _ => 0
     }
   }

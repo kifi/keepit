@@ -52,16 +52,21 @@ class UserConnectionCreator @Inject() (
       val socialConnections = socialConnectionRepo.getFortyTwoUserConnections(userId)
 
       val newConnections = socialConnections -- existingConnections
-      if (newConnections.nonEmpty) {
-        eliza.sendToUser(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
-        heimdal.setUserProperties(userId, "kifiConnections" -> ContextDoubleData(existingConnections.size), "socialConnections" -> ContextDoubleData(socialConnections.size))
-      }
+      userConnectionRepo.addConnections(userId, newConnections)
+      userValueRepo.setValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey, clock.now.toStandardTimeString)
+
       newConnections.foreach { connId =>
         log.info(s"Sending new connection to user $connId (to $userId)")
         eliza.sendToUser(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
       }
-      userConnectionRepo.addConnections(userId, newConnections)
-      userValueRepo.setValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey, clock.now.toStandardTimeString)
+
+      if (newConnections.nonEmpty) {
+        eliza.sendToUser(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
+        heimdal.setUserProperties(userId,
+          "kifiConnections" -> ContextDoubleData(userConnectionRepo.getConnectionCount(userId)),
+          "socialConnections" -> ContextDoubleData(socialConnectionRepo.getUserConnectionCount(userId))
+        )
+      }
     }
   }
 

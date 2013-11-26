@@ -144,6 +144,7 @@ class ExtBookmarksController @Inject() (
       }
     }
     searchClient.updateURIGraph()
+    SafeFuture { heimdal.incrementUserProperties(request.userId, "keeps" -> -1) }
     bookmark match {
       case Some(bookmark) => Ok(Json.toJson(SendableBookmark fromBookmark bookmark))
       case None => NotFound
@@ -192,17 +193,19 @@ class ExtBookmarksController @Inject() (
           searchClient.updateURIGraph()
 
           //Analytics
-          SafeFuture{ bookmarks.foreach { bookmark =>
-            val contextBuilder = userEventContextBuilder(Some(request))
+          SafeFuture{
+            bookmarks.foreach { bookmark =>
+              val contextBuilder = userEventContextBuilder(Some(request))
 
-            contextBuilder += ("isPrivate", bookmark.isPrivate)
-            contextBuilder += ("url", bookmark.url)
-            contextBuilder += ("source", bookmarkSource.getOrElse("UNKNOWN"))
-            contextBuilder += ("hasTitle", bookmark.title.isDefined)
+              contextBuilder += ("isPrivate", bookmark.isPrivate)
+              contextBuilder += ("url", bookmark.url)
+              contextBuilder += ("source", bookmarkSource.getOrElse("UNKNOWN"))
+              contextBuilder += ("hasTitle", bookmark.title.isDefined)
 
-            heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("keep"), tStart))
-          }}
-
+              heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("keep"), tStart))
+            }
+            heimdal.incrementUserProperties(userId, "keeps" -> bookmarks.length)
+          }
         }
         Status(ACCEPTED)(JsNumber(0))
     }
