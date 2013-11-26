@@ -73,13 +73,16 @@ class BookmarksCommander @Inject() (
     val keeps = bookmarkInterner.internBookmarks(Json.toJson(keepInfos), user, experiments, source).map(KeepInfo.fromBookmark)
 
     //Analytics
-    SafeFuture{ keeps.foreach { bookmark =>
-      contextBuilder += ("isPrivate", bookmark.isPrivate)
-      contextBuilder += ("url", bookmark.url)
-      contextBuilder += ("hasTitle", bookmark.title.isDefined)
+    SafeFuture{
+      keeps.foreach { bookmark =>
+        contextBuilder += ("isPrivate", bookmark.isPrivate)
+        contextBuilder += ("url", bookmark.url)
+        contextBuilder += ("hasTitle", bookmark.title.isDefined)
 
-      heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, EventType("keep"), tStart))
-    }}
+        heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, EventType("keep"), tStart))
+      }
+      heimdal.incrementUserProperties(user.id.get, "keeps" -> keeps.length)
+    }
 
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
@@ -112,6 +115,7 @@ class BookmarksCommander @Inject() (
         }
       }
     }.flatten.map(KeepInfo.fromBookmark(_))
+    SafeFuture { heimdal.incrementUserProperties(userId, "keeps" -> - keepInfos.length) }
     searchClient.updateURIGraph()
     deactivatedKeepInfos
   }
