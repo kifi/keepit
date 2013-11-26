@@ -134,6 +134,12 @@ class ShoeboxServiceClientImpl @Inject() (
   private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
 
+  private def redundantDBConnectionCheck(request: Seq[_]) {
+    if (request.isEmpty) {
+      airbrakeNotifier.notify("ShoeboxServiceClient: trying to call DB with empty list.")
+    }
+  }
+
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
     cacheProvider.userExternalIdCache.getOrElseFutureOpt(UserExternalIdKey(id)) {
       call(Shoebox.internal.getUserOpt(id)).map {r =>
@@ -234,6 +240,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
+    redundantDBConnectionCheck(userIds)
     val query = userIds.mkString(",")
     call(Shoebox.internal.getUsers(query)).map { r =>
       Json.fromJson[Seq[User]](r.json).get
@@ -241,6 +248,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
+    redundantDBConnectionCheck(userIds)
     val (cachedUsers, needToGetUsers) = userIds.map({ u =>
       u -> cacheProvider.externalUserIdCache.get(ExternalUserIdKey(u))
     }).foldRight((Map[ExternalId[User], Id[User]](), Seq[ExternalId[User]]())) { (uOpt, res) =>
@@ -261,6 +269,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
+    redundantDBConnectionCheck(userIds)
     cacheProvider.basicUserCache.bulkGetOrElseFuture(userIds.map{ BasicUserUserIdKey(_) }.toSet){ keys =>
       val payload = JsArray(keys.toSeq.map(x => JsNumber(x.userId.id)))
       call(Shoebox.internal.getBasicUsers(), payload).map{ res =>
@@ -273,6 +282,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
+    redundantDBConnectionCheck(userIds)
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
     call(Shoebox.internal.getEmailAddressesForUsers(), payload).map{ res =>
@@ -308,6 +318,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
+    redundantDBConnectionCheck(uriIds)
     val query = uriIds.mkString(",")
     call(Shoebox.internal.getNormalizedURIs(query)).map { r =>
       Json.fromJson[Seq[NormalizedURI]](r.json).get
@@ -388,6 +399,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]] = {
+    redundantDBConnectionCheck(userIds)
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
     call(Shoebox.internal.getExperimentsByUserIds(), payload).map{ res =>
@@ -403,6 +415,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = {
+    redundantDBConnectionCheck(collIds)
     call(Shoebox.internal.getCollectionIdsByExternalIds(collIds.mkString(","))).map { r =>
       r.json.as[Seq[Long]].map(Id[Collection](_))
     }

@@ -117,7 +117,7 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
     val myCollectionEdgeSet = collectionSearcher.myCollectionEdgeSet
     val hits = resultSet.hits
     val users = hits.map(_.users).flatten.distinct
-    val usersFuture = shoeboxClient.getBasicUsers(users)
+    val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], BasicUser]) else shoeboxClient.getBasicUsers(users)
 
     val field = "title_stemmed"
     val analyzer = DefaultAnalyzer.forIndexingWithStemmer(searcher.getLang)

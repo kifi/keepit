@@ -117,7 +117,8 @@ class ABookServiceClientImpl @Inject() (
 
   def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = {
     call(ABook.internal.getOAuth2Token(userId, abookId)).map { r =>
-      r.json.as[Option[OAuth2Token]]
+      if (r.json == null) None // TODO: revisit
+      else r.json.as[Option[OAuth2Token]]
     }
   }
 }

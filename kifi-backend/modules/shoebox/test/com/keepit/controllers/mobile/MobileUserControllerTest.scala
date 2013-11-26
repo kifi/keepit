@@ -55,12 +55,45 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
   }
 
   "mobileController" should {
+
+    "get currentUser" in {
+      running(new ShoeboxApplication(mobileControllerTestModules:_*)) {
+        val user = inject[Database].readWrite { implicit session =>
+          inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith"))
+        }
+
+        val path = com.keepit.controllers.mobile.routes.MobileUserController.currentUser().toString
+        path === "/m/1/user/me"
+
+        val controller = inject[MobileUserController]
+        inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
+
+        val request = FakeRequest("GET", path)
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        val expected = Json.parse(s"""
+            {
+              "id":"${user.externalId}",
+              "firstName":"Shanee",
+              "lastName":"Smith",
+              "pictureName":"0.jpg",
+              "description":"",
+              "emails":[],
+              "experiments":["admin"]}
+          """)
+
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
     "return connected users from the database" in {
       running(new ShoeboxApplication(mobileControllerTestModules:_*)) {
         val route = com.keepit.controllers.mobile.routes.MobileUserController.getFriends().toString
         route === "/m/1/user/friends"
 
-        val (user1965,friends) = setupSomeUsers()
+        val (user1965, friends) = setupSomeUsers()
         inject[FakeActionAuthenticator].setUser(user1965)
         val mobileController = inject[MobileUserController]
         val result = mobileController.getFriends()(FakeRequest())
