@@ -388,7 +388,8 @@ class AdminUserController @Inject() (
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
         val experiments = userExperimentRepo.getUserExperiments(userId)
         eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
-        heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))      }
+        heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
+      }
     }
     Ok(Json.obj(experiment -> false))
   }
