@@ -234,7 +234,7 @@ a.profile-nw {display: inline-block; color: white; padding: 8px 16px; padding-le
 .profile-email-separator {color: #9fb1c3; padding: 0 7px }
 .profile-email-contact-count {color: #9fb1c3; }
 
-.profile-section-divider { border: 0; border-bottom: 5px solid #f7f8fb; margin: 0; margin-left: 27px}
+.profile-section-divider { border: 0; border-bottom: 5px solid #f7f8fb; margin: 0; margin-left: 20px}
 
 .networks>ul>li:hover:not([data-network])::after { content: "Coming soon"; display: block; font-size: 11px; padding: 5px 0; }
 
