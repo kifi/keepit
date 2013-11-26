@@ -31,6 +31,10 @@
     kifiBlog: {
       selector: ".updates-features",
       events: ['click']
+    },
+    previewKeep: {
+      selector: ".keep",
+      events: ['click']
     }
   }
 
