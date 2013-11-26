@@ -90,11 +90,10 @@ document.addEventListener('keydown', function (e) {
   });
 
   var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-  function showError($in, msg, opts) {
+  function showError($in, msg) {
     var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
       .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
-      .css('visibility', '')
-      .delay(opts && opts.ms || 1000).fadeOut(300, removeError);
+      .css('visibility', '');
     $in.blur();  // closes browser autocomplete suggestion list
     $in.focus().select().on('input blur', removeError);
     return $err;
@@ -118,7 +117,7 @@ document.addEventListener('keydown', function (e) {
     if (!s) {
       showError($in, 'Please enter your password');
     } else if (s.length < 7) {
-      showError($in, 'Password too short', {ms: 1500});
+      showError($in, 'Password too short');
     } else {
       return s;
     }
@@ -152,12 +151,11 @@ document.addEventListener('keydown', function (e) {
         if (xhr.status === 403) {
           var o = xhr.responseJSON;
           if (o.error === 'no_such_user') {
-            showError($email, 'No account with this email address', {ms: 1500});
+            showError($email, 'No account with this email address');
           } else {
             showError($password,
               '<div class=form-error-title>Incorrect password</div>' +
-              '<div class=form-error-explanation>To choose a new password,<br>click “Forgot password”.</div>',
-             {ms: 2500});
+              '<div class=form-error-explanation>To choose a new password,<br>click “Forgot password”.</div>');
           }
         } else {
           // TODO: offline? 500?
@@ -218,7 +216,7 @@ document.addEventListener('keydown', function (e) {
         .fail(function (xhr) {
           var o = xhr.responseJSON;
           if (o && o.error === 'no_account') {
-            showError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
+            showError($email, 'Sorry, we don’t recognize this email address.');
           }
         })
         .always(function () {
