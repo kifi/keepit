@@ -4,7 +4,6 @@ import scala.concurrent.Await
 import scala.concurrent.Awaitable
 import scala.concurrent.duration._
 import scala.reflect.macros.Context
-import play.api.Logger
 
 trait MonitoredAwait {
 
