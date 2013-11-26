@@ -35,7 +35,6 @@
       ],
       "matches": [
         "*://www.kifi.com/r/*",
-        "*://kifi.com/r/*",
         "*://dev.ezkeep.com/r/*"
       ],
       "run_at": "document_start"
