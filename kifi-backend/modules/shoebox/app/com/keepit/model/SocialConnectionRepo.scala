@@ -21,6 +21,7 @@ trait SocialConnectionRepo extends Repo[SocialConnection] {
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialConnectionInfo]
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int
+  def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int
 }
 
 case class SocialConnectionInfo(
@@ -149,6 +150,16 @@ class SocialConnectionRepoImpl @Inject() (
           case _ => Nil
         }
       case _ => Nil
+    }
+  }
+
+  def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int = {
+    socialRepo.getByUser(id).map(_.id.get) match {
+      case ids if ids.nonEmpty => {
+        for (t <- table if ((t.socialUser1 inSet ids) || (t.socialUser2 inSet ids)) && t.state === SocialConnectionStates.ACTIVE)
+        yield t.length
+      }.first()
+      case _ => 0
     }
   }
 
