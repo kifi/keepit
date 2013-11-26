@@ -38,7 +38,11 @@
 					<a class="header-logo" href=""></a>
 				</div>
 				<div class="my-identity">
-					<a class="my-pic" href="profile"></a>
+					<span class="my-pic"></span>
+					<a class="my-settings" href="profile">
+						<span class="my-settings-icon"></span>
+						<span class="my-settings-text">Settings</span>
+					</a>
 					<div class="my-name">&nbsp;</div>
 					<div class="my-description">&nbsp;</div>
 				</div>
@@ -251,11 +255,11 @@
 							<h5>Find which of your friends are using Kifi</h5>
 							<ul class="profile-networks">
 								<li data-network="facebook">
-									<a class="profile-import profile-nw nw-facebook">Facebook</a>
+									<a class="profile-nw nw-facebook" href="javascript:void(0)">Facebook</a>
 									<span class="profile-nw-connected">Connected</span>
 								</li>
-								<li data-network="linkedin">
-									<a class="profile-import profile-nw nw-linkedin">LinkedIn</a>
+								<li class="not-connected" data-network="linkedin">
+									<a class="profile-nw nw-linkedin" href="javascript:void(0)">LinkedIn</a>
 									<span class="profile-nw-connected">Connected</span>
 								</li>
 							</ul>
@@ -264,15 +268,18 @@
 						<div class="profile-section">
 							<h3>Import your email contacts to Kifi</h3>
 							<h5>Message your email contact directly from Kifi</h5>
-							<a class="profile-import profile-email-import" href="javascript:void(0)">Import another Gmail account</a>
+							<a class="profile-nw nw-email" href="javascript:void(0)">Import another Gmail account</a>
 							<div class="profile-email-accounts-title">Your imported accounts:</div>
-							<ul class="profile-email-accounts">
-								<li class="profile-email-account" data-template>
-									<span class="profile-email-address">{{email}}</span>
-									<span class="profile-email-contact-count">{{contactCount}} contacts imported</span>
-									<a href="javascript:void(0)" class="profile-email-refresh">Refresh</a>
-								</li>
-							</ul>
+							<table class="profile-email-accounts">
+								<tbody>
+									<tr class="profile-email-account" data-template>
+										<td class="profile-email-status"></td>
+										<td class="profile-email-address">joonho1101@gmail.com{{email}}</td>
+										<td class="profile-email-separator">|</td>
+										<td class="profile-email-contact-count">2,333 out of 12,000{{contactCount}} contacts imported</td>
+									</tr>
+								</tbody>
+							</table>
 						</div>
 					</div>
 				</div>

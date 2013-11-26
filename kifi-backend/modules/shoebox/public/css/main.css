@@ -34,6 +34,7 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .my-pic::before { display: block; border: 34px solid transparent; background: #abb8c8 url(../img/pencil.png) center center no-repeat padding-box; transition: border-width .15s ease-in-out, border-color .15s ease-in-out; box-sizing: border-box; -moz-box-sizing: border-box; width: 66px; height: 66px; border-radius: 50%; content: " "; background-size: 14px; }
 .my-pic:hover::before, body[data-view=profile] .my-pic::before { border-width: 8px; border-color: rgba(103, 130, 156, .6); }
 body[data-view=profile] .my-pic::before { transition: none; animation-name: edit-profile; -webkit-animation-name: edit-profile; animation-duration: 0.2s; -webkit-animation-duration: 0.2s; }
+
 @-webkit-keyframes edit-profile {
   0% { border-width: 8px; }
   50% { border-width: 5px; }
@@ -44,6 +45,11 @@ body[data-view=profile] .my-pic::before { transition: none; animation-name: edit
   50% { border-width: 5px; }
   100% { border-width: 8px; }
 }
+
+a.my-settings { font-size: 12px; font-weight: 200; letter-spacing: .4px; color: #FFF; position: absolute; top: -2px; left: 50%; margin-left: -31px; width: 62px; height: 62px; background: #ABB8C8; border-radius: 50%; z-index: 4; text-align: center }
+.my-settings-icon { display: inline-block; width: 15px; height: 15px; background-image: url(../img/pencil.png); background-repeat: no-repeat; background-size: 15px 15px; margin-top: 14px }
+.my-settings-text { display: block }
+
 .my-name {height: 28px; line-height: 28px; font-size: 16px}
 .my-name:first-child {padding-top: 80px}
 .my-description {font-size: 12px; color: #818692;}
@@ -188,7 +194,7 @@ a.profile-input-save { position: absolute; bottom: 0; right: 0; font-size: 12px;
 a.profile-input-save { background-color: #b7ce84}
 .profile-input-remaining-chars { font-size: 14px; color: #B7CE84; margin-left: 2px; }
 
-.profile-section { padding: 20px 0 13px 27px;}
+.profile-section { padding: 20px 0 20px 27px;}
 .profile-section h3 { font-size: 18px; font-weight: 300; letter-spacing: .5px; color: #9fb1c3; margin-bottom: 3px}
 .profile-section h5 { color: #818691; font-weight: 200; letter-spacing: .5px; margin-bottom: 22px }
 
@@ -203,25 +209,37 @@ a.profile-input-save { background-color: #b7ce84}
 .profile>.networks>ul>li { display: block; float: left; margin: 0 5px; width: 60px; height: auto; font-size: 0; }
 
 .profile-networks li {display: inline-block; }
-.profile-nw { position: relative; display: block; background-image: url(../img/networks2.png); background-size: auto 32px; }
-.profile-nw-connected {display: block; color: #818691; margin-top: 8px; padding-left: 21px; font-size: 12px; line-height: 17px; font-weight: 200; letter-spacing: .8px; background-image: url(../img/tag-icon-small.png); background-repeat: no-repeat; background-size: auto 15px; }
+.profile-nw { position: relative; display: block }
+a.profile-nw {display: inline-block; color: white; padding: 8px 16px; padding-left: 39px; font-size: 13px; letter-spacing: .5px; border-radius: 2px }
+.profile-nw::before { display: block; position: absolute; top: 0; left: 0; content: ' '; background-image: url(../img/networks2.png); background-size: auto 32px; width: 32px; height: 32px; }
+.profile-nw.nw-linkedin::before { background-position: -32px 0 }
+.profile-nw.nw-twitter::before { background-position: -60px 0 }
+.profile-nw.nw-email::before { background-position: -128px 0 }
 
 .profile-nw.nw-facebook { background-color: #637ab8; }
 .profile-nw.nw-linkedin { background-color: #4f83c3; background-position: -60px 0; }
 .profile-nw.nw-twitter { background-color: #dbdee3; /*0da2d9*/ background-position: -120px 0; }
 .profile-nw.nw-google { background-color: #dbdee3; /*dd4c39*/ background-position: -180px 0; }
+.profile-nw.nw-email { background-color: #e16869 }
 
-.profile-nw.not-connected:not(:hover) { background-color: #dbdee3; }
-.profile-nw.not-connected { -webkit-transition: background-color .2s ease-in 50ms; transition: background-color .2s ease-in 50ms; }
+.not-connected > a.profile-nw { background-color: #dbdee3; }
+.not-connected > .profile-nw-connected { visibility: hidden; }
+
+.profile-nw-connected {display: block; color: #818691; margin-top: 8px; padding-left: 21px; font-size: 12px; line-height: 17px; font-weight: 200; letter-spacing: .8px; background-image: url(../img/tag-icon-small.png); background-repeat: no-repeat; background-size: auto 15px; background-position: 0 1px }
+
+.profile-email-accounts { margin-top: 6px }
+.profile-email-account {font-size: 12px; line-height: 18px; font-weight: 200; }
+.profile-email-status { width: 17px; background-image: url(../img/tag-icon-small.png); background-repeat: no-repeat; background-size: auto 15px; background-position: 0 2px }
+.profile-email-address {color: #818691 }
+.profile-email-separator {color: #9fb1c3; padding: 0 7px }
+.profile-email-contact-count {color: #9fb1c3; }
 
 .profile-section-divider { border: 0; border-bottom: 5px solid #f7f8fb; margin: 0; margin-left: 27px}
 
 .networks>ul>li:hover:not([data-network])::after { content: "Coming soon"; display: block; font-size: 11px; padding: 5px 0; }
 
-a.profile-import {display: inline-block; color: white; padding: 8px 16px; padding-left: 39px; font-size: 13px; letter-spacing: .5px; border-radius: 2px }
 
-a.profile-email-import {background: #e16869}
-.profile-email-accounts-title { color: #9FB1C3; margin-top: 8px; letter-spacing: .5px; }
+.profile-email-accounts-title { color: #9FB1C3; margin-top: 12px; letter-spacing: .5px; }
 
 .friends {position: absolute; top: 70px; bottom: 0; left: 0; right: 0; padding: 13px 20px 0; border-right: 1px solid #dbdee3}
 .friends-tabs-border {position: relative; border-bottom: 2px solid #e3e6ee; margin-bottom: 24px}
