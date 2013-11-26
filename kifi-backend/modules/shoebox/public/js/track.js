@@ -10,6 +10,7 @@
 
 (function() {
   'use strict';
+
   var thingsToTrack = {
     yourKeeps: {
       selector: ".my-keeps",
@@ -51,12 +52,9 @@
     for (var type in thingsToTrack){
       spec = thingsToTrack[type];
       handler = spec.handler || defaultEventHandler;
-      $(spec.selector).each(function(elem) {
-        spec.events.forEach(function(eventType) {
-          elem.addEventListener(eventType, function(evnt) {
-            handler(type, evnt);
-          }, true);
-        });
+
+      $(document).on(spec.events.join(" "), spec.selector, function (evnt){
+        handler(type, evnt);
       });
     };
   }
