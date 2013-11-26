@@ -7,9 +7,9 @@ import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.BasicUser
-import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
+import com.keepit.common.controller.ElizaServiceController
 
 import scala.concurrent.{Promise, future, Await, Future}
 import scala.concurrent.duration._
@@ -92,7 +92,7 @@ class MessagingController @Inject() (
         participantSet.toSeq.map(id2BasicUser(_))
       )
 
-      val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator, false, 0, 0, 0, 0)
+      val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator, false, 0, 0, 0, 0, false)
 
       userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson, false)
       userThreadRepo.clearNotification(userId)
@@ -324,7 +324,8 @@ class MessagingController @Inject() (
       originalAuthorIdx: Int,
       unseenAuthors: Int,
       numAuthors: Int,
-      numUnread: Int
+      numUnread: Int,
+      muted: Boolean
     ) : JsValue = {
     Json.obj(
       "id"            -> message.externalId.id,
@@ -341,7 +342,8 @@ class MessagingController @Inject() (
       "firstAuthor"   -> originalAuthorIdx,
       "authors"       -> numAuthors, //number of people who have sent messages in this conversation
       "unreadAuthors" -> unseenAuthors, //number of people in 'particiapnts' who's messages you haven't seen yet
-      "unreadMessages"-> numUnread
+      "unreadMessages"-> numUnread,
+      "muted"         -> muted
     )
   }
 
@@ -372,7 +374,7 @@ class MessagingController @Inject() (
       val numAuthors = orderedActivityInfo.filter(_.lastActive.isDefined).length
       val numUnread = db.readOnly{ implicit session => messageRepo.getNumMessagesAfter(thread.id.get,lastSeenOpt) }
 
-      val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator, !muted, originalAuthor, unseenAuthors, numAuthors, numUnread)
+      val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator, !muted, originalAuthor, if (muted) 0 else unseenAuthors, numAuthors, numUnread, muted)
 
       db.readWrite(attempts=2){ implicit session =>
         userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
@@ -540,7 +542,7 @@ class MessagingController @Inject() (
 
     //=== BEGIN
     (new SafeFuture(shoebox.getUserExperiments(from))).map{ userExperiments =>
-      val notifJson = buildMessageNotificationJson(message, thread, orderedMessageWithBasicUser, "/messages/" + thread.externalId, false, originalAuthor, 0, numAuthors, 0)
+      val notifJson = buildMessageNotificationJson(message, thread, orderedMessageWithBasicUser, "/messages/" + thread.externalId, false, originalAuthor, 0, numAuthors, 0, false)
       if (userExperiments.contains(ExperimentType.INBOX)){
         db.readWrite(attempts=2){ implicit session =>
           userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
@@ -862,22 +864,23 @@ class MessagingController @Inject() (
     buildThreadInfos(userId, Seq(thread), None).head
   }
 
-  def getThreadInfos(userId: Id[User], url: String): (String, Seq[ElizaThreadInfo]) = {
-    val nUriOrPrenorm = Await.result(shoebox.getNormalizedUriByUrlOrPrenormalize(url), 2 seconds) // todo: Remove await
-    val (nUrlStr, unsortedInfos) = if (nUriOrPrenorm.isLeft) {
-      val nUri = nUriOrPrenorm.left.get
-      val threads = db.readOnly { implicit session =>
-        val threadIds = userThreadRepo.getThreads(userId, nUri.id)
-        threadIds.map(threadRepo.get)
-      }.filter(_.replyable)
-      (nUri.url, buildThreadInfos(userId, threads, Some(url)))
-    } else {
-      (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
+  def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])] = {
+    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
+      val (nUrlStr, unsortedInfos) = if (nUriOrPrenorm.isLeft) {
+        val nUri = nUriOrPrenorm.left.get
+        val threads = db.readOnly { implicit session =>
+          val threadIds = userThreadRepo.getThreads(userId, nUri.id)
+          threadIds.map(threadRepo.get)
+        }.filter(_.replyable)
+        (nUri.url, buildThreadInfos(userId, threads, Some(url)))
+      } else {
+        (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
+      }
+      val infos = unsortedInfos sortWith { (a,b) =>
+        a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
+      }
+      (nUrlStr, infos)
     }
-    val infos = unsortedInfos sortWith { (a,b) =>
-      a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
-    }
-    (nUrlStr, infos)
   }
 
   def muteThread(userId: Id[User], threadId: ExternalId[MessageThread]): Boolean = {

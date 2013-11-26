@@ -1,17 +1,9 @@
 package com.keepit.dev
 
-import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.common.cache.HeimdalCacheModule
-import com.keepit.common.net.ProdHttpClientModule
-import com.keepit.inject.ProdFortyTwoModule
-import com.keepit.common.actor.DevActorSystemModule
-import com.keepit.common.zookeeper.DevDiscoveryModule
-import com.keepit.social.RemoteSecureSocialModule
-import com.keepit.heimdal.{HeimdalModule, ProdHeimdalServiceClientModule}
-import com.keepit.common.healthcheck.ProdHealthCheckModule
+import com.keepit.heimdal.{HeimdalModule, DevMongoModule}
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.inject.CommonDevModule
-import com.keepit.heimdal.DevMongoModule
 
 
 case class HeimdalDevModule() extends HeimdalModule(

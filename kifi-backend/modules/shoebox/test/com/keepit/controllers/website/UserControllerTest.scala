@@ -6,7 +6,7 @@ import net.codingwell.scalaguice.ScalaModule
 
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.controller.FortyTwoCookies.{KifiInstallationCookie, ImpersonateCookie}
-import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
+import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.{FakeHttpClient, HttpClient}
@@ -23,6 +23,11 @@ import securesocial.core._
 import securesocial.core.providers.Token
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.common.mail.TestMailModule
 
 class UserControllerTest extends Specification with ApplicationInjector {
 
@@ -91,7 +96,50 @@ class UserControllerTest extends Specification with ApplicationInjector {
     lazy val controller = inject[UserController]
   }
 
+  val controllerTestModules = Seq(
+    FakeShoeboxServiceModule(),
+    ShoeboxFakeStoreModule(),
+    TestActorSystemModule(),
+    FakeAirbrakeModule(),
+    TestABookServiceClientModule(),
+    TestMailModule(),
+    TestHeimdalServiceClientModule()
+  )
+
   "UserController" should {
+
+    "get currentUser" in {
+      running(new ShoeboxApplication(controllerTestModules:_*)) {
+        val user = inject[Database].readWrite { implicit session =>
+          inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith"))
+        }
+
+        val path = com.keepit.controllers.website.routes.UserController.currentUser().toString
+        path === "/site/user/me"
+
+        val controller = inject[UserController]
+        inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
+
+        val request = FakeRequest("GET", path)
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        val expected = Json.parse(s"""
+            {
+              "id":"${user.externalId}",
+              "firstName":"Shanee",
+              "lastName":"Smith",
+              "pictureName":"0.jpg",
+              "description":"",
+              "emails":[],
+              "experiments":["admin"]}
+          """)
+
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
     "fetch my social connections, in the proper order" in new WithUserController {
       def getNames(result: Result): Seq[String] = {
         Json.fromJson[Seq[JsObject]](Json.parse(contentAsString(result))).get.map(j => (j \ "label").as[String])

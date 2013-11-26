@@ -1,16 +1,16 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{AuthenticatedRequest, SearchServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.heimdal.{SearchEngine, SearchAnalytics}
 import com.keepit.search._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.model.NormalizedURI
-import com.keepit.social.BasicUser
-import play.api.libs.json.JsArray
+import com.keepit.model.ExperimentType
+import com.keepit.model.{User, NormalizedURI}
+import play.api.libs.json.{JsValue, JsArray}
 import com.keepit.search.ClickedURI
 import com.keepit.search.BrowsedURI
 import com.keepit.search.ArticleSearchResult
@@ -18,6 +18,16 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.net.{Host, URI}
 import com.keepit.common._
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.healthcheck._
+import com.typesafe.plugin.MailerPlugin
+import com.keepit.common.healthcheck.Healthcheck.EMAIL
+import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail}
+import play.api.libs.json.JsArray
+import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.search.ClickedURI
+import scala.Some
+import com.keepit.search.BrowsedURI
+import com.keepit.search.ArticleSearchResult
 
 class ExtSearchEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -26,7 +36,8 @@ class ExtSearchEventController @Inject() (
   browsingHistoryTracker: BrowsingHistoryTracker,
   resultClickedTracker: ResultClickTracker,
   articleSearchResultStore: ArticleSearchResultStore,
-  searchAnalytics: SearchAnalytics)
+  searchAnalytics: SearchAnalytics,
+  healthCheckMailer: HealthcheckMailSender)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
   extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
@@ -41,12 +52,14 @@ class ExtSearchEventController @Inject() (
     val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
     val origin = (json \ "origin").as[String]
     val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
-    val kifiTime = (json \ "kifiTime").as[Int]
+    val kifiTime = (json \ "kifiTime").asOpt[Int]
     val referenceTime = (json \ "referenceTime").asOpt[Int]
     val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
     val kifiResults = (json \ "kifiResults").as[Int]
+    val isDemo = request.experiments.contains(ExperimentType.DEMO)
 
+    checkForMissingDeliveryTimes(kifiTime, referenceTime, request, "ExtSearchEventController.clickedSearchResult")
     SearchEngine.get(resultSource) match {
 
       case SearchEngine.Kifi => {
@@ -54,7 +67,7 @@ class ExtSearchEventController @Inject() (
         shoeboxClient.getNormalizedURIByURL(personalSearchResult.hit.url).onSuccess { case Some(uri) =>
           val uriId = uri.id.get
           clickHistoryTracker.add(userId, ClickedURI(uriId))
-          resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark)
+          resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark, isDemo)
           if (personalSearchResult.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, personalSearchResult.users.map(_.externalId): _*)
         }
         searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
@@ -89,9 +102,10 @@ class ExtSearchEventController @Inject() (
     val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
     val kifiResultsClicked = (json \ "kifiResultsClicked").as[Int]
     val otherResultsClicked = (json \ "searchResultsClicked").as[Int]
-    val kifiTime = (json \ "kifiTime").as[Int]
+    val kifiTime = (json \ "kifiTime").asOpt[Int]
     val referenceTime = (json \ "referenceTime").asOpt[Int]
     val origin = (json \ "origin").as[String]
+    checkForMissingDeliveryTimes(kifiTime, referenceTime, request, "ExtSearchEventController.endedSearch")
     searchAnalytics.endedSearch(request, userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime, otherResultsClicked, kifiResultsClicked)
     Ok
   }
@@ -114,4 +128,18 @@ class ExtSearchEventController @Inject() (
       case _ => None
     }
   } tap { urlOpt => if (urlOpt.isEmpty) log.error(s"failed to extract the destination URL from $searchEngine: $searchResultUrl") }
+
+  private def checkForMissingDeliveryTimes(kifiDeliveryTime: Option[Int], otherDeliveryTime: Option[Int], request: AuthenticatedRequest[JsValue], method: String) = {
+    if (kifiDeliveryTime.isEmpty)
+      reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is missing."))
+    if (otherDeliveryTime.isEmpty)
+      reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Google delivery time is missing."))
+  }
+
+  private def reportToLéo(error: AirbrakeError) = {
+    val body = views.html.email.healthcheckMail(AirbrakeErrorHistory(error.signature, 1, 0, error), fortyTwoServices.started.toString, fortyTwoServices.currentService.name).body
+    healthCheckMailer.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.LÉO),
+      subject = "Missing Delivery Time in Search Statistics", htmlBody = body, category = PostOffice.Categories.System.HEALTHCHECK))
+  }
 }
+

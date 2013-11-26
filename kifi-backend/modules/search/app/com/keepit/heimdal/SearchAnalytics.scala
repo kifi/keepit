@@ -10,6 +10,8 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
+import play.api.mvc.Request
+
 
 case class SearchEngine(name: String) {
   override def toString = name
@@ -28,14 +30,15 @@ class SearchAnalytics @Inject() (
   heimdal: HeimdalServiceClient) {
 
   def performedSearch(
-    request: AuthenticatedRequest[AnyContent],
+    userId: Id[User],
+    request: Request[AnyContent],
     kifiVersion: Option[KifiVersion],
     maxHits: Int,
     searchFilter: SearchFilter,
     searchExperiment: Option[Id[SearchConfigExperiment]],
     articleSearchResult: ArticleSearchResult) = {
 
-    val obfuscatedSearchId = obfuscate(articleSearchResultStore.getInitialSearchId(articleSearchResult), request.userId)
+    val obfuscatedSearchId = obfuscate(articleSearchResultStore.getInitialSearchId(articleSearchResult), userId)
     val contextBuilder = userEventContextBuilder(Some(request))
 
     kifiVersion.foreach { version => contextBuilder += ("extVersion", version.toString) }
@@ -65,7 +68,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("filterByTimeRange", searchFilter.timeRange.isDefined)
     contextBuilder += ("filterByTags", searchFilter.collections.isDefined)
 
-    heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("performed_search"), articleSearchResult.time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("performed_search"), articleSearchResult.time))
   }
 
   def searchResultClicked(
@@ -148,7 +151,7 @@ class SearchAnalytics @Inject() (
     searchExperiment: Option[Id[SearchConfigExperiment]],
     kifiResults: Int,
     kifiCollapsed: Boolean,
-    kifiTime: Int,
+    kifiTime: Option[Int],
     referenceTime: Option[Int],
     otherResultsClicked: Int,
     kifiResultsClicked: Int
@@ -174,7 +177,7 @@ class SearchAnalytics @Inject() (
     query: String,
     kifiResults: Int,
     kifiCollapsed: Boolean,
-    kifiTime: Int,
+    kifiTime: Option[Int],
     referenceTime: Option[Int],
     resultSource: SearchEngine,
     resultPosition: Int,
@@ -220,7 +223,7 @@ class SearchAnalytics @Inject() (
     searchExperiment: Option[Id[SearchConfigExperiment]],
     kifiResults: Int,
     kifiCollapsed: Boolean,
-    kifiTime: Int,
+    kifiTime: Option[Int],
     referenceTime: Option[Int]
   ): EventContextBuilder = {
 
@@ -240,7 +243,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("kifiCollapsed", kifiCollapsed)
     contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
     contextBuilder += ("kifiLate", kifiCollapsed && initialSearchResult.toShow)
-    contextBuilder += ("kifiDeliveryTime", kifiTime)
+    kifiTime.foreach { kifiDevTime => contextBuilder += ("kifiDeliveryTime", kifiDevTime) }
     referenceTime.foreach { refTime => contextBuilder += ("3rdPartyDeliveryTime", refTime) }
     contextBuilder += ("isInitialSearch", uuid == initialSearchId)
 

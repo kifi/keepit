@@ -98,6 +98,7 @@ exports.log.error = function(exception, context) {
 exports.noop = function() {};
 
 exports.on = {
+  beforeSearch: new Listeners,  // TODO: dispatch this event!
   search: new Listeners,
   install: new Listeners,
   update: new Listeners,
@@ -550,7 +551,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentStyleFile: o.styles.map(url),
       contentScriptFile: o.scripts.map(url),
       contentScriptWhen: arr[2] ? "start" : "ready",
-      contentScriptOptions: {dataUriPrefix: url(""), dev: prefs.env == "development"},
+      contentScriptOptions: {dataUriPrefix: url(""), dev: prefs.env == "development", version: self.version},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
         const tab = worker.tab, page = pages[tab.id];

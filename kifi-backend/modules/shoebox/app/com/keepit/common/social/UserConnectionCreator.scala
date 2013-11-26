@@ -3,6 +3,8 @@ package com.keepit.common.social
 import org.joda.time.DateTime
 
 import com.google.inject.Inject
+
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -25,6 +27,7 @@ class UserConnectionCreator @Inject() (
     userConnectionRepo: UserConnectionRepo,
     userValueRepo: UserValueRepo,
     clock: Clock,
+    airbrake: AirbrakeNotifier,
     basicUserRepo: BasicUserRepo,
     eliza: ElizaServiceClient)
   extends Logging {
@@ -73,18 +76,33 @@ class UserConnectionCreator @Inject() (
       network: SocialNetworkType): Seq[SocialConnection] = {
     log.info(s"looking for new (or reactive) connections for user ${socialUserInfo.fullName}")
     allSocialIds.grouped(100).flatMap { socialIds =>
-      db.readWrite(attempts = 2) { implicit s =>
+      db.readWrite { implicit s =>
         extractFriendsWithConnections(socialUserInfo, socialIds, network) map {
-          case (_, Some(c)) if c.state == SocialConnectionStates.ACTIVE => c
+          case (_, Some(c)) if c.state == SocialConnectionStates.ACTIVE => Some(c)
           case (friend, Some(c)) =>
             log.info(s"activate connection between ${c.socialUser1} and ${c.socialUser2}")
-            socialConnectionRepo.save(c.withState(SocialConnectionStates.ACTIVE))
+            try {
+              Some(socialConnectionRepo.save(c.withState(SocialConnectionStates.ACTIVE)))
+            } catch {
+              //probably race condition, report and move on
+              case e: Throwable =>
+                airbrake.notify(s"fail activate connection between ${c.socialUser1} and ${c.socialUser2}", e)
+                None
+            }
           case (friend, None) =>
             log.info(s"a new connection was created between $socialUserInfo and ${friend.id.get}")
-            socialConnectionRepo.save(SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = friend.id.get))
+            try {
+              Some(socialConnectionRepo.save(SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = friend.id.get)))
+            } catch {
+              //probably race condition, check what's already in the db, report and move on
+              case e: Throwable =>
+                val existingConnection = socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, friend.id.get)
+                airbrake.notify(s"fail creating new connection between $socialUserInfo and ${friend.id.get}. found existing connection: $existingConnection", e)
+                None
+            }
         }
       }
-    }.toSeq
+    }.flatten.toSeq
   }
 
   def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],

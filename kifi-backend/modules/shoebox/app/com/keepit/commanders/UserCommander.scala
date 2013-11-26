@@ -10,6 +10,7 @@ import com.keepit.common.time._
 import com.keepit.abook.ABookServiceClient
 
 import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, Json, JsValue}
 
 import com.google.inject.Inject
@@ -23,15 +24,27 @@ import scala.concurrent.Future
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 
+case class UpdatableUserInfo(
+    description: Option[String], emails: Option[Seq[String]],
+    firstName: Option[String] = None, lastName: Option[String] = None)
+
+case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo)
+
 object BasicSocialUser {
   implicit val writesBasicSocialUser = Json.writes[BasicSocialUser]
   def from(sui: SocialUserInfo): BasicSocialUser =
     BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
 }
 
+object UpdatableUserInfo {
+  implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
+}
+
 class UserCommander @Inject() (
   db: Database,
   userRepo: UserRepo,
+  emailRepo: EmailAddressRepo,
+  userValueRepo: UserValueRepo,
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
   userExperimentRepo: UserExperimentRepo,
@@ -77,4 +90,15 @@ class UserCommander @Inject() (
   def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[JsValue] = {
     abook.uploadContacts(userId, origin, payload)
   }
+
+  def getUserInfo(userId: Id[User]): Future[BasicUserInfo] = {
+    for {
+      basicUser <- db.readOnlyAsync { implicit s => basicUserRepo.load(userId) }
+      description <- db.readOnlyAsync { implicit s => userValueRepo.getValue(userId, "user_description").getOrElse("") }
+      emails <- db.readOnlyAsync { implicit s => emailRepo.getAllByUser(userId).map(_.address) }
+    } yield {
+      BasicUserInfo(basicUser, UpdatableUserInfo(Some(description), Some(emails)))
+    }
+  }
+
 }
