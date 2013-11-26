@@ -28,11 +28,11 @@
     mixpanel.track('beta_clicked_internal_page', properties);
   }
 
-  function defaultHandler(type, event) {
+  function defaultHandler(type, spec) {
     trackEvent({
       type: type,
       where: window.location.pathname.slice(1).split('/'),
-      what: [event.target.className, event.target.id]
+      what: spec.selector
     });
   }
 
@@ -40,6 +40,6 @@
     var spec = thingsToTrack[type];
     var events = spec.events || 'click';
     var handler = spec.handler || defaultHandler;
-    $(document).on(events, spec.selector, handler.bind(document, type));
+    $(document).on(events, spec.selector, handler.bind(document, type, spec));
   }
 })();
