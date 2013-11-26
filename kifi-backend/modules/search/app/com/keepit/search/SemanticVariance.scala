@@ -47,10 +47,10 @@ object SemanticVariance {
     val hitSize = uriIdFilter.ids.size
     var composers = Map.empty[Term, SemanticVectorComposer]
 
-    personalizedSearcher.map{ searcher =>
+    personalizedSearcher.foreach{ searcher =>
       textQueries.foreach{ q =>
         val extractorQuery = q.getSemanticVectorExtractorQuery()
-          searcher.doSearch(extractorQuery, uriIdFilter){ (scorer, iterator, reader) =>
+        searcher.doSearch(extractorQuery, uriIdFilter){ (scorer, iterator, reader) =>
           if (scorer != null && iterator != null) {
             val extractor = scorer.asInstanceOf[SemanticVectorExtractorScorer]
             while (iterator.nextDoc() < NO_MORE_DOCS) {

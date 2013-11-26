@@ -16,6 +16,7 @@ import com.keepit.social.{SocialNetworkType, SocialGraphPlugin, SocialGraph, Soc
 import scala.util.Try
 import com.keepit.model.SocialConnection
 import com.keepit.common.db.Id
+import com.keepit.heimdal.{ContextStringData, HeimdalServiceClient}
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -30,7 +31,8 @@ private[social] class SocialGraphActor @Inject() (
   socialUserImportFriends: SocialUserImportFriends,
   socialUserImportEmail: SocialUserImportEmail,
   socialUserCreateConnections: UserConnectionCreator,
-  userValueRepo: UserValueRepo)
+  userValueRepo: UserValueRepo,
+  heimdal: HeimdalServiceClient)
   extends FortyTwoActor(airbrake) with Logging {
 
   private val networkTypeToGraph: Map[SocialNetworkType, SocialGraph] =
@@ -79,6 +81,7 @@ private[social] class SocialGraphActor @Inject() (
             db.readWrite { implicit c =>
               latestUserValues.collect { case (key, value) if userValueRepo.getValue(userId, key) != Some(value) =>
                 userValueRepo.setValue(userId, key, value)
+                heimdal.setUserProperties(userId, key -> ContextStringData(value))
               }
               socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
             }
