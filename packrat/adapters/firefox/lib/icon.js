@@ -21,10 +21,10 @@ function getXpcomWindow(win) {
   const winIndex = indexOf(win);
   const xpcomWins = WM.getEnumerator("navigator:browser");
   var xpcomWin;
-  for (let i = 0; i <= winIndex; i++) {
-    xpcomWin = xpcomWins.hasMoreElements() && xpcomWins.getNext();
+  for (let i = 0; i <= winIndex && xpcomWins.hasMoreElements(); i++) {
+    xpcomWin = xpcomWins.getNext();
   }
-  return xpcomWin || undefined;
+  return xpcomWin;
 }
 
 exports.addToWindow = function(win, click) {
@@ -48,7 +48,7 @@ exports.addToWindow = function(win, click) {
   tb.insertBefore(iconEl, tb.firstChild);
 
   return function removeFromWindow() {
-    iconEl.addEventListener("click", clickListener);
+    iconEl.removeEventListener("click", clickListener);
     tb.removeChild(iconEl);
   };
 };
