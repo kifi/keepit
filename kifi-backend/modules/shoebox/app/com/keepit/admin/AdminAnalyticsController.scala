@@ -86,15 +86,15 @@ class AdminAnalyticsController @Inject() (
 
   val keepActivityMetrics = Map[String, MetricAuxInfo](
     "keeps_daily" -> MetricAuxInfo("nothing yet", Map(
-      "0" -> "public",
-      "1" -> "private"
+      "false" -> "public",
+      "true" -> "private"
     ))
   )
 
   val keepMetrics = Map[String, MetricAuxInfo](
     "keeps_weekly" -> MetricAuxInfo("nothing yet", Map(
-      "0" -> "public",
-      "1" -> "private"
+      "false" -> "public",
+      "true" -> "private"
     ), Map(
       "public" -> 31450,
       "private" -> 22407,
