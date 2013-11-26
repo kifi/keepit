@@ -1,0 +1,5 @@
+deprecation=true
+eclipse.preferences.version=1
+scala.compiler.additionalParams=-encoding utf8 -feature -language\:reflectiveCalls -language\:implicitConversions -language\:postfixOps -language\:dynamics -language\:higherKinds -language\:existentials -language\:experimental.macros -Xmax-classfile-name 140
+scala.compiler.useProjectSettings=true
+unchecked=true
