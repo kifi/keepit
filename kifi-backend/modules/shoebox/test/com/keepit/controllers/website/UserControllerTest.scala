@@ -118,7 +118,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
         path === "/site/user/me"
 
         val controller = inject[UserController]
-        inject[FakeActionAuthenticator].setUser(user).setExperiments(Set(ExperimentType.ADMIN))
+        inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
 
         val request = FakeRequest("GET", path)
         val result = route(request).get

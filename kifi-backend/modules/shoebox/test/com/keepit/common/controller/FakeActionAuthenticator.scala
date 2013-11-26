@@ -49,14 +49,10 @@ class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with
   var fixedUser: Option[User] = None
   var fixedExperiments: Set[ExperimentType] = Set[ExperimentType]()
 
-  def setUser(user: User): FakeActionAuthenticator = {
+  def setUser(user: User, experiments: Set[ExperimentType] = Set[ExperimentType]()): FakeActionAuthenticator = {
     fixedUser = Some(user)
-    println(s">>>>using fixed user: $user")
-    this
-  }
-
-  def setExperiments(experiments: Set[ExperimentType]): FakeActionAuthenticator = {
     fixedExperiments = experiments
+    println(s">>>>using fixed user: $user")
     this
   }
 
