@@ -60,7 +60,6 @@
     };
   }
 
-  mixpanel.identify($(document).data('me').id);
   attachEventHandlers();
 
 })();
