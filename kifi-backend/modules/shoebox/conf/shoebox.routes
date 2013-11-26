@@ -128,12 +128,13 @@ GET     /blog                       @com.keepit.controllers.website.HomeControll
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /reddit                     @com.keepit.controllers.website.HomeController.redditPreview
+GET     /terms                      @com.keepit.controllers.website.HomeController.termsOfService
+GET     /privacy                    @com.keepit.controllers.website.HomeController.privacyPolicy
 
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], error_msg: Option[String], error_code: Option[Int])
-GET     /terms                      @com.keepit.controllers.website.OnboardingController.tos
 
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
