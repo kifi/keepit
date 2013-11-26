@@ -489,33 +489,45 @@ $(function () {
 					$save.text(saveText);
 				});
 			});
-			$('.profile .networks li').each(function () {
+			$('.profile .profile-networks li').each(function () {
 				var $this = $(this);
-				var name = $this.data('network');
-				if (!name) { return; }
+				var network = $this.data('network');
+
+				if (!network) { return; }
+
 				var $a = $this.find('a.profile-nw');
 				var networkInfo = myNetworks.filter(function (nw) {
-					return nw.network === name;
+					return nw.network === network;
 				})[0];
-				var postLink = function (e) {
-					e.preventDefault();
-					submitForm(wwwDomain + $(this).data('action'), 'post');
-				};
+
 				if (networkInfo) {
-					$a.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
+					$this.removeClass('not-connected');
+
+					$a
+						.attr('href', networkInfo.profileUrl)
+						.attr('title', 'View profile');
+
+						/*
 					if (myNetworks.length > 1) {
-						$('<a>').addClass('disconnect').text('Unlink')
+						$('<a>')
+							.addClass('disconnect')
+							.text('Unlink')
 							.attr('href', 'javascript:')
-							.data('action', '/disconnect/' + name)
-							.click(postLink)
+							.data('action', '/disconnect/' + network)
+							.click(function (e) {
+								e.preventDefault();
+								submitForm(wwwDomain + $(this).data('action'), 'post');
+							})
 							.appendTo($this);
 					}
-				} else {
-					$a.addClass('not-connected').attr('title', 'Click to connect')
-						.attr('href', wwwDomain + '/link/' + name);
-					$('<a class=connect title="Click to connect">Connect</a>')
-						.attr('href', wwwDomain + '/link/' + name)
-						.appendTo($this);
+					*/
+				}
+				else {
+					$this.addClass('not-connected');
+
+					$a
+						.attr('href', wwwDomain + '/link/' + network)
+						.attr('title', 'Click to connect');
 				}
 			});
 		});
