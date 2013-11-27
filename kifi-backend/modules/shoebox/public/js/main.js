@@ -438,12 +438,15 @@ $(function () {
 			cancelProfileInput($(this));
 		});
 
-		$input
-			.data('value', $input.val())
-			.prop('disabled', false)
-			.focus();
-
 		$box.addClass('edit');
+
+		$input
+			.each(function () {
+				var $this = $(this);
+				$this.data('value', $this.val());
+			})
+			.prop('disabled', false)
+			.first().focus();
 	}
 
 	function saveProfileInput($target, e) {
@@ -452,17 +455,29 @@ $(function () {
 		}
 
 		var $box = $target.closest('.profile-input-box'),
-			$input = $box.find('.profile-input-input');
+			$input = $box.find('.profile-input-input'),
+			valid = true;
 
-		var val = trimInputValue($input.val());
+		$input.each(function () {
+			var $this = $(this),
+				val = trimInputValue($this.val());
+			if (!val && $this.data('required')) {
+				valid = false;
+			}
+		});
 
-		if (!val && $input.data('required')) {
+		if (!valid) {
 			return cancelProfileInput($target, e);
 		}
 
 		$input
-			.val(val)
-			.data('value', val)
+			.each(function () {
+				var $this = $(this),
+					val = trimInputValue($this.val());
+				$this
+					.val(val)
+					.data('value', val);
+			})
 			.prop('disabled', true);
 
 		$box
@@ -479,10 +494,11 @@ $(function () {
 		var $box = $target.closest('.profile-input-box'),
 			$input = $box.find('.profile-input-input');
 
-		var val = trimInputValue($input.data('value'));
-
 		$input
-			.val(val)
+			.each(function () {
+				var $this = $(this);
+				$this.val(trimInputValue($this.data('value')));
+			})
 			.prop('disabled', true);
 
 		$box
@@ -564,6 +580,11 @@ $(function () {
 			});
 			$('.profile-input-edit').click(function (e) {
 				editProfileInput($(this), e);
+			});
+			$('.profile-input-box-name .profile-input-edit').click(function (e) {
+				setTimeout(function () {
+					$('.profile-first-name,.profile-last-name').css('width', '48%');
+				});
 			});
 			$('.profile-input-save').click(function (e) {
 				saveProfileInput($(this), e);
@@ -2843,6 +2864,14 @@ $(function () {
 		$('.my-pic').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
 		$('.my-name').text(data.firstName + ' ' + data.lastName);
 		$('.my-description').text(data.description || '\u00A0'); // nbsp
+		var $firstNamePlace = $('.profile-placeholder-first-name').text(data.firstName);
+		var $lastNamePlace = $('.profile-placeholder-last-name').text(data.lastName);
+		$('.profile-first-name')
+			.val(data.firstName)
+			.outerWidth($firstNamePlace.outerWidth());
+		$('.profile-last-name')
+			.val(data.lastName)
+			.outerWidth($lastNamePlace.outerWidth());
 		$friendsTabs.filter('[data-href="friends/invite"]').toggle(true);
 		updateGmailTab();
 		updateConnectTab();

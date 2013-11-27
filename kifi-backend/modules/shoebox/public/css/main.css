@@ -189,12 +189,22 @@ a.profile-image-change:active { background-color: #9FACB8}
 .profile-input-wrapper:last-child {margin-bottom: 0}
 .profile-input-box { position: relative; transition: padding .25s ease; }
 .profile-input-box.edit {padding-right: 58px}
+.profile-input-box.edit .profile-input-edit {display: none}
 
+.profile-input-placeholder,
 input.profile-input-input { display: block; font: inherit; letter-spacing: 0.5px; border: 0; margin: 0; width: 100%; color: #818691; background-color: #e2edfb; padding: 6px 7px; box-sizing: border-box; transition: all .25s ease }
+.profile-input-placeholder,
 input.profile-input-input:disabled { padding-left: 0; padding-right: 0; background-color: transparent }
 
-input.profile-input-input.profile-first-name { display: inline-block; width: 47%; margin-right: 4% }
-input.profile-input-input.profile-last-name { display: inline-block; width: 47% }
+.profile-input-box.edit .profile-input-placeholder {display: none; overflow: hidden; white-space: nowrap; text-overflow: ellipsis}
+
+input.profile-first-name,
+input.profile-last-name { display: none; width: 0 }
+
+.profile-input-box.edit input.profile-first-name,
+.profile-input-box.edit input.profile-last-name { display: inline-block }
+
+.profile-input-box.edit input.profile-first-name { margin-right: 8px }
 
 a.profile-input-edit,
 a.profile-input-save { position: absolute; bottom: 0; right: 0; font-size: 12px; line-height: 17px; display: inline-block; width: 58px; padding: 6px 0; color: white; background-color: #b8c5d1; border-radius: 2px; text-align: center; transition: background 0.2s ease; display: none }

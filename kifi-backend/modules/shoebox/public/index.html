@@ -235,7 +235,10 @@
 							</div>
 							<div class="profile-input-wrapper" data-name="name">
 								<div class="profile-input-title">Name</div>
-								<div class="profile-input-box">
+								<div class="profile-input-box profile-input-box-name">
+									<span class="profile-input-placeholder">
+										<span class="profile-placeholder-first-name">{{firstName}}</span> <span class="profile-placeholder-last-name">{{lastName}}</span>
+									</span>
 									<input class="profile-input-input profile-first-name" disabled="disabled" type="text" name="firstName" placeholder="First name" value="{{firstName}}" data-required="true">
 									<input class="profile-input-input profile-last-name" disabled="disabled" type="text" name="lastName" placeholder="Last name" value="{{lastName}}" data-required="true">
 									<a class="profile-input-edit" href="javascript:void(0)">Edit</a>
