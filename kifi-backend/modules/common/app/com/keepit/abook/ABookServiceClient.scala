@@ -17,6 +17,8 @@ import play.api.libs.json.{JsValue, JsArray, Json, JsObject}
 
 import com.google.inject.Inject
 import com.keepit.common.routes.ABook
+import scala.util.{Success, Failure, Try}
+import play.api.http.Status
 
 trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
@@ -35,6 +37,7 @@ trait ABookServiceClient extends ServiceClient {
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[JsValue]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
+  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName:Option[String], lastName:Option[String]):Future[Try[EContact]]
 }
 
 
@@ -121,6 +124,15 @@ class ABookServiceClientImpl @Inject() (
       else r.json.as[Option[OAuth2Token]]
     }
   }
+
+  def getOrCreateEContact(userId: Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String]): Future[Try[EContact]] = {
+    call(ABook.internal.getOrCreateEContact(userId, email, name, firstName, lastName)).map { r =>
+      r.status match {
+        case Status.OK => Success(r.json.as[EContact])
+        case _ => Failure(new IllegalArgumentException(r.body)) // can do better
+      }
+    }
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ABookServiceClient {
@@ -156,4 +168,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue): Future[JsValue] = ???
 
   def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
+
+  def getOrCreateEContact(userId: Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String]): Future[Try[EContact]] = ???
 }

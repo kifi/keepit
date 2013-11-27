@@ -21,6 +21,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.Play
 import play.api.Play.current
+import scala.util.{Success, Failure}
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -343,6 +344,14 @@ class ABookController @Inject() (
       } yield oauth2Token
     }
     Ok(Json.toJson(tokenOpt))
+  }
+
+  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName:Option[String], lastName:Option[String]) = Action { request =>
+    log.info(s"[getOrCreateEContact] userId=$userId email=$email name=$name")
+    abookCommander.getOrCreateEContact(userId, email, name, firstName, lastName) match {
+      case Success(c) => Ok(Json.toJson(c))
+      case Failure(t) => BadRequest(t.getMessage)
+    }
   }
 
 }
