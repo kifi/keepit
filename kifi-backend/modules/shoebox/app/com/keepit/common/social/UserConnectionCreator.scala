@@ -15,6 +15,7 @@ import com.keepit.model._
 import com.keepit.social.{SocialNetworkType, SocialId}
 
 import play.api.libs.json.Json
+import com.keepit.heimdal.{ContextDoubleData, HeimdalServiceClient}
 
 object UserConnectionCreator {
   private val UpdatedUserConnectionsKey = "updated_user_connections"
@@ -29,7 +30,8 @@ class UserConnectionCreator @Inject() (
     clock: Clock,
     airbrake: AirbrakeNotifier,
     basicUserRepo: BasicUserRepo,
-    eliza: ElizaServiceClient)
+    eliza: ElizaServiceClient,
+    heimdal: HeimdalServiceClient)
   extends Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
@@ -50,15 +52,21 @@ class UserConnectionCreator @Inject() (
       val socialConnections = socialConnectionRepo.getFortyTwoUserConnections(userId)
 
       val newConnections = socialConnections -- existingConnections
-      if (newConnections.nonEmpty) {
-        eliza.sendToUser(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
-      }
+      userConnectionRepo.addConnections(userId, newConnections)
+      userValueRepo.setValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey, clock.now.toStandardTimeString)
+
       newConnections.foreach { connId =>
         log.info(s"Sending new connection to user $connId (to $userId)")
         eliza.sendToUser(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
       }
-      userConnectionRepo.addConnections(userId, newConnections)
-      userValueRepo.setValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey, clock.now.toStandardTimeString)
+
+      if (newConnections.nonEmpty) {
+        eliza.sendToUser(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
+        heimdal.setUserProperties(userId,
+          "kifiConnections" -> ContextDoubleData(userConnectionRepo.getConnectionCount(userId)),
+          "socialConnections" -> ContextDoubleData(socialConnectionRepo.getUserConnectionCount(userId))
+        )
+      }
     }
   }
 

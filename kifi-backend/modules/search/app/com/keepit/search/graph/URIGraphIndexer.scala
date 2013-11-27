@@ -48,7 +48,7 @@ class URIGraphIndexer(
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
-  private[this] val commitBatchSize = 3000
+  private[this] val commitBatchSize = 500
   private[this] val fetchSize = commitBatchSize
 
   private[this] val updateLock = new AnyRef

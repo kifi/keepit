@@ -17,7 +17,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     val eventCode = implicitly[TypeCode[E]]
     val eventName = s"${eventCode}_${event.eventType.name}"
     val distinctId = event match {
-      case e: UserEvent => s"${eventCode}_${e.userId.toString}"
+      case e: UserEvent => getDistinctId(Id[User](e.userId))
       case _ => eventCode.toString
     }
 
@@ -26,43 +26,48 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
       case _ => Future.successful(Seq.empty)
     }
 
-    val properties = getProperties(event.context) :+ ("distinct_id" -> JsString(distinctId)) :+ ("token", JsString(projectToken)) :+ ("time", JsNumber(event.time.getMillis))
+    val properties = new EventContextBuilder()
+    properties.data ++= event.context.data
+    properties += ("distinct_id", distinctId)
+    properties += ("token", projectToken)
+    properties += ("time", event.time.getMillis)
 
     for (superProperties <- superPropertiesFuture recover { case _ : Throwable => Seq.empty } ) yield {
-      val data = Json.obj("event" -> JsString(eventName), "properties" -> JsObject(superProperties ++ properties))
+      properties.data ++= superProperties
+      val data = Json.obj("event" -> JsString(eventName), "properties" -> Json.toJson(properties.build))
       sendData("http://api.mixpanel.com/track", data)
     }
   }
 
-  private def getProperties(context: EventContext) : Seq[(String, JsValue)] = context.data.map {
-      case ("remoteAddress", ContextStringData(ip)) => "ip" -> JsString(ip)
-      case (key, value) => key -> ContextData.format.writes(value)
-  }.toSeq
-
-  private def getSuperProperties(userId: Id[User]): Future[Seq[(String, JsValue)]] =
+  private def getSuperProperties(userId: Id[User]): Future[Seq[(String, ContextData)]] =
     shoebox.getUserValue(userId, Gender.key).map(_.map { gender =>
-      Seq(Gender.key -> JsString(Gender(gender).toString))
+      Seq(Gender.key -> ContextStringData(Gender(gender).toString))
     } getOrElse(Seq.empty))
 
-  def engage(user: User) = getSuperProperties(user.id.get) foreach { superProperties =>
+  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]) = {
     val data = Json.obj(
       "$token" -> JsString(projectToken),
-      "$distinct_id" -> JsString(s"${UserEvent.typeCode.code}_${user.id.get}"),
+      "$distinct_id" -> JsString(getDistinctId(userId)),
       "$ip" -> JsNumber(0),
-      "$set" -> JsObject(superProperties ++ Seq(
-        "$first_name" -> JsString(user.firstName),
-        "$last_name" -> JsString(user.lastName),
-        "$created" -> JsString(user.createdAt.toString),
-        "state" -> JsString(user.state.value)
-      ))
+      "$increment" -> JsObject(increments.mapValues(JsNumber(_)).toSeq)
     )
     sendData("http://api.mixpanel.com/engage", data)
   }
 
-  def delete(user: User) = {
+  def setUserProperties(userId: Id[User], properties: EventContext) = {
     val data = Json.obj(
       "$token" -> JsString(projectToken),
-      "$distinct_id" -> JsString(s"${UserEvent.typeCode.code}_${user.id.get}"),
+      "$distinct_id" -> JsString(getDistinctId(userId)),
+      "$ip" -> JsNumber(0),
+      "$set" -> Json.toJson(properties)
+    )
+    sendData("http://api.mixpanel.com/engage", data)
+  }
+
+  def delete(userId: Id[User]) = {
+    val data = Json.obj(
+      "$token" -> JsString(projectToken),
+      "$distinct_id" -> JsString(getDistinctId(userId)),
       "$delete" -> JsString("")
     )
     sendData("http://api.mixpanel.com/engage", data)
@@ -78,5 +83,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
       }
     )
   }
+
+  private def getDistinctId(id: Id[User]) = s"${UserEvent.typeCode}_${id.toString}"
 
 }

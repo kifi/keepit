@@ -378,14 +378,7 @@ class MainSearcher(
     var hitList = hits.toSortedList
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
-    val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
-    val svVar = SemanticVariance.svVariance(textQueries, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
-
-    // simple classifier
-    val show = (parsedQuery, personalizedSearcher) match {
-      case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get, svVar)
-      case _ => true
-    }
+    val (show, svVar) = classify(hitList, personalizedSearcher)
 
     // insert a new content if any (after show/no-show classification)
     newContent.foreach { h =>
@@ -423,14 +416,27 @@ class MainSearcher(
     }
   }
 
-  private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher, svVar: Float) = {
-    def classify(hit: MutableArticleHit) = {
+  private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: Option[PersonalizedSearcher]) = {
+    def classify(hit: MutableArticleHit, svVar: Float) = {
       (hit.clickBoost) > 1.1f ||
       hit.scoring.recencyScore > 0.25f ||
       hit.scoring.textScore > 0.7f ||
-      (hit.scoring.textScore >= 0.02f && svVar < 0.18f)
+      (hit.scoring.textScore >= 0.1f && svVar < 0.17f)
     }
-    hitList.take(3).exists(classify(_))
+
+    if (filter.isDefault && isInitialSearch) {
+      val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
+      val svVar = SemanticVariance.svVariance(textQueries, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
+
+      // simple classifier
+      val show = (parsedQuery, personalizedSearcher) match {
+        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => hitList.take(5).exists(classify(_, svVar))
+        case _ => true
+      }
+      (show, svVar)
+    } else {
+      (true, -1f)
+    }
   }
 
   @inline private[this] def getPublicBookmarkCount(id: Long) = uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size

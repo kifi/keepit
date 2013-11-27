@@ -165,9 +165,9 @@ class S3BackedResultClickTrackerBuffer @Inject() (cache: ProbablisticLRUChunkCac
 
 
 
-class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEvery : Int)(slaveBuffer: Option[MultiChunkBuffer] = None) {
+class ProbablisticLRU(masterBuffer: MultiChunkBuffer, val numHashFuncs : Int, syncEvery : Int)(slaveBuffer: Option[MultiChunkBuffer] = None) {
 
-  class Probe(key: Long, positions: Array[Int], values: Array[Int], val norm: Float) {
+  class Probe(key: Long, positions: Array[Int], values: Array[Int]) {
     def count(value: Long) = {
       var count = 0
       var i = 0
@@ -199,9 +199,9 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
     if ((ins % syncEvery) == 0) sync
   }
 
-  def get(key: Long, useSlaveAsPrimary: Boolean) = {
+  def get(key: Long, useSlaveAsPrimary: Boolean): Probe = {
     val (p, h) = getValueHashes(key, useSlaveAsPrimary)
-    new Probe(key, p, h, numHashFuncs.toFloat)
+    new Probe(key, p, h)
   }
 
   def get(key: Long, values: Seq[Long], useSlaveAsPrimary: Boolean = false): Map[Long, Int] = {
@@ -225,23 +225,24 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
 
   protected def putValueHash(key: Long, value: Long, updateStrength: Double) {
     def putValueHashOnce(bufferChunk: IntBufferWrapper, tableSize: Int) : Unit = {
-      var positions = new Array[Int](numHashFuncs)
+      val (positions, values) = getValueHashes(key, true)
 
-      var v = init(key)
+      // count open positions
+      var openCount = 0
       var i = 0
-      val tsize = tableSize.toLong
-      while (i < numHashFuncs) {
-        v = next(v)
-        val pos = (v % tsize).toInt + 1
-        positions(i) = pos
+      while (i < positions.length) {
+        if (values(i) != valueHash(value, positions(i))) {
+          positions(openCount) = positions(i)
+          openCount += 1
+        }
         i += 1
       }
 
       // randomly overwrite the positions proportionally to updateStrength
       i = 0
-      val numUpdatePositions = min(ceil(numHashFuncs.toDouble * updateStrength).toInt, numHashFuncs)
-      while (i < numUpdatePositions) {
-        val index = rnd.nextInt(positions.length - i) + i
+      val numUpdatePositions = min(ceil(openCount * updateStrength).toInt, numHashFuncs)
+      while (i < numUpdatePositions && i < openCount) {
+        val index = rnd.nextInt(openCount - i) + i
         val pos = positions(index)
         positions(index) = positions(i)
         bufferChunk.put(pos, valueHash(value, pos))
