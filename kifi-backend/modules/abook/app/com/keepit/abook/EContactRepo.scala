@@ -102,21 +102,20 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
     log.info(s"[insertOnDupUpdate(${userId.id}, ${c.email})]")
   }
 
-  def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact] = {
-    if (userId == null || email == null) Failure(new IllegalArgumentException("userId and email cannot be null"))
-    else {
-      val parsedResult = EmailParser.parseAll(EmailParser.email, email)
-      if (!parsedResult.successful) Failure(new IllegalArgumentException(s"Invalid email: $email"))
-      else {
-        val parsedEmail = parsedResult.get
-        val c = EContact(userId = userId, email = parsedEmail.toString, name = name, firstName = firstName, lastName = lastName)
-        insertOnDupUpdate(userId, c) // todo: optimize (if needed)
-        val cOpt = getByUserIdAndEmail(userId, parsedEmail.toString)
-        cOpt match {
-          case Some(econtact) => Success(econtact)
-          case None => Failure(new IllegalStateException("Failed to retrieve econtact for $email"))
-        }
-      }
+  def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact] = Try {
+    if (userId == null || email == null) throw new IllegalArgumentException("userId and email cannot be null")
+
+    val parsedResult = EmailParser.parseAll(EmailParser.email, email)
+    if (!parsedResult.successful) throw new IllegalArgumentException(s"Invalid email: $email")
+
+    val parsedEmail = parsedResult.get
+    val c = EContact(userId = userId, email = parsedEmail.toString, name = name, firstName = firstName, lastName = lastName)
+    insertOnDupUpdate(userId, c) // todo: optimize (if needed)
+    val cOpt = getByUserIdAndEmail(userId, parsedEmail.toString)
+    cOpt match {
+      case Some(econtact) => econtact
+      case None => throw new IllegalStateException("Failed to retrieve econtact for $email")
     }
   }
+
 }
