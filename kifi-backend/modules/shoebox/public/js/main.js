@@ -522,6 +522,28 @@ $(function () {
 		});
 	}
 
+	var $disconnectDialog = $('.disconnect-dialog')
+		.detach()
+		.show()
+		.on('click', '.dialog-cancel', function (e) {
+			e.preventDefault();
+			$disconnectDialog.dialog('hide');
+		});
+
+	var disconnectDialogTmpl = Tempo.prepare($disconnectDialog);
+
+	function showDisconnectDialog(network) {
+		disconnectDialogTmpl.render({
+			url: wwwDomain + '/disconnect/' + network,
+			network: ucfirst(network)
+		});
+		$disconnectDialog.dialog('show');
+	}
+
+	function ucfirst(str) {
+		return str ? str.charAt(0).toUpperCase() + str.substring(1) : '';
+	}
+
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
@@ -548,7 +570,7 @@ $(function () {
 			});
 			$('.profile-disconnect').click(function (e) {
 				e.preventDefault();
-				submitForm(wwwDomain + '/disconnect/' + $(this).closest('li').data('network'), 'post');
+				showDisconnectDialog($(this).closest('li').data('network'));
 			});
 			$('.profile .profile-networks li').each(function () {
 				var $this = $(this);
@@ -1462,7 +1484,7 @@ $(function () {
 	var $unfriendDialog = $('.unfriend-dialog')
 	.detach()
 	.show()
-	.on('click', '.unfriend-cancel', function (e) {
+	.on('click', '.dialog-cancel', function (e) {
 		e.preventDefault();
 		$unfriendDialog.dialog('hide');
 	});

@@ -261,10 +261,13 @@ a.profile-nw {display: inline-block; color: white; padding: 8px 16px; padding-le
 .profile-networks > li:hover .profile-disconnect { top: 0 }
 
 .profile-email-accounts { margin-top: 6px }
+.profile-email-accounts-refresh { margin-left: 5px; font-size: 12px }
+.profile-email-accounts-refresh:hover { text-decoration: underline }
 .profile-email-account {font-size: 12px; line-height: 18px; font-weight: 200; }
 .profile-email-status { width: 17px; background-image: url(../img/tag-icon-small.png); background-repeat: no-repeat; background-size: auto 15px; background-position: 0 2px }
 .profile-email-address {color: #818691 }
 .profile-email-separator {color: #9fb1c3; padding: 0 7px }
+.profile-email-remove a:hover {text-decoration: underline}
 .profile-email-contact-count {color: #9fb1c3; }
 
 .profile-section-divider { border: 0; border-bottom: 5px solid #f7f8fb; margin: 0; margin-left: 20px}
@@ -451,27 +454,36 @@ a.invite-button {position: absolute; bottom: 10px; right: 10px; font-size: 13px;
   .invite-button,
   .connect-button {right: 16px}
 }
+
+.dialog {z-index: 100; opacity: 0; position: fixed; width: 100%; height: 100%; top: 0; left: 0; background: rgba(227, 224, 226, 0.8); -webkit-transition: opacity .3s linear; transition: opacity .3s linear}
+.dialog.showing {opacity: 1}
+.dialog-content {position: fixed; left: 50%; top: 50%; background: #faf8f7; border: 1px solid #f2eeed; border-radius: 5px; box-shadow: 6px 12px 1px #d1d7df; font-size: 14px; -moz-box-sizing: border-box; box-sizing: border-box}
+.dialog-content {width: 380px; margin-top: -113px; margin-left: -190px }
+.dialog-content>h2 {margin: 0 0 16px; font-size: 22px; font-weight: 300; -webkit-font-smoothing: antialiased; color: #0089d5}
+.dialog-header { font-size: 18px; font-weight: 300; padding: 19px 6px 8px; border-bottom: 2px solid #ecf0f1; margin: 0 11px; color: #3a495b }
+.dialog-content-body { padding: 5px 40px 28px; }
+.dialog-content-body p { margin: 0; margin-top: 15px; }
+.dialog-content-body ul { list-style: disc; padding-left: 16px; margin-top: 5px; }
+.dialog-buttons { text-align: center; margin: 0 auto; margin-top: 25px; }
+.dialog-content-body .dialog-submit,
+.dialog-content-body .dialog-cancel { color: white; border: 0; padding: 11px 15px; border-radius: 5px; font-size: 14px; width: 115px; font-weight: 100; text-align: center; cursor: pointer }
+.dialog-content-body .dialog-submit { background: #ce6159 }
+.dialog-content-body .dialog-cancel { background: #b8c5d2 }
+
+.disconnect-dialog .dialog-content {width: 400px}
+
+.invite-message-dialog .dialog-header { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .invite-message-dialog>.dialog-content { height: 290px; margin-top: -140px; width: 440px; margin-left: -220px; }
 .invite-message-dialog>.dialog-content>p { margin: 12px 15px; }
-.invite-message-header,
-.unfriend-dialog-header { font-size: 18px; font-weight: 300; padding: 19px 6px 8px; border-bottom: 2px solid #ecf0f1; margin: 0 11px; color: #3a495b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 a.invite-cancel,
-a.unfriend-cancel { position: absolute; color: #bcc1c7; font-weight: normal; padding: 15px 20px; right: 0; top: 0; font-size: 16px; text-decoration: none; }
+a.dialog-cancel { position: absolute; color: #bcc1c7; font-weight: normal; padding: 15px 20px; right: 0; top: 0; font-size: 16px; text-decoration: none; }
 input.invite-subject { display: block; font-size: 13px; margin: 8px 12px; margin-top: 15px; padding: 6px 8px; border: 1px solid #e7eced; width: 397px; }
 textarea.invite-message { display: block; font-size: 13px; margin: 8px 12px; padding: 4px; border: 1px solid #e7eced; width: 405px; min-height: 80px; resize: none}
 button.invite-send { position: absolute; right: 12px; bottom: 12px; font-size: 14px; border: none; outline: none; border-radius: 5px; padding: 8px 12px; background: #6fa6ef; color: white; cursor: pointer; overflow: hidden; text-overflow: ellipsis; max-width: 200px; white-space: nowrap }
 
 .no-invites-dialog>.dialog-content { height: 200px; margin-top: -100px; width: 400px; margin-left: -200px; padding: 20px 30px; color: #66829b }
 .no-invites-dialog>.dialog-content>p { margin: 12px 0; }
-.unfriend-dialog>.dialog-content {width: 380px; height: 227px; margin-top: -113px; margin-left: -190px }
-.unfriend-dialog-content { padding: 5px 40px 28px; }
-.unfriend-dialog-content p { margin: 0; margin-top: 15px; }
-.unfriend-dialog-content ul { list-style: disc; padding-left: 16px; margin-top: 5px; margin-bottom: 20px; }
-.unfriend-dialog-buttons { text-align: center; margin: 0 auto }
-.unfriend-dialog-content .unfriend-send,
-.unfriend-dialog-content .unfriend-cancel { color: white; border: 0; padding: 11px 15px; border-radius: 5px; font-size: 14px; width: 115px; font-weight: 100; text-align: center; cursor: pointer }
-.unfriend-dialog-content .unfriend-send { background: #ce6159 }
-.unfriend-dialog-content .unfriend-cancel { background: #b8c5d2 }
+
 button.more-invites { display: block; font-size: 14px; border: none; outline: none; border-radius: 5px; padding: 8px 12px; margin: 24px auto; background: #6fa6ef; color: white; cursor: pointer; }
 
 .no-results { font-size: 18px; padding: 10px; font-weight: 300; -webkit-font-smoothing: antialiased;}
@@ -754,10 +766,6 @@ input.page-coll-input {width: 20ex}
 /* shared styles */
 .long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 span.long-text, a.long-text {display: inline-block}
-.dialog {z-index: 100; opacity: 0; position: fixed; width: 100%; height: 100%; top: 0; left: 0; background: rgba(227, 224, 226, 0.8); -webkit-transition: opacity .3s linear; transition: opacity .3s linear}
-.dialog.showing {opacity: 1}
-.dialog-content {position: fixed; left: 50%; top: 50%; background: #faf8f7; border: 1px solid #f2eeed; border-radius: 5px; box-shadow: 6px 12px 1px #d1d7df; font-size: 14px; -moz-box-sizing: border-box; box-sizing: border-box}
-.dialog>.dialog-content>h2 {margin: 0 0 16px; font-size: 22px; font-weight: 300; -webkit-font-smoothing: antialiased; color: #0089d5}
 
 /* welcome dialog */
 .welcome-dialog>.dialog-content {height: 310px; margin-top: -155px; width: 410px; margin-left: -205px; padding: 40px 55px; color: #66829b; line-height: 1.5; }

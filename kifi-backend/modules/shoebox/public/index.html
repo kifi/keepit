@@ -307,6 +307,19 @@
 						</div>
 					</div>
 				</div>
+				<div class="dialog disconnect-dialog" style="display:none">
+					<form method="POST" action="{{url}}" class="dialog-content" data-template>
+						<div class="dialog-header">Are you sure you want to disconnect your {{network}} account?</div>
+						<a href="javascript:" class="dialog-cancel">×</a>
+						<div class="dialog-content-body">
+							<p>This action may degrade your Kifi experience with your {{network}} friends.</p>
+							<div class="dialog-buttons">
+								<button class="dialog-submit" type="submit">Disconnect</button>
+								<button class="dialog-cancel">Cancel</button>
+							</div>
+						</div>
+					</form>
+				</div>
 
 				<div class="friends">
 					<h1>Friends</h1>
@@ -375,7 +388,7 @@
 							</div>
 							<div class="dialog invite-message-dialog" style="display:none">
 								<form method="POST" action="/invite" class="dialog-content" data-template>
-									<div class="invite-message-header">Your Kifi invite to {{label}}</div>
+									<div class="dialog-header">Your Kifi invite to {{label}}</div>
 									<a href="javascript:" class="invite-cancel">×</a>
 									<input type="hidden" name="fullSocialId" value="{{fullSocialId}}">
 									<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
@@ -432,17 +445,17 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 							</div>
 							<div class="dialog unfriend-dialog" style="display:none">
 								<form method="POST" action="{{url}}" class="dialog-content" data-template>
-									<div class="unfriend-dialog-header">Unfriend {{name}}?</div>
-									<a href="javascript:" class="unfriend-cancel">×</a>
-									<div class="unfriend-dialog-content">
+									<div class="dialog-header">Unfriend {{name}}?</div>
+									<a href="javascript:" class="dialog-cancel">×</a>
+									<div class="dialog-content-body">
 										<p>Are you sure you want to unfriend this user?</p>
 										<ul>
 											<li>You will not see each other's results</li>
 											<li>You will not be able to send messages to each other</li>
 										</ul>
-										<div class="unfriend-dialog-buttons">
-											<button class="unfriend-send" type="submit">Unfriend</button>
-											<button class="unfriend-cancel">Cancel</button>
+										<div class="dialog-buttons">
+											<button class="dialog-submit" type="submit">Unfriend</button>
+											<button class="dialog-cancel">Cancel</button>
 										</div>
 									</div>
 								</form>
