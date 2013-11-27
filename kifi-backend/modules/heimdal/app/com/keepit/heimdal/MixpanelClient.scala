@@ -49,7 +49,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
       "$token" -> JsString(projectToken),
       "$distinct_id" -> JsString(getDistinctId(userId)),
       "$ip" -> JsNumber(0),
-      "$increment" -> JsObject(increments.mapValues(JsNumber(_)).toSeq)
+      "$add" -> JsObject(increments.mapValues(JsNumber(_)).toSeq)
     )
     sendData("http://api.mixpanel.com/engage", data)
   }
