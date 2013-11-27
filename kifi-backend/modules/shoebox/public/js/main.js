@@ -424,6 +424,105 @@ $(function () {
 		}
 	});
 	var profileTmpl = Tempo.prepare('profile-template');
+
+	function editProfileInput($target, e) {
+		if (e) {
+			e.preventDefault();
+		}
+
+		var $box = $target.closest('.profile-input-box'),
+			$input = $box.find('.profile-input-input');
+
+		$box.closest('.profile-container').find('.profile-input-box.edit').each(function () {
+			cancelProfileInput($(this));
+		});
+
+		$input
+			.data('value', $input.val())
+			.prop('disabled', false)
+			.focus();
+
+		$box.addClass('edit');
+	}
+
+	function saveProfileInput($target, e) {
+		if (e) {
+			e.preventDefault();
+		}
+
+		var $box = $target.closest('.profile-input-box'),
+			$input = $box.find('.profile-input-input');
+
+		var val = trimInputValue($input.val());
+
+		if (!val && $input.data('required')) {
+			return cancelProfileInput($target, e);
+		}
+
+		$input
+			.val(val)
+			.data('value', val)
+			.prop('disabled', true);
+
+		$box
+			.removeClass('edit');
+
+		saveProfileInfo();
+	}
+
+	function cancelProfileInput($target, e) {
+		if (e) {
+			e.preventDefault();
+		}
+
+		var $box = $target.closest('.profile-input-box'),
+			$input = $box.find('.profile-input-input');
+
+		var val = trimInputValue($input.data('value'));
+
+		$input
+			.val(val)
+			.prop('disabled', true);
+
+		$box
+			.removeClass('edit');
+	}
+
+	function trimInputValue(val) {
+		return val ? $.trim(val).replace(/\s+/g, ' ') : '';
+	}
+
+	function saveProfileInfo() {
+		var props = {},
+			$container = $('.profile-container');
+
+		$container.find('.profile-input-input').each(function () {
+			var $this = $(this);
+			props[$this.attr('name')] = trimInputValue($this.val());
+		});
+
+		if (!props.name) {
+			delete props.name;
+		}
+
+		if (props.email) {
+			var emails = props.emails = me.emails.slice();
+			emails[0] = props.email;
+			delete props.email;
+		}
+		else {
+			delete props.email;
+		}
+
+		$.postJson(xhrBase + '/user/me', props)
+		.success(function (data) {
+			updateMe(data);
+		})
+		.error(function () {
+			showMessage('Uh oh! A bad thing happened!');
+		});
+	}
+
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
@@ -432,62 +531,21 @@ $(function () {
 			$('.profile').on('keydown keypress keyup', function (e) {
 				e.stopPropagation();
 			});
-			$('.profile .edit').click(function () {
-				var $inputs = $(this).closest('.edit-container').addClass('editing').find('.editable').each(function () {
-					var $this = $(this);
-					var value = $this.text();
-					var maxlen = $this.data('maxlength');
-					$('<input>').val(value).attr('maxlength', maxlen).keyup(function (e) {
-						if (maxlen) {
-							$(this).closest('.editable').attr('data-chars-left', maxlen - $(this).val().length);
-						}
-						if (e.keyCode === 13) {
-							$(this).closest('.edit-container').find('.save').click();
-						} else if (e.which === 27) {
-							$(this).closest('.edit-container').removeClass('editing').find('.editable').each(function () {
-								var $this = $(this);
-								var prop = $this.data('prop');
-								if (prop === 'email') {
-									$this.text(me.emails[0]);
-								} else {
-									$this.text(me[prop]);
-								}
-							});
-						}
-					}).appendTo($this.empty()).keyup();
-				}).find('input');
-				$inputs[0].focus();
-				$inputs.on('keypress paste change', function () {
-					var minChars = 3, scale = 1.25;
-					var $this = $(this);
-					var size = Math.max(Math.ceil($this.val().length * scale), minChars);
-					$this.css('width', 'auto').attr('size', size);
-				}).keypress();
-			});
-			$('.profile .save').click(function () {
-				var props = {};
-				var $editContainer = $(this).closest('.edit-container');
-				$editContainer.find('.editable').each(function () {
-					var $this = $(this);
-					var value = $this.find('input').val();
-					$this.text(value);
-					props[$this.data('prop')] = value;
-				});
-				if (props.email) {
-					props.emails = [props.email];
-					delete props.email;
+			$('.profile-input-input').keyup(function (e) {
+				switch (e.which) {
+				case 13: // enter
+					saveProfileInput($(this), e);
+					break;
+				case 27: // esc
+					cancelProfileInput($(this), e);
+					break;
 				}
-				var $save = $editContainer.find('.save');
-				var saveText = $save.text();
-				$save.text('Saving...');
-				$.postJson(xhrBase + '/user/me', props, function (data) {
-					$editContainer.removeClass('editing');
-					$save.text(saveText);
-					updateMe(data);
-				}).error(function () {
-					showMessage('Uh oh! A bad thing happened!');
-					$save.text(saveText);
-				});
+			});
+			$('.profile-input-edit').click(function (e) {
+				editProfileInput($(this), e);
+			});
+			$('.profile-input-save').click(function (e) {
+				saveProfileInput($(this), e);
 			});
 			$('.profile .profile-networks li').each(function () {
 				var $this = $(this);
