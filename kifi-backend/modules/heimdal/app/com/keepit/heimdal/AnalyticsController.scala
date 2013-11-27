@@ -243,4 +243,11 @@ class AnalyticsController @Inject() (
       Ok
     }}
   }
+
+  def fixData(doIt: Boolean) = Action { request =>
+    Async { SafeFuture {
+      userEventLoggingRepo.fixKeepData(doIt)
+      Ok
+    }}
+  }
 }

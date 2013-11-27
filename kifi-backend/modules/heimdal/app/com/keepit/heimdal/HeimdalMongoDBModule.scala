@@ -39,7 +39,7 @@ case class ProdMongoModule() extends MongoModule {
     val connection = driver.connection(List(nodeA), List(auth), 2, Some("UserEventLoggingMongoActorSystem"))
     val db = connection("heimdal")
     val collection = db("user_events")
-    new ProdUserEventLoggingRepo(collection, mixpanel, descriptorRepo, airbrake)
+    new ProdUserEventLoggingRepo(collection, mixpanel, descriptorRepo, shoebox, airbrake)
   }
 
   @Provides @Singleton
