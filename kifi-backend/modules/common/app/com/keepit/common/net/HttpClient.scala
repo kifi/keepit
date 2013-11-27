@@ -31,7 +31,10 @@ case class NonOKResponseException(url: HttpUri, response: ClientResponse, reques
 }
 
 case class LongWaitException(request: Request, response: ClientResponse, waitTime: Int, duration: Int, remoteTime: Int)
-    extends Exception(s"[${request.httpUri.service}] Long Wait on ${request.httpUri.summary} tracking-id:${request.trackingId} total-time:${duration}ms remote-time:${remoteTime}ms wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status}"){
+    extends Exception(
+      s"[${request.httpUri.service}] Long Wait on ${request.httpUri.summary} " +
+      s"tracking-id:${request.trackingId} parse-time:${response.parsingTime.getOrElse("NA")} total-time:${duration}ms remote-time:${remoteTime}ms " +
+      s"wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status}"){
   override def toString(): String = getMessage
 }
 
@@ -183,6 +186,7 @@ case class HttpClientImpl(
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
+        parsingTime = res.parsingTime.map(_.toInt),
         remoteLeader = remoteLeader,
         result = "success",
         query = request.queryString,
