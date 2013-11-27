@@ -28,6 +28,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
 
     val properties = new EventContextBuilder()
     properties.data ++= event.context.data
+    properties.data += ("ip" -> event.context.data.getOrElse("remoteAddress", ContextDoubleData(0)))
     properties += ("distinct_id", distinctId)
     properties += ("token", projectToken)
     properties += ("time", event.time.getMillis)
