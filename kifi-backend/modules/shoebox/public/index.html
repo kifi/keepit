@@ -231,7 +231,8 @@
 							<div class="profile-input-wrapper" data-name="name">
 								<div class="profile-input-title">Name</div>
 								<div class="profile-input-box">
-									<input class="profile-input-input" disabled="disabled" type="text" name="name" placeholder="Enter your name" value="{{firstName}} {{lastName}}" data-required="true">
+									<input class="profile-input-input profile-first-name" disabled="disabled" type="text" name="firstName" placeholder="First name" value="{{firstName}}" data-required="true">
+									<input class="profile-input-input profile-last-name" disabled="disabled" type="text" name="lastName" placeholder="Last name" value="{{lastName}}" data-required="true">
 									<a class="profile-input-edit" href="javascript:void(0)">Edit</a>
 									<a class="profile-input-save" href="javascript:void(0)">Save</a>
 								</div>
@@ -259,13 +260,19 @@
 							<ul class="profile-networks">
 								<li data-network="facebook">
 									<a class="profile-nw nw-facebook" href="javascript:void(0)">Facebook</a>
-									<span class="profile-nw-connected">Connected</span>
-									<a href="javascript:void(0)" class="profile-nw-unlink">Unlink</a>
+									<a class="profile-nw-connected" href="javascript:void(0)">
+										<span class="profile-placeholder">&nbsp;</span>
+										<span class="profile-connected">Connected</span>
+										<span class="profile-disconnect">Disconnect?</span>
+									</a>
 								</li>
 								<li data-network="linkedin">
 									<a class="profile-nw nw-linkedin" href="javascript:void(0)">LinkedIn</a>
-									<span class="profile-nw-connected">Connected</span>
-									<a href="javascript:void(0)" class="profile-nw-unlink">Unlink</a>
+									<a class="profile-nw-connected" href="javascript:void(0)">
+										<span class="profile-placeholder">&nbsp;</span>
+										<span class="profile-connected">Connected</span>
+										<span class="profile-disconnect">Disconnect?</span>
+									</a>
 								</li>
 							</ul>
 						</div>
@@ -282,6 +289,10 @@
 										<td class="profile-email-address">joonho1101@gmail.com{{email}}</td>
 										<td class="profile-email-separator">|</td>
 										<td class="profile-email-contact-count">2,333 out of 12,000{{contactCount}} contacts imported</td>
+										<td class="profile-email-separator">|</td>
+										<td class="profile-email-remove">
+											<a href="javascript:void(0)">Remove</a>
+										</td>
 									</tr>
 								</tbody>
 							</table>

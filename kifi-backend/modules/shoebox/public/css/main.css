@@ -193,6 +193,9 @@ a.profile-image-change:active { background-color: #9FACB8}
 input.profile-input-input { display: block; font: inherit; letter-spacing: 0.5px; border: 0; margin: 0; width: 100%; color: #818691; background-color: #e2edfb; padding: 6px 7px; box-sizing: border-box; transition: all .25s ease }
 input.profile-input-input:disabled { padding-left: 0; padding-right: 0; background-color: transparent }
 
+input.profile-input-input.profile-first-name { display: inline-block; width: 47%; margin-right: 4% }
+input.profile-input-input.profile-last-name { display: inline-block; width: 47% }
+
 a.profile-input-edit,
 a.profile-input-save { position: absolute; bottom: 0; right: 0; font-size: 12px; line-height: 17px; display: inline-block; width: 58px; padding: 6px 0; color: white; background-color: #b8c5d1; border-radius: 2px; text-align: center; transition: background 0.2s ease; display: none }
 a.profile-input-edit:hover,
@@ -249,7 +252,13 @@ a.profile-nw {display: inline-block; color: white; padding: 8px 16px; padding-le
 .not-connected > a.profile-nw { background-color: #dbdee3; }
 .not-connected > .profile-nw-connected { visibility: hidden; }
 
-.profile-nw-connected {display: block; color: #818691; margin-top: 8px; padding-left: 21px; font-size: 12px; line-height: 17px; font-weight: 200; letter-spacing: .8px; background-image: url(../img/tag-icon-small.png); background-repeat: no-repeat; background-size: auto 15px; background-position: 0 1px }
+.profile-nw-connected { position: relative; display: block; color: #818691; margin-top: 8px; padding-left: 21px; font-size: 12px; line-height: 17px; font-weight: 200; letter-spacing: .8px; background-image: url(../img/tag-icon-small.png); background-repeat: no-repeat; background-size: auto 15px; background-position: 0 1px; overflow: hidden; }
+.profile-placeholder {}
+.profile-connected { position: absolute; color: #818691; transition: top .3s ease }
+.profile-disconnect { position: absolute; top: 100%; transition: top .3s ease; border-bottom: 1px solid transparent; }
+.profile-disconnect:hover { text-decoration: underline; }
+.profile-networks > li:hover .profile-connected { top: -100% }
+.profile-networks > li:hover .profile-disconnect { top: 0 }
 
 .profile-email-accounts { margin-top: 6px }
 .profile-email-account {font-size: 12px; line-height: 18px; font-weight: 200; }

@@ -501,16 +501,21 @@ $(function () {
 			props[$this.attr('name')] = trimInputValue($this.val());
 		});
 
-		if (props.email) {
-			var email = props.email,
-				emails = props.emails = me.emails.slice(),
-				index = emails.indexOf(email);
-			if (index !== -1) {
-				emails.splice(index, 1);
-			}
-			emails.unshift(email);
+		if (props.name) {
+			var names = props.name.split(' ');
+			props.lastName = names.pop();
+			props.firstName = names.join(' ');
 		}
-		delete props.email;
+		delete props.name;
+
+		if (props.email) {
+			var emails = props.emails = me.emails.slice();
+			emails[0] = props.email;
+			delete props.email;
+		}
+		else {
+			delete props.email;
+		}
 
 		$.postJson(xhrBase + '/user/me', props)
 		.success(function (data) {
@@ -561,7 +566,6 @@ $(function () {
 
 					$a
 						.attr('href', networkInfo.profileUrl)
-						.attr('target', '_blank')
 						.attr('title', 'View profile');
 
 						/*
