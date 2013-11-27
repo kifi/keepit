@@ -124,7 +124,7 @@ class MetricManager @Inject() (
   }
 
   def getMetric(name: String): Future[Seq[MetricData]] = {
-    metricRepoFactory(name).all.map{ dataPoints =>
+    metricRepoFactory(name).allLean.map{ dataPoints =>
       dataPoints.sortBy( md => md.dt.getMillis )
     }
   }

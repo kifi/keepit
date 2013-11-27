@@ -18,7 +18,7 @@ import play.api.libs.json.{JsNumber, Json, JsObject}
 import com.google.inject.Inject
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, Future, Promise}
 
 import views.html
 
@@ -139,30 +139,29 @@ class AnalyticsController @Inject() (
     else Ok(html.storedMetricChart(json.toString, errors))
   }
 
-  def getMetricData(repo: String, name: String) = Action { request => //see comment in getMetric
+  def getMetricData(repo: String, name: String) = Action { request =>
     require(repo != SystemEvent.typeCode.code, s"Metrics are not supported yet for system events")
-    Async(SafeFuture{
-      val infoOptions : Option[MetricDescriptor] = Await.result(metricManager.getMetricInfo(name), 20 seconds)
-      val json : JsObject = infoOptions.map{ desc =>
-        val data = Await.result(metricManager.getMetric(name), 20 seconds)
-        if (data.isEmpty){
-          Json.obj(
-            "header" -> ("No Data for Metric: " + name),
-            "data" -> Json.arr()
-          )
-        } else {
-          Json.obj(
-            "header" -> s"[$name] ${desc.description}",
-            "data" -> Json.toJson(data)
-          )
+    Async(metricManager.getMetricInfo(name).flatMap{ infoOption =>
+      infoOption.map{ desc =>
+        metricManager.getMetric(name).map{ data =>
+          if (data.isEmpty){
+            Ok(Json.obj(
+              "header" -> ("No Data for Metric: " + name),
+              "data" -> Json.arr()
+            ))
+          } else {
+            Ok(Json.obj(
+              "header" -> s"[$name] ${desc.description}",
+              "data" -> Json.toJson(data)
+            ))
+          }
         }
       } getOrElse {
-        Json.obj(
+        Promise.successful(Ok(Json.obj(
           "header" -> ("Unknown Metric: " + name),
           "data" -> Json.arr()
-        )
+        ))).future
       }
-      Ok(json)
     })
   }
 
