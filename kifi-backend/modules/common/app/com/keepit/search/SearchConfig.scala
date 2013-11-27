@@ -100,6 +100,8 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     _activeExperiments
   }
 
+  val userSegmentExperiments = activeExperiments.filter(_.description.startsWith("user segment experiment"))
+
   def syncActiveExperiments: Unit = {
     try {
       _activeExperiments = monitoredAwait.result(shoeboxClient.getActiveExperiments, 5 seconds, "getting experiments")
@@ -128,8 +130,8 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   }
 
   private def assignConfig(userId: Id[User], userSegment: Int) = {
-    if (hashBasedRand(userId) < 0.33f && activeExperiments.size == 4) {
-      val ex = activeExperiments(userSegment)
+    if (hashBasedRand(userId) < 0.33f && userSegmentExperiments.size == 4) {
+      val ex = userSegmentExperiments(userSegment)
       val config = defaultConfig(ex.config.params)
       (config, ex.id)
     } else {

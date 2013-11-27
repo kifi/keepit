@@ -109,6 +109,7 @@ class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) 
         case authRequest: AuthenticatedRequest[_] =>
           authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
           contextBuilder += ("experiments", authRequest.experiments.map(_.value).toSeq)
+          contextBuilder += ("userSegment", authRequest.userSegment)
         case _ =>
       }
     }
