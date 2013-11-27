@@ -417,21 +417,21 @@ class MainSearcher(
   }
 
   private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: Option[PersonalizedSearcher]) = {
-    def classify(hit: MutableArticleHit, r: Float) = {
+    def classify(hit: MutableArticleHit, minScore: Float) = {
       hit.clickBoost > 1.1f ||
       hit.scoring.recencyScore > 0.25f ||
-      hit.scoring.textScore > r
+      hit.scoring.textScore > minScore
     }
 
     if (filter.isDefault && isInitialSearch) {
       val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
       val svVar = SemanticVariance.svVariance(textQueries, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
 
-      val r = (0.9d - (0.8d / (1.0d + pow(svVar/1.9d, 8)))).toFloat // don't ask me how I got this formula
+      val minScore = (0.9d - (0.8d / (1.0d + pow(svVar/1.9d, 8)))).toFloat // don't ask me how I got this formula
 
       // simple classifier
       val show = (parsedQuery, personalizedSearcher) match {
-        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => hitList.take(5).exists(classify(_, r))
+        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => hitList.take(5).exists(classify(_, minScore))
         case _ => true
       }
       (show, svVar)
