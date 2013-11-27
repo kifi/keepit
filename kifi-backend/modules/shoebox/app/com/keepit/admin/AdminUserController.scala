@@ -457,7 +457,7 @@ class AdminUserController @Inject() (
     Async { SafeFuture {
       val user = db.readOnly { implicit session => userRepo.get(userId) }
       doResetMixpanelProfile(user)
-      Ok
+      Redirect(routes.AdminUserController.userView(userId))
     }}
   }
 
