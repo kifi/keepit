@@ -38,6 +38,7 @@ $.extend($.timeago.settings.strings, {
 	$.fn.layout = function () {
 		return this.each(forceLayout);
 	};
+
 	function forceLayout() {
 		this.clientHeight;
 	}
@@ -545,6 +546,10 @@ $(function () {
 			$('.profile-input-save').click(function (e) {
 				saveProfileInput($(this), e);
 			});
+			$('.profile-disconnect').click(function (e) {
+				e.preventDefault();
+				submitForm(wwwDomain + '/disconnect/' + $(this).closest('li').data('network'), 'post');
+			});
 			$('.profile .profile-networks li').each(function () {
 				var $this = $(this);
 				var network = $this.data('network');
@@ -563,21 +568,6 @@ $(function () {
 						.attr('href', networkInfo.profileUrl)
 						.attr('target', '_blank')
 						.attr('title', 'View profile');
-
-						/*
-					if (myNetworks.length > 1) {
-						$('<a>')
-							.addClass('disconnect')
-							.text('Unlink')
-							.attr('href', 'javascript:')
-							.data('action', '/disconnect/' + network)
-							.click(function (e) {
-								e.preventDefault();
-								submitForm(wwwDomain + $(this).data('action'), 'post');
-							})
-							.appendTo($this);
-					}
-					*/
 				}
 				else {
 					$this.addClass('not-connected');

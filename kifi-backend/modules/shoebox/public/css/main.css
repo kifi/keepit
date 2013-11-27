@@ -255,7 +255,7 @@ a.profile-nw {display: inline-block; color: white; padding: 8px 16px; padding-le
 .profile-nw-connected { position: relative; display: block; color: #818691; margin-top: 8px; padding-left: 21px; font-size: 12px; line-height: 17px; font-weight: 200; letter-spacing: .8px; background-image: url(../img/tag-icon-small.png); background-repeat: no-repeat; background-size: auto 15px; background-position: 0 1px; overflow: hidden; }
 .profile-placeholder {}
 .profile-connected { position: absolute; color: #818691; transition: top .3s ease }
-.profile-disconnect { position: absolute; top: 100%; transition: top .3s ease; border-bottom: 1px solid transparent; }
+.profile-disconnect { position: absolute; top: 100%; transition: top .3s ease; }
 .profile-disconnect:hover { text-decoration: underline; }
 .profile-networks > li:hover .profile-connected { top: -100% }
 .profile-networks > li:hover .profile-disconnect { top: 0 }
