@@ -12,6 +12,7 @@ import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import play.api.Play.current
 import play.api.Play
+import scala.util.{Success, Try, Failure}
 
 @ImplementedBy(classOf[EContactRepoImpl])
 trait EContactRepo extends Repo[EContact] {
@@ -24,6 +25,7 @@ trait EContactRepo extends Repo[EContact] {
   def deleteAndInsertAll(userId:Id[User], contactInfos:Seq[EContact])(implicit session:RWSession):Int
   def insertAll(userId:Id[User], contacts:Seq[EContact])(implicit session:RWSession):Unit
   def insertOnDupUpdate(userId:Id[User], contact:EContact)(implicit session:RWSession):Unit
+  def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact]
 }
 
 @Singleton
@@ -87,18 +89,34 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
 
   def insertOnDupUpdate(userId: Id[User], c: EContact)(implicit session: RWSession): Unit = {
     val cdt = currentDateTime
-    val res = if (Play.maybeApplication.isDefined && Play.isProd) {
-      sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName}) on duplicate key update id=id".first
+    if (Play.maybeApplication.isDefined && Play.isProd) {
+      sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName}) on duplicate key update id=id".execute
     } else {
       getByUserIdAndEmail(userId, c.email) match {
         case Some(e) => 0
         case None => {
-          sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName})".first
+          sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName})".execute
         }
       }
     }
-    val m = if (res == 0) "DUP" else "ADD"
-    log.info(s"[insertOnDupUpdate(${userId.id}, ${c.email})] $m")
+    log.info(s"[insertOnDupUpdate(${userId.id}, ${c.email})]")
   }
 
+  def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact] = {
+    if (userId == null || email == null) Failure(new IllegalArgumentException("userId and email cannot be null"))
+    else {
+      val parsedResult = EmailParser.parseAll(EmailParser.email, email)
+      if (!parsedResult.successful) Failure(new IllegalArgumentException(s"Invalid email: $email"))
+      else {
+        val parsedEmail = parsedResult.get
+        val c = EContact(userId = userId, email = parsedEmail.toString, name = name, firstName = firstName, lastName = lastName)
+        insertOnDupUpdate(userId, c) // todo: optimize (if needed)
+        val cOpt = getByUserIdAndEmail(userId, parsedEmail.toString)
+        cOpt match {
+          case Some(econtact) => Success(econtact)
+          case None => Failure(new IllegalStateException("Failed to retrieve econtact for $email"))
+        }
+      }
+    }
+  }
 }
