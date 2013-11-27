@@ -123,14 +123,9 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     (hash - min) / (max - min)
   }
 
-  private def hashBasedRand(userId: Id[User]): Double = {
-    val h = new StringHash64(userId.id).get
-    val (max, min) = (Long.MaxValue.toDouble, Long.MinValue.toDouble)
-    (h - min) / (max - min)
-  }
-
   private def assignConfig(userId: Id[User], userSegment: Int) = {
-    if (userSegmentExperiments.size == 4 && hashBasedRand(userId) < 0.33f) {
+    val modulo = userId.id.toLong % 3
+    if (userSegmentExperiments.size == 4 && modulo == 0) {
       val ex = userSegmentExperiments(userSegment)
       val config = defaultConfig(ex.config.params)
       (config, ex.id)
