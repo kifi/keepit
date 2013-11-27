@@ -52,16 +52,16 @@ class BookmarkRepoImpl @Inject() (
   private val sequence = db.getSequence("bookmark_sequence")
 
   override val table = new RepoTable[Bookmark](db, "bookmark") with ExternalIdColumn[Bookmark] {
-    def title = column[Option[String]]("title", O.Nullable)
-    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def title = column[Option[String]]("title", O.Nullable)//indexd
+    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)//indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
-    def url =   column[String]("url", O.NotNull)
+    def url =   column[String]("url", O.NotNull)//indexd
     def bookmarkPath = column[String]("bookmark_path", O.NotNull)
-    def userId = column[Id[User]]("user_id", O.Nullable)
-    def isPrivate = column[Boolean]("is_private", O.NotNull)
+    def userId = column[Id[User]]("user_id", O.Nullable)//indexd
+    def isPrivate = column[Boolean]("is_private", O.NotNull)//indexd
     def source = column[BookmarkSource]("source", O.NotNull)
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
-    def seq = column[SequenceNumber]("seq", O.Nullable)
+    def seq = column[SequenceNumber]("seq", O.Nullable)//indexd
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~
       userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark.apply _, Bookmark.unapply _)
   }
