@@ -33,6 +33,7 @@ import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
 import com.keepit.common.KestrelCombinator
 import scala.util.Try
+import com.keepit.eliza.model.{NonUserParticipant, NonUserThread}
 
 
 //For migration only
@@ -80,7 +81,7 @@ class MessagingController @Inject() (
     messages.collectFirst { case m if m.from.isDefined && m.from.get != userId => m }.map { lastMsgFromOther =>
       val locator = "/messages/" + thread.externalId
 
-      val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
+      val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
       val messageWithBasicUser = MessageWithBasicUser(
         lastMsgFromOther.externalId,
         lastMsgFromOther.createdAt,
@@ -107,16 +108,16 @@ class MessagingController @Inject() (
       val req = request.body.asJson.get.asInstanceOf[JsObject]
 
       val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
-      val participants = (req \ "participants").as[JsArray].value.map(v => Id[User](v.as[Long]))
+      val userParticipants = (req \ "participants").as[JsArray].value.map(v => Id[User](v.as[Long]))
       val extId = ExternalId[MessageThread]((req \ "extId").as[String])
       val messages = (req \ "messages").as[JsArray].value
 
       db.readWrite{ implicit session =>
         if (threadRepo.getOpt(extId).isEmpty) {
-          log.info(s"MIGRATION: Importing thread $extId with participants $participants on uriid $uriId")
+          log.info(s"MIGRATION: Importing thread $extId with participants $userParticipants on uriId $uriId")
           val nUri = Await.result(shoebox.getNormalizedURI(uriId), 10 seconds) // todo: Remove await
           //create thread
-          val mtps = MessageThreadParticipants(participants.toSet)
+          val mtps = MessageThreadParticipants(userParticipants.toSet)
           val thread = threadRepo.save(MessageThread(
             id = None,
             externalId = extId,
@@ -130,7 +131,7 @@ class MessagingController @Inject() (
           ))
 
           //create userThreads
-          participants.toSet.foreach{ userId : Id[User] =>
+          userParticipants.toSet.foreach{ userId : Id[User] =>
             userThreadRepo.create(userId, thread.id.get, Some(uriId))
           }
 
@@ -153,9 +154,9 @@ class MessagingController @Inject() (
           }
 
           log.info(s"MIGRATION: Starting notification recovery for $extId.")
-          val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
+          val participantSet = thread.participants.map(_.userParticipants.keySet).getOrElse(Set())
           val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds) // todo: Remove await
-          participants.toSet.foreach{ userId : Id[User] =>
+          userParticipants.toSet.foreach{ userId : Id[User] =>
             recoverNotification(userId, thread, dbMessages, id2BasicUser)
           }
           log.info(s"MIGRATION: Finished thread import for $extId")
@@ -280,7 +281,7 @@ class MessagingController @Inject() (
 
   private[eliza] def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
     //get all involved users
-    val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.all).getOrElse(Set())}
+    val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.allUsers).getOrElse(Set())}
     //get all basic users
     val userId2BasicUser : Map[Id[User], BasicUser] = Await.result(shoebox.getBasicUsers(allInvolvedUsers.toSeq), 2 seconds) //Temporary
     //get all messages
@@ -301,7 +302,7 @@ class MessagingController @Inject() (
 
       ElizaThreadInfo(
         externalId = thread.externalId,
-        participants = thread.participants.map(_.all).getOrElse(Set()).map(userId2BasicUser(_)).toSeq,
+        participants = thread.participants.map(_.allUsers).getOrElse(Set()).map(userId2BasicUser(_)).toSeq,
         digest = lastMessage.messageText,
         lastAuthor = userId2BasicUser(lastMessage.from.get).externalId,
         messageCount = messagesByThread(thread.id.get).length,
@@ -421,7 +422,7 @@ class MessagingController @Inject() (
   )
   val family = engineers ++ product ++ Seq(
     "e890b13a-e33c-4110-bd11-ddd51ec4eceb", // two-meals
-    "6f21b520-87e7-4053-9676-85762e96970a"  // jenny
+    "7a0f844e-a1b2-4dab-b94b-0a9b7932e141" // noam
   )
 
   def constructRecipientSeq(userExtIds: Seq[ExternalId[User]]) : Future[Seq[Id[User]]] = {
@@ -498,7 +499,7 @@ class MessagingController @Inject() (
       db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) }
     }
 
-    val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
+    val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
 
     val messageWithBasicUser = MessageWithBasicUser(
@@ -512,7 +513,7 @@ class MessagingController @Inject() (
       participantSet.toSeq.map(id2BasicUser(_))
     )
 
-    thread.participants.map(_.all.par.foreach { user =>
+    thread.participants.map(_.allUsers.par.foreach { user =>
       notificationRouter.sendToUser(
         user,
         Json.arr("message", message.threadExtId.id, messageWithBasicUser)
@@ -599,11 +600,11 @@ class MessagingController @Inject() (
   }
 
   def participantsToBasicUsers(participants: MessageThreadParticipants): Future[Map[Id[User], BasicUser]] =
-    shoebox.getBasicUsers(participants.participants.keySet.toSeq)
+    shoebox.getBasicUsers(participants.allUsers.toSeq)
 
 
   def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
-    val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
+    val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $participantSet")
     shoebox.getBasicUsers(participantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread, pageOpt)
@@ -669,7 +670,7 @@ class MessagingController @Inject() (
       }
 
       messageThreadOpt.exists { case (newParticipants, message, thread) =>
-        shoebox.getBasicUsers(thread.participants.get.participants.keys.toSeq) map { basicUsers =>
+        shoebox.getBasicUsers(thread.participants.get.userParticipants.keys.toSeq) map { basicUsers =>
 
           val adderName = basicUsers.get(adderUserId).map(n => n.firstName + " " + n.lastName).get
 
@@ -712,7 +713,7 @@ class MessagingController @Inject() (
           val participants = basicUsers.values.toSeq
           val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
           modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
-            thread.participants.map(_.all.par.foreach { userId =>
+            thread.participants.map(_.allUsers.par.foreach { userId =>
               notificationRouter.sendToUser(
                 userId,
                 Json.arr("message", thread.externalId.id, augmentedMessage)

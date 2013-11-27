@@ -119,7 +119,7 @@ class ExtMessagingController @Inject() (
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
       contextBuilder += ("extVersion", version.getOrElse(""))
       thread.participants.foreach { participants =>
-        contextBuilder += ("recipients", participants.allExcept(request.userId).map(_.id).toSeq)
+        contextBuilder += ("recipients", participants.allUsersExcept(request.userId).map(_.id).toSeq)
       }
 
       thread.uriId.map{ uriId =>
