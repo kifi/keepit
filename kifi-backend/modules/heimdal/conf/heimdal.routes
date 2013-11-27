@@ -32,8 +32,6 @@ POST /internal/heimdal/user/set               @com.keepit.heimdal.controllers.An
 
 POST /internal/heimdal/user/increment               @com.keepit.heimdal.controllers.AnalyticsController.incrementUserProperties(userId: Id[User])
 
-GET /internal/heimdal/fixData                 @com.keepit.heimdal.controllers.AnalyticsController.fixData(doIt: Boolean ?= false)
-
 ->  / common.Routes
 
 
