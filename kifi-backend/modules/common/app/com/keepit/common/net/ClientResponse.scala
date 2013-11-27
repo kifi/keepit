@@ -115,4 +115,3 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
     }
   }
 }
-
