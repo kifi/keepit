@@ -8,6 +8,7 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.User
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
+import com.keepit.search.query.StringHash64
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -118,6 +119,28 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     val hash = QueryHash(userId, queryText, analyzer)
     val (max, min) = (Long.MaxValue.toDouble, Long.MinValue.toDouble)
     (hash - min) / (max - min)
+  }
+
+  private def hashBasedRand(userId: Id[User]): Double = {
+    val h = new StringHash64(userId.id).get
+    val (max, min) = (Long.MaxValue.toDouble, Long.MinValue.toDouble)
+    (h - min) / (max - min)
+  }
+
+  private def assignConfig(userId: Id[User], userSegment: Int) = {
+    if (hashBasedRand(userId) < 0.33f && activeExperiments.size == 4) {
+      val ex = activeExperiments(userSegment)
+      val config = defaultConfig(ex.config.params)
+      (config, ex.id)
+    } else {
+      (SearchConfig.defaultConfig, None)
+    }
+  }
+
+  def getConfigByUserSegment(userId: Id[User], excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
+    val segFuture = shoeboxClient.getUserSegment(userId)
+    val seg = monitoredAwait.result(segFuture, 5 seconds, "getting user segment")
+    if (excludeFromExperiments) (SearchConfig.defaultConfig, None) else assignConfig(userId, seg)
   }
 
   def getConfig(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {

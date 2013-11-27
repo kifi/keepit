@@ -475,4 +475,17 @@ class ShoeboxController @Inject() (
     val value = db.readWrite { implicit session => userValueRepo.getValue(userId, key) }
     Ok(Json.toJson(value))
   }
+
+  def getUserSegment(userId: Id[User]) = SafeAsyncAction { request =>
+    val (numBms, numFriends) = db.readOnly{ implicit s =>
+      (bookmarkRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
+    }
+
+    val segment = if (numBms > 50){
+      if (numFriends > 10) 0 else 1
+    } else {
+      if (numFriends > 10) 2 else 3
+    }
+    Ok(Json.toJson(segment))
+  }
 }

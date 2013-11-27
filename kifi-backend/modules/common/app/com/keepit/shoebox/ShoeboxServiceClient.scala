@@ -100,6 +100,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
   def getUserValue(userId: Id[User], key: String): Future[Option[String]]
   def setUserValue(userId: Id[User], key: String, value: String): Unit
+  def getUserSegment(userId: Id[User]): Future[Int]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -609,4 +610,8 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def setUserValue(userId: Id[User], key: String, value: String): Unit = { call(Shoebox.internal.setUserValue(userId, key), JsString(value)) }
+
+  def getUserSegment(userId: Id[User]): Future[Int] = {
+    call(Shoebox.internal.getUserSegment(userId)).map{_.json.as[Int]}
+  }
 }

@@ -437,4 +437,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getUserValue(userId: Id[User], key: String): Future[Option[String]] = Future.successful(None)
 
   def setUserValue(userId: Id[User], key: String, value: String): Unit = {}
+
+  def getUserSegment(userId: Id[User]): Future[Int] = ???
 }
