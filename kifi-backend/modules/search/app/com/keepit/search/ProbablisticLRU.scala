@@ -225,23 +225,24 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, val numHashFuncs : Int, sy
 
   protected def putValueHash(key: Long, value: Long, updateStrength: Double) {
     def putValueHashOnce(bufferChunk: IntBufferWrapper, tableSize: Int) : Unit = {
-      var positions = new Array[Int](numHashFuncs)
+      val (positions, values) = getValueHashes(key, true)
 
-      var v = init(key)
+      // count open positions
+      var openCount = 0
       var i = 0
-      val tsize = tableSize.toLong
-      while (i < numHashFuncs) {
-        v = next(v)
-        val pos = (v % tsize).toInt + 1
-        positions(i) = pos
+      while (i < positions.length) {
+        if (values(i) != valueHash(value, positions(i))) {
+          positions(openCount) = positions(i)
+          openCount += 1
+        }
         i += 1
       }
 
       // randomly overwrite the positions proportionally to updateStrength
       i = 0
-      val numUpdatePositions = min(ceil(numHashFuncs.toDouble * updateStrength).toInt, numHashFuncs)
-      while (i < numUpdatePositions) {
-        val index = rnd.nextInt(positions.length - i) + i
+      val numUpdatePositions = min(ceil(openCount * updateStrength).toInt, numHashFuncs)
+      while (i < numUpdatePositions && i < openCount) {
+        val index = rnd.nextInt(openCount - i) + i
         val pos = positions(index)
         positions(index) = positions(i)
         bufferChunk.put(pos, valueHash(value, pos))
