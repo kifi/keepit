@@ -281,6 +281,9 @@ function initCompose($c, enterToSend, opts) {
         $d.focus();
       }
     },
+    isBlank: function () {
+      return $f.hasClass('kifi-empty') && !($t.length && $t.tokenInput('get').length);
+    },
     destroy: function() {
       if ($t.length) {
         $t.tokenInput('destroy');

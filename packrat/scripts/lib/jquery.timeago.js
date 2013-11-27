@@ -31,7 +31,25 @@
     settings: {
       refreshMillis: 60000,
       allowFuture: false,
-      strings: {
+      strings: window.session && ~session.experiments.indexOf('inbox') ? {
+        prefixAgo: null,
+        prefixFromNow: null,
+        suffixAgo: '',
+        suffixFromNow: '',
+        seconds: '<1 min',
+        minute: '1 min',
+        minutes: '%d min',
+        hour: '1 hour',
+        hours: '%d hours',
+        day: '1 day',
+        days: '%d days',
+        month: '1 month',
+        months: '%d months',
+        year: '1 year',
+        years: '%d years',
+        wordSeparator: ' ',
+        numbers: []
+      } : {
         prefixAgo: null,
         prefixFromNow: null,
         suffixAgo: "ago",

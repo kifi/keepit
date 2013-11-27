@@ -3,9 +3,11 @@
 // @require scripts/html/keeper/notices.js
 // @require scripts/html/keeper/notice_global.js
 // @require scripts/html/keeper/notice_message.js
-// @require scripts/formatting.js
+// @require scripts/lib/jquery-ui-position.min.js
+// @require scripts/lib/jquery.hoverfu.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
+// @require scripts/formatting.js
 // @require scripts/prevent_ancestor_scroll.js
 
 // There are several kinds of events that the notifications pane must handle:
@@ -94,7 +96,17 @@ panes.notices = function () {
         }
       }
       return false;
-    }).scroll(onScroll);
+    })
+    .scroll(onScroll)
+    .hoverfu('.kifi-notice-n-others', function(configureHover) {
+      var $a = $(this);
+      render('html/keeper/others', {names: $a.data('names')}, function(html) {
+        configureHover(html, {
+          mustHoverFor: 100,
+          position: {my: 'center bottom-8', at: 'center top', of: $a, collision: 'none'}
+        });
+      });
+    });
 
     var $box = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
       $notices = $markAll = null;
@@ -154,6 +166,7 @@ panes.notices = function () {
           } else {
             notice.namedParticipants = participants.slice(1, nNamesMax);
             notice.otherParticipants = participants.slice(nNamesMax);
+            notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
           }
         } else {
           if (nParticipants === 2) {
@@ -161,11 +174,16 @@ panes.notices = function () {
           } else if (nParticipants <= nNamesMax) {
             notice.namedParticipants = participants.map(makeFirstNameYou(session.user.id));
           } else {
-            notice.namedParticipants = participants.slice(0, nNamesMax).map(makeFirstNameYou(session.user.id));
-            notice.otherParticipants = participants.slice(nNamesMax);
+            notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(session.user.id));
+            notice.otherParticipants = participants.slice(nNamesMax - 1);
+            notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
           }
-          notice.nameIndex = counter();
         }
+        if (notice.namedParticipants) {
+          notice.nameIndex = counter();
+          notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
+        }
+        notice.authorShortName = notice.author.id === session.user.id ? 'Me' : notice.author.firstName;
       }
       return render('html/keeper/notice_message', notice);
     case 'global':
@@ -254,6 +272,14 @@ panes.notices = function () {
       }
       return o;
     };
+  }
+
+  function toNamesJson(users) {
+    return JSON.stringify(users.map(toName));
+  }
+
+  function toName(user) {
+    return user.firstName + ' ' + user.lastName;
   }
 }();
 
