@@ -563,11 +563,22 @@ $(function () {
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
+
+			setTimeout(function () {
+				$('.profile-first-name')
+					.outerWidth($('.profile-placeholder-first-name').outerWidth());
+				$('.profile-last-name')
+					.outerWidth($('.profile-placeholder-last-name').outerWidth());
+			});
+
 			$('body').attr('data-view', 'profile');
+
 			$('.left-col .active').removeClass('active');
+
 			$('.profile').on('keydown keypress keyup', function (e) {
 				e.stopPropagation();
 			});
+
 			$('.profile-input-input').keyup(function (e) {
 				switch (e.which) {
 				case 13: // enter
@@ -578,21 +589,26 @@ $(function () {
 					break;
 				}
 			});
+
 			$('.profile-input-edit').click(function (e) {
 				editProfileInput($(this), e);
 			});
+
 			$('.profile-input-box-name .profile-input-edit').click(function (e) {
 				setTimeout(function () {
 					$('.profile-first-name,.profile-last-name').css('width', '48%');
 				});
 			});
+
 			$('.profile-input-save').click(function (e) {
 				saveProfileInput($(this), e);
 			});
+
 			$('.profile-disconnect').click(function (e) {
 				e.preventDefault();
 				showDisconnectDialog($(this).closest('li').data('network'));
 			});
+
 			$('.profile .profile-networks li').each(function () {
 				var $this = $(this);
 				var network = $this.data('network');
