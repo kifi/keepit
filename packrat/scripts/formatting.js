@@ -172,3 +172,25 @@ function bringSessionUserToFront(users) {
     }
   }
 }
+
+if (window.session && ~session.experiments.indexOf('inbox')) {
+  $.extend($.timeago.settings.strings, {
+    prefixAgo: null,
+    prefixFromNow: null,
+    suffixAgo: '',
+    suffixFromNow: '',
+    seconds: '<1 min',
+    minute: '1 min',
+    minutes: '%d min',
+    hour: '1 hour',
+    hours: '%d hours',
+    day: '1 day',
+    days: '%d days',
+    month: '1 month',
+    months: '%d months',
+    year: '1 year',
+    years: '%d years',
+    wordSeparator: ' ',
+    numbers: []
+  });
+}
