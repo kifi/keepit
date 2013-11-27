@@ -78,8 +78,8 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
   lazy val json: JsValue = {
     val url = request.httpUri.url
     val trackTimeThreshold = if(
-      url.contains("/internal/shoebox/database/getIndexable") ||
-      url.contains("graph.facebook.com/")) {
+        url.contains("/internal/shoebox/database/getIndexable") ||
+        url.contains("graph.facebook.com/")) {
       5000//ms
     } else {
       100//ms
