@@ -133,9 +133,9 @@ panes.notices = function () {
         notice.threeParticipants = nParticipants === 3;
         notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
       } else {
-        notice.isSent = notice.authors === 1 && notice.author.id === session.user.id;
-        notice.isReceived = notice.authors === 1 && notice.author.id !== session.user.id;
-        if (notice.firstAuthor > 1) {
+        if (notice.authors === 1) {
+          notice[notice.author.id === session.user.id ? 'isSent' : 'isReceived'] = true;
+        } else if (notice.firstAuthor > 1) {
           participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
         }
         var nPicsMax = notice.isSent ? 4 : 3;
