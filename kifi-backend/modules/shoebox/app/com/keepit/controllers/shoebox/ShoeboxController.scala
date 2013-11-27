@@ -27,6 +27,7 @@ import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.social.{SocialNetworkType, SocialId}
 import com.keepit.scraper.HttpRedirect
+import com.keepit.commanders.UserCommander
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -54,7 +55,8 @@ class ShoeboxController @Inject() (
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
   scrapeInfoRepo:ScrapeInfoRepo,
   friendRequestRepo: FriendRequestRepo,
-  userValueRepo: UserValueRepo
+  userValueRepo: UserValueRepo,
+  userCommander: UserCommander
 )
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
@@ -477,15 +479,7 @@ class ShoeboxController @Inject() (
   }
 
   def getUserSegment(userId: Id[User]) = SafeAsyncAction { request =>
-    val (numBms, numFriends) = db.readOnly{ implicit s =>
-      (bookmarkRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
-    }
-
-    val segment = if (numBms > 50){
-      if (numFriends > 10) 0 else 1
-    } else {
-      if (numFriends > 10) 2 else 3
-    }
+    val segment = userCommander.getUserSegment(userId)
     Ok(Json.toJson(segment))
   }
 }

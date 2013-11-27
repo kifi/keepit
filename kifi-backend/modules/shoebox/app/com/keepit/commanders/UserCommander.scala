@@ -13,7 +13,7 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, Json, JsValue}
 
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{Singleton, Inject, ImplementedBy}
 import com.keepit.common.net.URI
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo

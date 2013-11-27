@@ -2,7 +2,6 @@ package com.keepit.controllers.admin
 
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
 import com.keepit.social.{SocialId, SocialNetworks}
@@ -14,7 +13,6 @@ import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.test._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -22,12 +20,13 @@ import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.abook.TestABookServiceClientModule
 
 class AdminDashboardControllerTest extends Specification with ShoeboxApplicationInjector {
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {
-      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), FakeHttpClientModule(), ShoeboxFakeStoreModule(), FakeSocialGraphModule(), FakeAirbrakeModule(), TestHeimdalServiceClientModule())) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), FakeHttpClientModule(), ShoeboxFakeStoreModule(), FakeSocialGraphModule(), FakeAirbrakeModule(), TestABookServiceClientModule(), TestHeimdalServiceClientModule())) {
 
         val now = new DateTime(2020, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         inject[FakeClock].setTimeFunction(() => now.getMillis)
