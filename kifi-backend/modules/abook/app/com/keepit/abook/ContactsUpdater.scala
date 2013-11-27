@@ -92,7 +92,6 @@ class ContactsUpdater @Inject() (
         }
         log.info(s"[upload($userId, $origin, ${abookInfo.id})] existing contacts(sz=${set.size}): ${set.mkString}")
 
-        val insertOnDupUpdate = sys.props.getOrElse("abook.db.insertOnDupUpdate", "false").toBoolean // todo: removeme
         abookRawInfoF map { abookRawInfo =>
           val cBuilder = mutable.ArrayBuilder.make[Contact]
           abookRawInfo.contacts.value.grouped(batchSize).foreach { g =>
@@ -119,25 +118,8 @@ class ContactsUpdater @Inject() (
                   } else {
                     val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
                     val e = EContact(userId = userId, email = parsedEmail.toString, name = nameOpt, firstName = fName, lastName = lName)
-                    if (insertOnDupUpdate) { // mysql too slow -- can try tuning but likely to be removed
-                      db.readWrite(attempts = 2) { implicit s =>
-                        try {
-                          econtactRepo.insertOnDupUpdate(userId, e)
-                        } catch {
-                          case ex:MySQLIntegrityConstraintViolationException => {
-                            log.warn(s"[insertOnDupUpd($userId,$e)] ex: $ex; ${ex.getCause}") // ignore
-                            throw ex; // readWrite will retry
-                          }
-                          case t:Throwable => {
-                            log.error(s"[insertOnDupUpd($userId,$e)] Unhandled: ex: $t; ${t.getCause}; sttack trace ${t.getStackTraceString}}")
-                            throw t // this will fail
-                          }
-                        }
-                      }
-                    } else {
-                      set += parsedEmail.toString
-                      econtactsToAddBuilder += e
-                    }
+                    set += parsedEmail.toString
+                    econtactsToAddBuilder += e
                   }
                 } else {
                   log.warn(s"[upload($userId, $origin)] cannot parse $email; discarded") // todo: revisit
@@ -155,19 +137,18 @@ class ContactsUpdater @Inject() (
 
             processed += g.length
             abookEntry = db.readWrite(attempts = 2) { implicit s =>
-              if (!insertOnDupUpdate) {
-                try {
-                  econtactRepo.insertAll(userId, econtactsToAdd.toSeq)
-                  log.info(s"[insertAll($userId)] added batch#${batchNum}(sz=${econtactsToAdd.length}) to econtacts: ${econtactsToAdd.map(_.email).mkString}")
-                } catch {
-                  case ex:MySQLIntegrityConstraintViolationException => {
-                    log.warn(s"[insertAll($userId)] ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}") // ignore
-                    throw ex // underlying retry
-                  }
-                  case t:Throwable => {
-                    log.error(s"[insertAll($userId)] Unhandled ex: $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
-                    throw t // this will fail
-                  }
+              try {
+                econtactRepo.insertAll(userId, econtactsToAdd.toSeq)
+                log.info(s"[insertAll($userId)] added batch#${batchNum}(sz=${econtactsToAdd.length}) to econtacts: ${econtactsToAdd.map(_.email).mkString}")
+              } catch {
+                case ex:MySQLIntegrityConstraintViolationException => {
+                  log.error(s"[insertAll($userId, processed=$processed)] Caught exception while processing batch(len=${econtactsToAdd.length}): ${econtactsToAdd.mkString}")
+                  log.error(s"[insertAll($userId)] ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
+                  // moving along
+                }
+                case t:Throwable => {
+                  log.error(s"[insertAll($userId)] Unhandled ex: $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
+                  throw t // this will fail
                 }
               }
               abookInfoRepo.save(abookEntry.withNumProcessed(Some(processed))) // status update
