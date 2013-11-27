@@ -81,7 +81,10 @@ class BookmarksCommander @Inject() (
 
         heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, EventType("keep"), tStart))
       }
-      heimdal.incrementUserProperties(user.id.get, "keeps" -> keeps.length)
+      val kept = keeps.length
+      val keptPrivate = keeps.count(_.isPrivate)
+      val keptPublic = kept - keptPrivate
+      heimdal.incrementUserProperties(user.id.get, "keeps" -> kept, "privateKeeps" -> keptPrivate, "publicKeeps" -> keptPublic)
     }
 
     val addedToCollection = collection flatMap {
@@ -115,7 +118,12 @@ class BookmarksCommander @Inject() (
         }
       }
     }.flatten.map(KeepInfo.fromBookmark(_))
-    SafeFuture { heimdal.incrementUserProperties(userId, "keeps" -> - keepInfos.length) }
+    SafeFuture {
+      val unkept = keepInfos.length
+      val unkeptPrivate = keepInfos.count(_.isPrivate)
+      val unkeptPublic = unkept - unkeptPrivate
+      heimdal.incrementUserProperties(userId, "keeps" -> - unkept, "privateKeeps" -> - unkeptPrivate, "publicKeeps" -> - unkeptPublic)
+    }
     searchClient.updateURIGraph()
     deactivatedKeepInfos
   }
