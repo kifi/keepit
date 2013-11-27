@@ -13,6 +13,7 @@ import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
 
+import com.keepit.common.logging.Logging
 import com.keepit.common._
 import com.keepit.common.strings._
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
@@ -28,6 +29,11 @@ import org.apache.commons.lang3.RandomStringUtils
 import com.ning.http.util.AsyncHttpProviderUtils
 
 
+case class SlowJsonParsingException(request: Request, response: ClientResponse, time: Long, tracking: JsonParserTrackingErrorMessage)
+    extends Exception(s"[${request.httpUri.service}] Slow JSON parsing on ${request.httpUri.summary} tracking-id:${request.trackingId} time:${time}ms data-size:${response.bytes.length} ${tracking.message}"){
+  override def toString(): String = getMessage
+}
+
 trait ClientResponse {
   def res: Response
   def bytes: Array[Byte]
@@ -35,17 +41,21 @@ trait ClientResponse {
   def json: JsValue
   def xml: NodeSeq
   def status: Int
+  def parsingTime: Option[Long] = None
 }
 
-class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser) extends ClientResponse {
+class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser) extends ClientResponse with Logging {
 
   override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 
   def status: Int = res.status
 
   lazy val bytes: Array[Byte] = res.ahcResponse.getResponseBodyAsBytes()
+  private var _parsingTime: Option[Long] = None
+  override def parsingTime = _parsingTime
 
   lazy val body: String = {
+    val startTime = System.currentTimeMillis
     val ahcResponse = res.ahcResponse
 
     //+ the following is copied from play.api.libs.ws.WS
@@ -59,18 +69,23 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
       else
         "utf-8"
     }
-    //-
-    new String(bytes, charset)
+    val str = new String(bytes, charset)
+    //if the parser already worked on json or xml we don't recalculate the time as its more likely that the request for the body is for logging now
+    if (_parsingTime.isEmpty) _parsingTime = Some(System.currentTimeMillis - startTime)
+    str
   }
 
   lazy val json: JsValue = {
+    val trackTimeThreshold = if(request.httpUri.url.contains("/internal/shoebox/database/getIndexable")) {
+      5000//ms
+    } else {
+      100//ms
+    }
     try {
-      val startTime = System.currentTimeMillis
-      val json: JsValue = jsonParser.parse(bytes)
-      val jsonTime = System.currentTimeMillis - startTime
-
-      if (jsonTime > 100 && !request.httpUri.url.contains("/internal/shoebox/database/getIndexable")) {//ms
-        val exception = request.tracer.withCause(SlowJsonParsingException(request, this, jsonTime.toInt))
+      val (json, time, tracking) = jsonParser.parse(bytes, trackTimeThreshold)
+      _parsingTime = Some(time)
+      tracking foreach { info =>
+        val exception = request.tracer.withCause(SlowJsonParsingException(request, this, time, info))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
@@ -78,20 +93,24 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
           )
         )
       }
-      if (json == null) JsNull else json
+
+      json
     } catch {
       case e: Throwable =>
-        println("bad res: %s".format(body))
+        log.error(s"bad res: $body")
         throw e
     }
   }
 
   def xml: NodeSeq = {
     try {
-      res.xml
+      val startTime = System.currentTimeMillis
+      val xml = res.xml
+      _parsingTime = Some(System.currentTimeMillis - startTime)
+      xml
     } catch {
       case e: Throwable =>
-        println("bad res: %s".format(body))
+        log.error(s"bad res: $body")
         throw e
     }
   }

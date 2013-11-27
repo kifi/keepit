@@ -28,6 +28,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
 
     val properties = new EventContextBuilder()
     properties.data ++= event.context.data
+    properties.data += ("ip" -> event.context.data.getOrElse("remoteAddress", ContextDoubleData(0)))
     properties += ("distinct_id", distinctId)
     properties += ("token", projectToken)
     properties += ("time", event.time.getMillis)
@@ -49,7 +50,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
       "$token" -> JsString(projectToken),
       "$distinct_id" -> JsString(getDistinctId(userId)),
       "$ip" -> JsNumber(0),
-      "$increment" -> JsObject(increments.mapValues(JsNumber(_)).toSeq)
+      "$add" -> JsObject(increments.mapValues(JsNumber(_)).toSeq)
     )
     sendData("http://api.mixpanel.com/engage", data)
   }
