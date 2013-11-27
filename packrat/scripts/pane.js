@@ -338,13 +338,13 @@ var pane = pane || function () {  // idempotent for Chrome
       log('[pane:compose]', trigger)();
       api.require('scripts/compose_toaster.js', function () {
         if ($pane) {
-          showToaster();
+          toggleToaster();
         } else {
-          showPane('/notices').then(showToaster);
+          showPane('/notices').then(toggleToaster);
         }
-        function showToaster() {
-          toaster.showNewIn($pane).done(function (compose) {
-            compose.focus();
+        function toggleToaster() {
+          toaster.toggleIn($pane).done(function (compose) {
+            compose && compose.focus();
           });
         }
       });

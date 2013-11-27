@@ -141,25 +141,6 @@ class ExtMessagingController @Inject() (
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }
 
-  def getChatter() = AuthenticatedJsonToJsonAction { request =>
-    val urls = request.body.as[Seq[String]]
-    Async {
-      messagingController.getChatter(request.user.id.get, urls).map { res =>
-        val built = res.map { case (url, msgs) =>
-          val threadId = if (msgs.size == 1) {
-            db.readOnly { implicit session =>
-              Some(threadRepo.get(msgs.head).externalId)
-            }
-          } else None
-          url -> JsObject(
-            Seq("threads" -> JsNumber(msgs.size)) ++
-            (if (threadId.isDefined) Seq("threadId" -> JsString(threadId.get.id)) else Nil))
-        }.toSeq
-        Ok(JsObject(built))
-      }
-    }
-  }
-
   /*********** WEBSOCKETS ******************/
 
   protected def onConnect(socket: SocketInfo) : Unit = {

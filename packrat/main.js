@@ -162,7 +162,7 @@ function insertUpdateChronologically(arr, o, time) {
 
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
   if (service.match(/^(?:GET|POST|HEAD|OPTIONS|PUT)$/)) { // shift args if service is missing
-    fail = done, done = data, data = uri, uri = method, method = service, service = "api";
+    fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
   if (typeof data == "function") {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
@@ -788,6 +788,9 @@ api.port.on({
   session: function(_, respond) {
     respond(session);
   },
+  web_base_uri: function(_, respond) {
+    respond(webBaseUri());
+  },
   get_friends: function(_, respond) {
     respond(friends);
   },
@@ -1258,7 +1261,7 @@ function kifify(tab) {
     }
   } else {
     ajax("POST", "/ext/pageDetails", {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
-      if (xhr.status == 403) {
+      if (xhr.status === 403) {
         clearSession();
       }
     });
@@ -1525,7 +1528,13 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
 });
 
-api.on.beforeSearch.add(throttle(ajax.bind(null, 'search', 'GET', '/up'), 50000));
+api.on.beforeSearch.add(throttle(function () {
+  if (session && ~session.experiments.indexOf('tsearch')) {
+    ajax('GET', '/204');
+  } else {
+    ajax('search', 'GET', '/up');
+  }
+}, 50000));
 
 var searchPrefetchCache = {};  // for searching before the results page is ready
 var searchFilterCache = {};    // for restoring filter if user navigates back to results
@@ -1829,6 +1838,12 @@ function openLogin(callback, retryMs) {
 }
 
 function clearSession() {
+  if (session) {
+    api.tabs.each(function(tab) {
+      api.icon.set(tab, 'icons/keep.faint.png');
+      api.tabs.emit(tab, 'session_change', null);
+    });
+  }
   session = null;
   if (socket) {
     socket.close();
@@ -1851,10 +1866,6 @@ function deauthenticate() {
         log("[deauthenticate] closing popup")();
         this.close();
       }
-      api.tabs.each(function(tab) {
-        api.icon.set(tab, "icons/keep.faint.png");
-        api.tabs.emit(tab, "session_change", null);
-      });
     }
   })
 }

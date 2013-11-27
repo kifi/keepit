@@ -1,30 +1,16 @@
 /*jshint globalstrict:true */
 'use strict';
 
-const { Ci, Cc } = require("chrome");
-const WM = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
 const ICON_ID = "kifi-urlbar-icon";
-const windows = require("sdk/windows").browserWindows;
+const {BrowserWindow} = require('sdk/windows');
+const {windows} = require('sdk/window/utils');
 
-function indexOf(win) {
-  for (let i = windows.length; i--;) {
-    if (win === windows[i]) return i;
-  }
-}
-
-// Gets the XPCOM window for a BrowserWindow, relying on both window collections using
-// the same ordering (oldest to newest).
-// https://addons.mozilla.org/en-US/developers/docs/sdk/latest/modules/sdk/windows.html#browserWindows
-// https://developer.mozilla.org/en-US/docs/XPCOM_Interface_Reference/nsIWindowMediator#getEnumerator()
 function getXpcomWindow(win) {
-  // return WM.getMostRecentWindow("navigator:browser");
-  const winIndex = indexOf(win);
-  const xpcomWins = WM.getEnumerator("navigator:browser");
-  var xpcomWin;
-  for (let i = 0; i <= winIndex && xpcomWins.hasMoreElements(); i++) {
-    xpcomWin = xpcomWins.getNext();
+  for (let w of windows('navigator:browser')) {
+    if (BrowserWindow({window: w}) === win) {
+      return w;
+    }
   }
-  return xpcomWin;
 }
 
 exports.addToWindow = function(win, click) {

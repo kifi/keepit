@@ -73,13 +73,19 @@ class BookmarksCommander @Inject() (
     val keeps = bookmarkInterner.internBookmarks(Json.toJson(keepInfos), user, experiments, source).map(KeepInfo.fromBookmark)
 
     //Analytics
-    SafeFuture{ keeps.foreach { bookmark =>
-      contextBuilder += ("isPrivate", bookmark.isPrivate)
-      contextBuilder += ("url", bookmark.url)
-      contextBuilder += ("hasTitle", bookmark.title.isDefined)
+    SafeFuture{
+      keeps.foreach { bookmark =>
+        contextBuilder += ("isPrivate", bookmark.isPrivate)
+        contextBuilder += ("url", bookmark.url)
+        contextBuilder += ("hasTitle", bookmark.title.isDefined)
 
-      heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, EventType("keep"), tStart))
-    }}
+        heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, EventType("keep"), tStart))
+      }
+      val kept = keeps.length
+      val keptPrivate = keeps.count(_.isPrivate)
+      val keptPublic = kept - keptPrivate
+      heimdal.incrementUserProperties(user.id.get, "keeps" -> kept, "privateKeeps" -> keptPrivate, "publicKeeps" -> keptPublic)
+    }
 
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
@@ -112,6 +118,12 @@ class BookmarksCommander @Inject() (
         }
       }
     }.flatten.map(KeepInfo.fromBookmark(_))
+    SafeFuture {
+      val unkept = keepInfos.length
+      val unkeptPrivate = keepInfos.count(_.isPrivate)
+      val unkeptPublic = unkept - unkeptPrivate
+      heimdal.incrementUserProperties(userId, "keeps" -> - unkept, "privateKeeps" -> - unkeptPrivate, "publicKeeps" -> - unkeptPublic)
+    }
     searchClient.updateURIGraph()
     deactivatedKeepInfos
   }

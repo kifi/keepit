@@ -40,5 +40,9 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int] = Future.successful(0)
 
-  def engageUser(user: User): Unit = {}
+  def deleteUser(userId: Id[User]): Unit = {}
+
+  def incrementUserProperties(userId: Id[User], increments: (String, Double)*): Unit = {}
+
+  def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit = {}
 }

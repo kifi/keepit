@@ -26,6 +26,6 @@ case class ProdHttpClientModule() extends HttpClientModule {
 
   @Provides
   def httpClientProvider(airbrake: Provider[AirbrakeNotifier],
-        accessLog: AccessLog, serviceDiscovery: ServiceDiscovery): HttpClient =
-    new HttpClientImpl(airbrake = airbrake, accessLog = accessLog, serviceDiscovery = serviceDiscovery)
+        accessLog: AccessLog, serviceDiscovery: ServiceDiscovery, fastJsonParser: FastJsonParser): HttpClient =
+    new HttpClientImpl(airbrake = airbrake, accessLog = accessLog, serviceDiscovery = serviceDiscovery, fastJsonParser = fastJsonParser)
 }
