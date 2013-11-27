@@ -18,7 +18,16 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.net.{Host, URI}
 import com.keepit.common._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.common.healthcheck._
+import com.typesafe.plugin.MailerPlugin
+import com.keepit.common.healthcheck.Healthcheck.EMAIL
+import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail}
+import play.api.libs.json.JsArray
+import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.search.ClickedURI
+import scala.Some
+import com.keepit.search.BrowsedURI
+import com.keepit.search.ArticleSearchResult
 
 class ExtSearchEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -28,7 +37,7 @@ class ExtSearchEventController @Inject() (
   resultClickedTracker: ResultClickTracker,
   articleSearchResultStore: ArticleSearchResultStore,
   searchAnalytics: SearchAnalytics,
-  airbrake: AirbrakeNotifier)
+  healthCheckMailer: HealthcheckMailSender)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
   extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
@@ -122,9 +131,15 @@ class ExtSearchEventController @Inject() (
 
   private def checkForMissingDeliveryTimes(kifiDeliveryTime: Option[Int], otherDeliveryTime: Option[Int], request: AuthenticatedRequest[JsValue], method: String) = {
     if (kifiDeliveryTime.isEmpty)
-      airbrake.notify(AirbrakeError(message = Some(s"[User ${request.userId} - Installation ${request.kifiInstallationId}] Kifi delivery time is missing in json:\n ${request.body}"), method = Some(method)))
+      reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is missing."))
     if (otherDeliveryTime.isEmpty)
-      airbrake.notify(AirbrakeError(message = Some(s"[User ${request.userId} - Installation ${request.kifiInstallationId}] Google delivery time is missing in json:\n ${request.body}"), method = Some(method)))
+      reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Google delivery time is missing."))
+  }
+
+  private def reportToLéo(error: AirbrakeError) = {
+    val body = views.html.email.healthcheckMail(AirbrakeErrorHistory(error.signature, 1, 0, error), fortyTwoServices.started.toString, fortyTwoServices.currentService.name).body
+    healthCheckMailer.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.LÉO),
+      subject = "Missing Delivery Time in Search Statistics", htmlBody = body, category = PostOffice.Categories.System.HEALTHCHECK))
   }
 }
 

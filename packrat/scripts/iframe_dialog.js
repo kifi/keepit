@@ -9,7 +9,6 @@
 var iframeDialog = function () {
   'use strict';
   var iframeOrigin = 'https://www.kifi.com';
-  var iframeSrc = iframeOrigin + '/blank.html';
   var configs = {
     login: {
       height: 372,
@@ -22,7 +21,17 @@ var iframeDialog = function () {
   };
   var $dialog;
 
+  api.onEnd.push(function() {
+    if ($dialog) {
+      remove($dialog);
+    }
+  });
+
   return {
+    origin: function (origin) {
+      iframeOrigin = origin;
+      return this;
+    },
     toggle: function (name) {
       if ($dialog) {
         hide();
@@ -48,7 +57,7 @@ var iframeDialog = function () {
   function buildAndShow(config) {
     var $d = $(render(config.templatePath, {
       logo: api.url('images/kifi_logo.png'),
-      iframeSrc: iframeSrc
+      iframeSrc: iframeOrigin + '/blank.html'
     }));
     $d.find('.kifi-dialog-box').css({
       height: config.height,

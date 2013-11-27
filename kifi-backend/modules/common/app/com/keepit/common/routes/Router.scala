@@ -154,29 +154,11 @@ object Search extends Service {
         userId: Id[User],
         noSearchExperiments: Boolean,
         acceptLangs: Seq[String],
-        query: String,
-        filter: Option[String],
-        maxHits: Int,
-        lastUUIDStr: Option[String],
-        context: Option[String],
-        kifiVersion: Option[KifiVersion] = None,
-        start: Option[String] = None,
-        end: Option[String] = None,
-        tz: Option[String] = None,
-        coll: Option[String] = None) = {
+        rawQuery: String) = {
         val params = "userId=" + userId.id.toString +
                      "&nse=" + noSearchExperiments +
                      "&al=" + acceptLangs.mkString(",") +
-                     "&q=" + query +
-                     filter.map("&f="+_).getOrElse("") +
-                     "&maxHits=" + maxHits.toString +
-                     lastUUIDStr.map("&lastUUIDStr="+_).getOrElse("") +
-                     context.map("&context="+_).getOrElse("") +
-                     kifiVersion.map("&kifiVersion="+_).getOrElse("") +
-                     start.map("&start="+_).getOrElse("") +
-                     end.map("&end="+_).getOrElse("") +
-                     tz.map("&tz"+_).getOrElse("") +
-                     coll.map("&coll="+_)
+                     "&" + rawQuery
         ServiceRoute(GET, "/internal/search?" + params)
     }
   }
@@ -203,7 +185,9 @@ object Heimdal extends Service {
     def getRawEvents(repo: String, eventTypes: Seq[String], limit: Int, window: Int) = ServiceRoute(GET, s"/internal/heimdal/$repo/rawEvents", Param("events", eventTypes.mkString(",")), Param("limit", limit), Param("window", window))
     def getEventDescriptors(repo: String) = ServiceRoute(GET, s"/internal/heimdal/$repo/eventDescriptors")
     def updateEventDescriptor(repo: String) = ServiceRoute(POST, s"/internal/heimdal/$repo/eventDescriptors")
-    def engageUser() = ServiceRoute(POST, s"/internal/heimdal/user/engage")
+    def deleteUser(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/delete", Param("userId", userId))
+    def incrementUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/increment", Param("userId", userId))
+    def setUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/set", Param("userId", userId))
   }
 }
 

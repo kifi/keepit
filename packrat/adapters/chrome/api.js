@@ -218,6 +218,17 @@ var api = function() {
     }
   });
 
+  chrome.webRequest.onBeforeRequest.addListener(function () {
+    dispatch.call(api.on.beforeSearch);
+  }, {
+    tabId: -1,
+    types: ['main_frame', 'other'],
+    urls: [
+      'https://www.google.com/webhp?sourceid=chrome-instant*',
+      'https://www.google.com/complete/search?client=chrome-omni*'
+    ]
+  });
+
   var pages = {};  // by tab.id in "normal" windows only
   var normalTab = {};  // by tab.id (true if tab is in a "normal" window)
   var selectedTabIds = {};  // by window.id in "normal" windows only
@@ -431,6 +442,7 @@ var api = function() {
     },
     loadReason: "enable",  // assuming "enable" by elimination
     on: {
+      beforeSearch: new Listeners,
       search: new Listeners,
       install: new Listeners,
       update: new Listeners,
