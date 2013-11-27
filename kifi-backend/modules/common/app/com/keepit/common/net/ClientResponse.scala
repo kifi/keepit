@@ -69,7 +69,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
       val json: JsValue = jsonParser.parse(bytes)
       val jsonTime = System.currentTimeMillis - startTime
 
-      if (jsonTime > 200 && !request.httpUri.url.contains("/internal/shoebox/database/getIndexable")) {//ms
+      if (jsonTime > 100 && !request.httpUri.url.contains("/internal/shoebox/database/getIndexable")) {//ms
         val exception = request.tracer.withCause(SlowJsonParsingException(request, this, jsonTime.toInt))
         airbrake.get.notify(
           AirbrakeError.outgoing(
