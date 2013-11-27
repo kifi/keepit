@@ -13,7 +13,7 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, Json, JsValue}
 
-import com.google.inject.Inject
+import com.google.inject.{Singleton, Inject}
 import com.keepit.common.net.URI
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo
@@ -47,6 +47,7 @@ class UserCommander @Inject() (
   userValueRepo: UserValueRepo,
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
+  bookmarkRepo: BookmarkRepo,
   userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   abook: ABookServiceClient) {
@@ -101,4 +102,16 @@ class UserCommander @Inject() (
     }
   }
 
+  def getUserSegment(userId: Id[User]): Int = {
+    val (numBms, numFriends) = db.readOnly{ implicit s =>
+      (bookmarkRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
+    }
+
+    val segment = if (numBms > 50){
+      if (numFriends > 10) 0 else 1
+    } else {
+      if (numFriends > 10) 2 else 3
+    }
+    segment
+  }
 }

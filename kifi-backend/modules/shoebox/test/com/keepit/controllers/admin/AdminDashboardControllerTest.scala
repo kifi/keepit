@@ -51,7 +51,7 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
 
         val cookie = Authenticator.create(su).right.get.toCookie
         val fakeRequest = FakeRequest().withCookies(cookie)
-        val authRequest = AuthenticatedRequest(null, u1.id.get, u1, fakeRequest)
+        val authRequest = AuthenticatedRequest(null, u1.id.get, u1, fakeRequest, userSegment = 0)
         val result = inject[AdminDashboardController].usersByDate(authRequest)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")

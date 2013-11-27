@@ -34,7 +34,7 @@ class ExtErrorReportControllerTest extends Specification with ShoeboxApplication
     }
     AuthenticatedRequest(null, user.id.get, user,
         FakeRequest().withCookies(Authenticator.create(su).right.get.toCookie)
-        .withBody[JsValue](json))
+        .withBody[JsValue](json), userSegment = 0)
   }
 
   "ExtAuthController" should {

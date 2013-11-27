@@ -27,6 +27,7 @@ case class AuthenticatedRequest[T](
     user: User,
     request: Request[T],
     experiments: Set[ExperimentType] = Set(),
+    userSegment: Int,
     kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
     adminUserId: Option[Id[User]] = None)
   extends WrappedRequest(request)
@@ -120,19 +121,23 @@ class RemoteActionAuthenticator @Inject() (
       val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
       val socialUser = request.user
       val newSession = session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)
+      val userSegment = shoeboxClient.getUserSegment(userId)
       impersonatedUserIdOpt match {
         case Some(impExternalUserId) =>
-          val impUserId = shoeboxClient.getUserIdsByExternalIds(Seq(impExternalUserId)).map(_.head)
+          val impUserIdFuture = shoeboxClient.getUserIdsByExternalIds(Seq(impExternalUserId)).map(_.head)
           val experiments = monitoredAwait.result(experimentsFuture, 3 second, s"on user id $userId", Set[ExperimentType]())
-          if (!experiments.contains(ExperimentType.ADMIN)) throw new IllegalStateException(s"non admin user $userId tries to impersonate to $impUserId")
-          val impSocialUserInfoFuture = shoeboxClient.getSocialUserInfosByUserId(userId)
+          if (!experiments.contains(ExperimentType.ADMIN)) throw new IllegalStateException(s"non admin user $userId tries to impersonate")
+          val impUserId = monitoredAwait.result(impUserIdFuture, 3 second, "get impUserId")
+          val impSocialUserInfoFuture = shoeboxClient.getSocialUserInfosByUserId(impUserId)
+          val impUserSeg = monitoredAwait.result(shoeboxClient.getUserSegment(impUserId), 3 second, "get impUser segment")
 
           val impSocialUserInfo = monitoredAwait.result(impSocialUserInfoFuture, 3 seconds, s"on user id $userId")
           log.info(s"[IMPERSONATOR] admin user $userId is impersonating user $impSocialUserInfo with request ${request.request.path}")
-          executeAction(authAction, monitoredAwait.result(impUserId, 3 seconds, s"on impersonating external user id $impExternalUserId"),
-            impSocialUserInfo.head.credentials.get, experiments.toSet, kifiInstallationId, newSession, request.request, Some(userId), allowPending)
+          executeAction(authAction, impUserId,
+            impSocialUserInfo.head.credentials.get, experiments.toSet, impUserSeg, kifiInstallationId, newSession, request.request, Some(userId), allowPending)
         case None =>
-          executeAction(authAction, userId, socialUser, monitoredAwait.result(experimentsFuture, 3 second, s"on experiments for user $userId", Set[ExperimentType]()), kifiInstallationId, newSession, request.request, None, allowPending)
+          executeAction(authAction, userId, socialUser, monitoredAwait.result(experimentsFuture, 3 second, s"on experiments for user $userId", Set[ExperimentType]()),
+              monitoredAwait.result(userSegment, 3 second, "get user segment"), kifiInstallationId, newSession, request.request, None, allowPending)
       }
     }
 
@@ -176,11 +181,11 @@ class RemoteActionAuthenticator @Inject() (
     getExperiments(userId).map(r => r.contains(ExperimentType.ADMIN)), 2 seconds, s"on is admin experiment for user $userId", false)
 
   private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
-      experiments: Set[ExperimentType], kifiInstallationId: Option[ExternalId[KifiInstallation]],
+      experiments: Set[ExperimentType], userSegment: Int, kifiInstallationId: Option[ExternalId[KifiInstallation]],
       newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = shoeboxClient.getUser(userId)
     try {
-      action(AuthenticatedRequest[T](identity, userId, monitoredAwait.result(user, 3 seconds, s"getting user $userId").get, request, experiments, kifiInstallationId, adminUserId)) match {
+      action(AuthenticatedRequest[T](identity, userId, monitoredAwait.result(user, 3 seconds, s"getting user $userId").get, request, experiments, userSegment, kifiInstallationId, adminUserId)) match {
         case r: PlainResult => r.withSession(newSession)
         case any: Result => any
       }

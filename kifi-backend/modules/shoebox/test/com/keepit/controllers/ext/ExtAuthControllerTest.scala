@@ -52,7 +52,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
         val fakeRequest1 = FakeRequest()
             .withCookies(cookie)
             .withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"))))
-        val authRequest1 = AuthenticatedRequest(null, user.id.get, user, fakeRequest1)
+        val authRequest1 = AuthenticatedRequest(null, user.id.get, user, fakeRequest1, userSegment = 0)
         val result1 = inject[ExtAuthController].start(authRequest1)
         status(result1) must equalTo(OK)
         val kifiInstallation1 = db.readOnly {implicit s =>
@@ -73,7 +73,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
             .withCookies(cookie)
             .withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"),
               "installation" -> JsString(kifiInstallation1.externalId.id))))
-        val authRequest2 = AuthenticatedRequest(null, user.id.get, user, fakeRequest2)
+        val authRequest2 = AuthenticatedRequest(null, user.id.get, user, fakeRequest2, userSegment = 0)
         val result2 = inject[ExtAuthController].start(authRequest2)
         status(result2) must equalTo(OK)
         val kifiInstallation2 = db.readOnly {implicit s =>
