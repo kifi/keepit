@@ -20,54 +20,87 @@ import scala.util.hashing.MurmurHash3
 import MessagingTypeMappers._
 import scala.concurrent.duration.Duration
 import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin}
+import com.keepit.eliza.model.NonUserParticipant
 
 
-class MessageThreadParticipants(val participants : Map[Id[User], DateTime]) {
+class MessageThreadParticipants(val userParticipants: Map[Id[User], DateTime], val nonUserParticipants: Map[NonUserParticipant, DateTime]) {
 
-  def contains(user: Id[User]) : Boolean = participants.contains(user)
-  def allExcept(user: Id[User]) : Set[Id[User]] = participants.keySet - user
+  def contains(user: Id[User]): Boolean = userParticipants.contains(user)
+  def allUsersExcept(user: Id[User]): Set[Id[User]] = userParticipants.keySet - user
 
-  lazy val all = participants.keySet
-  lazy val hash : Int = MurmurHash3.setHash(participants.keySet)
+  lazy val allUsers = userParticipants.keySet
+  lazy val allNonUsers = nonUserParticipants.keySet
+  lazy val userHash: Int = MurmurHash3.setHash(allUsers)
+  lazy val nonUserHash: Int = MurmurHash3.setHash(allNonUsers)
+  lazy val hash = userHash + nonUserHash
 
-  override def equals(other: Any) : Boolean = other match {
-    case mtps: MessageThreadParticipants => super.equals(other) || mtps.participants.keySet == participants.keySet
+  override def equals(other: Any): Boolean = other match {
+    case mtps: MessageThreadParticipants => super.equals(other) || (mtps.allUsers == allUsers && mtps.allNonUsers == allNonUsers)
     case _ => false
   }
 
-  override def hashCode = participants.keySet.hashCode
+  override def hashCode = allUsers.hashCode + allNonUsers.hashCode
 
 }
 
-object MessageThreadParticipants{
+object MessageThreadParticipants {
   implicit val format = new Format[MessageThreadParticipants] {
     def reads(json: JsValue) = {
       json match {
         case obj: JsObject => {
-          val mtps = MessageThreadParticipants(obj.fields.toMap.map {
-            case (uid, timestamp) => (Id[User](uid.toLong), timestamp.as[DateTime])
-          })
-          JsSuccess(mtps)
+          (obj \ "us").asOpt[JsObject] match {
+            case Some(users) =>
+              val userParticipants = users.value.map {
+                case (uid, timestamp) => (Id[User](uid.toLong), timestamp.as[DateTime])
+              }.toMap
+              (obj \ "nus").asOpt[JsArray].map { nonUsers =>
+                nonUsers.value.map(_.asOpt[JsArray]).flatten.map { v =>
+                  (v(0).asOpt[NonUserParticipant], v(1).asOpt[DateTime]) match {
+                    case (Some(_n), Some(_d)) => Some(_n -> _d)
+                    case _ => None
+                  }
+                }.flatten.toMap
+              } match {
+                case Some(nonUserParticipants) =>
+                  JsSuccess(MessageThreadParticipants(userParticipants, nonUserParticipants))
+                case None =>
+                  JsSuccess(MessageThreadParticipants(userParticipants))
+              }
+            case None =>
+              // Old serialization format. No worries.
+              val mtps = obj.value.map {
+                case (uid, timestamp) => (Id[User](uid.toLong), timestamp.as[DateTime])
+              }.toMap
+              JsSuccess(MessageThreadParticipants(mtps))
+          }
         }
         case _ => JsError()
       }
     }
 
     def writes(mtps: MessageThreadParticipants) : JsValue = {
-      JsObject(
-        mtps.participants.toSeq.map{
-          case (uid, timestamp) => (uid.id.toString, Json.toJson(timestamp))
+      Json.obj(
+        "us" -> mtps.userParticipants.map {
+          case (uid, timestamp) => (uid.id.toString -> Json.toJson(timestamp))
+        },
+        "nus" -> mtps.nonUserParticipants.toSeq.map {
+          case (nup, timestamp) => JsArray(Seq(Json.toJson(nup), Json.toJson(timestamp)))
         }
       )
     }
   }
 
-  def apply(initialParticipants: Set[Id[User]]) : MessageThreadParticipants = {
-    new MessageThreadParticipants(initialParticipants.map{userId => (userId, currentDateTime)}.toMap)
+
+  def apply(initialUserParticipants: Set[Id[User]]) : MessageThreadParticipants = {
+    new MessageThreadParticipants(initialUserParticipants.map{userId => (userId, currentDateTime)}.toMap, Map.empty[NonUserParticipant, DateTime])
   }
 
-  def apply(participants: Map[Id[User], DateTime]) : MessageThreadParticipants = {
-    new MessageThreadParticipants(participants)
+  def apply(initialUserParticipants: Set[Id[User]], initialNonUserPartipants: Set[NonUserParticipant]) : MessageThreadParticipants = {
+    new MessageThreadParticipants(initialUserParticipants.map{userId => (userId, currentDateTime)}.toMap, initialNonUserPartipants.map { nup => (nup, currentDateTime) }.toMap)
+  }
+
+  def apply(userParticipants: Map[Id[User], DateTime], nonUserParticipants: Map[NonUserParticipant, DateTime] = Map.empty) : MessageThreadParticipants = {
+    new MessageThreadParticipants(userParticipants, Map.empty)
   }
 
 }
@@ -93,17 +126,17 @@ case class MessageThread(
 
   def withParticipants(when: DateTime, userIds: Id[User]*) = {
     val newUsers = userIds.map(_ -> when).toMap
-    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.participants ++ newUsers))
-    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.hash))
+    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.userParticipants ++ newUsers)) // add in nonuser participants
+    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.userHash))  // add in nonuser participants
   }
 
   def withoutParticipant(userId: Id[User]) = {
-    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.participants - (userId)))
-    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.hash))
+    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.userParticipants - userId))  // add in nonuser participants
+    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.userHash))  // add in nonuser participants
   }
 
   def containsUser(user: Id[User]) : Boolean = participants.map(_.contains(user)).getOrElse(false)
-  def allParticipantsExcept(user: Id[User]) : Set[Id[User]] = participants.map(_.allExcept(user)).getOrElse(Set[Id[User]]())
+  def allParticipantsExcept(user: Id[User]) : Set[Id[User]] = participants.map(_.allUsersExcept(user)).getOrElse(Set[Id[User]]())  // add in nonuser participants
 }
 
 
@@ -164,10 +197,10 @@ class MessageThreadRepoImpl @Inject() (
     thread
   }
 
-  def getOrCreate(participants: Seq[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession) : (MessageThread, Boolean) = {
+  def getOrCreate(userParticipants: Seq[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession) : (MessageThread, Boolean) = {
     //Note (stephen): This has a race condition: When two threads that would normally be merged are created at the exact same time two different conversations will be the result
-    val mtps = MessageThreadParticipants(participants.toSet)
-    val candidates : Seq[MessageThread]= (for (row <- table if row.participantsHash===mtps.hash && row.uriId===uriIdOpt) yield row).list.filter { thread =>
+    val mtps = MessageThreadParticipants(userParticipants.toSet, Set.empty[NonUserParticipant])
+    val candidates : Seq[MessageThread]= (for (row <- table if row.participantsHash===mtps.userHash && row.uriId===uriIdOpt) yield row).list.filter { thread =>
       thread.uriId.isDefined &&
       thread.participants.isDefined &&
       thread.participants.get == mtps
@@ -181,7 +214,7 @@ class MessageThreadRepoImpl @Inject() (
         nUrl = nUriOpt,
         pageTitle=pageTitleOpt,
         participants = Some(mtps),
-        participantsHash = Some(mtps.hash),
+        participantsHash = Some(mtps.userHash),
         replyable = true
       )
       (super.save(thread), true)

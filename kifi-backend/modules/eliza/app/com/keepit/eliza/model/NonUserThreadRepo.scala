@@ -15,25 +15,54 @@ import com.keepit.eliza._
 import play.api.libs.functional.syntax._
 import com.keepit.eliza.Notification
 import play.api.libs.json.JsObject
-import com.keepit.common.mail.EmailAddressHolder
+import com.keepit.common.mail.{GenericEmailAddress, EmailAddressHolder}
 import scala.slick.driver.BasicProfile
 import MessagingTypeMappers._
 import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.social.BasicUserLikeEntity
 
-case class NonUserKind(name: String)
+sealed trait NonUserParticipant {
+  val identifier: String
+  val referenceId: Option[String]
+  val kind: NonUserKind
 
+  override def toString() = identifier.toString
+}
+object NonUserParticipant {
+  implicit val format = new Format[NonUserParticipant] {
+    // fields are shortened for overhead reasons
+    def reads(json: JsValue) = {
+      ((json \ "k").asOpt[String], (json \ "i").asOpt[String]) match {
+        case (Some(NonUserKinds.email.name), Some(emailAddress)) =>
+          val addr = GenericEmailAddress(emailAddress)
+          val id = (json \ "r").asOpt[String].map(i => Id[EContact](i.toLong))
+          JsSuccess(NonUserEmailParticipant(addr, id))
+        case _ => JsError()
+      }
+    }
+    def writes(p: NonUserParticipant): JsValue = {
+      JsObject(Seq(Some("k" -> JsString(p.kind.name)), Some("i" -> JsString(p.identifier)), p.referenceId.map(r => "r" -> JsString(r))).flatten)
+    }
+  }
+
+}
+
+case class NonUserEmailParticipant(address: EmailAddressHolder, econtactId: Option[Id[EContact]]) extends NonUserParticipant {
+  val identifier = address.address
+  val referenceId = econtactId.map(_.id.toString)
+  val kind = NonUserKinds.email
+}
+
+case class NonUserKind(name: String)
 object NonUserKinds {
-  val Email = NonUserKind("email")
+  val email = NonUserKind("email")
 }
 
 case class NonUserThread(
   id: Option[Id[NonUserThread]] = None,
   createdAt: DateTime = currentDateTime,
-  updateAt: DateTime = currentDateTime,
-  kind: NonUserKind,
-  emailAddress: Option[EmailAddressHolder],
-  econtactId: Option[Id[EContact]],
+  updatedAt: DateTime = currentDateTime,
+  participant: NonUserParticipant,
   threadId: Id[MessageThread],
   uriId: Option[Id[NormalizedURI]],
   notifiedCount: Int,
@@ -43,7 +72,7 @@ case class NonUserThread(
   state: State[NonUserThread]
 ) extends Model[NonUserThread] {
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime) = this.copy(updateAt = updateTime)
+  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withState(state: State[NonUserThread]) = copy(state = state)
 }
 
@@ -112,8 +141,23 @@ class NonUserThreadRepoImpl @Inject() (
     def threadUpdatedAt = column[DateTime]("thread_updated_at", O.Nullable)
     def muted = column[Boolean]("muted", O.NotNull)
 
-    def * = id.? ~ createdAt ~ updatedAt ~ kind ~ emailAddress.? ~ econtactId.? ~ threadId ~ uriId.? ~ notifiedCount ~ lastNotifiedAt.? ~ threadUpdatedAt.? ~ muted ~ state <> (NonUserThread.apply _, NonUserThread.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ kind ~ emailAddress.? ~ econtactId.? ~ threadId ~ uriId.? ~ notifiedCount ~ lastNotifiedAt.? ~ threadUpdatedAt.? ~ muted ~ state <> (rowToObj _, objToRow _)
 
+    private def rowToObj(id: Option[Id[NonUserThread]], createdAt: DateTime, updatedAt: DateTime, kind: NonUserKind, emailAddress: Option[EmailAddressHolder], econtactId: Option[Id[EContact]], threadId: Id[MessageThread], uriId: Option[Id[NormalizedURI]], notifiedCount: Int, lastNotifiedAt: Option[DateTime], threadUpdatedAt: Option[DateTime], muted: Boolean, state: State[NonUserThread]): NonUserThread = {
+      val participant = kind match {
+        case NonUserKinds.email =>
+          NonUserEmailParticipant(emailAddress.get, econtactId)
+      }
+      NonUserThread(id, createdAt, updatedAt, participant, threadId, uriId, notifiedCount, lastNotifiedAt, threadUpdatedAt, muted, state)
+    }
+
+    private def objToRow(n: NonUserThread) = {
+      val (kind, emailAddress, econtactId) = n.participant match {
+        case ep: NonUserEmailParticipant =>
+          (ep.kind, Option(ep.address), ep.econtactId)
+      }
+      Option((n.id, n.createdAt, n.updatedAt, kind, emailAddress, econtactId, n.threadId, n.uriId, n.notifiedCount, n.lastNotifiedAt, n.threadUpdatedAt, n.muted, n.state))
+    }
   }
 
   def getThreadsByEmail(emailAddress: EmailAddressHolder)(implicit session: RSession): Seq[Id[MessageThread]] =
