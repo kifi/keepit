@@ -13,6 +13,7 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import com.keepit.common.time._
 import com.keepit.common.db.slick._
+import scala.util.{Try, Failure, Success}
 
 class ABookCommander @Inject() (
   db:Database,
@@ -157,6 +158,13 @@ class ABookCommander @Inject() (
     val json = Json.toJson(abookRawInfos)
     log.info(s"[getContactsRawInfo(${userId})=$abookRawInfos json=$json")
     json
+  }
+
+  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Try[EContact] = {
+    log.info(s"[getOrCreateEContact] userId=$userId email=$email name=$name")
+    db.readWrite(attempts = 2) { implicit s =>
+      econtactRepo.getOrCreate(userId, email, name, firstName, lastName)
+    }
   }
 
 }

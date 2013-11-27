@@ -8,6 +8,7 @@ case class ScraperConfig(
   initialBackoff: Double = 1.0d, //hours
   maxBackoff: Double = 1024.0d, //hours
   changeThreshold: Double = 0.05,
+  scrapePendingFrequency: Int = sys.props.getOrElse("scraper.pending.freq", "30").toInt,
   disableScraperService: Boolean = sys.props.getOrElse("scraper.service.disable", "false").toBoolean,
   batchSize: Int = sys.props.getOrElse("scraper.service.batch.size", "10").toInt,
   batchMax: Int = sys.props.getOrElse("scraper.service.batch.max", "200").toInt,

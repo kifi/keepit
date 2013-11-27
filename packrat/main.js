@@ -162,7 +162,7 @@ function insertUpdateChronologically(arr, o, time) {
 
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
   if (service.match(/^(?:GET|POST|HEAD|OPTIONS|PUT)$/)) { // shift args if service is missing
-    fail = done, done = data, data = uri, uri = method, method = service, service = "api";
+    fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
   if (typeof data == "function") {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
@@ -1528,7 +1528,13 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
 });
 
-api.on.beforeSearch.add(throttle(ajax.bind(null, 'search', 'GET', '/up'), 50000));
+api.on.beforeSearch.add(throttle(function () {
+  if (session && ~session.experiments.indexOf('tsearch')) {
+    ajax('GET', '/204');
+  } else {
+    ajax('search', 'GET', '/up');
+  }
+}, 50000));
 
 var searchPrefetchCache = {};  // for searching before the results page is ready
 var searchFilterCache = {};    // for restoring filter if user navigates back to results
