@@ -18,13 +18,13 @@ object FastJsonParser {
 
 case class JsonParserTracking(time: Long, message: String)
 
-class FastJsonParser(alertThreshold: Int = 100) {
-  def parse(bytes: Array[Byte], trackTime: Boolean = true): (JsValue, Option[JsonParserTracking]) = {
+class FastJsonParser() {
+  def parse(bytes: Array[Byte], alertThreshold: Int = 100): (JsValue, Option[JsonParserTracking]) = {
     val startTime = System.currentTimeMillis
     val json = fastParse(bytes)
     val jsonTime = System.currentTimeMillis - startTime
 
-    val tracking = if (trackTime && jsonTime > alertThreshold) {//ms
+    val tracking = if (jsonTime > alertThreshold) {//ms
         val message: String = if (bytes.size <= 4) {
           new String(bytes, UTF8) match {
             case FastJsonParser.emptyObjectString => "matching empty object bytes"

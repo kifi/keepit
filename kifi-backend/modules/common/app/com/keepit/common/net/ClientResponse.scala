@@ -70,9 +70,13 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
   }
 
   lazy val json: JsValue = {
-    val trackTime = !request.httpUri.url.contains("/internal/shoebox/database/getIndexable")
+    val trackTimeThreshold = if(request.httpUri.url.contains("/internal/shoebox/database/getIndexable")) {
+      5000//ms
+    } else {
+      100//ms
+    }
     try {
-      val (json, tracking) = jsonParser.parse(bytes, trackTime)
+      val (json, tracking) = jsonParser.parse(bytes, trackTimeThreshold)
 
       tracking foreach { info =>
         val exception = request.tracer.withCause(SlowJsonParsingException(request, this, info))
