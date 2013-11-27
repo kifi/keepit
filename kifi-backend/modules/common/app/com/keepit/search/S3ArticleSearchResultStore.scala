@@ -22,6 +22,11 @@ class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Clien
   val formatter = ArticleSearchResult.format
   override def getInitialSearchId(uuid: ExternalId[ArticleSearchResult]): ExternalId[ArticleSearchResult] = initialSearchIdCache.getOrElse(InitialSearchIdSearchIdKey(uuid)) { super.getInitialSearchId(uuid) }
   override def get(uuid : ExternalId[ArticleSearchResult]): Option[ArticleSearchResult] =  articleCache.getOrElseOpt(ArticleSearchResultIdKey(uuid)) { super.get(uuid) }
+  override def += (uuidAndArticle: (ExternalId[ArticleSearchResult], ArticleSearchResult)) = {
+    val (uuid, article) = uuidAndArticle
+    articleCache.set(ArticleSearchResultIdKey(uuid), article)
+    super.+=(uuidAndArticle)
+  }
 }
 
 class InMemoryArticleSearchResultStoreImpl extends InMemoryObjectStore[ExternalId[ArticleSearchResult], ArticleSearchResult] with ArticleSearchResultStore
