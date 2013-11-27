@@ -16,6 +16,25 @@ import scala.concurrent.duration.Duration
 
 trait BasicUserLikeEntity
 
+object BasicUserLikeEntity {
+  implicit val nonUserTypeFormat = Json.format[NonUserKind]
+  implicit val basicUserLikeEntityFormat = new Format[BasicUserLikeEntity] {
+    def reads(json: JsValue): JsResult[BasicUserLikeEntity] = {
+      // Detect if this is a BasicUser or BasicNonUser
+      (json \ "kind").asOpt[NonUserKind] match {
+        case Some(kind) => BasicNonUser.basicNonUserFormat.reads(json)
+        case None => BasicUser.basicUserFormat.reads(json)
+      }
+    }
+    def writes(entity: BasicUserLikeEntity): JsValue = {
+      entity match {
+        case b: BasicUser => BasicUser.basicUserFormat.writes(b)
+        case b: BasicNonUser => BasicNonUser.basicNonUserFormat.writes(b)
+      }
+    }
+  }
+}
+
 case class BasicUser(
   externalId: ExternalId[User],
   firstName: String,
@@ -24,6 +43,8 @@ case class BasicUser(
 
 object BasicUser {
   implicit val userExternalIdFormat = ExternalId.format[User]
+
+  // Be aware that BasicUserLikeEntity uses the `kind` field to detect if its a BasicUser or BasicNonUser
   implicit val basicUserFormat = (
       (__ \ 'id).format[ExternalId[User]] and
       (__ \ 'firstName).format[String] and

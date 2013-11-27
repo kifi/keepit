@@ -1,9 +1,9 @@
 package com.keepit.eliza
 
-import com.keepit.model.{UserNotification, User, DeepLocator, NormalizedURI}
+import com.keepit.model.{User, DeepLocator, NormalizedURI}
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.db.slick.{Database}
-import com.keepit.shoebox.{ShoeboxServiceClient}
+import com.keepit.common.db.slick.Database
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.BasicUser
@@ -11,29 +11,29 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
 
-import scala.concurrent.{Promise, future, Await, Future}
+import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.http.Status.ACCEPTED
 
 import com.google.inject.Inject
 
 import org.joda.time.DateTime
 
-import play.api.libs.json.{JsValue, JsString, JsArray, Json}
+import play.api.libs.json._
 import play.modules.statsd.api.Statsd
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
-import com.keepit.realtime.{PushNotification, UrbanAirship}
+import com.keepit.realtime.UrbanAirship
+import com.keepit.common.KestrelCombinator
+import com.keepit.eliza.model.{NonUserParticipant, NonUserThread}
+import play.api.libs.json.JsString
+import scala.Some
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
-import com.keepit.common.KestrelCombinator
-import scala.util.Try
-import com.keepit.eliza.model.{NonUserParticipant, NonUserThread}
 
 
 //For migration only
@@ -425,7 +425,7 @@ class MessagingController @Inject() (
     "7a0f844e-a1b2-4dab-b94b-0a9b7932e141" // noam
   )
 
-  def constructRecipientSeq(userExtIds: Seq[ExternalId[User]]) : Future[Seq[Id[User]]] = {
+  def constructUserRecipients(userExtIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
     val loadedUser = userExtIds.map { userExtId =>
       userExtId match {
         case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
@@ -440,20 +440,42 @@ class MessagingController @Inject() (
     shoebox.getUserIdsByExternalIds(loadedUser.flatten)
   }
 
+  def constructNonUserRecipients(nonUsers: Seq[NonUserParticipant]): Future[Seq[NonUserParticipant]] = {
+    Promise.successful(nonUsers).future
+  }
 
-  def sendNewMessage(from: Id[User], recipients: Seq[Id[User]], urls: JsObject, titleOpt: Option[String], messageText: String) : (MessageThread, Message) = {
-    val participants = (from +: recipients).distinct
+
+  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], urls: JsObject, titleOpt: Option[String], messageText: String) : (MessageThread, Message) = {
+    val userParticipants = (from +: userRecipients).distinct
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
     val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(urls), 10 seconds)} // todo: Remove Await
     Statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis)
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val thread = db.readWrite{ implicit session =>
-      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
+      val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
       if (isNew){
-        log.info(s"This is a new thread. Creating User Threads.")
-        participants.par.foreach{ userId =>
-          userThreadRepo.create(userId, thread.id.get, uriIdOpt, userId==from)
+        nonUserRecipients.par.foreach { nonUser =>
+          NonUserThread(
+            participant = nonUser,
+            threadId = thread.id.get,
+            uriId = uriIdOpt,
+            notifiedCount = 0,
+            lastNotifiedAt = None,
+            threadUpdatedAt = Some(thread.createdAt),
+            muted = false
+          )
+        }
+        userParticipants.par.foreach { userId =>
+          userThreadRepo.save(UserThread(
+            user = userId,
+            thread = thread.id.get,
+            uriId = uriIdOpt,
+            lastSeen = None,
+            lastMsgFromOther = None,
+            lastNotification = JsNull,
+            started = (userId == from)
+          ))
         }
       }
       else{
@@ -533,16 +555,16 @@ class MessagingController @Inject() (
 
 
     val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
-    val numAuthors = threadActivity.filter(_.lastActive.isDefined).length
+    val numAuthors = threadActivity.count(_.lastActive.isDefined)
 
-    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants=threadActivity.map{ ta => id2BasicUser(ta.userId)})
+    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map{ ta => id2BasicUser(ta.userId)})
 
     thread.allParticipantsExcept(from).foreach { userId =>
       sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
     }
 
     //=== BEGIN
-    (new SafeFuture(shoebox.getUserExperiments(from))).map{ userExperiments =>
+    new SafeFuture(shoebox.getUserExperiments(from)).map{ userExperiments =>
       val notifJson = buildMessageNotificationJson(message, thread, orderedMessageWithBasicUser, "/messages/" + thread.externalId, false, originalAuthor, 0, numAuthors, 0, false)
       if (userExperiments.contains(ExperimentType.INBOX)){
         db.readWrite(attempts=2){ implicit session =>
@@ -643,6 +665,7 @@ class MessagingController @Inject() (
     }
   }
 
+  // todo: Add adding non-users by kind/identifier
   def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipants: Seq[ExternalId[User]]) = {
     shoebox.getUserIdsByExternalIds(newParticipants) map { newParticipantsUserIds =>
 
@@ -690,6 +713,7 @@ class MessagingController @Inject() (
             "category"     -> "message"
           )
           db.readWrite { implicit session =>
+            // todo: Add adding non-users
             newParticipants.map { pUserId =>
               userThreadRepo.save(UserThread(
                 id = None,
@@ -710,8 +734,8 @@ class MessagingController @Inject() (
             }
           }
 
-          val participants = basicUsers.values.toSeq
-          val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
+          val userParticipants = basicUsers.values.toSeq
+          val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, userParticipants)
           modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
             thread.participants.map(_.allUsers.par.foreach { userId =>
               notificationRouter.sendToUser(
@@ -720,7 +744,7 @@ class MessagingController @Inject() (
               )
               notificationRouter.sendToUser(
                 userId,
-                Json.arr("thread_participants", thread.externalId.id, participants)
+                Json.arr("thread_participants", thread.externalId.id, userParticipants)
               )
             })
           }
@@ -917,7 +941,7 @@ class MessagingController @Inject() (
 
   def getChatter(userId: Id[User], urls: Seq[String]) = {
     implicit val timeout = Duration(3, "seconds")
-    TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(u -> _)))).recover {
+    TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(n => u -> n)))).recover {
       case ex: TimeoutException => Seq[(String, Option[NormalizedURI])]()
     }.map { res =>
       val urlMsgCount = db.readOnly { implicit session =>

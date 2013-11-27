@@ -81,7 +81,7 @@ object MessageThreadParticipants {
     def writes(mtps: MessageThreadParticipants) : JsValue = {
       Json.obj(
         "us" -> mtps.userParticipants.map {
-          case (uid, timestamp) => (uid.id.toString -> Json.toJson(timestamp))
+          case (uid, timestamp) => uid.id.toString -> Json.toJson(timestamp)
         },
         "nus" -> mtps.nonUserParticipants.toSeq.map {
           case (nup, timestamp) => JsArray(Seq(Json.toJson(nup), Json.toJson(timestamp)))
@@ -135,8 +135,8 @@ case class MessageThread(
     this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.userHash))  // add in nonuser participants
   }
 
-  def containsUser(user: Id[User]) : Boolean = participants.map(_.contains(user)).getOrElse(false)
-  def allParticipantsExcept(user: Id[User]) : Set[Id[User]] = participants.map(_.allUsersExcept(user)).getOrElse(Set[Id[User]]())  // add in nonuser participants
+  def containsUser(user: Id[User]): Boolean = participants.exists(_.contains(user))
+  def allParticipantsExcept(user: Id[User]): Set[Id[User]] = participants.map(_.allUsersExcept(user)).getOrElse(Set[Id[User]]())  // add in nonuser participants
 }
 
 
@@ -161,7 +161,7 @@ object MessageThread {
 @ImplementedBy(classOf[MessageThreadRepoImpl])
 trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunction[MessageThread] {
 
-  def getOrCreate(participants: Seq[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession) : (MessageThread, Boolean)
+  def getOrCreate(participants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession) : (MessageThread, Boolean)
 
   override def get(id: ExternalId[MessageThread])(implicit session: RSession) : MessageThread
 
@@ -197,22 +197,22 @@ class MessageThreadRepoImpl @Inject() (
     thread
   }
 
-  def getOrCreate(userParticipants: Seq[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession) : (MessageThread, Boolean) = {
+  def getOrCreate(userParticipants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession): (MessageThread, Boolean) = {
     //Note (stephen): This has a race condition: When two threads that would normally be merged are created at the exact same time two different conversations will be the result
-    val mtps = MessageThreadParticipants(userParticipants.toSet, Set.empty[NonUserParticipant])
+    val mtps = MessageThreadParticipants(userParticipants.toSet, nonUserParticipants.toSet)
     val candidates : Seq[MessageThread]= (for (row <- table if row.participantsHash===mtps.userHash && row.uriId===uriIdOpt) yield row).list.filter { thread =>
       thread.uriId.isDefined &&
       thread.participants.isDefined &&
       thread.participants.get == mtps
     }
-    if (candidates.length>0) (candidates.head, false)
+    if (candidates.length > 0) (candidates.head, false)
     else {
       val thread = MessageThread(
         id = None,
         uriId = uriIdOpt,
         url = urlOpt,
         nUrl = nUriOpt,
-        pageTitle=pageTitleOpt,
+        pageTitle = pageTitleOpt,
         participants = Some(mtps),
         participantsHash = Some(mtps.userHash),
         replyable = true

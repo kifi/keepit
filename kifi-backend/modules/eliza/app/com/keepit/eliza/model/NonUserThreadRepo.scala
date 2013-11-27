@@ -19,7 +19,7 @@ import com.keepit.common.mail.{GenericEmailAddress, EmailAddressHolder}
 import scala.slick.driver.BasicProfile
 import MessagingTypeMappers._
 import com.keepit.common.crypto.SimpleDESCrypt
-import com.keepit.social.BasicUserLikeEntity
+import com.keepit.social.{NonUserKinds, NonUserKind, BasicUserLikeEntity}
 
 sealed trait NonUserParticipant {
   val identifier: String
@@ -44,18 +44,12 @@ object NonUserParticipant {
       JsObject(Seq(Some("k" -> JsString(p.kind.name)), Some("i" -> JsString(p.identifier)), p.referenceId.map(r => "r" -> JsString(r))).flatten)
     }
   }
-
 }
 
 case class NonUserEmailParticipant(address: EmailAddressHolder, econtactId: Option[Id[EContact]]) extends NonUserParticipant {
   val identifier = address.address
   val referenceId = econtactId.map(_.id.toString)
   val kind = NonUserKinds.email
-}
-
-case class NonUserKind(name: String)
-object NonUserKinds {
-  val email = NonUserKind("email")
 }
 
 case class NonUserThread(
@@ -69,7 +63,7 @@ case class NonUserThread(
   lastNotifiedAt: Option[DateTime],
   threadUpdatedAt: Option[DateTime],
   muted: Boolean,
-  state: State[NonUserThread]
+  state: State[NonUserThread] = NonUserThreadStates.ACTIVE
 ) extends Model[NonUserThread] {
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
@@ -78,17 +72,6 @@ case class NonUserThread(
 
 object NonUserThreadStates extends States[NonUserThread]
 
-case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String], lastName: Option[String]) extends BasicUserLikeEntity
-object BasicNonUser {
-  implicit val nonUserTypeFormat = Json.format[NonUserKind]
-  implicit val basicNonUserFormat = (
-    (__ \ 'kind).format[NonUserKind] and
-    (__ \ 'id).format[String] and
-    (__ \ 'firstName).formatNullable[String] and
-    (__ \ 'lastName).formatNullable[String]
-  )(BasicNonUser.apply, unlift(BasicNonUser.unapply))
-
-}
 
 
 @ImplementedBy(classOf[NonUserThreadRepoImpl])

@@ -27,6 +27,8 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.social.BasicUser
 import scala.concurrent.{Future, Promise}
+import com.keepit.eliza.model.{NonUserEmailParticipant, NonUserParticipant}
+import com.keepit.common.mail.GenericEmailAddress
 
 
 class ExtMessagingController @Inject() (
@@ -52,29 +54,30 @@ class ExtMessagingController @Inject() (
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val tStart = currentDateTime
     val o = request.body
-    val (title, text, recipients, version) = (
+    val (title, text, version) = (
       (o \ "title").asOpt[String],
       (o \ "text").as[String].trim,
-      (o \ "recipients").as[Seq[String]],
       (o \ "extVersion").asOpt[String])
+    val (userExtRecipients, nonUserRecipients) = recipientJsonToTypedFormat((o \ "recipients").as[Seq[JsValue]])
+
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
+    val messageSubmitResponse = for {
+      userRecipients <- messagingController.constructUserRecipients(userExtRecipients)
+      nonUserRecipients <- messagingController.constructNonUserRecipients(nonUserRecipients)
+    } yield {
 
-    val responseFuture = messagingController.constructRecipientSeq(recipients.distinct.map(ExternalId[User](_))).flatMap { recipientSeq =>
-      val (thread, message) = messagingController.sendNewMessage(request.user.id.get, recipientSeq, urls, title, text)
+      val (thread, message) = messagingController.sendNewMessage(request.user.id.get, userRecipients, nonUserRecipients, urls, title, text)
       val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(thread, None)
       val threadInfoOpt = (o \ "url").asOpt[String].map { url =>
         messagingController.buildThreadInfos(request.user.id.get, Seq(thread), Some(url)).headOption
       }.flatten
 
-
-
-      messageThreadFut map { case (thread, messages) => // object instantiated earlier to give Future head start
-
+      messageThreadFut.map { case (_, messages) =>
         //Analytics
         SafeFuture {
           val contextBuilder = userEventContextBuilder(Some(request))
-          contextBuilder += ("recipients", recipientSeq.map(_.id).toSeq)
+          contextBuilder += ("recipients", userRecipients.map(_.id).toSeq) // todo: Anything with nonusers?
           contextBuilder += ("threadId", thread.id.get.id)
           contextBuilder += ("url", thread.url.getOrElse(""))
           contextBuilder += ("isActuallyNew", messages.length<=1)
@@ -99,9 +102,31 @@ class ExtMessagingController @Inject() (
         Statsd.timing(s"messaging.newMessage", tDiff)
         Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages.reverse))
       }
-
     }
-    Async(responseFuture)
+
+    Async(messageSubmitResponse.flatMap(r => r))
+  }
+
+  private def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]) = {
+    rawRecipients.foldLeft((Seq[ExternalId[User]](), Seq[NonUserParticipant]())) { case ((externalUserIds, nonUserParticipants), elem) =>
+      elem.asOpt[String].flatMap(ExternalId.asOpt[User]) match {
+        case Some(externalUserId) => (externalUserIds :+ externalUserId, nonUserParticipants)
+        case None =>
+          elem.asOpt[JsObject].flatMap { obj =>
+            (obj \ "kind").asOpt[String] match {
+              case Some("email") if (obj \ "email").asOpt[String].isDefined =>
+                Some(NonUserEmailParticipant(GenericEmailAddress((obj \ "email").as[String]), None)) // todo: Hook up econtactIds
+              case _ => // Unsupported kind
+                None
+            }
+          } match {
+            case Some(nonUser) =>
+              (externalUserIds, nonUserParticipants :+ nonUser)
+            case None =>
+              (externalUserIds, nonUserParticipants)
+          }
+      }
+    }
   }
 
   def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = AuthenticatedJsonToJsonAction { request =>
