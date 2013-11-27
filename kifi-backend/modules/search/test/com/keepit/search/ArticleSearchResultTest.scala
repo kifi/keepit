@@ -3,9 +3,9 @@ package com.keepit.search
 import com.keepit.common.db._
 import com.keepit.model._
 import org.specs2.mutable._
-import com.keepit.serializer.ArticleSearchResultSerializer
 import com.keepit.test.TestApplication
 import play.api.test.Helpers._
+import play.api.libs.json.Json
 
 class ArticleSearchResultTest extends Specification {
 
@@ -24,7 +24,11 @@ class ArticleSearchResultTest extends Specification {
     previousHits = 13,
     millisPassed = 23,
     collections = Set(1L,10L,100L),
-    svVariance = 1.0f)
+    svVariance = 1.0f,
+    svExistenceVar = 1.0f,
+    toShow = false,
+    lang = Lang("fr")
+  )
 
   val nextResult = ArticleSearchResult(
     last = Some(initialResult.uuid),
@@ -41,20 +45,21 @@ class ArticleSearchResultTest extends Specification {
     previousHits = 13,
     millisPassed = 23,
     collections = Set(1L,10L,100L),
-    svVariance = 1.0f)
+    svVariance = 1.0f,
+    svExistenceVar = 1.0f,
+    lang = Lang("fr")
+  )
 
   "ArticleSearchResult" should {
     "be serialized" in {
 
-      val serializer = new ArticleSearchResultSerializer()
-
-      val initialJson = serializer.writes(initialResult)
-      val initialDeserialized = serializer.reads(initialJson).get
+      val initialJson = Json.toJson(initialResult)
+      val initialDeserialized = initialJson.as[ArticleSearchResult]
       initialDeserialized.uuid === initialResult.uuid
       initialDeserialized === initialResult
 
-      val nextJson = serializer.writes(nextResult)
-      val nextDeserialized = serializer.reads(nextJson).get
+      val nextJson = Json.toJson(nextResult)
+      val nextDeserialized = nextJson.as[ArticleSearchResult]
       nextDeserialized.uuid === nextResult.uuid
       nextDeserialized === nextResult
     }

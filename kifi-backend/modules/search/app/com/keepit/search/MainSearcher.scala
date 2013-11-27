@@ -399,7 +399,6 @@ class MainSearcher(
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, othersTotal, mayHaveMoreHits, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
         (idFilter.size / numHitsToReturn), idFilter.size, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
-        timeLogs = Some(timeLogs.toSearchTimeLogs),
         collections = parser.collectionIds,
         lang = lang)
   }
@@ -479,7 +478,7 @@ class MainSearcher(
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
   def getBookmarkId(uriId: Id[NormalizedURI]): Long = socialGraphInfo.myUriEdgeAccessor.getBookmarkId(uriId.id)
 
-  def timing() {
+  def timing(): SearchTimeLogs = {
     Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
     Statsd.timing("mainSearch.queryParsing", timeLogs.queryParsing)
     Statsd.timing("mainSearch.phraseDetection", timeLogs.phraseDetection)
@@ -495,6 +494,8 @@ class MainSearcher(
           warmer.addTerms(QueryUtil.getTerms(query))
       }
     }
+
+    timeLogs.toSearchTimeLogs
   }
 }
 

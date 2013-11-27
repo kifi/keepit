@@ -243,9 +243,9 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("kifiExpanded", !kifiCollapsed)
     contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
     contextBuilder += ("kifiLate", kifiCollapsed && initialSearchResult.toShow)
-    kifiTime.foreach { kifiDevTime => contextBuilder += ("kifiDeliveryTime", kifiDevTime) }
-    referenceTime.foreach { refTime => contextBuilder += ("thirdPartyDeliveryTime", refTime) }
-    for { kifiDevTime <- kifiTime; refTime <- referenceTime } yield { contextBuilder += ("kifiDeliveryDelay", kifiDevTime - refTime) }
+    kifiTime.foreach { kifiDevTime => contextBuilder += ("kifiLatency", kifiDevTime) }
+    referenceTime.foreach { refTime => contextBuilder += ("thirdPartyLatency", refTime) }
+    for { kifiDevTime <- kifiTime; refTime <- referenceTime } yield { contextBuilder += ("kifiDelay", kifiDevTime - refTime) }
     contextBuilder += ("isInitialSearch", uuid == initialSearchId)
 
     contextBuilder
