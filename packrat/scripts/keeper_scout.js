@@ -135,7 +135,9 @@ var tile = tile || function() {  // idempotent for Chrome
 
   function toggleLoginDialog() {
     api.require('scripts/iframe_dialog.js', function() {
-      iframeDialog.toggle('login');
+      api.port.emit('web_base_uri', function (uri) {
+        iframeDialog.origin(uri).toggle('login');
+      });
     });
   }
 

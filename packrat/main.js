@@ -788,6 +788,9 @@ api.port.on({
   session: function(_, respond) {
     respond(session);
   },
+  web_base_uri: function(_, respond) {
+    respond(webBaseUri());
+  },
   get_friends: function(_, respond) {
     respond(friends);
   },
@@ -1258,7 +1261,7 @@ function kifify(tab) {
     }
   } else {
     ajax("POST", "/ext/pageDetails", {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
-      if (xhr.status == 403) {
+      if (xhr.status === 403) {
         clearSession();
       }
     });
@@ -1829,6 +1832,12 @@ function openLogin(callback, retryMs) {
 }
 
 function clearSession() {
+  if (session) {
+    api.tabs.each(function(tab) {
+      api.icon.set(tab, 'icons/keep.faint.png');
+      api.tabs.emit(tab, 'session_change', null);
+    });
+  }
   session = null;
   if (socket) {
     socket.close();
@@ -1851,10 +1860,6 @@ function deauthenticate() {
         log("[deauthenticate] closing popup")();
         this.close();
       }
-      api.tabs.each(function(tab) {
-        api.icon.set(tab, "icons/keep.faint.png");
-        api.tabs.emit(tab, "session_change", null);
-      });
     }
   })
 }

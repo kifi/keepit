@@ -98,7 +98,7 @@ exports.log.error = function(exception, context) {
 exports.noop = function() {};
 
 exports.on = {
-  beforeSearch: new Listeners,  // TODO: dispatch this event!
+  beforeSearch: new Listeners,
   search: new Listeners,
   install: new Listeners,
   update: new Listeners,
@@ -489,6 +489,10 @@ for each (let win in windows) {
     pages[tab.id] || createPage(tab);
   }
 }
+
+// before search
+
+require('./location').onFocus(dispatch.bind(exports.on.beforeSearch));
 
 // navigation handling
 

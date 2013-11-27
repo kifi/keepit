@@ -5,9 +5,9 @@
 function initCompose($c, enterToSend, opts) {
   'use strict';
   var $f = $c.find('.kifi-compose');
-  var $t = $f.find(".kifi-compose-to");
+  var $t = $f.find('.kifi-compose-to');
   var $d = $f.find('.kifi-compose-draft');
-  var defaultText = $d.data("default");  // real text, not placeholder
+  var defaultText = $d.data('default');  // real text, not placeholder
 
   $d.focus(function () {
     var r, sel = window.getSelection();
@@ -18,14 +18,14 @@ function initCompose($c, enterToSend, opts) {
       sel.removeAllRanges();
       sel.addRange(r);
       $(this).data('preventNextMouseUp', true); // to avoid clearing selection
-    } else if ((r = $d.data("sel"))) {
+    } else if ((r = $d.data('sel'))) {
       // restore previous selection
       sel.removeAllRanges();
       sel.addRange(r);
     }
   }).blur(function () {
     if (!convertDraftToText($d.html())) {
-      if (defaultText && $t.tokenInput("get").length) {
+      if (defaultText && $t.tokenInput('get').length) {
         $f.removeClass('kifi-empty');
         $d.text(defaultText);
       } else {
@@ -39,7 +39,7 @@ function initCompose($c, enterToSend, opts) {
     $d.data('sel', getSelRange());
 
     if ($d.data('preventNextMouseUp')) {
-      $d.removeData("preventNextMouseUp");
+      $d.removeData('preventNextMouseUp');
       e.preventDefault();
     }
   }).on('mousedown mouseup click', function () {
@@ -55,13 +55,13 @@ function initCompose($c, enterToSend, opts) {
     }
   }).keyup(function () {
     $d.data('sel', getSelRange());
-  }).on("input", function () {
+  }).on('input', function () {
     var empty = this.firstElementChild === this.lastElementChild && !this.textContent;
     if (empty) {
       $d.empty();
     }
     $f.toggleClass('kifi-empty', empty);
-  }).on("paste", function (e) {
+  }).on('paste', function (e) {
     var cd = e.originalEvent.clipboardData;
     if (cd) {
       e.preventDefault();
@@ -73,35 +73,35 @@ function initCompose($c, enterToSend, opts) {
     $t.tokenInput({}, {
       searchDelay: 0,
       minChars: 1,
-      placeholder: "To",
+      placeholder: 'To',
       hintText: '',
-      noResultsText: "",
+      noResultsText: '',
       searchingText: '',
       animateDropdown: false,
       resultsLimit: 4,
       preventDuplicates: true,
       allowTabOut: true,
       tokenValue: 'id',
-      theme: "Kifi",
+      theme: 'Kifi',
       classes: {
         tokenList: 'kifi-ti-list',
-        token: "kifi-ti-token",
+        token: 'kifi-ti-token',
         tokenReadOnly: 'kifi-ti-token-readonly',
-        tokenDelete: "kifi-ti-token-delete",
+        tokenDelete: 'kifi-ti-token-delete',
         selectedToken: 'kifi-ti-token-selected',
-        highlightedToken: "kifi-ti-token-highlighted",
+        highlightedToken: 'kifi-ti-token-highlighted',
         dropdown: 'kifi-root kifi-ti-dropdown',
-        dropdownItem: "kifi-ti-dropdown-item",
+        dropdownItem: 'kifi-ti-dropdown-item',
         dropdownItem2: 'kifi-ti-dropdown-item',
-        selectedDropdownItem: "kifi-ti-dropdown-item-selected",
+        selectedDropdownItem: 'kifi-ti-dropdown-item-selected',
         inputToken: 'kifi-ti-token-input',
-        focused: "kifi-ti-focused",
+        focused: 'kifi-ti-focused',
         disabled: 'kifi-ti-disabled'
       },
       zindex: 999999999992,
       resultsFormatter: function (f) {
         return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' +
-          Mustache.escape(f.name) + "</li>";
+          Mustache.escape(f.name) + '</li>';
       },
       onAdd: function () {
         if (defaultText && !$d.text()) {
@@ -120,7 +120,7 @@ function initCompose($c, enterToSend, opts) {
         f.name = f.firstName + ' ' + f.lastName;
       });
       $t.data('settings').local_data = friends;
-      $t.data("friends", friends);
+      $t.data('friends', friends);
     });
   }
 
@@ -131,6 +131,9 @@ function initCompose($c, enterToSend, opts) {
     }
   }).submit(function (e) {
     e.preventDefault();
+    if ($f.data('submitted')) {
+      return;
+    }
     var text;
     if ($f.hasClass('kifi-empty') || !(text = convertDraftToText($d.html()))) {
       $d.focus();
@@ -143,23 +146,25 @@ function initCompose($c, enterToSend, opts) {
         return;
       }
     }
-    var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
-    setTimeout($.fn.removeClass.bind($submit, "kifi-active"), 10);
+    var $submit = $f.find('.kifi-compose-submit').addClass('kifi-active');
+    setTimeout($.fn.removeClass.bind($submit, 'kifi-active'), 10);
     opts.onSubmit(text, recipients);
     if (opts.resetOnSubmit) {
       $d.empty().focus().triggerHandler('input');
+    } else {
+      $f.data('submitted', true);
     }
   })
   .hoverfu('.kifi-compose-snapshot', function (configureHover) {
     var $a = $(this);
     render('html/keeper/titled_tip', {
-      title: "Microfind",
+      title: 'Microfind',
       html: 'Click to mark something on<br>the page and reference it in<br>your message.'
     }, function (html) {
       configureHover(html, {
         mustHoverFor: 500,
         hideAfter: 3000,
-        click: "hide",
+        click: 'hide',
         position: {my: 'center bottom-13', at: 'center top', of: $a, collision: 'none'}});
     });
   })
@@ -171,7 +176,7 @@ function initCompose($c, enterToSend, opts) {
 
       // insert link
       var r = $d.data('sel'), $a = $('<a>', {href: 'x-kifi-sel:' + selector, text: 'look\u00A0here'}), pad = true;
-      if (r && r.startContainer === r.endContainer && !$(r.endContainer).closest("a").length) {
+      if (r && r.startContainer === r.endContainer && !$(r.endContainer).closest('a').length) {
         var par = r.endContainer, i = r.startOffset, j = r.endOffset;
         if (par.nodeType == 3) {  // text
           var s = par.textContent;
@@ -219,15 +224,15 @@ function initCompose($c, enterToSend, opts) {
     var prefix = CO_KEY + '-';
     var $tip = $(this), tipTextNode = this.firstChild;
     var $alt = $('<span class=kifi-compose-tip-alt>')
-      .text((enterToSend ? prefix : "") + tipTextNode.nodeValue.replace(prefix, ""))
+      .text((enterToSend ? prefix : '') + tipTextNode.nodeValue.replace(prefix, ''))
       .css({'min-width': $tip.outerWidth(), 'visibility': 'hidden'})
       .hover(
         $.fn.addClass.bind($alt, 'kifi-hover'),
         $.fn.removeClass.bind($alt, 'kifi-hover'));
-    var $menu = $("<span class=kifi-compose-tip-menu>").append($alt).insertAfter($tip);
-    $tip.css("min-width", $alt.outerWidth()).addClass("kifi-active");
-    $alt.css("visibility", "").mouseup(hide.bind(null, true));
-    document.addEventListener("mousedown", docMouseDown, true);
+    var $menu = $('<span class=kifi-compose-tip-menu>').append($alt).insertAfter($tip);
+    $tip.css('min-width', $alt.outerWidth()).addClass('kifi-active');
+    $alt.css('visibility', '').mouseup(hide.bind(null, true));
+    document.addEventListener('mousedown', docMouseDown, true);
     function docMouseDown(e) {
       hide($alt[0].contains(e.target));
       if ($tip[0].contains(e.target)) {
@@ -236,18 +241,18 @@ function initCompose($c, enterToSend, opts) {
       e.preventDefault();
     }
     function hide(toggle) {
-      document.removeEventListener("mousedown", docMouseDown, true);
-      $tip.removeClass("kifi-active");
+      document.removeEventListener('mousedown', docMouseDown, true);
+      $tip.removeClass('kifi-active');
       $menu.remove();
       if (toggle) {
         enterToSend = !enterToSend;
-        log("[enterToSend]", enterToSend)();
-        tipTextNode.nodeValue = enterToSend ? tipTextNode.nodeValue.replace(prefix, "") : prefix + tipTextNode.nodeValue;
-        api.port.emit("set_enter_to_send", enterToSend);
+        log('[enterToSend]', enterToSend)();
+        tipTextNode.nodeValue = enterToSend ? tipTextNode.nodeValue.replace(prefix, '') : prefix + tipTextNode.nodeValue;
+        api.port.emit('set_enter_to_send', enterToSend);
       }
     }
   })
-  .find(".kifi-compose-submit")
+  .find('.kifi-compose-submit')
   .click(function () {
     $f.submit();
   })

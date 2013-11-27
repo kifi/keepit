@@ -2257,6 +2257,7 @@ $(function () {
 			clearTagInput();
 		}
 		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
+		mixpanel.track_pageview();
 	}
 
 	function queryFromUri(uri) {
@@ -2826,6 +2827,7 @@ $(function () {
 
 	function updateMe(data) {
 		me = data;
+		mixpanel.identify(me.id);
 		$('.my-pic').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
 		$('.my-name').text(data.firstName + ' ' + data.lastName);
 		$('.my-description').text(data.description || '\u00A0'); // nbsp

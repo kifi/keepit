@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import scala.concurrent.{Future, Await}
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import com.google.inject.Inject
@@ -21,13 +21,19 @@ import play.api.libs.json._
 import views.html
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.service.ServiceType
 import java.math.BigInteger
 import java.security.SecureRandom
 import com.keepit.common.store.S3ImageStore
-import com.keepit.heimdal.{HeimdalServiceClient}
+import com.keepit.heimdal._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.model.KifiInstallation
+import com.keepit.model.SocialConnection
+import com.keepit.model.EmailAddress
+import scala.Some
+import com.keepit.model.KeepToCollection
+import com.keepit.model.UserExperiment
+import com.keepit.common.akka.SafeFuture
 
 case class UserStatistics(
     user: User,
@@ -329,7 +335,9 @@ class AdminUserController @Inject() (
         case Some(ue) => Some(userExperimentRepo.save(ue.withState(UserExperimentStates.ACTIVE)))
         case None => Some(userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType)))
       }) foreach { _ =>
-        eliza.sendToUser(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
+        val experiments = userExperimentRepo.getUserExperiments(userId)
+        eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
+        heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
       }
     }
     Ok(Json.obj(experiment -> true))
@@ -378,7 +386,9 @@ class AdminUserController @Inject() (
     db.readWrite { implicit session =>
       userExperimentRepo.get(userId, ExperimentType.get(experiment)).foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
-        eliza.sendToUser(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
+        val experiments = userExperimentRepo.getUserExperiments(userId)
+        eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
+        heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
       }
     }
     Ok(Json.obj(experiment -> false))
@@ -441,5 +451,50 @@ class AdminUserController @Inject() (
       userRepo.all.sortBy(_.id.get.id).foreach{ u => userRepo.save(u) }
     }
     Ok("OK. Bumping up user sequence numbers")
+  }
+
+  def resetMixpanelProfile(userId: Id[User]) = AdminHtmlAction { implicit request =>
+    Async { SafeFuture {
+      val user = db.readOnly { implicit session => userRepo.get(userId) }
+      doResetMixpanelProfile(user)
+      Redirect(routes.AdminUserController.userView(userId))
+    }}
+  }
+
+  def resetAllMixpanelProfiles() = AdminHtmlAction { implicit request =>
+    Async { SafeFuture {
+      val allUsers = db.readOnly { implicit s => userRepo.all }
+      allUsers.foreach(doResetMixpanelProfile)
+      Ok("All user profiles have been reset in Mixpanel")
+    }}
+  }
+
+  private def doResetMixpanelProfile(user: User) = {
+    val userId = user.id.get
+    if (user.state == UserStates.INACTIVE)
+      heimdal.deleteUser(userId)
+    else {
+      val properties = new EventContextBuilder
+      db.readOnly { implicit session =>
+        properties += ("$first_name", user.firstName)
+        properties += ("$last_name", user.lastName)
+        properties += ("$created", user.createdAt)
+        properties += ("state", user.state.value)
+
+        val keeps = bookmarkRepo.getCountByUser(userId)
+        val publicKeeps = bookmarkRepo.getCountByUser(userId, includePrivate = false)
+        val privateKeeps = keeps - publicKeeps
+        properties += ("keeps", keeps)
+        properties += ("publicKeeps", publicKeeps)
+        properties += ("privateKeeps", privateKeeps)
+        properties += ("tags", collectionRepo.getByUser(userId).length)
+        properties += ("kifiConnections", userConnectionRepo.getConnectionCount(userId))
+        properties += ("socialConnections", socialConnectionRepo.getUserConnectionCount(userId))
+        properties += ("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value).toSeq)
+
+        userValueRepo.getValue(userId, Gender.key).foreach { gender => properties += (Gender.key, Gender(gender).toString) }
+      }
+      heimdal.setUserProperties(userId, properties.data.toSeq: _*)
+    }
   }
 }

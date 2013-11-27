@@ -101,7 +101,7 @@ class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) 
     }
 
     request.map { req =>
-      contextBuilder += ("remoteAddress", ipOpt.getOrElse(req.headers.get("X-Forwarded-For").getOrElse(req.remoteAddress)))
+      contextBuilder += ("ip", ipOpt.getOrElse(req.headers.get("X-Forwarded-For").getOrElse(req.remoteAddress)))
       contextBuilder += ("userAgent", req.headers.get("User-Agent").getOrElse(""))
       contextBuilder += ("doNotTrack", req.headers.get("do-not-track").exists(_ == "1"))
 
