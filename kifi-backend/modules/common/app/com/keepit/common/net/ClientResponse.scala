@@ -13,6 +13,7 @@ import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
 
+import com.keepit.common.logging.Logging
 import com.keepit.common._
 import com.keepit.common.strings._
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
@@ -28,6 +29,11 @@ import org.apache.commons.lang3.RandomStringUtils
 import com.ning.http.util.AsyncHttpProviderUtils
 
 
+case class SlowJsonParsingException(request: Request, response: ClientResponse, tracking: JsonParserTracking)
+    extends Exception(s"[${request.httpUri.service}] Slow JSON parsing on ${request.httpUri.summary} tracking-id:${request.trackingId} time:${tracking.time}ms data-size:${response.bytes.length} ${tracking.message}"){
+  override def toString(): String = getMessage
+}
+
 trait ClientResponse {
   def res: Response
   def bytes: Array[Byte]
@@ -37,7 +43,7 @@ trait ClientResponse {
   def status: Int
 }
 
-class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser) extends ClientResponse {
+class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser) extends ClientResponse with Logging {
 
   override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 
@@ -64,13 +70,16 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
   }
 
   lazy val json: JsValue = {
+    val trackTimeThreshold = if(request.httpUri.url.contains("/internal/shoebox/database/getIndexable")) {
+      5000//ms
+    } else {
+      100//ms
+    }
     try {
-      val startTime = System.currentTimeMillis
-      val json: JsValue = jsonParser.parse(bytes)
-      val jsonTime = System.currentTimeMillis - startTime
+      val (json, tracking) = jsonParser.parse(bytes, trackTimeThreshold)
 
-      if (jsonTime > 100 && !request.httpUri.url.contains("/internal/shoebox/database/getIndexable")) {//ms
-        val exception = request.tracer.withCause(SlowJsonParsingException(request, this, jsonTime.toInt))
+      tracking foreach { info =>
+        val exception = request.tracer.withCause(SlowJsonParsingException(request, this, info))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
@@ -78,10 +87,11 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
           )
         )
       }
-      if (json == null) JsNull else json
+
+      json
     } catch {
       case e: Throwable =>
-        println("bad res: %s".format(body))
+        log.error(s"bad res: $body")
         throw e
     }
   }
@@ -91,7 +101,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
       res.xml
     } catch {
       case e: Throwable =>
-        println("bad res: %s".format(body))
+        log.error(s"bad res: $body")
         throw e
     }
   }

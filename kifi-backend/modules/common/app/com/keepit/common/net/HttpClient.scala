@@ -35,11 +35,6 @@ case class LongWaitException(request: Request, response: ClientResponse, waitTim
   override def toString(): String = getMessage
 }
 
-case class SlowJsonParsingException(request: Request, response: ClientResponse, time: Int)
-    extends Exception(s"[${request.httpUri.service}] Slow JSON parsing on ${request.httpUri.summary} tracking-id:${request.trackingId} time:${time}ms data-size:${response.bytes.length}"){
-  override def toString(): String = getMessage
-}
-
 trait HttpUri {
   val serviceInstanceOpt: Option[ServiceInstance] = None
   def url: String

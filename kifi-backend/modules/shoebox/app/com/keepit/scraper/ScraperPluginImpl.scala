@@ -71,8 +71,8 @@ class ScraperPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    log.info("starting ScraperPluginImpl")
-    scheduleTask(actor.system, 30 seconds, 1 minutes, actor.ref, Scrape)
+    log.info(s"[onStart] starting ScraperPluginImpl with scraperConfig=$scraperConfig}")
+    scheduleTask(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, Scrape)
   }
   override def onStop() {
     log.info("stopping ScraperPluginImpl")
