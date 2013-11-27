@@ -130,7 +130,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   }
 
   private def assignConfig(userId: Id[User], userSegment: Int) = {
-    if (hashBasedRand(userId) < 0.33f && userSegmentExperiments.size == 4) {
+    if (userSegmentExperiments.size == 4 && hashBasedRand(userId) < 0.33f) {
       val ex = userSegmentExperiments(userSegment)
       val config = defaultConfig(ex.config.params)
       (config, ex.id)
