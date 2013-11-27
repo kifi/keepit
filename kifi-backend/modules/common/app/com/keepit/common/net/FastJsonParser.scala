@@ -16,10 +16,10 @@ object FastJsonParser {
   val nullVal: JsValue = JsNull
 }
 
-case class JsonParserTracking(time: Long, message: String)
+case class JsonParserTrackingErrorMessage(message: String) extends AnyVal
 
 class FastJsonParser() {
-  def parse(bytes: Array[Byte], alertThreshold: Int = 100): (JsValue, Option[JsonParserTracking]) = {
+  def parse(bytes: Array[Byte], alertThreshold: Int = 100): (JsValue, Long, Option[JsonParserTrackingErrorMessage]) = {
     val startTime = System.currentTimeMillis
     val json = fastParse(bytes)
     val jsonTime = System.currentTimeMillis - startTime
@@ -35,13 +35,13 @@ class FastJsonParser() {
         } else {
           "long message, no attempt to match"
         }
-        Some(JsonParserTracking(jsonTime, message))
+        Some(JsonParserTrackingErrorMessage(message))
       } else {
         None
       }
 
     val notNull = if (json == null) JsNull else json
-    (notNull, tracking)
+    (notNull, jsonTime, tracking)
   }
 
   //scala pattern matching on array is very slow using strings on small arrays
