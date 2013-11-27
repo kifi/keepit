@@ -134,7 +134,7 @@ class ShoeboxServiceClientImpl @Inject() (
   private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
 
-  private def redundantDBConnectionCheck(request: Seq[_]) {
+  private def redundantDBConnectionCheck(request: Iterable[_]) {
     if (request.isEmpty) {
       airbrakeNotifier.notify("ShoeboxServiceClient: trying to call DB with empty list.")
     }
@@ -248,7 +248,6 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
-    redundantDBConnectionCheck(userIds)
     val (cachedUsers, needToGetUsers) = userIds.map({ u =>
       u -> cacheProvider.externalUserIdCache.get(ExternalUserIdKey(u))
     }).foldRight((Map[ExternalId[User], Id[User]](), Seq[ExternalId[User]]())) { (uOpt, res) =>
@@ -269,8 +268,8 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
-    redundantDBConnectionCheck(userIds)
     cacheProvider.basicUserCache.bulkGetOrElseFuture(userIds.map{ BasicUserUserIdKey(_) }.toSet){ keys =>
+      redundantDBConnectionCheck(keys)
       val payload = JsArray(keys.toSeq.map(x => JsNumber(x.userId.id)))
       call(Shoebox.internal.getBasicUsers(), payload).map{ res =>
         res.json.as[Map[String, BasicUser]].map{ u =>

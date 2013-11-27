@@ -386,7 +386,9 @@ class AdminUserController @Inject() (
     db.readWrite { implicit session =>
       userExperimentRepo.get(userId, ExperimentType.get(experiment)).foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
-        eliza.sendToUser(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
+        val experiments = userExperimentRepo.getUserExperiments(userId)
+        eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
+        heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
       }
     }
     Ok(Json.obj(experiment -> false))
@@ -455,7 +457,7 @@ class AdminUserController @Inject() (
     Async { SafeFuture {
       val user = db.readOnly { implicit session => userRepo.get(userId) }
       doResetMixpanelProfile(user)
-      Ok
+      Redirect(routes.AdminUserController.userView(userId))
     }}
   }
 
@@ -479,7 +481,12 @@ class AdminUserController @Inject() (
         properties += ("$created", user.createdAt)
         properties += ("state", user.state.value)
 
-        properties += ("keeps", bookmarkRepo.getCountByUser(userId))
+        val keeps = bookmarkRepo.getCountByUser(userId)
+        val publicKeeps = bookmarkRepo.getCountByUser(userId, includePrivate = false)
+        val privateKeeps = keeps - publicKeeps
+        properties += ("keeps", keeps)
+        properties += ("publicKeeps", publicKeeps)
+        properties += ("privateKeeps", privateKeeps)
         properties += ("tags", collectionRepo.getByUser(userId).length)
         properties += ("kifiConnections", userConnectionRepo.getConnectionCount(userId))
         properties += ("socialConnections", socialConnectionRepo.getUserConnectionCount(userId))

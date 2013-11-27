@@ -42,4 +42,5 @@
     var handler = spec.handler || defaultHandler;
     $(document).on(events, spec.selector, handler.bind(document, type, spec));
   }
+
 })();

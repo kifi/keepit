@@ -31,12 +31,10 @@ case class NonOKResponseException(url: HttpUri, response: ClientResponse, reques
 }
 
 case class LongWaitException(request: Request, response: ClientResponse, waitTime: Int, duration: Int, remoteTime: Int)
-    extends Exception(s"[${request.httpUri.service}] Long Wait on ${request.httpUri.summary} tracking-id:${request.trackingId} total-time:${duration}ms remote-time:${remoteTime}ms wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status}"){
-  override def toString(): String = getMessage
-}
-
-case class SlowJsonParsingException(request: Request, response: ClientResponse, time: Int)
-    extends Exception(s"[${request.httpUri.service}] Slow JSON parsing on ${request.httpUri.summary} tracking-id:${request.trackingId} time:${time}ms data-size:${response.bytes.length}"){
+    extends Exception(
+      s"[${request.httpUri.service}] Long Wait on ${request.httpUri.summary} " +
+      s"tracking-id:${request.trackingId} parse-time:${response.parsingTime.getOrElse("NA")} total-time:${duration}ms remote-time:${remoteTime}ms " +
+      s"wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status}"){
   override def toString(): String = getMessage
 }
 
@@ -90,6 +88,7 @@ case class HttpClientImpl(
     timeout: Int = 5000,
     headers: List[(String, String)] = List(),
     airbrake: Provider[AirbrakeNotifier],
+    fastJsonParser: FastJsonParser,
     accessLog: AccessLog,
     serviceDiscovery: ServiceDiscovery,
     silentFail: Boolean = false) extends HttpClient with Logging {
@@ -159,7 +158,7 @@ case class HttpClientImpl(
   private def req(url: HttpUri): Request = new Request(WS.url(url.url).withTimeout(timeout), url, headers, accessLog, serviceDiscovery)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
-    val clientResponse = new ClientResponseImpl(request, response, airbrake)
+    val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser)
     if (response.status / 100 != validResponseClass) {
       val exception = new NonOKResponseException(request.httpUri, clientResponse, requestBody)
       if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
@@ -187,6 +186,7 @@ case class HttpClientImpl(
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
+        parsingTime = res.parsingTime.map(_.toInt),
         remoteLeader = remoteLeader,
         result = "success",
         query = request.queryString,
@@ -245,74 +245,5 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
   def post(body: JsValue) = {record(); wsRequest.post(body)}
   def post(body: NodeSeq) = {record(); wsRequest.post(body)}
   def delete() =            {record(); wsRequest.delete()}
-}
-
-trait ClientResponse {
-  def res: Response
-  def bytes: Array[Byte]
-  def body: String
-  def json: JsValue
-  def xml: NodeSeq
-  def status: Int
-}
-
-class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier]) extends ClientResponse {
-
-  override def toString: String = s"ClientResponse with [status: $status, body: $body]"
-
-  def status: Int = res.status
-
-  lazy val bytes: Array[Byte] = res.ahcResponse.getResponseBodyAsBytes()
-
-  lazy val body: String = {
-    val ahcResponse = res.ahcResponse
-
-    //+ the following is copied from play.api.libs.ws.WS
-    // RFC-2616#3.7.1 states that any text/* mime type should default to ISO-8859-1 charset if not
-    // explicitly set, while Plays default encoding is UTF-8.  So, use UTF-8 if charset is not explicitly
-    // set and content type is not text/*, otherwise default to ISO-8859-1
-    val contentType = Option(ahcResponse.getContentType).getOrElse("application/octet-stream")
-    val charset = Option(AsyncHttpProviderUtils.parseCharset(contentType)).getOrElse {
-      if (contentType.startsWith("text/"))
-        AsyncHttpProviderUtils.DEFAULT_CHARSET
-      else
-        "utf-8"
-    }
-    //-
-    new String(bytes, charset)
-  }
-
-  lazy val json: JsValue = {
-    try {
-      val startTime = System.currentTimeMillis
-      val json = Json.parse(bytes)
-      val jsonTime = System.currentTimeMillis - startTime
-
-      if (jsonTime > 200 && !request.httpUri.url.contains("/internal/shoebox/database/getIndexable")) {//ms
-        val exception = request.tracer.withCause(SlowJsonParsingException(request, this, jsonTime.toInt))
-        airbrake.get.notify(
-          AirbrakeError.outgoing(
-            request = request.req,
-            exception = exception
-          )
-        )
-      }
-      if (json == null) JsNull else json
-    } catch {
-      case e: Throwable =>
-        println("bad res: %s".format(body))
-        throw e
-    }
-  }
-
-  def xml: NodeSeq = {
-    try {
-      res.xml
-    } catch {
-      case e: Throwable =>
-        println("bad res: %s".format(body))
-        throw e
-    }
-  }
 }
 
