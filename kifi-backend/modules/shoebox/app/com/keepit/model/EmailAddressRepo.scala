@@ -64,7 +64,10 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
         } else {
           userValueRepo.getValue(userId, "pending_primary_email").flatMap { pending =>
             getByUserAndCode(userId, verificationCode).flatMap { ver =>
-              if (ver.address == pending) Some(ver) else None
+              if (ver.address == pending) {
+                userValueRepo.clearValue(userId, "pending_primary_email")
+                Some(ver)
+              } else None
             }
           }
         }
