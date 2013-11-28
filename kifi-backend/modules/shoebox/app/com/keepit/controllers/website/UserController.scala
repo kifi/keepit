@@ -220,29 +220,59 @@ class UserController @Inject() (
     }
   }
 
+  private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def updateCurrentUser() = AuthenticatedJsonToJsonAction(true) { implicit request =>
     request.body.asOpt[UpdatableUserInfo] map { userData =>
-      db.readWrite { implicit session =>
-        userData.description foreach { userValueRepo.setValue(request.userId, "user_description", _) }
-        if (userData.firstName.isDefined || userData.lastName.isDefined) {
-          val user = userRepo.get(request.userId)
-          val cleanFirst = User.sanitizeName(userData.firstName getOrElse user.firstName)
-          val cleanLast = User.sanitizeName(userData.lastName getOrElse user.lastName)
-          val updatedUser = user.copy(firstName = cleanFirst, lastName = cleanLast)
-          userRepo.save(updatedUser)
-        }
-        for (emails <- userData.emails) {
-          val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(emails contains _.address)
-          for (email <- toRemove) {
-            emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
-          }
-          for (address <- emails.toSet -- existing.map(_.address)) {
-            emailRepo.save(EmailAddress(userId = request.userId, address = address))
-          }
-        }
+      val hasInvalidEmails = userData.emails.exists { addresses =>
+        addresses.map(em => emailRegex.findFirstIn(em.address).isEmpty).contains(true)
       }
-      Async {
-        getUserInfo(request)
+      if (hasInvalidEmails) {
+        BadRequest(Json.obj("error" -> "bad email addresses"))
+      } else {
+        db.readWrite { implicit session =>
+          for (emails <- userData.emails) {
+            val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(emails contains _.address)
+            // Remove missing emails
+            // todo: Do not remove if this is the primary, last verified address, or last address
+            for (email <- toRemove) {
+              emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
+            }
+            // Add new emails
+            for (address <- emails.map(_.address).toSet -- existing.map(_.address)) {
+              emailRepo.save(EmailAddress(userId = request.userId, address = address))
+            }
+            // Set the correct email as primary
+            for (emailInfo <- emails) {
+              if (emailInfo.isPrimary) {
+                val emailRecordOpt = emailRepo.getByAddressOpt(emailInfo.address)
+                emailRecordOpt.map { emailRecord =>
+                  if (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get) {
+                    userRepo.save(request.user.copy(primaryEmailId = Some(emailRecord.id.get)))
+                  }
+                }
+              }
+            }
+          }
+          userData.description foreach { description =>
+            val trimmed = description.trim
+            if (trimmed != "") {
+              userValueRepo.setValue(request.userId, "user_description", trimmed)
+            } else {
+              userValueRepo.clearValue(request.userId, "user_description")
+            }
+          }
+          // Users cannot change their name for now. When we're ready, use the code below:
+//          if ((userData.firstName.isDefined && userData.firstName.get.trim != "") || (userData.lastName.isDefined && userData.lastName.get.trim != "")) {
+//            val user = userRepo.get(request.userId)
+//            val cleanFirst = User.sanitizeName(userData.firstName getOrElse user.firstName)
+//            val cleanLast = User.sanitizeName(userData.lastName getOrElse user.lastName)
+//            val updatedUser = user.copy(firstName = cleanFirst, lastName = cleanLast)
+//            userRepo.save(updatedUser)
+//          }
+        }
+        Async {
+          getUserInfo(request)
+        }
       }
     } getOrElse {
       BadRequest(Json.obj("error" -> "could not parse user info from body"))
@@ -250,7 +280,7 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
-    userCommander.getUserInfo(request.userId) map { user =>
+    userCommander.getUserInfo(request.user) map { user =>
       Ok(toJson(user.basicUser).as[JsObject] ++
          toJson(user.info).as[JsObject] ++
          Json.obj("experiments" -> request.experiments.map(_.value)))
