@@ -365,16 +365,17 @@ class MessagingController @Inject() (
       val muted = db.readOnly { implicit session =>
         userThreadRepo.isMuted(userId, thread.id.get)
       }
+      val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
+      val originalAuthorIdx = authorActivityInfos.filter(_.started).zipWithIndex.head._2
+      val numAuthors = authorActivityInfos.length
       val lastSeenOpt : Option[DateTime] = orderedActivityInfo.filter(_.userId==userId).head.lastSeen
       val unseenAuthors : Int = lastSeenOpt match {
-        case Some(lastSeen) => orderedActivityInfo.filter(ta => ta.lastActive.isDefined && ta.lastActive.get.isAfter(lastSeen)).length
-        case None => orderedActivityInfo.length
+        case Some(lastSeen) => authorActivityInfos.filter(_.lastActive.get.isAfter(lastSeen)).length
+        case None => numAuthors
       }
-      val originalAuthor = orderedActivityInfo.filter(_.started).zipWithIndex.head._2
-      val numAuthors = orderedActivityInfo.filter(_.lastActive.isDefined).length
       val numUnread = db.readOnly{ implicit session => messageRepo.getNumMessagesAfter(thread.id.get,lastSeenOpt) }
 
-      val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator, !muted, originalAuthor, if (muted) 0 else unseenAuthors, numAuthors, numUnread, muted)
+      val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator, !muted, originalAuthorIdx, if (muted) 0 else unseenAuthors, numAuthors, numUnread, muted)
 
       db.readWrite(attempts=2){ implicit session =>
         userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
