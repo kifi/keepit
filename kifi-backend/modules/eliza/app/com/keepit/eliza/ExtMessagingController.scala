@@ -78,7 +78,7 @@ class ExtMessagingController @Inject() (
           contextBuilder += ("threadId", thread.id.get.id)
           contextBuilder += ("url", thread.url.getOrElse(""))
           contextBuilder += ("isActuallyNew", messages.length<=1)
-          contextBuilder += ("extVersion", version.getOrElse(""))
+          contextBuilder += ("extensionVersion", version.getOrElse(""))
 
           thread.uriId.map{ uriId =>
             shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
@@ -117,7 +117,7 @@ class ExtMessagingController @Inject() (
 
       contextBuilder += ("threadId", message.thread.id)
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
-      contextBuilder += ("extVersion", version.getOrElse(""))
+      contextBuilder += ("extensionVersion", version.getOrElse(""))
       thread.participants.foreach { participants =>
         contextBuilder += ("recipients", participants.allExcept(request.userId).map(_.id).toSeq)
       }
