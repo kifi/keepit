@@ -210,7 +210,7 @@ class ExtMessagingController @Inject() (
     },
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
       val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
-      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
+      val unvisited = messagingController.getUnreadThreadCount(socket.userId)
       socket.channel.push(Json.arr("notifications", notices, unvisited))
     },
     "get_notifications_by_url" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
@@ -239,7 +239,7 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr(requestId.toLong, notices))
     },
     "get_unread_notifications_count" -> { _ =>
-      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
+      val unvisited = messagingController.getUnreadThreadCount(socket.userId)
       socket.channel.push(Json.arr("unread_notifications_count", unvisited))
     },
     "set_message_read" -> { case JsString(messageId) +: _ =>
