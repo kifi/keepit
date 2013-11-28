@@ -21,8 +21,6 @@ import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.TextQuery
-import com.keepit.search.query.LuceneExplanationExtractor
-import com.keepit.search.query.LuceneScoreNames
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
@@ -370,8 +368,6 @@ class MainSearcher(
           false
         }
       }
-      // if others have really high score, clear hits from mine and friends (this decision must be made after filtering out orphan URIs)
-      if (queue.size > 0 && highScore < queue.highScore * tailCutting * tailCutting) hits.clear()
       queue.foreach{ h => hits.insert(h) }
     }
 
