@@ -172,11 +172,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         }
         //Analytics
         SafeFuture {
-          val contextBuilder = userEventContextBuilder(Some(request), ipOpt)
-          contextBuilder += ("experiments", streamSession.experiments.map(_.toString).toSeq)
-          contextBuilder += ("userStatus", ExperimentType.getUserStatus(streamSession.experiments))
-          versionOpt.foreach{ version => contextBuilder += ("extensionVersion", version) }
-          heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, EventType("ws_connect"), tStart))
+          val context = authenticatedWebSocketsContextBuilder(request, ipOpt, streamSession, versionOpt).build
+          heimdal.trackEvent(UserEvent(streamSession.userId.id, context, EventType("ws_connect"), tStart))
         }
 
         def endSession(reason: String)(implicit channel: Concurrent.Channel[JsArray]) = {
@@ -190,11 +187,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           onDisconnect(socketInfo)
           //Analytics
           SafeFuture {
-            val contextBuilder = userEventContextBuilder(Some(request), ipOpt)
-            contextBuilder += ("experiments", streamSession.experiments.map(_.toString).toSeq)
-            contextBuilder += ("userStatus", ExperimentType.getUserStatus(streamSession.experiments))
-            versionOpt.foreach{ version => contextBuilder += ("extensionVersion", version) }
-            heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, EventType("ws_disconnect"), tStart))
+            val context = authenticatedWebSocketsContextBuilder(request, ipOpt, streamSession, versionOpt).build
+            heimdal.trackEvent(UserEvent(streamSession.userId.id, context, EventType("ws_disconnect"), tStart))
           }
         }
 
@@ -231,6 +225,14 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
       }
     }
+  }
+
+  private def authenticatedWebSocketsContextBuilder(request: RequestHeader, remoteAddress: Option[String], streamSession: StreamSession, extensionVersion: Option[String]) = {
+    val contextBuilder = userEventContextBuilder(request, remoteAddress)
+    contextBuilder.addExperiments(streamSession.experiments)
+    contextBuilder.addUserAgent(streamSession.userAgent)
+    extensionVersion.foreach{ version => contextBuilder += ("extensionVersion", version) }
+    contextBuilder
   }
 
 }

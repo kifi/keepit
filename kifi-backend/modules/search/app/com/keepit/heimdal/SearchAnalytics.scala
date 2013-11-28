@@ -39,7 +39,7 @@ class SearchAnalytics @Inject() (
     articleSearchResult: ArticleSearchResult) = {
 
     val obfuscatedSearchId = obfuscate(articleSearchResultStore.getInitialSearchId(articleSearchResult), userId)
-    val contextBuilder = userEventContextBuilder(Some(request))
+    val contextBuilder = userEventContextBuilder(request)
 
     kifiVersion.foreach { version => contextBuilder += ("extVersion", version.toString) }
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
@@ -230,7 +230,7 @@ class SearchAnalytics @Inject() (
     val initialSearchId = articleSearchResultStore.getInitialSearchId(uuid)
     val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
 
-    val contextBuilder = userEventContextBuilder(Some(request))
+    val contextBuilder = userEventContextBuilder(request)
 
     // Search Context
     contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
