@@ -215,9 +215,7 @@ class UserController @Inject() (
   }
 
   def currentUser = AuthenticatedJsonAction(true) { implicit request =>
-    Async {
-      getUserInfo(request)
-    }
+    getUserInfo(request)
   }
 
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
@@ -243,11 +241,13 @@ class UserController @Inject() (
             }
             // Set the correct email as primary
             for (emailInfo <- emails) {
-              if (emailInfo.isPrimary) {
+              if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
                 val emailRecordOpt = emailRepo.getByAddressOpt(emailInfo.address)
                 emailRecordOpt.map { emailRecord =>
-                  if (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get) {
+                  if (emailRecord.verified && (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get)) {
                     userRepo.save(request.user.copy(primaryEmailId = Some(emailRecord.id.get)))
+                  } else {
+                    userValueRepo.setValue(request.userId, "pending_primary_email", emailInfo.address)
                   }
                 }
               }
@@ -270,9 +270,7 @@ class UserController @Inject() (
 //            userRepo.save(updatedUser)
 //          }
         }
-        Async {
-          getUserInfo(request)
-        }
+        getUserInfo(request)
       }
     } getOrElse {
       BadRequest(Json.obj("error" -> "could not parse user info from body"))
@@ -280,11 +278,10 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
-    userCommander.getUserInfo(request.user) map { user =>
-      Ok(toJson(user.basicUser).as[JsObject] ++
-         toJson(user.info).as[JsObject] ++
-         Json.obj("experiments" -> request.experiments.map(_.value)))
-    }
+    val user = userCommander.getUserInfo(request.user)
+    Ok(toJson(user.basicUser).as[JsObject] ++
+       toJson(user.info).as[JsObject] ++
+       Json.obj("experiments" -> request.experiments.map(_.value)))
   }
 
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed")

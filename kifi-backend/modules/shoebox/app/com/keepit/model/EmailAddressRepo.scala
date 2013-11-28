@@ -21,7 +21,7 @@ trait EmailAddressRepo extends Repo[EmailAddress] {
 }
 
 @Singleton
-class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[EmailAddress] with EmailAddressRepo {
+class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, userValueRepo: UserValueRepo, userRepo: UserRepo) extends DbRepo[EmailAddress] with EmailAddressRepo {
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
   import DBSession._
@@ -57,7 +57,21 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
     val now = clock.now()
     table.filter(e => e.userId === userId && e.verificationCode === verificationCode && e.state === EmailAddressStates.UNVERIFIED)
       .map(e => e.verifiedAt ~ e.updatedAt ~ e.state).update((now, now, EmailAddressStates.VERIFIED)) match {
-      case count if count > 0 => (true, true)
+      case count if count > 0 =>
+        val user = userRepo.get(userId)
+        val pendingPrimary = if (user.primaryEmailId.isEmpty) {
+          getByUserAndCode(userId, verificationCode)
+        } else {
+          userValueRepo.getValue(userId, "pending_primary_email").flatMap { pending =>
+            getByUserAndCode(userId, verificationCode).flatMap { ver =>
+              if (ver.address == pending) Some(ver) else None
+            }
+          }
+        }
+        pendingPrimary.map { pp =>
+          userRepo.save(user.copy(primaryEmailId = pp.id))
+        }
+        (true, true)
       case _ => (getByUserAndCode(userId, verificationCode).isDefined, false)
     }
   }

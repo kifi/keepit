@@ -17,15 +17,20 @@ import play.api.libs.concurrent.Execution.Implicits._
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 
 
-case class EmailInfo(address: String, isPrimary: Boolean, isVerified: Boolean)
+case class EmailInfo(address: String, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
 object EmailInfo {
   implicit val format = new Format[EmailInfo] {
     def reads(json: JsValue): JsResult[EmailInfo] = {
       val arr = json.as[JsArray]
-      JsSuccess(EmailInfo(address = arr(0).as[String], isPrimary = arr(1).as[Boolean], isVerified = arr(2).asOpt[Boolean].getOrElse(false)))
+      JsSuccess(EmailInfo(
+        address = arr(0).as[String],
+        isPrimary = arr(1).as[Boolean],
+        isVerified = arr(2).asOpt[Boolean].getOrElse(false),
+        isPendingPrimary = arr(3).asOpt[Boolean].getOrElse(false)
+      ))
     }
     def writes(ei: EmailInfo): JsValue = {
-      Json.arr(JsString(ei.address), JsBoolean(ei.isPrimary), JsBoolean(ei.isVerified))
+      Json.arr(JsString(ei.address), JsBoolean(ei.isPrimary), JsBoolean(ei.isVerified), JsBoolean(ei.isPendingPrimary))
     }
   }
 }
@@ -96,28 +101,32 @@ class UserCommander @Inject() (
     abook.uploadContacts(userId, origin, payload)
   }
 
-  def getUserInfo(user: User): Future[BasicUserInfo] = {
-    val basicUserFut = db.readOnlyAsync { implicit s => basicUserRepo.load(user.id.get) }
-    val descriptionFut = db.readOnlyAsync { implicit s => userValueRepo.getValue(user.id.get, "user_description") }
-    val emailsFut = db.readOnlyAsync { implicit s => emailRepo.getAllByUser(user.id.get) }
-    for {
-      basicUser <- basicUserFut
-      description <- descriptionFut
-      emails <- emailsFut
-    } yield {
-      val primary = user.primaryEmailId.map(_.id).getOrElse(0L)
-      val emailInfos = emails.sortWith { case (a, b) =>
-        if (a.id.get.id == primary) true
-        else if (b.id.get.id == primary) false
-        else if (a.verified && b.verified) a.id.get.id < b.id.get.id
-        else if (a.verified) true
-        else if (b.verified) false
-        else  a.id.get.id < b.id.get.id
-      }.map { email =>
-        EmailInfo(email.address, isVerified = email.verified, isPrimary = user.primaryEmailId.isDefined && user.primaryEmailId.get.id == email.id.get.id)
-      }
-      BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)))
+  def getUserInfo(user: User): BasicUserInfo = {
+    val (basicUser, description, emails, pendingPrimary) = db.readOnly { implicit session =>
+      val basicUser = basicUserRepo.load(user.id.get)
+      val description =  userValueRepo.getValue(user.id.get, "user_description")
+      val emails = emailRepo.getAllByUser(user.id.get)
+      val pendingPrimary = userValueRepo.getValue(user.id.get, "pending_primary_email")
+      (basicUser, description, emails, pendingPrimary)
     }
+
+    val primary = user.primaryEmailId.map(_.id).getOrElse(0L)
+    val emailInfos = emails.sortWith { case (a, b) =>
+      if (a.id.get.id == primary) true
+      else if (b.id.get.id == primary) false
+      else if (a.verified && b.verified) a.id.get.id < b.id.get.id
+      else if (a.verified) true
+      else if (b.verified) false
+      else  a.id.get.id < b.id.get.id
+    }.map { email =>
+      EmailInfo(
+        address = email.address,
+        isVerified = email.verified,
+        isPrimary = user.primaryEmailId.isDefined && user.primaryEmailId.get.id == email.id.get.id,
+        isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get == email.address
+      )
+    }
+    BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)))
   }
 
 }
