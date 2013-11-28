@@ -11,6 +11,7 @@ import com.keepit.serializer.{Companion, TypeCode}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.model.ExperimentType
 
 
 case class EventType(name: String)
@@ -109,6 +110,8 @@ class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) 
         case authRequest: AuthenticatedRequest[_] =>
           authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
           contextBuilder += ("experiments", authRequest.experiments.map(_.value).toSeq)
+          contextBuilder += ("admin", authRequest.experiments.contains(ExperimentType.ADMIN))
+          contextBuilder += ("fake", authRequest.experiments.contains(ExperimentType.FAKE))
         case _ =>
       }
     }
