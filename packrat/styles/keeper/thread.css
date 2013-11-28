@@ -40,8 +40,11 @@
   display: none;
 }
 .kifi-message-sent:hover>time,
-.kifi-messages-sent-inner:not(:hover)>.kifi-message-sent:last-child>time {
+.kifi-message-sent:last-child>time {
   display: block;
+}
+.kifi-message-sent:hover~.kifi-message-sent:last-child>time {
+  display: none;
 }
 img.kifi-message-pic {
   float: left;

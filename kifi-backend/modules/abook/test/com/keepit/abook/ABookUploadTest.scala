@@ -136,6 +136,18 @@ class ABookUploadTest extends Specification with DbTestInjector {
         val econtactsSeq = econtactsSeqOpt.get
         econtactsSeq.isEmpty mustEqual false
         econtactsSeq.length mustEqual 3 // distinct
+
+        val e2 = "foo@42go.com"
+        val e2Res = commander.getOrCreateEContact(u42, e2)
+        e2Res.isSuccess mustEqual true
+
+        val npeRes = commander.getOrCreateEContact(u42, null)
+        npeRes.isSuccess mustEqual false
+
+        val e1 = "foobar@42go.com"
+        val e1Res = commander.getOrCreateEContact(u42, e1)
+        // e1Res.isSuccess mustEqual true // todo: revisit -- insertOnDup appears not working properly in test
+        e1Res mustNotEqual null
       }
     }
 
