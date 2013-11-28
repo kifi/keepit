@@ -11,7 +11,7 @@ import com.keepit.serializer.{Companion, TypeCode}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.model.{UserStatus, ExperimentType}
+import com.keepit.model.ExperimentType
 
 
 case class EventType(name: String)
