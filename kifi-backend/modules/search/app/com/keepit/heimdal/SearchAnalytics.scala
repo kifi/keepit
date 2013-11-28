@@ -41,7 +41,7 @@ class SearchAnalytics @Inject() (
     val obfuscatedSearchId = obfuscate(articleSearchResultStore.getInitialSearchId(articleSearchResult), userId)
     val contextBuilder = userEventContextBuilder(request)
 
-    kifiVersion.foreach { version => contextBuilder += ("extVersion", version.toString) }
+    kifiVersion.foreach { version => contextBuilder += ("extensionVersion", version.toString) }
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
 
     contextBuilder += ("queryTerms", articleSearchResult.query.split("""\b""").length)
