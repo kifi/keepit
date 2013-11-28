@@ -28,12 +28,13 @@ import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
 import com.keepit.realtime.UrbanAirship
 import com.keepit.common.KestrelCombinator
-import com.keepit.eliza.model.{NonUserParticipant, NonUserThread}
+import com.keepit.eliza.model.{NonUserEmailParticipant, NonUserParticipant, NonUserThread}
 import play.api.libs.json.JsString
 import scala.Some
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
+import com.keepit.abook.ABookServiceClient
 
 
 //For migration only
@@ -64,6 +65,7 @@ class MessagingController @Inject() (
     protected val shoebox: ShoeboxServiceClient,
     protected val db: Database,
     notificationRouter: NotificationRouter,
+    abookServiceClient: ABookServiceClient,
     clock: Clock,
     uriNormalizationUpdater: UriNormalizationUpdater,
     urbanAirship: UrbanAirship)
@@ -368,11 +370,11 @@ class MessagingController @Inject() (
       }
       val lastSeenOpt : Option[DateTime] = orderedActivityInfo.filter(_.userId==userId).head.lastSeen
       val unseenAuthors : Int = lastSeenOpt match {
-        case Some(lastSeen) => orderedActivityInfo.filter(ta => ta.lastActive.isDefined && ta.lastActive.get.isAfter(lastSeen)).length
+        case Some(lastSeen) => orderedActivityInfo.count(ta => ta.lastActive.isDefined && ta.lastActive.get.isAfter(lastSeen))
         case None => orderedActivityInfo.length
       }
       val originalAuthor = orderedActivityInfo.filter(_.started).zipWithIndex.head._2
-      val numAuthors = orderedActivityInfo.filter(_.lastActive.isDefined).length
+      val numAuthors = orderedActivityInfo.count(_.lastActive.isDefined)
       val numUnread = db.readOnly{ implicit session => messageRepo.getNumMessagesAfter(thread.id.get,lastSeenOpt) }
 
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator, !muted, originalAuthor, if (muted) 0 else unseenAuthors, numAuthors, numUnread, muted)
@@ -426,22 +428,27 @@ class MessagingController @Inject() (
   )
 
   def constructUserRecipients(userExtIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
-    val loadedUser = userExtIds.map { userExtId =>
-      userExtId match {
-        case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
-          engineers.map(ExternalId[User])
-        case ExternalId("42424242-4242-4242-4242-424242424202") => // FortyTwo Family
-          family.map(ExternalId[User])
-        case ExternalId("42424242-4242-4242-4242-424242424203") => // FortyTwo Product
-          product.map(ExternalId[User])
-        case notAGroup => Seq(notAGroup)
-      }
+    val loadedUser = userExtIds.map {
+      case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
+        engineers.map(ExternalId[User])
+      case ExternalId("42424242-4242-4242-4242-424242424202") => // FortyTwo Family
+        family.map(ExternalId[User])
+      case ExternalId("42424242-4242-4242-4242-424242424203") => // FortyTwo Product
+        product.map(ExternalId[User])
+      case notAGroup => Seq(notAGroup)
     }
     shoebox.getUserIdsByExternalIds(loadedUser.flatten)
   }
 
-  def constructNonUserRecipients(nonUsers: Seq[NonUserParticipant]): Future[Seq[NonUserParticipant]] = {
-    Promise.successful(nonUsers).future
+  def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[NonUserParticipant]): Future[Seq[NonUserParticipant]] = {
+    val pimpedParticipants = nonUsers.map {
+      case email: NonUserEmailParticipant =>
+        abookServiceClient.getEContactByEmail(userId, email.address.address).map {
+          case Some(eContact) => email.copy(econtactId = eContact.id)
+          case None => email // todo: Wire it up to create contact!
+        }
+    }
+    Future.sequence(pimpedParticipants)
   }
 
 
@@ -474,7 +481,7 @@ class MessagingController @Inject() (
             lastSeen = None,
             lastMsgFromOther = None,
             lastNotification = JsNull,
-            started = (userId == from)
+            started = userId == from
           ))
         }
       }
@@ -513,7 +520,7 @@ class MessagingController @Inject() (
         thread = thread.id.get,
         threadExtId = thread.externalId,
         messageText = messageText,
-        sentOnUrl = urlOpt.map(Some(_)).getOrElse(thread.url),
+        sentOnUrl = urlOpt.map(Some).getOrElse(thread.url),
         sentOnUriId = thread.uriId
       ))
     }

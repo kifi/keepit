@@ -64,7 +64,7 @@ class ExtMessagingController @Inject() (
 
     val messageSubmitResponse = for {
       userRecipients <- messagingController.constructUserRecipients(userExtRecipients)
-      nonUserRecipients <- messagingController.constructNonUserRecipients(nonUserRecipients)
+      nonUserRecipients <- messagingController.constructNonUserRecipients(request.userId, nonUserRecipients)
     } yield {
 
       val (thread, message) = messagingController.sendNewMessage(request.user.id.get, userRecipients, nonUserRecipients, urls, title, text)
@@ -95,7 +95,6 @@ class ExtMessagingController @Inject() (
               }
             }
           }
-
         }
 
         val tDiff = currentDateTime.getMillis - tStart.getMillis
@@ -104,7 +103,7 @@ class ExtMessagingController @Inject() (
       }
     }
 
-    Async(messageSubmitResponse.flatMap(r => r))
+    Async(messageSubmitResponse.flatMap(r => r)) // why scala.concurrent.Future doesn't have a .flatten is beyond me
   }
 
   private def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]) = {
@@ -113,9 +112,10 @@ class ExtMessagingController @Inject() (
         case Some(externalUserId) => (externalUserIds :+ externalUserId, nonUserParticipants)
         case None =>
           elem.asOpt[JsObject].flatMap { obj =>
+            // The strategy is to get the identifier in the correct wrapping type, and pimp it with `constructNonUserRecipients` later
             (obj \ "kind").asOpt[String] match {
               case Some("email") if (obj \ "email").asOpt[String].isDefined =>
-                Some(NonUserEmailParticipant(GenericEmailAddress((obj \ "email").as[String]), None)) // todo: Hook up econtactIds
+                Some(NonUserEmailParticipant(GenericEmailAddress((obj \ "email").as[String]), None))
               case _ => // Unsupported kind
                 None
             }
