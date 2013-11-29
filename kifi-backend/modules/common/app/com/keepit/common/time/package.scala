@@ -51,7 +51,7 @@ package object time {
     def reads(json: JsValue) = try {
       json.asOpt[String] match {
         case Some(timeStr) => JsSuccess(parseStandardTime(timeStr))
-        case None => JsSuccess(new DateTime(json.as[Long]))
+        case None => JsSuccess(new DateTime(json.as[Long], DEFAULT_DATE_TIME_ZONE))
       }
     } catch {
       case ex: Throwable => JsError(s"Could not deserialize time $json")

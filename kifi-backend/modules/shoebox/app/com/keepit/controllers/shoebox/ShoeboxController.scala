@@ -54,7 +54,8 @@ class ShoeboxController @Inject() (
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
   scrapeInfoRepo:ScrapeInfoRepo,
   friendRequestRepo: FriendRequestRepo,
-  userValueRepo: UserValueRepo
+  userValueRepo: UserValueRepo,
+  kifiInstallationRepo: KifiInstallationRepo
 )
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
@@ -472,7 +473,12 @@ class ShoeboxController @Inject() (
   }
 
   def getUserValue(userId: Id[User], key: String) = SafeAsyncAction { request =>
-    val value = db.readWrite { implicit session => userValueRepo.getValue(userId, key) }
+    val value = db.readOnly { implicit session => userValueRepo.getValue(userId, key) }
     Ok(Json.toJson(value))
+  }
+
+  def getExtensionVersion(installationId: ExternalId[KifiInstallation]) = SafeAsyncAction { request =>
+    val version = db.readOnly { implicit session => kifiInstallationRepo.get(installationId).version.toString }
+    Ok(JsString(version))
   }
 }
