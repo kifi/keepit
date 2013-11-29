@@ -361,7 +361,6 @@ class MessagingController @Inject() (
   private def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]) : Unit = {
     SafeFuture {
       val locator = "/messages/" + thread.externalId
-
       val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
       val numAuthors = authorActivityInfos.length
       val lastSeenOpt: Option[DateTime] = orderedActivityInfo.filter(_.userId==userId).head.lastSeen
