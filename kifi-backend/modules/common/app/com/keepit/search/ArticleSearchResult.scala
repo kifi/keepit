@@ -61,7 +61,7 @@ object ArticleSearchResult {
     (__ \ 'time).format[DateTime] and
     (__ \ 'svVariance).format[Float] and
     (__ \ 'svExistenceVar).format[Float] and
-    (__ \ 'toShow).format[Boolean] and
+    (__ \ 'toShow).format[Boolean]((Reads[Boolean](jsValue => JsSuccess(jsValue.asOpt[Boolean].getOrElse(true))))) and
     (__ \ 'collections).format[Set[Long]] and
     (__ \ 'lang).format[Lang]
   )(ArticleSearchResult.apply, unlift(ArticleSearchResult.unapply))
