@@ -362,11 +362,10 @@ class MessagingController @Inject() (
     SafeFuture {
       val locator = "/messages/" + thread.externalId
       val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
-      val numAuthors = authorActivityInfos.length
       val lastSeenOpt: Option[DateTime] = orderedActivityInfo.filter(_.userId==userId).head.lastSeen
       val unseenAuthors: Int = lastSeenOpt match {
         case Some(lastSeen) => authorActivityInfos.filter(_.lastActive.get.isAfter(lastSeen)).length
-        case None => numAuthors
+        case None => authorActivityInfos.length
       }
       val (numUnread: Int, muted: Boolean) = db.readOnly { implicit session =>
         (messageRepo.getNumMessagesAfter(thread.id.get, lastSeenOpt), userThreadRepo.isMuted(userId, thread.id.get))
@@ -380,7 +379,7 @@ class MessagingController @Inject() (
         unread = !muted,  // TODO: stop automatically marking messages read in muted threads
         originalAuthorIdx = authorActivityInfos.filter(_.started).zipWithIndex.head._2,
         unseenAuthors = if (muted) 0 else unseenAuthors,  // TODO: see TODO above
-        numAuthors = numAuthors,
+        numAuthors = authorActivityInfos.length,
         numUnread = numUnread,
         muted = muted)
 
