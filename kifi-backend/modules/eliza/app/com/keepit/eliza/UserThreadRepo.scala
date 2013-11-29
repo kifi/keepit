@@ -271,7 +271,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int = {
-    Query((for (row <- table if row.user === userId && row.unread) yield row).length).first
+    Query((for (row <- table if row.user === userId && row.unread && !row.muted) yield row).length).first
   }
 
   def getSendableNotificationsAfter(userId: Id[User], after: DateTime)(implicit session: RSession): Seq[JsObject] = {

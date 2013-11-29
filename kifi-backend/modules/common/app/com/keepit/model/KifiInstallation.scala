@@ -4,9 +4,11 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.common.net.UserAgent
 import org.joda.time.DateTime
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{AccessLog, Logging}
 import play.api.mvc.QueryStringBindable
 import play.api.mvc.JavascriptLitteral
+import com.keepit.common.cache._
+import scala.concurrent.duration.Duration
 
 case class KifiVersion(major: Int, minor: Int, patch: Int, tag: String = "") extends Ordered[KifiVersion]  {
   assert(major >= 0 && minor >= 0 && patch >= 0)
@@ -67,3 +69,12 @@ case class KifiInstallation (
 }
 
 object KifiInstallationStates extends States[KifiInstallation]
+
+case class ExtensionVersionInstallationIdKey(externalId: ExternalId[KifiInstallation]) extends Key[String] {
+  override val version = 1
+  val namespace = "extension_version_by_installation_id"
+  def toKey(): String = externalId.id
+}
+
+class ExtensionVersionInstallationIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends StringCacheImpl[ExtensionVersionInstallationIdKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)

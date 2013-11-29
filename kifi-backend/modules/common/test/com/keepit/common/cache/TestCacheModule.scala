@@ -134,5 +134,9 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Provides
   def searchFriendsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new SearchFriendsCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new ExtensionVersionInstallationIdCache(stats, accessLog, (outerRepo, 7 days))
 }
 
