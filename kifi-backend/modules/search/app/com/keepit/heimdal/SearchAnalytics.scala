@@ -39,9 +39,9 @@ class SearchAnalytics @Inject() (
     articleSearchResult: ArticleSearchResult) = {
 
     val obfuscatedSearchId = obfuscate(articleSearchResultStore.getInitialSearchId(articleSearchResult), userId)
-    val contextBuilder = userEventContextBuilder(Some(request))
+    val contextBuilder = userEventContextBuilder(request)
 
-    kifiVersion.foreach { version => contextBuilder += ("extVersion", version.toString) }
+    kifiVersion.foreach { version => contextBuilder += ("extensionVersion", version.toString) }
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
 
     contextBuilder += ("queryTerms", articleSearchResult.query.split("""\b""").length)
@@ -230,7 +230,7 @@ class SearchAnalytics @Inject() (
     val initialSearchId = articleSearchResultStore.getInitialSearchId(uuid)
     val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
 
-    val contextBuilder = userEventContextBuilder(Some(request))
+    val contextBuilder = userEventContextBuilder(request)
 
     // Search Context
     contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
@@ -240,11 +240,12 @@ class SearchAnalytics @Inject() (
 
     // Kifi Performances
     contextBuilder += ("kifiResults", kifiResults)
-    contextBuilder += ("kifiCollapsed", kifiCollapsed)
+    contextBuilder += ("kifiExpanded", !kifiCollapsed)
     contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
     contextBuilder += ("kifiLate", kifiCollapsed && initialSearchResult.toShow)
-    kifiTime.foreach { kifiDevTime => contextBuilder += ("kifiDeliveryTime", kifiDevTime) }
-    referenceTime.foreach { refTime => contextBuilder += ("3rdPartyDeliveryTime", refTime) }
+    kifiTime.foreach { kifiDevTime => contextBuilder += ("kifiLatency", kifiDevTime) }
+    referenceTime.foreach { refTime => contextBuilder += ("thirdPartyLatency", refTime) }
+    for { kifiDevTime <- kifiTime; refTime <- referenceTime } yield { contextBuilder += ("kifiDelay", kifiDevTime - refTime) }
     contextBuilder += ("isInitialSearch", uuid == initialSearchId)
 
     contextBuilder

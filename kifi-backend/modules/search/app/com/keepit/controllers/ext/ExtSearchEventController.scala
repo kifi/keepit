@@ -130,10 +130,15 @@ class ExtSearchEventController @Inject() (
   } tap { urlOpt => if (urlOpt.isEmpty) log.error(s"failed to extract the destination URL from $searchEngine: $searchResultUrl") }
 
   private def checkForMissingDeliveryTimes(kifiDeliveryTime: Option[Int], otherDeliveryTime: Option[Int], request: AuthenticatedRequest[JsValue], method: String) = {
-    if (kifiDeliveryTime.isEmpty)
-      reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is missing."))
-    if (otherDeliveryTime.isEmpty)
-      reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Google delivery time is missing."))
+    kifiDeliveryTime match {
+      case None => reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is missing."))
+      case Some(time) => if (time < 0) reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is negative."))
+    }
+
+    otherDeliveryTime match {
+      case None => reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is missing."))
+      case Some(time) => if (time < 0) reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is negative."))
+    }
   }
 
   private def reportToLéo(error: AirbrakeError) = {
