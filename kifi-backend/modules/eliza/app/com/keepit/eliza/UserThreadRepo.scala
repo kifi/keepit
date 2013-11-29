@@ -272,7 +272,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getPendingNotificationCount(userId: Id[User])(implicit session: RSession): Int = {
-    Query((for (row <- table if row.user === userId && !row.notificationPending && !row.muted) yield row).length).first
+    Query((for (row <- table if row.user === userId && row.notificationPending && !row.muted) yield row).length).first
   }
 
   def getSendableNotificationsAfter(userId: Id[User], after: DateTime)(implicit session: RSession): Seq[JsObject] = {
