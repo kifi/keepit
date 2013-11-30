@@ -44,7 +44,11 @@ case class ArticleSearchResult(
   lang: Lang = Lang("en"))
 
 object ArticleSearchResult {
-  implicit val format = (
+  implicit val format = new Format[ArticleSearchResult] {
+    def writes(article: ArticleSearchResult) = formatMacro.writes(article)
+    def reads(json: JsValue) = try { formatMacro.reads(json) } catch { case ex => throw new Exception(json.toString(), ex) }
+  }
+  private val formatMacro = (
     (__ \ 'last).formatNullable(ExternalId.format[ArticleSearchResult]) and // uuid of the last search. the frontend is responsible for tracking and this is meant for sessionization.
     (__ \ 'query).format[String] and
     (__ \ 'hits).format(TraversableFormat.seq[ArticleHit]) and
