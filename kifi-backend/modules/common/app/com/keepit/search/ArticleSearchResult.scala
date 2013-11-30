@@ -43,10 +43,13 @@ case class ArticleSearchResult(
   collections: Set[Long] = Set.empty[Long],
   lang: Lang = Lang("en"))
 
-object ArticleSearchResult {
+object ArticleSearchResult extends Logging {
   implicit val format = new Format[ArticleSearchResult] {
     def writes(article: ArticleSearchResult) = formatMacro.writes(article)
-    def reads(json: JsValue) = try { formatMacro.reads(json) } catch { case ex: Throwable => throw new Exception(json.toString(), ex) }
+    def reads(json: JsValue) = try { formatMacro.reads(json) } catch { case ex: Throwable =>
+      log.error(s"Deserialization error of ArticleSearchResult: $ex \n\n" + json.toString() )
+      throw ex
+    }
   }
   private val formatMacro: Format[ArticleSearchResult] = (
     (__ \ 'last).formatNullable(ExternalId.format[ArticleSearchResult]) and // uuid of the last search. the frontend is responsible for tracking and this is meant for sessionization.

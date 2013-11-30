@@ -231,28 +231,21 @@ class SearchAnalytics @Inject() (
 
     val contextBuilder = userEventContextBuilder(request)
 
-    try {
-      val initialSearchId = articleSearchResultStore.getInitialSearchId(uuid)
-      val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
+    val initialSearchId = articleSearchResultStore.getInitialSearchId(uuid)
+    val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
 
-      // Search Context
-      contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
-      contextBuilder += ("isInitialSearch", uuid == initialSearchId)
-      searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-      contextBuilder += ("origin", origin)
-      ("queryTerms", initialSearchResult.query.split("""\b""").length)
+    // Search Context
+    contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
+    contextBuilder += ("isInitialSearch", uuid == initialSearchId)
+    searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
+    contextBuilder += ("origin", origin)
+    ("queryTerms", initialSearchResult.query.split("""\b""").length)
 
-      // Kifi Performances
-      contextBuilder += ("kifiResults", kifiResults)
-      contextBuilder += ("kifiExpanded", !kifiCollapsed)
-      contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
-      contextBuilder += ("kifiLate", kifiCollapsed && initialSearchResult.toShow)
-    } catch { case ex =>
-      airbrake.notify(AirbrakeError(exception = ex, message = Some("Exception in Search Analytics")))
-    }
-
-
-
+    // Kifi Performances
+    contextBuilder += ("kifiResults", kifiResults)
+    contextBuilder += ("kifiExpanded", !kifiCollapsed)
+    contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
+    contextBuilder += ("kifiLate", kifiCollapsed && initialSearchResult.toShow)
     kifiTime.foreach { kifiDevTime => contextBuilder += ("kifiLatency", kifiDevTime) }
     referenceTime.foreach { refTime => contextBuilder += ("thirdPartyLatency", refTime) }
     for { kifiDevTime <- kifiTime; refTime <- referenceTime } yield { contextBuilder += ("kifiDelay", kifiDevTime - refTime) }
