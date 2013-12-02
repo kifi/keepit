@@ -198,7 +198,7 @@ class ExtBookmarksController @Inject() (
           //Analytics
           SafeFuture{
             bookmarks.foreach { bookmark =>
-              val contextBuilder = userEventContextBuilder(Some(request))
+              val contextBuilder = userEventContextBuilder(request)
 
               contextBuilder += ("isPrivate", bookmark.isPrivate)
               contextBuilder += ("url", bookmark.url)

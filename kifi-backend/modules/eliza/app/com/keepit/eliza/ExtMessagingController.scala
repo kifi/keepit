@@ -12,6 +12,7 @@ import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.search.SearchServiceClient
+import com.keepit.common.crypto.SimpleDESCrypt
 
 import scala.util.{Success, Failure}
 
@@ -49,6 +50,9 @@ class ExtMessagingController @Inject() (
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
+  private val crypt = new SimpleDESCrypt
+  private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
+
   /*********** REST *********************/
 
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
@@ -81,7 +85,7 @@ class ExtMessagingController @Inject() (
           contextBuilder += ("threadId", thread.id.get.id)
           contextBuilder += ("url", thread.url.getOrElse(""))
           contextBuilder += ("isActuallyNew", messages.length<=1)
-          contextBuilder += ("extVersion", version.getOrElse(""))
+          contextBuilder += ("extensionVersion", version.getOrElse(""))
 
           thread.uriId.map{ uriId =>
             shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
@@ -138,11 +142,11 @@ class ExtMessagingController @Inject() (
 
     //Analytics
     SafeFuture {
-      val contextBuilder = userEventContextBuilder(Some(request))
+      val contextBuilder = userEventContextBuilder(request)
 
       contextBuilder += ("threadId", message.thread.id)
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
-      contextBuilder += ("extVersion", version.getOrElse(""))
+      contextBuilder += ("extensionVersion", version.getOrElse(""))
       thread.participants.foreach { participants =>
         contextBuilder += ("recipients", participants.allUsersExcept(request.userId).map(_.id).toSeq)
       }
@@ -235,7 +239,7 @@ class ExtMessagingController @Inject() (
     },
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
       val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
-      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
+      val unvisited = messagingController.getUnreadThreadCount(socket.userId)
       socket.channel.push(Json.arr("notifications", notices, unvisited))
     },
     "get_notifications_by_url" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
@@ -264,7 +268,7 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr(requestId.toLong, notices))
     },
     "get_unread_notifications_count" -> { _ =>
-      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
+      val unvisited = messagingController.getUnreadThreadCount(socket.userId)
       socket.channel.push(Json.arr("unread_notifications_count", unvisited))
     },
     "set_message_read" -> { case JsString(messageId) +: _ =>
@@ -272,20 +276,17 @@ class ExtMessagingController @Inject() (
       messagingController.setNotificationReadForMessage(socket.userId, msgExtId)
       messagingController.setLastSeen(socket.userId, msgExtId)
       SafeFuture {
-        val contextBuilder = userEventContextBuilder()
-        contextBuilder += ("messageExternalId", messageId)
-        contextBuilder += ("global", false)
-        heimdal.trackEvent(UserEvent(socket.userId.id, contextBuilder.build, EventType("notification_read")))
+        val context = messagingContextBuilder(socket, msgExtId, false).build
+        heimdal.trackEvent(UserEvent(socket.userId.id, context, EventType("notification_read")))
       }
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
+      val msgExtId = ExternalId[Message](messageId)
       messagingController.setNotificationReadForMessage(socket.userId, ExternalId[Message](messageId))
-      messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
+      messagingController.setLastSeen(socket.userId, msgExtId)
       SafeFuture {
-        val contextBuilder = userEventContextBuilder()
-        contextBuilder += ("messageExternalId", messageId)
-        contextBuilder += ("global", true)
-        heimdal.trackEvent(UserEvent(socket.userId.id, contextBuilder.build, EventType("notification_read")))
+        val context = messagingContextBuilder(socket, msgExtId, true).build
+        heimdal.trackEvent(UserEvent(socket.userId.id, context, EventType("notification_read")))
       }
     },
     "get_threads_by_url" -> { case JsString(url) +: _ =>  // deprecated in favor of "get_threads"
@@ -307,6 +308,9 @@ class ExtMessagingController @Inject() (
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
       messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
     },
+    "eip" -> { case JsString(eip) +: _ =>
+      socket.ip = crypt.decrypt(ipkey, eip).toOption
+    },
     "log_event" -> { case JsObject(pairs) +: _ =>
       implicit val experimentFormat = State.format[ExperimentType]
       val eventJson = JsObject(pairs).deepMerge(
@@ -318,4 +322,13 @@ class ExtMessagingController @Inject() (
       //else discard!
     }
   )
+
+  private def messagingContextBuilder(socketInfo: SocketInfo, messageId: ExternalId[Message], global: Boolean): EventContextBuilder = {
+    val contextBuilder = userEventContextBuilder()
+    contextBuilder.addExperiments(socketInfo.experiments)
+    contextBuilder += ("extensionVersion", socketInfo.extVersion.getOrElse(""))
+    contextBuilder += ("messageExternalId", messageId.id)
+    contextBuilder += ("global", global)
+    contextBuilder
+  }
 }

@@ -15,7 +15,8 @@ trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnF
 }
 
 @Singleton
-class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[KifiInstallation] with KifiInstallationRepo with ExternalIdColumnDbFunction[KifiInstallation] {
+class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, val versionCache: ExtensionVersionInstallationIdCache)
+  extends DbRepo[KifiInstallation] with KifiInstallationRepo with ExternalIdColumnDbFunction[KifiInstallation] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -33,4 +34,9 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
 
   def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation] =
     (for(k <- table if k.userId === userId && k.externalId === externalId) yield k).firstOption
+
+  override def invalidateCache(kifiInstallation: KifiInstallation)(implicit session: RSession) = {
+    versionCache.set(ExtensionVersionInstallationIdKey(kifiInstallation.externalId), kifiInstallation.version.toString)
+    kifiInstallation
+  }
 }

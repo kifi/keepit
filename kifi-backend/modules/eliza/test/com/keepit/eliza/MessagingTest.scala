@@ -86,15 +86,19 @@ class MessagingTest extends Specification with DbTestInjector {
         val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Set, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat")
         val (thread2, msg2) = messagingController.sendNewMessage(user1, user2n3Set, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!")
 
+        messagingController.getUnreadThreadCount(user1)===0
 
         notified.isDefinedAt(user1)===false
         notified(user2)===2
 
         messagingController.getLatestSendableNotifications(user3, 10)
 
-        messagingController.getPendingNotifications(user3).length===1 //there was only one thread created due to merging
+        messagingController.getUnreadThreadNotifications(user3).length===1 //there was only one thread created due to merging
+        messagingController.getUnreadThreadCount(user3)===1
         messagingController.setAllNotificationsRead(user3)
-        messagingController.getPendingNotifications(user3).length===0
+        messagingController.getUnreadThreadNotifications(user3).length===0
+        messagingController.getUnreadThreadCount(user3)===0
+
 
       }
     }
