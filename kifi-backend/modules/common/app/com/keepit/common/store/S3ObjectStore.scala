@@ -8,8 +8,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.S3Object
-import play.api.libs.json.Json
-import play.api.libs.json.Format
+import play.api.libs.json._
 import play.api.Play.current
 import play.api.Logger
 import play.api.Play
@@ -108,12 +107,13 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
 
 }
 
+class S3ObjectJsonParsinException(message: String) extends Exception(message)
+
 trait S3JsonStore[A,B] extends S3ObjectStore[A, B] {
 
   protected val formatter: Format[B]
 
   protected def idToKey(id: A): String = "%s%s.json".format(keyPrefix, id.toString)
-
 
   protected def packValue(value: B) = {
     val metadata = new ObjectMetadata()
@@ -125,12 +125,15 @@ trait S3JsonStore[A,B] extends S3ObjectStore[A, B] {
     (inputStream, metadata)
   }
 
-  protected def unpackValue(s3obj: S3Object) = {
+  protected def unpackValue(s3obj: S3Object): B = {
     val is = s3obj.getObjectContent
     try {
       val jsonString = scala.io.Source.fromInputStream(is, UTF8).getLines().mkString("\n")
-      val json = Json.parse(jsonString)
-      formatter.reads(json).get
+      formatter.reads(Json.parse(jsonString)) match {
+        case json: JsSuccess[B] => json.get
+        case JsError(errors) =>
+          throw new S3ObjectJsonParsinException(s"[${s3obj.getBucketName()}(${s3obj.getKey()})] Error parsing [$jsonString]: ${errors mkString ","}")
+      }
     } finally {
       is.close
     }
@@ -153,7 +156,7 @@ trait S3BlobStore[A,B] extends S3ObjectStore[A,B] {
     (inputStream, metadata)
   }
 
-  protected def unpackValue(s3Obj: S3Object) = {
+  protected def unpackValue(s3Obj: S3Object): B = {
       val size  = s3Obj.getObjectMetadata().getContentLength()
       val dataStream  = s3Obj.getObjectContent()
       try{
