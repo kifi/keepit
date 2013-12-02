@@ -412,10 +412,11 @@ class MainSearcher(
   }
 
   private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: Option[PersonalizedSearcher]) = {
-    def classify(hit: MutableArticleHit, minScore: Float) = {
-      hit.clickBoost > 1.1f ||
-      hit.scoring.recencyScore > 0.25f ||
-      hit.scoring.textScore > minScore
+    def classify(hit: MutableArticleHit, minScore: Float): Boolean = {
+      if (hit.clickBoost > 1.1f) { log.info(s"show: clickBoost [${hit.clickBoost}]"); true }
+      else if (hit.scoring.recencyScore > 0.25f) { log.info(s"show: recency [${hit.scoring.recencyScore}]"); true }
+      else if (hit.scoring.textScore > minScore) { log.info(s"show: textScore [${hit.scoring.textScore} > $minScore]"); true }
+      else false
     }
 
     if (filter.isDefault && isInitialSearch) {
