@@ -1,31 +1,41 @@
 package com.keepit.commanders
 
-import com.keepit.classify.{Domain, DomainRepo, DomainStates}
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
-import com.keepit.common.time._
 import com.keepit.abook.ABookServiceClient
-
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsObject, Json, JsValue}
-
-import com.google.inject.Inject
-import com.keepit.common.net.URI
-import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
-import play.api.libs.concurrent.Akka
 
+import play.api.libs.json._
+import com.google.inject.Inject
 import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 
+
+case class EmailInfo(address: String, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
+object EmailInfo {
+  implicit val format = new Format[EmailInfo] {
+    def reads(json: JsValue): JsResult[EmailInfo] = {
+      val arr = json.as[JsArray]
+      JsSuccess(EmailInfo(
+        address = arr(0).as[String],
+        isPrimary = arr(1).as[Boolean],
+        isVerified = arr(2).asOpt[Boolean].getOrElse(false),
+        isPendingPrimary = arr(3).asOpt[Boolean].getOrElse(false)
+      ))
+    }
+    def writes(ei: EmailInfo): JsValue = {
+      Json.arr(JsString(ei.address), JsBoolean(ei.isPrimary), JsBoolean(ei.isVerified), JsBoolean(ei.isPendingPrimary))
+    }
+  }
+}
 case class UpdatableUserInfo(
-    description: Option[String], emails: Option[Seq[String]],
+    description: Option[String], emails: Option[Seq[EmailInfo]],
     firstName: Option[String] = None, lastName: Option[String] = None)
 
 case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo)
@@ -91,14 +101,32 @@ class UserCommander @Inject() (
     abook.uploadContacts(userId, origin, payload)
   }
 
-  def getUserInfo(userId: Id[User]): Future[BasicUserInfo] = {
-    for {
-      basicUser <- db.readOnlyAsync { implicit s => basicUserRepo.load(userId) }
-      description <- db.readOnlyAsync { implicit s => userValueRepo.getValue(userId, "user_description").getOrElse("") }
-      emails <- db.readOnlyAsync { implicit s => emailRepo.getAllByUser(userId).map(_.address) }
-    } yield {
-      BasicUserInfo(basicUser, UpdatableUserInfo(Some(description), Some(emails)))
+  def getUserInfo(user: User): BasicUserInfo = {
+    val (basicUser, description, emails, pendingPrimary) = db.readOnly { implicit session =>
+      val basicUser = basicUserRepo.load(user.id.get)
+      val description =  userValueRepo.getValue(user.id.get, "user_description")
+      val emails = emailRepo.getAllByUser(user.id.get)
+      val pendingPrimary = userValueRepo.getValue(user.id.get, "pending_primary_email")
+      (basicUser, description, emails, pendingPrimary)
     }
+
+    val primary = user.primaryEmailId.map(_.id).getOrElse(0L)
+    val emailInfos = emails.sortWith { case (a, b) =>
+      if (a.id.get.id == primary) true
+      else if (b.id.get.id == primary) false
+      else if (a.verified && b.verified) a.id.get.id < b.id.get.id
+      else if (a.verified) true
+      else if (b.verified) false
+      else  a.id.get.id < b.id.get.id
+    }.map { email =>
+      EmailInfo(
+        address = email.address,
+        isVerified = email.verified,
+        isPrimary = user.primaryEmailId.isDefined && user.primaryEmailId.get.id == email.id.get.id,
+        isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get == email.address
+      )
+    }
+    BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)))
   }
 
 }
