@@ -18,7 +18,7 @@ import play.api.libs.json._
 import play.api.libs.json.util._
 import play.api.libs.functional.syntax._
 import scala.slick.lifted.Query
-import scala.slick.jdbc.{StaticQuery => Q}
+import scala.slick.jdbc.StaticQuery
 
 case class Message(
     id: Option[Id[Message]] = None,
@@ -196,7 +196,7 @@ class MessageRepoImpl @Inject() (
 
   def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int) = {
     afterOpt.map{ after =>
-      Q.queryNA[(Int, Int)](s"select count(*), sum(created_at > '$after') from message where thread_id = $threadId").first
+      StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(created_at > '$after') from message where thread_id = $threadId").first
     } getOrElse {
       val n = Query(table.filter(row => row.thread === threadId).length).first
       (n, n)
