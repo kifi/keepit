@@ -1,9 +1,9 @@
 package com.keepit.eliza
 
-import com.keepit.model.{UserNotification, User, DeepLocator, NormalizedURI}
+import com.keepit.model.{User, DeepLocator, NormalizedURI}
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.db.slick.{Database}
-import com.keepit.shoebox.{ShoeboxServiceClient}
+import com.keepit.common.db.slick.Database
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.BasicUser
@@ -11,33 +11,32 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
 
-import scala.concurrent.{Promise, future, Await, Future}
+import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.http.Status.ACCEPTED
 
 import com.google.inject.Inject
 
 import org.joda.time.DateTime
 
-import play.api.libs.json.{JsValue, JsString, JsArray, Json}
+import play.api.libs.json._
 import play.modules.statsd.api.Statsd
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
-import com.keepit.realtime.{PushNotification, UrbanAirship}
-import com.keepit.common.KestrelCombinator
-import com.keepit.eliza.model.{NonUserEmailParticipant, NonUserParticipant, NonUserThread}
-import play.api.libs.json.JsString
-import scala.Some
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsObject
-import com.keepit.realtime.PushNotification
+import com.keepit.realtime.UrbanAirship
+import com.keepit.eliza.model.NonUserParticipant
 import com.keepit.common.KestrelCombinator
 import com.keepit.abook.ABookServiceClient
-import scala.util.Try
+import play.api.libs.json.JsString
+import scala.Some
+import com.keepit.eliza.model.NonUserThread
+import play.api.libs.json.JsArray
+import com.keepit.eliza.model.NonUserEmailParticipant
+import play.api.libs.json.JsObject
+import com.keepit.realtime.PushNotification
 
 
 //For migration only
@@ -492,6 +491,7 @@ class MessagingController @Inject() (
             lastSeen = None,
             lastMsgFromOther = None,
             lastNotification = JsNull,
+            unread = false,
             started = userId == from
           ))
         }
@@ -531,7 +531,7 @@ class MessagingController @Inject() (
         thread = thread.id.get,
         threadExtId = thread.externalId,
         messageText = messageText,
-        sentOnUrl = urlOpt.map(Some).getOrElse(thread.url),
+        sentOnUrl = urlOpt.map(Some(_)).getOrElse(thread.url),
         sentOnUriId = thread.uriId
       ))
     }

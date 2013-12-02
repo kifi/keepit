@@ -80,7 +80,7 @@ class ExtMessagingController @Inject() (
       messageThreadFut.map { case (_, messages) =>
         //Analytics
         SafeFuture {
-          val contextBuilder = userEventContextBuilder(Some(request))
+          val contextBuilder = userEventContextBuilder(request)
           contextBuilder += ("recipients", userRecipients.map(_.id).toSeq) // todo: Anything with nonusers?
           contextBuilder += ("threadId", thread.id.get.id)
           contextBuilder += ("url", thread.url.getOrElse(""))
