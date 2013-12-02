@@ -1,6 +1,5 @@
 package com.keepit.shoebox
 
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -33,7 +32,6 @@ import com.keepit.model.UserConnectionIdKey
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
-import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.scraper.HttpRedirect
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -101,6 +99,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserValue(userId: Id[User], key: String): Future[Option[String]]
   def setUserValue(userId: Id[User], key: String, value: String): Unit
   def getUserSegment(userId: Id[User]): Future[Int]
+  def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -120,7 +119,8 @@ case class ShoeboxCacheProvider @Inject() (
     uriByUrlhashCache: NormalizedURIUrlHashCache,
     userValueCache: UserValueCache,
     userConnCountCache: UserConnectionCountCache,
-    userBookmarkCountCache: BookmarkCountCache)
+    userBookmarkCountCache: BookmarkCountCache,
+    extensionVersionCache: ExtensionVersionInstallationIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -626,6 +626,12 @@ class ShoeboxServiceClientImpl @Inject() (
         Future.successful(segment)
       }
       case _ => call(Shoebox.internal.getUserSegment(userId)).map { _.json.as[Int] }
+    }
+  }
+
+  def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String] = {
+    cacheProvider.extensionVersionCache.getOrElseFuture(ExtensionVersionInstallationIdKey(installationId)) {
+      call(Shoebox.internal.getExtensionVersion(installationId)).map(_.json.as[String])
     }
   }
 }

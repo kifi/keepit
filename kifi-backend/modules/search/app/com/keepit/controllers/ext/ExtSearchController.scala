@@ -115,7 +115,7 @@ class ExtSearchController @Inject() (
 
     SafeFuture {
       // stash timing information
-      searcher.timing()
+      val timeLogs = searcher.timing()
 
       try {
         reportSearch(userId, request, kifiVersion, maxHits, searchFilter, searchExperimentId, searchRes)
@@ -131,10 +131,7 @@ class ExtSearchController @Inject() (
 
       log.info(timing.toString)
 
-      val searchDetails = searchRes.timeLogs match {
-        case Some(timelog) => "main-search detail: " + timelog.toString
-        case None => "main-search detail: N/A"
-      }
+      val searchDetails =  "main-search details: " + timeLogs.toString
       log.info(searchDetails)
 
       val timeLimit = 1000

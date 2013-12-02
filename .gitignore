@@ -31,6 +31,11 @@ kifi-backend/modules/securesocial/bin/*
 kifi-backend/kifi-backend.sublime-project
 kifi-backend/kifi-backend.sublime-workspace
 *.swp
+kifi-backend/modules/macros/.target/*
+kifi-backend/modules/macros/.classpath
+kifi-backend/modules/macros/.project
+kifi-backend/modules/macros/.settings/*
+kifi-backend/modules/macros/.cache
 kifi-backend/modules/common/.target/*
 kifi-backend/modules/common/.classpath
 kifi-backend/modules/common/.project

@@ -19,7 +19,7 @@ class EventTrackingTest extends Specification with TestInjector {
   def setup()(implicit injector: Injector) = {
     val eventTrackingController = inject[EventTrackingController]
 
-    val testContext = EventContext(Map(
+    val testContext = HeimdalContext(Map(
       "testField" -> ContextStringData("Yay!")
     ))
     val userEventRepo = inject[UserEventLoggingRepo].asInstanceOf[TestUserEventLoggingRepo]

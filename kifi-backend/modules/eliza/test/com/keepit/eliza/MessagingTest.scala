@@ -13,9 +13,10 @@ import com.keepit.common.time._
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.db.{Model, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
+import com.keepit.social.BasicUser
 
 import play.api.test.Helpers._
-import play.api.libs.json.{Json}
+import play.api.libs.json.{Json, JsObject}
 import com.keepit.realtime.{UrbanAirship, FakeUrbanAirshipImpl}
 
 
@@ -70,7 +71,7 @@ class MessagingTest extends Specification with DbTestInjector {
     "merge and notify correctly" in {
       withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
 
-        val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
+        val (messagingController, user1, user2, user3, user2n3Seq, notificationRouter) = setup()
 
         var notified = scala.collection.concurrent.TrieMap[Id[User], Int]()
 
@@ -83,18 +84,31 @@ class MessagingTest extends Specification with DbTestInjector {
           }
         }
 
-        val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Set, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat")
-        val (thread2, msg2) = messagingController.sendNewMessage(user1, user2n3Set, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!")
+        val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Seq, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat")
+        val (thread2, msg2) = messagingController.sendNewMessage(user1, user2n3Seq, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!")
 
+        messagingController.getUnreadThreadCount(user1)===0
 
         notified.isDefinedAt(user1)===false
         notified(user2)===2
 
         messagingController.getLatestSendableNotifications(user3, 10)
 
-        messagingController.getPendingNotifications(user3).length===1 //there was only one thread created due to merging
+        messagingController.getUnreadThreadNotifications(user3).length===1 //there was only one thread created due to merging
+        messagingController.getUnreadThreadCount(user3)===1
+
+        val notifications : Seq[JsObject] = messagingController.getLatestUnreadSendableNotifications(user3, 20)
+        notifications.length===1
+        val participants = (notifications.head \ "participants").as[Seq[BasicUser]]
+        participants.length===3
+        participants(0).lastName.endsWith(user1.id.toString)===true
+        participants(1).lastName.endsWith(user2.id.toString)===true
+        participants(2).lastName.endsWith(user3.id.toString)===true
+
         messagingController.setAllNotificationsRead(user3)
-        messagingController.getPendingNotifications(user3).length===0
+        messagingController.getUnreadThreadNotifications(user3).length===0
+        messagingController.getUnreadThreadCount(user3)===0
+
 
       }
     }

@@ -30,7 +30,9 @@ class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingR
 
   private[controllers] def trackInternalEvents(eventsJs: JsValue) = eventsJs.as[JsArray].value.map(trackInternalEvent)
 
-  def trackInternalEventsAction = Action(parse.json) { request =>
+  val TenMB = 1024 * 1024 * 10
+
+  def trackInternalEventsAction = Action(parse.json(maxLength = TenMB)) { request =>
     SafeFuture{
       trackInternalEvents(request.body)
     }(SlowRunningExecutionContext.ec)

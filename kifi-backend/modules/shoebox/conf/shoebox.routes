@@ -444,5 +444,6 @@ GET      /internal/shoebox/database/getFriendRequestBySender @com.keepit.control
 GET      /internal/shoebox/database/userValue         @com.keepit.controllers.shoebox.ShoeboxController.getUserValue(userId: Id[User], key: String)
 POST     /internal/shoebox/database/userValue         @com.keepit.controllers.shoebox.ShoeboxController.setUserValue(userId: Id[User], key: String)
 GET      /internal/shoebox/database/userSegment       @com.keepit.controllers.shoebox.ShoeboxController.getUserSegment(userId: Id[User])
+GET      /internal/shoebox/database/extensionVersion  @com.keepit.controllers.shoebox.ShoeboxController.getExtensionVersion(installationId: ExternalId[KifiInstallation])
 
 ->  / common.Routes

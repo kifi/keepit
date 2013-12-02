@@ -53,8 +53,13 @@ class ABookUploadTest extends Specification with DbTestInjector {
       "name" -> "forty two",
       "firstName" -> "forty",
       "lastName" -> "two",
-      "emails" -> Seq("fortytwo@42go.com", "Foo@42go.com ", "BAR@42go.com  "))
-  )
+      "emails" -> Seq("fortytwo@42go.com", "Foo@42go.com ", "BAR@42go.com  ")),
+    Json.obj(
+      "name" -> "ray",
+      "firstName" -> "ray",
+      "lastName" -> "ng",
+      "emails" -> Seq("ray@42go.com", " rAy@42GO.COM "))
+    )
 
   "ABook Controller" should {
     "handle imports from IOS and gmail" in {
@@ -100,7 +105,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
         val aBookRawInfoSeq = abookInfoSeqOpt.get
         aBookRawInfoSeq.length mustEqual 1
         val contacts = aBookRawInfoSeq(0).contacts.value
-        contacts.length mustEqual 2
+        contacts.length mustEqual 3
         (contacts(0) \ "name").as[String] mustEqual "foo bar"
         (contacts(0) \ "emails").as[Seq[String]].length mustEqual 2
         (contacts(1) \ "name").as[String] mustEqual "forty two"
@@ -110,7 +115,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
         val contactsSeqOpt = contactsJsArr.validate[Seq[Contact]].asOpt
         val contactsSeq = contactsSeqOpt.get
         contactsSeq.isEmpty mustEqual false
-        contactsSeq.length mustEqual 2
+        contactsSeq.length mustEqual 3
 
         val gmailOwner = GmailABookOwnerInfo(Some("123456789"), Some("42@42go.com"), Some(true), Some("42go.com"))
         val gmailUploadJson = Json.obj(
@@ -135,7 +140,18 @@ class ABookUploadTest extends Specification with DbTestInjector {
         econtactsSeqOpt.isEmpty mustEqual false
         val econtactsSeq = econtactsSeqOpt.get
         econtactsSeq.isEmpty mustEqual false
-        econtactsSeq.length mustEqual 3 // distinct
+        econtactsSeq.length mustEqual 4 // distinct
+
+        // todo: remove queryEContacts
+        var qRes = commander.queryEContacts(u42, 10, None, None)
+        qRes.isEmpty mustNotEqual true
+        qRes.length mustEqual 4
+        qRes = commander.queryEContacts(u42, 10, Some("ray"), None)
+        qRes.isEmpty mustNotEqual true
+        qRes.length mustEqual 1
+        qRes = commander.queryEContacts(u42, 10, Some("foo"), None)  // name and email both considered in our current alg
+        qRes.isEmpty mustNotEqual true
+        qRes.length mustEqual 2
 
         val e2 = "foo@42go.com"
         val e2Res = commander.getOrCreateEContact(u42, e2)

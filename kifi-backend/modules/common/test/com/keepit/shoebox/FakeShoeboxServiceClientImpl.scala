@@ -439,4 +439,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def setUserValue(userId: Id[User], key: String, value: String): Unit = {}
 
   def getUserSegment(userId: Id[User]): Future[Int] = ???
+
+  def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String] = Future.successful("")
 }

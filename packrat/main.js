@@ -24,7 +24,7 @@ var pageThreadData = {}; // keyed by normalized url
 var messageData = {}; // keyed by thread id; todo: evict old threads from memory
 var notifications;  // [] would mean user has none
 var timeNotificationsLastSeen = new Date(0);
-var numInNotificationsCounter = 0;  // may include some not yet loaded
+var numUnreadUnmutedThreads = 0;  // may include some not yet loaded
 var haveAllNotifications;  // inferred
 var friends = [];
 var friendsById = {};
@@ -40,7 +40,7 @@ function clearDataCache() {
   messageData = {};
   notifications = null;
   timeNotificationsLastSeen = new Date(0);
-  numInNotificationsCounter = 0;
+  numUnreadUnmutedThreads = 0;
   haveAllNotifications = false;
   friends = [];
   friendsById = {};
@@ -162,7 +162,7 @@ function insertUpdateChronologically(arr, o, time) {
 
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
   if (service.match(/^(?:GET|POST|HEAD|OPTIONS|PUT)$/)) { // shift args if service is missing
-    fail = done, done = data, data = uri, uri = method, method = service, service = "api";
+    fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
   if (typeof data == "function") {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
@@ -301,15 +301,15 @@ var socketHandlers = {
     log("[socket:url_patterns]", patterns)();
     urlPatterns = compilePatterns(patterns);
   },
-  notifications: function(arr, numInCounter) {  // initial load of notifications
-    log("[socket:notifications]", arr, numInCounter)();
+  notifications: function(arr, numUnreadUnmuted) {  // initial load of notifications
+    log("[socket:notifications]", arr, numUnreadUnmuted)();
     if (!notifications) {
       for (var i = 0; i < arr.length; i++) {
         standardizeNotification(arr[i]);
       }
       notifications = arr;
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
-      numInNotificationsCounter = numInCounter;
+      numUnreadUnmutedThreads = numUnreadUnmuted;
       while (notificationsCallbacks.length) {
         notificationsCallbacks.shift()();
       }
@@ -432,13 +432,13 @@ var socketHandlers = {
     tellVisibleTabsNoticeCountIfChanged();
   },
   unread_notifications_count: function(count) {
-    // see comment in syncNumInNotificationsCounter() :(
-    if (numInNotificationsCounter !== count) {
+    // see comment in syncNumUnreadUnmutedThreads() :(
+    if (numUnreadUnmutedThreads !== count) {
       if (notifications) {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
-        reportError("numInNotificationsCounter count incorrect: " + numInNotificationsCounter + " != " + count);
+        reportError("numUnreadUnmutedThreads count incorrect: " + numUnreadUnmutedThreads + " != " + count);
       }
-      numInNotificationsCounter = count;
+      numUnreadUnmutedThreads = count;
       tellVisibleTabsNoticeCountIfChanged();
     }
   }
@@ -723,11 +723,11 @@ api.port.on({
       notificationsCallbacks.push(reply);
     }
     function reply() {
-      syncNumInNotificationsCounter(); // sanity checking
+      syncNumUnreadUnmutedThreads(); // sanity checking
       respond({
         notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
         timeLastSeen: timeNotificationsLastSeen.toISOString(),
-        numNotVisited: numInNotificationsCounter});
+        numNotVisited: numUnreadUnmutedThreads});
     }
   },
   old_notifications: function(timeStr, respond) {
@@ -985,7 +985,7 @@ function insertNewNotification(n) {
       n.unread = false;
       n.unreadAuthors = 0;
     } else {
-      numInNotificationsCounter++;
+      numUnreadUnmutedThreads++;
     }
   }
 
@@ -994,7 +994,7 @@ function insertNewNotification(n) {
     if ((n.thread && n2.thread == n.thread) || (n.id == n2.id)) {
       notifications.splice(i--, 1);
       if (n2.unread && !n2.muted) {
-        decrementNumInNotificationsCounter(n2);
+        decrementNumUnreadUnmutedThreads(n2);
       }
     }
   }
@@ -1002,11 +1002,11 @@ function insertNewNotification(n) {
   return true;
 }
 
-function syncNumInNotificationsCounter() {
-  // We have an open issue where numInNotificationsCounter gets off - it goes below 0
-  // So either an incriment is not happening, or a decrement is happening too often.
+function syncNumUnreadUnmutedThreads() {
+  // We have an open issue where numUnreadUnmutedThreads gets off - it goes below 0
+  // So either an increment is not happening, or a decrement is happening too often.
   // The issue goes back several months (with the -1 notification issue), but has gotten
-  // much worse lately. I've had dificulty consistantly reproducing, so am adding this
+  // much worse lately. I've had difficulty consistantly reproducing, so am adding this
   // sync in until we can identify the real issue counts get off. Could be related to
   // spotty internet, or some logic error above. -Andrew
   if (socket) {
@@ -1025,7 +1025,7 @@ function markNoticesVisited(category, id, timeStr, locator) {
       if (n.unread) {
         n.unread = false;
         n.unreadAuthors = 0;
-        decrementNumInNotificationsCounter(n);
+        decrementNumUnreadUnmutedThreads(n);
       }
     }
   });
@@ -1035,7 +1035,7 @@ function markNoticesVisited(category, id, timeStr, locator) {
       time: timeStr,
       locator: locator,
       id: id,
-      numNotVisited: numInNotificationsCounter});
+      numNotVisited: numUnreadUnmutedThreads});
   });
 }
 
@@ -1054,25 +1054,25 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
       }
     }
   }
-  numInNotificationsCounter = notifications.filter(function(n) {
+  numUnreadUnmutedThreads = notifications.filter(function(n) {
     return n.unread && !n.muted;
   }).length;
   forEachTabAtLocator('/notices', function(tab) {
     api.tabs.emit(tab, "all_notifications_visited", {
       id: id,
       time: timeStr,
-      numNotVisited: numInNotificationsCounter});
+      numNotVisited: numUnreadUnmutedThreads});
   });
 
   tellVisibleTabsNoticeCountIfChanged();
 }
 
-function decrementNumInNotificationsCounter(n) {
-  if (numInNotificationsCounter <= 0) {
-    log("#a00", "[decrementNumInNotificationsCounter] error", numInNotificationsCounter, n)();
+function decrementNumUnreadUnmutedThreads(n) {
+  if (numUnreadUnmutedThreads <= 0) {
+    log("#a00", "[decrementNumUnreadUnmutedThreads] error", numUnreadUnmutedThreads, n)();
   }
-  if (numInNotificationsCounter > 0 || ~session.experiments.indexOf("admin")) {  // exposing -1 to admins to help debug
-    numInNotificationsCounter--;
+  if (numUnreadUnmutedThreads > 0 || ~session.experiments.indexOf("admin")) {  // exposing -1 to admins to help debug
+    numUnreadUnmutedThreads--;
   }
 }
 
@@ -1146,8 +1146,8 @@ function forEachTabAtUriAndLocator() { // (url[, url]..., loc, f)
 
 function tellVisibleTabsNoticeCountIfChanged() {
   api.tabs.eachSelected(function(tab) {
-    if (tab.counts && tab.counts.n !== numInNotificationsCounter) {
-      tab.counts.n = numInNotificationsCounter;
+    if (tab.counts && tab.counts.n !== numUnreadUnmutedThreads) {
+      tab.counts.n = numUnreadUnmutedThreads;
       api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
     }
   });
@@ -1159,7 +1159,7 @@ function tellTabsUnreadThreadCountIfChanged(td) { // (td, url[, url]...)
   args.push(function(tab) {
     if (tab.counts.m !== m) {
       tab.counts.m = m;
-      tab.counts.n = numInNotificationsCounter;
+      tab.counts.n = numUnreadUnmutedThreads;
       api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
     }
   });
@@ -1270,7 +1270,7 @@ function kifify(tab) {
   // thread data
   var td = pageThreadData[uri];
   if (td && !td.stale) {
-    tab.counts = {n: numInNotificationsCounter, m: td.countUnreadThreads()};
+    tab.counts = {n: numUnreadUnmutedThreads, m: td.countUnreadThreads()};
     api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
   } else {
     socket.send(["get_threads", url], gotThreadDataFor.bind(null, url, tab));
@@ -1368,7 +1368,7 @@ function gotThreadDataFor(url, tab, threads, nUri) {
   if (!tabIsOld) {
     pageThreadData[nUri] = td;
 
-    tab.counts = {n: numInNotificationsCounter, m: td.countUnreadThreads()};
+    tab.counts = {n: numUnreadUnmutedThreads, m: td.countUnreadThreads()};
     api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
 
     if (ruleSet.rules.message && tab.counts.m) {  // open immediately to unread message(s)
@@ -1528,7 +1528,13 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
 });
 
-api.on.beforeSearch.add(throttle(ajax.bind(null, 'search', 'GET', '/up'), 50000));
+api.on.beforeSearch.add(throttle(function () {
+  if (session && ~session.experiments.indexOf('tsearch')) {
+    ajax('GET', '/204');
+  } else {
+    ajax('search', 'GET', '/up');
+  }
+}, 50000));
 
 var searchPrefetchCache = {};  // for searching before the results page is ready
 var searchFilterCache = {};    // for restoring filter if user navigates back to results
@@ -1770,7 +1776,7 @@ function startSession(callback, retryMs) {
       } else {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
       }
-      syncNumInNotificationsCounter();
+      syncNumUnreadUnmutedThreads();
       api.tabs.eachSelected(kifify);
     }, function onDisconnect(why) {
       reportError("socket disconnect (" + why + ")");

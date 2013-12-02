@@ -55,7 +55,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     sendData("http://api.mixpanel.com/engage", data)
   }
 
-  def setUserProperties(userId: Id[User], properties: EventContext) = {
+  def setUserProperties(userId: Id[User], properties: HeimdalContext) = {
     val data = Json.obj(
       "$token" -> JsString(projectToken),
       "$distinct_id" -> JsString(getDistinctId(userId)),
