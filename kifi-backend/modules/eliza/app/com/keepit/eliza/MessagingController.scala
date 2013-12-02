@@ -460,7 +460,7 @@ class MessagingController @Inject() (
       val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
       if (isNew){
         log.info(s"This is a new thread. Creating User Threads.")
-        participants.par.foreach{ userId =>
+        participants.foreach{ userId =>
           userThreadRepo.create(userId, thread.id.get, uriIdOpt, userId==from)
         }
       }
