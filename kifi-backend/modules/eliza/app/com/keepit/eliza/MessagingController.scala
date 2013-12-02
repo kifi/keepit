@@ -528,12 +528,7 @@ class MessagingController @Inject() (
 
     val threadActivity = db.readOnly{ implicit session =>
       userThreadRepo.getThreadActivity(thread.id.get)
-    } sortWith { case (first, second) =>
-      first.id.id < second.id.id
-    } sortWith { case (first, second) =>
-      first.lastActive.isDefined && (second.lastActive.isEmpty || first.lastActive.get.isBefore(second.lastActive.get))
-    }
-
+    } sortBy { userThreadActivity => (-1*userThreadActivity.lastActive.getOrElse(START_OF_TIME).getMillis, userThreadActivity.id.id)}
 
     val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
     val numAuthors = threadActivity.filter(_.lastActive.isDefined).length
