@@ -22,6 +22,7 @@ import play.api.libs.json._
 import play.api.Play
 import play.api.Play.current
 import scala.util.{Success, Failure}
+import java.text.Normalizer
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -353,6 +354,13 @@ class ABookController @Inject() (
       case Success(c) => Ok(Json.toJson(c))
       case Failure(t) => BadRequest(t.getMessage)
     }
+  }
+
+  // todo: removeme (inefficient)
+  def queryEContacts(userId:Id[User], limit:Int, search: Option[String], after:Option[String]) = Action { request =>
+    val eContacts = abookCommander.queryEContacts(userId, limit, search, after)
+    log.info(s"[queryEContacts] userId=$userId search=$search after=$after limit=$limit res(len=${eContacts.length}):${eContacts.mkString}")
+    Ok(Json.toJson(eContacts))
   }
 
 }
