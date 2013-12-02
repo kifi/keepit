@@ -32,6 +32,9 @@ object NonUserParticipant {
   implicit val format = new Format[NonUserParticipant] {
     // fields are shortened for overhead reasons
     def reads(json: JsValue) = {
+      // k == "kind"
+      // i == "identifier"
+      // r == "referenceId"
       ((json \ "k").asOpt[String], (json \ "i").asOpt[String]) match {
         case (Some(NonUserKinds.email.name), Some(emailAddress)) =>
           val addr = GenericEmailAddress(emailAddress)

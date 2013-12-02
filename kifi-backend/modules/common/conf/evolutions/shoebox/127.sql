@@ -19,9 +19,9 @@ CREATE TABLE non_user_thread (
 
     state varchar(20) NOT NULL,
 
-    KEY (email_address),
-    KEY (econtact_id),
-    KEY (last_notified_at),
+    INDEX non_user_thread_i_email_address (email_address),
+    INDEX non_user_thread_i_econtact_id (econtact_id),
+    INDEX non_user_thread_i_last_notified_at (last_notified_at),
     PRIMARY KEY (id),
     CONSTRAINT non_user_thread_f_thread_id FOREIGN KEY (thread_id) REFERENCES message_thread(id)
 );
