@@ -3,11 +3,13 @@
 # --- !Ups
 
 CREATE INDEX message_i_thread_id_created_at ON message (thread_id, created_at);
-DROP INDEX message_i_my_thread /* ON message */;
+-- mysql needs this:
+--DROP INDEX message_i_my_thread /* ON message */;
 
 INSERT INTO evolutions (name, description) VALUES ('126.sql', 'add index on thread id and creation time in message table');
 
 # --- !Downs
 
-CREATE INDEX message_i_my_thread ON message (thread_id);
+-- mysql needs this:
+--CREATE INDEX message_i_my_thread ON message (thread_id);
 DROP INDEX message_i_thread_id_created_at /* ON message */;
