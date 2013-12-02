@@ -205,7 +205,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "kifiCollapsed": !response.expanded,
           "kifiTime": tKifiResultsReceived - tQuery,
           "kifiShownTime": tKifiResultsShown - tQuery,
-          "googleShownTime": tGoogleResultsShown - tQuery,
+          "thirdPartyShownTime": tGoogleResultsShown - tQuery,
           "kifiResultsClicked": clicks.kifi.length,
           "searchResultsClicked": clicks.google.length
         }
@@ -287,7 +287,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "kifiCollapsed": !response.expanded,
           "kifiTime": tKifiResultsReceived - tQuery,
           "kifiShownTime": tKifiResultsShown - tQuery,
-          "googleShownTime": tGoogleResultsShown - tQuery,
+          "thirdPartyShownTime": tGoogleResultsShown - tQuery,
           "resultPosition": resIdx,
           "resultSource": isKifi ? "Kifi" : "Google",
           "resultUrl": href,
