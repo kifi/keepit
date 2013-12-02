@@ -154,12 +154,13 @@ class SearchAnalytics @Inject() (
     kifiResults: Int,
     kifiCollapsed: Boolean,
     kifiTime: Option[Int],
-    referenceTime: Option[Int],
+    kifiShownTime: Option[Int],
+    thirdPartyShownTime: Option[Int],
     otherResultsClicked: Int,
     kifiResultsClicked: Int
     ) = {
 
-    val contextBuilder = searchContextBuilder(request, userId, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime)
+    val contextBuilder = searchContextBuilder(request, userId, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime)
 
     // Click Summary
 
@@ -180,12 +181,13 @@ class SearchAnalytics @Inject() (
     kifiResults: Int,
     kifiCollapsed: Boolean,
     kifiTime: Option[Int],
-    referenceTime: Option[Int],
+    kifiShownTime: Option[Int],
+    thirdPartyShownTime: Option[Int],
     resultSource: SearchEngine,
     resultPosition: Int,
     result: Option[PersonalSearchResult]) = {
 
-    val contextBuilder = searchContextBuilder(request, userId, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime)
+    val contextBuilder = searchContextBuilder(request, userId, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime)
 
     // Click Information
 
@@ -226,7 +228,8 @@ class SearchAnalytics @Inject() (
     kifiResults: Int,
     kifiCollapsed: Boolean,
     kifiTime: Option[Int],
-    referenceTime: Option[Int]
+    kifiShownTime: Option[Int],
+    thirdPartyShownTime: Option[Int]
   ): EventContextBuilder = {
 
     val contextBuilder = userEventContextBuilder(request)
@@ -246,9 +249,11 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("kifiExpanded", !kifiCollapsed)
     contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
     contextBuilder += ("kifiLate", kifiCollapsed && initialSearchResult.toShow)
-    kifiTime.foreach { kifiDevTime => contextBuilder += ("kifiLatency", kifiDevTime) }
-    referenceTime.foreach { refTime => contextBuilder += ("thirdPartyLatency", refTime) }
-    for { kifiDevTime <- kifiTime; refTime <- referenceTime } yield { contextBuilder += ("kifiDelay", kifiDevTime - refTime) }
+    kifiTime.foreach { kifiLatency => contextBuilder += ("kifiLatency", kifiLatency) }
+    kifiShownTime.foreach { kifiShown => contextBuilder += ("kifiShownTime", kifiShown) }
+    thirdPartyShownTime.foreach { thirdPartyShown => contextBuilder += ("thirdPartyShownTime", thirdPartyShown) }
+    for { kifiShown <- kifiShownTime; thirdPartyShown <- thirdPartyShownTime } yield { contextBuilder += ("kifiDelay", kifiShown - thirdPartyShown) }
+    for { kifiShown <- kifiShownTime; kifiLatency <- kifiTime } yield { contextBuilder += ("kifiRenderingTime", kifiShown - kifiLatency)}
 
     contextBuilder
   }
