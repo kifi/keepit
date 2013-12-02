@@ -92,9 +92,9 @@ class MessagingTest extends Specification with DbTestInjector {
 
         messagingController.getLatestSendableNotifications(user3, 10)
 
-        messagingController.getPendingNotifications(user3).length===1 //there was only one thread created due to merging
+        messagingController.getUnreadThreadNotifications(user3).length===1 //there was only one thread created due to merging
         messagingController.setAllNotificationsRead(user3)
-        messagingController.getPendingNotifications(user3).length===0
+        messagingController.getUnreadThreadNotifications(user3).length===0
 
       }
     }
