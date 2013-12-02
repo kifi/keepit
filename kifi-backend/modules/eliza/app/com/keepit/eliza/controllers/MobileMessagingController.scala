@@ -13,7 +13,7 @@ class MobileMessagingController @Inject() (messagingController: MessagingControl
 
   def getNotifications(howMany: Int) = AuthenticatedJsonAction { request =>
     val notices = messagingController.getLatestSendableNotifications(request.userId, howMany.toInt)
-    val unvisited = messagingController.getPendingNotificationCount(request.userId)
-    Ok(Json.arr("notifications", notices, unvisited))
+    val unread = messagingController.getUnreadThreadCount(request.userId)
+    Ok(Json.arr("notifications", notices, unread))
   }
 }
