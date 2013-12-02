@@ -48,9 +48,7 @@ class ExtEventController @Inject() (
       log.debug(s"Created new event: $event")
 
       val contextBuilder = new EventContextBuilder()
-      experiments.foreach{ experiment =>
-        contextBuilder += ("experiment", experiment.toString)
-      }
+      contextBuilder += ("experiments", experiments.map(_.toString).toSeq)
       metaData.fields.foreach{
         case (key, jsonValue) => {
           val jsonString = jsonValue match {

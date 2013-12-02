@@ -28,14 +28,6 @@ import play.api.mvc.Action
 import com.keepit.social.{SocialNetworkType, SocialId}
 import com.keepit.scraper.HttpRedirect
 
-object ShoeboxController {
-  implicit val collectionTupleFormat = (
-    (__ \ 'collId).format(Id.format[Collection]) and
-    (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
-  ).tupled
-}
-
 class ShoeboxController @Inject() (
   db: Database,
   userConnectionRepo: UserConnectionRepo,
@@ -61,7 +53,9 @@ class ShoeboxController @Inject() (
   changedUriRepo: ChangedURIRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
   scrapeInfoRepo:ScrapeInfoRepo,
-  friendRequestRepo: FriendRequestRepo
+  friendRequestRepo: FriendRequestRepo,
+  userValueRepo: UserValueRepo,
+  kifiInstallationRepo: KifiInstallationRepo
 )
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
@@ -343,7 +337,9 @@ class ShoeboxController @Inject() (
     val emails = db.readOnly{ implicit s =>
       userIds.map{userId => userId.id.toString -> emailAddressRepo.getAllByUser(userId).map{_.address}}.toMap
     }
-    Ok(Json.toJson(emails))
+    val json = Json.toJson(emails)
+    log.info(s"json emails for users [$userIds] are $json")
+    Ok(json)
   }
 
   def getCollectionIdsByExternalIds(ids: String) = Action { request =>
@@ -410,15 +406,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getByUser(userId) }))
   }
 
-  def getCollectionsChangedDeprecated(seqNum: Long, fetchSize: Int) = Action { request =>
-    import ShoeboxController.collectionTupleFormat
-    Ok(Json.toJson(db.readOnly { implicit s =>
-      collectionRepo.getCollectionsChanged(SequenceNumber(seqNum), fetchSize).map{ c => (c.id.get, c.userId, c.seq) }
-    }))
-  }
-
   def getCollectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
-    import ShoeboxController.collectionTupleFormat
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getCollectionsChanged(SequenceNumber(seqNum), fetchSize) }))
   }
 
@@ -463,7 +451,7 @@ class ShoeboxController @Inject() (
     val json = request.body
     val clicker = Id.format[User].reads(json \ "clicker").get
     val uriId = Id.format[NormalizedURI].reads(json \ "uriId").get
-    val keepers = (json \ "keepers").as[JsArray].value.map(jsString => ExternalId[User](jsString.as[String]))
+    val keepers = (json \ "keepers").as[JsArray].value.map(ExternalId.format[User].reads(_).get)
     db.readWrite { implicit session =>
       if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, uriId, true)
       else keepers.foreach { extId => userBookmarkClicksRepo.increaseCounts(userRepo.get(extId).id.get, uriId, false) }
@@ -476,5 +464,21 @@ class ShoeboxController @Inject() (
       friendRequestRepo.getBySender(senderId)
     }
     Ok(JsArray(requests.map{ x => Json.toJson(x) }))
+  }
+
+  def setUserValue(userId: Id[User], key: String) = SafeAsyncAction(parse.json) { request =>
+    val value = request.body.as[String]
+    db.readWrite { implicit session => userValueRepo.setValue(userId, key, value) }
+    Ok
+  }
+
+  def getUserValue(userId: Id[User], key: String) = SafeAsyncAction { request =>
+    val value = db.readOnly { implicit session => userValueRepo.getValue(userId, key) }
+    Ok(Json.toJson(value))
+  }
+
+  def getExtensionVersion(installationId: ExternalId[KifiInstallation]) = SafeAsyncAction { request =>
+    val version = db.readOnly { implicit session => kifiInstallationRepo.get(installationId).version.toString }
+    Ok(JsString(version))
   }
 }

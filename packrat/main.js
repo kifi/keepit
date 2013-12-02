@@ -24,7 +24,7 @@ var pageThreadData = {}; // keyed by normalized url
 var messageData = {}; // keyed by thread id; todo: evict old threads from memory
 var notifications;  // [] would mean user has none
 var timeNotificationsLastSeen = new Date(0);
-var numNotificationsNotVisited = 0;  // may include some not yet loaded
+var numUnreadUnmutedThreads = 0;  // may include some not yet loaded
 var haveAllNotifications;  // inferred
 var friends = [];
 var friendsById = {};
@@ -40,7 +40,7 @@ function clearDataCache() {
   messageData = {};
   notifications = null;
   timeNotificationsLastSeen = new Date(0);
-  numNotificationsNotVisited = 0;
+  numUnreadUnmutedThreads = 0;
   haveAllNotifications = false;
   friends = [];
   friendsById = {};
@@ -162,7 +162,7 @@ function insertUpdateChronologically(arr, o, time) {
 
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
   if (service.match(/^(?:GET|POST|HEAD|OPTIONS|PUT)$/)) { // shift args if service is missing
-    fail = done, done = data, data = uri, uri = method, method = service, service = "api";
+    fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
   if (typeof data == "function") {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
@@ -301,15 +301,15 @@ var socketHandlers = {
     log("[socket:url_patterns]", patterns)();
     urlPatterns = compilePatterns(patterns);
   },
-  notifications: function(arr, numNotVisited) {  // initial load of notifications
-    log("[socket:notifications]", arr, numNotVisited)();
+  notifications: function(arr, numUnreadUnmuted) {  // initial load of notifications
+    log("[socket:notifications]", arr, numUnreadUnmuted)();
     if (!notifications) {
       for (var i = 0; i < arr.length; i++) {
         standardizeNotification(arr[i]);
       }
       notifications = arr;
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
-      numNotificationsNotVisited = numNotVisited;
+      numUnreadUnmutedThreads = numUnreadUnmuted;
       while (notificationsCallbacks.length) {
         notificationsCallbacks.shift()();
       }
@@ -432,13 +432,13 @@ var socketHandlers = {
     tellVisibleTabsNoticeCountIfChanged();
   },
   unread_notifications_count: function(count) {
-    // see comment in syncNumNotificationsNotVisited() :(
-    if (numNotificationsNotVisited != count) {
+    // see comment in syncNumUnreadUnmutedThreads() :(
+    if (numUnreadUnmutedThreads !== count) {
       if (notifications) {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
-        reportError("numNotificationsNotVisited count incorrect: " + numNotificationsNotVisited + " != " + count);
+        reportError("numUnreadUnmutedThreads count incorrect: " + numUnreadUnmutedThreads + " != " + count);
       }
-      numNotificationsNotVisited = count;
+      numUnreadUnmutedThreads = count;
       tellVisibleTabsNoticeCountIfChanged();
     }
   }
@@ -603,6 +603,10 @@ api.port.on({
   log_event: function(data) {
     logEvent.apply(null, data);
   },
+  log_search_event: function(data) {
+    var whichEvent = data[0];
+    ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
+  },
   send_message: function(data, respond, tab) {
     var nUri = tab.nUri || data.url;
     data.extVersion = api.version;
@@ -719,11 +723,11 @@ api.port.on({
       notificationsCallbacks.push(reply);
     }
     function reply() {
-      syncNumNotificationsNotVisited(); // sanity checking
+      syncNumUnreadUnmutedThreads(); // sanity checking
       respond({
         notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
         timeLastSeen: timeNotificationsLastSeen.toISOString(),
-        numNotVisited: numNotificationsNotVisited});
+        numNotVisited: numUnreadUnmutedThreads});
     }
   },
   old_notifications: function(timeStr, respond) {
@@ -784,6 +788,9 @@ api.port.on({
   session: function(_, respond) {
     respond(session);
   },
+  web_base_uri: function(_, respond) {
+    respond(webBaseUri());
+  },
   get_friends: function(_, respond) {
     respond(friends);
   },
@@ -827,6 +834,7 @@ api.port.on({
       }
     });
   },
+  logged_in: startSession.bind(null, api.noop),
   remove_notification: function(o) {
     removeNotificationPopups(o.associatedId);
   },
@@ -925,9 +933,12 @@ function removeNotificationPopups(associatedId) {
 
 function standardizeNotification(n) {
   n.category = (n.category || "message").toLowerCase();
-  for (var i = n.participants ? n.participants.length : 0; i--;) {
-    if (n.participants[i].id == session.user.id) {
-      n.participants.splice(i, 1);
+  n.unread = n.unread || (n.unreadAuthors > 0);
+  if (!session || session.experiments.indexOf('inbox') < 0) {
+    for (var i = n.participants ? n.participants.length : 0; i--;) {
+      if (n.participants[i].id == session.user.id) {
+        n.participants.splice(i, 1);
+      }
     }
   }
 }
@@ -938,7 +949,7 @@ function sendNotificationToTabs(n) {
   forEachTabAtLocator('/notices', tellTab);
   tellVisibleTabsNoticeCountIfChanged();
 
-  if (n.unread) {
+  if (n.unread && !n.muted) {
     api.play("media/notification.mp3");
   }
 
@@ -965,15 +976,16 @@ function insertNewNotification(n) {
   }
   notifications.splice(i, 0, n);
 
-  if (n.unread) {  // may have been visited before arrival
+  if (n.unread && !n.muted) {  // may have been visited before arrival
     var td, th;
     if (n.category === 'message' &&
         (td = pageThreadData[n.url]) &&
         (th = td.getThread(n.locator.substr(10))) &&
         new Date(th.lastMessageRead || 0) > new Date(n.time)) {
       n.unread = false;
+      n.unreadAuthors = 0;
     } else {
-      numNotificationsNotVisited++;
+      numUnreadUnmutedThreads++;
     }
   }
 
@@ -981,8 +993,8 @@ function insertNewNotification(n) {
     var n2 = notifications[i];
     if ((n.thread && n2.thread == n.thread) || (n.id == n2.id)) {
       notifications.splice(i--, 1);
-      if (n2.unread) {
-        decrementNumNotificationsNotVisited(n2);
+      if (n2.unread && !n2.muted) {
+        decrementNumUnreadUnmutedThreads(n2);
       }
     }
   }
@@ -990,11 +1002,11 @@ function insertNewNotification(n) {
   return true;
 }
 
-function syncNumNotificationsNotVisited() {
-  // We have an open issue where numNotificationsNotVisited gets off - it goes below 0
-  // So either an incriment is not happening, or a decrement is happening too often.
+function syncNumUnreadUnmutedThreads() {
+  // We have an open issue where numUnreadUnmutedThreads gets off - it goes below 0
+  // So either an increment is not happening, or a decrement is happening too often.
   // The issue goes back several months (with the -1 notification issue), but has gotten
-  // much worse lately. I've had dificulty consistantly reproducing, so am adding this
+  // much worse lately. I've had difficulty consistantly reproducing, so am adding this
   // sync in until we can identify the real issue counts get off. Could be related to
   // spotty internet, or some logic error above. -Andrew
   if (socket) {
@@ -1012,7 +1024,8 @@ function markNoticesVisited(category, id, timeStr, locator) {
         (n.id == id || new Date(n.time) <= time)) {
       if (n.unread) {
         n.unread = false;
-        decrementNumNotificationsNotVisited(n);
+        n.unreadAuthors = 0;
+        decrementNumUnreadUnmutedThreads(n);
       }
     }
   });
@@ -1022,7 +1035,7 @@ function markNoticesVisited(category, id, timeStr, locator) {
       time: timeStr,
       locator: locator,
       id: id,
-      numNotVisited: numNotificationsNotVisited});
+      numNotVisited: numUnreadUnmutedThreads});
   });
 }
 
@@ -1032,6 +1045,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
     var n = notifications[i];
     if (n.unread && (n.id === id || new Date(n.time) <= time)) {
       n.unread = false;
+      n.unreadAuthors = 0;
       if (n.category === 'message') {
         var td = pageThreadData[n.url];
         if (td && td.markRead(n.locator.substr(10), n.time)) {
@@ -1040,25 +1054,25 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
       }
     }
   }
-  numNotificationsNotVisited = notifications.filter(function(n) {
-    return n.unread;
+  numUnreadUnmutedThreads = notifications.filter(function(n) {
+    return n.unread && !n.muted;
   }).length;
   forEachTabAtLocator('/notices', function(tab) {
     api.tabs.emit(tab, "all_notifications_visited", {
       id: id,
       time: timeStr,
-      numNotVisited: numNotificationsNotVisited});
+      numNotVisited: numUnreadUnmutedThreads});
   });
 
   tellVisibleTabsNoticeCountIfChanged();
 }
 
-function decrementNumNotificationsNotVisited(n) {
-  if (numNotificationsNotVisited <= 0) {
-    log("#a00", "[decrementNumNotificationsNotVisited] error", numNotificationsNotVisited, n)();
+function decrementNumUnreadUnmutedThreads(n) {
+  if (numUnreadUnmutedThreads <= 0) {
+    log("#a00", "[decrementNumUnreadUnmutedThreads] error", numUnreadUnmutedThreads, n)();
   }
-  if (numNotificationsNotVisited > 0 || ~session.experiments.indexOf("admin")) {  // exposing -1 to admins to help debug
-    numNotificationsNotVisited--;
+  if (numUnreadUnmutedThreads > 0 || ~session.experiments.indexOf("admin")) {  // exposing -1 to admins to help debug
+    numUnreadUnmutedThreads--;
   }
 }
 
@@ -1132,8 +1146,8 @@ function forEachTabAtUriAndLocator() { // (url[, url]..., loc, f)
 
 function tellVisibleTabsNoticeCountIfChanged() {
   api.tabs.eachSelected(function(tab) {
-    if (tab.counts && tab.counts.n !== numNotificationsNotVisited) {
-      tab.counts.n = numNotificationsNotVisited;
+    if (tab.counts && tab.counts.n !== numUnreadUnmutedThreads) {
+      tab.counts.n = numUnreadUnmutedThreads;
       api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
     }
   });
@@ -1145,7 +1159,7 @@ function tellTabsUnreadThreadCountIfChanged(td) { // (td, url[, url]...)
   args.push(function(tab) {
     if (tab.counts.m !== m) {
       tab.counts.m = m;
-      tab.counts.n = numNotificationsNotVisited;
+      tab.counts.n = numUnreadUnmutedThreads;
       api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
     }
   });
@@ -1184,15 +1198,24 @@ function searchOnServer(request, respond) {
       params.end = params.start;
     }
   }
-  ajax("search", "GET", "/search", params,
-    function(resp) {
+
+  var respHandler = function(resp) {
       log("[searchOnServer] response:", resp)();
       resp.filter = request.filter;
       resp.session = session;
       resp.admBaseUri = admBaseUri();
       resp.showScores = api.prefs.get("showScores");
+      resp.hits.forEach(function(hit){
+        hit.uuid = resp.uuid;
+      });
       respond(resp);
-    });
+  };
+
+  if (session.experiments.indexOf('tsearch') < 0) {
+    ajax("search", "GET", "/search", params, respHandler);
+  } else {
+    ajax("api", "GET", "/tsearch", params, respHandler);
+  }
   return true;
 }
 
@@ -1238,7 +1261,7 @@ function kifify(tab) {
     }
   } else {
     ajax("POST", "/ext/pageDetails", {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
-      if (xhr.status == 403) {
+      if (xhr.status === 403) {
         clearSession();
       }
     });
@@ -1247,7 +1270,7 @@ function kifify(tab) {
   // thread data
   var td = pageThreadData[uri];
   if (td && !td.stale) {
-    tab.counts = {n: numNotificationsNotVisited, m: td.countUnreadThreads()};
+    tab.counts = {n: numUnreadUnmutedThreads, m: td.countUnreadThreads()};
     api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
   } else {
     socket.send(["get_threads", url], gotThreadDataFor.bind(null, url, tab));
@@ -1345,7 +1368,7 @@ function gotThreadDataFor(url, tab, threads, nUri) {
   if (!tabIsOld) {
     pageThreadData[nUri] = td;
 
-    tab.counts = {n: numNotificationsNotVisited, m: td.countUnreadThreads()};
+    tab.counts = {n: numUnreadUnmutedThreads, m: td.countUnreadThreads()};
     api.tabs.emit(tab, "counts", tab.counts, {queue: 1});
 
     if (ruleSet.rules.message && tab.counts.m) {  // open immediately to unread message(s)
@@ -1467,35 +1490,6 @@ api.tabs.on.loading.add(function(tab) {
   logEvent("extension", "pageLoad");
 });
 
-var searchPrefetchCache = {};  // for searching before the results page is ready
-var searchFilterCache = {};    // for restoring filter if user navigates back to results
-api.on.search.add(function prefetchResults(query) {
-  log('[prefetchResults] prefetching for query:', query)();
-  searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter}, function(response) {
-    var cached = searchPrefetchCache[query];
-    cached.response = response;
-    while (cached.callbacks.length) cached.callbacks.shift()(response);
-    api.timers.setTimeout(function () { delete searchPrefetchCache[query] }, 10000);
-  });
-  searchPrefetchCache[query] = { callbacks: [], response: null };
-});
-
-function getPrefetched(request, cb) {
-  var cached = searchPrefetchCache[request.query];
-  if (cached) {
-    var logAndCb = function(r) {
-      log('[getPrefetched] results:', r)();
-      cb(r);
-    };
-    if (cached.response) {
-      logAndCb(cached.response);
-    } else {
-      cached.callbacks.push(logAndCb);
-    }
-    return true;
-  }
-}
-
 api.tabs.on.unload.add(function(tab, historyApi) {
   log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab)();
   var tabs = tabsByUrl[tab.nUri];
@@ -1533,6 +1527,55 @@ api.tabs.on.unload.add(function(tab, historyApi) {
     api.tabs.emit(tab, "reset");
   }
 });
+
+api.on.beforeSearch.add(throttle(function () {
+  if (session && ~session.experiments.indexOf('tsearch')) {
+    ajax('GET', '/204');
+  } else {
+    ajax('search', 'GET', '/up');
+  }
+}, 50000));
+
+var searchPrefetchCache = {};  // for searching before the results page is ready
+var searchFilterCache = {};    // for restoring filter if user navigates back to results
+api.on.search.add(function prefetchResults(query) {
+  log('[prefetchResults] prefetching for query:', query)();
+  var entry = searchPrefetchCache[query];
+  if (!entry) {
+    entry = searchPrefetchCache[query] = {callbacks: [], response: null};
+    searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter}, function(response) {
+      entry.response = response;
+      while (entry.callbacks.length) entry.callbacks.shift()(response);
+      api.timers.clearTimeout(entry.expireTimeout);
+      entry.expireTimeout = api.timers.setTimeout(cull, 10000);
+    });
+  } else {
+    api.timers.clearTimeout(entry.expireTimeout);
+  }
+  var cull = cullSearchPrefetchCacheEntry.bind(null, query, entry);
+  entry.expireTimeout = api.timers.setTimeout(cull, 10000);
+});
+function cullSearchPrefetchCacheEntry(key, val) {
+  if (searchPrefetchCache[key] === val) {
+    delete searchPrefetchCache[key];
+  }
+}
+
+function getPrefetched(request, cb) {
+  var cached = searchPrefetchCache[request.query];
+  if (cached) {
+    var logAndCb = function(r) {
+      log('[getPrefetched] results:', r)();
+      cb(r);
+    };
+    if (cached.response) {
+      logAndCb(cached.response);
+    } else {
+      cached.callbacks.push(logAndCb);
+    }
+    return true;
+  }
+}
 
 function scheduleAutoShow(tab) {
   log("[scheduleAutoShow] scheduling tab:", tab.id)();
@@ -1647,6 +1690,8 @@ function getPrefs() {
   ajax("GET", "/ext/prefs", function(o) {
     log("[getPrefs]", o)();
     session.prefs = o[1];
+    session.eip = o[2];
+    socket && socket.send(["eip", session.eip]);
   });
 }
 
@@ -1659,6 +1704,36 @@ function getRules() {
     }
   });
 }
+
+function throttle(func, wait, opts) {  // underscore.js
+  var context, args, result;
+  var timeout = null;
+  var previous = 0;
+  opts || (opts = {});
+  var later = function() {
+    previous = opts.leading === false ? 0 : Date.now();
+    timeout = null;
+    result = func.apply(context, args);
+    context = args = null;
+  };
+  return function() {
+    var now = Date.now();
+    if (!previous && opts.leading === false) previous = now;
+    var remaining = wait - (now - previous);
+    context = this;
+    args = arguments;
+    if (remaining <= 0) {
+      api.timers.clearTimeout(timeout);
+      timeout = null;
+      previous = now;
+      result = func.apply(context, args);
+      context = args = null;
+    } else if (!timeout && opts.trailing !== false) {
+      timeout = api.timers.setTimeout(later, remaining);
+    }
+    return result;
+  };
+};
 
 // ===== Session management
 
@@ -1690,18 +1765,18 @@ function startSession(callback, retryMs) {
 
     session = data;
     session.prefs = {}; // to come via socket
-    socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws?version=" + api.version, socketHandlers, function onConnect() {
+    socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws?version=" + api.version + "&eip=" + (session.eip || ""), socketHandlers, function onConnect() {
       for (var uri in pageThreadData) {
         pageThreadData[uri].stale = true;
       }
-      socket.send(["get_last_notify_read_time"]);
       connectSync();
+      socket.send(["get_last_notify_read_time"]);
       if (!notifications) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
       }
-      syncNumNotificationsNotVisited();
+      syncNumUnreadUnmutedThreads();
       api.tabs.eachSelected(kifify);
     }, function onDisconnect(why) {
       reportError("socket disconnect (" + why + ")");
@@ -1763,6 +1838,12 @@ function openLogin(callback, retryMs) {
 }
 
 function clearSession() {
+  if (session) {
+    api.tabs.each(function(tab) {
+      api.icon.set(tab, 'icons/keep.faint.png');
+      api.tabs.emit(tab, 'session_change', null);
+    });
+  }
   session = null;
   if (socket) {
     socket.close();
@@ -1785,10 +1866,6 @@ function deauthenticate() {
         log("[deauthenticate] closing popup")();
         this.close();
       }
-      api.tabs.each(function(tab) {
-        api.icon.set(tab, "icons/keep.faint.png");
-        api.tabs.emit(tab, "session_change", null);
-      });
     }
   })
 }

@@ -19,28 +19,46 @@ class ResultClickTracker(lru: ProbablisticLRU) {
 
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
-  def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean): Unit = {
-    val updateStrength = if (isUserKeep) {
-      min(0.1d * (rank.toDouble + 3.0d), 0.7d)
-    } else {
-      0.20d
+  private[this] val boostFactor: Array[Float] = {
+    val n = lru.numHashFuncs
+    val t = new Array[Float](n + 1)
+    var i = 1
+    while (i <= n) {
+      t(i) = sqrt(((i - 1).toDouble/(n - 1).toDouble)).toFloat // trying to stabilize the result when a few keeps are boosted at the same time
+      i += 1
     }
-    add(userId, query, uriId.id, updateStrength)
+    t
+  }
+
+  def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean, isDemo: Boolean = false): Unit = {
+    val hash = QueryHash(userId, query, analyzer)
+    val probe = lru.get(hash, true)
+    val norm = lru.numHashFuncs.toDouble
+    val count = probe.count(uriId.id)
+
+    if (count == 0 && !isDemo) {
+      lru.put(hash, uriId.id, 0.01d)
+    } else if (isUserKeep) {
+      val updateStrength = min(min(0.1d * (rank.toDouble + 3.0d), (count * 2).toDouble/norm.toDouble), 0.7)
+      lru.put(hash, uriId.id, updateStrength)
+    } else {
+      lru.put(hash, uriId.id, 0.2d)
+    }
   }
 
   def moderate(userId: Id[User], query: String): Unit = {
-    add(userId, query, rnd.nextLong(), 0.1d) // slowly making lru to forget by adding a random id
-  }
-
-  private[this] def add(userId: Id[User], query: String, uriId: Long, updateStrength: Double): Unit = {
-    lru.put(QueryHash(userId, query, analyzer), uriId, updateStrength)
+    val hash = QueryHash(userId, query, analyzer)
+    lru.put(hash, rnd.nextLong(), 0.01d) // slowly making lru to forget by adding a random id
   }
 
   def getBoosts(userId: Id[User], query: String, maxBoost: Float, useSlaveAsPrimary: Boolean = false): ResultClickBoosts = {
     val hash = QueryHash(userId, query, analyzer)
-    val likeliness = lru.get(hash, useSlaveAsPrimary)
+    val probe = lru.get(hash, useSlaveAsPrimary)
     new ResultClickBoosts {
-      def apply(value: Long) = 1.0f +  (maxBoost - 1.0f) * likeliness(value)
+      def apply(value: Long) = {
+        val count = probe.count(value)
+        if (count > 1) { 1.0f + maxBoost * boostFactor(count) } else { 1.0f }
+      }
     }
   }
 }

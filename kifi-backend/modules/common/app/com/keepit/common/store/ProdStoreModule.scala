@@ -1,15 +1,27 @@
 package com.keepit.common.store
 
+import play.api.Mode
+import play.api.Mode._
+import play.api.Play.current
+import play.api.Play._
+
 import net.codingwell.scalaguice.ScalaModule
+
+import com.keepit.common.time.Clock
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.{Provider, Provides, Singleton}
 import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
 import com.keepit.search._
-import play.api.Play._
 import com.keepit.common.analytics._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.keepit.learning.topicmodel._
 
 trait StoreModule extends ScalaModule {
+
+}
+
+trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
@@ -21,10 +33,6 @@ trait StoreModule extends ScalaModule {
     new AmazonS3Client(awsCredentials)
   }
 
-}
-
-trait ProdStoreModule extends StoreModule {
-
   @Singleton
   @Provides
   def probablisticLRUStore(amazonS3Client: AmazonS3): ProbablisticLRUStore = {
@@ -34,9 +42,9 @@ trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
-  def articleSearchResultStore(amazonS3Client: AmazonS3, searchIdCache: SearchIdCache): ArticleSearchResultStore = {
+  def articleSearchResultStore(amazonS3Client: AmazonS3, initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache): ArticleSearchResultStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.articleSearch.bucket").get)
-    new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client, searchIdCache)
+    new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client, initialSearchIdCache, articleCache)
   }
 
   @Singleton
@@ -77,6 +85,16 @@ trait ProdStoreModule extends StoreModule {
 
 abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) extends StoreModule {
 
+  @Singleton
+  @Provides
+  def amazonS3Client(): AmazonS3 = {
+    val conf = current.configuration.getConfig("amazon.s3").get
+    val awsCredentials = new BasicAWSCredentials(
+      conf.getString("accessKey").get,
+      conf.getString("secretKey").get)
+    new AmazonS3Client(awsCredentials)
+  }
+
   protected def whenConfigured[T](parameter: String)(expression: => T): Option[T] =
     current.configuration.getString(parameter).map(_ => expression)
 
@@ -89,9 +107,9 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
 
   @Singleton
   @Provides
-  def articleSearchResultStore(amazonS3ClientProvider: Provider[AmazonS3], searchIdCache: SearchIdCache): ArticleSearchResultStore =
+  def articleSearchResultStore(amazonS3ClientProvider: Provider[AmazonS3], initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache): ArticleSearchResultStore =
     whenConfigured("amazon.s3.articleSearch.bucket")(
-      prodStoreModule.articleSearchResultStore(amazonS3ClientProvider.get, searchIdCache)
+      prodStoreModule.articleSearchResultStore(amazonS3ClientProvider.get, initialSearchIdCache, articleCache)
     ).getOrElse(new InMemoryArticleSearchResultStoreImpl())
 
   @Singleton

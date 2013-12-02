@@ -24,7 +24,7 @@
   <link rel="shortcut icon" type="image/png" href="/assets/images/kifi-favi-50.png">
   @styles
 </head>
-<body@if(bodyClass != ""){ class="@bodyClass"}>
+<body class="still@if(bodyClass != ""){ @bodyClass}">
 @curtains
 <main>
 @content
@@ -39,4 +39,13 @@
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 <script>this.$||document.write('<script src=/assets/js/jquery.min.js><\/script>')</script>
 @scripts
+<script>
+var _gaq = [['_setAccount', 'UA-39789396-1'], ['_setDomainName', 'kifi.com'], ['_trackPageview']];
+!function(d, t) {
+  var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
+  g.async = true;
+  g.src = ('https:' == location.protocol ? '//ssl' : '//www') + '.google-analytics.com/ga.js';
+  s.parentNode.insertBefore(g, s);
+}(document, 'script');
+</script>
 </body>

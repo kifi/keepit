@@ -45,14 +45,13 @@ package object time {
         DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z").getParser))
     .toFormatter.withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE)
 
-  val UTC_DATETIME_FORMAT = STANDARD_DATETIME_FORMAT.withLocale(Locale.ENGLISH).withZone(zones.UTC)
   val STANDARD_DATE_FORMAT = ISODateTimeFormat.date.withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE)
 
   implicit object DateTimeJsonFormat extends Format[DateTime] {
     def reads(json: JsValue) = try {
       json.asOpt[String] match {
         case Some(timeStr) => JsSuccess(parseStandardTime(timeStr))
-        case None => JsSuccess(new DateTime(json.as[Long]))
+        case None => JsSuccess(new DateTime(json.as[Long], DEFAULT_DATE_TIME_ZONE))
       }
     } catch {
       case ex: Throwable => JsError(s"Could not deserialize time $json")

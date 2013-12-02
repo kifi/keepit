@@ -32,3 +32,15 @@ class UserValueCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlug
   extends StringCacheImpl[UserValueKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object UserValueStates extends States[UserValue]
+
+trait Gender
+object Gender {
+  case object Male extends Gender
+  case object Female extends Gender
+  val key = "gender"
+  def apply(gender: String): Gender = gender.toLowerCase match {
+    case "male" => Male
+    case "female" => Female
+  }
+}
+

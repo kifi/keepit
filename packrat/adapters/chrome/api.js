@@ -218,6 +218,17 @@ var api = function() {
     }
   });
 
+  chrome.webRequest.onBeforeRequest.addListener(function () {
+    dispatch.call(api.on.beforeSearch);
+  }, {
+    tabId: -1,
+    types: ['main_frame', 'other'],
+    urls: [
+      'https://www.google.com/webhp?sourceid=chrome-instant*',
+      'https://www.google.com/complete/search?client=chrome-omni*'
+    ]
+  });
+
   var pages = {};  // by tab.id in "normal" windows only
   var normalTab = {};  // by tab.id (true if tab is in a "normal" window)
   var selectedTabIds = {};  // by window.id in "normal" windows only
@@ -253,6 +264,22 @@ var api = function() {
           delete page.toEmit;
         }
       }
+    },
+    "api:iframe": function(o, _, page) {
+      var toUrl = chrome.runtime.getURL;
+      chrome.tabs.executeScript(page.id, {
+        allFrames: true,
+        code: [
+          'if (window !== top && document.URL === "', o.url, '") {',
+          " document.head.innerHTML='", o.styles.map(function(path) {return '<link rel="stylesheet" href="' + toUrl(path) + '">'}).join(''), "';",
+          ' ', JSON.stringify(o.scripts.map(function (path) {return toUrl(path)})), '.forEach(function(url) {',
+          '  var s = document.createElement("SCRIPT");',
+          '  s.src = url;',
+          '  document.head.appendChild(s);',
+          ' });',
+          '}'].join(''),
+        runAt: 'document_end'
+      });
     },
     "api:reload": function() {
       if (!api.isPackaged()) {
@@ -415,6 +442,7 @@ var api = function() {
     },
     loadReason: "enable",  // assuming "enable" by elimination
     on: {
+      beforeSearch: new Listeners,
       search: new Listeners,
       install: new Listeners,
       update: new Listeners,

@@ -40,7 +40,7 @@ class ResultDecoratorTest extends Specification {
     "highlight overlapping terms" in {
       val text = "holidays.doc"
 
-      var highlights = ResultDecorator.highlight(text, analyzer, "f", Set("holidays"))
+      var highlights = ResultDecorator.highlight(text, analyzer, "f", Set("holiday"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays.doc")
@@ -50,7 +50,7 @@ class ResultDecoratorTest extends Specification {
       highlights.size === 1
       highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays.doc")
 
-      highlights = ResultDecorator.highlight(text, analyzer, "f", Set("holidays", "doc"))
+      highlights = ResultDecorator.highlight(text, analyzer, "f", Set("holiday", "doc"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays.doc")

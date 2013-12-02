@@ -3,10 +3,11 @@
 // @require scripts/html/keeper/notices.js
 // @require scripts/html/keeper/notice_global.js
 // @require scripts/html/keeper/notice_message.js
-// @require scripts/formatting.js
+// @require scripts/lib/jquery-ui-position.min.js
+// @require scripts/lib/jquery.hoverfu.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
-// @require scripts/scrollable.js
+// @require scripts/formatting.js
 // @require scripts/prevent_ancestor_scroll.js
 
 // There are several kinds of events that the notifications pane must handle:
@@ -24,8 +25,6 @@ panes.notices = function () {
   'use strict';
 
   var PIXELS_FROM_BOTTOM = 40; // load more notifications when this many pixels from the bottom
-  var NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
-  var NEW_FADE_DURATION = 3000; // length of the fade
 
   var handlers = {
     new_notification: function (n) {
@@ -54,28 +53,21 @@ panes.notices = function () {
     }
   };
 
-  var $notices, $markAll;
+  var $notices, $markAll, inbox;
   return {
     render: function ($container) {
       api.port.emit('notifications', function (o) {
+        inbox = ~session.experiments.indexOf('inbox');
         renderNotices($container, o.notifications, o.timeLastSeen, o.numNotVisited);
         api.port.on(handlers);
       });
     }};
 
   function renderNotices($container, notices, timeLastSeen, numNotVisited) {
-    timeLastSeen = new Date(+new Date(timeLastSeen) + 1000); // hack for old data that did not have millis presision
-
     $notices = $(render('html/keeper/notices', {}))
-      .append(notices.map(function (n) {
-        return renderNotice(n, n.unread && new Date(n.time) > timeLastSeen);
-      }).join(''))
+      .append(notices.map(renderNotice).join(''))
       .appendTo($container)
       .preventAncestorScroll();
-    $notices.scrollable({
-      $above: $container.closest('.kifi-pane-box').find('.kifi-pane-title'),
-      $below: $('<div>').insertAfter($notices)})
-    .triggerHandler('scroll');
     $notices.find('time').timeago();
     $container.antiscroll({x: false});
 
@@ -104,9 +96,17 @@ panes.notices = function () {
         }
       }
       return false;
-    }).scroll(onScroll);
-
-    fadeOutNew($notices.find('.kifi-notice-new'));
+    })
+    .scroll(onScroll)
+    .hoverfu('.kifi-notice-n-others', function(configureHover) {
+      var $a = $(this);
+      render('html/keeper/others', {names: $a.data('names')}, function(html) {
+        configureHover(html, {
+          mustHoverFor: 100,
+          position: {my: 'center bottom-8', at: 'center top', of: $a, collision: 'none'}
+        });
+      });
+    });
 
     var $box = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
       $notices = $markAll = null;
@@ -123,24 +123,68 @@ panes.notices = function () {
       // not updating DOM until response received due to bulk nature of action
     }).toggle(numNotVisited > 0);
 
-    if (notices.length && new Date(notices[0].time) > timeLastSeen) {
+    if (notices.length && new Date(notices[0].time) > new Date(timeLastSeen)) {
       api.port.emit('notifications_read', notices[0].time);
     }
   }
 
-  function renderNotice(notice, isNew) {
-    notice.isNew = isNew;
+  function renderNotice(notice) {
     notice.isVisited = !notice.unread;
     notice.formatMessage = getSnippetFormatter;
     notice.formatLocalDate = getLocalDateFormatter;
     notice.cdnBase = cdnBase;
+    notice.inbox = inbox;
     switch (notice.category) {
     case 'message':
-      var nParticipants = notice.participants.length;
-      notice.oneParticipant = nParticipants === 1;
-      notice.twoParticipants = nParticipants === 2;
-      notice.threeParticipants = nParticipants === 3;
-      notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
+      var participants = notice.participants;
+      var nParticipants = participants.length;
+      notice.author = notice.author || notice.participants[0];
+      if (!inbox) {
+        notice.oneParticipant = nParticipants === 1;
+        notice.twoParticipants = nParticipants === 2;
+        notice.threeParticipants = nParticipants === 3;
+        notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
+      } else {
+        if (notice.authors === 1) {
+          notice[notice.author.id === session.user.id ? 'isSent' : 'isReceived'] = true;
+        } else if (notice.firstAuthor > 1) {
+          participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
+        }
+        var nPicsMax = notice.isSent ? 4 : 3;
+        notice.picturedParticipants = nParticipants <= nPicsMax ?
+          notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
+          participants.slice(0, nPicsMax);
+        notice.picIndex = notice.picturedParticipants.length === 1 ? 0 : counter();
+        var nNamesMax = 4;
+        if (notice.isReceived) {
+          notice.namedParticipant = notice.author;
+        } else if (notice.isSent) {
+          if (nParticipants === 2) {
+            notice.namedParticipant = participants[1];
+          } else if (nParticipants - 1 <= nNamesMax) {
+            notice.namedParticipants = participants.slice(1, 1 + nNamesMax);
+          } else {
+            notice.namedParticipants = participants.slice(1, nNamesMax);
+            notice.otherParticipants = participants.slice(nNamesMax);
+            notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
+          }
+        } else {
+          if (nParticipants === 2) {
+            notice.namedParticipant = participants.filter(idIsNot(session.user.id))[0];
+          } else if (nParticipants <= nNamesMax) {
+            notice.namedParticipants = participants.map(makeFirstNameYou(session.user.id));
+          } else {
+            notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(session.user.id));
+            notice.otherParticipants = participants.slice(nNamesMax - 1);
+            notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
+          }
+        }
+        if (notice.namedParticipants) {
+          notice.nameIndex = counter();
+          notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
+        }
+        notice.authorShortName = notice.author.id === session.user.id ? 'Me' : notice.author.firstName;
+      }
       return render('html/keeper/notice_message', notice);
     case 'global':
       return render('html/keeper/notice_global', notice);
@@ -155,10 +199,9 @@ panes.notices = function () {
       $notices.find('.kifi-notice[data-id="' + n.id + '"]').remove();
       $notices.find('.kifi-notice[data-thread="' + n.thread + '"]').remove();
     });
-    var $n = $(notices.map(function (n) {return renderNotice(n, true)}).join(''))
+    $(notices.map(renderNotice).join(''))
       .find('time').timeago().end()
       .prependTo($notices);
-    fadeOutNew($n);
     api.port.emit('notifications_read', notices[0].time);
   }
 
@@ -183,16 +226,6 @@ panes.notices = function () {
     });
   }
 
-  function fadeOutNew($new) {
-    $new.css('transition', 'background ' + NEW_FADE_DURATION + 'ms ease');
-    setTimeout(function () {
-      $new.removeClass('kifi-notice-new');
-      setTimeout(function () {
-        $new.css('transition', '');
-      }, NEW_FADE_DURATION);
-    }, NEW_FADE_TIMEOUT);
-  }
-
   function onScroll() {
     if (this.scrollTop + this.clientHeight > this.scrollHeight - PIXELS_FROM_BOTTOM) {
       var $oldest = $notices.children('.kifi-notice').last(), now = new Date;
@@ -201,7 +234,7 @@ panes.notices = function () {
         api.port.emit('old_notifications', $oldest.find('time').attr('datetime'), function (notices) {
           if ($notices) {
             if (notices.length) {
-              $(notices.map(function (n) {return renderNotice(n, false)}).join(''))
+              $(notices.map(renderNotice).join(''))
                 .find('time').timeago().end()
                 .appendTo($notices);
             } else {
@@ -213,10 +246,40 @@ panes.notices = function () {
     }
   }
 
+  function counter() {
+    var i = 0;
+    return function() {
+      return i++;
+    };
+  }
+
   function dateWithoutMs(t) { // until db has ms precision
     var d = new Date(t);
     d.setMilliseconds(0);
     return d;
+  }
+
+  function idIsNot(id) {
+    return function (o) {
+      return o.id !== id;
+    };
+  }
+
+  function makeFirstNameYou(id) {
+    return function (o) {
+      if (o.id === id) {
+        o.firstName = 'You';
+      }
+      return o;
+    };
+  }
+
+  function toNamesJson(users) {
+    return JSON.stringify(users.map(toName));
+  }
+
+  function toName(user) {
+    return user.firstName + ' ' + user.lastName;
   }
 }();
 

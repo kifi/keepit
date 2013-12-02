@@ -11,6 +11,7 @@ import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute
 import org.apache.lucene.analysis.tokenattributes.TypeAttributeImpl
 import org.apache.lucene.analysis.TokenStream
+import org.apache.lucene.analysis.util.CharArraySet
 import org.apache.lucene.util.Version
 import java.io.Reader
 import java.io.StringReader
@@ -40,6 +41,11 @@ class DefaultAnalyzerTest extends Specification {
              Token("<ALPHANUM>", "dot", 1),
              Token("<ALPHANUM>", "compound", 1),
              Token("<ALPHANUM>", "name", 1))
+
+      toTokenList(analyzer.tokenStream("b", "www.yahoo.com")) ===
+        List(Token("<ALPHANUM>", "www", 1),
+             Token("<ALPHANUM>", "yahoo", 1),
+             Token("<ALPHANUM>", "com", 1))
     }
 
     "preserve dots in acronyms" in { // lucene drops the last . in a token
@@ -72,6 +78,14 @@ class DefaultAnalyzerTest extends Specification {
       toTokenList(DefaultAnalyzer.forParsingWithStemmer.tokenStream("b", "O'Reilly's books")) ===
         List(Token("<ALPHANUM>", "o'reilly", 1),
              Token("<ALPHANUM>", "book", 1))
+    }
+
+    "expose the stop word list" in {
+      val stopWords = DefaultAnalyzer.forIndexing.getStopWords
+
+      stopWords must beSome[CharArraySet]
+      stopWords.get.contains("scala") === false
+      stopWords.get.contains("is") === true
     }
   }
 

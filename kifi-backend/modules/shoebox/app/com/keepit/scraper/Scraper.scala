@@ -10,8 +10,7 @@ import com.keepit.scraper.extractor.{ExtractorFactory, Extractor}
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.search.LangDetector
 import org.apache.http.HttpStatus
-import org.joda.time.Seconds
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{AirbrakeNotifier}
 import com.keepit.common.store.S3ScreenshotStore
 import org.joda.time.Days
 import com.keepit.model.ScrapeInfo
@@ -21,7 +20,7 @@ import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.normalizer.{TrustedCandidate, NormalizationService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Success
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import scala.collection.mutable
 
@@ -71,7 +70,7 @@ class Scraper @Inject() (
   def schedule(): Unit = {
     log.info("[schedule] starting a new scrape round")
     val (activeOverdues, pendingCount, pendingOverdues) = db.readOnly { implicit s =>
-      (scrapeInfoRepo.getOverdueList(), scrapeInfoRepo.getPendingCount(), scrapeInfoRepo.getOverduePendingList())
+      (scrapeInfoRepo.getOverdueList(), scrapeInfoRepo.getPendingCount(), scrapeInfoRepo.getOverduePendingList(currentDateTime.minusSeconds(config.pendingOverdueThreshold)))
     }
     log.info(s"[schedule-active]:  (len=${activeOverdues.length}) ${activeOverdues.map(i => (i.id, i.destinationUrl)).mkString(System.lineSeparator)}")
     log.info(s"[schedule-pending]: pendingCount=${pendingCount} overdues: (len=${pendingOverdues.length}) ${pendingOverdues.map(i => (i.id, i.destinationUrl)).mkString(System.lineSeparator)}")
@@ -97,17 +96,20 @@ class Scraper @Inject() (
       val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
     } else {
       tasks.grouped(scraperConfig.batchSize).foreach { g => // revisit rate-limit
-        val futures = g.map { case (uri, info) =>
-          val saved = db.readWrite { implicit s =>
-            scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // TODO: batch
+        val futures = g map { case (uri, info) =>
+          db.readWrite { implicit s =>
+            val savedInfo = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // TODO: batch
+            val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
+            ScrapeRequest(uri, savedInfo, proxyOpt)
           }
-          (uri.url, scraperServiceClient.scheduleScrape(uri, saved))
+        } map { case sr =>
+          scraperServiceClient.scheduleScrapeWithRequest(sr)
         }
-        val res = futures.map(f => (f._1, Await.result(f._2, 5 seconds))) // revisit artificial wait/delay
-        log.info(s"[schedule] (remote) results=${res.mkString(System.lineSeparator())}")
+        Await.result(Future sequence (futures), 5 seconds) // todo: remove arbitrary await
+        log.info(s"[schedule-WithRequest] (remote) finished scheduling batch (sz=${g.length}) ${g.map(_._1.url).mkString}") // todo: ScheduleResult
       }
+      log.info(s"[schedule-WithRequest] finished scheduling ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
     }
-    log.info(s"[schedule] finished scheduling ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {

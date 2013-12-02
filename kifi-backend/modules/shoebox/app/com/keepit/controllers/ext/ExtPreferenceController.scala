@@ -12,6 +12,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.classify.{DomainRepo, Domain, DomainStates}
 import com.keepit.normalizer.NormalizationService
+import com.keepit.common.crypto.SimpleDESCrypt
 
 class ExtPreferenceController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -28,6 +29,9 @@ class ExtPreferenceController @Inject() (
 
   private case class UserPrefs(enterToSend: Boolean)
   private implicit val userPrefsFormat = Json.format[UserPrefs]
+
+  private val crypt = new SimpleDESCrypt
+  private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   def normalize(url: String) = AuthenticatedJsonAction { request =>
     val json = db.readOnly { implicit session => Json.arr(normalizationService.normalize(url)) }
@@ -51,7 +55,9 @@ class ExtPreferenceController @Inject() (
   }
 
   def getPrefs() = AuthenticatedJsonAction { request =>
-    Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get)))
+    val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
+    val encryptedIp: String = crypt.crypt(ipkey, ip)
+    Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get), encryptedIp))
   }
 
   def setKeeperPosition() = AuthenticatedJsonToJsonAction { request =>

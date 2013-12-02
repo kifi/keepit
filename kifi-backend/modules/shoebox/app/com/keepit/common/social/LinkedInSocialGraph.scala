@@ -112,6 +112,8 @@ class LinkedInSocialGraph @Inject() (
     s"https://api.linkedin.com/v1/people/$id:$ProfileFieldSelector?format=json&oauth2_access_token=$accessToken"
   }
 
+  def extractUserValues(json: JsValue): Map[String, String] = Map.empty
+
   def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue): SocialUserInfo = {
     (json \ "id").asOpt[String] map { id =>
       assert(sui.socialId.id == id, s"Social id in profile $id should be equal to the existing id ${sui.socialId}")

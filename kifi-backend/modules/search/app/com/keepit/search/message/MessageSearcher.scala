@@ -48,7 +48,7 @@ class MessageSearcher(searcher: Searcher){
     }.drop(from).take(howMany)
 
 
-    orderedResults.map{ x => 
+    orderedResults.map{ x =>
       try {
         Json.parse(x.value)
       } catch {
@@ -59,4 +59,4 @@ class MessageSearcher(searcher: Searcher){
     }
 
   }
-} 
+}

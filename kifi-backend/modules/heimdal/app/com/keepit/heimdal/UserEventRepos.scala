@@ -3,35 +3,83 @@ package com.keepit.heimdal
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 
-import reactivemongo.bson.{BSONDocument, BSONLong, BSONArray}
+import reactivemongo.bson.{BSONDocument, BSONLong}
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.core.commands.PipelineOperator
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
+import com.keepit.common.logging.AccessLog
+import scala.concurrent.duration.Duration
+import com.keepit.common.KestrelCombinator
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.model.{KifiInstallation, User}
+import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.util.{Failure, Success}
 
-import scala.concurrent.{Promise, Future}
+trait UserEventLoggingRepo extends EventRepo[UserEvent] {
+  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit
+  def setUserProperties(userId: Id[User], properties: EventContext): Unit
+  def delete(userId: Id[User]): Unit
+}
 
-abstract class UserEventLoggingRepo extends MongoEventRepo[UserEvent] {
+class ProdUserEventLoggingRepo(
+  val collection: BSONCollection,
+  val mixpanel: MixpanelClient,
+  val descriptors: UserEventDescriptorRepo,
+  shoeboxClient: ShoeboxServiceClient,
+  protected val airbrake: AirbrakeNotifier)
+  extends MongoEventRepo[UserEvent] with UserEventLoggingRepo {
+
   val warnBufferSize = 500
   val maxBufferSize = 10000
 
   def toBSON(event: UserEvent) : BSONDocument = {
     val userBatch: Long = event.userId / 1000 //Warning: This is a (neccessary!) index optimization. Changing this will require a database change!
     val fields = EventRepo.eventToBSONFields(event) ++ Seq(
-      "user_batch" -> BSONLong(userBatch),
-      "user_id" -> BSONLong(event.userId)
-    )
+        "user_batch" -> BSONLong(userBatch),
+        "user_id" -> BSONLong(event.userId)
+      )
     BSONDocument(fields)
   }
 
   def fromBSON(bson: BSONDocument): UserEvent = ???
+
+  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = mixpanel.incrementUserProperties(userId, increments)
+  def setUserProperties(userId: Id[User], properties: EventContext): Unit = mixpanel.setUserProperties(userId, properties)
+  def delete(userId: Id[User]): Unit = mixpanel.delete(userId)
+
+  override def persist(userEvent: UserEvent) : Unit = {
+    val contextData = userEvent.context.data
+    contextData.get("extensionVersion") match {
+      case None | Some(ContextStringData("")) => contextData.get("kifiInstallationId") match {
+        case Some(ContextStringData(id)) => shoeboxClient.getExtensionVersion(ExternalId[KifiInstallation](id)) onComplete {
+          case Success(version) => super.persist(userEvent.copy(context = EventContext(contextData + ("extensionVersion" -> ContextStringData(version)))))
+          case Failure(_) => super.persist(userEvent)
+        }
+        case _ => super.persist(userEvent)
+      }
+      case _ => super.persist(userEvent)
+    }
+  }
 }
 
-class ProdUserEventLoggingRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends UserEventLoggingRepo
+trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]
 
-class DevUserEventLoggingRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends UserEventLoggingRepo {
-  override def insert(obj: UserEvent, dropDups: Boolean = false) : Unit = {}
-  override def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
-    Promise.successful(
-      Stream(BSONDocument("command" -> BSONArray(command.map(_.makePipe))))
-    ).future
-  }
+class ProdUserEventDescriptorRepo(val collection: BSONCollection, cache: UserEventDescriptorNameCache, protected val airbrake: AirbrakeNotifier) extends ProdEventDescriptorRepo[UserEvent] with UserEventDescriptorRepo {
+  override def upsert(obj: EventDescriptor) = super.upsert(obj) map { _ tap { _ => cache.set(UserEventDescriptorNameKey(obj.name), obj) } }
+  override def getByName(name: EventType) = cache.getOrElseFutureOpt(UserEventDescriptorNameKey(name)) { super.getByName(name) }
+}
+
+class UserEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserEventDescriptorNameKey, EventDescriptor](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+case class UserEventDescriptorNameKey(name: EventType) extends Key[EventDescriptor] {
+  override val version = 1
+  val namespace = "user_event_descriptor"
+  def toKey(): String = name.name
+}
+
+class DevUserEventLoggingRepo extends DevEventRepo[UserEvent] with UserEventLoggingRepo {
+  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = {}
+  def setUserProperties(userId: Id[User], properties: EventContext): Unit = {}
+  def delete(userId: Id[User]): Unit = {}
 }

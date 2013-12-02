@@ -99,8 +99,8 @@ class NormalizationServiceImpl @Inject() (
       orderedCandidates match {
         case Seq() => Future.successful((None, Seq()))
         case Seq(strongerCandidate, weakerCandidates @ _*) => {
-          assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization)
-          assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization)
+          assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization, "Normalization candidates have not been sorted properly")
+          assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization, "Normalization candidates have not been filtered properly")
 
           db.readOnly { implicit session =>
             oracle(strongerCandidate) match {
@@ -109,7 +109,7 @@ class NormalizationServiceImpl @Inject() (
               case Check(contentCheck) =>
                 if (currentReference.url == strongerCandidate.url) Future.successful(Some(strongerCandidate), weakerCandidates)
                 else for {
-                  contentCheck <- contentCheck(strongerCandidate)(session)
+                  contentCheck <- contentCheck(strongerCandidate)
                   (successful, weaker) <- {
                     if (contentCheck) Future.successful((Some(strongerCandidate), weakerCandidates))
                     else findCandidate(weakerCandidates)

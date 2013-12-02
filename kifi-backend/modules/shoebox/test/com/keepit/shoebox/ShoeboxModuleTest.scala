@@ -26,7 +26,6 @@ import com.keepit.model.TestSliderHistoryTrackerModule
 import com.keepit.classify.FakeDomainTagImporterModule
 import com.keepit.learning.topicmodel.FakeWordTopicModule
 import com.keepit.learning.topicmodel.DevTopicModelModule
-import com.keepit.learning.topicmodel.DevTopicStoreModule
 import com.keepit.eliza.TestElizaServiceClientModule
 import com.keepit.scraper.FakeScraperModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -55,7 +54,6 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeDomainTagImporterModule(),
         FakeWordTopicModule(),
         DevTopicModelModule(),
-        DevTopicStoreModule(),
         GeckoboardModule(),
         FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
         FakeScraperModule(), // This one should not be required once the Scraper is off Shoebox

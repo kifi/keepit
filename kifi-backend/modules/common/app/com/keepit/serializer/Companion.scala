@@ -18,6 +18,10 @@ object TypeCode {
     val typeCodeStrings = typeCodes.map(_.toString)
     typeCodeStrings.length == typeCodeStrings.toSet.size
   }
+  def typeCodeMap[T](typeCodes: TypeCode[T]*): Map[String, TypeCode[T]] = {
+    require(TypeCode.integrityCheck(typeCodes), "Duplicate type codes")
+    typeCodes.map(typeCode => typeCode.toString -> typeCode).toMap
+  }
 }
 
 object Companion {

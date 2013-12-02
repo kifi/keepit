@@ -11,6 +11,7 @@
 // @require scripts/compose.js
 // @require scripts/snapshot.js
 // @require scripts/lib/antiscroll.min.js
+// @require scripts/maintain_height.js
 // @require scripts/prevent_ancestor_scroll.js
 
 panes.threads = function () {
@@ -63,22 +64,31 @@ panes.threads = function () {
       var $th = $(this), id = $th.data('id');
       var participants = $th.data('recipients') ||
         threads.filter(function (t) {return t.id === id})[0].participants;
-      $th.closest('.kifi-pane').triggerHandler('kifi:show-pane', ['/messages/' + id, participants])
+      pane.show({locator: '/messages/' + id, paramsArg: participants});
     })
-    .on('kifi:compose-submit', sendMessage.bind(null, $container))
     .find('time').timeago();
 
-    attachComposeBindings($container, 'message', prefs.enterToSend);
-
     $list = $container.find('.kifi-threads-list').preventAncestorScroll();
-    var scroller = $list.parent().antiscroll({x: false}).data('antiscroll');
+    var $scroll = $list.parent();
+    var compose = initCompose($container, prefs.enterToSend, {onSubmit: sendMessage});
+    var heighter = maintainHeight($scroll[0], $list[0], $container[0], [compose.form()]);
+
+    $scroll.antiscroll({x: false});
+    var scroller = $scroll.data('antiscroll');
     $(window).on('resize.threads', scroller.refresh.bind(scroller));
 
-    $container.closest('.kifi-pane-box').on('kifi:remove', function () {
+    var $box = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
       $list.length = 0;
       $(window).off('resize.threads');
+      compose.destroy();
+      heighter.destroy();
       api.port.off(handlers);
     });
+    if ($box.data('shown')) {
+      compose.focus();
+    } else {
+      $box.on('kifi:shown', compose.focus);
+    }
   }
 
   function update(thread) {
@@ -113,20 +123,15 @@ panes.threads = function () {
       .append(els).scrollToBottom();
   }
 
-  function sendMessage($container, e, text, recipientIds) {
-    // logEvent('slider', 'message');
+  function sendMessage(text, recipients) {
     api.port.emit(
       'send_message',
-      withUrls({title: document.title, text: text, recipients: recipientIds}),
+      withUrls({title: document.title, text: text, recipients: recipients.map(idOf)}),
       function (resp) {
         log('[sendMessage] resp:', resp)();
-        var friends = $container.find('.kifi-compose-to').data('friends').reduce(function (o, f) {
-          o[f.id] = f;
-          return o;
-        }, {});
-        var participants = recipientIds.map(function (id) {return friends[id];});
-        var locator = '/messages/' + (resp.parentId || resp.id);
-        $container.closest('.kifi-pane').triggerHandler('kifi:show-pane', [locator, participants]);
+        pane.show({
+          locator: '/messages/' + (resp.parentId || resp.id),
+          paramsArg: recipients});
       });
   }
 
@@ -155,5 +160,9 @@ panes.threads = function () {
 
   function remove() {
     $(this).remove();
+  }
+
+  function idOf(o) {
+    return o.id;
   }
 }();

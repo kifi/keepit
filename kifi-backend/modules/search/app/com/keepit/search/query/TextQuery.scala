@@ -23,7 +23,7 @@ object TextQuery {
   val regularQueryTieBreakerMultiplier = 0.5f
 }
 
-class TextQuery extends Query {
+class TextQuery extends Query with Logging {
   import TextQuery._
 
   private var personalQuery: Query = new DisjunctionMaxQuery(personalQueryTieBreakerMultiplier)
@@ -44,6 +44,7 @@ class TextQuery extends Query {
         disjunct.add(query)
         disjunct
       case _ => {
+        log.info("TextQuery: DisjunctionMaxQuery match failed")
         val disjunct = new DisjunctionMaxQuery(personalQueryTieBreakerMultiplier)
         disjunct.add(personalQuery)
         disjunct.add(query)
@@ -60,8 +61,9 @@ class TextQuery extends Query {
         disjunct.add(query)
         disjunct
       case _ => {
+        log.info("TextQuery: DisjunctionMaxQuery match failed")
         val disjunct = new DisjunctionMaxQuery(regularQueryTieBreakerMultiplier)
-        disjunct.add(personalQuery)
+        disjunct.add(regularQuery)
         disjunct.add(query)
         disjunct
       }
@@ -104,8 +106,9 @@ class TextQuery extends Query {
         disjunct.add(query)
         disjunct
       case _ => {
+        log.info("TextQuery: DisjunctionMaxQuery match failed")
         val disjunct = new DisjunctionMaxQuery(0.0f)
-        disjunct.add(personalQuery)
+        disjunct.add(semanticVectorQuery)
         disjunct.add(query)
         disjunct
       }
@@ -201,6 +204,10 @@ class TextWeight(
         val exp = regularWeight.explain(context, doc)
         if (exp.getValue() > 0.0f) result.addDetail(regularWeight.explain(context, doc))
       }
+      if (semanticWeight != null) {
+        val exp = semanticWeight.explain(context, doc)
+        if (exp.getValue() > 0.0f) result.addDetail(semanticWeight.explain(context, doc))
+      }
     } else {
       result.setDescription("TextQuery, doesn't match id %d".format(doc))
       result.setValue(0.0f)
@@ -248,7 +255,6 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
       val scoreP = if (docP == doc) personalScorer.score() else 0.0f
       val scoreR = if (docR == doc) regularScorer.score() else 0.0f
       val scoreMax = max(scoreP, scoreR)
-      val scoreSum = scoreP + scoreR
       val semScore = semanticScore()
 
       scoreVal = scoreMax * semScore

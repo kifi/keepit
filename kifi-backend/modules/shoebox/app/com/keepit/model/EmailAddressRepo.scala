@@ -16,7 +16,8 @@ trait EmailAddressRepo extends Repo[EmailAddress] {
       (implicit session: RSession): Option[EmailAddress]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress]
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Boolean
+  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Boolean, Boolean) // returns (isValidVerificationCode, isFirstTimeUsed)
+  def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress]
 }
 
 @Singleton
@@ -42,7 +43,7 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[EmailAddress] = {
     val allAddresses = getByAddress(address, excludeState)
-    allAddresses.find(_.state == EmailAddressStates.VERIFIED).orElse(allAddresses.headOption)
+    allAddresses.find(_.state == EmailAddressStates.VERIFIED).orElse(allAddresses.find(_.state == EmailAddressStates.UNVERIFIED).headOption)
   }
 
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
@@ -51,12 +52,13 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress] =
     (for (e <- table if e.userId === userId && e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
 
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): Boolean = {
+  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Boolean, Boolean) = {
+    // returns (isValidVerificationCode, isFirstTimeUsed)
     val now = clock.now()
     table.filter(e => e.userId === userId && e.verificationCode === verificationCode && e.state === EmailAddressStates.UNVERIFIED)
       .map(e => e.verifiedAt ~ e.updatedAt ~ e.state).update((now, now, EmailAddressStates.VERIFIED)) match {
-      case count if count > 0 => true
-      case _ => getByUserAndCode(userId, verificationCode).isDefined
+      case count if count > 0 => (true, true)
+      case _ => (getByUserAndCode(userId, verificationCode).isDefined, false)
     }
   }
 

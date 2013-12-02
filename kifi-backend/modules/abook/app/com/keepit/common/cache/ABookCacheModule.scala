@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
-import com.keepit.search.{SearchIdCache, ActiveExperimentsCache}
+import com.keepit.search.{ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache}
 import com.keepit.common.logging.AccessLog
 
 case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
@@ -93,6 +93,18 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def searchIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SearchIdCache(stats, accessLog, (outerRepo, 1 hour))
+    new InitialSearchIdCache(stats, accessLog, (outerRepo, 1 hour))
 
+  @Singleton
+  @Provides
+  def searchArticleCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ArticleSearchResultCache(stats, accessLog, (outerRepo, 1 hour))
+
+  @Provides @Singleton
+  def userValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new UserValueCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new ExtensionVersionInstallationIdCache(stats, accessLog, (outerRepo, 7 days))
 }

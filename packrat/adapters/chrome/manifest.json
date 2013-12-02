@@ -20,11 +20,13 @@
   },
   "content_scripts": [
     {
-      "js": ["scripts/install_redirect.js"],
+      "js": [
+        "scripts/api.js",
+        "scripts/installed.js"
+      ],
       "matches": [
-        "*://www.kifi.com/install",
-        "*://kifi.com/install",
-        "*://dev.ezkeep.com/install"
+        "*://www.kifi.com/*",
+        "*://dev.ezkeep.com/*"
       ],
       "run_at": "document_start"
     },
@@ -35,7 +37,6 @@
       ],
       "matches": [
         "*://www.kifi.com/r/*",
-        "*://kifi.com/r/*",
         "*://dev.ezkeep.com/r/*"
       ],
       "run_at": "document_start"
@@ -79,8 +80,15 @@
     "tabs",
     "bookmarks",
     "webNavigation",
+    "webRequest",
     "http://*/",
     "https://*/"
   ],
-  "web_accessible_resources": []
+  "web_accessible_resources": [
+    "styles/iframes/login.css",
+    "scripts/html/iframes/login.js",
+    "scripts/iframes/login.js",
+    "scripts/iframes/lib/jquery.js",
+    "scripts/iframes/lib/jquery-ui-position.js"
+  ]
 }

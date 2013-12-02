@@ -9,6 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
+import scala.concurrent._
 
 import scala.concurrent.{Future, Promise}
 
@@ -16,23 +17,27 @@ import play.api.libs.json.{JsValue, JsArray, Json, JsObject}
 
 import com.google.inject.Inject
 import com.keepit.common.routes.ABook
+import scala.util.{Success, Failure, Try}
+import play.api.http.Status
 
 trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
+  def importContactsP(userId:Id[User], oauth2Token:OAuth2Token):Future[JsValue]
   def importContacts(userId:Id[User], provider:String, accessToken:String):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
-  def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
+  def getABookInfo(userId:Id[User], id:Id[ABookInfo]):Future[Option[ABookInfo]]
   def getContacts(userId:Id[User], maxRows:Int):Future[Seq[Contact]]
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
+  def getEContactCount(userId:Id[User]):Future[Int]
+  def getEContactById(contactId:Id[EContact]):Future[Option[EContact]]
   def getEContactByEmail(userId:Id[User], email:String):Future[Option[EContact]]
-  def getContactInfos(userId:Id[User], maxRows:Int):Future[Seq[ContactInfo]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
-  def getContactsRawInfo(userId:Id[User], origin:ABookOriginType):Future[Seq[ContactInfo]]
-  def getMergedContactInfos(userId:Id[User], maxRows:Int):Future[JsArray]
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[JsValue]
+  def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
+  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName:Option[String], lastName:Option[String]):Future[Try[EContact]]
 }
 
 
@@ -43,8 +48,12 @@ class ABookServiceClientImpl @Inject() (
 )
   extends ABookServiceClient with Logging {
 
+  def importContactsP(userId: Id[User], oauth2Token:OAuth2Token): Future[JsValue] = {
+    call(ABook.internal.importContactsP(userId), Json.toJson(oauth2Token), timeout = 30000).map { r => r.json }
+  }
+
   def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = {
-    call(ABook.internal.importContacts(userId, provider, accessToken)).map { r => r.json }
+    call(ABook.internal.importContacts(userId, provider, accessToken), timeout = 30000).map { r => r.json }
   }
 
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {
@@ -55,8 +64,10 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.uploadDirect(userId, origin), json).map { r => r.json }
   }
 
-  def upload(userId:Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {
-    call(ABook.internal.upload(userId, origin), Json.toJson(contacts))
+  def getABookInfo(userId:Id[User], id: Id[ABookInfo]): Future[Option[ABookInfo]] = {
+    call(ABook.internal.getABookInfo(userId, id)).map { r =>
+      Json.fromJson[Option[ABookInfo]](r.json).get
+    }
   }
 
   def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = {
@@ -77,15 +88,21 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = {
-    call(ABook.internal.getEContactByEmail(userId, email)).map { r =>
+  def getEContactCount(userId: Id[User]): Future[Int] = {
+    call(ABook.internal.getEContactCount(userId)).map { r =>
+      Json.fromJson[Int](r.json).get
+    }
+  }
+
+  def getEContactById(contactId: Id[EContact]): Future[Option[EContact]] = {
+    call(ABook.internal.getEContactById(contactId)).map { r =>
       Json.fromJson[Option[EContact]](r.json).get
     }
   }
 
-  def getContactInfos(userId: Id[User], maxRows: Int): Future[Seq[ContactInfo]] = {
-    call(ABook.internal.getContactInfos(userId, maxRows)).map { r =>
-      Json.fromJson[Seq[ContactInfo]](r.json).get
+  def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = {
+    call(ABook.internal.getEContactByEmail(userId, email)).map { r =>
+      Json.fromJson[Option[EContact]](r.json).get
     }
   }
 
@@ -95,21 +112,25 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def getContactsRawInfo(userId: Id[User], origin: ABookOriginType): Future[Seq[ContactInfo]] = {
-    call(ABook.internal.getContactsRawInfo(userId, origin)).map { r =>
-      Json.fromJson[Seq[ContactInfo]](r.json).get
-    }
-  }
-
-  def getMergedContactInfos(userId: Id[User], maxRows: Int): Future[JsArray] = {
-    call(ABook.internal.getMergedContactInfo(userId, maxRows)).map { r =>
-      Json.fromJson[JsArray](r.json).get
-    }
-  }
-
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue): Future[JsValue] = {
     call(ABook.internal.uploadForUser(userId, origin), data).map{ r =>
       r.json
+    }
+  }
+
+  def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = {
+    call(ABook.internal.getOAuth2Token(userId, abookId)).map { r =>
+      if (r.json == null) None // TODO: revisit
+      else r.json.as[Option[OAuth2Token]]
+    }
+  }
+
+  def getOrCreateEContact(userId: Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String]): Future[Try[EContact]] = {
+    call(ABook.internal.getOrCreateEContact(userId, email, name, firstName, lastName)).map { r =>
+      r.status match {
+        case Status.OK => Success(r.json.as[EContact])
+        case _ => Failure(new IllegalArgumentException(r.body)) // can do better
+      }
     }
   }
 }
@@ -120,30 +141,33 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
+  def importContactsP(userId: Id[User], oauth2Token: OAuth2Token): Future[JsValue] = ???
+
   def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = ???
 
   def upload(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
 
   def uploadDirect(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
 
-  def upload(userId: Id[User], origin:ABookOriginType, contacts:Seq[ContactInfo]):Unit = {}
+  def getABookInfo(userId: Id[User], id: Id[ABookInfo]): Future[Option[ABookInfo]] = ???
 
   def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = ???
 
   def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = ???
 
-  def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = ???
+  def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = Future.successful(Seq.empty[EContact])
+
+  def getEContactCount(userId: Id[User]): Future[Int] = ???
+
+  def getEContactById(contactId: Id[EContact]): Future[Option[EContact]] = ???
 
   def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = ???
 
-  def getContactInfos(userId: Id[User], maxRows:Int): Future[Seq[ContactInfo]] = ???
-
   def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
-
-  def getContactsRawInfo(userId: Id[User], origin: ABookOriginType): Future[Seq[ContactInfo]] = ???
-
-  def getMergedContactInfos(userId: Id[User], maxRows: Int): Future[JsArray] = ???
 
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue): Future[JsValue] = ???
 
+  def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
+
+  def getOrCreateEContact(userId: Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String]): Future[Try[EContact]] = ???
 }

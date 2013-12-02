@@ -14,12 +14,12 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def messageThreadExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new MessageThreadExternalIdCache(stats, accessLog, (outerRepo, 7 days))
+    new MessageThreadExternalIdCache(stats, accessLog, (outerRepo, Duration.Inf))
 
   @Singleton
   @Provides
   def messagesForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new MessagesForThreadIdCache(stats, accessLog, (outerRepo, 24 hours))
+    new MessagesForThreadIdCache(stats, accessLog, (outerRepo, Duration.Inf))
 
   @Singleton
   @Provides
@@ -101,4 +101,11 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def normalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new NormalizedURIUrlHashCache(stats, accessLog, (outerRepo, 7 days))
 
+  @Provides @Singleton
+  def userValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new UserValueCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new ExtensionVersionInstallationIdCache(stats, accessLog, (outerRepo, 7 days))
 }

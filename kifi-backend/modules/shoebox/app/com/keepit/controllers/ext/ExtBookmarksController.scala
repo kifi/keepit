@@ -145,8 +145,12 @@ class ExtBookmarksController @Inject() (
     }
     searchClient.updateURIGraph()
     bookmark match {
-      case Some(bookmark) => Ok(Json.toJson(SendableBookmark fromBookmark bookmark))
       case None => NotFound
+      case Some(bookmark) => {
+        val privacyKeeps = if (bookmark.isPrivate) "privateKeeps" else "publicKeeps"
+        SafeFuture { heimdal.incrementUserProperties(request.userId, "keeps" -> -1, privacyKeeps -> -1) }
+        Ok(Json.toJson(SendableBookmark fromBookmark bookmark))
+      }
     }
   }
 
@@ -168,7 +172,9 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def addBookmarks() = AuthenticatedJsonToJsonAction { request =>
+  private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
+
+  def addBookmarks() = AuthenticatedJsonAction(parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
     val tStart = currentDateTime
     val userId = request.userId
     val installationId = request.kifiInstallationId
@@ -183,21 +189,29 @@ class ExtBookmarksController @Inject() (
           val experiments = request.experiments
           val user = db.readOnly { implicit s => userRepo.get(userId) }
           val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
-          searchClient.updateBrowsingHistory(userId, bookmarks.map(_.uriId): _*)
+          //the bookmarks list may be very large!
+          bookmarks.grouped(50) foreach { chunk =>
+            searchClient.updateBrowsingHistory(userId, chunk.map(_.uriId): _*)
+          }
           searchClient.updateURIGraph()
 
           //Analytics
-          SafeFuture{ bookmarks.foreach { bookmark =>
-            val contextBuilder = userEventContextBuilder(Some(request))
+          SafeFuture{
+            bookmarks.foreach { bookmark =>
+              val contextBuilder = userEventContextBuilder(request)
 
-            contextBuilder += ("isPrivate", bookmark.isPrivate)
-            contextBuilder += ("url", bookmark.url)
-            contextBuilder += ("source", bookmarkSource.getOrElse("UNKNOWN"))
-            contextBuilder += ("hasTitle", bookmark.title.isDefined)
+              contextBuilder += ("isPrivate", bookmark.isPrivate)
+              contextBuilder += ("url", bookmark.url)
+              contextBuilder += ("source", bookmarkSource.getOrElse("UNKNOWN"))
+              contextBuilder += ("hasTitle", bookmark.title.isDefined)
 
-            heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("keep"), tStart))
-          }}
-
+              heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("keep"), tStart))
+            }
+            val kept = bookmarks.length
+            val keptPrivate = bookmarks.count(_.isPrivate)
+            val keptPublic = kept - keptPrivate
+            heimdal.incrementUserProperties(user.id.get, "keeps" -> kept, "privateKeeps" -> keptPrivate, "publicKeeps" -> keptPublic)
+          }
         }
         Status(ACCEPTED)(JsNumber(0))
     }

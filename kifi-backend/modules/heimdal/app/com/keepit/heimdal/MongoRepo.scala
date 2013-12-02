@@ -9,8 +9,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONDouble
 import reactivemongo.bson.BSONString
 import reactivemongo.api.collections.default.BSONCollection
-import com.keepit.serializer.Companion
-import play.api.libs.json.JsArray
+import org.joda.time.DateTime
 
 //Might want to change this to a custom play one
 import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
@@ -90,5 +89,37 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
     }
 
   }
+}
 
+object CustomBSONHandlers {
+  implicit object BSONDateTimeHandler extends BSONHandler[BSONDateTime, DateTime] {
+    def read(time: BSONDateTime) = new DateTime(time.value)
+    def write(jdtime: DateTime) = BSONDateTime(jdtime.getMillis)
+  }
+
+  implicit object BSONEventTypeHandler extends BSONHandler[BSONString, EventType] {
+    def read(name: BSONString) = EventType(name.value)
+    def write(eventType: EventType) = BSONString(eventType.name)
+  }
+
+  implicit object BSONContextDataHandler extends BSONHandler[BSONArray, ContextData] {
+    def write(data: ContextData) = data match {
+      case ContextList(values) => BSONArray(values.map(writeSimpleContextData))
+      case data: SimpleContextData => BSONArray(writeSimpleContextData(data))
+    }
+
+    private def writeSimpleContextData(data: SimpleContextData): BSONValue = data match {
+      case ContextStringData(value) => BSONString(value)
+      case ContextDoubleData(value) => BSONDouble(value)
+      case ContextBoolean(value) => BSONBoolean(value)
+      case ContextDate(value) => BSONDateTimeHandler.write(value)
+    }
+
+    def read(doc: BSONArray): ContextData = ???
+  }
+
+  implicit object BSONEventContextHandler extends BSONHandler[BSONDocument, EventContext] {
+    def write(context: EventContext) = BSONDocument(context.data.mapValues(BSONContextDataHandler.write))
+    def read(doc: BSONDocument): EventContext = ???
+  }
 }

@@ -2,7 +2,10 @@ package com.keepit.search
 
 import com.keepit.common.db.{Id, State}
 import com.keepit.model.NormalizedURI
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 import org.joda.time.DateTime
+import com.keepit.common.time.DateTimeJsonFormat
 
 case class Article(
     id: Id[NormalizedURI],
@@ -18,14 +21,14 @@ case class Article(
     message: Option[String],
     titleLang: Option[Lang],
     contentLang: Option[Lang],
-    destinationUrl: Option[String] = None)
+    destinationUrl: Option[String] = None) {
+  println(implicitly[Format[DateTime]])
+}
 
 object Article {
-  import play.api.libs.functional.syntax._
-  import play.api.libs.json._
 
   implicit val format = (
-      (__ \ 'id).format(Id.format[NormalizedURI]) and
+      (__ \ 'normalizedUriId).format(Id.format[NormalizedURI]) and
       (__ \ 'title).format[String] and
       (__ \ 'content).format[String] and
       (__ \ 'description).formatNullable[String] and
@@ -33,7 +36,7 @@ object Article {
       (__ \ 'media).formatNullable[String] and
       (__ \ 'scrapedAt).format[DateTime] and
       (__ \ 'httpContentType).formatNullable[String] and
-      (__ \ 'httpOriginalContentCharSet).formatNullable[String] and
+      (__ \ 'httpOriginalContentCharset).formatNullable[String] and
       (__ \ 'state).format(State.format[NormalizedURI]) and
       (__ \ 'message).formatNullable[String] and
       (__ \ 'titleLang).formatNullable[com.keepit.search.Lang] and

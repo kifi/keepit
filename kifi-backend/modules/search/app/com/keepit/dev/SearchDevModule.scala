@@ -7,6 +7,7 @@ import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.store.SearchDevStoreModule
 import com.keepit.inject.CommonDevModule
+import com.keepit.search.spellcheck.SpellCorrectorModule
 
 case class SearchDevModule() extends SearchModule(
 
@@ -16,6 +17,7 @@ case class SearchDevModule() extends SearchModule(
 
   // Search Functional Modules
   indexModule = DevIndexModule(),
-  trackingModule = DevTrackingModule()
+  trackingModule = DevTrackingModule(),
+  spellModule = SpellCorrectorModule()
 ) with CommonDevModule
 

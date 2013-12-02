@@ -1,5 +1,6 @@
 package com.keepit.common.healthcheck
 
+import com.keepit.common.controller.ReportedException
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
 import com.keepit.common.strings._
@@ -30,6 +31,18 @@ case class AirbrakeError(
     createdAt: DateTime = currentDateTime,
     details: Option[String] = None) {
 
+  lazy val cleanError: AirbrakeError = {
+    if (exception.getCause == null) {
+      this
+    } else {
+      exception match {
+        case e: ReportedException => this.copy(exception = e.getCause).cleanError
+        case t: Throwable if (t.toString.contains("Execution exception in null:null")) => this.copy(exception = t.getCause).cleanError
+        case _ => this
+      }
+    }
+  }
+
   lazy val trimmedMessage = message.map(_.toString.abbreviate(AirbrakeError.MaxMessageSize))
   override def toString(): String = {
     s"${super.toString()}\n${rootException.getStackTrace mkString "\nat \t"}"
@@ -53,7 +66,8 @@ case class AirbrakeError(
       causeStacktraceHead(4).getOrElse(message.map(_.take(Max8M)).getOrElse("")) +
         url.getOrElse("") +
         method.getOrElse("")
-    val binaryHash = MessageDigest.getInstance("MD5").digest(permText)
+    val cleanText = permText.replaceAll("[0-9]", "")
+    val binaryHash = MessageDigest.getInstance("MD5").digest(cleanText)
     AirbrakeErrorSignature(new String(new Base64().encode(binaryHash), UTF8))
   }
 

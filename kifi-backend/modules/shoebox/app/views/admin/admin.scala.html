@@ -44,9 +44,14 @@
 		        </ul>
 		      </li>
 
-          <li><a href="@com.keepit.controllers.admin.routes.AdminAnalyticsController.index">Analytics</a></li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" href="#">Analytics</a>
+            <ul class="dropdown-menu" role="menu">
+              <li><a href="@com.keepit.controllers.admin.routes.AdminAnalyticsController.index">Overview</a>
+              <li><a href="@com.keepit.controllers.admin.routes.AdminAnalyticsController.getEventDescriptors">All Events</a>
+            </ul>
 
-		      <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0)">Keeps</a>
+		  <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0)">Keeps</a>
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown" href="#">Users</a>
             <ul class="dropdown-menu" role="menu">
@@ -75,7 +80,7 @@
                 <ul class="dropdown-menu" role="menu">
                    <li><a href="@com.keepit.controllers.admin.routes.AdminSearchLabsController.friendMap()">Friend Map</a>
                    <li><a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases()">Phrases</a>
-                   <li><a href="@com.keepit.controllers.admin.routes.AdminSpellCorrectorController.spellController()">SpellCorrector</a>
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminSpellCorrectorController.spellChecker()">SpellCorrector</a>
                    <li><a href="@com.keepit.controllers.admin.routes.TopicModelController.documentTopic()">Document Topic</a>
                    <li><a href="@com.keepit.controllers.admin.routes.TopicModelController.wordTopic()">Word Topic</a>
                    <li><a href="@com.keepit.controllers.admin.routes.TopicModelController.userTopic()">User Topic</a>
@@ -123,6 +128,11 @@
 	    @content
 	    @quote(com.keepit.common.admin.DouglasAdamsQuotes.random)
 		</div>
+    <div class="integrity-reminder">
+      <img src="/assets/images/halo.png" class="BXNQgdvtxmc">
+      When accessing private information, make sure you follow the <a href="/assets/conduct.html">FortyTwo Code of Conduct</a>.
+      <img src="/assets/images/halo.png" class="BXNQgdvtxmc">
+    </div>
     <script>
     $(function() {
       $("#scrlBotm").click(function() {

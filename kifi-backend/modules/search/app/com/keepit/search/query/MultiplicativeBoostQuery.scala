@@ -73,7 +73,7 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
           case true =>
             new Explanation((e.getValue * boosterStrength + (1.0f - boosterStrength)), s"boosting (strength=${boosterStrength})")
           case false =>
-            new Explanation(0.0f, "no match in (" + boosterWeight.getQuery.toString() + ")")
+            new Explanation((1.0f - boosterStrength), "no match in (" + boosterWeight.getQuery.toString() + ")")
         }
         r.addDetail(e)
         result.addDetail(r)

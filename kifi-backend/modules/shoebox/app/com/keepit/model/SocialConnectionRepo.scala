@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.social._
+import scala.slick.lifted.Query
 
 import play.api.libs.json._
 
@@ -21,6 +22,7 @@ trait SocialConnectionRepo extends Repo[SocialConnection] {
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialConnectionInfo]
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int
+  def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int
 }
 
 case class SocialConnectionInfo(
@@ -152,6 +154,20 @@ class SocialConnectionRepoImpl @Inject() (
     }
   }
 
+  def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int = {
+    socialRepo.getByUser(id).map(_.id.get) match {
+      case ids if ids.nonEmpty => {
+        val q = Query(
+          (for {
+            t <- table if ((t.socialUser1 inSet ids) || (t.socialUser2 inSet ids)) && t.state === SocialConnectionStates.ACTIVE
+          } yield t).length
+        )
+        q.first()
+      }
+      case _ => 0
+    }
+  }
+
   def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialConnectionInfo] = {
     socialUserConnectionsCache.getOrElse(SocialUserConnectionsKey(id)) {
       getSocialUserConnections(id) map SocialConnectionInfo.fromSocialUser
@@ -170,8 +186,11 @@ class SocialConnectionRepoImpl @Inject() (
   }
 
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int = {
-    (for {
+    val conns = for {
       t <- table if (t.socialUser1 === id || t.socialUser2 === id) && t.state === SocialConnectionStates.ACTIVE
-    } yield t.state).update(SocialConnectionStates.INACTIVE)
+    } yield t
+    val updatedRows = conns.map(_.state).update(SocialConnectionStates.INACTIVE)
+    conns.list.map(invalidateCache)
+    updatedRows
   }
 }

@@ -1,15 +1,15 @@
-// @require scripts/scrollable.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
+// @require scripts/prevent_ancestor_scroll.js
 
-function attachComposeBindings($c, composeTypeName, enterToSend) {
+function initCompose($c, enterToSend, opts) {
   'use strict';
-  var $f = $c.find(".kifi-compose");
-  var $t = $f.find(".kifi-compose-to");
-  var $d = $f.find(".kifi-compose-draft");
-  var defaultText = $d.data("default");  // real text, not placeholder
+  var $f = $c.find('.kifi-compose');
+  var $t = $f.find('.kifi-compose-to');
+  var $d = $f.find('.kifi-compose-draft');
+  var defaultText = $d.data('default');  // real text, not placeholder
 
-  $d.focus(function() {
+  $d.focus(function () {
     var r, sel = window.getSelection();
     if (defaultText && $d.text() === defaultText) {
       // select default text for easy replacement
@@ -17,33 +17,33 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       r.selectNodeContents(this);
       sel.removeAllRanges();
       sel.addRange(r);
-      $(this).data("preventNextMouseUp", true); // to avoid clearing selection
-    } else if ((r = $d.data("sel"))) {
+      $(this).data('preventNextMouseUp', true); // to avoid clearing selection
+    } else if ((r = $d.data('sel'))) {
       // restore previous selection
       sel.removeAllRanges();
       sel.addRange(r);
     }
-  }).blur(function() {
+  }).blur(function () {
     if (!convertDraftToText($d.html())) {
-      if (defaultText && $t.tokenInput("get").length) {
-        $f.removeClass("kifi-empty");
+      if (defaultText && $t.tokenInput('get').length) {
+        $f.removeClass('kifi-empty');
         $d.text(defaultText);
       } else {
         $d.empty();
-        $f.addClass("kifi-empty");
+        $f.addClass('kifi-empty');
       }
     }
-  }).mousedown(function() {
-    $d.removeData("preventNextMouseUp");
-  }).mouseup(function(e) {
-    $d.data("sel", window.getSelection().getRangeAt(0));
+  }).mousedown(function () {
+    $d.removeData('preventNextMouseUp');
+  }).mouseup(function (e) {
+    $d.data('sel', getSelRange());
 
-    if ($d.data("preventNextMouseUp")) {
-      $d.removeData("preventNextMouseUp");
+    if ($d.data('preventNextMouseUp')) {
+      $d.removeData('preventNextMouseUp');
       e.preventDefault();
     }
-  }).on('mousedown mouseup click', function() {
-    var sel = window.getSelection(), r = sel.getRangeAt(0);
+  }).on('mousedown mouseup click', function () {
+    var sel = window.getSelection(), r = getSelRange(sel);
     if (r.startContainer === this.parentNode) {  // related to bugzil.la/904846
       var r2 = document.createRange();
       r2.selectNodeContents(this);
@@ -53,127 +53,130 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       sel.removeAllRanges();
       sel.addRange(r2);
     }
-  }).keyup(function() {
-    $d.data("sel", window.getSelection().getRangeAt(0));
-  }).on("input", function() {
-    updateMaxHeight();
+  }).keyup(function () {
+    $d.data('sel', getSelRange());
+  }).on('input', function () {
     var empty = this.firstElementChild === this.lastElementChild && !this.textContent;
     if (empty) {
       $d.empty();
     }
-    $f.toggleClass("kifi-empty", empty);
-  }).on("transitionend", function() {
-    updateMaxHeight();
-  }).on("paste", function(e) {
+    $f.toggleClass('kifi-empty', empty);
+  }).on('paste', function (e) {
     var cd = e.originalEvent.clipboardData;
     if (cd) {
       e.preventDefault();
-      document.execCommand("insertText", false, cd.getData("text/plain"));
+      document.execCommand('insertText', false, cd.getData('text/plain'));
     }
-  });
+  }).preventAncestorScroll();
 
   if ($t.length) {
     $t.tokenInput({}, {
       searchDelay: 0,
       minChars: 1,
-      placeholder: "To",
-      hintText: "",
-      noResultsText: "",
-      searchingText: "",
+      placeholder: 'To',
+      hintText: '',
+      noResultsText: '',
+      searchingText: '',
       animateDropdown: false,
       resultsLimit: 4,
       preventDuplicates: true,
       allowTabOut: true,
-      tokenValue: "id",
-      theme: "Kifi",
+      tokenValue: 'id',
+      theme: 'Kifi',
       classes: {
-        tokenList: "kifi-ti-list",
-        token: "kifi-ti-token",
-        tokenReadOnly: "kifi-ti-token-readonly",
-        tokenDelete: "kifi-ti-token-delete",
-        selectedToken: "kifi-ti-token-selected",
-        highlightedToken: "kifi-ti-token-highlighted",
-        dropdown: "kifi-root kifi-ti-dropdown",
-        dropdownItem: "kifi-ti-dropdown-item",
-        dropdownItem2: "kifi-ti-dropdown-item",
-        selectedDropdownItem: "kifi-ti-dropdown-item-selected",
-        inputToken: "kifi-ti-token-input",
-        focused: "kifi-ti-focused",
-        disabled: "kifi-ti-disabled"
+        tokenList: 'kifi-ti-list',
+        token: 'kifi-ti-token',
+        tokenReadOnly: 'kifi-ti-token-readonly',
+        tokenDelete: 'kifi-ti-token-delete',
+        selectedToken: 'kifi-ti-token-selected',
+        highlightedToken: 'kifi-ti-token-highlighted',
+        dropdown: 'kifi-root kifi-ti-dropdown',
+        dropdownItem: 'kifi-ti-dropdown-item',
+        dropdownItem2: 'kifi-ti-dropdown-item',
+        selectedDropdownItem: 'kifi-ti-dropdown-item-selected',
+        inputToken: 'kifi-ti-token-input',
+        focused: 'kifi-ti-focused',
+        disabled: 'kifi-ti-disabled'
       },
       zindex: 999999999992,
-      resultsFormatter: function(f) {
-        return "<li style='background-image:url(//" + cdnBase + "/users/" + f.id + "/pics/100/" + f.pictureName + ")'>" +
-          Mustache.escape(f.name) + "</li>";
+      resultsFormatter: function (f) {
+        return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' +
+          Mustache.escape(f.name) + '</li>';
       },
-      onAdd: function() {
+      onAdd: function () {
         if (defaultText && !$d.text()) {
-          $f.removeClass("kifi-empty");
+          $f.removeClass('kifi-empty');
           $d.text(defaultText);
         }
       },
-      onDelete: function() {
-        if (defaultText && !$t.tokenInput("get").length && $d.text() == defaultText) {
+      onDelete: function () {
+        if (defaultText && !$t.tokenInput('get').length && $d.text() == defaultText) {
           $d.empty();
-          $f.addClass("kifi-empty");
+          $f.addClass('kifi-empty');
         }
       }});
-    api.port.emit("get_friends", function(friends) {
-      friends.forEach(function(f) {
-        f.name = f.firstName + " " + f.lastName;
+    api.port.emit('get_friends', function (friends) {
+      friends.forEach(function (f) {
+        f.name = f.firstName + ' ' + f.lastName;
       });
-      $t.data("settings").local_data = friends;
-      $t.data("friends", friends);
+      $t.data('settings').local_data = friends;
+      $t.data('friends', friends);
     });
   }
 
-  $f.keydown(function(e) {
+  $f.keydown(function (e) {
     if (e.which === 13 && !e.shiftKey && !e.altKey && !enterToSend === (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       $f.submit();
     }
-  }).submit(function(e) {
+  }).submit(function (e) {
     e.preventDefault();
+    if ($f.data('submitted')) {
+      return;
+    }
     var text;
-    if ($f.hasClass("kifi-empty") || !(text = convertDraftToText($d.html()))) {
+    if ($f.hasClass('kifi-empty') || !(text = convertDraftToText($d.html()))) {
       $d.focus();
       return;
     }
-    var args = [text];
     if ($t.length) {
-      var recipients = $t.tokenInput("get");
+      var recipients = $t.tokenInput('get');
       if (!recipients.length) {
-        $f.find("#token-input-kifi-compose-to").focus();
+        $f.find('#token-input-kifi-compose-to').focus();
         return;
       }
-      args.push(recipients.map(function(r) {return r.id}));
     }
-    $d.trigger("kifi:compose-submit", args).empty().focus().triggerHandler("input");
-    var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
-    setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
+    var $submit = $f.find('.kifi-compose-submit').addClass('kifi-active');
+    setTimeout($.fn.removeClass.bind($submit, 'kifi-active'), 10);
+    opts.onSubmit(text, recipients);
+    if (opts.resetOnSubmit) {
+      $d.empty().focus().triggerHandler('input');
+    } else {
+      $f.data('submitted', true);
+    }
   })
-  .hoverfu(".kifi-compose-snapshot", function(configureHover) {
+  .hoverfu('.kifi-compose-snapshot', function (configureHover) {
     var $a = $(this);
-    render("html/keeper/titled_tip", {
-      title: "Microfind",
-      html: "Click to mark something on<br>the page and reference it in<br>your " + composeTypeName + "."
-    }, function(html) {
+    render('html/keeper/titled_tip', {
+      title: 'Microfind',
+      html: 'Click to mark something on<br>the page and reference it in<br>your message.'
+    }, function (html) {
       configureHover(html, {
         mustHoverFor: 500,
         hideAfter: 3000,
-        click: "hide",
-        position: {my: "center bottom-13", at: "center top", of: $a, collision: "none"}});
+        click: 'hide',
+        position: {my: 'center bottom-13', at: 'center top', of: $a, collision: 'none'}});
     });
   })
-  .on("click", ".kifi-compose-snapshot", function() {
-    snapshot.take(composeTypeName, function(selector) {
+  .on('click', '.kifi-compose-snapshot', function () {
+    snapshot.take(function (selector) {
       $d.focus();
       if (!selector) return;
-      $f.removeClass("kifi-empty");
+      $f.removeClass('kifi-empty');
 
       // insert link
-      var r = $d.data("sel"), $a = $("<a>", {href: "x-kifi-sel:" + selector, text: "look\u00A0here"}), pad = true;
-      if (r && r.startContainer === r.endContainer && !$(r.endContainer).closest("a").length) {
+      var r = $d.data('sel'), $a = $('<a>', {href: 'x-kifi-sel:' + selector, text: 'look\u00A0here'}), pad = true;
+      if (r && r.startContainer === r.endContainer && !$(r.endContainer).closest('a').length) {
         var par = r.endContainer, i = r.startOffset, j = r.endOffset;
         if (par.nodeType == 3) {  // text
           var s = par.textContent;
@@ -184,7 +187,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
           $(par).replaceWith($a);
           $a.before(s.substr(0, i))
           $a.after(s.substr(j));
-        } else if (i == j || !r.cloneContents().querySelector("a")) {
+        } else if (i == j || !r.cloneContents().querySelector('a')) {
           var next = par.childNodes.item(j);
           if (i < j) {
             $a.empty().append(r.extractContents());
@@ -200,10 +203,10 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       if (pad) {
         var sib;
         if ((sib = $a[0].previousSibling) && (sib.nodeType != 3 || !/\s$/.test(sib.nodeValue))) {
-          $a.before(" ");
+          $a.before(' ');
         }
         if ((sib = $a[0].nextSibling) && (sib.nodeType != 3 || /^\S/.test(sib.nodeValue))) {
-          $a.after(" ");
+          $a.after(' ');
         }
       }
 
@@ -216,20 +219,20 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       sel.addRange(r);
     });
   })
-  .on("mousedown", ".kifi-compose-tip", function(e) {
+  .on('mousedown', '.kifi-compose-tip', function (e) {
     e.preventDefault();
-    var prefix = CO_KEY + "-";
+    var prefix = CO_KEY + '-';
     var $tip = $(this), tipTextNode = this.firstChild;
-    var $alt = $("<span class=kifi-compose-tip-alt>")
-      .text((enterToSend ? prefix : "") + tipTextNode.nodeValue.replace(prefix, ""))
-      .css({"min-width": $tip.outerWidth(), "visibility": "hidden"})
+    var $alt = $('<span class=kifi-compose-tip-alt>')
+      .text((enterToSend ? prefix : '') + tipTextNode.nodeValue.replace(prefix, ''))
+      .css({'min-width': $tip.outerWidth(), 'visibility': 'hidden'})
       .hover(
-        function() { $alt.addClass("kifi-hover"); },
-        function() { $alt.removeClass("kifi-hover"); });
-    var $menu = $("<span class=kifi-compose-tip-menu>").append($alt).insertAfter($tip);
-    $tip.css("min-width", $alt.outerWidth()).addClass("kifi-active");
-    $alt.css("visibility", "").mouseup(hide.bind(null, true));
-    document.addEventListener("mousedown", docMouseDown, true);
+        $.fn.addClass.bind($alt, 'kifi-hover'),
+        $.fn.removeClass.bind($alt, 'kifi-hover'));
+    var $menu = $('<span class=kifi-compose-tip-menu>').append($alt).insertAfter($tip);
+    $tip.css('min-width', $alt.outerWidth()).addClass('kifi-active');
+    $alt.css('visibility', '').mouseup(hide.bind(null, true));
+    document.addEventListener('mousedown', docMouseDown, true);
     function docMouseDown(e) {
       hide($alt[0].contains(e.target));
       if ($tip[0].contains(e.target)) {
@@ -238,71 +241,52 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       e.preventDefault();
     }
     function hide(toggle) {
-      document.removeEventListener("mousedown", docMouseDown, true);
-      $tip.removeClass("kifi-active");
+      document.removeEventListener('mousedown', docMouseDown, true);
+      $tip.removeClass('kifi-active');
       $menu.remove();
       if (toggle) {
         enterToSend = !enterToSend;
-        log("[enterToSend]", enterToSend)();
-        tipTextNode.nodeValue = enterToSend ? tipTextNode.nodeValue.replace(prefix, "") : prefix + tipTextNode.nodeValue;
-        api.port.emit("set_enter_to_send", enterToSend);
+        log('[enterToSend]', enterToSend)();
+        tipTextNode.nodeValue = enterToSend ? tipTextNode.nodeValue.replace(prefix, '') : prefix + tipTextNode.nodeValue;
+        api.port.emit('set_enter_to_send', enterToSend);
       }
     }
   })
-  .find(".kifi-compose-submit")
-  .click(function() {
+  .find('.kifi-compose-submit')
+  .click(function () {
     $f.submit();
   })
-  .keypress(function(e) {
+  .keypress(function (e) {
     if (e.which == 32) {
+      e.preventDefault();
       $f.submit();
     }
   });
 
-  var hOld, elAbove = $f[0].previousElementSibling;
-  var elScroll = $(elAbove).find(".kifi-scroll-inner").scrollable({
-    $above: $c.closest(".kifi-pane-box").find(".kifi-pane-title,.kifi-thread-who").last(),
-    $below: $f
-  })[0];
-  $(elAbove).layout();
-  updateMaxHeight();
-
-  $(window).on("resize", updateMaxHeight);
-
-  var $box = $c.closest(".kifi-pane-box")
-  if ($box.data("shown")) {
-    setFocus();
-  } else {
-    $box.on("kifi:shown", setFocus);
-  }
-  $box.on("kifi:remove", function() {
-    $(window).off("resize", updateMaxHeight);
-    if ($t.length) {
-      $t.tokenInput("destroy");
-    }
-  });
-
-  function setFocus() {
-    log("[setFocus]")();
-    if ($t.length) {  // timeout avoids Chrome transition displacement glitch
-      setTimeout($f.focus.bind($f.find("#token-input-kifi-compose-to")));
-    } else {
-      $d.focus();
-    }
+  function getSelRange(sel) {
+    sel = sel || window.getSelection();
+    return sel.rangeCount ? sel.getRangeAt(0) : null;
   }
 
-  function updateMaxHeight() {
-    var hNew = Math.max(0, $c[0].offsetHeight - $f[0].offsetHeight);
-    if (hNew != hOld) {
-      log("[updateMaxHeight]", hOld, "->", hNew)();
-      var scrollTop = elScroll.scrollTop;
-      elAbove.style.maxHeight = hNew + "px";
-      if (hOld) {
-        elScroll.scrollTop = Math.max(0, scrollTop + hOld - hNew);
+  // compose API
+  return {
+    form: function () {
+      return $f[0];
+    },
+    focus: function () {
+      log('[compose.focus]')();
+      if ($t.length) {
+        $f.find('#token-input-kifi-compose-to').focus();
       } else {
-        elScroll.scrollTop = 99999;
+        $d.focus();
       }
-      hOld = hNew;
-    }
-  }
+    },
+    isBlank: function () {
+      return $f.hasClass('kifi-empty') && !($t.length && $t.tokenInput('get').length);
+    },
+    destroy: function() {
+      if ($t.length) {
+        $t.tokenInput('destroy');
+      }
+    }};
 }

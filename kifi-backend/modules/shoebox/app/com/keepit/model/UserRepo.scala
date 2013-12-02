@@ -1,7 +1,6 @@
 package com.keepit.model
 
-import scala.concurrent._
-import com.google.inject.{Inject, Singleton, ImplementedBy, Provider}
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ExternalId, Id, State, SequenceNumber, NotFoundException}
@@ -9,6 +8,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.heimdal.{EventContextBuilder, HeimdalServiceClient}
+import com.keepit.common.akka.SafeFuture
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
@@ -26,7 +27,8 @@ class UserRepoImpl @Inject() (
     val clock: Clock,
     val externalIdCache: UserExternalIdCache,
     val idCache: UserIdCache,
-    basicUserCache: BasicUserUserIdCache)
+    basicUserCache: BasicUserUserIdCache,
+    heimdal: HeimdalServiceClient)
   extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
@@ -72,8 +74,23 @@ class UserRepoImpl @Inject() (
       idCache.set(UserIdKey(id), user)
       basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
     }
+
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
+    invalidateMixpanel(user)
     user
+  }
+
+  private def invalidateMixpanel(user: User) = SafeFuture {
+    if (user.state == UserStates.INACTIVE)
+      heimdal.deleteUser(user.id.get)
+    else {
+      val properties = new EventContextBuilder
+      properties += ("$first_name", user.firstName)
+      properties += ("$last_name", user.lastName)
+      properties += ("$created", user.createdAt)
+      properties += ("state", user.state.value)
+      heimdal.setUserProperties(user.id.get, properties.data.toSeq: _*)
+    }
   }
 
   override def get(id: Id[User])(implicit session: RSession): User = {

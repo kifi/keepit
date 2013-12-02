@@ -13,6 +13,9 @@ CREATE TABLE abook_info (
 	owner_id varchar(256),
 	owner_email varchar(512),
 	raw_info_loc varchar(512),
+	oauth2_token_id bigint(20),
+	num_contacts int,
+	num_processed int,
 
 	PRIMARY KEY (id)
 ) -- DEFAULT CHARSET=utf8mb4

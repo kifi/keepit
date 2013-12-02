@@ -41,15 +41,8 @@ trait QueryExpansion extends QueryParser {
       }
     }
 
-    def addSiteQuery(baseQuery: TextQuery, queryText: String, query: Query) {
-      (if (Domain.isValid(queryText)) Option(SiteQuery(queryText)) else None).orElse{
-        query match {
-          case query: TermQuery => Option(copyFieldQuery(query, "site_keywords"))
-          case _ => None
-        }
-      }.foreach{ q =>
-        baseQuery.addRegularQuery(q, siteBoost)
-      }
+    def addSiteQuery(baseQuery: TextQuery, queryText: String) {
+      if (Domain.isValid(queryText)) baseQuery.addRegularQuery(SiteQuery(queryText), siteBoost)
     }
 
     def isNumericTermQuery(query: Query): Boolean = query match {
@@ -65,7 +58,7 @@ trait QueryExpansion extends QueryParser {
       textQuery.addRegularQuery(query)
       textQuery.addRegularQuery(copyFieldQuery(query, "c"))
       textQuery.addPersonalQuery(copyFieldQuery(query, "title"))
-      addSiteQuery(textQuery, queryText, query)
+      addSiteQuery(textQuery, queryText)
       if (isNumericTermQuery(query) && textQuery.getBoost() >= 1.0f) textQuery.setBoost(0.5f)
     }
 
@@ -95,7 +88,6 @@ trait QueryExpansion extends QueryParser {
 
     textQuery.addRegularQuery(new TermQuery(new Term("t", t1)), concatBoost)
     textQuery.addRegularQuery(new TermQuery(new Term("c", t1)), concatBoost)
-    textQuery.addRegularQuery(new TermQuery(new Term("site_keywords", t1)), concatBoost)
     textQuery.addPersonalQuery(new TermQuery(new Term("title", t1)), concatBoost)
 
     textQuery.addRegularQuery(new TermQuery(new Term("ts", t2)), concatBoost)
@@ -132,8 +124,8 @@ trait QueryExpansion extends QueryParser {
 
   override protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query] = {
     val emptyQuery = new TextQuery
-    var prevTextQuery: TextQuery = null
     val clauses = ArrayBuffer.empty[BooleanClause]
+    val queries = ArrayBuffer.empty[(QuerySpec, TextQuery)]
 
     querySpecList.foreach{ spec =>
       val query = getFieldQuery(spec.field, spec.term, spec.quoted)
@@ -141,26 +133,36 @@ trait QueryExpansion extends QueryParser {
         case Some(query) =>
           clauses += new BooleanClause(query, spec.occur)
           query match {
-            case currTextQuery: TextQuery if (spec.occur == SHOULD && !spec.quoted && concatBoost > 0.0f) =>
-              // concat phrase in the current query
-              if (currTextQuery.terms.length > 1) {
-                val c = concat(emptyQuery, currTextQuery)
-                addConcatQuery(currTextQuery, c)
-              }
-              // concat with the previous query
-              if (prevTextQuery != null) {
-                val c = concat(prevTextQuery, currTextQuery)
-                addConcatQuery(prevTextQuery, c)
-                addConcatQuery(currTextQuery, c)
-              }
-              prevTextQuery = currTextQuery
-            case _ =>
-              prevTextQuery = null
+            case textQuery: TextQuery => queries += ((spec, textQuery))
+            case _ => queries += ((spec, null))
           }
         case _ =>
-          prevTextQuery = null
+          queries += ((spec, null))
       }
     }
+
+    if (concatBoost > 0.0f && clauses.size <= 42) { // if we have too many terms, don't concat terms
+      var prevTextQuery: TextQuery = null
+      queries.foreach{ case (spec, currTextQuery) =>
+        if (currTextQuery != null && !spec.quoted && spec.occur == SHOULD) {
+          // concat phrase in the current query
+          if (currTextQuery.terms.length > 1) {
+            val c = concat(emptyQuery, currTextQuery)
+            addConcatQuery(currTextQuery, c)
+          }
+          // concat with the previous query
+          if (prevTextQuery != null) {
+            val c = concat(prevTextQuery, currTextQuery)
+            addConcatQuery(prevTextQuery, c)
+            addConcatQuery(currTextQuery, c)
+          }
+          prevTextQuery = currTextQuery
+        } else {
+          prevTextQuery = null
+        }
+      }
+    }
+
     getBooleanQuery(clauses)
   }
 }

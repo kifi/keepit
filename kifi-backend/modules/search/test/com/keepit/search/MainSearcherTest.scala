@@ -15,7 +15,7 @@ import com.keepit.test._
 import org.specs2.mutable._
 import play.api.test.Helpers._
 import scala.math._
-import com.keepit.search.query.parser.FakeSpellCorrector
+import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.common.service.FortyTwoServices
 import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.search.graph.{URIGraphImpl, URIGraphIndexer}
@@ -74,7 +74,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
       inject[BrowsingHistoryTracker],
       inject[ClickHistoryTracker],
       inject[ShoeboxServiceClient],
-      inject[FakeSpellCorrector],
+      inject[SpellCorrector],
       inject[MonitoredAwait],
       clock,
       fortyTwoServices)

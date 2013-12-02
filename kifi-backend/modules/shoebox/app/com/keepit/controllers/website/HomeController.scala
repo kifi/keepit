@@ -11,15 +11,17 @@ import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.controllers.core.AuthController
 import com.keepit.model._
-import com.keepit.social.{SocialNetworkType, SocialGraphPlugin}
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
 
 import ActionAuthenticator.MaybeAuthenticatedRequest
 import play.api.Play.current
 import play.api._
+import play.api.http.HeaderNames.USER_AGENT
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import com.keepit.commanders.InviteCommander
 import com.keepit.common.db.ExternalId
+import securesocial.core.{SecureSocial, Authenticator}
 
 class HomeController @Inject() (
   db: Database,
@@ -35,6 +37,7 @@ class HomeController @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   socialGraphPlugin: SocialGraphPlugin,
   fortyTwoServices: FortyTwoServices,
+  userCache: SocialUserInfoUserCache,
   inviteCommander: InviteCommander)
   extends WebsiteController(actionAuthenticator) with Logging {
 
@@ -50,7 +53,9 @@ class HomeController @Inject() (
     Ok(fortyTwoServices.currentVersion.toString)
   }
 
-  def home = HtmlAction(true)(authenticatedAction = { implicit request =>
+  def home = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
+
+  private def homeAuthed(implicit request: AuthenticatedRequest[_]): Result = {
     val linkWith = request.session.get(AuthController.LinkWithKey)
     if (linkWith.isDefined) {
       Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
@@ -64,23 +69,38 @@ class HomeController @Inject() (
     } else {
       Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
-  }, unauthenticatedAction = { implicit request =>
+  }
+
+  private def homeNotAuthed(implicit request: Request[_]): Result = {
     if (request.identityOpt.isDefined) {
       // User needs to sign up or (social) finalize
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else {
+      // TODO: Redirect to /login if the path is not /
       // Non-user landing page
       Ok(views.html.auth.auth())
     }
-  })
+  }
+
+  def homeWithParam(id: String) = home
+
+  def blog = HtmlAction(true)(authenticatedAction = { request =>
+      request.headers.get(USER_AGENT) match {
+        case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
+        case _ => homeAuthed(request)
+      }
+    }, unauthenticatedAction = { request =>
+      request.headers.get(USER_AGENT) match {
+        case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
+        case _ => homeNotAuthed(request)
+      }
+    })
 
   def kifiSiteRedirect(path: String) = Action {
     MovedPermanently(s"/$path")
   }
 
-  def homeWithParam(id: String) = home
-
-  def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
+  def pendingHome()(implicit request: AuthenticatedRequest[_]) = {
     val user = request.user
 
     inviteCommander.markPendingInvitesAsAccepted(user.id.get, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
@@ -129,13 +149,14 @@ class HomeController @Inject() (
   }
 
   def disconnect(networkString: String) = AuthenticatedHtmlAction { implicit request =>
+    userCache.remove(SocialUserInfoUserKey(request.userId))
     val network = SocialNetworkType(networkString)
     val (thisNetwork, otherNetworks) = db.readOnly { implicit s =>
       socialUserRepo.getByUser(request.userId).partition(_.networkType == network)
     }
     if (otherNetworks.isEmpty) {
       BadRequest("You must have at least one other network connected.")
-    } else if (thisNetwork.isEmpty) {
+    } else if (thisNetwork.isEmpty || thisNetwork.head.networkType == SocialNetworks.FORTYTWO) {
       BadRequest(s"You are not connected to ${network.displayName}.")
     } else {
       val sui = thisNetwork.head
@@ -144,13 +165,37 @@ class HomeController @Inject() (
         socialConnectionRepo.deactivateAllConnections(sui.id.get)
         socialUserRepo.invalidateCache(sui)
         socialUserRepo.save(sui.copy(credentials = None, userId = None))
+        socialUserRepo.getByUser(request.userId).map(socialUserRepo.invalidateCache)
       }
-      otherNetworks map socialGraphPlugin.asyncFetch
-      Redirect(com.keepit.controllers.website.routes.HomeController.home())
+      userCache.remove(SocialUserInfoUserKey(request.userId))
+
+      val newLoginUser = otherNetworks.find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(otherNetworks.head)
+      val identity = newLoginUser.credentials.get
+      Authenticator.create(identity).fold(
+        error => Status(INTERNAL_SERVER_ERROR)("0"),
+        authenticator => {
+          Redirect("/profile") // hard coded because reverse router doesn't let us go there. todo: fix
+            .withSession(session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> sui.userId.get.toString))
+            .withCookies(authenticator.toCookie)
+        }
+      )
     }
   }
 
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
     Ok(views.html.website.gettingStarted2(request.user))
   }
+
+  def redditPreview = Action { implicit request =>
+    Ok(views.html.website.redditPreview())
+  }
+
+  def termsOfService = Action { implicit request =>
+    Ok(views.html.website.termsOfService())
+  }
+
+  def privacyPolicy = Action { implicit request =>
+    Ok(views.html.website.privacyPolicy())
+  }
+
 }

@@ -42,7 +42,7 @@ class UserPictureController @Inject() (
           user.pictureName.map { pictureName =>
             imageStore.getPictureUrl(optSize, user, pictureName) map (Redirect(_))
           } getOrElse {
-            imageStore.getPictureUrl(optSize, user, "0.jpg") map (Redirect(_))
+            imageStore.getPictureUrl(optSize, user, "0") map (Redirect(_))
           }
         }
     } getOrElse {
