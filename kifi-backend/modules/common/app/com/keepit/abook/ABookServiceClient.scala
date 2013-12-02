@@ -38,6 +38,7 @@ trait ABookServiceClient extends ServiceClient {
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[JsValue]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
   def getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName:Option[String], lastName:Option[String]):Future[Try[EContact]]
+  def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
 }
 
 
@@ -133,6 +134,12 @@ class ABookServiceClientImpl @Inject() (
       }
     }
   }
+
+  def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = {
+    call(ABook.internal.queryEContacts(userId, limit, search, after)).map { r =>
+      Json.fromJson[Seq[EContact]](r.json).get
+    }
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ABookServiceClient {
@@ -170,4 +177,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
 
   def getOrCreateEContact(userId: Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String]): Future[Try[EContact]] = ???
+
+  def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
 }
