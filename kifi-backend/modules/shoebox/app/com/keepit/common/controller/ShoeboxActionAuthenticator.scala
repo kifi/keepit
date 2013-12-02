@@ -13,7 +13,6 @@ import com.keepit.model._
 import com.keepit.social.{SocialNetworkType, SocialId}
 import play.api.mvc._
 import securesocial.core._
-import com.keepit.commanders.UserCommander
 
 @Singleton
 class ShoeboxActionAuthenticator @Inject() (
@@ -21,7 +20,6 @@ class ShoeboxActionAuthenticator @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   userExperimentRepo: UserExperimentRepo,
   userRepo: UserRepo,
-  userCommander: UserCommander,
   fortyTwoServices: FortyTwoServices,
   airbrake: AirbrakeNotifier,
   impersonateCookie: ImpersonateCookie,
@@ -50,23 +48,21 @@ class ShoeboxActionAuthenticator @Inject() (
     val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
     val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
     val experiments = db.readOnly { implicit s => getExperiments(userId) }
-    val userSeg = userCommander.getUserSegment(userId)
     val newSession =
       if (session.get(ActionAuthenticator.FORTYTWO_USER_ID) == Some(userId.toString)) None
       else Some(session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
     impersonatedUserIdOpt match {
       case Some(impExternalUserId) =>
-        val (impUserSeg, impExperiments, impSocialUser, impUserId) = db.readOnly { implicit session =>
+        val (impExperiments, impSocialUser, impUserId) = db.readOnly { implicit session =>
           val impUserId = userRepo.get(impExternalUserId).id.get
           if (!isAdmin(experiments)) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
           val impSocialUserInfo = socialUserInfoRepo.getByUser(impUserId).head
-          val impUserSeg = userCommander.getUserSegment(impUserId)
-          (impUserSeg, getExperiments(impUserId), impSocialUserInfo.credentials.get, impUserId)
+          (getExperiments(impUserId), impSocialUserInfo.credentials.get, impUserId)
         }
         log.info("[IMPERSONATOR] admin user %s is impersonating user %s with request %s".format(userId, impSocialUser, request.request.path))
-        executeAction(authAction, impUserId, impSocialUser, impExperiments, impUserSeg, kifiInstallationId, newSession, request.request, Some(userId), allowPending)
+        executeAction(authAction, impUserId, impSocialUser, impExperiments, kifiInstallationId, newSession, request.request, Some(userId), allowPending)
       case None =>
-        executeAction(authAction, userId, socialUser, experiments, userSeg, kifiInstallationId, newSession, request.request, None, allowPending)
+        executeAction(authAction, userId, socialUser, experiments, kifiInstallationId, newSession, request.request, None, allowPending)
     }
   }
 
@@ -110,7 +106,7 @@ class ShoeboxActionAuthenticator @Inject() (
   }
 
   private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
-     experiments: Set[ExperimentType], userSegment: Int, kifiInstallationId: Option[ExternalId[KifiInstallation]],
+     experiments: Set[ExperimentType], kifiInstallationId: Option[ExternalId[KifiInstallation]],
      newSession: Option[Session], request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = db.readOnly(implicit s => userRepo.get(userId))
     if (experiments.contains(ExperimentType.BLOCK) ||
@@ -122,7 +118,7 @@ class ShoeboxActionAuthenticator @Inject() (
       Forbidden(message)
     } else {
       try {
-        action(AuthenticatedRequest[T](identity, userId, user, request, experiments, userSegment, kifiInstallationId, adminUserId)) match {
+        action(AuthenticatedRequest[T](identity, userId, user, request, experiments, kifiInstallationId, adminUserId)) match {
           case r: PlainResult => newSession map r.withSession getOrElse r
           case any: Result => any
         }

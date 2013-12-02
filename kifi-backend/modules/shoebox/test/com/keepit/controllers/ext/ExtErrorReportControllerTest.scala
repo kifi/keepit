@@ -18,7 +18,6 @@ import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.abook.TestABookServiceClientModule
 
 
 class ExtErrorReportControllerTest extends Specification with ShoeboxApplicationInjector {
@@ -36,12 +35,12 @@ class ExtErrorReportControllerTest extends Specification with ShoeboxApplication
     }
     AuthenticatedRequest(null, user.id.get, user,
         FakeRequest().withCookies(Authenticator.create(su).right.get.toCookie)
-        .withBody[JsValue](json), userSegment = 0)
+        .withBody[JsValue](json))
   }
 
   "ExtAuthController" should {
     "start" in {
-      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule(), FakeAirbrakeModule(), TestABookServiceClientModule(), TestHeimdalServiceClientModule())) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule(), FakeAirbrakeModule(), TestHeimdalServiceClientModule())) {
         val fakeHeimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         fakeHeimdal.eventCount === 0
 

@@ -20,13 +20,12 @@ import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.abook.TestABookServiceClientModule
 
 class AdminDashboardControllerTest extends Specification with ShoeboxApplicationInjector {
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {
-      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), FakeHttpClientModule(), ShoeboxFakeStoreModule(), FakeSocialGraphModule(), FakeAirbrakeModule(), TestABookServiceClientModule(), TestHeimdalServiceClientModule())) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), FakeHttpClientModule(), ShoeboxFakeStoreModule(), FakeSocialGraphModule(), FakeAirbrakeModule(), TestHeimdalServiceClientModule())) {
 
         val now = new DateTime(2020, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         inject[FakeClock].setTimeFunction(() => now.getMillis)
@@ -50,7 +49,7 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
 
         val cookie = Authenticator.create(su).right.get.toCookie
         val fakeRequest = FakeRequest().withCookies(cookie)
-        val authRequest = AuthenticatedRequest(null, u1.id.get, u1, fakeRequest, userSegment = 0)
+        val authRequest = AuthenticatedRequest(null, u1.id.get, u1, fakeRequest)
         val result = inject[AdminDashboardController].usersByDate(authRequest)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")

@@ -48,7 +48,6 @@ class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with
 
   var fixedUser: Option[User] = None
   var fixedExperiments: Set[ExperimentType] = Set[ExperimentType]()
-  val fakeUserSeg = 0
 
   def setUser(user: User, experiments: Set[ExperimentType] = Set[ExperimentType]()): FakeActionAuthenticator = {
     fixedUser = Some(user)
@@ -64,7 +63,7 @@ class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with
       try {
         val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent"))
         println(s">>>>running action with fake auth of user $user, request on path ${request.path} api: $apiClient")
-        val res = onAuthenticated(AuthenticatedRequest[T](FakeIdentity(user), user.id.get, user, request, fixedExperiments, fakeUserSeg, None, None))
+        val res = onAuthenticated(AuthenticatedRequest[T](FakeIdentity(user), user.id.get, user, request, fixedExperiments, None, None))
         println(s">>>>executed action with res: $res")
         res
       } catch {
