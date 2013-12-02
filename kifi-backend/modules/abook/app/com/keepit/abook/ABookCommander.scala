@@ -172,7 +172,10 @@ class ABookCommander @Inject() (
   def queryEContacts(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Seq[EContact] = {
     @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
     @inline def mkId(email:String) = s"email/$email"
-    val searchTerms = search.toSeq.map(_.split("[@\\s+]")).flatten.filterNot(_.isEmpty).map(normalize)
+    val searchTerms = search match {
+      case Some(s) if s.trim.length > 0 => s.split("[@\\s+]").filterNot(_.isEmpty).map(normalize)
+      case _ => Array.empty[String]
+    }
     @inline def searchScore(s: String): Int = {
       if (s.isEmpty) 0
       else if (searchTerms.isEmpty) 1
@@ -193,14 +196,14 @@ class ABookCommander @Inject() (
     }
     val filtered = contacts.filter(e => ((searchScore(e.name.getOrElse("")) > 0) || (searchScore(e.email) > 0)))
     val paged = after match {
-      case Some(a) => filtered.dropWhile(e => (mkId(e.email) != a)) match {
+      case Some(a) if a.trim.length > 0 => filtered.dropWhile(e => (mkId(e.email) != a)) match { // todo: revisit Option param handling
         case hd +: tl => tl
         case tl => tl
       }
-      case None => filtered
+      case _ => filtered
     }
     val eContacts = paged.take(limit)
-    log.info(s"[queryContacts(id=$userId)] res(len=${eContacts.length}):${eContacts.mkString.take(200)}")
+    log.info(s"[queryEContacts(id=$userId, limit=$limit, search=$search after=$after)] searchTerms=$searchTerms res(len=${eContacts.length}):${eContacts.mkString.take(200)}")
     eContacts
   }
 
