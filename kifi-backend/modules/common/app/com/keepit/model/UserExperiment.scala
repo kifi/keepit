@@ -66,6 +66,12 @@ object ExperimentType {
     case DEMO.value => DEMO
     case TSEARCH.value => TSEARCH
   }
+
+  val irrelevant = List(FAKE, BLOCK, INACTIVE)
+  def getUserStatus(experiments: Set[ExperimentType]): String =
+    if (irrelevant.exists(experiments.contains)) "irrelevant"
+    else if (experiments.contains(ADMIN)) "admin"
+    else "standard"
 }
 
 object UserExperimentStates extends States[UserExperiment] {

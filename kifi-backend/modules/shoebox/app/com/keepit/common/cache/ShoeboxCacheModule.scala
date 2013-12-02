@@ -186,4 +186,8 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Provides
   def searchArticleCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ArticleSearchResultCache(stats, accessLog, (outerRepo, 1 hour))
+
+  @Provides @Singleton
+  def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new ExtensionVersionInstallationIdCache(stats, accessLog, (outerRepo, 7 days))
 }

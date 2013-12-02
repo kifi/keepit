@@ -11,6 +11,7 @@ import com.keepit.serializer.{Companion, TypeCode}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.model.ExperimentType
 
 
 case class EventType(name: String)
@@ -86,33 +87,50 @@ class EventContextBuilder {
 
   def +=[T <% SimpleContextData](key: String, value: T) : Unit = data(key) = value
   def +=[T <% SimpleContextData](key: String, values: Seq[T]) : Unit = data(key) = ContextList(values.map(identity[SimpleContextData](_)))
-
   def build : EventContext = EventContext(data.toMap)
+
+  def addService(serviceDiscovery: ServiceDiscovery): Unit = {
+    this += ("serviceVersion", serviceDiscovery.myVersion.value)
+    serviceDiscovery.thisInstance.map { instance =>
+      this += ("serviceInstance", instance.instanceInfo.instanceId.id)
+      this += ("serviceZone", instance.instanceInfo.availabilityZone)
+    }
+  }
+
+  def addRequest(request: RequestHeader, remoteAddress: Option[String]): Unit = {
+    this += ("remoteAddress", remoteAddress orElse request.headers.get("X-Forwarded-For") getOrElse request.remoteAddress)
+    this += ("doNotTrack", request.headers.get("do-not-track").exists(_ == "1"))
+    addUserAgent(request.headers.get("User-Agent").getOrElse(""))
+
+    request match {
+      case authRequest: AuthenticatedRequest[_] =>
+        authRequest.kifiInstallationId.foreach { id => this += ("kifiInstallationId", id.toString) }
+        addExperiments(authRequest.experiments)
+      case _ =>
+    }
+  }
+
+  def addExperiments(experiments: Set[ExperimentType]): Unit = {
+    this += ("experiments", experiments.map(_.value).toSeq)
+    this += ("userStatus", ExperimentType.getUserStatus(experiments))
+  }
+
+  def addUserAgent(userAgent: String): Unit = {
+    this += ("userAgent", userAgent)
+  }
 }
 
 @Singleton
 class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) {
-  def apply(request: Option[RequestHeader] = None, ipOpt : Option[String] = None): EventContextBuilder = {
+  def apply(): EventContextBuilder = {
     val contextBuilder = new EventContextBuilder()
-    contextBuilder += ("serviceVersion", serviceDiscovery.myVersion.value)
-    serviceDiscovery.thisInstance.map { instance =>
-      contextBuilder += ("serviceInstance", instance.instanceInfo.instanceId.id)
-      contextBuilder += ("serviceZone", instance.instanceInfo.availabilityZone)
-    }
+    contextBuilder.addService(serviceDiscovery)
+    contextBuilder
+  }
 
-    request.map { req =>
-      contextBuilder += ("remoteAddress", ipOpt.getOrElse(req.headers.get("X-Forwarded-For").getOrElse(req.remoteAddress)))
-      contextBuilder += ("userAgent", req.headers.get("User-Agent").getOrElse(""))
-      contextBuilder += ("doNotTrack", req.headers.get("do-not-track").exists(_ == "1"))
-
-      req match {
-        case authRequest: AuthenticatedRequest[_] =>
-          authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
-          contextBuilder += ("experiments", authRequest.experiments.map(_.value).toSeq)
-        case _ =>
-      }
-    }
-
+  def apply(request: RequestHeader, remoteAddress: Option[String] = None): EventContextBuilder = {
+    val contextBuilder = apply()
+    contextBuilder.addRequest(request, remoteAddress)
     contextBuilder
   }
 }

@@ -105,6 +105,8 @@ object BookmarkSource {
   implicit def source(value: String) = BookmarkSource(value)
   val hover = BookmarkSource("HOVER_KEEP")
   val initLoad = BookmarkSource("INIT_LOAD")
+  val site = BookmarkSource("SITE")
+  val mobile = BookmarkSource("MOBILE")
 }
 
 object BookmarkFactory {

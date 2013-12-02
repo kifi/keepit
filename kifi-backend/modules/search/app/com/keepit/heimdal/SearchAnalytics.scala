@@ -11,6 +11,7 @@ import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
 import play.api.mvc.Request
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 
 
 case class SearchEngine(name: String) {
@@ -27,7 +28,8 @@ object SearchEngine {
 class SearchAnalytics @Inject() (
   articleSearchResultStore: ArticleSearchResultStore,
   userEventContextBuilder: EventContextBuilderFactory,
-  heimdal: HeimdalServiceClient) {
+  heimdal: HeimdalServiceClient,
+  airbrake: AirbrakeNotifier) {
 
   def performedSearch(
     userId: Id[User],
@@ -39,9 +41,9 @@ class SearchAnalytics @Inject() (
     articleSearchResult: ArticleSearchResult) = {
 
     val obfuscatedSearchId = obfuscate(articleSearchResultStore.getInitialSearchId(articleSearchResult), userId)
-    val contextBuilder = userEventContextBuilder(Some(request))
+    val contextBuilder = userEventContextBuilder(request)
 
-    kifiVersion.foreach { version => contextBuilder += ("extVersion", version.toString) }
+    kifiVersion.foreach { version => contextBuilder += ("extensionVersion", version.toString) }
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
 
     contextBuilder += ("queryTerms", articleSearchResult.query.split("""\b""").length)
@@ -227,25 +229,26 @@ class SearchAnalytics @Inject() (
     referenceTime: Option[Int]
   ): EventContextBuilder = {
 
+    val contextBuilder = userEventContextBuilder(request)
+
     val initialSearchId = articleSearchResultStore.getInitialSearchId(uuid)
     val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
 
-    val contextBuilder = userEventContextBuilder(Some(request))
-
     // Search Context
     contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
+    contextBuilder += ("isInitialSearch", uuid == initialSearchId)
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
     contextBuilder += ("origin", origin)
     ("queryTerms", initialSearchResult.query.split("""\b""").length)
 
     // Kifi Performances
     contextBuilder += ("kifiResults", kifiResults)
-    contextBuilder += ("kifiCollapsed", kifiCollapsed)
+    contextBuilder += ("kifiExpanded", !kifiCollapsed)
     contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
     contextBuilder += ("kifiLate", kifiCollapsed && initialSearchResult.toShow)
-    kifiTime.foreach { kifiDevTime => contextBuilder += ("kifiDeliveryTime", kifiDevTime) }
-    referenceTime.foreach { refTime => contextBuilder += ("3rdPartyDeliveryTime", refTime) }
-    contextBuilder += ("isInitialSearch", uuid == initialSearchId)
+    kifiTime.foreach { kifiDevTime => contextBuilder += ("kifiLatency", kifiDevTime) }
+    referenceTime.foreach { refTime => contextBuilder += ("thirdPartyLatency", refTime) }
+    for { kifiDevTime <- kifiTime; refTime <- referenceTime } yield { contextBuilder += ("kifiDelay", kifiDevTime - refTime) }
 
     contextBuilder
   }

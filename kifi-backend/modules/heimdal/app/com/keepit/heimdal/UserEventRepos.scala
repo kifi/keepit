@@ -10,8 +10,10 @@ import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.KestrelCombinator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.model.User
-import com.keepit.common.db.Id
+import com.keepit.model.{KifiInstallation, User}
+import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.util.{Failure, Success}
 
 trait UserEventLoggingRepo extends EventRepo[UserEvent] {
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit
@@ -23,6 +25,7 @@ class ProdUserEventLoggingRepo(
   val collection: BSONCollection,
   val mixpanel: MixpanelClient,
   val descriptors: UserEventDescriptorRepo,
+  shoeboxClient: ShoeboxServiceClient,
   protected val airbrake: AirbrakeNotifier)
   extends MongoEventRepo[UserEvent] with UserEventLoggingRepo {
 
@@ -43,6 +46,20 @@ class ProdUserEventLoggingRepo(
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = mixpanel.incrementUserProperties(userId, increments)
   def setUserProperties(userId: Id[User], properties: EventContext): Unit = mixpanel.setUserProperties(userId, properties)
   def delete(userId: Id[User]): Unit = mixpanel.delete(userId)
+
+  override def persist(userEvent: UserEvent) : Unit = {
+    val contextData = userEvent.context.data
+    contextData.get("extensionVersion") match {
+      case None | Some(ContextStringData("")) => contextData.get("kifiInstallationId") match {
+        case Some(ContextStringData(id)) => shoeboxClient.getExtensionVersion(ExternalId[KifiInstallation](id)) onComplete {
+          case Success(version) => super.persist(userEvent.copy(context = EventContext(contextData + ("extensionVersion" -> ContextStringData(version)))))
+          case Failure(_) => super.persist(userEvent)
+        }
+        case _ => super.persist(userEvent)
+      }
+      case _ => super.persist(userEvent)
+    }
+  }
 }
 
 trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]
