@@ -20,7 +20,7 @@ class ExtErrorReportController @Inject() (
     val message = (json \ "message").as[String]
     val (inst, userId, exps) = (request.kifiInstallationId.getOrElse(""), request.userId, request.experiments.mkString(","))
     log.error(s"""Extension error "$message": on installation id $inst, user $userId, experiments [$exps]""")
-    val contextBuilder = userEventContextBuilder(Some(request))
+    val contextBuilder = userEventContextBuilder(request)
     contextBuilder += ("message", message)
     contextBuilder += ("authenticated", true)
     heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("ext_error")))
@@ -29,7 +29,7 @@ class ExtErrorReportController @Inject() (
     val json = request.body
     val message = (json \ "message").as[String]
     log.error(s"error of unauthenticated user in extension: $message")
-    val contextBuilder = userEventContextBuilder(Some(request))
+    val contextBuilder = userEventContextBuilder(request)
     contextBuilder += ("message", message)
     contextBuilder += ("authenticated", false)
     heimdal.trackEvent(UserEvent(-1, contextBuilder.build, EventType("ext_error")))

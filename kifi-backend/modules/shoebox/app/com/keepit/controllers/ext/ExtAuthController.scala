@@ -75,8 +75,8 @@ class ExtAuthController @Inject() (
 
     if (isUpgrade){
       SafeFuture{
-        val contextBuilder = userEventContextBuilder(Some(request))
-        contextBuilder += ("extVersion", installation.version.toString)
+        val contextBuilder = userEventContextBuilder(request)
+        contextBuilder += ("extensionVersion", installation.version.toString)
         contextBuilder += ("firstTime", firstTime)
         heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("extension_install")))
       }
