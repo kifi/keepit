@@ -59,7 +59,10 @@ class BookmarkInterner @Inject() (
     }.flatten.toList
 
     log.info(s"[internBookmarks-$referenceId] Requesting scrapes")
-    val persistedBookmarks = persistedBookmarksWithUris.map { case (bm, uri) =>
+    val persistedBookmarks = persistedBookmarksWithUris.map { case (bm, uri, isNewBookmark) =>
+      if (isNewBookmark) {
+        Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
+      }
       db.readWrite { implicit session =>
         if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
           Try(scraper.scheduleScrape(uri))
@@ -84,16 +87,15 @@ class BookmarkInterner @Inject() (
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String)(implicit session: RWSession) = {
     val startTime = System.currentTimeMillis
     bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {
-      case Some(bookmark) if bookmark.isActive => bookmark.withPrivate(isPrivate = isPrivate)
-      case Some(bookmark) => bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate).withTitle(title orElse(uri.title)).withUrl(url))
+      case Some(bookmark) if bookmark.isActive => (false, bookmark.withPrivate(isPrivate = isPrivate))
+      case Some(bookmark) => (false, bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate).withTitle(title orElse(uri.title)).withUrl(url)))
       case None =>
-        Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
         val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-        bookmarkRepo.save(BookmarkFactory(uri, user.id.get, title orElse uri.title, urlObj, source, isPrivate, installationId))
+        (true, bookmarkRepo.save(BookmarkFactory(uri, user.id.get, title orElse uri.title, urlObj, source, isPrivate, installationId)))
     }
   }
 
-  private def internUriAndBookmark(json: JsObject, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[(Bookmark, NormalizedURI)] = try {
+  private def internUriAndBookmark(json: JsObject, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[(Bookmark, NormalizedURI, Boolean)] = try {
     val startTime = System.currentTimeMillis
     val title = (json \ "title").asOpt[String]
     val url = (json \ "url").as[String]
@@ -107,8 +109,8 @@ class BookmarkInterner @Inject() (
           uriRepo.save(initialURI.withState(NormalizedURIStates.SCRAPE_WANTED))
         else initialURI
       }
-
-      Some((internBookmark(uri, user, isPrivate, experiments, installationId, source, title, url), uri))
+      val (isNewKeep, bookmark) = internBookmark(uri, user, isPrivate, experiments, installationId, source, title, url)
+      Some((bookmark, uri, isNewKeep))
     } else {
       None
     }
