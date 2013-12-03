@@ -1,13 +1,13 @@
 package com.keepit.common.cache
 
 import scala.concurrent.duration._
-
 import com.keepit.common.logging.AccessLog
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.eliza.{MessagesForThreadIdCache, MessageThreadExternalIdCache}
 import com.keepit.search.ActiveExperimentsCache
+import com.keepit.common.usersegment.UserSegmentCache
 
 case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
 
@@ -106,11 +106,18 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def normalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new NormalizedURIUrlHashCache(stats, accessLog, (outerRepo, 7 days))
 
-  @Provides @Singleton
+  @Provides
+  @Singleton
   def userValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserValueCache(stats, accessLog, (outerRepo, 7 days))
 
-  @Provides @Singleton
+  @Singleton
+  @Provides
+  def userSegmentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserSegmentCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides
+  @Singleton
   def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new ExtensionVersionInstallationIdCache(stats, accessLog, (outerRepo, 7 days))
 }

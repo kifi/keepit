@@ -37,6 +37,8 @@ import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
+import com.keepit.common.usersegment.UserSegmentCache
+import com.keepit.common.usersegment.UserSegmentKey
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -122,6 +124,7 @@ case class ShoeboxCacheProvider @Inject() (
     userValueCache: UserValueCache,
     userConnCountCache: UserConnectionCountCache,
     userBookmarkCountCache: BookmarkCountCache,
+    userSegmentCache: UserSegmentCache,
     extensionVersionCache: ExtensionVersionInstallationIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
@@ -615,15 +618,17 @@ class ShoeboxServiceClientImpl @Inject() (
   def setUserValue(userId: Id[User], key: String, value: String): Unit = { call(Shoebox.internal.setUserValue(userId, key), JsString(value)) }
 
   def getUserSegment(userId: Id[User]): Future[UserSegment] = {
-    val friendsCount = cacheProvider.userConnCountCache.get(UserConnectionCountKey(userId))
-    val bmsCount = cacheProvider.userBookmarkCountCache.get(BookmarkCountKey(Some(userId)))
+    cacheProvider.userSegmentCache.getOrElseFuture(UserSegmentKey(userId)){
+      val friendsCount = cacheProvider.userConnCountCache.get(UserConnectionCountKey(userId))
+      val bmsCount = cacheProvider.userBookmarkCountCache.get(BookmarkCountKey(Some(userId)))
 
-    (friendsCount, bmsCount) match {
-      case (Some(f), Some(bm)) => {
-        val segment =  UserSegmentFactory(bm, f)
-        Future.successful(segment)
+      (friendsCount, bmsCount) match {
+        case (Some(f), Some(bm)) => {
+          val segment =  UserSegmentFactory(bm, f)
+          Future.successful(segment)
+        }
+        case _ => call(Shoebox.internal.getUserSegment(userId)).map { x => Json.fromJson[UserSegment](x.json).get }
       }
-      case _ => call(Shoebox.internal.getUserSegment(userId)).map { x => Json.fromJson[UserSegment](x.json).get }
     }
   }
 

@@ -1,6 +1,17 @@
 package com.keepit.common.usersegment
 
+import scala.concurrent.duration.Duration
+
+import com.google.inject.Singleton
+import com.keepit.common.cache._
+import com.keepit.common.cache.Key
+import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
+import com.keepit.model.User
+
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
 
 case class UserSegment(
   val value: Int,
@@ -20,3 +31,11 @@ object UserSegmentFactory{
     }
   }
 }
+
+case class UserSegmentKey(userId: Id[User]) extends Key[UserSegment] {
+  val namespace = "user_segment"
+  def toKey(): String = userId.id.toString
+}
+
+class UserSegmentCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserSegmentKey, UserSegment](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
