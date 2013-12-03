@@ -27,6 +27,7 @@ import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.social.{SocialNetworkType, SocialId}
 import com.keepit.scraper.HttpRedirect
+import com.keepit.common.db.slick.Database.Slave
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -274,7 +275,7 @@ class ShoeboxController @Inject() (
 
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]) = Action { request =>
     val ts = System.currentTimeMillis
-    val bookmarks = db.readOnly { implicit session =>
+    val bookmarks = db.readOnly(2, Slave) { implicit session =>
       bookmarkRepo.getByUriWithoutTitle(uriId)
     }
     log.info(s"[getBookmarksByUriWithoutTitle($uriId)] time-lapsed:${System.currentTimeMillis - ts} bookmarks(len=${bookmarks.length}):${bookmarks.mkString}")
@@ -282,7 +283,7 @@ class ShoeboxController @Inject() (
   }
 
   def getLatestBookmark(uriId: Id[NormalizedURI]) = Action { request =>
-    val bookmarkOpt = db.readOnly { implicit session =>
+    val bookmarkOpt = db.readOnly(2) { implicit session =>
       bookmarkRepo.latestBookmark(uriId)
     }
     log.info(s"[getLatestBookmark($uriId)] $bookmarkOpt")
