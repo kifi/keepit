@@ -214,8 +214,9 @@ class ExtMessagingController @Inject() (
     },
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
       val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
-      val unvisited = messagingController.getUnreadThreadCount(socket.userId)
-      socket.channel.push(Json.arr("notifications", notices, unvisited))
+      val numUnreadUnmuted = messagingController.getUnreadThreadCount(socket.userId)
+      val timeLastSeen = messagingController.getNotificationLastSeen(socket.userId).getOrElse(START_OF_TIME).toStandardTimeString
+      socket.channel.push(Json.arr("notifications", notices, numUnreadUnmuted, timeLastSeen))
     },
     "get_notifications_by_url" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
       messagingController.getSendableNotificationsForUrl(socket.userId, url).map { case (nUriStr, notices) =>
