@@ -24,10 +24,6 @@ if (searchUrlRe.test(document.URL)) !function() {
   'use strict';
   log("[google_inject]")();
 
-  function logEvent() {  // parameters defined in main.js
-    api.port.emit("log_event", Array.prototype.slice.call(arguments));
-  }
-
   var $res = $(render("html/search/google", {images: api.url("images")}));   // a reference to our search results (kept so that we can reinsert when removed)
   var $status = $res.find(".kifi-res-status");
   attachKifiRes();
@@ -37,7 +33,7 @@ if (searchUrlRe.test(document.URL)) !function() {
   var response = {};      // latest kifi results received
   var showMoreOnArrival;
   var clicks = {kifi: [], google: []};  // clicked result link hrefs
-  var tQuery, tGoogleResultsShown, tKifiResultsReceived, tKifiResultsShown, reportTimingTimer;  // for timing stats
+  var tQuery, tGoogleResultsShown, tKifiResultsReceived, tKifiResultsShown;  // for timing stats
 
   var $q = $(), $qf = $q, $qp = $q, keyTimer;
   $(function() {
@@ -90,10 +86,6 @@ if (searchUrlRe.test(document.URL)) !function() {
     $status.removeAttr("data-n").removeClass("kifi-promote").parent().addClass("kifi-loading");
     $res.find("#kifi-res-list,.kifi-res-end").css("opacity", .2).slideUp(200);
 
-    clearTimeout(reportTimingTimer);
-    if (newFilter == null) {
-      reportTimingTimer = setTimeout(reportTiming, 1200);
-    }
     var t1 = tQuery = Date.now();
     api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
       if (q != query || !areSameFilter(f, filter)) {
@@ -147,11 +139,6 @@ if (searchUrlRe.test(document.URL)) !function() {
         $status.attr("data-n", resp.hits.length).addClass(resp.show && resp.hits.length ? "kifi-promote" : "").layout();
       }
       $status.parent().removeClass("kifi-loading");
-
-      logEvent("search", "kifiLoaded", {"query": q, "filter": f, "queryUUID": resp.uuid});
-      if (resp.hits.length) {
-        logEvent("search", "kifiAtLeastOneResult", {"query": q, "filter": f, "queryUUID": resp.uuid, "experimentId": resp.experimentId});
-      }
     });
   }
 
@@ -166,35 +153,12 @@ if (searchUrlRe.test(document.URL)) !function() {
     return m && decodeURIComponent(m[0].substr(3).replace(/\+/g, " ")).trim() || "";
   }
 
-  function reportTiming() {
-    var kR = tKifiResultsReceived - tQuery;
-    var kS = tKifiResultsShown - tQuery;
-    var gS = tGoogleResultsShown - tQuery;
-    logEvent("search", "dustSettled", {
-      "query": query,
-      "experimentId": response.experimentId,
-      "kifiHadResults": response.hits && response.hits.length > 0,
-      "kifiReceivedAt": kR >= 0 ? kR : null,
-      "kifiShownAt": kR >= 0 && kS >= 0 ? kS : null,
-      "googleShownAt": gS >= 0 ? gS : null});
-  }
-
   $(window).on("hashchange", function() {
     log("[hashchange]")();
     checkSearchType();
     search();  // needed for switch from shopping to web search, for example
   }).on("beforeunload", function(e) {
     if (response.query === query && Date.now() - tKifiResultsShown > 2000) {
-      logEvent("search", "searchUnload", {
-        "query": response.query,
-        "queryUUID": response.uuid,
-        "experimentId": response.experimentId,
-        "kifiResultsClicked": clicks.kifi.length,
-        "googleResultsClicked": clicks.google.length,
-        "kifiShownURIs": response.expanded ? response.hits.map(function(hit) {return hit.bookmark.url}) : [],
-        "kifiClickedURIs": clicks.kifi,
-        "googleClickedURIs": clicks.google}
-      );
       api.port.emit("log_search_event", [
         "searchEnded",
         {
@@ -275,8 +239,6 @@ if (searchUrlRe.test(document.URL)) !function() {
     clicks[isKifi ? "kifi" : "google"].push(href);
 
     if (href && resIdx >= 0) {
-      logEvent("search", isKifi ? "kifiResultClicked" : "googleResultClicked",
-        {"url": href, "whichResult": resIdx, "query": response.query, "experimentId": response.experimentId, "kifiResultsCount": $kifiLi.length});
       api.port.emit("log_search_event", [
         "resultClicked",
         {
@@ -304,7 +266,6 @@ if (searchUrlRe.test(document.URL)) !function() {
     observer.disconnect();
     $q.off("input");
     $qf.off("submit");
-    clearTimeout(reportTimingTimer);
     $res.remove();
     $res.length = 0;
   });

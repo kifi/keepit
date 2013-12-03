@@ -114,8 +114,12 @@ class ExtSearchEventController @Inject() (
 
   def updateBrowsingHistory() = AuthenticatedJsonToJsonAction { request =>
     val userId = request.userId
-    val browsed = request.body.as[JsArray].value.map(Id.format[NormalizedURI].reads)
-    browsed.foreach(uriIdJs => browsingHistoryTracker.add(userId, BrowsedURI(uriIdJs.get)))
+    val browsedUrls = request.body.as[JsArray].value.map(_.as[String])
+    browsedUrls.foreach { url =>
+      shoeboxClient.getNormalizedURIByURL(url).foreach(_.foreach { uri =>
+        browsingHistoryTracker.add(userId, BrowsedURI(uri.id.get))
+      })
+    }
     Ok
   }
 
