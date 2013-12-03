@@ -598,6 +598,9 @@ api.port.on({
     session.prefs.enterToSend = data;
     ajax("POST", "/ext/pref/enterToSend?enterToSend=" + data);
   },
+  useful_page: function(o, _, tab) {
+    ajax('search', 'POST', '/search/events/browsed', [tab.url]);
+  },
   log_event: function(data) {
     logEvent.apply(null, data);
   },
