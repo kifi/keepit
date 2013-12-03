@@ -29,6 +29,7 @@
     @experiments.map { experiment =>
     <li class="@if(experiment.isActive) { active-experiment }" data-id="@experiment.id">
       <div class="experiment-desc">
+        <button type="button" class="btn-info">@experiment.id.get</button>
         <input class="experiment-description" value="@experiment.description">
         @if(experiment.isRunning) {
           <button type="button" class="btn pause-experiment">Pause</button>
