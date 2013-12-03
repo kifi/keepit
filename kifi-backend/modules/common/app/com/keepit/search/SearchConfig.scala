@@ -123,10 +123,10 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     (hash - min) / (max - min)
   }
 
-  private def assignConfig(userId: Id[User], userSegment: Int) = {
+  private def assignConfig(userId: Id[User], userSegmentValue: Int) = {
     val modulo = userId.id.toLong % 3
     if (userSegmentExperiments.size == 4 && modulo == 0) {
-      val ex = userSegmentExperiments(userSegment)
+      val ex = userSegmentExperiments(userSegmentValue)
       val config = defaultConfig(ex.config.params)
       (config, ex.id)
     } else {
@@ -137,7 +137,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   def getConfigByUserSegment(userId: Id[User], excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
     val segFuture = shoeboxClient.getUserSegment(userId)
     val seg = monitoredAwait.result(segFuture, 5 seconds, "getting user segment")
-    if (excludeFromExperiments) (SearchConfig.defaultConfig, None) else assignConfig(userId, seg)
+    if (excludeFromExperiments) (SearchConfig.defaultConfig, None) else assignConfig(userId, seg.value)
   }
 
   def getConfig(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {

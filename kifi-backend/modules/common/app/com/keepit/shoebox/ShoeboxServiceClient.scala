@@ -35,6 +35,8 @@ import com.keepit.model.UserExternalIdKey
 import com.keepit.scraper.HttpRedirect
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.usersegment.UserSegment
+import com.keepit.common.usersegment.UserSegmentFactory
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -98,7 +100,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
   def getUserValue(userId: Id[User], key: String): Future[Option[String]]
   def setUserValue(userId: Id[User], key: String, value: String): Unit
-  def getUserSegment(userId: Id[User]): Future[Int]
+  def getUserSegment(userId: Id[User]): Future[UserSegment]
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
 }
 
@@ -612,20 +614,16 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def setUserValue(userId: Id[User], key: String, value: String): Unit = { call(Shoebox.internal.setUserValue(userId, key), JsString(value)) }
 
-  def getUserSegment(userId: Id[User]): Future[Int] = {
+  def getUserSegment(userId: Id[User]): Future[UserSegment] = {
     val friendsCount = cacheProvider.userConnCountCache.get(UserConnectionCountKey(userId))
     val bmsCount = cacheProvider.userBookmarkCountCache.get(BookmarkCountKey(Some(userId)))
 
     (friendsCount, bmsCount) match {
       case (Some(f), Some(bm)) => {
-        val segment = if (bm > 50) {
-          if (f > 10) 0 else 1
-        } else {
-          if (f > 10) 2 else 3
-        }
+        val segment =  UserSegmentFactory(bm, f)
         Future.successful(segment)
       }
-      case _ => call(Shoebox.internal.getUserSegment(userId)).map { _.json.as[Int] }
+      case _ => call(Shoebox.internal.getUserSegment(userId)).map { x => Json.fromJson[UserSegment](x.json).get }
     }
   }
 

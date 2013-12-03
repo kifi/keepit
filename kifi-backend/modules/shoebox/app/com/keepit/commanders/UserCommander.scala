@@ -8,19 +8,18 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.abook.ABookServiceClient
-
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, Json, JsValue}
-
 import com.google.inject.{Singleton, Inject, ImplementedBy}
 import com.keepit.common.net.URI
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Akka
-
 import scala.concurrent.Future
+import com.keepit.common.usersegment.UserSegment
+import com.keepit.common.usersegment.UserSegmentFactory
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 
@@ -102,16 +101,12 @@ class UserCommander @Inject() (
     }
   }
 
-  def getUserSegment(userId: Id[User]): Int = {
+  def getUserSegment(userId: Id[User]): UserSegment = {
     val (numBms, numFriends) = db.readOnly{ implicit s =>
       (bookmarkRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
     }
 
-    val segment = if (numBms > 50){
-      if (numFriends > 10) 0 else 1
-    } else {
-      if (numFriends > 10) 2 else 3
-    }
+    val segment = UserSegmentFactory(numBms, numFriends)
     segment
   }
 }
