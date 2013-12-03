@@ -138,7 +138,7 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Singleton
   @Provides
   def userSegmentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserSegmentCache(stats, accessLog, (outerRepo, 1 day))
+    new UserSegmentCache(stats, accessLog, (innerRepo, 12 hours), (outerRepo, 1 day))
 
   @Provides @Singleton
   def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
