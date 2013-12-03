@@ -35,7 +35,7 @@
       selector: '.friend-mute'
     },
     searchKifi: {
-      selector: '.query-wrap',
+      selector: '.query',
       events: 'keypress'
     },
     searchContacts: {
