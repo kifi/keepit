@@ -4,7 +4,7 @@
 // @require scripts/html/keeper/notice_global.js
 // @require scripts/html/keeper/notice_message.js
 // @require scripts/lib/jquery-ui-position.min.js
-// @require scripts/lib/jquery.hoverfu.js
+// @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/formatting.js

@@ -17,7 +17,7 @@ import scala.util.{Failure, Success}
 
 trait UserEventLoggingRepo extends EventRepo[UserEvent] {
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit
-  def setUserProperties(userId: Id[User], properties: EventContext): Unit
+  def setUserProperties(userId: Id[User], properties: HeimdalContext): Unit
   def delete(userId: Id[User]): Unit
 }
 
@@ -44,7 +44,7 @@ class ProdUserEventLoggingRepo(
   def fromBSON(bson: BSONDocument): UserEvent = ???
 
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = mixpanel.incrementUserProperties(userId, increments)
-  def setUserProperties(userId: Id[User], properties: EventContext): Unit = mixpanel.setUserProperties(userId, properties)
+  def setUserProperties(userId: Id[User], properties: HeimdalContext): Unit = mixpanel.setUserProperties(userId, properties)
   def delete(userId: Id[User]): Unit = mixpanel.delete(userId)
 
   override def persist(userEvent: UserEvent) : Unit = {
@@ -52,7 +52,7 @@ class ProdUserEventLoggingRepo(
     contextData.get("extensionVersion") match {
       case None | Some(ContextStringData("")) => contextData.get("kifiInstallationId") match {
         case Some(ContextStringData(id)) => shoeboxClient.getExtensionVersion(ExternalId[KifiInstallation](id)) onComplete {
-          case Success(version) => super.persist(userEvent.copy(context = EventContext(contextData + ("extensionVersion" -> ContextStringData(version)))))
+          case Success(version) => super.persist(userEvent.copy(context = HeimdalContext(contextData + ("extensionVersion" -> ContextStringData(version)))))
           case Failure(_) => super.persist(userEvent)
         }
         case _ => super.persist(userEvent)
@@ -80,6 +80,6 @@ case class UserEventDescriptorNameKey(name: EventType) extends Key[EventDescript
 
 class DevUserEventLoggingRepo extends DevEventRepo[UserEvent] with UserEventLoggingRepo {
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = {}
-  def setUserProperties(userId: Id[User], properties: EventContext): Unit = {}
+  def setUserProperties(userId: Id[User], properties: HeimdalContext): Unit = {}
   def delete(userId: Id[User]): Unit = {}
 }

@@ -118,8 +118,8 @@ object CustomBSONHandlers {
     def read(doc: BSONArray): ContextData = ???
   }
 
-  implicit object BSONEventContextHandler extends BSONHandler[BSONDocument, EventContext] {
-    def write(context: EventContext) = BSONDocument(context.data.mapValues(BSONContextDataHandler.write))
-    def read(doc: BSONDocument): EventContext = ???
+  implicit object BSONEventContextHandler extends BSONHandler[BSONDocument, HeimdalContext] {
+    def write(context: HeimdalContext) = BSONDocument(context.data.mapValues(BSONContextDataHandler.write))
+    def read(doc: BSONDocument): HeimdalContext = ???
   }
 }

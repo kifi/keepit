@@ -39,7 +39,16 @@ import com.keepit.social.SocialId
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
-case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User], experiments: Set[ExperimentType], extVersion: Option[String])
+case class SocketInfo(
+  id: Long,
+  channel: Concurrent.Channel[JsArray],
+  connectedAt: DateTime,
+  userId: Id[User],
+  experiments: Set[ExperimentType],
+  extVersion: Option[String],
+  userAgent: String,
+  var ip: Option[String]
+)
 
 
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
@@ -157,12 +166,13 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     authenticate(request) match {
       case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
         implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
-        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt)
-        val handlers = websocketHandlers(socketInfo)
         val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
         val ipOpt : Option[String] = eipOpt.flatMap{ eip =>
           crypt.decrypt(ipkey, eip).toOption
         }
+        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
+        val handlers = websocketHandlers(socketInfo)
+
 
         onConnect(socketInfo)
 

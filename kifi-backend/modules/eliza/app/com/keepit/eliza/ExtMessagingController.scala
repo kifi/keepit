@@ -12,6 +12,7 @@ import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.search.SearchServiceClient
+import com.keepit.common.crypto.SimpleDESCrypt
 
 import scala.util.{Success, Failure}
 
@@ -46,6 +47,9 @@ class ExtMessagingController @Inject() (
     protected val userEventContextBuilder: EventContextBuilderFactory
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
+
+  private val crypt = new SimpleDESCrypt
+  private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   /*********** REST *********************/
 
@@ -278,6 +282,9 @@ class ExtMessagingController @Inject() (
     },
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
       messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
+    },
+    "eip" -> { case JsString(eip) +: _ =>
+      socket.ip = crypt.decrypt(ipkey, eip).toOption
     },
     "log_event" -> { case JsObject(pairs) +: _ =>
       implicit val experimentFormat = State.format[ExperimentType]
