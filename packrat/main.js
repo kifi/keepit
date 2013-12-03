@@ -187,10 +187,8 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 
 // ===== Event logging
 
-var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
-
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
-  if (!eventFamilies[eventFamily]) {
+  if (eventFamily !== 'slider') {
     log("#800", "[logEvent] invalid event family:", eventFamily)();
     return;
   }
@@ -1167,8 +1165,6 @@ function tellTabsUnreadThreadCountIfChanged(td) { // (td, url[, url]...)
 }
 
 function searchOnServer(request, respond) {
-  logEvent("search", "newSearch", {query: request.query, filter: request.filter});
-
   if (request.first && getPrefetched(request, respond)) return;
 
   if (!session) {
@@ -1487,7 +1483,6 @@ api.tabs.on.blur.add(function(tab) {
 api.tabs.on.loading.add(function(tab) {
   log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab)();
   kifify(tab);
-  logEvent("extension", "pageLoad");
 });
 
 api.tabs.on.unload.add(function(tab, historyApi) {
@@ -1657,10 +1652,10 @@ function unstore(key) {
 }
 
 api.on.install.add(function() {
-  logEvent("extension", "install");
+  log('[api.on.install]')();
 });
 api.on.update.add(function() {
-  logEvent("extension", "update");
+  log('[api.on.update]')();
 });
 
 function getFriends() {
@@ -1760,7 +1755,6 @@ function startSession(callback, retryMs) {
     version: api.version},
   function done(data) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
-    logEvent("extension", "authenticated");
     unstore('logout');
 
     session = data;
@@ -1884,8 +1878,6 @@ api.timers.setTimeout(function() {
   }
   log("\n"+f)();
 });
-
-logEvent("extension", "started");
 
 authenticate(function() {
   if (api.loadReason == "install") {
