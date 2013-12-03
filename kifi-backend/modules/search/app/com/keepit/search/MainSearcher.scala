@@ -422,7 +422,7 @@ class MainSearcher(
       val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
       val svVar = SemanticVariance.svVariance(textQueries, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
 
-      val minScore = (0.9d - (0.8d / (1.0d + pow(svVar.toDouble/0.19d, 8.0d)))) .toFloat // don't ask me how I got this formula
+      val minScore = (0.9d - (0.7d / (1.0d + pow(svVar.toDouble/0.19d, 8.0d)))).toFloat // don't ask me how I got this formula
 
       // simple classifier
       val show = (parsedQuery, personalizedSearcher) match {

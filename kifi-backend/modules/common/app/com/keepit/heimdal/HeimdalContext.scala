@@ -16,8 +16,6 @@ case class ContextBoolean(value: Boolean) extends SimpleContextData
 case class ContextDate(value: DateTime) extends SimpleContextData
 case class ContextList(values: Seq[SimpleContextData]) extends ContextData
 
-case class HeimdalContext(data: Map[String, ContextData])
-
 object SimpleContextData {
   implicit val format = new Format[SimpleContextData] {
     def reads(json: JsValue): JsResult[SimpleContextData] = json match {
@@ -36,12 +34,18 @@ object SimpleContextData {
   }
 
   implicit def toContextStringData(value: String) = ContextStringData(value)
-  implicit def toContextDoubleData[T <% Double](value: T) = ContextDoubleData(value)
+  implicit def toContextDoubleData[T](value: T)(implicit toDouble: T => Double) = ContextDoubleData(value)
   implicit def toContextBoolean(value: Boolean) = ContextBoolean(value)
   implicit def toContextDate(value: DateTime) = ContextDate(value)
+
+  implicit def fromContextStringData(simpleContextData: SimpleContextData): Option[String] = Some(simpleContextData) collect { case ContextStringData(value) => value }
+  implicit def fromContextDoubleData(simpleContextData: SimpleContextData): Option[Double] = Some(simpleContextData) collect { case ContextDoubleData(value) => value }
+  implicit def fromContextBoolean(simpleContextData: SimpleContextData): Option[Boolean] = Some(simpleContextData) collect { case ContextBoolean(value) => value }
+  implicit def fromContextDate(simpleContextData: SimpleContextData) = Some(simpleContextData) collect { case ContextDate(value) => value }
 }
 
 object ContextData {
+
   implicit val format = new Format[ContextData] {
     def reads(json: JsValue): JsResult[ContextData] = json match {
       case list: JsArray => Json.fromJson[Seq[SimpleContextData]](list) map ContextList
@@ -53,6 +57,18 @@ object ContextData {
       case simpleData: SimpleContextData => Json.toJson(simpleData)
     }
   }
+}
+
+case class HeimdalContext(data: Map[String, ContextData]) {
+  def get[T](key: String)(implicit fromSimpleContextData: SimpleContextData => Option[T]): Option[T] = for {
+    simpleContextData <- data.get(key) collect { case data: SimpleContextData => data }
+    value <- fromSimpleContextData(simpleContextData)
+  } yield value
+
+  def getSeq[T](key: String)(implicit fromSimpleContextData: SimpleContextData => Option[T]): Option[Seq[T]] = for {
+    ContextList(values) <- data.get(key)
+    unboxedValues <- Some(values.map(fromSimpleContextData).flatten) if unboxedValues.length == values.length
+  } yield unboxedValues
 }
 
 object HeimdalContext {
@@ -73,8 +89,8 @@ object HeimdalContext {
 class EventContextBuilder {
   val data = new scala.collection.mutable.HashMap[String, ContextData]()
 
-  def +=[T <% SimpleContextData](key: String, value: T) : Unit = data(key) = value
-  def +=[T <% SimpleContextData](key: String, values: Seq[T]) : Unit = data(key) = ContextList(values.map(identity[SimpleContextData](_)))
+  def +=[T ](key: String, value: T)(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = value
+  def +=[T](key: String, values: Seq[T])(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = ContextList(values.map(toSimpleContextData))
   def build : HeimdalContext = HeimdalContext(data.toMap)
 
   def addService(serviceDiscovery: ServiceDiscovery): Unit = {

@@ -126,6 +126,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     }
   }
 
+  //using readonly db when exist, don't use cache
   def getByUriOrPrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String] = {
     val prenormalizedUrl = prenormalize(url)
     val normalizedUri = getByNormalizedUrl(prenormalizedUrl) map {
@@ -156,12 +157,15 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
       }
     }
   }
-  
+
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI] = {
     (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
 
-  private def prenormalize(uriString: String)(implicit session: RSession): String = Statsd.time(key = "normalizedURIRepo.prenormalize") { normalizationServiceProvider.get.prenormalize(uriString) }
+  private def prenormalize(uriString: String)(implicit session: RSession): String = Statsd.time(key = "normalizedURIRepo.prenormalize") {
+    normalizationServiceProvider.get.prenormalize(uriString)
+  }
+
   private def findNormalization(normalizedUrl: String): Option[Normalization] =
     SchemeNormalizer.generateVariations(normalizedUrl).find { case (_, url) => (url == normalizedUrl) }.map { case (normalization, _) => normalization }
 }

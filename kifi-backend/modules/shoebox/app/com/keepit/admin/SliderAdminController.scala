@@ -185,23 +185,26 @@ class SliderAdminController @Inject() (
     import com.keepit.classify.DomainTagImportEvents._
 
     val eventsFuture = heimdal.getRawEvents[SystemEvent](50, 42000, DOMAIN_TAG_IMPORT).map { rawEvents =>
-      rawEvents.value.map { event =>
-        val createdAt = DateTimeJsonFormat.reads(event \ "time").get
-        val context = (event \ "context")
-        val eventName = (context \ "eventName").as[String]
+      rawEvents.value.map { json =>
+        val event = SystemEvent.format.reads(json).get
+        val context = event.context
+        val eventName = event.eventType.name
+        val createdAt = event.time
         val description = eventName match {
           case IMPORT_START => "Full import started"
-          case IMPORT_TAG_SUCCESS => "Tag %s imported (%d added, %d removed, %d total domains)".format(
-            (context \ "tagName").as[String],
-            (context \ "numDomainsAdded").as[Int],
-            (context \ "numDomainsRemoved").as[Int],
-            (context \ "totalDomains").as[Int])
-          case IMPORT_SUCCESS => "Domains imported (%d added, %d removed, %d total domains)".format(
-            (context \ "numDomainsAdded").as[Int],
-            (context \ "numDomainsRemoved").as[Int],
-            (context \ "totalDomains").as[Int])
-          case REMOVE_TAG_SUCCESS => "Tag %s removed".format((context \ "tagName").as[String])
-          case IMPORT_FAILURE => (context \ "message").as[String]
+          case IMPORT_TAG_SUCCESS => "Tag %s imported (%d added, %d removed, %d total domains)".format((
+            context.get[String]("tagName").get,
+            context.get[Double]("numDomainsAdded").get.toInt,
+            context.get[Double]("numDomainsRemoved").get.toInt,
+            context.get[Double]("totalDomains").get.toInt
+          ))
+          case IMPORT_SUCCESS => "Domains imported (%d added, %d removed, %d total domains)".format((
+            context.get[Double]("numDomainsAdded").get.toInt,
+            context.get[Double]("numDomainsRemoved").get.toInt,
+            context.get[Double]("totalDomains").get.toInt
+          ))
+          case REMOVE_TAG_SUCCESS => "Tag %s removed".format((context.get[String]("tagName")))
+          case IMPORT_FAILURE => context.get[String]("message").get
         }
         ImportEvent(createdAt, eventName, description)
       }.sortBy(_.createdAt).reverse
