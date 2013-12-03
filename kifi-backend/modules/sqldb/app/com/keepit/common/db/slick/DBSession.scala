@@ -9,7 +9,7 @@ import scala.util.Try
 import play.api.Logger
 
 object DBSession {
-  abstract class SessionWrapper(name: String, masterSlave: Database.DBMasterSlave, _session: => Session) extends Session {
+  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session) extends Session {
     private var open = false
     private var doRollback = false
     private var transaction: Option[Promise[Unit]] = None
@@ -80,7 +80,7 @@ object DBSession {
 
   abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session) extends SessionWrapper(name, masterSlave, roSession)
   class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session) extends RSession("RO", masterSlave, roSession)
-  class RWSession(masterSlave: Database.DBMasterSlave, rwSession: => Session) extends RSession("RW", masterSlave, rwSession)
+  class RWSession(rwSession: => Session) extends RSession("RW", Database.Master, rwSession) //RWSession is always reading from master
 
   implicit def roToSession(roSession: ROSession): Session = roSession.session
   implicit def rwToSession(rwSession: RWSession): Session = rwSession.session
