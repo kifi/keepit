@@ -642,7 +642,11 @@ $(function () {
 	// profile email accounts section
 	$(document).on('click', '.profile-email-addresses-title-wrapper', function (e) {
 		e.preventDefault();
-		$(this).closest('.profile-email-addresses').toggleClass('opened');
+		var $list = $(this).closest('.profile-email-addresses');
+		$list.toggleClass('opened');
+		$list.find('.profile-email-address-manage')
+			.removeClass('add')
+			.find('input').val('');
 	});
 
 	// profile email account dropdown actions
@@ -677,7 +681,36 @@ $(function () {
 		$input.val('');
 		$manage.addClass('add');
 		$input.focus();
+		$input.keydown(function (e) {
+			if (e.which === 13) {
+				// enter
+				submitAddEmail.call(this, e);
+			}
+		});
 	});
+
+	function submitAddEmail(e) {
+		e.preventDefault();
+		var $this = $(this),
+			$box = $this.closest('.profile-email-address-add-box'),
+			$manage = $box.closest('.profile-email-address-manage'),
+			$input = $box.find('.profile-email-address-add-input'),
+			email = $input.val();
+		if (addEmailAccount(email)) {
+			$input.val('');
+			$input.off('keydown');
+			$manage.removeClass('add');
+		}
+	}
+
+	$(document).on('click', '.profile-email-address-add-save', submitAddEmail);
+
+	function addEmailAccount(email) {
+		console.log(email);
+		if (email) {
+			return true;
+		}
+	}
 
 	// Friends Tabs/Pages
 
