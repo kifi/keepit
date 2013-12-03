@@ -639,6 +639,37 @@ $(function () {
 		});
 	}
 
+	// profile email accounts section
+	$(document).on('click', '.profile-email-addresses-title-wrapper', function (e) {
+		e.preventDefault();
+		$(this).closest('.profile-email-addresses').toggleClass('opened');
+	});
+
+	// profile email account dropdown actions
+	var $openedArrow = null;
+	$(document).on('click', '.profile-email-address-item-make-primary', function (e) {
+		e.preventDefault();
+	});
+
+	$(document).on('click', '.profile-email-address-item-delete', function (e) {
+		e.preventDefault();
+	});
+
+	$(document).on('click', '.profile-email-address-item-arrow', function (e) {
+		e.preventDefault();
+		var isOpen = $(this).hasClass('opened');
+		$('.profile-email-address-item-arrow').removeClass('opened');
+		if (!isOpen) {
+			$(this).addClass('opened');
+		}
+	});
+
+	$(document).on('click', function (e) {
+		if (!$(e.target).closest('.profile-email-address-item-arrow').length) {
+			$('.profile-email-address-item-arrow').removeClass('opened');
+		}
+	});
+
 	// Friends Tabs/Pages
 
 	var $friends = $('.friends');
