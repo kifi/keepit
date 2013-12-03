@@ -1,43 +1,35 @@
 package com.keepit.eliza
 
-import com.keepit.model.{UserNotification, User, DeepLocator, NormalizedURI}
+import com.google.inject.Inject
+
+import com.keepit.common.KestrelCombinator
+import com.keepit.common.akka.{SafeFuture, TimeoutFuture}
+import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.{Database}
-import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.model.{ExperimentType, UserNotification, User, DeepLocator, NormalizedURI}
+import com.keepit.realtime.{PushNotification, UrbanAirship}
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
-import com.keepit.common.akka.SafeFuture
-import com.keepit.model.ExperimentType
-import com.keepit.common.controller.ElizaServiceController
-
-import scala.concurrent.{Promise, future, Await, Future}
-import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.http.Status.ACCEPTED
-
-import com.google.inject.Inject
 
 import org.joda.time.DateTime
 
-import play.api.libs.json.{JsValue, JsString, JsArray, Json}
+import play.api.http.Status.ACCEPTED
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{JsValue, JsString, JsArray, JsObject, Json}
+import play.api.mvc.Action
 import play.modules.statsd.api.Statsd
+
+import scala.concurrent.{Promise, future, Await, Future}
+import scala.concurrent.duration._
+import scala.util.Try
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
-import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
-import com.keepit.realtime.{PushNotification, UrbanAirship}
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsObject
-import com.keepit.realtime.PushNotification
-import com.keepit.common.KestrelCombinator
-import scala.util.Try
 
-
-//For migration only
-import play.api.mvc.Action
-import com.keepit.common.db.slick.DBSession.RWSession
 
 /* To future maintainers
 *  If this is ever getting too slow the first things I would look at (in no particular order):
@@ -75,33 +67,6 @@ class MessagingController @Inject() (
     })
   }
 
-  //migration code
-  private def recoverNotification(userId: Id[User], thread: MessageThread, messages: Seq[Message], id2BasicUser: Map[Id[User], BasicUser])(implicit session: RWSession) : Unit = {
-    messages.collectFirst { case m if m.from.isDefined && m.from.get != userId => m }.map { lastMsgFromOther =>
-      val locator = "/messages/" + thread.externalId
-
-      val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-      val messageWithBasicUser = MessageWithBasicUser(
-        lastMsgFromOther.externalId,
-        lastMsgFromOther.createdAt,
-        lastMsgFromOther.messageText,
-        None,
-        lastMsgFromOther.sentOnUrl.getOrElse(""),
-        thread.nUrl.getOrElse(""),
-        lastMsgFromOther.from.map(id2BasicUser(_)),
-        participantSet.toSeq.map(id2BasicUser(_))
-      )
-
-      val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator, false, 0, 0, 0, 0, 0, false)
-
-      userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson, false)
-      userThreadRepo.markRead(userId)
-      userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime)
-      userThreadRepo.setNotificationLastSeen(userId, currentDateTime)
-    }
-  }
-
-
   def sendGlobalNotification() = Action(parse.json) { request =>
     SafeFuture {
       val data : JsObject = request.body.asInstanceOf[JsObject]
@@ -115,7 +80,6 @@ class MessagingController @Inject() (
       val sticky   : Boolean       =  (data \ "sticky").as[Boolean]
 
       createGlobalNotificaiton(userIds, title, body, linkText, linkUrl, imageUrl, sticky)
-
     }
     Status(ACCEPTED)
   }
