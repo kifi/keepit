@@ -704,7 +704,11 @@ $(function () {
 				$error.find('.error-body').text(body || '');
 			}
 			else {
-				$input.after('<div class="input-error"><div class="error-header">' + (header || '') + '</div><div class="error-body">' + (body || '') + '</div></div>');
+				var $error = $('<div class="input-error"><div class="error-header">' + (header || '') + '</div><div class="error-body">' + (body || '') + '</div></div>').insertAfter($input);
+				console.log($input.offset().top, $input.height());
+				$error.offset({
+					top: $input.offset().top + $input.outerHeight() + 5
+				});
 			}
 		}
 		else {
