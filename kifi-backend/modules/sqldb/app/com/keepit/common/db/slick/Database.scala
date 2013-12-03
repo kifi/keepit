@@ -120,7 +120,7 @@ class Database @Inject() (
   }
 
   def readWrite[T](f: RWSession => T): T = enteringSession {
-    val rw = new RWSession(Master, {
+    val rw = new RWSession({//always master
       Statsd.increment("db.write.Master")
       sessionProvider.createReadWriteSession(db.masterDb)
     })

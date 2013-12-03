@@ -31,6 +31,8 @@ class NormalizationServiceImpl @Inject() (
   airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
   def normalize(uriString: String)(implicit session: RSession): String = normalizedURIRepo.getByUri(uriString).map(_.url).getOrElse(prenormalize(uriString))
+
+  //using readonly db when exist, don't use cache
   def prenormalize(uriString: String)(implicit session: RSession): String = {
     val withStandardPrenormalizationOption = URI.safelyParse(uriString).map(Prenormalizer)
     val withPreferredSchemeOption = for {

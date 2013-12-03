@@ -51,18 +51,18 @@ class MessagingTest extends Specification with DbTestInjector {
 
         val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Set, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
 
-        messagingController.getLatestSendableNotifications(user1, 20).length===0
+        messagingController.getLatestSendableNotifications(user1, 20).length === 0
 
         val (thread2, msg2) = messagingController.sendMessage(user1, msg1.thread, "Domination!", None)
 
         val messageIds : Seq[Option[Id[Message]]] = messagingController.getThreads(user2).flatMap(messagingController.getThreadMessages(_, None)).map(_.id)
         val messageContents : Seq[String] = messagingController.getThreads(user2).flatMap(messagingController.getThreadMessages(_, None)).map(_.messageText)
 
-        messageIds.contains(msg1.id)===true
-        messageIds.contains(msg2.id)===true
+        messageIds.contains(msg1.id) === true
+        messageIds.contains(msg2.id) === true
 
-        messageContents.contains(msg1.messageText)===true
-        messageContents.contains(msg2.messageText)===true
+        messageContents.contains(msg1.messageText) === true
+        messageContents.contains(msg2.messageText) === true
 
       }
     }
@@ -87,27 +87,28 @@ class MessagingTest extends Specification with DbTestInjector {
         val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Seq, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat")
         val (thread2, msg2) = messagingController.sendNewMessage(user1, user2n3Seq, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!")
 
-        messagingController.getUnreadThreadCount(user1)===0
+        messagingController.getUnreadThreadCount(user1) === 0
 
-        notified.isDefinedAt(user1)===false
-        notified(user2)===2
+        notified.isDefinedAt(user1) === false
+        notified(user2) === 2
 
         messagingController.getLatestSendableNotifications(user3, 10)
 
-        messagingController.getUnreadThreadNotifications(user3).length===1 //there was only one thread created due to merging
-        messagingController.getUnreadThreadCount(user3)===1
+        messagingController.getUnreadThreadNotifications(user3).length === 1 //there was only one thread created due to merging
+        messagingController.getUnreadThreadCount(user3) === 1
 
         val notifications : Seq[JsObject] = messagingController.getLatestUnreadSendableNotifications(user3, 20)
-        notifications.length===1
-        val participants = (notifications.head \ "participants").as[Seq[BasicUser]]
-        participants.length===3
-        participants(0).lastName.endsWith(user1.id.toString)===true
-        participants(1).lastName.endsWith(user2.id.toString)===true
-        participants(2).lastName.endsWith(user3.id.toString)===true
+        notifications.length === 1
+        val participants = (notifications.head \ "participants").as[Seq[BasicUser]].sortBy (_.lastName)
+        println(participants)
+        participants.length === 3
+        participants(0).lastName.endsWith(user1.id.toString) === true
+        participants(1).lastName.endsWith(user2.id.toString) === true
+        participants(2).lastName.endsWith(user3.id.toString) === true
 
         messagingController.setAllNotificationsRead(user3)
-        messagingController.getUnreadThreadNotifications(user3).length===0
-        messagingController.getUnreadThreadCount(user3)===0
+        messagingController.getUnreadThreadNotifications(user3).length === 0
+        messagingController.getUnreadThreadCount(user3) === 0
 
 
       }
