@@ -5,7 +5,7 @@ import com.keepit.model._
 import org.specs2.mutable._
 import com.keepit.test.TestApplication
 import play.api.test.Helpers._
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 
 class ArticleSearchResultTest extends Specification {
 
@@ -62,6 +62,13 @@ class ArticleSearchResultTest extends Specification {
       val nextDeserialized = nextJson.as[ArticleSearchResult]
       nextDeserialized.uuid === nextResult.uuid
       nextDeserialized === nextResult
+    }
+
+    "deal with legacy articles missing toShow" in {
+      val fullJson = Json.toJson(initialResult)
+      val legacyJson = JsObject((fullJson.as[JsObject].value - "toShow").toSeq)
+      val legacyDeserialized = legacyJson.as[ArticleSearchResult]
+      legacyDeserialized === initialResult.copy(toShow = true)
     }
 
     "be stored and retrieved" in {
