@@ -205,9 +205,9 @@ class ExtMessagingController @Inject() (
         val msgsWithModifiedAuxData = msgs.map { m =>
           messagingController.modifyMessageWithAuxData(m)
         }
-        Future.sequence(msgsWithModifiedAuxData).map { completeMsgs =>
+        SafeFuture(Future.sequence(msgsWithModifiedAuxData).map { completeMsgs =>
           socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> completeMsgs.reverse)))
-        }
+        })
       }
     },
     "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>

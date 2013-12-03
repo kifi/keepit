@@ -32,7 +32,7 @@ class MessageThreadParticipants(val userParticipants: Map[Id[User], DateTime], v
   lazy val allNonUsers = nonUserParticipants.keySet
   lazy val userHash: Int = MurmurHash3.setHash(allUsers)
   lazy val nonUserHash: Int = MurmurHash3.setHash(allNonUsers)
-  lazy val hash = userHash + nonUserHash
+  lazy val hash = if (allNonUsers.isEmpty) userHash else nonUserHash + userHash
 
   override def equals(other: Any): Boolean = other match {
     case mtps: MessageThreadParticipants => super.equals(other) || (mtps.allUsers == allUsers && mtps.allNonUsers == allNonUsers)
@@ -64,21 +64,21 @@ object MessageThreadParticipants {
                 case Some(nonUserParticipants) =>
                   JsSuccess(MessageThreadParticipants(userParticipants, nonUserParticipants))
                 case None =>
-                  JsSuccess(MessageThreadParticipants(userParticipants))
+                  JsSuccess(MessageThreadParticipants(userParticipants, Map.empty[NonUserParticipant, DateTime]))
               }
             case None =>
               // Old serialization format. No worries.
               val mtps = obj.value.map {
                 case (uid, timestamp) => (Id[User](uid.toLong), timestamp.as[DateTime])
               }.toMap
-              JsSuccess(MessageThreadParticipants(mtps))
+              JsSuccess(MessageThreadParticipants(mtps, Map.empty[NonUserParticipant, DateTime]))
           }
         }
         case _ => JsError()
       }
     }
 
-    def writes(mtps: MessageThreadParticipants) : JsValue = {
+    def writes(mtps: MessageThreadParticipants): JsValue = {
       Json.obj(
         "us" -> mtps.userParticipants.map {
           case (uid, timestamp) => uid.id.toString -> Json.toJson(timestamp)
@@ -90,17 +90,16 @@ object MessageThreadParticipants {
     }
   }
 
-
-  def apply(initialUserParticipants: Set[Id[User]]) : MessageThreadParticipants = {
+  def apply(initialUserParticipants: Set[Id[User]]): MessageThreadParticipants = {
     new MessageThreadParticipants(initialUserParticipants.map{userId => (userId, currentDateTime)}.toMap, Map.empty[NonUserParticipant, DateTime])
   }
 
-  def apply(initialUserParticipants: Set[Id[User]], initialNonUserPartipants: Set[NonUserParticipant]) : MessageThreadParticipants = {
+  def apply(initialUserParticipants: Set[Id[User]], initialNonUserPartipants: Set[NonUserParticipant]): MessageThreadParticipants = {
     new MessageThreadParticipants(initialUserParticipants.map{userId => (userId, currentDateTime)}.toMap, initialNonUserPartipants.map { nup => (nup, currentDateTime) }.toMap)
   }
 
-  def apply(userParticipants: Map[Id[User], DateTime], nonUserParticipants: Map[NonUserParticipant, DateTime] = Map.empty) : MessageThreadParticipants = {
-    new MessageThreadParticipants(userParticipants, Map.empty)
+  def apply(userParticipants: Map[Id[User], DateTime], nonUserParticipants: Map[NonUserParticipant, DateTime]): MessageThreadParticipants = {
+    new MessageThreadParticipants(userParticipants, nonUserParticipants)
   }
 
 }
@@ -124,15 +123,16 @@ case class MessageThread(
   def withId(id: Id[MessageThread]): MessageThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime)
 
-  def withParticipants(when: DateTime, userIds: Id[User]*) = {
+  def withParticipants(when: DateTime, userIds: Seq[Id[User]], nonUsers: Seq[NonUserParticipant] = Seq.empty) = {
     val newUsers = userIds.map(_ -> when).toMap
-    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.userParticipants ++ newUsers)) // add in nonuser participants
-    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.userHash))  // add in nonuser participants
+    val newNonUsers = nonUsers.map(_ -> when).toMap
+    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.userParticipants ++ newUsers, ps.nonUserParticipants ++ newNonUsers))
+    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.hash))
   }
 
   def withoutParticipant(userId: Id[User]) = {
-    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.userParticipants - userId))  // add in nonuser participants
-    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.userHash))  // add in nonuser participants
+    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.userParticipants - userId, ps.nonUserParticipants))
+    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.hash))
   }
 
   def containsUser(user: Id[User]): Boolean = participants.exists(_.contains(user))

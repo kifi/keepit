@@ -19,7 +19,7 @@ import com.keepit.common.mail.{GenericEmailAddress, EmailAddressHolder}
 import scala.slick.driver.BasicProfile
 import MessagingTypeMappers._
 import com.keepit.common.crypto.SimpleDESCrypt
-import com.keepit.social.{NonUserKinds, NonUserKind, BasicUserLikeEntity}
+import com.keepit.social.{BasicNonUser, NonUserKinds, NonUserKind, BasicUserLikeEntity}
 
 sealed trait NonUserParticipant {
   val identifier: String
@@ -46,6 +46,10 @@ object NonUserParticipant {
     def writes(p: NonUserParticipant): JsValue = {
       JsObject(Seq(Some("k" -> JsString(p.kind.name)), Some("i" -> JsString(p.identifier)), p.referenceId.map(r => "r" -> JsString(r))).flatten)
     }
+  }
+
+  def toBasicNonUser(nonUser: NonUserParticipant) = {
+    BasicNonUser(kind = nonUser.kind, id = nonUser.identifier, firstName = Some(nonUser.identifier), lastName = None)
   }
 }
 

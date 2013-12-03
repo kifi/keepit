@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.social.BasicUser
+import com.keepit.social.{BasicNonUser, BasicUser}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
@@ -574,7 +574,8 @@ class MessagingController @Inject() (
     val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
     val numAuthors = threadActivity.count(_.lastActive.isDefined)
 
-    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map{ ta => id2BasicUser(ta.userId)})
+    val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
+    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ nonUsers)
 
     thread.allParticipantsExcept(from).foreach { userId =>
       sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
@@ -654,12 +655,14 @@ class MessagingController @Inject() (
 
 
   def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
-    val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
-    log.info(s"[get_thread] got participants for extId ${thread.externalId}: $participantSet")
-    shoebox.getBasicUsers(participantSet.toSeq) map { id2BasicUser =>
+    val userParticipantSet = thread.participants.map(_.allUsers).getOrElse(Set())
+    log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
+    shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread, pageOpt)
       log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: $messages")
       (thread, messages.map { message =>
+        log.info(s"[get_thread] WHOOOOOOP ${thread.participants}\n\n\n${thread.participants.map(_.allNonUsers)}")
+        val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
         MessageWithBasicUser(
           id           = message.externalId,
           createdAt    = message.createdAt,
@@ -668,7 +671,7 @@ class MessagingController @Inject() (
           url          = message.sentOnUrl.getOrElse(""),
           nUrl         = thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
           user         = message.from.map(id2BasicUser(_)),
-          participants = participantSet.toSeq.map(id2BasicUser(_))
+          participants = userParticipantSet.toSeq.map(id2BasicUser(_)) ++ nonUsers
         )
       })
     }
@@ -704,7 +707,7 @@ class MessagingController @Inject() (
         if (!oldThread.participants.exists(_.contains(adderUserId)) || actuallyNewParticipantUserIds.isEmpty) {
           None
         } else {
-          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewParticipantUserIds: _*))
+          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewParticipantUserIds))
 
           val message = messageRepo.save(Message(
             from = None,
@@ -791,7 +794,6 @@ class MessagingController @Inject() (
             case JsString("add_participants") +: JsString(jsAdderUserId) +: JsArray(jsAddedUsers) +: _ =>
               val addedUsers = jsAddedUsers.map(id => Id[User](id.as[Long]))
               val adderUserId = Id[User](jsAdderUserId.toLong)
-              val basicUsers = m.participants
               shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
                 val adderUser = basicUsers(adderUserId)
                 val addedBasicUsers = addedUsers.map(u => basicUsers(u))
