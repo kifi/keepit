@@ -23,6 +23,7 @@ import scala.util.Success
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import scala.collection.mutable
+import play.modules.statsd.api.Statsd
 
 @Singleton
 class Scraper @Inject() (
@@ -91,6 +92,7 @@ class Scraper @Inject() (
       infos.map{ info => (normalizedURIRepo.get(info.uriId), info) }
     }
     log.info("[schedule] got %s uris to scrape".format(tasks.length))
+    Statsd.gauge("scraper.scheduler.uris.count", tasks.length)
     val ts = System.currentTimeMillis
     if (config.disableScraperService) {
       val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
