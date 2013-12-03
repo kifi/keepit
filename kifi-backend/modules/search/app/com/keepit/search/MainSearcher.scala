@@ -414,7 +414,7 @@ class MainSearcher(
   private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: Option[PersonalizedSearcher]) = {
     def classify(hit: MutableArticleHit, minScore: Float): Boolean = {
       hit.clickBoost > 1.1f ||
-      hit.scoring.recencyScore > 0.25f ||
+      (hit.isMyBookmark && hit.scoring.recencyScore > 0.25f) ||
       hit.scoring.textScore > minScore
     }
 
