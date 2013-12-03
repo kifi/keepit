@@ -4,9 +4,6 @@
   'use strict';
 
   var thingsToTrack = {
-    unkeep: {
-      selector: '.page-keep'
-    },
     preview: {
       selector: '.keep'
     },
