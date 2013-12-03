@@ -156,7 +156,7 @@ class ExtMessagingController @Inject() (
   }
 
   //TEMPORARY STOP GAP
-  val sideEffectingEvents = Set[String]("kifiResultClicked", "googleResultClicked", "usefulPage", "searchUnload", "sliderShown")
+  val sideEffectingEvents = Set[String]("usefulPage", "sliderShown")
 
   protected def websocketHandlers(socket: SocketInfo) = Map[String, Seq[JsValue] => Unit](
     "ping" -> { _ =>
