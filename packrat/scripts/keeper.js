@@ -292,7 +292,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     createSlider();
     $slider.prependTo(tile);
 
-    logEvent('slider', 'sliderShown', withUrls({trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0)}));
+    api.port.emit('log_event', ['slider', 'sliderShown', withUrls({trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0)})]);
     api.port.emit('keeper_shown');
   }
 
