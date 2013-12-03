@@ -48,31 +48,36 @@ class ProdUserEventLoggingRepo(
   def delete(userId: Id[User]): Unit = mixpanel.delete(userId)
 
   override def persist(userEvent: UserEvent) : Unit = {
-    val (a1, a2) = (new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient))
-    augmentUserEvent(userEvent, a1, a2).onComplete{
-      case Success(augEvent) => super.persist(augEvent)
+    val augmentors = Seq(new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient))
+    val moreDataFuture = Future.sequence(augmentUserEvent(userEvent, augmentors)).map{ augs => augs.flatten }
+    moreDataFuture onComplete {
+      case Success(moreData) => {
+        val oldContext = userEvent.context.data
+        val newEvent = userEvent.copy(context = HeimdalContext(oldContext ++ moreData.toMap))
+        super.persist(newEvent)
+      }
       case Failure(_) => super.persist(userEvent)
     }
   }
 
-  private def augmentUserEvent(userEvent: UserEvent, augmentors: UserEventAugmentor *): Future[UserEvent] = {
-    augmentors.foldLeft{Future.successful(userEvent)}{ case (event, augmentor) => event.flatMap{augmentor.augment(_)}}
+  private def augmentUserEvent(userEvent: UserEvent, augmentors: Seq[UserEventAugmentor]) = {
+    augmentors.map{ a => a.augment(userEvent) }
   }
 }
 
 trait UserEventAugmentor {
-  def augment(userEvent: UserEvent): Future[UserEvent]
+  def augment(userEvent: UserEvent): Future[Seq[(String, ContextData)]]
 }
 
 class ExtensionVersionAugmentor(shoeboxClient: ShoeboxServiceClient) extends UserEventAugmentor {
-  override def augment(userEvent: UserEvent): Future[UserEvent] = {
+  override def augment(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
     val contextData = userEvent.context.data
-    val default = Future.successful(userEvent)
+    val default = Future.successful(Seq())
     contextData.get("extensionVersion") match {
       case None | Some(ContextStringData("")) => contextData.get("kifiInstallationId") match {
         case Some(ContextStringData(id)) => {
            shoeboxClient.getExtensionVersion(ExternalId[KifiInstallation](id)).map{
-             version => userEvent.copy(context = HeimdalContext(contextData + ("extensionVersion" -> ContextStringData(version))))
+             version => Seq(("extensionVersion" -> ContextStringData(version)))
            } fallbackTo default
         }
         case _ => default
@@ -83,12 +88,12 @@ class ExtensionVersionAugmentor(shoeboxClient: ShoeboxServiceClient) extends Use
 }
 
 class UserSegmentAugmentor(shoeboxClient: ShoeboxServiceClient) extends UserEventAugmentor {
-  override def augment(userEvent: UserEvent): Future[UserEvent] = {
+  override def augment(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
     val contextData = userEvent.context.data
     val uid = Id[User](userEvent.userId)
     shoeboxClient.getUserSegment(uid).map{ seg =>
-      userEvent.copy(context = HeimdalContext(contextData + ("userSegment" -> ContextStringData(seg.description))))
-    } fallbackTo Future.successful(userEvent)
+      Seq(("userSegment" -> ContextStringData(seg.description)))
+    } fallbackTo Future.successful(Seq())
   }
 }
 
