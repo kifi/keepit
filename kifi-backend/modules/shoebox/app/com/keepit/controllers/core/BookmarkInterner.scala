@@ -63,12 +63,7 @@ class BookmarkInterner @Inject() (
       if (isNewBookmark) {
         Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
       }
-      db.readWrite { implicit session =>
-        if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
-          Try(scraper.scheduleScrape(uri))
-        }
-        bm
-      }
+      bm
     }.toList
     log.info(s"[internBookmarks-$referenceId] Done!")
     persistedBookmarks
@@ -110,6 +105,11 @@ class BookmarkInterner @Inject() (
         else initialURI
       }
       val (isNewKeep, bookmark) = internBookmark(uri, user, isPrivate, experiments, installationId, source, title, url)
+
+      if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
+        Try(scraper.scheduleScrape(uri))
+      }
+
       Some((bookmark, uri, isNewKeep))
     } else {
       None
