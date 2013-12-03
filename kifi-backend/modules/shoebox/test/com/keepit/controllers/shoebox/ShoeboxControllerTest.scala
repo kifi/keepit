@@ -22,6 +22,7 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.keepit.abook.TestABookServiceClientModule
 
 class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -35,7 +36,8 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     TestSearchServiceClientModule(),
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),
-    AuthHelperModule()
+    AuthHelperModule(),
+    TestABookServiceClientModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

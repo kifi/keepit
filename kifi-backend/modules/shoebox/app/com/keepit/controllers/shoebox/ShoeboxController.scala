@@ -27,7 +27,10 @@ import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.social.{SocialNetworkType, SocialId}
 import com.keepit.scraper.HttpRedirect
+
+import com.keepit.commanders.UserCommander
 import com.keepit.common.db.slick.Database.Slave
+
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -56,6 +59,7 @@ class ShoeboxController @Inject() (
   scrapeInfoRepo:ScrapeInfoRepo,
   friendRequestRepo: FriendRequestRepo,
   userValueRepo: UserValueRepo,
+  userCommander: UserCommander,
   kifiInstallationRepo: KifiInstallationRepo
 )
   (implicit private val clock: Clock,
@@ -476,6 +480,11 @@ class ShoeboxController @Inject() (
   def getUserValue(userId: Id[User], key: String) = SafeAsyncAction { request =>
     val value = db.readOnly { implicit session => userValueRepo.getValue(userId, key) }
     Ok(Json.toJson(value))
+  }
+
+  def getUserSegment(userId: Id[User]) = SafeAsyncAction { request =>
+    val segment = userCommander.getUserSegment(userId)
+    Ok(Json.toJson(segment))
   }
 
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]) = SafeAsyncAction { request =>
