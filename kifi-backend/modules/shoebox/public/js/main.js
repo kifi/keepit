@@ -670,6 +670,15 @@ $(function () {
 		}
 	});
 
+	$(document).on('click', '.profile-email-address-add', function (e) {
+		e.preventDefault();
+		var $manage = $(this).closest('.profile-email-address-manage');
+		var $input = $manage.find('input');
+		$input.val('');
+		$manage.addClass('add');
+		$input.focus();
+	});
+
 	// Friends Tabs/Pages
 
 	var $friends = $('.friends');

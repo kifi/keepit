@@ -234,6 +234,10 @@ a.profile-email-pending-cancel { color: #777c87; text-decoration: underline }
 .profile-email-address-manage { display: none; }
 .profile-email-addresses.opened .profile-email-address-manage { display: block; }
 
+.profile-email-address-add-box { display: none }
+.profile-email-address-manage.add .profile-email-address-add-box { display: block }
+.profile-email-address-manage.add .profile-email-address-add { display: none }
+
 a.profile-email-addresses-title-wrapper { display: block; color: #9FB1C3; font-size: 15px; padding: 5px 0; margin-top: 10px; letter-spacing: 0.8px }
 
 .profile-email-address-manage-description { color: #c4cfd9; font-size: 13px; font-weight: 200; letter-spacing: 0.5px; }
@@ -269,7 +273,16 @@ a.profile-email-address-add { display: block; padding: 4px 0; }
 .profile-email-address-item-dropdown a:hover { background: #eeeeee; }
 .profile-email-address-item-dropdown a:active { background: #cccccc; }
 
-a.profile-email-address-add { text-decoration: underline }
+a.profile-email-address-add { font-size: 14px; font-weight: 300; color: #566278; text-decoration: underline }
+
+.profile-email-address-add-box { position: relative; }
+input.profile-email-address-add-input { display: block; font: inherit; letter-spacing: 0.5px; border: 0; margin: 0; width: 100%; color: #818691; background-color: #e2edfb; padding: 6px 7px; box-sizing: border-box; transition: all .3s ease }
+
+a.profile-email-address-add-save { position: absolute; bottom: 0; right: 0; font-size: 12px; line-height: 17px; display: inline-block; width: 58px; padding: 6px 0; color: white; background-color: #b8c5d1; border-radius: 2px; text-align: center; transition: background 0.2s ease }
+a.profile-email-address-add-save { background-color: #b7ce84}
+a.profile-email-address-add-save:hover,
+a.profile-email-address-add-save:focus { background-color: #C4DB91}
+a.profile-email-address-add-save:active { background-color: #9EB56B}
 
 
 .profile-section { padding: 20px 0 20px 27px;}
