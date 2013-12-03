@@ -83,7 +83,7 @@ class ExtSearchController @Inject() (
         else SearchFilter.default(context)
     }
 
-    val (config, searchExperimentId) = searchConfigManager.getConfigByUserSegment(userId, noSearchExperiments)
+    val (config, searchExperimentId) = searchConfigManager.getConfigByUserSegment(userId, query, noSearchExperiments)
 
     val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
 
