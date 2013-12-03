@@ -44,26 +44,29 @@ class BookmarkInterner @Inject() (
 
     var count = new AtomicInteger(0)
     val total = bookmarks.size
+    val batchConcurrency = 5
     val batchSize = 100
-    val persistedBookmarksWithUris = bookmarks.grouped(batchSize).map { bms =>
-      val startTime = System.currentTimeMillis
-      log.info(s"[internBookmarks-$referenceId] Persisting $batchSize bookmarks: ${count.get}/$total")
-      val persisted = db.readWrite(attempts = 2) { implicit session =>
-        bms.map { bm => internUriAndBookmark(bm, user, experiments, source) }.flatten
-      }
-      log.info(s"[internBookmarks-$referenceId] Done with ${count.addAndGet(bms.size)}/$total. Took ${System.currentTimeMillis - startTime}ms")
-      persisted
-    }
+    val persistedBookmarksWithUris = bookmarks.grouped(batchSize).grouped(batchConcurrency).map { concurrentGroup =>
+      concurrentGroup.par.map { bms =>
+        val startTime = System.currentTimeMillis
+        log.info(s"[internBookmarks-$referenceId] Persisting $batchSize bookmarks: ${count.get}/$total")
+        val persisted = db.readWrite(attempts = 2) { implicit session =>
+          bms.map { bm => internUriAndBookmark(bm, user, experiments, source) }.flatten
+        }
+        log.info(s"[internBookmarks-$referenceId] Done with ${count.addAndGet(bms.size)}/$total. Took ${System.currentTimeMillis - startTime}ms")
+        persisted
+      }.flatten.toList
+    }.flatten.toList
 
     log.info(s"[internBookmarks-$referenceId] Requesting scrapes")
-    val persistedBookmarks = persistedBookmarksWithUris.flatten.toSeq.map { case (bm, uri) =>
+    val persistedBookmarks = persistedBookmarksWithUris.map { case (bm, uri) =>
       db.readWrite { implicit session =>
         if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
           Try(scraper.scheduleScrape(uri))
         }
         bm
       }
-    }
+    }.toList
     log.info(s"[internBookmarks-$referenceId] Done!")
     persistedBookmarks
   }
