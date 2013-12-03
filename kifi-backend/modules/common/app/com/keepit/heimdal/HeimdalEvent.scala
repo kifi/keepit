@@ -10,7 +10,10 @@ import play.api.libs.json._
 case class EventType(name: String)
 
 object EventType {
-  implicit val format = Json.format[EventType]
+  implicit val format = new Format[EventType] {
+    def reads(json: JsValue) = JsSuccess(EventType(json.asOpt[String] getOrElse (json \ "name").as[String]))
+    def writes(eventType: EventType) = JsString(eventType.name)
+  }
 }
 
 sealed trait HeimdalEvent {
