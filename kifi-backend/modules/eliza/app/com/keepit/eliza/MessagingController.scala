@@ -500,12 +500,12 @@ class MessagingController @Inject() (
         db.readWrite(attempts=2){ implicit session =>
           userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
         }
-        notificationRouter.sendToUser(from, Json.arr("notification", notifJson))
       } else {
         db.readWrite(attempts=2){ implicit session =>
           userThreadRepo.setNotificationJsonIfNotPresent(from, thread.id.get, notifJson, message)
         }
       }
+      notificationRouter.sendToUser(from, Json.arr("notification", notifJson))
     }
     //=== END
 
