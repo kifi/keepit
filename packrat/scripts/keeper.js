@@ -343,7 +343,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
         $slider.remove(), $slider = null;
       }
     });
-    logEvent('slider', 'sliderClosed', {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
   }
 
   function startDrag(data) {
@@ -391,14 +390,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
     log('[keepPage]', how)();
     updateKeptDom(how);
     api.port.emit('keep', withUrls({title: document.title, how: how}));
-    logEvent('slider', 'keep', {isPrivate: how == 'private'});
   }
 
   function unkeepPage() {
     log('[unkeepPage]', document.URL)();
     updateKeptDom('');
     api.port.emit('unkeep', withUrls({}));
-    logEvent('slider', 'unkeep');
   }
 
   function toggleKeep(how) {
