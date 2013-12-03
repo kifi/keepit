@@ -55,7 +55,7 @@ object EventRepo {
   def findByEventTypeCode(availableRepos: EventRepo[_ <: HeimdalEvent]*)(code: String): Option[EventRepo[_ <: HeimdalEvent]] = availableRepos.find(_.getEventTypeCode == HeimdalEvent.getTypeCode(code))
   def eventToBSONFields(event: HeimdalEvent): Seq[(String, BSONValue)] = Seq(
     "context" -> BSONEventContextHandler.write(event.context),
-    "event_type" -> BSONEventTypeHandler.write(event.eventType),
+    "eventType" -> BSONEventTypeHandler.write(event.eventType),
     "time" -> BSONDateTimeHandler.write(event.time)
   )
 }

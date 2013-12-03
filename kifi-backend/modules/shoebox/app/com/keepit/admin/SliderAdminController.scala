@@ -188,23 +188,23 @@ class SliderAdminController @Inject() (
       rawEvents.value.map { json =>
         val event = SystemEvent.format.reads(json).get
         val context = event.context
-        val eventName = event.eventType.name
+        val eventName = context.getSeq[String]("eventName").get.head
         val createdAt = event.time
         val description = eventName match {
           case IMPORT_START => "Full import started"
           case IMPORT_TAG_SUCCESS => "Tag %s imported (%d added, %d removed, %d total domains)".format((
-            context.get[String]("tagName").get,
-            context.get[Double]("numDomainsAdded").get.toInt,
-            context.get[Double]("numDomainsRemoved").get.toInt,
-            context.get[Double]("totalDomains").get.toInt
+            context.getSeq[String]("tagName").get.head,
+            context.getSeq[Double]("numDomainsAdded").get.head.toInt,
+            context.getSeq[Double]("numDomainsRemoved").get.head.toInt,
+            context.getSeq[Double]("totalDomains").get.head.toInt
           ))
           case IMPORT_SUCCESS => "Domains imported (%d added, %d removed, %d total domains)".format((
-            context.get[Double]("numDomainsAdded").get.toInt,
-            context.get[Double]("numDomainsRemoved").get.toInt,
-            context.get[Double]("totalDomains").get.toInt
+            context.getSeq[Double]("numDomainsAdded").get.head.toInt,
+            context.getSeq[Double]("numDomainsRemoved").get.head.toInt,
+            context.getSeq[Double]("totalDomains").get.head.toInt
           ))
           case REMOVE_TAG_SUCCESS => "Tag %s removed".format((context.get[String]("tagName")))
-          case IMPORT_FAILURE => context.get[String]("message").get
+          case IMPORT_FAILURE => context.getSeq[String]("message").get.head
         }
         ImportEvent(createdAt, eventName, description)
       }.sortBy(_.createdAt).reverse
