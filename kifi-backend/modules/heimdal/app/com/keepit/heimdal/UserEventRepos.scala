@@ -35,8 +35,8 @@ class ProdUserEventLoggingRepo(
   def toBSON(event: UserEvent) : BSONDocument = {
     val userBatch: Long = event.userId / 1000 //Warning: This is a (neccessary!) index optimization. Changing this will require a database change!
     val fields = EventRepo.eventToBSONFields(event) ++ Seq(
-        "user_batch" -> BSONLong(userBatch),
-        "user_id" -> BSONLong(event.userId)
+        "userBatch" -> BSONLong(userBatch),
+        "userId" -> BSONLong(event.userId)
       )
     BSONDocument(fields)
   }
