@@ -686,8 +686,43 @@ $(function () {
 				// enter
 				submitAddEmail.call(this, e);
 			}
+			else if (e.which === 27) {
+				// esc
+				cancelAddEmail.call(this, e);
+			}
+			showError($input, 'This is header', 'This is body');
 		});
 	});
+
+	function showError($input, header, body) {
+		var $parent = $input.parent(),
+			$error = $parent.find('.input-error');
+		if (header || body) {
+			$input.addClass('error');
+			if ($error.length) {
+				$error.find('.error-header').text(header || '');
+				$error.find('.error-body').text(body || '');
+			}
+			else {
+				$input.after('<div class="input-error"><div class="error-header">' + (header || '') + '</div><div class="error-body">' + (body || '') + '</div></div>');
+			}
+		}
+		else {
+			$input.removeClass('error');
+			$error.remove();
+		}
+	}
+
+	function cancelAddEmail(e) {
+		e.preventDefault();
+		var $this = $(this),
+			$box = $this.closest('.profile-email-address-add-box'),
+			$manage = $box.closest('.profile-email-address-manage'),
+			$input = $box.find('.profile-email-address-add-input');
+		$input.val('');
+		$input.off('keydown');
+		$manage.removeClass('add');
+	}
 
 	function submitAddEmail(e) {
 		e.preventDefault();

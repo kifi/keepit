@@ -198,6 +198,10 @@ input.profile-input-input { display: block; font: inherit; letter-spacing: 0.5px
 .profile-input-placeholder,
 input.profile-input-input:disabled { padding-left: 0; padding-right: 0; background-color: transparent }
 
+.input-error { position: absolute; top: 30px; left: 0; font-size: 13px; background: #ed7071; color: white; text-align: center; padding: 9px 12px }
+.input-error .error-header { font-weight: 500; }
+.input-error .error-body { font-weight: 200; font-size: .9em }
+
 .profile-input-box.edit .profile-input-placeholder {display: none; overflow: hidden; white-space: nowrap; text-overflow: ellipsis}
 
 input.profile-first-name,
