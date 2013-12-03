@@ -78,7 +78,7 @@ sealed trait EventSet {
 
 case class SpecificEventSet(events: Set[EventType]) extends EventSet {
   def toBSONMatchDocument = BSONDocument(
-    "event_type" -> BSONDocument(
+    "eventType" -> BSONDocument(
       "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
     )
   )
@@ -86,7 +86,7 @@ case class SpecificEventSet(events: Set[EventType]) extends EventSet {
 
 case class ComplementEventSet(events: Set[EventType]) extends EventSet {
   def toBSONMatchDocument = BSONDocument(
-    "event_type" -> BSONDocument(
+    "eventType" -> BSONDocument(
       "$nin" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
     )
   )
@@ -138,7 +138,7 @@ sealed trait MetricDefinition {
 sealed trait SimpleMetricDefinition extends MetricDefinition {
   val fakeUsers: Seq[Long] = Seq[Long](6,32,60,90,93,125,127,128,217,249,259,262,265,279,286,342,346,395,396,421,422,424,428,429,435,436,475,478,494,495,545,550)
   def preFilter: PipelineOperator = Match(BSONDocument(
-    "user_id" -> BSONDocument(
+    "userId" -> BSONDocument(
       "$nin" -> BSONArray(fakeUsers.map(BSONLong(_)))
     )
   ))
@@ -188,7 +188,7 @@ class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestri
     val eventSelector = Match(eventsToConsider.toBSONMatchDocument)
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
-    val grouping = GroupField(groupField.fieldName)("users" -> AddToSet("$user_id"))
+    val grouping = GroupField(groupField.fieldName)("users" -> AddToSet("$userId"))
 
     var pipeline: Seq[PipelineOperator] = Seq(timeWindowSelector, preFilter, eventSelector, contextSelector)
 
