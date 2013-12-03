@@ -50,8 +50,8 @@
     tagResults: /^\/tag/,
     searchResults: /^\/find/,
     addFriends: /^\/friends\/(invite|find)$/,
-    requests: /^\/friends\/requests$/ ,
-    kifiBlog: /^\/blog$/,
+    requests: /^\/friends\/requests$/,
+    kifiBlog: /^\/blog$/
   };
 
   function getLocation() {
