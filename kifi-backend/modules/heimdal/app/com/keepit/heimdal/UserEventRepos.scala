@@ -87,7 +87,7 @@ class UserSegmentAugmentor(shoeboxClient: ShoeboxServiceClient) extends UserEven
     val contextData = userEvent.context.data
     val uid = Id[User](userEvent.userId)
     shoeboxClient.getUserSegment(uid).map{ seg =>
-      userEvent.copy(context = HeimdalContext(contextData + ("userSegment" -> ContextStringData(seg.toString))))
+      userEvent.copy(context = HeimdalContext(contextData + ("userSegment" -> ContextStringData(seg.description))))
     } fallbackTo Future.successful(userEvent)
   }
 }
