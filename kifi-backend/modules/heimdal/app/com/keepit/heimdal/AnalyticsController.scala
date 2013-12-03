@@ -237,7 +237,7 @@ class AnalyticsController @Inject() (
   }
 
   def setUserProperties(userId: Id[User]) = Action { request =>
-    val properties = Json.fromJson[EventContext](request.body.asJson.get).get
+    val properties = Json.fromJson[HeimdalContext](request.body.asJson.get).get
     Async { SafeFuture {
       userEventLoggingRepo.setUserProperties(userId, properties)
       Ok

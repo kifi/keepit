@@ -139,7 +139,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("kifiResults", kifiResults)
     contextBuilder += ("kifiResultsClicked", kifiResultsClicked)
     contextBuilder += ("origin", origin)
-    contextBuilder += ("searchResultsClicked", searchResultsClicked)
+    contextBuilder += ("thirdPartyResultsClicked", searchResultsClicked)
     kifiCollapsed.foreach { collapsed => contextBuilder += ("kifiCollapsed", collapsed) }
     heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("search_ended"), time))
   }
@@ -165,7 +165,7 @@ class SearchAnalytics @Inject() (
     // Click Summary
 
     contextBuilder += ("kifiResultsClicked", kifiResultsClicked)
-    contextBuilder += ("otherResultsClicked", otherResultsClicked)
+    contextBuilder += ("thirdPartyResultsClicked", otherResultsClicked)
 
     heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("ended_search"), time))
   }

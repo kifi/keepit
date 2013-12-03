@@ -14,6 +14,7 @@ import com.keepit.common.controller.ElizaServiceController
 import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.http.Status.ACCEPTED
 
 import com.google.inject.Inject
 
@@ -26,7 +27,7 @@ import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
-import com.keepit.realtime.UrbanAirship
+import com.keepit.realtime.{PushNotification, UrbanAirship}
 import com.keepit.eliza.model.NonUserParticipant
 import com.keepit.common.KestrelCombinator
 import com.keepit.abook.ABookServiceClient
@@ -106,72 +107,6 @@ class MessagingController @Inject() (
     }
   }
 
-
-  def importThread() = Action { request =>
-    SafeFuture { shoebox.synchronized { //needed some arbitrary singleton object
-      val req = request.body.asJson.get.asInstanceOf[JsObject]
-
-      val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
-      val userParticipants = (req \ "participants").as[JsArray].value.map(v => Id[User](v.as[Long]))
-      val extId = ExternalId[MessageThread]((req \ "extId").as[String])
-      val messages = (req \ "messages").as[JsArray].value
-
-      db.readWrite{ implicit session =>
-        if (threadRepo.getOpt(extId).isEmpty) {
-          log.info(s"MIGRATION: Importing thread $extId with participants $userParticipants on uriId $uriId")
-          val nUri = Await.result(shoebox.getNormalizedURI(uriId), 10 seconds) // todo: Remove await
-          //create thread
-          val mtps = MessageThreadParticipants(userParticipants.toSet)
-          val thread = threadRepo.save(MessageThread(
-            id = None,
-            externalId = extId,
-            uriId = Some(uriId),
-            url = Some(nUri.url),
-            nUrl = Some(nUri.url),
-            pageTitle = nUri.title,
-            participants = Some(mtps),
-            participantsHash = Some(mtps.hash),
-            replyable = true
-          ))
-
-          //create userThreads
-          userParticipants.toSet.foreach{ userId : Id[User] =>
-            userThreadRepo.create(userId, thread.id.get, Some(uriId))
-          }
-
-          val dbMessages = messages.sortBy( j => -1*(j \ "created_at").as[Long]).map{ messageJson =>
-            val text = (messageJson \ "text").as[String]
-            val from = Id[User]((messageJson \ "from").as[Long])
-            val createdAt = (messageJson \ "created_at").as[DateTime]
-
-            //create message
-            messageRepo.save(Message(
-              id= None,
-              createdAt = createdAt,
-              from = Some(from),
-              thread = thread.id.get,
-              threadExtId = thread.externalId,
-              messageText = text,
-              sentOnUrl = thread.url,
-              sentOnUriId = Some(uriId)
-            ))
-          }
-
-          log.info(s"MIGRATION: Starting notification recovery for $extId.")
-          val participantSet = thread.participants.map(_.userParticipants.keySet).getOrElse(Set())
-          val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds) // todo: Remove await
-          userParticipants.toSet.foreach{ userId : Id[User] =>
-            recoverNotification(userId, thread, dbMessages, id2BasicUser)
-          }
-          log.info(s"MIGRATION: Finished thread import for $extId")
-
-        } else {
-          log.info(s"MIGRATION: Thread $extId already imported. Doing nothing.")
-        }
-      }
-    }}
-    Ok("")
-  }
 
   def sendGlobalNotification() = Action(parse.json) { request =>
     SafeFuture {
