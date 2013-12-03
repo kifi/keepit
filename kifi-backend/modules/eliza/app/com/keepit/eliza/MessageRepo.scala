@@ -18,6 +18,7 @@ import play.api.libs.json._
 import play.api.libs.json.util._
 import play.api.libs.functional.syntax._
 import scala.slick.lifted.Query
+import scala.slick.jdbc.StaticQuery
 
 case class Message(
     id: Option[Id[Message]] = None,
@@ -104,7 +105,7 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def getMaxId()(implicit session: RSession): Id[Message]
 
-  def getNumMessagesAfter(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): Int
+  def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int)
 
 }
 
@@ -193,16 +194,13 @@ class MessageRepoImpl @Inject() (
     Query(table.map(_.id).max).first.getOrElse(Id[Message](0))
   }
 
-  def getNumMessagesAfter(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): Int = {
-    afterOpt.map{ after => 
-      Query(table.filter(row => row.thread===threadId && row.createdAt > after).length).first
+  def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int) = {
+    afterOpt.map{ after =>
+      StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(created_at > '$after') from message where thread_id = $threadId").first
     } getOrElse {
-      Query(table.filter(row => row.thread===threadId).length).first
+      val n = Query(table.filter(row => row.thread === threadId).length).first
+      (n, n)
     }
   }
 
 }
-
-
-
-

@@ -92,7 +92,7 @@ class MessagingController @Inject() (
         participantSet.toSeq.map(id2BasicUser(_))
       )
 
-      val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator, false, 0, 0, 0, 0, false)
+      val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator, false, 0, 0, 0, 0, 0, false)
 
       userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson, false)
       userThreadRepo.markRead(userId)
@@ -101,72 +101,6 @@ class MessagingController @Inject() (
     }
   }
 
-
-  def importThread() = Action { request =>
-    SafeFuture { shoebox.synchronized { //needed some arbitrary singleton object
-      val req = request.body.asJson.get.asInstanceOf[JsObject]
-
-      val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
-      val participants = (req \ "participants").as[JsArray].value.map(v => Id[User](v.as[Long]))
-      val extId = ExternalId[MessageThread]((req \ "extId").as[String])
-      val messages = (req \ "messages").as[JsArray].value
-
-      db.readWrite{ implicit session =>
-        if (threadRepo.getOpt(extId).isEmpty) {
-          log.info(s"MIGRATION: Importing thread $extId with participants $participants on uriid $uriId")
-          val nUri = Await.result(shoebox.getNormalizedURI(uriId), 10 seconds) // todo: Remove await
-          //create thread
-          val mtps = MessageThreadParticipants(participants.toSet)
-          val thread = threadRepo.save(MessageThread(
-            id = None,
-            externalId = extId,
-            uriId = Some(uriId),
-            url = Some(nUri.url),
-            nUrl = Some(nUri.url),
-            pageTitle = nUri.title,
-            participants = Some(mtps),
-            participantsHash = Some(mtps.hash),
-            replyable = true
-          ))
-
-          //create userThreads
-          participants.toSet.foreach{ userId : Id[User] =>
-            userThreadRepo.create(userId, thread.id.get, Some(uriId))
-          }
-
-          val dbMessages = messages.sortBy( j => -1*(j \ "created_at").as[Long]).map{ messageJson =>
-            val text = (messageJson \ "text").as[String]
-            val from = Id[User]((messageJson \ "from").as[Long])
-            val createdAt = (messageJson \ "created_at").as[DateTime]
-
-            //create message
-            messageRepo.save(Message(
-              id= None,
-              createdAt = createdAt,
-              from = Some(from),
-              thread = thread.id.get,
-              threadExtId = thread.externalId,
-              messageText = text,
-              sentOnUrl = thread.url,
-              sentOnUriId = Some(uriId)
-            ))
-          }
-
-          log.info(s"MIGRATION: Starting notification recovery for $extId.")
-          val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-          val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds) // todo: Remove await
-          participants.toSet.foreach{ userId : Id[User] =>
-            recoverNotification(userId, thread, dbMessages, id2BasicUser)
-          }
-          log.info(s"MIGRATION: Finished thread import for $extId")
-
-        } else {
-          log.info(s"MIGRATION: Thread $extId already imported. Doing nothing.")
-        }
-      }
-    }}
-    Ok("")
-  }
 
   def sendGlobalNotification() = Action(parse.json) { request =>
     SafeFuture {
@@ -324,6 +258,7 @@ class MessagingController @Inject() (
       originalAuthorIdx: Int,
       unseenAuthors: Int,
       numAuthors: Int,
+      numMessages: Int,
       numUnread: Int,
       muted: Boolean
     ) : JsValue = {
@@ -341,7 +276,8 @@ class MessagingController @Inject() (
       "category"      -> "message",
       "firstAuthor"   -> originalAuthorIdx,
       "authors"       -> numAuthors, //number of people who have sent messages in this conversation
-      "unreadAuthors" -> unseenAuthors, //number of people in 'particiapnts' who's messages you haven't seen yet
+      "messages"      -> numMessages, //total number of messages in this conversation
+      "unreadAuthors" -> unseenAuthors, //number of people in 'participants' whose messages user hasn't seen yet
       "unreadMessages"-> numUnread,
       "muted"         -> muted
     )
@@ -367,8 +303,10 @@ class MessagingController @Inject() (
         case Some(lastSeen) => authorActivityInfos.filter(_.lastActive.get.isAfter(lastSeen)).length
         case None => authorActivityInfos.length
       }
-      val (numUnread: Int, muted: Boolean) = db.readOnly { implicit session =>
-        (messageRepo.getNumMessagesAfter(thread.id.get, lastSeenOpt), userThreadRepo.isMuted(userId, thread.id.get))
+      val (numMessages: Int, numUnread: Int, muted: Boolean) = db.readOnly { implicit session =>
+        val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, lastSeenOpt)
+        val muted = userThreadRepo.isMuted(userId, thread.id.get)
+        (numMessages, numUnread, muted)
       }
 
       val notifJson = buildMessageNotificationJson(
@@ -380,6 +318,7 @@ class MessagingController @Inject() (
         originalAuthorIdx = authorActivityInfos.filter(_.started).zipWithIndex.head._2,
         unseenAuthors = if (muted) 0 else unseenAuthors,  // TODO: see TODO above
         numAuthors = authorActivityInfos.length,
+        numMessages = numMessages,
         numUnread = numUnread,
         muted = muted)
 
@@ -455,7 +394,7 @@ class MessagingController @Inject() (
       val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
       if (isNew){
         log.info(s"This is a new thread. Creating User Threads.")
-        participants.par.foreach{ userId =>
+        participants.foreach{ userId =>
           userThreadRepo.create(userId, thread.id.get, uriIdOpt, userId==from)
         }
       }
@@ -526,9 +465,13 @@ class MessagingController @Inject() (
     setLastSeen(from, thread.id.get, Some(message.createdAt))
     db.readWrite { implicit session => userThreadRepo.setLastActive(from, thread.id.get, message.createdAt) }
 
-    val threadActivity = db.readOnly{ implicit session =>
-      userThreadRepo.getThreadActivity(thread.id.get)
-    } sortBy { userThreadActivity => (-1*userThreadActivity.lastActive.getOrElse(START_OF_TIME).getMillis, userThreadActivity.id.id)}
+    val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnly { implicit session =>
+      val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, Some(message.createdAt))
+      val threadActivity = userThreadRepo.getThreadActivity(thread.id.get).sortBy { uta =>
+        (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
+      }
+      (numMessages, numUnread, threadActivity)
+    }
 
     val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
     val numAuthors = threadActivity.filter(_.lastActive.isDefined).length
@@ -550,7 +493,8 @@ class MessagingController @Inject() (
         originalAuthorIdx = originalAuthor,
         unseenAuthors = 0,
         numAuthors = numAuthors,
-        numUnread = 0,
+        numMessages = numMessages,
+        numUnread = numUnread,
         muted = false)
       if (userExperiments.contains(ExperimentType.INBOX)){
         db.readWrite(attempts=2){ implicit session =>

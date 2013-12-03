@@ -53,13 +53,14 @@ class ExtSearchEventController @Inject() (
     val origin = (json \ "origin").as[String]
     val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
     val kifiTime = (json \ "kifiTime").asOpt[Int]
-    val referenceTime = (json \ "referenceTime").asOpt[Int]
+    val kifiShownTime = (json \ "kifiShownTime").asOpt[Int]
+    val thirdPartyShownTime = (json \ "thirdPartyShownTime").asOpt[Int] orElse (json \ "referenceTime").asOpt[Int]
     val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
     val kifiResults = (json \ "kifiResults").as[Int]
     val isDemo = request.experiments.contains(ExperimentType.DEMO)
 
-    checkForMissingDeliveryTimes(kifiTime, referenceTime, request, "ExtSearchEventController.clickedSearchResult")
+    checkForMissingDeliveryTimes(kifiTime, kifiShownTime, thirdPartyShownTime, request, "ExtSearchEventController.clickedSearchResult")
     SearchEngine.get(resultSource) match {
 
       case SearchEngine.Kifi => {
@@ -70,7 +71,7 @@ class ExtSearchEventController @Inject() (
           resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark, isDemo)
           if (personalSearchResult.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, personalSearchResult.users.map(_.externalId): _*)
         }
-        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
+        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
       }
 
       case theOtherGuys => {
@@ -86,7 +87,7 @@ class ExtSearchEventController @Inject() (
               resultClickedTracker.moderate(userId, query)
           }
         }
-        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, referenceTime, theOtherGuys, resultPosition, None)
+        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, theOtherGuys, resultPosition, None)
       }
     }
     Ok
@@ -103,17 +104,22 @@ class ExtSearchEventController @Inject() (
     val kifiResultsClicked = (json \ "kifiResultsClicked").as[Int]
     val otherResultsClicked = (json \ "searchResultsClicked").as[Int]
     val kifiTime = (json \ "kifiTime").asOpt[Int]
-    val referenceTime = (json \ "referenceTime").asOpt[Int]
+    val kifiShownTime = (json \ "kifiShownTime").asOpt[Int]
+    val thirdPartyShownTime = (json \ "thirdPartyShownTime").asOpt[Int] orElse (json \ "referenceTime").asOpt[Int]
     val origin = (json \ "origin").as[String]
-    checkForMissingDeliveryTimes(kifiTime, referenceTime, request, "ExtSearchEventController.endedSearch")
-    searchAnalytics.endedSearch(request, userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, referenceTime, otherResultsClicked, kifiResultsClicked)
+    checkForMissingDeliveryTimes(kifiTime, kifiShownTime, thirdPartyShownTime, request, "ExtSearchEventController.endedSearch")
+    searchAnalytics.endedSearch(request, userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, otherResultsClicked, kifiResultsClicked)
     Ok
   }
 
   def updateBrowsingHistory() = AuthenticatedJsonToJsonAction { request =>
     val userId = request.userId
-    val browsed = request.body.as[JsArray].value.map(Id.format[NormalizedURI].reads)
-    browsed.foreach(uriIdJs => browsingHistoryTracker.add(userId, BrowsedURI(uriIdJs.get)))
+    val browsedUrls = request.body.as[JsArray].value.map(_.as[String])
+    browsedUrls.foreach { url =>
+      shoeboxClient.getNormalizedURIByURL(url).foreach(_.foreach { uri =>
+        browsingHistoryTracker.add(userId, BrowsedURI(uri.id.get))
+      })
+    }
     Ok
   }
 
@@ -129,15 +135,20 @@ class ExtSearchEventController @Inject() (
     }
   } tap { urlOpt => if (urlOpt.isEmpty) log.error(s"failed to extract the destination URL from $searchEngine: $searchResultUrl") }
 
-  private def checkForMissingDeliveryTimes(kifiDeliveryTime: Option[Int], otherDeliveryTime: Option[Int], request: AuthenticatedRequest[JsValue], method: String) = {
-    kifiDeliveryTime match {
+  private def checkForMissingDeliveryTimes(kifiTime: Option[Int], kifiShownTime: Option[Int], thirdPartyShownTime: Option[Int], request: AuthenticatedRequest[JsValue], method: String) = {
+    kifiTime match {
       case None => reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is missing."))
       case Some(time) => if (time < 0) reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is negative."))
     }
 
-    otherDeliveryTime match {
-      case None => reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is missing."))
-      case Some(time) => if (time < 0) reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is negative."))
+    thirdPartyShownTime match {
+      case None => reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Google shown time is missing."))
+      case Some(time) => if (time < 0) reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Google shown time is negative."))
+    }
+
+    kifiShownTime match {
+      case None => reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi shown time is missing."))
+      case Some(time) => if (time < 0) reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi shown time is negative."))
     }
   }
 
