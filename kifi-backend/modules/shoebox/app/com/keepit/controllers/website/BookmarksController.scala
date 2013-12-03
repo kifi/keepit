@@ -163,6 +163,7 @@ class BookmarksController @Inject() (
 
   def allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int) =
       AuthenticatedJsonAction { request =>
+        clean db calls
     (before map getBookmarkExternalId, after map getBookmarkExternalId,
         collection map { getCollectionByExternalId(request.userId, _) }) match {
       case (Some(None), _, _) => BadRequest(Json.obj("error" -> s"Invalid id for before: ${before.get}"))
