@@ -526,19 +526,25 @@ $(function () {
 		return val ? $.trim(val).replace(/\s+/g, ' ') : '';
 	}
 
+	var PRIMARY_INDEX = 0,
+		ADDRESS = 0,
+		PRIMARY = 1,
+		VERIFIED = 2,
+		PENDING_PRIMARY = 3;
+
 	function getPrimaryEmail(emails) {
-		return (emails || me.emails)[0] || null;
+		return (emails || me.emails)[PRIMARY_INDEX] || null;
 	}
 
 	function getPendingPrimaryEmail(emails) {
 		return findEmail(emails || me.emails, function (info) {
-			return info[3];
+			return info[PENDING_PRIMARY];
 		})[0] || null;
 	}
 
 	function getPrimaryEmailAddress(emails) {
 		var addr = getPrimaryEmail(emails);
-		return addr && addr[0] || null;
+		return addr && addr[ADDRESS] || null;
 	}
 
 	function getProfileCopy() {
@@ -566,7 +572,7 @@ $(function () {
 	function removeEmailInfo(emails, addr) {
 		emails = emails || me.emails;
 		for (var i = emails.length - 1; i >= 0; i--) {
-			if (emails[i][0] === addr) {
+			if (emails[i][ADDRESS] === addr) {
 				emails.splice(i, 1);
 			}
 		}
@@ -575,7 +581,7 @@ $(function () {
 	function unsetPrimary(emails) {
 		var primary = getPrimaryEmail(emails);
 		if (primary) {
-			primary[1] = false;
+			primary[PRIMARY] = false;
 		}
 	}
 
@@ -589,7 +595,7 @@ $(function () {
 		var emails = props.emails;
 		removeEmailInfo(emails, email);
 		unsetPrimary(emails);
-		emails.push([email, true]);
+		emails.unshift([email, true]);
 
 		return $.postJson(xhrBase + '/user/me', props);
 	}
@@ -3079,6 +3085,7 @@ $(function () {
 	var $sendFeedback = $('.send-feedback').click(sendFeedback).filter('.top-right-nav>*');
 
 	function updateMe(data) {
+		console.log('[updateMe]', data);
 		me = data;
 		mixpanel.identify(me.id);
 
@@ -3099,12 +3106,14 @@ $(function () {
 
 		var primary = getPrimaryEmail();
 		var $unverified = $('.profile-email-address-unverified');
-		$unverified.toggle(!primary);
+		$unverified.toggle(!primary[VERIFIED]);
+
+		$('.profile-email input').val(primary[ADDRESS] || '');
 
 		var pendingPrimary = getPendingPrimaryEmail();
 		var $pending = $('.profile-email-address-pending');
 		if (pendingPrimary) {
-			$('.profile-email-address-pending-email').text(pendingPrimary[0]);
+			$('.profile-email-address-pending-email').text(pendingPrimary[ADDRESS]);
 		}
 		$pending.toggle(!!pendingPrimary);
 

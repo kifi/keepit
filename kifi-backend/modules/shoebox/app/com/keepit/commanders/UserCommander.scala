@@ -6,18 +6,14 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
-<<<<<<< HEAD
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
 
 import play.api.libs.json._
 import com.google.inject.Inject
 import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
-=======
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsObject, Json, JsValue}
 import com.google.inject.{Singleton, Inject, ImplementedBy}
 import com.keepit.common.net.URI
 import com.keepit.controllers.core.NetworkInfoLoader
@@ -27,7 +23,6 @@ import play.api.libs.concurrent.Akka
 import scala.concurrent.Future
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
->>>>>>> aa31a9713e151eb6ea58ada6e78c0dcb56591c75
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 
