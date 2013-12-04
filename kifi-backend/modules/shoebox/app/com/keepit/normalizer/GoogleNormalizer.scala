@@ -40,9 +40,9 @@ object GoogleNormalizer extends StaticNormalizer {
         }
       case URI(scheme, userInfo, host @ Some(Host("com", "google", "drive")), port, _, _, fragment @ Some(fragmentString)) =>
         if (fragmentString startsWith "folders/") URI(scheme, userInfo, host, port, None, None, fragment)
-        if (fragmentString startsWith "search/") URI(scheme, userInfo, host, port, None, None, fragment)
-        if (fragmentString startsWith "query?") URI(scheme, userInfo, host, port, None, None, fragment)
-        if (driveTabs.contains(fragmentString)) URI(scheme, userInfo, host, port, None, None, fragment)
+        else if (fragmentString startsWith "search/") URI(scheme, userInfo, host, port, None, None, fragment)
+        else if (fragmentString startsWith "query?") URI(scheme, userInfo, host, port, None, None, fragment)
+        else if (driveTabs.contains(fragmentString)) URI(scheme, userInfo, host, port, None, None, fragment)
         else uri
       case _ => uri
     }
