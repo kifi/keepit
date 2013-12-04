@@ -49,8 +49,7 @@ class ProdUserEventLoggingRepo(
 
   override def persist(userEvent: UserEvent) : Unit = {
     val augmentors = Seq(new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient))
-    val moreDataFuture = Future.sequence(augmentUserEvent(userEvent, augmentors)).map{ augs => augs.flatten }
-    moreDataFuture onComplete {
+    augmentUserEvent(userEvent, augmentors) onComplete {
       case Success(moreData) => {
         val oldContext = userEvent.context.data
         val newEvent = userEvent.copy(context = HeimdalContext(oldContext ++ moreData.toMap))
@@ -60,8 +59,9 @@ class ProdUserEventLoggingRepo(
     }
   }
 
-  private def augmentUserEvent(userEvent: UserEvent, augmentors: Seq[UserEventAugmentor]) = {
-    augmentors.map{ a => a.augment(userEvent) }
+  private def augmentUserEvent(userEvent: UserEvent, augmentors: Seq[UserEventAugmentor]): Future[Seq[(String, ContextData)]] = {
+    val seqFuture = augmentors.map{ a => a.augment(userEvent) }
+    Future.sequence(seqFuture).map{_.flatten}
   }
 }
 
