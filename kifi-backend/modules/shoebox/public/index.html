@@ -43,7 +43,14 @@
 					<a class="header-logo" href=""></a>
 				</div>
 				<div class="my-identity">
-					<a class="my-pic" href="profile"></a>
+					<a class="my-settings-wrapper" href="profile">
+						<span class="my-pic"></span>
+						<span class="my-settings-shade"></span>
+						<span class="my-settings">
+							<span class="my-settings-icon"></span>
+							<span class="my-settings-text">Settings</span>
+						</span>
+					</a>
 					<div class="my-name">&nbsp;</div>
 					<div class="my-description">&nbsp;</div>
 				</div>
@@ -220,37 +227,130 @@
 				</div>
 				<div id="profile-template">
 					<div class="profile" data-template>
-						<div class="profile-image" style="background-image: url(//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/200/{{pictureName}})"></div>
-						<div class="profile-details">
-							<div class="profile-name"><!-- TODO: edit-container -->
-								<span data-prop="firstName" data-placeholder="First Name" class="profile-firstname editable">{{firstName}}</span>
-								<span data-prop="lastName" data-placeholder="Last Name" class="profile-lastName editable">{{lastName}}</span>
-								<span class="edit">Edit</span>
-								<span class="save">Save</span>
+						<h2>Settings</h2>
+						<div class="profile-container">
+							<div class="profile-image-wrapper">
+								<div class="profile-image" style="background-image: url(//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/200/{{pictureName}})"></div>
+								<a class="profile-image-change" href="javascript:void(0)">Change photo</a>
 							</div>
-							<div class="profile-description edit-container">
-								<span data-prop="description" data-placeholder="Add a short description" data-maxlength="50" class="editable">{{description}}</span>
-								<span class="edit">Edit</span>
-								<span class="save">Save</span>
+							<div class="profile-input-wrapper" data-name="name">
+								<div class="profile-input-title">Name</div>
+								<div class="profile-input-box profile-input-box-name">
+									<span class="profile-input-placeholder">
+										<span class="profile-placeholder-first-name">{{firstName}}</span> <span class="profile-placeholder-last-name">{{lastName}}</span>
+									</span>
+									<input class="profile-input-input profile-first-name" disabled="disabled" type="text" name="firstName" placeholder="First name" value="{{firstName}}" data-required="true">
+									<input class="profile-input-input profile-last-name" disabled="disabled" type="text" name="lastName" placeholder="Last name" value="{{lastName}}" data-required="true">
+									<a class="profile-input-edit" href="javascript:void(0)">Edit</a>
+									<a class="profile-input-save" href="javascript:void(0)">Save</a>
+								</div>
+							</div>
+							<div class="profile-input-wrapper" data-name="description">
+								<div class="profile-input-title">Description tagline <span class="profile-input-remaining-chars"></span></div>
+								<div class="profile-input-box">
+									<input class="profile-input-input" disabled="disabled" type="text" name="description" placeholder="Enter your description tagline" value="{{description}}" maxlength="50">
+									<a class="profile-input-edit" href="javascript:void(0)">Edit</a>
+									<a class="profile-input-save" href="javascript:void(0)">Save</a>
+								</div>
+							</div>
+							<div class="profile-input-wrapper profile-email" data-name="email">
+								<div class="profile-input-title">Contact email</div>
+								<div class="profile-input-box">
+									<input class="profile-input-input" disabled="disabled" type="text" name="email" placeholder="Enter your email address" value="{{email}}" data-required="true">
+									<a class="profile-input-edit" href="javascript:void(0)">Edit</a>
+									<a class="profile-input-save" href="javascript:void(0)">Save</a>
+								</div>
+							</div>
+							<div class="profile-email-address-unverified">
+								Your email is pending your verification
+								(<a class="profile-email-pending-resend" href="javascript:void(0)">Resend verification</a>,
+								<a class="profile-email-pending-cancel" href="javascript:void(0)">Cancel</a>).
+							</div>
+							<div class="profile-email-address-pending">
+								Your new primary email, <span class="profile-email-address-pending-email">{{email}}</span>, is pending your verification
+								(<a class="profile-email-pending-resend" href="javascript:void(0)">Resend verification</a>,
+								<a class="profile-email-pending-cancel" href="javascript:void(0)">Cancel</a>).
+							</div>
+							<div class="profile-email-addresses">
+								<a class="profile-email-addresses-title-wrapper" href="javascript:void(0)">
+									<span class="profile-email-addresses-arrow"></span>
+									<span class="profile-email-addresses-title">Manage your email addresses</span>
+								</a>
+								<div class="profile-email-address-manage">
+									<div class="profile-email-address-manage-description">
+										These are email addresses associated with your account.
+										You may login with them and be searched by them by your friends.
+									</div>
+									<ul class="profile-email-address-list">
+									</ul>
+									<a class="profile-email-address-add" href="javascript:void(0)">+ add a new email address</a>
+									<div class="profile-email-address-add-box">
+										<input class="profile-email-address-add-input" type="text" name="new_email" placeholder="Type a new email address">
+										<a class="profile-email-address-add-save" href="javascript:void(0)">Add</a>
+									</div>
+								</div>
 							</div>
 						</div>
-						<h2>Contact email</h2>
-						<div class="edit-container contact-email">
-							<span data-prop="email" class="editable">{{emails[0]}}</span>
-							<span class="edit">Edit</span>
-							<span class="save">Save</span>
-						</div>
-						<h2>Social networks connected to your Kifi&nbsp;account</h2>
-						<div class="networks">
-							<div class="kifi-k"></div>
-							<ul>
-								<li data-network="facebook"><a class="profile-nw nw-facebook">Facebook</a></li>
-								<li data-network="linkedin"><a class="profile-nw nw-linkedin">LinkedIn</a></li>
-								<li><a class="profile-nw nw-twitter not-connected">Twitter</a></li>
-								<li><a class="profile-nw nw-google not-connected">Google</a></li>
+						<div class="profile-section">
+							<h3>Connect your social networks to Kifi</h3>
+							<h5>Find which of your friends are using Kifi</h5>
+							<ul class="profile-networks">
+								<li data-network="facebook">
+									<a class="profile-nw nw-facebook" href="javascript:void(0)">Facebook</a>
+									<span class="profile-nw-connected">
+										<span class="profile-placeholder">&nbsp;</span>
+										<span class="profile-connected">Connected</span>
+										<a class="profile-disconnect" href="javascript:void(0)">Disconnect?</a>
+									</span>
+								</li>
+								<li data-network="linkedin">
+									<a class="profile-nw nw-linkedin" href="javascript:void(0)">LinkedIn</a>
+									<span class="profile-nw-connected">
+										<span class="profile-placeholder">&nbsp;</span>
+										<span class="profile-connected">Connected</span>
+										<a class="profile-disconnect" href="javascript:void(0)">Disconnect?</a>
+									</span>
+								</li>
 							</ul>
 						</div>
+						<hr class="profile-section-divider">
+						<div class="profile-section">
+							<h3>Import your email contacts to Kifi</h3>
+							<h5>Message your email contact directly from Kifi</h5>
+							<a class="profile-nw nw-email" href="javascript:void(0)">Import another Gmail account</a>
+							<div class="profile-email-accounts-title">
+								<span>Your imported accounts: </span>
+								<a class="profile-email-accounts-refresh" href="javascript:void(0)">Refresh all</a>
+							</div>
+							<table class="profile-email-accounts">
+								<tbody>
+									<tr class="profile-email-account" data-template>
+										<td class="profile-email-status"></td>
+										<td class="profile-email-address">joonho1101@gmail.com{{email}}</td>
+										<td class="profile-email-separator">|</td>
+										<td class="profile-email-contact-count">2,333 out of 12,000{{contactCount}} contacts imported</td>
+										<td class="profile-email-separator">|</td>
+										<td class="profile-email-remove">
+											<a href="javascript:void(0)">Remove</a>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
 					</div>
+				</div>
+				<div class="dialog disconnect-dialog" style="display:none">
+					<form method="POST" action="{{url}}" class="dialog-content" data-template>
+						<div class="dialog-header">Are you sure you want to disconnect your {{network}} account?</div>
+						<a href="javascript:" class="dialog-cancel">×</a>
+						<div class="dialog-content-body">
+							<p>This action may degrade your Kifi experience with your {{network}} friends.</p>
+							<div class="dialog-buttons">
+								<button class="dialog-submit" type="submit">Disconnect</button>
+								<button class="dialog-cancel">Cancel</button>
+							</div>
+						</div>
+					</form>
 				</div>
 
 				<div class="friends">
@@ -271,21 +371,21 @@
 						<div id="friends-list">
 							<ul class="antiscroll-inner">
 								<li class="friend {{state}}" data-template>
-								<div class="friend-pic">
-									<img src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
-									<a class="friend-nw friend-nw-kifi"></a>
-								</div>
-								<div class="friend-info">
-									<div class="friend-name">{{firstName}} {{lastName}}</div>
-									<div class="friend-label">{{friendCount}} friend{% if friendCount !== 1 %}s{% endif %} on Kifi</div>
-								</div>
-								<div class="friend-actions {{state}}">
-									<div style="position:relative">
-										<a class="friend-mute{% if searchFriend === false %} muted{% endif %}" href="javascript:"></a>
-										<a class="friend-status" href="javascript:"></a>
-										<div class="friend-action-desc"></div>
+									<div class="friend-pic">
+										<img src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+										<a class="friend-nw friend-nw-kifi"></a>
 									</div>
-								</div>
+									<div class="friend-info">
+										<div class="friend-name">{{firstName}} {{lastName}}</div>
+										<div class="friend-label">{{friendCount}} friend{% if friendCount !== 1 %}s{% endif %} on Kifi</div>
+									</div>
+									<div class="friend-actions {{state}}">
+										<div style="position:relative">
+											<a class="friend-mute{% if searchFriend === false %} muted{% endif %}" href="javascript:"></a>
+											<a class="friend-status" href="javascript:"></a>
+											<div class="friend-action-desc"></div>
+										</div>
+									</div>
 								</li>
 							</ul>
 							<img class="friends-loading" src="assets/img/wait.gif">
@@ -320,7 +420,7 @@
 							</div>
 							<div class="dialog invite-message-dialog" style="display:none">
 								<form method="POST" action="/invite" class="dialog-content" data-template>
-									<div class="invite-message-header">Your Kifi invite to {{label}}</div>
+									<div class="dialog-header">Your Kifi invite to {{label}}</div>
 									<a href="javascript:" class="invite-cancel">×</a>
 									<input type="hidden" name="fullSocialId" value="{{fullSocialId}}">
 									<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
@@ -377,17 +477,17 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 							</div>
 							<div class="dialog unfriend-dialog" style="display:none">
 								<form method="POST" action="{{url}}" class="dialog-content" data-template>
-									<div class="unfriend-dialog-header">Unfriend {{name}}?</div>
-									<a href="javascript:" class="unfriend-cancel">×</a>
-									<div class="unfriend-dialog-content">
+									<div class="dialog-header">Unfriend {{name}}?</div>
+									<a href="javascript:" class="dialog-cancel">×</a>
+									<div class="dialog-content-body">
 										<p>Are you sure you want to unfriend this user?</p>
 										<ul>
 											<li>You will not see each other's results</li>
 											<li>You will not be able to send messages to each other</li>
 										</ul>
-										<div class="unfriend-dialog-buttons">
-											<button class="unfriend-send" type="submit">Unfriend</button>
-											<button class="unfriend-cancel">Cancel</button>
+										<div class="dialog-buttons">
+											<button class="dialog-submit" type="submit">Unfriend</button>
+											<button class="dialog-cancel">Cancel</button>
 										</div>
 									</div>
 								</form>
@@ -581,28 +681,47 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 
 
 	<script type="text/x-handlebars" id="invite-friends-help">
-	  <div class="invite-friends-help {{network_class}}">
-		  <div class="no-error">To invite your {{network}} {{friends}} to Kifi,</div>
-		  <div class="no-error">please connect to {{network}}</div>
-		  <div class="error-message">Import failed. Try again.</div>
-		  <a class="invite-friends-help-connect" href="javascript:void(0)" data-network="{{network_class}}">
-			  <span class="invite-friends-help-logo"></span>
-			  <span>Connect {{network}}</span>
-		  </a>
-	  </div>
+	<div class="invite-friends-help {{network_class}}">
+		<div class="no-error">To invite your {{network}} {{friends}} to Kifi,</div>
+		<div class="no-error">please connect to {{network}}</div>
+		<div class="error-message">Import failed. Try again.</div>
+		<a class="invite-friends-help-connect" href="javascript:void(0)" data-network="{{network_class}}">
+			<span class="invite-friends-help-logo"></span>
+			<span>Connect {{network}}</span>
+		</a>
+	</div>
 	</script>
 
 
 	<script type="text/x-handlebars" id="friends-importing">
-	  <div class="friends-importing {{network_class}}">
-		  <span class="friends-importing-logo"></span>
-		  <div>Importing your {{friends}}</div>
-		  <div>from {{network}}</div>
-		  <img class="keeps-loading" src="assets/img/wait.gif">
-		  {{#if progress}}
-		  <div class="friends-importing-progress">{{progress}} {{friends}} imported</div>
-		  {{/if}}
-	  </div>
+		<div class="friends-importing {{network_class}}">
+			<span class="friends-importing-logo"></span>
+			<div>Importing your {{friends}}</div>
+			<div>from {{network}}</div>
+			<img class="keeps-loading" src="assets/img/wait.gif">
+			{{#if progress}}
+			<div class="friends-importing-progress">{{progress}} {{friends}} imported</div>
+			{{/if}}
+		</div>
+	</script>
+
+	<script type="text/x-handlebars" id="email-address">
+		<li class="profile-email-address-item{{#if primary}} primary-email{{/if}}{{#if verified}} verified-email{{/if}}{{#if pendingPrimary}} pending-primary-email{{/if}}">
+			<span class="profile-email-address-item-email">{{email}}</span>
+			<span class="profile-email-address-item-primary">(primary)</span>
+			<span class="profile-email-address-item-pending-primary">(pending primary)</span>
+			<span class="profile-email-address-item-unverified">(<a href="javascript:void(0)">unverified</a>)</span>
+			<div class="profile-email-address-item-arrow" href="javascript:void(0)">
+				<ul class="profile-email-address-item-dropdown">
+					<li>
+						<a class="profile-email-address-item-make-primary" href="javascript:void(0)">Make primary</a>
+					</li>
+					<li>
+						<a class="profile-email-address-item-delete" href="javascript:void(0)">Delete</a>
+					</li>
+				</ul>
+			</div>
+		</li>
 	</script>
 
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
@@ -616,6 +735,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 	<script src="assets/js/tempo.min.js"></script>
 	<script src="assets/js/util.js"></script>
 	<script src="assets/js/scorefilter.js"></script>
+	<script src="assets/js/form.js"></script>
 	<script src="assets/js/main.js"></script>
 	<script src="assets/js/track.js" async defer></script>
 	<script src="assets/js/fancybox/jquery.fancybox.pack.js" async defer></script>
