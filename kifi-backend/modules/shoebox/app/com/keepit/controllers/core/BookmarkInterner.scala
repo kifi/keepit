@@ -110,6 +110,8 @@ class BookmarkInterner @Inject() (
         Try(scraper.scheduleScrape(uri))
       }
 
+      session.conn.commit()
+
       Some((bookmark, uri, isNewKeep))
     } else {
       None
