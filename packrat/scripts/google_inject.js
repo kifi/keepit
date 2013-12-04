@@ -31,6 +31,7 @@ if (searchUrlRe.test(document.URL)) !function() {
   var filter;             // current search filter (null or {[who: "m"|"f"|dot-delimited user ids]?, [when: "t"|"y"|"w"|"m"]?})
   var query = "";         // latest search query
   var response = {};      // latest kifi results received
+  var refinements = -1;    //how many times the user has refined teh search on the same page. No searches at all yet.
   var showMoreOnArrival;
   var clicks = {kifi: [], google: []};  // clicked result link hrefs
   var tQuery, tGoogleResultsShown, tKifiResultsReceived, tKifiResultsShown;  // for timing stats
@@ -87,6 +88,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     $res.find("#kifi-res-list,.kifi-res-end").css("opacity", .2).slideUp(200);
 
     var t1 = tQuery = Date.now();
+    refinements++;
     api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
       if (q != query || !areSameFilter(f, filter)) {
         log("[results] ignoring for query:", q, "filter:", f)();
@@ -158,7 +160,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     checkSearchType();
     search();  // needed for switch from shopping to web search, for example
   }).on("beforeunload", function(e) {
-    if (response.query === query && Date.now() - tKifiResultsShown > 2000) {
+    if (response.query === query) {
       api.port.emit("log_search_event", [
         "searchEnded",
         {
@@ -171,7 +173,8 @@ if (searchUrlRe.test(document.URL)) !function() {
           "kifiShownTime": tKifiResultsShown - tQuery,
           "thirdPartyShownTime": tGoogleResultsShown - tQuery,
           "kifiResultsClicked": clicks.kifi.length,
-          "searchResultsClicked": clicks.google.length
+          "searchResultsClicked": clicks.google.length,
+          "refinements": refinements
         }
       ]);
     }
@@ -254,7 +257,8 @@ if (searchUrlRe.test(document.URL)) !function() {
           "resultSource": isKifi ? "Kifi" : "Google",
           "resultUrl": href,
           "query": response.query,
-          "hit": isKifi ? response.hits[resIdx] : null
+          "hit": isKifi ? response.hits[resIdx] : null,
+          "refinements": refinements
         }
       ]);
     }
