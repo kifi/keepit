@@ -2147,6 +2147,7 @@ $(function () {
 			return;
 		}
 		hideKeepDetails();
+		kifiViewTracker.push('/' + hash);
 	});
 
 	function navigate(uri, opts) {
@@ -2188,7 +2189,6 @@ $(function () {
 			clearTagInput();
 		}
 		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
-		kifiViewTracker.push('/' + uri);
 	}
 
 	function queryFromUri(uri) {

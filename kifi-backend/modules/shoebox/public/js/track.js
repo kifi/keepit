@@ -81,8 +81,7 @@
     });
   }
 
-  window.kifiViewTracker = window.kifiViewTracker || [window.location.pathname];
-  window.kifiViewTracker.forEach(function(path){
+  kifiViewTracker.forEach(function(path){
     defaultViewHandler(path);
   });
   kifiViewTracker = {
