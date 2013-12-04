@@ -24,7 +24,7 @@ class ClickHistoryTrackerImpl @Inject() (val store: ClickHistoryStore, val build
 
 trait ClickHistoryStore extends ObjectStore[Id[User], MultiHashFilter[ClickedURI]]
 
-class S3ClickHistoryStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val cache: ClickHistoryUserIdCache, val format: ClickHistoryBuilder)
+class S3ClickHistoryStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val cache: ClickHistoryUserIdCache, val format: ClickHistoryBuilder)
   extends S3BlobStore[Id[User], MultiHashFilter[ClickedURI]] with BlobFormat[MultiHashFilter[ClickedURI]] with ClickHistoryStore {
 
   protected def idToKey(userId: Id[User]) : String = "click_history_by_userid_" + userId

@@ -1,17 +1,16 @@
 package com.keepit.search
 
 import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ObjectStore, S3BlobStore, InMemoryObjectStore, S3Bucket}
-
 import com.amazonaws.services.s3.AmazonS3
-
 import java.nio.{IntBuffer, ByteBuffer}
 
 case class FullFilterChunkId(name: String, chunk: Int)
 
 trait ProbablisticLRUStore extends ObjectStore[FullFilterChunkId, Array[Int]]
 
-class S3ProbablisticLRUStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends S3BlobStore[FullFilterChunkId, Array[Int]] with ProbablisticLRUStore {
+class S3ProbablisticLRUStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog) extends S3BlobStore[FullFilterChunkId, Array[Int]] with ProbablisticLRUStore {
 
     protected def idToKey(id: FullFilterChunkId) : String = id.name + "/chunk_" + id.chunk.toString
 
