@@ -12,6 +12,7 @@ import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.search.SearchServiceClient
+import com.keepit.common.crypto.SimpleDESCrypt
 
 import scala.util.{Success, Failure}
 
@@ -46,6 +47,9 @@ class ExtMessagingController @Inject() (
     protected val userEventContextBuilder: EventContextBuilderFactory
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
+
+  private val crypt = new SimpleDESCrypt
+  private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   /*********** REST *********************/
 
@@ -152,7 +156,7 @@ class ExtMessagingController @Inject() (
   }
 
   //TEMPORARY STOP GAP
-  val sideEffectingEvents = Set[String]("kifiResultClicked", "googleResultClicked", "usefulPage", "searchUnload", "sliderShown")
+  val sideEffectingEvents = Set[String]("usefulPage", "sliderShown")
 
   protected def websocketHandlers(socket: SocketInfo) = Map[String, Seq[JsValue] => Unit](
     "ping" -> { _ =>
@@ -210,12 +214,13 @@ class ExtMessagingController @Inject() (
     },
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
       val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
-      val unvisited = messagingController.getUnreadThreadCount(socket.userId)
-      socket.channel.push(Json.arr("notifications", notices, unvisited))
+      val numUnreadUnmuted = messagingController.getUnreadThreadCount(socket.userId)
+      val timeLastSeen = messagingController.getNotificationLastSeen(socket.userId).getOrElse(START_OF_TIME).toStandardTimeString
+      socket.channel.push(Json.arr("notifications", notices, numUnreadUnmuted, timeLastSeen))
     },
-    "get_notifications_by_url" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
+    "get_page_notifications" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
       messagingController.getSendableNotificationsForUrl(socket.userId, url).map { case (nUriStr, notices) =>
-        socket.channel.push(Json.arr(requestId.toLong, notices, nUriStr))
+        socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices))
       }
     },
     "get_unread_notifications" -> { case JsNumber(howMany) +: _ =>
@@ -278,6 +283,9 @@ class ExtMessagingController @Inject() (
     },
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
       messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
+    },
+    "eip" -> { case JsString(eip) +: _ =>
+      socket.ip = crypt.decrypt(ipkey, eip).toOption
     },
     "log_event" -> { case JsObject(pairs) +: _ =>
       implicit val experimentFormat = State.format[ExperimentType]

@@ -159,9 +159,13 @@ object ApplicationBuild extends Build {
       Keys.fork := false
     )
 
-    lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
+    lazy val macros = play.Project("macros", appVersion, commonDependencies, path = file("modules/macros")).settings(
       commonSettings: _*
     )
+
+    lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
+      commonSettings: _*
+    ).dependsOn(macros)
 
     lazy val sqldb = play.Project("sqldb", appVersion, sqldbDependencies, path = file("modules/sqldb")).settings(
       commonSettings: _*

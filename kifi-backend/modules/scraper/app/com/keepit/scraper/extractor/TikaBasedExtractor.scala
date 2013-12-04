@@ -72,10 +72,11 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper:
       }
     }
 
-    Option(metadata.get(name))
-      .orElse(Option(metadata.get(name.toLowerCase)))
-      .orElse(Option(metadata.get(name.toUpperCase)))
-      .orElse(Option(metadata.get(initCap(name))))
+    // take longer one if there are multiple values
+    metadata.getValues(name).sortBy(_.size).lastOption
+      .orElse(metadata.getValues(name.toLowerCase).sortBy(_.size).lastOption)
+      .orElse(metadata.getValues(name.toUpperCase).sortBy(_.size).lastOption)
+      .orElse(metadata.getValues(initCap(name)).sortBy(_.size).lastOption)
   }
 
 }

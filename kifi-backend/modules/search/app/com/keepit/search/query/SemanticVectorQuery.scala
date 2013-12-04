@@ -95,7 +95,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
     val contextSketch = searcher.getContextSketch
-    val vector = searcher.getSemanticVector(query.term, contextSketch, 0.618f)
+    val weight = (searcher.numOfContextTerms - 1).toFloat / searcher.numOfContextTerms
+    val vector = searcher.getSemanticVector(query.term, contextSketch, weight)
 
     val tp = searcher.getSemanticVectorEnum(context, query.term, context.reader.getLiveDocs)
     if (tp != null) new SemanticVectorScorerImpl(this, tp, vector, value) else new EmptySemanticVectorScorerImpl(this, vector)

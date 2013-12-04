@@ -112,6 +112,7 @@ object Shoebox extends Service {
     def getFriendRequestBySender(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getFriendRequestBySender", Param("senderId", senderId) )
     def getUserValue(userId: Id[User], key: String) = ServiceRoute(GET, "/internal/shoebox/database/userValue", Param("userId", userId), Param("key", key))
     def setUserValue(userId: Id[User], key: String) = ServiceRoute(POST, "/internal/shoebox/database/userValue", Param("userId", userId), Param("key", key))
+    def getUserSegment(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/userSegment", Param("userId", userId))
     def getExtensionVersion(installationId: ExternalId[KifiInstallation]) = ServiceRoute(GET, "/internal/shoebox/database/extensionVersion", Param("installationId", installationId))
   }
 }
@@ -209,6 +210,7 @@ object ABook extends Service {
     def getABookRawInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
     def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getOAuth2Token", Param("abookId", abookId))
     def getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName:Option[String], lastName:Option[String]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getOrCreateEContact", Param("email", email), Param("name", name), Param("firstName", firstName), Param("lastName", lastName))
+    def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/queryEContacts", Param("limit", limit), Param("search", search), Param("after", after))
   }
 }
 
@@ -220,7 +222,7 @@ object Scraper extends Service {
     def scheduleScrape() = ServiceRoute(POST, s"/internal/scraper/scheduleScrape")
     def scheduleScrapeWithRequest() = ServiceRoute(POST, s"/internal/scraper/scheduleScrapeWithRequest")
     def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
-    def getBasicArticleP() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
+    def getBasicArticleP() = ServiceRoute(POST, s"/internal/scraper/getBasicArticleP")
   }
 }
 

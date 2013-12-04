@@ -122,17 +122,19 @@ class RemoteActionAuthenticator @Inject() (
       val newSession = session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)
       impersonatedUserIdOpt match {
         case Some(impExternalUserId) =>
-          val impUserId = shoeboxClient.getUserIdsByExternalIds(Seq(impExternalUserId)).map(_.head)
+          val impUserIdFuture = shoeboxClient.getUserIdsByExternalIds(Seq(impExternalUserId)).map(_.head)
           val experiments = monitoredAwait.result(experimentsFuture, 3 second, s"on user id $userId", Set[ExperimentType]())
-          if (!experiments.contains(ExperimentType.ADMIN)) throw new IllegalStateException(s"non admin user $userId tries to impersonate to $impUserId")
-          val impSocialUserInfoFuture = shoeboxClient.getSocialUserInfosByUserId(userId)
+          if (!experiments.contains(ExperimentType.ADMIN)) throw new IllegalStateException(s"non admin user $userId tries to impersonate")
+          val impUserId = monitoredAwait.result(impUserIdFuture, 3 second, "get impUserId")
+          val impSocialUserInfoFuture = shoeboxClient.getSocialUserInfosByUserId(impUserId)
 
           val impSocialUserInfo = monitoredAwait.result(impSocialUserInfoFuture, 3 seconds, s"on user id $userId")
           log.info(s"[IMPERSONATOR] admin user $userId is impersonating user $impSocialUserInfo with request ${request.request.path}")
-          executeAction(authAction, monitoredAwait.result(impUserId, 3 seconds, s"on impersonating external user id $impExternalUserId"),
+          executeAction(authAction, impUserId,
             impSocialUserInfo.head.credentials.get, experiments.toSet, kifiInstallationId, newSession, request.request, Some(userId), allowPending)
         case None =>
-          executeAction(authAction, userId, socialUser, monitoredAwait.result(experimentsFuture, 3 second, s"on experiments for user $userId", Set[ExperimentType]()), kifiInstallationId, newSession, request.request, None, allowPending)
+          executeAction(authAction, userId, socialUser, monitoredAwait.result(experimentsFuture, 3 second, s"on experiments for user $userId", Set[ExperimentType]()),
+              kifiInstallationId, newSession, request.request, None, allowPending)
       }
     }
 

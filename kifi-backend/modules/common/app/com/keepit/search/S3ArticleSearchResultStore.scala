@@ -16,7 +16,7 @@ trait ArticleSearchResultStore extends ObjectStore[ExternalId[ArticleSearchResul
     get(uuid).map(article => getInitialSearchId(article)) getOrElse uuid
 }
 
-class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache)
+class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache)
   extends S3JsonStore[ExternalId[ArticleSearchResult], ArticleSearchResult] with ArticleSearchResultStore {
 
   val formatter = ArticleSearchResult.format

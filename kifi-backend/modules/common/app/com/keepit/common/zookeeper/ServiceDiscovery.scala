@@ -4,6 +4,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.service._
 import com.keepit.common.amazon._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
@@ -42,6 +43,7 @@ class ServiceDiscoveryImpl @Inject() (
     services: FortyTwoServices,
     amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
     scheduler: Scheduler,
+    airbrake: Provider[AirbrakeNotifier],
     servicesToListenOn: Seq[ServiceType] =
         ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil)
   extends ServiceDiscovery with Logging {
@@ -50,12 +52,14 @@ class ServiceDiscoveryImpl @Inject() (
   private var selfCheckIsRunning: Boolean = false
   private var selfCheckFutureOpt: Option[Future[Boolean]] = None
 
+
+
   def thisInstance: Option[ServiceInstance] = myInstance
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
     servicesToListenOn foreach {service =>
-      val cluster = new ServiceCluster(service)
+      val cluster = new ServiceCluster(service, airbrake, if (services.currentService==ServiceType.SHOEBOX) Some(scheduler) else None)
       clustersToInit(service) = cluster
     }
     log.info(s"registered clusters: $clustersToInit")

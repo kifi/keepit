@@ -31,8 +31,6 @@ GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.MessagingCo
 
 GET   /internal/eliza/verifyAllNotifications    @com.keepit.eliza.MessagingController.verifyAllNotifications
 
-POST /internal/eliza/importThread               @com.keepit.eliza.MessagingController.importThread()
-
 
 
 

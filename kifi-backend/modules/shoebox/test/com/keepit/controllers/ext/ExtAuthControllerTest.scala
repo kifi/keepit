@@ -9,9 +9,7 @@ import com.keepit.social.{SocialId, SocialNetworks}
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-
 import securesocial.core._
-
 import org.joda.time.DateTime
 import play.api.libs.json.JsArray
 import com.keepit.common.controller.AuthenticatedRequest
