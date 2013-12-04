@@ -2521,6 +2521,7 @@ $(function () {
 			return;
 		}
 		hideKeepDetails();
+		kifiViewTracker.push('/' + hash);
 	});
 
 	function navigate(uri, opts) {
