@@ -21,6 +21,7 @@ object GoogleNormalizer extends StaticNormalizer {
   val spreadsheet = """(.*)(/spreadsheet/ccc)(.*)""".r
   val file = """(.*)(/file/d/[^/]+/)(.*)""".r
   val gmail = """(/mail/)(.*)""".r
+  val driveTabs = Set[String]("my-drive", "shared-with-me", "starred", "recent", "activity", "offline", "all", "trash")
 
   def apply(uri: URI) = {
     uri match {
@@ -37,6 +38,12 @@ object GoogleNormalizer extends StaticNormalizer {
           case Some(id) if msgFragments.length > 1 => URI(scheme, userInfo, host, port, Some("/mail/" + addr), None, Some("search//" + id))
           case _ => URI(scheme, userInfo, host, port, Some("/mail/" + addr), None, Some(fragment))
         }
+      case URI(scheme, userInfo, host @ Some(Host("com", "google", "drive")), port, _, _, fragment @ Some(fragmentString)) =>
+        if (fragmentString startsWith "folders/") URI(scheme, userInfo, host, port, None, None, fragment)
+        if (fragmentString startsWith "search/") URI(scheme, userInfo, host, port, None, None, fragment)
+        if (fragmentString startsWith "query?") URI(scheme, userInfo, host, port, None, None, fragment)
+        if (driveTabs.contains(fragmentString)) URI(scheme, userInfo, host, port, None, None, fragment)
+        else uri
       case _ => uri
     }
   }
