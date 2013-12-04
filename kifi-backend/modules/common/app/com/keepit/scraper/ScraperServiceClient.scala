@@ -12,6 +12,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import scala.concurrent.{Future, Promise}
 import play.api.libs.json._
 import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.util.Providers
 import com.keepit.common.routes.Scraper
 import com.keepit.search.Article
 import play.api.libs.json.JsArray
@@ -102,7 +103,7 @@ class ScraperServiceClientImpl @Inject() (
 
 class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ScraperServiceClient {
 
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
