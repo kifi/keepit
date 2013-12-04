@@ -61,6 +61,7 @@
         return loc;
       }
     }
+    return path;
   }
 
   function defaultClickHandler(action) {
@@ -78,8 +79,8 @@
     });
   }
 
-  kifiViewTracker = kifiViewTracker || [window.location.pathname];
-  kifiViewTracker.forEach(function(path){
+  window.kifiViewTracker = window.kifiViewTracker || [window.location.pathname];
+  window.kifiViewTracker.forEach(function(path){
     defaultViewHandler(path);
   });
   kifiViewTracker = {
