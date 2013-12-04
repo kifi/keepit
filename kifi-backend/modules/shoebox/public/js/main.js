@@ -461,13 +461,24 @@ $(function () {
 		$input.each(function () {
 			var $this = $(this),
 				val = trimInputValue($this.val());
+			if ($input.prop('disabled')) {
+				return;
+			}
 			if (!val && $this.data('required')) {
+				showError($this, 'This field is required');
 				valid = false;
+			}
+			else if ($this.attr('name') === 'email' && !validateEmailInput($this)) {
+				valid = false;
+			}
+			else {
+				showError($this, false);
 			}
 		});
 
 		if (!valid) {
-			return cancelProfileInput($target, e);
+			return false;
+			//return cancelProfileInput($target, e);
 		}
 
 		$input
@@ -498,6 +509,7 @@ $(function () {
 			.each(function () {
 				var $this = $(this);
 				$this.val(trimInputValue($this.data('value')));
+				showError($this, false);
 			})
 			.prop('disabled', true);
 
@@ -507,6 +519,47 @@ $(function () {
 
 	function trimInputValue(val) {
 		return val ? $.trim(val).replace(/\s+/g, ' ') : '';
+	}
+
+	function getPrimaryEmail() {
+		return me.emails[0] || null;
+	}
+
+	function getPrimaryEmailAddress() {
+		var addr = getPrimaryEmail();
+		return addr && addr[0] || null;
+	}
+
+	function getProfileCopy() {
+		var props = {};
+		for (var i in me) {
+			if (me.hasOwnProperty(i)) {
+				props[i] = me[i];
+			}
+		}
+		props.emails = props.emails && props.emails.slice();
+		return props;
+	}
+
+	function removeEmailInfo(emails, addr) {
+		for (var i = emails.length - 1; i >= 0; i--) {
+			if (emails[i][0] === addr) {
+				emails.splice(i, 1);
+			}
+		}
+	}
+
+	function saveNewPrimaryEmail(email) {
+		if (getPrimaryEmailAddress() === email) {
+			// already primary
+			return false;
+		}
+
+		var props = getProfileCopy();
+		removeEmailInfo(props.emails, email);
+		props.emails.push([email, true]);
+
+		return $.postJson(xhrBase + '/user/me', props);
 	}
 
 	function saveProfileInfo() {
@@ -674,6 +727,8 @@ $(function () {
 		}
 	});
 
+	var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
 	$(document).on('click', '.profile-email-address-add', function (e) {
 		e.preventDefault();
 		var $manage = $(this).closest('.profile-email-address-manage');
@@ -682,38 +737,51 @@ $(function () {
 		$manage.addClass('add');
 		$input.focus();
 		$input.keydown(function (e) {
-			if (e.which === 13) {
-				// enter
+			switch (e.which) {
+			case 13: // enter
 				submitAddEmail.call(this, e);
-			}
-			else if (e.which === 27) {
-				// esc
+				break;
+			case 27: // esc
 				cancelAddEmail.call(this, e);
+				break;
 			}
-			showError($input, 'This is header', 'This is body');
 		});
 	});
 
+	function validateEmailInput($input) {
+		var input = $input.val();
+		if (emailAddrRe.test(input)) {
+			showError($input, false);
+			return true;
+		}
+		showError($input, 'Invalid email address', 'Please enter a valid email address');
+		return false;
+	}
+
 	function showError($input, header, body) {
 		var $parent = $input.parent(),
-			$error = $parent.find('.input-error');
+			$next = $input.next(),
+			hasError = $next.hasClass('input-error');
 		if (header || body) {
 			$input.addClass('error');
-			if ($error.length) {
-				$error.find('.error-header').text(header || '');
-				$error.find('.error-body').text(body || '');
+			if (hasError) {
+				$next.find('.error-header').text(header || '');
+				$next.find('.error-body').text(body || '');
 			}
 			else {
 				var $error = $('<div class="input-error"><div class="error-header">' + (header || '') + '</div><div class="error-body">' + (body || '') + '</div></div>').insertAfter($input);
-				console.log($input.offset().top, $input.height());
 				$error.offset({
-					top: $input.offset().top + $input.outerHeight() + 5
+					top: $input.offset().top + $input.outerHeight() + 5,
+					left: $input.offset().left
 				});
 			}
 		}
 		else {
+			console.log($input[0], hasError, $next[0])
 			$input.removeClass('error');
-			$error.remove();
+			if (hasError) {
+				$next.remove();
+			}
 		}
 	}
 
@@ -725,6 +793,7 @@ $(function () {
 			$input = $box.find('.profile-email-address-add-input');
 		$input.val('');
 		$input.off('keydown');
+		showError($input, false);
 		$manage.removeClass('add');
 	}
 
@@ -733,19 +802,20 @@ $(function () {
 		var $this = $(this),
 			$box = $this.closest('.profile-email-address-add-box'),
 			$manage = $box.closest('.profile-email-address-manage'),
-			$input = $box.find('.profile-email-address-add-input'),
-			email = $input.val();
-		if (addEmailAccount(email)) {
-			$input.val('');
-			$input.off('keydown');
-			$manage.removeClass('add');
+			$input = $box.find('.profile-email-address-add-input');
+		if (validateEmailInput($input)) {
+			if (addEmailAccount($input.val())) {
+				$input.val('');
+				$input.off('keydown');
+				showError($input, false);
+				$manage.removeClass('add');
+			}
 		}
 	}
 
 	$(document).on('click', '.profile-email-address-add-save', submitAddEmail);
 
 	function addEmailAccount(email) {
-		console.log(email);
 		if (email) {
 			return true;
 		}
@@ -870,7 +940,6 @@ $(function () {
 				$this.attr('href', $this.data('href'));
 			}
 		});
-		updateGmailTab();
 
 		$nwFriends.find('ul').empty();
 	}
@@ -2999,19 +3068,6 @@ $(function () {
 		$('.profile-last-name')
 			.val(data.lastName)
 			.outerWidth($lastNamePlace.outerWidth());
-		$friendsTabs.filter('[data-href="friends/invite"]').toggle(true);
-		updateGmailTab();
-		updateConnectTab();
-	}
-
-	function updateGmailTab() {
-		var $button = $('a[data-nw="email"]');
-		$button.attr('href', 'friends/invite/email');
-		$button.attr('data-href', 'friends/invite/email');
-	}
-
-	function updateConnectTab() {
-		$('a[data-href="friends/find"]').toggle(true);
 	}
 
 	function updateFriendRequests(n) {
@@ -3036,11 +3092,6 @@ $(function () {
 			}
 		}).promise()
 	};
-	$.when(promise.me).done(function () {
-		$('#invite-friends-link').toggle(true);
-		updateGmailTab();
-		updateConnectTab();
-	});
 	updateCollections();
 	$.getJSON(xhrBase + '/user/friends/count', function (data) {
 		updateFriendRequests(data.requests);
