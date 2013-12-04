@@ -41,34 +41,26 @@ class TextQuery extends Query with Logging {
     query.setBoost(boost)
     personalQuery = personalQuery match {
       case disjunct: DisjunctionMaxQuery =>
+        totalSubQueryCnt += 1
         disjunct.add(query)
         disjunct
-      case _ => {
+      case _ =>
         log.info("TextQuery: DisjunctionMaxQuery match failed")
-        val disjunct = new DisjunctionMaxQuery(personalQueryTieBreakerMultiplier)
-        disjunct.add(personalQuery)
-        disjunct.add(query)
-        disjunct
-      }
+        personalQuery
     }
-    totalSubQueryCnt += 1
   }
 
   def addRegularQuery(query: Query, boost: Float = 1.0f): Unit = {
     query.setBoost(boost)
     regularQuery = regularQuery match {
       case disjunct: DisjunctionMaxQuery =>
+        totalSubQueryCnt += 1
         disjunct.add(query)
         disjunct
-      case _ => {
+      case _ =>
         log.info("TextQuery: DisjunctionMaxQuery match failed")
-        val disjunct = new DisjunctionMaxQuery(regularQueryTieBreakerMultiplier)
-        disjunct.add(regularQuery)
-        disjunct.add(query)
-        disjunct
-      }
+        regularQuery
     }
-    totalSubQueryCnt += 1
   }
 
   private[this] var collectionIds: Set[Long] = Set()
@@ -103,17 +95,14 @@ class TextQuery extends Query with Logging {
     val query = SemanticVectorQuery(new Term(field, text))
     semanticVectorQuery = semanticVectorQuery match {
       case disjunct: DisjunctionMaxQuery =>
+        totalSubQueryCnt += 1
         disjunct.add(query)
         disjunct
-      case _ => {
+      case _ =>
         log.info("TextQuery: DisjunctionMaxQuery match failed")
-        val disjunct = new DisjunctionMaxQuery(0.0f)
-        disjunct.add(semanticVectorQuery)
-        disjunct.add(query)
-        disjunct
-      }
+        semanticVectorQuery
     }
-    totalSubQueryCnt += 1
+
   }
 
   override def createWeight(searcher: IndexSearcher): Weight = {
