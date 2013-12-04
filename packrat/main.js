@@ -1772,8 +1772,8 @@ function startSession(callback, retryMs) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
+        syncNumUnreadUnmutedThreads();
       }
-      syncNumUnreadUnmutedThreads();
       api.tabs.eachSelected(kifify);
     }, function onDisconnect(why) {
       reportError("socket disconnect (" + why + ")");
