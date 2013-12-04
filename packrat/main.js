@@ -17,8 +17,6 @@ var notificationsCallbacks = [];
 var threadDataCallbacks = {}; // by normalized url
 var threadCallbacks = {}; // by thread ID
 
-var searchKeepWarmIntervalId;
-
 // ===== Cached data from server
 
 var pageData = {}; // keyed by normalized url
@@ -1169,10 +1167,6 @@ function tellTabsUnreadThreadCountIfChanged(td) { // (td, url[, url]...)
   forEachTabAt.apply(null, args);
 }
 
-function searchKeepWarm() {
-  ajax("search", "GET", "/up");
-}
-
 function searchOnServer(request, respond) {
   if (request.first && getPrefetched(request, respond)) return;
 
@@ -1765,13 +1759,6 @@ function startSession(callback, retryMs) {
   function done(data) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
     unstore('logout');
-
-    searchKeepWarm();
-    if (!searchKeepWarmIntervalId){
-      searchKeepWarmIntervalId = setInterval(function(){
-        searchKeepWarm();
-      }, 10000);
-    }
 
     session = data;
     session.prefs = {}; // to come via socket
