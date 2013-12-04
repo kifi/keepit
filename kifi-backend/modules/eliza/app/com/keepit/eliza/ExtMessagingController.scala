@@ -218,9 +218,9 @@ class ExtMessagingController @Inject() (
       val timeLastSeen = messagingController.getNotificationLastSeen(socket.userId).getOrElse(START_OF_TIME).toStandardTimeString
       socket.channel.push(Json.arr("notifications", notices, numUnreadUnmuted, timeLastSeen))
     },
-    "get_notifications_by_url" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
+    "get_page_notifications" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
       messagingController.getSendableNotificationsForUrl(socket.userId, url).map { case (nUriStr, notices) =>
-        socket.channel.push(Json.arr(requestId.toLong, notices, nUriStr))
+        socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices))
       }
     },
     "get_unread_notifications" -> { case JsNumber(howMany) +: _ =>
