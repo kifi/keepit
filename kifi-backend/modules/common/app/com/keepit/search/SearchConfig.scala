@@ -12,6 +12,7 @@ import com.keepit.search.query.StringHash64
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.logging.Logging
 
 object SearchConfig {
   private[search] val defaultParams =
@@ -83,7 +84,7 @@ object SearchConfig {
   def getDescription(name: String) = descriptions.get(name)
 }
 
-class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) {
+class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends Logging {
 
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
@@ -126,10 +127,12 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   private def assignConfig(userId: Id[User], queryText: String, userSegmentValue: Int) = {
     val modulo = userId.id.toLong % 3
     if (userSegmentExperiments.size == 4 && modulo == 0) {
+      log.info(s"search config: user segment value = ${userSegmentValue}. Using experimental parameters.")
       val ex = userSegmentExperiments(userSegmentValue)
       val config = defaultConfig(ex.config.params)
       (config, ex.id)
     } else {
+      log.info(s"search config: user segment value = ${userSegmentValue}. Using default parameters.")
       getConfig(userId, queryText, false)   // assume not excludedFromExperiments
     }
   }
