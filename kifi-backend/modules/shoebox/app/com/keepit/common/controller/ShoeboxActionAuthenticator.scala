@@ -11,7 +11,6 @@ import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.social.{SocialNetworkType, SocialId}
-
 import play.api.mvc._
 import securesocial.core._
 
@@ -110,8 +109,7 @@ class ShoeboxActionAuthenticator @Inject() (
      experiments: Set[ExperimentType], kifiInstallationId: Option[ExternalId[KifiInstallation]],
      newSession: Option[Session], request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = db.readOnly(implicit s => userRepo.get(userId))
-    if (experiments.contains(ExperimentType.BLOCK) ||
-      user.state == UserStates.BLOCKED ||
+    if (user.state == UserStates.BLOCKED ||
       user.state == UserStates.INACTIVE ||
       (!allowPending && (user.state == UserStates.PENDING || user.state == UserStates.INCOMPLETE_SIGNUP))) {
       val message = "user %s access is forbidden".format(userId)

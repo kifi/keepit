@@ -306,6 +306,7 @@ class UserController @Inject() (
 
   @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
 
+  val queryWithABook = sys.props.getOrElse("query.contacts.abook", "true").toBoolean
   private def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
     @inline def mkId(email:String) = s"email/$email"
     val searchTerms = search.toSeq.map(_.split("[@\\s+]")).flatten.filterNot(_.isEmpty).map(normalize)
@@ -333,7 +334,8 @@ class UserController @Inject() (
       } getOrElse ""
     }
 
-    val res = abookServiceClient.getEContacts(userId, 40000000).map { contacts =>
+    val pagedF = if (queryWithABook) abookServiceClient.queryEContacts(userId, limit, search, after)
+    else abookServiceClient.getEContacts(userId, 40000000).map { contacts =>
       val filtered = contacts.filter(e => ((searchScore(e.name.getOrElse("")) > 0) || (searchScore(e.email) > 0)))
       val paged = after match {
         case Some(a) => filtered.dropWhile(e => (mkId(e.email) != a)) match {
@@ -342,13 +344,16 @@ class UserController @Inject() (
         }
         case None => filtered
       }
+      paged
+    }
+
+    pagedF.map { paged =>
       val objs = paged.take(limit).map { e =>
         Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
       }
       log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
       objs
     }
-    res
   }
 
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction {  request =>

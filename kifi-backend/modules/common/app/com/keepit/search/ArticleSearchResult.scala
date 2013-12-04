@@ -44,14 +44,7 @@ case class ArticleSearchResult(
   lang: Lang = Lang("en"))
 
 object ArticleSearchResult extends Logging {
-  implicit val format = new Format[ArticleSearchResult] {
-    def writes(article: ArticleSearchResult) = formatMacro.writes(article)
-    def reads(json: JsValue) = try { formatMacro.reads(json) } catch { case ex: Throwable =>
-      log.error(s"Deserialization error of ArticleSearchResult: $ex \n\n" + json.toString() )
-      throw ex
-    }
-  }
-  private val formatMacro: Format[ArticleSearchResult] = (
+  implicit val format: Format[ArticleSearchResult] = (
     (__ \ 'last).formatNullable(ExternalId.format[ArticleSearchResult]) and // uuid of the last search. the frontend is responsible for tracking and this is meant for sessionization.
     (__ \ 'query).format[String] and
     (__ \ 'hits).format(TraversableFormat.seq[ArticleHit]) and
@@ -68,7 +61,7 @@ object ArticleSearchResult extends Logging {
     (__ \ 'time).format[DateTime] and
     (__ \ 'svVariance).format[Float] and
     (__ \ 'svExistenceVar).format[Float] and
-    (__ \ 'toShow).format[Boolean]((Reads[Boolean](jsValue => JsSuccess(jsValue.asOpt[Boolean].getOrElse(true))))) and
+    (__ \ 'toShow).formatNullable[Boolean].inmap(_.getOrElse(true), Some.apply[Boolean]) and
     (__ \ 'collections).format[Set[Long]] and
     (__ \ 'lang).format[Lang]
   )(ArticleSearchResult.apply, unlift(ArticleSearchResult.unapply))

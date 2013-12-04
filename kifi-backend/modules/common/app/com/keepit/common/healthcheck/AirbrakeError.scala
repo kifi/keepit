@@ -45,7 +45,7 @@ case class AirbrakeError(
 
   lazy val trimmedMessage = message.map(_.toString.abbreviate(AirbrakeError.MaxMessageSize))
   override def toString(): String = {
-    s"${super.toString()}\n${rootException.getStackTrace mkString "\nat \t"}"
+    s"${rootException.toString()}\nat \t${rootException.getStackTrace mkString "\nat \t"}"
   }
 
   private val maxCauseDepth = 5

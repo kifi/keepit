@@ -4,43 +4,81 @@
   'use strict';
 
   var thingsToTrack = {
-    yourKeeps: {
-      selector: '.my-keeps'
-    },
-    yourFriends: {
-      selector: '.my-friends'
-    },
-    installExtension: {
-      selector: '.install-kifi'
-    },
-    tagResults: {
-      selector: '.collection'
-    },
-    kifiBlog: {
-      selector: '.updates-features'
-    },
-    previewKeep: {
+    preview: {
       selector: '.keep'
+    },
+    sendFeedback: {
+      selector: '.send-feedback'
+    },
+    viewTeam: {
+      selector: '.view-team'
+    },
+    viewEngBlog: {
+      selector: '.view-eng-blog'
+    },
+    contactUs: {
+      selector: '.contact-us'
+    },
+    jobs: {
+      selector: '.join-us'
+    },
+    addFriends: {
+      selector: '.add-friends'
+    },
+    inviteFriend: {
+      selector: '.invite-button'
+    },
+    unFriend: {
+      selector: '.friend-status'
+    },
+    hideFriendInSearch: {
+      selector: '.friend-mute'
+    },
+    searchKifi: {
+      selector: '.query',
+      events: 'keypress'
+    },
+    searchContacts: {
+      selector: '.friends-filter',
+      events: 'keypress'
     }
   };
 
-  function trackEvent(properties) {
-    mixpanel.track('beta_clicked_internal_page', properties);
+  var locations = {
+    yourKeeps: /^\/$/,
+    yourFriends: /^\/friends$/,
+    tagResults: /^\/tag/,
+    searchResults: /^\/find/,
+    addFriends: /^\/friends\/(invite|find)$/,
+    requests: /^\/friends\/requests$/,
+    kifiBlog: /^\/blog$/
+  };
+
+  function getLocation() {
+    var path = window.location.pathname;
+    for (var loc in locations){
+      if (locations[loc].test(path)) {
+        return loc;
+      }
+    }
   }
 
-  function defaultHandler(type, spec) {
-    trackEvent({
-      type: type,
-      where: window.location.pathname.slice(1).split('/'),
-      what: spec.selector
+  function trackClick(properties) {
+    mixpanel.track('clicked_internal_page', properties);
+  }
+
+  function defaultClickHandler(action) {
+    trackClick({
+      type: getLocation(),
+      action: action
     });
   }
 
-  for (var type in thingsToTrack) {
-    var spec = thingsToTrack[type];
+  for (var action in thingsToTrack) {
+    var spec = thingsToTrack[action];
     var events = spec.events || 'click';
-    var handler = spec.handler || defaultHandler;
-    $(document).on(events, spec.selector, handler.bind(document, type, spec));
+    var handler = spec.handler || defaultClickHandler;
+    $(document).on(events, spec.selector, handler.bind(document, action));
   }
 
 })();
