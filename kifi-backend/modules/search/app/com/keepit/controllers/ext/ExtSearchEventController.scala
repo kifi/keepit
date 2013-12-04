@@ -88,7 +88,7 @@ class ExtSearchEventController @Inject() (
               resultClickedTracker.moderate(userId, query)
           }
         }
-        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, theOtherGuys, resultPosition, None)
+        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, queryRefinements, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, theOtherGuys, resultPosition, None)
       }
     }
     Ok
