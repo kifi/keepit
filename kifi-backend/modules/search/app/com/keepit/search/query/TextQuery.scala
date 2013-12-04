@@ -23,7 +23,7 @@ object TextQuery {
   val regularQueryTieBreakerMultiplier = 0.5f
 }
 
-class TextQuery extends Query {
+class TextQuery extends Query with Logging {
   import TextQuery._
 
   private var personalQuery: Query = new DisjunctionMaxQuery(personalQueryTieBreakerMultiplier)
@@ -41,32 +41,26 @@ class TextQuery extends Query {
     query.setBoost(boost)
     personalQuery = personalQuery match {
       case disjunct: DisjunctionMaxQuery =>
+        totalSubQueryCnt += 1
         disjunct.add(query)
         disjunct
-      case _ => {
-        val disjunct = new DisjunctionMaxQuery(personalQueryTieBreakerMultiplier)
-        disjunct.add(personalQuery)
-        disjunct.add(query)
-        disjunct
-      }
+      case _ =>
+        log.error("TextQuery: DisjunctionMaxQuery match failed")
+        throw new Exception("Failed to add personal query")
     }
-    totalSubQueryCnt += 1
   }
 
   def addRegularQuery(query: Query, boost: Float = 1.0f): Unit = {
     query.setBoost(boost)
     regularQuery = regularQuery match {
       case disjunct: DisjunctionMaxQuery =>
+        totalSubQueryCnt += 1
         disjunct.add(query)
         disjunct
-      case _ => {
-        val disjunct = new DisjunctionMaxQuery(regularQueryTieBreakerMultiplier)
-        disjunct.add(personalQuery)
-        disjunct.add(query)
-        disjunct
-      }
+      case _ =>
+        log.error("TextQuery: DisjunctionMaxQuery match failed")
+        throw new Exception("Failed to add regular query")
     }
-    totalSubQueryCnt += 1
   }
 
   private[this] var collectionIds: Set[Long] = Set()
@@ -101,16 +95,13 @@ class TextQuery extends Query {
     val query = SemanticVectorQuery(new Term(field, text))
     semanticVectorQuery = semanticVectorQuery match {
       case disjunct: DisjunctionMaxQuery =>
+        totalSubQueryCnt += 1
         disjunct.add(query)
         disjunct
-      case _ => {
-        val disjunct = new DisjunctionMaxQuery(0.0f)
-        disjunct.add(personalQuery)
-        disjunct.add(query)
-        disjunct
-      }
+      case _ =>
+        log.error("TextQuery: DisjunctionMaxQuery match failed")
+        throw new Exception("Failed to add semanticVectorQuery")
     }
-    totalSubQueryCnt += 1
   }
 
   override def createWeight(searcher: IndexSearcher): Weight = {
@@ -252,7 +243,6 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
       val scoreP = if (docP == doc) personalScorer.score() else 0.0f
       val scoreR = if (docR == doc) regularScorer.score() else 0.0f
       val scoreMax = max(scoreP, scoreR)
-      val scoreSum = scoreP + scoreR
       val semScore = semanticScore()
 
       scoreVal = scoreMax * semScore

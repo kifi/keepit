@@ -25,8 +25,7 @@ case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) exten
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin =
-    new ActorPlugin(system)
+  def actorPluginProvider: ActorPlugin = new ActorPlugin(system)
 }
 
 case class StandaloneTestActorSystemModule(system: ActorSystem = ActorSystem("test-actor-system")) extends ActorSystemModule {
@@ -39,7 +38,6 @@ case class StandaloneTestActorSystemModule(system: ActorSystem = ActorSystem("te
 
   @Provides
   def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
-
 }
 
 class FakeScheduler extends Scheduler {

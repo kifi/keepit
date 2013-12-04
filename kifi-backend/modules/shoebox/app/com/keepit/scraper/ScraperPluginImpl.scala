@@ -19,6 +19,7 @@ import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.scraper.extractor.Extractor
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.slick.DBSession.RWSession
 
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
@@ -71,8 +72,8 @@ class ScraperPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    log.info("starting ScraperPluginImpl")
-    scheduleTask(actor.system, 30 seconds, 1 minutes, actor.ref, Scrape)
+    log.info(s"[onStart] starting ScraperPluginImpl with scraperConfig=$scraperConfig}")
+    scheduleTask(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, Scrape)
   }
   override def onStop() {
     log.info("stopping ScraperPluginImpl")
@@ -82,26 +83,20 @@ class ScraperPluginImpl @Inject() (
   override def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]] =
     actor.ref.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
 
-  def scheduleScrape(uri: NormalizedURI): Unit = {
+  def scheduleScrape(uri: NormalizedURI)(implicit session: RWSession): Unit = {
     if (scraperConfig.disableScraperService) {
       actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
     } else {
       val uriId = uri.id.get
-      val (info, proxyOpt) = db.readOnly { implicit s =>
-        val info = scrapeInfoRepo.getByUriId(uriId)
-        val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
-        (info, proxyOpt)
-      }
+      val info = scrapeInfoRepo.getByUriId(uriId)
+      val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
+
       val toSave = info match {
         case Some(s) => s.withState(ScrapeInfoStates.PENDING)
         case None => ScrapeInfo(uriId = uriId, state = ScrapeInfoStates.PENDING)
       }
-      val saved = db.readWrite { implicit s =>
-        scrapeInfoRepo.save(toSave)
-      }
-      log.info(s"[scheduleScrape-WithRequest] invoke (remote) Scraper service; uri=(${uri.id}, ${uri.state}, ${uri.url}, proxy=$proxyOpt)")
-      val f = scraperClient.scheduleScrapeWithRequest(ScrapeRequest(uri, saved, proxyOpt))
-      Await.result(f, 5 seconds) // should be really quick
+      val saved = scrapeInfoRepo.save(toSave)
+      // todo: It may be nice to force trigger a scrape directly
     }
   }
 

@@ -60,6 +60,18 @@ input[type=password] {
 @kifi-green: #9fc062;
 @kifi-blue: #85a4ea;
 
+body.still>.curtain-l,
+body.still>.curtain-r,
+body.still .curtain-logo-l,
+body.still .curtain-logo-r,
+body.still .curtain-welcome-l,
+body.still .curtain-welcome-r,
+body.still .curtain-panel,
+body.still>.curtain-back,
+body.still .pate-title {
+  .transition(none);
+}
+
 // curtains
 @curtain-time: .42s;
 .curtain-l,
@@ -409,6 +421,56 @@ footer {
   &:active {
     background: shade(@bg-color, 10%);
   }
+}
+
+.intro-header {
+  margin: 0 0 24px;
+  text-align: center;
+  font-weight: 300;
+  font-size: 20px;
+  line-height: 24px;
+  color: #5a5a5a;
+}
+a.video-frame {
+  border: 8px solid #aaa;
+  border-radius: 10px;
+}
+.video-still {
+  display: block;
+  width: 325px;
+  height: 182px;
+  font-size: 0;
+  line-height: 0;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.1) url(/assets/img/video-still.jpg);
+  background-size: cover;
+  position: relative;
+}
+.video-still:before {
+  content: ' ';
+  position: absolute;
+  top: 59px;
+  left: 125px;
+  height: 68px;
+  width: 68px;
+  background-color: #6fa6ef;
+  border-radius: 4px;
+}
+.video-still:hover:before,
+.video-still:focus:before {
+  background: #7daff1;
+}
+.video-still:active:before {
+  background: #699ee3;
+}
+.video-still:after {
+  content: ' ';
+  position: absolute;
+  top: 76px;
+  left: 145px;
+  border-style: solid;
+  border-color: transparent #fff;
+  border-width: 17px 0 17px 34px;
 }
 
 // form errors
@@ -1098,11 +1160,11 @@ footer {
 }
 .reset-password .dialog-box:before {
   left: 0;
-  .background-image(linear-gradient(to right, #fff, transparent));
+  .background-image(linear-gradient(to right, #fff, rgba(255,255,255,0)));
 }
 .reset-password .dialog-box:after {
   right: 0;
-  .background-image(linear-gradient(to left, #fff, transparent));
+  .background-image(linear-gradient(to left, #fff, rgba(255,255,255,0)));
 }
 .reset-password-email {
   width: 300px;
@@ -1133,12 +1195,12 @@ footer {
   .reset-password-form {
     .translate(-80%);
     visibility: hidden;
-    .transition(visibility 0 .2s, transform .2s ease-in-out);
+    .transition(visibility 0s .2s, transform .2s ease-in-out);
   }
   .reset-password-success {
     .transform(none);
     visibility: visible;
-    .transition(visibility 0, transform .2s ease-in-out);
+    .transition(visibility 0s, transform .2s ease-in-out);
   }
 }
 .reset-password-addresses {

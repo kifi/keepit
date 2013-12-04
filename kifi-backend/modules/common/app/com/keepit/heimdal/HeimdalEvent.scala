@@ -1,115 +1,24 @@
 package com.keepit.heimdal
 
 import com.keepit.common.time._
-
 import org.joda.time.DateTime
-
-import play.api.mvc.RequestHeader
-import com.google.inject.{Inject, Singleton}
-import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.serializer.{Companion, TypeCode}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.controller.AuthenticatedRequest
 
 
 case class EventType(name: String)
 
 object EventType {
-  implicit val format = Json.format[EventType]
-}
-
-sealed trait ContextData
-case class ContextStringData(value: String) extends ContextData
-case class ContextDoubleData(value: Double) extends ContextData
-
-case class EventContext(data: Map[String, Seq[ContextData]]) extends AnyVal
-
-object EventContext {
-  implicit val format = new Format[EventContext] {
-
-    def reads(json: JsValue): JsResult[EventContext] = {
-      val map = json match {
-        case obj: JsObject => obj.value.mapValues{ value =>
-          val seq : Seq[ContextData] = value match {
-            case arr: JsArray => arr.value.map{
-              case JsNumber(x) => ContextDoubleData(x.doubleValue)
-              case JsString(s) => ContextStringData(s)
-              case _ => return JsError()
-            }
-            case _ => return JsError()
-          }
-          seq
-        }
-        case _ => return JsError()
-      }
-      JsSuccess(EventContext(Map[String, Seq[ContextData]](map.toSeq :_*)))
-    }
-
-    def writes(obj: EventContext) : JsValue = {
-      JsObject(obj.data.mapValues{ seq =>
-        JsArray(seq.map {
-          case ContextStringData(s) => JsString(s)
-          case ContextDoubleData(x) => JsNumber(x)
-        })
-      }.toSeq)
-    }
-
+  implicit val format = new Format[EventType] {
+    def reads(json: JsValue) = JsSuccess(EventType(json.asOpt[String] getOrElse (json \ "name").as[String]))
+    def writes(eventType: EventType) = JsString(eventType.name)
   }
 }
 
-class EventContextBuilder {
-  val data = new scala.collection.mutable.HashMap[String, Seq[ContextData]]()
-
-  def +=(key: String, value: Double) : Unit = {
-    val currentValues = data.getOrElse(key,Seq[ContextData]())
-    data(key) = (currentValues :+ ContextDoubleData(value)).toSet.toSeq
-  }
-
-  def +=(key: String, value: Boolean) : Unit = {
-    if (value) +=(key, 1.0) else +=(key, 0.0)
-  }
-
-  def +=(key: String, value: String) : Unit = {
-    val currentValues = data.getOrElse(key,Seq[ContextData]())
-    data(key) = (currentValues :+ ContextStringData(value)).toSet.toSeq
-  }
-
-  def build : EventContext = {
-    EventContext(Map(data.toSeq:_*))
-  }
-}
-
-@Singleton
-class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) {
-  def apply(request: Option[RequestHeader] = None, ipOpt : Option[String] = None): EventContextBuilder = {
-    val contextBuilder = new EventContextBuilder()
-    contextBuilder += ("serviceVersion", serviceDiscovery.myVersion.value)
-    serviceDiscovery.thisInstance.map { instance =>
-      contextBuilder += ("serviceInstance", instance.instanceInfo.instanceId.id)
-      contextBuilder += ("serviceZone", instance.instanceInfo.availabilityZone)
-    }
-
-    request.map { req =>
-      contextBuilder += ("remoteAddress", ipOpt.getOrElse(req.headers.get("X-Forwarded-For").getOrElse(req.remoteAddress)))
-      contextBuilder += ("userAgent", req.headers.get("User-Agent").getOrElse(""))
-      contextBuilder += ("requestScheme", req.headers.get("X-Scheme").getOrElse(""))
-      contextBuilder += ("doNotTrack", req.headers.get("do-not-track").map(_=="1").getOrElse(false))
-
-      req match {
-        case authRequest: AuthenticatedRequest[_] =>
-          authRequest.kifiInstallationId.foreach { id => contextBuilder += ("kifiInstallationId", id.toString) }
-          authRequest.experiments.foreach { experiment => contextBuilder += ("experiment", experiment.toString) }
-        case _ =>
-      }
-    }
-
-    contextBuilder
-  }
-}
 
 sealed trait HeimdalEvent {
-  val context: EventContext
+  val context: HeimdalContext
   val eventType: EventType
   val time: DateTime
 }
@@ -130,7 +39,7 @@ object HeimdalEvent {
 
 case class UserEvent(
   userId: Long,
-  context: EventContext,
+  context: HeimdalContext,
   eventType: EventType,
   time: DateTime = currentDateTime
 ) extends HeimdalEvent {
@@ -142,7 +51,7 @@ object UserEvent extends Companion[UserEvent] {
   implicit val typeCode = TypeCode("user")
 }
 
-case class SystemEvent(context: EventContext, eventType: EventType, time: DateTime = currentDateTime) extends HeimdalEvent {
+case class SystemEvent(context: HeimdalContext, eventType: EventType, time: DateTime = currentDateTime) extends HeimdalEvent {
   override def toString(): String = s"SystemEvent[type=${eventType.name},time=$time]"
 }
 

@@ -1,4 +1,4 @@
-@(view: String = "", emailAddress: String = "", firstName: String = "", lastName: String = "", picturePath: String = "", network: Option[com.keepit.social.SocialNetworkType] = None, titleText: String = "", titleDesc: String = "")
+@(view: String = "", emailAddress: String = "", firstName: String = "", lastName: String = "", picturePath: String = "", network: Option[com.keepit.social.SocialNetworkType] = None, titleText: String = "", titleDesc: String = "", inviteVideo: Boolean = false)
 
 @import com.keepit.controllers.core.routes.{AuthController => routes}
 
@@ -40,6 +40,12 @@
 @content = {
 <h1 class="main-logo">kifi</h1>
 
+@if(inviteVideo) {
+<h3 class="intro-header">Watch a quick introduction to Kifi</h3>
+<a href="//fast.wistia.net/embed/iframe/arn4nh8il4?popover=true" class="wistia-popover[height=540,playerColor=7b796a,width=960] video-still video-frame"></a>
+<script charset="ISO-8859-1" src="https://fast.wistia.com/assets/external/popover-v1.js" async></script>
+}
+
 <div class="signup"@if(view == "signup" || view == "signup2Email" || view == "signup2Social") { style="display:block"}>
   <form class="signup-1" data-title="Sign up" action="@routes.userPasswordSignup()" novalidate>
     <div class="form-sides">
@@ -65,7 +71,7 @@
     </div>
   </form>
   <p class="terms">
-    By signing up, you agree to Kifi’s <a target="_blank" href="@com.keepit.controllers.website.routes.OnboardingController.tos">Terms of Service</a>.
+    By signing up, you agree to Kifi’s <a target="_blank" href="@com.keepit.controllers.website.routes.HomeController.termsOfService">Terms of Service</a>.
   </p>
 
   <form class="signup-2 signup-2-email" data-title="Finalize your account" action="@routes.userPassFinalizeAccountAction()" novalidate@if(view == "signup2Email") { style="display:block"}>

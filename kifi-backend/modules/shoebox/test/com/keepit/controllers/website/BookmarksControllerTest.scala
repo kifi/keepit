@@ -29,7 +29,6 @@ import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
 import securesocial.core.providers.Token
-import com.keepit.abook.TestABookServiceClientModule
 
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -54,6 +53,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
   )
 
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id
+  def externalIdForCollection(userId: Id[User], name: String): String = forCollection(userId, name).externalId.id
 
   def sourceForTitle(title: String): String = forTitle(title).source.value
 
@@ -67,7 +67,48 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
     }
   }
 
+  def forCollection(userId: Id[User], name: String): Collection = {
+    inject[Database].readWrite { implicit session =>
+      val collections = inject[CollectionRepo].getByUserAndName(userId, name)
+      collections.size === 1
+      collections.head
+    }
+  }
+
   "BookmarksController" should {
+    "allCollections" in  {
+      running(new ShoeboxApplication(controllerTestModules:_*)) {
+        val (user, collections) = inject[Database].readWrite { implicit session =>
+          val user = inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
+          val collections = inject[CollectionRepo].save(Collection(userId = user.id.get, name = "myCollaction1")) ::
+                            inject[CollectionRepo].save(Collection(userId = user.id.get, name = "myCollaction2")) ::
+                            inject[CollectionRepo].save(Collection(userId = user.id.get, name = "myCollaction3")) ::
+                            Nil
+          (user, collections)
+        }
+
+        val path = com.keepit.controllers.website.routes.BookmarksController.allCollections().toString
+        path === "/site/collections/all"
+
+        inject[FakeActionAuthenticator].setUser(user)
+        val controller = inject[BookmarksController]
+        val request = FakeRequest("GET", path)
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        val expected = Json.parse(s"""
+          {"keeps":0,
+           "collections":[
+              {"id":"${externalIdForCollection(user.id.get, "myCollaction3")}","name":"myCollaction3","keeps":0},
+              {"id":"${externalIdForCollection(user.id.get, "myCollaction2")}","name":"myCollaction2","keeps":0},
+              {"id":"${externalIdForCollection(user.id.get, "myCollaction1")}","name":"myCollaction1","keeps":0}
+            ]}
+        """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
     "keepMultiple" in  {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val user = inject[Database].readWrite { implicit session =>

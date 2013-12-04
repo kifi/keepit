@@ -93,6 +93,10 @@ object FortyTwoTypeMappers {
     def apply(profile:BasicProfile) = new IdMapperDelegate[ABookInfo](profile)
   }
 
+  implicit object OAuth2TokenIdTypeMapper extends BaseTypeMapper[Id[OAuth2Token]] {
+    def apply(profile:BasicProfile) = new IdMapperDelegate[OAuth2Token](profile)
+  }
+
   implicit object EmailAddressIdTypeMapper extends BaseTypeMapper[Id[EmailAddress]] {
     def apply(profile:BasicProfile) = new IdMapperDelegate[EmailAddress](profile)
   }
@@ -311,6 +315,10 @@ object FortyTwoTypeMappers {
 
   implicit object LangTypeMapper extends BaseTypeMapper[Lang] {
     def apply(profile: BasicProfile) = new LangMapperDelegate(profile)
+  }
+
+  implicit object OAuth2ProviderMapper extends BaseTypeMapper[OAuth2TokenIssuer] {
+    def apply(profile: BasicProfile) = new OAuth2ProviderMapperDelegate(profile)
   }
 
   implicit object UserNotificationCategoryTypeMapper extends BaseTypeMapper[UserNotificationCategory] {
@@ -651,6 +659,15 @@ class LangMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[Lan
   def zero = Lang("")
   def sourceToDest(value: Lang) = value.lang
   def safeDestToSource(str: String) = Lang(str)
+}
+
+//************************************
+//       OAuth2Provider -> String
+//************************************
+class OAuth2ProviderMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[OAuth2TokenIssuer](profile) {
+  def zero = OAuth2TokenIssuer("")
+  def sourceToDest(value: OAuth2TokenIssuer) = value.name
+  def safeDestToSource(str: String) = OAuth2TokenIssuer(str)
 }
 
 //************************************

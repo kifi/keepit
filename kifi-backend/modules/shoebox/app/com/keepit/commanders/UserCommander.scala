@@ -8,20 +8,26 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.abook.ABookServiceClient
-
 import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, Json, JsValue}
-
-import com.google.inject.Inject
+import com.google.inject.{Singleton, Inject, ImplementedBy}
 import com.keepit.common.net.URI
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Akka
-
 import scala.concurrent.Future
+import com.keepit.common.usersegment.UserSegment
+import com.keepit.common.usersegment.UserSegmentFactory
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
+
+case class UpdatableUserInfo(
+    description: Option[String], emails: Option[Seq[String]],
+    firstName: Option[String] = None, lastName: Option[String] = None)
+
+case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo)
 
 object BasicSocialUser {
   implicit val writesBasicSocialUser = Json.writes[BasicSocialUser]
@@ -29,11 +35,18 @@ object BasicSocialUser {
     BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
 }
 
+object UpdatableUserInfo {
+  implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
+}
+
 class UserCommander @Inject() (
   db: Database,
   userRepo: UserRepo,
+  emailRepo: EmailAddressRepo,
+  userValueRepo: UserValueRepo,
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
+  bookmarkRepo: BookmarkRepo,
   userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   abook: ABookServiceClient) {
@@ -59,7 +72,13 @@ class UserCommander @Inject() (
     } else {
       Seq()
     }
-    basicUsers ++ iNeededToDoThisIn20Minutes
+
+    // This will eventually be a lot more complex. However, for now, tricking the client is the way to go.
+    // ^^^^^^^^^ Unrelated to the offensive code above ^^^^^^^^^
+    val kifiSupport = Seq(
+      BasicUser(ExternalId[User]("742fa97c-c12a-4dcf-bff5-0f33280ef35a"), "Noah, Kifi Help", "", "Vjy5S.jpg"),
+      BasicUser(ExternalId[User]("aa345838-70fe-45f2-914c-f27c865bdb91"), "Tamila, Kifi Help", "", "tmilz.jpg"))
+    basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport
   }
 
   private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
@@ -72,5 +91,24 @@ class UserCommander @Inject() (
 
   def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[JsValue] = {
     abook.uploadContacts(userId, origin, payload)
+  }
+
+  def getUserInfo(userId: Id[User]): Future[BasicUserInfo] = {
+    for {
+      basicUser <- db.readOnlyAsync { implicit s => basicUserRepo.load(userId) }
+      description <- db.readOnlyAsync { implicit s => userValueRepo.getValue(userId, "user_description").getOrElse("") }
+      emails <- db.readOnlyAsync { implicit s => emailRepo.getAllByUser(userId).map(_.address) }
+    } yield {
+      BasicUserInfo(basicUser, UpdatableUserInfo(Some(description), Some(emails)))
+    }
+  }
+
+  def getUserSegment(userId: Id[User]): UserSegment = {
+    val (numBms, numFriends) = db.readOnly{ implicit s =>
+      (bookmarkRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
+    }
+
+    val segment = UserSegmentFactory(numBms, numFriends)
+    segment
   }
 }

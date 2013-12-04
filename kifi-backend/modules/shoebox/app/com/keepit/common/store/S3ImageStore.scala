@@ -206,8 +206,8 @@ class S3ImageStoreImpl @Inject() (
         val userPicture = userPictureRepo.save(UserPicture(userId = userId, name = pictureName, origin = source, attributes = jsonCropAttributes))
         userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id))
       } else {
-        val prevPic = userPictureRepo.get(user.userPictureId.get)
-        if (user.userPictureId.get == prevPic.id.get) {
+        if (user.pictureName.isDefined && user.pictureName.get == pictureName) {
+          val prevPic = userPictureRepo.get(user.userPictureId.get)
           userPictureRepo.save(prevPic) // touch updatedAt
         } else {
           val userPicRecord = userPictureRepo.save(

@@ -2,8 +2,6 @@ package com.keepit.search
 
 import com.amazonaws.services.s3._
 import com.keepit.common.store._
-import play.api.libs.json.Format
-import com.keepit.serializer.ArticleSearchResultSerializer
 import com.keepit.common.db.ExternalId
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
@@ -18,11 +16,17 @@ trait ArticleSearchResultStore extends ObjectStore[ExternalId[ArticleSearchResul
     get(uuid).map(article => getInitialSearchId(article)) getOrElse uuid
 }
 
-class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache, val formatter: Format[ArticleSearchResult] = new ArticleSearchResultSerializer())
+class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache)
   extends S3JsonStore[ExternalId[ArticleSearchResult], ArticleSearchResult] with ArticleSearchResultStore {
 
+  val formatter = ArticleSearchResult.format
   override def getInitialSearchId(uuid: ExternalId[ArticleSearchResult]): ExternalId[ArticleSearchResult] = initialSearchIdCache.getOrElse(InitialSearchIdSearchIdKey(uuid)) { super.getInitialSearchId(uuid) }
   override def get(uuid : ExternalId[ArticleSearchResult]): Option[ArticleSearchResult] =  articleCache.getOrElseOpt(ArticleSearchResultIdKey(uuid)) { super.get(uuid) }
+  override def += (uuidAndArticle: (ExternalId[ArticleSearchResult], ArticleSearchResult)) = {
+    val (uuid, article) = uuidAndArticle
+    articleCache.set(ArticleSearchResultIdKey(uuid), article)
+    super.+=(uuidAndArticle)
+  }
 }
 
 class InMemoryArticleSearchResultStoreImpl extends InMemoryObjectStore[ExternalId[ArticleSearchResult], ArticleSearchResult] with ArticleSearchResultStore
@@ -43,4 +47,4 @@ case class ArticleSearchResultIdKey(uuid: ExternalId[ArticleSearchResult]) exten
 }
 
 class ArticleSearchResultCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[ArticleSearchResultIdKey, ArticleSearchResult](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(ArticleSearchResultSerializer.articleSearchResultSerializer)
+  extends JsonCacheImpl[ArticleSearchResultIdKey, ArticleSearchResult](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)

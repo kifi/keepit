@@ -19,6 +19,7 @@
 )
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
+    <button class="btn" id="reset_mixpanel" onclick="resetMixpanelProfile()">Reset Mixpanel Profile</button>
     <button class="btn" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>
     <button class="btn" onclick="impersonate()">Impersonate User</button>
     <button class="btn" onclick="unimpersonate()">Stop Impersonating</button>
@@ -26,7 +27,7 @@
     <br/>
     <table class="user-summary table table-bordered">
       <tr>
-        <th>Name</th><td>@user.firstName @user.lastName</td>
+        <th>Name</th><td><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, user.externalId)" height=25 width=25>@user.firstName @user.lastName</td>
       </tr>
       <tr>
         <th>Id</th><td>@user.id</td>
@@ -74,9 +75,9 @@
         <th>Experiments</th>
         <td id="experiments" class="form-inline">
           @for(exp <- Seq(ExperimentType.ADMIN, ExperimentType.BLOCK,
-              ExperimentType.NO_SEARCH_EXPERIMENTS, ExperimentType.FAKE, ExperimentType.INACTIVE,
+              ExperimentType.NO_SEARCH_EXPERIMENTS, ExperimentType.DEMO, ExperimentType.FAKE, ExperimentType.INACTIVE,
               ExperimentType.CAN_INVITE, ExperimentType.CAN_MESSAGE_ALL_USERS, ExperimentType.NOT_SENSITIVE,
-              ExperimentType.GMAIL_INVITE, ExperimentType.CAN_CONNECT)) {
+              ExperimentType.GMAIL_INVITE, ExperimentType.CAN_CONNECT, ExperimentType.TSEARCH)) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(experiments.contains(exp)) {checked}>@exp.value
             </label>
@@ -138,9 +139,28 @@
     <br/>
     <h3>Address Book(s)</h3>
     <table class="table table-condensed table-striped">
-        <tr><th>ABookId</th><th>Origin</th><th>State</th><th>OwnerId</th><th>OwnerEmail</th><th>RawInfoLoc</th><th># Contacts</th><th># Processed</th></tr>
+        <tr><th>ABookId</th><th>Origin</th><th>State</th><th>OwnerId</th><th>OwnerEmail</th><th>RawInfoLoc</th><th>OAuth2TokenId</th><th># Contacts</th><th># Processed</th></tr>
         @for(abook <- abookInfos) {
-            <tr><td>@abook.id</td><td>@abook.origin</td><td>@abook.state</td><td>@abook.ownerId</td><td>@abook.ownerEmail</td><td>@abook.rawInfoLoc</td><td>@abook.numContacts</td><td>@abook.numProcessed</td></tr>
+            <tr>
+                <td>@abook.id</td>
+                <td>@abook.origin</td>
+                <td>@abook.state</td>
+                <td>@abook.ownerId</td>
+                <td>@abook.ownerEmail</td>
+                <td>@abook.rawInfoLoc</td>
+                <td>@abook.oauth2TokenId</td>
+                <td>@abook.numContacts</td>
+                <td>@abook.numProcessed</td>
+                @if(experiments.contains(ExperimentType.ADMIN)) {
+                  <td>
+                      <form class="form-inline" style="display:inline" action="/refreshContacts" method="GET">
+                          <input type="hidden" name="abookId"  value=@abook.id>
+                          <input type="hidden" name="provider" value=@abook.origin>
+                          <button type="submit" class="btn">Refresh</button>
+                      </form>
+                  </td>
+                }
+            </tr>
         }
     </table>
   }
@@ -152,7 +172,7 @@
             <tr><th>EContactId</th><th>Name</th><th>Email</th><th>State</th></tr>
             @for(contact <- econtacts) {
             <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td><td>@contact.state</td>
-              @if(experiments.contains(ExperimentType.GMAIL_INVITE)) {
+              @if(experiments.contains(ExperimentType.ADMIN)) {
                 <td>
                     <form class="form-inline" style="display:inline" action="/invite" method="POST">
                         <input type="hidden" name="fullSocialId" value="email/@contact.email">
@@ -171,7 +191,9 @@
   <h3>Import Contacts</h3>
   <h4>Direct Import from Gmail</h4>
   <div>
-      <form class="form-inline" action="@com.keepit.controllers.core.routes.OAuth2Controller.importContacts(None)" method="GET">
+      <form class="form-inline" action="/importContacts" method="GET">
+          <input type="hidden" name="provider" value="google">
+          <input type="hidden" name="approvalPromptOpt" value="force">
           <input type=submit value="Import"> contacts from your GMail account
       </form>
   </div>
@@ -238,6 +260,10 @@
   </form>
 
   <script type="text/javascript">
+    function resetMixpanelProfile() {
+      $("#reset_mixpanel").prop("disabled", true).text("Resetting Mixpanel Profile...");
+      location.href="@com.keepit.controllers.admin.routes.AdminUserController.resetMixpanelProfile(user.id.get)"
+    }
     function refreshAllSocialUserInfo() {
       $("#refresh_sui").prop("disabled", true).text("Refreshing Social User Info...");
       location.href="@com.keepit.controllers.admin.routes.AdminUserController.refreshAllSocialInfo(user.id.get)"

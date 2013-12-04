@@ -26,7 +26,11 @@ GET  /internal/heimdal/:repo/eventDescriptors    @com.keepit.heimdal.controllers
 
 POST /internal/heimdal/:repo/eventDescriptors    @com.keepit.heimdal.controllers.AnalyticsController.updateEventDescriptors(repo: String)
 
-POST /internal/heimdal/user/engage               @com.keepit.heimdal.controllers.AnalyticsController.engageUser
+GET /internal/heimdal/user/delete               @com.keepit.heimdal.controllers.AnalyticsController.deleteUser(userId: Id[User])
+
+POST /internal/heimdal/user/set               @com.keepit.heimdal.controllers.AnalyticsController.setUserProperties(userId: Id[User])
+
+POST /internal/heimdal/user/increment               @com.keepit.heimdal.controllers.AnalyticsController.incrementUserProperties(userId: Id[User])
 
 ->  / common.Routes
 

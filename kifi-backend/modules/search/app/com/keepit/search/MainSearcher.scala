@@ -21,8 +21,6 @@ import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.TextQuery
-import com.keepit.search.query.LuceneExplanationExtractor
-import com.keepit.search.query.LuceneScoreNames
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
@@ -370,22 +368,13 @@ class MainSearcher(
           false
         }
       }
-      // if others have really high score, clear hits from mine and friends (this decision must be made after filtering out orphan URIs)
-      if (queue.size > 0 && highScore < queue.highScore * tailCutting * tailCutting) hits.clear()
       queue.foreach{ h => hits.insert(h) }
     }
 
     var hitList = hits.toSortedList
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
-    val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
-    val svVar = SemanticVariance.svVariance(textQueries, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
-
-    // simple classifier
-    val show = (parsedQuery, personalizedSearcher) match {
-      case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get, svVar)
-      case _ => true
-    }
+    val (show, svVar) = classify(hitList, personalizedSearcher)
 
     // insert a new content if any (after show/no-show classification)
     newContent.foreach { h =>
@@ -406,7 +395,6 @@ class MainSearcher(
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, othersTotal, mayHaveMoreHits, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
         (idFilter.size / numHitsToReturn), idFilter.size, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
-        timeLogs = Some(timeLogs.toSearchTimeLogs),
         collections = parser.collectionIds,
         lang = lang)
   }
@@ -423,14 +411,28 @@ class MainSearcher(
     }
   }
 
-  private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher, svVar: Float) = {
-    def classify(hit: MutableArticleHit) = {
-      (hit.clickBoost) > 1.1f ||
-      hit.scoring.recencyScore > 0.25f ||
-      hit.scoring.textScore > 0.7f ||
-      (hit.scoring.textScore >= 0.02f && svVar < 0.18f)
+  private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: Option[PersonalizedSearcher]) = {
+    def classify(hit: MutableArticleHit, minScore: Float): Boolean = {
+      hit.clickBoost > 1.1f ||
+      (hit.isMyBookmark && hit.scoring.recencyScore > 0.25f) ||
+      hit.scoring.textScore > minScore
     }
-    hitList.take(3).exists(classify(_))
+
+    if (filter.isDefault && isInitialSearch) {
+      val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
+      val svVar = SemanticVariance.svVariance(textQueries, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
+
+      val minScore = (0.9d - (0.7d / (1.0d + pow(svVar.toDouble/0.19d, 8.0d)))).toFloat // don't ask me how I got this formula
+
+      // simple classifier
+      val show = (parsedQuery, personalizedSearcher) match {
+        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => hitList.take(5).exists(classify(_, minScore))
+        case _ => true
+      }
+      (show, svVar)
+    } else {
+      (true, -1f)
+    }
   }
 
   @inline private[this] def getPublicBookmarkCount(id: Long) = uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
@@ -473,7 +475,7 @@ class MainSearcher(
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
   def getBookmarkId(uriId: Id[NormalizedURI]): Long = socialGraphInfo.myUriEdgeAccessor.getBookmarkId(uriId.id)
 
-  def timing() {
+  def timing(): SearchTimeLogs = {
     Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
     Statsd.timing("mainSearch.queryParsing", timeLogs.queryParsing)
     Statsd.timing("mainSearch.phraseDetection", timeLogs.phraseDetection)
@@ -489,6 +491,8 @@ class MainSearcher(
           warmer.addTerms(QueryUtil.getTerms(query))
       }
     }
+
+    timeLogs.toSearchTimeLogs
   }
 }
 

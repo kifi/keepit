@@ -1,6 +1,5 @@
 package com.keepit.shoebox
 
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -33,10 +32,13 @@ import com.keepit.model.UserConnectionIdKey
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
-import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.scraper.HttpRedirect
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.usersegment.UserSegment
+import com.keepit.common.usersegment.UserSegmentFactory
+import com.keepit.common.usersegment.UserSegmentCache
+import com.keepit.common.usersegment.UserSegmentKey
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -100,6 +102,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
   def getUserValue(userId: Id[User], key: String): Future[Option[String]]
   def setUserValue(userId: Id[User], key: String, value: String): Unit
+  def getUserSegment(userId: Id[User]): Future[UserSegment]
+  def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -117,7 +121,11 @@ case class ShoeboxCacheProvider @Inject() (
     userConnectionsCache: UserConnectionIdCache,
     searchFriendsCache: SearchFriendsCache,
     uriByUrlhashCache: NormalizedURIUrlHashCache,
-    userValueCache: UserValueCache)
+    userValueCache: UserValueCache,
+    userConnCountCache: UserConnectionCountCache,
+    userBookmarkCountCache: BookmarkCountCache,
+    userSegmentCache: UserSegmentCache,
+    extensionVersionCache: ExtensionVersionInstallationIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -133,6 +141,12 @@ class ShoeboxServiceClientImpl @Inject() (
   private[this] val consolidateSearchFriendsReq = new RequestConsolidator[SearchFriendsKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
+
+  private def redundantDBConnectionCheck(request: Iterable[_]) {
+    if (request.isEmpty) {
+      airbrakeNotifier.notify("ShoeboxServiceClient: trying to call DB with empty list.")
+    }
+  }
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
     cacheProvider.userExternalIdCache.getOrElseFutureOpt(UserExternalIdKey(id)) {
@@ -234,6 +248,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
+    redundantDBConnectionCheck(userIds)
     val query = userIds.mkString(",")
     call(Shoebox.internal.getUsers(query)).map { r =>
       Json.fromJson[Seq[User]](r.json).get
@@ -262,6 +277,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
     cacheProvider.basicUserCache.bulkGetOrElseFuture(userIds.map{ BasicUserUserIdKey(_) }.toSet){ keys =>
+      redundantDBConnectionCheck(keys)
       val payload = JsArray(keys.toSeq.map(x => JsNumber(x.userId.id)))
       call(Shoebox.internal.getBasicUsers(), payload).map{ res =>
         res.json.as[Map[String, BasicUser]].map{ u =>
@@ -273,11 +289,12 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
+    redundantDBConnectionCheck(userIds)
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
     call(Shoebox.internal.getEmailAddressesForUsers(), payload).map{ res =>
-      res.json.as[Map[String, Seq[String]]]
-      .map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
+      log.info(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
+      res.json.as[Map[String, Seq[String]]].map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
   }
 
@@ -308,6 +325,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
+    redundantDBConnectionCheck(uriIds)
     val query = uriIds.mkString(",")
     call(Shoebox.internal.getNormalizedURIs(query)).map { r =>
       Json.fromJson[Seq[NormalizedURI]](r.json).get
@@ -388,6 +406,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]] = {
+    redundantDBConnectionCheck(userIds)
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
     call(Shoebox.internal.getExperimentsByUserIds(), payload).map{ res =>
@@ -403,6 +422,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = {
+    redundantDBConnectionCheck(collIds)
     call(Shoebox.internal.getCollectionIdsByExternalIds(collIds.mkString(","))).map { r =>
       r.json.as[Seq[Long]].map(Id[Collection](_))
     }
@@ -596,4 +616,25 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def setUserValue(userId: Id[User], key: String, value: String): Unit = { call(Shoebox.internal.setUserValue(userId, key), JsString(value)) }
+
+  def getUserSegment(userId: Id[User]): Future[UserSegment] = {
+    cacheProvider.userSegmentCache.getOrElseFuture(UserSegmentKey(userId)){
+      val friendsCount = cacheProvider.userConnCountCache.get(UserConnectionCountKey(userId))
+      val bmsCount = cacheProvider.userBookmarkCountCache.get(BookmarkCountKey(Some(userId)))
+
+      (friendsCount, bmsCount) match {
+        case (Some(f), Some(bm)) => {
+          val segment =  UserSegmentFactory(bm, f)
+          Future.successful(segment)
+        }
+        case _ => call(Shoebox.internal.getUserSegment(userId)).map { x => Json.fromJson[UserSegment](x.json).get }
+      }
+    }
+  }
+
+  def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String] = {
+    cacheProvider.extensionVersionCache.getOrElseFuture(ExtensionVersionInstallationIdKey(installationId)) {
+      call(Shoebox.internal.getExtensionVersion(installationId)).map(_.json.as[String])
+    }
+  }
 }

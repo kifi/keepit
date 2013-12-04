@@ -12,6 +12,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.concurrent.Future
 import com.keepit.common.db.State
 import com.keepit.model.UserStates._
 import com.keepit.model.ExperimentType
@@ -65,27 +66,32 @@ class UserIndexer(
 
   private def getUsersInfo(fetchSize: Int): Seq[UserInfo] = {
     val usersFuture = shoeboxClient.getUserIndexable(sequenceNumber.value, fetchSize)
-    val userIdsFuture = usersFuture.map{users => users.map(_.id.get)}
-    val basicUsersFuture = userIdsFuture.flatMap{ ids => shoeboxClient.getBasicUsers(ids) }
-    val emailsFuture = userIdsFuture.flatMap{ ids => shoeboxClient.getEmailAddressesForUsers(ids) }
-    val experimentsFuture = userIdsFuture.flatMap{ ids => shoeboxClient.getExperimentsByUserIds(ids) }
 
-    val infoFuture = for {
-      users <- usersFuture
-      userIds <- userIdsFuture
-      basicUsers <- basicUsersFuture
-      emails <- emailsFuture
-      experiments <- experimentsFuture
-    } yield {
-      userIds.zipWithIndex.flatMap{ case (id, idx) =>
-        (basicUsers.get(id), emails.get(id), experiments.get(id)) match {
-          case (Some(basicUser), Some(emails), Some(exps)) => Some(UserInfo(users(idx), basicUser, emails, exps.toSeq))
-          case _ => None
+    val infoFuture = usersFuture.flatMap{ users =>
+      if (users.isEmpty) Future.successful(Seq[UserInfo]())
+      else {
+        val userIds = users.map(_.id.get)
+        val basicUsersFuture = shoeboxClient.getBasicUsers(userIds)
+        val emailsFuture = shoeboxClient.getEmailAddressesForUsers(userIds)
+        val experimentsFuture = shoeboxClient.getExperimentsByUserIds(userIds)
+
+        val infoFuture = for {
+          basicUsers <- basicUsersFuture
+          emails <- emailsFuture
+          experiments <- experimentsFuture
+        } yield {
+          users.flatMap{ user =>
+            val id = user.id.get
+            (basicUsers.get(id), emails.get(id), experiments.get(id)) match {
+              case (Some(basicUser), Some(emails), Some(exps)) => Some(UserInfo(user, basicUser, emails, exps.toSeq))
+              case _ => None
+            }
+          }
         }
+        infoFuture
       }
     }
-
-    Await.result(infoFuture, 180 seconds)
+    Await.result(infoFuture, 5 seconds)
   }
 
   def buildIndexable(user: User, basicUser: BasicUser, emails: Seq[String], experiments: Seq[ExperimentType]): UserIndexable = {

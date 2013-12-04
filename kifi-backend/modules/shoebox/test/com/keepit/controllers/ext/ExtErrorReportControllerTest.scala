@@ -19,6 +19,7 @@ import securesocial.core._
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
 
+
 class ExtErrorReportControllerTest extends Specification with ShoeboxApplicationInjector {
 
   def fakeRequest(json: JsValue) = {

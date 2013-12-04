@@ -2,9 +2,13 @@ package com.keepit.common.store
 
 import com.keepit.inject.AppScoped
 import com.google.inject.{Provider, Provides, Singleton}
-import play.api.Play._
-import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.AccessLog
+import com.keepit.common.time.Clock
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
+import play.api.Play._
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def configure() {
@@ -21,10 +25,18 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
 
   @Singleton
   @Provides
-  def socialUserRawInfoStore(amazonS3Client: AmazonS3): SocialUserRawInfoStore = {
+  def socialUserRawInfoStore(amazonS3Client: AmazonS3, acessLog: AccessLog): SocialUserRawInfoStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.social.bucket").get)
-    new S3SocialUserRawInfoStoreImpl(bucketName, amazonS3Client)
+    new S3SocialUserRawInfoStoreImpl(bucketName, amazonS3Client, acessLog)
   }
+
+  @Singleton
+  @Provides
+  def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
+      airbrake: AirbrakeNotifier, clock: Clock, config: S3ImageConfig): S3ScreenshotStore = {
+    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, config)
+  }
+
 }
 
 case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule()) {
@@ -39,8 +51,15 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
 
   @Singleton
   @Provides
-  def socialUserRawInfoStore(amazonS3ClientProvider: Provider[AmazonS3]): SocialUserRawInfoStore =
+  def socialUserRawInfoStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): SocialUserRawInfoStore =
     whenConfigured("amazon.s3.social.bucket")(
-      prodStoreModule.socialUserRawInfoStore(amazonS3ClientProvider.get)
+      prodStoreModule.socialUserRawInfoStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemorySocialUserRawInfoStoreImpl())
+
+  @Singleton
+  @Provides
+  def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
+      airbrake: AirbrakeNotifier, clock: Clock, config: S3ImageConfig): S3ScreenshotStore = {
+    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, config)
+  }
 }

@@ -234,7 +234,7 @@ a.undo-link[href]:hover {text-decoration: underline}
 .friends-tabs>a[data-href="friends/requests"]:not([href]) {border-color: #e74c3c}
 .friends-tabs>a[href]:not(:hover) {color: #67829c}
 .friends-tabs>a[href]:focus {border-color: #e3e6ee}
-.friend-req-count {background: #b6d177; border-radius: 50%; color: #fff; font-size: 12px; font-weight: normal; line-height: 16px; width: 16px; text-align: center; position: absolute; top: 12px; right: 8px}
+.friend-req-count {background: #b6d177; border-radius: 15px; color: #fff; font-size: 12px; font-weight: normal; line-height: 16px; text-align: center; position: absolute; top: -10px; padding: 0px 4px; right: -6px }
 .friend-req-count:empty {display: none}
 
 .above-friends-list {padding-bottom: 20px; border-bottom: 1px solid #e3e6ee; position: relative; z-index: 1; -webkit-transition: border-bottom-color .3s ease-out; transition: border-bottom-color .3s ease-out}
@@ -479,12 +479,12 @@ body[data-view=search] .main-keeps {top: 108px}
 .keep-hover-button-wrapper {display: none; position: absolute; right: 0; top: 0; height: 100%; width: 1px}
 .keep-hover-button-table {display: table; width: 100%; height: 100%}
 .keep-hover-button-cell {display: table-cell; vertical-align: middle}
-.keep-hover-button {font-size: 11px; color: #9ea3ad; background: #eff2f7; padding: 7px 12px; border: 1px solid #f4f6f9; border-radius: 9px; position: absolute; right: 16px; cursor: pointer; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
+.keep-hover-button {font-size: 11px; color: #fff; background: #67829c; padding: 7px 12px; border: 1px solid #f4f6f9; border-radius: 9px; position: absolute; right: 16px; cursor: pointer; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
 .keep .keep-button-close {display: none}
 .keep:hover .keep-hover-button-wrapper {display: block}
 .keep.detailed .keep-button-preview {display: none}
 .keep.detailed .keep-button-close {display: block}
-.keep.detailed .keep-hover-button {background: #e3e6ee;}
+.keep.detailed .keep-hover-button {background: #67829c;}
 .keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
 .keep>.handle:hover,
 .keep.detailed>.handle,
@@ -579,6 +579,7 @@ body[data-view=search] .main-keeps {top: 108px}
 .about-kifi>li:nth-child(3)>a::before {background-position: 0 -48px}
 .about-kifi>li:nth-child(4)>a::before {background-position: 0 -72px}
 .about-kifi>li:nth-child(5)>a::before {background-position: 0 -96px}
+html[data-kifi-ext] .install-kifi {display: none}
 .about-us>li:first-child>a::before {background-position: 0 -120px}
 .about-us>li:nth-child(2)>a::before {background-position: 0 -144px}
 .about-us>li:nth-child(3)>a::before {background-position: 0 -168px}

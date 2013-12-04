@@ -1,19 +1,18 @@
 package com.keepit.common.store
 
 import com.keepit.common.logging.Logging
+import com.keepit.common.logging.Access.S3
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.strings._
-
 import com.amazonaws.services.s3._
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.S3Object
-import play.api.libs.json.Json
-import play.api.libs.json.Format
+import play.api.libs.json._
 import play.api.Play.current
 import play.api.Logger
 import play.api.Play
-
 import java.io._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.serializer.BinaryFormat
@@ -26,6 +25,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
 
   val bucketName: S3Bucket
   val amazonS3Client: AmazonS3
+  val accessLog: AccessLog
 
   protected def unpackValue(s3Obj : S3Object) : B
   protected def packValue(value : B) : (InputStream, ObjectMetadata)
@@ -46,12 +46,10 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
       throw ex
   }
 
-  private lazy val accessLog = Logger("com.keepit.access")
-
   def += (kv: (A, B)) = {
-    val startTime = System.currentTimeMillis
     kv match {
       case (key, value) =>
+        val timer = accessLog.timer(S3)
         doWithS3Client("adding an item to S3Store"){ s3Client =>
           val (inputStream, metadata) = packValue(value)
           try {
@@ -74,24 +72,22 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
             try { inputStream.close() } catch {case e: Exception => log.error("error closing content stream.", e)}
           }
         }
-      val millis = System.currentTimeMillis - startTime
-      accessLog.info(s"""[S3] [${bucketName.name}] PUT $key took [${millis}ms]""")
+        accessLog.add(timer.done(space = bucketName.name, key = key.toString, result = "PUT"))
     }
     this
   }
 
   def -= (key: A) = {
-    val startTime = System.currentTimeMillis
+    val timer = accessLog.timer(S3)
     doWithS3Client("removing an item from S3BStore"){ s3Client =>
       Some(s3Client.deleteObject(bucketName, idToKey(key)))
     }
-    val millis = System.currentTimeMillis - startTime
-    accessLog.info(s"""[S3] [${bucketName.name}] DEL $key took [${millis}ms]""")
+    accessLog.add(timer.done(space = bucketName.name, key = key.toString, result = "DEL"))
     this
   }
 
   def get(id: A): Option[B] = {
-    val startTime = System.currentTimeMillis
+    val timer = accessLog.timer(S3)
     doWithS3Client("getting an item from S3BStore"){ s3Client =>
       val key = idToKey(id)
       val s3obj = try {
@@ -100,20 +96,20 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
         case e: AmazonS3Exception if (e.getMessage().contains("The specified key does not exist")) => None
       }
       val value = s3obj map unpackValue
-      val millis = System.currentTimeMillis - startTime
-      accessLog.info(s"""[S3] [${bucketName.name}] GET $key took [${millis}ms]""")
+      accessLog.add(timer.done(space = bucketName.name, key = key.toString, result = "GET"))
       value
     }
   }
 
 }
 
+class S3ObjectJsonParsinException(message: String) extends Exception(message)
+
 trait S3JsonStore[A,B] extends S3ObjectStore[A, B] {
 
   protected val formatter: Format[B]
 
   protected def idToKey(id: A): String = "%s%s.json".format(keyPrefix, id.toString)
-
 
   protected def packValue(value: B) = {
     val metadata = new ObjectMetadata()
@@ -125,12 +121,15 @@ trait S3JsonStore[A,B] extends S3ObjectStore[A, B] {
     (inputStream, metadata)
   }
 
-  protected def unpackValue(s3obj: S3Object) = {
+  protected def unpackValue(s3obj: S3Object): B = {
     val is = s3obj.getObjectContent
     try {
       val jsonString = scala.io.Source.fromInputStream(is, UTF8).getLines().mkString("\n")
-      val json = Json.parse(jsonString)
-      formatter.reads(json).get
+      formatter.reads(Json.parse(jsonString)) match {
+        case json: JsSuccess[B] => json.get
+        case JsError(errors) =>
+          throw new S3ObjectJsonParsinException(s"[${s3obj.getBucketName()}(${s3obj.getKey()})] Error parsing [$jsonString]: ${errors mkString ","}")
+      }
     } finally {
       is.close
     }
@@ -153,7 +152,7 @@ trait S3BlobStore[A,B] extends S3ObjectStore[A,B] {
     (inputStream, metadata)
   }
 
-  protected def unpackValue(s3Obj: S3Object) = {
+  protected def unpackValue(s3Obj: S3Object): B = {
       val size  = s3Obj.getObjectMetadata().getContentLength()
       val dataStream  = s3Obj.getObjectContent()
       try{

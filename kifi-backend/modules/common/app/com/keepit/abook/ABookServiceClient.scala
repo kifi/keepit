@@ -17,10 +17,13 @@ import play.api.libs.json.{JsValue, JsArray, Json, JsObject}
 
 import com.google.inject.Inject
 import com.keepit.common.routes.ABook
+import scala.util.{Success, Failure, Try}
+import play.api.http.Status
 
 trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
+  def importContactsP(userId:Id[User], oauth2Token:OAuth2Token):Future[JsValue]
   def importContacts(userId:Id[User], provider:String, accessToken:String):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
@@ -33,6 +36,9 @@ trait ABookServiceClient extends ServiceClient {
   def getEContactByEmail(userId:Id[User], email:String):Future[Option[EContact]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[JsValue]
+  def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
+  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName:Option[String], lastName:Option[String]):Future[Try[EContact]]
+  def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
 }
 
 
@@ -43,8 +49,12 @@ class ABookServiceClientImpl @Inject() (
 )
   extends ABookServiceClient with Logging {
 
+  def importContactsP(userId: Id[User], oauth2Token:OAuth2Token): Future[JsValue] = {
+    call(ABook.internal.importContactsP(userId), Json.toJson(oauth2Token), timeout = 30000).map { r => r.json }
+  }
+
   def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = {
-    call(ABook.internal.importContacts(userId, provider, accessToken)).map { r => r.json }
+    call(ABook.internal.importContacts(userId, provider, accessToken), timeout = 30000).map { r => r.json }
   }
 
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {
@@ -108,6 +118,28 @@ class ABookServiceClientImpl @Inject() (
       r.json
     }
   }
+
+  def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = {
+    call(ABook.internal.getOAuth2Token(userId, abookId)).map { r =>
+      if (r.json == null) None // TODO: revisit
+      else r.json.as[Option[OAuth2Token]]
+    }
+  }
+
+  def getOrCreateEContact(userId: Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String]): Future[Try[EContact]] = {
+    call(ABook.internal.getOrCreateEContact(userId, email, name, firstName, lastName)).map { r =>
+      r.status match {
+        case Status.OK => Success(r.json.as[EContact])
+        case _ => Failure(new IllegalArgumentException(r.body)) // can do better
+      }
+    }
+  }
+
+  def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = {
+    call(ABook.internal.queryEContacts(userId, limit, search, after)).map { r =>
+      Json.fromJson[Seq[EContact]](r.json).get
+    }
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ABookServiceClient {
@@ -115,6 +147,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
+
+  def importContactsP(userId: Id[User], oauth2Token: OAuth2Token): Future[JsValue] = ???
 
   def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = ???
 
@@ -140,4 +174,9 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
 
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue): Future[JsValue] = ???
 
+  def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
+
+  def getOrCreateEContact(userId: Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String]): Future[Try[EContact]] = ???
+
+  def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
 }

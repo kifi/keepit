@@ -10,11 +10,13 @@ import com.keepit.search.index.VolatileIndexDirectoryImpl
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import org.apache.lucene.index.IndexWriter
+import scala.math.{log, abs}
 
 class TermStatsReaderTest extends Specification {
 
   val articles = Seq("abc abc abc", "abc def", "abc abd deg xyz")
   val analyzer = DefaultAnalyzer.forIndexing
+  val EPSILON = 1e-8f
 
   def mkDoc(content: String) = {
     val doc = new Document()
@@ -22,6 +24,10 @@ class TermStatsReaderTest extends Specification {
     doc.add(new Field("c", ts, new FieldType(TextField.TYPE_NOT_STORED)))
     doc
   }
+
+   def log2(x: Double) = log(x)/log(2)
+
+   def idf(docFreq: Int, numDocs: Int): Float = 1f + log2(numDocs.toFloat/(1f + docFreq)).toFloat
 
   "TermStatsReader" should {
     "read simple stats" in {
@@ -36,10 +42,12 @@ class TermStatsReaderTest extends Specification {
       var stats = statsReader.getSimpleTermStats("abc")
       stats.docFreq === 3
       stats.docIds === Set(0,1,2)
+      abs(stats.idf - idf(3, 3)) < EPSILON === true
 
       stats = statsReader.getSimpleTermStats("xyz")
       stats.docFreq === 1
       stats.docIds === Set(2)
+      abs(stats.idf - idf(1, 3)) < EPSILON === true
     }
 
     "retrieve docs and positions for liveDocs" in {

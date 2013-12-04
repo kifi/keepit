@@ -20,13 +20,14 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, JsValue}
 import com.keepit.common.db.{ExternalId, Id}
 import com.newrelic.api.agent.Trace
 import play.modules.statsd.api.Statsd
 import scala.concurrent.Promise
 import play.api.mvc.AnyContent
 import com.keepit.heimdal.SearchAnalytics
+import play.api.mvc.Request
 
 class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -41,8 +42,11 @@ class ExtSearchController @Inject() (
     private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
-  @Trace
-  def search(
+  private def doSearch(
+    request: Request[AnyContent],
+    userId: Id[User],
+    acceptLangs: Seq[String],
+    noSearchExperiments: Boolean,
     query: String,
     filter: Option[String],
     maxHits: Int,
@@ -52,13 +56,9 @@ class ExtSearchController @Inject() (
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
-    coll: Option[String] = None) = AuthenticatedJsonAction { request =>
+    coll: Option[String] = None) : JsValue = {
 
     val timing = new SearchTiming
-
-    val userId = request.userId
-    val acceptLangs = request.request.acceptLanguages.map(_.code)
-    val noSearchExperiments = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
     // fetch user data in background
     val prefetcher = fetchUserDataInBackground(userId)
@@ -83,7 +83,7 @@ class ExtSearchController @Inject() (
         else SearchFilter.default(context)
     }
 
-    val (config, searchExperimentId) = searchConfigManager.getConfig(userId, query, noSearchExperiments)
+    val (config, searchExperimentId) = searchConfigManager.getConfigByUserSegment(userId, query, noSearchExperiments)
 
     val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
 
@@ -115,10 +115,10 @@ class ExtSearchController @Inject() (
 
     SafeFuture {
       // stash timing information
-      searcher.timing()
+      val timeLogs = searcher.timing()
 
       try {
-        reportSearch(request,kifiVersion, maxHits, searchFilter, searchExperimentId, searchRes)
+        reportSearch(userId, request, kifiVersion, maxHits, searchFilter, searchExperimentId, searchRes)
       } catch {
         case e: Throwable => log.error("Could not report search %s".format(res), e)
       }
@@ -131,10 +131,7 @@ class ExtSearchController @Inject() (
 
       log.info(timing.toString)
 
-      val searchDetails = searchRes.timeLogs match {
-        case Some(timelog) => "main-search detail: " + timelog.toString
-        case None => "main-search detail: N/A"
-      }
+      val searchDetails =  "main-search details: " + timeLogs.toString
       log.info(searchDetails)
 
       val timeLimit = 1000
@@ -147,7 +144,51 @@ class ExtSearchController @Inject() (
       }
     }
 
-    Ok(Json.toJson(res)).withHeaders("Cache-Control" -> "private, max-age=10")
+    Json.toJson(res)
+
+  }
+
+  def internalSearch(
+    userId: Long,
+    noSearchExperiments: Boolean,
+    acceptLangs: String,
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    kifiVersion: Option[KifiVersion] = None,
+    start: Option[String] = None,
+    end: Option[String] = None,
+    tz: Option[String] = None,
+    coll: Option[String] = None) = Action { request =>
+
+    val res = doSearch(request, Id[User](userId), acceptLangs.split(","), noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, kifiVersion, start, end, tz, coll)
+
+    Ok(res).withHeaders("Cache-Control" -> "private, max-age=10")
+  }
+
+
+  def search(
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    kifiVersion: Option[KifiVersion] = None,
+    start: Option[String] = None,
+    end: Option[String] = None,
+    tz: Option[String] = None,
+    coll: Option[String] = None) = AuthenticatedJsonAction { request =>
+
+
+    val userId = request.userId
+    val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
+    val noSearchExperiments : Boolean = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
+
+    val res = doSearch(request, userId, acceptLangs, noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, kifiVersion, start, end, tz, coll)
+
+    Ok(res).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
   //external (from the extension/website)
@@ -218,7 +259,8 @@ class ExtSearchController @Inject() (
   }
 
   private def reportSearch(
-    request: AuthenticatedRequest[AnyContent],
+    userId: Id[User],
+    request: Request[AnyContent],
     kifiVersion: Option[KifiVersion],
     maxHits: Int,
     searchFilter: SearchFilter,
@@ -226,7 +268,7 @@ class ExtSearchController @Inject() (
     res: ArticleSearchResult) {
 
     articleSearchResultStore += (res.uuid -> res)
-    searchAnalytics.performedSearch(request, kifiVersion, maxHits, searchFilter, searchExperiment, res)
+    searchAnalytics.performedSearch(userId, request, kifiVersion, maxHits, searchFilter, searchExperiment, res)
   }
 
   class SearchTiming{

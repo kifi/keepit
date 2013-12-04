@@ -39,7 +39,16 @@ import com.keepit.social.SocialId
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
-case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User], experiments: Set[ExperimentType], extVersion: Option[String])
+case class SocketInfo(
+  id: Long,
+  channel: Concurrent.Channel[JsArray],
+  connectedAt: DateTime,
+  userId: Id[User],
+  experiments: Set[ExperimentType],
+  extVersion: Option[String],
+  userAgent: String,
+  var ip: Option[String]
+)
 
 
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
@@ -157,12 +166,13 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     authenticate(request) match {
       case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
         implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
-        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt)
-        val handlers = websocketHandlers(socketInfo)
         val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
         val ipOpt : Option[String] = eipOpt.flatMap{ eip =>
           crypt.decrypt(ipkey, eip).toOption
         }
+        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
+        val handlers = websocketHandlers(socketInfo)
+
 
         onConnect(socketInfo)
 
@@ -172,12 +182,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         }
         //Analytics
         SafeFuture {
-          val contextBuilder = userEventContextBuilder(Some(request), ipOpt)
-          streamSession.experiments.foreach{ experiment =>
-            contextBuilder += ("experiment", experiment.toString)
-          }
-          versionOpt.foreach{ version => contextBuilder += ("extVersion", version) }
-          heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, EventType("ws_connect"), tStart))
+          val context = authenticatedWebSocketsContextBuilder(request, ipOpt, streamSession, versionOpt).build
+          heimdal.trackEvent(UserEvent(streamSession.userId.id, context, EventType("ws_connect"), tStart))
         }
 
         def endSession(reason: String)(implicit channel: Concurrent.Channel[JsArray]) = {
@@ -191,12 +197,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           onDisconnect(socketInfo)
           //Analytics
           SafeFuture {
-            val contextBuilder = userEventContextBuilder(Some(request), ipOpt)
-            streamSession.experiments.foreach{ experiment =>
-              contextBuilder += ("experiment", experiment.toString)
-            }
-            versionOpt.foreach{ version => contextBuilder += ("extVersion", version) }
-            heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, EventType("ws_disconnect"), tStart))
+            val context = authenticatedWebSocketsContextBuilder(request, ipOpt, streamSession, versionOpt).build
+            heimdal.trackEvent(UserEvent(streamSession.userId.id, context, EventType("ws_disconnect"), tStart))
           }
         }
 
@@ -233,6 +235,14 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
       }
     }
+  }
+
+  private def authenticatedWebSocketsContextBuilder(request: RequestHeader, remoteAddress: Option[String], streamSession: StreamSession, extensionVersion: Option[String]) = {
+    val contextBuilder = userEventContextBuilder(request, remoteAddress)
+    contextBuilder.addExperiments(streamSession.experiments)
+    contextBuilder.addUserAgent(streamSession.userAgent)
+    extensionVersion.foreach{ version => contextBuilder += ("extensionVersion", version) }
+    contextBuilder
   }
 
 }

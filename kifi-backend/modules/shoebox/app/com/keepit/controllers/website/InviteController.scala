@@ -29,6 +29,7 @@ import com.keepit.abook.ABookServiceClient
 import play.api.mvc.Cookie
 import com.keepit.social.SocialId
 import com.keepit.model.Invitation
+import scala.util.Success
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -117,11 +118,11 @@ class InviteController @Inject() (db: Database,
         CloseWindow()
       } else if (fullSocialId(0) == "email") {
         log.info(s"[inviteConnection-email] inviting: ${fullSocialId(1)}")
-        val econtactOptF = abookServiceClient.getEContactByEmail(request.userId, fullSocialId(1))
+        val econtactTrF = abookServiceClient.getOrCreateEContact(request.userId, fullSocialId(1), None, None, None)
         Async {
-          econtactOptF.map { econtactOpt =>
-            econtactOpt match {
-              case Some(c) => {
+          econtactTrF.map { econtactTr =>
+            econtactTr match {
+              case Success(c) => {
                 val inviteOpt = invitationRepo.getBySenderIdAndRecipientEContactId(request.userId, c.id.get)
                 log.info(s"[inviteConnection-email] inviteOpt=$inviteOpt")
                 inviteOpt match {
@@ -146,8 +147,8 @@ class InviteController @Inject() (db: Database,
                   }
                 }
               }
-              case None => {
-                log.warn(s"[inviteConnection-email] cannot locate econtact entry for ${fullSocialId(1)}")
+              case _ => {
+                log.warn(s"[inviteConnection-email] cannot locate or create econtact entry for ${fullSocialId(1)}")
               }
             }
             CloseWindow()
@@ -225,7 +226,8 @@ class InviteController @Inject() (db: Database,
                   Ok(views.html.auth.auth(
                     "signup",
                     titleText = s"${name}, join ${inviterUserOpt.get.firstName} on Kifi!",
-                    titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUserOpt.get.firstName}'s invite."
+                    titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUserOpt.get.firstName}'s invite.",
+                    inviteVideo = true
                   )).withCookies(Cookie("inv", invite.externalId.id))
                 case None =>
                   log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")

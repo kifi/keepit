@@ -89,7 +89,9 @@ class InviteCommander @Inject() (
           connectInvitedUsers(userId, invite)
           if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
             invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-            notifyAdminsAboutNewSignupRequest(userId, su.fullName)
+            if (invite.senderUserId.isEmpty) {
+              notifyAdminsAboutNewSignupRequest(userId, su.fullName)
+            }
           }
         }
       }

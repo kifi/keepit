@@ -10,7 +10,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail, LocalPostOffice}
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders._
 import com.keepit.model._
 import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
@@ -25,11 +25,12 @@ import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.{AtomicInteger, AtomicBoolean}
 import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.common.akka.SafeFuture
 import play.api.Play
 import com.keepit.social.SocialNetworks
+import com.keepit.eliza.ElizaServiceClient
 
 class UserController @Inject() (
   db: Database,
@@ -47,6 +48,7 @@ class UserController @Inject() (
   searchFriendRepo: SearchFriendRepo,
   postOffice: LocalPostOffice,
   userCommander: UserCommander,
+  elizaServiceClient: ElizaServiceClient,
   clock: Clock,
   abookServiceClient: ABookServiceClient
 ) extends WebsiteController(actionAuthenticator) {
@@ -115,8 +117,24 @@ class UserController @Inject() (
           Ok(Json.obj("success" -> true, "alreadySent" -> true))
         } else {
           friendRequestRepo.getBySenderAndRecipient(user.id.get, request.userId) map { friendReq =>
+            val socialUser1 = socialUserRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
+            val socialUser2 = socialUserRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
+            for {
+              su1 <- socialUser1
+              su2 <- socialUser2
+            } yield {
+              socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
+                case Some(sc) =>
+                  socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
+                case None =>
+                  socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
+              }
+            }
             userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
-            // TODO(greg): trigger notification?
+
+            elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
+            elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
+
             Ok(Json.obj("success" -> true, "acceptedRequest" -> true))
           } getOrElse {
             friendRequestRepo.save(FriendRequest(senderId = request.userId, recipientId = user.id.get))
@@ -196,12 +214,11 @@ class UserController @Inject() (
     }
   }
 
-  def currentUser = AuthenticatedJsonAction(true) { implicit request => getUserInfo(request) }
-
-  private case class UpdatableUserInfo(
-      description: Option[String], emails: Option[Seq[String]],
-      firstName: Option[String] = None, lastName: Option[String] = None)
-  private implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
+  def currentUser = AuthenticatedJsonAction(true) { implicit request =>
+    Async {
+      getUserInfo(request)
+    }
+  }
 
   def updateCurrentUser() = AuthenticatedJsonToJsonAction(true) { implicit request =>
     request.body.asOpt[UpdatableUserInfo] map { userData =>
@@ -224,21 +241,20 @@ class UserController @Inject() (
           }
         }
       }
-      getUserInfo(request)
+      Async {
+        getUserInfo(request)
+      }
     } getOrElse {
       BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
   }
 
   private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
-    val basicUser = db.readOnly { implicit s => basicUserRepo.load(request.userId) }
-    val info = db.readOnly { implicit s =>
-      UpdatableUserInfo(
-        description = Some(userValueRepo.getValue(request.userId, "user_description").getOrElse("")),
-        emails = Some(emailRepo.getAllByUser(request.userId).map(_.address))
-      )
+    userCommander.getUserInfo(request.userId) map { user =>
+      Ok(toJson(user.basicUser).as[JsObject] ++
+         toJson(user.info).as[JsObject] ++
+         Json.obj("experiments" -> request.experiments.map(_.value)))
     }
-    Ok(toJson(basicUser).as[JsObject] ++ toJson(info).as[JsObject] ++ Json.obj("experiments" -> request.experiments.map(_.value)))
   }
 
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed")
@@ -290,6 +306,7 @@ class UserController @Inject() (
 
   @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
 
+  val queryWithABook = sys.props.getOrElse("query.contacts.abook", "true").toBoolean
   private def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
     @inline def mkId(email:String) = s"email/$email"
     val searchTerms = search.toSeq.map(_.split("[@\\s+]")).flatten.filterNot(_.isEmpty).map(normalize)
@@ -317,7 +334,8 @@ class UserController @Inject() (
       } getOrElse ""
     }
 
-    val res = abookServiceClient.getEContacts(userId, 40000000).map { contacts =>
+    val pagedF = if (queryWithABook) abookServiceClient.queryEContacts(userId, limit, search, after)
+    else abookServiceClient.getEContacts(userId, 40000000).map { contacts =>
       val filtered = contacts.filter(e => ((searchScore(e.name.getOrElse("")) > 0) || (searchScore(e.email) > 0)))
       val paged = after match {
         case Some(a) => filtered.dropWhile(e => (mkId(e.email) != a)) match {
@@ -326,13 +344,16 @@ class UserController @Inject() (
         }
         case None => filtered
       }
+      paged
+    }
+
+    pagedF.map { paged =>
       val objs = paged.take(limit).map { e =>
         Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
       }
       log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
       objs
     }
-    res
   }
 
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction {  request =>
@@ -444,29 +465,31 @@ class UserController @Inject() (
   }
 
   // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
+  val abookUploadTimeoutThreshold = sys.props.getOrElse("abook.upload.timeout.threshold", "30").toInt * 1000
   def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = AuthenticatedHtmlAction { request =>
+    import ABookInfoStates._
+    val ts = System.currentTimeMillis
     val callback = callbackOpt.getOrElse("parent.updateABookProgress")
     val done = new AtomicBoolean(false)
     def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 500)
     def reqF = abookServiceClient.getABookInfo(request.userId, id) map { abookInfoOpt =>
-      abookInfoOpt match {
-        case Some(abookInfo) if abookInfo.state == ABookInfoStates.ACTIVE => {
-          if (done.get) None else {
-            log.info(s"[getABookUploadStatus($id)] available!")
-            done.set(true)
-            Some(s"<script>$callback($id,'${abookInfo.state}',${abookInfo.numContacts.getOrElse(-1)},${abookInfo.numProcessed.getOrElse(-1)})</script>")
-          }
+      log.info(s"[getABookUploadStatus($id)] ... ${abookInfoOpt.map(_.state)}")
+      if (done.get) None
+      else {
+        val (state, numContacts, numProcessed) = abookInfoOpt match {
+          case None => ("notAvail", -1, -1)
+          case Some(abookInfo) =>
+            val resp = (abookInfo.state, abookInfo.numContacts.getOrElse(-1), abookInfo.numProcessed.getOrElse(-1))
+            abookInfo.state match {
+              case ACTIVE => { done.set(true); resp }
+              case UPLOAD_FAILURE => { done.set(true); resp }
+              case PENDING => resp
+            }
         }
-        case waitingOpt => waitingOpt match {
-          case Some(processing) => {
-            log.info(s"[getABookUploadStatus($id)] waiting ... '${processing.state}'")
-            Some(s"<script>$callback($id,'${processing.state}',${processing.numContacts.getOrElse(-1)},${processing.numProcessed.getOrElse(-1)})</script>")
-          }
-          case None => {
-            log.info(s"[getABookUploadStatus($id)] waiting ... 'notAvail'") // can be an error
-            Some(s"<script>$callback($id,'notAvail',-1,-1)</script>")
-          }
-        }
+        if ((System.currentTimeMillis - ts) > abookUploadTimeoutThreshold) {
+          done.set(true)
+          Some(s"<script>$callback($id,'timeout',${numContacts},${numProcessed})</script>")
+        } else Some(s"<script>$callback($id,'${state}',${numContacts},${numProcessed})</script>")
       }
     }
     val firstResponse = Enumerator(domain.body)

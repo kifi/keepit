@@ -1,6 +1,7 @@
 @()(implicit flash: play.api.mvc.Flash)
 
 @admin("Spell-Checker"){
+  <div>Type a word or a phrase</div>
 	<form action = "@com.keepit.controllers.admin.routes.AdminSpellCorrectorController.correct" method = "POST">
     <div>
       <input id = "query" name = "query" type = "text" value="">
@@ -9,11 +10,8 @@
 	</form>
 
 	@flash.get("success").map { message =>
-        
-      @message.split("\n").map{ line =>
+    @message.split("\n").map{ line =>
         <div><strong>@line</strong></div>
     }
-        
-    }
-     
+  }
 }

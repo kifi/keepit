@@ -189,4 +189,13 @@ class HomeController @Inject() (
   def redditPreview = Action { implicit request =>
     Ok(views.html.website.redditPreview())
   }
+
+  def termsOfService = Action { implicit request =>
+    Ok(views.html.website.termsOfService())
+  }
+
+  def privacyPolicy = Action { implicit request =>
+    Ok(views.html.website.privacyPolicy())
+  }
+
 }

@@ -7,7 +7,6 @@ import com.keepit.heimdal._
 import com.keepit.commanders._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders.KeepInfo._
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick.DBSession.RWSession
@@ -94,7 +93,7 @@ class BookmarksController @Inject() (
   def keepMultiple() = AuthenticatedJsonAction { request =>
     try {
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
-        val contextBuilder = userEventContextBuilder(Some(request))
+        val contextBuilder = userEventContextBuilder(request)
         val source = "SITE"
         contextBuilder += ("source", source)
         val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.user, request.experiments, contextBuilder, source)

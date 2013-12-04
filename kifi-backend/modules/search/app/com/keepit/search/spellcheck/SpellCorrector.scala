@@ -8,13 +8,14 @@ trait SpellCorrector {
   def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest]
 }
 
-class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: String, enableAdjScore: Boolean) extends SpellCorrector{
+class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: String, enableAdjScore: Boolean, orderedAdjScore: Boolean = false) extends SpellCorrector{
   val spellChecker = spellIndexer.getSpellChecker
   val stopwords = StandardAnalyzer.STOP_WORDS_SET
   def suggestionProvider = {
-    val termScorer = new TermScorer(spellIndexer.getTermStatsReader, enableAdjScore)
+    val termScorer = new TermScorer(spellIndexer.getTermStatsReader, enableAdjScore, orderedAdjScore)
     suggestionProviderFlag match {
       case "viterbi" => new ViterbiSuggestionProvider(termScorer)
+      case "slow" => new SlowSuggestionProvider(termScorer)
       case _ => new SlowSuggestionProvider(termScorer)
     }
   }
@@ -38,7 +39,7 @@ class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: Str
 
   private def getSimilarTerms(term: String, numSug: Int): Array[String] = {
     val similar = spellChecker.suggestSimilar(term, numSug)       // this never includes the original term
-    if (spellChecker.exist(term) || stopwords.contains(term) || similar.isEmpty) Array(term) // ++ similar.take(2)   // add 2 just in case misspelling words were indexed
+    if (spellChecker.exist(term) || stopwords.contains(term) || similar.isEmpty) Array(term) ++ similar.take(3)   // add 3 just in case misspelling words were indexed
     else similar
   }
 }
@@ -50,8 +51,15 @@ class MetaphoneBooster {
   }
 }
 
+class CompositeBooster {
+  val comp = new CompositeDistance()
+  def similarity(a: Array[String], b: Array[String]): Float = {
+    (a zip b).map{ case (x, y) => comp.getDistance(x, y) }.foldLeft(1f)(_*_)
+  }
+}
+
 class ScoreDecorator(originalQuery: String) {
-  val booster = new MetaphoneBooster
+  val booster = new CompositeBooster
   val originalTerms = originalQuery.split(" ")
   def decorate(scoredSuggest: ScoredSuggest): ScoredSuggest = {
     val boost = booster.similarity(originalTerms, scoredSuggest.value.split(" "))
