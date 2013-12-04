@@ -66,7 +66,7 @@ class BookmarksCommander @Inject() (
     collectionRepo: CollectionRepo
  ) extends Logging {
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], contextBuilder: EventContextBuilder, source: String):
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], contextBuilder: HeimdalContextBuilder, source: String):
                   (Seq[KeepInfo], Option[Int]) = {
     val tStart = currentDateTime
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection

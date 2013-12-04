@@ -85,7 +85,7 @@ private[classify] class DomainTagImportActor @Inject() (
         val outputPath = new URI(s"${settings.localDir}/$outputFilename").normalize.getPath
         log.info(s"refetching all domains to $outputPath")
         WS.url(settings.url).get().onSuccess { case res =>
-          persistEvent(IMPORT_START, new EventContextBuilder)
+          persistEvent(IMPORT_START, new HeimdalContextBuilder)
           val startTime = currentDateTime
           db.readWrite { implicit s =>
             postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
@@ -118,7 +118,7 @@ private[classify] class DomainTagImportActor @Inject() (
           val (added, removed, total) =
             (results.map(_.added).sum, results.map(_.removed).sum, results.map(_.total).sum)
 
-          val context = new EventContextBuilder
+          val context = new HeimdalContextBuilder
           context += ("numDomainsAdded", added)
           context += ("numDomainsRemoved", removed)
           context += ("totalDomains", total)
@@ -159,7 +159,7 @@ private[classify] class DomainTagImportActor @Inject() (
           }
         }
         result.foreach { tag =>
-          val context = new EventContextBuilder
+          val context = new HeimdalContextBuilder
           context += ("tagId", tag.id.get.id)
           context += ("tagName", tag.name.name)
           persistEvent(REMOVE_TAG_SUCCESS, context)
@@ -171,7 +171,7 @@ private[classify] class DomainTagImportActor @Inject() (
     case m => throw new UnsupportedActorMessage(m)
   }
 
-  private def persistEvent(eventName: String, contextBuilder: EventContextBuilder) = {
+  private def persistEvent(eventName: String, contextBuilder: HeimdalContextBuilder) = {
     contextBuilder += ("eventName", eventName)
     heimdal.trackEvent(SystemEvent(contextBuilder.build, DOMAIN_TAG_IMPORT, currentDateTime))
   }
@@ -180,7 +180,7 @@ private[classify] class DomainTagImportActor @Inject() (
     log.error(s"fail on event $eventName", e)
     airbrake.notify(AirbrakeError(exception = e, message = Some(s"on event $eventName")))
 
-    val context = new EventContextBuilder
+    val context = new HeimdalContextBuilder
     context += ("message", e.getMessage)
     context += ("stackTrace", e.getStackTraceString)
     persistEvent(eventName, context)
@@ -288,7 +288,7 @@ private[classify] class DomainTagImportActor @Inject() (
     findRelationshipsToUpdate()
     addNewRelationships()
 
-    val context = new EventContextBuilder
+    val context = new HeimdalContextBuilder
     context += ("tagId", tag.id.get.id)
     context += ("tagName", tag.name.name)
     context += ("numDomainsAdded", added)

@@ -27,7 +27,7 @@ object SearchEngine {
 @Singleton
 class SearchAnalytics @Inject() (
   articleSearchResultStore: ArticleSearchResultStore,
-  userEventContextBuilder: EventContextBuilderFactory,
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   airbrake: AirbrakeNotifier) {
 
@@ -41,8 +41,9 @@ class SearchAnalytics @Inject() (
     articleSearchResult: ArticleSearchResult) = {
 
     val obfuscatedSearchId = obfuscate(articleSearchResultStore.getInitialSearchId(articleSearchResult), userId)
-    val contextBuilder = userEventContextBuilder(request)
+    val contextBuilder = heimdalContextBuilder()
 
+    contextBuilder.addRequestInfo(request)
     kifiVersion.foreach { version => contextBuilder += ("extensionVersion", version.toString) }
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
 
@@ -84,7 +85,7 @@ class SearchAnalytics @Inject() (
     time: DateTime) = {
 
     val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getInitialSearchId).map(obfuscate(_, userId))
-    val contextBuilder = userEventContextBuilder()
+    val contextBuilder = heimdalContextBuilder()
     obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
     contextBuilder += ("searchEngine", resultSource.toString)
     contextBuilder += ("resultPosition", resultPosition)
@@ -108,7 +109,7 @@ class SearchAnalytics @Inject() (
     time: DateTime) = {
 
     val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getInitialSearchId).map(obfuscate(_, userId))
-    val contextBuilder = userEventContextBuilder()
+    val contextBuilder = heimdalContextBuilder()
     obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
     contextBuilder += ("resultPosition", resultPosition)
     bookmarkCount.foreach { count => contextBuilder += ("bookmarkCount", count) }
@@ -133,7 +134,7 @@ class SearchAnalytics @Inject() (
     time: DateTime) = {
 
     val obfuscatedSearchId = queryUUID.map(articleSearchResultStore.getInitialSearchId).map(obfuscate(_, userId))
-    val contextBuilder = userEventContextBuilder()
+    val contextBuilder = heimdalContextBuilder()
     obfuscatedSearchId.map { id => contextBuilder += ("searchId", id) }
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
     contextBuilder += ("kifiResults", kifiResults)
@@ -233,14 +234,15 @@ class SearchAnalytics @Inject() (
     kifiTime: Option[Int],
     kifiShownTime: Option[Int],
     thirdPartyShownTime: Option[Int]
-  ): EventContextBuilder = {
+  ): HeimdalContextBuilder = {
 
-    val contextBuilder = userEventContextBuilder(request)
+    val contextBuilder = heimdalContextBuilder()
 
     val initialSearchId = articleSearchResultStore.getInitialSearchId(uuid)
     val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
 
     // Search Context
+    contextBuilder.addRequestInfo(request)
     contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
     contextBuilder += ("isInitialSearch", uuid == initialSearchId)
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }

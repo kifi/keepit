@@ -44,7 +44,7 @@ class ExtMessagingController @Inject() (
     protected val clock: Clock,
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
-    protected val userEventContextBuilder: EventContextBuilderFactory
+    protected val heimdalContextBuilder: HeimdalContextBuilderFactory
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
@@ -77,7 +77,8 @@ class ExtMessagingController @Inject() (
 
         //Analytics
         SafeFuture {
-          val contextBuilder = userEventContextBuilder(request)
+          val contextBuilder = heimdalContextBuilder()
+          contextBuilder.addRequestInfo(request)
           contextBuilder += ("recipients", recipientSeq.map(_.id).toSeq)
           contextBuilder += ("threadId", thread.id.get.id)
           contextBuilder += ("url", thread.url.getOrElse(""))
@@ -117,8 +118,8 @@ class ExtMessagingController @Inject() (
 
     //Analytics
     SafeFuture {
-      val contextBuilder = userEventContextBuilder(request)
-
+      val contextBuilder = heimdalContextBuilder()
+      contextBuilder.addRequestInfo(request)
       contextBuilder += ("threadId", message.thread.id)
       contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
       contextBuilder += ("extensionVersion", version.getOrElse(""))
@@ -299,10 +300,8 @@ class ExtMessagingController @Inject() (
     }
   )
 
-  private def messagingContextBuilder(socketInfo: SocketInfo, messageId: ExternalId[Message], global: Boolean): EventContextBuilder = {
-    val contextBuilder = userEventContextBuilder()
-    contextBuilder.addExperiments(socketInfo.experiments)
-    contextBuilder += ("extensionVersion", socketInfo.extVersion.getOrElse(""))
+  private def messagingContextBuilder(socketInfo: SocketInfo, messageId: ExternalId[Message], global: Boolean): HeimdalContextBuilder = {
+    val contextBuilder = authenticatedWebSocketsContextBuilder(socketInfo)
     contextBuilder += ("messageExternalId", messageId.id)
     contextBuilder += ("global", global)
     contextBuilder

@@ -50,7 +50,7 @@ class ExtBookmarksController @Inject() (
   searchClient: SearchServiceClient,
   healthcheck: HealthcheckPlugin,
   heimdal: HeimdalServiceClient,
-  userEventContextBuilder: EventContextBuilderFactory)
+  heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends BrowserExtensionController(actionAuthenticator) {
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
@@ -198,7 +198,8 @@ class ExtBookmarksController @Inject() (
           //Analytics
           SafeFuture{
             bookmarks.foreach { bookmark =>
-              val contextBuilder = userEventContextBuilder(request)
+              val contextBuilder = heimdalContextBuilder()
+              contextBuilder.addRequestInfo(request)
 
               contextBuilder += ("isPrivate", bookmark.isPrivate)
               contextBuilder += ("url", bookmark.url)

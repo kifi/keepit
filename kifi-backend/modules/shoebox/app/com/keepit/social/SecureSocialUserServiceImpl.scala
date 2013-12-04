@@ -38,7 +38,7 @@ class SecureSocialUserPluginImpl @Inject() (
   airbrake: AirbrakeNotifier,
   emailRepo: EmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
-  eventContextBuilder: EventContextBuilderFactory,
+  eventContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   userExperimentRepo: UserExperimentRepo,
   clock: Clock)

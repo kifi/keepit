@@ -16,7 +16,7 @@ import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.social.{SocialGraphPlugin, SocialNetworks, SocialNetworkType, SocialId}
 import com.keepit.common.akka.{TimeoutFuture, SafeFuture}
-import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilderFactory, UserEvent, EventType}
+import com.keepit.heimdal.{HeimdalServiceClient, HeimdalContextBuilderFactory, UserEvent, EventType}
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -45,7 +45,7 @@ class InviteController @Inject() (db: Database,
   socialGraphPlugin: SocialGraphPlugin,
   actionAuthenticator: ActionAuthenticator,
   httpClient: HttpClient,
-  eventContextBuilder: EventContextBuilderFactory,
+  eventContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice)
