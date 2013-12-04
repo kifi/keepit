@@ -95,8 +95,7 @@ class BookmarksController @Inject() (
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
         val contextBuilder = heimdalContextBuilder()
         contextBuilder.addRequestInfo(request)
-        val source = "SITE"
-        contextBuilder += ("source", source)
+        val source = BookmarkSource.site
         val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.user, request.experiments, contextBuilder, source)
         log.info(s"kept ${keeps.size} new keeps")
         Ok(Json.obj(

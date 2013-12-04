@@ -41,7 +41,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
             val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz"))
 
-            val hover = BookmarkSource("HOVER_KEEP")
+            val hover = BookmarkSource.hover
             val bm1 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id,  uriId = nuri0.id.get, source = hover))
             val bm2 = bmRepo.save(Bookmark(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id, uriId = nuri2.id.get, source = hover))
             val bm3 = bmRepo.save(Bookmark(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id, uriId = nuri2.id.get, source = hover))
@@ -81,7 +81,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
           urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
           urlRepo.getByNormUri(uris(0).id.get) === Nil
-          
+
           scrapeInfoRepo.count === 3
           scrapeInfoRepo.getByUriId(uris(0).id.get).head.state === ScrapeInfoStates.INACTIVE
           scrapeInfoRepo.getByUriId(uris(1).id.get).head.state === ScrapeInfoStates.ACTIVE
@@ -104,7 +104,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url
-          
+
           scrapeInfoRepo.count === 4
           scrapeInfoRepo.getByUriId(uris(3).id.get).head.state === ScrapeInfoStates.ACTIVE
 
