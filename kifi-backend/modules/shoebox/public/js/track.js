@@ -3,6 +3,8 @@
 (function() {
   'use strict';
 
+  var lastLocation;
+
   var thingsToTrack = {
     preview: {
       selector: '.keep'
@@ -55,7 +57,7 @@
   };
 
   function getLocation(path) {
-    path = path || window.location.pathname;
+    path = path || lastLocation || window.location.pathname;
     for (var loc in locations){
       if (locations[loc].test(path)) {
         return loc;
@@ -85,6 +87,7 @@
   });
   kifiViewTracker = {
     push: function(path){
+      lastLocation = path;
       defaultViewHandler(path);
     }
   };
