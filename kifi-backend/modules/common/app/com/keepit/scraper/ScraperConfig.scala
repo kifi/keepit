@@ -3,7 +3,7 @@ package com.keepit.scraper
 import scala.util.Random
 
 case class ScraperConfig(
-  minInterval: Double = 12.0d, //hours
+  minInterval: Double = 24.0d, //hours
   maxInterval: Double = 1024.0d, //hours
   intervalIncrement: Double = 4.0d, //hours
   intervalDecrement: Double = 2.0d, //hours
