@@ -31,7 +31,7 @@ if (searchUrlRe.test(document.URL)) !function() {
   var filter;             // current search filter (null or {[who: "m"|"f"|dot-delimited user ids]?, [when: "t"|"y"|"w"|"m"]?})
   var query = "";         // latest search query
   var response = {};      // latest kifi results received
-  var refinements = -1;    //how many times the user has refined teh search on the same page. No searches at all yet.
+  var refinements = -1;   // how many times the user has refined the search on the same page. No searches at all yet.
   var showMoreOnArrival;
   var clicks = {kifi: [], google: []};  // clicked result link hrefs
   var tQuery, tGoogleResultsShown, tKifiResultsReceived, tKifiResultsShown;  // for timing stats
