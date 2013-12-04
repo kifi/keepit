@@ -13,6 +13,8 @@ import com.keepit.common.net.{HttpClient,DirectUrl}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.amazon.AmazonInstanceId
+import com.keepit.common.healthcheck.AirbrakeNotifier
+
 
 import play.api.Play.current
 
@@ -55,8 +57,8 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
   @Singleton
   @Provides
-  def serviceDiscovery(zk: ZooKeeperClient, services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], scheduler: Scheduler): ServiceDiscovery = {
-      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler)
+  def serviceDiscovery(zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], scheduler: Scheduler): ServiceDiscovery = {
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler, airbrake)
   }
 
   @Singleton
@@ -89,8 +91,8 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
 
   @Provides
   @Singleton
-  def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster =
-    new ServiceCluster(serviceType) tap {
+  def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo, airbrake: Provider[AirbrakeNotifier]): ServiceCluster =
+    new ServiceCluster(serviceType, airbrake) tap {
       _.register(ServiceInstance(Node(s"${serviceType.name}_0"),
         RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType), true))
     }

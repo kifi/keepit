@@ -23,10 +23,11 @@ import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsObject
 import com.keepit.scraper.HttpRedirect
+import com.google.inject.util.Providers
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   // Fake ID counters
