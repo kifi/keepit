@@ -1,34 +1,4 @@
-<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isSent}} kifi-notice-sent{{/isSent}}{{#isReceived}} kifi-notice-received{{/isReceived}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-locator="{{locator}}" data-created-at="{{time}}">
-{{^inbox}}
-  <img class="kifi-notice-avatar" src="{{cdnBase}}/users/{{author.id}}/pics/200/{{author.pictureName}}">
-  <div class="kifi-notice-name">
-    {{#oneParticipant}}
-      <span class="kifi-author-name">{{participants.0.firstName}} {{participants.0.lastName}}</span>
-    {{/oneParticipant}}
-    {{#twoParticipants}}
-      <span class="kifi-author-name">{{participants.0.firstName}}</span> and
-      <span class="kifi-author-name">{{participants.1.firstName}}</span>
-    {{/twoParticipants}}
-    {{#threeParticipants}}
-      <span class="kifi-author-name">{{participants.0.firstName}}</span>,
-      <span class="kifi-author-name">{{participants.1.firstName}}</span> and
-      <span class="kifi-author-name">{{participants.2.firstName}}</span>
-    {{/threeParticipants}}
-    {{#moreParticipants}}
-      <span class="kifi-author-name">{{participants.0.firstName}}</span>,
-      <span class="kifi-author-name">{{participants.1.firstName}}</span> and {{moreParticipants}} others
-    {{/moreParticipants}}
-  </div>
-  <div class="kifi-notice-action">
-    Message
-  </div>
-  <div class="kifi-notice-page">
-    <a href="{{url}}" class="kifi-link" target="_blank">{{title}}</a>
-  </div>
-  <div class="kifi-notice-text">{{#formatMessage}}{{{text}}}{{/formatMessage}}</div>
-  <time class="kifi-notice-when" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
-{{/inbox}}
-{{#inbox}}
+<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isSent}} kifi-notice-sent{{/isSent}}{{#isReceived}} kifi-notice-received{{/isReceived}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-created-at="{{time}}" data-category="message">
   <div class="kifi-notice-mosaic kifi-notice-mosaic-{{picturedParticipants.length}}">
   {{#picturedParticipants}}
     <div class="kifi-notice-pic kifi-notice-pic-{{picIndex}}" style="background-image:url({{cdnBase}}/users/{{id}}/pics/200/{{pictureName}})"></div>
@@ -50,5 +20,4 @@
   <div class="kifi-notice-author">{{authorShortName}}: </div>
   <div class="kifi-notice-blurb">{{#formatMessage}}{{{text}}}{{/formatMessage}}</div>
   <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
-{{/inbox}}
 </div>
