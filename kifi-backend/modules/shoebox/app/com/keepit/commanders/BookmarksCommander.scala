@@ -67,7 +67,7 @@ class BookmarksCommander @Inject() (
  ) extends Logging {
 
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], contextBuilder: EventContextBuilder, source: String):
-                  (List[KeepInfo], Option[Int]) = {
+                  (Seq[KeepInfo], Option[Int]) = {
     val tStart = currentDateTime
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
     val keeps = bookmarkInterner.internBookmarks(Json.toJson(keepInfos), user, experiments, source).map(KeepInfo.fromBookmark)

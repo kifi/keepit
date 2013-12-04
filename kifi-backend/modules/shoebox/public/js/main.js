@@ -527,9 +527,7 @@ $(function () {
 	}
 
 	function getPrimaryEmail(emails) {
-		return findEmail(emails || me.emails, function (info) {
-			return info[1];
-		})[0] || null;
+		return (emails || me.emails)[0] || null;
 	}
 
 	function getPendingPrimaryEmail(emails) {

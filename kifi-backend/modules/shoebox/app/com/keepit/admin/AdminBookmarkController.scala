@@ -51,7 +51,7 @@ class AdminBookmarksController @Inject() (
 
   def rescrape = AdminJsonAction { request =>
     val id = Id[Bookmark]((request.body.asJson.get \ "id").as[Int])
-    db.readOnly { implicit session =>
+    db.readWrite { implicit session =>
       val bookmark = bookmarkRepo.get(id)
       val uri = uriRepo.get(bookmark.uriId)
       scraper.scheduleScrape(uri)

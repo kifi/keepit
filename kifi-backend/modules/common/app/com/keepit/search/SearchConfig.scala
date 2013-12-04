@@ -8,6 +8,7 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.User
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
+import com.keepit.search.query.StringHash64
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -99,6 +100,8 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     _activeExperiments
   }
 
+  val userSegmentExperiments = activeExperiments.filter(_.description.startsWith("user segment experiment"))
+
   def syncActiveExperiments: Unit = {
     try {
       _activeExperiments = monitoredAwait.result(shoeboxClient.getActiveExperiments, 5 seconds, "getting experiments")
@@ -118,6 +121,23 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     val hash = QueryHash(userId, queryText, analyzer)
     val (max, min) = (Long.MaxValue.toDouble, Long.MinValue.toDouble)
     (hash - min) / (max - min)
+  }
+
+  private def assignConfig(userId: Id[User], queryText: String, userSegmentValue: Int) = {
+    val modulo = userId.id.toLong % 3
+    if (userSegmentExperiments.size == 4 && modulo == 0) {
+      val ex = userSegmentExperiments(userSegmentValue)
+      val config = defaultConfig(ex.config.params)
+      (config, ex.id)
+    } else {
+      getConfig(userId, queryText, false)   // assume not excludedFromExperiments
+    }
+  }
+
+  def getConfigByUserSegment(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
+    val segFuture = shoeboxClient.getUserSegment(userId)
+    val seg = monitoredAwait.result(segFuture, 5 seconds, "getting user segment")
+    if (excludeFromExperiments) (SearchConfig.defaultConfig, None) else assignConfig(userId, queryText, seg.value)
   }
 
   def getConfig(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
