@@ -228,6 +228,7 @@ a.profile-input-save:active { background-color: #9EB56B}
 
 .profile-input-remaining-chars { font-size: 14px; color: #B7CE84; margin-left: 2px; }
 
+.profile-email-address-unverified,
 .profile-email-address-pending { color: #a7aaa9; font-size: 13px }
 a.profile-email-pending-resend,
 a.profile-email-pending-cancel { color: #777c87; text-decoration: underline }

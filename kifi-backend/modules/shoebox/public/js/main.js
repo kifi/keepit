@@ -494,7 +494,12 @@ $(function () {
 		$box
 			.removeClass('edit');
 
-		saveProfileInfo();
+		if ($input.attr('name') === 'email') {
+			saveNewPrimaryEmail($input.val());
+		}
+		else {
+			saveProfileInfo();
+		}
 	}
 
 	function cancelProfileInput($target, e) {
@@ -521,12 +526,20 @@ $(function () {
 		return val ? $.trim(val).replace(/\s+/g, ' ') : '';
 	}
 
-	function getPrimaryEmail() {
-		return me.emails[0] || null;
+	function getPrimaryEmail(emails) {
+		return findEmail(emails || me.emails, function (info) {
+			return info[1];
+		})[0] || null;
 	}
 
-	function getPrimaryEmailAddress() {
-		var addr = getPrimaryEmail();
+	function getPendingPrimaryEmail(emails) {
+		return findEmail(emails || me.emails, function (info) {
+			return info[3];
+		})[0] || null;
+	}
+
+	function getPrimaryEmailAddress(emails) {
+		var addr = getPrimaryEmail(emails);
 		return addr && addr[0] || null;
 	}
 
@@ -541,11 +554,30 @@ $(function () {
 		return props;
 	}
 
+	function findEmail(emails, callback, that) {
+		var list = [];
+		emails = emails || me.emails;
+		for (var i = 0, l = emails.length; i < l; i++) {
+			if (callback.call(that, emails[i], i, emails)) {
+				list.push(emails[i]);
+			}
+		}
+		return list;
+	}
+
 	function removeEmailInfo(emails, addr) {
+		emails = emails || me.emails;
 		for (var i = emails.length - 1; i >= 0; i--) {
 			if (emails[i][0] === addr) {
 				emails.splice(i, 1);
 			}
+		}
+	}
+
+	function unsetPrimary(emails) {
+		var primary = getPrimaryEmail(emails);
+		if (primary) {
+			primary[1] = false;
 		}
 	}
 
@@ -556,8 +588,10 @@ $(function () {
 		}
 
 		var props = getProfileCopy();
-		removeEmailInfo(props.emails, email);
-		props.emails.push([email, true]);
+		var emails = props.emails;
+		removeEmailInfo(emails, email);
+		unsetPrimary(emails);
+		emails.push([email, true]);
 
 		return $.postJson(xhrBase + '/user/me', props);
 	}
@@ -571,16 +605,8 @@ $(function () {
 			props[$this.attr('name')] = trimInputValue($this.val());
 		});
 
-		if (props.email) {
-			var email = props.email,
-				emails = props.emails = me.emails.slice(),
-				index = emails.indexOf(email);
-			if (index !== -1) {
-				emails.splice(index, 1);
-			}
-			emails.unshift(email);
-		}
 		delete props.email;
+		//props.emails = me.emails.slice();
 
 		$.postJson(xhrBase + '/user/me', props)
 		.success(function (data) {
@@ -616,6 +642,7 @@ $(function () {
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
+			updateMe(me);
 
 			setTimeout(function () {
 				$('.profile-first-name')
@@ -777,7 +804,6 @@ $(function () {
 			}
 		}
 		else {
-			console.log($input[0], hasError, $next[0])
 			$input.removeClass('error');
 			if (hasError) {
 				$next.remove();
@@ -3057,17 +3083,33 @@ $(function () {
 	function updateMe(data) {
 		me = data;
 		mixpanel.identify(me.id);
+
 		$('.my-pic').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
 		$('.my-name').text(data.firstName + ' ' + data.lastName);
 		$('.my-description').text(data.description || '\u00A0'); // nbsp
+
 		var $firstNamePlace = $('.profile-placeholder-first-name').text(data.firstName);
 		var $lastNamePlace = $('.profile-placeholder-last-name').text(data.lastName);
+
 		$('.profile-first-name')
 			.val(data.firstName)
 			.outerWidth($firstNamePlace.outerWidth());
+
 		$('.profile-last-name')
 			.val(data.lastName)
 			.outerWidth($lastNamePlace.outerWidth());
+
+		var primary = getPrimaryEmail();
+		var $unverified = $('.profile-email-address-unverified');
+		$unverified.toggle(!primary);
+
+		var pendingPrimary = getPendingPrimaryEmail();
+		var $pending = $('.profile-email-address-pending');
+		if (pendingPrimary) {
+			$('.profile-email-address-pending-email').text(pendingPrimary[0]);
+		}
+		$pending.toggle(!!pendingPrimary);
+
 	}
 
 	function updateFriendRequests(n) {
