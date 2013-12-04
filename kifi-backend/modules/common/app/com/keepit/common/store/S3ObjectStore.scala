@@ -72,7 +72,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
             try { inputStream.close() } catch {case e: Exception => log.error("error closing content stream.", e)}
           }
         }
-        accessLog.add(timer.done(space = bucketName.name, key = key.toString, result = "PUT"))
+        accessLog.add(timer.done(space = bucketName.name, key = key.toString, method = "PUT"))
     }
     this
   }
@@ -82,7 +82,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
     doWithS3Client("removing an item from S3BStore"){ s3Client =>
       Some(s3Client.deleteObject(bucketName, idToKey(key)))
     }
-    accessLog.add(timer.done(space = bucketName.name, key = key.toString, result = "DEL"))
+    accessLog.add(timer.done(space = bucketName.name, key = key.toString, method = "DEL"))
     this
   }
 
@@ -96,7 +96,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
         case e: AmazonS3Exception if (e.getMessage().contains("The specified key does not exist")) => None
       }
       val value = s3obj map unpackValue
-      accessLog.add(timer.done(space = bucketName.name, key = key.toString, result = "GET"))
+      accessLog.add(timer.done(space = bucketName.name, key = key.toString, method = "GET"))
       value
     }
   }

@@ -198,6 +198,8 @@ class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[Inde
 
   private[this] var contextTerms = Set.empty[Term]
 
+  def numOfContextTerms = contextTerms.size
+
   def addContextTerm(term: Term): Unit = { // weight.normalize should call this
     contextTerms += term
   }

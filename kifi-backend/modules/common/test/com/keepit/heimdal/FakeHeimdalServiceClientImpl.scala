@@ -15,11 +15,12 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
+import com.google.inject.util.Providers
 import com.keepit.serializer.TypeCode
 
 
 class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient{
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   var eventsRecorded : Int = 0
