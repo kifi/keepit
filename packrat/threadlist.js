@@ -1,16 +1,18 @@
-(function (exports) {
+(function () {
   'use strict';
+
+  this.ThreadList = ThreadList;
 
   // allById is a read-only object for looking up threads by their IDs
   // recentThreadIds should be contiguous and in chronological order, newest first
   // numUnreadUnmnuted may refer to threads not yet represented in this ThreadList
-  var TL = exports.ThreadList = function (allById, recentThreadIds, numUnreadUnmuted, lastSeenTimeStr) {
+  function ThreadList(allById, recentThreadIds, numUnreadUnmuted, lastSeenTimeStr) {
     this.allById = allById;
     this.ids = recentThreadIds;
     this.numUnreadUnmuted = numUnreadUnmuted || 0;
     this.lastSeen = new Date(lastSeenTimeStr || 0);
   };
-  TL.prototype = {
+  ThreadList.prototype = {
     contains: function (threadId) {
       return this.ids.indexOf(threadId) >= 0;
     },
@@ -75,4 +77,4 @@
       }
     }
   };
-}(this.exports || this));
+}.call(this.exports || this));
