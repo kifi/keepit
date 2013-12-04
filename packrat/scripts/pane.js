@@ -1,6 +1,7 @@
 // @require styles/keeper/pane.css
 // @require scripts/lib/q.min.js
 // @require scripts/keeper.js
+// @require scripts/listen.js
 // @require scripts/html/keeper/pane.js
 // @require scripts/html/keeper/pane_settings.js
 // @require scripts/html/keeper/pane_notices.js
@@ -272,27 +273,28 @@ var pane = pane || function () {  // idempotent for Chrome
   function hidePane(leaveSlider) {
     log('[hidePane]', leaveSlider ? 'leaving slider' : '')();
     if (leaveSlider) {
-      $(tile).css({top: "", bottom: "", transform: ""}).insertAfter($pane);
+      $(tile).css({top: '', bottom: '', transform: ''}).insertAfter($pane);
       keeper.onPaneChange();
-      // $slider.find(".kifi-keeper-x").css("overflow", "");
+      // $slider.find('.kifi-keeper-x').css('overflow', '');
     } else {
-      $(tile).css("transform", "");
+      $(tile).css('transform', '');
       keeper.discard();
     }
+    pane.onHide.dispatch();
     $pane
-    .off("transitionend") // onPaneShown
+    .off('transitionend') // onPaneShown
     .on("transitionend", function (e) {
       if (e.target === this) {
         var $pane = $(this);
-        $pane.find(".kifi-pane-box").triggerHandler("kifi:remove");
+        $pane.find('.kifi-pane-box').triggerHandler('kifi:remove');
         $pane.remove();
-        $("html").removeClass("kifi-pane-parent");
+        $('html').removeClass('kifi-pane-parent');
         window.dispatchEvent(new Event("resize"));  // for other page scripts
       }
     });
-    api.port.emit("pane", {old: $pane[0].dataset.locator});
+    api.port.emit('pane', {old: $pane[0].dataset.locator});
     $pane = paneHistory = null;
-    $("html").removeClass("kifi-with-pane");
+    $('html').removeClass('kifi-with-pane');
   }
 
   function populatePane($box, name, locator) {
@@ -364,6 +366,7 @@ var pane = pane || function () {  // idempotent for Chrome
     getThreadId: function () {
       var locator = this.getLocator();
       return locator && locator.split('/')[2];
-    }
+    },
+    onHide: new Listeners
   };
 }();

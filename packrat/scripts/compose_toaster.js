@@ -49,6 +49,8 @@ var toaster = (function () {
     .appendTo($parent);
 
     $toaster.data('compose', initCompose($toaster, session.prefs.enterToSend, {onSubmit: send}));
+    $(document).data('esc').add(hide);
+    pane.onHide.add(hide);
 
     var deferred = Q.defer();
 
@@ -67,10 +69,13 @@ var toaster = (function () {
     }
   }
 
-  function hide() {
+  function hide(e) {
     log('[toaster:hide]')();
+    pane.onHide.remove(hide);
+    $(document).data('esc').remove(hide);
     $toaster.on('transitionend', onHidden).addClass('kifi-down');
     $toaster = null;
+    e && e.preventDefault();
   }
 
   function onHidden(e) {
