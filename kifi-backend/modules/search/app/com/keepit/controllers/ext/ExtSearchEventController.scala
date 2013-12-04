@@ -58,6 +58,7 @@ class ExtSearchEventController @Inject() (
     val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
     val kifiResults = (json \ "kifiResults").as[Int]
+    val queryRefinements = (json \ "refinements").asOpt[Int]
     val isDemo = request.experiments.contains(ExperimentType.DEMO)
 
     checkForMissingDeliveryTimes(kifiTime, kifiShownTime, thirdPartyShownTime, request, "ExtSearchEventController.clickedSearchResult")
@@ -71,7 +72,7 @@ class ExtSearchEventController @Inject() (
           resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark, isDemo)
           if (personalSearchResult.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, personalSearchResult.users.map(_.externalId): _*)
         }
-        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
+        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, queryRefinements, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
       }
 
       case theOtherGuys => {
@@ -107,8 +108,9 @@ class ExtSearchEventController @Inject() (
     val kifiShownTime = (json \ "kifiShownTime").asOpt[Int]
     val thirdPartyShownTime = (json \ "thirdPartyShownTime").asOpt[Int] orElse (json \ "referenceTime").asOpt[Int]
     val origin = (json \ "origin").as[String]
+    val queryRefinements = (json \ "refinements").asOpt[Int]
     checkForMissingDeliveryTimes(kifiTime, kifiShownTime, thirdPartyShownTime, request, "ExtSearchEventController.endedSearch")
-    searchAnalytics.endedSearch(request, userId, time, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, otherResultsClicked, kifiResultsClicked)
+    searchAnalytics.endedSearch(request, userId, time, origin, uuid, searchExperiment, queryRefinements, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, otherResultsClicked, kifiResultsClicked)
     Ok
   }
 

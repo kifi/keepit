@@ -151,6 +151,7 @@ class SearchAnalytics @Inject() (
     origin: String,
     uuid: ExternalId[ArticleSearchResult],
     searchExperiment: Option[Id[SearchConfigExperiment]],
+    queryRefinements: Option[Int],
     kifiResults: Int,
     kifiCollapsed: Boolean,
     kifiTime: Option[Int],
@@ -160,7 +161,7 @@ class SearchAnalytics @Inject() (
     kifiResultsClicked: Int
     ) = {
 
-    val contextBuilder = searchContextBuilder(request, userId, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime)
+    val contextBuilder = searchContextBuilder(request, userId, origin, uuid, searchExperiment, queryRefinements, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime)
 
     // Click Summary
 
@@ -178,6 +179,7 @@ class SearchAnalytics @Inject() (
     uuid: ExternalId[ArticleSearchResult],
     searchExperiment: Option[Id[SearchConfigExperiment]],
     query: String,
+    queryRefinements: Option[Int],
     kifiResults: Int,
     kifiCollapsed: Boolean,
     kifiTime: Option[Int],
@@ -187,7 +189,7 @@ class SearchAnalytics @Inject() (
     resultPosition: Int,
     result: Option[PersonalSearchResult]) = {
 
-    val contextBuilder = searchContextBuilder(request, userId, origin, uuid, searchExperiment, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime)
+    val contextBuilder = searchContextBuilder(request, userId, origin, uuid, searchExperiment, queryRefinements, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime)
 
     // Click Information
 
@@ -225,6 +227,7 @@ class SearchAnalytics @Inject() (
     origin: String,
     uuid: ExternalId[ArticleSearchResult],
     searchExperiment: Option[Id[SearchConfigExperiment]],
+    queryRefinements : Option[Int],
     kifiResults: Int,
     kifiCollapsed: Boolean,
     kifiTime: Option[Int],
@@ -243,6 +246,7 @@ class SearchAnalytics @Inject() (
     searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
     contextBuilder += ("origin", origin)
     ("queryTerms", initialSearchResult.query.split("""\b""").length)
+    queryRefinements.foreach { refinements => contextBuilder += ("queryRefinements", refinements) }
 
     // Kifi Performances
     contextBuilder += ("kifiResults", kifiResults)
