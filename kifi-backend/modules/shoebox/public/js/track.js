@@ -54,8 +54,8 @@
     kifiBlog: /^\/blog$/
   };
 
-  function getLocation() {
-    var path = window.location.pathname;
+  function getLocation(path) {
+    path = path || window.location.pathname;
     for (var loc in locations){
       if (locations[loc].test(path)) {
         return loc;
@@ -63,16 +63,30 @@
     }
   }
 
-  function trackClick(properties) {
-    mixpanel.track('clicked_internal_page', properties);
-  }
-
   function defaultClickHandler(action) {
-    trackClick({
+    mixpanel.track('clicked_internal_page',{
       type: getLocation(),
-      action: action
+      action: action,
+      origin: window.location.origin
     });
   }
+
+  function defaultViewHandler(path) {
+    mixpanel.track('viewed_internal_page',{
+      type: getLocation(path),
+      origin: window.location.origin
+    });
+  }
+
+  kifiViewTracker = kifiViewTracker || [window.location.pathname];
+  kifiViewTracker.forEach(function(path){
+    defaultViewHandler(path);
+  });
+  kifiViewTracker = {
+    push: function(path){
+      defaultViewHandler(path);
+    }
+  };
 
   for (var action in thingsToTrack) {
     var spec = thingsToTrack[action];

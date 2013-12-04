@@ -2188,6 +2188,7 @@ $(function () {
 			clearTagInput();
 		}
 		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
+		kifiViewTracker.push(window.location.pathname);
 	}
 
 	function queryFromUri(uri) {
