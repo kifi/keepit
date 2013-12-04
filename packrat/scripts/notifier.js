@@ -11,14 +11,16 @@ var notifier = function () {
   'use strict';
 
   return {
-    removeByAssociatedId: removeByAssociatedId,
+    hide: function (threadId) {
+      removeItem($('.kifi-notify-item-wrapper[data-thread-id="' + threadId + '"]'));
+    },
     show: function (o) {
       switch (o.category) {
       case 'message':
-        removeByAssociatedId(o.thread);
+        this.hide(o.thread);
         o.author = o.author || o.participants[0];
         add({
-          title: o.author.firstName + " " + o.author.lastName,
+          title: o.author.firstName + ' ' + o.author.lastName,
           subtitle: 'Sent you a new Kifi Message',
           contentHtml: o.text,
           link: o.title,
@@ -26,11 +28,11 @@ var notifier = function () {
           sticky: false,
           showForMs: 60000,
           onClick: $.proxy(onClickMessage, null, o.url, o.locator),
-          associatedId: o.thread
+          threadId: o.thread
         });
         break;
       case 'global':
-        removeByAssociatedId(o.id);
+        this.hide(o.thread);
         add({
           title: o.title,
           subtitle: o.subtitle,
@@ -39,8 +41,8 @@ var notifier = function () {
           image: o.image,
           sticky: o.isSticky,
           showForMs: o.showForMs || 60000,
-          onClick: $.proxy(onClickGlobal, null, o.id, o.url),
-          associatedId: o.id
+          onClick: $.proxy(onClickGlobal, null, o.thread, o.id, o.url),
+          threadId: o.thread
         });
         break;
       }
@@ -62,13 +64,13 @@ var notifier = function () {
       popupClass: '',
       innerClass: params.image ? 'kifi-notify-with-image' : 'kifi-notify-without-image',
       link: params.link,
-      associatedId: params.associatedId
+      threadId: params.threadId
     }))
     .appendTo($wrap)
     .fadeIn(params.fadeInMs || 500)
     .click(function(e) {
       if (e.which !== 1) return;
-      api.port.emit('remove_notification', {associatedId: $item.data('associatedId')});
+      api.port.emit('remove_notification', $item.data('threadId'));
       $item.off('mouseenter mouseleave');
       fadeItem($item, params);
       if (!$(e.target).hasClass('kifi-notify-close')) {
@@ -95,8 +97,8 @@ var notifier = function () {
     }
   }
 
-  function onClickGlobal(id, url, e) {
-    api.port.emit('set_global_read', {noticeId: id});
+  function onClickGlobal(threadId, messageId, url, e) {
+    api.port.emit('set_global_read', {threadId: threadId, messageId: messageId});
     var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
     if (url && url !== document.URL) {
       if (inThisTab) {
@@ -114,9 +116,5 @@ var notifier = function () {
   function removeItem($item) {
     $item.remove();
     $('#kifi-notify-notice-wrapper:empty').remove();
-  }
-
-  function removeByAssociatedId(id) {
-    removeItem($('.kifi-notify-item-wrapper[data-associated-id="' + id + '"]'));
   }
 }();

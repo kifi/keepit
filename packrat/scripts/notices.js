@@ -43,7 +43,7 @@ panes.notices = function () {
     },
     notifications_visited: function (o) {
       log('[notifications_visited]', o)();
-      markVisited(o.category, o.time, o.locator, o.id);
+      markVisited(o.category, o.time, o.threadId, o.id);
       $markAll.toggle(o.numNotVisited > 0);
     },
     all_notifications_visited: function (o) {
@@ -77,16 +77,17 @@ panes.notices = function () {
     $notices.on('click', '.kifi-notice', function (e) {
       if (e.which !== 1) return;
       var uri = this.dataset.uri;
-      var locator = this.dataset.locator;
       var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
-      if (locator) {
-        api.port.emit('open_deep_link', {nUri: uri, locator: locator, inThisTab: inThisTab});
+      switch (this.dataset.category) {
+      case 'message':
+        api.port.emit('open_deep_link', {nUri: uri, locator: '/messages/' + this.dataset.thread, inThisTab: inThisTab});
         if (inThisTab && uri !== document.URL) {
           window.location = uri;
         }
-      } else if (this.dataset.category === 'global') {
-        markVisited('global', undefined, undefined, this.dataset.id);
-        api.port.emit('set_global_read', {noticeId: this.dataset.id});
+        break;
+      case 'global':
+        markVisited('global', this.dataset.createdAt, this.dataset.thread, this.dataset.id);
+        api.port.emit('set_global_read', {threadId: this.dataset.thread, messageId: this.dataset.id, time: this.dataset.createdAt});
         if (uri && uri !== document.URL) {
           if (inThisTab) {
             window.location = uri;
@@ -94,6 +95,7 @@ panes.notices = function () {
             window.open(uri, '_blank').focus();
           }
         }
+        break;
       }
       return false;
     })
@@ -133,18 +135,12 @@ panes.notices = function () {
     notice.formatMessage = getSnippetFormatter;
     notice.formatLocalDate = getLocalDateFormatter;
     notice.cdnBase = cdnBase;
-    notice.inbox = inbox;
     switch (notice.category) {
     case 'message':
       var participants = notice.participants;
       var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
-      if (!inbox) {
-        notice.oneParticipant = nParticipants === 1;
-        notice.twoParticipants = nParticipants === 2;
-        notice.threeParticipants = nParticipants === 3;
-        notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
-      } else {
+      // TODO: fix indentation below
         if (notice.authors === 1) {
           notice[notice.author.id === session.user.id ? 'isSent' : 'isReceived'] = true;
         } else if (notice.firstAuthor > 1) {
@@ -184,7 +180,6 @@ panes.notices = function () {
           notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
         }
         notice.authorShortName = notice.author.id === session.user.id ? 'Me' : notice.author.firstName;
-      }
       return render('html/keeper/notice_message', notice);
     case 'global':
       return render('html/keeper/notice_global', notice);
@@ -205,13 +200,9 @@ panes.notices = function () {
     api.port.emit('notifications_read', notices[0].time);
   }
 
-  function markVisited(category, timeStr, locator, id) {
-    var time = new Date(timeStr);  // event time, not notification time
-    $notices.find('.kifi-notice-' + category + ':not(.kifi-notice-visited)').each(function () {
-      if (id && id === this.dataset.id) {
-        this.classList.add('kifi-notice-visited');
-      } else if (dateWithoutMs(this.dataset.createdAt) <= time &&
-          (!locator || this.dataset.locator === locator)) {
+  function markVisited(category, timeStr, threadId, id) {
+    $notices.find('.kifi-notice-' + category + '[data-thread="' + threadId + '"]:not(.kifi-notice-visited)').each(function () {
+      if (id === this.dataset.id || new Date(timeStr) >= new Date(this.dataset.createdAt)) {
         this.classList.add('kifi-notice-visited');
       }
     });
@@ -220,7 +211,7 @@ panes.notices = function () {
   function markAllVisited(id, timeStr) {
     var time = new Date(timeStr);
     $notices.find('.kifi-notice:not(.kifi-notice-visited)').each(function () {
-      if (id === this.dataset.id || dateWithoutMs(this.dataset.createdAt) <= time) {
+      if (id === this.dataset.id || time >= new Date(this.dataset.createdAt)) {
         this.classList.add('kifi-notice-visited');
       }
     });
@@ -251,12 +242,6 @@ panes.notices = function () {
     return function() {
       return i++;
     };
-  }
-
-  function dateWithoutMs(t) { // until db has ms precision
-    var d = new Date(t);
-    d.setMilliseconds(0);
-    return d;
   }
 
   function idIsNot(id) {

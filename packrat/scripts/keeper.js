@@ -77,17 +77,14 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function createSlider(locator) {
     var kept = tile && tile.dataset.kept;
-    var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"m":0}');
-    log('[createSlider] kept: %s counts: %o', kept || 'no', counts)();
+    var count = +(tile && tile.dataset.count || 0);
+    log('[createSlider] kept: %s count: %o', kept || 'no', count)();
 
     $slider = $(render('html/keeper/keeper', {
       'bgDir': api.url('images/keeper'),
       'isKept': kept,
       'isPrivate': kept === 'private',
-      'noticesCount': Math.max(0, counts.n - counts.m),
-      'messageCount': counts.m,
-      'inboxCount': counts.n,
-      'showInbox': ~session.experiments.indexOf('inbox'),
+      'inboxCount': count,
       'atNotices': '/notices' === locator,
       'atMessages': /^\/messages/.test(locator),
       'isTagged': tags.length
@@ -478,16 +475,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
     kept: function (o) {
       updateKeptDom(o.kept);
     },
-    counts: function (o) {
+    count: function (n) {
       if (!$slider) return;
-      var $btns = $slider.find('.kifi-dock-btn');
-      [['.kifi-dock-inbox', o.n],
-       ['.kifi-dock-notices', Math.max(0, o.n - o.m)],
-       ['.kifi-dock-messages', o.m]].forEach(function (a) {
-        $btns.filter(a[0]).find('.kifi-count')
-          .text(a[1] || '')
-          .css('display', a[1] ? '' : 'none');
-      });
+      $slider.find('.kifi-count')
+        .text(n || '')
+        .css('display', n ? '' : 'none');
     },
     tagged: function (o) {
       if ($slider) {

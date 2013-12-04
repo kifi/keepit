@@ -19,6 +19,8 @@ var toaster = (function () {
       if ($toaster) {
         if ($toaster.data('compose').isBlank()) {
           hide();
+        } else {
+          log('[toaster:toggleIn] no-op')();
         }
         var d = Q.defer();
         d.resolve();
@@ -30,6 +32,7 @@ var toaster = (function () {
   };
 
   function show($parent) {
+    log('[toaster:show]')();
     $toaster = $(render('html/keeper/compose_toaster', {
       showTo: true,
       draftPlaceholder: 'Type a message…',
@@ -58,18 +61,21 @@ var toaster = (function () {
 
   function onShown(deferred, e) {
     if (e.target === this && e.originalEvent.propertyName === 'background-color') {
+      log('[toaster:onShown]')();
       var $t = $(this).off('transitionend', onShown);
       deferred.resolve($t.data('compose'));
     }
   }
 
   function hide() {
+    log('[toaster:hide]')();
     $toaster.on('transitionend', onHidden).addClass('kifi-down');
     $toaster = null;
   }
 
   function onHidden(e) {
     if (e.target === this && e.originalEvent.propertyName === 'background-color') {
+      log('[toaster:onHidden]')();
       var $t = $(this);
       $t.data('compose').destroy();
       $t.remove();
@@ -84,7 +90,7 @@ var toaster = (function () {
       function (resp) {
         log('[sendMessage] resp:', resp)();
         pane.show({
-          locator: '/messages/' + (resp.parentId || resp.id),
+          locator: '/messages/' + resp.threadId,
           paramsArg: recipients});
       });
   }

@@ -12,10 +12,10 @@ var notifierScout = notifierScout || function() {  // idempotent for Chrome
         }
       }
     },
-    remove_notification: function(associatedId) {
-      if (document.querySelector(".kifi-notify-item-wrapper[data-associated-id='" + associatedId + "']")) {
+    remove_notification: function(threadId) {
+      if (document.querySelector(".kifi-notify-item-wrapper[data-thread-id='" + threadId + "']")) {
         api.require("scripts/notifier.js", function() {
-          notifier.removeByAssociatedId(associatedId);
+          notifier.hide(threadId);
         });
       }
     },

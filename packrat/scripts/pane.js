@@ -4,7 +4,6 @@
 // @require scripts/html/keeper/pane.js
 // @require scripts/html/keeper/pane_settings.js
 // @require scripts/html/keeper/pane_notices.js
-// @require scripts/html/keeper/pane_threads.js
 // @require scripts/html/keeper/pane_thread.js
 
 $.fn.scrollToBottom = function () {
@@ -41,10 +40,10 @@ var pane = pane || function () {  // idempotent for Chrome
 
   function toPaneName(locator) {
     var name = locator.match(/[a-z]+\/?/)[0];
-    return {messages: "threads", "messages/": "thread"}[name] || name;
+    return {messages: 'notices', 'messages/': 'thread'}[name] || name;
   }
 
-  var paneIdxs = ["notices","threads","thread"];
+  var paneIdxs = ['notices', 'thread'];
   function toPaneIdx(name) {
     return paneIdxs.indexOf(name);
   }
