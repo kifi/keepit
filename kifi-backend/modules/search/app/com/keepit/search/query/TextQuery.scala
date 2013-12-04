@@ -45,8 +45,8 @@ class TextQuery extends Query with Logging {
         disjunct.add(query)
         disjunct
       case _ =>
-        log.info("TextQuery: DisjunctionMaxQuery match failed")
-        personalQuery
+        log.error("TextQuery: DisjunctionMaxQuery match failed")
+        throw new Exception("Failed to add personal query")
     }
   }
 
@@ -58,8 +58,8 @@ class TextQuery extends Query with Logging {
         disjunct.add(query)
         disjunct
       case _ =>
-        log.info("TextQuery: DisjunctionMaxQuery match failed")
-        regularQuery
+        log.error("TextQuery: DisjunctionMaxQuery match failed")
+        throw new Exception("Failed to add regular query")
     }
   }
 
@@ -99,10 +99,9 @@ class TextQuery extends Query with Logging {
         disjunct.add(query)
         disjunct
       case _ =>
-        log.info("TextQuery: DisjunctionMaxQuery match failed")
-        semanticVectorQuery
+        log.error("TextQuery: DisjunctionMaxQuery match failed")
+        throw new Exception("Failed to add semanticVectorQuery")
     }
-
   }
 
   override def createWeight(searcher: IndexSearcher): Weight = {
