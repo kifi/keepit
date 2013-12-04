@@ -70,11 +70,7 @@ class SemanticVectorExtractorWeight(query: SemanticVectorExtractorQuery, semanti
   override def getQuery() = query
   override def scoresDocsOutOfOrder() = false
 
-  override def getValueForNormalization(): Float = {
-    semanticWeights.foreach{ _.getValueForNormalization() } // for side effect
-    personalWeight.foreach{ _.getValueForNormalization() } // for side effect
-    1.0f
-  }
+  override def getValueForNormalization(): Float = 1f
 
   override def normalize(norm: Float, topLevelBoost: Float): Unit = {
     semanticWeights.foreach{ _.normalize(1.0f, 1.0f) } // for side effect
