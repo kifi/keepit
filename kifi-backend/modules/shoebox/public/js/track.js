@@ -3,6 +3,8 @@
 (function() {
   'use strict';
 
+  var lastLocation;
+
   var thingsToTrack = {
     preview: {
       selector: '.keep'
@@ -54,25 +56,40 @@
     kifiBlog: /^\/blog$/
   };
 
-  function getLocation() {
-    var path = window.location.pathname;
+  function getLocation(path) {
+    path = path || lastLocation || window.location.pathname;
     for (var loc in locations){
       if (locations[loc].test(path)) {
         return loc;
       }
     }
-  }
-
-  function trackClick(properties) {
-    mixpanel.track('clicked_internal_page', properties);
+    return path;
   }
 
   function defaultClickHandler(action) {
-    trackClick({
+    mixpanel.track('clicked_internal_page',{
       type: getLocation(),
-      action: action
+      action: action,
+      origin: window.location.origin
     });
   }
+
+  function defaultViewHandler(path) {
+    mixpanel.track('viewed_internal_page',{
+      type: getLocation(path),
+      origin: window.location.origin
+    });
+  }
+
+  kifiViewTracker.forEach(function(path){
+    defaultViewHandler(path);
+  });
+  kifiViewTracker = {
+    push: function(path){
+      lastLocation = path;
+      defaultViewHandler(path);
+    }
+  };
 
   for (var action in thingsToTrack) {
     var spec = thingsToTrack[action];
