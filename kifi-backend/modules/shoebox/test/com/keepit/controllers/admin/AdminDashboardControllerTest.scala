@@ -2,7 +2,6 @@ package com.keepit.controllers.admin
 
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
 import com.keepit.social.{SocialId, SocialNetworks}
@@ -14,7 +13,6 @@ import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.test._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._

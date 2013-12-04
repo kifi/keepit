@@ -24,6 +24,7 @@ import com.keepit.model.UrlHash
 import play.api.libs.json.JsObject
 import com.keepit.scraper.HttpRedirect
 import com.google.inject.util.Providers
+import com.keepit.common.usersegment.UserSegment
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -438,6 +439,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getUserValue(userId: Id[User], key: String): Future[Option[String]] = Future.successful(None)
 
   def setUserValue(userId: Id[User], key: String, value: String): Unit = {}
+
+  def getUserSegment(userId: Id[User]): Future[UserSegment] = ???
 
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String] = Future.successful("")
 }

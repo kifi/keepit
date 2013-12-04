@@ -16,6 +16,7 @@ object EventType {
   }
 }
 
+
 sealed trait HeimdalEvent {
   val context: HeimdalContext
   val eventType: EventType
