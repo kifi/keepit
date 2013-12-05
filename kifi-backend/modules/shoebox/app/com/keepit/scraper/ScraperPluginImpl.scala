@@ -67,7 +67,7 @@ class ScraperPluginImpl @Inject() (
     val schedulingProperties: SchedulingProperties) //only on leader
   extends ScraperPlugin with SchedulingPlugin with Logging {
 
-  implicit val actorTimeout = Timeout(5 seconds)
+  implicit val actorTimeout = Timeout(scraperConfig.actorTimeout)
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
