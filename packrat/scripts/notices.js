@@ -53,11 +53,10 @@ panes.notices = function () {
     }
   };
 
-  var $notices, $markAll, inbox;
+  var $notices, $markAll;
   return {
     render: function ($container) {
       api.port.emit('notifications', function (o) {
-        inbox = ~session.experiments.indexOf('inbox');
         renderNotices($container, o.notifications, o.timeLastSeen, o.numNotVisited);
         api.port.on(handlers);
       });

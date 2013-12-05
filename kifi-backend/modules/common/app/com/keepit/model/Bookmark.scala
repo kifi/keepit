@@ -96,17 +96,18 @@ class LatestBookmarkUriCache(stats: CacheStatistics, accessLog: AccessLog, inner
 object BookmarkStates extends States[Bookmark]
 
 case class BookmarkSource(value: String) {
-  implicit def getValue = value
-  implicit def source(value: String) = BookmarkSource(value)
   override def toString = value
 }
 
 object BookmarkSource {
-  implicit def source(value: String) = BookmarkSource(value)
   val hover = BookmarkSource("HOVER_KEEP")
   val initLoad = BookmarkSource("INIT_LOAD")
   val site = BookmarkSource("SITE")
   val mobile = BookmarkSource("MOBILE")
+  val email = BookmarkSource("EMAIL")
+  val unknown = BookmarkSource("UNKNOWN")
+
+  val valid = Set(hover, initLoad, site, mobile, email)
 }
 
 object BookmarkFactory {

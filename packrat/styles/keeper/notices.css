@@ -7,9 +7,6 @@
   font-size: 12px;
   line-height: 26px;
   color: #fff !important;
-  display: none;
-}
-.kifi-pane-v2 .kifi-pane-mark-notices-read {
   display: none !important;
 }
 a.kifi-pane-mark-notices-read:hover {
@@ -34,37 +31,19 @@ div.kifi-notices-none:only-child {
 .kifi-notice {
   position: relative;
   border-bottom: 1px solid #d2d2d2;
-  padding: 10px 12px 10px 58px;
-  min-height: 10px;
-  cursor: pointer;
-  background: #e5ebf1;
-}
-.kifi-pane-v2 .kifi-notice {
   padding: 10px 12px 10px 71px;
   min-height: 53px;
+  cursor: pointer;
   background: #f0f2f6;
 }
-.kifi-notice:hover {
-  background: #dfe7ef;
-}
 .kifi-notice-visited {
-  background: #fefefe;
-}
-.kifi-pane-v2 .kifi-notice-visited {
   background: #fff;
 }
-.kifi-notice-visited:hover,
-.kifi-pane-v2 .kifi-notice:hover {
+.kifi-notice:hover {
   background: #f8fafd;
 }
 
-/* v1 */
-.kifi-notice-when {
-  margin: 4px 0 0 0;
-  font-size: 11px;
-  color: #ccc;
-  display: block;
-}
+/* global */
 .kifi-notice-avatar {
   position: absolute;
   top: 12px;
@@ -94,24 +73,6 @@ div.kifi-notices-none:only-child {
   width: 9px;
   border-radius: 5px;
 }
-.kifi-notice-message:not(.kifi-notice-visited) .kifi-notice-action::after {
-  content: " waiting";
-}
-.kifi-notice-page {
-  font-size: 12px;
-  margin: 8px 0;
-}
-.kifi-notice-page a.kifi-link,
-.kifi-notice-page a.kifi-link:hover,
-.kifi-notice-page a.kifi-link:visited,
-.kifi-notice-page a.kifi-link:active {
-  display: block;
-  color: #97a1ac !important;
-  width: 220px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
-}
 .kifi-notice-text {
   margin: 6px 0;
   font-size: 13px;
@@ -119,7 +80,7 @@ div.kifi-notices-none:only-child {
   word-wrap: break-word;
 }
 
-/* v2 */
+/* message */
 .kifi-notice-mosaic {
   position: absolute;
   top: 11px;

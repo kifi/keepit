@@ -31,7 +31,7 @@
     settings: {
       refreshMillis: 60000,
       allowFuture: false,
-      strings: window.session && ~session.experiments.indexOf('inbox') ? {
+      strings: {
         prefixAgo: null,
         prefixFromNow: null,
         suffixAgo: '',
@@ -48,24 +48,6 @@
         year: '1 year',
         years: '%d years',
         wordSeparator: ' ',
-        numbers: []
-      } : {
-        prefixAgo: null,
-        prefixFromNow: null,
-        suffixAgo: "ago",
-        suffixFromNow: "from now",
-        seconds: "just now",
-        minute: "about a minute",
-        minutes: "%d minutes",
-        hour: "about an hour",
-        hours: "about %d hours",
-        day: "a day",
-        days: "%d days",
-        month: "about a month",
-        months: "%d months",
-        year: "about a year",
-        years: "%d years",
-        wordSeparator: " ",
         numbers: []
       }
     },

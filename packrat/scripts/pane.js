@@ -70,7 +70,6 @@ var pane = pane || function () {  // idempotent for Chrome
       var name = toPaneName(locator);
       (createPaneParams[name] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
         params.redirected = redirected;
-        params.inbox = ~session.experiments.indexOf('inbox');
         showPaneContinued(locator, back, name, params);
         deferred.resolve();
       }, locator, paramsArg);
@@ -177,7 +176,7 @@ var pane = pane || function () {  // idempotent for Chrome
         var btn = this;
         render("html/keeper/titled_tip", {
           dir: "below",
-          cssClass: 'kifi-pane-settings-tip' + (~session.experiments.indexOf('inbox') ? ' kifi-pane-v2-settings-tip' : ''),
+          cssClass: 'kifi-pane-settings-tip',
           title: "Settings",
           html: "Customize your Kifi<br>experience."
         }, function (html) {
@@ -322,7 +321,7 @@ var pane = pane || function () {  // idempotent for Chrome
       }
     },
     toggle: function (trigger, locator) {
-      if (!locator || (locator === '/messages' && ~session.experiments.indexOf('inbox'))) {
+      if (!locator) {
         locator = '/notices';
       }
       if ($pane) {

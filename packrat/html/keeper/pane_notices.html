@@ -1,19 +1,13 @@
 <div class="kifi-pane-box kifi-pane-notices">
   {{#backButton}}
-  <a class="kifi-pane-back" href="javascript:"></a>
+  {{!<a class="kifi-pane-back" href="javascript:"></a>}}
   {{/backButton}}
-  {{^inbox}}
-    <a class="kifi-pane-mark-notices-read" href="javascript:">Mark all read</a>
-    <div class="kifi-pane-title">Notifications</div>
-  {{/inbox}}
-  {{#inbox}}
-    <div class="kifi-notices-head">
-      <input class="kifi-notices-query" type="text" placeholder="Search your messages">
-      <a class="kifi-notices-filter kifi-notices-filter-all">All</a>{{!
-    }}<a class="kifi-notices-filter kifi-notices-filter-sent" href="javascript:">Sent</a>{{!
-    }}<a class="kifi-notices-filter kifi-notices-filter-unread" href="javascript:">Unread</a>{{!
-    }}<a class="kifi-notices-filter kifi-notices-filter-page" href="javascript:">This Page</a>
-    </div>
-  {{/inbox}}
+  <div class="kifi-notices-head">
+    <input class="kifi-notices-query" type="text" placeholder="Search your messages">
+    <a class="kifi-notices-filter kifi-notices-filter-all">All</a>{{!
+  }}<a class="kifi-notices-filter kifi-notices-filter-sent" href="javascript:">Sent</a>{{!
+  }}<a class="kifi-notices-filter kifi-notices-filter-unread" href="javascript:">Unread</a>{{!
+  }}<a class="kifi-notices-filter kifi-notices-filter-page" href="javascript:">This Page</a>
+  </div>
   <div class="kifi-pane-tall"></div>
 </div>

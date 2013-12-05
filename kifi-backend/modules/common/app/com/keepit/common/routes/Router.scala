@@ -222,7 +222,8 @@ object Scraper extends Service {
     def scheduleScrape() = ServiceRoute(POST, s"/internal/scraper/scheduleScrape")
     def scheduleScrapeWithRequest() = ServiceRoute(POST, s"/internal/scraper/scheduleScrapeWithRequest")
     def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
-    def getBasicArticleP() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
+    def getBasicArticleP() = ServiceRoute(POST, s"/internal/scraper/getBasicArticleP")
+    def getBasicArticleWithExtractor() = ServiceRoute(POST, s"/internal/scraper/getBasicArticleWithExtractor")
   }
 }
 

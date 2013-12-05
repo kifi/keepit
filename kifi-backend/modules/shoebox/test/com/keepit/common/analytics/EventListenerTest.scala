@@ -30,7 +30,7 @@ class EventListenerTest extends Specification with ShoeboxApplicationInjector {
         userId = user.id.get,
         title = Some("test"),
         url = url,
-        source = BookmarkSource("HOVER_KEEP")
+        source = BookmarkSource.hover
       ))
       (normUrl.id.get, url, user, bookmark)
     }

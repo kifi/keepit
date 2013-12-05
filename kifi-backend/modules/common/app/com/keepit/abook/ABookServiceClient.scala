@@ -16,6 +16,7 @@ import scala.concurrent.{Future, Promise}
 import play.api.libs.json.{JsValue, JsArray, Json, JsObject}
 
 import com.google.inject.Inject
+import com.google.inject.util.Providers
 import com.keepit.common.routes.ABook
 import scala.util.{Success, Failure, Try}
 import play.api.http.Status
@@ -144,7 +145,7 @@ class ABookServiceClientImpl @Inject() (
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ABookServiceClient {
 
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 

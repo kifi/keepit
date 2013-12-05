@@ -38,7 +38,7 @@ class SecureSocialUserPluginImpl @Inject() (
   airbrake: AirbrakeNotifier,
   emailRepo: EmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
-  eventContextBuilder: EventContextBuilderFactory,
+  eventContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   userExperimentRepo: UserExperimentRepo,
   clock: Clock)
@@ -135,7 +135,7 @@ class SecureSocialUserPluginImpl @Inject() (
       ))
       SafeFuture{
         val contextBuilder = eventContextBuilder()
-        heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, EventType("signup")))
+        heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, UserEventTypes.SIGNUP))
       }
       userOpt
     } else None

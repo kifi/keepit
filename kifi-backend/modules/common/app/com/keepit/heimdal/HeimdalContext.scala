@@ -86,14 +86,14 @@ object HeimdalContext {
   }
 }
 
-class EventContextBuilder {
+class HeimdalContextBuilder {
   val data = new scala.collection.mutable.HashMap[String, ContextData]()
 
   def +=[T ](key: String, value: T)(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = value
   def +=[T](key: String, values: Seq[T])(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = ContextList(values.map(toSimpleContextData))
   def build : HeimdalContext = HeimdalContext(data.toMap)
 
-  def addService(serviceDiscovery: ServiceDiscovery): Unit = {
+  def addServiceInfo(serviceDiscovery: ServiceDiscovery): Unit = {
     this += ("serviceVersion", serviceDiscovery.myVersion.value)
     serviceDiscovery.thisInstance.map { instance =>
       this += ("serviceInstance", instance.instanceInfo.instanceId.id)
@@ -101,9 +101,9 @@ class EventContextBuilder {
     }
   }
 
-  def addRequest(request: RequestHeader, remoteAddress: Option[String]): Unit = {
-    this += ("remoteAddress", remoteAddress orElse request.headers.get("X-Forwarded-For") getOrElse request.remoteAddress)
+  def addRequestInfo(request: RequestHeader): Unit = {
     this += ("doNotTrack", request.headers.get("do-not-track").exists(_ == "1"))
+    addRemoteAddress(request.headers.get("X-Forwarded-For") getOrElse request.remoteAddress)
     addUserAgent(request.headers.get("User-Agent").getOrElse(""))
 
     request match {
@@ -113,6 +113,8 @@ class EventContextBuilder {
       case _ =>
     }
   }
+
+  def addRemoteAddress(remoteAddress: String) = this += ("remoteAddress", remoteAddress)
 
   def addExperiments(experiments: Set[ExperimentType]): Unit = {
     this += ("experiments", experiments.map(_.value).toSeq)
@@ -125,16 +127,10 @@ class EventContextBuilder {
 }
 
 @Singleton
-class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) {
-  def apply(): EventContextBuilder = {
-    val contextBuilder = new EventContextBuilder()
-    contextBuilder.addService(serviceDiscovery)
-    contextBuilder
-  }
-
-  def apply(request: RequestHeader, remoteAddress: Option[String] = None): EventContextBuilder = {
-    val contextBuilder = apply()
-    contextBuilder.addRequest(request, remoteAddress)
+class HeimdalContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) {
+  def apply(): HeimdalContextBuilder = {
+    val contextBuilder = new HeimdalContextBuilder()
+    contextBuilder.addServiceInfo(serviceDiscovery)
     contextBuilder
   }
 }
