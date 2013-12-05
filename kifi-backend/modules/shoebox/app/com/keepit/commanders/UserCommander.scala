@@ -99,7 +99,7 @@ class UserCommander @Inject() (
   }
 
   def socialNetworkInfo(userId: Id[User]) = db.readOnly { implicit s =>
-    socialUserInfoRepo.getByUser(userId).map(BasicSocialUser from _)
+    socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }
 
   def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[JsValue] = {
