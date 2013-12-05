@@ -84,6 +84,7 @@ class UserRepoImpl @Inject() (
     if (user.state == UserStates.INACTIVE)
       heimdal.deleteUser(user.id.get)
     else {
+      heimdal.setUserAlias(user.id.get, user.externalId)
       val properties = new HeimdalContextBuilder
       properties += ("$first_name", user.firstName)
       properties += ("$last_name", user.lastName)
