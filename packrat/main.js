@@ -1182,7 +1182,7 @@ function getSearchMaxResults(request) {
   }
 
   var joined = session.joined;
-  if (joined && new Date() - joined < TWO_WEEKS) {
+  if (joined && (new Date() - joined) < TWO_WEEKS) {
     return MAX_RES_FOR_NEW;
   }
 
