@@ -248,26 +248,26 @@ class UserController @Inject() (
       } else {
         db.readWrite { implicit session =>
           for (emails <- userData.emails.map(_.toSet)) {
-            val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(em => emails.map(_.address) contains em.address)
-
+            val emailStrings = emails.map(_.address)
+            val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(em => emailStrings contains em.address)
             // Remove missing emails
             for (email <- toRemove) {
               val isPrimary = request.user.primaryEmailId.isDefined && (request.user.primaryEmailId.get == email.id.get)
-              val isLast = (existing.length - toRemove.length) == 0
-              val isLastVerified = existing.exists(em => em != email && em.verified)
+              val isLast = existing.isEmpty
+              val isLastVerified = !existing.exists(em => em != email && em.verified)
               if (!isPrimary && !isLast && !isLastVerified) {
                 emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
               }
             }
             // Add new emails
-            for (address <- emails.map(_.address).toSet -- existing.map(_.address)) {
+            for (address <- emailStrings -- existing.map(_.address)) {
               val emailAddr = emailAddressRepo.save(EmailAddress(userId = request.userId, address = address).withVerificationCode(clock.now))
               val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
 
               postOffice.sendMail(ElectronicMail(
                 from = EmailAddresses.NOTIFICATIONS,
                 to = Seq(GenericEmailAddress(address)),
-                subject = "Kifi.com |  Please confirm your email address",
+                subject = "Kifi.com | Please confirm your email address",
                 htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
                 category = ElectronicMailCategory("email_confirmation")
               ))
@@ -277,9 +277,11 @@ class UserController @Inject() (
               if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
                 val emailRecordOpt = emailRepo.getByAddressOpt(emailInfo.address)
                 emailRecordOpt.map { emailRecord =>
-                  if (emailRecord.verified && (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get)) {
-                    userValueRepo.clearValue(request.userId, "pending_primary_email")
-                    userRepo.save(request.user.copy(primaryEmailId = Some(emailRecord.id.get)))
+                  if (emailRecord.verified) {
+                    if (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get) {
+                      userValueRepo.clearValue(request.userId, "pending_primary_email")
+                      userRepo.save(request.user.copy(primaryEmailId = Some(emailRecord.id.get)))
+                    }
                   } else {
                     userValueRepo.setValue(request.userId, "pending_primary_email", emailInfo.address)
                   }
