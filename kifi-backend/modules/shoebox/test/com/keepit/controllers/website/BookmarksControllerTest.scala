@@ -22,6 +22,8 @@ import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.social.{SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin, SocialId, SocialNetworks}
 import com.keepit.test.ShoeboxApplication
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import play.api.libs.json.{JsObject, Json, JsArray, JsString}
 import play.api.mvc.Result
@@ -119,18 +121,23 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
 
         val path = com.keepit.controllers.website.routes.BookmarksController.allKeeps(before = None, after = None, collection = None).toString
         path === "/site/keeps/all"
+        inject[FakeSearchServiceClient] == inject[FakeSearchServiceClient]
+        val sharingUserInfo = Seq(SharingUserInfo(Set(), 0), SharingUserInfo(Set(), 0))
+        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 
-        inject[SearchServiceClient].sharingUserInfoData(Seq(SharingUserInfo(Set(), 0), SharingUserInfo(Set(), 0)))
-
-        inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[BookmarksController]
+        inject[FakeActionAuthenticator].setUser(user)
+        controller.searchClient == inject[FakeSearchServiceClient]
+
+        Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
+        Await.result(controller.searchClient.sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest("GET", path)
         val result = route(request).get
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
         val expected = Json.parse(s"""
-          {"collection":null}
+          {"collection":null,"before":null,"after":null,"keeps":["something here"]}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
@@ -148,7 +155,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         }
 
         val path = com.keepit.controllers.website.routes.BookmarksController.allCollections().toString
-        path === "/site/collections/all"
+        path === "/site/collectionons/all"
 
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[BookmarksController]

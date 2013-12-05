@@ -39,7 +39,7 @@ class BookmarksController @Inject() (
     s3ScreenshotStore: S3ScreenshotStore,
     collectionCommander: CollectionCommander,
     bookmarksCommander: BookmarksCommander,
-    searchClient: SearchServiceClient,
+    val searchClient: SearchServiceClient,
     userEventContextBuilder: EventContextBuilderFactory
   )
   extends WebsiteController(actionAuthenticator) {
@@ -163,7 +163,6 @@ class BookmarksController @Inject() (
 
   def allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int) =
       AuthenticatedJsonAction { request =>
-        clean db calls
     (before map getBookmarkExternalId, after map getBookmarkExternalId,
         collection map { getCollectionByExternalId(request.userId, _) }) match {
       case (Some(None), _, _) => BadRequest(Json.obj("error" -> s"Invalid id for before: ${before.get}"))
@@ -173,7 +172,9 @@ class BookmarksController @Inject() (
         val keeps = db.readOnly { implicit s =>
           bookmarkRepo.getByUser(request.userId, beforeId.flatten, afterId.flatten, coll.flatten.map(_.id.get), count)
         }
+        log.info(s"keeps for: before $beforeId after $afterId collections $coll: $keeps")
         searchClient.sharingUserInfo(request.userId, keeps.map(_.uriId)) map { infos =>
+          log.info(s"got sharingUserInfo: $infos")
           db.readOnly { implicit s =>
             val idToBasicUser = infos.flatMap(_.sharingUserIds).distinct.map(id => id -> basicUserRepo.load(id)).toMap
             val collIdToExternalId = collectionRepo.getByUser(request.userId).map(c => c.id.get -> c.externalId).toMap

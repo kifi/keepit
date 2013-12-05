@@ -49,7 +49,8 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
 
   var sharingUserInfoDataFix: Seq[SharingUserInfo] = Seq()
   def sharingUserInfoData(data: Seq[SharingUserInfo]): Unit = sharingUserInfoDataFix = data
-  override def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = Future.successful(data)
+
+  override def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = Future.successful(sharingUserInfoDataFix)
 
   override def articleIndexerSequenceNumber(): Future[Int] = ???
 
