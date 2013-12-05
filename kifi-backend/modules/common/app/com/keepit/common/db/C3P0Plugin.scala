@@ -161,11 +161,11 @@ class  C3P0Api(configuration: Configuration, classloader: ClassLoader) extends D
     conf.getString("password").map(datasource.setPassword(_))
 
     datasource.setDriverClass(driver)
-    datasource.setAcquireIncrement(conf.getInt("acquireIncrement").getOrElse(1))
-    datasource.setAcquireRetryAttempts(conf.getInt("acquireRetryAttempts").getOrElse(10))
-    datasource.setMinPoolSize(conf.getInt("minPoolSize").getOrElse(10));
-    datasource.setMaxPoolSize(conf.getInt("maxPoolSize").getOrElse(10));
-    datasource.setMaxIdleTime(conf.getInt("maxIdleTime").getOrElse(0));
+    datasource.setAcquireIncrement(conf.getInt("acquireIncrement").getOrElse(3))
+    datasource.setAcquireRetryAttempts(conf.getInt("acquireRetryAttempts").getOrElse(30))
+    datasource.setMinPoolSize(conf.getInt("minPoolSize").getOrElse(10))
+    datasource.setMaxPoolSize(conf.getInt("maxPoolSize").getOrElse(40))
+    datasource.setMaxIdleTime(conf.getInt("maxIdleTime").getOrElse(60))
 
 
     // Bind in JNDI
