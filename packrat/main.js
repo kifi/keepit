@@ -187,6 +187,37 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 
 // ===== Event logging
 
+var mixpanel = {
+  queue: [],
+  send: function(data) {
+    data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
+    data.properties.distinct_id = session.user.id;
+    var dataString = btoa(JSON.stringify(data));
+    api.request("GET", "http://api.mixpanel.com/track/?data=" + dataString);
+  },
+  track: function(eventName, properties) {
+    log("#aaa", "[mixpanel.track] %s %o", eventName, properties)();
+    properties.time = Date.now();
+    var data = {
+      'event': eventName,
+      'properties': properties
+    };
+    if (typeof session != 'undefined' && session.user) {
+      this.send(data);
+    } else {
+      this.queue.push(data);
+    }
+  },
+  catchUp: function() {
+    var that = this;
+    this.queue.forEach(function(data){
+      that.send(data);
+    });
+    this.queue = [];
+  }
+};
+
+
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (eventFamily !== 'slider') {
     log("#800", "[logEvent] invalid event family:", eventFamily)();
@@ -607,6 +638,9 @@ api.port.on({
   log_search_event: function(data) {
     var whichEvent = data[0];
     ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
+  },
+  track_pane_viewed: function(type){
+    mixpanel.track("viewed_pane", {'type': type});
   },
   send_message: function(data, respond, tab) {
     var nUri = tab.nUri || data.url;
@@ -1779,6 +1813,7 @@ function startSession(callback, retryMs) {
       reportError("socket disconnect (" + why + ")");
     });
     logEvent.catchUp();
+    mixpanel.catchUp();
 
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
