@@ -3162,8 +3162,7 @@ $(function () {
 	function updateMe(data) {
 		console.log('[updateMe]', data);
 		me = data;
-		mixpanel.identify(me.id);
-
+		mixpanel.alias(me.id);
 		$('.my-pic').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
 		$('.my-name').text(data.firstName + ' ' + data.lastName);
 		$('.my-description').text(data.description || '\u00A0'); // nbsp
