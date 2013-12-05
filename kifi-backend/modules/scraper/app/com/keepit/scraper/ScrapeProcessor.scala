@@ -23,8 +23,7 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.actor.ActorInstance
-import akka.routing.RoundRobinRouter
+import akka.routing.{SmallestMailboxRouter}
 import play.api.Play.current
 import scala.Some
 import scala.util.Success
@@ -38,28 +37,30 @@ trait ScrapeProcessorPlugin extends Plugin {
 
 @Singleton
 class ScrapeProcessorPluginProvider @Inject() (
+  scraperConfig: ScraperConfig,
   asyncScrapeProcessor:AsyncScrapeProcessorPlugin,
   syncScrapeProcessor:ScrapeProcessorPluginImpl
 ) extends Provider[ScrapeProcessorPlugin] with Logging {
 
-  val doAsync = sys.props.getOrElse("scraper.plugin.async", "false").toBoolean  // scraper-instance config
-  lazy val plugin = if (doAsync) asyncScrapeProcessor else syncScrapeProcessor
-  log.info(s"[ScrapeProcessorPluginProvider] created. async=$doAsync")
+  lazy val plugin = if (scraperConfig.async) asyncScrapeProcessor else syncScrapeProcessor
+  log.info(s"[ScrapeProcessorPluginProvider] created with: $scraperConfig")
 
   def get = plugin
 }
 
-class ScrapeProcessorPluginImpl @Inject() (actorInstance:ActorInstance[ScrapeProcessor], sysProvider: Provider[ActorSystem], procProvider: Provider[ScrapeProcessor]) extends ScrapeProcessorPlugin with Logging {
+class ScrapeProcessorPluginImpl @Inject() (
+  scraperConfig: ScraperConfig,
+  sysProvider:   Provider[ActorSystem],
+  procProvider:  Provider[ScrapeProcessor]
+) extends ScrapeProcessorPlugin with Logging {
 
   lazy val system = sysProvider.get
   lazy val actor = {
-    if (Play.maybeApplication.isDefined && (!Play.isTest))
-      system.actorOf(Props(procProvider.get).withRouter(RoundRobinRouter(nrOfInstances = Runtime.getRuntime.availableProcessors)))
-    else
-      actorInstance.ref
+    val nrOfInstances = if (Play.maybeApplication.isDefined && (!Play.isTest)) scraperConfig.numInstances else 1
+    system.actorOf(Props(procProvider.get).withRouter(SmallestMailboxRouter(nrOfInstances)))
   }
 
-  implicit val timeout = Timeout(5 seconds)
+  implicit val timeout = Timeout(20 seconds)
 
   def fetchBasicArticle(url: String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     (actor ? FetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)).mapTo[Option[BasicArticle]]
@@ -81,7 +82,7 @@ case class ScrapeArticle(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[Htt
 class ScrapeProcessor @Inject() (
   airbrake:AirbrakeNotifier,
   config: ScraperConfig,
-  helper: SyncScraper,
+  syncScraper: SyncScraper,
   httpFetcher: HttpFetcher,
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
@@ -104,7 +105,7 @@ class ScrapeProcessor @Inject() (
       }
       val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
       val res = fetchStatus.statusCode match {
-        case HttpStatus.SC_OK if !(helper.isUnscrapableP(url, fetchStatus.destinationUrl)) => Some(helper.basicArticle(url, extractor))
+        case HttpStatus.SC_OK if !(syncScraper.isUnscrapableP(url, fetchStatus.destinationUrl)) => Some(syncScraper.basicArticle(url, extractor))
         case _ => None
       }
       log.info(s"[FetchArticle] time-lapsed:${System.currentTimeMillis - ts} url=$url result=$res")
@@ -114,14 +115,14 @@ class ScrapeProcessor @Inject() (
     case ScrapeArticle(uri, info, proxyOpt) => {
       log.info(s"[ScrapeArticle] message received; url=${uri.url}")
       val ts = System.currentTimeMillis
-      val res = helper.safeProcessURI(uri, info, proxyOpt)
+      val res = syncScraper.safeProcessURI(uri, info, proxyOpt)
       log.info(s"[ScrapeArticle] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=${res._1.state}")
       sender ! res
     }
     case AsyncScrape(nuri, info, proxyOpt) => {
       log.info(s"[AsyncScrape] message received; url=${nuri.url}")
       val ts = System.currentTimeMillis
-      val (uri, a) = helper.safeProcessURI(nuri, info, proxyOpt)
+      val (uri, a) = syncScraper.safeProcessURI(nuri, info, proxyOpt)
       log.info(s"[AsyncScrape] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=(${uri.id}, ${uri.state})")
     }
   }
