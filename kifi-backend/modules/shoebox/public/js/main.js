@@ -3160,10 +3160,10 @@ $(function () {
 		$('.profile-email input').val(primary[ADDRESS] || '');
 
 		var $emails = $('.profile-email-address-list').empty();
-		(me.emails || []).forEach(function (info) {
+		(me.emails || []).forEach(function (info, i, list) {
 			$emails.append(emailTmpl({
 				email: info[ADDRESS],
-				primary: !!info[PRIMARY],
+				primary: list.length <= 1 || !!info[PRIMARY],
 				verified: !!info[VERIFIED],
 				pendingPrimary: !!info[PENDING_PRIMARY]
 			}));
