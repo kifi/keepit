@@ -101,10 +101,10 @@
   color: #fff;
   -webkit-font-smoothing: antialiased;
 }
-.kifi-pane[data-locator='/box'] .kifi-pane-head-title::before {
+.kifi-pane .kifi-pane-head-title::before {
   content: 'Message Box';
 }
-.kifi-pane .kifi-pane-head-title::before {
+.kifi-pane[data-locator^='/messages/'] .kifi-pane-head-title::before {
   content: 'Kifi Chat';
 }
 a.kifi-pane-settings {

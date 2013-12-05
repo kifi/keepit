@@ -290,7 +290,7 @@ panes.notices = function () {
   }
 
   function formatLocator(hash) {
-    return hash && hash !== 'all' ? '/box#' + hash : '/box';
+    return hash && hash !== 'page' ? '/messages#' + hash : '/messages';
   }
 }();
 

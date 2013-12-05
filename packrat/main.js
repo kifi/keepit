@@ -241,7 +241,7 @@ var socketHandlers = {
       handleRealTimeNotification(n);
       var tl = pageThreads[n.url];
       if (tl) {
-        // TODO: update tabs at n.url and /box
+        // TODO: update tabs at n.url and /messages
       }
       tellVisibleTabsNoticeCountIfChanged();
     }
@@ -268,7 +268,7 @@ var socketHandlers = {
       }
     }
     if (arr.length) {
-      forEachTabAtLocator('/box', function(tab) {
+      forEachTabAtLocator('/messages', function(tab) {
         api.tabs.emit(tab, 'missed_notifications', arr);
       });
     }
@@ -790,7 +790,7 @@ function standardizeNotification(n) {
 function handleRealTimeNotification(n) {
   var tabsTold = {};
   api.tabs.eachSelected(tellTab);
-  forEachTabAtLocator('/box', tellTab);
+  forEachTabAtLocator('/messages', tellTab);
 
   if (n.unread && !n.muted) {
     api.play('media/notification.mp3');
@@ -855,7 +855,7 @@ function markRead(category, threadId, messageId, timeStr) {
       allThreads.decNumUnreadUnmuted();
     }
 
-    forEachTabAtLocator('/box', function(tab) {
+    forEachTabAtLocator('/messages', function(tab) {
       api.tabs.emit(tab, 'notifications_visited', {
         category: category,
         time: timeStr,
@@ -882,7 +882,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
   });
   // TODO: update numUnreadUnmuted for each ThreadList in pageThreads?
 
-  forEachTabAtLocator('/box', function(tab) {
+  forEachTabAtLocator('/messages', function(tab) {
     api.tabs.emit(tab, "all_notifications_visited", {
       id: id,
       time: timeStr,
@@ -1220,10 +1220,10 @@ function gotPageThreads(uri, nUri, threads) {
   }
   delete pageThreadsCallbacks[uri];
 
-  // sending new page threads (or just the count) to tabs at '/box' on this page
+  // sending new page threads (or just the count) to tabs at '/messages' on this page
   if (numNewThreads) {
-    forEachTabAtUriAndLocator(uri, nUri, '/box', function(tab) {
-      // should send all threads if at /box/page; otherwise, just the count
+    forEachTabAtUriAndLocator(uri, nUri, '/messages', function(tab) {
+      // should send all threads if at /messages#page; otherwise, just the count
       api.tabs.emit(tab, 'page_threads', pt.ids.map(idToThread));  // TODO: write handler
       api.tabs.emit(tab, 'page_thread_count', pt.ids.length);  // TODO: write handler
     });
@@ -1259,7 +1259,7 @@ function gotPageThreadsFor(url, tab, pt, nUri) {
     pageThreads[nUri] = pt;
     if (ruleSet.rules.message && pt.numUnreadUnmuted) {  // open immediately to unread message(s)
       api.tabs.emit(tab, 'open_to', {
-        locator: pt.numUnreadUnmuted === 1 ? '/messages/' + pt.firstUnreadUnmuted() : '/box#page',
+        locator: pt.numUnreadUnmuted === 1 ? '/messages/' + pt.firstUnreadUnmuted() : '/messages',
         trigger: 'message'
       }, {queue: 1});
       pt.forEachUnread(function(threadId) {

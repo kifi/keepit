@@ -39,13 +39,8 @@ var pane = pane || function () {  // idempotent for Chrome
     $('html').removeClass('kifi-with-pane kifi-pane-parent');
   });
 
-  function canonicalize(locator) {  // kifi.com chatter link uses /messages
-    return locator === '/messages' ? '/box#page' : (locator || '/box');
-  }
-
   function toPaneName(locator) {
-    var name = locator.match(/[a-z]+/)[0];
-    return {box: 'notices', messages: 'thread'}[name] || name;
+    return /^\/messages\//.test(locator) ? 'thread' : 'notices';
   }
 
   var paneIdxs = ['notices', 'thread'];
@@ -312,7 +307,7 @@ var pane = pane || function () {  // idempotent for Chrome
       }
     },
     toggle: function (trigger, locator) {
-      locator = canonicalize(locator);
+      locator = locator || '/messages#all';
       if ($pane) {
         if (locator === paneHistory[0]) {
           hidePane(trigger === 'keeper');
@@ -329,7 +324,7 @@ var pane = pane || function () {  // idempotent for Chrome
         if ($pane) {
           toggleToaster();
         } else {
-          showPane('/box').then(toggleToaster);
+          showPane('/messages#all').then(toggleToaster);
         }
         function toggleToaster() {
           toaster.toggleIn($pane).done(function (compose) {
