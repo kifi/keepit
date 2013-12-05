@@ -1089,7 +1089,7 @@ function kifify(tab) {
     var callbacks = pageThreadsCallbacks[uri];
     if (!callbacks) {
       callbacks = pageThreadsCallbacks[uri] = [];
-      socket.send(['get_notifications_by_url', url], gotPageThreads.bind(null, uri));
+      socket.send(['get_page_notifications', url], gotPageThreads.bind(null, uri));
     }
     callbacks.push(gotPageThreadsFor.bind(null, url, tab));
   }
@@ -1247,7 +1247,7 @@ function gotPageThreads(uri, nUri, threads) {
 
 function gotPageThreadsFor(url, tab, pt, nUri) {
   var tabIsOld = api.tabs.get(tab.id) !== tab || url.split('#', 1)[0] !== tab.url.split('#', 1)[0];
-  log('[gotPageThreadsFor]', tab.id, tabIsOld ? 'OLD' : '', url, nUri === url ? '' : nUri, threads)();
+  log('[gotPageThreadsFor]', tab.id, tabIsOld ? 'OLD' : '', url, nUri === url ? '' : nUri, pt.ids)();
 
   if (!tabIsOld) {
     pageThreads[nUri] = pt;
