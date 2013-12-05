@@ -238,11 +238,12 @@ var socketHandlers = {
     log("[socket:notification]", n)();
     standardizeNotification(n);
     if (insertNewNotification(n)) {
-      sendNotificationToTabs(n, true);
+      handleRealTimeNotification(n);
       var tl = pageThreads[n.url];
       if (tl) {
-        // TODO: update tabs at n.url and /messages (or /notices?)
+        // TODO: update tabs at n.url and /box
       }
+      tellVisibleTabsNoticeCountIfChanged();
     }
   },
   missed_notifications: function(arr, serverTime) {
@@ -253,9 +254,8 @@ var socketHandlers = {
       standardizeNotification(n);
 
       if (insertNewNotification(n)) {
-        var showPopup = serverTime - new Date(n.time) < 60000;
-        sendNotificationToTabs(n, showPopup);
-        if (showPopup) {
+        if (serverTime - new Date(n.time) < 60000) {
+          handleRealTimeNotification(n);
           arr.splice(i, 1);
         }
         var md = messageData[n.thread];
@@ -268,7 +268,7 @@ var socketHandlers = {
       }
     }
     if (arr.length) {
-      forEachTabAtLocator('/notices', function(tab) {
+      forEachTabAtLocator('/box', function(tab) {
         api.tabs.emit(tab, 'missed_notifications', arr);
       });
     }
@@ -787,20 +787,13 @@ function standardizeNotification(n) {
   n.unread = n.unread || (n.unreadAuthors > 0);
 }
 
-function sendNotificationToTabs(n, showPopup) {
-  if (showPopup) {
-    var tabsTold = {};
-    api.tabs.eachSelected(tellTab);
-    forEachTabAtLocator('/notices', tellTab);
-  }
-  forEachTabAtUriAndLocator(n.url, '/messages', function(tab) {
-    api.tabs.emit(tab, 'thread_info', n);
-  });
-
-  tellVisibleTabsNoticeCountIfChanged();
+function handleRealTimeNotification(n) {
+  var tabsTold = {};
+  api.tabs.eachSelected(tellTab);
+  forEachTabAtLocator('/box', tellTab);
 
   if (n.unread && !n.muted) {
-    api.play("media/notification.mp3");
+    api.play('media/notification.mp3');
   }
 
   function tellTab(tab) {
@@ -862,16 +855,13 @@ function markRead(category, threadId, messageId, timeStr) {
       allThreads.decNumUnreadUnmuted();
     }
 
-    forEachTabAtLocator('/notices', function(tab) {
+    forEachTabAtLocator('/box', function(tab) {
       api.tabs.emit(tab, 'notifications_visited', {
         category: category,
         time: timeStr,
         threadId: threadId,
         id: messageId,
         numNotVisited: allThreads.numUnreadUnmuted});
-    });
-    forEachTabAtUriAndLocator(th.url, '/messages', function(tab) {
-      api.tabs.emit(tab, 'thread_info', th);
     });
 
     tellVisibleTabsNoticeCountIfChanged();
@@ -892,7 +882,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
   });
   // TODO: update numUnreadUnmuted for each ThreadList in pageThreads?
 
-  forEachTabAtLocator('/notices', function(tab) {
+  forEachTabAtLocator('/box', function(tab) {
     api.tabs.emit(tab, "all_notifications_visited", {
       id: id,
       time: timeStr,
@@ -1230,18 +1220,12 @@ function gotPageThreads(uri, nUri, threads) {
   }
   delete pageThreadsCallbacks[uri];
 
-  // sending new page thread count to tabs at '/notices' on this page
+  // sending new page threads (or just the count) to tabs at '/box' on this page
   if (numNewThreads) {
-    forEachTabAtUriAndLocator(uri, nUri, '/notices', function(tab) {
+    forEachTabAtUriAndLocator(uri, nUri, '/box', function(tab) {
+      // should send all threads if at /box/page; otherwise, just the count
+      api.tabs.emit(tab, 'page_threads', pt.ids.map(idToThread));  // TODO: write handler
       api.tabs.emit(tab, 'page_thread_count', pt.ids.length);  // TODO: write handler
-    });
-  }
-
-  // updating tabs currently displaying this list of page threads
-  // TODO: determine whether this sometimes duplicates the work of a callback invoked above
-  if (numNewThreads || updatedThreads.length) {
-    forEachTabAtUriAndLocator(uri, nUri, '/messages', function(tab) {
-      api.tabs.emit(tab, 'threads', pt.ids.map(idToThread));
     });
   }
 
@@ -1273,9 +1257,11 @@ function gotPageThreadsFor(url, tab, pt, nUri) {
 
   if (!tabIsOld) {
     pageThreads[nUri] = pt;
-
     if (ruleSet.rules.message && pt.numUnreadUnmuted) {  // open immediately to unread message(s)
-      api.tabs.emit(tab, 'open_to', {trigger: 'message', locator: pt.getUnreadLocator()}, {queue: 1});
+      api.tabs.emit(tab, 'open_to', {
+        locator: pt.numUnreadUnmuted === 1 ? '/messages/' + pt.firstUnreadUnmuted() : '/box#page',
+        trigger: 'message'
+      }, {queue: 1});
       pt.forEachUnread(function(threadId) {
         if (!threadCallbacks[threadId]) {
           socket.send(['get_thread', threadId]);  // prefetch

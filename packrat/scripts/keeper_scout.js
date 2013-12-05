@@ -101,11 +101,11 @@ var tile = tile || function() {  // idempotent for Chrome
         e.preventDefault();
         break;
       case 77: // m
-        loadAndDo('pane', 'toggle', 'key', '/messages');
+        loadAndDo('pane', 'toggle', 'key', '/box#page');
         e.preventDefault();
         break;
       case 79: // o
-        loadAndDo('pane', 'toggle', 'key', '/notices');
+        loadAndDo('pane', 'toggle', 'key', '/box');
         e.preventDefault();
         break;
       case 83: // s

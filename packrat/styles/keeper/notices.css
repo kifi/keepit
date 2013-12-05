@@ -1,4 +1,4 @@
-.kifi-pane a.kifi-pane-mark-notices-read[href] {
+.kifi-pane-mark-notices-read {
   position: absolute;
   top: 8px;
   right: 0;
@@ -7,26 +7,57 @@
   font-size: 12px;
   line-height: 26px;
   color: #fff !important;
-  display: none !important;
+  text-decoration: none !important;
+  display: none;
 }
-a.kifi-pane-mark-notices-read:hover {
-  text-decoration: none;
+.kifi-pane-mark-notices-read:hover {
   background-color: #67829c;
 }
-a.kifi-pane-mark-notices-read:active {
+.kifi-pane-mark-notices-read:active {
   background-color: #607991;
 }
-.kifi-notices {
+.kifi-notices-cart {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}
+.kifi-notices-cart.kifi-forward,
+.kifi-notices-cart.kifi-back {
+  width: 626px; /* 310 + 6 + 310 */
+}
+.kifi-notices-cart.kifi-animated {
+  transition: -webkit-transform .2s ease-in-out;
+  transition: transform .2s ease-in-out;
+}
+.kifi-notices-cart.kifi-back:not(.kifi-roll),
+.kifi-notices-cart.kifi-roll.kifi-forward {
+  -webkit-transform: translate(-316px,0);
+  transform: translate(-316px,0);
+}
+.kifi-notices-box {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 310px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.kifi-notices-cart.kifi-back .kifi-notices-box:last-child,
+.kifi-notices-cart.kifi-forward .kifi-notices-box:nth-child(2) {
+  left: 316px;
+}
+.kifi-notices-list {
   max-height: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
-div.kifi-notices-none {
-  margin: 10px 12px;
-  display: none;
-}
-div.kifi-notices-none:only-child {
+.kifi-notices-list:empty::before {
   display: block;
+  margin: 10px 12px;
+  content: 'Ho, hum... Nothing’s happened yet!';
 }
 .kifi-notice {
   position: relative;

@@ -1,13 +1,14 @@
 <div class="kifi-pane-box kifi-pane-notices">
-  {{#backButton}}
-  {{!<a class="kifi-pane-back" href="javascript:"></a>}}
-  {{/backButton}}
+  {{!<a class="kifi-pane-mark-notices-read" href="javascript:">Mark all read</a>}}
   <div class="kifi-notices-head">
     <input class="kifi-notices-query" type="text" placeholder="Search your messages">
-    <a class="kifi-notices-filter kifi-notices-filter-all">All</a>{{!
-  }}<a class="kifi-notices-filter kifi-notices-filter-sent" href="javascript:">Sent</a>{{!
-  }}<a class="kifi-notices-filter kifi-notices-filter-unread" href="javascript:">Unread</a>{{!
-  }}<a class="kifi-notices-filter kifi-notices-filter-page" href="javascript:">This Page</a>
+    <a class="kifi-notices-filter kifi-notices-filter-all" data-hash="all">All</a>{{!
+  }}<a class="kifi-notices-filter kifi-notices-filter-sent" data-hash="sent" href="javascript:">Sent</a>{{!
+  }}<a class="kifi-notices-filter kifi-notices-filter-unread" data-hash="unread" href="javascript:">Unread</a>{{!
+  }}<a class="kifi-notices-filter kifi-notices-filter-page" data-hash="page" href="javascript:">This Page</a>
   </div>
-  <div class="kifi-pane-tall"></div>
+  <div class="kifi-pane-tall">
+    <div class="kifi-notices-cart">
+    </div>
+  </div>
 </div>

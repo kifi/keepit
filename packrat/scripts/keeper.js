@@ -84,9 +84,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
       'bgDir': api.url('images/keeper'),
       'isKept': kept,
       'isPrivate': kept === 'private',
-      'inboxCount': count,
-      'atNotices': '/notices' === locator,
-      'atMessages': /^\/messages/.test(locator),
+      'boxCount': count,
+      'boxOpen': /^\/box(?:#|$)/.test(locator),
       'isTagged': tags.length
     }));
       // TODO: unindent below

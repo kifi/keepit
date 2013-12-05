@@ -24,8 +24,6 @@
 panes.notices = function () {
   'use strict';
 
-  var PIXELS_FROM_BOTTOM = 40; // load more notifications when this many pixels from the bottom
-
   var handlers = {
     new_notification: function (n) {
       log('[new_notification]', n)();
@@ -53,7 +51,7 @@ panes.notices = function () {
     }
   };
 
-  var $notices, $markAll;
+  var $list;
   return {
     render: function ($container) {
       api.port.emit('notifications', function (o) {
@@ -63,17 +61,16 @@ panes.notices = function () {
     }};
 
   function renderNotices($container, notices, timeLastSeen, numNotVisited) {
-    $notices = $(render('html/keeper/notices', {}))
+    var $box = $(render('html/keeper/notices', {}));
+    $list = $box.find('.kifi-notices-list')
       .append(notices.map(renderNotice).join(''))
-      .appendTo($container)
       .preventAncestorScroll();
-    $notices.find('time').timeago();
-    $container.antiscroll({x: false});
-
-    var scroller = $container.data('antiscroll');
+    $list.find('time').timeago();
+    $box.appendTo($container.find('.kifi-notices-cart')).antiscroll({x: false});
+    var scroller = $box.data('antiscroll');
     $(window).on('resize.notices', scroller.refresh.bind(scroller));
 
-    $notices.on('click', '.kifi-notice', function (e) {
+    $list.on('click', '.kifi-notice', function (e) {
       if (e.which !== 1) return;
       var uri = this.dataset.uri;
       var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
@@ -109,14 +106,15 @@ panes.notices = function () {
       });
     });
 
-    var $box = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
-      $notices = $markAll = null;
+    var $paneBox = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
+      $list = null;
       $(window).off('resize.notices');
       api.port.off(handlers);
-    });
+    })
+    .on('click', '.kifi-notices-filter[href]', switchTabs);
 
-    $markAll = $box.find('.kifi-pane-mark-notices-read').click(function () {
-      var o = $notices.find('.kifi-notice').toArray().reduce(function (o, el) {
+    $paneBox.find('.kifi-pane-mark-notices-read').click(function () {
+      var o = $list.find('.kifi-notice').toArray().reduce(function (o, el) {
         var t = new Date(el.dataset.createdAt);
         return t > o.time ? {time: t, id: el.dataset.id} : o;
       }, {time: 0});
@@ -190,17 +188,17 @@ panes.notices = function () {
 
   function showNew(notices) {
     notices.forEach(function (n) {
-      $notices.find('.kifi-notice[data-id="' + n.id + '"]').remove();
-      $notices.find('.kifi-notice[data-thread="' + n.thread + '"]').remove();
+      $list.find('.kifi-notice[data-id="' + n.id + '"]').remove();
+      $list.find('.kifi-notice[data-thread="' + n.thread + '"]').remove();
     });
     $(notices.map(renderNotice).join(''))
       .find('time').timeago().end()
-      .prependTo($notices);
+      .prependTo($list);
     api.port.emit('notifications_read', notices[0].time);
   }
 
   function markVisited(category, timeStr, threadId, id) {
-    $notices.find('.kifi-notice-' + category + '[data-thread="' + threadId + '"]:not(.kifi-notice-visited)').each(function () {
+    $list.find('.kifi-notice-' + category + '[data-thread="' + threadId + '"]:not(.kifi-notice-visited)').each(function () {
       if (id === this.dataset.id || new Date(timeStr) >= new Date(this.dataset.createdAt)) {
         this.classList.add('kifi-notice-visited');
       }
@@ -209,7 +207,7 @@ panes.notices = function () {
 
   function markAllVisited(id, timeStr) {
     var time = new Date(timeStr);
-    $notices.find('.kifi-notice:not(.kifi-notice-visited)').each(function () {
+    $list.find('.kifi-notice:not(.kifi-notice-visited)').each(function () {
       if (id === this.dataset.id || time >= new Date(this.dataset.createdAt)) {
         this.classList.add('kifi-notice-visited');
       }
@@ -217,23 +215,48 @@ panes.notices = function () {
   }
 
   function onScroll() {
+    var PIXELS_FROM_BOTTOM = 40; // load more notifications when this close to the bottom
     if (this.scrollTop + this.clientHeight > this.scrollHeight - PIXELS_FROM_BOTTOM) {
-      var $oldest = $notices.children('.kifi-notice').last(), now = new Date;
+      var $oldest = $list.children('.kifi-notice').last(), now = new Date;
       if (now - ($oldest.data('lastOlderReqTime') || 0) > 10000) {
         $oldest.data('lastOlderReqTime', now);
         api.port.emit('old_notifications', $oldest.find('time').attr('datetime'), function (notices) {
-          if ($notices) {
+          if ($list) {
             if (notices.length) {
               $(notices.map(renderNotice).join(''))
                 .find('time').timeago().end()
-                .appendTo($notices);
+                .appendTo($list);
             } else {
-              $notices.off('scroll', onScroll);  // got 'em all
+              $list.off('scroll', onScroll);  // got 'em all
             }
           }
         });
       }
     }
+  }
+
+  function switchTabs() {
+    var $aNew = $(this).removeAttr('href');
+    var $aOld = $aNew.siblings('.kifi-notices-filter:not([href])').attr('href', 'javascript:');
+    var back = $aNew.index() < $aOld.index();
+
+    var $cart = $list.closest('.kifi-notices-cart');
+    var $cubby = $cart.parent().css('overflow', 'hidden').layout();
+    $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
+    var $old = $cart.find('.kifi-notices-box');
+    var $new = $(render('html/keeper/notices', {}))[back ? 'prependTo' : 'appendTo']($cart).layout();
+    $cart.addClass('kifi-animated').layout().addClass('kifi-roll').on('transitionend', function end(e) {
+      if (e.target !== this) return;
+      if (!back) $cart.removeClass('kifi-animated kifi-back kifi-forward');
+      $old.remove();
+      $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward').off('transitionend', end);
+      $cubby.css('overflow', '');
+    });
+    $list = $new.find('.kifi-notices-list');
+    api.port.emit('pane', {
+      old: formatLocator($aOld.data('hash')),
+      new: formatLocator($aNew.data('hash'))
+    });
   }
 
   function counter() {
@@ -264,6 +287,10 @@ panes.notices = function () {
 
   function toName(user) {
     return user.firstName + ' ' + user.lastName;
+  }
+
+  function formatLocator(hash) {
+    return hash && hash !== 'all' ? '/box#' + hash : '/box';
   }
 }();
 
