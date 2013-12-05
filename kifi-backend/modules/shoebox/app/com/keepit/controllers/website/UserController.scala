@@ -261,22 +261,24 @@ class UserController @Inject() (
             }
             // Add new emails
             for (address <- emailStrings -- existing.map(_.address)) {
-              val emailAddr = emailAddressRepo.save(EmailAddress(userId = request.userId, address = address).withVerificationCode(clock.now))
-              val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+              if (emailRepo.getByAddressOpt(address).isEmpty) {
+                val emailAddr = emailAddressRepo.save(EmailAddress(userId = request.userId, address = address).withVerificationCode(clock.now))
+                val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
 
-              postOffice.sendMail(ElectronicMail(
-                from = EmailAddresses.NOTIFICATIONS,
-                to = Seq(GenericEmailAddress(address)),
-                subject = "Kifi.com | Please confirm your email address",
-                htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-                category = ElectronicMailCategory("email_confirmation")
-              ))
+                postOffice.sendMail(ElectronicMail(
+                  from = EmailAddresses.NOTIFICATIONS,
+                  to = Seq(GenericEmailAddress(address)),
+                  subject = "Kifi.com | Please confirm your email address",
+                  htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
+                  category = ElectronicMailCategory("email_confirmation")
+                ))
+              }
             }
             // Set the correct email as primary
             for (emailInfo <- emails) {
               if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
                 val emailRecordOpt = emailRepo.getByAddressOpt(emailInfo.address)
-                emailRecordOpt.map { emailRecord =>
+                emailRecordOpt.collect { case emailRecord if emailRecord.userId == request.user.id.get =>
                   if (emailRecord.verified) {
                     if (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get) {
                       userValueRepo.clearValue(request.userId, "pending_primary_email")
