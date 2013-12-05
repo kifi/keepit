@@ -27,15 +27,16 @@ for d in $(find html -type d); do
   mkdir -p "out/chrome/scripts/$d" "out/firefox/data/scripts/$d"
 done
 for f in $(find html -name '*.html'); do
-  f2="out/chrome/scripts/"${f/%.html/.js}
+  html=$(cat $f)
+  html="${html//$'\n'/ }"
+  html="${html//\'/\'}"
   if [[ $f == html/iframes/* ]]; then
-    echo -n "document.body.innerHTML='" > $f2
+    js="document.body.innerHTML='$html';"
   else
-    echo -n "render.cache['${f%.html}']='" > $f2
+    js="render.cache['${f%.html}']='$html';"
   fi
-  # replace newlines and subsequent whitespace with a single space, then close the JS string and assignment
-  cat $f | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n */ /g' -e "s/'/\\\\'/g" -e $'$s/$/\';/' >> $f2
-  cp $f2 ${f2/chrome/firefox\/data}
+  echo $js > out/chrome/scripts/${f/%.html/.js}
+  echo $js > out/firefox/data/scripts/${f/%.html/.js}
 done
 
 for d in $(find styles -type d); do
