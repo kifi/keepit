@@ -307,7 +307,7 @@ var pane = pane || function () {  // idempotent for Chrome
       }
     },
     toggle: function (trigger, locator) {
-      locator = locator || '/messages#all';
+      locator = locator || '/messages:all';
       if ($pane) {
         if (locator === paneHistory[0]) {
           hidePane(trigger === 'keeper');
@@ -324,7 +324,7 @@ var pane = pane || function () {  // idempotent for Chrome
         if ($pane) {
           toggleToaster();
         } else {
-          showPane('/messages#all').then(toggleToaster);
+          showPane('/messages:all').then(toggleToaster);
         }
         function toggleToaster() {
           toaster.toggleIn($pane).done(function (compose) {

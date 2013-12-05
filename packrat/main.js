@@ -1223,7 +1223,7 @@ function gotPageThreads(uri, nUri, threads) {
   // sending new page threads (or just the count) to tabs at '/messages' on this page
   if (numNewThreads) {
     forEachTabAtUriAndLocator(uri, nUri, '/messages', function(tab) {
-      // should send all threads if at /messages#page; otherwise, just the count
+      // should send all threads if at /messages:page; otherwise, just the count
       api.tabs.emit(tab, 'page_threads', pt.ids.map(idToThread));  // TODO: write handler
       api.tabs.emit(tab, 'page_thread_count', pt.ids.length);  // TODO: write handler
     });

@@ -254,8 +254,8 @@ panes.notices = function () {
     });
     $list = $new.find('.kifi-notices-list');
     api.port.emit('pane', {
-      old: formatLocator($aOld.data('hash')),
-      new: formatLocator($aNew.data('hash'))
+      old: formatLocator($aOld.data('sub')),
+      new: formatLocator($aNew.data('sub'))
     });
   }
 
@@ -289,8 +289,8 @@ panes.notices = function () {
     return user.firstName + ' ' + user.lastName;
   }
 
-  function formatLocator(hash) {
-    return hash && hash !== 'page' ? '/messages#' + hash : '/messages';
+  function formatLocator(sub) {
+    return sub && sub !== 'page' ? '/messages:' + sub : '/messages';
   }
 }();
 

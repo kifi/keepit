@@ -85,7 +85,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       'isKept': kept,
       'isPrivate': kept === 'private',
       'boxCount': count,
-      'boxOpen': /^\/messages(?:#|$)/.test(locator),
+      'boxOpen': /^\/messages(?:$|:)/.test(locator),
       'isTagged': tags.length
     }));
       // TODO: unindent below

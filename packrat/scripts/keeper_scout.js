@@ -105,7 +105,7 @@ var tile = tile || function() {  // idempotent for Chrome
         e.preventDefault();
         break;
       case 79: // o
-        loadAndDo('pane', 'toggle', 'key', '/messages#all');
+        loadAndDo('pane', 'toggle', 'key', '/messages:all');
         e.preventDefault();
         break;
       case 83: // s
