@@ -286,8 +286,12 @@ a.profile-email-address-add { display: block; padding: 4px 0; }
 
 .profile-email-address-item-pending-primary { display: none; }
 .profile-email-address-item.pending-primary-email .profile-email-address-item-pending-primary { display: inline; }
-.profile-email-address-item.pending-primary-email .profile-email-address-item-make-primary { display: none; }
 .profile-email-address-item.primary-email .profile-email-address-item-pending-primary { display: none; }
+
+.profile-email-address-item .profile-email-address-item-make-primary { display: none; }
+.profile-email-address-item.verified-email .profile-email-address-item-make-primary { display: block; }
+.profile-email-address-item.pending-primary-email .profile-email-address-item-make-primary { display: none; }
+
 
 .profile-email-address-item-unverified a { color: #a7aaa9; text-decoration: underline}
 

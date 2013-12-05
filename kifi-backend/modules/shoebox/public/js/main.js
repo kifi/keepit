@@ -554,8 +554,17 @@ $(function () {
 				props[i] = me[i];
 			}
 		}
-		props.emails = props.emails && props.emails.slice();
+		props.emails = copyEmails(me.emails);
 		return props;
+	}
+
+	function copyEmails(emails) {
+		if (emails) {
+			return emails.map(function (info) {
+				return info.slice(0, 2);
+			});
+		}
+		return emails;
 	}
 
 	function findEmail(emails, callback, that) {
@@ -613,10 +622,10 @@ $(function () {
 		//props.emails = me.emails.slice();
 
 		$.postJson(xhrBase + '/user/me', props)
-		.success(updateMe)
-		.error(function () {
-			showMessage('Uh oh! A bad thing happened!');
-		});
+			.success(updateMe)
+			.error(function () {
+				showMessage('Uh oh! A bad thing happened!');
+			});
 	}
 
 	var $disconnectDialog = $('.disconnect-dialog')
@@ -3182,7 +3191,7 @@ $(function () {
 		(me.emails || []).forEach(function (info, i, list) {
 			$emails.append(emailTmpl({
 				email: info[ADDRESS],
-				primary: list.length <= 1 || !!info[PRIMARY],
+				primary: i === 0 || list.length <= 1 || !!info[PRIMARY],
 				verified: !!info[VERIFIED],
 				pendingPrimary: !!info[PENDING_PRIMARY]
 			}));
