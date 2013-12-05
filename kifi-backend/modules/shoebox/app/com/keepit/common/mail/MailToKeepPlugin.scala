@@ -13,7 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.controllers.core.BookmarkInterner
-import com.keepit.model.{EmailAddressRepo, User, UserRepo}
+import com.keepit.model.{BookmarkSource, EmailAddressRepo, User, UserRepo}
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 
@@ -103,7 +103,7 @@ class MailToKeepActor @Inject() (
                   val bookmark = bookmarkInterner.internBookmarks(Json.obj(
                     "url" -> uri.toString,
                     "isPrivate" -> (keepType == KeepType.Private)
-                  ), user, Set(), "EMAIL").head
+                  ), user, Set(), BookmarkSource.email).head
                   log.info(s"created bookmark from email with id ${bookmark.id.get}")
                   sendReply(
                     message = message,

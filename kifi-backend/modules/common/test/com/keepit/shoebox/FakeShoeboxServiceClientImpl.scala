@@ -23,10 +23,12 @@ import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsObject
 import com.keepit.scraper.HttpRedirect
+import com.google.inject.util.Providers
+import com.keepit.common.usersegment.UserSegment
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   // Fake ID counters
@@ -437,6 +439,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getUserValue(userId: Id[User], key: String): Future[Option[String]] = Future.successful(None)
 
   def setUserValue(userId: Id[User], key: String, value: String): Unit = {}
+
+  def getUserSegment(userId: Id[User]): Future[UserSegment] = ???
 
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String] = Future.successful("")
 }

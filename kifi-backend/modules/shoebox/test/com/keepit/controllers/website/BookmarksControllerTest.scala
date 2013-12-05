@@ -127,7 +127,10 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
 
         val controller = inject[BookmarksController]
         inject[FakeActionAuthenticator].setUser(user)
-        controller.searchClient == inject[FakeSearchServiceClient]
+        controller.searchClient eq inject[FakeSearchServiceClient]
+
+        import play.api.Play.current
+        println("global id: " + current.global.asInstanceOf[com.keepit.FortyTwoGlobal].globalId)
 
         Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         Await.result(controller.searchClient.sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo

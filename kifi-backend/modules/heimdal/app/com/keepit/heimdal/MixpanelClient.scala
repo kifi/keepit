@@ -16,19 +16,15 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
   def track[E <: HeimdalEvent: TypeCode](event: E) = {
     val eventCode = implicitly[TypeCode[E]]
     val eventName = s"${eventCode}_${event.eventType.name}"
-    val distinctId = event match {
-      case e: UserEvent => getDistinctId(Id[User](e.userId))
-      case _ => eventCode.toString
-    }
+    val userId = Some(event) collect { case userEvent: UserEvent => Id[User](userEvent.userId) }
 
-    val superPropertiesFuture = event match {
-      case e: UserEvent => getSuperProperties(Id[User](e.userId))
-      case _ => Future.successful(Seq.empty)
-    }
+    val distinctId = userId.map(getDistinctId) getOrElse eventCode.toString
+    val superPropertiesFuture = userId.map(getSuperProperties) getOrElse Future.successful(Seq.empty)
 
-    val properties = new EventContextBuilder()
+    val properties = new HeimdalContextBuilder()
     properties.data ++= event.context.data
     properties.data += ("ip" -> event.context.data.getOrElse("remoteAddress", ContextDoubleData(0)))
+    userId.foreach(id => properties += ("userId", id.id))
     properties += ("distinct_id", distinctId)
     properties += ("token", projectToken)
     properties += ("time", event.time.getMillis)

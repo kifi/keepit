@@ -25,6 +25,9 @@ import play.utils.Threads
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
 
+  //used to identify instance of applciation. used to debug intest mode
+  val globalId: ExternalId[FortyTwoGlobal] = ExternalId()
+
   override def getControllerInstance[A](clazz: Class[A]) = try {
     injector.getInstance(clazz)
   } catch {

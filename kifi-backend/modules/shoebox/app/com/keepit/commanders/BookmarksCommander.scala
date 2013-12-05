@@ -66,8 +66,8 @@ class BookmarksCommander @Inject() (
     collectionRepo: CollectionRepo
  ) extends Logging {
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], contextBuilder: EventContextBuilder, source: String):
-                  (List[KeepInfo], Option[Int]) = {
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], contextBuilder: HeimdalContextBuilder, source: BookmarkSource):
+                  (Seq[KeepInfo], Option[Int]) = {
     val tStart = currentDateTime
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
     val keeps = bookmarkInterner.internBookmarks(Json.toJson(keepInfos), user, experiments, source).map(KeepInfo.fromBookmark)
@@ -75,11 +75,12 @@ class BookmarksCommander @Inject() (
     //Analytics
     SafeFuture{
       keeps.foreach { bookmark =>
+        contextBuilder += ("source", source.value)
         contextBuilder += ("isPrivate", bookmark.isPrivate)
         contextBuilder += ("url", bookmark.url)
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
 
-        heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, EventType("keep"), tStart))
+        heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, UserEventTypes.KEEP, tStart))
       }
       val kept = keeps.length
       val keptPrivate = keeps.count(_.isPrivate)

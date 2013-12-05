@@ -14,6 +14,7 @@ import com.keepit.common.store.S3BlobStore
 import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
 import play.api.libs.json._
 import com.keepit.common.store.S3JsonStore
+import com.keepit.common.logging.AccessLog
 
 /**
  * This file contains various S3 stores related to topic model
@@ -27,7 +28,7 @@ import com.keepit.common.store.S3JsonStore
 
 trait WordTopicStore extends ObjectStore[String, String]
 
-class S3WordTopicStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends S3ObjectStore[String, String] with WordTopicStore {
+class S3WordTopicStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog) extends S3ObjectStore[String, String] with WordTopicStore {
   val prefix = "word_topic/"              // S3 folder
 
   def unpackValue(s3Obj : S3Object) : String = {
@@ -56,7 +57,7 @@ class InMemoryWordTopicStoreImpl extends InMemoryObjectStore[String, String] wit
  */
 trait WordTopicBlobStore extends ObjectStore[String, Array[Double]]
 
-class S3WordTopicBlobStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends S3BlobStore[String, Array[Double]] with WordTopicBlobStore {
+class S3WordTopicBlobStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog) extends S3BlobStore[String, Array[Double]] with WordTopicBlobStore {
   val prefix = "word_topic/"
 
   def encodeValue(arr: Array[Double]): Array[Byte] = {
@@ -98,7 +99,7 @@ class StringArraryFormat extends Format[Array[String]] {
   }
 }
 
-class S3WordStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[Array[String]] = new StringArraryFormat())
+class S3WordStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[Array[String]] = new StringArraryFormat())
   extends S3JsonStore[String, Array[String]] with WordStore {
   val prefix = "word_topic/"
   override def idToKey(id: String) = prefix + "%s.words.json".format(id)
@@ -111,7 +112,7 @@ class InMemoryWordStoreImpl extends InMemoryObjectStore[String, Array[String]] w
  */
 trait TopicWordsStore extends ObjectStore[String, String]
 
-class S3TopicWordsStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends S3ObjectStore[String, String] with TopicWordsStore {
+class S3TopicWordsStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog) extends S3ObjectStore[String, String] with TopicWordsStore {
    val prefix = "word_topic/"
 
   def unpackValue(s3Obj : S3Object) : String = {

@@ -1,21 +1,16 @@
 package com.keepit.model
 
 import com.keepit.common.db._
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.service.FortyTwoServices
 
-case class DeepLinkToken(value: String)
+case class DeepLinkToken(value: String) extends AnyVal
 object DeepLinkToken {
   def apply(): DeepLinkToken = DeepLinkToken(ExternalId().id) // use ExternalIds for now. Eventually, we may move off this.
 }
 
-case class DeepLocator(value: String)
-object DeepLocator {
-  def ofMessageThread(message: Comment) = DeepLocator("/messages/%s".format(message.externalId))
-  def ofMessageThreadList = DeepLocator("/messages")
-  def ofCommentList = DeepLocator("/comments")
-}
+case class DeepLocator(value: String) extends AnyVal
 
 case class DeepLink(
   id: Option[Id[DeepLink]] = None,
