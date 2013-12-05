@@ -2,7 +2,7 @@ package com.keepit.common.net
 
 import com.keepit.common.logging.Logging
 import net.sf.uadetector.service.UADetectorServiceFactory
-import net.sf.uadetector.{UserAgent => SFUserAgent, UserAgentStringParser}
+import net.sf.uadetector.{ReadableUserAgent => SFUserAgent}
 
 
 case class UserAgent(
@@ -16,7 +16,8 @@ case class UserAgent(
 object UserAgent extends Logging {
 
   private val MAX_USER_AGENT_LENGTH = 512
-  private lazy val parser = UADetectorServiceFactory.getResourceModuleParser()
+  lazy val parser = UADetectorServiceFactory.getResourceModuleParser()
+  lazy val iPhonePattern = """^iKeeFee/(\d+\.\d+)(\.\d+) \(Device-Type: (.+), OS: (iOS .+)\)$""".r("appVersion", "buildSuffix", "device", "os")
 
   def fromString(userAgent: String): UserAgent = {
     def normalize(str: String) = if (str == "unknown") "" else str
