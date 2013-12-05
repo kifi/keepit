@@ -9,12 +9,13 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net._
 import com.keepit.model._
-import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilderFactory, UserEvent, EventType}
+import com.keepit.heimdal._
 import com.keepit.social.BasicUser
 import com.keepit.common.crypto.SimpleDESCrypt
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
+import com.keepit.model.KifiInstallation
 
 class ExtAuthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -25,7 +26,7 @@ class ExtAuthController @Inject() (
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
   kifiInstallationCookie: KifiInstallationCookie,
-  userEventContextBuilder: EventContextBuilderFactory,
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
@@ -75,10 +76,11 @@ class ExtAuthController @Inject() (
 
     if (isUpgrade){
       SafeFuture{
-        val contextBuilder = userEventContextBuilder(request)
+        val contextBuilder = heimdalContextBuilder()
+        contextBuilder.addRequestInfo(request)
         contextBuilder += ("extensionVersion", installation.version.toString)
         contextBuilder += ("firstTime", firstTime)
-        heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("extension_install")))
+        heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.EXTENSION_INSTALL))
       }
     }
 
