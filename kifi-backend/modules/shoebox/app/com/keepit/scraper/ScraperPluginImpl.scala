@@ -17,13 +17,13 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.scraper.extractor.Extractor
+import com.keepit.scraper.extractor.{ExtractorProviderType, Extractor}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RWSession
 
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
-case class ScrapeBasicArticle(url: String, customExtractor: Option[Extractor])
+case class ScrapeBasicArticle(url: String, extractorProviderType:Option[ExtractorProviderType])
 
 private[scraper] class ScraperActor @Inject() (
     scraper: Scraper,
@@ -50,7 +50,7 @@ private[scraper] class ReadOnlyScraperActor @Inject() (
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
   def receive() = {
-    case ScrapeBasicArticle(url, customExtractor) => sender ! scraper.getBasicArticle(url, customExtractor)
+    case ScrapeBasicArticle(url, extractorProviderType) => sender ! scraper.getBasicArticle(url, extractorProviderType)
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -100,15 +100,17 @@ class ScraperPluginImpl @Inject() (
     }
   }
 
-  override def scrapeBasicArticle(url: String, customExtractor: Option[Extractor] = None): Future[Option[BasicArticle]] = {
-    if (scraperConfig.disableScraperService || customExtractor.isDefined) {
-      readOnlyActor.ref.ask(ScrapeBasicArticle(url, customExtractor))(1 minutes).mapTo[Option[BasicArticle]]
+  override def scrapeBasicArticle(url:String): Future[Option[BasicArticle]] = scrapeBasicArticleWithExtractor(url, None)
+
+  override def scrapeBasicArticleWithExtractor(url: String, extractorProviderType:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
+    if (scraperConfig.disableScraperService) {
+      readOnlyActor.ref.ask(ScrapeBasicArticle(url, extractorProviderType))(1 minutes).mapTo[Option[BasicArticle]]
     } else {
       val proxyOpt = db.readOnly { implicit s =>
         urlPatternRuleRepo.getProxy(url)
       }
-      log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt")
-      scraperClient.getBasicArticleP(url, proxyOpt)
+      log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
+      scraperClient.getBasicArticleWithExtractor(url, proxyOpt, extractorProviderType)
     }
   }
 }

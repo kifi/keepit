@@ -2,7 +2,7 @@ package com.keepit.scraper
 
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.scraper.extractor.{Extractor, ExtractorFactory}
+import com.keepit.scraper.extractor._
 import com.keepit.search.{LangDetector, Article, ArticleStore}
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -15,15 +15,16 @@ import com.keepit.common.net.URI
 import org.apache.http.HttpStatus
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.common.db.Id
-import scala.util.{Failure, Try, Success}
 import scala.concurrent.duration._
 import scala.concurrent._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.util.Failure
+import scala.util.Success
 
 class AsyncScrapeProcessorPlugin @Inject() (asyncScraper:AsyncScraper) extends ScrapeProcessorPlugin with Logging {
 
-  def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy]): Future[Option[BasicArticle]] = {
-    asyncScraper.asyncFetchBasicArticle(url, proxyOpt)
+  def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
+    asyncScraper.asyncFetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
   }
 
   def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
@@ -49,8 +50,11 @@ class AsyncScraper @Inject() (
 
   implicit val myConfig = config
 
-  def asyncFetchBasicArticle(url:String, proxyOpt:Option[HttpProxy]):Future[Option[BasicArticle]] = {
-    val extractor = extractorFactory(url)
+  def asyncFetchBasicArticle(url:String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]):Future[Option[BasicArticle]] = {
+    val extractor = extractorProviderTypeOpt match {
+      case Some(t) if (t == ExtractorProviderTypes.LINKEDIN_ID) => new LinkedInIdExtractor(url, ScraperConfig.maxContentChars)
+      case _ => extractorFactory(url)
+    }
     val isUnscrapableF = for {
       fetchStatus <- future { httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input)) }
       isUnscrapable <- asyncIsUnscrapableP(url, fetchStatus.destinationUrl) if fetchStatus.statusCode == HttpStatus.SC_OK

@@ -1,6 +1,7 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.scraper.HttpInputStream
+import com.keepit.common.net.URI
 
 trait Extractor {
   def process(input: HttpInputStream): Unit
@@ -10,3 +11,16 @@ trait Extractor {
 }
 
 trait ExtractorFactory extends Function[String, Extractor]
+
+sealed abstract class ExtractorProviderType(val name:String)
+
+object ExtractorProviderTypes {
+  case object YOUTUBE         extends ExtractorProviderType("youtube")
+  case object GITHUB          extends ExtractorProviderType("github")
+  case object LINKEDIN        extends ExtractorProviderType("linkedin")
+  case object LINKEDIN_ID     extends ExtractorProviderType("linkedin_id")
+  case object LINK_PROCESSING extends ExtractorProviderType("link_processing")
+  val ALL:Seq[ExtractorProviderType] = Seq(YOUTUBE, GITHUB, LINKEDIN, LINKEDIN_ID, LINK_PROCESSING)
+}
+
+abstract class ExtractorProvider extends PartialFunction[URI, Extractor]
