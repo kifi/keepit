@@ -152,6 +152,7 @@ class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[Inde
     indexReader.getContext.leaves.foreach{ subReaderContext =>
       val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
       val tp = subReader.termPositionsEnum(term)
+      if (tp != null){
       while (tp.nextDoc < NO_MORE_DOCS) {
         var freq = tp.freq()
         while (freq > 0) {
@@ -161,7 +162,7 @@ class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[Inde
           composer.add(payload.bytes, payload.offset, payload.length, 1)
         }
       }
-    }
+    }}
     composer
   }
 
