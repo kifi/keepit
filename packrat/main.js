@@ -187,10 +187,8 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 
 // ===== Event logging
 
-var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
-
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
-  if (!eventFamilies[eventFamily]) {
+  if (eventFamily !== 'slider') {
     log("#800", "[logEvent] invalid event family:", eventFamily)();
     return;
   }
@@ -599,6 +597,9 @@ api.port.on({
   set_enter_to_send: function(data) {
     session.prefs.enterToSend = data;
     ajax("POST", "/ext/pref/enterToSend?enterToSend=" + data);
+  },
+  useful_page: function(o, _, tab) {
+    ajax('search', 'POST', '/search/events/browsed', [tab.url]);
   },
   log_event: function(data) {
     logEvent.apply(null, data);
@@ -1167,8 +1168,6 @@ function tellTabsUnreadThreadCountIfChanged(td) { // (td, url[, url]...)
 }
 
 function searchOnServer(request, respond) {
-  logEvent("search", "newSearch", {query: request.query, filter: request.filter});
-
   if (request.first && getPrefetched(request, respond)) return;
 
   if (!session) {
@@ -1487,7 +1486,6 @@ api.tabs.on.blur.add(function(tab) {
 api.tabs.on.loading.add(function(tab) {
   log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab)();
   kifify(tab);
-  logEvent("extension", "pageLoad");
 });
 
 api.tabs.on.unload.add(function(tab, historyApi) {
@@ -1657,10 +1655,10 @@ function unstore(key) {
 }
 
 api.on.install.add(function() {
-  logEvent("extension", "install");
+  log('[api.on.install]')();
 });
 api.on.update.add(function() {
-  logEvent("extension", "update");
+  log('[api.on.update]')();
 });
 
 function getFriends() {
@@ -1760,7 +1758,6 @@ function startSession(callback, retryMs) {
     version: api.version},
   function done(data) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
-    logEvent("extension", "authenticated");
     unstore('logout');
 
     session = data;
@@ -1775,8 +1772,8 @@ function startSession(callback, retryMs) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
+        syncNumUnreadUnmutedThreads();
       }
-      syncNumUnreadUnmutedThreads();
       api.tabs.eachSelected(kifify);
     }, function onDisconnect(why) {
       reportError("socket disconnect (" + why + ")");
@@ -1884,8 +1881,6 @@ api.timers.setTimeout(function() {
   }
   log("\n"+f)();
 });
-
-logEvent("extension", "started");
 
 authenticate(function() {
   if (api.loadReason == "install") {

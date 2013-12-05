@@ -8,19 +8,18 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.abook.ABookServiceClient
-
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, Json, JsValue}
-
-import com.google.inject.Inject
+import com.google.inject.{Singleton, Inject, ImplementedBy}
 import com.keepit.common.net.URI
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Akka
-
 import scala.concurrent.Future
+import com.keepit.common.usersegment.UserSegment
+import com.keepit.common.usersegment.UserSegmentFactory
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 
@@ -47,6 +46,7 @@ class UserCommander @Inject() (
   userValueRepo: UserValueRepo,
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
+  bookmarkRepo: BookmarkRepo,
   userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   abook: ABookServiceClient) {
@@ -75,8 +75,10 @@ class UserCommander @Inject() (
 
     // This will eventually be a lot more complex. However, for now, tricking the client is the way to go.
     // ^^^^^^^^^ Unrelated to the offensive code above ^^^^^^^^^
-    val kifiSupport = BasicUser(ExternalId[User]("742fa97c-c12a-4dcf-bff5-0f33280ef35a"), "Kifi Help", "", "Vjy5S.jpg")
-    basicUsers ++ iNeededToDoThisIn20Minutes + kifiSupport
+    val kifiSupport = Seq(
+      BasicUser(ExternalId[User]("742fa97c-c12a-4dcf-bff5-0f33280ef35a"), "Noah, Kifi Help", "", "Vjy5S.jpg"),
+      BasicUser(ExternalId[User]("aa345838-70fe-45f2-914c-f27c865bdb91"), "Tamila, Kifi Help", "", "tmilz.jpg"))
+    basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport
   }
 
   private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
@@ -101,4 +103,12 @@ class UserCommander @Inject() (
     }
   }
 
+  def getUserSegment(userId: Id[User]): UserSegment = {
+    val (numBms, numFriends) = db.readOnly{ implicit s =>
+      (bookmarkRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
+    }
+
+    val segment = UserSegmentFactory(numBms, numFriends)
+    segment
+  }
 }

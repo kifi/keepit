@@ -8,9 +8,11 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.User
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
+import com.keepit.search.query.StringHash64
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.logging.Logging
 
 object SearchConfig {
   private[search] val defaultParams =
@@ -82,7 +84,7 @@ object SearchConfig {
   def getDescription(name: String) = descriptions.get(name)
 }
 
-class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) {
+class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends Logging {
 
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
@@ -98,6 +100,8 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     }
     _activeExperiments
   }
+
+  def userSegmentExperiments = activeExperiments.filter(_.description.contains("user segment experiment"))
 
   def syncActiveExperiments: Unit = {
     try {
@@ -118,6 +122,26 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     val hash = QueryHash(userId, queryText, analyzer)
     val (max, min) = (Long.MaxValue.toDouble, Long.MinValue.toDouble)
     (hash - min) / (max - min)
+  }
+
+  private def assignConfig(userId: Id[User], queryText: String, userSegmentValue: Int) = {
+    val modulo = userId.id.toLong % 3
+    log.info(s"${userSegmentExperiments.size} user segement experiments")
+    if (userSegmentExperiments.size == 4 && modulo == 0) {
+      log.info(s"search config: user segment value = ${userSegmentValue}. Using experimental parameters.")
+      val ex = userSegmentExperiments(userSegmentValue)
+      val config = defaultConfig(ex.config.params)
+      (config, ex.id)
+    } else {
+      log.info(s"search config: user segment value = ${userSegmentValue}. Using default parameters.")
+      getConfig(userId, queryText, false)   // assume not excludedFromExperiments
+    }
+  }
+
+  def getConfigByUserSegment(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
+    val segFuture = shoeboxClient.getUserSegment(userId)
+    val seg = monitoredAwait.result(segFuture, 5 seconds, "getting user segment")
+    if (excludeFromExperiments) (SearchConfig.defaultConfig, None) else assignConfig(userId, queryText, seg.value)
   }
 
   def getConfig(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {

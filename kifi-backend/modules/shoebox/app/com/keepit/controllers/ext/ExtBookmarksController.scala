@@ -7,7 +7,7 @@ import com.keepit.common.controller.{BrowserExtensionController, ActionAuthentic
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier, HealthcheckPlugin}
 import com.keepit.common.time._
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.heimdal._
@@ -50,7 +50,8 @@ class ExtBookmarksController @Inject() (
   searchClient: SearchServiceClient,
   healthcheck: HealthcheckPlugin,
   heimdal: HeimdalServiceClient,
-  userEventContextBuilder: EventContextBuilderFactory)
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
+  airbrake: AirbrakeNotifier)
     extends BrowserExtensionController(actionAuthenticator) {
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
@@ -180,15 +181,16 @@ class ExtBookmarksController @Inject() (
     val installationId = request.kifiInstallationId
     val json = request.body
 
-    val bookmarkSource = (json \ "source").asOpt[String]
+    val bookmarkSource = (json \ "source").asOpt[String].map(BookmarkSource(_)) getOrElse BookmarkSource.unknown
+    if (!BookmarkSource.valid.contains(bookmarkSource)) airbrake.notify(AirbrakeError(message = Some(s"Invalid bookmark source: $bookmarkSource"), method = Some("ExtBookmarksController.addBookmarks"), details = Some(json.toString)))
     bookmarkSource match {
-      case Some("PLUGIN_START") => Forbidden
+      case BookmarkSource("PLUGIN_START") => Forbidden
       case _ =>
         SafeFuture {
           log.info("adding bookmarks of user %s".format(userId))
           val experiments = request.experiments
           val user = db.readOnly { implicit s => userRepo.get(userId) }
-          val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
+          val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, bookmarkSource, installationId)
           //the bookmarks list may be very large!
           bookmarks.grouped(50) foreach { chunk =>
             searchClient.updateBrowsingHistory(userId, chunk.map(_.uriId): _*)
@@ -198,14 +200,15 @@ class ExtBookmarksController @Inject() (
           //Analytics
           SafeFuture{
             bookmarks.foreach { bookmark =>
-              val contextBuilder = userEventContextBuilder(request)
+              val contextBuilder = heimdalContextBuilder()
+              contextBuilder.addRequestInfo(request)
 
               contextBuilder += ("isPrivate", bookmark.isPrivate)
               contextBuilder += ("url", bookmark.url)
-              contextBuilder += ("source", bookmarkSource.getOrElse("UNKNOWN"))
+              contextBuilder += ("source", bookmarkSource.value)
               contextBuilder += ("hasTitle", bookmark.title.isDefined)
 
-              heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("keep"), tStart))
+              heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.KEEP, tStart))
             }
             val kept = bookmarks.length
             val keptPrivate = bookmarks.count(_.isPrivate)
@@ -241,7 +244,7 @@ class ExtBookmarksController @Inject() (
     } yield bookmark.id.get
     val bookmarkId = bookmarkIdOpt getOrElse {
       bookmarkManager.internBookmarks(
-        Json.obj("url" -> url), user, experiments, BookmarkSource("TAGGED")
+        Json.obj("url" -> url), user, experiments, BookmarkSource.hover
       ).head.id.get
     }
     keepToCollectionRepo.getOpt(bookmarkId, tagId) match {

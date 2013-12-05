@@ -6,13 +6,6 @@ import com.keepit.serializer.{Companion, TypeCode}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-
-case class EventType(name: String)
-
-object EventType {
-  implicit val format = Json.format[EventType]
-}
-
 sealed trait HeimdalEvent {
   val context: HeimdalContext
   val eventType: EventType

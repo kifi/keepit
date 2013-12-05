@@ -16,7 +16,7 @@ import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.social.{SocialGraphPlugin, SocialNetworks, SocialNetworkType, SocialId}
 import com.keepit.common.akka.{TimeoutFuture, SafeFuture}
-import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilderFactory, UserEvent, EventType}
+import com.keepit.heimdal._
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -29,6 +29,7 @@ import com.keepit.abook.ABookServiceClient
 import play.api.mvc.Cookie
 import com.keepit.social.SocialId
 import com.keepit.model.Invitation
+import scala.util.Success
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -44,7 +45,7 @@ class InviteController @Inject() (db: Database,
   socialGraphPlugin: SocialGraphPlugin,
   actionAuthenticator: ActionAuthenticator,
   httpClient: HttpClient,
-  eventContextBuilder: EventContextBuilderFactory,
+  eventContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice)
@@ -117,11 +118,11 @@ class InviteController @Inject() (db: Database,
         CloseWindow()
       } else if (fullSocialId(0) == "email") {
         log.info(s"[inviteConnection-email] inviting: ${fullSocialId(1)}")
-        val econtactOptF = abookServiceClient.getEContactByEmail(request.userId, fullSocialId(1))
+        val econtactTrF = abookServiceClient.getOrCreateEContact(request.userId, fullSocialId(1), None, None, None)
         Async {
-          econtactOptF.map { econtactOpt =>
-            econtactOpt match {
-              case Some(c) => {
+          econtactTrF.map { econtactTr =>
+            econtactTr match {
+              case Success(c) => {
                 val inviteOpt = invitationRepo.getBySenderIdAndRecipientEContactId(request.userId, c.id.get)
                 log.info(s"[inviteConnection-email] inviteOpt=$inviteOpt")
                 inviteOpt match {
@@ -146,8 +147,8 @@ class InviteController @Inject() (db: Database,
                   }
                 }
               }
-              case None => {
-                log.warn(s"[inviteConnection-email] cannot locate econtact entry for ${fullSocialId(1)}")
+              case _ => {
+                log.warn(s"[inviteConnection-email] cannot locate or create econtact entry for ${fullSocialId(1)}")
               }
             }
             CloseWindow()
@@ -250,7 +251,7 @@ class InviteController @Inject() (db: Database,
             SafeFuture{
               val contextBuilder = eventContextBuilder()
               contextBuilder += ("invitee", invite.recipientSocialUserId.getOrElse(invite.recipientEContactId.get).id)
-              heimdal.trackEvent(UserEvent(invite.senderUserId.map(_.id).getOrElse(-1), contextBuilder.build, EventType("invite_sent")))
+              heimdal.trackEvent(UserEvent(invite.senderUserId.map(_.id).getOrElse(-1), contextBuilder.build, UserEventTypes.INVITE_SENT))
             }
           }
           CloseWindow()

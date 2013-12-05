@@ -1,21 +1,9 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.scraper.HttpInputStream
 import com.keepit.common.net.URI
 import scala.util.{Failure, Success}
 import com.keepit.common.logging.Logging
-import com.google.inject.{Provides, ImplementedBy, Singleton, Inject}
-
-
-sealed abstract class ExtractorProviderType(val name:String)
-
-object ExtractorProviderTypes {
-  case object YOUTUBE         extends ExtractorProviderType("youtube")
-  case object GITHUB          extends ExtractorProviderType("github")
-  case object LINKEDIN        extends ExtractorProviderType("linkedin")
-  case object LINK_PROCESSING extends ExtractorProviderType("link_processing")
-  val ALL:Seq[ExtractorProviderType] = Seq(YOUTUBE, GITHUB, LINKEDIN, LINK_PROCESSING)
-}
+import com.google.inject.{Singleton, Inject}
 
 @Singleton
 class ExtractorFactoryImpl @Inject() (youtubeExtractorProvider: YoutubeExtractorProvider, linkProcessingExtractorProvider: LinkProcessingExtractorProvider) extends ExtractorFactory with Logging {
@@ -45,5 +33,3 @@ class ExtractorFactoryImpl @Inject() (youtubeExtractorProvider: YoutubeExtractor
     }
   }
 }
-
-abstract class ExtractorProvider extends PartialFunction[URI, Extractor]

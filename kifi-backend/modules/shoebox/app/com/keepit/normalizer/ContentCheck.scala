@@ -3,7 +3,7 @@ package com.keepit.normalizer
 import scala.concurrent.Future
 import com.keepit.scraper.{ScraperPlugin, ScraperConfig, Signature}
 import com.keepit.model.Normalization
-import com.keepit.scraper.extractor.LinkedInIdExtractor
+import com.keepit.scraper.extractor.{ExtractorProviderTypes, LinkedInIdExtractor}
 import com.keepit.common.logging.Logging
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -51,9 +51,7 @@ case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: 
 
   def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInCanonicalPublicProfile.findFirstIn(candidate.url).isDefined
   protected def check(publicProfileCandidate: NormalizationCandidate) = {
-    val idExtractor = new LinkedInIdExtractor(publicProfileCandidate.url, ScraperConfig.maxContentChars)
-
-    for { idArticleOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(idExtractor)) } yield {println(idArticleOption); idArticleOption match {
+    for { idArticleOption <- scraperPlugin.scrapeBasicArticleWithExtractor(publicProfileCandidate.url, Some(ExtractorProviderTypes.LINKEDIN_ID)) } yield {println(idArticleOption); idArticleOption match {
       case Some(idArticle) => idArticle.content == privateProfileId.toString
       case None => {
         log.error(s"Content check of LinkedIn public profile ${publicProfileCandidate.url} for id ${privateProfileId} failed.")

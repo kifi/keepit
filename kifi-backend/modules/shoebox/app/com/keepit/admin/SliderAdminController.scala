@@ -16,7 +16,7 @@ import com.keepit.eliza.ElizaServiceClient
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import views.html
-import com.keepit.heimdal.{SystemEvent, HeimdalServiceClient}
+import com.keepit.heimdal.{SystemEventTypes, HeimdalContext, SystemEvent, HeimdalServiceClient}
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsBoolean
 import com.keepit.classify.DomainTag
@@ -184,27 +184,27 @@ class SliderAdminController @Inject() (
   def getImportEvents = AdminHtmlAction { implicit request =>
     import com.keepit.classify.DomainTagImportEvents._
 
-    val eventsFuture = heimdal.getRawEvents[SystemEvent](50, 42000, DOMAIN_TAG_IMPORT).map { rawEvents =>
+    val eventsFuture = heimdal.getRawEvents[SystemEvent](50, 42000, SystemEventTypes.DOMAIN_TAG_IMPORT).map { rawEvents =>
       rawEvents.value.map { json =>
-        val event = SystemEvent.format.reads(json).get
-        val context = event.context
-        val eventName = event.eventType.name
-        val createdAt = event.time
+        println(json)
+        val createdAt = DateTimeJsonFormat.reads(json \ "time" \ "$date").get
+        val context = (json \ "context").as[HeimdalContext]
+        val eventName = context.getSeq[String]("eventName").get.head
         val description = eventName match {
           case IMPORT_START => "Full import started"
-          case IMPORT_TAG_SUCCESS => "Tag %s imported (%d added, %d removed, %d total domains)".format((
-            context.get[String]("tagName").get,
-            context.get[Double]("numDomainsAdded").get.toInt,
-            context.get[Double]("numDomainsRemoved").get.toInt,
-            context.get[Double]("totalDomains").get.toInt
-          ))
-          case IMPORT_SUCCESS => "Domains imported (%d added, %d removed, %d total domains)".format((
-            context.get[Double]("numDomainsAdded").get.toInt,
-            context.get[Double]("numDomainsRemoved").get.toInt,
-            context.get[Double]("totalDomains").get.toInt
-          ))
-          case REMOVE_TAG_SUCCESS => "Tag %s removed".format((context.get[String]("tagName")))
-          case IMPORT_FAILURE => context.get[String]("message").get
+          case IMPORT_TAG_SUCCESS => "Tag %s imported (%d added, %d removed, %d total domains)".format(
+            context.getSeq[String]("tagName").get.head,
+            context.getSeq[Double]("numDomainsAdded").get.head.toInt,
+            context.getSeq[Double]("numDomainsRemoved").get.head.toInt,
+            context.getSeq[Double]("totalDomains").get.head.toInt
+          )
+          case IMPORT_SUCCESS => "Domains imported (%d added, %d removed, %d total domains)".format(
+            context.getSeq[Double]("numDomainsAdded").get.head.toInt,
+            context.getSeq[Double]("numDomainsRemoved").get.head.toInt,
+            context.getSeq[Double]("totalDomains").get.head.toInt
+          )
+          case REMOVE_TAG_SUCCESS => "Tag %s removed".format(context.getSeq[String]("tagName").get.head)
+          case IMPORT_FAILURE => context.getSeq[String]("message").get.head
         }
         ImportEvent(createdAt, eventName, description)
       }.sortBy(_.createdAt).reverse

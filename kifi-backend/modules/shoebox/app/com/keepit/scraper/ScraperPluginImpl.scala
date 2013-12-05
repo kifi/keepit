@@ -17,12 +17,13 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.scraper.extractor.Extractor
+import com.keepit.scraper.extractor.{ExtractorProviderType, Extractor}
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.slick.DBSession.RWSession
 
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
-case class ScrapeBasicArticle(url: String, customExtractor: Option[Extractor])
+case class ScrapeBasicArticle(url: String, extractorProviderType:Option[ExtractorProviderType])
 
 private[scraper] class ScraperActor @Inject() (
     scraper: Scraper,
@@ -49,7 +50,7 @@ private[scraper] class ReadOnlyScraperActor @Inject() (
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
   def receive() = {
-    case ScrapeBasicArticle(url, customExtractor) => sender ! scraper.getBasicArticle(url, customExtractor)
+    case ScrapeBasicArticle(url, extractorProviderType) => sender ! scraper.getBasicArticle(url, extractorProviderType)
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -82,38 +83,34 @@ class ScraperPluginImpl @Inject() (
   override def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]] =
     actor.ref.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
 
-  def scheduleScrape(uri: NormalizedURI): Unit = {
+  def scheduleScrape(uri: NormalizedURI)(implicit session: RWSession): Unit = {
     if (scraperConfig.disableScraperService) {
       actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
     } else {
       val uriId = uri.id.get
-      val (info, proxyOpt) = db.readOnly { implicit s =>
-        val info = scrapeInfoRepo.getByUriId(uriId)
-        val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
-        (info, proxyOpt)
-      }
+      val info = scrapeInfoRepo.getByUriId(uriId)
+      val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
+
       val toSave = info match {
         case Some(s) => s.withState(ScrapeInfoStates.PENDING)
         case None => ScrapeInfo(uriId = uriId, state = ScrapeInfoStates.PENDING)
       }
-      val saved = db.readWrite { implicit s =>
-        scrapeInfoRepo.save(toSave)
-      }
-      log.info(s"[scheduleScrape-WithRequest] invoke (remote) Scraper service; uri=(${uri.id}, ${uri.state}, ${uri.url}, proxy=$proxyOpt)")
-      val f = scraperClient.scheduleScrapeWithRequest(ScrapeRequest(uri, saved, proxyOpt))
-      Await.result(f, 5 seconds) // should be really quick
+      val saved = scrapeInfoRepo.save(toSave)
+      // todo: It may be nice to force trigger a scrape directly
     }
   }
 
-  override def scrapeBasicArticle(url: String, customExtractor: Option[Extractor] = None): Future[Option[BasicArticle]] = {
-    if (scraperConfig.disableScraperService || customExtractor.isDefined) {
-      readOnlyActor.ref.ask(ScrapeBasicArticle(url, customExtractor))(1 minutes).mapTo[Option[BasicArticle]]
+  override def scrapeBasicArticle(url:String): Future[Option[BasicArticle]] = scrapeBasicArticleWithExtractor(url, None)
+
+  override def scrapeBasicArticleWithExtractor(url: String, extractorProviderType:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
+    if (scraperConfig.disableScraperService) {
+      readOnlyActor.ref.ask(ScrapeBasicArticle(url, extractorProviderType))(1 minutes).mapTo[Option[BasicArticle]]
     } else {
       val proxyOpt = db.readOnly { implicit s =>
         urlPatternRuleRepo.getProxy(url)
       }
-      log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt")
-      scraperClient.getBasicArticleP(url, proxyOpt)
+      log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
+      scraperClient.getBasicArticleWithExtractor(url, proxyOpt, extractorProviderType)
     }
   }
 }

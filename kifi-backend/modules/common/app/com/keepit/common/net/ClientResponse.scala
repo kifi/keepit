@@ -85,7 +85,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
         url.contains("graph.facebook.com/")) {
       5000//ms
     } else {
-      100//ms
+      200//ms
     }
     try {
       val (json, time, tracking) = jsonParser.parse(bytes, trackTimeThreshold)

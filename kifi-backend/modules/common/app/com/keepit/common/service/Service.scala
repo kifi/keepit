@@ -21,6 +21,10 @@ sealed abstract class ServiceType(val name: String, val shortName: String) {
   def selfCheck() : Future[Boolean] = promise[Boolean].success(true).future
   def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = ServiceStatus.UP
   override def toString(): String = name
+
+  val minInstances  : Int = 1
+  val warnInstances : Int = 2
+
 }
 
 object ServiceType {
@@ -36,6 +40,9 @@ object ServiceType {
       case AmazonInstanceInfo.small => ServiceStatus.BACKING_UP
       case _ => ServiceStatus.UP
     }
+
+    override val minInstances = 3
+    override val warnInstances = 4
   }
 
   def fromString(str: String) = str match {
