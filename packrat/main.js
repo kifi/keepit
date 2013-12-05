@@ -1168,25 +1168,25 @@ function tellTabsUnreadThreadCountIfChanged(td) { // (td, url[, url]...)
 }
 
 
-var MAX_RES = 5;
+var DEFAULT_RES = 5;
 var MAX_RES_FOR_NEW = 2;
 var TWO_WEEKS = 1000 * 60 * 60 * 24 * 7 * 2;
 function getSearchMaxResults(request) {
   if (request.lastUUID) {
-    return MAX_RES;
+    return DEFAULT_RES;
   }
 
   var pref = api.prefs.get("maxResults");
-  if (pref !== MAX_RES) {
+  if (pref !== DEFAULT_RES) {
     return pref;
   }
 
   var joined = session.joined;
-  if (joined && (new Date() - joined) < TWO_WEEKS) {
+  if (joined && (Date.now() - joined) < TWO_WEEKS) {
     return MAX_RES_FOR_NEW;
   }
 
-  return MAX_RES;
+  return DEFAULT_RES;
 }
 
 function searchOnServer(request, respond) {
