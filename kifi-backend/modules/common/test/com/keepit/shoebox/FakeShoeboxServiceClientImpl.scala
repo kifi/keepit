@@ -180,7 +180,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]] = ???
 
-  def saveBookmark(bookmark: Bookmark): Future[Bookmark] = ???
+  def saveBookmark(bookmark: Bookmark)(implicit timeout:Int): Future[Bookmark] = ???
 
   def getCollection(collectionId: Id[Collection]): Collection = {
     allCollections(collectionId)
@@ -420,11 +420,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = ???
 
-  def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = ???
+  def saveScrapeInfo(info: ScrapeInfo)(implicit timeout:Int): Future[ScrapeInfo] = ???
 
-  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
+  def saveNormalizedURI(uri: NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = ???
 
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = ???
+  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = ???
 
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 

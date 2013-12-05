@@ -366,13 +366,15 @@ class AsyncScraper @Inject() (
     }
   }
 
+  implicit val serviceCallTTL = config.serviceCallTTL // explicitly pass in for now
+
   // private[scraper] def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI] = Await.result(getNormalizedUri(uri), 5 seconds)
 
-  private[scraper] def saveNormalizedUri(uri:NormalizedURI):Future[NormalizedURI] = shoeboxServiceClient.saveNormalizedURI(uri)
+  private[scraper] def saveNormalizedUri(uri:NormalizedURI):Future[NormalizedURI] = shoeboxServiceClient.saveNormalizedURI(uri)(serviceCallTTL)
 
   // private[scraper] def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI = Await.result(saveNormalizedUri(uri), 5 seconds)
 
-  private[scraper] def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo] = shoeboxServiceClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE))
+  private[scraper] def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo] = shoeboxServiceClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE))(serviceCallTTL)
 
   // private[scraper] def syncSaveScrapeInfo(info:ScrapeInfo):ScrapeInfo = Await.result(saveScrapeInfo(info), 5 seconds)
 
@@ -384,9 +386,9 @@ class AsyncScraper @Inject() (
 
   // private[scraper] def syncGetLatestBookmark(uriId: Id[NormalizedURI]): Option[Bookmark] = Await.result(getLatestBookmark(uriId), 5 seconds)
 
-  private[scraper] def saveBookmark(bookmark:Bookmark): Future[Bookmark] = shoeboxServiceClient.saveBookmark(bookmark)
+  private[scraper] def saveBookmark(bookmark:Bookmark): Future[Bookmark] = shoeboxServiceClient.saveBookmark(bookmark)(serviceCallTTL)
 
-  private[scraper] def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxServiceClient.recordPermanentRedirect(uri, redirect)
+  private[scraper] def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxServiceClient.recordPermanentRedirect(uri, redirect)(serviceCallTTL)
 
   // private[scraper] def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = Await.result(recordPermanentRedirect(uri, redirect), 5 seconds)
 

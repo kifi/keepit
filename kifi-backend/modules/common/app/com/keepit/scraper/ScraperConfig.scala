@@ -14,6 +14,8 @@ case class ScraperConfig(
   scrapePendingFrequency: Int = sys.props.getOrElse("scraper.pending.freq", "20").toInt, // seconds
   disableScraperService: Boolean = sys.props.getOrElse("scraper.service.disable", "false").toBoolean,
   async: Boolean = sys.props.getOrElse("scraper.plugin.async", "true").toBoolean,
+  syncAwaitTTL: Int = sys.props.getOrElse("scraper.plugin.sync.await.ttl", "20000").toInt,
+  serviceCallTTL: Int = sys.props.getOrElse("scraper.service.call.ttl", "20000").toInt,
   numInstances: Int = sys.props.getOrElse("scraper.service.instances", (Runtime.getRuntime.availableProcessors * 2).toString).toInt,
   batchSize: Int = sys.props.getOrElse("scraper.service.batch.size", "10").toInt,
   batchMax: Int = sys.props.getOrElse("scraper.service.batch.max", "100").toInt,

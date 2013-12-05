@@ -69,7 +69,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]]
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Bookmark]]
   def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]]
-  def saveBookmark(bookmark:Bookmark): Future[Bookmark]
   def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiments: Future[Seq[SearchConfigExperiment]]
@@ -92,9 +91,10 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
-  def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo]
-  def saveNormalizedURI(uri:NormalizedURI):Future[NormalizedURI]
-  def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect):Future[NormalizedURI]
+  def saveBookmark(bookmark:Bookmark)(implicit timeout:Int = 10000): Future[Bookmark]
+  def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
+  def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
+  def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def getProxy(url:String):Future[Option[HttpProxy]]
   def getProxyP(url:String):Future[Option[HttpProxy]]
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
@@ -211,8 +211,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def saveBookmark(bookmark: Bookmark): Future[Bookmark] = {
-    call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark)).map { r =>
+  def saveBookmark(bookmark: Bookmark)(implicit timeout:Int): Future[Bookmark] = {
+    call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark), timeout = timeout).map { r =>
       Json.fromJson[Bookmark](r.json).get
     }
   }
@@ -561,20 +561,20 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = {
-    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info)).map { r =>
+  def saveScrapeInfo(info: ScrapeInfo)(implicit timeout:Int): Future[ScrapeInfo] = {
+    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), timeout = timeout).map { r =>
       r.json.as[ScrapeInfo]
     }
   }
 
-  def saveNormalizedURI(uri:NormalizedURI): Future[NormalizedURI] = {
-    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri)).map { r =>
+  def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = {
+    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), timeout = timeout).map { r =>
       r.json.as[NormalizedURI]
     }
   }
 
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = {
-    call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect)))).map { r =>
+  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = {
+    call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect))), timeout = timeout).map { r =>
       r.json.as[NormalizedURI]
     }
   }
