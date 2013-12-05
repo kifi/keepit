@@ -474,7 +474,7 @@ class AdminUserController @Inject() (
     if (user.state == UserStates.INACTIVE)
       heimdal.deleteUser(userId)
     else {
-      val properties = new EventContextBuilder
+      val properties = new HeimdalContextBuilder
       db.readOnly { implicit session =>
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)

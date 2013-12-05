@@ -8,7 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.heimdal.{EventContextBuilder, HeimdalServiceClient}
+import com.keepit.heimdal.{HeimdalContextBuilder, HeimdalServiceClient}
 import com.keepit.common.akka.SafeFuture
 
 @ImplementedBy(classOf[UserRepoImpl])
@@ -84,7 +84,7 @@ class UserRepoImpl @Inject() (
     if (user.state == UserStates.INACTIVE)
       heimdal.deleteUser(user.id.get)
     else {
-      val properties = new EventContextBuilder
+      val properties = new HeimdalContextBuilder
       properties += ("$first_name", user.firstName)
       properties += ("$last_name", user.lastName)
       properties += ("$created", user.createdAt)

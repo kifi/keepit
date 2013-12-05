@@ -9,7 +9,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.db.slick.{Database}
 import com.keepit.common.akka.SafeFuture
-import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilder, UserEvent, EventType}
+import com.keepit.heimdal.{HeimdalServiceClient, HeimdalContextBuilder, UserEvent, EventType}
 
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -47,7 +47,7 @@ class ExtEventController @Inject() (
       val event = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
       log.debug(s"Created new event: $event")
 
-      val contextBuilder = new EventContextBuilder()
+      val contextBuilder = new HeimdalContextBuilder()
       contextBuilder += ("experiments", experiments.map(_.toString).toSeq)
       metaData.fields.foreach{
         case (key, jsonValue) => {
