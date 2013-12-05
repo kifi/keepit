@@ -93,7 +93,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         val initLoad = BookmarkSource("INIT_LOAD")
         val db = inject[Database]
 
-        val user = db.readWrite {implicit s =>
+        val (user, bookmark1, bookmark2, bookmark3) = db.readWrite {implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
           val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
 
@@ -104,14 +104,14 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+          val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
             uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
-          bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+          val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
             uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
-          bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
+          val bookmark3 = bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
             uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = BookmarkStates.ACTIVE))
 
-          user1
+          (user1, bookmark1, bookmark2, bookmark3)
         }
 
         val keeps = db.readWrite {implicit s =>
@@ -140,7 +140,29 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         contentType(result) must beSome("application/json");
 
         val expected = Json.parse(s"""
-          {"collection":null,"before":null,"after":null,"keeps":["something here"]}
+          {"collection":null,
+           "before":null,
+           "after":null,
+           "keeps":[
+            {
+              "id":"${bookmark2.externalId.toString}",
+              "title":"A1",
+              "url":"http://www.amazon.com/",
+              "isPrivate":false,
+              "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
+              "others":-1,
+              "keepers":[],
+              "collections":[]},
+            {
+              "id":"${bookmark1.externalId.toString}",
+              "title":"G1",
+              "url":"http://www.google.com/",
+              "isPrivate":false,
+              "createdAt":"${bookmark1.createdAt.toStandardTimeString}",
+              "others":-1,
+              "keepers":[],
+              "collections":[]}
+          ]}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
@@ -158,7 +180,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         }
 
         val path = com.keepit.controllers.website.routes.BookmarksController.allCollections().toString
-        path === "/site/collectionons/all"
+        path === "/site/collections/all"
 
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[BookmarksController]
