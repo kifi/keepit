@@ -140,6 +140,16 @@ class PrenormalizerTest extends Specification {
       // google drive
       Prenormalizer("https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit") ===
         "https://docs.google.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit"
+      Prenormalizer("https://drive.google.com/a/42go.com/#folders/0B_SswQqUaqw6c1dteUNRUkdLRGs") ===
+        "https://drive.google.com#folders/0B_SswQqUaqw6c1dteUNRUkdLRGs"
+      Prenormalizer("https://drive.google.com/a/42go.com/#search/spec") ===
+        "https://drive.google.com#search/spec"
+      Prenormalizer("https://drive.google.com/a/42go.com/#query?view=2&filter=images") ===
+        "https://drive.google.com#query?view=2&filter=images"
+      Prenormalizer("https://drive.google.com/a/42go.com/#my-drive") ===
+        "https://drive.google.com#my-drive"
+      Prenormalizer("https://drive.google.com/a/42go.com/?tab=wo#shared-with-me") ===
+        "https://drive.google.com#shared-with-me"
 
       // google docs
       Prenormalizer("https://docs.google.com/document/d/1pFRKQtcZFqBYRdfcRbYT3TQaZaFqI1PgeOHEacF57q8/edit") ===
