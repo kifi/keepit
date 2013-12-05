@@ -13,7 +13,6 @@
     </span>
   </span>
   <span class="kifi-dock">
-    {{^showInbox}}
     <span class="kifi-dock-btn kifi-dock-notices{{#atNotices}} kifi-at{{/atNotices}}" data-loc="/notices" data-tip="n">
       <span class="kifi-count"{{^noticesCount}} style="display:none"{{/noticesCount}}>{{noticesCount}}</span>
     </span>
@@ -21,13 +20,5 @@
     <span class="kifi-dock-btn kifi-dock-messages{{#atMessages}} kifi-at{{/atMessages}}" data-loc="/messages" data-tip="m">
       <span class="kifi-count"{{^messageCount}} style="display:none"{{/messageCount}}>{{messageCount}}</span>
     </span>
-    {{/showInbox}}
-    {{#showInbox}}
-    <span class="kifi-dock-btn kifi-dock-inbox{{#atNotices}} kifi-at{{/atNotices}}" data-loc="/notices" data-tip="i">
-      <span class="kifi-count"{{^inboxCount}} style="display:none"{{/inboxCount}}>{{inboxCount}}</span>
-    </span>
-    <span class="kifi-dock-sep"></span>
-    <span class="kifi-dock-btn kifi-dock-compose" data-tip="c"></span>
-    {{/showInbox}}
   </span>
 </kifi>
