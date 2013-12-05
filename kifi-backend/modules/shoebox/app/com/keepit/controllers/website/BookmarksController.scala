@@ -57,16 +57,6 @@ class BookmarksController @Inject() (
     )
   }
 
-  private def getBookmarkExternalId(id: String): Option[ExternalId[Bookmark]] = {
-    db.readOnly { implicit s => ExternalId.asOpt[Bookmark](id).flatMap(bookmarkRepo.getOpt) } map (_.externalId)
-  }
-
-  private def getCollectionByExternalId(userId: Id[User], id: String): Option[Collection] = {
-    db.readOnly { implicit s =>
-      ExternalId.asOpt[Collection](id).flatMap(collectionRepo.getByUserAndExternalId(userId, _))
-    }
-  }
-
   def updateCollectionOrdering() = AuthenticatedAction(parse.tolerantJson) { request =>
     implicit val externalIdFormat = ExternalId.format[Collection]
     val orderedIds = request.body.as[Seq[ExternalId[Collection]]]
