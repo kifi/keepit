@@ -61,7 +61,7 @@ class ScrapeProcessorPluginImpl @Inject() (
     system.actorOf(Props(procProvider.get).withRouter(SmallestMailboxRouter(nrOfInstances)))
   }
 
-  implicit val timeout = Timeout(20 seconds)
+  implicit val timeout = Timeout(scraperConfig.actorTimeout)
 
   def fetchBasicArticle(url: String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     (actor ? FetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)).mapTo[Option[BasicArticle]]
@@ -142,7 +142,7 @@ class SyncScraper @Inject() (
 ) extends Logging {
   
   implicit val myConfig = config
-  val awaitTTL = (myConfig.syncAwaitTTL seconds)
+  val awaitTTL = (myConfig.syncAwaitTimeout seconds)
 
   private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = try {
     processURI(uri, info, proxyOpt)
@@ -385,8 +385,8 @@ class SyncScraper @Inject() (
 
 class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceClient:ShoeboxServiceClient) {
 
-  val awaitTTL = config.syncAwaitTTL seconds
-  implicit val serviceCallTTL = config.serviceCallTTL
+  val awaitTimeout = config.syncAwaitTimeout seconds
+  implicit val serviceCallTimeout = config.serviceCallTimeout
 
   def getNormalizedUri(uri:NormalizedURI):Future[Option[NormalizedURI]] = {
     uri.id match {
@@ -395,15 +395,15 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
     }
   }
 
-  def isUnscrapableP(url: String, destinationUrl: Option[String]) = Await.result(asyncIsUnscrapableP(url, destinationUrl), awaitTTL)
+  def isUnscrapableP(url: String, destinationUrl: Option[String]) = Await.result(asyncIsUnscrapableP(url, destinationUrl), awaitTimeout)
 
-  def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI] = Await.result(getNormalizedUri(uri), awaitTTL)
-  def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI = Await.result(saveNormalizedUri(uri), awaitTTL)
-  def syncSaveScrapeInfo(info:ScrapeInfo):ScrapeInfo = Await.result(saveScrapeInfo(info), awaitTTL)
-  def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Seq[Bookmark] = Await.result(getBookmarksByUriWithoutTitle(uriId), awaitTTL)
-  def syncGetLatestBookmark(uriId: Id[NormalizedURI]): Option[Bookmark] = Await.result(getLatestBookmark(uriId), awaitTTL)
-  def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = Await.result(recordPermanentRedirect(uri, redirect), awaitTTL)
-  def syncSaveBookmark(bookmark:Bookmark):Bookmark = Await.result(saveBookmark(bookmark), awaitTTL)
+  def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI] = Await.result(getNormalizedUri(uri), awaitTimeout)
+  def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI = Await.result(saveNormalizedUri(uri), awaitTimeout)
+  def syncSaveScrapeInfo(info:ScrapeInfo):ScrapeInfo = Await.result(saveScrapeInfo(info), awaitTimeout)
+  def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Seq[Bookmark] = Await.result(getBookmarksByUriWithoutTitle(uriId), awaitTimeout)
+  def syncGetLatestBookmark(uriId: Id[NormalizedURI]): Option[Bookmark] = Await.result(getLatestBookmark(uriId), awaitTimeout)
+  def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = Await.result(recordPermanentRedirect(uri, redirect), awaitTimeout)
+  def syncSaveBookmark(bookmark:Bookmark):Bookmark = Await.result(saveBookmark(bookmark), awaitTimeout)
 
   def saveNormalizedUri(uri:NormalizedURI):Future[NormalizedURI] = shoeboxServiceClient.saveNormalizedURI(uri)
   def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo] = shoeboxServiceClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE))
