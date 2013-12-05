@@ -79,7 +79,6 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
               "firstName":"Shanee",
               "lastName":"Smith",
               "pictureName":"0.jpg",
-              "description":"",
               "emails":[],
               "experiments":["admin"]}
           """)
