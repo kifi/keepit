@@ -28,6 +28,7 @@ import play.api.Play.current
 import scala.Some
 import scala.util.Success
 
+
 @ProvidedBy(classOf[ScrapeProcessorPluginProvider])
 trait ScrapeProcessorPlugin extends Plugin {
   def fetchBasicArticle(url:String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
@@ -87,7 +88,7 @@ class ScrapeProcessor @Inject() (
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
-  shoeboxServiceClient: ShoeboxServiceClient
+  helper: ShoeboxDbCallbackHelper
 ) extends FortyTwoActor(airbrake) with Logging {
 
   log.info(s"[ScraperProcessor-actor] created $this")
@@ -105,7 +106,7 @@ class ScrapeProcessor @Inject() (
       }
       val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
       val res = fetchStatus.statusCode match {
-        case HttpStatus.SC_OK if !(syncScraper.isUnscrapableP(url, fetchStatus.destinationUrl)) => Some(syncScraper.basicArticle(url, extractor))
+        case HttpStatus.SC_OK if !(helper.isUnscrapableP(url, fetchStatus.destinationUrl)) => Some(syncScraper.basicArticle(url, extractor))
         case _ => None
       }
       log.info(s"[FetchArticle] time-lapsed:${System.currentTimeMillis - ts} url=$url result=$res")
@@ -137,7 +138,7 @@ class SyncScraper @Inject() (
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
-  shoeboxServiceClient: ShoeboxServiceClient
+  helper: ShoeboxDbCallbackHelper
 ) extends Logging {
   
   implicit val myConfig = config
@@ -149,15 +150,15 @@ class SyncScraper @Inject() (
     case t: Throwable => {
       log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
       airbrake.notify(t)
-      val latestUriOpt = syncGetNormalizedUri(uri)
+      val latestUriOpt = helper.syncGetNormalizedUri(uri)
       // update the uri state to SCRAPE_FAILED
       val savedUriOpt = for (latestUri <- latestUriOpt) yield {
         if (latestUri.state == NormalizedURIStates.INACTIVE) latestUri else {
-          Await.result(saveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED)), awaitTTL)
+          helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
       }
       // then update the scrape schedule
-      val savedInfoF = saveScrapeInfo(info.withFailure())
+      val savedInfoF = helper.syncSaveScrapeInfo(info.withFailure())
       (savedUriOpt.getOrElse(uri), None)
     }
   }
@@ -165,7 +166,7 @@ class SyncScraper @Inject() (
   private def processURI(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = {
     log.info(s"[processURI] scraping ${uri.url} $info")
     val fetchedArticle = fetchArticle(uri, info, proxyOpt)
-    val latestUri = syncGetNormalizedUri(uri).get
+    val latestUri = helper.syncGetNormalizedUri(uri).get
     if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
     else fetchedArticle match {
       case Scraped(article, signature, redirects) =>
@@ -179,7 +180,7 @@ class SyncScraper @Inject() (
           signature.similarTo(Signature(info.signature)) >= (1.0d - config.changeThreshold * (config.minInterval / info.interval))
         ) {
           // the article does not need to be reindexed update the scrape schedule, uri is not changed
-          saveScrapeInfo(info.withDocumentUnchanged())
+          helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
           log.info(s"[processURI] (${uri.url}) no change detected")
           (latestUri, None)
         } else {
@@ -189,12 +190,12 @@ class SyncScraper @Inject() (
           articleStore += (latestUri.id.get -> article)
 
           // first update the uri state to SCRAPED
-          val scrapedURI = syncSaveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          val scrapedURI = helper.syncSaveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
 
           // then update the scrape schedule
-          saveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-          syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
-            saveBookmark(bookmark.copy(title = scrapedURI.title))
+          helper.syncSaveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
+          helper.syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
+            helper.syncSaveBookmark(bookmark.copy(title = scrapedURI.title))
           }
           log.info(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
@@ -210,15 +211,15 @@ class SyncScraper @Inject() (
         }
       case NotScrapable(destinationUrl, redirects) =>
         val unscrapableURI = {
-          syncSaveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
+          helper.syncSaveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
           val toBeSaved = processRedirects(latestUri, redirects).withState(NormalizedURIStates.UNSCRAPABLE)
-          syncSaveNormalizedUri(toBeSaved)
+          helper.syncSaveNormalizedUri(toBeSaved)
         }
         log.info(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
         (unscrapableURI, None)
       case com.keepit.scraper.NotModified =>
         // update the scrape schedule, uri is not changed
-        saveScrapeInfo(info.withDocumentUnchanged())
+        helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
         log.info(s"[processURI] (${uri.url} not modified; latestUri=(${latestUri.id}, ${latestUri.state}, ${latestUri.url}})")
         (latestUri, None)
       case Error(httpStatus, msg) =>
@@ -241,8 +242,8 @@ class SyncScraper @Inject() (
         articleStore += (latestUri.id.get -> article)
         // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
         val errorURI = {
-          syncSaveScrapeInfo(info.withFailure())
-          syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          helper.syncSaveScrapeInfo(info.withFailure())
+          helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=(${errorURI.id}, ${errorURI.state}, ${errorURI.url})")
         (errorURI, None)
@@ -289,7 +290,7 @@ class SyncScraper @Inject() (
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
-          if (isUnscrapableP(url, fetchStatus.destinationUrl)) {
+          if (helper.isUnscrapableP(url, fetchStatus.destinationUrl)) {
             NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects)
           } else {
             val content = extractor.getContent
@@ -358,7 +359,7 @@ class SyncScraper @Inject() (
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): NormalizedURI = {
     redirects.find(_.isLocatedAt(uri.url)) match {
       case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => updateRedirectRestriction(uri, redirect)
-      case Some(permanentRedirect) if permanentRedirect.isAbsolute => syncRecordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
+      case Some(permanentRedirect) if permanentRedirect.isAbsolute => helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
       case _ => removeRedirectRestriction(uri)
     }
   }
@@ -375,53 +376,41 @@ class SyncScraper @Inject() (
 
   private def hasFishy301(movedUri: NormalizedURI): Boolean = {
     val hasFishy301Restriction = movedUri.restriction == Some(Restriction.http(301))
-    val wasKeptRecently = syncGetLatestBookmark(movedUri.id.get).map(_.updatedAt.isAfter(currentDateTime.minusHours(1))).getOrElse(false)
+    val wasKeptRecently = helper.syncGetLatestBookmark(movedUri.id.get).map(_.updatedAt.isAfter(currentDateTime.minusHours(1))).getOrElse(false)
     hasFishy301Restriction || wasKeptRecently
     hasFishy301Restriction
   }
 
-  // db helpers
+}
 
-  private[scraper] def getNormalizedUri(uri:NormalizedURI):Future[Option[NormalizedURI]] = {
+class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceClient:ShoeboxServiceClient) {
+
+  val awaitTTL = config.syncAwaitTTL seconds
+  implicit val serviceCallTTL = config.serviceCallTTL
+
+  def getNormalizedUri(uri:NormalizedURI):Future[Option[NormalizedURI]] = {
     uri.id match {
       case Some(id) => shoeboxServiceClient.getNormalizedURI(id).map(Some(_))
       case None => shoeboxServiceClient.getNormalizedURIByURL(uri.url)
     }
   }
 
-  implicit val serviceCallTTL = myConfig.serviceCallTTL // explicitly pass in for now
-
-  private[scraper] def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI] = Await.result(getNormalizedUri(uri), awaitTTL)
-
-  private[scraper] def saveNormalizedUri(uri:NormalizedURI):Future[NormalizedURI] = shoeboxServiceClient.saveNormalizedURI(uri)(serviceCallTTL)
-
-  private[scraper] def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI = Await.result(saveNormalizedUri(uri), awaitTTL)
-
-  private[scraper] def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo] = shoeboxServiceClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE))(serviceCallTTL)
-
-  private[scraper] def syncSaveScrapeInfo(info:ScrapeInfo):ScrapeInfo = Await.result(saveScrapeInfo(info), awaitTTL)
-
-  private[scraper] def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Future[Seq[Bookmark]] = shoeboxServiceClient.getBookmarksByUriWithoutTitle(uriId)
-
-  private[scraper] def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Seq[Bookmark] = Await.result(getBookmarksByUriWithoutTitle(uriId), awaitTTL)
-
-  private[scraper] def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]] = shoeboxServiceClient.getLatestBookmark(uriId)
-
-  private[scraper] def syncGetLatestBookmark(uriId: Id[NormalizedURI]): Option[Bookmark] = Await.result(getLatestBookmark(uriId), awaitTTL)
-
-  private[scraper] def saveBookmark(bookmark:Bookmark): Future[Bookmark] = shoeboxServiceClient.saveBookmark(bookmark)(serviceCallTTL)
-
-  private[scraper] def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxServiceClient.recordPermanentRedirect(uri, redirect)(serviceCallTTL)
-
-  private[scraper] def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = Await.result(recordPermanentRedirect(uri, redirect), awaitTTL)
-
-//  private[scraper] def getProxyP(url: String):Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
-
-//  private[scraper] def syncGetProxyP(url: String):Option[HttpProxy] = Await.result(getProxyP(url), defaultTimeout)
-
-  private[scraper] def asyncIsUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxServiceClient.isUnscrapableP(url, destinationUrl)
-
   def isUnscrapableP(url: String, destinationUrl: Option[String]) = Await.result(asyncIsUnscrapableP(url, destinationUrl), awaitTTL)
 
+  def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI] = Await.result(getNormalizedUri(uri), awaitTTL)
+  def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI = Await.result(saveNormalizedUri(uri), awaitTTL)
+  def syncSaveScrapeInfo(info:ScrapeInfo):ScrapeInfo = Await.result(saveScrapeInfo(info), awaitTTL)
+  def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Seq[Bookmark] = Await.result(getBookmarksByUriWithoutTitle(uriId), awaitTTL)
+  def syncGetLatestBookmark(uriId: Id[NormalizedURI]): Option[Bookmark] = Await.result(getLatestBookmark(uriId), awaitTTL)
+  def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = Await.result(recordPermanentRedirect(uri, redirect), awaitTTL)
+  def syncSaveBookmark(bookmark:Bookmark):Bookmark = Await.result(saveBookmark(bookmark), awaitTTL)
+
+  def saveNormalizedUri(uri:NormalizedURI):Future[NormalizedURI] = shoeboxServiceClient.saveNormalizedURI(uri)
+  def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo] = shoeboxServiceClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE))
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Future[Seq[Bookmark]] = shoeboxServiceClient.getBookmarksByUriWithoutTitle(uriId)
+  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]] = shoeboxServiceClient.getLatestBookmark(uriId)
+  def saveBookmark(bookmark:Bookmark): Future[Bookmark] = shoeboxServiceClient.saveBookmark(bookmark)
+  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxServiceClient.recordPermanentRedirect(uri, redirect)
+  def asyncIsUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxServiceClient.isUnscrapableP(url, destinationUrl)
 
 }

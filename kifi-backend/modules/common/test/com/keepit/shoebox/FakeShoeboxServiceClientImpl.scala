@@ -176,9 +176,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     saveBookmarksByEdges(edges, isPrivate, source)
   }
 
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Bookmark]] = ???
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Seq[Bookmark]] = ???
 
-  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]] = ???
+  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Option[Bookmark]] = ???
 
   def saveBookmark(bookmark: Bookmark)(implicit timeout:Int): Future[Bookmark] = ???
 
@@ -432,7 +432,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
 
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
+  def isUnscrapableP(url: String, destinationUrl: Option[String])(implicit timeout:Int): Future[Boolean] = ???
 
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = ???
 

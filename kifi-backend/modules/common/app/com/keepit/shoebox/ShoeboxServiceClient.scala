@@ -67,8 +67,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
   def getBookmarksChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Bookmark]]
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]]
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Bookmark]]
-  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]]
   def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiments: Future[Seq[SearchConfigExperiment]]
@@ -91,6 +89,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
+  def isUnscrapableP(url: String, destinationUrl: Option[String])(implicit timeout:Int = 10000):Future[Boolean]
+  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Option[Bookmark]]
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Seq[Bookmark]]
   def saveBookmark(bookmark:Bookmark)(implicit timeout:Int = 10000): Future[Bookmark]
   def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
@@ -98,7 +99,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getProxy(url:String):Future[Option[HttpProxy]]
   def getProxyP(url:String):Future[Option[HttpProxy]]
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
-  def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
   def getUserValue(userId: Id[User], key: String): Future[Option[String]]
   def setUserValue(userId: Id[User], key: String, value: String): Unit
@@ -199,13 +199,13 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Bookmark]] = {
-    call(Shoebox.internal.getBookmarksByUriWithoutTitle(uriId)).map { r =>
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Seq[Bookmark]] = {
+    call(Shoebox.internal.getBookmarksByUriWithoutTitle(uriId), timeout = timeout).map { r =>
       r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
     }
   }
 
-  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]] = {
+  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Option[Bookmark]] = {
     call(Shoebox.internal.getLatestBookmark(uriId)).map { r =>
       Json.fromJson[Option[Bookmark]](r.json).get
     }
@@ -597,8 +597,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = {
-    call(Shoebox.internal.isUnscrapableP, JsArray(Seq(Json.toJson(url), Json.toJson(destinationUrl)))).map { r =>
+  def isUnscrapableP(url: String, destinationUrl: Option[String])(implicit timeout:Int): Future[Boolean] = {
+    call(Shoebox.internal.isUnscrapableP, JsArray(Seq(Json.toJson(url), Json.toJson(destinationUrl))), timeout = timeout).map { r =>
       r.json.as[Boolean]
     }
   }
