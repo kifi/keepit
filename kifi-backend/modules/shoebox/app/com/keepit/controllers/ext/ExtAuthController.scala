@@ -86,6 +86,7 @@ class ExtAuthController @Inject() (
     val encryptedIp: String = crypt.crypt(ipkey, ip)
 
     Ok(Json.obj(
+      "joined" -> user.createdAt.toLocalDate,
       "user" -> BasicUser.fromUser(user),
       "name" -> s"${user.firstName} ${user.lastName}",  // deprecated, remove after all extensions at 2.6.38 or later
       "userId" -> user.externalId.id,                   // deprecated, remove after all extensions at 2.6.38 or later
