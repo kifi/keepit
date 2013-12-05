@@ -208,7 +208,7 @@ class ExtBookmarksController @Inject() (
               contextBuilder += ("source", bookmarkSource.value)
               contextBuilder += ("hasTitle", bookmark.title.isDefined)
 
-              heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("keep"), tStart))
+              heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.KEEP, tStart))
             }
             val kept = bookmarks.length
             val keptPrivate = bookmarks.count(_.isPrivate)

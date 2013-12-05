@@ -38,8 +38,6 @@ private case class ApplyTag(tagName: DomainTagName, domainNames: Seq[String])
 private case class RemoveTag(tagName: DomainTagName)
 
 object DomainTagImportEvents {
-  // heimdal event type
-  val DOMAIN_TAG_IMPORT = EventType("domain_tag_import")
 
   // success
   val IMPORT_START = "importStart"
@@ -173,7 +171,7 @@ private[classify] class DomainTagImportActor @Inject() (
 
   private def persistEvent(eventName: String, contextBuilder: HeimdalContextBuilder) = {
     contextBuilder += ("eventName", eventName)
-    heimdal.trackEvent(SystemEvent(contextBuilder.build, DOMAIN_TAG_IMPORT, currentDateTime))
+    heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.DOMAIN_TAG_IMPORT, currentDateTime))
   }
 
   private def failWithException(eventName: String, e: Exception) {

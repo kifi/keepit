@@ -80,7 +80,7 @@ class BookmarksCommander @Inject() (
         contextBuilder += ("url", bookmark.url)
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
 
-        heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, EventType("keep"), tStart))
+        heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, UserEventTypes.KEEP, tStart))
       }
       val kept = keeps.length
       val keptPrivate = keeps.count(_.isPrivate)

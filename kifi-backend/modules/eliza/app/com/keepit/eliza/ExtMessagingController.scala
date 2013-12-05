@@ -89,11 +89,11 @@ class ExtMessagingController @Inject() (
             shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
               case Success(bookmarkOpt) => {
                 contextBuilder += ("isKeep", bookmarkOpt.isDefined)
-                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("new_message"), tStart))
+                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventTypes.NEW_MESSAGE, tStart))
               }
               case Failure(ex) => {
                 log.warn("Failed to check if url is a keep.")
-                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("new_message"), tStart))
+                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventTypes.NEW_MESSAGE, tStart))
               }
             }
           }
@@ -131,11 +131,11 @@ class ExtMessagingController @Inject() (
         shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
           case Success(bookmarkOpt) => {
             contextBuilder += ("isKeep", bookmarkOpt.isDefined)
-            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("reply_message"), tStart))
+            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventTypes.REPLY_MESSAGE, tStart))
           }
           case Failure(ex) => {
             log.warn("Failed to check if url is a keep.")
-            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, EventType("reply_message"), tStart))
+            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventTypes.REPLY_MESSAGE, tStart))
           }
         }
       }
@@ -254,7 +254,7 @@ class ExtMessagingController @Inject() (
       messagingController.setLastSeen(socket.userId, msgExtId)
       SafeFuture {
         val context = messagingContextBuilder(socket, msgExtId, false).build
-        heimdal.trackEvent(UserEvent(socket.userId.id, context, EventType("notification_read")))
+        heimdal.trackEvent(UserEvent(socket.userId.id, context, UserEventTypes.NOTIFICATION_READ))
       }
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
@@ -263,7 +263,7 @@ class ExtMessagingController @Inject() (
       messagingController.setLastSeen(socket.userId, msgExtId)
       SafeFuture {
         val context = messagingContextBuilder(socket, msgExtId, true).build
-        heimdal.trackEvent(UserEvent(socket.userId.id, context, EventType("notification_read")))
+        heimdal.trackEvent(UserEvent(socket.userId.id, context, UserEventTypes.NOTIFICATION_READ))
       }
     },
     "get_threads_by_url" -> { case JsString(url) +: _ =>  // deprecated in favor of "get_threads"

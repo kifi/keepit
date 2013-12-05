@@ -71,7 +71,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("filterByTimeRange", searchFilter.timeRange.isDefined)
     contextBuilder += ("filterByTags", searchFilter.collections.isDefined)
 
-    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("performed_search"), articleSearchResult.time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.PERFORMED_SEARCH, articleSearchResult.time))
   }
 
   def searchResultClicked(
@@ -169,7 +169,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("kifiResultsClicked", kifiResultsClicked)
     contextBuilder += ("thirdPartyResultsClicked", otherResultsClicked)
 
-    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("ended_search"), time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.ENDED_SEARCH, time))
   }
 
   def clickedSearchResult(
@@ -211,7 +211,7 @@ class SearchAnalytics @Inject() (
       contextBuilder += ("urlMatchQueryRatio", result.hit.urlMatches.length.toDouble / queryTerms)
     }
 
-    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType("clicked_search_result"), time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.CLICKED_SEARCH_RESULT, time))
   }
 
   private def obfuscate(searchId: ExternalId[ArticleSearchResult], userId: Id[User]): String = {

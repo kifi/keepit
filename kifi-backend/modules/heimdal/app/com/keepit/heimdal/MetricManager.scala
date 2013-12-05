@@ -38,7 +38,7 @@ class MetricManager @Inject() (
     "none" -> NoContextRestriction,
     "noadmins" -> AnyContextRestriction("context.experiments", NotEqualTo(ContextStringData("admin"))),
     "withkifiresults" -> AnyContextRestriction("context.kifiResults", GreaterThan(ContextDoubleData(0))),
-    "clickedkifiresult" -> ConditionalContextRestriction(AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi"))), EventType("clicked_search_result")),
+    "clickedkifiresult" -> ConditionalContextRestriction(AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi"))), UserEventTypes.CLICKED_SEARCH_RESULT),
     "nofakes" -> AnyContextRestriction("context.experiments", NotEqualTo(ContextStringData("fake"))), //Is this correct?
     "publickeepsonly_nofakes" -> AndContextRestriction(
       AnyContextRestriction("context.experiments", NotEqualTo(ContextStringData("fake"))),
