@@ -101,7 +101,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     _activeExperiments
   }
 
-  val userSegmentExperiments = activeExperiments.filter(_.description.startsWith("user segment experiment"))
+  def userSegmentExperiments = activeExperiments.filter(_.description.contains("user segment experiment"))
 
   def syncActiveExperiments: Unit = {
     try {
@@ -126,6 +126,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
 
   private def assignConfig(userId: Id[User], queryText: String, userSegmentValue: Int) = {
     val modulo = userId.id.toLong % 3
+    log.info(s"${userSegmentExperiments.size} user segement experiments")
     if (userSegmentExperiments.size == 4 && modulo == 0) {
       log.info(s"search config: user segment value = ${userSegmentValue}. Using experimental parameters.")
       val ex = userSegmentExperiments(userSegmentValue)

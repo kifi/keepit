@@ -15,13 +15,13 @@ import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.inject.TestFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
 import com.google.inject.Injector
-import com.keepit.scraper.extractor.Extractor
+import com.keepit.scraper.extractor.{ExtractorProviderType, Extractor}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.TestElizaServiceClientModule
 
 class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
 
-  val fakeArticles: PartialFunction[(String, Option[Extractor]), BasicArticle] = {
+  val fakeArticles: PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle] = {
     case ("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever")
     case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "17558679")
     case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content")

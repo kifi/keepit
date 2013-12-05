@@ -20,7 +20,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
         val bookmarks = bookmarkInterner.internBookmarks(Json.obj(
             "url" -> "http://42go.com",
             "isPrivate" -> true
-          ), user, Set(), "EMAIL")
+          ), user, Set(), BookmarkSource.email)
         db.readWrite { implicit db =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 1
@@ -42,7 +42,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
           ), Json.obj(
             "url" -> "http://kifi.com",
             "isPrivate" -> false
-          )), user, Set(), "EMAIL")
+          )), user, Set(), BookmarkSource.email)
         db.readWrite { implicit db =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 2
@@ -67,7 +67,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
           ), Json.obj(
             "url" -> "http://kifi.com",
             "isPrivate" -> true
-          )), user, Set(), "EMAIL")
+          )), user, Set(), BookmarkSource.email)
         db.readWrite { implicit db =>
           bookmarks.size === 2
           bookmarkRepo.all.size === 2
@@ -84,7 +84,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
         val initialBookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        )), user, Set(), "HOVER_KEEP")
+        )), user, Set(), BookmarkSource.hover)
         initialBookmarks.size === 1
         db.readWrite { implicit s =>
           bookmarkRepo.save(bookmarkRepo.getByUser(user.id.get).head.withActive(false))
@@ -92,7 +92,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
         val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        )), user, Set(), "HOVER_KEEP")
+        )), user, Set(), BookmarkSource.hover)
         db.readOnly { implicit s =>
           bookmarks.size === 1
           bookmarkRepo.all.size === 1

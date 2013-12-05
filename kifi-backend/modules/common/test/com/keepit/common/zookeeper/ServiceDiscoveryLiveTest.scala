@@ -44,7 +44,7 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
         val zk = new ZooKeeperClientImpl("localhost", 3000,
           Some({zk1 => println(s"in callback, got $zk1")}))
         try {
-          val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zk, services, Providers.of(amazonInstanceInfo.copy(localHostname = "main")), inject[Scheduler])
+          val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zk, services, Providers.of(amazonInstanceInfo.copy(localHostname = "main")), inject[Scheduler], null)
           discovery.myClusterSize === 0
           zk.watchChildren(Path(s"/fortytwo/services/SHOEBOX"), { (children : Seq[Node]) =>
             println("Service Instances ----------- : %s".format(children.mkString(", ")))
