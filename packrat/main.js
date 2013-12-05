@@ -1167,6 +1167,28 @@ function tellTabsUnreadThreadCountIfChanged(td) { // (td, url[, url]...)
   forEachTabAt.apply(null, args);
 }
 
+
+var MAX_RES = 5;
+var MAX_RES_FOR_NEW = 2;
+var TWO_WEEKS = 1000 * 60 * 60 * 24 * 7 * 2;
+function getSearchMaxResults(request) {
+  if (request.lastUUID) {
+    return MAX_RES;
+  }
+
+  var pref = api.prefs.get("maxResults");
+  if (pref !== MAX_RES) {
+    return pref;
+  }
+
+  var joined = session.joined;
+  if (joined && new Date() - joined < TWO_WEEKS) {
+    return MAX_RES_FOR_NEW;
+  }
+
+  return MAX_RES;
+}
+
 function searchOnServer(request, respond) {
   if (request.first && getPrefetched(request, respond)) return;
 
@@ -1185,7 +1207,7 @@ function searchOnServer(request, respond) {
   var when, params = {
       q: request.query,
       f: request.filter && request.filter.who,
-      maxHits: request.lastUUID ? 5 : api.prefs.get("maxResults"),
+      maxHits: getSearchMaxResults(request),
       lastUUID: request.lastUUID,
       context: request.context,
       kifiVersion: api.version};
@@ -1760,6 +1782,7 @@ function startSession(callback, retryMs) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
     unstore('logout');
 
+    data.joined = data.joined ? new Date(data.joined) : null;
     session = data;
     session.prefs = {}; // to come via socket
     socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws?version=" + api.version + "&eip=" + (session.eip || ""), socketHandlers, function onConnect() {
