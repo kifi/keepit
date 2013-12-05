@@ -57,16 +57,14 @@
         }
       }
     },
-    getUnreadLocator: function () {
-      if (this.numUnreadUnmuted === 1) {
-        for (var i = 0; i < this.ids.length; i++) {
-          var id = this.ids[i];
-          if (this.allById[id].unread) {
-            return '/messages/' + id;
-          }
+    firstUnreadUnmuted: function () {
+      for (var i = 0; i < this.ids.length; i++) {
+        var id = this.ids[i];
+        var th = this.allById[id];
+        if (th.unread && !th.muted) {
+          return id;
         }
       }
-      return '/messages';
     },
     decNumUnreadUnmuted: function() {
       if (this.numUnreadUnmuted <= 0) {

@@ -40,8 +40,7 @@ var pane = pane || function () {  // idempotent for Chrome
   });
 
   function toPaneName(locator) {
-    var name = locator.match(/[a-z]+\/?/)[0];
-    return {messages: 'notices', 'messages/': 'thread'}[name] || name;
+    return /^\/messages\//.test(locator) ? 'thread' : 'notices';
   }
 
   var paneIdxs = ['notices', 'thread'];
@@ -68,7 +67,7 @@ var pane = pane || function () {  // idempotent for Chrome
     var deferred = Q.defer();
     if (locator !== (paneHistory && paneHistory[0])) {
       var name = toPaneName(locator);
-      (createPaneParams[name] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
+      (createPaneParams[name] || function (cb) {cb({})})(function (params) {
         params.redirected = redirected;
         showPaneContinued(locator, back, name, params);
         deferred.resolve();
@@ -244,19 +243,6 @@ var pane = pane || function () {  // idempotent for Chrome
         }, 150);
         return;
       })
-      .on("keydown", ".kifi-pane-search", function (e) {
-        var q;
-        if (e.which == 13 && (q = this.value.trim())) {
-          this.value = '';
-          window.open('https://www.kifi.com/find?q=' + encodeURIComponent(q).replace(/%20/g, "+"));
-        }
-      })
-      .on("click", ".kifi-pane-back", function () {
-        var loc = paneHistory[1] || this.dataset.loc;
-        if (loc) {
-          showPane(loc, true);
-        }
-      })
       .on("kifi:show-pane", function (e, loc, paramsArg) {
         showPane(loc, false, paramsArg);
       })
@@ -298,10 +284,10 @@ var pane = pane || function () {  // idempotent for Chrome
 
   function populatePane($box, name, locator) {
     var $tall = $box.find(".kifi-pane-tall");
-    if (name == "thread") {
+    if (name === 'thread') {
       $tall.css("margin-top", $box.find(".kifi-thread-who").outerHeight());
     }
-    api.require("scripts/" + name + ".js", function () {
+    api.require('scripts/' + name + '.js', function () {
       panes[name].render($tall, locator);
     });
   };
@@ -321,11 +307,9 @@ var pane = pane || function () {  // idempotent for Chrome
       }
     },
     toggle: function (trigger, locator) {
-      if (!locator) {
-        locator = '/notices';
-      }
+      locator = locator || '/messages:all';
       if ($pane) {
-        if (locator == paneHistory[0]) {
+        if (locator === paneHistory[0]) {
           hidePane(trigger === 'keeper');
         } else {
           showPane(locator);
@@ -340,7 +324,7 @@ var pane = pane || function () {  // idempotent for Chrome
         if ($pane) {
           toggleToaster();
         } else {
-          showPane('/notices').then(toggleToaster);
+          showPane('/messages:all').then(toggleToaster);
         }
         function toggleToaster() {
           toaster.toggleIn($pane).done(function (compose) {
