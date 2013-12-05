@@ -28,5 +28,4 @@ class SemanticContextAnalyzer(searcher: Searcher, analyzer: Analyzer, stemAnalyz
       (subTerms, completeVector.similarity(subVector))
     }
   }
-
 }
