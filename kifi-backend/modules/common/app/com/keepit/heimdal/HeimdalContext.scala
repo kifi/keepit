@@ -7,6 +7,8 @@ import play.api.mvc.RequestHeader
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.ExperimentType
 import com.google.inject.{Inject, Singleton}
+import net.sf.uadetector.service.UADetectorServiceFactory
+import com.keepit.common.net.UserAgent
 
 sealed trait ContextData
 sealed trait SimpleContextData extends ContextData
@@ -123,6 +125,19 @@ class HeimdalContextBuilder {
 
   def addUserAgent(userAgent: String): Unit = {
     this += ("userAgent", userAgent)
+    userAgent match {
+      case UserAgent.iPhonePattern(appVersion, buildSuffix, device, os) =>
+        this += ("appVersion", appVersion)
+        this += ("appBuild", appVersion + buildSuffix)
+        this += ("device", device)
+        this += ("os", os)
+      case _ =>
+        val agent = UserAgent.parser.parse(userAgent)
+        this += ("device", agent.getDeviceCategory.getName)
+        this += ("os", agent.getOperatingSystem.getName)
+        this += ("browser", agent.getName + " " + agent.getVersionNumber.toVersionString)
+        this += ("browserType", agent.getType.getName)
+    }
   }
 }
 

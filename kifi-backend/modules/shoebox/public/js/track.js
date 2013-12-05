@@ -67,7 +67,7 @@
   }
 
   function defaultClickHandler(action) {
-    mixpanel.track('clicked_internal_page',{
+    mixpanel.track('user_clicked_internal_page',{
       type: getLocation(),
       action: action,
       origin: window.location.origin
@@ -75,7 +75,7 @@
   }
 
   function defaultViewHandler(path) {
-    mixpanel.track('viewed_internal_page',{
+    mixpanel.track('user_viewed_internal_page',{
       type: getLocation(path),
       origin: window.location.origin
     });
