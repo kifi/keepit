@@ -7,7 +7,7 @@ import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, 
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail, LocalPostOffice}
+import com.keepit.common.mail._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
@@ -31,6 +31,23 @@ import com.keepit.common.akka.SafeFuture
 import play.api.Play
 import com.keepit.social.SocialNetworks
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.model.SocialConnection
+import com.keepit.model.EmailAddress
+import play.api.libs.json.JsString
+import play.api.libs.json.JsBoolean
+import scala.Some
+import play.api.libs.json.JsArray
+import com.keepit.common.controller.AuthenticatedRequest
+import play.api.libs.json.JsObject
+import com.keepit.model.SocialConnection
+import com.keepit.model.EmailAddress
+import play.api.libs.json.JsString
+import play.api.libs.json.JsBoolean
+import scala.Some
+import play.api.libs.json.JsArray
+import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.controller.AuthenticatedRequest
+import play.api.libs.json.JsObject
 
 class UserController @Inject() (
   db: Database,
@@ -50,6 +67,7 @@ class UserController @Inject() (
   userCommander: UserCommander,
   elizaServiceClient: ElizaServiceClient,
   clock: Clock,
+  emailAddressRepo: EmailAddressRepo,
   abookServiceClient: ABookServiceClient
 ) extends WebsiteController(actionAuthenticator) {
 
@@ -218,6 +236,7 @@ class UserController @Inject() (
     getUserInfo(request)
   }
 
+  private val siteUrl = current.configuration.getString("application.baseUrl").get
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def updateCurrentUser() = AuthenticatedJsonToJsonAction(true) { implicit request =>
     request.body.asOpt[UpdatableUserInfo] map { userData =>
@@ -228,24 +247,43 @@ class UserController @Inject() (
         BadRequest(Json.obj("error" -> "bad email addresses"))
       } else {
         db.readWrite { implicit session =>
-          for (emails <- userData.emails) {
-            val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(emails contains _.address)
+          for (emails <- userData.emails.map(_.toSet)) {
+            val emailStrings = emails.map(_.address)
+            val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(em => emailStrings contains em.address)
             // Remove missing emails
-            // todo: Do not remove if this is the primary, last verified address, or last address
             for (email <- toRemove) {
-              emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
+              val isPrimary = request.user.primaryEmailId.isDefined && (request.user.primaryEmailId.get == email.id.get)
+              val isLast = existing.isEmpty
+              val isLastVerified = !existing.exists(em => em != email && em.verified)
+              if (!isPrimary && !isLast && !isLastVerified) {
+                emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
+              }
             }
             // Add new emails
-            for (address <- emails.map(_.address).toSet -- existing.map(_.address)) {
-              emailRepo.save(EmailAddress(userId = request.userId, address = address))
+            for (address <- emailStrings -- existing.map(_.address)) {
+              if (emailRepo.getByAddressOpt(address).isEmpty) {
+                val emailAddr = emailAddressRepo.save(EmailAddress(userId = request.userId, address = address).withVerificationCode(clock.now))
+                val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+
+                postOffice.sendMail(ElectronicMail(
+                  from = EmailAddresses.NOTIFICATIONS,
+                  to = Seq(GenericEmailAddress(address)),
+                  subject = "Kifi.com | Please confirm your email address",
+                  htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
+                  category = ElectronicMailCategory("email_confirmation")
+                ))
+              }
             }
             // Set the correct email as primary
             for (emailInfo <- emails) {
               if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
                 val emailRecordOpt = emailRepo.getByAddressOpt(emailInfo.address)
-                emailRecordOpt.map { emailRecord =>
-                  if (emailRecord.verified && (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get)) {
-                    userRepo.save(request.user.copy(primaryEmailId = Some(emailRecord.id.get)))
+                emailRecordOpt.collect { case emailRecord if emailRecord.userId == request.user.id.get =>
+                  if (emailRecord.verified) {
+                    if (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get) {
+                      userValueRepo.clearValue(request.userId, "pending_primary_email")
+                      userRepo.save(request.user.copy(primaryEmailId = Some(emailRecord.id.get)))
+                    }
                   } else {
                     userValueRepo.setValue(request.userId, "pending_primary_email", emailInfo.address)
                   }

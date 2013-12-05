@@ -6,20 +6,12 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.social.BasicUser
 
 import play.api.libs.json._
+import play.api.libs.json.{Json, JsValue}
 import com.google.inject.Inject
-import scala.concurrent.Future
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits._
-import com.google.inject.{Singleton, Inject, ImplementedBy}
-import com.keepit.common.net.URI
-import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
-import play.api.libs.concurrent.Akka
 import scala.concurrent.Future
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
@@ -107,7 +99,7 @@ class UserCommander @Inject() (
   }
 
   def socialNetworkInfo(userId: Id[User]) = db.readOnly { implicit s =>
-    socialUserInfoRepo.getByUser(userId).map(BasicSocialUser from _)
+    socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }
 
   def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[JsValue] = {

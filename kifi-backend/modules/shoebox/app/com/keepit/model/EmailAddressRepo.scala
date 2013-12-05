@@ -15,6 +15,7 @@ trait EmailAddressRepo extends Repo[EmailAddress] {
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[EmailAddress]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
+  def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress]
   def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Boolean, Boolean) // returns (isValidVerificationCode, isFirstTimeUsed)
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress]
@@ -48,6 +49,20 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
 
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
     (for(f <- table if f.userId === userId && f.state =!= EmailAddressStates.INACTIVE) yield f).list
+
+  def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress = {
+    if (userRepo.get(userId).primaryEmailId.isDefined) {
+      get(userRepo.get(userId).primaryEmailId.get)
+    } else {
+      val all = getAllByUser(userId)
+      all.find(_.verified) match {
+        case Some(em) =>
+          em
+        case None =>
+          all.head
+      }
+    }
+  }
 
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress] =
     (for (e <- table if e.userId === userId && e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
