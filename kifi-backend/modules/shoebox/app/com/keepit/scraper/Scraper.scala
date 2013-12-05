@@ -6,7 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.search.ArticleStore
 import com.keepit.model._
-import com.keepit.scraper.extractor.{ExtractorFactory, Extractor}
+import com.keepit.scraper.extractor.{LinkedInIdExtractor, ExtractorProviderType, ExtractorFactory, Extractor}
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.search.LangDetector
 import org.apache.http.HttpStatus
@@ -24,6 +24,7 @@ import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import scala.collection.mutable
 import play.modules.statsd.api.Statsd
+import com.keepit.scraper.extractor.ExtractorProviderTypes.LINKEDIN_ID
 
 @Singleton
 class Scraper @Inject() (
@@ -121,8 +122,11 @@ class Scraper @Inject() (
     safeProcessURI(uri, info)
   }
 
-  def getBasicArticle(url: String, customExtractor: Option[Extractor] = None): Option[BasicArticle] = {
-    val extractor = customExtractor.getOrElse(extractorFactory(url))
+  def getBasicArticle(url: String, extractorProviderType: Option[ExtractorProviderType] = None): Option[BasicArticle] = {
+    val extractor = extractorProviderType match {
+      case Some(t) if (t == LINKEDIN_ID) => new LinkedInIdExtractor(url, ScraperConfig.maxContentChars)
+      case _ => extractorFactory(url)
+    }
     try {
       val fetchStatus = httpFetcher.fetch(url, proxy = getProxy(url)) { input => extractor.process(input) }
 

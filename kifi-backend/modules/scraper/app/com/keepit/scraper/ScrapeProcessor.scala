@@ -1,12 +1,12 @@
 package com.keepit.scraper
 
-import com.google.inject.{ProvidedBy, Provider, Inject, ImplementedBy}
+import com.google.inject.{Singleton, ProvidedBy, Provider, Inject}
 import play.api.{Play, Plugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
-import com.keepit.scraper.extractor.{Extractor, ExtractorFactory}
+import com.keepit.scraper.extractor._
 import com.keepit.search.{LangDetector, Article, ArticleStore}
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -24,29 +24,29 @@ import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.actor.ActorInstance
-import scala.util.Success
 import akka.routing.RoundRobinRouter
 import play.api.Play.current
+import scala.Some
+import scala.util.Success
 
 @ProvidedBy(classOf[ScrapeProcessorPluginProvider])
 trait ScrapeProcessorPlugin extends Plugin {
-  def fetchBasicArticle(url:String, proxyOpt:Option[HttpProxy]):Future[Option[BasicArticle]]
+  def fetchBasicArticle(url:String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
   def scrapeArticle(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy]):Future[(NormalizedURI, Option[Article])]
   def asyncScrape(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy]): Unit
 }
 
+@Singleton
 class ScrapeProcessorPluginProvider @Inject() (
   asyncScrapeProcessor:AsyncScrapeProcessorPlugin,
   syncScrapeProcessor:ScrapeProcessorPluginImpl
-) extends Provider[ScrapeProcessorPlugin] {
+) extends Provider[ScrapeProcessorPlugin] with Logging {
 
-  def get(): ScrapeProcessorPlugin = {
-    if (sys.props.getOrElse("scraper.plugin.async", "true").toBoolean) { // scraper-instance config
-      asyncScrapeProcessor
-    } else {
-      syncScrapeProcessor
-    }
-  }
+  val doAsync = sys.props.getOrElse("scraper.plugin.async", "false").toBoolean  // scraper-instance config
+  lazy val plugin = if (doAsync) asyncScrapeProcessor else syncScrapeProcessor
+  log.info(s"[ScrapeProcessorPluginProvider] created. async=$doAsync")
+
+  def get = plugin
 }
 
 class ScrapeProcessorPluginImpl @Inject() (actorInstance:ActorInstance[ScrapeProcessor], sysProvider: Provider[ActorSystem], procProvider: Provider[ScrapeProcessor]) extends ScrapeProcessorPlugin with Logging {
@@ -54,15 +54,15 @@ class ScrapeProcessorPluginImpl @Inject() (actorInstance:ActorInstance[ScrapePro
   lazy val system = sysProvider.get
   lazy val actor = {
     if (Play.maybeApplication.isDefined && (!Play.isTest))
-      system.actorOf(Props(procProvider.get).withRouter(RoundRobinRouter(Runtime.getRuntime.availableProcessors)))
+      system.actorOf(Props(procProvider.get).withRouter(RoundRobinRouter(nrOfInstances = Runtime.getRuntime.availableProcessors)))
     else
       actorInstance.ref
   }
 
   implicit val timeout = Timeout(5 seconds)
 
-  def fetchBasicArticle(url: String, proxyOpt:Option[HttpProxy]): Future[Option[BasicArticle]] = {
-    (actor ? FetchBasicArticle(url, proxyOpt)).mapTo[Option[BasicArticle]]
+  def fetchBasicArticle(url: String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
+    (actor ? FetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)).mapTo[Option[BasicArticle]]
   }
 
   def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
@@ -75,7 +75,7 @@ class ScrapeProcessorPluginImpl @Inject() (actorInstance:ActorInstance[ScrapePro
 }
 
 case class AsyncScrape(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy])
-case class FetchBasicArticle(url:String, proxyOpt:Option[HttpProxy])
+case class FetchBasicArticle(url:String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType])
 case class ScrapeArticle(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy])
 
 class ScrapeProcessor @Inject() (
@@ -95,10 +95,13 @@ class ScrapeProcessor @Inject() (
 
   def receive = {
 
-    case FetchBasicArticle(url, proxyOpt) => {
+    case FetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt) => {
       log.info(s"[FetchArticle] message received; url=$url")
       val ts = System.currentTimeMillis
-      val extractor = extractorFactory(url)
+      val extractor = extractorProviderTypeOpt match {
+        case Some(t) if (t == ExtractorProviderTypes.LINKEDIN_ID) => new LinkedInIdExtractor(url, ScraperConfig.maxContentChars)
+        case _ => extractorFactory(url)
+      }
       val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
       val res = fetchStatus.statusCode match {
         case HttpStatus.SC_OK if !(helper.isUnscrapableP(url, fetchStatus.destinationUrl)) => Some(helper.basicArticle(url, extractor))

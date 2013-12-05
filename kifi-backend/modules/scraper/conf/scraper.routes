@@ -4,6 +4,7 @@
 
 GET     /internal/scraper/getBasicArticle               @com.keepit.scraper.ScraperController.getBasicArticle(url:String)
 POST    /internal/scraper/getBasicArticleP              @com.keepit.scraper.ScraperController.getBasicArticleP
+POST    /internal/scraper/getBasicArticleWithExtractor  @com.keepit.scraper.ScraperController.getBasicArticleWithExtractor
 POST    /internal/scraper/scheduleScrape                @com.keepit.scraper.ScraperController.scheduleScrape
 POST    /internal/scraper/scheduleScrapeWithRequest     @com.keepit.scraper.ScraperController.scheduleScrapeWithRequest
 POST    /internal/scraper/asyncScrapeWithInfo           @com.keepit.scraper.ScraperController.asyncScrapeWithInfo
