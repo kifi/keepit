@@ -20,6 +20,7 @@ import play.api.libs.json._
 import views.html
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.db.Id
+import com.keepit.common.time._
 
 class AdminBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -31,7 +32,8 @@ class AdminBookmarksController @Inject() (
   userRepo: UserRepo,
   scrapeRepo: ScrapeInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  s3ScreenshotStore: S3ScreenshotStore)
+  s3ScreenshotStore: S3ScreenshotStore,
+  clock: Clock)
     extends AdminController(actionAuthenticator) {
 
   implicit val dbMasterSlave = Database.Slave
@@ -106,31 +108,47 @@ class AdminBookmarksController @Inject() (
 
     def bookmarksInfos() = {
       future { time(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => bookmarkRepo.page(page, PAGE_SIZE, false, Set(BookmarkStates.INACTIVE)) } } } flatMap { bookmarks =>
+        val usersFuture = future { time("load user") { db.readOnly { implicit s =>
+          bookmarks map (_.userId) map { id =>
+            userMap.getOrElseUpdate(id, userRepo.get(id))
+          }
+        }}}
+        val urisFuture = future { time("load uris") { db.readOnly { implicit s =>
+          bookmarks map (_.uriId) map uriRepo.get
+        }}}
+        val scrapesFuture = future { time("load scrape info") { db.readOnly { implicit s =>
+          bookmarks map (_.uriId) map scrapeRepo.getByUriId
+        }}}
+
         for {
-          users <- future { time("load user") { db.readOnly { implicit s =>
-            bookmarks map (_.userId) map { id =>
-              userMap.getOrElseUpdate(id, userRepo.get(id))
-            }
-          }}}
-          uris <- future { time("load uris") { db.readOnly { implicit s =>
-            bookmarks map (_.uriId) map uriRepo.get
-          }}}
-          scrapes <- future { time("load scrape info") { db.readOnly { implicit s =>
-            bookmarks map (_.uriId) map scrapeRepo.getByUriId
-          }}}
+          users <- usersFuture
+          uris <- urisFuture
+          scrapes <- scrapesFuture
         } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
       }
     }
 
-    val (count, bookmarksAndUsers) = Await.result(for {
-        bookmarksAndUsers <- time("load full bookmarksInfos") { bookmarksInfos() }
-        count <- searchServiceClient.uriGraphIndexInfo() map { infos =>
-          (infos find (_.name == "BookmarkStore")).get.numDocs
-        }
-      } yield (count, bookmarksAndUsers), 1 minutes)
+    val bookmarkTotalCountFuture = searchServiceClient.uriGraphIndexInfo() map { infos =>
+      (infos find (_.name == "BookmarkStore")).get.numDocs
+    }
+    val bookmarkTodayCountFuture = future { time("load bookmarks counts from today") { db.readOnly { implicit s =>
+      val imported = bookmarkRepo.getCountByTimeAndSource(clock.now().minusDays(1), clock.now(), BookmarkSource.initLoad)
+      val others = bookmarkRepo.getCountByTime(clock.now().minusDays(1), clock.now())
+      (others, imported)
+    }}}
 
-    val pageCount: Int = count / PAGE_SIZE + 1
-    Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount))
+
+    Async {
+      for {
+        bookmarksAndUsers <- time("load full bookmarksInfos") { bookmarksInfos() }
+        count <- bookmarkTotalCountFuture
+        todayCount <- bookmarkTodayCountFuture
+      } yield {
+        val pageCount: Int = count / PAGE_SIZE + 1
+        Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount, todayCount._1, todayCount._2))
+      }
+    }
+
   }
 }
 
