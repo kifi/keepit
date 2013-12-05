@@ -289,6 +289,23 @@
 									</div>
 								</div>
 							</div>
+							<div class="dialog email-delete-dialog" style="display:none">
+								<form method="POST" action="{{url}}" class="dialog-content" data-template>
+									<div class="dialog-header">Delete {{email}}?</div>
+									<a href="javascript:" class="dialog-cancel">×</a>
+									<div class="dialog-content-body">
+										<p>Are you sure you want to delete this email address?</p>
+										<ul>
+											<li>You will not be able to login with this email address</li>
+											<li>Your friends will not be able to find you by this email address</li>
+										</ul>
+										<div class="dialog-buttons">
+											<button class="dialog-submit" type="submit">Delete</button>
+											<button class="dialog-cancel">Cancel</button>
+										</div>
+									</div>
+								</form>
+							</div>
 						</div>
 						<div class="profile-section">
 							<h3>Connect your social networks to Kifi</h3>
@@ -721,6 +738,26 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 				</ul>
 			</div>
 		</li>
+	</script>
+
+	<script type="text/x-handlebars" id="email-delete-dialog">
+		<div class="dialog email-delete-dialog">
+			<form method="POST" action="{{url}}" class="dialog-content" data-template>
+				<div class="dialog-header">Delete {{email}}?</div>
+				<a href="javascript:" class="dialog-cancel">×</a>
+				<div class="dialog-content-body">
+					<p>Are you sure you want to delete this email address?</p>
+					<ul>
+						<li>You will not be able to login with this email address</li>
+						<li>Your friends will not be able to find you by this email address</li>
+					</ul>
+					<div class="dialog-buttons">
+						<button class="dialog-submit" type="submit">Delete</button>
+						<button class="dialog-cancel">Cancel</button>
+					</div>
+				</div>
+			</form>
+		</div>
 	</script>
 
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>

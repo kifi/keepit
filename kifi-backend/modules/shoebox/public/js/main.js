@@ -746,7 +746,7 @@ $(function () {
 
 	$(document).on('click', '.profile-email-address-item-delete', function (e) {
 		e.preventDefault();
-		deleteEmailAccount($(this).closest('.profile-email-address-item').data('email'));
+		showEmailDeleteDialog($(this).closest('.profile-email-address-item').data('email'));
 	});
 
 	$(document).on('click', '.profile-email-address-item-arrow', function (e) {
@@ -889,12 +889,31 @@ $(function () {
 		if (email) {
 			var props = getProfileCopy();
 			var emails = props.emails;
-			removeEmailInfo(emails, email)
+			removeEmailInfo(emails, email);
 
 			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
 		}
 		return null;
 	}
+
+	var emailDeleteTmpl = Handlebars.compile($('#email-delete-dialog').html());
+	function showEmailDeleteDialog(email) {
+		var $dialog = $(emailDeleteTmpl({
+				email: email
+			}))
+			.appendTo(document.body)
+			.on('click', '.dialog-cancel', function (e) {
+				e.preventDefault();
+				$dialog.remove();
+			})
+			.on('submit', 'form', function (e) {
+				e.preventDefault();
+				deleteEmailAccount(email);
+				$dialog.remove();
+			})
+			.dialog('show');
+	}
+
 
 	// Friends Tabs/Pages
 
