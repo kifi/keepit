@@ -86,8 +86,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
       'isPrivate': kept === 'private',
       'noticesCount': Math.max(0, counts.n - counts.m),
       'messageCount': counts.m,
-      'inboxCount': counts.n,
-      'showInbox': ~session.experiments.indexOf('inbox'),
       'atNotices': '/notices' === locator,
       'atMessages': /^\/messages/.test(locator),
       'isTagged': tags.length
@@ -481,8 +479,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     counts: function (o) {
       if (!$slider) return;
       var $btns = $slider.find('.kifi-dock-btn');
-      [['.kifi-dock-inbox', o.n],
-       ['.kifi-dock-notices', Math.max(0, o.n - o.m)],
+      [['.kifi-dock-notices', Math.max(0, o.n - o.m)],
        ['.kifi-dock-messages', o.m]].forEach(function (a) {
         $btns.filter(a[0]).find('.kifi-count')
           .text(a[1] || '')
