@@ -18,7 +18,7 @@
 	<base href="/">
 	<script>
 		if (/^Mac/.test(navigator.platform)) document.documentElement.className = 'mac';
-
+		var kifiViewTracker = [];
 		(function(e,b){if(!b.__SV){var a,f,i,g;window.mixpanel=b;a=e.createElement("script");a.type="text/javascript";a.async=!0;a.src='//cdn.mxpnl.com/libs/mixpanel-2.2.min.js';f=e.getElementsByTagName("script")[0];f.parentNode.insertBefore(a,f);b._i=[];b.init=function(a,e,d){function f(b,h){var a=h.split(".");2==a.length&&(b=b[a[0]],h=a[1]);b[h]=function(){b.push([h].concat(Array.prototype.slice.call(arguments,0)))}}var c=b;"undefined"!==typeof d?c=b[d]=[]:d="mixpanel";c.people=c.people||[];c.toString=function(b){var a="mixpanel";"mixpanel"!==d&&(a+="."+d);b||(a+=" (stub)");return a};c.people.toString=function(){return c.toString(1)+".people (stub)"};i="disable track track_pageview track_links track_forms register register_once alias unregister identify name_tag set_config people.set people.set_once people.increment people.append people.track_charge people.clear_charges people.delete_user".split(" ");for(g=0;g<i.length;g++)f(c,i[g]);b._i.push([a,e,d])};b.__SV=1.2}})(document,window.mixpanel||[]);
 		mixpanel.init("cff752ff16ee39eda30ae01bb6fa3bd6");
 	</script>
@@ -241,7 +241,7 @@
 									</span>
 									<input class="profile-input-input profile-first-name" disabled="disabled" type="text" name="firstName" placeholder="First name" value="{{firstName}}" data-required="true">
 									<input class="profile-input-input profile-last-name" disabled="disabled" type="text" name="lastName" placeholder="Last name" value="{{lastName}}" data-required="true">
-									<a class="profile-input-edit" href="javascript:void(0)">Edit</a>
+									<a class="profile-input-edit" href="javascript:void(0)" style="display:none">Edit</a>
 									<a class="profile-input-save" href="javascript:void(0)">Save</a>
 								</div>
 							</div>
@@ -263,8 +263,7 @@
 							</div>
 							<div class="profile-email-address-unverified">
 								Your email is pending your verification
-								(<a class="profile-email-pending-resend" href="javascript:void(0)">Resend verification</a>,
-								<a class="profile-email-pending-cancel" href="javascript:void(0)">Cancel</a>).
+								(<a class="profile-email-pending-resend" href="javascript:void(0)">Resend verification</a>).
 							</div>
 							<div class="profile-email-address-pending">
 								Your new primary email, <span class="profile-email-address-pending-email">{{email}}</span>, is pending your verification
@@ -706,7 +705,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 	</script>
 
 	<script type="text/x-handlebars" id="email-address">
-		<li class="profile-email-address-item{{#if primary}} primary-email{{/if}}{{#if verified}} verified-email{{/if}}{{#if pendingPrimary}} pending-primary-email{{/if}}">
+		<li class="profile-email-address-item{{#if primary}} primary-email{{/if}}{{#if verified}} verified-email{{/if}}{{#if pendingPrimary}} pending-primary-email{{/if}}" data-email="{{email}}">
 			<span class="profile-email-address-item-email">{{email}}</span>
 			<span class="profile-email-address-item-primary">(primary)</span>
 			<span class="profile-email-address-item-pending-primary">(pending primary)</span>

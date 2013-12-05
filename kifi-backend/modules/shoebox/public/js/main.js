@@ -597,7 +597,7 @@ $(function () {
 		unsetPrimary(emails);
 		emails.unshift([email, true]);
 
-		return $.postJson(xhrBase + '/user/me', props);
+		return $.postJson(xhrBase + '/user/me', props).success(updateMe);
 	}
 
 	function saveProfileInfo() {
@@ -613,9 +613,7 @@ $(function () {
 		//props.emails = me.emails.slice();
 
 		$.postJson(xhrBase + '/user/me', props)
-		.success(function (data) {
-			updateMe(data);
-		})
+		.success(updateMe)
 		.error(function () {
 			showMessage('Uh oh! A bad thing happened!');
 		});
@@ -735,12 +733,20 @@ $(function () {
 
 	// profile email account dropdown actions
 	var $openedArrow = null;
+
+	$(document).on('click', '.profile-email-pending-cancel', function (e) {
+		e.preventDefault();
+		cancelPendingPrimary($(this).closest('.profile-email-address-pending').find('.profile-email-address-pending-email').text());
+	});
+
 	$(document).on('click', '.profile-email-address-item-make-primary', function (e) {
 		e.preventDefault();
+		makePrimary($(this).closest('.profile-email-address-item').data('email'));
 	});
 
 	$(document).on('click', '.profile-email-address-item-delete', function (e) {
 		e.preventDefault();
+		deleteEmailAccount($(this).closest('.profile-email-address-item').data('email'));
 	});
 
 	$(document).on('click', '.profile-email-address-item-arrow', function (e) {
@@ -847,8 +853,47 @@ $(function () {
 
 	function addEmailAccount(email) {
 		if (email) {
-			return true;
+			var props = getProfileCopy();
+			var emails = props.emails;
+			emails.push([email, false]);
+
+			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
 		}
+		return null;
+	}
+
+	function makePrimary(email) {
+		if (email) {
+			var props = getProfileCopy();
+			var emails = props.emails;
+			unsetPrimary(emails);
+			findEmail(emails, function (info) {
+				if (info[ADDRESS] === email) {
+					info[PRIMARY] = true;
+				}
+			});
+
+			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
+		}
+		return null;
+	}
+
+	function cancelPendingPrimary(email) {
+		if (email) {
+			return deleteEmailAccount(email);
+		}
+		return null;
+	}
+
+	function deleteEmailAccount(email) {
+		if (email) {
+			var props = getProfileCopy();
+			var emails = props.emails;
+			removeEmailInfo(emails, email)
+
+			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
+		}
+		return null;
 	}
 
 	// Friends Tabs/Pages
@@ -2476,6 +2521,7 @@ $(function () {
 			return;
 		}
 		hideKeepDetails();
+		kifiViewTracker.push('/' + hash);
 	});
 
 	function navigate(uri, opts) {
@@ -3083,6 +3129,7 @@ $(function () {
 	}
 
 	var $sendFeedback = $('.send-feedback').click(sendFeedback).filter('.top-right-nav>*');
+	var emailTmpl = Handlebars.compile($('#email-address').html());
 
 	function updateMe(data) {
 		console.log('[updateMe]', data);
@@ -3105,12 +3152,23 @@ $(function () {
 			.outerWidth($lastNamePlace.outerWidth());
 
 		var primary = getPrimaryEmail();
+		var pendingPrimary = getPendingPrimaryEmail();
+
 		var $unverified = $('.profile-email-address-unverified');
-		$unverified.toggle(!primary[VERIFIED]);
+		$unverified.toggle(!pendingPrimary && !primary[VERIFIED]);
 
 		$('.profile-email input').val(primary[ADDRESS] || '');
 
-		var pendingPrimary = getPendingPrimaryEmail();
+		var $emails = $('.profile-email-address-list').empty();
+		(me.emails || []).forEach(function (info) {
+			$emails.append(emailTmpl({
+				email: info[ADDRESS],
+				primary: !!info[PRIMARY],
+				verified: !!info[VERIFIED],
+				pendingPrimary: !!info[PENDING_PRIMARY]
+			}));
+		});
+
 		var $pending = $('.profile-email-address-pending');
 		if (pendingPrimary) {
 			$('.profile-email-address-pending-email').text(pendingPrimary[ADDRESS]);

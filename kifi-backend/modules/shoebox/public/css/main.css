@@ -198,7 +198,28 @@ input.profile-input-input { display: block; font: inherit; letter-spacing: 0.5px
 .profile-input-placeholder,
 input.profile-input-input:disabled { padding-left: 0; padding-right: 0; background-color: transparent }
 
-.input-error { position: absolute; top: 30px; left: 0; font-size: 13px; background: #ed7071; color: white; text-align: center; padding: 9px 12px }
+.input-error {
+	position: absolute;
+	top: 30px;
+	left: 0;
+	font-size: 13px;
+	background: #ed7071;
+	color: white;
+	text-align: center;
+	padding: 9px 12px
+}
+.input-error:before {
+	content: ' ';
+	position: absolute;
+	top: -8px;
+	width: 0;
+	left: 50%;
+	margin-left: -10px;
+	border-style: solid;
+	border-width: 0 10px 8px;
+	border-color: transparent transparent #ef6f6e;
+	font-size: 0;
+}
 .input-error .error-header { font-weight: 500; }
 .input-error .error-body { font-weight: 200; font-size: .9em }
 
@@ -269,7 +290,7 @@ a.profile-email-address-add { display: block; padding: 4px 0; }
 
 .profile-email-address-item-unverified a { color: #a7aaa9; text-decoration: underline}
 
-.profile-email-address-item-arrow { position: relative; display: block; float: right; color: #b8c5d1; background: #b8c5d1; width: 20px; height: 17px; vertical-align: middle; cursor: pointer; }
+.profile-email-address-item-arrow { position: absolute; display: block; top: 4px; right: 0; color: #b8c5d1; background: #b8c5d1; width: 20px; height: 17px; vertical-align: middle; cursor: pointer; }
 
 .profile-email-address-item-dropdown { display: none; position: absolute; top: 100%; right: 0; background: white; border: 1px solid #a7aaa9; z-index: 1 }
 .profile-email-address-item-arrow.opened .profile-email-address-item-dropdown { display: block; }
