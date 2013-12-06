@@ -1,6 +1,6 @@
 @(data: Map[String, String])
 
-@admin("Analytics Overview"){
+@admin("Analytics Overview - Being deprecated, do not trust this data."){
   <h2>Users</h2>
   @analyticsView(data("installMetrics"), "install", "sum", "merged", "Total Invites sent vs. total unique users with the extension installed")
   @analyticsView(data("userMetrics"), "user", "simple", "merged", "Connected unique users vs. active (message,keep,kifi search result click) unique users by week")

@@ -45,6 +45,7 @@ object ExperimentType {
   val INBOX = ExperimentType("inbox")
   val DEMO = ExperimentType("demo")
   val TSEARCH = ExperimentType("tsearch")
+  val EXTENSION_LOGGING = ExperimentType("extension_logging")
 
   val DONT_SHOW_IN_ANALYTICS = List(ADMIN, FAKE)
   val DONT_SHOW_IN_ANALYTICS_STR = DONT_SHOW_IN_ANALYTICS map {s => s"'$s'"} mkString ","
@@ -61,6 +62,7 @@ object ExperimentType {
     case INBOX.value => INBOX
     case DEMO.value => DEMO
     case TSEARCH.value => TSEARCH
+    case EXTENSION_LOGGING.value => EXTENSION_LOGGING
   }
 
   def getUserStatus(experiments: Set[ExperimentType]): String =
