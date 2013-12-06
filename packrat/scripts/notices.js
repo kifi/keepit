@@ -55,22 +55,22 @@ panes.notices = function () {
 
   var $notices, $markAll;
   return {
-    render: function ($container) {
+    render: function ($paneBox) {
       api.port.emit('notifications', function (o) {
-        renderNotices($container, o.notifications, o.timeLastSeen, o.numNotVisited);
+        renderNotices($paneBox, $paneBox.find('.kifi-pane-tall'), o.notifications, o.timeLastSeen, o.numNotVisited);
         api.port.on(handlers);
       });
     }};
 
-  function renderNotices($container, notices, timeLastSeen, numNotVisited) {
+  function renderNotices($paneBox, $tall, notices, timeLastSeen, numNotVisited) {
     $notices = $(render('html/keeper/notices', {}))
       .append(notices.map(renderNotice).join(''))
-      .appendTo($container)
+      .appendTo($tall)
       .preventAncestorScroll();
     $notices.find('time').timeago();
-    $container.antiscroll({x: false});
+    $tall.antiscroll({x: false});
 
-    var scroller = $container.data('antiscroll');
+    var scroller = $tall.data('antiscroll');
     $(window).on('resize.notices', scroller.refresh.bind(scroller));
 
     $notices.on('click', '.kifi-notice', function (e) {
@@ -107,13 +107,13 @@ panes.notices = function () {
       });
     });
 
-    var $box = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
+    $paneBox.on('kifi:remove', function () {
       $notices = $markAll = null;
       $(window).off('resize.notices');
       api.port.off(handlers);
     });
 
-    $markAll = $box.find('.kifi-pane-mark-notices-read').click(function () {
+    $markAll = $paneBox.find('.kifi-pane-mark-notices-read').click(function () {
       var o = $notices.find('.kifi-notice').toArray().reduce(function (o, el) {
         var t = new Date(el.dataset.createdAt);
         return t > o.time ? {time: t, id: el.dataset.id} : o;
