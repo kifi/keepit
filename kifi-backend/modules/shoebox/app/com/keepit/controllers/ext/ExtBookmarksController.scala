@@ -51,6 +51,7 @@ class ExtBookmarksController @Inject() (
   healthcheck: HealthcheckPlugin,
   heimdal: HeimdalServiceClient,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
+  userValueRepo: UserValueRepo,
   airbrake: AirbrakeNotifier)
     extends BrowserExtensionController(actionAuthenticator) {
 
@@ -196,6 +197,11 @@ class ExtBookmarksController @Inject() (
             searchClient.updateBrowsingHistory(userId, chunk.map(_.uriId): _*)
           }
           searchClient.updateURIGraph()
+          if (request.kifiInstallationId.isDefined && bookmarkSource == BookmarkSource("INIT_LOAD")) {
+            db.readWrite { implicit session =>
+              userValueRepo.setValue(request.userId, "has_imported_from_" + request.kifiInstallationId.get, "true")
+            }
+          }
 
           //Analytics
           SafeFuture{

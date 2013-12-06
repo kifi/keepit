@@ -13,6 +13,20 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   };
 
+  function postBookmarks(bookmarks) {
+    log('Got the bookmarks', bookmarks)();
+    window.postMessage({'bookmarks':bookmarks}, '*');
+  }
+  function postBookmarksMessageHandler(event) {
+    log("MEEEEEE!!!!!!")();
+    if(!/www\.kifi\.com|dev\.ezkeep\.com/.test(event.origin)) return;
+    else if (event.data == 'get_bookmarks') {
+      log("YOU!!!!!!")();
+      api.port.emit('get_bookmarks', postBookmarks.data);
+    }
+  }
+  window.addEventListener('message', postBookmarksMessageHandler, false);
+
   var whenSessionKnown = [], tileCard, tileCount, onScroll;
   api.port.emit("session", onSessionChange);
   api.port.on({
@@ -245,6 +259,7 @@ var tile = tile || function() {  // idempotent for Chrome
 
   api.onEnd.push(function() {
     document.removeEventListener("keydown", onKeyDown, true);
+    window.removeEventListener('message', postBookmarks, false);
     cleanUpDom();
     session = tile = tileCard = tileCount = null;
   });

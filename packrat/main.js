@@ -901,6 +901,9 @@ api.port.on({
   unmute_thread: function(threadId, respond, tab) {
     socket.send(['unmute_thread', threadId]);
   },
+  get_bookmarks: function(_, respond, tab) {
+    api.bookmarks.getAll(respond);
+  },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
     //reportError(data.message, data.url, data.lineNo);
@@ -1912,9 +1915,6 @@ authenticate(function() {
     } else {
       api.tabs.open(webBaseUri() + "/getting-started");
     }
-  }
-  if (api.loadReason == "install" || api.prefs.get("env") === "development") {
-    postBookmarks(api.bookmarks.getAll, "INIT_LOAD");
   }
 }, 3000);
 

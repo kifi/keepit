@@ -261,9 +261,16 @@ class UserController @Inject() (
 
   def getPrefs() = AuthenticatedJsonAction { request =>
     Ok(db.readOnly { implicit s =>
+      val shouldPromptForImport = request.kifiInstallationId match {
+        case Some(inst) =>
+          val pref = userValueRepo.getValue(request.userId, "has_imported_from_" + inst)
+          if (pref.isDefined && pref.get == "false") true
+          else false
+        case None => false
+      }
       JsObject(SitePrefNames.toSeq.map { name =>
         name -> userValueRepo.getValue(request.userId, name).map(JsString).getOrElse(JsNull)
-      })
+      } ++ Seq("prompt_for_import" -> JsBoolean(shouldPromptForImport)))
     })
   }
 

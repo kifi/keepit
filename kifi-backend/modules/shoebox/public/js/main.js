@@ -2842,6 +2842,11 @@ $(function () {
 
 	var $welcomeDialog = $('.welcome-dialog').remove().show();
 	$.when(promise.myPrefs).done(function () {
+		if (myPrefs.prompt_for_import) {
+			setTimeout(function() {
+				window.postMessage('get_bookmarks', '*');
+			}, 200);
+		}
 		if (!myPrefs.site_welcomed) {
 			$welcomeDialog.dialog('show').on('click', 'button', function () {
 				$welcomeDialog.dialog('hide');
