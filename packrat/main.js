@@ -296,7 +296,7 @@ var socketHandlers = {
   experiments: function(exp) {
     log("[socket:experiments]", exp)();
     session.experiments = exp;
-    api.log = exp.indexOf('extension_logging') >= 0;
+    api.logging = exp.indexOf('extension_logging') >= 0;
   },
   new_friends: function(fr) {
     log("[socket:new_friends]", fr)();
@@ -1814,7 +1814,7 @@ function startSession(callback, retryMs) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
     unstore('logout');
 
-    api.log = data.experiments.indexOf('extension_logging') >= 0;
+    api.logging = data.experiments.indexOf('extension_logging') >= 0;
     data.joined = data.joined ? new Date(data.joined) : null;
     session = data;
     session.prefs = {}; // to come via socket
