@@ -91,7 +91,7 @@ class UserRepoImpl @Inject() (
       properties += ("$created", user.createdAt)
       properties += ("state", user.state.value)
       properties += ("userId", user.id.get.id)
-      properties += ("admin", com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
+      properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
       heimdal.setUserProperties(user.id.get, properties.data.toSeq: _*)
     }
   }
