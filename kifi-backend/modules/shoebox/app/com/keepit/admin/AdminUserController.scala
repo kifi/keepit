@@ -461,6 +461,14 @@ class AdminUserController @Inject() (
     }}
   }
 
+  def deleteAllMixpanelProfiles() = AdminHtmlAction { implicit request =>
+    Async { SafeFuture {
+      val allUsers = db.readOnly { implicit s => userRepo.all }
+      allUsers.foreach(user => heimdal.deleteUser(user.id.get))
+      Ok("All user profiles have been deleted from Mixpanel")
+    }}
+  }
+
   def resetAllMixpanelProfiles() = AdminHtmlAction { implicit request =>
     Async { SafeFuture {
       val allUsers = db.readOnly { implicit s => userRepo.all }
@@ -471,6 +479,7 @@ class AdminUserController @Inject() (
 
   private def doResetMixpanelProfile(user: User) = {
     val userId = user.id.get
+    heimdal.setUserAlias(user.id.get, user.externalId)
     if (user.state == UserStates.INACTIVE)
       heimdal.deleteUser(userId)
     else {
@@ -480,6 +489,8 @@ class AdminUserController @Inject() (
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
         properties += ("state", user.state.value)
+        properties += ("userId", user.id.get.id)
+        properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
 
         val keeps = bookmarkRepo.getCountByUser(userId)
         val publicKeeps = bookmarkRepo.getCountByUser(userId, includePrivate = false)

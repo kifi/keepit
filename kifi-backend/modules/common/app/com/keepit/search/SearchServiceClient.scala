@@ -68,6 +68,9 @@ trait SearchServiceClient extends ServiceClient {
     noSearchExperiments: Boolean,
     acceptLangs: Seq[String],
     rawQuery: String): Future[String]
+
+  def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
+  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
 }
 
 class SearchServiceClientImpl(
@@ -228,5 +231,17 @@ class SearchServiceClientImpl(
     acceptLangs: Seq[String],
     rawQuery: String): Future[String] = {
       tee(Search.internal.search(userId,noSearchExperiments,acceptLangs,rawQuery)).map(_.body)
+  }
+
+  def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = {
+    call(Search.internal.leaveOneOut(queryText, stem, useSketch)).map{ r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
+
+  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = {
+     call(Search.internal.allSubsets(queryText, stem, useSketch)).map{ r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
   }
 }
