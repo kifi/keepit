@@ -10,7 +10,7 @@
     this.allById = allById;
     this.ids = recentThreadIds;
     this.numUnreadUnmuted = numUnreadUnmuted || 0;
-    this.lastSeen = new Date(lastSeenTimeStr || 0);
+    this.lastSeen = lastSeenTimeStr ? new Date(lastSeenTimeStr) : null;
   };
   ThreadList.prototype = {
     contains: function (threadId) {
@@ -18,7 +18,7 @@
     },
     updateLastSeen: function(timeStr) {
       var time = new Date(timeStr);
-      if (this.lastSeen < time) {
+      if (!this.lastSeen || this.lastSeen < time) {
         this.lastSeen = time;
         return true;
       }
@@ -48,6 +48,11 @@
     },
     insertOlder: function(olderThreadIds) {
       Array.prototype.push.apply(this.ids, olderThreadIds);
+    },
+    anyUnread: function() {
+      return this.numUnreadUnmuted > 0 || this.ids.some(function (id) {
+        return this.allById[id].unread;
+      }, this);
     },
     forEachUnread: function (f) {
       for (var i = 0; i < this.ids.length; i++) {
