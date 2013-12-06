@@ -1,9 +1,9 @@
 package com.keepit.eliza
 
-import com.keepit.model.{UserNotification, User, DeepLocator, NormalizedURI}
+import com.keepit.model.{User, DeepLocator, NormalizedURI}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.{Database}
-import com.keepit.shoebox.{ShoeboxServiceClient}
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.BasicUser
@@ -11,28 +11,27 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
 
-import scala.concurrent.{Promise, future, Await, Future}
+import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.http.Status.ACCEPTED
 
 import com.google.inject.Inject
 
 import org.joda.time.DateTime
 
-import play.api.libs.json.{JsValue, JsString, JsArray, Json}
+import play.api.libs.json.{JsValue, JsString, Json}
 import play.modules.statsd.api.Statsd
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
-import com.keepit.realtime.{PushNotification, UrbanAirship}
+import com.keepit.realtime.UrbanAirship
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
 import com.keepit.common.KestrelCombinator
-import scala.util.Try
+import com.keepit.heimdal.{HeimdalServiceClient, UserEventTypes, UserEvent, HeimdalContextBuilder}
 
 
 //For migration only
@@ -65,7 +64,8 @@ class MessagingController @Inject() (
     notificationRouter: NotificationRouter,
     clock: Clock,
     uriNormalizationUpdater: UriNormalizationUpdater,
-    urbanAirship: UrbanAirship)
+    urbanAirship: UrbanAirship,
+    heimdal: HeimdalServiceClient)
   extends ElizaServiceController with MessagingIndexHelper with Logging {
 
   //for indexing data requests
@@ -884,7 +884,7 @@ class MessagingController @Inject() (
 
   def connectedSockets: Int  = notificationRouter.connectedSockets
 
-  def setNotificationReadForMessage(userId: Id[User], msgExtId: ExternalId[Message]): Unit = {
+  def setNotificationReadForMessage(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContextBuilder): Unit = {
     val message = db.readOnly{ implicit session => messageRepo.get(msgExtId) }
     val thread  = db.readOnly{ implicit session => threadRepo.get(message.thread) } //TODO: This needs to change when we have detached threads
     val nUrl: String = thread.nUrl.getOrElse("")
@@ -892,6 +892,11 @@ class MessagingController @Inject() (
       db.readWrite(attempts=2) { implicit session =>
         userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message)
       }
+    }
+    val clearedAt = currentDateTime
+    SafeFuture {
+      context += ("messageExternalId", message.externalId.id)
+      heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.NOTIFICATION_READ, clearedAt))
     }
     notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
     notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadThreadCount(userId)))
