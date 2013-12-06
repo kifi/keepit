@@ -2830,6 +2830,21 @@ $(function () {
 		}
 	}
 
+	var $bookmarkImportDialog = $('.import-dialog').remove().show();
+	function recieveBookmarks(event) {
+		if (event.data && event.data.bookmarks) {
+			$bookmarkImportDialog.dialog('show').on('click', 'button', function () {
+				$bookmarkImportDialog.dialog('hide');
+				$bookmarkImportDialog = null;
+				setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
+			}).find('button').focus();
+			$.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
+				console.log('[prefs]', data);
+			});
+		}
+	}
+	window.addEventListener('message', recieveBookmarks);
+
 	// render initial view
 	$(window).trigger('statechange');
 
