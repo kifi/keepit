@@ -189,13 +189,29 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 
 var mixpanel = {
   queue: [],
-  send: function(data) {
+  batch: [],
+  sendBatch: function(){
+    if (this.batch.length > 0) {
+      var dataString = "data=" + btoa(unescape(encodeURIComponent(JSON.stringify(this.batch))));
+      api.postAsForm("https://api.mixpanel.com/track/", dataString);
+      this.batch = [];
+    }
+  },
+  augmentAndBatch: function(data) {
     data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
     data.properties.distinct_id = session.user.id;
-    var dataString = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-    api.request("GET", "https://api.mixpanel.com/track/?data=" + dataString);
+    this.batch.push(data);
+    if (this.batch.length > 10) {
+      this.sendBatch();
+    }
   },
   track: function(eventName, properties) {
+    var that = this;
+    if (!this.sendTimer) {
+      this.sendTimer = setInterval(function(){
+        that.sendBatch();
+      }, 60000);
+    }
     log("#aaa", "[mixpanel.track] %s %o", eventName, properties)();
     properties.time = Date.now();
     var data = {
@@ -203,7 +219,7 @@ var mixpanel = {
       'properties': properties
     };
     if (session) {
-      this.send(data);
+      this.augmentAndBatch(data);
     } else {
       this.queue.push(data);
     }
@@ -211,7 +227,7 @@ var mixpanel = {
   catchUp: function() {
     var that = this;
     this.queue.forEach(function(data){
-      that.send(data);
+      that.augmentAndBatch(data);
     });
     this.queue = [];
   }

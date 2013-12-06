@@ -227,6 +227,15 @@ exports.request = function(method, url, data, done, fail) {
   require("sdk/request").Request(options)[method.toLowerCase()]();
 };
 
+exports.postRawAsForm = function(url, data) {
+  var options = {
+    url: url,
+    contentType: "Content-Type", "application/x-www-form-urlencoded",
+    content: data
+  }
+  require("sdk/request").Request(options).post();
+};
+
 exports.requestUpdateCheck = exports.log.bind(null, "[requestUpdateCheck] unsupported");
 
 var socketPage, sockets = [,];
