@@ -639,9 +639,6 @@ api.port.on({
     var whichEvent = data[0];
     ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
   },
-  track_pane_viewed: function(type) {
-    mixpanel.track("viewed_pane", {'type': type});
-  },
   send_message: function(data, respond, tab) {
     var nUri = tab.nUri || data.url;
     data.extVersion = api.version;
@@ -801,6 +798,7 @@ api.port.on({
       }
     }
     if (o.new) {
+      mixpanel.track("viewed_pane", {'type': o.new}); //TODO: probably need to parse locator a bit for easier human consumption/spec naming compliance
       var arr = tabsByLocator[o.new];
       if (arr) {
         arr = arr.filter(idIsNot(tab.id));
