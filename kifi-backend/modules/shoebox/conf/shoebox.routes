@@ -314,6 +314,7 @@ POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSe
 POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
 
 GET     /admin/search/semanticVector/leaveOneOut       @com.keepit.controllers.admin.AdminSemanticVectorController.leaveOneOut(queryText: String, stem: Boolean ?= true, useSketch: Boolean ?= false)
+GET     /admin/search/semanticVector/allSubsets       @com.keepit.controllers.admin.AdminSemanticVectorController.allSubsets(queryText: String, stem: Boolean ?= true, useSketch: Boolean ?= false)
 
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])

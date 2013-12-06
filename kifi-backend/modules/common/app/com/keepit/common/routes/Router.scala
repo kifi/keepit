@@ -165,6 +165,7 @@ object Search extends Service {
     }
 
     def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/leaveOneOut", Param("queryText", queryText), Param("stem", stem), Param("useSketch", useSketch))
+    def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/allSubsets", Param("queryText", queryText), Param("stem", stem), Param("useSketch", useSketch))
   }
 }
 

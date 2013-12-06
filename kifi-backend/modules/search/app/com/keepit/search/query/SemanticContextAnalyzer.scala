@@ -47,4 +47,21 @@ class SemanticContextAnalyzer(searcher: Searcher, analyzer: Analyzer, stemAnalyz
       }
     }
   }
+
+  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Set[(Set[Term], Float)] = {
+     val terms = getTerms(queryText, stem)
+    if (useSketch) {
+      val completeSketch = searcher.getSemanticVectorSketch(terms)
+      terms.subsets.toSet.filter(!_.isEmpty) map { subTerms: Set[Term] =>
+        val subSketch = searcher.getSemanticVectorSketch(subTerms)
+        (subTerms, cosineDistance(subSketch.vec, completeSketch.vec))
+      }
+    } else {
+      val completeVector = searcher.getSemanticVector(terms)
+      terms.subsets.toSet.filter(! _.isEmpty) map { subTerms: Set[Term] =>
+        val subVector = searcher.getSemanticVector(subTerms)
+        (subTerms, completeVector.similarity(subVector))
+      }
+    }
+  }
 }
