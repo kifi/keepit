@@ -18,6 +18,7 @@ import com.keepit.search.Article
 import play.api.libs.json.JsArray
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.scraper.extractor.ExtractorProviderType
 
 case class ScrapeTuple(uri:NormalizedURI, articleOpt:Option[Article])
 object ScrapeTuple {
@@ -47,6 +48,7 @@ trait ScraperServiceClient extends ServiceClient {
   def scheduleScrapeWithRequest(request:ScrapeRequest):Future[Boolean] // ack
   def getBasicArticle(url:String):Future[Option[BasicArticle]]
   def getBasicArticleP(url:String, proxy:Option[HttpProxy]):Future[Option[BasicArticle]]
+  def getBasicArticleWithExtractor(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
 }
 
 class ScraperServiceClientImpl @Inject() (
@@ -99,6 +101,12 @@ class ScraperServiceClientImpl @Inject() (
       r.json.validate[BasicArticle].asOpt
     }
   }
+
+  def getBasicArticleWithExtractor(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
+    call(Scraper.internal.getBasicArticleWithExtractor, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map{ r =>
+      r.json.validate[BasicArticle].asOpt
+    }
+  }
 }
 
 class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ScraperServiceClient {
@@ -120,4 +128,6 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getBasicArticle(url: String): Future[Option[BasicArticle]] = ???
 
   def getBasicArticleP(url: String, proxy: Option[HttpProxy]): Future[Option[BasicArticle]] = ???
+
+  def getBasicArticleWithExtractor(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = ???
 }

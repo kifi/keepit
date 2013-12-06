@@ -162,10 +162,11 @@ class ABookCommander @Inject() (
   }
 
   def getOrCreateEContact(userId:Id[User], email:String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Try[EContact] = {
-    log.info(s"[getOrCreateEContact] userId=$userId email=$email name=$name")
-    db.readWrite(attempts = 2) { implicit s =>
+    val res = db.readWrite(attempts = 2) { implicit s =>
       econtactRepo.getOrCreate(userId, email, name, firstName, lastName)
     }
+    log.info(s"[getOrCreateEContact($userId,$email,${name.getOrElse("")})] res=$res")
+    res
   }
 
   // todo: removeme (inefficient)

@@ -21,7 +21,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     val distinctId = userId.map(getDistinctId) getOrElse eventCode.toString
     val superPropertiesFuture = userId.map(getSuperProperties) getOrElse Future.successful(Seq.empty)
 
-    val properties = new EventContextBuilder()
+    val properties = new HeimdalContextBuilder()
     properties.data ++= event.context.data
     properties.data += ("ip" -> event.context.data.getOrElse("remoteAddress", ContextDoubleData(0)))
     userId.foreach(id => properties += ("userId", id.id))

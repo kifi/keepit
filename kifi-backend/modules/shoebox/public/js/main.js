@@ -2147,6 +2147,7 @@ $(function () {
 			return;
 		}
 		hideKeepDetails();
+		kifiViewTracker.push('/' + hash);
 	});
 
 	function navigate(uri, opts) {
@@ -2757,7 +2758,7 @@ $(function () {
 
 	function updateMe(data) {
 		me = data;
-		mixpanel.identify(me.id);
+		mixpanel.alias(me.id);
 		$('.my-pic').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
 		$('.my-name').text(data.firstName + ' ' + data.lastName);
 		$('.my-description').text(data.description || '\u00A0'); // nbsp
@@ -2832,12 +2833,14 @@ $(function () {
 	// render initial view
 	$(window).trigger('statechange');
 
+	/*
 	// auto-update my keeps
 	setTimeout(function refresh() {
 		updateCollections();
 		addNewKeeps();
 		setTimeout(refresh, 25000 + 5000 * Math.random());
 	}, 30000);
+	*/
 
 	var $welcomeDialog = $('.welcome-dialog').remove().show();
 	$.when(promise.myPrefs).done(function () {
