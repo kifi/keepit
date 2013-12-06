@@ -1,8 +1,5 @@
 package com.keepit.controllers.admin
 
-import scala.Option.option2Iterable
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.AdminController
@@ -27,14 +24,6 @@ class ScraperAdminController @Inject() (
   bookmarkRepo: BookmarkRepo,
   httpProxyRepo: HttpProxyRepo)
     extends AdminController(actionAuthenticator) {
-
-  def scrape = AdminHtmlAction { implicit request =>
-    Async {
-      scraper.scrapePending() map { articles =>
-        Ok(html.admin.scrape(articles))
-      }
-    }
-  }
 
   def searchScraper = AdminHtmlAction {implicit request =>
     Ok(html.admin.searchScraper())

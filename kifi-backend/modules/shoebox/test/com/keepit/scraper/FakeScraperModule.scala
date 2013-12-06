@@ -16,6 +16,5 @@ case class FakeScraperModule(fakeArticles: Option[PartialFunction[(String, Optio
 class FakeScraperPlugin(fakeArticles: Option[PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle]]) extends ScraperPlugin {
   def scrapePending() = Future.successful(Seq())
   def scheduleScrape(uri: NormalizedURI)(implicit session: RWSession): Unit = {}
-  def scrapeBasicArticle(url: String): Future[Option[BasicArticle]] = Future.successful(fakeArticles.map(_.apply((url, None))))
-  def scrapeBasicArticleWithExtractor(url: String, extractorProviderType:Option[ExtractorProviderType] = None): Future[Option[BasicArticle]] = Future.successful(fakeArticles.map(_.apply((url, extractorProviderType))))
+  def scrapeBasicArticle(url: String, extractorProviderType:Option[ExtractorProviderType] = None): Future[Option[BasicArticle]] = Future.successful(fakeArticles.map(_.apply((url, extractorProviderType))))
 }
