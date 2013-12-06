@@ -56,14 +56,13 @@ class ScraperPluginImpl @Inject() (
     scheduleTask(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, Scrape)
   }
 
-  override def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]] =
+  def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]] =
     actor.ref.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
 
   def scheduleScrape(uri: NormalizedURI)(implicit session: RWSession): Unit = {
+    require(uri != null && !uri.id.isEmpty, "[scheduleScrape] <uri> cannot be null and <uri.id> cannot be empty")
     val uriId = uri.id.get
     val info = scrapeInfoRepo.getByUriId(uriId)
-    val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
-
     val toSave = info match {
       case Some(s) => s.withState(ScrapeInfoStates.PENDING)
       case None => ScrapeInfo(uriId = uriId, state = ScrapeInfoStates.PENDING)
@@ -72,9 +71,8 @@ class ScraperPluginImpl @Inject() (
     // todo: It may be nice to force trigger a scrape directly
   }
 
-  override def scrapeBasicArticle(url:String): Future[Option[BasicArticle]] = scrapeBasicArticleWithExtractor(url, None)
-
-  override def scrapeBasicArticleWithExtractor(url: String, extractorProviderType:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
+  def scrapeBasicArticle(url: String, extractorProviderType:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
+    require(url != null, "[scrapeBasicArticle] <url> cannot be null")
     val proxyOpt = db.readOnly { implicit s =>
       urlPatternRuleRepo.getProxy(url)
     }

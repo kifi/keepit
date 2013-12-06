@@ -21,7 +21,6 @@ import play.modules.statsd.api.Statsd
 @Singleton
 class Scraper @Inject() (
   db: Database,
-//  httpFetcher: HttpFetcher,
   articleStore: ArticleStore,
   extractorFactory: ExtractorFactory,
   scraperConfig: ScraperConfig,
