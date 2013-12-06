@@ -12,8 +12,10 @@ class AdminSemanticVectorController @Inject()(
   actionAuthenticator: ActionAuthenticator
 ) extends AdminController(actionAuthenticator){
 
-  def leaveOneOut(queryText: String, stem: Boolean) = AdminHtmlAction{ implicit request =>
-    val scores = Await.result(searchClient.leaveOneOut(queryText, stem), 5 seconds)
-    Ok(s"Full query: ${queryText} \n" + scores.mkString("\n"))
+  def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean) = AdminHtmlAction{ implicit request =>
+    val t1 = System.currentTimeMillis
+    val scores = Await.result(searchClient.leaveOneOut(queryText, stem, useSketch), 5 seconds)
+    val elapse = System.currentTimeMillis - t1
+    Ok(s"time elapsed: ${elapse} millis.\nFull query: ${queryText} \n" + scores.mkString("\n"))
   }
 }

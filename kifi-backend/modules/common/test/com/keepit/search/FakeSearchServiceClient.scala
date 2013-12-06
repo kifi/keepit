@@ -85,4 +85,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
   override def resetUserConfig(id: Id[User]): Unit = {}
 
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
+
+  override def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = ???
 }
