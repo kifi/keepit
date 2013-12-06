@@ -5,11 +5,9 @@ import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.search.Article
 
 import akka.actor._
 import scala.concurrent.Future
-import akka.pattern.ask
 import akka.util.Timeout
 
 import scala.concurrent.duration._
@@ -41,7 +39,6 @@ class ScraperPluginImpl @Inject() (
     scrapeInfoRepo: ScrapeInfoRepo,
     urlPatternRuleRepo: UrlPatternRuleRepo,
     actor: ActorInstance[ScraperActor],
-    scraper: Scraper,
     scraperConfig: ScraperConfig,
     scraperClient: ScraperServiceClient,
     val schedulingProperties: SchedulingProperties) //only on leader
@@ -55,9 +52,6 @@ class ScraperPluginImpl @Inject() (
     log.info(s"[onStart] starting ScraperPluginImpl with scraperConfig=$scraperConfig}")
     scheduleTask(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, Scrape)
   }
-
-  def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]] =
-    actor.ref.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
 
   def scheduleScrape(uri: NormalizedURI)(implicit session: RWSession): Unit = {
     require(uri != null && !uri.id.isEmpty, "[scheduleScrape] <uri> cannot be null and <uri.id> cannot be empty")
