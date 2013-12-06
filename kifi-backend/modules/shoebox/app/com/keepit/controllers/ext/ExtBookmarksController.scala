@@ -73,10 +73,8 @@ class ExtBookmarksController @Inject() (
 
   def createTag() = AuthenticatedJsonToJsonAction { request =>
     val name = (request.body \ "name").as[String]
-    db.readWrite { implicit s =>
-      val tag = getOrCreateTag(request.userId, name)
-      Ok(Json.toJson(SendableTag from tag))
-    }
+    val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
+    Ok(Json.toJson(SendableTag from tag))
   }
 
   def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
@@ -94,8 +92,8 @@ class ExtBookmarksController @Inject() (
   def addToUrl() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     val name = (request.body \ "name").as[String]
-    val tag = db.readWrite { implicit s =>
-      getOrCreateTag(request.userId, name) tap { tag =>
+    val tag = bookmarksCommander.getOrCreateTag(request.userId, name) tap { tag =>
+      db.readWrite { implicit s =>
         bookmarksCommander.addTagToUrl(request.user, request.experiments, url, tag.id.get)
       }
     }
@@ -228,15 +226,6 @@ class ExtBookmarksController @Inject() (
       bookmarkRepo.getNumMutual(request.userId, userRepo.get(id).id.get)
     }
     Ok(Json.obj("n" -> n))
-  }
-
-  private def getOrCreateTag(userId: Id[User], name: String)(implicit s: RWSession): Collection = {
-    val normalizedName = name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength)
-    collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None) match {
-      case Some(t) if t.isActive => t
-      case Some(t) => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE))
-      case None => collectionRepo.save(Collection(userId = userId, name = normalizedName))
-    }
   }
 
 }

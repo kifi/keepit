@@ -225,4 +225,17 @@ class BookmarksCommander @Inject() (
         keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmarkId, collectionId = tagId))
     }
   }
+
+  def getOrCreateTag(userId: Id[User], name: String): Collection = {
+    val normalizedName = name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength)
+    val collection = db.readOnly { implicit s =>
+      collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None)
+    }
+    collection match {
+      case Some(t) if t.isActive => t
+      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE)) }
+      case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) }
+    }
+  }
+
 }
