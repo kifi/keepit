@@ -39,7 +39,17 @@ class BookmarkInterner @Inject() (
     val referenceId = UUID.randomUUID
     log.info(s"[internBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$value $referenceId ")
     val parseStart = System.currentTimeMillis()
-    val bookmarks = getBookmarksFromJson(value)
+    val bookmarks = getBookmarksFromJson(value).sortWith { case (a, b) =>
+      val aUrl = (a \ "url").asOpt[String]
+      val bUrl = (b \ "url").asOpt[String]
+      (aUrl, bUrl) match {
+        case (Some(au), Some(bu)) => au < bu
+        case (Some(au), None) => true
+        case (None, Some(bu)) => false
+        case (None, None) => true
+      }
+      true
+    }
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
 
     var count = new AtomicInteger(0)
