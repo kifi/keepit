@@ -25,7 +25,6 @@ private[scraper] class ScrapeScheduler @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
     articleStore: ArticleStore,
-    extractorFactory: ExtractorFactory,
     scrapeInfoRepo: ScrapeInfoRepo,
     normalizedURIRepo: NormalizedURIRepo,
     urlPatternRuleRepo: UrlPatternRuleRepo,
